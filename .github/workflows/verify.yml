@@ -1,0 +1,31 @@
+name: Verify Bootstrap
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install -r requirements.txt
+      - name: Compile controller
+        run: python -m compileall controller
+      - name: Verify locked invariants
+        run: |
+          set -euo pipefail
+          grep -q 'KMJ_PAID_FALLBACK' render.yaml
+          grep -q 'KMJ_LOCAL_LLM' render.yaml
+          grep -q 'kmjtechno/kmj-main-platform' mission/main-platform.yaml
+          grep -q 'cloud_nexus_policy: untouched' mission/main-platform.yaml
+          grep -q 'paid_ai_fallback: prohibited' mission/main-platform.yaml
+          grep -q 'local_llm_inference: prohibited' mission/main-platform.yaml
+          grep -q 'no_free_route_status: NO_FREE_ROUTE_AVAILABLE' mission/main-platform.yaml
