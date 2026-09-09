@@ -1,0 +1,43 @@
+project: KMJ TECHNO Main Platform
+repo: kmjtechno/kmj-main-platform
+cloud_nexus_policy: untouched
+source_of_truth: git
+generative_ai_policy: cloud_only
+local_llm_inference: prohibited
+paid_ai_fallback: prohibited
+unknown_cost_is_free: false
+no_free_route_status: NO_FREE_ROUTE_AVAILABLE
+production_requires_owner_approval: true
+writer_policy: single_authoritative_writer
+first_vertical_slice:
+  - organization
+  - product
+  - entitlement
+  - signed_sandbox_license
+  - product_validation
+  - revocation
+phases:
+  - id: P0
+    name: Truth and Boundaries
+    status: ACTIVE
+  - id: P1
+    name: Secure Foundation
+    status: READY
+  - id: P2
+    name: Enterprise Core
+    status: PENDING
+  - id: P3
+    name: Commerce and Licensing
+    status: PENDING
+  - id: P4
+    name: Kristi Operations
+    status: PENDING
+  - id: P5
+    name: Public Experience
+    status: PENDING
+  - id: P6
+    name: Product Integration
+    status: PENDING
+  - id: P7
+    name: Migration and Cutover
+    status: PENDING
