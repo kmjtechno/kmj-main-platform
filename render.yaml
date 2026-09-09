@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: kmj-autonomous-dev-controller
+    runtime: docker
+    plan: free
+    autoDeploy: true
+    healthCheckPath: /health
+    envVars:
+      - key: KMJ_MODE
+        value: bootstrap
+      - key: KMJ_PAID_FALLBACK
+        value: prohibited
+      - key: KMJ_LOCAL_LLM
+        value: prohibited
+      - key: KMJ_TARGET_REPO
+        value: kmjtechno/kmj-main-platform
