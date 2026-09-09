@@ -1,0 +1,11 @@
+{
+  "status": "IDLE",
+  "last_cycle": null,
+  "last_checkpoint": null,
+  "invariants": {
+    "paid_fallback": "PROHIBITED",
+    "local_llm_inference": "PROHIBITED",
+    "cloud_nexus": "UNTOUCHED",
+    "production_owner_approval": true
+  }
+}
