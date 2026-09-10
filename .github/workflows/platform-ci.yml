@@ -3,7 +3,6 @@ name: Platform Runtime CI
 on:
   push:
     branches:
-      - main
       - implementation/runtime-bootstrap
     paths:
       - 'apps/platform/**'
@@ -17,6 +16,10 @@ on:
 
 permissions:
   contents: read
+
+concurrency:
+  group: platform-ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   platform:
@@ -52,7 +55,14 @@ jobs:
         env:
           DB_CONNECTION: sqlite
           DB_DATABASE: ${{ github.workspace }}/apps/platform/database/database.sqlite
-        run: composer setup
+        run: |
+          set -euo pipefail
+          composer install --no-interaction --prefer-dist --no-progress
+          test -f .env || cp .env.example .env
+          php artisan key:generate --force
+          php artisan migrate --force
+          npm install --no-audit --no-fund
+          npm run build
 
       - name: Run upstream-quality CI checks
         env:
