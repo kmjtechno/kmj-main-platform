@@ -3,7 +3,6 @@ name: Platform Runtime CI
 on:
   push:
     branches:
-      - main
       - implementation/runtime-bootstrap
     paths:
       - 'apps/platform/**'
@@ -17,6 +16,10 @@ on:
 
 permissions:
   contents: read
+
+concurrency:
+  group: platform-ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   platform:
@@ -38,21 +41,30 @@ jobs:
           tools: composer:v2
           coverage: none
 
-      - name: Setup Node 22
+      - name: Setup Node 22 with npm cache
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: apps/platform/package-lock.json
 
       - name: Prepare deterministic CI database
         run: |
           set -euo pipefail
           touch database/database.sqlite
 
-      - name: Install and build application
+      - name: Install and build application deterministically
         env:
           DB_CONNECTION: sqlite
           DB_DATABASE: ${{ github.workspace }}/apps/platform/database/database.sqlite
-        run: composer setup
+        run: |
+          set -euo pipefail
+          composer install --no-interaction --prefer-dist --no-progress
+          test -f .env || cp .env.example .env
+          php artisan key:generate --force
+          php artisan migrate --force
+          npm ci --no-audit --no-fund
+          npm run build
 
       - name: Run upstream-quality CI checks
         env:
