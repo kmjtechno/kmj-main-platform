@@ -1,0 +1,51 @@
+name: Server Infrastructure CI
+
+on:
+  push:
+    paths:
+      - 'infra/server/**'
+      - '.github/workflows/server-infra-ci.yml'
+  pull_request:
+    paths:
+      - 'infra/server/**'
+      - '.github/workflows/server-infra-ci.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  verify-server-infra:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Bash syntax
+        run: |
+          set -euo pipefail
+          bash -n infra/server/KMJ_SERVER_BOOTSTRAP.sh
+          bash -n infra/server/KMJ_SERVER_VERIFY.sh
+          bash -n infra/server/KMJ_SERVER_EXPORT.sh
+
+      - name: Locked server invariants
+        run: |
+          set -euo pipefail
+          grep -q 'DEPLOY_BRANCH="${KMJ_DEPLOY_BRANCH:-staging-approved}"' infra/server/KMJ_SERVER_BOOTSTRAP.sh
+          grep -q "listen_addresses = '127.0.0.1'" infra/server/KMJ_SERVER_BOOTSTRAP.sh
+          grep -q "Disallow: /" infra/server/KMJ_SERVER_BOOTSTRAP.sh
+          grep -q 'php8.5-pgsql' infra/server/KMJ_SERVER_BOOTSTRAP.sh
+          grep -q 'postgresql-18' infra/server/KMJ_SERVER_BOOTSTRAP.sh
+          grep -q 'KMJ Cloud Nexus' infra/server/README.md
+          grep -q 'Production `kmjtechno.com` is not changed' infra/server/README.md
+          grep -q 'FAIL=0' infra/server/README.md
+
+      - name: No committed private key material
+        run: |
+          set -euo pipefail
+          if grep -R -n -E -- '-----BEGIN (OPENSSH|RSA|EC|DSA) PRIVATE KEY-----' infra/server; then
+            echo "Private key material must never be committed."
+            exit 1
+          fi
