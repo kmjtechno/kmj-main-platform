@@ -1,0 +1,9 @@
+name: catalog
+version: 1
+owns:
+  - products
+  - plans
+  - public_product_facts
+allowed_dependencies:
+  - organizations
+persistence_namespace: catalog
