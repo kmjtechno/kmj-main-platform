@@ -298,10 +298,11 @@ fi
 if [[ ! -d "\$REPO_DIR/.git" ]]; then
   git clone --branch "\$BRANCH" --single-branch "\$REPO" "\$REPO_DIR"
 else
-  git -C "\$REPO_DIR" config --add remote.origin.fetch \
-    "+refs/heads/\$BRANCH:refs/remotes/origin/\$BRANCH" 2>/dev/null || true
-  git -C "\$REPO_DIR" fetch --prune origin \
-    "+refs/heads/\$BRANCH:refs/remotes/origin/\$BRANCH"
+  FETCH_SPEC="+refs/heads/\$BRANCH:refs/remotes/origin/\$BRANCH"
+  if ! git -C "\$REPO_DIR" config --get-all remote.origin.fetch | grep -Fxq "\$FETCH_SPEC"; then
+    git -C "\$REPO_DIR" config --add remote.origin.fetch "\$FETCH_SPEC"
+  fi
+  git -C "\$REPO_DIR" fetch --prune origin "\$FETCH_SPEC"
   git -C "\$REPO_DIR" reset --hard "origin/\$BRANCH"
 fi
 
