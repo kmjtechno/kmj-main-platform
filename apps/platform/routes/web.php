@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\User;
 use App\Services\AuthorityBootstrapper;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -15,7 +16,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
         OrganizationDirectory $organizations,
         EntitlementReader $entitlements,
     ) {
-        $items = collect($organizations->forUser($request->user()->id))
+        $user = $request->user();
+        abort_unless($user instanceof User, 401);
+
+        $items = collect($organizations->forUser($user->id))
             ->map(function (array $organization) use ($entitlements): array {
                 $organization['entitlements'] = $entitlements->forOrganization($organization['id']);
 
@@ -30,13 +34,16 @@ Route::middleware(['auth', 'verified'])->group(function () {
     })->name('dashboard');
 
     Route::post('organizations', function (Request $request, AuthorityBootstrapper $bootstrapper) {
+        $user = $request->user();
+        abort_unless($user instanceof User, 401);
+
         $validated = $request->validate([
             'name' => ['required', 'string', 'min:2', 'max:160'],
         ]);
 
         $bootstrapper->createOrganizationWithSandboxAccess(
             $validated['name'],
-            $request->user()->id,
+            $user->id,
         );
 
         return redirect()->route('dashboard');
