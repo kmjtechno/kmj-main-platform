@@ -1,0 +1,10 @@
+name: identity
+version: 1
+owns:
+  - accounts
+  - credentials
+  - sessions
+  - passkeys
+  - workload_identities
+allowed_dependencies: []
+persistence_namespace: identity

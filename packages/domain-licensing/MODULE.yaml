@@ -1,0 +1,12 @@
+name: licensing
+version: 1
+owns:
+  - licenses
+  - activations
+  - revocations
+  - license_ledger
+allowed_dependencies:
+  - organizations
+  - catalog
+  - entitlements
+persistence_namespace: licensing

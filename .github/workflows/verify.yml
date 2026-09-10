@@ -50,3 +50,5 @@ jobs:
           grep -q 'production_requires_owner_approval: true' work/backlog.yaml
       - name: Verify versioned contracts
         run: python scripts/verify_contracts.py
+      - name: Verify module architecture
+        run: python scripts/verify_architecture.py

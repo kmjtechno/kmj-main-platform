@@ -1,0 +1,10 @@
+name: releases
+version: 1
+owns:
+  - releases
+  - artifacts
+  - provenance
+  - release_status
+allowed_dependencies:
+  - catalog
+persistence_namespace: releases
