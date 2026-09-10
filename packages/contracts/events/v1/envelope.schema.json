@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.kmjtechno.invalid/events/v1/envelope.schema.json",
+  "title": "KMJ Main Platform Event Envelope v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["specversion", "id", "source", "type", "time", "subject", "datacontenttype", "data"],
+  "properties": {
+    "specversion": {"const": "1.0"},
+    "id": {"type": "string", "minLength": 1},
+    "source": {"type": "string", "minLength": 1},
+    "type": {"type": "string", "pattern": "^com\\.kmjtechno\\.mainplatform\\.v1\\."},
+    "time": {"type": "string", "format": "date-time"},
+    "subject": {"type": "string", "minLength": 1},
+    "datacontenttype": {"const": "application/json"},
+    "correlationid": {"type": ["string", "null"]},
+    "causationid": {"type": ["string", "null"]},
+    "organizationid": {"type": ["string", "null"], "format": "uuid"},
+    "data": {"type": "object"}
+  }
+}
