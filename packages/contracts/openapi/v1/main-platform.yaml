@@ -1,0 +1,411 @@
+openapi: 3.1.0
+info:
+  title: KMJ TECHNO Main Platform API
+  version: 1.0.0
+  description: Versioned external boundary for the first Main Platform vertical slice.
+x-kmj-contract-version: 1
+servers:
+  - url: https://api.invalid.example
+    description: Placeholder only; no production endpoint is authorized by this contract.
+tags:
+  - name: Organizations
+  - name: Catalog
+  - name: Entitlements
+  - name: Licensing
+  - name: Releases
+paths:
+  /v1/organizations:
+    post:
+      tags: [Organizations]
+      operationId: createOrganization
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateOrganizationRequest'
+      responses:
+        '201':
+          description: Organization created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Organization'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /v1/products:
+    post:
+      tags: [Catalog]
+      operationId: createProduct
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateProductRequest'
+      responses:
+        '201':
+          description: Product created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Product'
+  /v1/entitlements:
+    post:
+      tags: [Entitlements]
+      operationId: issueEntitlement
+      description: Issues capability only from an explicit entitlement policy result.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/IssueEntitlementRequest'
+      responses:
+        '201':
+          description: Entitlement issued
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Entitlement'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+  /v1/licenses/sandbox:
+    post:
+      tags: [Licensing]
+      operationId: issueSandboxLicense
+      description: Creates a sandbox license derived from an existing entitlement.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/IssueSandboxLicenseRequest'
+      responses:
+        '201':
+          description: Signed sandbox license envelope
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SignedLicenseEnvelope'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /v1/licenses/validate:
+    post:
+      tags: [Licensing]
+      operationId: validateLicense
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ValidateLicenseRequest'
+      responses:
+        '200':
+          description: Deterministic validation result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LicenseValidationResult'
+  /v1/licenses/{licenseId}/revoke:
+    post:
+      tags: [Licensing]
+      operationId: revokeLicense
+      parameters:
+        - $ref: '#/components/parameters/LicenseId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RevokeLicenseRequest'
+      responses:
+        '200':
+          description: License revoked
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LicenseRevocation'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /v1/releases/{releaseId}:
+    get:
+      tags: [Releases]
+      operationId: getRelease
+      parameters:
+        - $ref: '#/components/parameters/ReleaseId'
+      responses:
+        '200':
+          description: Trusted release metadata
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Release'
+        '404':
+          $ref: '#/components/responses/NotFound'
+components:
+  parameters:
+    LicenseId:
+      name: licenseId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    ReleaseId:
+      name: releaseId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+  responses:
+    Conflict:
+      description: State transition conflict
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    ValidationError:
+      description: Request or policy validation failed
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+  schemas:
+    CreateOrganizationRequest:
+      type: object
+      additionalProperties: false
+      required: [name]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 160
+    Organization:
+      type: object
+      additionalProperties: false
+      required: [id, name, created_at]
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+    CreateProductRequest:
+      type: object
+      additionalProperties: false
+      required: [organization_id, sku, name, status]
+      properties:
+        organization_id:
+          type: string
+          format: uuid
+        sku:
+          type: string
+          minLength: 1
+          maxLength: 80
+        name:
+          type: string
+          minLength: 1
+          maxLength: 160
+        status:
+          type: string
+          enum: [available, preview, research, planned]
+    Product:
+      allOf:
+        - $ref: '#/components/schemas/CreateProductRequest'
+        - type: object
+          required: [id, created_at]
+          properties:
+            id:
+              type: string
+              format: uuid
+            created_at:
+              type: string
+              format: date-time
+    IssueEntitlementRequest:
+      type: object
+      additionalProperties: false
+      required: [organization_id, product_id, capability, policy_decision_id]
+      properties:
+        organization_id:
+          type: string
+          format: uuid
+        product_id:
+          type: string
+          format: uuid
+        capability:
+          type: string
+          minLength: 1
+          maxLength: 120
+        policy_decision_id:
+          type: string
+          format: uuid
+        valid_until:
+          type: [string, 'null']
+          format: date-time
+    Entitlement:
+      type: object
+      additionalProperties: false
+      required: [id, organization_id, product_id, capability, policy_decision_id, status, issued_at]
+      properties:
+        id:
+          type: string
+          format: uuid
+        organization_id:
+          type: string
+          format: uuid
+        product_id:
+          type: string
+          format: uuid
+        capability:
+          type: string
+        policy_decision_id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [active, suspended, expired, revoked]
+        issued_at:
+          type: string
+          format: date-time
+        valid_until:
+          type: [string, 'null']
+          format: date-time
+    IssueSandboxLicenseRequest:
+      type: object
+      additionalProperties: false
+      required: [entitlement_id, device_public_key]
+      properties:
+        entitlement_id:
+          type: string
+          format: uuid
+        device_public_key:
+          type: string
+          minLength: 16
+        requested_ttl_seconds:
+          type: integer
+          minimum: 60
+          maximum: 86400
+          default: 3600
+    SignedLicenseEnvelope:
+      type: object
+      additionalProperties: false
+      required: [license_id, entitlement_id, payload, signature, key_id, issued_at, expires_at]
+      properties:
+        license_id:
+          type: string
+          format: uuid
+        entitlement_id:
+          type: string
+          format: uuid
+        payload:
+          type: string
+          description: Compact signed-license payload representation. This contract does not expose signing private key material.
+        signature:
+          type: string
+        key_id:
+          type: string
+        issued_at:
+          type: string
+          format: date-time
+        expires_at:
+          type: string
+          format: date-time
+    ValidateLicenseRequest:
+      type: object
+      additionalProperties: false
+      required: [payload, signature, device_public_key]
+      properties:
+        payload:
+          type: string
+        signature:
+          type: string
+        device_public_key:
+          type: string
+        observed_at:
+          type: [string, 'null']
+          format: date-time
+    LicenseValidationResult:
+      type: object
+      additionalProperties: false
+      required: [valid, reason_code]
+      properties:
+        valid:
+          type: boolean
+        reason_code:
+          type: string
+          enum: [valid, malformed, signature_invalid, expired, revoked, entitlement_inactive, device_mismatch]
+        license_id:
+          type: [string, 'null']
+          format: uuid
+        entitlement_id:
+          type: [string, 'null']
+          format: uuid
+    RevokeLicenseRequest:
+      type: object
+      additionalProperties: false
+      required: [reason, idempotency_key]
+      properties:
+        reason:
+          type: string
+          minLength: 1
+          maxLength: 240
+        idempotency_key:
+          type: string
+          minLength: 8
+          maxLength: 120
+    LicenseRevocation:
+      type: object
+      additionalProperties: false
+      required: [license_id, revoked_at, reason]
+      properties:
+        license_id:
+          type: string
+          format: uuid
+        revoked_at:
+          type: string
+          format: date-time
+        reason:
+          type: string
+    Release:
+      type: object
+      additionalProperties: false
+      required: [id, product_id, version, artifact_digest, provenance_ref, status]
+      properties:
+        id:
+          type: string
+          format: uuid
+        product_id:
+          type: string
+          format: uuid
+        version:
+          type: string
+        artifact_digest:
+          type: string
+          pattern: '^sha256:[a-f0-9]{64}$'
+        provenance_ref:
+          type: string
+        status:
+          type: string
+          enum: [draft, signed, staged, promoted, revoked]
+    ErrorResponse:
+      type: object
+      additionalProperties: false
+      required: [code, message]
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+        correlation_id:
+          type: [string, 'null']
