@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.kmjtechno.invalid/events/v1/license.revoked.schema.json",
+  "title": "License Revoked Event v1",
+  "allOf": [
+    {"$ref": "./envelope.schema.json"},
+    {
+      "type": "object",
+      "properties": {
+        "type": {"const": "com.kmjtechno.mainplatform.v1.license.revoked"},
+        "data": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["license_id", "entitlement_id", "organization_id", "reason", "revoked_at"],
+          "properties": {
+            "license_id": {"type": "string", "format": "uuid"},
+            "entitlement_id": {"type": "string", "format": "uuid"},
+            "organization_id": {"type": "string", "format": "uuid"},
+            "reason": {"type": "string", "minLength": 1, "maxLength": 240},
+            "revoked_at": {"type": "string", "format": "date-time"}
+          }
+        }
+      }
+    }
+  ]
+}
