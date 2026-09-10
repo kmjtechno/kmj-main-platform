@@ -79,7 +79,10 @@ export default function Welcome() {
 
                 <header className="relative z-20 border-b border-white/[0.07] bg-[#07090c]/80 backdrop-blur-xl">
                     <div className="mx-auto flex h-20 max-w-7xl items-center justify-between px-5 sm:px-8 lg:px-10">
-                        <Link href="/" className="group flex items-center gap-3">
+                        <Link
+                            href="/"
+                            className="group flex items-center gap-3"
+                        >
                             <span className="relative grid h-10 w-10 place-items-center overflow-hidden rounded-xl border border-[#e21b23]/45 bg-[#e21b23]/10 shadow-[0_0_30px_rgba(226,27,35,0.08)]">
                                 <span className="text-[17px] font-black tracking-[-0.12em] text-[#f1252e]">
                                     K
@@ -142,9 +145,11 @@ export default function Welcome() {
                             </h1>
 
                             <p className="mt-7 max-w-2xl text-base leading-7 text-white/55 sm:text-lg sm:leading-8">
-                                A secure central platform for software products, customer access,
-                                entitlements, licensing, releases and governed automation — built as
-                                an enterprise foundation instead of a collection of disconnected tools.
+                                A secure central platform for software products,
+                                customer access, entitlements, licensing,
+                                releases and governed automation — built as an
+                                enterprise foundation instead of a collection of
+                                disconnected tools.
                             </p>
 
                             <div className="mt-9 flex flex-col gap-3 sm:flex-row">
@@ -181,8 +186,12 @@ export default function Welcome() {
                                     ['Rust', 'License core'],
                                 ].map(([value, label]) => (
                                     <div key={value}>
-                                        <div className="text-sm font-bold text-white/90">{value}</div>
-                                        <div className="mt-1 text-[11px] text-white/35">{label}</div>
+                                        <div className="text-sm font-bold text-white/90">
+                                            {value}
+                                        </div>
+                                        <div className="mt-1 text-[11px] text-white/35">
+                                            {label}
+                                        </div>
                                     </div>
                                 ))}
                             </div>
@@ -197,8 +206,12 @@ export default function Welcome() {
                                             <Workflow className="h-4 w-4" />
                                         </div>
                                         <div>
-                                            <div className="text-xs font-bold">Commercial authority</div>
-                                            <div className="text-[10px] text-white/35">Canonical rights chain</div>
+                                            <div className="text-xs font-bold">
+                                                Commercial authority
+                                            </div>
+                                            <div className="text-[10px] text-white/35">
+                                                Canonical rights chain
+                                            </div>
                                         </div>
                                     </div>
                                     <span className="rounded-full border border-emerald-400/15 bg-emerald-400/[0.06] px-2.5 py-1 text-[10px] font-semibold text-emerald-300">
@@ -209,15 +222,24 @@ export default function Welcome() {
                                 <div className="p-5 sm:p-7">
                                     <div className="space-y-2.5">
                                         {authority.map((item, index) => (
-                                            <div key={item} className="relative flex items-center gap-3">
-                                                {index < authority.length - 1 && (
+                                            <div
+                                                key={item}
+                                                className="relative flex items-center gap-3"
+                                            >
+                                                {index <
+                                                    authority.length - 1 && (
                                                     <span className="absolute top-9 left-[15px] h-4 w-px bg-gradient-to-b from-[#e21b23]/50 to-white/10" />
                                                 )}
                                                 <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg border border-white/[0.08] bg-white/[0.035] text-[10px] font-black text-[#f34a51]">
-                                                    {String(index + 1).padStart(2, '0')}
+                                                    {String(index + 1).padStart(
+                                                        2,
+                                                        '0',
+                                                    )}
                                                 </span>
                                                 <div className="flex h-10 flex-1 items-center justify-between rounded-lg border border-white/[0.07] bg-white/[0.025] px-4">
-                                                    <span className="text-xs font-semibold text-white/80">{item}</span>
+                                                    <span className="text-xs font-semibold text-white/80">
+                                                        {item}
+                                                    </span>
                                                     {index === 3 && (
                                                         <span className="text-[9px] font-bold tracking-wide text-[#ff5b62] uppercase">
                                                             capability
@@ -234,7 +256,8 @@ export default function Welcome() {
                                             [Fingerprint, 'Proof'],
                                             [RadioTower, 'Audit'],
                                         ].map(([Icon, label]) => {
-                                            const Component = Icon as typeof LockKeyhole;
+                                            const Component =
+                                                Icon as typeof LockKeyhole;
                                             return (
                                                 <div
                                                     key={label as string}
@@ -253,7 +276,10 @@ export default function Welcome() {
                         </div>
                     </section>
 
-                    <section id="platform" className="border-y border-white/[0.07] bg-white/[0.018]">
+                    <section
+                        id="platform"
+                        className="border-y border-white/[0.07] bg-white/[0.018]"
+                    >
                         <div className="mx-auto max-w-7xl px-5 py-20 sm:px-8 lg:px-10 lg:py-24">
                             <div className="max-w-3xl">
                                 <div className="text-xs font-bold tracking-[0.2em] text-[#e21b23] uppercase">
@@ -263,30 +289,38 @@ export default function Welcome() {
                                     One source of truth. Clear boundaries.
                                 </h2>
                                 <p className="mt-4 text-sm leading-7 text-white/45 sm:text-base">
-                                    The Main Platform is being built as a modular business control plane.
-                                    Products remain independent and consume versioned identity, entitlement,
-                                    licensing, release and support contracts.
+                                    The Main Platform is being built as a
+                                    modular business control plane. Products
+                                    remain independent and consume versioned
+                                    identity, entitlement, licensing, release
+                                    and support contracts.
                                 </p>
                             </div>
 
                             <div className="mt-10 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                                {capabilities.map(({ icon: Icon, title, text, status }) => (
-                                    <article
-                                        key={title}
-                                        className="group rounded-2xl border border-white/[0.08] bg-[#0b0e12] p-5 transition hover:-translate-y-1 hover:border-[#e21b23]/25 hover:bg-[#0d1015]"
-                                    >
-                                        <div className="flex items-start justify-between gap-4">
-                                            <span className="grid h-10 w-10 place-items-center rounded-xl border border-[#e21b23]/15 bg-[#e21b23]/[0.07] text-[#ee343c]">
-                                                <Icon className="h-4.5 w-4.5" />
-                                            </span>
-                                            <span className="rounded-full border border-white/[0.07] px-2 py-1 text-[9px] font-semibold text-white/35">
-                                                {status}
-                                            </span>
-                                        </div>
-                                        <h3 className="mt-5 text-base font-bold">{title}</h3>
-                                        <p className="mt-2 text-[13px] leading-6 text-white/42">{text}</p>
-                                    </article>
-                                ))}
+                                {capabilities.map(
+                                    ({ icon: Icon, title, text, status }) => (
+                                        <article
+                                            key={title}
+                                            className="group rounded-2xl border border-white/[0.08] bg-[#0b0e12] p-5 transition hover:-translate-y-1 hover:border-[#e21b23]/25 hover:bg-[#0d1015]"
+                                        >
+                                            <div className="flex items-start justify-between gap-4">
+                                                <span className="grid h-10 w-10 place-items-center rounded-xl border border-[#e21b23]/15 bg-[#e21b23]/[0.07] text-[#ee343c]">
+                                                    <Icon className="h-4.5 w-4.5" />
+                                                </span>
+                                                <span className="rounded-full border border-white/[0.07] px-2 py-1 text-[9px] font-semibold text-white/35">
+                                                    {status}
+                                                </span>
+                                            </div>
+                                            <h3 className="mt-5 text-base font-bold">
+                                                {title}
+                                            </h3>
+                                            <p className="mt-2 text-[13px] leading-6 text-white/42">
+                                                {text}
+                                            </p>
+                                        </article>
+                                    ),
+                                )}
                             </div>
                         </div>
                     </section>
@@ -298,13 +332,20 @@ export default function Welcome() {
                                     <Cpu className="h-5 w-5" />
                                 </span>
                                 <div>
-                                    <div className="text-sm font-bold">Engineering policy</div>
-                                    <div className="text-[11px] text-white/35">Built for controlled autonomy</div>
+                                    <div className="text-sm font-bold">
+                                        Engineering policy
+                                    </div>
+                                    <div className="text-[11px] text-white/35">
+                                        Built for controlled autonomy
+                                    </div>
                                 </div>
                             </div>
                             <div className="mt-7 space-y-4">
                                 {principles.map((principle) => (
-                                    <div key={principle} className="flex gap-3 text-sm leading-6 text-white/55">
+                                    <div
+                                        key={principle}
+                                        className="flex gap-3 text-sm leading-6 text-white/55"
+                                    >
                                         <CheckCircle2 className="mt-1 h-4 w-4 shrink-0 text-[#e21b23]" />
                                         <span>{principle}</span>
                                     </div>
@@ -317,22 +358,28 @@ export default function Welcome() {
                                 Built to evolve
                             </div>
                             <h2 className="mt-4 max-w-xl text-3xl font-black tracking-[-0.035em] sm:text-4xl">
-                                Infrastructure is working. Product capabilities come next.
+                                Infrastructure is working. Product capabilities
+                                come next.
                             </h2>
                             <p className="mt-5 max-w-xl text-sm leading-7 text-white/45 sm:text-base">
-                                The current staging environment is the active engineering preview. Core
-                                authority, licensing, trusted releases and product integrations will be
-                                exposed here only after they pass their implementation and verification gates.
+                                The current staging environment is the active
+                                engineering preview. Core authority, licensing,
+                                trusted releases and product integrations will
+                                be exposed here only after they pass their
+                                implementation and verification gates.
                             </p>
                             <div className="mt-7 flex flex-wrap gap-3 text-[11px] font-semibold text-white/45">
                                 <span className="inline-flex items-center gap-2 rounded-full border border-white/[0.08] px-3 py-1.5">
-                                    <Boxes className="h-3.5 w-3.5 text-[#e21b23]" /> Modular domains
+                                    <Boxes className="h-3.5 w-3.5 text-[#e21b23]" />{' '}
+                                    Modular domains
                                 </span>
                                 <span className="inline-flex items-center gap-2 rounded-full border border-white/[0.08] px-3 py-1.5">
-                                    <Globe2 className="h-3.5 w-3.5 text-[#e21b23]" /> Versioned interfaces
+                                    <Globe2 className="h-3.5 w-3.5 text-[#e21b23]" />{' '}
+                                    Versioned interfaces
                                 </span>
                                 <span className="inline-flex items-center gap-2 rounded-full border border-white/[0.08] px-3 py-1.5">
-                                    <ShieldCheck className="h-3.5 w-3.5 text-[#e21b23]" /> Verification gates
+                                    <ShieldCheck className="h-3.5 w-3.5 text-[#e21b23]" />{' '}
+                                    Verification gates
                                 </span>
                             </div>
                         </div>
@@ -341,7 +388,9 @@ export default function Welcome() {
                     <section className="border-t border-white/[0.07]">
                         <div className="mx-auto flex max-w-7xl flex-col items-start justify-between gap-6 px-5 py-12 sm:px-8 md:flex-row md:items-center lg:px-10">
                             <div>
-                                <div className="text-lg font-black tracking-[0.08em]">KMJ TECHNO</div>
+                                <div className="text-lg font-black tracking-[0.08em]">
+                                    KMJ TECHNO
+                                </div>
                                 <div className="mt-1 text-xs text-white/30">
                                     Innovation · Technology · Global Solutions
                                 </div>
