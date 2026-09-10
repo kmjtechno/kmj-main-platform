@@ -27,8 +27,8 @@ class RouteCandidate:
 class FreeCloudRouter:
     """Strict verified-zero model selector in front of 9Router.
 
-    9Router is used only as a transport/discovery/failover layer. KMJ policy is
-    authoritative: paid routes are prohibited and unknown cost is never free.
+    9Router is transport/discovery only. KMJ policy is authoritative: paid
+    routes are prohibited and unknown cost is never treated as free.
     """
 
     def __init__(self) -> None:
@@ -36,9 +36,10 @@ class FreeCloudRouter:
         self.base_url = os.getenv("KMJ_9ROUTER_BASE_URL", "http://127.0.0.1:20128/v1").rstrip("/")
         self.api_key = os.getenv("KMJ_9ROUTER_API_KEY", "")
         self.timeout = float(os.getenv("KMJ_9ROUTER_TIMEOUT_SECONDS", "20"))
+        self.max_failover_models = int(os.getenv("KMJ_MAX_FREE_FAILOVER_MODELS", "4"))
 
     def _headers(self) -> dict[str, str]:
-        headers = {"Accept": "application/json"}
+        headers = {"Accept": "application/json", "Content-Type": "application/json"}
         if self.api_key:
             headers["Authorization"] = f"Bearer {self.api_key}"
         return headers
@@ -57,8 +58,6 @@ class FreeCloudRouter:
         if any(fragment.lower() in model_id_l for fragment in denied):
             return False, "denied-fragment"
 
-        # OpenRouter models are eligible only when their canonical id itself
-        # carries the :free suffix. This prevents accidental paid fallback.
         if model_id_l.endswith(":free"):
             return True, "explicit-free-suffix"
 
@@ -111,6 +110,48 @@ class FreeCloudRouter:
             raise NoFreeRouteAvailable("NO_FREE_ROUTE_AVAILABLE")
         return ranked[0]
 
+    async def complete(
+        self,
+        messages: list[dict[str, str]],
+        route: str = "coding",
+        temperature: float = 0.1,
+    ) -> dict[str, Any]:
+        models = await self.discover()
+        ranked = self.rank(models, route)
+        if not ranked:
+            raise NoFreeRouteAvailable("NO_FREE_ROUTE_AVAILABLE")
+
+        attempts: list[dict[str, str]] = []
+        async with httpx.AsyncClient(timeout=self.timeout) as client:
+            for candidate in ranked[: self.max_failover_models]:
+                try:
+                    response = await client.post(
+                        f"{self.base_url}/chat/completions",
+                        headers=self._headers(),
+                        json={
+                            "model": candidate.model_id,
+                            "messages": messages,
+                            "temperature": temperature,
+                            "stream": False,
+                        },
+                    )
+                    response.raise_for_status()
+                    payload = response.json()
+                    choices = payload.get("choices", []) if isinstance(payload, dict) else []
+                    if not choices:
+                        raise RuntimeError("EMPTY_COMPLETION")
+                    return {
+                        "model": candidate.model_id,
+                        "owner": candidate.owner,
+                        "verification": candidate.reason,
+                        "attempts": attempts + [{"model": candidate.model_id, "result": "success"}],
+                        "response": payload,
+                    }
+                except Exception as exc:
+                    attempts.append({"model": candidate.model_id, "result": type(exc).__name__})
+
+        raise NoFreeRouteAvailable("ALL_VERIFIED_FREE_ROUTES_FAILED")
+
     async def status(self) -> dict[str, Any]:
         try:
             models = await self.discover()
@@ -132,6 +173,7 @@ class FreeCloudRouter:
                 "paid_fallback": "PROHIBITED",
                 "unknown_cost_is_free": False,
                 "local_llm": "PROHIBITED",
+                "max_free_failover_models": self.max_failover_models,
                 "models": eligible,
             }
         except Exception as exc:
