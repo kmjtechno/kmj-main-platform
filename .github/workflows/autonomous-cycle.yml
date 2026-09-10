@@ -33,7 +33,7 @@ jobs:
           grep -q 'cloud_nexus_policy: untouched' mission/main-platform.yaml
           grep -q 'paid_fallback: prohibited' config/free-cloud-routing.yaml
           grep -q 'unknown_cost_is_free: false' config/free-cloud-routing.yaml
-          python scripts/verify_free_router.py
+          PYTHONPATH=. python scripts/verify_free_router.py
           echo 'KMJ agent safety gates PASS'
       - name: Safe autonomous status
         run: |
