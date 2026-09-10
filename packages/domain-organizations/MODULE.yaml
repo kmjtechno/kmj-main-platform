@@ -1,0 +1,9 @@
+name: organizations
+version: 1
+owns:
+  - organizations
+  - memberships
+  - tenant_context
+allowed_dependencies:
+  - identity
+persistence_namespace: organizations
