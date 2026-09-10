@@ -1,0 +1,29 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.kmjtechno.invalid/events/v1/entitlement.issued.schema.json",
+  "title": "Entitlement Issued Event v1",
+  "allOf": [
+    {"$ref": "./envelope.schema.json"},
+    {
+      "type": "object",
+      "properties": {
+        "type": {"const": "com.kmjtechno.mainplatform.v1.entitlement.issued"},
+        "data": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["entitlement_id", "organization_id", "product_id", "capability", "policy_decision_id", "status", "issued_at"],
+          "properties": {
+            "entitlement_id": {"type": "string", "format": "uuid"},
+            "organization_id": {"type": "string", "format": "uuid"},
+            "product_id": {"type": "string", "format": "uuid"},
+            "capability": {"type": "string", "minLength": 1},
+            "policy_decision_id": {"type": "string", "format": "uuid"},
+            "status": {"const": "active"},
+            "issued_at": {"type": "string", "format": "date-time"},
+            "valid_until": {"type": ["string", "null"], "format": "date-time"}
+          }
+        }
+      }
+    }
+  ]
+}
