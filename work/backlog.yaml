@@ -33,7 +33,7 @@ phases:
         status: done
       - id: P1-04
         title: Bootstrap application runtime after supported versions are verified
-        status: in_review
+        status: done
   - id: P2
     name: Enterprise Core
     status: pending
