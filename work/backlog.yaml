@@ -1,0 +1,68 @@
+project: KMJ TECHNO Main Platform
+source_of_truth: git
+writer_policy: single_authoritative_writer
+cloud_nexus: untouched
+
+phases:
+  - id: P0
+    name: Truth and Boundaries
+    status: active
+    tasks:
+      - id: P0-01
+        title: Lock names and system boundaries
+        status: done_in_foundation_pr
+      - id: P0-02
+        title: Inventory current public URLs, assets and approved facts
+        status: pending
+      - id: P0-03
+        title: Accept ADR-001 through ADR-005
+        status: done_in_foundation_pr
+  - id: P1
+    name: Secure Foundation
+    status: active
+    tasks:
+      - id: P1-01
+        title: Establish protected development workflow, CODEOWNERS and CI
+        status: in_progress
+      - id: P1-02
+        title: Add architecture tests and module skeletons
+        status: in_progress
+      - id: P1-03
+        title: Define OpenAPI and event contracts for identity, catalog, entitlement, licensing and releases
+        status: pending
+      - id: P1-04
+        title: Bootstrap application runtime after supported versions are verified
+        status: pending
+  - id: P2
+    name: Enterprise Core
+    status: pending
+  - id: P3
+    name: Commerce and Licensing
+    status: pending
+  - id: P4
+    name: Kristi Operations
+    status: pending
+  - id: P5
+    name: Public Experience
+    status: pending
+  - id: P6
+    name: Product Integration
+    status: pending
+  - id: P7
+    name: Migration and Cutover
+    status: pending
+
+first_vertical_slice:
+  - organization
+  - product
+  - entitlement
+  - signed_sandbox_license
+  - product_validation
+  - revocation
+
+hard_gates:
+  paid_ai_fallback: prohibited
+  local_llm_inference: prohibited
+  unknown_cost_is_free: false
+  no_free_route_status: NO_FREE_ROUTE_AVAILABLE
+  production_requires_owner_approval: true
