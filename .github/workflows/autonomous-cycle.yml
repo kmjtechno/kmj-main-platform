@@ -18,15 +18,25 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
-      - name: Enforce bootstrap safety
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Install controller dependencies
+        run: pip install -r requirements.txt
+      - name: Enforce platform safety boundaries
         shell: bash
         run: |
           set -euo pipefail
           grep -q 'paid_ai_fallback: prohibited' mission/main-platform.yaml
           grep -q 'local_llm_inference: prohibited' mission/main-platform.yaml
           grep -q 'cloud_nexus_policy: untouched' mission/main-platform.yaml
-          echo 'KMJ bootstrap safety gates PASS'
-      - name: Safe bootstrap status
+          grep -q 'paid_fallback: prohibited' config/free-cloud-routing.yaml
+          grep -q 'unknown_cost_is_free: false' config/free-cloud-routing.yaml
+          PYTHONPATH=. python scripts/verify_free_router.py
+          echo 'KMJ agent safety gates PASS'
+      - name: Safe autonomous status
         run: |
-          echo 'No autonomous AI write is enabled until a verified-zero provider route and scoped writer credential are configured.'
+          echo '9Router is transport/discovery only; KMJ verified-zero policy remains authoritative.'
+          echo 'Unknown-cost and paid models are rejected before route selection.'
           echo 'Safe result: NO_FREE_ROUTE_AVAILABLE when no eligible route exists.'

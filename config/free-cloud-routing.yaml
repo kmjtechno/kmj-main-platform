@@ -1,0 +1,81 @@
+policy:
+  generative_ai: cloud_only
+  local_llm: prohibited
+  paid_fallback: prohibited
+  unknown_cost_is_free: false
+  no_route_status: NO_FREE_ROUTE_AVAILABLE
+  router_transport: 9Router
+
+verified_zero:
+  # Dynamically discovered from 9Router /v1/models, then filtered here.
+  # Keep this list conservative: only providers/models whose route is known
+  # to be zero-cost may pass. Add changing providers through explicit review.
+  trusted_prefixes:
+    - "iflow/"
+    - "qwen/"
+    - "kiro/"
+    - "opencode/"
+  trusted_owners:
+    - "iflow"
+    - "qwen"
+    - "kiro"
+    - "opencode"
+  explicit_models: []
+
+deny:
+  model_fragments:
+    - "paid"
+    - "premium"
+    - "pro-payg"
+
+routes:
+  fast:
+    prefer:
+      - "coder"
+      - "flash"
+      - "mini"
+      - "qwen"
+  coding:
+    prefer:
+      - "coder"
+      - "code"
+      - "qwen"
+      - "deepseek"
+      - "reason"
+  deep:
+    prefer:
+      - "reason"
+      - "thinking"
+      - "deep"
+      - "qwen"
+  review:
+    prefer:
+      - "reason"
+      - "coder"
+      - "qwen"
+
+failure_protocol:
+  attempt_1: retry_same_route_with_evidence
+  attempt_2: escalate_to_deep
+  attempt_3: select_different_verified_zero_model_analysis_only
+  attempt_4: circuit_breaker_and_report
+
+agent:
+  name: KMJ Main Platform Engineer
+  scope_repo: kmjtechno/kmj-main-platform
+  cloud_nexus: untouched
+  writer_policy: single_authoritative_writer
+  priorities:
+    - organization
+    - product
+    - entitlement
+    - signed_sandbox_license
+    - product_validation
+    - revocation
+  high_risk_requires_owner_approval:
+    - production
+    - dns
+    - billing
+    - destructive_database
+    - signing_keys
+    - legal
