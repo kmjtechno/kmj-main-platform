@@ -48,3 +48,5 @@ jobs:
           grep -q 'NO_FREE_ROUTE_AVAILABLE' docs/adr/ADR-004-cloud-ai-policy.md
           grep -q 'Organization -> Product -> Entitlement' docs/architecture/first-vertical-slice.md
           grep -q 'production_requires_owner_approval: true' work/backlog.yaml
+      - name: Verify versioned contracts
+        run: python scripts/verify_contracts.py
