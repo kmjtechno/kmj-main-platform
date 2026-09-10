@@ -11,10 +11,23 @@ DB_USER="${KMJ_DB_USER:-kmj_platform}"
 SECRETS="/root/.kmj-server-secrets"
 
 [[ $EUID -eq 0 ]] || { echo "Run as root."; exit 1; }
-[[ -f "$SECRETS" ]] || { echo "Missing $SECRETS"; exit 2; }
 
-# shellcheck disable=SC1090
-source "$SECRETS"
+# New servers use the canonical root secrets file. The original staging VPS
+# predates that file, so fall back to its existing server-local deploy env.
+if [[ -f "$SECRETS" ]]; then
+  # shellcheck disable=SC1090
+  source "$SECRETS"
+elif [[ -f "/home/$SITE_USER/.kmj-stage-env" ]]; then
+  # shellcheck disable=SC1090
+  source "/home/$SITE_USER/.kmj-stage-env"
+  DB_NAME="${KMJ_DB_DATABASE:-$DB_NAME}"
+  DB_USER="${KMJ_DB_USERNAME:-$DB_USER}"
+else
+  echo "No server-local database credential source found."
+  exit 2
+fi
+
+[[ -n "${KMJ_DB_PASSWORD:-}" ]] || { echo "Database password is unavailable."; exit 3; }
 
 ts="$(date +%Y%m%d-%H%M%S)"
 work="/root/kmj-migration-$ts"
