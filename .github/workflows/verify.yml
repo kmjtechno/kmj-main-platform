@@ -1,4 +1,4 @@
-name: Verify Bootstrap
+name: Verify Foundation
 
 on:
   push:
@@ -15,11 +15,11 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
-          python-version: '3.12'
+          python-version: '3.13'
       - run: pip install -r requirements.txt
       - name: Compile controller
         run: python -m compileall controller
-      - name: Verify locked invariants
+      - name: Verify locked runtime invariants
         run: |
           set -euo pipefail
           grep -q 'KMJ_PAID_FALLBACK' render.yaml
@@ -29,3 +29,22 @@ jobs:
           grep -q 'paid_ai_fallback: prohibited' mission/main-platform.yaml
           grep -q 'local_llm_inference: prohibited' mission/main-platform.yaml
           grep -q 'no_free_route_status: NO_FREE_ROUTE_AVAILABLE' mission/main-platform.yaml
+      - name: Verify architecture foundation
+        run: |
+          set -euo pipefail
+          test -f .github/CODEOWNERS
+          test -f docs/adr/ADR-001-system-boundaries.md
+          test -f docs/adr/ADR-002-modular-monolith.md
+          test -f docs/adr/ADR-003-commercial-authority-chain.md
+          test -f docs/adr/ADR-004-cloud-ai-policy.md
+          test -f docs/adr/ADR-005-kristi-governance.md
+          test -f docs/architecture/first-vertical-slice.md
+          test -f work/backlog.yaml
+          test -f apps/platform/README.md
+          test -f packages/contracts/README.md
+          test -f services/license-core/README.md
+          test -f tests/architecture/README.md
+          grep -q 'Cloud Nexus remains a separate engineering IDE' docs/adr/ADR-001-system-boundaries.md
+          grep -q 'NO_FREE_ROUTE_AVAILABLE' docs/adr/ADR-004-cloud-ai-policy.md
+          grep -q 'Organization -> Product -> Entitlement' docs/architecture/first-vertical-slice.md
+          grep -q 'production_requires_owner_approval: true' work/backlog.yaml
