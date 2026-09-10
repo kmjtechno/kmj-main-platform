@@ -1,0 +1,15 @@
+source_repository: https://github.com/laravel/react-starter-kit.git
+source_commit: 87cce8705d712629ebddd70ccfbb06592ecbaac2
+verified_at: 2026-09-10
+runtime_target:
+  laravel: 13
+  php: 8.5
+  inertia: 3
+  react: 19
+  typescript: true
+  postgres: 18
+policy:
+  cloud_nexus: untouched
+  local_llm_inference: prohibited
+  paid_ai_fallback: prohibited
+  production_deploy: prohibited_without_owner_approval
