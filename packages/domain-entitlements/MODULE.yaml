@@ -1,0 +1,10 @@
+name: entitlements
+version: 1
+owns:
+  - entitlement_policies
+  - entitlements
+  - entitlement_ledger
+allowed_dependencies:
+  - organizations
+  - catalog
+persistence_namespace: entitlements
