@@ -23,16 +23,17 @@ phases:
     tasks:
       - id: P1-01
         title: Establish protected development workflow, CODEOWNERS and CI
-        status: done
+        status: blocked_main_branch_protection
+        note: CODEOWNERS and CI are active; GitHub main branch protection is not yet enabled and cannot be changed by the connected GitHub tool.
       - id: P1-02
         title: Add architecture tests and module skeletons
-        status: in_review
+        status: done
       - id: P1-03
         title: Define OpenAPI and event contracts for identity, catalog, entitlement, licensing and releases
         status: done
       - id: P1-04
         title: Bootstrap application runtime after supported versions are verified
-        status: next
+        status: done
   - id: P2
     name: Enterprise Core
     status: pending

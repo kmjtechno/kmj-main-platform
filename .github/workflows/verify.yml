@@ -41,6 +41,7 @@ jobs:
           test -f docs/architecture/first-vertical-slice.md
           test -f work/backlog.yaml
           test -f apps/platform/README.md
+          test -f apps/platform/KMJ_BOUNDARY.md
           test -f packages/contracts/README.md
           test -f services/license-core/README.md
           test -f tests/architecture/README.md
@@ -52,3 +53,5 @@ jobs:
         run: python scripts/verify_contracts.py
       - name: Verify module architecture
         run: python scripts/verify_architecture.py
+      - name: Verify platform runtime provenance
+        run: python scripts/verify_runtime.py
