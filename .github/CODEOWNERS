@@ -1,0 +1,8 @@
+# Initial ownership for KMJ TECHNO Main Platform
+* @kmjtechno
+
+# Security-sensitive surfaces
+/services/license-core/ @kmjtechno
+/packages/contracts/ @kmjtechno
+/docs/adr/ @kmjtechno
+/.github/ @kmjtechno
