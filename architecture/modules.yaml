@@ -1,0 +1,44 @@
+version: 1
+architecture: modular_monolith
+cross_module_write_policy: interfaces_or_events_only
+persistence_policy: module_owned
+cloud_nexus_dependency: prohibited
+
+modules:
+  identity:
+    path: packages/domain-identity
+    owns: [accounts, credentials, sessions, passkeys, workload_identities]
+    allowed_dependencies: []
+  organizations:
+    path: packages/domain-organizations
+    owns: [organizations, memberships, tenant_context]
+    allowed_dependencies: [identity]
+  catalog:
+    path: packages/domain-catalog
+    owns: [products, plans, public_product_facts]
+    allowed_dependencies: [organizations]
+  entitlements:
+    path: packages/domain-entitlements
+    owns: [entitlement_policies, entitlements, entitlement_ledger]
+    allowed_dependencies: [organizations, catalog]
+  licensing:
+    path: packages/domain-licensing
+    owns: [licenses, activations, revocations, license_ledger]
+    allowed_dependencies: [organizations, catalog, entitlements]
+  releases:
+    path: packages/domain-releases
+    owns: [releases, artifacts, provenance, release_status]
+    allowed_dependencies: [catalog]
+
+provider_boundaries:
+  payment: adapters_only
+  generative_ai: adapters_only
+  object_storage: adapters_only
+  email: adapters_only
+
+forbidden_domain_authority_sources:
+  - ui_visibility
+  - raw_payment_webhook
+  - editable_local_license_file
+  - download_filename
+  - generative_model_output
