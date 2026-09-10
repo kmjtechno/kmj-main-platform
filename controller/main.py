@@ -8,15 +8,22 @@ import time
 import uuid
 import yaml
 
-app = FastAPI(title="KMJ Autonomous Dev Controller", version="0.1.1")
+from controller.model_router import FreeCloudRouter, NoFreeRouteAvailable
+
+app = FastAPI(title="KMJ Main Platform Autonomous Engineer", version="0.2.0")
 ROOT = Path(__file__).resolve().parents[1]
 STATE = ROOT / "state" / "runtime.json"
 MISSION = ROOT / "mission" / "main-platform.yaml"
+router = FreeCloudRouter()
 
 
 class StartRequest(BaseModel):
     requested_by: str = "owner-mobile"
     dry_run: bool = True
+
+
+class RouteRequest(BaseModel):
+    route: str = "coding"
 
 
 def load_state():
@@ -45,9 +52,10 @@ def require_control_token(authorization: str | None):
 @app.get("/")
 def root():
     return {
-        "service": "KMJ Autonomous Dev Controller",
-        "version": "0.1.1",
+        "service": "KMJ Main Platform Autonomous Engineer",
+        "version": "0.2.0",
         "health": "/health",
+        "router_status": "/router/status",
         "cloud_nexus": "UNTOUCHED",
     }
 
@@ -57,7 +65,9 @@ def health():
     return {
         "ok": True,
         "mode": os.getenv("KMJ_MODE", "bootstrap"),
+        "router": "9Router + KMJ strict verified-zero gate",
         "paid_fallback": "PROHIBITED",
+        "unknown_cost_is_free": False,
         "local_llm": "PROHIBITED",
         "cloud_nexus": "UNTOUCHED",
         "write_control": "TOKEN_GATED" if os.getenv("KMJ_CONTROL_TOKEN") else "DISABLED",
@@ -73,6 +83,27 @@ def status():
 @app.get("/mission")
 def mission():
     return yaml.safe_load(MISSION.read_text(encoding="utf-8"))
+
+
+@app.get("/router/status")
+async def router_status():
+    return await router.status()
+
+
+@app.post("/router/select")
+async def router_select(req: RouteRequest, authorization: str | None = Header(default=None)):
+    require_control_token(authorization)
+    try:
+        candidate = await router.select(req.route)
+    except NoFreeRouteAvailable:
+        raise HTTPException(503, "NO_FREE_ROUTE_AVAILABLE")
+    return {
+        "route": req.route,
+        "model": candidate.model_id,
+        "owner": candidate.owner,
+        "verification": candidate.reason,
+        "paid_fallback": "PROHIBITED",
+    }
 
 
 @app.post("/start")
@@ -97,10 +128,12 @@ def start(req: StartRequest, authorization: str | None = Header(default=None)):
             "last_cycle": cycle,
             "requested_by": req.requested_by,
             "dry_run": req.dry_run,
+            "agent": "KMJ Main Platform Autonomous Engineer",
+            "router": "9Router + verified-zero gate",
             "message": (
-                "Bootstrap controller is ready. No AI call is made until a current "
-                "verified-zero provider route is configured. NO_FREE_ROUTE_AVAILABLE "
-                "is the safe default."
+                "Agent controller is ready. AI work can route only through dynamically "
+                "discovered verified-zero cloud models. Unknown-cost or paid models are "
+                "rejected. NO_FREE_ROUTE_AVAILABLE is the safe default."
             ),
         }
     )
