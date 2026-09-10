@@ -1,0 +1,107 @@
+name: Bootstrap Platform Runtime
+
+on:
+  push:
+    branches:
+      - implementation/runtime-bootstrap
+    paths:
+      - bootstrap/runtime-source.yaml
+      - .github/workflows/bootstrap-runtime.yml
+
+permissions:
+  contents: write
+
+jobs:
+  import-runtime:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Import pinned official Laravel React starter
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          SOURCE_REPO="https://github.com/laravel/react-starter-kit.git"
+          SOURCE_SHA="87cce8705d712629ebddd70ccfbb06592ecbaac2"
+          TMP_DIR="$(mktemp -d)"
+          trap 'rm -rf "$TMP_DIR"' EXIT
+
+          git clone --quiet --filter=blob:none "$SOURCE_REPO" "$TMP_DIR/upstream"
+          git -C "$TMP_DIR/upstream" checkout --quiet --detach "$SOURCE_SHA"
+          test "$(git -C "$TMP_DIR/upstream" rev-parse HEAD)" = "$SOURCE_SHA"
+
+          mkdir -p apps/platform
+          rsync -a --delete \
+            --exclude='.git' \
+            --exclude='.github' \
+            --exclude='KMJ_BOUNDARY.md' \
+            "$TMP_DIR/upstream/" apps/platform/
+
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          root = Path('apps/platform')
+
+          composer_path = root / 'composer.json'
+          composer = json.loads(composer_path.read_text(encoding='utf-8'))
+          composer['name'] = 'kmjtechno/kmj-main-platform'
+          composer['description'] = 'KMJ TECHNO Main Platform application runtime.'
+          composer_path.write_text(json.dumps(composer, indent=4) + '\n', encoding='utf-8')
+
+          package_path = root / 'package.json'
+          package = json.loads(package_path.read_text(encoding='utf-8'))
+          package['name'] = '@kmjtechno/main-platform'
+          package_path.write_text(json.dumps(package, indent=4) + '\n', encoding='utf-8')
+
+          env_path = root / '.env.example'
+          env = env_path.read_text(encoding='utf-8')
+          env = env.replace('APP_NAME=Laravel', 'APP_NAME="KMJ TECHNO"')
+          env = env.replace('DB_CONNECTION=sqlite', 'DB_CONNECTION=pgsql')
+          env = env.replace('# DB_HOST=127.0.0.1', 'DB_HOST=127.0.0.1')
+          env = env.replace('# DB_PORT=3306', 'DB_PORT=5432')
+          env = env.replace('# DB_DATABASE=laravel', 'DB_DATABASE=kmj_main')
+          env = env.replace('# DB_USERNAME=root', 'DB_USERNAME=kmj')
+          env = env.replace('# DB_PASSWORD=', 'DB_PASSWORD=')
+          env_path.write_text(env, encoding='utf-8')
+
+          (root / '.php-version').write_text('8.5\n', encoding='utf-8')
+          (root / 'UPSTREAM.md').write_text(
+              '# Runtime Upstream Provenance\n\n'
+              '- Source: `https://github.com/laravel/react-starter-kit`\n'
+              '- Pinned commit: `87cce8705d712629ebddd70ccfbb06592ecbaac2`\n'
+              '- Imported for KMJ Main Platform: 2026-09-10\n'
+              '- Runtime target: PHP 8.5 / Laravel 13 / Inertia 3 / React 19 / TypeScript\n'
+              '- Primary authority database target: PostgreSQL 18\n\n'
+              'The upstream source is pinned for reproducibility. Upgrades require a new reviewed pin.\n',
+              encoding='utf-8',
+          )
+          PY
+
+          test -f apps/platform/artisan
+          grep -q '"laravel/framework": "^13.17"' apps/platform/composer.json
+          grep -q '"inertiajs/inertia-laravel": "^3.0"' apps/platform/composer.json
+          grep -q '"@inertiajs/react": "^3.0.0"' apps/platform/package.json
+          grep -q '"@laravel/passkeys": "^0.2.0"' apps/platform/package.json
+          grep -q '"react": "^19.2.0"' apps/platform/package.json
+          grep -q 'DB_CONNECTION=pgsql' apps/platform/.env.example
+          grep -q '^8.5$' apps/platform/.php-version
+
+      - name: Commit imported runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add apps/platform
+          if git diff --cached --quiet; then
+            echo 'Runtime already matches pinned upstream.'
+            exit 0
+          fi
+          git commit -m 'feat(runtime): import pinned Laravel 13 React starter'
+          git push origin HEAD:implementation/runtime-bootstrap
