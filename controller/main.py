@@ -10,11 +10,32 @@ import yaml
 
 from controller.model_router import FreeCloudRouter, NoFreeRouteAvailable
 
-app = FastAPI(title="KMJ Main Platform Autonomous Engineer", version="0.2.0")
+app = FastAPI(title="KMJ Main Platform Autonomous Engineer", version="0.3.0")
 ROOT = Path(__file__).resolve().parents[1]
 STATE = ROOT / "state" / "runtime.json"
 MISSION = ROOT / "mission" / "main-platform.yaml"
 router = FreeCloudRouter()
+
+HIGH_RISK_TERMS = (
+    "production",
+    "dns",
+    "billing",
+    "payment",
+    "drop database",
+    "delete database",
+    "signing key",
+    "private key",
+    "legal",
+)
+
+SYSTEM_PROMPT = """You are the KMJ Main Platform Autonomous Engineer.
+Work only on kmjtechno/kmj-main-platform. Keep KMJ Cloud Nexus untouched.
+Primary critical path: Organization -> Product -> Entitlement -> signed sandbox license -> validation -> revocation.
+Prefer minimal, testable, reversible changes. Diagnose before editing. Never claim a test passed without evidence.
+Generative AI is cloud-only. Paid fallback is prohibited. Unknown cost is not free.
+Production, DNS, billing, destructive database actions, signing keys and legal actions require explicit owner approval.
+Return a concise execution plan with: objective, evidence needed, files/components, tests, risks, and next safe action.
+"""
 
 
 class StartRequest(BaseModel):
@@ -23,6 +44,11 @@ class StartRequest(BaseModel):
 
 
 class RouteRequest(BaseModel):
+    route: str = "coding"
+
+
+class AgentTaskRequest(BaseModel):
+    task: str
     route: str = "coding"
 
 
@@ -49,13 +75,22 @@ def require_control_token(authorization: str | None):
         raise HTTPException(403, "CONTROL_AUTH_INVALID")
 
 
+def high_risk_reason(task: str) -> str | None:
+    task_l = task.lower()
+    for term in HIGH_RISK_TERMS:
+        if term in task_l:
+            return term
+    return None
+
+
 @app.get("/")
 def root():
     return {
         "service": "KMJ Main Platform Autonomous Engineer",
-        "version": "0.2.0",
+        "version": "0.3.0",
         "health": "/health",
         "router_status": "/router/status",
+        "agent_plan": "/agent/plan",
         "cloud_nexus": "UNTOUCHED",
     }
 
@@ -106,6 +141,40 @@ async def router_select(req: RouteRequest, authorization: str | None = Header(de
     }
 
 
+@app.post("/agent/plan")
+async def agent_plan(req: AgentTaskRequest, authorization: str | None = Header(default=None)):
+    require_control_token(authorization)
+    risk = high_risk_reason(req.task)
+    if risk:
+        return {
+            "accepted": False,
+            "status": "OWNER_APPROVAL_REQUIRED",
+            "risk": risk,
+            "task": req.task,
+        }
+
+    try:
+        result = await router.complete(
+            [
+                {"role": "system", "content": SYSTEM_PROMPT},
+                {"role": "user", "content": req.task},
+            ],
+            route=req.route,
+        )
+    except NoFreeRouteAvailable as exc:
+        raise HTTPException(503, str(exc))
+
+    return {
+        "accepted": True,
+        "task": req.task,
+        "route": req.route,
+        "model": result["model"],
+        "verification": result["verification"],
+        "attempts": result["attempts"],
+        "response": result["response"],
+    }
+
+
 @app.post("/start")
 def start(req: StartRequest, authorization: str | None = Header(default=None)):
     require_control_token(authorization)
@@ -131,9 +200,8 @@ def start(req: StartRequest, authorization: str | None = Header(default=None)):
             "agent": "KMJ Main Platform Autonomous Engineer",
             "router": "9Router + verified-zero gate",
             "message": (
-                "Agent controller is ready. AI work can route only through dynamically "
-                "discovered verified-zero cloud models. Unknown-cost or paid models are "
-                "rejected. NO_FREE_ROUTE_AVAILABLE is the safe default."
+                "Agent runtime is ready for verified-free cloud planning and failover. "
+                "Autonomous repository writes remain separately execution-gated."
             ),
         }
     )
