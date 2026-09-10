@@ -1,0 +1,61 @@
+name: Platform Runtime CI
+
+on:
+  push:
+    branches:
+      - main
+      - implementation/runtime-bootstrap
+    paths:
+      - 'apps/platform/**'
+      - 'bootstrap/runtime-source.yaml'
+      - '.github/workflows/platform-ci.yml'
+  pull_request:
+    paths:
+      - 'apps/platform/**'
+      - 'bootstrap/runtime-source.yaml'
+      - '.github/workflows/platform-ci.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  platform:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: apps/platform
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Setup PHP 8.5
+        uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # v2, exact pin used by official Laravel starter CI
+        with:
+          php-version: '8.5'
+          tools: composer:v2
+          coverage: none
+
+      - name: Setup Node 22
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '22'
+
+      - name: Prepare deterministic CI database
+        run: |
+          set -euo pipefail
+          touch database/database.sqlite
+
+      - name: Install and build application
+        env:
+          DB_CONNECTION: sqlite
+          DB_DATABASE: ${{ github.workspace }}/apps/platform/database/database.sqlite
+        run: composer setup
+
+      - name: Run upstream-quality CI checks
+        env:
+          DB_CONNECTION: sqlite
+          DB_DATABASE: ${{ github.workspace }}/apps/platform/database/database.sqlite
+        run: composer ci:check
