@@ -3,6 +3,7 @@
 This directory contains the Main Platform application runtime.
 
 Locked rules:
+
 - Main Platform owns business/customer/product/licensing/release/automation authority.
 - KMJ Cloud Nexus remains a separate engineering IDE and is not a runtime dependency here.
 - Domain authority belongs in module packages/services, not UI visibility or provider SDKs.
