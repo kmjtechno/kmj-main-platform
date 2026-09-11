@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\LicenseAuditEvent;
 use App\Models\User;
 use App\Services\AuthorityBootstrapper;
 use App\Services\Licensing\LicenseAuditRecorder;
@@ -53,11 +54,34 @@ Route::middleware(['auth', 'verified'])->group(function () {
             })
             ->values()
             ->all();
+        $organizationIds = collect($items)
+            ->pluck('id')
+            ->filter(fn (mixed $id): bool => is_string($id))
+            ->values()
+            ->all();
+        $auditEvents = $organizationIds === []
+            ? []
+            : LicenseAuditEvent::query()
+                ->whereIn('organization_id', $organizationIds)
+                ->latest('id')
+                ->limit(20)
+                ->get(['id', 'organization_id', 'action', 'status', 'jti', 'metadata', 'created_at'])
+                ->map(fn (LicenseAuditEvent $event): array => [
+                    'id' => $event->getKey(),
+                    'organization_id' => $event->getAttribute('organization_id'),
+                    'action' => $event->getAttribute('action'),
+                    'status' => $event->getAttribute('status'),
+                    'jti' => $event->getAttribute('jti'),
+                    'metadata' => $event->getAttribute('metadata'),
+                    'created_at' => $event->getAttribute('created_at')?->toISOString(),
+                ])
+                ->all();
 
         return Inertia::render('sandbox-licenses', [
             'organizations' => $items,
             'licenseResult' => $request->session()->get('sandbox_license'),
             'validationResult' => $request->session()->get('sandbox_license_validation'),
+            'auditEvents' => $auditEvents,
         ]);
     })->name('sandbox-licenses.index');
 
