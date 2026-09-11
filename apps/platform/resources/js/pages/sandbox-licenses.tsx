@@ -62,7 +62,9 @@ export default function SandboxLicenses({
                                 License Control Center
                             </h1>
                             <p className="text-muted-foreground mt-2 max-w-2xl text-sm leading-6">
-                                Issue a short-lived license only from an active entitlement, validate it, then revoke it and confirm the same token fails closed.
+                                Issue a short-lived license only from an active
+                                entitlement, validate it, then revoke it and
+                                confirm the same token fails closed.
                             </p>
                         </div>
                     </div>
@@ -71,7 +73,10 @@ export default function SandboxLicenses({
                 <div className="grid gap-6 xl:grid-cols-3">
                     <section className="border-sidebar-border/70 bg-card rounded-2xl border p-5">
                         <h2 className="font-bold">1. Issue license</h2>
-                        <p className="text-muted-foreground mt-1 text-xs">Owner-scoped, entitlement-backed, 30-minute sandbox token.</p>
+                        <p className="text-muted-foreground mt-1 text-xs">
+                            Owner-scoped, entitlement-backed, 30-minute sandbox
+                            token.
+                        </p>
                         <form
                             className="mt-5 space-y-4"
                             onSubmit={(event) => {
@@ -92,7 +97,10 @@ export default function SandboxLicenses({
                             >
                                 <option value="">Select organization</option>
                                 {organizations.map((organization) => (
-                                    <option key={organization.id} value={organization.id}>
+                                    <option
+                                        key={organization.id}
+                                        value={organization.id}
+                                    >
                                         {organization.name}
                                     </option>
                                 ))}
@@ -101,15 +109,28 @@ export default function SandboxLicenses({
                             <select
                                 className="border-input bg-background h-11 w-full rounded-xl border px-3 text-sm"
                                 value={issue.data.entitlement_id}
-                                onChange={(event) => issue.setData('entitlement_id', event.target.value)}
+                                onChange={(event) =>
+                                    issue.setData(
+                                        'entitlement_id',
+                                        event.target.value,
+                                    )
+                                }
                                 required
                                 disabled={!selectedOrganization}
                             >
-                                <option value="">Select active entitlement</option>
+                                <option value="">
+                                    Select active entitlement
+                                </option>
                                 {selectedOrganization?.entitlements
-                                    .filter((entitlement) => entitlement.status === 'active')
+                                    .filter(
+                                        (entitlement) =>
+                                            entitlement.status === 'active',
+                                    )
                                     .map((entitlement) => (
-                                        <option key={entitlement.id} value={entitlement.id}>
+                                        <option
+                                            key={entitlement.id}
+                                            value={entitlement.id}
+                                        >
                                             {entitlement.capability}
                                         </option>
                                     ))}
@@ -121,14 +142,19 @@ export default function SandboxLicenses({
                                 className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-red-600 px-4 text-sm font-bold text-white disabled:opacity-60"
                             >
                                 <KeyRound className="h-4 w-4" />
-                                {issue.processing ? 'Issuing…' : 'Issue sandbox license'}
+                                {issue.processing
+                                    ? 'Issuing…'
+                                    : 'Issue sandbox license'}
                             </button>
                         </form>
                     </section>
 
                     <section className="border-sidebar-border/70 bg-card rounded-2xl border p-5">
                         <h2 className="font-bold">2. Validate token</h2>
-                        <p className="text-muted-foreground mt-1 text-xs">Checks signature, environment, expiry and persisted revocation state.</p>
+                        <p className="text-muted-foreground mt-1 text-xs">
+                            Checks signature, environment, expiry and persisted
+                            revocation state.
+                        </p>
                         <form
                             className="mt-5 space-y-4"
                             onSubmit={(event) => {
@@ -139,7 +165,12 @@ export default function SandboxLicenses({
                             <textarea
                                 className="border-input bg-background min-h-36 w-full rounded-xl border p-3 font-mono text-xs"
                                 value={validate.data.license}
-                                onChange={(event) => validate.setData('license', event.target.value)}
+                                onChange={(event) =>
+                                    validate.setData(
+                                        'license',
+                                        event.target.value,
+                                    )
+                                }
                                 placeholder="Paste sandbox license token"
                                 required
                             />
@@ -148,14 +179,19 @@ export default function SandboxLicenses({
                                 disabled={validate.processing}
                                 className="h-11 w-full rounded-xl border px-4 text-sm font-bold disabled:opacity-60"
                             >
-                                {validate.processing ? 'Validating…' : 'Validate license'}
+                                {validate.processing
+                                    ? 'Validating…'
+                                    : 'Validate license'}
                             </button>
                         </form>
                     </section>
 
                     <section className="border-sidebar-border/70 bg-card rounded-2xl border p-5">
                         <h2 className="font-bold">3. Revoke token</h2>
-                        <p className="text-muted-foreground mt-1 text-xs">Persists the JTI revocation and immediately re-validates the token.</p>
+                        <p className="text-muted-foreground mt-1 text-xs">
+                            Persists the JTI revocation and immediately
+                            re-validates the token.
+                        </p>
                         <form
                             className="mt-5 space-y-4"
                             onSubmit={(event) => {
@@ -166,14 +202,21 @@ export default function SandboxLicenses({
                             <textarea
                                 className="border-input bg-background min-h-28 w-full rounded-xl border p-3 font-mono text-xs"
                                 value={revoke.data.license}
-                                onChange={(event) => revoke.setData('license', event.target.value)}
+                                onChange={(event) =>
+                                    revoke.setData(
+                                        'license',
+                                        event.target.value,
+                                    )
+                                }
                                 placeholder="Paste token to revoke"
                                 required
                             />
                             <input
                                 className="border-input bg-background h-11 w-full rounded-xl border px-3 text-sm"
                                 value={revoke.data.reason}
-                                onChange={(event) => revoke.setData('reason', event.target.value)}
+                                onChange={(event) =>
+                                    revoke.setData('reason', event.target.value)
+                                }
                                 placeholder="Reason (optional)"
                                 maxLength={255}
                             />
@@ -183,7 +226,9 @@ export default function SandboxLicenses({
                                 className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl border border-red-500/30 px-4 text-sm font-bold text-red-500 disabled:opacity-60"
                             >
                                 <ShieldAlert className="h-4 w-4" />
-                                {revoke.processing ? 'Revoking…' : 'Revoke license'}
+                                {revoke.processing
+                                    ? 'Revoking…'
+                                    : 'Revoke license'}
                             </button>
                         </form>
                     </section>
@@ -212,7 +257,8 @@ export default function SandboxLicenses({
                                 <ShieldAlert className="h-5 w-5 text-red-500" />
                             )}
                             <h2 className="font-bold">
-                                Validation: {validationResult.valid ? 'VALID' : 'INVALID'}
+                                Validation:{' '}
+                                {validationResult.valid ? 'VALID' : 'INVALID'}
                             </h2>
                         </div>
                         <p className="text-muted-foreground mt-2 text-xs">
@@ -220,7 +266,11 @@ export default function SandboxLicenses({
                         </p>
                         {validationResult.claims && (
                             <pre className="bg-muted/30 mt-4 overflow-x-auto rounded-xl border p-4 text-xs">
-                                {JSON.stringify(validationResult.claims, null, 2)}
+                                {JSON.stringify(
+                                    validationResult.claims,
+                                    null,
+                                    2,
+                                )}
                             </pre>
                         )}
                     </section>
