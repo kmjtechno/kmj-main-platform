@@ -47,6 +47,7 @@ type Props = {
     licenseResult: LicenseResult | null;
     validationResult: ValidationResult | null;
     auditEvents: AuditEvent[];
+    validationEngine: string;
 };
 
 export default function SandboxLicenses({
@@ -54,6 +55,7 @@ export default function SandboxLicenses({
     licenseResult,
     validationResult,
     auditEvents,
+    validationEngine,
 }: Props) {
     const issue = useForm({ organization_id: '', entitlement_id: '' });
     const validate = useForm({ license: licenseResult?.token ?? '' });
@@ -90,6 +92,12 @@ export default function SandboxLicenses({
                                 entitlement, validate it, then revoke it and
                                 confirm the same token fails closed.
                             </p>
+                            <div className="mt-3 inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-semibold">
+                                Validation engine
+                                <span className="font-mono text-red-500">
+                                    {validationEngine}
+                                </span>
+                            </div>
                         </div>
                     </div>
                 </section>
