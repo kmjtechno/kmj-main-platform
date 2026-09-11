@@ -7,6 +7,7 @@ use App\Services\Licensing\LicenseValidator;
 use App\Services\Licensing\RustSandboxLicenseVerifier;
 use App\Services\Licensing\SandboxLicenseIssuer;
 use App\Services\Licensing\SandboxLicenseLifecycle;
+use App\Services\Licensing\SandboxLicenseValidationEngine;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
@@ -33,6 +34,14 @@ class AppServiceProvider extends ServiceProvider
                 (string) config('services.kmj_sandbox_licensing.rust_verifier_binary', ''),
                 $this->sandboxLicenseSecret(),
                 (float) config('services.kmj_sandbox_licensing.rust_verifier_timeout', 5),
+            );
+        });
+
+        $this->app->singleton(SandboxLicenseValidationEngine::class, function ($app): SandboxLicenseValidationEngine {
+            return new SandboxLicenseValidationEngine(
+                $app->make(LicenseValidator::class),
+                $app->make(RustSandboxLicenseVerifier::class),
+                (string) config('services.kmj_sandbox_licensing.validation_engine', 'php'),
             );
         });
 
