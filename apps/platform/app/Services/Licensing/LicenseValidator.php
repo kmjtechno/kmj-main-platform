@@ -7,7 +7,8 @@ use JsonException;
 
 final class LicenseValidator
 {
-    public function __construct(private readonly string $secret) {}
+    public function __construct(private readonly string $secret)
+    {}
 
     /**
      * @return array{valid: bool, reason: string|null, claims: array<string, mixed>|null}
@@ -73,8 +74,6 @@ final class LicenseValidator
     }
 
     /**
-     * @param  array<string, mixed>|null  $claims
-     *
      * @return array{valid: false, reason: string, claims: array<string, mixed>|null}
      */
     private function invalid(string $reason, ?array $claims = null): array
