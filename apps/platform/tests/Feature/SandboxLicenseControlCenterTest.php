@@ -11,7 +11,7 @@ final class SandboxLicenseControlCenterTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_owner_can_issue_and_revoke_sandbox_license_from_control_surface(): void
+    public function test_owner_can_issue_validate_and_revoke_sandbox_license_from_control_surface(): void
     {
         $user = User::factory()->create();
 
@@ -33,6 +33,13 @@ final class SandboxLicenseControlCenterTest extends TestCase
         $license = session('sandbox_license.token');
         self::assertIsString($license);
         self::assertNotSame('', $license);
+
+        $validateResponse = $this->actingAs($user)->post('/sandbox-licenses/validate', [
+            'license' => $license,
+        ]);
+
+        $validateResponse->assertRedirect(route('sandbox-licenses.index'));
+        $validateResponse->assertSessionHas('sandbox_license_validation.valid', true);
 
         $revokeResponse = $this->actingAs($user)->post('/sandbox-licenses/revoke', [
             'license' => $license,
@@ -61,5 +68,38 @@ final class SandboxLicenseControlCenterTest extends TestCase
             'organization_id' => $entitlement->organization_id,
             'entitlement_id' => $entitlement->id,
         ])->assertForbidden();
+    }
+
+    public function test_user_cannot_validate_or_revoke_another_organizations_license(): void
+    {
+        $owner = User::factory()->create();
+        $otherUser = User::factory()->create();
+
+        $this->actingAs($owner)->post('/organizations', [
+            'name' => 'Owner Organization',
+        ]);
+
+        $entitlement = DB::table('entitlements')->first();
+        self::assertNotNull($entitlement);
+
+        $issueResponse = $this->actingAs($owner)->post('/sandbox-licenses', [
+            'organization_id' => $entitlement->organization_id,
+            'entitlement_id' => $entitlement->id,
+        ]);
+        $issueResponse->assertRedirect(route('sandbox-licenses.index'));
+
+        $license = session('sandbox_license.token');
+        self::assertIsString($license);
+
+        $this->actingAs($otherUser)->post('/sandbox-licenses/validate', [
+            'license' => $license,
+        ])->assertForbidden();
+
+        $this->actingAs($otherUser)->post('/sandbox-licenses/revoke', [
+            'license' => $license,
+            'reason' => 'unauthorized-attempt',
+        ])->assertForbidden();
+
+        $this->assertDatabaseCount('license_revocations', 0);
     }
 }
