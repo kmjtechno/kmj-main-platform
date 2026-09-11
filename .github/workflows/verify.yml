@@ -29,6 +29,14 @@ jobs:
           grep -q 'paid_ai_fallback: prohibited' mission/main-platform.yaml
           grep -q 'local_llm_inference: prohibited' mission/main-platform.yaml
           grep -q 'no_free_route_status: NO_FREE_ROUTE_AVAILABLE' mission/main-platform.yaml
+      - name: Verify backup and recovery scripts
+        run: |
+          set -euo pipefail
+          bash -n scripts/backup_platform.sh
+          bash -n scripts/verify_backup_bundle.sh
+          grep -q 'BACKUP_REMOTE' scripts/backup_platform.sh
+          grep -q 'BACKUP_AGE_RECIPIENT' scripts/backup_platform.sh
+          grep -q 'sha256sum --check' scripts/verify_backup_bundle.sh
       - name: Verify architecture foundation
         run: |
           set -euo pipefail
