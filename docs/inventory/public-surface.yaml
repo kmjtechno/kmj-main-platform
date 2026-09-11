@@ -1,0 +1,58 @@
+version: 1
+scope: kmj_main_platform
+cloud_nexus: untouched
+sources:
+  routes:
+    - apps/platform/routes/web.php
+    - apps/platform/routes/settings.php
+    - apps/platform/config/fortify.php
+  assets: apps/platform/public
+  facts:
+    - README.md
+    - apps/platform/KMJ_BOUNDARY.md
+public_urls:
+  - path: /
+    access: public
+    purpose: Main Platform welcome surface
+    source: apps/platform/routes/web.php
+  - path: /login
+    access: guest
+    purpose: Account sign-in
+    source: apps/platform/config/fortify.php
+  - path: /register
+    access: guest
+    purpose: Account registration
+    source: apps/platform/config/fortify.php
+  - path: /forgot-password
+    access: guest
+    purpose: Password recovery request
+    source: apps/platform/config/fortify.php
+  - path: /reset-password/{token}
+    access: guest
+    purpose: Password reset completion
+    source: apps/platform/config/fortify.php
+  - path: /.well-known/passkey-endpoints
+    access: public
+    purpose: Passkey enrollment/manage discovery
+    source: apps/platform/routes/settings.php
+protected_control_surfaces:
+  - /dashboard
+  - /sandbox-licenses
+  - /settings/profile
+  - /settings/security
+  - /settings/appearance
+public_assets:
+  - .htaccess
+  - apple-touch-icon.png
+  - favicon.ico
+  - favicon.svg
+  - index.php
+  - robots.txt
+approved_facts:
+  - Main Platform owns business, customer, product, licensing, release, and automation authority.
+  - KMJ Cloud Nexus is separate and is not a Main Platform runtime dependency.
+  - Git is the source of truth.
+  - Generative AI is cloud-only; local LLM inference is prohibited.
+  - Paid AI fallback is prohibited and unknown cost is not free.
+  - Deterministic workflows remain usable when no verified-zero AI route exists.
+  - Production deployment, DNS, billing, destructive database actions, and signing-key operations require explicit owner approval.
