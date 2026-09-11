@@ -30,7 +30,7 @@ final class SandboxLicenseValidationEngineTest extends TestCase
         $rustVerifier = new RustSandboxLicenseVerifier(
             '/configured/verifier',
             'unused',
-            runner: static function (string $license) use ($phpValidator): array {
+            runner: static function (string $license, string $secret, float $timeout) use ($phpValidator): array {
                 return [
                     'exit_code' => 0,
                     'output' => json_encode($phpValidator->validate($license), JSON_THROW_ON_ERROR),
@@ -48,7 +48,7 @@ final class SandboxLicenseValidationEngineTest extends TestCase
         $rustVerifier = new RustSandboxLicenseVerifier(
             '/configured/verifier',
             'unused',
-            runner: static function (string $license) use ($phpValidator): array {
+            runner: static function (string $license, string $secret, float $timeout) use ($phpValidator): array {
                 $result = $phpValidator->validate($license);
                 $result['claims']['product_id'] = 'different-product';
 
@@ -73,7 +73,7 @@ final class SandboxLicenseValidationEngineTest extends TestCase
         $rustVerifier = new RustSandboxLicenseVerifier(
             '/configured/verifier',
             'unused',
-            runner: static fn (): never => throw new \RuntimeException('Rust should not run for PHP-invalid licenses.'),
+            runner: static fn (string $license, string $secret, float $timeout): never => throw new \RuntimeException('Rust should not run for PHP-invalid licenses.'),
         );
         $engine = new SandboxLicenseValidationEngine($phpValidator, $rustVerifier, 'cross_check');
         $result = $engine->validate($license);
