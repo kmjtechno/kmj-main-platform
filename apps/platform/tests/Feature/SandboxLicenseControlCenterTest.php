@@ -27,7 +27,7 @@ final class SandboxLicenseControlCenterTest extends TestCase
             'entitlement_id' => $entitlement->id,
         ]);
 
-        $issueResponse->assertRedirect(route('dashboard'));
+        $issueResponse->assertRedirect(route('sandbox-licenses.index'));
         $issueResponse->assertSessionHas('sandbox_license.validation.valid', true);
 
         $license = session('sandbox_license.token');
@@ -39,7 +39,7 @@ final class SandboxLicenseControlCenterTest extends TestCase
             'reason' => 'control-center-test',
         ]);
 
-        $revokeResponse->assertRedirect(route('dashboard'));
+        $revokeResponse->assertRedirect(route('sandbox-licenses.index'));
         $revokeResponse->assertSessionHas('sandbox_license_validation.valid', false);
         $revokeResponse->assertSessionHas('sandbox_license_validation.reason', 'revoked');
         $this->assertDatabaseCount('license_revocations', 1);
