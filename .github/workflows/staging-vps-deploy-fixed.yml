@@ -143,6 +143,9 @@ jobs:
           fi
           echo "Using PHP runtime: $($PHP_BIN -r 'echo PHP_BINARY;')"
 
+          # Remove stale package manifests before switching to --no-dev.
+          # Otherwise a previous dev install can leave providers such as Laravel Pail cached.
+          rm -f bootstrap/cache/packages.php bootstrap/cache/services.php
           COMPOSER_PHP="$PHP_BIN" composer install --no-interaction --prefer-dist --no-progress --no-dev --optimize-autoloader
           "$PHP_BIN" artisan migrate --force
           if [ -f package-lock.json ]; then
