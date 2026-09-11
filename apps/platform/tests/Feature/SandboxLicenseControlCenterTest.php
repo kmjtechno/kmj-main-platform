@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
 
 final class SandboxLicenseControlCenterTest extends TestCase
@@ -69,6 +70,38 @@ final class SandboxLicenseControlCenterTest extends TestCase
             'status' => 'revoked',
         ]);
         $this->assertDatabaseCount('license_audit_events', 3);
+    }
+
+    public function test_license_audit_history_is_visible_only_for_managed_organizations(): void
+    {
+        $owner = User::factory()->create();
+        $otherUser = User::factory()->create();
+
+        $this->actingAs($owner)->post('/organizations', ['name' => 'Owner Organization']);
+        $ownerEntitlement = DB::table('entitlements')->first();
+        self::assertNotNull($ownerEntitlement);
+        $this->actingAs($owner)->post('/sandbox-licenses', [
+            'organization_id' => $ownerEntitlement->organization_id,
+            'entitlement_id' => $ownerEntitlement->id,
+        ]);
+
+        $this->actingAs($otherUser)->post('/organizations', ['name' => 'Other Organization']);
+        $otherEntitlement = DB::table('entitlements')
+            ->where('organization_id', '!=', $ownerEntitlement->organization_id)
+            ->first();
+        self::assertNotNull($otherEntitlement);
+        $this->actingAs($otherUser)->post('/sandbox-licenses', [
+            'organization_id' => $otherEntitlement->organization_id,
+            'entitlement_id' => $otherEntitlement->id,
+        ]);
+
+        $this->actingAs($owner)->get('/sandbox-licenses')
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('sandbox-licenses')
+                ->has('auditEvents', 1)
+                ->where('auditEvents.0.organization_id', $ownerEntitlement->organization_id)
+                ->where('auditEvents.0.action', 'sandbox_license.issued'));
     }
 
     public function test_user_cannot_issue_license_for_another_organization(): void
