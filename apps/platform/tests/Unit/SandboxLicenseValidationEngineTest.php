@@ -8,10 +8,13 @@ use App\Services\Licensing\RustSandboxLicenseVerifier;
 use App\Services\Licensing\SandboxLicenseIssuer;
 use App\Services\Licensing\SandboxLicenseValidationEngine;
 use DateTimeImmutable;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 final class SandboxLicenseValidationEngineTest extends TestCase
 {
+    use RefreshDatabase;
+
     public function test_php_mode_remains_authoritative_without_rust_configuration(): void
     {
         [$license, $phpValidator] = $this->licenseFixture();
