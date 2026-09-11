@@ -1,9 +1,11 @@
 name: Staging VPS Deploy
 
 on:
-  push:
-    branches:
-      - staging-approved
+  workflow_run:
+    workflows:
+      - Staging Promotion Gate
+    types:
+      - completed
   workflow_dispatch:
 
 permissions:
@@ -16,16 +18,33 @@ concurrency:
 jobs:
   deploy:
     name: Deploy approved commit to staging VPS
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     environment: staging
 
     steps:
-      - name: Checkout exact approved commit
+      - name: Checkout approved staging branch
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-          ref: ${{ github.sha }}
+          ref: staging-approved
+          fetch-depth: 1
+
+      - name: Resolve exact approved commit
+        id: approved
+        env:
+          PROMOTED_SHA: ${{ github.event.workflow_run.head_sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          approved_sha="$(git rev-parse HEAD)"
+          if [ "${{ github.event_name }}" = "workflow_run" ]; then
+            test -n "$PROMOTED_SHA"
+            test "$approved_sha" = "$PROMOTED_SHA"
+          fi
+          echo "sha=$approved_sha" >> "$GITHUB_OUTPUT"
+          echo "DEPLOY_SHA=$approved_sha" >> "$GITHUB_ENV"
 
       - name: Validate staging deployment configuration
         env:
@@ -53,12 +72,11 @@ jobs:
           chmod 600 ~/.ssh/id_ed25519
           ssh-keyscan -H "$STAGING_HOST" >> ~/.ssh/known_hosts
 
-      - name: Deploy staging-approved commit
+      - name: Deploy approved commit
         env:
           STAGING_HOST: ${{ secrets.STAGING_SSH_HOST }}
           STAGING_USER: ${{ secrets.STAGING_SSH_USER }}
           STAGING_PATH: ${{ vars.STAGING_APP_PATH }}
-          DEPLOY_SHA: ${{ github.sha }}
         shell: bash
         run: |
           set -euo pipefail
@@ -85,7 +103,6 @@ jobs:
           STAGING_HOST: ${{ secrets.STAGING_SSH_HOST }}
           STAGING_USER: ${{ secrets.STAGING_SSH_USER }}
           STAGING_PATH: ${{ vars.STAGING_APP_PATH }}
-          DEPLOY_SHA: ${{ github.sha }}
         shell: bash
         run: |
           set -euo pipefail
