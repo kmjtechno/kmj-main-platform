@@ -2,6 +2,7 @@
 
 use App\Models\User;
 use App\Services\AuthorityBootstrapper;
+use App\Services\Licensing\LicenseAuditRecorder;
 use App\Services\Licensing\SandboxLicenseLifecycle;
 use DateTimeImmutable as ImmutableDateTime;
 use Illuminate\Http\Request;
@@ -80,6 +81,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Request $request,
         OrganizationDirectory $organizations,
         SandboxLicenseLifecycle $licenses,
+        LicenseAuditRecorder $audit,
     ) {
         $user = $request->user();
         abort_unless($user instanceof User, 401);
@@ -103,12 +105,24 @@ Route::middleware(['auth', 'verified'])->group(function () {
             $entitlement->getKey(),
             new ImmutableDateTime('+30 minutes'),
         );
+        $validation = $licenses->validate($license);
+        $claims = $validation['claims'];
+        $jti = is_array($claims) ? ($claims['jti'] ?? null) : null;
+
+        $audit->record(
+            'sandbox_license.issued',
+            $user->id,
+            $validated['organization_id'],
+            is_string($jti) ? $jti : null,
+            'success',
+            ['entitlement_id' => $validated['entitlement_id']],
+        );
 
         return redirect()
             ->route('sandbox-licenses.index')
             ->with('sandbox_license', [
                 'token' => $license,
-                'validation' => $licenses->validate($license),
+                'validation' => $validation,
             ]);
     })->name('sandbox-licenses.store');
 
@@ -116,6 +130,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Request $request,
         OrganizationDirectory $organizations,
         SandboxLicenseLifecycle $licenses,
+        LicenseAuditRecorder $audit,
     ) {
         $user = $request->user();
         abort_unless($user instanceof User, 401);
@@ -125,11 +140,22 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ]);
 
         $result = $licenses->validate($validated['license']);
-        $organizationId = $result['claims']['organization_id'] ?? null;
+        $claims = $result['claims'];
+        $organizationId = is_array($claims) ? ($claims['organization_id'] ?? null) : null;
+        $jti = is_array($claims) ? ($claims['jti'] ?? null) : null;
 
         if (is_string($organizationId)) {
             abort_unless($organizations->userCanManage($user->id, $organizationId), 403);
         }
+
+        $audit->record(
+            'sandbox_license.validated',
+            $user->id,
+            is_string($organizationId) ? $organizationId : null,
+            is_string($jti) ? $jti : null,
+            $result['valid'] ? 'valid' : 'invalid',
+            ['reason' => $result['reason']],
+        );
 
         return redirect()
             ->route('sandbox-licenses.index')
@@ -140,6 +166,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Request $request,
         OrganizationDirectory $organizations,
         SandboxLicenseLifecycle $licenses,
+        LicenseAuditRecorder $audit,
     ) {
         $user = $request->user();
         abort_unless($user instanceof User, 401);
@@ -158,6 +185,14 @@ Route::middleware(['auth', 'verified'])->group(function () {
         abort_unless($organizations->userCanManage($user->id, $organizationId), 403);
 
         $licenses->revoke($jti, $validated['reason'] ?? null);
+        $audit->record(
+            'sandbox_license.revoked',
+            $user->id,
+            $organizationId,
+            $jti,
+            'revoked',
+            ['reason' => $validated['reason'] ?? null],
+        );
 
         return redirect()
             ->route('sandbox-licenses.index')
