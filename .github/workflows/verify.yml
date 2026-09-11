@@ -55,6 +55,11 @@ jobs:
         run: PYTHONPATH=. python scripts/verify_free_router.py
       - name: Verify versioned contracts
         run: python scripts/verify_contracts.py
+      - name: Verify Rust sandbox license core
+        run: |
+          rustup default stable
+          cargo fmt --manifest-path services/license-core/Cargo.toml --check
+          cargo test --manifest-path services/license-core/Cargo.toml --locked
       - name: Verify module architecture
         run: python scripts/verify_architecture.py
       - name: Verify platform runtime provenance
