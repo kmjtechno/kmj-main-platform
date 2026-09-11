@@ -4,10 +4,20 @@ policy:
   paid_fallback: prohibited
   unknown_cost_is_free: false
   no_route_status: NO_FREE_ROUTE_AVAILABLE
-  router_transport: 9Router
+  router_transport: federated_verified_zero
+
+providers:
+  # Direct provider adapters are dormant until their API key exists.
+  priority:
+    - 9router
+    - openrouter
+    - groq
+    - cerebras
+    - gemini
+    - mistral
 
 verified_zero:
-  # Dynamically discovered from 9Router /v1/models, then filtered here.
+  # Models are discovered from configured providers and filtered by the strict-zero gate.
   # Keep this list conservative: only providers/models whose route is known
   # to be zero-cost may pass. Add changing providers through explicit review.
   trusted_prefixes:
@@ -20,7 +30,11 @@ verified_zero:
     - "qwen"
     - "kiro"
     - "opencode"
-  explicit_models: []
+  # OpenRouter free auto-router is always zero-price; all other direct
+  # providers must be explicitly verified as free-tier before use.
+  explicit_models:
+    - "openrouter/free"
+  verified_free_provider_accounts: []
 
 deny:
   model_fragments:
