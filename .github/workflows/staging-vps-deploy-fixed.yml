@@ -75,7 +75,7 @@ jobs:
         run: |
           set -euo pipefail
           install -m 700 -d ~/.ssh
-          printf '%s\n' "$STAGING_KEY" > ~/.ssh/id_ed25519
+          printf '%s\n' "$STAGING_KEY" | tr -d '\r' > ~/.ssh/id_ed25519
           chmod 600 ~/.ssh/id_ed25519
           for attempt in 1 2 3; do
             if ssh-keyscan -T 10 -H "$STAGING_HOST" >> ~/.ssh/known_hosts 2>/dev/null; then
