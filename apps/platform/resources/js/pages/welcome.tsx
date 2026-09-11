@@ -60,10 +60,16 @@ const authority = [
 ];
 
 export default function Welcome() {
+    const stagingSyncBadge = (
+        <div className="fixed right-4 bottom-4 z-50 rounded-full border border-emerald-400/20 bg-[#08110d]/95 px-3 py-2 text-[10px] font-bold tracking-[0.12em] text-emerald-300 uppercase shadow-2xl backdrop-blur">
+            Live staging · frontend sync
+        </div>
+    );
     const { auth } = usePage().props;
 
     return (
         <>
+            {stagingSyncBadge}
             <Head title="KMJ TECHNO — Main Platform">
                 <meta
                     name="description"
