@@ -37,6 +37,8 @@ return [
 
     'kmj_sandbox_licensing' => [
         'secret' => env('KMJ_SANDBOX_LICENSE_SECRET'),
+        'rust_verifier_binary' => env('KMJ_SANDBOX_RUST_VERIFIER_BINARY', ''),
+        'rust_verifier_timeout' => (float) env('KMJ_SANDBOX_RUST_VERIFIER_TIMEOUT', 5),
     ],
 
 ];
