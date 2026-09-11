@@ -1,5 +1,11 @@
 import { Head, useForm } from '@inertiajs/react';
-import { CheckCircle2, KeyRound, ShieldAlert, ShieldCheck } from 'lucide-react';
+import {
+    CheckCircle2,
+    History,
+    KeyRound,
+    ShieldAlert,
+    ShieldCheck,
+} from 'lucide-react';
 
 type Entitlement = {
     id: string;
@@ -26,16 +32,28 @@ type LicenseResult = {
     validation: ValidationResult;
 };
 
+type AuditEvent = {
+    id: number | string;
+    organization_id: string | null;
+    action: string;
+    status: string;
+    jti: string | null;
+    metadata: Record<string, unknown> | null;
+    created_at: string | null;
+};
+
 type Props = {
     organizations: Organization[];
     licenseResult: LicenseResult | null;
     validationResult: ValidationResult | null;
+    auditEvents: AuditEvent[];
 };
 
 export default function SandboxLicenses({
     organizations,
     licenseResult,
     validationResult,
+    auditEvents,
 }: Props) {
     const issue = useForm({ organization_id: '', entitlement_id: '' });
     const validate = useForm({ license: licenseResult?.token ?? '' });
@@ -43,6 +61,12 @@ export default function SandboxLicenses({
 
     const selectedOrganization = organizations.find(
         (organization) => organization.id === issue.data.organization_id,
+    );
+    const organizationNames = new Map(
+        organizations.map((organization) => [
+            organization.id,
+            organization.name,
+        ]),
     );
 
     return (
@@ -275,6 +299,85 @@ export default function SandboxLicenses({
                         )}
                     </section>
                 )}
+
+                <section className="border-sidebar-border/70 bg-card rounded-2xl border p-5">
+                    <div className="flex items-center gap-2">
+                        <History className="h-5 w-5 text-red-500" />
+                        <div>
+                            <h2 className="font-bold">
+                                Recent license audit trail
+                            </h2>
+                            <p className="text-muted-foreground mt-1 text-xs">
+                                Latest tenant-scoped issue, validation and
+                                revocation evidence.
+                            </p>
+                        </div>
+                    </div>
+                    {auditEvents.length === 0 ? (
+                        <p className="text-muted-foreground mt-5 text-sm">
+                            No sandbox license audit events yet.
+                        </p>
+                    ) : (
+                        <div className="mt-5 overflow-x-auto">
+                            <table className="w-full min-w-[760px] text-left text-xs">
+                                <thead className="text-muted-foreground border-b">
+                                    <tr>
+                                        <th className="px-3 py-3 font-semibold">
+                                            Time
+                                        </th>
+                                        <th className="px-3 py-3 font-semibold">
+                                            Organization
+                                        </th>
+                                        <th className="px-3 py-3 font-semibold">
+                                            Action
+                                        </th>
+                                        <th className="px-3 py-3 font-semibold">
+                                            Status
+                                        </th>
+                                        <th className="px-3 py-3 font-semibold">
+                                            JTI
+                                        </th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {auditEvents.map((event) => (
+                                        <tr
+                                            key={event.id}
+                                            className="border-b last:border-0"
+                                        >
+                                            <td className="px-3 py-3 whitespace-nowrap">
+                                                {event.created_at
+                                                    ? new Date(
+                                                          event.created_at,
+                                                      ).toLocaleString()
+                                                    : '—'}
+                                            </td>
+                                            <td className="px-3 py-3 font-medium">
+                                                {event.organization_id
+                                                    ? (organizationNames.get(
+                                                          event.organization_id,
+                                                      ) ??
+                                                      event.organization_id)
+                                                    : '—'}
+                                            </td>
+                                            <td className="px-3 py-3 font-mono">
+                                                {event.action}
+                                            </td>
+                                            <td className="px-3 py-3 uppercase">
+                                                {event.status}
+                                            </td>
+                                            <td className="px-3 py-3 font-mono">
+                                                {event.jti
+                                                    ? `${event.jti.slice(0, 12)}…`
+                                                    : '—'}
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    )}
+                </section>
             </div>
         </>
     );
