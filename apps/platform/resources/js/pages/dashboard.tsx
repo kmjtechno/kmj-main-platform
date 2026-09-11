@@ -8,7 +8,6 @@ import {
     KeyRound,
     Layers3,
     Plus,
-    RotateCcwKey,
     ShieldCheck,
 } from 'lucide-react';
 import { dashboard } from '@/routes';
@@ -207,7 +206,7 @@ export default function Dashboard({ organizations }: DashboardProps) {
                                 text="Signed sandbox license lifecycle"
                             />
                             <FlowStep
-                                icon={RotateCcwKey}
+                                icon={ShieldCheck}
                                 text="Validation + revocation checks"
                             />
                         </div>
