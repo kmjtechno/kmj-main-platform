@@ -8,7 +8,7 @@ final class SandboxLicenseLifecycle
 {
     public function __construct(
         private readonly SandboxLicenseIssuer $issuer,
-        private readonly LicenseValidator $validator,
+        private readonly SandboxLicenseValidationEngine $validator,
         private readonly LicenseRevoker $revoker,
     ) {}
 
