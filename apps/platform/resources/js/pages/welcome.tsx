@@ -59,6 +59,51 @@ const authority = [
     'Device',
 ];
 
+const deliveryMilestones = [
+    {
+        title: 'Authority foundation',
+        state: 'verified',
+        detail: 'Architecture + authority chain',
+    },
+    {
+        title: 'Staging delivery',
+        state: 'verified',
+        detail: 'CI + promotion + deploy + health',
+    },
+    {
+        title: 'Frontend live sync',
+        state: 'verified',
+        detail: 'Visible staging + stale-build reload',
+    },
+    {
+        title: 'Guarded AI worker',
+        state: 'verified',
+        detail: '5-minute safe task executor',
+    },
+    {
+        title: 'Free-provider federation',
+        state: 'ready',
+        detail: 'Adapters ready; verified credential required',
+    },
+    {
+        title: 'License vertical slice',
+        state: 'active',
+        detail: 'Validation + revocation hardening',
+    },
+    {
+        title: 'Production hardening',
+        state: 'queued',
+        detail: 'Owner-gated production readiness',
+    },
+] as const;
+
+const verifiedDeliveryMilestones = deliveryMilestones.filter(
+    (milestone) => milestone.state === 'verified',
+).length;
+const deliveryProgress = Math.round(
+    (verifiedDeliveryMilestones / deliveryMilestones.length) * 100,
+);
+
 export default function Welcome() {
     const stagingSyncBadge = (
         <div className="fixed right-4 bottom-4 z-50 rounded-full border border-emerald-400/20 bg-[#08110d]/95 px-3 py-2 text-[10px] font-bold tracking-[0.12em] text-emerald-300 uppercase shadow-2xl backdrop-blur">
@@ -241,6 +286,74 @@ export default function Welcome() {
                                         </p>
                                     </div>
                                 ))}
+                            </div>
+
+                            <div className="mt-5 max-w-2xl rounded-2xl border border-white/[0.08] bg-white/[0.025] p-4 sm:p-5">
+                                <div className="flex items-start justify-between gap-4">
+                                    <div>
+                                        <div className="text-[10px] font-bold tracking-[0.16em] text-[#ff555d] uppercase">
+                                            Verified delivery progress
+                                        </div>
+                                        <div className="mt-1 text-sm font-bold text-white/90">
+                                            Evidence-based platform milestones
+                                        </div>
+                                    </div>
+                                    <div className="shrink-0 text-right">
+                                        <div className="text-lg font-black text-white">
+                                            {deliveryProgress}%
+                                        </div>
+                                        <div className="text-[10px] text-white/35">
+                                            {verifiedDeliveryMilestones}/
+                                            {deliveryMilestones.length} verified
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="mt-4 h-2 overflow-hidden rounded-full bg-white/[0.07]">
+                                    <div
+                                        className="h-full rounded-full bg-gradient-to-r from-[#b71018] via-[#e21b23] to-[#ff4a52] transition-[width] duration-700"
+                                        style={{
+                                            width: `${deliveryProgress}%`,
+                                        }}
+                                    />
+                                </div>
+
+                                <div className="mt-4 grid gap-2 sm:grid-cols-2">
+                                    {deliveryMilestones.map((milestone) => (
+                                        <div
+                                            key={milestone.title}
+                                            className="flex items-center justify-between gap-3 rounded-lg border border-white/[0.06] bg-black/15 px-3 py-2.5"
+                                        >
+                                            <div className="min-w-0">
+                                                <div className="truncate text-[11px] font-bold text-white/75">
+                                                    {milestone.title}
+                                                </div>
+                                                <div className="mt-0.5 truncate text-[9px] text-white/30">
+                                                    {milestone.detail}
+                                                </div>
+                                            </div>
+                                            <span
+                                                className={
+                                                    milestone.state ===
+                                                    'verified'
+                                                        ? 'rounded-full border border-emerald-400/15 bg-emerald-400/[0.06] px-2 py-1 text-[8px] font-bold tracking-wide text-emerald-300 uppercase'
+                                                        : milestone.state ===
+                                                            'active'
+                                                          ? 'rounded-full border border-amber-300/15 bg-amber-300/[0.05] px-2 py-1 text-[8px] font-bold tracking-wide text-amber-200 uppercase'
+                                                          : 'rounded-full border border-white/10 bg-white/[0.03] px-2 py-1 text-[8px] font-bold tracking-wide text-white/45 uppercase'
+                                                }
+                                            >
+                                                {milestone.state}
+                                            </span>
+                                        </div>
+                                    ))}
+                                </div>
+
+                                <p className="mt-3 text-[10px] leading-4 text-white/30">
+                                    Progress counts only milestones with
+                                    verification evidence; active, ready and
+                                    queued work is not counted as complete.
+                                </p>
                             </div>
                         </div>
 

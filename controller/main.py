@@ -100,7 +100,7 @@ def health():
     return {
         "ok": True,
         "mode": os.getenv("KMJ_MODE", "bootstrap"),
-        "router": "9Router + KMJ strict verified-zero gate",
+        "router": "KMJ federated verified-zero cloud router",
         "paid_fallback": "PROHIBITED",
         "unknown_cost_is_free": False,
         "local_llm": "PROHIBITED",
@@ -137,6 +137,7 @@ async def router_select(req: RouteRequest, authorization: str | None = Header(de
     return {
         "route": req.route,
         "model": candidate.model_id,
+        "provider": candidate.provider,
         "owner": candidate.owner,
         "verification": candidate.reason,
         "paid_fallback": "PROHIBITED",
@@ -171,6 +172,7 @@ async def agent_plan(req: AgentTaskRequest, authorization: str | None = Header(d
         "task": req.task,
         "route": req.route,
         "model": result["model"],
+        "provider": result.get("provider"),
         "verification": result["verification"],
         "attempts": result["attempts"],
         "response": result["response"],
@@ -200,7 +202,7 @@ def start(req: StartRequest, authorization: str | None = Header(default=None)):
             "requested_by": req.requested_by,
             "dry_run": req.dry_run,
             "agent": "KMJ Main Platform Autonomous Engineer",
-            "router": "9Router + verified-zero gate",
+            "router": "KMJ federated verified-zero cloud router",
             "message": (
                 "Agent runtime is ready for verified-free cloud planning and failover. "
                 "Autonomous repository writes remain separately execution-gated."
