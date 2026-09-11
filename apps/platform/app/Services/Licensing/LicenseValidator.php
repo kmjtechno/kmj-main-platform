@@ -31,7 +31,7 @@ final class LicenseValidator
 
         $expected = hash_hmac('sha256', $encodedPayload, $this->secret, true);
 
-        if (! hash_equals($expected, $signature)) {
+        if (hash_equals($expected, $signature) === false) {
             return $this->invalid('invalid_signature');
         }
 
@@ -55,7 +55,7 @@ final class LicenseValidator
         $expiresAt = $claims['expires_at'] ?? null;
         $jti = $claims['jti'] ?? null;
 
-        if (! is_int($expiresAt) || ! is_string($jti) || $jti === '') {
+        if (is_int($expiresAt) === false || is_string($jti) === false || $jti === '') {
             return $this->invalid('missing_claims');
         }
 
