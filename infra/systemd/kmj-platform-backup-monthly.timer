@@ -1,0 +1,11 @@
+[Unit]
+Description=Run KMJ Main Platform monthly encrypted backup
+
+[Timer]
+OnCalendar=*-*-01 04:15:00 UTC
+Persistent=true
+RandomizedDelaySec=45m
+Unit=kmj-platform-backup@monthly.service
+
+[Install]
+WantedBy=timers.target
