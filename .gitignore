@@ -12,3 +12,6 @@ node_modules/
 vendor/
 .DS_Store
 Thumbs.db
+
+# Rust build artifacts
+**/target/
