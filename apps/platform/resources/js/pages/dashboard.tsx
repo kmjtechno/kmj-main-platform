@@ -2,7 +2,6 @@ import type { FormEvent } from 'react';
 import { Head, useForm } from '@inertiajs/react';
 import {
     ArrowRight,
-    BadgeCheck,
     Building2,
     CheckCircle2,
     KeyRound,
@@ -31,15 +30,6 @@ type DashboardProps = {
     organizations: Organization[];
 };
 
-const deliveryPath = [
-    { label: 'Organization', status: 'Active' },
-    { label: 'Product', status: 'Active' },
-    { label: 'Entitlement', status: 'Active' },
-    { label: 'Sandbox license', status: 'Implemented' },
-    { label: 'Validation', status: 'Implemented' },
-    { label: 'Revocation', status: 'Implemented' },
-];
-
 export default function Dashboard({ organizations }: DashboardProps) {
     const form = useForm({ name: '' });
 
@@ -66,20 +56,21 @@ export default function Dashboard({ organizations }: DashboardProps) {
                         <div className="max-w-2xl">
                             <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-red-500/15 bg-red-500/5 px-3 py-1 text-xs font-semibold text-red-500">
                                 <span className="h-1.5 w-1.5 rounded-full bg-red-500" />
-                                Authority + Licensing · Active development
+                                Authority Core · Active
                             </div>
                             <h1 className="text-3xl font-black tracking-tight sm:text-4xl">
                                 KMJ Main Platform Control Center
                             </h1>
                             <p className="text-muted-foreground mt-3 max-w-xl text-sm leading-6">
-                                The working authority path now covers
-                                organization, product and entitlement authority
-                                plus the sandbox license lifecycle: issue →
-                                validate → revoke.
+                                Create an organization and the platform will
+                                establish the first verified authority chain:
+                                organization ownership → sandbox product →
+                                explicit entitlement policy → active
+                                entitlement.
                             </p>
                         </div>
 
-                        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
                             <Metric
                                 label="Organizations"
                                 value={organizations.length}
@@ -88,47 +79,10 @@ export default function Dashboard({ organizations }: DashboardProps) {
                                 label="Entitlements"
                                 value={entitlementCount}
                             />
-                            <Metric label="Licensing" value="Ready" />
-                            <Metric label="Authority" value="Online" />
-                        </div>
-                    </div>
-                </section>
-
-                <section className="border-sidebar-border/70 bg-card dark:border-sidebar-border rounded-2xl border p-5 sm:p-6">
-                    <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
-                        <div>
-                            <h2 className="font-bold">
-                                Minimum working product path
-                            </h2>
-                            <p className="text-muted-foreground mt-1 text-xs">
-                                Current implementation progress surfaced directly
-                                in the control center
-                            </p>
-                        </div>
-                        <span className="inline-flex w-fit items-center gap-1.5 rounded-full border border-emerald-500/15 bg-emerald-500/5 px-2.5 py-1 text-[10px] font-bold text-emerald-600 dark:text-emerald-400">
-                            <BadgeCheck className="h-3 w-3" />
-                            P0 path advancing
-                        </span>
-                    </div>
-
-                    <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-6">
-                        {deliveryPath.map((step, index) => (
-                            <div
-                                key={step.label}
-                                className="bg-background/60 rounded-xl border p-4"
-                            >
-                                <div className="text-muted-foreground text-[10px] font-bold tracking-wider uppercase">
-                                    Step {String(index + 1).padStart(2, '0')}
-                                </div>
-                                <div className="mt-2 text-sm font-bold">
-                                    {step.label}
-                                </div>
-                                <div className="mt-3 inline-flex items-center gap-1.5 text-[10px] font-bold text-emerald-600 uppercase dark:text-emerald-400">
-                                    <CheckCircle2 className="h-3 w-3" />
-                                    {step.status}
-                                </div>
+                            <div className="col-span-2 sm:col-span-1">
+                                <Metric label="Authority" value="Online" />
                             </div>
-                        ))}
+                        </div>
                     </div>
                 </section>
 
@@ -206,14 +160,6 @@ export default function Dashboard({ organizations }: DashboardProps) {
                             <FlowStep
                                 icon={ShieldCheck}
                                 text="Idempotent active entitlement"
-                            />
-                            <FlowStep
-                                icon={BadgeCheck}
-                                text="Signed sandbox license lifecycle"
-                            />
-                            <FlowStep
-                                icon={ShieldCheck}
-                                text="Validation + revocation checks"
                             />
                         </div>
                     </section>
