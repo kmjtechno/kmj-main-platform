@@ -75,6 +75,7 @@ final class LicenseValidator
     }
 
     /**
+     * @param  array<string, mixed>|null  $claims
      * @return array{valid: false, reason: string, claims: array<string, mixed>|null}
      */
     private function invalid(string $reason, ?array $claims = null): array
