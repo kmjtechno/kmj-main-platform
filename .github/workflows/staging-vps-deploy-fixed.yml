@@ -151,7 +151,11 @@ jobs:
           "$PHP_BIN" artisan package:discover --ansi
           "$PHP_BIN" artisan migrate --force
           if [ -f package-lock.json ]; then
-            rm -rf node_modules
+            if [ -d node_modules ]; then
+              stale_node_modules="node_modules.stale.$(date +%s).$$"
+              mv node_modules "$stale_node_modules"
+              rm -rf "$stale_node_modules" >/dev/null 2>&1 || true
+            fi
             npm ci --no-audit --no-fund
           else
             npm install --no-audit --no-fund
