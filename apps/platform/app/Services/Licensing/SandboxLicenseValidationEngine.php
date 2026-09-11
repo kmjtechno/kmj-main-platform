@@ -2,6 +2,8 @@
 
 namespace App\Services\Licensing;
 
+use App\Models\LicenseRevocation;
+
 final class SandboxLicenseValidationEngine
 {
     public function __construct(
@@ -15,8 +17,29 @@ final class SandboxLicenseValidationEngine
      */
     public function validate(string $license): array
     {
-        if (! in_array($this->mode, ['php', 'cross_check'], true)) {
+        if (! in_array($this->mode, ['php', 'cross_check', 'rust'], true)) {
             return $this->invalid('validation_engine_unconfigured');
+        }
+
+        if ($this->mode === 'rust') {
+            $rustResult = $this->rustVerifier->validate($license);
+
+            if ($rustResult['valid'] === false) {
+                return $rustResult;
+            }
+
+            $claims = $rustResult['claims'];
+            $jti = is_array($claims) ? ($claims['jti'] ?? null) : null;
+
+            if (! is_string($jti) || $jti === '') {
+                return $this->invalid('missing_claims');
+            }
+
+            if (LicenseRevocation::query()->where('jti', $jti)->exists()) {
+                return $this->invalid('revoked', $claims);
+            }
+
+            return $rustResult;
         }
 
         $phpResult = $this->phpValidator->validate($license);
@@ -56,12 +79,16 @@ final class SandboxLicenseValidationEngine
     /**
      * @return array{valid: false, reason: string, claims: null}
      */
-    private function invalid(string $reason): array
+    /**
+     * @param  array<string, mixed>|null  $claims
+     * @return array{valid: false, reason: string, claims: array<string, mixed>|null}
+     */
+    private function invalid(string $reason, ?array $claims = null): array
     {
         return [
             'valid' => false,
             'reason' => $reason,
-            'claims' => null,
+            'claims' => $claims,
         ];
     }
 }

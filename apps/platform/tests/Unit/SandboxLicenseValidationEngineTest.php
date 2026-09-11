@@ -85,6 +85,45 @@ final class SandboxLicenseValidationEngineTest extends TestCase
         self::assertSame('revoked', $result['reason']);
     }
 
+    public function test_rust_mode_accepts_rust_verified_license(): void
+    {
+        [$license, $phpValidator] = $this->licenseFixture();
+        $claims = $phpValidator->validate($license);
+        $rustVerifier = new RustSandboxLicenseVerifier(
+            '/configured/verifier',
+            'unused',
+            runner: static fn (string $license, string $secret, float $timeout): array => [
+                'exit_code' => 0,
+                'output' => json_encode($claims, JSON_THROW_ON_ERROR),
+            ],
+        );
+        $engine = new SandboxLicenseValidationEngine($phpValidator, $rustVerifier, 'rust');
+
+        self::assertTrue($engine->validate($license)['valid']);
+    }
+
+    public function test_rust_mode_preserves_database_revocation(): void
+    {
+        [$license, $phpValidator] = $this->licenseFixture();
+        $result = $phpValidator->validate($license);
+        self::assertIsArray($result['claims']);
+        (new LicenseRevoker)->revoke((string) $result['claims']['jti'], 'test');
+
+        $rustVerifier = new RustSandboxLicenseVerifier(
+            '/configured/verifier',
+            'unused',
+            runner: static fn (string $license, string $secret, float $timeout): array => [
+                'exit_code' => 0,
+                'output' => json_encode($result, JSON_THROW_ON_ERROR),
+            ],
+        );
+        $engine = new SandboxLicenseValidationEngine($phpValidator, $rustVerifier, 'rust');
+        $validation = $engine->validate($license);
+
+        self::assertFalse($validation['valid']);
+        self::assertSame('revoked', $validation['reason']);
+    }
+
     public function test_unknown_mode_fails_closed(): void
     {
         [$license, $phpValidator] = $this->licenseFixture();
