@@ -151,12 +151,28 @@ jobs:
           "$PHP_BIN" artisan package:discover --ansi
           "$PHP_BIN" artisan migrate --force
           if [ -f package-lock.json ]; then
-            if [ -d node_modules ]; then
-              stale_node_modules="node_modules.stale.$(date +%s).$$"
-              mv node_modules "$stale_node_modules"
-              rm -rf "$stale_node_modules" >/dev/null 2>&1 || true
+            quarantine_node_modules() {
+              if [ -d node_modules ] || [ -L node_modules ]; then
+                stale_node_modules="node_modules.stale.$(date +%s).$$.$RANDOM"
+                mv node_modules "$stale_node_modules"
+                rm -rf "$stale_node_modules" >/dev/null 2>&1 || true
+              fi
+            }
+            quarantine_node_modules
+            npm_ok=0
+            for npm_attempt in 1 2 3; do
+              if npm ci --no-audit --no-fund; then
+                npm_ok=1
+                break
+              fi
+              echo "npm ci attempt $npm_attempt failed; quarantining partial install and retrying..." >&2
+              quarantine_node_modules
+              sleep $((npm_attempt * 2))
+            done
+            if [ "$npm_ok" -ne 1 ]; then
+              echo 'ERROR: npm ci failed after 3 clean attempts.' >&2
+              exit 44
             fi
-            npm ci --no-audit --no-fund
           else
             npm install --no-audit --no-fund
           fi
