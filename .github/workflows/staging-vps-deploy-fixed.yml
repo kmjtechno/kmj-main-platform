@@ -1,4 +1,4 @@
-name: Staging VPS Deploy Safe
+name: Staging VPS Deploy
 
 on:
   push:
@@ -89,6 +89,11 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          actual="$(ssh "$STAGING_USER@$STAGING_HOST" git -C "$STAGING_PATH" rev-parse HEAD)"
+          actual="$(ssh "$STAGING_USER@$STAGING_HOST" bash -s -- "$STAGING_PATH" <<'REMOTE'
+          set -euo pipefail
+          cd "$1"
+          git rev-parse HEAD
+          REMOTE
+          )"
           test "$actual" = "$DEPLOY_SHA"
           echo "Staging VPS deployed commit: $actual"
