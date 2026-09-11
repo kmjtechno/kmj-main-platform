@@ -2,11 +2,13 @@ import type { FormEvent } from 'react';
 import { Head, useForm } from '@inertiajs/react';
 import {
     ArrowRight,
+    BadgeCheck,
     Building2,
     CheckCircle2,
     KeyRound,
     Layers3,
     Plus,
+    RotateCcw,
     ShieldCheck,
 } from 'lucide-react';
 import { dashboard } from '@/routes';
@@ -30,8 +32,21 @@ type DashboardProps = {
     organizations: Organization[];
 };
 
+const milestones = [
+    ['Organization', 'Active'],
+    ['Product', 'Active'],
+    ['Entitlement', 'Active'],
+    ['Sandbox license', 'Implemented'],
+    ['Validation', 'Implemented'],
+    ['Revocation', 'Implemented'],
+];
+
 export default function Dashboard({ organizations }: DashboardProps) {
     const form = useForm({ name: '' });
+    const entitlementCount = organizations.reduce(
+        (count, organization) => count + organization.entitlements.length,
+        0,
+    );
 
     const submit = (event: FormEvent<HTMLFormElement>) => {
         event.preventDefault();
@@ -40,11 +55,6 @@ export default function Dashboard({ organizations }: DashboardProps) {
             onSuccess: () => form.reset(),
         });
     };
-
-    const entitlementCount = organizations.reduce(
-        (count, organization) => count + organization.entitlements.length,
-        0,
-    );
 
     return (
         <>
@@ -56,21 +66,20 @@ export default function Dashboard({ organizations }: DashboardProps) {
                         <div className="max-w-2xl">
                             <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-red-500/15 bg-red-500/5 px-3 py-1 text-xs font-semibold text-red-500">
                                 <span className="h-1.5 w-1.5 rounded-full bg-red-500" />
-                                Authority Core · Active
+                                Authority + Licensing · Active development
                             </div>
                             <h1 className="text-3xl font-black tracking-tight sm:text-4xl">
                                 KMJ Main Platform Control Center
                             </h1>
                             <p className="text-muted-foreground mt-3 max-w-xl text-sm leading-6">
-                                Create an organization and the platform will
-                                establish the first verified authority chain:
-                                organization ownership → sandbox product →
-                                explicit entitlement policy → active
-                                entitlement.
+                                The minimum working product path now connects
+                                organization, product and entitlement authority
+                                with sandbox license issuance, validation and
+                                revocation.
                             </p>
                         </div>
 
-                        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
                             <Metric
                                 label="Organizations"
                                 value={organizations.length}
@@ -79,10 +88,51 @@ export default function Dashboard({ organizations }: DashboardProps) {
                                 label="Entitlements"
                                 value={entitlementCount}
                             />
-                            <div className="col-span-2 sm:col-span-1">
-                                <Metric label="Authority" value="Online" />
-                            </div>
+                            <Metric label="Licensing" value="Ready" />
+                            <Metric label="Authority" value="Online" />
                         </div>
+                    </div>
+                </section>
+
+                <section className="border-sidebar-border/70 bg-card dark:border-sidebar-border rounded-2xl border p-5 sm:p-6">
+                    <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
+                        <div>
+                            <div className="flex items-center gap-2">
+                                <BadgeCheck className="h-5 w-5 text-red-500" />
+                                <h2 className="font-bold">
+                                    Minimum working product path
+                                </h2>
+                            </div>
+                            <p className="text-muted-foreground mt-1 text-xs">
+                                Visible staging progress backed by implemented
+                                authority and sandbox licensing work.
+                            </p>
+                        </div>
+                        <span className="w-fit rounded-full border border-emerald-500/15 bg-emerald-500/5 px-3 py-1 text-[10px] font-bold text-emerald-600 dark:text-emerald-400">
+                            P0 path advancing
+                        </span>
+                    </div>
+
+                    <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+                        {milestones.map(([name, status], index) => (
+                            <div
+                                key={name}
+                                className="bg-background/60 rounded-xl border p-4"
+                            >
+                                <div className="flex items-center justify-between gap-2">
+                                    <span className="grid h-7 w-7 place-items-center rounded-lg bg-red-500/10 text-[10px] font-black text-red-500">
+                                        {String(index + 1).padStart(2, '0')}
+                                    </span>
+                                    <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+                                </div>
+                                <div className="mt-4 text-xs font-bold">
+                                    {name}
+                                </div>
+                                <div className="text-muted-foreground mt-1 text-[10px]">
+                                    {status}
+                                </div>
+                            </div>
+                        ))}
                     </div>
                 </section>
 
@@ -159,7 +209,15 @@ export default function Dashboard({ organizations }: DashboardProps) {
                             />
                             <FlowStep
                                 icon={ShieldCheck}
-                                text="Idempotent active entitlement"
+                                text="Active entitlement"
+                            />
+                            <FlowStep
+                                icon={BadgeCheck}
+                                text="Signed sandbox license + validation"
+                            />
+                            <FlowStep
+                                icon={RotateCcw}
+                                text="Persistent license revocation"
                             />
                         </div>
                     </section>
