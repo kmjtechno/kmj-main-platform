@@ -36,7 +36,7 @@ final class RustSandboxLicenseVerifier
             return $this->invalid('verifier_failed');
         }
 
-        if (($result['exit_code'] ?? 1) !== 0) {
+        if ($result['exit_code'] !== 0) {
             return $this->invalid('verifier_failed');
         }
 
