@@ -3,7 +3,7 @@ name: Autonomous Cycle
 on:
   workflow_dispatch:
   schedule:
-    - cron: '17 * * * *'
+    - cron: '*/15 * * * *'
 
 concurrency:
   group: kmj-autonomous-writer
@@ -11,19 +11,27 @@ concurrency:
 
 permissions:
   contents: read
+  actions: read
 
 jobs:
-  bootstrap-gate:
+  watchdog:
+    name: Autonomous safety and recovery watchdog
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.13'
+          cache: pip
+
       - name: Install controller dependencies
         run: pip install -r requirements.txt
+
       - name: Enforce platform safety boundaries
         shell: bash
         run: |
@@ -34,9 +42,39 @@ jobs:
           grep -q 'paid_fallback: prohibited' config/free-cloud-routing.yaml
           grep -q 'unknown_cost_is_free: false' config/free-cloud-routing.yaml
           PYTHONPATH=. python scripts/verify_free_router.py
-          echo 'KMJ agent safety gates PASS'
-      - name: Safe autonomous status
+
+      - name: Run autonomous recovery verification pack
+        shell: bash
         run: |
-          echo '9Router is transport/discovery only; KMJ verified-zero policy remains authoritative.'
-          echo 'Unknown-cost and paid models are rejected before route selection.'
-          echo 'Safe result: NO_FREE_ROUTE_AVAILABLE when no eligible route exists.'
+          set -euo pipefail
+          PYTHONPATH=. python scripts/verify_architecture.py
+          PYTHONPATH=. python scripts/verify_contracts.py
+          PYTHONPATH=. python scripts/verify_runtime.py
+
+      - name: Check staging promotion drift
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin main staging-approved --depth=1
+          main_sha="$(git rev-parse origin/main)"
+          staging_sha="$(git rev-parse origin/staging-approved)"
+          {
+            echo '## KMJ autonomous watchdog'
+            echo
+            echo "- main: \`$main_sha\`"
+            echo "- staging-approved: \`$staging_sha\`"
+            if [ "$main_sha" = "$staging_sha" ]; then
+              echo '- promotion drift: none'
+            else
+              echo '- promotion drift: detected; staging promotion/deploy chain must continue'
+            fi
+            echo '- free-cloud policy: enforced'
+            echo '- paid fallback: prohibited'
+            echo '- local LLM inference: prohibited'
+            echo '- KMJ Cloud Nexus: untouched'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Watchdog result
+        run: |
+          echo 'Autonomous watchdog PASS.'
+          echo 'The project is re-verified every 15 minutes; deployment recovery remains handled by the staging deploy workflow.'
