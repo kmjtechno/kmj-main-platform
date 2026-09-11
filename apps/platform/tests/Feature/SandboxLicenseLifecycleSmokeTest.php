@@ -18,7 +18,7 @@ final class SandboxLicenseLifecycleSmokeTest extends TestCase
         $secret = str_repeat('s', 32);
         $issuer = new SandboxLicenseIssuer($secret);
         $validator = new LicenseValidator($secret);
-        $revoker = new LicenseRevoker();
+        $revoker = new LicenseRevoker;
 
         $license = $issuer->issue(1, 1, 1, new DateTimeImmutable('+5 minutes'));
         $validation = $validator->validate($license);
