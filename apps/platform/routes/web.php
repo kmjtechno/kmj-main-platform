@@ -82,6 +82,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
             'licenseResult' => $request->session()->get('sandbox_license'),
             'validationResult' => $request->session()->get('sandbox_license_validation'),
             'auditEvents' => $auditEvents,
+            'validationEngine' => (string) config('services.kmj_sandbox_licensing.validation_engine', 'php'),
         ]);
     })->name('sandbox-licenses.index');
 

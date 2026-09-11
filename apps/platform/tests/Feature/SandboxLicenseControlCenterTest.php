@@ -99,6 +99,7 @@ final class SandboxLicenseControlCenterTest extends TestCase
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->component('sandbox-licenses')
+                ->where('validationEngine', 'php')
                 ->has('auditEvents', 1)
                 ->where('auditEvents.0.organization_id', $ownerEntitlement->organization_id)
                 ->where('auditEvents.0.action', 'sandbox_license.issued'));
