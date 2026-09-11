@@ -143,21 +143,47 @@ jobs:
           fi
           echo "Using PHP runtime: $($PHP_BIN -r 'echo PHP_BINARY;')"
 
-          # Remove stale package manifests before switching to --no-dev.
-          # Otherwise a previous dev install can leave providers such as Laravel Pail cached.
-          rm -f bootstrap/cache/packages.php bootstrap/cache/services.php
-          COMPOSER_PHP="$PHP_BIN" composer install --no-interaction --prefer-dist --no-progress --no-dev --optimize-autoloader
-          rm -f bootstrap/cache/packages.php bootstrap/cache/services.php
+          # Never boot Laravel while Composer removes dev-only packages.
+          # Uninstall hooks can otherwise regenerate a stale services manifest.
+          find bootstrap/cache -maxdepth 1 -type f -name '*.php' -delete
+          COMPOSER_PHP="$PHP_BIN" composer install --no-interaction --prefer-dist --no-progress --no-dev --optimize-autoloader --no-scripts
+          find bootstrap/cache -maxdepth 1 -type f -name '*.php' -delete
           "$PHP_BIN" artisan package:discover --ansi
           "$PHP_BIN" artisan migrate --force
           if [ -f package-lock.json ]; then
-            rm -rf node_modules
-            npm ci --no-audit --no-fund
+            quarantine_node_modules() {
+              if [ -d node_modules ] || [ -L node_modules ]; then
+                stale_node_modules="node_modules.stale.$(date +%s).$$.$RANDOM"
+                mv node_modules "$stale_node_modules"
+                rm -rf "$stale_node_modules" >/dev/null 2>&1 || true
+              fi
+            }
+            quarantine_node_modules
+            npm_ok=0
+            for npm_attempt in 1 2 3; do
+              if npm ci --no-audit --no-fund; then
+                npm_ok=1
+                break
+              fi
+              echo "npm ci attempt $npm_attempt failed; quarantining partial install and retrying..." >&2
+              quarantine_node_modules
+              sleep $((npm_attempt * 2))
+            done
+            if [ "$npm_ok" -ne 1 ]; then
+              echo 'ERROR: npm ci failed after 3 clean attempts.' >&2
+              exit 44
+            fi
           else
             npm install --no-audit --no-fund
           fi
           npm run build
           "$PHP_BIN" artisan optimize:clear
+          rm -f bootstrap/cache/packages.php bootstrap/cache/services.php
+          "$PHP_BIN" artisan package:discover --ansi
+          if grep -R -q 'Laravel\\Pail\\PailServiceProvider' bootstrap/cache 2>/dev/null; then
+            echo 'ERROR: stale Laravel Pail provider remained in bootstrap cache.' >&2
+            exit 43
+          fi
           "$PHP_BIN" artisan optimize
           "$PHP_BIN" artisan queue:restart || true
           REMOTE
@@ -199,6 +225,21 @@ jobs:
           echo 'result=pass' >> "$GITHUB_OUTPUT"
           echo "Staging health check PASS: $HEALTH_URL"
 
+      - name: Verify rendered staging progress UI
+        id: ui
+        env:
+          HEALTH_URL: ${{ vars.STAGING_HEALTHCHECK_URL }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          chrome="$(command -v google-chrome || command -v chromium || command -v chromium-browser || true)"
+          test -n "$chrome"
+          dom="$($chrome --headless --no-sandbox --disable-gpu --virtual-time-budget=10000 --dump-dom "$HEALTH_URL" 2>/dev/null)"
+          printf '%s' "$dom" | grep -Fq 'Verified delivery progress'
+          printf '%s' "$dom" | grep -Fq '57%'
+          echo 'result=pass' >> "$GITHUB_OUTPUT"
+          echo 'Rendered staging UI PASS: verified delivery progress = 57%.'
+
       - name: Deployment evidence summary
         if: always()
         shell: bash
@@ -207,6 +248,7 @@ jobs:
           APPROVED_SHA: ${{ steps.approved.outputs.sha }}
           DEPLOYED_SHA: ${{ steps.verify.outputs.actual_sha }}
           HEALTH_RESULT: ${{ steps.health.outputs.result }}
+          UI_RESULT: ${{ steps.ui.outputs.result }}
         run: |
           {
             echo '## KMJ staging deployment evidence'
@@ -217,5 +259,6 @@ jobs:
             echo "- deployment: ${{ steps.deploy.conclusion }}"
             echo "- commit verification: ${{ steps.verify.conclusion }}"
             echo "- HTTP health: ${HEALTH_RESULT:-not-run}"
+            echo "- rendered UI: ${UI_RESULT:-not-run}"
             if [ -n "$HEALTH_URL" ]; then echo "- staging URL: $HEALTH_URL"; fi
           } >> "$GITHUB_STEP_SUMMARY"
