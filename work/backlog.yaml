@@ -13,7 +13,7 @@ phases:
         status: done
       - id: P0-02
         title: Inventory current public URLs, assets and approved facts
-        status: pending
+        status: done
       - id: P0-03
         title: Accept ADR-001 through ADR-005
         status: done
