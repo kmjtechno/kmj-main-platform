@@ -39,6 +39,7 @@ jobs:
           grep -q 'BACKUP_AGE_RECIPIENT' scripts/backup_platform.sh
           grep -q 'sha256sum --check' scripts/verify_backup_bundle.sh
           grep -q 'No secret values were printed' scripts/backup_preflight.sh
+          python scripts/test_backup_contract.py
       - name: Verify architecture foundation
         run: |
           set -euo pipefail
