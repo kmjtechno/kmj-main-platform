@@ -98,8 +98,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
             ->firstOrFail();
 
         $license = $licenses->issue(
-            $entitlement->organization_id,
-            $entitlement->product_id,
+            (string) $entitlement->getAttribute('organization_id'),
+            (string) $entitlement->getAttribute('product_id'),
             $entitlement->getKey(),
             new ImmutableDateTime('+30 minutes'),
         );
