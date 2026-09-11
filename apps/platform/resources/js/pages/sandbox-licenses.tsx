@@ -356,7 +356,8 @@ export default function SandboxLicenses({
                                                 {event.organization_id
                                                     ? (organizationNames.get(
                                                           event.organization_id,
-                                                      ) ?? event.organization_id)
+                                                      ) ??
+                                                      event.organization_id)
                                                     : '—'}
                                             </td>
                                             <td className="px-3 py-3 font-mono">
