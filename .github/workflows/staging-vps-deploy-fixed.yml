@@ -147,8 +147,11 @@ jobs:
           # Otherwise a previous dev install can leave providers such as Laravel Pail cached.
           rm -f bootstrap/cache/packages.php bootstrap/cache/services.php
           COMPOSER_PHP="$PHP_BIN" composer install --no-interaction --prefer-dist --no-progress --no-dev --optimize-autoloader
+          rm -f bootstrap/cache/packages.php bootstrap/cache/services.php
+          "$PHP_BIN" artisan package:discover --ansi
           "$PHP_BIN" artisan migrate --force
           if [ -f package-lock.json ]; then
+            rm -rf node_modules
             npm ci --no-audit --no-fund
           else
             npm install --no-audit --no-fund
