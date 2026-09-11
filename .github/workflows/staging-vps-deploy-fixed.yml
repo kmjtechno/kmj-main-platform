@@ -165,12 +165,14 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          actual="$(ssh "$STAGING_USER@$STAGING_HOST" bash -s -- "$STAGING_PATH" <<'REMOTE'
+          actual_raw="$(ssh "$STAGING_USER@$STAGING_HOST" bash -s -- "$STAGING_PATH" <<'REMOTE'
           set -euo pipefail
           cd "$1"
           git rev-parse HEAD
           REMOTE
           )"
+          actual="$(printf '%s\n' "$actual_raw" | grep -Eo '[0-9a-f]{40}' | tail -n 1)"
+          test -n "$actual"
           test "$actual" = "$DEPLOY_SHA"
           echo "actual_sha=$actual" >> "$GITHUB_OUTPUT"
           echo "Staging VPS deployed commit: $actual"
