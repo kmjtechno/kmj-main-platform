@@ -143,11 +143,11 @@ jobs:
           fi
           echo "Using PHP runtime: $($PHP_BIN -r 'echo PHP_BINARY;')"
 
-          # Remove stale package manifests before switching to --no-dev.
-          # Otherwise a previous dev install can leave providers such as Laravel Pail cached.
-          rm -f bootstrap/cache/packages.php bootstrap/cache/services.php
-          COMPOSER_PHP="$PHP_BIN" composer install --no-interaction --prefer-dist --no-progress --no-dev --optimize-autoloader
-          rm -f bootstrap/cache/packages.php bootstrap/cache/services.php
+          # Never boot Laravel while Composer removes dev-only packages.
+          # Uninstall hooks can otherwise regenerate a stale services manifest.
+          find bootstrap/cache -maxdepth 1 -type f -name '*.php' -delete
+          COMPOSER_PHP="$PHP_BIN" composer install --no-interaction --prefer-dist --no-progress --no-dev --optimize-autoloader --no-scripts
+          find bootstrap/cache -maxdepth 1 -type f -name '*.php' -delete
           "$PHP_BIN" artisan package:discover --ansi
           "$PHP_BIN" artisan migrate --force
           if [ -f package-lock.json ]; then
@@ -158,6 +158,12 @@ jobs:
           fi
           npm run build
           "$PHP_BIN" artisan optimize:clear
+          rm -f bootstrap/cache/packages.php bootstrap/cache/services.php
+          "$PHP_BIN" artisan package:discover --ansi
+          if grep -R -q 'Laravel\\Pail\\PailServiceProvider' bootstrap/cache 2>/dev/null; then
+            echo 'ERROR: stale Laravel Pail provider remained in bootstrap cache.' >&2
+            exit 43
+          fi
           "$PHP_BIN" artisan optimize
           "$PHP_BIN" artisan queue:restart || true
           REMOTE
