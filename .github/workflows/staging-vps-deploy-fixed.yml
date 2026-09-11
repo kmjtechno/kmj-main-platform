@@ -75,7 +75,6 @@ jobs:
         run: |
           set -euo pipefail
           install -m 700 -d ~/.ssh
-          # Accept normal multiline secrets and secrets pasted with literal \n escapes.
           printf '%s' "$STAGING_KEY" | sed 's/\\n/\n/g' | tr -d '\r' > ~/.ssh/id_ed25519
           printf '\n' >> ~/.ssh/id_ed25519
           chmod 600 ~/.ssh/id_ed25519
@@ -129,17 +128,32 @@ jobs:
           git checkout -B staging-approved origin/staging-approved
           git reset --hard "$DEPLOY_SHA"
           cd apps/platform
-          composer install --no-interaction --prefer-dist --no-progress --no-dev --optimize-autoloader
-          php artisan migrate --force
+
+          PHP_BIN=""
+          for candidate in php php8.5 php8.4 php8.3 php8.2; do
+            if command -v "$candidate" >/dev/null 2>&1 && "$candidate" -m 2>/dev/null | grep -qx 'pdo_pgsql'; then
+              PHP_BIN="$candidate"
+              break
+            fi
+          done
+          if [ -z "$PHP_BIN" ]; then
+            echo 'ERROR: No installed PHP CLI binary has pdo_pgsql enabled.' >&2
+            echo 'Checked: php php8.5 php8.4 php8.3 php8.2' >&2
+            exit 42
+          fi
+          echo "Using PHP runtime: $($PHP_BIN -r 'echo PHP_BINARY;')"
+
+          COMPOSER_PHP="$PHP_BIN" composer install --no-interaction --prefer-dist --no-progress --no-dev --optimize-autoloader
+          "$PHP_BIN" artisan migrate --force
           if [ -f package-lock.json ]; then
             npm ci --no-audit --no-fund
           else
             npm install --no-audit --no-fund
           fi
           npm run build
-          php artisan optimize:clear
-          php artisan optimize
-          php artisan queue:restart || true
+          "$PHP_BIN" artisan optimize:clear
+          "$PHP_BIN" artisan optimize
+          "$PHP_BIN" artisan queue:restart || true
           REMOTE
 
       - name: Verify deployed commit
