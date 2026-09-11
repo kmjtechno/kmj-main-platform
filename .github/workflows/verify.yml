@@ -34,9 +34,11 @@ jobs:
           set -euo pipefail
           bash -n scripts/backup_platform.sh
           bash -n scripts/verify_backup_bundle.sh
+          bash -n scripts/backup_preflight.sh
           grep -q 'BACKUP_REMOTE' scripts/backup_platform.sh
           grep -q 'BACKUP_AGE_RECIPIENT' scripts/backup_platform.sh
           grep -q 'sha256sum --check' scripts/verify_backup_bundle.sh
+          grep -q 'No secret values were printed' scripts/backup_preflight.sh
       - name: Verify architecture foundation
         run: |
           set -euo pipefail
