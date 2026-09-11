@@ -1,0 +1,21 @@
+[Unit]
+Description=KMJ Main Platform encrypted off-site backup (%i)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=kmj
+Group=kmj
+WorkingDirectory=/opt/kmj-main-platform
+EnvironmentFile=/etc/kmj-platform/backup.env
+Environment=BACKUP_TIER=%i
+ExecStart=/usr/bin/bash /opt/kmj-main-platform/scripts/backup_platform.sh
+PrivateTmp=true
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/tmp
+
+[Install]
+WantedBy=multi-user.target
