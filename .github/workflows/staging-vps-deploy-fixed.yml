@@ -1,0 +1,99 @@
+name: Staging VPS Deploy
+
+on:
+  push:
+    branches:
+      - staging-approved
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: staging-vps-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Deploy approved commit to staging VPS
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: staging
+
+    steps:
+      - name: Checkout exact approved commit
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          ref: ${{ github.sha }}
+
+      - name: Validate staging deployment configuration
+        env:
+          STAGING_HOST: ${{ secrets.STAGING_SSH_HOST }}
+          STAGING_USER: ${{ secrets.STAGING_SSH_USER }}
+          STAGING_KEY: ${{ secrets.STAGING_SSH_PRIVATE_KEY }}
+          STAGING_PATH: ${{ vars.STAGING_APP_PATH }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$STAGING_HOST"
+          test -n "$STAGING_USER"
+          test -n "$STAGING_KEY"
+          test -n "$STAGING_PATH"
+
+      - name: Configure SSH
+        env:
+          STAGING_HOST: ${{ secrets.STAGING_SSH_HOST }}
+          STAGING_KEY: ${{ secrets.STAGING_SSH_PRIVATE_KEY }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$STAGING_KEY" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -H "$STAGING_HOST" >> ~/.ssh/known_hosts
+
+      - name: Deploy staging-approved commit
+        env:
+          STAGING_HOST: ${{ secrets.STAGING_SSH_HOST }}
+          STAGING_USER: ${{ secrets.STAGING_SSH_USER }}
+          STAGING_PATH: ${{ vars.STAGING_APP_PATH }}
+          DEPLOY_SHA: ${{ github.sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          ssh "$STAGING_USER@$STAGING_HOST" bash -s -- "$STAGING_PATH" "$DEPLOY_SHA" <<'REMOTE'
+          set -euo pipefail
+          STAGING_PATH="$1"
+          DEPLOY_SHA="$2"
+          cd "$STAGING_PATH"
+          git fetch --prune origin staging-approved
+          git checkout staging-approved
+          git reset --hard "$DEPLOY_SHA"
+          cd apps/platform
+          composer install --no-interaction --prefer-dist --no-progress --no-dev --optimize-autoloader
+          php artisan migrate --force
+          npm install --no-audit --no-fund
+          npm run build
+          php artisan optimize:clear
+          php artisan optimize
+          php artisan queue:restart || true
+          REMOTE
+
+      - name: Verify deployed commit
+        env:
+          STAGING_HOST: ${{ secrets.STAGING_SSH_HOST }}
+          STAGING_USER: ${{ secrets.STAGING_SSH_USER }}
+          STAGING_PATH: ${{ vars.STAGING_APP_PATH }}
+          DEPLOY_SHA: ${{ github.sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          actual="$(ssh "$STAGING_USER@$STAGING_HOST" bash -s -- "$STAGING_PATH" <<'REMOTE'
+          set -euo pipefail
+          cd "$1"
+          git rev-parse HEAD
+          REMOTE
+          )"
+          test "$actual" = "$DEPLOY_SHA"
+          echo "Staging VPS deployed commit: $actual"
