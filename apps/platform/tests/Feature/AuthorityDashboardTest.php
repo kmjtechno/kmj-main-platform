@@ -63,6 +63,8 @@ final class AuthorityDashboardTest extends TestCase
             ->where('organizations.0.name', 'Visible Organization')
             ->where('organizations.0.role', 'owner')
             ->has('organizations.0.entitlements', 1)
+            ->where('organizations.0.entitlements.0.product_name', 'KMJ Main Platform Sandbox')
+            ->where('organizations.0.entitlements.0.product_slug', 'kmj-main-platform-sandbox')
             ->where('organizations.0.entitlements.0.capability', 'sandbox.product.access')
             ->where('organizations.0.entitlements.0.status', 'active'));
     }

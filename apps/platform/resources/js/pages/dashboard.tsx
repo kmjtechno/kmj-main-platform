@@ -16,6 +16,8 @@ import { dashboard } from '@/routes';
 type Entitlement = {
     id: string;
     product_id: string;
+    product_name: string;
+    product_slug: string;
     capability: string;
     status: string;
     starts_at: string;
@@ -109,7 +111,7 @@ export default function Dashboard({ organizations }: DashboardProps) {
                             </p>
                         </div>
                         <span className="w-fit rounded-full border border-emerald-500/15 bg-emerald-500/5 px-3 py-1 text-[10px] font-bold text-emerald-600 dark:text-emerald-400">
-                            P0 path advancing
+                            Critical path active
                         </span>
                     </div>
 
@@ -299,13 +301,25 @@ export default function Dashboard({ organizations }: DashboardProps) {
                                                             key={entitlement.id}
                                                             className="bg-muted/40 flex flex-col justify-between gap-2 rounded-lg px-3 py-3 text-xs sm:flex-row sm:items-center"
                                                         >
-                                                            <div className="flex items-center gap-2">
-                                                                <KeyRound className="h-3.5 w-3.5 text-red-500" />
-                                                                <span className="font-semibold">
-                                                                    {
-                                                                        entitlement.capability
-                                                                    }
-                                                                </span>
+                                                            <div className="flex min-w-0 items-start gap-2">
+                                                                <KeyRound className="mt-0.5 h-3.5 w-3.5 shrink-0 text-red-500" />
+                                                                <div className="min-w-0">
+                                                                    <div className="truncate font-semibold">
+                                                                        {
+                                                                            entitlement.product_name
+                                                                        }
+                                                                    </div>
+                                                                    <div className="text-muted-foreground mt-0.5 truncate font-mono text-[10px]">
+                                                                        {
+                                                                            entitlement.product_slug
+                                                                        }
+                                                                    </div>
+                                                                    <div className="text-muted-foreground mt-1 text-[10px]">
+                                                                        {
+                                                                            entitlement.capability
+                                                                        }
+                                                                    </div>
+                                                                </div>
                                                             </div>
                                                             <span className="text-[10px] font-bold text-emerald-600 uppercase dark:text-emerald-400">
                                                                 {
