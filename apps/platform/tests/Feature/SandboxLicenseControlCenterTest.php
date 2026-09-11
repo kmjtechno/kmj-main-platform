@@ -29,6 +29,12 @@ final class SandboxLicenseControlCenterTest extends TestCase
 
         $issueResponse->assertRedirect(route('sandbox-licenses.index'));
         $issueResponse->assertSessionHas('sandbox_license.validation.valid', true);
+        $this->assertDatabaseHas('license_audit_events', [
+            'actor_id' => $user->id,
+            'organization_id' => $entitlement->organization_id,
+            'action' => 'sandbox_license.issued',
+            'status' => 'success',
+        ]);
 
         $license = session('sandbox_license.token');
         self::assertIsString($license);
@@ -40,6 +46,12 @@ final class SandboxLicenseControlCenterTest extends TestCase
 
         $validateResponse->assertRedirect(route('sandbox-licenses.index'));
         $validateResponse->assertSessionHas('sandbox_license_validation.valid', true);
+        $this->assertDatabaseHas('license_audit_events', [
+            'actor_id' => $user->id,
+            'organization_id' => $entitlement->organization_id,
+            'action' => 'sandbox_license.validated',
+            'status' => 'valid',
+        ]);
 
         $revokeResponse = $this->actingAs($user)->post('/sandbox-licenses/revoke', [
             'license' => $license,
@@ -50,6 +62,13 @@ final class SandboxLicenseControlCenterTest extends TestCase
         $revokeResponse->assertSessionHas('sandbox_license_validation.valid', false);
         $revokeResponse->assertSessionHas('sandbox_license_validation.reason', 'revoked');
         $this->assertDatabaseCount('license_revocations', 1);
+        $this->assertDatabaseHas('license_audit_events', [
+            'actor_id' => $user->id,
+            'organization_id' => $entitlement->organization_id,
+            'action' => 'sandbox_license.revoked',
+            'status' => 'revoked',
+        ]);
+        $this->assertDatabaseCount('license_audit_events', 3);
     }
 
     public function test_user_cannot_issue_license_for_another_organization(): void
@@ -68,6 +87,8 @@ final class SandboxLicenseControlCenterTest extends TestCase
             'organization_id' => $entitlement->organization_id,
             'entitlement_id' => $entitlement->id,
         ])->assertForbidden();
+
+        $this->assertDatabaseCount('license_audit_events', 0);
     }
 
     public function test_user_cannot_validate_or_revoke_another_organizations_license(): void
@@ -101,5 +122,6 @@ final class SandboxLicenseControlCenterTest extends TestCase
         ])->assertForbidden();
 
         $this->assertDatabaseCount('license_revocations', 0);
+        $this->assertDatabaseCount('license_audit_events', 1);
     }
 }
