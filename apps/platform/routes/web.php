@@ -36,6 +36,30 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ]);
     })->name('dashboard');
 
+    Route::get('sandbox-licenses', function (
+        Request $request,
+        OrganizationDirectory $organizations,
+        EntitlementReader $entitlements,
+    ) {
+        $user = $request->user();
+        abort_unless($user instanceof User, 401);
+
+        $items = collect($organizations->forUser($user->id))
+            ->map(function (array $organization) use ($entitlements): array {
+                $organization['entitlements'] = $entitlements->forOrganization($organization['id']);
+
+                return $organization;
+            })
+            ->values()
+            ->all();
+
+        return Inertia::render('sandbox-licenses', [
+            'organizations' => $items,
+            'licenseResult' => $request->session()->get('sandbox_license'),
+            'validationResult' => $request->session()->get('sandbox_license_validation'),
+        ]);
+    })->name('sandbox-licenses.index');
+
     Route::post('organizations', function (Request $request, AuthorityBootstrapper $bootstrapper) {
         $user = $request->user();
         abort_unless($user instanceof User, 401);
@@ -81,7 +105,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         );
 
         return redirect()
-            ->route('dashboard')
+            ->route('sandbox-licenses.index')
             ->with('sandbox_license', [
                 'token' => $license,
                 'validation' => $licenses->validate($license),
@@ -108,7 +132,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         }
 
         return redirect()
-            ->route('dashboard')
+            ->route('sandbox-licenses.index')
             ->with('sandbox_license_validation', $result);
     })->name('sandbox-licenses.validate');
 
@@ -136,7 +160,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         $licenses->revoke($jti, $validated['reason'] ?? null);
 
         return redirect()
-            ->route('dashboard')
+            ->route('sandbox-licenses.index')
             ->with('sandbox_license_validation', $licenses->validate($validated['license']));
     })->name('sandbox-licenses.revoke');
 });
