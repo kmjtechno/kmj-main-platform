@@ -1,0 +1,80 @@
+name: Autonomous Execution Worker
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '*/5 * * * *'
+
+concurrency:
+  group: kmj-persistent-autonomous-worker
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  issues: write
+  pull-requests: write
+  checks: read
+  actions: read
+
+jobs:
+  worker:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      GITHUB_TOKEN: ${{ github.token }}
+      KMJ_EXECUTION_ENABLED: 'true'
+      KMJ_AUTONOMOUS_WRITE_ENABLED: 'true'
+      KMJ_AUTO_MERGE_ENABLED: 'true'
+      DB_CONNECTION: sqlite
+      DB_DATABASE: ${{ github.workspace }}/apps/platform/database/database.sqlite
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: true
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+          cache: pip
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240
+        with:
+          php-version: '8.5'
+          tools: composer:v2
+          coverage: none
+
+      - name: Setup Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: '22'
+
+      - name: Install worker dependencies
+        run: pip install -r requirements.txt
+
+      - name: Configure verified-free router
+        if: ${{ vars.KMJ_9ROUTER_BASE_URL != '' }}
+        shell: bash
+        run: echo "KMJ_9ROUTER_BASE_URL=${{ vars.KMJ_9ROUTER_BASE_URL }}" >> "$GITHUB_ENV"
+
+      - name: Verify worker safety core
+        run: PYTHONPATH=. python -m unittest tests.test_persistent_worker
+
+      - name: Run one guarded worker cycle
+        env:
+          KMJ_9ROUTER_API_KEY: ${{ secrets.KMJ_9ROUTER_API_KEY }}
+        run: PYTHONPATH=. python controller/persistent_worker.py
+
+      - name: Worker summary
+        if: always()
+        run: |
+          echo '## KMJ persistent autonomous worker' >> "$GITHUB_STEP_SUMMARY"
+          echo '- cadence: every 5 minutes' >> "$GITHUB_STEP_SUMMARY"
+          echo '- task gate: autonomous-safe label only' >> "$GITHUB_STEP_SUMMARY"
+          echo '- paid AI fallback: prohibited' >> "$GITHUB_STEP_SUMMARY"
+          echo '- local LLM inference: prohibited' >> "$GITHUB_STEP_SUMMARY"
+          echo '- auto-merge: only after required CI is green' >> "$GITHUB_STEP_SUMMARY"
+          echo '- deployment: existing staging promotion/deploy chain' >> "$GITHUB_STEP_SUMMARY"
