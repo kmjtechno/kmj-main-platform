@@ -1,5 +1,11 @@
 import { Head, useForm } from '@inertiajs/react';
-import { CheckCircle2, History, KeyRound, ShieldAlert, ShieldCheck } from 'lucide-react';
+import {
+    CheckCircle2,
+    History,
+    KeyRound,
+    ShieldAlert,
+    ShieldCheck,
+} from 'lucide-react';
 
 type Entitlement = {
     id: string;
@@ -57,7 +63,10 @@ export default function SandboxLicenses({
         (organization) => organization.id === issue.data.organization_id,
     );
     const organizationNames = new Map(
-        organizations.map((organization) => [organization.id, organization.name]),
+        organizations.map((organization) => [
+            organization.id,
+            organization.name,
+        ]),
     );
 
     return (
@@ -112,7 +121,10 @@ export default function SandboxLicenses({
                             >
                                 <option value="">Select organization</option>
                                 {organizations.map((organization) => (
-                                    <option key={organization.id} value={organization.id}>
+                                    <option
+                                        key={organization.id}
+                                        value={organization.id}
+                                    >
                                         {organization.name}
                                     </option>
                                 ))}
@@ -122,16 +134,27 @@ export default function SandboxLicenses({
                                 className="border-input bg-background h-11 w-full rounded-xl border px-3 text-sm"
                                 value={issue.data.entitlement_id}
                                 onChange={(event) =>
-                                    issue.setData('entitlement_id', event.target.value)
+                                    issue.setData(
+                                        'entitlement_id',
+                                        event.target.value,
+                                    )
                                 }
                                 required
                                 disabled={!selectedOrganization}
                             >
-                                <option value="">Select active entitlement</option>
+                                <option value="">
+                                    Select active entitlement
+                                </option>
                                 {selectedOrganization?.entitlements
-                                    .filter((entitlement) => entitlement.status === 'active')
+                                    .filter(
+                                        (entitlement) =>
+                                            entitlement.status === 'active',
+                                    )
                                     .map((entitlement) => (
-                                        <option key={entitlement.id} value={entitlement.id}>
+                                        <option
+                                            key={entitlement.id}
+                                            value={entitlement.id}
+                                        >
                                             {entitlement.capability}
                                         </option>
                                     ))}
@@ -143,7 +166,9 @@ export default function SandboxLicenses({
                                 className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-red-600 px-4 text-sm font-bold text-white disabled:opacity-60"
                             >
                                 <KeyRound className="h-4 w-4" />
-                                {issue.processing ? 'Issuing…' : 'Issue sandbox license'}
+                                {issue.processing
+                                    ? 'Issuing…'
+                                    : 'Issue sandbox license'}
                             </button>
                         </form>
                     </section>
@@ -165,7 +190,10 @@ export default function SandboxLicenses({
                                 className="border-input bg-background min-h-36 w-full rounded-xl border p-3 font-mono text-xs"
                                 value={validate.data.license}
                                 onChange={(event) =>
-                                    validate.setData('license', event.target.value)
+                                    validate.setData(
+                                        'license',
+                                        event.target.value,
+                                    )
                                 }
                                 placeholder="Paste sandbox license token"
                                 required
@@ -175,7 +203,9 @@ export default function SandboxLicenses({
                                 disabled={validate.processing}
                                 className="h-11 w-full rounded-xl border px-4 text-sm font-bold disabled:opacity-60"
                             >
-                                {validate.processing ? 'Validating…' : 'Validate license'}
+                                {validate.processing
+                                    ? 'Validating…'
+                                    : 'Validate license'}
                             </button>
                         </form>
                     </section>
@@ -197,7 +227,10 @@ export default function SandboxLicenses({
                                 className="border-input bg-background min-h-28 w-full rounded-xl border p-3 font-mono text-xs"
                                 value={revoke.data.license}
                                 onChange={(event) =>
-                                    revoke.setData('license', event.target.value)
+                                    revoke.setData(
+                                        'license',
+                                        event.target.value,
+                                    )
                                 }
                                 placeholder="Paste token to revoke"
                                 required
@@ -217,7 +250,9 @@ export default function SandboxLicenses({
                                 className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl border border-red-500/30 px-4 text-sm font-bold text-red-500 disabled:opacity-60"
                             >
                                 <ShieldAlert className="h-4 w-4" />
-                                {revoke.processing ? 'Revoking…' : 'Revoke license'}
+                                {revoke.processing
+                                    ? 'Revoking…'
+                                    : 'Revoke license'}
                             </button>
                         </form>
                     </section>
@@ -246,7 +281,8 @@ export default function SandboxLicenses({
                                 <ShieldAlert className="h-5 w-5 text-red-500" />
                             )}
                             <h2 className="font-bold">
-                                Validation: {validationResult.valid ? 'VALID' : 'INVALID'}
+                                Validation:{' '}
+                                {validationResult.valid ? 'VALID' : 'INVALID'}
                             </h2>
                         </div>
                         <p className="text-muted-foreground mt-2 text-xs">
@@ -254,7 +290,11 @@ export default function SandboxLicenses({
                         </p>
                         {validationResult.claims && (
                             <pre className="bg-muted/30 mt-4 overflow-x-auto rounded-xl border p-4 text-xs">
-                                {JSON.stringify(validationResult.claims, null, 2)}
+                                {JSON.stringify(
+                                    validationResult.claims,
+                                    null,
+                                    2,
+                                )}
                             </pre>
                         )}
                     </section>
@@ -264,9 +304,12 @@ export default function SandboxLicenses({
                     <div className="flex items-center gap-2">
                         <History className="h-5 w-5 text-red-500" />
                         <div>
-                            <h2 className="font-bold">Recent license audit trail</h2>
+                            <h2 className="font-bold">
+                                Recent license audit trail
+                            </h2>
                             <p className="text-muted-foreground mt-1 text-xs">
-                                Latest tenant-scoped issue, validation and revocation evidence.
+                                Latest tenant-scoped issue, validation and
+                                revocation evidence.
                             </p>
                         </div>
                     </div>
@@ -279,30 +322,53 @@ export default function SandboxLicenses({
                             <table className="w-full min-w-[760px] text-left text-xs">
                                 <thead className="text-muted-foreground border-b">
                                     <tr>
-                                        <th className="px-3 py-3 font-semibold">Time</th>
-                                        <th className="px-3 py-3 font-semibold">Organization</th>
-                                        <th className="px-3 py-3 font-semibold">Action</th>
-                                        <th className="px-3 py-3 font-semibold">Status</th>
-                                        <th className="px-3 py-3 font-semibold">JTI</th>
+                                        <th className="px-3 py-3 font-semibold">
+                                            Time
+                                        </th>
+                                        <th className="px-3 py-3 font-semibold">
+                                            Organization
+                                        </th>
+                                        <th className="px-3 py-3 font-semibold">
+                                            Action
+                                        </th>
+                                        <th className="px-3 py-3 font-semibold">
+                                            Status
+                                        </th>
+                                        <th className="px-3 py-3 font-semibold">
+                                            JTI
+                                        </th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     {auditEvents.map((event) => (
-                                        <tr key={event.id} className="border-b last:border-0">
+                                        <tr
+                                            key={event.id}
+                                            className="border-b last:border-0"
+                                        >
                                             <td className="px-3 py-3 whitespace-nowrap">
                                                 {event.created_at
-                                                    ? new Date(event.created_at).toLocaleString()
+                                                    ? new Date(
+                                                          event.created_at,
+                                                      ).toLocaleString()
                                                     : '—'}
                                             </td>
                                             <td className="px-3 py-3 font-medium">
                                                 {event.organization_id
-                                                    ? organizationNames.get(event.organization_id) ?? event.organization_id
+                                                    ? (organizationNames.get(
+                                                          event.organization_id,
+                                                      ) ?? event.organization_id)
                                                     : '—'}
                                             </td>
-                                            <td className="px-3 py-3 font-mono">{event.action}</td>
-                                            <td className="px-3 py-3 uppercase">{event.status}</td>
                                             <td className="px-3 py-3 font-mono">
-                                                {event.jti ? `${event.jti.slice(0, 12)}…` : '—'}
+                                                {event.action}
+                                            </td>
+                                            <td className="px-3 py-3 uppercase">
+                                                {event.status}
+                                            </td>
+                                            <td className="px-3 py-3 font-mono">
+                                                {event.jti
+                                                    ? `${event.jti.slice(0, 12)}…`
+                                                    : '—'}
                                             </td>
                                         </tr>
                                     ))}
