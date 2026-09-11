@@ -3,7 +3,7 @@ name: Autonomous Cycle
 on:
   workflow_dispatch:
   schedule:
-    - cron: '*/15 * * * *'
+    - cron: '*/5 * * * *'
 
 concurrency:
   group: kmj-autonomous-writer
@@ -17,7 +17,7 @@ jobs:
   watchdog:
     name: Autonomous safety and recovery watchdog
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
         with:
@@ -77,4 +77,4 @@ jobs:
       - name: Watchdog result
         run: |
           echo 'Autonomous watchdog PASS.'
-          echo 'The project is re-verified every 15 minutes; deployment recovery remains handled by the staging deploy workflow.'
+          echo 'The project is re-verified every 5 minutes; deployment recovery remains handled by the staging deploy workflow.'

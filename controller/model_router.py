@@ -35,7 +35,7 @@ class FreeCloudRouter:
         self.config = yaml.safe_load(ROUTER_CONFIG.read_text(encoding="utf-8"))
         self.base_url = os.getenv("KMJ_9ROUTER_BASE_URL", "http://127.0.0.1:20128/v1").rstrip("/")
         self.api_key = os.getenv("KMJ_9ROUTER_API_KEY", "")
-        self.timeout = float(os.getenv("KMJ_9ROUTER_TIMEOUT_SECONDS", "20"))
+        self.timeout = float(os.getenv("KMJ_9ROUTER_TIMEOUT_SECONDS", "12"))
         self.max_failover_models = int(os.getenv("KMJ_MAX_FREE_FAILOVER_MODELS", "4"))
 
     def _headers(self) -> dict[str, str]:
