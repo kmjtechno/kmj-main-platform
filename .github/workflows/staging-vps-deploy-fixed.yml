@@ -75,8 +75,14 @@ jobs:
         run: |
           set -euo pipefail
           install -m 700 -d ~/.ssh
-          printf '%s\n' "$STAGING_KEY" | tr -d '\r' > ~/.ssh/id_ed25519
+          # Accept normal multiline secrets and secrets pasted with literal \n escapes.
+          printf '%s' "$STAGING_KEY" | sed 's/\\n/\n/g' | tr -d '\r' > ~/.ssh/id_ed25519
+          printf '\n' >> ~/.ssh/id_ed25519
           chmod 600 ~/.ssh/id_ed25519
+          if ! ssh-keygen -y -f ~/.ssh/id_ed25519 >/dev/null 2>&1; then
+            echo '::error title=Invalid staging SSH private key::STAGING_SSH_PRIVATE_KEY could not be parsed after newline normalization'
+            exit 1
+          fi
           for attempt in 1 2 3; do
             if ssh-keyscan -T 10 -H "$STAGING_HOST" >> ~/.ssh/known_hosts 2>/dev/null; then
               exit 0
