@@ -10,7 +10,7 @@ import yaml
 
 from controller.model_router import FreeCloudRouter, NoFreeRouteAvailable
 
-app = FastAPI(title="KMJ Main Platform Autonomous Engineer", version="0.3.0")
+app = FastAPI(title="KMJ Main Platform Autonomous Engineer", version="0.3.1")
 ROOT = Path(__file__).resolve().parents[1]
 STATE = ROOT / "state" / "runtime.json"
 MISSION = ROOT / "mission" / "main-platform.yaml"
@@ -87,7 +87,7 @@ def high_risk_reason(task: str) -> str | None:
 def root():
     return {
         "service": "KMJ Main Platform Autonomous Engineer",
-        "version": "0.3.0",
+        "version": "0.3.1",
         "health": "/health",
         "router_status": "/router/status",
         "agent_plan": "/agent/plan",
@@ -107,6 +107,8 @@ def health():
         "cloud_nexus": "UNTOUCHED",
         "write_control": "TOKEN_GATED" if os.getenv("KMJ_CONTROL_TOKEN") else "DISABLED",
         "execution_enabled": os.getenv("KMJ_EXECUTION_ENABLED", "false").lower() == "true",
+        "autonomy_level": "execution-gated" if os.getenv("KMJ_EXECUTION_ENABLED", "false").lower() == "true" else "planning-only",
+        "router_timeout_seconds": router.timeout,
     }
 
 
