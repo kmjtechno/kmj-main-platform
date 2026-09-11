@@ -14,7 +14,10 @@ const buildFingerprint = (doc: Document): string =>
             'link[href*="/build/assets/"], script[src*="/build/assets/"]',
         ),
     )
-        .map((node) => node.getAttribute('href') ?? node.getAttribute('src') ?? '')
+        .map(
+            (node) =>
+                node.getAttribute('href') ?? node.getAttribute('src') ?? '',
+        )
         .filter(Boolean)
         .sort()
         .join('|');
@@ -27,7 +30,9 @@ const installBuildUpdateWatcher = (): void => {
         if (document.visibilityState !== 'visible') return;
 
         try {
-            const response = await fetch(window.location.href, { cache: 'no-store' });
+            const response = await fetch(window.location.href, {
+                cache: 'no-store',
+            });
             if (!response.ok) return;
 
             const nextDocument = new DOMParser().parseFromString(
