@@ -11,6 +11,5 @@ final readonly class SandboxLicenseClaims
         public string $entitlementId,
         public int $issuedAt,
         public int $expiresAt,
-    ) {
-    }
+    ) {}
 }
