@@ -18,7 +18,7 @@ final class SandboxLicenseLifecycleTest extends TestCase
         $secret = str_repeat('k', 32);
         $issuer = new SandboxLicenseIssuer($secret);
         $validator = new LicenseValidator($secret);
-        $revoker = new LicenseRevoker();
+        $revoker = new LicenseRevoker;
 
         $license = $issuer->issue(
             organizationId: 10,
