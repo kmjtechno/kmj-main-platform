@@ -1,0 +1,378 @@
+from __future__ import annotations
+
+import asyncio
+import json
+import os
+import re
+import subprocess
+import time
+from pathlib import Path
+from typing import Any
+
+import httpx
+
+from controller.main import SYSTEM_PROMPT, high_risk_reason
+from controller.model_router import FreeCloudRouter, NoFreeRouteAvailable
+
+ROOT = Path(__file__).resolve().parents[1]
+REPO = os.getenv("GITHUB_REPOSITORY", "kmjtechno/kmj-main-platform")
+API = os.getenv("GITHUB_API_URL", "https://api.github.com").rstrip("/")
+SAFE_LABEL = "autonomous-safe"
+RUNNING_LABEL = "autonomous-running"
+AGENT_LABEL = "autonomous-agent"
+BLOCKED_LABEL = "autonomous-blocked"
+ALLOWED_PREFIXES = ("apps/platform/", "crates/", "contracts/", "docs/")
+DENIED_PREFIXES = (
+    ".github/", "controller/", "config/", "mission/", "infra/", ".env", "secrets/",
+)
+HIGH_RISK_EXTRA = (
+    "production", "dns", "billing", "payment", "private key", "signing key",
+    "drop database", "delete database", "migration cutover", "legal", "cloud nexus",
+)
+MAX_PATCH_BYTES = int(os.getenv("KMJ_WORKER_MAX_PATCH_BYTES", "80000"))
+MAX_PATCH_FILES = int(os.getenv("KMJ_WORKER_MAX_PATCH_FILES", "12"))
+
+
+def enabled(name: str) -> bool:
+    return os.getenv(name, "false").lower() == "true"
+
+
+def run(cmd: list[str], cwd: Path = ROOT, timeout: int = 900) -> subprocess.CompletedProcess[str]:
+    return subprocess.run(
+        cmd, cwd=cwd, text=True, capture_output=True, timeout=timeout, check=False,
+    )
+
+
+def task_risk(text: str) -> str | None:
+    base = high_risk_reason(text)
+    if base:
+        return base
+    lowered = text.lower()
+    return next((term for term in HIGH_RISK_EXTRA if term in lowered), None)
+
+def patch_paths(patch: str) -> list[str]:
+    paths: list[str] = []
+    for line in patch.splitlines():
+        if line.startswith("+++ b/"):
+            path = line[6:].strip()
+            if path != "/dev/null":
+                paths.append(path)
+    return sorted(set(paths))
+
+
+def validate_patch(patch: str) -> list[str]:
+    if not patch.startswith("diff --git "):
+        raise ValueError("PATCH_NOT_UNIFIED_DIFF")
+    if len(patch.encode("utf-8")) > MAX_PATCH_BYTES:
+        raise ValueError("PATCH_TOO_LARGE")
+    paths = patch_paths(patch)
+    if not paths or len(paths) > MAX_PATCH_FILES:
+        raise ValueError("PATCH_FILE_COUNT_INVALID")
+    for path in paths:
+        if path.startswith("/") or ".." in Path(path).parts:
+            raise ValueError(f"UNSAFE_PATH:{path}")
+        if path.startswith(DENIED_PREFIXES):
+            raise ValueError(f"DENIED_PATH:{path}")
+        if not path.startswith(ALLOWED_PREFIXES):
+            raise ValueError(f"PATH_NOT_ALLOWLISTED:{path}")
+    return paths
+
+
+def extract_model_json(result: dict[str, Any]) -> dict[str, Any]:
+    choices = result.get("response", {}).get("choices", [])
+    if not choices:
+        raise ValueError("MODEL_RESPONSE_EMPTY")
+    content = str(choices[0].get("message", {}).get("content", "")).strip()
+    content = re.sub(r"^```(?:json)?\s*|\s*```$", "", content, flags=re.I | re.S)
+    payload = json.loads(content)
+    if not isinstance(payload, dict) or not isinstance(payload.get("patch"), str):
+        raise ValueError("MODEL_RESPONSE_SCHEMA_INVALID")
+    return payload
+
+class GitHubClient:
+    def __init__(self) -> None:
+        token = os.getenv("GITHUB_TOKEN", "")
+        if not token:
+            raise RuntimeError("GITHUB_TOKEN_NOT_CONFIGURED")
+        self.client = httpx.Client(
+            timeout=30,
+            headers={
+                "Authorization": f"Bearer {token}",
+                "Accept": "application/vnd.github+json",
+                "X-GitHub-Api-Version": "2022-11-28",
+            },
+        )
+
+    def request(self, method: str, path: str, **kwargs: Any) -> Any:
+        response = self.client.request(method, f"{API}/repos/{REPO}{path}", **kwargs)
+        response.raise_for_status()
+        if response.status_code == 204 or not response.content:
+            return None
+        return response.json()
+
+    def ensure_labels(self) -> None:
+        for name, color in (
+            (SAFE_LABEL, "0e8a16"), (RUNNING_LABEL, "fbca04"),
+            (AGENT_LABEL, "5319e7"), (BLOCKED_LABEL, "b60205"),
+        ):
+            try:
+                self.request("POST", "/labels", json={"name": name, "color": color})
+            except httpx.HTTPStatusError as exc:
+                if exc.response.status_code != 422:
+                    raise
+    def safe_issues(self) -> list[dict[str, Any]]:
+        issues = self.request(
+            "GET", f"/issues?state=open&labels={SAFE_LABEL}&sort=created&direction=asc&per_page=50",
+        )
+        return [item for item in issues if "pull_request" not in item]
+
+    def labels(self, issue_number: int) -> set[str]:
+        issue = self.request("GET", f"/issues/{issue_number}")
+        return {str(label.get("name")) for label in issue.get("labels", [])}
+
+    def add_labels(self, issue_number: int, labels: list[str]) -> None:
+        self.request("POST", f"/issues/{issue_number}/labels", json={"labels": labels})
+
+    def remove_label(self, issue_number: int, label: str) -> None:
+        try:
+            self.request("DELETE", f"/issues/{issue_number}/labels/{label}")
+        except httpx.HTTPStatusError as exc:
+            if exc.response.status_code != 404:
+                raise
+
+    def comment(self, issue_number: int, body: str) -> None:
+        self.request("POST", f"/issues/{issue_number}/comments", json={"body": body})
+
+    def create_pr(self, title: str, branch: str, body: str) -> dict[str, Any]:
+        return self.request(
+            "POST", "/pulls", json={"title": title, "head": branch, "base": "main", "body": body},
+        )
+
+    def open_agent_prs(self) -> list[dict[str, Any]]:
+        pulls = self.request("GET", "/pulls?state=open&per_page=50")
+        return [p for p in pulls if str(p.get("head", {}).get("ref", "")).startswith("agent/auto-")]
+    def pr_files(self, pr_number: int) -> list[str]:
+        files = self.request("GET", f"/pulls/{pr_number}/files?per_page=100")
+        return [str(item.get("filename", "")) for item in files]
+
+    def checks_green(self, sha: str, require_platform: bool) -> bool:
+        payload = self.request("GET", f"/commits/{sha}/check-runs?per_page=100")
+        runs = payload.get("check_runs", [])
+        if not runs or any(run.get("status") != "completed" for run in runs):
+            return False
+        allowed = {"success", "neutral", "skipped"}
+        if any(run.get("conclusion") not in allowed for run in runs):
+            return False
+        names = {str(run.get("name", "")).lower() for run in runs}
+        if "verify" not in names:
+            return False
+        if require_platform and "platform" not in names:
+            return False
+        return True
+
+    def merge_pr(self, pr_number: int, sha: str) -> dict[str, Any]:
+        return self.request(
+            "PUT", f"/pulls/{pr_number}/merge",
+            json={"sha": sha, "merge_method": "squash"},
+        )
+
+
+def issue_text(issue: dict[str, Any]) -> str:
+    return f"{issue.get('title', '')}\n\n{issue.get('body') or ''}".strip()
+
+
+def select_issue(gh: GitHubClient) -> dict[str, Any] | None:
+    for issue in gh.safe_issues():
+        labels = {str(x.get("name")) for x in issue.get("labels", [])}
+        if RUNNING_LABEL in labels or BLOCKED_LABEL in labels:
+            continue
+        risk = task_risk(issue_text(issue))
+        if risk:
+            gh.add_labels(int(issue["number"]), [BLOCKED_LABEL])
+            gh.comment(int(issue["number"]), f"Autonomous worker blocked this task: high-risk term `{risk}` requires owner review.")
+            continue
+        return issue
+    return None
+
+async def propose_patch(issue: dict[str, Any]) -> tuple[dict[str, Any], dict[str, Any]]:
+    router = FreeCloudRouter()
+    prompt = f"""Implement this GitHub issue as one small safe patch.
+Issue #{issue['number']}: {issue.get('title', '')}
+
+{issue.get('body') or ''}
+
+Return JSON only with keys: summary, patch, tests.
+patch must be a git unified diff and may only modify allowlisted product paths.
+Never modify CI, workflows, autonomous worker/controller, infra, secrets, mission policy, DNS,
+production configuration, billing/payment, signing/private keys, or KMJ Cloud Nexus.
+Keep the change minimal and reversible. Do not claim tests passed; only list tests to run.
+"""
+    result = await router.complete(
+        [
+            {"role": "system", "content": SYSTEM_PROMPT},
+            {"role": "user", "content": prompt},
+        ],
+        route="coding",
+        temperature=0.05,
+    )
+    return extract_model_json(result), result
+
+
+def run_verification(paths: list[str]) -> tuple[bool, str]:
+    commands: list[tuple[list[str], Path]] = [
+        (["python", "scripts/verify_architecture.py"], ROOT),
+        (["python", "scripts/verify_contracts.py"], ROOT),
+        (["python", "scripts/verify_runtime.py"], ROOT),
+        (["python", "scripts/verify_free_router.py"], ROOT),
+    ]
+    if any(path.startswith("apps/platform/") for path in paths):
+        platform = ROOT / "apps" / "platform"
+        (platform / "database" / "database.sqlite").touch(exist_ok=True)
+        if not (platform / ".env").exists() and (platform / ".env.example").exists():
+            (platform / ".env").write_text(
+                (platform / ".env.example").read_text(encoding="utf-8"), encoding="utf-8"
+            )
+        commands.extend([
+            (["composer", "install", "--no-interaction", "--prefer-dist", "--no-progress"], platform),
+            (["php", "artisan", "key:generate", "--force"], platform),
+            (["php", "artisan", "migrate", "--force"], platform),
+            (["npm", "ci", "--no-audit", "--no-fund"], platform),
+            (["composer", "ci:check"], platform),
+        ])
+    if any(path.startswith("crates/") for path in paths) and (ROOT / "Cargo.toml").exists():
+        commands.append((["cargo", "test", "--workspace"], ROOT))
+    output: list[str] = []
+    for cmd, cwd in commands:
+        completed = run(cmd, cwd=cwd)
+        output.append(f"$ {' '.join(cmd)}\n{completed.stdout[-3000:]}\n{completed.stderr[-3000:]}")
+        if completed.returncode != 0:
+            return False, "\n\n".join(output)
+    return True, "\n\n".join(output)
+
+def reconcile_agent_prs(gh: GitHubClient) -> bool:
+    progressed = False
+    for pr in gh.open_agent_prs():
+        pr_number = int(pr["number"])
+        sha = str(pr.get("head", {}).get("sha", ""))
+        files = gh.pr_files(pr_number)
+        require_platform = any(path.startswith("apps/platform/") for path in files)
+        if not sha or not gh.checks_green(sha, require_platform=require_platform):
+            continue
+        if not enabled("KMJ_AUTO_MERGE_ENABLED"):
+            continue
+        merged = gh.merge_pr(pr_number, sha)
+        if merged.get("merged"):
+            match = re.search(r"Autonomous-Issue:\s*(\d+)", str(pr.get("body") or ""))
+            if match:
+                issue_number = int(match.group(1))
+                gh.remove_label(issue_number, RUNNING_LABEL)
+                gh.comment(issue_number, f"Autonomous PR #{pr_number} passed CI and was merged. Staging promotion/deploy will continue through the guarded pipeline.")
+            progressed = True
+    return progressed
+
+
+def prepare_branch(issue_number: int) -> str:
+    branch = f"agent/auto-{issue_number}-{int(time.time())}"
+    for cmd in (
+        ["git", "fetch", "origin", "main"],
+        ["git", "checkout", "-B", branch, "origin/main"],
+        ["git", "reset", "--hard", "origin/main"],
+        ["git", "clean", "-fd"],
+    ):
+        completed = run(cmd)
+        if completed.returncode != 0:
+            raise RuntimeError(f"GIT_PREP_FAILED:{' '.join(cmd)}:{completed.stderr[-500:]}")
+    return branch
+
+
+def apply_patch(patch: str) -> None:
+    patch_file = ROOT / ".kmj-agent.patch"
+    patch_file.write_text(patch, encoding="utf-8")
+    try:
+        check = run(["git", "apply", "--check", str(patch_file)])
+        if check.returncode != 0:
+            raise RuntimeError(f"PATCH_CHECK_FAILED:{check.stderr[-1000:]}")
+        applied = run(["git", "apply", str(patch_file)])
+        if applied.returncode != 0:
+            raise RuntimeError(f"PATCH_APPLY_FAILED:{applied.stderr[-1000:]}")
+    finally:
+        patch_file.unlink(missing_ok=True)
+
+def commit_and_push(branch: str, issue: dict[str, Any], summary: str) -> None:
+    run(["git", "config", "user.name", "KMJ Autonomous Worker"])
+    run(["git", "config", "user.email", "158804600+kmjtechno@users.noreply.github.com"])
+    add = run(["git", "add", "--all"])
+    if add.returncode != 0:
+        raise RuntimeError("GIT_ADD_FAILED")
+    diff = run(["git", "diff", "--cached", "--quiet"])
+    if diff.returncode == 0:
+        raise RuntimeError("PATCH_PRODUCED_NO_CHANGES")
+    title = str(issue.get("title", "Autonomous safe task"))[:72]
+    commit = run(["git", "commit", "-m", f"agent: {title}", "-m", summary[:500]])
+    if commit.returncode != 0:
+        raise RuntimeError(f"GIT_COMMIT_FAILED:{commit.stderr[-1000:]}")
+    pushed = run(["git", "push", "origin", f"HEAD:{branch}"])
+    if pushed.returncode != 0:
+        raise RuntimeError(f"GIT_PUSH_FAILED:{pushed.stderr[-1000:]}")
+
+
+def execute_one(gh: GitHubClient) -> bool:
+    issue = select_issue(gh)
+    if not issue:
+        return False
+    issue_number = int(issue["number"])
+    gh.add_labels(issue_number, [RUNNING_LABEL])
+    try:
+        payload, model_result = asyncio.run(propose_patch(issue))
+        patch = str(payload["patch"])
+        paths = validate_patch(patch)
+        branch = prepare_branch(issue_number)
+        apply_patch(patch)
+        ok, evidence = run_verification(paths)
+        if not ok:
+            run(["git", "reset", "--hard", "origin/main"])
+            gh.remove_label(issue_number, RUNNING_LABEL)
+            gh.add_labels(issue_number, [BLOCKED_LABEL])
+            gh.comment(issue_number, "Autonomous patch failed local verification and was not pushed.\n\n```text\n" + evidence[-5000:] + "\n```")
+            return True
+        summary = str(payload.get("summary", "Autonomous safe task"))
+        commit_and_push(branch, issue, summary)
+        model_name = str(model_result.get("model", "verified-free-cloud"))
+        body = (
+            f"Autonomous-Issue: {issue_number}\n\n"
+            f"Implements #{issue_number} through the execution-gated KMJ worker.\n\n"
+            f"Model route: `{model_name}`\n"
+            f"Changed paths: {', '.join(f'`{p}`' for p in paths)}\n\n"
+            "Local verification completed successfully before push. "
+            "This PR must still pass repository CI before autonomous merge.\n\n"
+            f"Closes #{issue_number}"
+        )
+        pr = gh.create_pr(f"agent: {issue.get('title', '')}", branch, body)
+        gh.add_labels(int(pr["number"]), [AGENT_LABEL])
+        gh.comment(issue_number, f"Autonomous worker opened PR #{pr['number']} after local verification. Waiting for required CI checks.")
+        return True
+    except NoFreeRouteAvailable:
+        gh.remove_label(issue_number, RUNNING_LABEL)
+        return False
+    except Exception as exc:
+        gh.remove_label(issue_number, RUNNING_LABEL)
+        gh.add_labels(issue_number, [BLOCKED_LABEL])
+        gh.comment(issue_number, f"Autonomous worker stopped safely: `{type(exc).__name__}`. No merge/deploy was performed.")
+        return True
+
+
+def main() -> int:
+    if not enabled("KMJ_EXECUTION_ENABLED") or not enabled("KMJ_AUTONOMOUS_WRITE_ENABLED"):
+        print("KMJ autonomous worker: execution gate is closed; no repository writes performed.")
+        return 0
+    gh = GitHubClient()
+    gh.ensure_labels()
+    progressed = reconcile_agent_prs(gh)
+    if not gh.open_agent_prs():
+        progressed = execute_one(gh) or progressed
+    print("KMJ autonomous worker:", "progressed" if progressed else "idle")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

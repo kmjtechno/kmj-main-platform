@@ -19,6 +19,8 @@ jobs:
       - run: pip install -r requirements.txt
       - name: Compile controller
         run: python -m compileall controller
+      - name: Verify persistent worker safety
+        run: PYTHONPATH=. python -m unittest tests.test_persistent_worker
       - name: Verify locked runtime invariants
         run: |
           set -euo pipefail
