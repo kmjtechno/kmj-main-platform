@@ -72,9 +72,10 @@ export default function Dashboard({ organizations }: DashboardProps) {
                                 KMJ Main Platform Control Center
                             </h1>
                             <p className="text-muted-foreground mt-3 max-w-xl text-sm leading-6">
-                                The working authority path now covers organization,
-                                product and entitlement authority plus the sandbox
-                                license lifecycle: issue → validate → revoke.
+                                The working authority path now covers
+                                organization, product and entitlement authority
+                                plus the sandbox license lifecycle: issue →
+                                validate → revoke.
                             </p>
                         </div>
 
@@ -96,9 +97,12 @@ export default function Dashboard({ organizations }: DashboardProps) {
                 <section className="border-sidebar-border/70 bg-card dark:border-sidebar-border rounded-2xl border p-5 sm:p-6">
                     <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
                         <div>
-                            <h2 className="font-bold">Minimum working product path</h2>
+                            <h2 className="font-bold">
+                                Minimum working product path
+                            </h2>
                             <p className="text-muted-foreground mt-1 text-xs">
-                                Current implementation progress surfaced directly in the control center
+                                Current implementation progress surfaced directly
+                                in the control center
                             </p>
                         </div>
                         <span className="inline-flex w-fit items-center gap-1.5 rounded-full border border-emerald-500/15 bg-emerald-500/5 px-2.5 py-1 text-[10px] font-bold text-emerald-600 dark:text-emerald-400">
@@ -116,7 +120,9 @@ export default function Dashboard({ organizations }: DashboardProps) {
                                 <div className="text-muted-foreground text-[10px] font-bold tracking-wider uppercase">
                                     Step {String(index + 1).padStart(2, '0')}
                                 </div>
-                                <div className="mt-2 text-sm font-bold">{step.label}</div>
+                                <div className="mt-2 text-sm font-bold">
+                                    {step.label}
+                                </div>
                                 <div className="mt-3 inline-flex items-center gap-1.5 text-[10px] font-bold text-emerald-600 uppercase dark:text-emerald-400">
                                     <CheckCircle2 className="h-3 w-3" />
                                     {step.status}
@@ -292,11 +298,15 @@ export default function Dashboard({ organizations }: DashboardProps) {
                                                             <div className="flex items-center gap-2">
                                                                 <KeyRound className="h-3.5 w-3.5 text-red-500" />
                                                                 <span className="font-semibold">
-                                                                    {entitlement.capability}
+                                                                    {
+                                                                        entitlement.capability
+                                                                    }
                                                                 </span>
                                                             </div>
                                                             <span className="text-[10px] font-bold text-emerald-600 uppercase dark:text-emerald-400">
-                                                                {entitlement.status}
+                                                                {
+                                                                    entitlement.status
+                                                                }
                                                             </span>
                                                         </div>
                                                     ),
