@@ -134,7 +134,8 @@ export default function Welcome() {
                         <div>
                             <div className="mb-7 inline-flex items-center gap-2 rounded-full border border-[#e21b23]/25 bg-[#e21b23]/[0.07] px-3 py-1.5 text-xs font-semibold tracking-wide text-[#ff747a]">
                                 <span className="h-1.5 w-1.5 rounded-full bg-[#e21b23] shadow-[0_0_10px_#e21b23]" />
-                                Staging live · foundation + licensing validation in motion
+                                Staging live · foundation + licensing validation
+                                in motion
                             </div>
 
                             <h1 className="max-w-4xl text-5xl leading-[0.98] font-black tracking-[-0.055em] sm:text-6xl lg:text-[5.4rem]">
@@ -149,9 +150,10 @@ export default function Welcome() {
                                 customer access, entitlements, licensing,
                                 releases and governed automation — built as an
                                 enterprise foundation instead of a collection of
-                                disconnected tools. The current staging track now
-                                includes the authority foundation, sandbox licensing
-                                validation and deployment verification in parallel.
+                                disconnected tools. The current staging track
+                                now includes the authority foundation, sandbox
+                                licensing validation and deployment verification
+                                in parallel.
                             </p>
 
                             <div className="mt-9 flex flex-col gap-3 sm:flex-row">
@@ -200,16 +202,37 @@ export default function Welcome() {
 
                             <div className="mt-6 grid max-w-2xl gap-3 sm:grid-cols-3">
                                 {[
-                                    ['Authority core', 'Active', 'Identity → entitlement → license chain'],
-                                    ['License validation', 'Running', 'Sandbox verification + audit evidence'],
-                                    ['Staging delivery', 'Auto', 'CI → promotion → deploy → health'],
+                                    [
+                                        'Authority core',
+                                        'Active',
+                                        'Identity → entitlement → license chain',
+                                    ],
+                                    [
+                                        'License validation',
+                                        'Running',
+                                        'Sandbox verification + audit evidence',
+                                    ],
+                                    [
+                                        'Staging delivery',
+                                        'Auto',
+                                        'CI → promotion → deploy → health',
+                                    ],
                                 ].map(([title, status, detail]) => (
-                                    <div key={title} className="rounded-xl border border-[#e21b23]/15 bg-[#e21b23]/[0.045] p-4">
+                                    <div
+                                        key={title}
+                                        className="rounded-xl border border-[#e21b23]/15 bg-[#e21b23]/[0.045] p-4"
+                                    >
                                         <div className="flex items-center justify-between gap-3">
-                                            <span className="text-xs font-bold text-white/85">{title}</span>
-                                            <span className="rounded-full border border-emerald-400/15 bg-emerald-400/[0.06] px-2 py-1 text-[9px] font-bold uppercase tracking-wide text-emerald-300">{status}</span>
+                                            <span className="text-xs font-bold text-white/85">
+                                                {title}
+                                            </span>
+                                            <span className="rounded-full border border-emerald-400/15 bg-emerald-400/[0.06] px-2 py-1 text-[9px] font-bold tracking-wide text-emerald-300 uppercase">
+                                                {status}
+                                            </span>
                                         </div>
-                                        <p className="mt-2 text-[11px] leading-5 text-white/40">{detail}</p>
+                                        <p className="mt-2 text-[11px] leading-5 text-white/40">
+                                            {detail}
+                                        </p>
                                     </div>
                                 ))}
                             </div>
