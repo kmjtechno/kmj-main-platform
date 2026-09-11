@@ -10,8 +10,7 @@ final class SandboxLicenseLifecycle
         private readonly SandboxLicenseIssuer $issuer,
         private readonly LicenseValidator $validator,
         private readonly LicenseRevoker $revoker,
-    ) {
-    }
+    ) {}
 
     public function issue(
         int|string $organizationId,
