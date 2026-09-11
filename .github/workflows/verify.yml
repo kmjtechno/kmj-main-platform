@@ -40,6 +40,7 @@ jobs:
           grep -q 'sha256sum --check' scripts/verify_backup_bundle.sh
           grep -q 'No secret values were printed' scripts/backup_preflight.sh
           python scripts/test_backup_contract.py
+          python scripts/test_restore_verification_contract.py
       - name: Verify architecture foundation
         run: |
           set -euo pipefail
