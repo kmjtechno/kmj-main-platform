@@ -4,6 +4,9 @@ on:
   push:
     branches:
       - main
+    paths-ignore:
+      - '.github/workflows/staging-vps-deploy-fixed.yml'
+      - '.github/workflows/staging-promotion-gate.yml'
   workflow_dispatch:
 
 permissions:
