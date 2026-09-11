@@ -3,7 +3,6 @@
 use App\Models\User;
 use App\Services\AuthorityBootstrapper;
 use App\Services\Licensing\SandboxLicenseLifecycle;
-use DateTimeImmutable;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -101,7 +100,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
             $entitlement->organization_id,
             $entitlement->product_id,
             $entitlement->getKey(),
-            new DateTimeImmutable('+30 minutes'),
+            new \\DateTimeImmutable('+30 minutes'),
         );
 
         return redirect()
