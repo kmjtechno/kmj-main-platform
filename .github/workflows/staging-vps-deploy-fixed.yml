@@ -205,6 +205,21 @@ jobs:
           echo 'result=pass' >> "$GITHUB_OUTPUT"
           echo "Staging health check PASS: $HEALTH_URL"
 
+      - name: Verify rendered staging progress UI
+        id: ui
+        env:
+          HEALTH_URL: ${{ vars.STAGING_HEALTHCHECK_URL }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          chrome="$(command -v google-chrome || command -v chromium || command -v chromium-browser || true)"
+          test -n "$chrome"
+          dom="$($chrome --headless --no-sandbox --disable-gpu --virtual-time-budget=10000 --dump-dom "$HEALTH_URL" 2>/dev/null)"
+          printf '%s' "$dom" | grep -Fq 'Verified delivery progress'
+          printf '%s' "$dom" | grep -Fq '57%'
+          echo 'result=pass' >> "$GITHUB_OUTPUT"
+          echo 'Rendered staging UI PASS: verified delivery progress = 57%.'
+
       - name: Deployment evidence summary
         if: always()
         shell: bash
@@ -213,6 +228,7 @@ jobs:
           APPROVED_SHA: ${{ steps.approved.outputs.sha }}
           DEPLOYED_SHA: ${{ steps.verify.outputs.actual_sha }}
           HEALTH_RESULT: ${{ steps.health.outputs.result }}
+          UI_RESULT: ${{ steps.ui.outputs.result }}
         run: |
           {
             echo '## KMJ staging deployment evidence'
@@ -223,5 +239,6 @@ jobs:
             echo "- deployment: ${{ steps.deploy.conclusion }}"
             echo "- commit verification: ${{ steps.verify.conclusion }}"
             echo "- HTTP health: ${HEALTH_RESULT:-not-run}"
+            echo "- rendered UI: ${UI_RESULT:-not-run}"
             if [ -n "$HEALTH_URL" ]; then echo "- staging URL: $HEALTH_URL"; fi
           } >> "$GITHUB_STEP_SUMMARY"
