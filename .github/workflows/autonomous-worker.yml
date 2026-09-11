@@ -20,6 +20,7 @@ jobs:
   worker:
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    environment: staging
     env:
       GITHUB_TOKEN: ${{ github.token }}
       KMJ_EXECUTION_ENABLED: 'true'
@@ -59,6 +60,29 @@ jobs:
         if: ${{ vars.KMJ_9ROUTER_BASE_URL != '' }}
         shell: bash
         run: echo "KMJ_9ROUTER_BASE_URL=${{ vars.KMJ_9ROUTER_BASE_URL }}" >> "$GITHUB_ENV"
+
+      - name: Tunnel to server-local 9Router when no public endpoint is configured
+        if: ${{ vars.KMJ_9ROUTER_BASE_URL == '' }}
+        env:
+          STAGING_HOST: ${{ secrets.STAGING_SSH_HOST }}
+          STAGING_USER: ${{ secrets.STAGING_SSH_USER }}
+          STAGING_KEY: ${{ secrets.STAGING_SSH_PRIVATE_KEY }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          install -m 700 -d ~/.ssh
+          printf '%s' "$STAGING_KEY" | sed 's/\\n/\n/g' | tr -d '\r' > ~/.ssh/id_ed25519
+          printf '\n' >> ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -T 10 -H "$STAGING_HOST" >> ~/.ssh/known_hosts 2>/dev/null
+          ssh -fN -o BatchMode=yes -o ExitOnForwardFailure=yes -o ConnectTimeout=15 \
+            -L 20128:127.0.0.1:20128 "$STAGING_USER@$STAGING_HOST"
+          if curl --fail --silent --max-time 8 http://127.0.0.1:20128/v1/models >/dev/null; then
+            echo 'KMJ_9ROUTER_BASE_URL=http://127.0.0.1:20128/v1' >> "$GITHUB_ENV"
+            echo 'Server-local 9Router tunnel is reachable.'
+          else
+            echo '::warning title=9Router unavailable::Server SSH works but local 9Router is not reachable on port 20128; worker will fail closed for AI tasks.'
+          fi
 
       - name: Verify worker safety core
         run: PYTHONPATH=. python -m unittest tests.test_persistent_worker
