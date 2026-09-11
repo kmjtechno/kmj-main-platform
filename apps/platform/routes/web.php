@@ -100,7 +100,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
             $entitlement->organization_id,
             $entitlement->product_id,
             $entitlement->getKey(),
-            new \\DateTimeImmutable('+30 minutes'),
+            new \DateTimeImmutable('+30 minutes'),
         );
 
         return redirect()
