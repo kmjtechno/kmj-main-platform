@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\LicenseRevocation;
 use App\Services\Licensing\LicenseRevoker;
 use App\Services\Licensing\LicenseValidator;
 use App\Services\Licensing\SandboxLicenseIssuer;
@@ -41,6 +42,18 @@ final class SandboxLicenseLifecycleTest extends TestCase
 
         self::assertFalse($revoked['valid']);
         self::assertSame('revoked', $revoked['reason']);
+    }
+
+    public function test_revoking_the_same_license_is_idempotent(): void
+    {
+        $revoker = new LicenseRevoker;
+
+        $first = $revoker->revoke('sandbox-idempotency-jti', 'initial reason');
+        $second = $revoker->revoke('sandbox-idempotency-jti', 'duplicate retry');
+
+        self::assertSame($first->getKey(), $second->getKey());
+        self::assertSame(1, LicenseRevocation::query()->where('jti', 'sandbox-idempotency-jti')->count());
+        self::assertSame('initial reason', $second->reason);
     }
 
     public function test_tampered_license_is_rejected(): void
