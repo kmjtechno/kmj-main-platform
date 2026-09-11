@@ -17,9 +17,24 @@ Artisan::command('staging:bootstrap-admin {email} {--name=KMJ Staging Admin}', f
         return Command::FAILURE;
     }
 
-    $email = (string) $this->argument('email');
-    $name = (string) $this->option('name');
-    $password = (string) config('kmj.staging_admin_password', '');
+    $emailArgument = $this->argument('email');
+    $nameOption = $this->option('name');
+
+    if (! is_string($emailArgument) || ! is_string($nameOption)) {
+        $this->error('Invalid staging admin arguments.');
+
+        return Command::INVALID;
+    }
+
+    $email = $emailArgument;
+    $name = $nameOption;
+    $password = config('kmj.staging_admin_password', '');
+
+    if (! is_string($password)) {
+        $this->error('KMJ_STAGING_ADMIN_PASSWORD must be configured as a string.');
+
+        return Command::FAILURE;
+    }
 
     if (filter_var($email, FILTER_VALIDATE_EMAIL) === false) {
         $this->error('A valid staging admin email is required.');
