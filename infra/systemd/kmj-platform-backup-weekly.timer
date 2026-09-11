@@ -1,0 +1,11 @@
+[Unit]
+Description=Run KMJ Main Platform weekly encrypted backup
+
+[Timer]
+OnCalendar=Sun *-*-* 03:15:00 UTC
+Persistent=true
+RandomizedDelaySec=30m
+Unit=kmj-platform-backup@weekly.service
+
+[Install]
+WantedBy=timers.target
