@@ -35,4 +35,8 @@ return [
         ],
     ],
 
+    'kmj_sandbox_licensing' => [
+        'secret' => env('KMJ_SANDBOX_LICENSE_SECRET'),
+    ],
+
 ];

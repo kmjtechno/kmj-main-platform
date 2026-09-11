@@ -19,7 +19,7 @@ class HandleInertiaRequests extends Middleware
     /**
      * Determines the current asset version.
      *
-     * @see https://inertiajs.com/asset-versioning
+     * @see https://inertiajs.com/server-side-setup#asset-versioning
      */
     public function version(Request $request): ?string
     {
@@ -40,6 +40,10 @@ class HandleInertiaRequests extends Middleware
             'name' => config('app.name'),
             'auth' => [
                 'user' => $request->user(),
+            ],
+            'flash' => [
+                'sandbox_license' => fn () => $request->session()->get('sandbox_license'),
+                'sandbox_license_validation' => fn () => $request->session()->get('sandbox_license_validation'),
             ],
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
         ];
