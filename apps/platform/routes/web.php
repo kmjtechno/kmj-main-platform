@@ -2,9 +2,12 @@
 
 use App\Models\User;
 use App\Services\AuthorityBootstrapper;
+use App\Services\Licensing\SandboxLicenseLifecycle;
+use DateTimeImmutable;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
+use KMJ\MainPlatform\Entitlements\Models\Entitlement;
 use KMJ\MainPlatform\Entitlements\Services\EntitlementReader;
 use KMJ\MainPlatform\Organizations\Services\OrganizationDirectory;
 
@@ -48,6 +51,94 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
         return redirect()->route('dashboard');
     })->name('organizations.store');
+
+    Route::post('sandbox-licenses', function (
+        Request $request,
+        OrganizationDirectory $organizations,
+        SandboxLicenseLifecycle $licenses,
+    ) {
+        $user = $request->user();
+        abort_unless($user instanceof User, 401);
+
+        $validated = $request->validate([
+            'organization_id' => ['required', 'uuid'],
+            'entitlement_id' => ['required', 'uuid'],
+        ]);
+
+        abort_unless($organizations->userCanManage($user->id, $validated['organization_id']), 403);
+
+        $entitlement = Entitlement::query()
+            ->whereKey($validated['entitlement_id'])
+            ->where('organization_id', $validated['organization_id'])
+            ->where('status', 'active')
+            ->firstOrFail();
+
+        $license = $licenses->issue(
+            $entitlement->organization_id,
+            $entitlement->product_id,
+            $entitlement->getKey(),
+            new DateTimeImmutable('+30 minutes'),
+        );
+
+        return redirect()
+            ->route('dashboard')
+            ->with('sandbox_license', [
+                'token' => $license,
+                'validation' => $licenses->validate($license),
+            ]);
+    })->name('sandbox-licenses.store');
+
+    Route::post('sandbox-licenses/validate', function (
+        Request $request,
+        OrganizationDirectory $organizations,
+        SandboxLicenseLifecycle $licenses,
+    ) {
+        $user = $request->user();
+        abort_unless($user instanceof User, 401);
+
+        $validated = $request->validate([
+            'license' => ['required', 'string', 'max:8192'],
+        ]);
+
+        $result = $licenses->validate($validated['license']);
+        $organizationId = $result['claims']['organization_id'] ?? null;
+
+        if (is_string($organizationId)) {
+            abort_unless($organizations->userCanManage($user->id, $organizationId), 403);
+        }
+
+        return redirect()
+            ->route('dashboard')
+            ->with('sandbox_license_validation', $result);
+    })->name('sandbox-licenses.validate');
+
+    Route::post('sandbox-licenses/revoke', function (
+        Request $request,
+        OrganizationDirectory $organizations,
+        SandboxLicenseLifecycle $licenses,
+    ) {
+        $user = $request->user();
+        abort_unless($user instanceof User, 401);
+
+        $validated = $request->validate([
+            'license' => ['required', 'string', 'max:8192'],
+            'reason' => ['nullable', 'string', 'max:255'],
+        ]);
+
+        $result = $licenses->validate($validated['license']);
+        $claims = $result['claims'];
+        $organizationId = is_array($claims) ? ($claims['organization_id'] ?? null) : null;
+        $jti = is_array($claims) ? ($claims['jti'] ?? null) : null;
+
+        abort_unless(is_string($organizationId) && is_string($jti), 422);
+        abort_unless($organizations->userCanManage($user->id, $organizationId), 403);
+
+        $licenses->revoke($jti, $validated['reason'] ?? null);
+
+        return redirect()
+            ->route('dashboard')
+            ->with('sandbox_license_validation', $licenses->validate($validated['license']));
+    })->name('sandbox-licenses.revoke');
 });
 
 require __DIR__.'/settings.php';
