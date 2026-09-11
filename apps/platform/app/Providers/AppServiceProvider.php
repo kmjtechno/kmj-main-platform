@@ -9,6 +9,7 @@ use App\Services\Licensing\SandboxLicenseIssuer;
 use App\Services\Licensing\SandboxLicenseLifecycle;
 use App\Services\Licensing\SandboxLicenseValidationEngine;
 use Carbon\CarbonImmutable;
+use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\ServiceProvider;
@@ -37,7 +38,7 @@ class AppServiceProvider extends ServiceProvider
             );
         });
 
-        $this->app->singleton(SandboxLicenseValidationEngine::class, function ($app): SandboxLicenseValidationEngine {
+        $this->app->singleton(SandboxLicenseValidationEngine::class, function (Application $app): SandboxLicenseValidationEngine {
             return new SandboxLicenseValidationEngine(
                 $app->make(LicenseValidator::class),
                 $app->make(RustSandboxLicenseVerifier::class),
