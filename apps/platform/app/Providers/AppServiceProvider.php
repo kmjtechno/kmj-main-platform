@@ -4,6 +4,7 @@ namespace App\Providers;
 
 use App\Services\Licensing\LicenseRevoker;
 use App\Services\Licensing\LicenseValidator;
+use App\Services\Licensing\RustSandboxLicenseVerifier;
 use App\Services\Licensing\SandboxLicenseIssuer;
 use App\Services\Licensing\SandboxLicenseLifecycle;
 use Carbon\CarbonImmutable;
@@ -25,6 +26,14 @@ class AppServiceProvider extends ServiceProvider
 
         $this->app->singleton(LicenseValidator::class, function (): LicenseValidator {
             return new LicenseValidator($this->sandboxLicenseSecret());
+        });
+
+        $this->app->singleton(RustSandboxLicenseVerifier::class, function (): RustSandboxLicenseVerifier {
+            return new RustSandboxLicenseVerifier(
+                (string) config('services.kmj_sandbox_licensing.rust_verifier_binary', ''),
+                $this->sandboxLicenseSecret(),
+                (float) config('services.kmj_sandbox_licensing.rust_verifier_timeout', 5),
+            );
         });
 
         $this->app->singleton(LicenseRevoker::class);
