@@ -13,6 +13,7 @@ use Inertia\Inertia;
 use KMJ\MainPlatform\Commerce\Models\CommercialOrder;
 use KMJ\MainPlatform\Entitlements\Models\Entitlement;
 use KMJ\MainPlatform\Entitlements\Models\EntitlementPolicy;
+use KMJ\MainPlatform\Entitlements\Services\EntitlementIssuer;
 use KMJ\MainPlatform\Entitlements\Services\EntitlementReader;
 use KMJ\MainPlatform\Organizations\Models\Organization;
 use KMJ\MainPlatform\Organizations\Services\OrganizationCapabilityContext;
@@ -95,6 +96,60 @@ Route::middleware(['auth', 'verified'])->group(function () {
             'recentOrders' => $recentOrders,
         ]);
     })->name('operator.index')->middleware('password.confirm');
+
+    Route::post('operator/orders/{order}/fulfill', function (
+        Request $request,
+        string $order,
+        PlatformOwnerAccess $access,
+        EntitlementIssuer $issuer,
+    ) {
+        $user = $request->user();
+        abort_unless($user instanceof User, 401);
+        $access->require($user);
+
+        $commercialOrder = CommercialOrder::query()
+            ->whereKey($order)
+            ->where('status', 'confirmed')
+            ->firstOrFail();
+        $organizationId = (string) $commercialOrder->getAttribute('organization_id');
+        $productId = (string) $commercialOrder->getAttribute('product_id');
+        $idempotencyKey = 'commercial-order:'.$commercialOrder->getKey();
+
+        $existing = Entitlement::query()
+            ->where('idempotency_key', $idempotencyKey)
+            ->first();
+
+        if ($existing instanceof Entitlement) {
+            abort_unless(
+                $existing->getAttribute('organization_id') === $organizationId
+                && $existing->getAttribute('product_id') === $productId,
+                409,
+            );
+
+            return redirect()->route('operator.index');
+        }
+
+        abort_if(
+            Entitlement::query()
+                ->where('organization_id', $organizationId)
+                ->where('product_id', $productId)
+                ->where('status', 'active')
+                ->exists(),
+            409,
+            'An active entitlement already exists for this organization and product.',
+        );
+
+        $policy = EntitlementPolicy::query()
+            ->where('product_id', $productId)
+            ->where('status', 'active')
+            ->oldest('created_at')
+            ->oldest('id')
+            ->firstOrFail();
+
+        $issuer->issue($organizationId, $policy, $idempotencyKey);
+
+        return redirect()->route('operator.index');
+    })->name('operator.orders.fulfill')->middleware('password.confirm');
 
     Route::get('sandbox-licenses', function (
         Request $request,
