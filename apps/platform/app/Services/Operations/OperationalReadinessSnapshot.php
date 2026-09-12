@@ -7,7 +7,10 @@ use Throwable;
 
 final class OperationalReadinessSnapshot
 {
-    /** @param array<string, mixed> $server */
+    /**
+     * @param  array<string, mixed>  $server
+     * @return array<string, mixed>
+     */
     public function capture(array $server): array
     {
         $backups = $this->backupFreshness();
@@ -21,7 +24,10 @@ final class OperationalReadinessSnapshot
         ];
     }
 
-    /** @param array<string, mixed> $server */
+    /**
+     * @param  array<string, mixed>  $server
+     * @return array<string, mixed>
+     */
     private function deployment(array $server): array
     {
         $sha = $server['deployed_sha'] ?? null;
