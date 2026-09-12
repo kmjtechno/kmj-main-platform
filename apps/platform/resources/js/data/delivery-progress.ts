@@ -62,8 +62,8 @@ export const deliveryMilestones: DeliveryMilestone[] = [
         id: 'organization-capabilities',
         title: 'Organization capabilities',
         state: 'verified',
-        detail: 'Tenant capability context enforced',
-        evidence: 'PR #77 / #80',
+        detail: 'Tenant capability + selected-org binding enforced',
+        evidence: 'PR #77 / #80 / #82',
     },
     {
         id: 'passkey-first-auth',
