@@ -114,6 +114,12 @@ export const deliveryMilestones: DeliveryMilestone[] = [
         evidence: 'PR #90 / #91 / #93 + staging-approved 81137e0617c9',
     },
     {
+        id: 'ops-readiness-evidence',
+        title: 'Ops readiness evidence',
+        state: 'active',
+        detail: 'Backup freshness + worker/AI posture + internal compliance guardrails under verification',
+    },
+    {
         id: 'production-hardening',
         title: 'Production hardening',
         state: 'active',
