@@ -109,9 +109,9 @@ export const deliveryMilestones: DeliveryMilestone[] = [
     {
         id: 'revenue-working-phase',
         title: 'Revenue working phase',
-        state: 'active',
-        detail: 'Entitled orders now hand off directly into governed sandbox license issuance; CI verification pending',
-        evidence: 'PR #90 / #91 / #92 + exact-SHA staging promotion',
+        state: 'verified',
+        detail: 'Confirmed order -> entitlement -> governed sandbox license handoff is staging-approved',
+        evidence: 'PR #90 / #91 / #93 + staging-approved 81137e0617c9',
     },
     {
         id: 'production-hardening',
@@ -132,5 +132,5 @@ export const deliveryProgress = Math.round(
 export const deliveryProgressMeta = {
     label: 'Revenue-capable working phase',
     note: 'Evidence-based delivery milestones, not total product completion.',
-    refreshed: '2026-09-12',
+    refreshed: '2026-09-13',
 } as const;
