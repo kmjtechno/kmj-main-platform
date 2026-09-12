@@ -224,7 +224,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         return redirect()
             ->route('sandbox-licenses.index')
             ->with('sandbox_license_validation', $licenses->validate($validated['license']));
-    })->name('sandbox-licenses.revoke');
+    })->name('sandbox-licenses.revoke')->middleware('password.confirm');
 });
 
 require __DIR__.'/settings.php';
