@@ -45,6 +45,14 @@ const fulfillmentLabels: Record<FulfillmentState, string> = {
     blocked_no_policy: 'Blocked · no active policy',
 };
 
+function canIssueSandboxLicense(order: RecentOrder): boolean {
+    return (
+        order.fulfillment_state === 'entitled' &&
+        order.entitlement_id !== null &&
+        order.can_manage_license
+    );
+}
+
 function Metric({
     icon: Icon,
     label,
@@ -199,10 +207,7 @@ export default function Operator({ metrics, recentOrders }: OperatorProps) {
                                                 >
                                                     Issue entitlement
                                                 </button>
-                                            ) : order.fulfillment_state ===
-                                                  'entitled' &&
-                                              order.entitlement_id &&
-                                              order.can_manage_license ? (
+                                            ) : canIssueSandboxLicense(order) ? (
                                                 <button
                                                     type="button"
                                                     className="inline-flex rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-[10px] font-bold text-emerald-600 transition hover:bg-emerald-500/15 dark:text-emerald-400"
