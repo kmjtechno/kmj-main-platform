@@ -1,5 +1,11 @@
 import { Link } from '@inertiajs/react';
-import { BookOpen, FolderGit2, KeyRound, LayoutGrid } from 'lucide-react';
+import {
+    BookOpen,
+    FolderGit2,
+    KeyRound,
+    LayoutGrid,
+    ShieldCheck,
+} from 'lucide-react';
 import AppLogo from '@/components/app-logo';
 import { NavFooter } from '@/components/nav-footer';
 import { NavMain } from '@/components/nav-main';
@@ -14,6 +20,7 @@ import {
     SidebarMenuItem,
 } from '@/components/ui/sidebar';
 import { dashboard } from '@/routes';
+import { edit as securitySettings } from '@/routes/security';
 import type { NavItem } from '@/types';
 
 const mainNavItems: NavItem[] = [
@@ -26,6 +33,11 @@ const mainNavItems: NavItem[] = [
         title: 'Sandbox Licensing',
         href: '/sandbox-licenses',
         icon: KeyRound,
+    },
+    {
+        title: 'Security',
+        href: securitySettings(),
+        icon: ShieldCheck,
     },
 ];
 
