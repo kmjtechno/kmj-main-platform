@@ -176,7 +176,19 @@ jobs:
           else
             npm install --no-audit --no-fund
           fi
-          npm run build
+          build_ok=0
+          for build_attempt in 1 2 3; do
+            if npm run build; then
+              build_ok=1
+              break
+            fi
+            echo "Frontend build attempt $build_attempt failed; retrying transient build failure..." >&2
+            sleep $((build_attempt * 3))
+          done
+          if [ "$build_ok" -ne 1 ]; then
+            echo 'ERROR: frontend build failed after 3 attempts.' >&2
+            exit 45
+          fi
           "$PHP_BIN" artisan optimize:clear
           rm -f bootstrap/cache/packages.php bootstrap/cache/services.php
           "$PHP_BIN" artisan package:discover --ansi

@@ -8,6 +8,7 @@ on:
       - '.github/workflows/staging-vps-deploy-fixed.yml'
       - '.github/workflows/staging-promotion-gate.yml'
       - 'KMJ_TECHNO_MAIN_PLATFORM_MASTER_ROADMAP_BLUEPRINT_V1_0.md'
+      - 'docs/adr/**'
   workflow_dispatch:
 
 permissions:
