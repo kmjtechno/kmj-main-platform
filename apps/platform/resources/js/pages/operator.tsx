@@ -8,6 +8,12 @@ import {
     Users,
 } from 'lucide-react';
 
+type FulfillmentState =
+    | 'awaiting_confirmation'
+    | 'ready'
+    | 'entitled'
+    | 'blocked_no_policy';
+
 type RecentOrder = {
     id: string;
     organization_id: string;
@@ -16,6 +22,7 @@ type RecentOrder = {
     currency: string | null;
     amount_minor: number | null;
     created_at: string | null;
+    fulfillment_state: FulfillmentState;
 };
 
 type OperatorProps = {
@@ -28,6 +35,14 @@ type OperatorProps = {
     };
     recentOrders: RecentOrder[];
 };
+
+const fulfillmentLabels: Record<FulfillmentState, string> = {
+    awaiting_confirmation: 'Awaiting confirmation',
+    ready: 'Ready for fulfillment',
+    entitled: 'Entitlement active',
+    blocked_no_policy: 'Blocked · no active policy',
+};
+
 function Metric({
     icon: Icon,
     label,
@@ -69,10 +84,9 @@ export default function Operator({ metrics, recentOrders }: OperatorProps) {
                             </h1>
                             <p className="text-muted-foreground mt-3 max-w-xl text-sm leading-6">
                                 Privileged platform authority is separated from
-                                customer access. This console starts read-only
-                                and will receive governed commerce, entitlement
-                                and operations actions behind explicit
-                                capability gates.
+                                customer access. This console exposes governed
+                                commerce and fulfillment readiness without
+                                automatically issuing customer entitlements.
                             </p>
                         </div>
                         <div className="rounded-xl border border-emerald-500/15 bg-emerald-500/5 px-4 py-3 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
@@ -112,7 +126,8 @@ export default function Operator({ metrics, recentOrders }: OperatorProps) {
                                 Recent commercial orders
                             </h2>
                             <p className="text-muted-foreground mt-1 text-xs">
-                                Read-only commercial evidence. Fulfillment
+                                Read-only commercial evidence with deterministic
+                                fulfillment readiness. Entitlement issuance
                                 remains a separate governed action.
                             </p>
                         </div>
@@ -130,7 +145,7 @@ export default function Operator({ metrics, recentOrders }: OperatorProps) {
                                 {recentOrders.map((order) => (
                                     <div
                                         key={order.id}
-                                        className="grid gap-3 px-4 py-4 text-xs sm:grid-cols-[1.2fr_1fr_1fr_auto] sm:items-center"
+                                        className="grid gap-3 px-4 py-4 text-xs sm:grid-cols-[1.2fr_1fr_0.8fr_1.2fr_auto] sm:items-center"
                                     >
                                         <div>
                                             <div className="font-bold">
@@ -145,6 +160,18 @@ export default function Operator({ metrics, recentOrders }: OperatorProps) {
                                         </div>
                                         <div className="font-semibold tracking-wide uppercase">
                                             {order.status}
+                                        </div>
+                                        <div>
+                                            <span
+                                                className="inline-flex rounded-full border px-2.5 py-1 text-[10px] font-bold"
+                                                data-test="fulfillment-state"
+                                            >
+                                                {
+                                                    fulfillmentLabels[
+                                                        order.fulfillment_state
+                                                    ]
+                                                }
+                                            </span>
                                         </div>
                                         <div className="text-right font-bold">
                                             {order.amount_minor !== null &&

@@ -12,6 +12,7 @@ use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 use KMJ\MainPlatform\Commerce\Models\CommercialOrder;
 use KMJ\MainPlatform\Entitlements\Models\Entitlement;
+use KMJ\MainPlatform\Entitlements\Models\EntitlementPolicy;
 use KMJ\MainPlatform\Entitlements\Services\EntitlementReader;
 use KMJ\MainPlatform\Organizations\Models\Organization;
 use KMJ\MainPlatform\Organizations\Services\OrganizationCapabilityContext;
@@ -52,15 +53,36 @@ Route::middleware(['auth', 'verified'])->group(function () {
             ->latest('created_at')
             ->limit(20)
             ->get(['id', 'organization_id', 'product_id', 'status', 'currency', 'amount_minor', 'created_at'])
-            ->map(fn (CommercialOrder $order): array => [
-                'id' => $order->getKey(),
-                'organization_id' => $order->getAttribute('organization_id'),
-                'product_id' => $order->getAttribute('product_id'),
-                'status' => $order->getAttribute('status'),
-                'currency' => $order->getAttribute('currency'),
-                'amount_minor' => $order->getAttribute('amount_minor'),
-                'created_at' => $order->getAttribute('created_at')?->toISOString(),
-            ])->all();
+            ->map(function (CommercialOrder $order): array {
+                $organizationId = (string) $order->getAttribute('organization_id');
+                $productId = (string) $order->getAttribute('product_id');
+                $hasActiveEntitlement = Entitlement::query()
+                    ->where('organization_id', $organizationId)
+                    ->where('product_id', $productId)
+                    ->where('status', 'active')
+                    ->exists();
+                $hasActivePolicy = EntitlementPolicy::query()
+                    ->where('product_id', $productId)
+                    ->where('status', 'active')
+                    ->exists();
+                $fulfillmentState = match (true) {
+                    $order->getAttribute('status') !== 'confirmed' => 'awaiting_confirmation',
+                    $hasActiveEntitlement => 'entitled',
+                    $hasActivePolicy => 'ready',
+                    default => 'blocked_no_policy',
+                };
+
+                return [
+                    'id' => $order->getKey(),
+                    'organization_id' => $organizationId,
+                    'product_id' => $productId,
+                    'status' => $order->getAttribute('status'),
+                    'currency' => $order->getAttribute('currency'),
+                    'amount_minor' => $order->getAttribute('amount_minor'),
+                    'created_at' => $order->getAttribute('created_at')?->toISOString(),
+                    'fulfillment_state' => $fulfillmentState,
+                ];
+            })->all();
 
         return Inertia::render('operator', [
             'metrics' => [
