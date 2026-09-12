@@ -9,7 +9,6 @@ use App\Services\PlatformOwnerAccess;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
-use Throwable;
 
 Route::middleware(['auth', 'verified', 'password.confirm'])
     ->prefix('operator')
@@ -38,14 +37,14 @@ Route::middleware(['auth', 'verified', 'password.confirm'])
                         'created_at' => $event->getAttribute('created_at')?->toISOString(),
                     ])
                     ->all();
-            } catch (Throwable $exception) {
+            } catch (\Throwable $exception) {
                 report($exception);
                 $recentActions = [];
             }
 
             try {
                 $snapshot = $metrics->capture();
-            } catch (Throwable $exception) {
+            } catch (\Throwable $exception) {
                 report($exception);
                 $snapshot = [
                     'captured_at' => now()->toIso8601String(),
@@ -84,7 +83,7 @@ Route::middleware(['auth', 'verified', 'password.confirm'])
 
             try {
                 $readinessSnapshot = $readiness->capture($snapshot);
-            } catch (Throwable $exception) {
+            } catch (\Throwable $exception) {
                 report($exception);
                 $missingBackup = [
                     'status' => 'unavailable',
