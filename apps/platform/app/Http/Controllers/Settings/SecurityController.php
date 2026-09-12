@@ -73,6 +73,25 @@ class SecurityController extends Controller
     }
 
     /**
+     * Sign the authenticated user out of every database-backed session except this one.
+     */
+    public function destroyOtherSessions(TwoFactorAuthenticationRequest $request): RedirectResponse
+    {
+        if (config('session.driver') === 'database') {
+            $table = (string) config('session.table', 'sessions');
+
+            DB::table($table)
+                ->where('user_id', $request->user()->getAuthIdentifier())
+                ->where('id', '!=', $request->session()->getId())
+                ->delete();
+        }
+
+        Inertia::flash('toast', ['type' => 'success', 'message' => __('Other sessions signed out.')]);
+
+        return back();
+    }
+
+    /**
      * @return array<int, array{id: string, ip_address: ?string, user_agent: ?string, last_active_at: string, is_current: bool}>
      */
     private function sessionsFor(TwoFactorAuthenticationRequest $request): array
