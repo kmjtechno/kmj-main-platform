@@ -64,8 +64,14 @@ jobs:
           npm install --no-audit --no-fund
           npm run build
 
-      - name: Run upstream-quality CI checks
+      - name: Check frontend quality
+        run: npm run check
+
+      - name: Check frontend types
+        run: npm run types:check
+
+      - name: Check PHP quality and tests
         env:
           DB_CONNECTION: sqlite
           DB_DATABASE: ${{ github.workspace }}/apps/platform/database/database.sqlite
-        run: composer ci:check
+        run: composer test
