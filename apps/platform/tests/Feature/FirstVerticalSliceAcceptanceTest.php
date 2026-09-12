@@ -52,6 +52,7 @@ final class FirstVerticalSliceAcceptanceTest extends TestCase
         self::assertNotSame('', $license);
 
         $validate = $this->actingAs($user)->post('/sandbox-licenses/validate', [
+            'organization_id' => $organization->id,
             'license' => $license,
         ]);
         $validate->assertSessionHas('sandbox_license_validation.valid', true);
@@ -59,6 +60,7 @@ final class FirstVerticalSliceAcceptanceTest extends TestCase
         $revoke = $this->actingAs($user)
             ->withSession(['auth.password_confirmed_at' => time()])
             ->post('/sandbox-licenses/revoke', [
+                'organization_id' => $organization->id,
                 'license' => $license,
                 'reason' => 'vertical-slice-acceptance',
             ]);
