@@ -1,5 +1,5 @@
-import type { FormEvent } from "react";
-import { Head, Link, useForm } from "@inertiajs/react";
+import type { FormEvent } from 'react';
+import { Head, Link, useForm } from '@inertiajs/react';
 import {
     ArrowRight,
     BadgeCheck,
@@ -10,8 +10,8 @@ import {
     Plus,
     RotateCcw,
     ShieldCheck,
-} from "lucide-react";
-import { dashboard } from "@/routes";
+} from 'lucide-react';
+import { dashboard } from '@/routes';
 
 type Entitlement = {
     id: string;
@@ -36,19 +36,19 @@ type DashboardProps = {
 };
 
 const milestones = [
-    ["Organization", "Active"],
-    ["Product", "Active"],
-    ["Entitlement", "Active"],
-    ["Sandbox license", "Implemented"],
-    ["Validation", "Implemented"],
-    ["Revocation", "Implemented"],
+    ['Organization', 'Active'],
+    ['Product', 'Active'],
+    ['Entitlement', 'Active'],
+    ['Sandbox license', 'Implemented'],
+    ['Validation', 'Implemented'],
+    ['Revocation', 'Implemented'],
 ];
 
 export default function Dashboard({
     organizations,
     hasPasskey,
 }: DashboardProps) {
-    const form = useForm({ name: "" });
+    const form = useForm({ name: '' });
     const entitlementCount = organizations.reduce(
         (count, organization) => count + organization.entitlements.length,
         0,
@@ -58,7 +58,7 @@ export default function Dashboard({
 
     const submit = (event: FormEvent<HTMLFormElement>) => {
         event.preventDefault();
-        form.post("/organizations", {
+        form.post('/organizations', {
             preserveScroll: true,
             onSuccess: () => form.reset(),
         });
@@ -129,7 +129,7 @@ export default function Dashboard({
                             >
                                 <div className="flex items-center justify-between gap-2">
                                     <span className="grid h-7 w-7 place-items-center rounded-lg bg-red-500/10 text-[10px] font-black text-red-500">
-                                        {String(index + 1).padStart(2, "0")}
+                                        {String(index + 1).padStart(2, '0')}
                                     </span>
                                     <CheckCircle2 className="h-4 w-4 text-emerald-500" />
                                 </div>
@@ -180,13 +180,13 @@ export default function Dashboard({
                                 </div>
                                 <h2 className="mt-1 font-bold">
                                     {hasActiveEntitlement
-                                        ? "Sandbox licensing is ready to use"
-                                        : "Your owner organization is ready"}
+                                        ? 'Sandbox licensing is ready to use'
+                                        : 'Your owner organization is ready'}
                                 </h2>
                                 <p className="text-muted-foreground mt-1 max-w-2xl text-xs leading-5">
                                     {hasActiveEntitlement
-                                        ? "Open the license control center to issue, validate and revoke sandbox licenses for your active entitlement."
-                                        : "No active entitlement is attached yet. The organization authority is in place; entitlement provisioning is the next required step before license operations become available."}
+                                        ? 'Open the license control center to issue, validate and revoke sandbox licenses for your active entitlement.'
+                                        : 'No active entitlement is attached yet. The organization authority is in place; entitlement provisioning is the next required step before license operations become available.'}
                                 </p>
                             </div>
                             {hasActiveEntitlement && (
@@ -229,7 +229,7 @@ export default function Dashboard({
                                     id="organization-name"
                                     value={form.data.name}
                                     onChange={(event) =>
-                                        form.setData("name", event.target.value)
+                                        form.setData('name', event.target.value)
                                     }
                                     placeholder="Example: KMJ Product Lab"
                                     className="border-input bg-background mt-2 h-11 w-full rounded-xl border px-3 text-sm transition outline-none focus:border-red-500/50 focus:ring-2 focus:ring-red-500/10"
@@ -251,8 +251,8 @@ export default function Dashboard({
                                 className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-red-600 px-4 text-sm font-bold text-white transition hover:bg-red-500 disabled:cursor-not-allowed disabled:opacity-60"
                             >
                                 {form.processing
-                                    ? "Creating authority…"
-                                    : "Create & initialize"}
+                                    ? 'Creating authority…'
+                                    : 'Create & initialize'}
                                 {!form.processing && (
                                     <ArrowRight className="h-4 w-4" />
                                 )}
@@ -436,7 +436,7 @@ function FlowStep({
 Dashboard.layout = {
     breadcrumbs: [
         {
-            title: "Control Center",
+            title: 'Control Center',
             href: dashboard(),
         },
     ],
