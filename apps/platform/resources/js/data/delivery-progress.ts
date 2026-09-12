@@ -116,8 +116,8 @@ export const deliveryMilestones: DeliveryMilestone[] = [
     {
         id: 'production-hardening',
         title: 'Production hardening',
-        state: 'queued',
-        detail: 'Owner-gated production readiness',
+        state: 'active',
+        detail: 'Ops Command Center + owner-gated production readiness',
     },
 ];
 
