@@ -1,5 +1,6 @@
 import { Link, usePage } from '@inertiajs/react';
 import {
+    Activity,
     BookOpen,
     Crown,
     FolderGit2,
@@ -62,7 +63,14 @@ export function AppSidebar() {
     const mainNavItems: NavItem[] = [
         ...baseNavItems,
         ...(operator?.enabled
-            ? [{ title: 'Operator', href: '/operator', icon: Crown }]
+            ? [
+                  { title: 'Operator', href: '/operator', icon: Crown },
+                  {
+                      title: 'Ops Command Center',
+                      href: '/operator/ops',
+                      icon: Activity,
+                  },
+              ]
             : []),
     ];
 
