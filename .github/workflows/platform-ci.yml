@@ -64,8 +64,11 @@ jobs:
           npm install --no-audit --no-fund
           npm run build
 
-      - name: Check frontend quality
-        run: npm run check
+      - name: Check frontend format
+        run: ./node_modules/.bin/vp fmt --check
+
+      - name: Check frontend lint
+        run: ./node_modules/.bin/vp lint
 
       - name: Check frontend types
         run: npm run types:check
