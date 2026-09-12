@@ -98,7 +98,7 @@ final class PlatformOwnerConsoleTest extends TestCase
             'status' => 'active',
             'idempotency_key' => 'commercial-order:'.$order->getKey(),
         ]);
-        $this->assertDatabaseHas('entitlement_ledger_entries', [
+        $this->assertDatabaseHas('entitlement_ledger', [
             'organization_id' => $organization->getKey(),
             'event_type' => 'entitlement.issued',
         ]);

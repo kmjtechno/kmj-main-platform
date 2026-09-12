@@ -179,7 +179,8 @@ export default function Operator({ metrics, recentOrders }: OperatorProps) {
                                                 : 'Pending'}
                                         </div>
                                         <div className="sm:text-right">
-                                            {order.fulfillment_state === 'ready' ? (
+                                            {order.fulfillment_state ===
+                                            'ready' ? (
                                                 <button
                                                     type="button"
                                                     className="inline-flex rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-[10px] font-bold text-red-500 transition hover:bg-red-500/15"
@@ -189,8 +190,7 @@ export default function Operator({ metrics, recentOrders }: OperatorProps) {
                                                             `/operator/orders/${order.id}/fulfill`,
                                                             {},
                                                             {
-                                                                preserveScroll:
-                                                                    true,
+                                                                preserveScroll: true,
                                                             },
                                                         )
                                                     }
