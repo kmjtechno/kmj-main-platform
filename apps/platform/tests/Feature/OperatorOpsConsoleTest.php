@@ -37,6 +37,12 @@ final class OperatorOpsConsoleTest extends TestCase
                 ->has('snapshot.memory.used_percent')
                 ->has('snapshot.disk.used_percent')
                 ->where('snapshot.database.status', 'healthy')
+                ->has('readiness.deployment.status')
+                ->has('readiness.backups.daily.status')
+                ->has('readiness.autonomous_worker.status')
+                ->has('readiness.free_ai_router.status')
+                ->has('readiness.compliance_guard.signals')
+                ->where('readiness.free_ai_router.paid_fallback', false)
                 ->has('recentActions', 0));
     }
 

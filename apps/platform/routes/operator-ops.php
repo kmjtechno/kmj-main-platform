@@ -2,6 +2,7 @@
 
 use App\Models\OperatorActionAudit;
 use App\Models\User;
+use App\Services\Operations\OperationalReadinessSnapshot;
 use App\Services\Operations\OperatorActionRunner;
 use App\Services\Operations\ServerMetricsSnapshot;
 use App\Services\PlatformOwnerAccess;
@@ -17,6 +18,7 @@ Route::middleware(['auth', 'verified', 'password.confirm'])
             Request $request,
             PlatformOwnerAccess $access,
             ServerMetricsSnapshot $metrics,
+            OperationalReadinessSnapshot $readiness,
         ) {
             $user = $request->user();
             abort_unless($user instanceof User, 401);
@@ -35,8 +37,11 @@ Route::middleware(['auth', 'verified', 'password.confirm'])
                 ])
                 ->all();
 
+            $snapshot = $metrics->capture();
+
             return Inertia::render('operator-ops', [
-                'snapshot' => $metrics->capture(),
+                'snapshot' => $snapshot,
+                'readiness' => $readiness->capture($snapshot),
                 'recentActions' => $recentActions,
             ]);
         })->name('ops.index');
