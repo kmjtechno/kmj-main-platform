@@ -61,3 +61,35 @@ Artisan::command('staging:bootstrap-admin {email} {--name=KMJ Staging Admin}', f
 
     return Command::SUCCESS;
 })->purpose('Create or reset the staging-only control-center operator account');
+
+Artisan::command('staging:promote-platform-owner {email}', function () {
+    if (! app()->environment('staging')) {
+        $this->error('This command is restricted to APP_ENV=staging.');
+
+        return Command::FAILURE;
+    }
+
+    $email = $this->argument('email');
+    if (! is_string($email) || filter_var($email, FILTER_VALIDATE_EMAIL) === false) {
+        $this->error('A valid staging user email is required.');
+
+        return Command::INVALID;
+    }
+
+    $user = User::query()->where('email', $email)->first();
+    if (! $user instanceof User) {
+        $this->error('Staging user not found.');
+
+        return Command::FAILURE;
+    }
+    if (! $user->passkeys()->exists()) {
+        $this->error('Enroll a passkey before granting platform-owner authority.');
+
+        return Command::FAILURE;
+    }
+
+    $user->forceFill(['is_platform_owner' => true, 'platform_owner_granted_at' => now()])->save();
+    $this->info('Platform-owner authority granted to the verified staging user.');
+
+    return Command::SUCCESS;
+})->purpose('Promote an existing passkey-enabled staging user to platform owner');

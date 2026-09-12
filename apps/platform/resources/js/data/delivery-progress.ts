@@ -55,7 +55,7 @@ export const deliveryMilestones: DeliveryMilestone[] = [
         id: 'license-lifecycle',
         title: 'License lifecycle',
         state: 'verified',
-        detail: 'Issue → validate → revoke operator flow',
+        detail: 'Issue -> validate -> revoke operator flow',
         evidence: 'PR #68',
     },
     {
@@ -102,7 +102,7 @@ export const deliveryMilestones: DeliveryMilestone[] = [
         id: 'revenue-working-phase',
         title: 'Revenue working phase',
         state: 'active',
-        detail: 'Checkout/provider + governed fulfillment next',
+        detail: 'Passkey-gated operator console + governed fulfillment next',
     },
     {
         id: 'production-hardening',

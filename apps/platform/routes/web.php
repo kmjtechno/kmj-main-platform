@@ -5,12 +5,15 @@ use App\Models\User;
 use App\Services\AuthorityBootstrapper;
 use App\Services\Licensing\LicenseAuditRecorder;
 use App\Services\Licensing\SandboxLicenseLifecycle;
+use App\Services\PlatformOwnerAccess;
 use DateTimeImmutable as ImmutableDateTime;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
+use KMJ\MainPlatform\Commerce\Models\CommercialOrder;
 use KMJ\MainPlatform\Entitlements\Models\Entitlement;
 use KMJ\MainPlatform\Entitlements\Services\EntitlementReader;
+use KMJ\MainPlatform\Organizations\Models\Organization;
 use KMJ\MainPlatform\Organizations\Services\OrganizationCapabilityContext;
 use KMJ\MainPlatform\Organizations\Services\OrganizationDirectory;
 
@@ -39,6 +42,37 @@ Route::middleware(['auth', 'verified'])->group(function () {
             'hasPasskey' => $user->passkeys()->exists(),
         ]);
     })->name('dashboard');
+
+    Route::get('operator', function (Request $request, PlatformOwnerAccess $access) {
+        $user = $request->user();
+        abort_unless($user instanceof User, 401);
+        $access->require($user);
+
+        $recentOrders = CommercialOrder::query()
+            ->latest('created_at')
+            ->limit(20)
+            ->get(['id', 'organization_id', 'product_id', 'status', 'currency', 'amount_minor', 'created_at'])
+            ->map(fn (CommercialOrder $order): array => [
+                'id' => $order->getKey(),
+                'organization_id' => $order->getAttribute('organization_id'),
+                'product_id' => $order->getAttribute('product_id'),
+                'status' => $order->getAttribute('status'),
+                'currency' => $order->getAttribute('currency'),
+                'amount_minor' => $order->getAttribute('amount_minor'),
+                'created_at' => $order->getAttribute('created_at')?->toISOString(),
+            ])->all();
+
+        return Inertia::render('operator', [
+            'metrics' => [
+                'users' => User::query()->count(),
+                'organizations' => Organization::query()->count(),
+                'entitlements' => Entitlement::query()->count(),
+                'orders' => CommercialOrder::query()->count(),
+                'confirmed_orders' => CommercialOrder::query()->where('status', 'confirmed')->count(),
+            ],
+            'recentOrders' => $recentOrders,
+        ]);
+    })->name('operator.index')->middleware('password.confirm');
 
     Route::get('sandbox-licenses', function (
         Request $request,
