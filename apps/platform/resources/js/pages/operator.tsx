@@ -1,4 +1,4 @@
-import { Head } from '@inertiajs/react';
+import { Head, router } from '@inertiajs/react';
 import {
     BadgeIndianRupee,
     Building2,
@@ -84,9 +84,9 @@ export default function Operator({ metrics, recentOrders }: OperatorProps) {
                             </h1>
                             <p className="text-muted-foreground mt-3 max-w-xl text-sm leading-6">
                                 Privileged platform authority is separated from
-                                customer access. This console exposes governed
-                                commerce and fulfillment readiness without
-                                automatically issuing customer entitlements.
+                                customer access. Confirmed ready orders can now
+                                be fulfilled through an explicit, idempotent
+                                entitlement action.
                             </p>
                         </div>
                         <div className="rounded-xl border border-emerald-500/15 bg-emerald-500/5 px-4 py-3 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
@@ -126,13 +126,12 @@ export default function Operator({ metrics, recentOrders }: OperatorProps) {
                                 Recent commercial orders
                             </h2>
                             <p className="text-muted-foreground mt-1 text-xs">
-                                Read-only commercial evidence with deterministic
-                                fulfillment readiness. Entitlement issuance
-                                remains a separate governed action.
+                                Deterministic readiness plus explicit governed
+                                fulfillment. Nothing is issued automatically.
                             </p>
                         </div>
                         <span className="text-muted-foreground rounded-full border px-3 py-1 text-[10px] font-bold">
-                            No auto-entitlement
+                            Manual owner action
                         </span>
                     </div>
                     {recentOrders.length === 0 ? (
@@ -145,7 +144,7 @@ export default function Operator({ metrics, recentOrders }: OperatorProps) {
                                 {recentOrders.map((order) => (
                                     <div
                                         key={order.id}
-                                        className="grid gap-3 px-4 py-4 text-xs sm:grid-cols-[1.2fr_1fr_0.8fr_1.2fr_auto] sm:items-center"
+                                        className="grid gap-3 px-4 py-4 text-xs sm:grid-cols-[1.2fr_1fr_0.8fr_1.2fr_auto_auto] sm:items-center"
                                     >
                                         <div>
                                             <div className="font-bold">
@@ -173,11 +172,36 @@ export default function Operator({ metrics, recentOrders }: OperatorProps) {
                                                 }
                                             </span>
                                         </div>
-                                        <div className="text-right font-bold">
+                                        <div className="font-bold sm:text-right">
                                             {order.amount_minor !== null &&
                                             order.currency
                                                 ? `${order.currency} ${(order.amount_minor / 100).toFixed(2)}`
                                                 : 'Pending'}
+                                        </div>
+                                        <div className="sm:text-right">
+                                            {order.fulfillment_state === 'ready' ? (
+                                                <button
+                                                    type="button"
+                                                    className="inline-flex rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-[10px] font-bold text-red-500 transition hover:bg-red-500/15"
+                                                    data-test="fulfill-order"
+                                                    onClick={() =>
+                                                        router.post(
+                                                            `/operator/orders/${order.id}/fulfill`,
+                                                            {},
+                                                            {
+                                                                preserveScroll:
+                                                                    true,
+                                                            },
+                                                        )
+                                                    }
+                                                >
+                                                    Issue entitlement
+                                                </button>
+                                            ) : (
+                                                <span className="text-muted-foreground text-[10px] font-semibold">
+                                                    No action
+                                                </span>
+                                            )}
                                         </div>
                                     </div>
                                 ))}
