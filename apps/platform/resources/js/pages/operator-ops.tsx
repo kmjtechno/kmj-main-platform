@@ -1,6 +1,9 @@
 import { Head, router } from '@inertiajs/react';
 import {
     Activity,
+    ArchiveRestore,
+    Bot,
+    CloudCog,
     Database,
     HardDrive,
     MemoryStick,
@@ -8,6 +11,7 @@ import {
     RotateCw,
     Server,
     ShieldCheck,
+    ShieldEllipsis,
     TriangleAlert,
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
@@ -46,6 +50,55 @@ type OpsSnapshot = {
     queue_restart_at: number | null;
 };
 
+type BackupStatus = {
+    status: string;
+    completed_at: string | null;
+    age_hours: number | null;
+    max_age_hours: number;
+    git_sha: string | null;
+};
+
+type ComplianceSignal = {
+    code: string;
+    status: string;
+    value: number | null;
+    unit: string;
+    warning_threshold?: number;
+    critical_threshold?: number;
+};
+
+type OperationalReadiness = {
+    deployment: {
+        status: string;
+        deployed_sha: string | null;
+        database_status: string;
+        evidence: string;
+    };
+    backups: Record<'daily' | 'weekly' | 'monthly', BackupStatus>;
+    autonomous_worker: {
+        status: string;
+        source: string;
+        execution_gate: string;
+        write_gate: string;
+        live_run_observed: boolean;
+    };
+    free_ai_router: {
+        status: string;
+        policy: string;
+        configured_provider_count: number;
+        configured_providers: string[];
+        live_route_observed: boolean;
+        paid_fallback: boolean;
+    };
+    compliance_guard: {
+        status: string;
+        mode: string;
+        provider_policy_enforcement: string;
+        legal_interpretation: boolean;
+        signals: ComplianceSignal[];
+    };
+};
+
 type ActionAudit = {
     id: number;
     actor_user_id: number;
@@ -56,6 +109,7 @@ type ActionAudit = {
 
 type Props = {
     snapshot: OpsSnapshot;
+    readiness: OperationalReadiness;
     recentActions: ActionAudit[];
 };
 
@@ -83,6 +137,28 @@ function uptime(seconds: number | null): string {
     const minutes = Math.floor((seconds % 3600) / 60);
 
     return `${days}d ${hours}h ${minutes}m`;
+}
+
+function statusTone(status: string): string {
+    if (['healthy', 'fresh', 'enabled'].includes(status)) {
+        return 'border-emerald-500/20 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300';
+    }
+
+    if (['critical', 'degraded', 'invalid'].includes(status)) {
+        return 'border-red-500/20 bg-red-500/10 text-red-700 dark:text-red-300';
+    }
+
+    return 'border-amber-500/20 bg-amber-500/10 text-amber-700 dark:text-amber-300';
+}
+
+function StatusPill({ status }: { status: string }) {
+    return (
+        <span
+            className={`inline-flex rounded-full border px-2.5 py-1 text-[10px] font-black tracking-wide uppercase ${statusTone(status)}`}
+        >
+            {status.replaceAll('_', ' ')}
+        </span>
+    );
 }
 
 function Gauge({ value }: { value: number }) {
@@ -128,14 +204,58 @@ function MetricCard({
     );
 }
 
-export default function OperatorOps({ snapshot, recentActions }: Props) {
+function ReadinessCard({
+    icon: Icon,
+    label,
+    status,
+    detail,
+    children,
+}: {
+    icon: typeof Activity;
+    label: string;
+    status: string;
+    detail: string;
+    children?: React.ReactNode;
+}) {
+    return (
+        <div className="bg-card rounded-2xl border p-5">
+            <div className="flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2">
+                    <Icon className="h-4 w-4 text-red-500" />
+                    <span className="text-xs font-black tracking-wide uppercase">
+                        {label}
+                    </span>
+                </div>
+                <StatusPill status={status} />
+            </div>
+            <p className="text-muted-foreground mt-3 text-xs leading-5">
+                {detail}
+            </p>
+            {children}
+        </div>
+    );
+}
+
+function backupDetail(backup: BackupStatus): string {
+    if (backup.age_hours === null) {
+        return 'No verified success marker yet';
+    }
+
+    return `${backup.age_hours.toFixed(1)}h old · freshness window ${backup.max_age_hours}h`;
+}
+
+export default function OperatorOps({
+    snapshot,
+    readiness,
+    recentActions,
+}: Props) {
     const [refreshing, setRefreshing] = useState(false);
     const [restarting, setRestarting] = useState(false);
 
     const refresh = () => {
         setRefreshing(true);
         router.reload({
-            only: ['snapshot', 'recentActions'],
+            only: ['snapshot', 'readiness', 'recentActions'],
             onFinish: () => setRefreshing(false),
         });
     };
@@ -143,7 +263,7 @@ export default function OperatorOps({ snapshot, recentActions }: Props) {
     useEffect(() => {
         const timer = window.setInterval(() => {
             router.reload({
-                only: ['snapshot', 'recentActions'],
+                only: ['snapshot', 'readiness', 'recentActions'],
             });
         }, 15_000);
 
@@ -171,6 +291,7 @@ export default function OperatorOps({ snapshot, recentActions }: Props) {
     };
 
     const databaseHealthy = snapshot.database.status === 'healthy';
+    const providers = readiness.free_ai_router.configured_providers;
 
     return (
         <>
@@ -188,10 +309,10 @@ export default function OperatorOps({ snapshot, recentActions }: Props) {
                                 KMJ Ops Command Center
                             </h1>
                             <p className="text-muted-foreground mt-3 max-w-2xl text-sm leading-6">
-                                Real server telemetry and audited recovery
-                                controls. No raw shell, destructive database
-                                action, billing mutation, DNS change, or
-                                production publish is exposed from this surface.
+                                Real server telemetry, evidence-based readiness
+                                and audited recovery controls. Unknown external
+                                state stays explicitly unobserved instead of
+                                being guessed.
                             </p>
                         </div>
                         <button
@@ -236,6 +357,116 @@ export default function OperatorOps({ snapshot, recentActions }: Props) {
                         value={databaseHealthy ? 'Healthy' : 'Degraded'}
                         detail={`${snapshot.failed_jobs} failed queue job${snapshot.failed_jobs === 1 ? '' : 's'}`}
                     />
+                </section>
+
+                <section>
+                    <div className="mb-3 flex items-end justify-between gap-3">
+                        <div>
+                            <h2 className="font-black">Readiness & guardrails</h2>
+                            <p className="text-muted-foreground mt-1 text-xs">
+                                Evidence only. External systems are never marked
+                                healthy unless this runtime can actually observe
+                                them.
+                            </p>
+                        </div>
+                        <StatusPill status={readiness.compliance_guard.status} />
+                    </div>
+                    <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                        <ReadinessCard
+                            icon={Server}
+                            label="Deployment"
+                            status={readiness.deployment.status}
+                            detail="Local deployed SHA plus database health. GitHub workflow state is validated by the deployment pipeline, not fabricated here."
+                        >
+                            <div className="text-muted-foreground mt-3 font-mono text-[10px] break-all">
+                                {readiness.deployment.deployed_sha ??
+                                    'SHA unavailable'}
+                            </div>
+                        </ReadinessCard>
+                        <ReadinessCard
+                            icon={Bot}
+                            label="Autonomous worker"
+                            status={readiness.autonomous_worker.status}
+                            detail="Execution lives in GitHub Actions. This VPS reports only gates available to its own runtime."
+                        >
+                            <div className="text-muted-foreground mt-3 text-[11px]">
+                                execution{' '}
+                                {readiness.autonomous_worker.execution_gate} ·
+                                write {readiness.autonomous_worker.write_gate}
+                            </div>
+                        </ReadinessCard>
+                        <ReadinessCard
+                            icon={CloudCog}
+                            label="Free AI router"
+                            status={readiness.free_ai_router.status}
+                            detail="Strict verified-zero policy remains enforced. Credential presence is shown without revealing any credential value."
+                        >
+                            <div className="text-muted-foreground mt-3 text-[11px]">
+                                {providers.length > 0
+                                    ? `${providers.length} configured: ${providers.join(', ')}`
+                                    : 'No provider credential observed by this app'}
+                            </div>
+                        </ReadinessCard>
+                        <ReadinessCard
+                            icon={ShieldEllipsis}
+                            label="Compliance guard"
+                            status={readiness.compliance_guard.status}
+                            detail="Internal operational thresholds only. Provider legal-policy enforcement stays off until approved policy rules exist."
+                        >
+                            <div className="text-muted-foreground mt-3 text-[11px]">
+                                provider rules:{' '}
+                                {
+                                    readiness.compliance_guard
+                                        .provider_policy_enforcement
+                                }
+                            </div>
+                        </ReadinessCard>
+                    </div>
+                </section>
+
+                <section className="bg-card rounded-2xl border p-5 sm:p-6">
+                    <div className="flex items-center gap-2">
+                        <ArchiveRestore className="h-4 w-4 text-red-500" />
+                        <h2 className="font-bold">Backup freshness evidence</h2>
+                    </div>
+                    <p className="text-muted-foreground mt-1 text-xs leading-5">
+                        A marker is written only after encrypted remote upload
+                        succeeds. Missing markers are shown as unknown/missing,
+                        never assumed healthy.
+                    </p>
+                    <div className="mt-5 grid gap-3 md:grid-cols-3">
+                        {(['daily', 'weekly', 'monthly'] as const).map(
+                            (tier) => {
+                                const backup = readiness.backups[tier];
+
+                                return (
+                                    <div
+                                        key={tier}
+                                        className="rounded-xl border p-4"
+                                    >
+                                        <div className="flex items-center justify-between gap-3">
+                                            <span className="text-xs font-black tracking-wide uppercase">
+                                                {tier}
+                                            </span>
+                                            <StatusPill
+                                                status={backup.status}
+                                            />
+                                        </div>
+                                        <p className="text-muted-foreground mt-3 text-[11px]">
+                                            {backupDetail(backup)}
+                                        </p>
+                                        {backup.completed_at ? (
+                                            <p className="text-muted-foreground mt-1 text-[10px]">
+                                                {new Date(
+                                                    backup.completed_at,
+                                                ).toLocaleString()}
+                                            </p>
+                                        ) : null}
+                                    </div>
+                                );
+                            },
+                        )}
+                    </div>
                 </section>
 
                 <section className="grid gap-4 lg:grid-cols-[1.2fr_1fr]">
@@ -309,8 +540,38 @@ export default function OperatorOps({ snapshot, recentActions }: Props) {
                         <div className="mt-3 flex items-start gap-2 rounded-xl border border-amber-500/15 bg-amber-500/5 p-3 text-xs text-amber-700 dark:text-amber-300">
                             <TriangleAlert className="mt-0.5 h-4 w-4 shrink-0" />
                             Production deploy, DNS, billing, destructive DB and
-                            raw shell remain owner-approved outside this MVP.
+                            raw shell remain owner-approved outside this console.
                         </div>
+                    </div>
+                </section>
+
+                <section className="bg-card rounded-2xl border p-5 sm:p-6">
+                    <h2 className="font-bold">Operational guardrail signals</h2>
+                    <p className="text-muted-foreground mt-1 text-xs">
+                        These are KMJ internal warning thresholds, not claims
+                        about a hosting provider&apos;s legal or contractual
+                        limits.
+                    </p>
+                    <div className="mt-5 grid gap-2 lg:grid-cols-2">
+                        {readiness.compliance_guard.signals.map((signal) => (
+                            <div
+                                key={signal.code}
+                                className="flex items-center justify-between gap-4 rounded-xl border px-4 py-3"
+                            >
+                                <div>
+                                    <div className="text-xs font-bold">
+                                        {signal.code}
+                                    </div>
+                                    <div className="text-muted-foreground mt-1 text-[10px]">
+                                        value{' '}
+                                        {signal.value === null
+                                            ? 'unavailable'
+                                            : `${signal.value} ${signal.unit}`}
+                                    </div>
+                                </div>
+                                <StatusPill status={signal.status} />
+                            </div>
+                        ))}
                     </div>
                 </section>
 
