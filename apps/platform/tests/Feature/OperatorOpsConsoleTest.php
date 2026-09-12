@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
 
@@ -43,6 +44,22 @@ final class OperatorOpsConsoleTest extends TestCase
                 ->has('readiness.free_ai_router.status')
                 ->has('readiness.compliance_guard.signals')
                 ->where('readiness.free_ai_router.paid_fallback', false)
+                ->has('recentActions', 0));
+    }
+
+    public function test_ops_command_center_stays_available_when_audit_probe_is_unavailable(): void
+    {
+        $owner = $this->platformOwner();
+        Schema::dropIfExists('operator_action_audits');
+
+        $this->actingAs($owner)
+            ->withSession(['auth.password_confirmed_at' => time()])
+            ->get('/operator/ops')
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('operator-ops')
+                ->has('snapshot.captured_at')
+                ->has('readiness.compliance_guard.status')
                 ->has('recentActions', 0));
     }
 
