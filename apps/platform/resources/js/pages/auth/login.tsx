@@ -27,7 +27,10 @@ export default function Login({ status, canResetPassword }: Props) {
             <Head title="Log in" />
 
             {/* @chisel-passkeys */}
-            <PasskeyVerify />
+            <PasskeyVerify
+                label="Continue with passkey"
+                separator="Or use your password"
+            />
             {/* @end-chisel-passkeys */}
 
             <Form
@@ -121,5 +124,6 @@ export default function Login({ status, canResetPassword }: Props) {
 
 Login.layout = {
     title: 'Log in to your account',
-    description: 'Enter your email and password below to log in',
+    description:
+        'Use a passkey when available, or continue with your email and password.',
 };
