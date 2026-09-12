@@ -110,7 +110,7 @@ export const deliveryMilestones: DeliveryMilestone[] = [
         id: 'revenue-working-phase',
         title: 'Revenue working phase',
         state: 'active',
-        detail: 'Operator fulfillment readiness visible; governed issuance action next',
+        detail: 'Confirmed orders can be explicitly fulfilled into idempotent entitlements; CI verification pending',
     },
     {
         id: 'production-hardening',
