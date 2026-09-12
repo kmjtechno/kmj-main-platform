@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\LicenseAuditEvent;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
@@ -78,7 +79,9 @@ final class PlatformOwnerConsoleTest extends TestCase
             ->where('metrics.confirmed_orders', 1)
             ->has('recentOrders', 1)
             ->where('recentOrders.0.id', $order->getKey())
-            ->where('recentOrders.0.fulfillment_state', 'ready'));
+            ->where('recentOrders.0.fulfillment_state', 'ready')
+            ->where('recentOrders.0.entitlement_id', null)
+            ->where('recentOrders.0.can_manage_license', false));
     }
 
     public function test_passkey_owner_can_idempotently_fulfill_ready_order(): void
@@ -109,13 +112,43 @@ final class PlatformOwnerConsoleTest extends TestCase
             ->assertRedirect('/operator');
 
         $this->assertSame(1, Entitlement::query()->count());
+        $entitlement = Entitlement::query()->firstOrFail();
 
         $this->actingAs($user)
             ->withSession(['auth.password_confirmed_at' => time()])
             ->get('/operator')
             ->assertInertia(fn (Assert $page) => $page
                 ->where('recentOrders.0.id', $order->getKey())
-                ->where('recentOrders.0.fulfillment_state', 'entitled'));
+                ->where('recentOrders.0.fulfillment_state', 'entitled')
+                ->where('recentOrders.0.entitlement_id', $entitlement->getKey())
+                ->where('recentOrders.0.can_manage_license', true));
+    }
+
+    public function test_passkey_owner_can_issue_sandbox_license_from_entitled_order(): void
+    {
+        $user = $this->createPasskeyOwner();
+        [$order] = $this->createReadyOrder($user);
+
+        $this->actingAs($user)
+            ->withSession(['auth.password_confirmed_at' => time()])
+            ->post('/operator/orders/'.$order->getKey().'/fulfill')
+            ->assertRedirect('/operator');
+
+        $response = $this->actingAs($user)
+            ->withSession(['auth.password_confirmed_at' => time()])
+            ->post('/operator/orders/'.$order->getKey().'/sandbox-license');
+
+        $response->assertRedirect('/sandbox-licenses');
+        $response->assertSessionHas('sandbox_license.token');
+        $response->assertSessionHas('sandbox_license.validation.valid', true);
+
+        $this->assertDatabaseHas('license_audit_events', [
+            'action' => 'sandbox_license.issued',
+            'status' => 'success',
+        ]);
+        $event = LicenseAuditEvent::query()->latest('id')->firstOrFail();
+        $this->assertSame('operator_handoff', $event->getAttribute('metadata')['source'] ?? null);
+        $this->assertSame($order->getKey(), $event->getAttribute('metadata')['commercial_order_id'] ?? null);
     }
 
     public function test_regular_user_cannot_fulfill_ready_order(): void

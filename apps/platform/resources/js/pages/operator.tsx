@@ -23,6 +23,8 @@ type RecentOrder = {
     amount_minor: number | null;
     created_at: string | null;
     fulfillment_state: FulfillmentState;
+    entitlement_id: string | null;
+    can_manage_license: boolean;
 };
 
 type OperatorProps = {
@@ -42,6 +44,14 @@ const fulfillmentLabels: Record<FulfillmentState, string> = {
     entitled: 'Entitlement active',
     blocked_no_policy: 'Blocked · no active policy',
 };
+
+function canIssueSandboxLicense(order: RecentOrder): boolean {
+    return (
+        order.fulfillment_state === 'entitled' &&
+        order.entitlement_id !== null &&
+        order.can_manage_license
+    );
+}
 
 function Metric({
     icon: Icon,
@@ -84,9 +94,9 @@ export default function Operator({ metrics, recentOrders }: OperatorProps) {
                             </h1>
                             <p className="text-muted-foreground mt-3 max-w-xl text-sm leading-6">
                                 Privileged platform authority is separated from
-                                customer access. Confirmed ready orders can now
-                                be fulfilled through an explicit, idempotent
-                                entitlement action.
+                                customer access. Confirmed orders can be
+                                fulfilled into entitlements and handed directly
+                                into the governed sandbox license lifecycle.
                             </p>
                         </div>
                         <div className="rounded-xl border border-emerald-500/15 bg-emerald-500/5 px-4 py-3 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
@@ -126,8 +136,8 @@ export default function Operator({ metrics, recentOrders }: OperatorProps) {
                                 Recent commercial orders
                             </h2>
                             <p className="text-muted-foreground mt-1 text-xs">
-                                Deterministic readiness plus explicit governed
-                                fulfillment. Nothing is issued automatically.
+                                Deterministic readiness, explicit entitlement
+                                fulfillment and governed license handoff.
                             </p>
                         </div>
                         <span className="text-muted-foreground rounded-full border px-3 py-1 text-[10px] font-bold">
@@ -196,6 +206,21 @@ export default function Operator({ metrics, recentOrders }: OperatorProps) {
                                                     }
                                                 >
                                                     Issue entitlement
+                                                </button>
+                                            ) : canIssueSandboxLicense(
+                                                  order,
+                                              ) ? (
+                                                <button
+                                                    type="button"
+                                                    className="inline-flex rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-[10px] font-bold text-emerald-600 transition hover:bg-emerald-500/15 dark:text-emerald-400"
+                                                    data-test="issue-sandbox-license"
+                                                    onClick={() =>
+                                                        router.post(
+                                                            `/operator/orders/${order.id}/sandbox-license`,
+                                                        )
+                                                    }
+                                                >
+                                                    Issue sandbox license
                                                 </button>
                                             ) : (
                                                 <span className="text-muted-foreground text-[10px] font-semibold">
