@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 use KMJ\MainPlatform\Entitlements\Models\Entitlement;
 use KMJ\MainPlatform\Entitlements\Services\EntitlementReader;
+use KMJ\MainPlatform\Organizations\Services\OrganizationCapabilityContext;
 use KMJ\MainPlatform\Organizations\Services\OrganizationDirectory;
 
 Route::inertia('/', 'welcome')->name('home');
@@ -105,7 +106,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     Route::post('sandbox-licenses', function (
         Request $request,
-        OrganizationDirectory $organizations,
+        OrganizationCapabilityContext $capabilities,
         SandboxLicenseLifecycle $licenses,
         LicenseAuditRecorder $audit,
     ) {
@@ -117,7 +118,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
             'entitlement_id' => ['required', 'uuid'],
         ]);
 
-        abort_unless($organizations->userCanManage($user->id, $validated['organization_id']), 403);
+        abort_unless($capabilities->allows($user->id, $validated['organization_id'], 'license.manage'), 403);
 
         $entitlement = Entitlement::query()
             ->whereKey($validated['entitlement_id'])
@@ -154,7 +155,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     Route::post('sandbox-licenses/validate', function (
         Request $request,
-        OrganizationDirectory $organizations,
+        OrganizationCapabilityContext $capabilities,
         SandboxLicenseLifecycle $licenses,
         LicenseAuditRecorder $audit,
     ) {
@@ -171,7 +172,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         $jti = is_array($claims) ? ($claims['jti'] ?? null) : null;
 
         if (is_string($organizationId)) {
-            abort_unless($organizations->userCanManage($user->id, $organizationId), 403);
+            abort_unless($capabilities->allows($user->id, $organizationId, 'license.manage'), 403);
         }
 
         $audit->record(
@@ -190,7 +191,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     Route::post('sandbox-licenses/revoke', function (
         Request $request,
-        OrganizationDirectory $organizations,
+        OrganizationCapabilityContext $capabilities,
         SandboxLicenseLifecycle $licenses,
         LicenseAuditRecorder $audit,
     ) {
@@ -208,7 +209,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         $jti = is_array($claims) ? ($claims['jti'] ?? null) : null;
 
         abort_unless(is_string($organizationId) && is_string($jti), 422);
-        abort_unless($organizations->userCanManage($user->id, $organizationId), 403);
+        abort_unless($capabilities->allows($user->id, $organizationId, 'license.manage'), 403);
 
         $licenses->revoke($jti, $validated['reason'] ?? null);
         $audit->record(

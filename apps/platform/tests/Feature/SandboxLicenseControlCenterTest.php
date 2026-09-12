@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
 
@@ -103,6 +104,40 @@ final class SandboxLicenseControlCenterTest extends TestCase
                 ->has('auditEvents', 1)
                 ->where('auditEvents.0.organization_id', $ownerEntitlement->organization_id)
                 ->where('auditEvents.0.action', 'sandbox_license.issued'));
+    }
+
+    public function test_admin_capability_can_manage_sandbox_license_without_owner_role(): void
+    {
+        $owner = User::factory()->create();
+        $admin = User::factory()->create();
+
+        $this->actingAs($owner)->post('/organizations', [
+            'name' => 'Capability Organization',
+        ]);
+
+        $entitlement = DB::table('entitlements')->first();
+        self::assertNotNull($entitlement);
+
+        DB::table('organization_memberships')->insert([
+            'id' => (string) Str::uuid(),
+            'organization_id' => $entitlement->organization_id,
+            'user_id' => $admin->id,
+            'role' => 'admin',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $this->actingAs($admin)->post('/sandbox-licenses', [
+            'organization_id' => $entitlement->organization_id,
+            'entitlement_id' => $entitlement->id,
+        ])->assertRedirect(route('sandbox-licenses.index'));
+
+        $this->assertDatabaseHas('license_audit_events', [
+            'actor_id' => $admin->id,
+            'organization_id' => $entitlement->organization_id,
+            'action' => 'sandbox_license.issued',
+            'status' => 'success',
+        ]);
     }
 
     public function test_user_cannot_issue_license_for_another_organization(): void
