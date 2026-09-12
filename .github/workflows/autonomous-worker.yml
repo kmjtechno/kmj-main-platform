@@ -75,6 +75,22 @@ jobs:
           printf '\n' >> ~/.ssh/id_ed25519
           chmod 600 ~/.ssh/id_ed25519
           ssh-keyscan -T 10 -H "$STAGING_HOST" >> ~/.ssh/known_hosts 2>/dev/null
+          ssh -o BatchMode=yes -o ConnectTimeout=15 "$STAGING_USER@$STAGING_HOST" 'bash -s' <<'REMOTE_DIAG'
+          set -u
+          echo 'KMJ server-agent diagnostic (names/status only)'
+          echo '--- listener 20128 ---'
+          ss -ltn 2>/dev/null | grep -E '[:.]20128[[:space:]]' || true
+          echo '--- candidate user services ---'
+          systemctl --user list-unit-files --type=service --no-legend 2>/dev/null | awk '{print $1}' | grep -Ei '(^|[-_.])(9router|router|agent)([-_.]|$)|kmj' | head -40 || true
+          echo '--- candidate running processes ---'
+          ps -eo comm= 2>/dev/null | grep -Ei '9router|router|agent' | sort -u | head -40 || true
+          echo '--- candidate router files ---'
+          find "$HOME" -maxdepth 4 -type f \( -iname '*9router*' -o -iname '*router*.py' -o -iname '*router*.js' -o -iname '*router*.mjs' \) -print 2>/dev/null | head -40 || true
+          echo '--- provider credential variable names found in env files ---'
+          find "$HOME" -maxdepth 5 -type f \( -name '.env' -o -name '*.env' \) -print0 2>/dev/null |
+            xargs -0 -r grep -hE '^(OPENROUTER_API_KEY|GROQ_API_KEY|CEREBRAS_API_KEY|MISTRAL_API_KEY|GEMINI_API_KEY|NVIDIA_API_KEY|NVIDIA_NIM_API_KEY|KMJ_9ROUTER_API_KEY)=' 2>/dev/null |
+            cut -d= -f1 | sort -u || true
+          REMOTE_DIAG
           ssh -fN -o BatchMode=yes -o ExitOnForwardFailure=yes -o ConnectTimeout=15 \
             -L 20128:127.0.0.1:20128 "$STAGING_USER@$STAGING_HOST"
           if curl --fail --silent --max-time 8 http://127.0.0.1:20128/v1/models >/dev/null; then
