@@ -136,7 +136,6 @@ export default function OperatorOps({ snapshot, recentActions }: Props) {
         setRefreshing(true);
         router.reload({
             only: ['snapshot', 'recentActions'],
-            preserveScroll: true,
             onFinish: () => setRefreshing(false),
         });
     };
@@ -145,7 +144,6 @@ export default function OperatorOps({ snapshot, recentActions }: Props) {
         const timer = window.setInterval(() => {
             router.reload({
                 only: ['snapshot', 'recentActions'],
-                preserveScroll: true,
             });
         }, 15_000);
 
