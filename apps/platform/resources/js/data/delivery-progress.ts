@@ -80,6 +80,13 @@ export const deliveryMilestones: DeliveryMilestone[] = [
         evidence: 'PR #78 / #79',
     },
     {
+        id: 'session-device-visibility',
+        title: 'Session/device visibility',
+        state: 'active',
+        detail: 'Password-confirmed security view now exposes account session inventory',
+        evidence: 'Session management increment',
+    },
+    {
         id: 'step-up-revocation',
         title: 'Step-up revocation',
         state: 'verified',
