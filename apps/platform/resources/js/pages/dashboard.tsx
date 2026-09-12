@@ -1,5 +1,5 @@
 import type { FormEvent } from 'react';
-import { Head, useForm } from '@inertiajs/react';
+import { Head, Link, useForm } from '@inertiajs/react';
 import {
     ArrowRight,
     BadgeCheck,
@@ -49,6 +49,8 @@ export default function Dashboard({ organizations }: DashboardProps) {
         (count, organization) => count + organization.entitlements.length,
         0,
     );
+    const hasOrganization = organizations.length > 0;
+    const hasActiveEntitlement = entitlementCount > 0;
 
     const submit = (event: FormEvent<HTMLFormElement>) => {
         event.preventDefault();
@@ -138,6 +140,36 @@ export default function Dashboard({ organizations }: DashboardProps) {
                     </div>
                 </section>
 
+                {hasOrganization && (
+                    <section className="border-sidebar-border/70 bg-card dark:border-sidebar-border rounded-2xl border p-5 sm:p-6">
+                        <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
+                            <div>
+                                <div className="text-xs font-bold tracking-wider text-red-500 uppercase">
+                                    Next safe action
+                                </div>
+                                <h2 className="mt-1 font-bold">
+                                    {hasActiveEntitlement
+                                        ? 'Sandbox licensing is ready to use'
+                                        : 'Your owner organization is ready'}
+                                </h2>
+                                <p className="text-muted-foreground mt-1 max-w-2xl text-xs leading-5">
+                                    {hasActiveEntitlement
+                                        ? 'Open the license control center to issue, validate and revoke sandbox licenses for your active entitlement.'
+                                        : 'No active entitlement is attached yet. The organization authority is in place; entitlement provisioning is the next required step before license operations become available.'}
+                                </p>
+                            </div>
+                            {hasActiveEntitlement && (
+                                <Link
+                                    href="/sandbox-licenses"
+                                    className="inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-xl bg-red-600 px-4 text-xs font-bold text-white transition hover:bg-red-500"
+                                >
+                                    Open license control
+                                    <ArrowRight className="h-3.5 w-3.5" />
+                                </Link>
+                            )}
+                        </div>
+                    </section>
+                )}
                 <div className="grid gap-6 xl:grid-cols-[380px_1fr]">
                     <section className="border-sidebar-border/70 bg-card dark:border-sidebar-border rounded-2xl border p-5 sm:p-6">
                         <div className="flex items-center gap-3">
