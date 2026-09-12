@@ -362,14 +362,18 @@ export default function OperatorOps({
                 <section>
                     <div className="mb-3 flex items-end justify-between gap-3">
                         <div>
-                            <h2 className="font-black">Readiness & guardrails</h2>
+                            <h2 className="font-black">
+                                Readiness & guardrails
+                            </h2>
                             <p className="text-muted-foreground mt-1 text-xs">
                                 Evidence only. External systems are never marked
                                 healthy unless this runtime can actually observe
                                 them.
                             </p>
                         </div>
-                        <StatusPill status={readiness.compliance_guard.status} />
+                        <StatusPill
+                            status={readiness.compliance_guard.status}
+                        />
                     </div>
                     <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
                         <ReadinessCard
@@ -540,7 +544,8 @@ export default function OperatorOps({
                         <div className="mt-3 flex items-start gap-2 rounded-xl border border-amber-500/15 bg-amber-500/5 p-3 text-xs text-amber-700 dark:text-amber-300">
                             <TriangleAlert className="mt-0.5 h-4 w-4 shrink-0" />
                             Production deploy, DNS, billing, destructive DB and
-                            raw shell remain owner-approved outside this console.
+                            raw shell remain owner-approved outside this
+                            console.
                         </div>
                     </div>
                 </section>
