@@ -111,6 +111,7 @@ export const deliveryMilestones: DeliveryMilestone[] = [
         detail: 'Owner-gated production readiness',
     },
 ];
+
 export const verifiedDeliveryMilestones = deliveryMilestones.filter(
     (milestone) => milestone.state === 'verified',
 ).length;
