@@ -3,6 +3,7 @@
 namespace Tests\Feature\Auth;
 
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use KMJ\MainPlatform\Organizations\Models\OrganizationMembership;
 use Laravel\Fortify\Features;
 use Tests\TestCase;
 
@@ -33,7 +34,24 @@ class RegistrationTest extends TestCase
             'password_confirmation' => 'password',
         ]);
 
+        $user = $this->app['auth']->user();
+
         $this->assertAuthenticated();
+        $this->assertNotNull($user);
+        $this->assertDatabaseHas('organizations', [
+            'name' => "Test User's Organization",
+        ]);
+
+        $membership = OrganizationMembership::query()
+            ->where('user_id', $user->getAuthIdentifier())
+            ->where('role', 'owner')
+            ->first();
+
+        $this->assertNotNull($membership);
+        $this->assertDatabaseHas('organizations', [
+            'id' => $membership->organization_id,
+            'name' => "Test User's Organization",
+        ]);
         $response->assertRedirect(route('dashboard', absolute: false));
     }
 }
