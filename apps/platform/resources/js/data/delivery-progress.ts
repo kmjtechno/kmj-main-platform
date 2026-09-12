@@ -84,7 +84,7 @@ export const deliveryMilestones: DeliveryMilestone[] = [
         title: 'Session/device visibility',
         state: 'verified',
         detail: 'Password-confirmed session inventory + sign-out-other-sessions control',
-        evidence: 'Session/device management increment',
+        evidence: 'PR #89',
     },
     {
         id: 'step-up-revocation',
@@ -110,7 +110,7 @@ export const deliveryMilestones: DeliveryMilestone[] = [
         id: 'revenue-working-phase',
         title: 'Revenue working phase',
         state: 'active',
-        detail: 'Passkey-gated operator console + governed fulfillment next',
+        detail: 'Operator fulfillment readiness visible; governed issuance action next',
     },
     {
         id: 'production-hardening',
