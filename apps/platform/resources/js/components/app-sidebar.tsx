@@ -1,6 +1,7 @@
-import { Link } from '@inertiajs/react';
+import { Link, usePage } from '@inertiajs/react';
 import {
     BookOpen,
+    Crown,
     FolderGit2,
     KeyRound,
     LayoutGrid,
@@ -23,7 +24,7 @@ import { dashboard } from '@/routes';
 import { edit as securitySettings } from '@/routes/security';
 import type { NavItem } from '@/types';
 
-const mainNavItems: NavItem[] = [
+const baseNavItems: NavItem[] = [
     {
         title: 'Dashboard',
         href: dashboard(),
@@ -55,6 +56,16 @@ const footerNavItems: NavItem[] = [
 ];
 
 export function AppSidebar() {
+    const operator = usePage().props.operator as
+        | { enabled?: boolean }
+        | undefined;
+    const mainNavItems: NavItem[] = [
+        ...baseNavItems,
+        ...(operator?.enabled
+            ? [{ title: 'Operator', href: '/operator', icon: Crown }]
+            : []),
+    ];
+
     return (
         <Sidebar collapsible="icon" variant="inset">
             <SidebarHeader>
