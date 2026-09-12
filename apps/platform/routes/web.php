@@ -43,6 +43,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('sandbox-licenses', function (
         Request $request,
         OrganizationDirectory $organizations,
+        OrganizationCapabilityContext $capabilities,
         EntitlementReader $entitlements,
     ) {
         $user = $request->user();
@@ -58,7 +59,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
             ->all();
         $organizationIds = collect($items)
             ->pluck('id')
-            ->filter(fn (mixed $id): bool => is_string($id))
+            ->filter(fn (mixed $id): bool => is_string($id) && $capabilities->allows($user->id, $id, 'license.manage'))
             ->values()
             ->all();
         $auditEvents = $organizationIds === []
