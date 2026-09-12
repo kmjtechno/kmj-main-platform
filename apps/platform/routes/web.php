@@ -35,6 +35,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
         return Inertia::render('dashboard', [
             'organizations' => $items,
+            'hasPasskey' => $user->passkeys()->exists(),
         ]);
     })->name('dashboard');
 

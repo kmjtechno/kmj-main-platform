@@ -1,5 +1,5 @@
-import type { FormEvent } from 'react';
-import { Head, Link, useForm } from '@inertiajs/react';
+import type { FormEvent } from "react";
+import { Head, Link, useForm } from "@inertiajs/react";
 import {
     ArrowRight,
     BadgeCheck,
@@ -10,8 +10,8 @@ import {
     Plus,
     RotateCcw,
     ShieldCheck,
-} from 'lucide-react';
-import { dashboard } from '@/routes';
+} from "lucide-react";
+import { dashboard } from "@/routes";
 
 type Entitlement = {
     id: string;
@@ -32,19 +32,23 @@ type Organization = {
 
 type DashboardProps = {
     organizations: Organization[];
+    hasPasskey: boolean;
 };
 
 const milestones = [
-    ['Organization', 'Active'],
-    ['Product', 'Active'],
-    ['Entitlement', 'Active'],
-    ['Sandbox license', 'Implemented'],
-    ['Validation', 'Implemented'],
-    ['Revocation', 'Implemented'],
+    ["Organization", "Active"],
+    ["Product", "Active"],
+    ["Entitlement", "Active"],
+    ["Sandbox license", "Implemented"],
+    ["Validation", "Implemented"],
+    ["Revocation", "Implemented"],
 ];
 
-export default function Dashboard({ organizations }: DashboardProps) {
-    const form = useForm({ name: '' });
+export default function Dashboard({
+    organizations,
+    hasPasskey,
+}: DashboardProps) {
+    const form = useForm({ name: "" });
     const entitlementCount = organizations.reduce(
         (count, organization) => count + organization.entitlements.length,
         0,
@@ -54,7 +58,7 @@ export default function Dashboard({ organizations }: DashboardProps) {
 
     const submit = (event: FormEvent<HTMLFormElement>) => {
         event.preventDefault();
-        form.post('/organizations', {
+        form.post("/organizations", {
             preserveScroll: true,
             onSuccess: () => form.reset(),
         });
@@ -125,7 +129,7 @@ export default function Dashboard({ organizations }: DashboardProps) {
                             >
                                 <div className="flex items-center justify-between gap-2">
                                     <span className="grid h-7 w-7 place-items-center rounded-lg bg-red-500/10 text-[10px] font-black text-red-500">
-                                        {String(index + 1).padStart(2, '0')}
+                                        {String(index + 1).padStart(2, "0")}
                                     </span>
                                     <CheckCircle2 className="h-4 w-4 text-emerald-500" />
                                 </div>
@@ -140,6 +144,33 @@ export default function Dashboard({ organizations }: DashboardProps) {
                     </div>
                 </section>
 
+                {!hasPasskey && (
+                    <section className="border-sidebar-border/70 bg-card dark:border-sidebar-border rounded-2xl border p-5 sm:p-6">
+                        <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
+                            <div>
+                                <div className="text-xs font-bold tracking-wider text-red-500 uppercase">
+                                    Account security
+                                </div>
+                                <h2 className="mt-1 font-bold">
+                                    Add a phishing-resistant passkey
+                                </h2>
+                                <p className="text-muted-foreground mt-1 max-w-2xl text-xs leading-5">
+                                    Your account is active, but no passkey is
+                                    enrolled yet. Add one from Security settings
+                                    for faster and stronger sign-in.
+                                </p>
+                            </div>
+                            <Link
+                                href="/settings/security"
+                                className="inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-xl border px-4 text-xs font-bold transition hover:border-red-500/40 hover:text-red-500"
+                            >
+                                Add passkey
+                                <ArrowRight className="h-3.5 w-3.5" />
+                            </Link>
+                        </div>
+                    </section>
+                )}
+
                 {hasOrganization && (
                     <section className="border-sidebar-border/70 bg-card dark:border-sidebar-border rounded-2xl border p-5 sm:p-6">
                         <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
@@ -149,13 +180,13 @@ export default function Dashboard({ organizations }: DashboardProps) {
                                 </div>
                                 <h2 className="mt-1 font-bold">
                                     {hasActiveEntitlement
-                                        ? 'Sandbox licensing is ready to use'
-                                        : 'Your owner organization is ready'}
+                                        ? "Sandbox licensing is ready to use"
+                                        : "Your owner organization is ready"}
                                 </h2>
                                 <p className="text-muted-foreground mt-1 max-w-2xl text-xs leading-5">
                                     {hasActiveEntitlement
-                                        ? 'Open the license control center to issue, validate and revoke sandbox licenses for your active entitlement.'
-                                        : 'No active entitlement is attached yet. The organization authority is in place; entitlement provisioning is the next required step before license operations become available.'}
+                                        ? "Open the license control center to issue, validate and revoke sandbox licenses for your active entitlement."
+                                        : "No active entitlement is attached yet. The organization authority is in place; entitlement provisioning is the next required step before license operations become available."}
                                 </p>
                             </div>
                             {hasActiveEntitlement && (
@@ -198,7 +229,7 @@ export default function Dashboard({ organizations }: DashboardProps) {
                                     id="organization-name"
                                     value={form.data.name}
                                     onChange={(event) =>
-                                        form.setData('name', event.target.value)
+                                        form.setData("name", event.target.value)
                                     }
                                     placeholder="Example: KMJ Product Lab"
                                     className="border-input bg-background mt-2 h-11 w-full rounded-xl border px-3 text-sm transition outline-none focus:border-red-500/50 focus:ring-2 focus:ring-red-500/10"
@@ -220,8 +251,8 @@ export default function Dashboard({ organizations }: DashboardProps) {
                                 className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-red-600 px-4 text-sm font-bold text-white transition hover:bg-red-500 disabled:cursor-not-allowed disabled:opacity-60"
                             >
                                 {form.processing
-                                    ? 'Creating authority…'
-                                    : 'Create & initialize'}
+                                    ? "Creating authority…"
+                                    : "Create & initialize"}
                                 {!form.processing && (
                                     <ArrowRight className="h-4 w-4" />
                                 )}
@@ -405,7 +436,7 @@ function FlowStep({
 Dashboard.layout = {
     breadcrumbs: [
         {
-            title: 'Control Center',
+            title: "Control Center",
             href: dashboard(),
         },
     ],

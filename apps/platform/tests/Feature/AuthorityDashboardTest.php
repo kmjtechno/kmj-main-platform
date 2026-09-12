@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
 
@@ -59,6 +60,7 @@ final class AuthorityDashboardTest extends TestCase
         $response->assertOk();
         $response->assertInertia(fn (Assert $page) => $page
             ->component('dashboard')
+            ->where('hasPasskey', false)
             ->has('organizations', 1)
             ->where('organizations.0.name', 'Visible Organization')
             ->where('organizations.0.role', 'owner')
@@ -67,5 +69,26 @@ final class AuthorityDashboardTest extends TestCase
             ->where('organizations.0.entitlements.0.product_slug', 'kmj-main-platform-sandbox')
             ->where('organizations.0.entitlements.0.capability', 'sandbox.product.access')
             ->where('organizations.0.entitlements.0.status', 'active'));
+    }
+
+    public function test_dashboard_reports_existing_passkey_enrollment(): void
+    {
+        $user = User::factory()->create();
+
+        DB::table('passkeys')->insert([
+            'user_id' => $user->id,
+            'name' => 'Primary passkey',
+            'credential_id' => 'dashboard-passkey',
+            'credential' => json_encode(['id' => 'dashboard-passkey'], JSON_THROW_ON_ERROR),
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $this->actingAs($user)
+            ->get(route('dashboard'))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('dashboard')
+                ->where('hasPasskey', true));
     }
 }
