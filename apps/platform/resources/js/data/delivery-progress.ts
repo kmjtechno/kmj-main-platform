@@ -109,9 +109,9 @@ export const deliveryMilestones: DeliveryMilestone[] = [
     {
         id: 'revenue-working-phase',
         title: 'Revenue working phase',
-        state: 'verified',
-        detail: 'Confirmed orders can be explicitly fulfilled into idempotent entitlements',
-        evidence: 'PR #90 / #91 + staging-approved exact-SHA promotion',
+        state: 'active',
+        detail: 'Entitled orders now hand off directly into governed sandbox license issuance; CI verification pending',
+        evidence: 'PR #90 / #91 / #92 + exact-SHA staging promotion',
     },
     {
         id: 'production-hardening',
