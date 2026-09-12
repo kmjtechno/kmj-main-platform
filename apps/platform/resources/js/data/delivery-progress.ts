@@ -61,8 +61,15 @@ export const deliveryMilestones: DeliveryMilestone[] = [
     {
         id: 'license-claim-contract',
         title: 'License tenant claim hardening',
+        state: 'verified',
+        detail: 'Complete tenant/product/entitlement identity and coherent issue/expiry ordering are required before sandbox validation succeeds',
+        evidence: 'PR #99',
+    },
+    {
+        id: 'license-time-contract',
+        title: 'License time-bound hardening',
         state: 'active',
-        detail: 'Require complete tenant/product/entitlement identity and coherent issue/expiry ordering before sandbox validation succeeds',
+        detail: 'Fail closed on future-issued or overlong sandbox license tokens and cap issuance to the 30-minute sandbox contract',
     },
     {
         id: 'organization-capabilities',
