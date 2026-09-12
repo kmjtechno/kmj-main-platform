@@ -71,7 +71,17 @@ final class LicenseValidator
             return $this->invalid('missing_claims');
         }
 
-        if ($expiresAt <= time()) {
+        $now = time();
+
+        if ($issuedAt > $now + SandboxLicensePolicy::MAX_FUTURE_ISSUED_AT_SKEW_SECONDS) {
+            return $this->invalid('issued_in_future', $claims);
+        }
+
+        if ($expiresAt - $issuedAt > SandboxLicensePolicy::MAX_LIFETIME_SECONDS) {
+            return $this->invalid('lifetime_exceeded', $claims);
+        }
+
+        if ($expiresAt <= $now) {
             return $this->invalid('expired', $claims);
         }
 
