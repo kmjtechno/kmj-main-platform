@@ -163,8 +163,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
         abort_unless($user instanceof User, 401);
 
         $validated = $request->validate([
+            'organization_id' => ['required', 'uuid'],
             'license' => ['required', 'string', 'max:8192'],
         ]);
+
+        abort_unless($capabilities->allows($user->id, $validated['organization_id'], 'license.manage'), 403);
 
         $result = $licenses->validate($validated['license']);
         $claims = $result['claims'];
@@ -172,7 +175,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         $jti = is_array($claims) ? ($claims['jti'] ?? null) : null;
 
         if (is_string($organizationId)) {
-            abort_unless($capabilities->allows($user->id, $organizationId, 'license.manage'), 403);
+            abort_unless(hash_equals($validated['organization_id'], $organizationId), 422);
         }
 
         $audit->record(
@@ -199,9 +202,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
         abort_unless($user instanceof User, 401);
 
         $validated = $request->validate([
+            'organization_id' => ['required', 'uuid'],
             'license' => ['required', 'string', 'max:8192'],
             'reason' => ['nullable', 'string', 'max:255'],
         ]);
+
+        abort_unless($capabilities->allows($user->id, $validated['organization_id'], 'license.manage'), 403);
 
         $result = $licenses->validate($validated['license']);
         $claims = $result['claims'];
@@ -209,7 +215,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         $jti = is_array($claims) ? ($claims['jti'] ?? null) : null;
 
         abort_unless(is_string($organizationId) && is_string($jti), 422);
-        abort_unless($capabilities->allows($user->id, $organizationId, 'license.manage'), 403);
+        abort_unless(hash_equals($validated['organization_id'], $organizationId), 422);
 
         $licenses->revoke($jti, $validated['reason'] ?? null);
         $audit->record(

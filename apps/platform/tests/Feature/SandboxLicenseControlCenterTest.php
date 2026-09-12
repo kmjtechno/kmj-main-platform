@@ -43,6 +43,7 @@ final class SandboxLicenseControlCenterTest extends TestCase
         self::assertNotSame('', $license);
 
         $validateResponse = $this->actingAs($user)->post('/sandbox-licenses/validate', [
+            'organization_id' => $entitlement->organization_id,
             'license' => $license,
         ]);
 
@@ -58,6 +59,7 @@ final class SandboxLicenseControlCenterTest extends TestCase
         $revokeResponse = $this->actingAs($user)
             ->withSession(['auth.password_confirmed_at' => time()])
             ->post('/sandbox-licenses/revoke', [
+                'organization_id' => $entitlement->organization_id,
                 'license' => $license,
                 'reason' => 'control-center-test',
             ]);
@@ -188,6 +190,43 @@ final class SandboxLicenseControlCenterTest extends TestCase
         $this->assertDatabaseCount('license_revocations', 0);
     }
 
+    public function test_license_actions_fail_closed_when_selected_tenant_does_not_match_token(): void
+    {
+        $user = User::factory()->create();
+
+        $this->actingAs($user)->post('/organizations', ['name' => 'Tenant One']);
+        $firstEntitlement = DB::table('entitlements')->first();
+        self::assertNotNull($firstEntitlement);
+
+        $this->actingAs($user)->post('/organizations', ['name' => 'Tenant Two']);
+        $secondEntitlement = DB::table('entitlements')
+            ->where('organization_id', '!=', $firstEntitlement->organization_id)
+            ->first();
+        self::assertNotNull($secondEntitlement);
+
+        $this->actingAs($user)->post('/sandbox-licenses', [
+            'organization_id' => $firstEntitlement->organization_id,
+            'entitlement_id' => $firstEntitlement->id,
+        ]);
+        $license = session('sandbox_license.token');
+        self::assertIsString($license);
+
+        $this->actingAs($user)->post('/sandbox-licenses/validate', [
+            'organization_id' => $secondEntitlement->organization_id,
+            'license' => $license,
+        ])->assertUnprocessable();
+
+        $this->actingAs($user)
+            ->withSession(['auth.password_confirmed_at' => time()])
+            ->post('/sandbox-licenses/revoke', [
+                'organization_id' => $secondEntitlement->organization_id,
+                'license' => $license,
+                'reason' => 'tenant-mismatch',
+            ])->assertUnprocessable();
+
+        $this->assertDatabaseCount('license_revocations', 0);
+    }
+
     public function test_user_cannot_validate_or_revoke_another_organizations_license(): void
     {
         $owner = User::factory()->create();
@@ -210,12 +249,14 @@ final class SandboxLicenseControlCenterTest extends TestCase
         self::assertIsString($license);
 
         $this->actingAs($otherUser)->post('/sandbox-licenses/validate', [
+            'organization_id' => $entitlement->organization_id,
             'license' => $license,
         ])->assertForbidden();
 
         $this->actingAs($otherUser)
             ->withSession(['auth.password_confirmed_at' => time()])
             ->post('/sandbox-licenses/revoke', [
+                'organization_id' => $entitlement->organization_id,
                 'license' => $license,
                 'reason' => 'unauthorized-attempt',
             ])->assertForbidden();

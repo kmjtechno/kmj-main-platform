@@ -58,8 +58,15 @@ export default function SandboxLicenses({
     validationEngine,
 }: Props) {
     const issue = useForm({ organization_id: '', entitlement_id: '' });
-    const validate = useForm({ license: licenseResult?.token ?? '' });
-    const revoke = useForm({ license: licenseResult?.token ?? '', reason: '' });
+    const validate = useForm({
+        organization_id: '',
+        license: licenseResult?.token ?? '',
+    });
+    const revoke = useForm({
+        organization_id: '',
+        license: licenseResult?.token ?? '',
+        reason: '',
+    });
 
     const selectedOrganization = organizations.find(
         (organization) => organization.id === issue.data.organization_id,
@@ -245,6 +252,27 @@ export default function SandboxLicenses({
                                 validate.post('/sandbox-licenses/validate');
                             }}
                         >
+                            <select
+                                className="border-input bg-background h-11 w-full rounded-xl border px-3 text-sm"
+                                value={validate.data.organization_id}
+                                onChange={(event) =>
+                                    validate.setData(
+                                        'organization_id',
+                                        event.target.value,
+                                    )
+                                }
+                                required
+                            >
+                                <option value="">Select organization</option>
+                                {organizations.map((organization) => (
+                                    <option
+                                        key={organization.id}
+                                        value={organization.id}
+                                    >
+                                        {organization.name}
+                                    </option>
+                                ))}
+                            </select>
                             <textarea
                                 className="border-input bg-background min-h-36 w-full rounded-xl border p-3 font-mono text-xs"
                                 value={validate.data.license}
@@ -282,6 +310,27 @@ export default function SandboxLicenses({
                                 revoke.post('/sandbox-licenses/revoke');
                             }}
                         >
+                            <select
+                                className="border-input bg-background h-11 w-full rounded-xl border px-3 text-sm"
+                                value={revoke.data.organization_id}
+                                onChange={(event) =>
+                                    revoke.setData(
+                                        'organization_id',
+                                        event.target.value,
+                                    )
+                                }
+                                required
+                            >
+                                <option value="">Select organization</option>
+                                {organizations.map((organization) => (
+                                    <option
+                                        key={organization.id}
+                                        value={organization.id}
+                                    >
+                                        {organization.name}
+                                    </option>
+                                ))}
+                            </select>
                             <textarea
                                 className="border-input bg-background min-h-28 w-full rounded-xl border p-3 font-mono text-xs"
                                 value={revoke.data.license}
