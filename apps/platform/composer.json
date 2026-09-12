@@ -29,19 +29,27 @@
             "options": {
                 "symlink": false
             }
+        },
+        {
+            "type": "path",
+            "url": "../../packages/domain-commerce",
+            "options": {
+                "symlink": false
+            }
         }
     ],
     "require": {
-        "php": "^8.3",
         "inertiajs/inertia-laravel": "^3.0",
         "kmjtechno/domain-catalog": "0.1.0",
+        "kmjtechno/domain-commerce": "0.1.0",
         "kmjtechno/domain-entitlements": "0.1.0",
         "kmjtechno/domain-organizations": "0.1.0",
         "laravel/chisel": "^0.1.0",
         "laravel/fortify": "^1.37.2",
         "laravel/framework": "^13.17",
         "laravel/tinker": "^3.0",
-        "laravel/wayfinder": "^0.1.14"
+        "laravel/wayfinder": "^0.1.14",
+        "php": "^8.3"
     },
     "require-dev": {
         "fakerphp/faker": "^1.24",
