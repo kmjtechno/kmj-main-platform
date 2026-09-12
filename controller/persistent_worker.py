@@ -31,10 +31,31 @@ HIGH_RISK_EXTRA = (
 )
 MAX_PATCH_BYTES = int(os.getenv("KMJ_WORKER_MAX_PATCH_BYTES", "80000"))
 MAX_PATCH_FILES = int(os.getenv("KMJ_WORKER_MAX_PATCH_FILES", "12"))
+MAX_TASKS_PER_CYCLE_HARD_LIMIT = 3
 
 
 def enabled(name: str) -> bool:
     return os.getenv(name, "false").lower() == "true"
+
+
+def worker_capacity() -> int:
+    try:
+        configured = int(os.getenv("KMJ_WORKER_MAX_TASKS_PER_CYCLE", "1"))
+    except ValueError:
+        configured = 1
+    return max(1, min(configured, MAX_TASKS_PER_CYCLE_HARD_LIMIT))
+
+
+def paths_conflict(candidate: list[str] | set[str], occupied: list[str] | set[str]) -> bool:
+    for left in candidate:
+        for right in occupied:
+            left_path = left.rstrip("/")
+            right_path = right.rstrip("/")
+            if left_path == right_path:
+                return True
+            if left_path.startswith(right_path + "/") or right_path.startswith(left_path + "/"):
+                return True
+    return False
 
 
 def run(cmd: list[str], cwd: Path = ROOT, timeout: int = 900) -> subprocess.CompletedProcess[str]:
@@ -316,16 +337,28 @@ def commit_and_push(branch: str, issue: dict[str, Any], summary: str) -> None:
         raise RuntimeError(f"GIT_PUSH_FAILED:{pushed.stderr[-1000:]}")
 
 
-def execute_one(gh: GitHubClient) -> bool:
+def open_agent_paths(gh: GitHubClient) -> set[str]:
+    occupied: set[str] = set()
+    for pr in gh.open_agent_prs():
+        occupied.update(gh.pr_files(int(pr["number"])))
+    return occupied
+
+
+def execute_one(gh: GitHubClient, occupied_paths: set[str] | None = None) -> tuple[bool, set[str]]:
     issue = select_issue(gh)
     if not issue:
-        return False
+        return False, set()
     issue_number = int(issue["number"])
     gh.add_labels(issue_number, [RUNNING_LABEL])
     try:
         payload, model_result = asyncio.run(propose_patch(issue))
         patch = str(payload["patch"])
         paths = validate_patch(patch)
+        occupied_paths = occupied_paths or set()
+        if paths_conflict(paths, occupied_paths):
+            gh.remove_label(issue_number, RUNNING_LABEL)
+            gh.comment(issue_number, "Autonomous worker deferred this task because its proposed changed paths overlap another running agent PR. No repository write was performed.")
+            return False, set()
         branch = prepare_branch(issue_number)
         apply_patch(patch)
         ok, evidence = run_verification(paths)
@@ -334,7 +367,7 @@ def execute_one(gh: GitHubClient) -> bool:
             gh.remove_label(issue_number, RUNNING_LABEL)
             gh.add_labels(issue_number, [BLOCKED_LABEL])
             gh.comment(issue_number, "Autonomous patch failed local verification and was not pushed.\n\n```text\n" + evidence[-5000:] + "\n```")
-            return True
+            return True, set()
         summary = str(payload.get("summary", "Autonomous safe task"))
         commit_and_push(branch, issue, summary)
         model_name = str(model_result.get("model", "verified-free-cloud"))
@@ -350,15 +383,15 @@ def execute_one(gh: GitHubClient) -> bool:
         pr = gh.create_pr(f"agent: {issue.get('title', '')}", branch, body)
         gh.add_labels(int(pr["number"]), [AGENT_LABEL])
         gh.comment(issue_number, f"Autonomous worker opened PR #{pr['number']} after local verification. Waiting for required CI checks.")
-        return True
+        return True, set(paths)
     except NoFreeRouteAvailable:
         gh.remove_label(issue_number, RUNNING_LABEL)
-        return False
+        return False, set()
     except Exception as exc:
         gh.remove_label(issue_number, RUNNING_LABEL)
         gh.add_labels(issue_number, [BLOCKED_LABEL])
         gh.comment(issue_number, f"Autonomous worker stopped safely: `{type(exc).__name__}`. No merge/deploy was performed.")
-        return True
+        return True, set()
 
 
 def main() -> int:
@@ -368,8 +401,16 @@ def main() -> int:
     gh = GitHubClient()
     gh.ensure_labels()
     progressed = reconcile_agent_prs(gh)
-    if not gh.open_agent_prs():
-        progressed = execute_one(gh) or progressed
+    open_prs = gh.open_agent_prs()
+    capacity = worker_capacity()
+    occupied_paths = open_agent_paths(gh)
+    available_slots = max(0, capacity - len(open_prs))
+    for _ in range(available_slots):
+        task_progressed, changed_paths = execute_one(gh, occupied_paths)
+        progressed = task_progressed or progressed
+        if not task_progressed:
+            break
+        occupied_paths.update(changed_paths)
     print("KMJ autonomous worker:", "progressed" if progressed else "idle")
     return 0
 
