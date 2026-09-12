@@ -52,10 +52,22 @@ final class LicenseValidator
             return $this->invalid('wrong_environment');
         }
 
-        $expiresAt = $claims['expires_at'] ?? null;
         $jti = $claims['jti'] ?? null;
+        $organizationId = $claims['organization_id'] ?? null;
+        $productId = $claims['product_id'] ?? null;
+        $entitlementId = $claims['entitlement_id'] ?? null;
+        $issuedAt = $claims['issued_at'] ?? null;
+        $expiresAt = $claims['expires_at'] ?? null;
 
-        if (is_int($expiresAt) === false || is_string($jti) === false || $jti === '') {
+        if (
+            is_string($jti) === false || $jti === ''
+            || is_string($organizationId) === false || $organizationId === ''
+            || is_string($productId) === false || $productId === ''
+            || is_string($entitlementId) === false || $entitlementId === ''
+            || is_int($issuedAt) === false
+            || is_int($expiresAt) === false
+            || $issuedAt > $expiresAt
+        ) {
             return $this->invalid('missing_claims');
         }
 
