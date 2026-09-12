@@ -70,6 +70,25 @@ export default function SandboxLicenses({
             organization.name,
         ]),
     );
+    const lifecycleState = validationResult
+        ? validationResult.valid
+            ? {
+                  current: 'Validated',
+                  next: 'Revoke when access should end',
+                  step: 3,
+              }
+            : {
+                  current: 'Invalid or revoked',
+                  next: 'Issue a new license if access is still required',
+                  step: 1,
+              }
+        : licenseResult
+          ? { current: 'Issued', next: 'Validate the issued token', step: 2 }
+          : {
+                current: 'Ready to issue',
+                next: 'Issue a license from an active entitlement',
+                step: 1,
+            };
 
     return (
         <>
@@ -98,6 +117,38 @@ export default function SandboxLicenses({
                                     {validationEngine}
                                 </span>
                             </div>
+                        </div>
+                    </div>
+                </section>
+
+                <section className="border-sidebar-border/70 bg-card rounded-2xl border p-5">
+                    <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
+                        <div>
+                            <div className="text-xs font-bold tracking-wider text-red-500 uppercase">
+                                License lifecycle
+                            </div>
+                            <h2 className="mt-1 font-bold">
+                                {lifecycleState.current}
+                            </h2>
+                            <p className="text-muted-foreground mt-1 text-xs">
+                                Next safe action: {lifecycleState.next}
+                            </p>
+                        </div>
+                        <div className="grid grid-cols-3 gap-2 text-center text-xs font-semibold sm:min-w-80">
+                            {['Issue', 'Validate', 'Revoke'].map(
+                                (label, index) => {
+                                    const step = index + 1;
+                                    const active = lifecycleState.step === step;
+                                    return (
+                                        <div
+                                            key={label}
+                                            className={`rounded-xl border px-3 py-2 ${active ? 'border-red-500/40 bg-red-500/10 text-red-500' : 'text-muted-foreground'}`}
+                                        >
+                                            {step}. {label}
+                                        </div>
+                                    );
+                                },
+                            )}
                         </div>
                     </div>
                 </section>
