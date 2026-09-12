@@ -14,6 +14,12 @@ import {
     Sparkles,
     Workflow,
 } from 'lucide-react';
+import {
+    deliveryMilestones,
+    deliveryProgress,
+    deliveryProgressMeta,
+    verifiedDeliveryMilestones,
+} from '@/data/delivery-progress';
 import { dashboard, login, register } from '@/routes';
 
 const capabilities = [
@@ -58,51 +64,6 @@ const authority = [
     'License',
     'Device',
 ];
-
-const deliveryMilestones = [
-    {
-        title: 'Authority foundation',
-        state: 'verified',
-        detail: 'Architecture + authority chain',
-    },
-    {
-        title: 'Staging delivery',
-        state: 'verified',
-        detail: 'CI + promotion + deploy + health',
-    },
-    {
-        title: 'Frontend live sync',
-        state: 'verified',
-        detail: 'Visible staging + stale-build reload',
-    },
-    {
-        title: 'Guarded AI worker',
-        state: 'verified',
-        detail: '5-minute safe task executor',
-    },
-    {
-        title: 'Free-provider federation',
-        state: 'ready',
-        detail: 'Adapters ready; verified credential required',
-    },
-    {
-        title: 'License vertical slice',
-        state: 'active',
-        detail: 'Validation + revocation hardening',
-    },
-    {
-        title: 'Production hardening',
-        state: 'queued',
-        detail: 'Owner-gated production readiness',
-    },
-] as const;
-
-const verifiedDeliveryMilestones = deliveryMilestones.filter(
-    (milestone) => milestone.state === 'verified',
-).length;
-const deliveryProgress = Math.round(
-    (verifiedDeliveryMilestones / deliveryMilestones.length) * 100,
-);
 
 export default function Welcome() {
     const stagingSyncBadge = (
@@ -202,9 +163,10 @@ export default function Welcome() {
                                 releases and governed automation — built as an
                                 enterprise foundation instead of a collection of
                                 disconnected tools. The current staging track
-                                now includes the authority foundation, sandbox
-                                licensing validation and deployment verification
-                                in parallel.
+                                now includes governed commerce, tenant
+                                capability enforcement, passkey-first access,
+                                license lifecycle controls and verified delivery
+                                automation in parallel.
                             </p>
 
                             <div className="mt-9 flex flex-col gap-3 sm:flex-row">
@@ -295,7 +257,7 @@ export default function Welcome() {
                                             Verified delivery progress
                                         </div>
                                         <div className="mt-1 text-sm font-bold text-white/90">
-                                            Evidence-based platform milestones
+                                            {deliveryProgressMeta.label}
                                         </div>
                                     </div>
                                     <div className="shrink-0 text-right">
@@ -350,9 +312,10 @@ export default function Welcome() {
                                 </div>
 
                                 <p className="mt-3 text-[10px] leading-4 text-white/30">
-                                    Progress counts only milestones with
-                                    verification evidence; active, ready and
-                                    queued work is not counted as complete.
+                                    {deliveryProgressMeta.note} Refreshed{' '}
+                                    {deliveryProgressMeta.refreshed}. Active,
+                                    blocked and queued work is not counted as
+                                    complete.
                                 </p>
                             </div>
                         </div>
