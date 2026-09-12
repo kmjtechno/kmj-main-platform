@@ -32,6 +32,7 @@ type Organization = {
 
 type DashboardProps = {
     organizations: Organization[];
+    hasPasskey: boolean;
 };
 
 const milestones = [
@@ -43,7 +44,10 @@ const milestones = [
     ['Revocation', 'Implemented'],
 ];
 
-export default function Dashboard({ organizations }: DashboardProps) {
+export default function Dashboard({
+    organizations,
+    hasPasskey,
+}: DashboardProps) {
     const form = useForm({ name: '' });
     const entitlementCount = organizations.reduce(
         (count, organization) => count + organization.entitlements.length,
@@ -139,6 +143,33 @@ export default function Dashboard({ organizations }: DashboardProps) {
                         ))}
                     </div>
                 </section>
+
+                {!hasPasskey && (
+                    <section className="border-sidebar-border/70 bg-card dark:border-sidebar-border rounded-2xl border p-5 sm:p-6">
+                        <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
+                            <div>
+                                <div className="text-xs font-bold tracking-wider text-red-500 uppercase">
+                                    Account security
+                                </div>
+                                <h2 className="mt-1 font-bold">
+                                    Add a phishing-resistant passkey
+                                </h2>
+                                <p className="text-muted-foreground mt-1 max-w-2xl text-xs leading-5">
+                                    Your account is active, but no passkey is
+                                    enrolled yet. Add one from Security settings
+                                    for faster and stronger sign-in.
+                                </p>
+                            </div>
+                            <Link
+                                href="/settings/security"
+                                className="inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-xl border px-4 text-xs font-bold transition hover:border-red-500/40 hover:text-red-500"
+                            >
+                                Add passkey
+                                <ArrowRight className="h-3.5 w-3.5" />
+                            </Link>
+                        </div>
+                    </section>
+                )}
 
                 {hasOrganization && (
                     <section className="border-sidebar-border/70 bg-card dark:border-sidebar-border rounded-2xl border p-5 sm:p-6">
