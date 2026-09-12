@@ -17,10 +17,19 @@ import ManageTwoFactor from '@/components/manage-two-factor';
 /* @end-chisel-2fa */
 
 // oxfmt-ignore
+type Session = {
+    id: string;
+    ip_address: string | null;
+    user_agent: string | null;
+    last_active_at: string;
+    is_current: boolean;
+};
+
 type Props = {
     passwordRules: string;
+    sessions: Session[];
 } /* @chisel-passkeys */ & ManagePasskeysProps /* @end-chisel-passkeys */ /* @chisel-2fa */ &
-    ManageTwoFactorProps /* @end-chisel-2fa */;
+    ManageTwoFactorProps; /* @end-chisel-2fa */
 
 export default function Security(props: Props) {
     const passwordInput = useRef<HTMLInputElement>(null);
@@ -128,6 +137,48 @@ export default function Security(props: Props) {
                 </Form>
             </div>
 
+            <div className="space-y-6">
+                <Heading
+                    variant="small"
+                    title="Active sessions"
+                    description="Review the devices currently signed in to your account"
+                />
+
+                <div className="space-y-3">
+                    {props.sessions.length === 0 ? (
+                        <p className="text-muted-foreground text-sm">
+                            No database-backed sessions are currently available.
+                        </p>
+                    ) : (
+                        props.sessions.map((session) => (
+                            <div
+                                key={session.id}
+                                className="bg-card rounded-xl border p-4"
+                            >
+                                <div className="flex items-center gap-2 text-sm font-medium">
+                                    <span>
+                                        {session.ip_address ?? 'Unknown IP'}
+                                    </span>
+                                    {session.is_current && (
+                                        <span className="text-primary">
+                                            Current session
+                                        </span>
+                                    )}
+                                </div>
+                                <p className="text-muted-foreground mt-1 truncate text-xs">
+                                    {session.user_agent ?? 'Unknown device'}
+                                </p>
+                                <p className="text-muted-foreground mt-1 text-xs">
+                                    Last active{' '}
+                                    {new Date(
+                                        session.last_active_at,
+                                    ).toLocaleString()}
+                                </p>
+                            </div>
+                        ))
+                    )}
+                </div>
+            </div>
             {/* @chisel-2fa */}
             <ManageTwoFactor
                 canManageTwoFactor={props.canManageTwoFactor}

@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Settings\PasswordUpdateRequest;
 use App\Http\Requests\Settings\TwoFactorAuthenticationRequest;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rules\Password;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -42,6 +43,7 @@ class SecurityController extends Controller
                 : [],
             /* @end-chisel-passkeys */
             'passwordRules' => Password::defaults()->toPasswordRulesString(),
+            'sessions' => $this->sessionsFor($request),
         ];
 
         /* @chisel-2fa */
@@ -68,5 +70,32 @@ class SecurityController extends Controller
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Password updated.')]);
 
         return back();
+    }
+
+    /**
+     * @return array<int, array{id: string, ip_address: ?string, user_agent: ?string, last_active_at: string, is_current: bool}>
+     */
+    private function sessionsFor(TwoFactorAuthenticationRequest $request): array
+    {
+        if (config('session.driver') !== 'database') {
+            return [];
+        }
+
+        $table = (string) config('session.table', 'sessions');
+        $currentSessionId = $request->session()->getId();
+
+        return DB::table($table)
+            ->where('user_id', $request->user()->getAuthIdentifier())
+            ->orderByDesc('last_activity')
+            ->limit(20)
+            ->get(['id', 'ip_address', 'user_agent', 'last_activity'])
+            ->map(fn (object $session): array => [
+                'id' => (string) $session->id,
+                'ip_address' => is_string($session->ip_address) ? $session->ip_address : null,
+                'user_agent' => is_string($session->user_agent) ? $session->user_agent : null,
+                'last_active_at' => now()->setTimestamp((int) $session->last_activity)->toISOString(),
+                'is_current' => hash_equals($currentSessionId, (string) $session->id),
+            ])
+            ->all();
     }
 }
