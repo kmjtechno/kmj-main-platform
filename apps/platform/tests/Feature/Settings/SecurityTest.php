@@ -4,6 +4,7 @@ namespace Tests\Feature\Settings;
 
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Inertia\Testing\AssertableInertia as Assert;
 use Laravel\Fortify\Features;
@@ -88,6 +89,37 @@ class SecurityTest extends TestCase
                 ->missing('twoFactorEnabled')
                 ->missing('requiresConfirmation'),
             );
+    }
+
+    public function test_other_database_sessions_can_be_signed_out_without_touching_another_user()
+    {
+        config(['session.driver' => 'database']);
+
+        $user = User::factory()->create();
+        $otherUser = User::factory()->create();
+
+        DB::table('sessions')->insert([
+            ['id' => 'other-session', 'user_id' => $user->id, 'ip_address' => '127.0.0.2', 'user_agent' => 'other', 'payload' => '', 'last_activity' => time()],
+            ['id' => 'different-user-session', 'user_id' => $otherUser->id, 'ip_address' => '127.0.0.3', 'user_agent' => 'different-user', 'payload' => '', 'last_activity' => time()],
+        ]);
+
+        $this->actingAs($user)
+            ->withSession(['auth.password_confirmed_at' => time()])
+            ->delete(route('security.sessions.destroy-other'))
+            ->assertRedirect();
+
+        $this->assertDatabaseMissing('sessions', ['id' => 'other-session', 'user_id' => $user->id]);
+        $this->assertDatabaseHas('sessions', ['id' => 'different-user-session', 'user_id' => $otherUser->id]);
+        $this->assertAuthenticatedAs($user);
+    }
+
+    public function test_signing_out_other_sessions_requires_password_confirmation()
+    {
+        $user = User::factory()->create();
+
+        $this->actingAs($user)
+            ->delete(route('security.sessions.destroy-other'))
+            ->assertRedirect(route('password.confirm'));
     }
 
     public function test_password_can_be_updated()

@@ -1,4 +1,4 @@
-import { Form, Head } from '@inertiajs/react';
+import { Form, Head, router } from '@inertiajs/react';
 import { useRef } from 'react';
 import SecurityController from '@/actions/App/Http/Controllers/Settings/SecurityController';
 import Heading from '@/components/heading';
@@ -143,6 +143,20 @@ export default function Security(props: Props) {
                     title="Active sessions"
                     description="Review the devices currently signed in to your account"
                 />
+
+                {props.sessions.some((session) => !session.is_current) && (
+                    <Button
+                        variant="outline"
+                        onClick={() =>
+                            router.delete('/settings/security/sessions/other', {
+                                preserveScroll: true,
+                            })
+                        }
+                        data-test="sign-out-other-sessions-button"
+                    >
+                        Sign out other sessions
+                    </Button>
+                )}
 
                 <div className="space-y-3">
                     {props.sessions.length === 0 ? (

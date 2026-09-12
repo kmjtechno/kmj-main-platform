@@ -27,6 +27,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->middleware('throttle:6,1')
         ->name('user-password.update');
 
+    Route::delete('settings/security/sessions/other', [SecurityController::class, 'destroyOtherSessions'])
+        /* @chisel-password-confirmation */
+        ->middleware(RequirePassword::class)
+        /* @end-chisel-password-confirmation */
+        ->name('security.sessions.destroy-other');
+
     Route::inertia('settings/appearance', 'settings/appearance')->name('appearance.edit');
 });
 
