@@ -1,0 +1,38 @@
+name: Ops Branch Autoformat
+
+on:
+  push:
+    branches:
+      - feat/ops-command-center-mvp-gh
+
+permissions:
+  contents: write
+
+jobs:
+  format:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Format frontend
+        working-directory: apps/platform
+        run: |
+          npm install --no-audit --no-fund
+          npm run check:fix
+      - name: Commit formatter output
+        run: |
+          if git diff --quiet; then
+            echo 'No formatter changes required.'
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add apps/platform
+          git commit -m 'style(ops): apply project formatter'
+          git push origin HEAD:${{ github.ref_name }}
