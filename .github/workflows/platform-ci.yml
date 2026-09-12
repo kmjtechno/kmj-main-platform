@@ -64,20 +64,8 @@ jobs:
           npm install --no-audit --no-fund
           npm run build
 
-      - name: Generate frontend format patch
-        run: |
-          set -euo pipefail
-          ./node_modules/.bin/vp fmt . --write
-          git diff -- . > frontend-format.patch
-          test ! -s frontend-format.patch
-
-      - name: Upload frontend format patch
-        if: failure()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
-        with:
-          name: frontend-format-patch
-          path: apps/platform/frontend-format.patch
-          if-no-files-found: error
+      - name: Check frontend format
+        run: ./node_modules/.bin/vp fmt --check
 
       - name: Check frontend lint
         run: ./node_modules/.bin/vp lint
