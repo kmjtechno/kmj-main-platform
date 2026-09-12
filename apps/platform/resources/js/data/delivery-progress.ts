@@ -59,6 +59,12 @@ export const deliveryMilestones: DeliveryMilestone[] = [
         evidence: 'PR #68',
     },
     {
+        id: 'license-claim-contract',
+        title: 'License tenant claim hardening',
+        state: 'active',
+        detail: 'Require complete tenant/product/entitlement identity and coherent issue/expiry ordering before sandbox validation succeeds',
+    },
+    {
         id: 'organization-capabilities',
         title: 'Organization capabilities',
         state: 'verified',
