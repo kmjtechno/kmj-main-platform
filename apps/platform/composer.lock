@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "9d55da40a75941ea1010f387aa8238a5",
+    "content-hash": "68e21bc99445f47a64efe752b272f77b",
     "packages": [
         {
             "name": "bacon/bacon-qr-code",
@@ -1312,6 +1312,40 @@
                 }
             },
             "description": "KMJ Main Platform Catalog domain module.",
+            "transport-options": {
+                "symlink": false,
+                "relative": true
+            }
+        },
+        {
+            "name": "kmjtechno/domain-commerce",
+            "version": "0.1.0",
+            "dist": {
+                "type": "path",
+                "url": "../../packages/domain-commerce",
+                "reference": "c362fc9e08706b36c049fa2a480ecbfd4c11e9b8"
+            },
+            "require": {
+                "illuminate/database": "^13.0",
+                "illuminate/support": "^13.0",
+                "kmjtechno/domain-catalog": "0.1.0",
+                "kmjtechno/domain-organizations": "0.1.0",
+                "php": "^8.3"
+            },
+            "type": "library",
+            "extra": {
+                "laravel": {
+                    "providers": [
+                        "KMJ\\MainPlatform\\Commerce\\CommerceServiceProvider"
+                    ]
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "KMJ\\MainPlatform\\Commerce\\": "src/"
+                }
+            },
+            "description": "KMJ Main Platform Commerce domain module.",
             "transport-options": {
                 "symlink": false,
                 "relative": true

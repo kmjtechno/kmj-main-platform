@@ -17,6 +17,10 @@ modules:
     path: packages/domain-catalog
     owns: [products, plans, public_product_facts]
     allowed_dependencies: [organizations]
+  commerce:
+    path: packages/domain-commerce
+    owns: [commerce_orders, commerce_ledger]
+    allowed_dependencies: [organizations, catalog]
   entitlements:
     path: packages/domain-entitlements
     owns: [entitlement_policies, entitlements, entitlement_ledger]
