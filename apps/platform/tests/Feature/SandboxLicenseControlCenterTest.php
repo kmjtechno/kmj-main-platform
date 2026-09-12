@@ -55,10 +55,12 @@ final class SandboxLicenseControlCenterTest extends TestCase
             'status' => 'valid',
         ]);
 
-        $revokeResponse = $this->actingAs($user)->post('/sandbox-licenses/revoke', [
-            'license' => $license,
-            'reason' => 'control-center-test',
-        ]);
+        $revokeResponse = $this->actingAs($user)
+            ->withSession(['auth.password_confirmed_at' => time()])
+            ->post('/sandbox-licenses/revoke', [
+                'license' => $license,
+                'reason' => 'control-center-test',
+            ]);
 
         $revokeResponse->assertRedirect(route('sandbox-licenses.index'));
         $revokeResponse->assertSessionHas('sandbox_license_validation.valid', false);
@@ -160,6 +162,32 @@ final class SandboxLicenseControlCenterTest extends TestCase
         $this->assertDatabaseCount('license_audit_events', 0);
     }
 
+    public function test_revocation_requires_recent_step_up_confirmation(): void
+    {
+        $user = User::factory()->create();
+
+        $this->actingAs($user)->post('/organizations', [
+            'name' => 'Step Up Organization',
+        ]);
+
+        $entitlement = DB::table('entitlements')->first();
+        self::assertNotNull($entitlement);
+
+        $issueResponse = $this->actingAs($user)->post('/sandbox-licenses', [
+            'organization_id' => $entitlement->organization_id,
+            'entitlement_id' => $entitlement->id,
+        ]);
+        $license = session('sandbox_license.token');
+        self::assertIsString($license);
+
+        $this->actingAs($user)->post('/sandbox-licenses/revoke', [
+            'license' => $license,
+            'reason' => 'step-up-required',
+        ])->assertRedirect(route('password.confirm'));
+
+        $this->assertDatabaseCount('license_revocations', 0);
+    }
+
     public function test_user_cannot_validate_or_revoke_another_organizations_license(): void
     {
         $owner = User::factory()->create();
@@ -185,10 +213,12 @@ final class SandboxLicenseControlCenterTest extends TestCase
             'license' => $license,
         ])->assertForbidden();
 
-        $this->actingAs($otherUser)->post('/sandbox-licenses/revoke', [
-            'license' => $license,
-            'reason' => 'unauthorized-attempt',
-        ])->assertForbidden();
+        $this->actingAs($otherUser)
+            ->withSession(['auth.password_confirmed_at' => time()])
+            ->post('/sandbox-licenses/revoke', [
+                'license' => $license,
+                'reason' => 'unauthorized-attempt',
+            ])->assertForbidden();
 
         $this->assertDatabaseCount('license_revocations', 0);
         $this->assertDatabaseCount('license_audit_events', 1);

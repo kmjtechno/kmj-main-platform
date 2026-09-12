@@ -56,10 +56,12 @@ final class FirstVerticalSliceAcceptanceTest extends TestCase
         ]);
         $validate->assertSessionHas('sandbox_license_validation.valid', true);
 
-        $revoke = $this->actingAs($user)->post('/sandbox-licenses/revoke', [
-            'license' => $license,
-            'reason' => 'vertical-slice-acceptance',
-        ]);
+        $revoke = $this->actingAs($user)
+            ->withSession(['auth.password_confirmed_at' => time()])
+            ->post('/sandbox-licenses/revoke', [
+                'license' => $license,
+                'reason' => 'vertical-slice-acceptance',
+            ]);
         $revoke->assertSessionHas('sandbox_license_validation.valid', false);
         $revoke->assertSessionHas('sandbox_license_validation.reason', 'revoked');
 
