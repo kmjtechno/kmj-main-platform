@@ -45,7 +45,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ]);
     })->name('dashboard');
 
-    Route::get('operator', function (Request $request, PlatformOwnerAccess $access) {
+    Route::get('operator', function (
+        Request $request,
+        PlatformOwnerAccess $access,
+        OrganizationCapabilityContext $capabilities,
+    ) {
         $user = $request->user();
         abort_unless($user instanceof User, 401);
         $access->require($user);
@@ -54,21 +58,23 @@ Route::middleware(['auth', 'verified'])->group(function () {
             ->latest('created_at')
             ->limit(20)
             ->get(['id', 'organization_id', 'product_id', 'status', 'currency', 'amount_minor', 'created_at'])
-            ->map(function (CommercialOrder $order): array {
+            ->map(function (CommercialOrder $order) use ($capabilities, $user): array {
                 $organizationId = (string) $order->getAttribute('organization_id');
                 $productId = (string) $order->getAttribute('product_id');
-                $hasActiveEntitlement = Entitlement::query()
+                $activeEntitlement = Entitlement::query()
                     ->where('organization_id', $organizationId)
                     ->where('product_id', $productId)
                     ->where('status', 'active')
-                    ->exists();
+                    ->oldest('created_at')
+                    ->oldest('id')
+                    ->first();
                 $hasActivePolicy = EntitlementPolicy::query()
                     ->where('product_id', $productId)
                     ->where('status', 'active')
                     ->exists();
                 $fulfillmentState = match (true) {
                     $order->getAttribute('status') !== 'confirmed' => 'awaiting_confirmation',
-                    $hasActiveEntitlement => 'entitled',
+                    $activeEntitlement instanceof Entitlement => 'entitled',
                     $hasActivePolicy => 'ready',
                     default => 'blocked_no_policy',
                 };
@@ -82,6 +88,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
                     'amount_minor' => $order->getAttribute('amount_minor'),
                     'created_at' => $order->getAttribute('created_at')?->toISOString(),
                     'fulfillment_state' => $fulfillmentState,
+                    'entitlement_id' => $activeEntitlement?->getKey(),
+                    'can_manage_license' => $activeEntitlement instanceof Entitlement
+                        && $capabilities->allows($user->id, $organizationId, 'license.manage'),
                 ];
             })->all();
 
@@ -150,6 +159,66 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
         return redirect()->route('operator.index');
     })->name('operator.orders.fulfill')->middleware('password.confirm');
+
+    Route::post('operator/orders/{order}/sandbox-license', function (
+        Request $request,
+        string $order,
+        PlatformOwnerAccess $access,
+        OrganizationCapabilityContext $capabilities,
+        SandboxLicenseLifecycle $licenses,
+        LicenseAuditRecorder $audit,
+    ) {
+        $user = $request->user();
+        abort_unless($user instanceof User, 401);
+        $access->require($user);
+
+        $commercialOrder = CommercialOrder::query()
+            ->whereKey($order)
+            ->where('status', 'confirmed')
+            ->firstOrFail();
+        $organizationId = (string) $commercialOrder->getAttribute('organization_id');
+        $productId = (string) $commercialOrder->getAttribute('product_id');
+
+        abort_unless($capabilities->allows($user->id, $organizationId, 'license.manage'), 403);
+
+        $entitlement = Entitlement::query()
+            ->where('organization_id', $organizationId)
+            ->where('product_id', $productId)
+            ->where('status', 'active')
+            ->oldest('created_at')
+            ->oldest('id')
+            ->firstOrFail();
+
+        $license = $licenses->issue(
+            $organizationId,
+            $productId,
+            $entitlement->getKey(),
+            new ImmutableDateTime('+30 minutes'),
+        );
+        $validation = $licenses->validate($license);
+        $claims = $validation['claims'];
+        $jti = is_array($claims) ? ($claims['jti'] ?? null) : null;
+
+        $audit->record(
+            'sandbox_license.issued',
+            $user->id,
+            $organizationId,
+            is_string($jti) ? $jti : null,
+            'success',
+            [
+                'entitlement_id' => $entitlement->getKey(),
+                'commercial_order_id' => $commercialOrder->getKey(),
+                'source' => 'operator_handoff',
+            ],
+        );
+
+        return redirect()
+            ->route('sandbox-licenses.index')
+            ->with('sandbox_license', [
+                'token' => $license,
+                'validation' => $validation,
+            ]);
+    })->name('operator.orders.sandbox-license')->middleware('password.confirm');
 
     Route::get('sandbox-licenses', function (
         Request $request,
