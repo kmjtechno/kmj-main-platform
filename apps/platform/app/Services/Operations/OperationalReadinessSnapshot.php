@@ -176,8 +176,8 @@ final class OperationalReadinessSnapshot
     }
 
     /**
-     * @param array<string, mixed> $server
-     * @param array<string, array<string, mixed>> $backups
+     * @param  array<string, mixed>  $server
+     * @param  array<string, array<string, mixed>>  $backups
      * @return array<string, mixed>
      */
     private function complianceGuard(array $server, array $backups): array
