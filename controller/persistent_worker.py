@@ -226,6 +226,7 @@ Return JSON only with keys: summary, patch, tests.
 patch must be a git unified diff and may only modify allowlisted product paths.
 Never modify CI, workflows, autonomous worker/controller, infra, secrets, mission policy, DNS,
 production configuration, billing/payment, signing/private keys, or KMJ Cloud Nexus.
+If the task advances a material platform capability, update apps/platform/resources/js/data/delivery-progress.ts in the same patch with evidence-backed state. Never mark a milestone verified without implementation/test evidence.
 Keep the change minimal and reversible. Do not claim tests passed; only list tests to run.
 """
     result = await router.complete(

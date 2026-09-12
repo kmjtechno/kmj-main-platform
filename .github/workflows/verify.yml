@@ -13,6 +13,8 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/setup-python@v5
         with:
           python-version: '3.13'
@@ -63,6 +65,11 @@ jobs:
           grep -q 'NO_FREE_ROUTE_AVAILABLE' docs/adr/ADR-004-cloud-ai-policy.md
           grep -q 'Organization -> Product -> Entitlement' docs/architecture/first-vertical-slice.md
           grep -q 'production_requires_owner_approval: true' work/backlog.yaml
+      - name: Verify delivery progress sync
+        env:
+          KMJ_PROGRESS_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          KMJ_PROGRESS_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: python scripts/verify_delivery_progress.py
       - name: Verify public surface inventory
         run: python scripts/verify_public_surface.py
       - name: Verify strict free-cloud router
