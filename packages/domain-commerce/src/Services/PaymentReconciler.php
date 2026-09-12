@@ -29,6 +29,10 @@ final class PaymentReconciler
             throw new InvalidArgumentException('Adapter returned an invalid provider identifier.');
         }
 
+        if (strlen($provider.':'.$providerReference) > 160) {
+            throw new InvalidArgumentException('Provider confirmation reference exceeds the commercial ledger limit.');
+        }
+
         $confirmation = $adapter->confirmation($providerReference);
 
         if ($confirmation->provider !== $provider || $confirmation->reference !== $providerReference) {
