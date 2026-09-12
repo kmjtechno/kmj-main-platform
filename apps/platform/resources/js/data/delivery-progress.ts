@@ -123,8 +123,8 @@ export const deliveryMilestones: DeliveryMilestone[] = [
         id: 'ops-readiness-evidence',
         title: 'Ops readiness evidence',
         state: 'active',
-        detail: 'Backup freshness + worker/AI posture + compliance guardrails + fail-closed probe isolation under verification',
-        evidence: 'PR #98 + PR #101 hotfix verification',
+        detail: 'Backup freshness + worker/AI posture + fail-closed probes + transaction-scoped authenticated staging smoke under verification',
+        evidence: 'PR #98 + PR #101 + authenticated surface smoke lane',
     },
     {
         id: 'production-hardening',
