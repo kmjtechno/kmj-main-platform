@@ -122,9 +122,7 @@ function MetricCard({
             <div className="mt-3 text-3xl font-black tracking-tight">
                 {value}
             </div>
-            <div className="text-muted-foreground mt-1 text-xs">
-                {detail}
-            </div>
+            <div className="text-muted-foreground mt-1 text-xs">{detail}</div>
             {gauge !== undefined ? <Gauge value={gauge} /> : null}
         </div>
     );
@@ -202,7 +200,7 @@ export default function OperatorOps({ snapshot, recentActions }: Props) {
                             type="button"
                             onClick={refresh}
                             disabled={refreshing}
-                            className="inline-flex items-center justify-center gap-2 rounded-xl border px-4 py-3 text-xs font-bold transition hover:bg-muted disabled:opacity-50"
+                            className="hover:bg-muted inline-flex items-center justify-center gap-2 rounded-xl border px-4 py-3 text-xs font-bold transition disabled:opacity-50"
                         >
                             <RefreshCw
                                 className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`}
@@ -278,7 +276,7 @@ export default function OperatorOps({ snapshot, recentActions }: Props) {
                                 <div className="text-muted-foreground text-xs">
                                     Deployed SHA
                                 </div>
-                                <div className="mt-1 break-all font-mono text-xs font-bold">
+                                <div className="mt-1 font-mono text-xs font-bold break-all">
                                     {snapshot.deployed_sha ?? 'Unavailable'}
                                 </div>
                             </div>
@@ -293,9 +291,7 @@ export default function OperatorOps({ snapshot, recentActions }: Props) {
                     <div className="bg-card rounded-2xl border p-5 sm:p-6">
                         <div className="flex items-center gap-2">
                             <RotateCw className="h-4 w-4 text-red-500" />
-                            <h2 className="font-bold">
-                                Safe recovery actions
-                            </h2>
+                            <h2 className="font-bold">Safe recovery actions</h2>
                         </div>
                         <p className="text-muted-foreground mt-2 text-xs leading-5">
                             Only allow-listed, reversible or low-risk actions
