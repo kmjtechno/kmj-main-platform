@@ -68,8 +68,9 @@ export const deliveryMilestones: DeliveryMilestone[] = [
     {
         id: 'license-audit-governance',
         title: 'License audit governance',
-        state: 'active',
+        state: 'verified',
         detail: 'Capability-scope privileged audit visibility',
+        evidence: 'PR #85',
     },
     {
         id: 'passkey-first-auth',
