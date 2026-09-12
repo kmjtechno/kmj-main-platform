@@ -1,0 +1,106 @@
+name: Staging Authenticated Surface Smoke
+
+on:
+  workflow_run:
+    workflows:
+      - Staging VPS Deploy
+    types:
+      - completed
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: staging-authenticated-surface-smoke
+  cancel-in-progress: false
+
+jobs:
+  smoke:
+    name: Verify authenticated staging surfaces
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: staging
+
+    steps:
+      - name: Checkout approved staging branch
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          ref: staging-approved
+          fetch-depth: 1
+
+      - name: Resolve exact approved commit
+        shell: bash
+        env:
+          DEPLOYED_SHA: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          set -euo pipefail
+          approved_sha="$(git rev-parse HEAD)"
+          if [ "${{ github.event_name }}" = "workflow_run" ]; then
+            test -n "$DEPLOYED_SHA"
+            test "$approved_sha" = "$DEPLOYED_SHA"
+          fi
+          echo "SMOKE_SHA=$approved_sha" >> "$GITHUB_ENV"
+
+      - name: Validate staging SSH configuration
+        shell: bash
+        env:
+          STAGING_HOST: ${{ secrets.STAGING_SSH_HOST }}
+          STAGING_USER: ${{ secrets.STAGING_SSH_USER }}
+          STAGING_KEY: ${{ secrets.STAGING_SSH_PRIVATE_KEY }}
+          STAGING_PATH: ${{ vars.STAGING_APP_PATH }}
+        run: |
+          set -euo pipefail
+          test -n "$STAGING_HOST"
+          test -n "$STAGING_USER"
+          test -n "$STAGING_KEY"
+          test -n "$STAGING_PATH"
+          install -m 700 -d ~/.ssh
+          printf '%s' "$STAGING_KEY" | sed 's/\\n/\n/g' | tr -d '\r' > ~/.ssh/id_ed25519
+          printf '\n' >> ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keygen -y -f ~/.ssh/id_ed25519 >/dev/null
+          ssh-keyscan -T 10 -H "$STAGING_HOST" >> ~/.ssh/known_hosts 2>/dev/null
+
+      - name: Verify deployed SHA and authenticated runtime surfaces
+        shell: bash
+        env:
+          STAGING_HOST: ${{ secrets.STAGING_SSH_HOST }}
+          STAGING_USER: ${{ secrets.STAGING_SSH_USER }}
+          STAGING_PATH: ${{ vars.STAGING_APP_PATH }}
+        run: |
+          set -euo pipefail
+          ssh -o BatchMode=yes -o ConnectTimeout=15 "$STAGING_USER@$STAGING_HOST" bash -s -- "$STAGING_PATH" "$SMOKE_SHA" <<'REMOTE'
+          set -euo pipefail
+          STAGING_PATH="$1"
+          EXPECTED_SHA="$2"
+          cd "$STAGING_PATH"
+          actual_sha="$(git rev-parse HEAD)"
+          test "$actual_sha" = "$EXPECTED_SHA"
+          cd apps/platform
+
+          PHP_BIN=""
+          for candidate in php php8.5 php8.4 php8.3 php8.2; do
+            if command -v "$candidate" >/dev/null 2>&1 && "$candidate" -m 2>/dev/null | grep -qx 'pdo_pgsql'; then
+              PHP_BIN="$candidate"
+              break
+            fi
+          done
+          test -n "$PHP_BIN"
+          "$PHP_BIN" artisan staging:smoke-authenticated-surfaces
+          REMOTE
+
+      - name: Authenticated smoke evidence
+        if: always()
+        shell: bash
+        run: |
+          {
+            echo '## KMJ authenticated staging smoke'
+            echo
+            echo "- expected/deployed commit: \`${SMOKE_SHA:-unresolved}\`"
+            echo "- authenticated runtime smoke: ${{ job.status }}"
+            echo '- surfaces: `/dashboard`, `/operator/ops`'
+            echo '- synthetic owner data: transaction-scoped and rolled back'
+          } >> "$GITHUB_STEP_SUMMARY"
