@@ -66,6 +66,12 @@ export const deliveryMilestones: DeliveryMilestone[] = [
         evidence: 'PR #77 / #80 / #82',
     },
     {
+        id: 'license-audit-governance',
+        title: 'License audit governance',
+        state: 'active',
+        detail: 'Capability-scope privileged audit visibility',
+    },
+    {
         id: 'passkey-first-auth',
         title: 'Passkey-first auth path',
         state: 'verified',
@@ -105,6 +111,7 @@ export const deliveryMilestones: DeliveryMilestone[] = [
         detail: 'Owner-gated production readiness',
     },
 ];
+
 export const verifiedDeliveryMilestones = deliveryMilestones.filter(
     (milestone) => milestone.state === 'verified',
 ).length;
