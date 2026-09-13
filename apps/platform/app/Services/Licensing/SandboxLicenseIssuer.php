@@ -27,6 +27,10 @@ final class SandboxLicenseIssuer
             throw new InvalidArgumentException('License expiry must be in the future.');
         }
 
+        if ($expiresAt->getTimestamp() - $now->getTimestamp() > SandboxLicensePolicy::MAX_LIFETIME_SECONDS) {
+            throw new InvalidArgumentException('Sandbox license lifetime cannot exceed 30 minutes.');
+        }
+
         $payload = [
             'environment' => 'sandbox',
             'jti' => (string) Str::uuid(),
