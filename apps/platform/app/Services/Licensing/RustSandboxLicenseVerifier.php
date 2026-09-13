@@ -28,6 +28,10 @@ final class RustSandboxLicenseVerifier
             return $this->invalid('verifier_unconfigured');
         }
 
+        if (trim($license) === '') {
+            return $this->invalid('malformed');
+        }
+
         try {
             $result = $this->runner instanceof Closure
                 ? ($this->runner)($license, $this->secret, $this->timeoutSeconds)
