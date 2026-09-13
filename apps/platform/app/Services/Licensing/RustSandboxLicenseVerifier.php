@@ -57,6 +57,14 @@ final class RustSandboxLicenseVerifier
             return $this->invalid('verifier_invalid_response');
         }
 
+        if ($decoded['valid'] === true && ($reason !== null || $claims === null)) {
+            return $this->invalid('verifier_invalid_response');
+        }
+
+        if ($decoded['valid'] === false && (! is_string($reason) || trim($reason) === '')) {
+            return $this->invalid('verifier_invalid_response');
+        }
+
         return [
             'valid' => $decoded['valid'],
             'reason' => $reason,
