@@ -78,7 +78,7 @@ final class LicenseValidator
             || is_string($entitlementId) === false || trim($entitlementId) === ''
             || is_int($issuedAt) === false
             || is_int($expiresAt) === false
-            || $issuedAt > $expiresAt
+            || $issuedAt >= $expiresAt
         ) {
             return $this->invalid('missing_claims');
         }
