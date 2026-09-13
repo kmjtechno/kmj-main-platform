@@ -117,8 +117,15 @@ export const deliveryMilestones: DeliveryMilestone[] = [
     {
         id: 'rust-nonblank-identity-contract',
         title: 'Rust non-blank identity contract',
-        state: 'active',
+        state: 'verified',
         detail: 'Reject whitespace-only JTI and tenant/product/entitlement identity claims before Rust-authoritative sandbox validation can succeed',
+        evidence: 'PR #111',
+    },
+    {
+        id: 'php-nonblank-identity-contract',
+        title: 'PHP non-blank identity contract',
+        state: 'active',
+        detail: 'Reject whitespace-only JTI and tenant/product/entitlement identity claims in the PHP validator so PHP, cross-check and Rust authority paths share the same identity contract',
     },
     {
         id: 'organization-capabilities',
