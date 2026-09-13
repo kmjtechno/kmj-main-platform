@@ -49,6 +49,20 @@ final class LicenseValidatorIdentityClaimContractTest extends TestCase
         }
     }
 
+    public function test_php_validator_rejects_signed_list_json_payloads(): void
+    {
+        $secret = str_repeat('k', 32);
+        $validator = new LicenseValidator($secret);
+
+        foreach ([[], ['sandbox'], ['environment', 'sandbox']] as $payload) {
+            $validation = $validator->validate($this->signJson($payload, $secret));
+
+            self::assertFalse($validation['valid']);
+            self::assertSame('invalid_payload', $validation['reason']);
+            self::assertNull($validation['claims']);
+        }
+    }
+
     /**
      * @param  array<string, mixed>  $claims
      */
