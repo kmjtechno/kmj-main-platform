@@ -3,13 +3,22 @@
 namespace App\Services\Licensing;
 
 use App\Models\LicenseRevocation;
+use InvalidArgumentException;
 use JsonException;
 
 final class LicenseValidator
 {
     public function __construct(
         private readonly string $secret,
-    ) {}
+    ) {
+        if (trim($this->secret) === '') {
+            throw new InvalidArgumentException('Sandbox validation secret must be non-blank.');
+        }
+
+        if (strlen($this->secret) < 32) {
+            throw new InvalidArgumentException('Sandbox validation secret must be at least 32 bytes.');
+        }
+    }
 
     /**
      * @return array{valid: bool, reason: string|null, claims: array<string, mixed>|null}
