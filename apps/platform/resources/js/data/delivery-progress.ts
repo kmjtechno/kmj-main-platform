@@ -110,8 +110,15 @@ export const deliveryMilestones: DeliveryMilestone[] = [
     {
         id: 'rust-license-input-contract',
         title: 'Rust verifier input contract',
-        state: 'active',
+        state: 'verified',
         detail: 'Reject empty sandbox license input before invoking the Rust verifier so malformed requests fail closed deterministically',
+        evidence: 'PR #110',
+    },
+    {
+        id: 'rust-nonblank-identity-contract',
+        title: 'Rust non-blank identity contract',
+        state: 'active',
+        detail: 'Reject whitespace-only JTI and tenant/product/entitlement identity claims before Rust-authoritative sandbox validation can succeed',
     },
     {
         id: 'organization-capabilities',
