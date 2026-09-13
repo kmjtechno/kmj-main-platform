@@ -47,7 +47,7 @@ final class LicenseValidator
             return $this->invalid('invalid_payload');
         }
 
-        if (! is_array($claims)) {
+        if (! is_array($claims) || array_is_list($claims)) {
             return $this->invalid('invalid_payload');
         }
 
