@@ -42,9 +42,12 @@ final class LicenseValidator
         }
 
         try {
-            /** @var array<string, mixed> $claims */
             $claims = json_decode($payloadJson, true, flags: JSON_THROW_ON_ERROR);
         } catch (JsonException) {
+            return $this->invalid('invalid_payload');
+        }
+
+        if (! is_array($claims)) {
             return $this->invalid('invalid_payload');
         }
 
