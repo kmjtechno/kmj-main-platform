@@ -33,6 +33,14 @@ final class SandboxLicenseIssuer
             throw new InvalidArgumentException('Sandbox license identity values must be non-blank.');
         }
 
+        if (
+            trim($organizationId) !== $organizationId
+            || trim($productId) !== $productId
+            || trim($entitlementId) !== $entitlementId
+        ) {
+            throw new InvalidArgumentException('Sandbox license identity values must not contain surrounding whitespace.');
+        }
+
         $now = new DateTimeImmutable('now');
 
         if ($expiresAt <= $now) {

@@ -29,6 +29,25 @@ final class SandboxLicenseIssuerIdentityContractTest extends TestCase
         );
     }
 
+    #[DataProvider('paddedIdentityProvider')]
+    public function test_issuer_rejects_identity_values_with_surrounding_whitespace(
+        string $organizationId,
+        string $productId,
+        string $entitlementId,
+    ): void {
+        $issuer = new SandboxLicenseIssuer(str_repeat('s', 32));
+
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('Sandbox license identity values must not contain surrounding whitespace.');
+
+        $issuer->issue(
+            $organizationId,
+            $productId,
+            $entitlementId,
+            new DateTimeImmutable('+5 minutes'),
+        );
+    }
+
     /**
      * @return array<string, array{string, string, string}>
      */
@@ -38,6 +57,18 @@ final class SandboxLicenseIssuerIdentityContractTest extends TestCase
             'blank organization' => ['   ', 'product', 'entitlement'],
             'blank product' => ['organization', "\t", 'entitlement'],
             'blank entitlement' => ['organization', 'product', "\n"],
+        ];
+    }
+
+    /**
+     * @return array<string, array{string, string, string}>
+     */
+    public static function paddedIdentityProvider(): array
+    {
+        return [
+            'padded organization' => [' organization ', 'product', 'entitlement'],
+            'padded product' => ['organization', "\tproduct", 'entitlement'],
+            'padded entitlement' => ['organization', 'product', "entitlement\n"],
         ];
     }
 }

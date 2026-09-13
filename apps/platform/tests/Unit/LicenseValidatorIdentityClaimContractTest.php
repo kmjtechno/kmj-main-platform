@@ -35,6 +35,31 @@ final class LicenseValidatorIdentityClaimContractTest extends TestCase
         }
     }
 
+    public function test_php_validator_rejects_identity_claims_with_surrounding_whitespace(): void
+    {
+        $secret = str_repeat('k', 32);
+        $validator = new LicenseValidator($secret);
+
+        foreach (['jti', 'organization_id', 'product_id', 'entitlement_id'] as $claim) {
+            $claims = [
+                'environment' => 'sandbox',
+                'jti' => 'license-1',
+                'organization_id' => 'org-1',
+                'product_id' => 'product-1',
+                'entitlement_id' => 'entitlement-1',
+                'issued_at' => time(),
+                'expires_at' => time() + 1800,
+            ];
+            $claims[$claim] = ' '.$claims[$claim].' ';
+
+            $validation = $validator->validate($this->sign($claims, $secret));
+
+            self::assertFalse($validation['valid'], "{$claim} must not accept surrounding whitespace.");
+            self::assertSame('non_canonical_identity', $validation['reason']);
+            self::assertNull($validation['claims']);
+        }
+    }
+
     public function test_php_validator_rejects_signed_scalar_json_payloads(): void
     {
         $secret = str_repeat('k', 32);
