@@ -89,8 +89,15 @@ export const deliveryMilestones: DeliveryMilestone[] = [
     {
         id: 'rust-verifier-response-contract',
         title: 'Rust verifier response contract',
-        state: 'active',
+        state: 'verified',
         detail: 'Fail closed when the Rust verifier returns semantically inconsistent valid/reason/claims combinations',
+        evidence: 'PR #107',
+    },
+    {
+        id: 'rust-invalid-claims-contract',
+        title: 'Rust invalid-response claim isolation',
+        state: 'active',
+        detail: 'Reject invalid Rust verifier responses that still carry claims so failure paths cannot leak or propagate stale license identity data',
     },
     {
         id: 'organization-capabilities',
