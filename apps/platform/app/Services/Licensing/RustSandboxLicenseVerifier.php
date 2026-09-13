@@ -10,7 +10,7 @@ use Throwable;
 final class RustSandboxLicenseVerifier
 {
     /**
-     * @param  Closure(string, string, float): array{exit_code: int, output: string}|null  $runner
+     * @param  Closure(string, string, float): mixed|null  $runner
      */
     public function __construct(
         private readonly string $binaryPath,
