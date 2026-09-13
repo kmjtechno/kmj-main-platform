@@ -42,12 +42,14 @@ final class SandboxLicenseIssuer
         }
 
         $now = new DateTimeImmutable('now');
+        $issuedAt = $now->getTimestamp();
+        $expiresAtTimestamp = $expiresAt->getTimestamp();
 
-        if ($expiresAt <= $now) {
-            throw new InvalidArgumentException('License expiry must be in the future.');
+        if ($expiresAtTimestamp <= $issuedAt) {
+            throw new InvalidArgumentException('License expiry must be at least one second after issuance.');
         }
 
-        if ($expiresAt->getTimestamp() - $now->getTimestamp() > SandboxLicensePolicy::MAX_LIFETIME_SECONDS) {
+        if ($expiresAtTimestamp - $issuedAt > SandboxLicensePolicy::MAX_LIFETIME_SECONDS) {
             throw new InvalidArgumentException('Sandbox license lifetime cannot exceed 30 minutes.');
         }
 
@@ -57,8 +59,8 @@ final class SandboxLicenseIssuer
             'organization_id' => $organizationId,
             'product_id' => $productId,
             'entitlement_id' => $entitlementId,
-            'issued_at' => $now->getTimestamp(),
-            'expires_at' => $expiresAt->getTimestamp(),
+            'issued_at' => $issuedAt,
+            'expires_at' => $expiresAtTimestamp,
         ];
 
         $encodedPayload = $this->base64UrlEncode(json_encode($payload, JSON_THROW_ON_ERROR));
