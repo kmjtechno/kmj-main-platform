@@ -75,8 +75,15 @@ export const deliveryMilestones: DeliveryMilestone[] = [
     {
         id: 'rust-license-claims-contract',
         title: 'Rust license claim parity',
-        state: 'active',
+        state: 'verified',
         detail: 'Fail closed when a Rust-valid response omits the complete sandbox tenant/product/entitlement/time claim contract',
+        evidence: 'PR #105',
+    },
+    {
+        id: 'rust-license-time-contract',
+        title: 'Rust license time parity',
+        state: 'active',
+        detail: 'Independently enforce issue-time skew, maximum lifetime and expiry in the PHP orchestration boundary even when Rust reports valid',
     },
     {
         id: 'organization-capabilities',
