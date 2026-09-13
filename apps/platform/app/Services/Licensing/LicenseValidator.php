@@ -83,6 +83,15 @@ final class LicenseValidator
             return $this->invalid('missing_claims');
         }
 
+        if (
+            trim($jti) !== $jti
+            || trim($organizationId) !== $organizationId
+            || trim($productId) !== $productId
+            || trim($entitlementId) !== $entitlementId
+        ) {
+            return $this->invalid('non_canonical_identity');
+        }
+
         $now = time();
 
         if ($issuedAt > $now + SandboxLicensePolicy::MAX_FUTURE_ISSUED_AT_SKEW_SECONDS) {
