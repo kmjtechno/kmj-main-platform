@@ -152,8 +152,15 @@ export const deliveryMilestones: DeliveryMilestone[] = [
     {
         id: 'sandbox-signing-secret-contract',
         title: 'Sandbox signing secret contract',
-        state: 'active',
+        state: 'verified',
         detail: 'Reject whitespace-only signing secrets before sandbox token issuance so minimum byte length cannot be satisfied by blank key material',
+        evidence: 'PR #116',
+    },
+    {
+        id: 'php-validator-secret-contract',
+        title: 'PHP validator secret contract',
+        state: 'active',
+        detail: 'Fail closed when the PHP sandbox validator is configured with blank or sub-32-byte key material so validation cannot operate with a weaker secret contract than issuance',
     },
     {
         id: 'organization-capabilities',
