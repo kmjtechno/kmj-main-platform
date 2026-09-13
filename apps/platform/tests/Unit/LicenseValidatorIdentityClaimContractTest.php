@@ -35,12 +35,31 @@ final class LicenseValidatorIdentityClaimContractTest extends TestCase
         }
     }
 
+    public function test_php_validator_rejects_signed_scalar_json_payloads(): void
+    {
+        $secret = str_repeat('k', 32);
+        $validator = new LicenseValidator($secret);
+
+        foreach ([null, true, 42, 'sandbox'] as $payload) {
+            $validation = $validator->validate($this->signJson($payload, $secret));
+
+            self::assertFalse($validation['valid']);
+            self::assertSame('invalid_payload', $validation['reason']);
+            self::assertNull($validation['claims']);
+        }
+    }
+
     /**
      * @param  array<string, mixed>  $claims
      */
     private function sign(array $claims, string $secret): string
     {
-        $payload = $this->base64UrlEncode(json_encode($claims, JSON_THROW_ON_ERROR));
+        return $this->signJson($claims, $secret);
+    }
+
+    private function signJson(mixed $payloadValue, string $secret): string
+    {
+        $payload = $this->base64UrlEncode(json_encode($payloadValue, JSON_THROW_ON_ERROR));
         $signature = hash_hmac('sha256', $payload, $secret, true);
 
         return $payload.'.'.$this->base64UrlEncode($signature);
