@@ -59,6 +59,41 @@ final class RustSandboxLicenseVerifierTest extends TestCase
         self::assertNull($result['claims']);
     }
 
+    public function test_missing_runner_output_fails_closed(): void
+    {
+        $verifier = new RustSandboxLicenseVerifier(
+            '/configured/verifier',
+            'secret',
+            runner: static fn (string $license, string $secret, float $timeout): array => [
+                'exit_code' => 0,
+            ],
+        );
+
+        self::assertSame([
+            'valid' => false,
+            'reason' => 'verifier_invalid_response',
+            'claims' => null,
+        ], $verifier->validate('license'));
+    }
+
+    public function test_non_integer_runner_exit_code_fails_closed(): void
+    {
+        $verifier = new RustSandboxLicenseVerifier(
+            '/configured/verifier',
+            'secret',
+            runner: static fn (string $license, string $secret, float $timeout): array => [
+                'exit_code' => '0',
+                'output' => '{}',
+            ],
+        );
+
+        self::assertSame([
+            'valid' => false,
+            'reason' => 'verifier_invalid_response',
+            'claims' => null,
+        ], $verifier->validate('license'));
+    }
+
     public function test_invalid_json_fails_closed(): void
     {
         $verifier = new RustSandboxLicenseVerifier(
