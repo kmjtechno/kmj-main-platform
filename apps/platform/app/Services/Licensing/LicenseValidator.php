@@ -60,10 +60,10 @@ final class LicenseValidator
         $expiresAt = $claims['expires_at'] ?? null;
 
         if (
-            is_string($jti) === false || $jti === ''
-            || is_string($organizationId) === false || $organizationId === ''
-            || is_string($productId) === false || $productId === ''
-            || is_string($entitlementId) === false || $entitlementId === ''
+            is_string($jti) === false || trim($jti) === ''
+            || is_string($organizationId) === false || trim($organizationId) === ''
+            || is_string($productId) === false || trim($productId) === ''
+            || is_string($entitlementId) === false || trim($entitlementId) === ''
             || is_int($issuedAt) === false
             || is_int($expiresAt) === false
             || $issuedAt > $expiresAt
