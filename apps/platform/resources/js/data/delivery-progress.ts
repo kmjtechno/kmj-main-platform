@@ -124,8 +124,15 @@ export const deliveryMilestones: DeliveryMilestone[] = [
     {
         id: 'php-nonblank-identity-contract',
         title: 'PHP non-blank identity contract',
-        state: 'active',
+        state: 'verified',
         detail: 'Reject whitespace-only JTI and tenant/product/entitlement identity claims in the PHP validator so PHP, cross-check and Rust authority paths share the same identity contract',
+        evidence: 'PR #112',
+    },
+    {
+        id: 'php-object-payload-contract',
+        title: 'PHP license payload object contract',
+        state: 'active',
+        detail: 'Reject signed scalar JSON payloads before claim access so the PHP validator only accepts object/map license claims and fails closed deterministically',
     },
     {
         id: 'organization-capabilities',
