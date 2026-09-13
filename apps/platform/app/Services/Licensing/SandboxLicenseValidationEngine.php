@@ -74,7 +74,7 @@ final class SandboxLicenseValidationEngine
         }
 
         foreach (['jti', 'organization_id', 'product_id', 'entitlement_id'] as $claim) {
-            if (! is_string($claims[$claim] ?? null) || $claims[$claim] === '') {
+            if (! is_string($claims[$claim] ?? null) || trim($claims[$claim]) === '') {
                 return false;
             }
         }
