@@ -18,6 +18,31 @@ final class RustSandboxLicenseVerifierTest extends TestCase
         ], $verifier->validate('license'));
     }
 
+    public function test_empty_license_fails_closed_without_invoking_runner(): void
+    {
+        $runnerCalled = false;
+
+        $verifier = new RustSandboxLicenseVerifier(
+            '/configured/verifier',
+            'secret',
+            runner: static function (string $license, string $secret, float $timeout) use (&$runnerCalled): array {
+                $runnerCalled = true;
+
+                return [
+                    'exit_code' => 0,
+                    'output' => '{}',
+                ];
+            },
+        );
+
+        self::assertSame([
+            'valid' => false,
+            'reason' => 'malformed',
+            'claims' => null,
+        ], $verifier->validate('   '));
+        self::assertFalse($runnerCalled);
+    }
+
     public function test_successful_verifier_response_is_mapped(): void
     {
         $verifier = new RustSandboxLicenseVerifier(
