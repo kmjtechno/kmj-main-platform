@@ -10,6 +10,10 @@ final class SandboxLicenseIssuer
 {
     public function __construct(private readonly string $secret)
     {
+        if (trim($this->secret) === '') {
+            throw new InvalidArgumentException('Sandbox signing secret must be non-blank.');
+        }
+
         if (strlen($this->secret) < 32) {
             throw new InvalidArgumentException('Sandbox signing secret must be at least 32 bytes.');
         }
