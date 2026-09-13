@@ -114,6 +114,21 @@ final class RustSandboxLicenseVerifierTest extends TestCase
         self::assertSame('verifier_invalid_response', $verifier->validate('license')['reason']);
     }
 
+    public function test_invalid_response_with_claims_fails_closed(): void
+    {
+        $verifier = $this->verifierReturning([
+            'valid' => false,
+            'reason' => 'expired',
+            'claims' => ['environment' => 'sandbox', 'jti' => 'should-not-leak'],
+        ]);
+
+        self::assertSame([
+            'valid' => false,
+            'reason' => 'verifier_invalid_response',
+            'claims' => null,
+        ], $verifier->validate('license'));
+    }
+
     /**
      * @param  array<string, mixed>  $response
      */
