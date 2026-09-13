@@ -96,8 +96,15 @@ export const deliveryMilestones: DeliveryMilestone[] = [
     {
         id: 'rust-invalid-claims-contract',
         title: 'Rust invalid-response claim isolation',
-        state: 'active',
+        state: 'verified',
         detail: 'Reject invalid Rust verifier responses that still carry claims so failure paths cannot leak or propagate stale license identity data',
+        evidence: 'PR #108',
+    },
+    {
+        id: 'rust-runner-envelope-contract',
+        title: 'Rust verifier runner envelope',
+        state: 'active',
+        detail: 'Fail closed when the verifier transport envelope omits or mistypes exit_code/output before response parsing begins',
     },
     {
         id: 'organization-capabilities',
