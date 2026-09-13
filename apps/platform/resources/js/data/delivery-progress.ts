@@ -103,8 +103,15 @@ export const deliveryMilestones: DeliveryMilestone[] = [
     {
         id: 'rust-runner-envelope-contract',
         title: 'Rust verifier runner envelope',
-        state: 'active',
+        state: 'verified',
         detail: 'Fail closed when the verifier transport envelope omits or mistypes exit_code/output before response parsing begins',
+        evidence: 'PR #109',
+    },
+    {
+        id: 'rust-license-input-contract',
+        title: 'Rust verifier input contract',
+        state: 'active',
+        detail: 'Reject empty sandbox license input before invoking the Rust verifier so malformed requests fail closed deterministically',
     },
     {
         id: 'organization-capabilities',
