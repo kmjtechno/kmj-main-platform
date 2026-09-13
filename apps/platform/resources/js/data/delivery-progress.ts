@@ -145,8 +145,15 @@ export const deliveryMilestones: DeliveryMilestone[] = [
     {
         id: 'sandbox-issuer-identity-contract',
         title: 'Sandbox issuer identity contract',
-        state: 'active',
+        state: 'verified',
         detail: 'Reject blank organization/product/entitlement identities before signing so the issuer cannot create a token that its own validators must reject',
+        evidence: 'PR #115',
+    },
+    {
+        id: 'sandbox-signing-secret-contract',
+        title: 'Sandbox signing secret contract',
+        state: 'active',
+        detail: 'Reject whitespace-only signing secrets before sandbox token issuance so minimum byte length cannot be satisfied by blank key material',
     },
     {
         id: 'organization-capabilities',
