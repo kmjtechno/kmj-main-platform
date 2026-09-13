@@ -68,8 +68,15 @@ export const deliveryMilestones: DeliveryMilestone[] = [
     {
         id: 'license-time-contract',
         title: 'License time-bound hardening',
-        state: 'active',
+        state: 'verified',
         detail: 'Fail closed on future-issued or overlong sandbox license tokens and cap issuance to the 30-minute sandbox contract',
+        evidence: 'PR #103',
+    },
+    {
+        id: 'rust-license-claims-contract',
+        title: 'Rust license claim parity',
+        state: 'active',
+        detail: 'Fail closed when a Rust-valid response omits the complete sandbox tenant/product/entitlement/time claim contract',
     },
     {
         id: 'organization-capabilities',
