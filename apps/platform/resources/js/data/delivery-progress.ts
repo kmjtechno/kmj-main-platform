@@ -166,8 +166,15 @@ export const deliveryMilestones: DeliveryMilestone[] = [
     {
         id: 'canonical-license-identities',
         title: 'Canonical license identity contract',
-        state: 'active',
+        state: 'verified',
         detail: 'Reject surrounding whitespace in sandbox tenant/product/entitlement identities at issuance and reject non-canonical signed identities at validation so authority and revocation comparisons stay deterministic',
+        evidence: 'PR #118',
+    },
+    {
+        id: 'positive-license-lifetime',
+        title: 'Positive sandbox license lifetime',
+        state: 'active',
+        detail: 'Reject zero-length or reversed issued-at/expiry intervals so signed sandbox licenses always represent a strictly positive validity window',
     },
     {
         id: 'organization-capabilities',
