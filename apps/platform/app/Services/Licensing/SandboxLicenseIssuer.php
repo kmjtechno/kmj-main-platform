@@ -21,6 +21,14 @@ final class SandboxLicenseIssuer
         int|string $entitlementId,
         DateTimeImmutable $expiresAt,
     ): string {
+        $organizationId = (string) $organizationId;
+        $productId = (string) $productId;
+        $entitlementId = (string) $entitlementId;
+
+        if (trim($organizationId) === '' || trim($productId) === '' || trim($entitlementId) === '') {
+            throw new InvalidArgumentException('Sandbox license identity values must be non-blank.');
+        }
+
         $now = new DateTimeImmutable('now');
 
         if ($expiresAt <= $now) {
@@ -34,9 +42,9 @@ final class SandboxLicenseIssuer
         $payload = [
             'environment' => 'sandbox',
             'jti' => (string) Str::uuid(),
-            'organization_id' => (string) $organizationId,
-            'product_id' => (string) $productId,
-            'entitlement_id' => (string) $entitlementId,
+            'organization_id' => $organizationId,
+            'product_id' => $productId,
+            'entitlement_id' => $entitlementId,
             'issued_at' => $now->getTimestamp(),
             'expires_at' => $expiresAt->getTimestamp(),
         ];
