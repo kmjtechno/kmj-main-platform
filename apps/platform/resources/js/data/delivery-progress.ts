@@ -159,8 +159,15 @@ export const deliveryMilestones: DeliveryMilestone[] = [
     {
         id: 'php-validator-secret-contract',
         title: 'PHP validator secret contract',
-        state: 'active',
+        state: 'verified',
         detail: 'Fail closed when the PHP sandbox validator is configured with blank or sub-32-byte key material so validation cannot operate with a weaker secret contract than issuance',
+        evidence: 'PR #117',
+    },
+    {
+        id: 'canonical-license-identities',
+        title: 'Canonical license identity contract',
+        state: 'active',
+        detail: 'Reject surrounding whitespace in sandbox tenant/product/entitlement identities at issuance and reject non-canonical signed identities at validation so authority and revocation comparisons stay deterministic',
     },
     {
         id: 'organization-capabilities',
@@ -243,5 +250,5 @@ export const deliveryProgress = Math.round(
 export const deliveryProgressMeta = {
     label: 'Revenue-capable working phase',
     note: 'Evidence-based delivery milestones, not total product completion.',
-    refreshed: '2026-09-13',
+    refreshed: '2026-09-14',
 } as const;
