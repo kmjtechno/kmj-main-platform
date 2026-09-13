@@ -131,8 +131,15 @@ export const deliveryMilestones: DeliveryMilestone[] = [
     {
         id: 'php-object-payload-contract',
         title: 'PHP license payload object contract',
-        state: 'active',
+        state: 'verified',
         detail: 'Reject signed scalar JSON payloads before claim access so the PHP validator only accepts object/map license claims and fails closed deterministically',
+        evidence: 'PR #113',
+    },
+    {
+        id: 'php-map-payload-contract',
+        title: 'PHP license payload map contract',
+        state: 'active',
+        detail: 'Reject signed JSON list payloads so only associative claim maps can enter the PHP license validation authority path',
     },
     {
         id: 'organization-capabilities',
