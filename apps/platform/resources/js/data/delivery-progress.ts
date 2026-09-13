@@ -138,8 +138,15 @@ export const deliveryMilestones: DeliveryMilestone[] = [
     {
         id: 'php-map-payload-contract',
         title: 'PHP license payload map contract',
-        state: 'active',
+        state: 'verified',
         detail: 'Reject signed JSON list payloads so only associative claim maps can enter the PHP license validation authority path',
+        evidence: 'PR #114',
+    },
+    {
+        id: 'sandbox-issuer-identity-contract',
+        title: 'Sandbox issuer identity contract',
+        state: 'active',
+        detail: 'Reject blank organization/product/entitlement identities before signing so the issuer cannot create a token that its own validators must reject',
     },
     {
         id: 'organization-capabilities',
