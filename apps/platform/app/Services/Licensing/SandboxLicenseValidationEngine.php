@@ -34,6 +34,12 @@ final class SandboxLicenseValidationEngine
                 return $this->invalid('missing_claims');
             }
 
+            $temporalFailure = $this->temporalFailure($claims);
+
+            if ($temporalFailure !== null) {
+                return $this->invalid($temporalFailure, $claims);
+            }
+
             $jti = $claims['jti'];
 
             if (LicenseRevocation::query()->where('jti', $jti)->exists()) {
@@ -74,7 +80,32 @@ final class SandboxLicenseValidationEngine
         }
 
         return is_int($claims['issued_at'] ?? null)
-            && is_int($claims['expires_at'] ?? null);
+            && is_int($claims['expires_at'] ?? null)
+            && $claims['issued_at'] <= $claims['expires_at'];
+    }
+
+    /**
+     * @param  array<string, mixed>  $claims
+     */
+    private function temporalFailure(array $claims): ?string
+    {
+        $issuedAt = $claims['issued_at'];
+        $expiresAt = $claims['expires_at'];
+        $now = time();
+
+        if ($issuedAt > $now + SandboxLicensePolicy::MAX_FUTURE_ISSUED_AT_SKEW_SECONDS) {
+            return 'issued_in_future';
+        }
+
+        if ($expiresAt - $issuedAt > SandboxLicensePolicy::MAX_LIFETIME_SECONDS) {
+            return 'lifetime_exceeded';
+        }
+
+        if ($expiresAt <= $now) {
+            return 'expired';
+        }
+
+        return null;
     }
 
     /**

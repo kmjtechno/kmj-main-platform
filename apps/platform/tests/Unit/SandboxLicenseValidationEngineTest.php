@@ -6,6 +6,7 @@ use App\Services\Licensing\LicenseRevoker;
 use App\Services\Licensing\LicenseValidator;
 use App\Services\Licensing\RustSandboxLicenseVerifier;
 use App\Services\Licensing\SandboxLicenseIssuer;
+use App\Services\Licensing\SandboxLicensePolicy;
 use App\Services\Licensing\SandboxLicenseValidationEngine;
 use DateTimeImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -129,6 +130,54 @@ final class SandboxLicenseValidationEngineTest extends TestCase
         self::assertSame('missing_claims', $validation['reason']);
     }
 
+    public function test_rust_mode_fails_closed_when_valid_response_is_issued_too_far_in_future(): void
+    {
+        [$license, $phpValidator] = $this->licenseFixture();
+        $validResult = $phpValidator->validate($license);
+        self::assertIsArray($validResult['claims']);
+        $claims = $validResult['claims'];
+        $claims['issued_at'] = time() + SandboxLicensePolicy::MAX_FUTURE_ISSUED_AT_SKEW_SECONDS + 5;
+        $claims['expires_at'] = $claims['issued_at'] + 60;
+
+        $engine = $this->rustEngineWithClaims($phpValidator, $claims);
+        $validation = $engine->validate($license);
+
+        self::assertFalse($validation['valid']);
+        self::assertSame('issued_in_future', $validation['reason']);
+    }
+
+    public function test_rust_mode_fails_closed_when_valid_response_exceeds_maximum_lifetime(): void
+    {
+        [$license, $phpValidator] = $this->licenseFixture();
+        $validResult = $phpValidator->validate($license);
+        self::assertIsArray($validResult['claims']);
+        $claims = $validResult['claims'];
+        $claims['issued_at'] = time();
+        $claims['expires_at'] = $claims['issued_at'] + SandboxLicensePolicy::MAX_LIFETIME_SECONDS + 1;
+
+        $engine = $this->rustEngineWithClaims($phpValidator, $claims);
+        $validation = $engine->validate($license);
+
+        self::assertFalse($validation['valid']);
+        self::assertSame('lifetime_exceeded', $validation['reason']);
+    }
+
+    public function test_rust_mode_fails_closed_when_valid_response_is_expired(): void
+    {
+        [$license, $phpValidator] = $this->licenseFixture();
+        $validResult = $phpValidator->validate($license);
+        self::assertIsArray($validResult['claims']);
+        $claims = $validResult['claims'];
+        $claims['issued_at'] = time() - 120;
+        $claims['expires_at'] = time() - 60;
+
+        $engine = $this->rustEngineWithClaims($phpValidator, $claims);
+        $validation = $engine->validate($license);
+
+        self::assertFalse($validation['valid']);
+        self::assertSame('expired', $validation['reason']);
+    }
+
     public function test_rust_mode_preserves_database_revocation(): void
     {
         [$license, $phpValidator] = $this->licenseFixture();
@@ -161,6 +210,25 @@ final class SandboxLicenseValidationEngineTest extends TestCase
         );
 
         self::assertSame('validation_engine_unconfigured', $engine->validate($license)['reason']);
+    }
+
+    /** @param array<string, mixed> $claims */
+    private function rustEngineWithClaims(LicenseValidator $phpValidator, array $claims): SandboxLicenseValidationEngine
+    {
+        $rustVerifier = new RustSandboxLicenseVerifier(
+            '/configured/verifier',
+            'unused',
+            runner: static fn (string $license, string $secret, float $timeout): array => [
+                'exit_code' => 0,
+                'output' => json_encode([
+                    'valid' => true,
+                    'reason' => null,
+                    'claims' => $claims,
+                ], JSON_THROW_ON_ERROR),
+            ],
+        );
+
+        return new SandboxLicenseValidationEngine($phpValidator, $rustVerifier, 'rust');
     }
 
     /** @return array{string, LicenseValidator} */
