@@ -29,11 +29,12 @@ final class SandboxLicenseValidationEngine
             }
 
             $claims = $rustResult['claims'];
-            $jti = is_array($claims) ? ($claims['jti'] ?? null) : null;
 
-            if (! is_string($jti) || $jti === '') {
+            if ($this->claimsComplete($claims) === false) {
                 return $this->invalid('missing_claims');
             }
+
+            $jti = $claims['jti'];
 
             if (LicenseRevocation::query()->where('jti', $jti)->exists()) {
                 return $this->invalid('revoked', $claims);
@@ -58,6 +59,25 @@ final class SandboxLicenseValidationEngine
     }
 
     /**
+     * @param  array<string, mixed>|null  $claims
+     */
+    private function claimsComplete(?array $claims): bool
+    {
+        if ($claims === null || ($claims['environment'] ?? null) !== 'sandbox') {
+            return false;
+        }
+
+        foreach (['jti', 'organization_id', 'product_id', 'entitlement_id'] as $claim) {
+            if (! is_string($claims[$claim] ?? null) || $claims[$claim] === '') {
+                return false;
+            }
+        }
+
+        return is_int($claims['issued_at'] ?? null)
+            && is_int($claims['expires_at'] ?? null);
+    }
+
+    /**
      * @param  array<string, mixed>|null  $phpClaims
      * @param  array<string, mixed>|null  $rustClaims
      */
@@ -76,9 +96,6 @@ final class SandboxLicenseValidationEngine
         return true;
     }
 
-    /**
-     * @return array{valid: false, reason: string, claims: null}
-     */
     /**
      * @param  array<string, mixed>|null  $claims
      * @return array{valid: false, reason: string, claims: array<string, mixed>|null}

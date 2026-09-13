@@ -102,6 +102,33 @@ final class SandboxLicenseValidationEngineTest extends TestCase
         self::assertTrue($engine->validate($license)['valid']);
     }
 
+    public function test_rust_mode_fails_closed_when_valid_response_omits_tenant_claims(): void
+    {
+        [$license, $phpValidator] = $this->licenseFixture();
+        $validResult = $phpValidator->validate($license);
+        self::assertIsArray($validResult['claims']);
+        $claims = $validResult['claims'];
+        unset($claims['organization_id']);
+
+        $rustVerifier = new RustSandboxLicenseVerifier(
+            '/configured/verifier',
+            'unused',
+            runner: static fn (string $license, string $secret, float $timeout): array => [
+                'exit_code' => 0,
+                'output' => json_encode([
+                    'valid' => true,
+                    'reason' => null,
+                    'claims' => $claims,
+                ], JSON_THROW_ON_ERROR),
+            ],
+        );
+        $engine = new SandboxLicenseValidationEngine($phpValidator, $rustVerifier, 'rust');
+        $validation = $engine->validate($license);
+
+        self::assertFalse($validation['valid']);
+        self::assertSame('missing_claims', $validation['reason']);
+    }
+
     public function test_rust_mode_preserves_database_revocation(): void
     {
         [$license, $phpValidator] = $this->licenseFixture();
