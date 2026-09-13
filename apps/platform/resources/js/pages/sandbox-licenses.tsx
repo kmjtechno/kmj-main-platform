@@ -57,13 +57,23 @@ export default function SandboxLicenses({
     auditEvents,
     validationEngine,
 }: Props) {
+    const claimedOrganizationId =
+        licenseResult?.validation.claims?.['organization_id'];
+    const issuedOrganizationId =
+        typeof claimedOrganizationId === 'string' &&
+        organizations.some(
+            (organization) => organization.id === claimedOrganizationId,
+        )
+            ? claimedOrganizationId
+            : '';
+
     const issue = useForm({ organization_id: '', entitlement_id: '' });
     const validate = useForm({
-        organization_id: '',
+        organization_id: issuedOrganizationId,
         license: licenseResult?.token ?? '',
     });
     const revoke = useForm({
-        organization_id: '',
+        organization_id: issuedOrganizationId,
         license: licenseResult?.token ?? '',
         reason: '',
     });
