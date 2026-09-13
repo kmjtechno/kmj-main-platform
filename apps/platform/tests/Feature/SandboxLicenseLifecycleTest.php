@@ -25,7 +25,7 @@ final class SandboxLicenseLifecycleTest extends TestCase
             organizationId: 10,
             productId: 20,
             entitlementId: 30,
-            expiresAt: new DateTimeImmutable('+1 hour'),
+            expiresAt: new DateTimeImmutable('+30 minutes'),
         );
 
         $valid = $validator->validate($license);
@@ -62,7 +62,7 @@ final class SandboxLicenseLifecycleTest extends TestCase
         $issuer = new SandboxLicenseIssuer($secret);
         $validator = new LicenseValidator($secret);
 
-        $license = $issuer->issue(1, 2, 3, new DateTimeImmutable('+1 hour'));
+        $license = $issuer->issue(1, 2, 3, new DateTimeImmutable('+30 minutes'));
         [$payload, $signature] = explode('.', $license);
         $tampered = substr($payload, 0, -1).($payload[-1] === 'A' ? 'B' : 'A').'.'.$signature;
 
