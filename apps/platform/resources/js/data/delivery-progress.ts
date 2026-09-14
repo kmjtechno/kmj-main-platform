@@ -27,7 +27,7 @@ export const deliveryMilestones: DeliveryMilestone[] = [
         id: 'staging-auth-surface-smoke',
         title: 'Authenticated staging surface smoke',
         state: 'active',
-        detail: 'Repair route execution parity so the staging probe exercises Laravel matched routes instead of rejecting non-callable cached action representations',
+        detail: 'Exercise matched Laravel routes in authenticated staging smoke',
         evidence: 'Staging Authenticated Surface Smoke #47 regression + repair PR',
     },
     {
