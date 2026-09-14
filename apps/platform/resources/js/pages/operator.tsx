@@ -159,7 +159,7 @@ function ManualPaymentConfirmation({ order }: { order: RecentOrder }) {
                 />
                 <input
                     type="number"
-                    min="0"
+                    min="1"
                     step="1"
                     value={form.data.amount_minor}
                     onChange={(event) =>
