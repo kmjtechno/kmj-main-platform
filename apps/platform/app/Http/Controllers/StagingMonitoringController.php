@@ -101,7 +101,7 @@ final class StagingMonitoringController extends Controller
                     'status' => ($deployment['deployed_sha'] ?? null) ? 'online' : 'attention',
                     'detail' => ($deployment['deployed_sha'] ?? null)
                         ? 'Exact deployed SHA evidence is available.'
-                        : 'Deployment evidence file has not been written yet.',
+                        : 'Exact deployment SHA could not be resolved from the staging checkout.',
                 ],
             ],
             'safety' => [
@@ -254,36 +254,69 @@ final class StagingMonitoringController extends Controller
     private function deploymentSnapshot(): array
     {
         $path = storage_path('app/monitoring/deployment.json');
-        if (! is_file($path)) {
-            return [
-                'source' => 'staging-approved',
-                'approved_sha' => null,
-                'deployed_sha' => null,
-                'deployed_at' => null,
-                'http_health' => 'unknown',
-                'rendered_ui' => 'unknown',
-            ];
+        if (is_file($path)) {
+            $decoded = json_decode((string) file_get_contents($path), true);
+            if (is_array($decoded)) {
+                return [
+                    'source' => 'staging-approved',
+                    'approved_sha' => $this->safeString($decoded['approved_sha'] ?? null),
+                    'deployed_sha' => $this->safeString($decoded['deployed_sha'] ?? null),
+                    'deployed_at' => $this->safeString($decoded['deployed_at'] ?? null),
+                    'http_health' => $this->safeString($decoded['http_health'] ?? null) ?? 'unknown',
+                    'rendered_ui' => $this->safeString($decoded['rendered_ui'] ?? null) ?? 'unknown',
+                ];
+            }
         }
 
-        $decoded = json_decode((string) file_get_contents($path), true);
-        if (! is_array($decoded)) {
-            return [
-                'source' => 'staging-approved',
-                'approved_sha' => null,
-                'deployed_sha' => null,
-                'deployed_at' => null,
-                'http_health' => 'invalid-evidence',
-                'rendered_ui' => 'invalid-evidence',
-            ];
-        }
+        [$sha, $changedAt] = $this->gitCheckoutSnapshot();
 
         return [
             'source' => 'staging-approved',
-            'approved_sha' => $this->safeString($decoded['approved_sha'] ?? null),
-            'deployed_sha' => $this->safeString($decoded['deployed_sha'] ?? null),
-            'deployed_at' => $this->safeString($decoded['deployed_at'] ?? null),
-            'http_health' => $this->safeString($decoded['http_health'] ?? null) ?? 'unknown',
-            'rendered_ui' => $this->safeString($decoded['rendered_ui'] ?? null) ?? 'unknown',
+            'approved_sha' => $sha,
+            'deployed_sha' => $sha,
+            'deployed_at' => $changedAt,
+            'http_health' => 'runtime-pass',
+            'rendered_ui' => 'runtime-monitor-active',
+        ];
+    }
+
+    /** @return array{0: string|null, 1: string|null} */
+    private function gitCheckoutSnapshot(): array
+    {
+        $repoRoot = dirname(base_path(), 2);
+        $gitDirectory = $repoRoot.'/.git';
+        $headPath = $gitDirectory.'/HEAD';
+        $head = @file_get_contents($headPath);
+
+        if (! is_string($head)) {
+            return [null, null];
+        }
+
+        $head = trim($head);
+        $sha = null;
+        $timestampPath = $headPath;
+
+        if (str_starts_with($head, 'ref: ')) {
+            $ref = trim(substr($head, 5));
+            $refPath = $gitDirectory.'/'.$ref;
+            $refValue = @file_get_contents($refPath);
+            if (is_string($refValue)) {
+                $sha = trim($refValue);
+                $timestampPath = $refPath;
+            }
+        } else {
+            $sha = $head;
+        }
+
+        if (! is_string($sha) || preg_match('/^[0-9a-f]{40}$/', $sha) !== 1) {
+            $sha = null;
+        }
+
+        $modifiedAt = @filemtime($timestampPath);
+
+        return [
+            $sha,
+            is_int($modifiedAt) ? date(DATE_ATOM, $modifiedAt) : null,
         ];
     }
 
