@@ -7,6 +7,7 @@ import {
     KeyRound,
     LayoutGrid,
     ShieldCheck,
+    ShoppingCart,
 } from 'lucide-react';
 import AppLogo from '@/components/app-logo';
 import { NavFooter } from '@/components/nav-footer';
@@ -30,6 +31,11 @@ const baseNavItems: NavItem[] = [
         title: 'Dashboard',
         href: dashboard(),
         icon: LayoutGrid,
+    },
+    {
+        title: 'Purchase Center',
+        href: '/purchase',
+        icon: ShoppingCart,
     },
     {
         title: 'Sandbox Licensing',
