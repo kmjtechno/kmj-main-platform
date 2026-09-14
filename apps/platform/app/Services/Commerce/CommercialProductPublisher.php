@@ -18,12 +18,12 @@ final class CommercialProductPublisher
     {
         return DB::transaction(function () use ($slug, $name): Product {
             $product = $this->catalog->ensureCommercialProduct($slug, $name);
-            $canonicalSlug = (string) $product->getAttribute('slug');
+            $productId = (string) $product->getKey();
 
             $this->policies->ensure(
-                (string) $product->getKey(),
-                'commercial.'.$canonicalSlug.'.default',
-                'product.'.$canonicalSlug.'.access',
+                $productId,
+                'commercial.'.$productId.'.default',
+                'product.access',
             );
 
             return $product;
