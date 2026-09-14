@@ -79,7 +79,11 @@ final class StagingAuthenticatedSmokeCommand extends Command
 
         $route = $router->getRoutes()->match($request);
         $request->setRouteResolver(static fn () => $route);
-        $route->bind($request);
+
+        $action = $route->getAction('uses');
+        if (! is_callable($action)) {
+            throw new RuntimeException("Smoke route {$uri} does not have a callable action.");
+        }
 
         $previousRequest = app('request');
         $previousTypedRequest = app(Request::class);
@@ -87,7 +91,7 @@ final class StagingAuthenticatedSmokeCommand extends Command
         app()->instance(Request::class, $request);
 
         try {
-            $result = $route->run();
+            $result = app()->call($action, ['request' => $request]);
         } catch (Throwable $exception) {
             throw new RuntimeException(
                 sprintf(
