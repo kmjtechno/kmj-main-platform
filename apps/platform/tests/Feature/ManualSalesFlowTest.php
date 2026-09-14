@@ -46,6 +46,23 @@ final class ManualSalesFlowTest extends TestCase
         ]);
     }
 
+    public function test_purchase_request_rejects_active_product_without_fulfillment_policy(): void
+    {
+        $user = User::factory()->create(['email_verified_at' => now()]);
+        $organization = app(OrganizationCreator::class)->create('Policy Buyer', $user->id);
+        $product = app(ProductCatalog::class)->ensureCommercialProduct('policyless-product', 'Policyless Product');
+
+        $this->actingAs($user)
+            ->post('/purchase/orders', [
+                'organization_id' => $organization->getKey(),
+                'product_id' => $product->getKey(),
+                'idempotency_key' => 'policyless-order-1',
+            ])
+            ->assertNotFound();
+
+        $this->assertDatabaseCount('commerce_orders', 0);
+    }
+
     public function test_non_member_cannot_request_purchase_for_another_organization(): void
     {
         $owner = User::factory()->create(['email_verified_at' => now()]);
