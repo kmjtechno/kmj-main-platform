@@ -15,6 +15,17 @@ final class StagingMonitoringTest extends TestCase
     {
         $this->get('/info')->assertNotFound();
         $this->getJson('/info/status')->assertNotFound();
+        $this->withHeader('Host', 'kmjtechno.com')->get('/info')->assertNotFound();
+    }
+
+    public function test_monitor_is_available_on_exact_staging_host(): void
+    {
+        $this->withHeader('Host', 'staging.kmjtechno.com')
+            ->get('/info')
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('info')
+                ->where('pollIntervalMs', 5000));
     }
 
     public function test_staging_monitor_page_and_status_endpoint_are_available(): void
