@@ -11,3 +11,9 @@ parameters:
         - routes/
 
     level: 7
+
+    # Self-hosted CI already parallelizes frontend/backend across separate runners.
+    # Keep PHPStan itself single-process so shared-host child-process spawning cannot
+    # fail nondeterministically while preserving the full level-7 analysis.
+    parallel:
+        maximumNumberOfProcesses: 1
