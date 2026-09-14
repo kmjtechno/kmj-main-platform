@@ -116,7 +116,11 @@ jobs:
           test -f .env || cp .env.example .env
           php artisan key:generate --force
           php artisan migrate --force
-          npm ci --no-audit --no-fund
+          if [ -f package-lock.json ]; then
+            npm ci --no-audit --no-fund
+          else
+            npm install --no-audit --no-fund
+          fi
           npm run build
 
       - name: Run platform quality checks
@@ -124,7 +128,11 @@ jobs:
         env:
           DB_CONNECTION: sqlite
           DB_DATABASE: ${{ github.workspace }}/apps/platform/database/database.sqlite
-        run: composer ci:check
+          TMPDIR: ${{ runner.temp }}/phpstan-${{ github.run_id }}-${{ github.run_attempt }}
+        run: |
+          set -euo pipefail
+          mkdir -p "$TMPDIR"
+          composer ci:check
 
   promote:
     name: Promote verified commit to staging-approved

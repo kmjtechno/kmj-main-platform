@@ -239,6 +239,12 @@ export const deliveryMilestones: DeliveryMilestone[] = [
         evidence: 'PR #90 / #91 / #93 + staging-approved 81137e0617c9',
     },
     {
+        id: 'staging-live-monitor',
+        title: 'Staging live operations monitor',
+        state: 'active',
+        detail: 'Temporary /info surface with live runtime, VPS, queue, runner, AI-route and deployment telemetry under CI verification',
+    },
+    {
         id: 'ops-readiness-evidence',
         title: 'Ops readiness evidence',
         state: 'active',
