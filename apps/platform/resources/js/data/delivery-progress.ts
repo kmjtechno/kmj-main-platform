@@ -173,8 +173,15 @@ export const deliveryMilestones: DeliveryMilestone[] = [
     {
         id: 'positive-license-lifetime',
         title: 'Positive sandbox license lifetime',
-        state: 'active',
+        state: 'verified',
         detail: 'Reject zero-length or reversed issued-at/expiry intervals so signed sandbox licenses always represent a strictly positive validity window',
+        evidence: 'PR #119',
+    },
+    {
+        id: 'issuer-positive-license-lifetime',
+        title: 'Issuer positive lifetime parity',
+        state: 'active',
+        detail: 'Reject same-second expiry before signing so the sandbox issuer cannot create a token that the validator must immediately reject',
     },
     {
         id: 'organization-capabilities',
