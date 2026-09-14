@@ -28,7 +28,8 @@ export const deliveryMilestones: DeliveryMilestone[] = [
         title: 'Authenticated staging surface smoke',
         state: 'active',
         detail: 'Exercise matched Laravel routes in authenticated staging smoke',
-        evidence: 'Staging Authenticated Surface Smoke #47 regression + repair PR',
+        evidence:
+            'Staging Authenticated Surface Smoke #47 regression + repair PR',
     },
     {
         id: 'frontend-live-sync',
