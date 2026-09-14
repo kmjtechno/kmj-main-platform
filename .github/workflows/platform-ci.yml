@@ -23,7 +23,7 @@ concurrency:
 
 jobs:
   platform:
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux, x64, kmj-main-platform-ci]
     timeout-minutes: 20
     defaults:
       run:
