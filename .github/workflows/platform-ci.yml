@@ -108,9 +108,6 @@ jobs:
     defaults:
       run:
         working-directory: apps/platform
-    env:
-      DB_CONNECTION: sqlite
-      DB_DATABASE: ${{ runner.temp }}/kmj-platform-${{ github.run_id }}-${{ github.job }}.sqlite
     steps:
       - name: Checkout code
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -127,12 +124,15 @@ jobs:
       - name: Prepare isolated CI database
         run: |
           set -euo pipefail
-          touch "${DB_DATABASE}"
+          touch database/database.sqlite
 
       - name: Install backend dependencies
         run: composer install --no-interaction --prefer-dist --no-progress
 
       - name: Prepare application database
+        env:
+          DB_CONNECTION: sqlite
+          DB_DATABASE: ${{ github.workspace }}/apps/platform/database/database.sqlite
         run: |
           set -euo pipefail
           test -f .env || cp .env.example .env
@@ -140,4 +140,7 @@ jobs:
           php artisan migrate --force
 
       - name: Run backend tests
+        env:
+          DB_CONNECTION: sqlite
+          DB_DATABASE: ${{ github.workspace }}/apps/platform/database/database.sqlite
         run: php artisan test
