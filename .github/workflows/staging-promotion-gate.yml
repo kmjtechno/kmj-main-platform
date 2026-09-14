@@ -124,7 +124,11 @@ jobs:
         env:
           DB_CONNECTION: sqlite
           DB_DATABASE: ${{ github.workspace }}/apps/platform/database/database.sqlite
-        run: composer ci:check
+          TMPDIR: ${{ runner.temp }}/phpstan-${{ github.run_id }}-${{ github.run_attempt }}
+        run: |
+          set -euo pipefail
+          mkdir -p "$TMPDIR"
+          composer ci:check
 
   promote:
     name: Promote verified commit to staging-approved
