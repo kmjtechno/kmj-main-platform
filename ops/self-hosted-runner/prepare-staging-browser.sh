@@ -30,10 +30,36 @@ PY
   mv "$download_dir/chrome-headless-shell-linux64" "$release"
 fi
 
-if ! "$chrome" --version; then
-  echo 'Chrome runtime dependencies are missing; no system packages or sudo were used.' >&2
-  ldd "$chrome" | grep 'not found' >&2 || true
-  exit 1
+# Minimal Ubuntu images can lack Chrome's desktop shared libraries. Extract
+# authenticated distro packages into this private cache; never install them.
+if ! "$chrome" --version >/dev/null 2>&1 && [ ! -d "$release/runtime-libs" ]; then
+  dependency_dir="$(mktemp -d "${RUNNER_TEMP:?}/kmj-chrome-libs.XXXXXX")"
+  (
+    trap 'rm -rf -- "$dependency_dir"' EXIT
+    . /etc/os-release
+    test "$ID" = ubuntu
+    test "$VERSION_ID" = 24.04
+    mkdir -p "$dependency_dir/packages" "$dependency_dir/root"
+    cd "$dependency_dir/packages"
+    apt-get download \
+      libatk1.0-0t64 libatk-bridge2.0-0t64 libatspi2.0-0t64 \
+      libxcomposite1 libxdamage1 libxfixes3 libxrandr2 \
+      libgbm1 libdrm2 libwayland-server0 libasound2t64 libasound2-data
+    for package in ./*.deb; do
+      dpkg-deb --extract "$package" "$dependency_dir/root"
+    done
+    mv "$dependency_dir/root" "$release/runtime-libs"
+  )
 fi
 
-printf 'KMJ_STAGING_CHROME=%s\n' "$chrome" >> "${GITHUB_ENV:?}"
+wrapper="$release/kmj-chrome"
+cat > "$wrapper" <<'BROWSER'
+#!/usr/bin/env bash
+set -euo pipefail
+browser_root="$(cd -- "$(dirname -- "$0")" && pwd)"
+export LD_LIBRARY_PATH="$browser_root/runtime-libs/usr/lib/x86_64-linux-gnu:$browser_root/runtime-libs/lib/x86_64-linux-gnu${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+exec "$browser_root/chrome-headless-shell" "$@"
+BROWSER
+chmod 700 "$wrapper"
+"$wrapper" --version
+printf 'KMJ_STAGING_CHROME=%s\n' "$wrapper" >> "${GITHUB_ENV:?}"
