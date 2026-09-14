@@ -91,12 +91,17 @@ function CommercialProductForm() {
     };
 
     return (
-        <form onSubmit={submit} className="grid gap-3 sm:grid-cols-[1fr_1fr_auto]">
+        <form
+            onSubmit={submit}
+            className="grid gap-3 sm:grid-cols-[1fr_1fr_auto]"
+        >
             <label className="space-y-1.5 text-xs font-semibold">
                 <span>Product name</span>
                 <input
                     value={form.data.name}
-                    onChange={(event) => form.setData('name', event.target.value)}
+                    onChange={(event) =>
+                        form.setData('name', event.target.value)
+                    }
                     placeholder="KMJ Calibration Pro"
                     className="bg-background h-10 w-full rounded-lg border px-3 text-sm"
                     required
@@ -106,7 +111,9 @@ function CommercialProductForm() {
                 <span>Product slug</span>
                 <input
                     value={form.data.slug}
-                    onChange={(event) => form.setData('slug', event.target.value)}
+                    onChange={(event) =>
+                        form.setData('slug', event.target.value)
+                    }
                     placeholder="kmj-calibration-pro"
                     className="bg-background h-10 w-full rounded-lg border px-3 text-sm"
                     pattern="[a-z0-9]+(?:-[a-z0-9]+)*"
@@ -150,7 +157,10 @@ function ManualPaymentConfirmation({ order }: { order: RecentOrder }) {
                 <input
                     value={form.data.currency}
                     onChange={(event) =>
-                        form.setData('currency', event.target.value.toUpperCase())
+                        form.setData(
+                            'currency',
+                            event.target.value.toUpperCase(),
+                        )
                     }
                     maxLength={3}
                     className="bg-background h-9 rounded-lg border px-2 text-xs font-bold uppercase"
