@@ -284,7 +284,7 @@ class FreeCloudRouter:
         )
 
     async def select(self, route: str = "coding") -> RouteCandidate:
-        ranked = self.ranj(await self.discover(), route)
+        ranked = self.rank(await self.discover(), route)
         if not ranked:
             raise NoFreeRouteAvailable("NO_FREE_ROUTE_AVAILABLE")
         return ranked[0]
@@ -333,8 +333,8 @@ class FreeCloudRouter:
                                 "provider": candidate.provider,
                                 "model": candidate.model_id,
                                 "result": "success",
-                                }
-                            ],
+                            }
+                        ],
                         "response": payload,
                     }
                 except Exception as exc:
@@ -392,4 +392,4 @@ class FreeCloudRouter:
             "local_llm": "PROHIBITED",
             "max_free_failover_models": self.max_failover_models,
             "models": eligible,
-      }
+        }
