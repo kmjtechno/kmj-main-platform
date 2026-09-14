@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\User;
+use App\Services\Commerce\CommercialProductPublisher;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use KMJ\MainPlatform\Catalog\Services\ProductCatalog;
@@ -20,7 +21,7 @@ final class ManualSalesFlowTest extends TestCase
     {
         $user = User::factory()->create(['email_verified_at' => now()]);
         $organization = app(OrganizationCreator::class)->create('Buyer Org', $user->id);
-        $product = app(ProductCatalog::class)->ensureCommercialProduct('buyer-product', 'Buyer Product');
+        $product = app(CommercialProductPublisher::class)->publish('buyer-product', 'Buyer Product');
         $payload = [
             'organization_id' => $organization->getKey(),
             'product_id' => $product->getKey(),
@@ -50,7 +51,7 @@ final class ManualSalesFlowTest extends TestCase
         $owner = User::factory()->create(['email_verified_at' => now()]);
         $outsider = User::factory()->create(['email_verified_at' => now()]);
         $organization = app(OrganizationCreator::class)->create('Protected Org', $owner->id);
-        $product = app(ProductCatalog::class)->ensureCommercialProduct('protected-product', 'Protected Product');
+        $product = app(CommercialProductPublisher::class)->publish('protected-product', 'Protected Product');
 
         $this->actingAs($outsider)
             ->post('/purchase/orders', [
@@ -63,7 +64,7 @@ final class ManualSalesFlowTest extends TestCase
         $this->assertDatabaseCount('commerce_orders', 0);
     }
 
-    public function test_platform_owner_can_activate_commercial_product(): void
+    public function test_platform_owner_can_activate_commercial_product_with_fulfillment_policy(): void
     {
         $operator = $this->createPasskeyOwner();
 
@@ -75,19 +76,29 @@ final class ManualSalesFlowTest extends TestCase
             ])
             ->assertRedirect('/operator');
 
+        $product = app(ProductCatalog::class)
+            ->ensureCommercialProduct('kmj-revenue-product', 'KMJ Revenue Product');
+
         $this->assertDatabaseHas('products', [
+            'id' => $product->getKey(),
             'slug' => 'kmj-revenue-product',
             'name' => 'KMJ Revenue Product',
             'status' => 'active',
         ]);
+        $this->assertDatabaseHas('entitlement_policies', [
+            'product_id' => $product->getKey(),
+            'code' => 'commercial.'.$product->getKey().'.default',
+            'capability' => 'product.access',
+            'status' => 'active',
+        ]);
     }
 
-    public function test_platform_owner_can_confirm_payment_without_granting_entitlement(): void
+    public function test_payment_confirmation_does_not_grant_access_until_explicit_fulfillment(): void
     {
         $customer = User::factory()->create(['email_verified_at' => now()]);
         $operator = $this->createPasskeyOwner();
         $organization = app(OrganizationCreator::class)->create('Paid Buyer', $customer->id);
-        $product = app(ProductCatalog::class)->ensureCommercialProduct('paid-product', 'Paid Product');
+        $product = app(CommercialProductPublisher::class)->publish('paid-product', 'Paid Product');
         $order = app(CommercialOrderService::class)->request(
             $organization->getKey(),
             $product->getKey(),
@@ -112,13 +123,25 @@ final class ManualSalesFlowTest extends TestCase
             'confirmation_reference' => 'UTR-FAST-EARNING-001',
         ]);
         $this->assertSame(0, Entitlement::query()->count());
+
+        $this->actingAs($operator)
+            ->withSession(['auth.password_confirmed_at' => time()])
+            ->post('/operator/orders/'.$order->getKey().'/fulfill')
+            ->assertRedirect('/operator');
+
+        $this->assertDatabaseHas('entitlements', [
+            'organization_id' => $organization->getKey(),
+            'product_id' => $product->getKey(),
+            'status' => 'active',
+            'idempotency_key' => 'commercial-order:'.$order->getKey(),
+        ]);
     }
 
     public function test_regular_user_cannot_confirm_payment(): void
     {
         $customer = User::factory()->create(['email_verified_at' => now()]);
         $organization = app(OrganizationCreator::class)->create('Customer Org', $customer->id);
-        $product = app(ProductCatalog::class)->ensureCommercialProduct('customer-product', 'Customer Product');
+        $product = app(CommercialProductPublisher::class)->publish('customer-product', 'Customer Product');
         $order = app(CommercialOrderService::class)->request(
             $organization->getKey(),
             $product->getKey(),
