@@ -7,7 +7,6 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Request;
 use Illuminate\Routing\RouteCollection;
 use Illuminate\Routing\Router;
-use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
@@ -53,16 +52,13 @@ final class StagingAuthenticatedSmokeCommandTest extends TestCase
         app()->detectEnvironment(static fn (): string => 'staging');
 
         try {
-            $exitCode = Artisan::call('staging:smoke-authenticated-surfaces');
+            $this->artisan('staging:smoke-authenticated-surfaces')
+                ->expectsOutput('Authenticated staging surfaces PASS: /dashboard, /operator/ops')
+                ->assertSuccessful();
         } finally {
             app()->detectEnvironment(static fn (): string => $originalEnvironment);
         }
 
-        $this->assertSame(0, $exitCode, Artisan::output());
-        $this->assertStringContainsString(
-            'Authenticated staging surfaces PASS: /dashboard, /operator/ops',
-            Artisan::output(),
-        );
         $this->assertSame($usersBefore, User::query()->count());
         $this->assertSame($passkeysBefore, DB::table('passkeys')->count());
     }
