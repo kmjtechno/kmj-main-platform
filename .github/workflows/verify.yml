@@ -78,6 +78,8 @@ jobs:
         run: python scripts/verify_contracts.py
       - name: Verify Rust sandbox license core
         run: |
+          set -euo pipefail
+          source /home/kmjrunner/.cargo/env
           rustup default stable
           cargo fmt --manifest-path services/license-core/Cargo.toml --check
           cargo test --manifest-path services/license-core/Cargo.toml --locked
