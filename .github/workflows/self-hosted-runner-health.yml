@@ -5,6 +5,9 @@ on:
   pull_request:
     paths:
       - '.github/workflows/self-hosted-runner-health.yml'
+      - '.github/workflows/staging-vps-deploy-fixed.yml'
+      - '.github/workflows/staging-authenticated-smoke.yml'
+      - '.github/workflows/staging-deploy-recovery.yml'
       - 'ops/self-hosted-runner/**'
       - 'docs/ops/SELF_HOSTED_CI_RUNNER.md'
 
@@ -40,3 +43,27 @@ jobs:
           test -f apps/platform/composer.json
           test -f apps/platform/package.json
           git status --short
+
+      - name: Verify staging client tools
+        shell: bash
+        run: |
+          set -euo pipefail
+          for tool in ssh ssh-keygen ssh-keyscan curl python3; do
+            command -v "$tool"
+          done
+          chrome="$(command -v google-chrome || command -v chromium || command -v chromium-browser || true)"
+          if [ -n "$chrome" ]; then
+            "$chrome" --version
+          else
+            echo 'No Chrome binary found; rendered staging verification needs browser setup.'
+          fi
+
+      - name: Inspect public staging HTTP availability
+        shell: bash
+        run: |
+          set -euo pipefail
+          for path in / /info /info/status; do
+            curl --silent --show-error --connect-timeout 5 --max-time 15 \
+              --output /dev/null --write-out "$path HTTP %{http_code}\\n" \
+              "https://staging.kmjtechno.com$path" || true
+          done
