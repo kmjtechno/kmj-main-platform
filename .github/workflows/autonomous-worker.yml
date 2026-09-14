@@ -5,6 +5,11 @@ on:
     branches:
       - main
   workflow_dispatch:
+  issues:
+    types:
+      - opened
+      - reopened
+      - labeled
   schedule:
     - cron: '*/5 * * * *'
 
@@ -106,7 +111,7 @@ jobs:
         if: always()
         run: |
           echo '## KMJ persistent autonomous worker' >> "$GITHUB_STEP_SUMMARY"
-          echo '- cadence: every 5 minutes' >> "$GITHUB_STEP_SUMMARY"
+          echo '- cadence: every 5 minutes plus immediate issue open/reopen/label wake-up' >> "$GITHUB_STEP_SUMMARY"
           echo '- capacity: up to 3 autonomous-safe, non-conflicting tasks per cycle' >> "$GITHUB_STEP_SUMMARY"
           echo '- task gate: autonomous-safe label only' >> "$GITHUB_STEP_SUMMARY"
           echo '- paid AI fallback: prohibited' >> "$GITHUB_STEP_SUMMARY"
