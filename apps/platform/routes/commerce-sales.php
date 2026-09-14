@@ -29,6 +29,10 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
                 'commerce.purchase',
             ))
             ->values();
+        $authorizedOrganizationIds = $organizationItems
+            ->pluck('id')
+            ->map(static fn (mixed $id): string => (string) $id)
+            ->all();
 
         $products = Product::query()
             ->where('status', 'active')
@@ -46,6 +50,7 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
 
         $recentOrders = CommercialOrder::query()
             ->where('requester_user_id', $user->id)
+            ->whereIn('organization_id', $authorizedOrganizationIds)
             ->latest('created_at')
             ->limit(20)
             ->get(['id', 'organization_id', 'product_id', 'status', 'currency', 'amount_minor', 'created_at'])
