@@ -103,4 +103,4 @@ jobs:
         run: |
           set -euo pipefail
           dom="$(timeout 30 "$KMJ_STAGING_CHROME" --no-sandbox --disable-gpu --dump-dom 'data:text/html,<body>KMJ_RUNNER_BROWSER_OK</body>' 2>/dev/null)"
-          printf '%s' "$dom" | grep -Fq 'KMJ_RUNNER_BROWSER_OK'
+          grep -Fq 'KMJ_RUNNER_BROWSER_OK' <<< "$dom"
