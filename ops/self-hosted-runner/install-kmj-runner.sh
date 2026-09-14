@@ -3,7 +3,8 @@ set -euo pipefail
 
 : "${RUNNER_TOKEN:?RUNNER_TOKEN is required}"
 REPO_URL="${REPO_URL:-https://github.com/kmjtechno/kmj-main-platform}"
-RUNNER_VERSION="${RUNNER_VERSION:-2.328.0}"
+RUNNER_VERSION="${RUNNER_VERSION:-2.337.0}"
+RUNNER_SHA256="${RUNNER_SHA256:-70920811a4f8ad4328818682bca5c6469c1c942fab52448868071d0063816613}"
 RUNNER_USER="${RUNNER_USER:-kmjrunner}"
 RUNNER_HOME="${RUNNER_HOME:-/opt/kmj-actions-runner}"
 RUNNER_NAME="${RUNNER_NAME:-kmj-main-platform-ci-$(hostname)}"
@@ -26,6 +27,7 @@ cd "${RUNNER_HOME}"
 
 archive="actions-runner-linux-x64-${RUNNER_VERSION}.tar.gz"
 curl -fsSLo "${archive}" "https://github.com/actions/runner/releases/download/v${RUNNER_VERSION}/${archive}"
+echo "${RUNNER_SHA256}  ${archive}" | sha256sum -c -
 tar xzf "${archive}"
 rm -f "${archive}"
 chown -R "${RUNNER_USER}:${RUNNER_USER}" "${RUNNER_HOME}"
