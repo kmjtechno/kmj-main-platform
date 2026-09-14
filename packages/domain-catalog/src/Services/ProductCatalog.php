@@ -10,15 +10,23 @@ final class ProductCatalog
 {
     public function ensureSandboxProduct(string $slug, string $name): Product
     {
-        return $this->ensureProduct($slug, $name, 'sandbox');
+        $slug = trim($slug);
+        $name = trim($name);
+
+        if ($slug === '' || $name === '') {
+            throw new InvalidArgumentException('Product slug and name are required.');
+        }
+
+        return Product::query()->firstOrCreate(
+            ['slug' => $slug],
+            [
+                'name' => $name,
+                'status' => 'sandbox',
+            ],
+        );
     }
 
     public function ensureCommercialProduct(string $slug, string $name): Product
-    {
-        return $this->ensureProduct($slug, $name, 'active');
-    }
-
-    private function ensureProduct(string $slug, string $name, string $status): Product
     {
         $slug = trim($slug);
         $name = trim($name);
@@ -31,13 +39,13 @@ final class ProductCatalog
             ['slug' => $slug],
             [
                 'name' => $name,
-                'status' => $status,
+                'status' => 'active',
             ],
         );
 
         if (
             (string) $product->getAttribute('name') !== $name
-            || (string) $product->getAttribute('status') !== $status
+            || (string) $product->getAttribute('status') !== 'active'
         ) {
             throw new DomainException('Product slug is already bound to different catalog facts.');
         }
