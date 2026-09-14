@@ -33,7 +33,7 @@ jobs:
           set -euo pipefail
           lint_dir="$(mktemp -d "$RUNNER_TEMP/kmj-actionlint.XXXXXX")"
           trap 'rm -rf -- "$lint_dir"' EXIT
-          curl --fail --silent --show-error --retry 2 --max-time 90 \
+          curl --fail --silent --show-error --location --retry 2 --max-time 90 \
             'https://github.com/rhysd/actionlint/releases/download/v1.7.12/actionlint_1.7.12_linux_amd64.tar.gz' \
             --output "$lint_dir/actionlint.tar.gz"
           printf '8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8  %s\n' \
