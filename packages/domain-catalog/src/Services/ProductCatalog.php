@@ -35,7 +35,10 @@ final class ProductCatalog
             ],
         );
 
-        if ((string) $product->name !== $name || (string) $product->status !== $status) {
+        if (
+            (string) $product->getAttribute('name') !== $name
+            || (string) $product->getAttribute('status') !== $status
+        ) {
             throw new DomainException('Product slug is already bound to different catalog facts.');
         }
 
