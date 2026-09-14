@@ -59,8 +59,15 @@ jobs:
           test -f .env || cp .env.example .env
           php artisan key:generate --force
           php artisan migrate --force
-          npm install --no-audit --no-fund
+          npm install --prefer-offline --no-audit --no-fund
           npm run build
+
+      - name: Capture formatter diff for revenue pages
+        run: |
+          set -euo pipefail
+          ./node_modules/.bin/vp fmt resources/js/pages/operator.tsx resources/js/pages/purchase.tsx
+          git diff -- resources/js/pages/operator.tsx resources/js/pages/purchase.tsx
+          exit 1
 
       - name: Check frontend format
         run: ./node_modules/.bin/vp fmt --check
