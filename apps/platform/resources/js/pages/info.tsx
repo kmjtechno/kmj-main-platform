@@ -133,14 +133,41 @@ function MiniChart({
                     aria-label={`${title} live graph`}
                 >
                     <defs>
-                        <linearGradient id={`fill-${title}`} x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="0%" stopColor="rgba(226,27,35,0.24)" />
+                        <linearGradient
+                            id={`fill-${title}`}
+                            x1="0"
+                            y1="0"
+                            x2="0"
+                            y2="1"
+                        >
+                            <stop
+                                offset="0%"
+                                stopColor="rgba(226,27,35,0.24)"
+                            />
                             <stop offset="100%" stopColor="rgba(226,27,35,0)" />
                         </linearGradient>
                     </defs>
-                    <line x1="0" y1="27" x2={width} y2="27" stroke="rgba(255,255,255,0.05)" />
-                    <line x1="0" y1="54" x2={width} y2="54" stroke="rgba(255,255,255,0.05)" />
-                    <line x1="0" y1="81" x2={width} y2="81" stroke="rgba(255,255,255,0.05)" />
+                    <line
+                        x1="0"
+                        y1="27"
+                        x2={width}
+                        y2="27"
+                        stroke="rgba(255,255,255,0.05)"
+                    />
+                    <line
+                        x1="0"
+                        y1="54"
+                        x2={width}
+                        y2="54"
+                        stroke="rgba(255,255,255,0.05)"
+                    />
+                    <line
+                        x1="0"
+                        y1="81"
+                        x2={width}
+                        y2="81"
+                        stroke="rgba(255,255,255,0.05)"
+                    />
                     <polyline
                         points={points}
                         fill="none"
@@ -152,7 +179,8 @@ function MiniChart({
                 </svg>
             </div>
             <div className="mt-1 text-[10px] text-white/25">
-                Last {safeValues.length} sample{safeValues.length === 1 ? '' : 's'} · updates automatically
+                Last {safeValues.length} sample
+                {safeValues.length === 1 ? '' : 's'} · updates automatically
             </div>
         </div>
     );
@@ -207,7 +235,11 @@ export default function Info({ pollIntervalMs }: { pollIntervalMs: number }) {
                 },
             ]);
         } catch (reason) {
-            setError(reason instanceof Error ? reason.message : 'Monitor refresh failed');
+            setError(
+                reason instanceof Error
+                    ? reason.message
+                    : 'Monitor refresh failed',
+            );
         } finally {
             setRefreshing(false);
         }
@@ -228,7 +260,8 @@ export default function Info({ pollIntervalMs }: { pollIntervalMs: number }) {
         return status.processes.reduce(
             (result, process) => {
                 if (process.status === 'online') result.online += 1;
-                if (process.status === 'attention' || process.status === 'idle') result.attention += 1;
+                if (process.status === 'attention' || process.status === 'idle')
+                    result.attention += 1;
                 if (process.status === 'blocked') result.blocked += 1;
                 return result;
             },
@@ -278,7 +311,9 @@ export default function Info({ pollIntervalMs }: { pollIntervalMs: number }) {
                                 onClick={() => void refresh()}
                                 className="inline-flex h-10 items-center gap-2 rounded-xl border border-white/10 bg-white/[0.035] px-3 text-xs font-bold text-white/70 transition hover:bg-white/[0.07] hover:text-white"
                             >
-                                <RefreshCw className={`h-3.5 w-3.5 ${refreshing ? 'animate-spin' : ''}`} />
+                                <RefreshCw
+                                    className={`h-3.5 w-3.5 ${refreshing ? 'animate-spin' : ''}`}
+                                />
                                 Refresh
                             </button>
                             <Link
@@ -305,8 +340,11 @@ export default function Info({ pollIntervalMs }: { pollIntervalMs: number }) {
                                         One page for the whole delivery system.
                                     </h1>
                                     <p className="mt-3 max-w-3xl text-sm leading-6 text-white/45 sm:text-base">
-                                        Runtime health, VPS load, database latency, queue state, self-hosted runners,
-                                        verified-free AI routing and exact deployment evidence — refreshed continuously without exposing secrets.
+                                        Runtime health, VPS load, database
+                                        latency, queue state, self-hosted
+                                        runners, verified-free AI routing and
+                                        exact deployment evidence — refreshed
+                                        continuously without exposing secrets.
                                     </p>
                                 </div>
 
@@ -356,24 +394,36 @@ export default function Info({ pollIntervalMs }: { pollIntervalMs: number }) {
                                         icon: Database,
                                         label: 'DB latency',
                                         value: `${status?.runtime.database_latency_ms ?? 0} ms`,
-                                        note: status?.runtime.database ? 'Database online' : 'Database probe failed',
+                                        note: status?.runtime.database
+                                            ? 'Database online'
+                                            : 'Database probe failed',
                                     },
                                     {
                                         icon: Clock3,
                                         label: 'Server uptime',
-                                        value: formatUptime(status?.runtime.server_uptime_seconds ?? null),
+                                        value: formatUptime(
+                                            status?.runtime
+                                                .server_uptime_seconds ?? null,
+                                        ),
                                         note: 'Kernel uptime',
                                     },
                                 ].map(({ icon: Icon, label, value, note }) => (
-                                    <div key={label} className="rounded-2xl border border-white/[0.07] bg-black/15 p-4">
+                                    <div
+                                        key={label}
+                                        className="rounded-2xl border border-white/[0.07] bg-black/15 p-4"
+                                    >
                                         <div className="flex items-center justify-between">
                                             <span className="text-[10px] font-bold tracking-[0.12em] text-white/35 uppercase">
                                                 {label}
                                             </span>
                                             <Icon className="h-4 w-4 text-white/35" />
                                         </div>
-                                        <div className="mt-3 text-xl font-black tracking-tight text-white">{value}</div>
-                                        <div className="mt-1 text-[10px] text-white/30">{note}</div>
+                                        <div className="mt-3 text-xl font-black tracking-tight text-white">
+                                            {value}
+                                        </div>
+                                        <div className="mt-1 text-[10px] text-white/30">
+                                            {note}
+                                        </div>
                                     </div>
                                 ))}
                             </div>
@@ -382,20 +432,45 @@ export default function Info({ pollIntervalMs }: { pollIntervalMs: number }) {
                         <div className="rounded-[1.6rem] border border-white/[0.08] bg-white/[0.025] p-5 sm:p-6">
                             <div className="flex items-center justify-between">
                                 <div>
-                                    <div className="text-[10px] font-bold tracking-[0.14em] text-white/35 uppercase">Process state</div>
-                                    <div className="mt-1 text-lg font-black">Live summary</div>
+                                    <div className="text-[10px] font-bold tracking-[0.14em] text-white/35 uppercase">
+                                        Process state
+                                    </div>
+                                    <div className="mt-1 text-lg font-black">
+                                        Live summary
+                                    </div>
                                 </div>
                                 <Workflow className="h-5 w-5 text-[#ff4b53]" />
                             </div>
                             <div className="mt-5 grid grid-cols-3 gap-2">
                                 {[
-                                    ['Online', processSummary.online, 'text-emerald-300'],
-                                    ['Watch', processSummary.attention, 'text-amber-200'],
-                                    ['Blocked', processSummary.blocked, 'text-red-300'],
+                                    [
+                                        'Online',
+                                        processSummary.online,
+                                        'text-emerald-300',
+                                    ],
+                                    [
+                                        'Watch',
+                                        processSummary.attention,
+                                        'text-amber-200',
+                                    ],
+                                    [
+                                        'Blocked',
+                                        processSummary.blocked,
+                                        'text-red-300',
+                                    ],
                                 ].map(([label, value, className]) => (
-                                    <div key={label} className="rounded-xl border border-white/[0.07] bg-black/15 p-3 text-center">
-                                        <div className={`text-xl font-black ${className}`}>{value}</div>
-                                        <div className="mt-1 text-[9px] font-bold tracking-[0.12em] text-white/30 uppercase">{label}</div>
+                                    <div
+                                        key={label}
+                                        className="rounded-xl border border-white/[0.07] bg-black/15 p-3 text-center"
+                                    >
+                                        <div
+                                            className={`text-xl font-black ${className}`}
+                                        >
+                                            {value}
+                                        </div>
+                                        <div className="mt-1 text-[9px] font-bold tracking-[0.12em] text-white/30 uppercase">
+                                            {label}
+                                        </div>
                                     </div>
                                 ))}
                             </div>
@@ -403,28 +478,53 @@ export default function Info({ pollIntervalMs }: { pollIntervalMs: number }) {
                                 <div className="flex items-center justify-between border-b border-white/[0.06] pb-3">
                                     <span className="text-white/40">Queue</span>
                                     <span className="font-bold text-white/75">
-                                        {status?.runtime.pending_jobs ?? 0} pending · {status?.runtime.failed_jobs ?? 0} failed
+                                        {status?.runtime.pending_jobs ?? 0}{' '}
+                                        pending ·{' '}
+                                        {status?.runtime.failed_jobs ?? 0}{' '}
+                                        failed
                                     </span>
                                 </div>
                                 <div className="flex items-center justify-between border-b border-white/[0.06] pb-3">
-                                    <span className="text-white/40">CI runners</span>
-                                    <span className="font-bold text-white/75">{status?.runtime.runner_count ?? 0} visible</span>
+                                    <span className="text-white/40">
+                                        CI runners
+                                    </span>
+                                    <span className="font-bold text-white/75">
+                                        {status?.runtime.runner_count ?? 0}{' '}
+                                        visible
+                                    </span>
                                 </div>
                                 <div className="flex items-center justify-between border-b border-white/[0.06] pb-3">
-                                    <span className="text-white/40">AI route</span>
-                                    <span className={status?.runtime.ai_router_online ? 'font-bold text-emerald-300' : 'font-bold text-red-300'}>
-                                        {status?.runtime.ai_router_online ? 'Reachable' : 'Fail-closed'}
+                                    <span className="text-white/40">
+                                        AI route
+                                    </span>
+                                    <span
+                                        className={
+                                            status?.runtime.ai_router_online
+                                                ? 'font-bold text-emerald-300'
+                                                : 'font-bold text-red-300'
+                                        }
+                                    >
+                                        {status?.runtime.ai_router_online
+                                            ? 'Reachable'
+                                            : 'Fail-closed'}
                                     </span>
                                 </div>
                                 <div className="flex items-center justify-between">
-                                    <span className="text-white/40">Last sample</span>
+                                    <span className="text-white/40">
+                                        Last sample
+                                    </span>
                                     <span className="font-bold text-white/75">
                                         {status?.timestamp
-                                            ? new Intl.DateTimeFormat(undefined, {
-                                                  hour: '2-digit',
-                                                  minute: '2-digit',
-                                                  second: '2-digit',
-                                              }).format(new Date(status.timestamp))
+                                            ? new Intl.DateTimeFormat(
+                                                  undefined,
+                                                  {
+                                                      hour: '2-digit',
+                                                      minute: '2-digit',
+                                                      second: '2-digit',
+                                                  },
+                                              ).format(
+                                                  new Date(status.timestamp),
+                                              )
                                             : 'Connecting'}
                                     </span>
                                 </div>
@@ -465,21 +565,34 @@ export default function Info({ pollIntervalMs }: { pollIntervalMs: number }) {
                         <div className="rounded-[1.6rem] border border-white/[0.08] bg-white/[0.025] p-5 sm:p-6">
                             <div className="flex items-center justify-between gap-4">
                                 <div>
-                                    <div className="text-[10px] font-bold tracking-[0.14em] text-white/35 uppercase">End-to-end process</div>
-                                    <h2 className="mt-1 text-xl font-black">What is actually running</h2>
+                                    <div className="text-[10px] font-bold tracking-[0.14em] text-white/35 uppercase">
+                                        End-to-end process
+                                    </div>
+                                    <h2 className="mt-1 text-xl font-black">
+                                        What is actually running
+                                    </h2>
                                 </div>
                                 <Server className="h-5 w-5 text-[#ff4b53]" />
                             </div>
 
                             <div className="mt-5 grid gap-3 lg:grid-cols-2">
                                 {(status?.processes ?? []).map((process) => (
-                                    <div key={process.key} className="rounded-2xl border border-white/[0.07] bg-black/15 p-4">
+                                    <div
+                                        key={process.key}
+                                        className="rounded-2xl border border-white/[0.07] bg-black/15 p-4"
+                                    >
                                         <div className="flex items-start justify-between gap-3">
                                             <div className="min-w-0">
-                                                <div className="text-sm font-bold text-white/85">{process.label}</div>
-                                                <p className="mt-2 text-[11px] leading-5 text-white/35">{process.detail}</p>
+                                                <div className="text-sm font-bold text-white/85">
+                                                    {process.label}
+                                                </div>
+                                                <p className="mt-2 text-[11px] leading-5 text-white/35">
+                                                    {process.detail}
+                                                </p>
                                             </div>
-                                            <span className={`shrink-0 rounded-full border px-2.5 py-1 text-[8px] font-black tracking-[0.1em] uppercase ${statusClass[process.status]}`}>
+                                            <span
+                                                className={`shrink-0 rounded-full border px-2.5 py-1 text-[8px] font-black tracking-[0.1em] uppercase ${statusClass[process.status]}`}
+                                            >
                                                 {process.status}
                                             </span>
                                         </div>
@@ -492,26 +605,43 @@ export default function Info({ pollIntervalMs }: { pollIntervalMs: number }) {
                             <div className="rounded-[1.6rem] border border-white/[0.08] bg-white/[0.025] p-5 sm:p-6">
                                 <div className="flex items-center justify-between">
                                     <div>
-                                        <div className="text-[10px] font-bold tracking-[0.14em] text-white/35 uppercase">Deployment evidence</div>
-                                        <h2 className="mt-1 text-lg font-black">Current staging release</h2>
+                                        <div className="text-[10px] font-bold tracking-[0.14em] text-white/35 uppercase">
+                                            Deployment evidence
+                                        </div>
+                                        <h2 className="mt-1 text-lg font-black">
+                                            Current staging release
+                                        </h2>
                                     </div>
                                     <HardDrive className="h-5 w-5 text-white/35" />
                                 </div>
                                 <div className="mt-5 space-y-3 text-xs">
                                     <div className="rounded-xl border border-white/[0.07] bg-black/15 p-3">
-                                        <div className="text-[9px] font-bold tracking-[0.12em] text-white/30 uppercase">Deployed SHA</div>
-                                        <div className="mt-1 break-all font-mono text-[11px] text-white/70">
-                                            {status?.deployment.deployed_sha ?? 'Evidence pending'}
+                                        <div className="text-[9px] font-bold tracking-[0.12em] text-white/30 uppercase">
+                                            Deployed SHA
+                                        </div>
+                                        <div className="mt-1 font-mono text-[11px] break-all text-white/70">
+                                            {status?.deployment.deployed_sha ??
+                                                'Evidence pending'}
                                         </div>
                                     </div>
                                     <div className="grid grid-cols-2 gap-2">
                                         <div className="rounded-xl border border-white/[0.07] bg-black/15 p-3">
-                                            <div className="text-[9px] text-white/30 uppercase">HTTP health</div>
-                                            <div className="mt-1 font-bold text-white/70">{status?.deployment.http_health ?? 'unknown'}</div>
+                                            <div className="text-[9px] text-white/30 uppercase">
+                                                HTTP health
+                                            </div>
+                                            <div className="mt-1 font-bold text-white/70">
+                                                {status?.deployment
+                                                    .http_health ?? 'unknown'}
+                                            </div>
                                         </div>
                                         <div className="rounded-xl border border-white/[0.07] bg-black/15 p-3">
-                                            <div className="text-[9px] text-white/30 uppercase">Rendered UI</div>
-                                            <div className="mt-1 font-bold text-white/70">{status?.deployment.rendered_ui ?? 'unknown'}</div>
+                                            <div className="text-[9px] text-white/30 uppercase">
+                                                Rendered UI
+                                            </div>
+                                            <div className="mt-1 font-bold text-white/70">
+                                                {status?.deployment
+                                                    .rendered_ui ?? 'unknown'}
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -523,18 +653,30 @@ export default function Info({ pollIntervalMs }: { pollIntervalMs: number }) {
                                         <ShieldCheck className="h-4 w-4" />
                                     </div>
                                     <div>
-                                        <div className="text-sm font-black">Safety boundary</div>
+                                        <div className="text-sm font-black">
+                                            Safety boundary
+                                        </div>
                                         <p className="mt-2 text-[11px] leading-5 text-white/40">
-                                            This page is staging-only. Production remains untouched. No secrets, signing keys or provider credentials are returned by the monitor.
+                                            This page is staging-only.
+                                            Production remains untouched. No
+                                            secrets, signing keys or provider
+                                            credentials are returned by the
+                                            monitor.
                                         </p>
                                     </div>
                                 </div>
                                 <div className="mt-4 grid gap-2 text-[10px] sm:grid-cols-2">
                                     <div className="rounded-lg border border-white/[0.06] bg-black/15 px-3 py-2 text-white/45">
-                                        Paid AI fallback: <span className="font-bold text-white/70">prohibited</span>
+                                        Paid AI fallback:{' '}
+                                        <span className="font-bold text-white/70">
+                                            prohibited
+                                        </span>
                                     </div>
                                     <div className="rounded-lg border border-white/[0.06] bg-black/15 px-3 py-2 text-white/45">
-                                        Local LLM: <span className="font-bold text-white/70">prohibited</span>
+                                        Local LLM:{' '}
+                                        <span className="font-bold text-white/70">
+                                            prohibited
+                                        </span>
                                     </div>
                                 </div>
                             </div>
@@ -548,8 +690,13 @@ export default function Info({ pollIntervalMs }: { pollIntervalMs: number }) {
                                     <Bot className="h-4 w-4" />
                                 </div>
                                 <div>
-                                    <div className="text-xs font-bold">Autonomous execution</div>
-                                    <div className="mt-1 text-[10px] text-white/30">Runners + verified-free AI dependency visible</div>
+                                    <div className="text-xs font-bold">
+                                        Autonomous execution
+                                    </div>
+                                    <div className="mt-1 text-[10px] text-white/30">
+                                        Runners + verified-free AI dependency
+                                        visible
+                                    </div>
                                 </div>
                             </div>
                             <div className="flex items-center gap-3">
@@ -557,8 +704,13 @@ export default function Info({ pollIntervalMs }: { pollIntervalMs: number }) {
                                     <Database className="h-4 w-4" />
                                 </div>
                                 <div>
-                                    <div className="text-xs font-bold">Authority runtime</div>
-                                    <div className="mt-1 text-[10px] text-white/30">Database + queue health sampled continuously</div>
+                                    <div className="text-xs font-bold">
+                                        Authority runtime
+                                    </div>
+                                    <div className="mt-1 text-[10px] text-white/30">
+                                        Database + queue health sampled
+                                        continuously
+                                    </div>
                                 </div>
                             </div>
                             <div className="flex items-center gap-3">
@@ -566,8 +718,14 @@ export default function Info({ pollIntervalMs }: { pollIntervalMs: number }) {
                                     <RefreshCw className="h-4 w-4" />
                                 </div>
                                 <div>
-                                    <div className="text-xs font-bold">Automatic refresh</div>
-                                    <div className="mt-1 text-[10px] text-white/30">Every {Math.round(pollIntervalMs / 1000)} seconds · last 60 samples</div>
+                                    <div className="text-xs font-bold">
+                                        Automatic refresh
+                                    </div>
+                                    <div className="mt-1 text-[10px] text-white/30">
+                                        Every{' '}
+                                        {Math.round(pollIntervalMs / 1000)}{' '}
+                                        seconds · last 60 samples
+                                    </div>
                                 </div>
                             </div>
                         </div>
