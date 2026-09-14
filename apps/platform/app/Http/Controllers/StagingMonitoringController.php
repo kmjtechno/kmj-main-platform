@@ -14,7 +14,7 @@ final class StagingMonitoringController extends Controller
 {
     public function index(): Response
     {
-        abort_unless(app()->environment('staging'), 404);
+        $this->ensureStagingRequest();
 
         return Inertia::render('info', [
             'pollIntervalMs' => 5000,
@@ -23,7 +23,7 @@ final class StagingMonitoringController extends Controller
 
     public function status(): JsonResponse
     {
-        abort_unless(app()->environment('staging'), 404);
+        $this->ensureStagingRequest();
 
         $requestStartedAt = hrtime(true);
         [$databaseHealthy, $databaseLatencyMs] = $this->databaseProbe();
@@ -111,6 +111,14 @@ final class StagingMonitoringController extends Controller
                 'local_llm_inference' => 'prohibited',
             ],
         ]);
+    }
+
+    private function ensureStagingRequest(): void
+    {
+        abort_unless(
+            app()->environment('staging') || request()->getHost() === 'staging.kmjtechno.com',
+            404,
+        );
     }
 
     /** @return array{0: bool, 1: float|null} */
