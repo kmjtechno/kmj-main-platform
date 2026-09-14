@@ -22,9 +22,10 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  platform:
+  frontend:
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     runs-on: [self-hosted, linux, x64, kmj-main-platform-ci]
-    timeout-minutes: 20
+    timeout-minutes: 15
     defaults:
       run:
         working-directory: apps/platform
@@ -34,7 +35,7 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Verify pre-provisioned runtime
+      - name: Verify frontend runtime
         run: |
           set -euo pipefail
           php --version
@@ -44,30 +45,14 @@ jobs:
           php -r 'exit(PHP_VERSION_ID >= 80300 && PHP_VERSION_ID < 80600 ? 0 : 1);'
           node -e 'const m=Number(process.versions.node.split(".")[0]); process.exit(m === 22 ? 0 : 1)'
 
-      - name: Prepare deterministic CI database
-        run: |
-          set -euo pipefail
-          touch database/database.sqlite
-
-      - name: Install and build application
-        env:
-          DB_CONNECTION: sqlite
-          DB_DATABASE: ${{ github.workspace }}/apps/platform/database/database.sqlite
+      - name: Install frontend build dependencies
         run: |
           set -euo pipefail
           composer install --no-interaction --prefer-dist --no-progress
-          test -f .env || cp .env.example .env
-          php artisan key:generate --force
-          php artisan migrate --force
           npm install --prefer-offline --no-audit --no-fund
-          npm run build
 
-      - name: Capture formatter diff for revenue pages
-        run: |
-          set -euo pipefail
-          ./node_modules/.bin/vp fmt resources/js/pages/operator.tsx resources/js/pages/purchase.tsx
-          git diff -- resources/js/pages/operator.tsx resources/js/pages/purchase.tsx
-          exit 1
+      - name: Build frontend
+        run: npm run build
 
       - name: Check frontend format
         run: ./node_modules/.bin/vp fmt --check
@@ -77,6 +62,44 @@ jobs:
 
       - name: Check frontend types
         run: npm run types:check
+
+  backend:
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: [self-hosted, linux, x64, kmj-main-platform-ci]
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: apps/platform
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Verify backend runtime
+        run: |
+          set -euo pipefail
+          php --version
+          composer --version
+          php -r 'exit(PHP_VERSION_ID >= 80300 && PHP_VERSION_ID < 80600 ? 0 : 1);'
+
+      - name: Prepare deterministic CI database
+        run: |
+          set -euo pipefail
+          touch database/database.sqlite
+
+      - name: Install backend dependencies
+        run: composer install --no-interaction --prefer-dist --no-progress
+
+      - name: Prepare application database
+        env:
+          DB_CONNECTION: sqlite
+          DB_DATABASE: ${{ github.workspace }}/apps/platform/database/database.sqlite
+        run: |
+          set -euo pipefail
+          test -f .env || cp .env.example .env
+          php artisan key:generate --force
+          php artisan migrate --force
 
       - name: Check PHP quality and tests
         env:
