@@ -75,13 +75,17 @@ final class StagingAuthenticatedSmokeCommand extends Command
 
         $route = $router->getRoutes()->match($request);
         $request->setRouteResolver(static fn () => $route);
+        $route->bind($request);
 
-        $action = $route->getAction('uses');
-        if (! is_callable($action)) {
-            throw new RuntimeException("Smoke route {$uri} does not have a callable action.");
+        $previousRequest = app('request');
+        app()->instance('request', $request);
+
+        try {
+            $result = $route->run();
+        } finally {
+            app()->instance('request', $previousRequest);
         }
 
-        $result = app()->call($action, ['request' => $request]);
         if (! $result instanceof InertiaResponse) {
             throw new RuntimeException("Smoke route {$uri} did not return an Inertia response.");
         }
