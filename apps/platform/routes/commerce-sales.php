@@ -155,7 +155,7 @@ Route::middleware(['auth', 'verified', 'password.confirm'])
 
             $validated = $request->validate([
                 'currency' => ['required', 'string', 'size:3', 'regex:/^[A-Za-z]{3}$/'],
-                'amount_minor' => ['required', 'integer', 'min:0'],
+                'amount_minor' => ['required', 'integer', 'min:1'],
                 'confirmation_reference' => ['required', 'string', 'max:160'],
             ]);
 
