@@ -172,7 +172,7 @@ final class StagingMonitoringController extends Controller
     {
         $load = sys_getloadavg();
         $cpuCount = $this->cpuCount();
-        $systemLoadPercent = is_array($load) && isset($load[0]) && $cpuCount > 0
+        $systemLoadPercent = $load !== false && $cpuCount > 0
             ? round(min(100, ((float) $load[0] / $cpuCount) * 100), 1)
             : null;
 
@@ -231,7 +231,7 @@ final class StagingMonitoringController extends Controller
             return null;
         }
 
-        $value = explode(' ', trim($uptime))[0] ?? null;
+        $value = explode(' ', trim($uptime))[0];
 
         return is_numeric($value) ? (int) floor((float) $value) : null;
     }
