@@ -32,7 +32,7 @@ fi
 
 # Minimal Ubuntu images can lack Chrome's desktop shared libraries. Extract
 # authenticated distro packages into this private cache; never install them.
-if ! "$chrome" --version >/dev/null 2>&1 && [ ! -d "$release/runtime-libs" ]; then
+if ! "$chrome" --version >/dev/null 2>&1 && [ ! -d "$release/runtime-libs-v2" ]; then
   dependency_dir="$(mktemp -d "${RUNNER_TEMP:?}/kmj-chrome-libs.XXXXXX")"
   (
     trap 'rm -rf -- "$dependency_dir"' EXIT
@@ -43,12 +43,12 @@ if ! "$chrome" --version >/dev/null 2>&1 && [ ! -d "$release/runtime-libs" ]; th
     cd "$dependency_dir/packages"
     apt-get download \
       libatk1.0-0t64 libatk-bridge2.0-0t64 libatspi2.0-0t64 \
-      libxcomposite1 libxdamage1 libxfixes3 libxrandr2 \
+      libxcomposite1 libxdamage1 libxfixes3 libxrandr2 libxrender1 libxi6 libxtst6 libxext6 \
       libgbm1 libdrm2 libwayland-server0 libasound2t64 libasound2-data
     for package in ./*.deb; do
       dpkg-deb --extract "$package" "$dependency_dir/root"
     done
-    mv "$dependency_dir/root" "$release/runtime-libs"
+    mv "$dependency_dir/root" "$release/runtime-libs-v2"
   )
 fi
 
@@ -57,9 +57,13 @@ cat > "$wrapper" <<'BROWSER'
 #!/usr/bin/env bash
 set -euo pipefail
 browser_root="$(cd -- "$(dirname -- "$0")" && pwd)"
-export LD_LIBRARY_PATH="$browser_root/runtime-libs/usr/lib/x86_64-linux-gnu:$browser_root/runtime-libs/lib/x86_64-linux-gnu${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+export LD_LIBRARY_PATH="$browser_root/runtime-libs-v2/usr/lib/x86_64-linux-gnu:$browser_root/runtime-libs-v2/lib/x86_64-linux-gnu${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
 exec "$browser_root/chrome-headless-shell" "$@"
 BROWSER
 chmod 700 "$wrapper"
-"$wrapper" --version
+if ! "$wrapper" --version; then
+  LD_LIBRARY_PATH="$release/runtime-libs-v2/usr/lib/x86_64-linux-gnu:$release/runtime-libs-v2/lib/x86_64-linux-gnu" \
+    ldd "$chrome" | grep 'not found' >&2 || true
+  exit 1
+fi
 printf 'KMJ_STAGING_CHROME=%s\n' "$wrapper" >> "${GITHUB_ENV:?}"

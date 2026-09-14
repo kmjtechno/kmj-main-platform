@@ -69,6 +69,10 @@ jobs:
               "https://staging.kmjtechno.com$path" || true
           done
 
+      - name: Verify live staging monitor response
+        shell: bash
+        run: python3 ops/staging/verify-monitor.py
+
       - name: Prepare staging browser without privileged installation
         shell: bash
         run: bash ops/self-hosted-runner/prepare-staging-browser.sh
@@ -79,7 +83,3 @@ jobs:
           set -euo pipefail
           dom="$(timeout 30 "$KMJ_STAGING_CHROME" --no-sandbox --disable-gpu --dump-dom 'data:text/html,<body>KMJ_RUNNER_BROWSER_OK</body>' 2>/dev/null)"
           printf '%s' "$dom" | grep -Fq 'KMJ_RUNNER_BROWSER_OK'
-
-      - name: Verify live staging monitor response
-        shell: bash
-        run: python3 ops/staging/verify-monitor.py
