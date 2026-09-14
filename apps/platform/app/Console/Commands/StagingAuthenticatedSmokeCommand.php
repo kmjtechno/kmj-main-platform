@@ -6,6 +6,7 @@ use App\Models\User;
 use Illuminate\Console\Command;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Router;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Inertia\Response as InertiaResponse;
@@ -49,6 +50,8 @@ final class StagingAuthenticatedSmokeCommand extends Command
                 'updated_at' => now(),
             ]);
 
+            Auth::guard()->setUser($user);
+
             $this->probe($router, '/dashboard', $user);
             $this->probe($router, '/operator/ops', $user);
 
@@ -65,6 +68,7 @@ final class StagingAuthenticatedSmokeCommand extends Command
 
             return self::FAILURE;
         } finally {
+            Auth::forgetGuards();
             DB::rollBack();
         }
     }
@@ -75,7 +79,7 @@ final class StagingAuthenticatedSmokeCommand extends Command
             'HTTP_X_INERTIA' => 'true',
             'HTTP_ACCEPT' => 'text/html,application/xhtml+xml',
         ]);
-        $request->setUserResolver(static fn (): User => $user);
+        $request->setUserResolver(static fn (?string $guard = null): User => $user);
 
         $route = $router->getRoutes()->match($request);
         $request->setRouteResolver(static fn () => $route);
