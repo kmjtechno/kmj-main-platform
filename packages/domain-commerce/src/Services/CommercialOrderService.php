@@ -75,6 +75,13 @@ final class CommercialOrderService
                 throw new DomainException('Only a requested commercial order can be confirmed.');
             }
 
+            if (CommercialOrder::query()
+                ->where('confirmation_reference', $confirmationReference)
+                ->whereKeyNot($order->getKey())
+                ->exists()) {
+                throw new DomainException('Confirmation reference is already attached to another commercial order.');
+            }
+
             $order->forceFill([
                 'status' => 'confirmed',
                 'currency' => $currency,
