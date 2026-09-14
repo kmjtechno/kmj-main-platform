@@ -24,6 +24,13 @@ export const deliveryMilestones: DeliveryMilestone[] = [
         evidence: 'Exact-SHA deployment evidence',
     },
     {
+        id: 'staging-auth-surface-smoke',
+        title: 'Authenticated staging surface smoke',
+        state: 'active',
+        detail: 'Repair route execution parity so the staging probe exercises Laravel matched routes instead of rejecting non-callable cached action representations',
+        evidence: 'Staging Authenticated Surface Smoke #47 regression + repair PR',
+    },
+    {
         id: 'frontend-live-sync',
         title: 'Frontend live sync',
         state: 'verified',
@@ -180,8 +187,9 @@ export const deliveryMilestones: DeliveryMilestone[] = [
     {
         id: 'issuer-positive-license-lifetime',
         title: 'Issuer positive lifetime parity',
-        state: 'active',
+        state: 'verified',
         detail: 'Reject same-second expiry before signing so the sandbox issuer cannot create a token that the validator must immediately reject',
+        evidence: 'PR #120',
     },
     {
         id: 'organization-capabilities',
