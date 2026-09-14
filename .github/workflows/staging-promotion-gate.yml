@@ -169,7 +169,7 @@ jobs:
             exit 1
           fi
 
-          python - "$response" "$SHA" <<'PY'
+          python3 - "$response" "$SHA" <<'PY'
           import json
           import sys
 

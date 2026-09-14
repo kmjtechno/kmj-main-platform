@@ -8,6 +8,7 @@ on:
       - '.github/workflows/staging-vps-deploy-fixed.yml'
       - '.github/workflows/staging-authenticated-smoke.yml'
       - '.github/workflows/staging-deploy-recovery.yml'
+      - 'ops/staging/**'
       - 'ops/self-hosted-runner/**'
       - 'docs/ops/SELF_HOSTED_CI_RUNNER.md'
 
@@ -67,3 +68,18 @@ jobs:
               --output /dev/null --write-out "$path HTTP %{http_code}\\n" \
               "https://staging.kmjtechno.com$path" || true
           done
+
+      - name: Prepare staging browser without privileged installation
+        shell: bash
+        run: bash ops/self-hosted-runner/prepare-staging-browser.sh
+
+      - name: Verify browser runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          dom="$(timeout 30 "$KMJ_STAGING_CHROME" --no-sandbox --disable-gpu --dump-dom 'data:text/html,<body>KMJ_RUNNER_BROWSER_OK</body>' 2>/dev/null)"
+          printf '%s' "$dom" | grep -Fq 'KMJ_RUNNER_BROWSER_OK'
+
+      - name: Verify live staging monitor response
+        shell: bash
+        run: python3 ops/staging/verify-monitor.py

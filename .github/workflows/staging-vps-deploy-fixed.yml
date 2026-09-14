@@ -68,6 +68,10 @@ jobs:
           if [ "$missing" -ne 0 ]; then exit 1; fi
           echo 'Staging deployment configuration is present.'
 
+      - name: Prepare staging browser without privileged installation
+        shell: bash
+        run: bash ops/self-hosted-runner/prepare-staging-browser.sh
+
       - name: Configure SSH
         id: ssh
         env:
@@ -246,7 +250,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          chrome="$(command -v google-chrome || command -v chromium || command -v chromium-browser || true)"
+          chrome="$KMJ_STAGING_CHROME"
           test -n "$chrome"
           dom="$($chrome --headless --no-sandbox --disable-gpu --virtual-time-budget=10000 --dump-dom "$HEALTH_URL" 2>/dev/null)"
           progress_source='apps/platform/resources/js/data/delivery-progress.ts'
@@ -260,6 +264,15 @@ jobs:
           printf '%s' "$dom" | grep -Fq "${verified_count}/${total_count} verified"
           echo 'result=pass' >> "$GITHUB_OUTPUT"
           echo "Rendered staging UI PASS: verified delivery progress = ${expected_progress}% (${verified_count}/${total_count})."
+
+      - name: Verify live monitor and deployed SHA
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 ops/staging/verify-monitor.py "$DEPLOY_SHA"
+          dom="$(timeout 45 "$KMJ_STAGING_CHROME" --no-sandbox --disable-gpu --virtual-time-budget=10000 --dump-dom 'https://staging.kmjtechno.com/info' 2>/dev/null)"
+          printf '%s' "$dom" | grep -Fq 'Staging live operations monitor'
+          echo 'Rendered staging monitor PASS.'
 
       - name: Deployment evidence summary
         if: always()

@@ -115,8 +115,12 @@ final class StagingMonitoringController extends Controller
 
     private function ensureStagingRequest(): void
     {
+        $host = request()->getHost();
+
+        abort_if(in_array($host, ['kmjtechno.com', 'www.kmjtechno.com'], true), 404);
+
         abort_unless(
-            app()->environment('staging') || request()->getHost() === 'staging.kmjtechno.com',
+            app()->environment('staging') || $host === 'staging.kmjtechno.com',
             404,
         );
     }
