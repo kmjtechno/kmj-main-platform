@@ -71,6 +71,7 @@ def task_risk(text: str) -> str | None:
     lowered = text.lower()
     return next((term for term in HIGH_RISK_EXTRA if term in lowered), None)
 
+
 def patch_paths(patch: str) -> list[str]:
     paths: list[str] = []
     for line in patch.splitlines():
@@ -110,6 +111,7 @@ def extract_model_json(result: dict[str, Any]) -> dict[str, Any]:
         raise ValueError("MODEL_RESPONSE_SCHEMA_INVALID")
     return payload
 
+
 class GitHubClient:
     def __init__(self) -> None:
         token = os.getenv("GITHUB_TOKEN", "")
@@ -141,6 +143,7 @@ class GitHubClient:
             except httpx.HTTPStatusError as exc:
                 if exc.response.status_code != 422:
                     raise
+
     def safe_issues(self) -> list[dict[str, Any]]:
         issues = self.request(
             "GET", f"/issues?state=open&labels={SAFE_LABEL}&sort=created&direction=asc&per_page=50",
@@ -172,6 +175,7 @@ class GitHubClient:
     def open_agent_prs(self) -> list[dict[str, Any]]:
         pulls = self.request("GET", "/pulls?state=open&per_page=50")
         return [p for p in pulls if str(p.get("head", {}).get("ref", "")).startswith("agent/auto-")]
+
     def pr_files(self, pr_number: int) -> list[str]:
         files = self.request("GET", f"/pulls/{pr_number}/files?per_page=100")
         return [str(item.get("filename", "")) for item in files]
@@ -214,6 +218,7 @@ def select_issue(gh: GitHubClient) -> dict[str, Any] | None:
             continue
         return issue
     return None
+
 
 async def propose_patch(issue: dict[str, Any]) -> tuple[dict[str, Any], dict[str, Any]]:
     router = FreeCloudRouter()
@@ -258,7 +263,7 @@ def run_verification(paths: list[str]) -> tuple[bool, str]:
             (["composer", "install", "--no-interaction", "--prefer-dist", "--no-progress"], platform),
             (["php", "artisan", "key:generate", "--force"], platform),
             (["php", "artisan", "migrate", "--force"], platform),
-            (["npm", "ci", "--no-audit", "--no-fund"], platform),
+            (["npm", "install", "--prefer-offline", "--no-audit", "--no-fund"], platform),
             (["composer", "ci:check"], platform),
         ])
     if any(path.startswith("crates/") for path in paths) and (ROOT / "Cargo.toml").exists():
@@ -270,6 +275,7 @@ def run_verification(paths: list[str]) -> tuple[bool, str]:
         if completed.returncode != 0:
             return False, "\n\n".join(output)
     return True, "\n\n".join(output)
+
 
 def reconcile_agent_prs(gh: GitHubClient) -> bool:
     progressed = False
@@ -319,6 +325,7 @@ def apply_patch(patch: str) -> None:
             raise RuntimeError(f"PATCH_APPLY_FAILED:{applied.stderr[-1000:]}")
     finally:
         patch_file.unlink(missing_ok=True)
+
 
 def commit_and_push(branch: str, issue: dict[str, Any], summary: str) -> None:
     run(["git", "config", "user.name", "KMJ Autonomous Worker"])
@@ -387,6 +394,7 @@ def execute_one(gh: GitHubClient, occupied_paths: set[str] | None = None) -> tup
         return True, set(paths)
     except NoFreeRouteAvailable:
         gh.remove_label(issue_number, RUNNING_LABEL)
+        print(f"KMJ autonomous worker: NO_FREE_ROUTE_AVAILABLE for issue #{issue_number}; task left open for retry.")
         return False, set()
     except Exception as exc:
         gh.remove_label(issue_number, RUNNING_LABEL)
@@ -406,13 +414,19 @@ def main() -> int:
     capacity = worker_capacity()
     occupied_paths = open_agent_paths(gh)
     available_slots = max(0, capacity - len(open_prs))
+    safe_issue_count = len(gh.safe_issues())
     for _ in range(available_slots):
         task_progressed, changed_paths = execute_one(gh, occupied_paths)
         progressed = task_progressed or progressed
         if not task_progressed:
             break
         occupied_paths.update(changed_paths)
-    print("KMJ autonomous worker:", "progressed" if progressed else "idle")
+    if progressed:
+        print("KMJ autonomous worker: progressed")
+    elif safe_issue_count == 0:
+        print("KMJ autonomous worker: idle:no-autonomous-safe-tasks")
+    else:
+        print("KMJ autonomous worker: idle:eligible-task-not-progressed")
     return 0
 
 
