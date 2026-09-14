@@ -82,7 +82,9 @@ final class StagingAuthenticatedSmokeCommand extends Command
         $route->bind($request);
 
         $previousRequest = app('request');
+        $previousTypedRequest = app(Request::class);
         app()->instance('request', $request);
+        app()->instance(Request::class, $request);
 
         try {
             $result = $route->run();
@@ -98,6 +100,7 @@ final class StagingAuthenticatedSmokeCommand extends Command
             );
         } finally {
             app()->instance('request', $previousRequest);
+            app()->instance(Request::class, $previousTypedRequest);
         }
 
         if (! $result instanceof InertiaResponse) {
