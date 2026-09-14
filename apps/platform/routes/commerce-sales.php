@@ -1,13 +1,13 @@
 <?php
 
 use App\Models\User;
+use App\Services\Commerce\CommercialProductPublisher;
 use App\Services\PlatformOwnerAccess;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
 use KMJ\MainPlatform\Catalog\Models\Product;
-use KMJ\MainPlatform\Catalog\Services\ProductCatalog;
 use KMJ\MainPlatform\Commerce\Models\CommercialOrder;
 use KMJ\MainPlatform\Commerce\Services\CommercialOrderService;
 use KMJ\MainPlatform\Organizations\Services\OrganizationCapabilityContext;
@@ -125,7 +125,7 @@ Route::middleware(['auth', 'verified', 'password.confirm'])
         Route::post('products', function (
             Request $request,
             PlatformOwnerAccess $access,
-            ProductCatalog $catalog,
+            CommercialProductPublisher $products,
         ) {
             $user = $request->user();
             abort_unless($user instanceof User, 401);
@@ -136,11 +136,11 @@ Route::middleware(['auth', 'verified', 'password.confirm'])
                 'name' => ['required', 'string', 'min:2', 'max:160'],
             ]);
 
-            $catalog->ensureCommercialProduct($validated['slug'], $validated['name']);
+            $products->publish($validated['slug'], $validated['name']);
 
             return redirect()
                 ->route('operator.index')
-                ->with('success', 'Commercial product is active for purchase requests.');
+                ->with('success', 'Commercial product and entitlement policy are active for purchase requests.');
         })->name('products.store');
 
         Route::post('orders/{order}/confirm', function (
