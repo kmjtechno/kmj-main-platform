@@ -49,7 +49,7 @@ jobs:
         run: |
           set -euo pipefail
           composer install --no-interaction --prefer-dist --no-progress
-          npm install --prefer-offline --no-audit --no-fund
+          npm ci --prefer-offline --no-audit --no-fund
 
       - name: Build frontend
         run: npm run build
@@ -63,10 +63,10 @@ jobs:
       - name: Check frontend types
         run: npm run types:check
 
-  backend:
+  backend-quality:
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     runs-on: [self-hosted, linux, x64, kmj-main-platform-ci]
-    timeout-minutes: 15
+    timeout-minutes: 12
     defaults:
       run:
         working-directory: apps/platform
@@ -83,28 +83,61 @@ jobs:
           composer --version
           php -r 'exit(PHP_VERSION_ID >= 80300 && PHP_VERSION_ID < 80600 ? 0 : 1);'
 
-      - name: Prepare isolated CI temp and database
+      - name: Install backend dependencies
+        run: composer install --no-interaction --prefer-dist --no-progress
+
+      - name: Prepare application environment
         run: |
           set -euo pipefail
+          test -f .env || cp .env.example .env
+          php artisan key:generate --force
           mkdir -p "${{ runner.temp }}/kmj-phpstan-${{ github.run_id }}-${{ github.job }}"
-          touch database/database.sqlite
+
+      - name: Check PHP formatting
+        run: composer run lint:check
+
+      - name: Check PHP static analysis
+        env:
+          TMPDIR: ${{ runner.temp }}/kmj-phpstan-${{ github.run_id }}-${{ github.job }}
+        run: composer run types:check
+
+  backend-tests:
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: [self-hosted, linux, x64, kmj-main-platform-ci]
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: apps/platform
+    env:
+      DB_CONNECTION: sqlite
+      DB_DATABASE: ${{ runner.temp }}/kmj-platform-${{ github.run_id }}-${{ github.job }}.sqlite
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Verify backend runtime
+        run: |
+          set -euo pipefail
+          php --version
+          composer --version
+          php -r 'exit(PHP_VERSION_ID >= 80300 && PHP_VERSION_ID < 80600 ? 0 : 1);'
+
+      - name: Prepare isolated CI database
+        run: |
+          set -euo pipefail
+          touch "${DB_DATABASE}"
 
       - name: Install backend dependencies
         run: composer install --no-interaction --prefer-dist --no-progress
 
       - name: Prepare application database
-        env:
-          DB_CONNECTION: sqlite
-          DB_DATABASE: ${{ github.workspace }}/apps/platform/database/database.sqlite
         run: |
           set -euo pipefail
           test -f .env || cp .env.example .env
           php artisan key:generate --force
           php artisan migrate --force
 
-      - name: Check PHP quality and tests
-        env:
-          DB_CONNECTION: sqlite
-          DB_DATABASE: ${{ github.workspace }}/apps/platform/database/database.sqlite
-          TMPDIR: ${{ runner.temp }}/kmj-phpstan-${{ github.run_id }}-${{ github.job }}
-        run: composer test
+      - name: Run backend tests
+        run: php artisan test
