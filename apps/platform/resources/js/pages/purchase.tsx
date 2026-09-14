@@ -124,8 +124,8 @@ export default function Purchase({
                         </div>
                         <p className="text-muted-foreground mt-1 text-xs">
                             Choose an organization and active commercial
-                            product. Price/payment facts are confirmed separately
-                            by the operator.
+                            product. Price/payment facts are confirmed
+                            separately by the operator.
                         </p>
 
                         <form onSubmit={submit} className="mt-6 space-y-4">
@@ -222,8 +222,8 @@ export default function Purchase({
                     <section className="bg-card rounded-2xl border p-5 sm:p-6">
                         <h2 className="font-bold">Your commercial requests</h2>
                         <p className="text-muted-foreground mt-1 text-xs">
-                            Requested → payment confirmed → entitlement fulfilled
-                            → governed license handoff.
+                            Requested → payment confirmed → entitlement
+                            fulfilled → governed license handoff.
                         </p>
 
                         {recentOrders.length === 0 ? (
