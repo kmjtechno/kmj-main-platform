@@ -2,6 +2,10 @@ name: Verify Foundation
 
 on:
   push:
+    branches:
+      - main
+      - staging-approved
+      - implementation/runtime-bootstrap
   pull_request:
 
 permissions:
