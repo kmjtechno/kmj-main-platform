@@ -84,18 +84,14 @@ final class StagingAuthenticatedSmokeCommand extends Command
         $route = $router->getRoutes()->match($request);
         $request->setRouteResolver(static fn () => $route);
 
-        $action = $route->getAction('uses');
-        if (! is_callable($action)) {
-            throw new RuntimeException("Smoke route {$uri} does not have a callable action.");
-        }
-
         $previousRequest = app('request');
         $previousTypedRequest = app(Request::class);
         app()->instance('request', $request);
         app()->instance(Request::class, $request);
 
         try {
-            $result = app()->call($action, ['request' => $request]);
+            // Laravel resolves both live and serialized route-cache actions here.
+            $result = $route->run();
         } catch (Throwable $exception) {
             throw new RuntimeException(
                 sprintf(
