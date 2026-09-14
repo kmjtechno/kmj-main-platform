@@ -57,7 +57,11 @@ final class StagingAuthenticatedSmokeCommand extends Command
             return self::SUCCESS;
         } catch (Throwable $exception) {
             report($exception);
-            $this->error('Authenticated staging surface smoke failed: '.$exception->getMessage());
+            $this->error(sprintf(
+                'Authenticated staging surface smoke failed with %s: %s',
+                $exception::class,
+                $exception->getMessage(),
+            ));
 
             return self::FAILURE;
         } finally {
@@ -82,6 +86,16 @@ final class StagingAuthenticatedSmokeCommand extends Command
 
         try {
             $result = $route->run();
+        } catch (Throwable $exception) {
+            throw new RuntimeException(
+                sprintf(
+                    'Smoke route %s execution failed with %s: %s',
+                    $uri,
+                    $exception::class,
+                    $exception->getMessage(),
+                ),
+                previous: $exception,
+            );
         } finally {
             app()->instance('request', $previousRequest);
         }
