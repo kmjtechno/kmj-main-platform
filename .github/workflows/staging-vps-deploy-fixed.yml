@@ -129,6 +129,19 @@ jobs:
           set -euo pipefail
           STAGING_PATH="$1"
           DEPLOY_SHA="$2"
+          timer_script="$HOME/bin/kmj-stage-deploy.sh"
+          if [ ! -r "$timer_script" ] \
+            || ! grep -Fq '.kmj-stage-deploy.lock' "$timer_script" \
+            || ! grep -Eq 'flock[[:space:]]+-n[[:space:]]+9' "$timer_script" \
+            || ! grep -Fq 'staging-approved' "$timer_script"; then
+            echo 'ERROR: Could not verify the existing staging timer and its shared writer lock.' >&2
+            exit 46
+          fi
+          echo 'Verified staging-approved timer and shared deployment lock.'
+          exec 9>"$HOME/.kmj-stage-deploy.lock"
+          echo 'Waiting for the staging deployment writer lock.'
+          flock -w 600 9
+          echo 'Acquired the staging deployment writer lock.'
           cd "$STAGING_PATH"
           git fetch --prune origin staging-approved
           git checkout -B staging-approved origin/staging-approved

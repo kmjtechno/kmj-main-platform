@@ -70,7 +70,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          for tool in ssh ssh-keygen ssh-keyscan curl python3; do
+          for tool in ssh ssh-keygen ssh-keyscan curl python3 flock; do
             command -v "$tool"
           done
           chrome="$(command -v google-chrome || command -v chromium || command -v chromium-browser || true)"
