@@ -83,9 +83,10 @@ jobs:
           composer --version
           php -r 'exit(PHP_VERSION_ID >= 80300 && PHP_VERSION_ID < 80600 ? 0 : 1);'
 
-      - name: Prepare deterministic CI database
+      - name: Prepare isolated CI temp and database
         run: |
           set -euo pipefail
+          mkdir -p "${{ runner.temp }}/kmj-phpstan-${{ github.run_id }}-${{ github.job }}"
           touch database/database.sqlite
 
       - name: Install backend dependencies
@@ -105,4 +106,5 @@ jobs:
         env:
           DB_CONNECTION: sqlite
           DB_DATABASE: ${{ github.workspace }}/apps/platform/database/database.sqlite
+          TMPDIR: ${{ runner.temp }}/kmj-phpstan-${{ github.run_id }}-${{ github.job }}
         run: composer test
