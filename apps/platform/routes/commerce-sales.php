@@ -10,6 +10,8 @@ use Inertia\Inertia;
 use KMJ\MainPlatform\Catalog\Models\Product;
 use KMJ\MainPlatform\Commerce\Models\CommercialOrder;
 use KMJ\MainPlatform\Commerce\Services\CommercialOrderService;
+use KMJ\MainPlatform\Entitlements\Models\EntitlementPolicy;
+use KMJ\MainPlatform\Entitlements\Services\EntitlementIssuer;
 use KMJ\MainPlatform\Organizations\Services\OrganizationCapabilityContext;
 use KMJ\MainPlatform\Organizations\Services\OrganizationDirectory;
 
@@ -171,4 +173,35 @@ Route::middleware(['auth', 'verified', 'password.confirm'])
                 ->route('operator.index')
                 ->with('success', 'Payment evidence confirmed. Entitlement still requires explicit fulfillment.');
         })->name('orders.confirm');
+
+        Route::post('orders/{order}/fulfill', function (
+            Request $request,
+            string $order,
+            PlatformOwnerAccess $access,
+            EntitlementIssuer $entitlements,
+        ) {
+            $user = $request->user();
+            abort_unless($user instanceof User, 401);
+            $access->require($user);
+
+            $commercialOrder = CommercialOrder::query()->findOrFail($order);
+            abort_unless($commercialOrder->status === 'confirmed', 409);
+
+            $productId = (string) $commercialOrder->product_id;
+            $policy = EntitlementPolicy::query()
+                ->where('product_id', $productId)
+                ->where('code', 'commercial.'.$productId.'.default')
+                ->where('status', 'active')
+                ->firstOrFail();
+
+            $entitlements->issue(
+                (string) $commercialOrder->organization_id,
+                $policy,
+                'commercial-order:'.$commercialOrder->getKey(),
+            );
+
+            return redirect()
+                ->route('operator.index')
+                ->with('success', 'Confirmed order fulfilled into an active entitlement.');
+        })->name('orders.fulfill');
     });
