@@ -64,12 +64,8 @@ jobs:
           npm install --no-audit --no-fund
           npm run build
 
-      - name: Diagnose frontend format
-        run: |
-          set -euo pipefail
-          ./node_modules/.bin/vp fmt resources/js/data/delivery-progress.ts
-          git diff -- resources/js/data/delivery-progress.ts
-          exit 1
+      - name: Check frontend format
+        run: ./node_modules/.bin/vp fmt --check
 
       - name: Check frontend lint
         run: ./node_modules/.bin/vp lint
