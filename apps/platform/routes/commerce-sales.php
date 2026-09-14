@@ -10,6 +10,7 @@ use Inertia\Inertia;
 use KMJ\MainPlatform\Catalog\Models\Product;
 use KMJ\MainPlatform\Commerce\Models\CommercialOrder;
 use KMJ\MainPlatform\Commerce\Services\CommercialOrderService;
+use KMJ\MainPlatform\Entitlements\Models\EntitlementPolicy;
 use KMJ\MainPlatform\Organizations\Services\OrganizationCapabilityContext;
 use KMJ\MainPlatform\Organizations\Services\OrganizationDirectory;
 
@@ -34,8 +35,16 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
             ->map(static fn (mixed $id): string => (string) $id)
             ->all();
 
+        $fulfillableProductIds = EntitlementPolicy::query()
+            ->where('status', 'active')
+            ->pluck('product_id')
+            ->unique()
+            ->values()
+            ->all();
+
         $products = Product::query()
             ->where('status', 'active')
+            ->whereIn('id', $fulfillableProductIds)
             ->orderBy('name')
             ->get(['id', 'slug', 'name', 'status']);
 
@@ -109,6 +118,14 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
             ->whereKey($validated['product_id'])
             ->where('status', 'active')
             ->firstOrFail();
+
+        abort_unless(
+            EntitlementPolicy::query()
+                ->where('product_id', $validated['product_id'])
+                ->where('status', 'active')
+                ->exists(),
+            404,
+        );
 
         $orders->request(
             $validated['organization_id'],
