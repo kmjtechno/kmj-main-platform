@@ -242,7 +242,8 @@ export const deliveryMilestones: DeliveryMilestone[] = [
         id: 'staging-live-monitor',
         title: 'Staging live operations monitor',
         state: 'active',
-        detail: 'Temporary /info surface with live runtime, VPS, queue, runner, AI-route and deployment telemetry under CI verification',
+        detail: 'Exact staging-host requests and production-host isolation for /info and /info/status are under verification; deployment recovery is in progress',
+        evidence: 'PR #129',
     },
     {
         id: 'ops-readiness-evidence',
