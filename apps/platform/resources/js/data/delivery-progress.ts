@@ -180,8 +180,15 @@ export const deliveryMilestones: DeliveryMilestone[] = [
     {
         id: 'issuer-positive-license-lifetime',
         title: 'Issuer positive lifetime parity',
-        state: 'active',
+        state: 'verified',
         detail: 'Reject same-second expiry before signing so the sandbox issuer cannot create a token that the validator must immediately reject',
+        evidence: 'PR #120',
+    },
+    {
+        id: 'manual-sales-earning-lane',
+        title: 'Manual sales earning lane',
+        state: 'active',
+        detail: 'Customer Purchase Center + commercial product activation + owner-confirmed external payment evidence before governed entitlement/license fulfillment',
     },
     {
         id: 'organization-capabilities',

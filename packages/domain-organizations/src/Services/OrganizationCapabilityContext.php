@@ -10,12 +10,14 @@ final class OrganizationCapabilityContext
         'owner' => [
             'organization.manage',
             'catalog.manage',
+            'commerce.purchase',
             'entitlement.manage',
             'license.manage',
             'security.manage',
         ],
         'admin' => [
             'catalog.manage',
+            'commerce.purchase',
             'entitlement.manage',
             'license.manage',
         ],

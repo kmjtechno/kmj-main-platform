@@ -57,7 +57,11 @@ final class StagingAuthenticatedSmokeCommand extends Command
             return self::SUCCESS;
         } catch (Throwable $exception) {
             report($exception);
-            $this->error('Authenticated staging surface smoke failed: '.$exception->getMessage());
+            $this->error(sprintf(
+                'Authenticated staging surface smoke failed with %s: %s',
+                $exception::class,
+                $exception->getMessage(),
+            ));
 
             return self::FAILURE;
         } finally {
@@ -75,13 +79,30 @@ final class StagingAuthenticatedSmokeCommand extends Command
 
         $route = $router->getRoutes()->match($request);
         $request->setRouteResolver(static fn () => $route);
+        $route->bind($request);
 
-        $action = $route->getAction('uses');
-        if (! is_callable($action)) {
-            throw new RuntimeException("Smoke route {$uri} does not have a callable action.");
+        $previousRequest = app('request');
+        $previousTypedRequest = app(Request::class);
+        app()->instance('request', $request);
+        app()->instance(Request::class, $request);
+
+        try {
+            $result = $route->run();
+        } catch (Throwable $exception) {
+            throw new RuntimeException(
+                sprintf(
+                    'Smoke route %s execution failed with %s: %s',
+                    $uri,
+                    $exception::class,
+                    $exception->getMessage(),
+                ),
+                previous: $exception,
+            );
+        } finally {
+            app()->instance('request', $previousRequest);
+            app()->instance(Request::class, $previousTypedRequest);
         }
 
-        $result = app()->call($action, ['request' => $request]);
         if (! $result instanceof InertiaResponse) {
             throw new RuntimeException("Smoke route {$uri} did not return an Inertia response.");
         }
