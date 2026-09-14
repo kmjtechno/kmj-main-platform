@@ -5,6 +5,7 @@ namespace Tests\Feature\Commerce;
 use App\Models\User;
 use DomainException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use InvalidArgumentException;
 use KMJ\MainPlatform\Catalog\Models\Product;
 use KMJ\MainPlatform\Commerce\Services\CommercialOrderService;
 use KMJ\MainPlatform\Organizations\Services\OrganizationCreator;
@@ -96,6 +97,35 @@ final class CommercialOrderServiceTest extends TestCase
         );
         self::assertSame($order->getKey(), $replayed->getKey());
         $this->assertDatabaseCount('commerce_ledger', 2);
+    }
+
+    public function test_confirmation_rejects_zero_value_payment_evidence(): void
+    {
+        $requester = User::factory()->create();
+        $operator = User::factory()->create();
+        $organization = app(OrganizationCreator::class)->create('Zero Value Guard', $requester->id);
+        $product = Product::query()->create([
+            'slug' => 'zero-value-guard',
+            'name' => 'Zero Value Guard Product',
+            'status' => 'preview',
+        ]);
+
+        $orders = app(CommercialOrderService::class);
+        $order = $orders->request(
+            $organization->getKey(),
+            $product->getKey(),
+            $requester->id,
+            'request:zero-value-guard:1',
+        );
+
+        $this->expectException(InvalidArgumentException::class);
+        $orders->confirm(
+            $order->getKey(),
+            $operator->id,
+            'INR',
+            0,
+            'zero-value-reference',
+        );
     }
 
     public function test_idempotency_key_cannot_be_reused_for_different_commercial_request(): void
