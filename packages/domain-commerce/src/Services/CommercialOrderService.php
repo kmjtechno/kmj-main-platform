@@ -58,8 +58,8 @@ final class CommercialOrderService
         $currency = strtoupper(trim($currency));
         $confirmationReference = trim($confirmationReference);
 
-        if ($orderId === '' || $actorUserId < 1 || $amountMinor < 0 || ! preg_match('/^[A-Z]{3}$/', $currency) || $confirmationReference === '') {
-            throw new InvalidArgumentException('A valid order, actor, currency, amount and confirmation reference are required.');
+        if ($orderId === '' || $actorUserId < 1 || $amountMinor < 1 || ! preg_match('/^[A-Z]{3}$/', $currency) || $confirmationReference === '') {
+            throw new InvalidArgumentException('A valid order, actor, currency, positive amount and confirmation reference are required.');
         }
 
         return DB::transaction(function () use ($orderId, $actorUserId, $currency, $amountMinor, $confirmationReference): CommercialOrder {
