@@ -81,6 +81,7 @@ jobs:
           set -euo pipefail
           source /home/kmjrunner/.cargo/env
           rustup default stable
+          rustup component add rustfmt
           cargo fmt --manifest-path services/license-core/Cargo.toml --check
           cargo test --manifest-path services/license-core/Cargo.toml --locked
       - name: Verify module architecture
