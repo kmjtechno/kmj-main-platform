@@ -9,7 +9,7 @@ permissions:
 
 jobs:
   verify:
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux, x64, kmj-main-platform-ci]
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
@@ -78,7 +78,11 @@ jobs:
         run: python scripts/verify_contracts.py
       - name: Verify Rust sandbox license core
         run: |
+          set -euo pipefail
+          RUNNER_USER_HOME="$(getent passwd "$(id -un)" | cut -d: -f6)"
+          source "${RUNNER_USER_HOME}/.cargo/env"
           rustup default stable
+          rustup component add rustfmt
           cargo fmt --manifest-path services/license-core/Cargo.toml --check
           cargo test --manifest-path services/license-core/Cargo.toml --locked
       - name: Verify module architecture

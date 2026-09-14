@@ -1,0 +1,42 @@
+name: Self-Hosted Runner Health
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - '.github/workflows/self-hosted-runner-health.yml'
+      - 'ops/self-hosted-runner/**'
+      - 'docs/ops/SELF_HOSTED_CI_RUNNER.md'
+
+permissions:
+  contents: read
+
+jobs:
+  health:
+    runs-on: [self-hosted, linux, x64, kmj-main-platform-ci]
+    timeout-minutes: 10
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+
+      - name: Verify runner identity and toolchain
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "runner=${RUNNER_NAME:-unknown}"
+          uname -a
+          git --version
+          php -v || true
+          composer --version || true
+          node --version || true
+          npm --version || true
+
+      - name: Verify repository checkout
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f apps/platform/composer.json
+          test -f apps/platform/package.json
+          git status --short
