@@ -128,6 +128,49 @@ final class CommercialOrderServiceTest extends TestCase
         );
     }
 
+    public function test_confirmation_reference_cannot_be_reused_for_another_order(): void
+    {
+        $requester = User::factory()->create();
+        $operator = User::factory()->create();
+        $organization = app(OrganizationCreator::class)->create('Payment Evidence Guard', $requester->id);
+        $product = Product::query()->create([
+            'slug' => 'payment-evidence-guard',
+            'name' => 'Payment Evidence Guard Product',
+            'status' => 'preview',
+        ]);
+
+        $orders = app(CommercialOrderService::class);
+        $first = $orders->request(
+            $organization->getKey(),
+            $product->getKey(),
+            $requester->id,
+            'request:payment-evidence-guard:1',
+        );
+        $second = $orders->request(
+            $organization->getKey(),
+            $product->getKey(),
+            $requester->id,
+            'request:payment-evidence-guard:2',
+        );
+
+        $orders->confirm(
+            $first->getKey(),
+            $operator->id,
+            'INR',
+            125000,
+            'manual-receipt-unique-001',
+        );
+
+        $this->expectException(DomainException::class);
+        $orders->confirm(
+            $second->getKey(),
+            $operator->id,
+            'INR',
+            125000,
+            'manual-receipt-unique-001',
+        );
+    }
+
     public function test_idempotency_key_cannot_be_reused_for_different_commercial_request(): void
     {
         $user = User::factory()->create();
