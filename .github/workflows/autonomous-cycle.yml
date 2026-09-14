@@ -43,13 +43,18 @@ jobs:
           grep -q 'unknown_cost_is_free: false' config/free-cloud-routing.yaml
           PYTHONPATH=. python scripts/verify_free_router.py
 
-      - name: Run autonomous recovery verification pack
+      - name: Run autonomous recovery verification pack in parallel
         shell: bash
         run: |
           set -euo pipefail
-          PYTHONPATH=. python scripts/verify_architecture.py
-          PYTHONPATH=. python scripts/verify_contracts.py
-          PYTHONPATH=. python scripts/verify_runtime.py
+          PYTHONPATH=. python scripts/verify_architecture.py & p1=$!
+          PYTHONPATH=. python scripts/verify_contracts.py & p2=$!
+          PYTHONPATH=. python scripts/verify_runtime.py & p3=$!
+          status=0
+          wait "$p1" || status=1
+          wait "$p2" || status=1
+          wait "$p3" || status=1
+          exit "$status"
 
       - name: Check staging promotion drift
         shell: bash
@@ -68,6 +73,7 @@ jobs:
             else
               echo '- promotion drift: detected; staging promotion/deploy chain must continue'
             fi
+            echo '- recovery verification: architecture/contracts/runtime executed in parallel'
             echo '- free-cloud policy: enforced'
             echo '- paid fallback: prohibited'
             echo '- local LLM inference: prohibited'
