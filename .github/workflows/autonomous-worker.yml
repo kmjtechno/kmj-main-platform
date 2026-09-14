@@ -21,7 +21,7 @@ permissions:
 
 jobs:
   worker:
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux, x64, kmj-main-platform-ci]
     timeout-minutes: 30
     environment: staging
     env:
@@ -44,17 +44,16 @@ jobs:
           python-version: '3.13'
           cache: pip
 
-      - name: Setup PHP
-        uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240
-        with:
-          php-version: '8.5'
-          tools: composer:v2
-          coverage: none
-
-      - name: Setup Node
-        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
-        with:
-          node-version: '22'
+      - name: Verify pre-provisioned PHP and Node runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          php --version
+          composer --version
+          node --version
+          npm --version
+          php -r 'exit(PHP_VERSION_ID >= 80300 && PHP_VERSION_ID < 80600 ? 0 : 1);'
+          node -e 'const m=Number(process.versions.node.split(".")[0]); process.exit(m === 22 ? 0 : 1)'
 
       - name: Install worker dependencies
         run: pip install -r requirements.txt
