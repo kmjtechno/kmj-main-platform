@@ -21,6 +21,8 @@ SAFE_LABEL = "autonomous-safe"
 RUNNING_LABEL = "autonomous-running"
 AGENT_LABEL = "autonomous-agent"
 BLOCKED_LABEL = "autonomous-blocked"
+PENDING_LABEL = "autonomous-pr-pending"
+CHECKPOINT_PREFIX = "KMJ-Prepared-PR: "
 ALLOWED_PREFIXES = ("apps/platform/", "crates/", "contracts/", "docs/")
 DENIED_PREFIXES = (
     ".github/", "controller/", "config/", "mission/", "infra/", ".env", "secrets/",
@@ -137,6 +139,42 @@ def extract_model_json(result: dict[str, Any]) -> dict[str, Any]:
     return payload
 
 
+def github_failure(exc: httpx.HTTPStatusError) -> dict[str, Any]:
+    try:
+        message = str(exc.response.json().get("message", "")).lower()
+    except (ValueError, AttributeError):
+        message = ""
+    reasons = {
+        "github actions is not permitted to create or approve pull requests": "ACTIONS_PR_CREATION_DISABLED",
+        "resource not accessible by integration": "TOKEN_PERMISSION_DENIED",
+        "bad credentials": "TOKEN_AUTHENTICATION_FAILED",
+        "validation failed": "REQUEST_VALIDATION_FAILED",
+    }
+    reason = next((value for text, value in reasons.items() if text in message), "HTTP_REQUEST_FAILED")
+    return {"status": exc.response.status_code, "method": exc.request.method,
+            "endpoint": exc.request.url.path, "reason": reason}
+
+
+def validate_checkpoint(record: dict[str, Any], issue_number: int) -> dict[str, Any]:
+    if not isinstance(record, dict):
+        raise ValueError("PREPARED_CHECKPOINT_INVALID")
+    branch, sha, paths = record.get("branch"), record.get("sha"), record.get("paths")
+    if not isinstance(branch, str) or not re.fullmatch(rf"agent/auto-{issue_number}-[0-9]+", branch):
+        raise ValueError("PREPARED_BRANCH_INVALID")
+    if not isinstance(sha, str) or not re.fullmatch(r"[0-9a-f]{40}", sha):
+        raise ValueError("PREPARED_SHA_INVALID")
+    if not isinstance(paths, list) or not paths or len(paths) > MAX_PATCH_FILES:
+        raise ValueError("PREPARED_PATHS_INVALID")
+    for path in paths:
+        if not isinstance(path, str) or not re.fullmatch(r"[^\s]+", path):
+            raise ValueError("PREPARED_PATH_INVALID")
+        validate_patch(f"diff --git a/{path} b/{path}\n--- a/{path}\n+++ b/{path}\n")
+    model = record.get("model")
+    if not isinstance(model, str) or not re.fullmatch(r"[A-Za-z0-9_./:-]{1,120}", model):
+        raise ValueError("PREPARED_MODEL_INVALID")
+    return {"branch": branch, "sha": sha, "paths": paths, "model": model}
+
+
 class GitHubClient:
     def __init__(self) -> None:
         token = os.getenv("GITHUB_TOKEN", "")
@@ -153,7 +191,12 @@ class GitHubClient:
 
     def request(self, method: str, path: str, **kwargs: Any) -> Any:
         response = self.client.request(method, f"{API}/repos/{REPO}{path}", **kwargs)
-        response.raise_for_status()
+        try:
+            response.raise_for_status()
+        except httpx.HTTPStatusError as exc:
+            if not (path == "/labels" and response.status_code == 422):
+                print("KMJ GitHub API: " + json.dumps(github_failure(exc)), flush=True)
+            raise
         if response.status_code == 204 or not response.content:
             return None
         return response.json()
@@ -162,6 +205,7 @@ class GitHubClient:
         for name, color in (
             (SAFE_LABEL, "0e8a16"), (RUNNING_LABEL, "fbca04"),
             (AGENT_LABEL, "5319e7"), (BLOCKED_LABEL, "b60205"),
+            (PENDING_LABEL, "d4c5f9"),
         ):
             try:
                 self.request("POST", "/labels", json={"name": name, "color": color})
@@ -174,6 +218,20 @@ class GitHubClient:
             "GET", f"/issues?state=open&labels={SAFE_LABEL}&sort=created&direction=asc&per_page=50",
         )
         return [item for item in issues if "pull_request" not in item]
+
+    def pending_issues(self) -> list[dict[str, Any]]:
+        issues = self.request("GET", f"/issues?state=open&labels={SAFE_LABEL},{PENDING_LABEL}&per_page=50")
+        return [item for item in issues if "pull_request" not in item]
+
+    def prepared_checkpoint(self, issue_number: int) -> dict[str, Any]:
+        comments = self.request("GET", f"/issues/{issue_number}/comments?per_page=100")
+        for comment in reversed(comments):
+            if comment.get("user", {}).get("login") != "github-actions[bot]":
+                continue
+            for line in str(comment.get("body", "")).splitlines():
+                if line.startswith(CHECKPOINT_PREFIX):
+                    return validate_checkpoint(json.loads(line[len(CHECKPOINT_PREFIX):]), issue_number)
+        raise ValueError("PREPARED_CHECKPOINT_MISSING")
 
     def labels(self, issue_number: int) -> set[str]:
         issue = self.request("GET", f"/issues/{issue_number}")
@@ -234,7 +292,7 @@ def issue_text(issue: dict[str, Any]) -> str:
 def select_issue(gh: GitHubClient) -> dict[str, Any] | None:
     for issue in gh.safe_issues():
         labels = {str(x.get("name")) for x in issue.get("labels", [])}
-        if RUNNING_LABEL in labels or BLOCKED_LABEL in labels:
+        if RUNNING_LABEL in labels or BLOCKED_LABEL in labels or PENDING_LABEL in labels:
             continue
         risk = task_risk(issue_text(issue))
         if risk:
@@ -406,18 +464,12 @@ def execute_one(gh: GitHubClient, occupied_paths: set[str] | None = None) -> tup
         summary = str(payload.get("summary", "Autonomous safe task"))
         commit_and_push(branch, issue, summary)
         model_name = str(model_result.get("model", "verified-free-cloud"))
-        body = (
-            f"Autonomous-Issue: {issue_number}\n\n"
-            f"Implements #{issue_number} through the execution-gated KMJ worker.\n\n"
-            f"Model route: `{model_name}`\n"
-            f"Changed paths: {', '.join(f'`{p}`' for p in paths)}\n\n"
-            "Local verification completed successfully before push. "
-            "This PR must still pass repository CI before autonomous merge.\n\n"
-            f"Closes #{issue_number}"
-        )
-        pr = gh.create_pr(f"agent: {issue.get('title', '')}", branch, body)
-        gh.add_labels(int(pr["number"]), [AGENT_LABEL])
-        gh.comment(issue_number, f"Autonomous worker opened PR #{pr['number']} after local verification. Waiting for required CI checks.")
+        sha = run(["git", "rev-parse", "HEAD"]).stdout.strip()
+        record = validate_checkpoint({"branch": branch, "sha": sha, "paths": paths, "model": model_name}, issue_number)
+        print(CHECKPOINT_PREFIX + json.dumps(record), flush=True)
+        gh.comment(issue_number, CHECKPOINT_PREFIX + json.dumps(record))
+        gh.add_labels(issue_number, [PENDING_LABEL])
+        submit_prepared_pr(gh, issue, record)
         return True, set(paths)
     except NoFreeRouteAvailable:
         gh.remove_label(issue_number, RUNNING_LABEL)
@@ -430,6 +482,49 @@ def execute_one(gh: GitHubClient, occupied_paths: set[str] | None = None) -> tup
         return True, set()
 
 
+def submit_prepared_pr(gh: GitHubClient, issue: dict[str, Any], record: dict[str, Any]) -> bool:
+    number = int(issue["number"])
+    try:
+        ref = gh.request("GET", f"/git/ref/heads/{record['branch']}")
+        if ref.get("object", {}).get("sha") != record["sha"]:
+            raise ValueError("PREPARED_BRANCH_MOVED")
+        existing = next((pr for pr in gh.open_agent_prs() if pr.get("head", {}).get("ref") == record["branch"]), None)
+        body = (f"Autonomous-Issue: {number}\n\nCloses #{number}\n\n"
+                f"Prepared commit: `{record['sha']}`\nModel route: `{record['model']}`\n\n"
+                "Patch safety and local verification passed before the prepared commit was pushed. "
+                "Required repository CI must succeed before merge.")
+        pr = existing or gh.create_pr(f"agent: {issue.get('title', '')}", record["branch"], body)
+        gh.add_labels(int(pr["number"]), [AGENT_LABEL])
+        gh.remove_label(number, PENDING_LABEL)
+        gh.comment(number, f"Prepared commit submitted as PR #{pr['number']}; no AI regeneration. Waiting for CI.")
+        return True
+    except httpx.HTTPStatusError as exc:
+        failure = github_failure(exc)
+        if exc.response.status_code < 500 and exc.response.status_code != 429:
+            gh.add_labels(number, [BLOCKED_LABEL])
+        gh.comment(number, "Prepared branch is preserved. PR submission failed: `" + json.dumps(failure) +
+                   "`. No merge was attempted. Permission failures require owner resolution before retry.")
+        return False
+
+
+def resume_prepared_prs(gh: GitHubClient) -> bool:
+    progressed = False
+    for issue in gh.pending_issues():
+        labels = {str(label.get("name")) for label in issue.get("labels", [])}
+        if BLOCKED_LABEL in labels:
+            continue
+        number = int(issue["number"])
+        try:
+            if task_risk(issue_text(issue)):
+                raise ValueError("PREPARED_TASK_REQUIRES_REVIEW")
+            record = gh.prepared_checkpoint(number)
+            progressed = submit_prepared_pr(gh, issue, record) or progressed
+        except (ValueError, KeyError, TypeError) as exc:
+            gh.add_labels(number, [BLOCKED_LABEL])
+            gh.comment(number, f"Prepared task stopped: `{type(exc).__name__}`. Branch is preserved; no AI regeneration.")
+    return progressed
+
+
 def main() -> int:
     if not enabled("KMJ_EXECUTION_ENABLED") or not enabled("KMJ_AUTONOMOUS_WRITE_ENABLED"):
         print("KMJ autonomous worker: execution gate is closed; no repository writes performed.")
@@ -437,10 +532,18 @@ def main() -> int:
     gh = GitHubClient()
     gh.ensure_labels()
     progressed = reconcile_agent_prs(gh)
+    progressed = resume_prepared_prs(gh) or progressed
     open_prs = gh.open_agent_prs()
     capacity = worker_capacity()
     occupied_paths = open_agent_paths(gh)
-    available_slots = max(0, capacity - len(open_prs))
+    pending = gh.pending_issues()
+    for issue in pending:
+        try:
+            occupied_paths.update(gh.prepared_checkpoint(int(issue["number"]))["paths"])
+        except (ValueError, KeyError, TypeError):
+            # Unknown prepared state reserves all task capacity until reviewed.
+            return 0
+    available_slots = max(0, capacity - len(open_prs) - len(pending))
     safe_issue_count = len(gh.safe_issues())
     for _ in range(available_slots):
         task_progressed, changed_paths = execute_one(gh, occupied_paths)

@@ -236,7 +236,7 @@ export const deliveryMilestones: DeliveryMilestone[] = [
         id: 'verified-free-ai-route',
         title: 'Verified-free AI route',
         state: 'active',
-        detail: 'Real zero-cost cloud response verified on the VPS and published to the monitor; structured patch output is being verified end to end',
+        detail: 'Real zero-cost task produced a verified branch on the VPS; prepared-commit checkpoints now preserve work and expose GitHub PR submission blockers',
     },
     {
         id: 'revenue-working-phase',
