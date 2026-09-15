@@ -280,4 +280,3 @@ export const deliveryProgressMeta = {
     note: 'Evidence-based delivery milestones, not total product completion.',
     refreshed: '2026-09-15',
 } as const;
-

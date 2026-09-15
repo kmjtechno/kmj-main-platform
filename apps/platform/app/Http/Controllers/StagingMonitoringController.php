@@ -164,13 +164,16 @@ final class StagingMonitoringController extends Controller
         $path = storage_path('app/monitoring/ai-worker.json');
         $raw = @file_get_contents($path, false, null, 0, 4096);
         $proof = is_string($raw) ? json_decode($raw, true) : null;
-        if (! is_array($proof)
+
+        if (
+            ! is_array($proof)
             || ($proof['provider'] ?? null) !== 'opencode-client'
             || ($proof['model'] ?? null) !== 'opencode/big-pickle'
             || ($proof['status'] ?? null) !== 'verified'
             || ! in_array($proof['cost'] ?? null, [0, 0.0], true)
             || ! is_int($proof['verified_at'] ?? null)
-            || ! is_numeric($proof['latency_ms'] ?? null)) {
+            || ! is_numeric($proof['latency_ms'] ?? null)
+        ) {
             return null;
         }
 
@@ -376,4 +379,3 @@ final class StagingMonitoringController extends Controller
         return round((hrtime(true) - $startedAt) / 1_000_000, 1);
     }
 }
-

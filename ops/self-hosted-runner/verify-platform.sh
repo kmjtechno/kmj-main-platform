@@ -59,6 +59,16 @@ install_frontend() {
     npm install --prefer-offline --no-audit --no-fund
   fi
 }
+verify_php() {
+  if composer test; then
+    return 0
+  fi
+  # Show the concrete formatter diff on failure so repair does not need another CI cycle.
+  if [ -f vendor/bin/pint ]; then
+    php vendor/bin/pint --test -v || true
+  fi
+  return 1
+}
 verify_frontend() {
   ./node_modules/.bin/vp fmt --check
   ./node_modules/.bin/vp lint
@@ -77,7 +87,7 @@ php artisan migrate --force
 npm run build
 
 checks_started=$SECONDS
-start_task php-quality-and-tests composer test
+start_task php-quality-and-tests verify_php
 start_task frontend-quality verify_frontend
 wait_tasks
 echo "Parallel quality checks elapsed: $((SECONDS - checks_started)) seconds"
