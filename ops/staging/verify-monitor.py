@@ -55,6 +55,8 @@ print(json.dumps({
     'status': status.get('status'),
     'database': status.get('runtime', {}).get('database'),
     'deployed_sha': deployed,
+    'ai_recently_verified': status.get('runtime', {}).get('ai_router_online'),
+    'ai_last_verified_at': status.get('runtime', {}).get('ai_last_verified_at'),
     'expected_sha': expected_sha,
     'result': 'PASS',
 }))
