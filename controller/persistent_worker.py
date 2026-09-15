@@ -228,9 +228,9 @@ class GitHubClient:
         for comment in reversed(comments):
             if comment.get("user", {}).get("login") != "github-actions[bot]":
                 continue
-            for line in str(comment.get("body", "")).splitlines():
-                if line.startswith(CHECKPOINT_PREFIX):
-                    return validate_checkpoint(json.loads(line[len(CHECKPOINT_PREFIX):]), issue_number)
+            body = str(comment.get("body", ""))
+            if body.startswith(CHECKPOINT_PREFIX):
+                return validate_checkpoint(json.loads(body[len(CHECKPOINT_PREFIX):]), issue_number)
         raise ValueError("PREPARED_CHECKPOINT_MISSING")
 
     def labels(self, issue_number: int) -> set[str]:

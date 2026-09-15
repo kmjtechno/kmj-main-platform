@@ -198,6 +198,9 @@ class PreparedPullRequestTests(unittest.TestCase):
         with patch.object(gh, "request", return_value=[{"user": {"login": "someone"}, "body": body}]):
             with self.assertRaisesRegex(ValueError, "CHECKPOINT_MISSING"):
                 gh.prepared_checkpoint(42)
+        with patch.object(gh, "request", return_value=[{"user": {"login": "github-actions[bot]"}, "body": "Verification output:\n" + body}]):
+            with self.assertRaisesRegex(ValueError, "CHECKPOINT_MISSING"):
+                gh.prepared_checkpoint(42)
         with patch.object(gh, "request", return_value=[{"user": {"login": "github-actions[bot]"}, "body": body}]):
             self.assertEqual(gh.prepared_checkpoint(42), self.record)
 
