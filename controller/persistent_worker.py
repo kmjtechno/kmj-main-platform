@@ -105,9 +105,10 @@ def paths_conflict(candidate: list[str] | set[str], occupied: list[str] | set[st
     return False
 
 
-def run(cmd: list[str], cwd: Path = ROOT, timeout: int = 900) -> subprocess.CompletedProcess[str]:
+def run(cmd: list[str], cwd: Path = ROOT, timeout: int = 900, env: dict[str, str] | None = None) -> subprocess.CompletedProcess[str]:
     return subprocess.run(
         cmd, cwd=cwd, text=True, capture_output=True, timeout=timeout, check=False,
+        env={**os.environ, **(env or {})},
     )
 
 
@@ -419,21 +420,21 @@ Keep the change minimal and reversible. Do not claim tests passed; only list tes
 
 
 def run_verification(paths: list[str]) -> tuple[bool, str]:
-    commands: list[tuple[list[str], Path]] = [
-        (["python", "scripts/verify_architecture.py"], ROOT),
-        (["python", "scripts/verify_contracts.py"], ROOT),
-        (["python", "scripts/verify_runtime.py"], ROOT),
-        (["python", "scripts/verify_free_router.py"], ROOT),
+    commands: list[tuple[list[str], Path, dict[str, str] | None]] = [
+        (["python", "scripts/verify_architecture.py"], ROOT, None),
+        (["python", "scripts/verify_contracts.py"], ROOT, None),
+        (["python", "scripts/verify_runtime.py"], ROOT, None),
+        (["python", "scripts/verify_free_router.py"], ROOT, None),
     ]
     if any(path.startswith("apps/platform/") for path in paths):
-        commands.append((
-            ["bash", "ops/self-hosted-runner/verify-platform.sh"], ROOT,
-        ))
+        format_paths = [path.removeprefix("apps/platform/") for path in paths if path.startswith("apps/platform/resources/js/") and Path(path).suffix in {".js", ".jsx", ".ts", ".tsx", ".css"}]
+        platform_env = {"KMJ_FORMAT_PATHS": "\n".join(format_paths)} if format_paths else None
+        commands.append((["bash", "ops/self-hosted-runner/verify-platform.sh"], ROOT, platform_env))
     if any(path.startswith("crates/") for path in paths) and (ROOT / "Cargo.toml").exists():
-        commands.append((["cargo", "test", "--workspace"], ROOT))
+        commands.append((["cargo", "test", "--workspace"], ROOT, None))
     output: list[str] = []
-    for cmd, cwd in commands:
-        completed = run(cmd, cwd=cwd)
+    for cmd, cwd, command_env in commands:
+        completed = run(cmd, cwd=cwd, env=command_env)
         output.append(f"$ {' '.join(cmd)}\n{completed.stdout[-3000:]}\n{completed.stderr[-3000:]}")
         if completed.returncode != 0:
             return False, "\n\n".join(output)
