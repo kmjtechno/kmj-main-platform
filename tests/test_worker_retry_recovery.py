@@ -3,7 +3,9 @@ import unittest
 from pathlib import Path
 
 
-WATCHDOG_PATH = Path(__file__).resolve().parents[1] / "controller" / "continuity_watchdog.py"
+ROOT = Path(__file__).resolve().parents[1]
+WATCHDOG_PATH = ROOT / "controller" / "continuity_watchdog.py"
+CYCLE_WORKFLOW = ROOT / ".github" / "workflows" / "autonomous-cycle.yml"
 
 
 class ContinuityWatchdogContractTests(unittest.TestCase):
@@ -80,6 +82,15 @@ class ContinuityWatchdogContractTests(unittest.TestCase):
         self.assertEqual(gh.removed, [(142, "autonomous-blocked")])
         self.assertEqual(gh.dispatched, 1)
         self.assertTrue(any("requeued" in body.lower() for _, body in gh.comments))
+
+    def test_five_minute_cycle_runs_continuity_watchdog_with_minimum_write_scope(self):
+        workflow = CYCLE_WORKFLOW.read_text(encoding="utf-8")
+
+        self.assertIn("cron: '*/5 * * * *'", workflow)
+        self.assertIn("issues: write", workflow)
+        self.assertIn("actions: write", workflow)
+        self.assertIn("python3 controller/continuity_watchdog.py", workflow)
+        self.assertIn("GITHUB_TOKEN: ${{ github.token }}", workflow)
 
 
 if __name__ == "__main__":
