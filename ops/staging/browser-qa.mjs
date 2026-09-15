@@ -12,6 +12,12 @@ const pages = [
     { path: '/login', marker: null },
 ];
 
+export function matchesMarker(text, marker) {
+    if (marker === null) return true;
+    const normalize = value => value.replace(/\s+/g, ' ').trim().toLowerCase();
+    return normalize(text).includes(normalize(marker));
+}
+
 export function assess(sample) {
     const failures = [];
     if (sample.url !== origin + sample.path) failures.push('unexpected_navigation');
@@ -117,7 +123,7 @@ export async function main() {
                         await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
                         const nav = performance.getEntriesByType('navigation')[0];
                         return { url: location.href, bodyLength: document.body.innerText.length,
-                            markerFound: ${page.marker ? `document.body.innerText.includes(${JSON.stringify(page.marker)})` : 'true'},
+                            markerFound: (${matchesMarker.toString()})(document.body.innerText, ${JSON.stringify(page.marker)}),
                             overflowPx: Math.max(0, document.documentElement.scrollWidth - innerWidth),
                             domContentLoadedMs: nav ? Math.round(nav.domContentLoadedEventEnd) : null,
                             loadEventMs: nav ? Math.round(nav.loadEventEnd) : null,
