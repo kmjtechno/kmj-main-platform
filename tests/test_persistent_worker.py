@@ -8,6 +8,7 @@ from unittest.mock import AsyncMock, Mock, patch
 
 import httpx
 
+
 from controller.persistent_worker import (
     GitHubClient,
     PENDING_LABEL,
@@ -18,6 +19,7 @@ from controller.persistent_worker import (
     submit_prepared_pr,
     resume_prepared_prs,
     extract_model_json,
+    run_verification,
     patch_paths,
     propose_patch,
     paths_conflict,
@@ -96,6 +98,14 @@ class PersistentWorkerSafetyTests(unittest.TestCase):
         self.assertNotIn((142, [BLOCKED_LABEL]), [call.args for call in gh.add_labels.call_args_list])
         gh.remove_label.assert_any_call(142, "autonomous-running")
         self.assertTrue(any("retry" in str(call.args[1]).lower() for call in gh.comment.call_args_list))
+
+    def test_frontend_patch_is_formatted_inside_platform_verification(self):
+        runner = Mock(return_value=Mock(returncode=0, stdout="", stderr=""))
+        with patch("controller.persistent_worker.run", runner):
+            ok, _ = run_verification(["apps/platform/resources/js/components/nav-main.tsx"])
+        self.assertTrue(ok)
+        platform_call = next(call for call in runner.call_args_list if call.args[0] == ["bash", "ops/self-hosted-runner/verify-platform.sh"])
+        self.assertEqual(platform_call.kwargs["env"]["KMJ_FORMAT_PATHS"], "resources/js/components/nav-main.tsx")
 
     def test_extracts_json_after_short_introduction_or_fence(self):
         payload = {"summary": "Guide", "patch": "diff --git a/docs/a.md b/docs/a.md\n", "tests": []}

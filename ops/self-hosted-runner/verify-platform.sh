@@ -82,6 +82,11 @@ start_task npm-install install_frontend
 wait_tasks
 echo "Dependency installation elapsed: $((SECONDS - started)) seconds"
 
+if [ -n "${KMJ_FORMAT_PATHS:-}" ]; then
+  mapfile -t format_paths <<< "$KMJ_FORMAT_PATHS"
+  ./node_modules/.bin/vp fmt "${format_paths[@]}"
+fi
+
 php artisan key:generate --force
 php artisan migrate --force
 npm run build
