@@ -27,9 +27,7 @@ export function NavMain({ items }: { items: NavItem[] }) {
                                 href={item.href}
                                 prefetch
                                 aria-current={
-                                    isCurrentUrl(item.href)
-                                        ? 'page'
-                                        : undefined
+                                    isCurrentUrl(item.href) ? 'page' : undefined
                                 }
                             >
                                 {item.icon && <item.icon />}
