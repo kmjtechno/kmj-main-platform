@@ -55,11 +55,8 @@ jobs:
           ref: main
           persist-credentials: true
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.13'
-          cache: pip
+      - name: Prepare resilient Python runtime
+        run: bash ops/self-hosted-runner/prepare-python-runtime.sh
 
       - name: Verify pre-provisioned PHP and Node runtime
         shell: bash
@@ -72,9 +69,6 @@ jobs:
           php -r 'exit(PHP_VERSION_ID >= 80300 && PHP_VERSION_ID < 80600 ? 0 : 1);'
           node -e 'const m=Number(process.versions.node.split(".")[0]); process.exit(m === 22 ? 0 : 1)'
 
-      - name: Install worker dependencies
-        run: pip install -r requirements.txt
-
       - name: Prepare pinned official free client
         run: bash ops/self-hosted-runner/prepare-free-client.sh
 
@@ -86,13 +80,13 @@ jobs:
           echo "KMJ_AI_PROOF_PATH=$evidence_dir/completion.json" >> "$GITHUB_ENV"
 
       - name: Inspect VPS capacity and verified-free route
-        run: PYTHONPATH=. python controller/worker_preflight.py
+        run: PYTHONPATH=. python3 controller/worker_preflight.py
 
       - name: Verify worker safety core
-        run: PYTHONPATH=. python -m unittest tests.test_persistent_worker tests.test_opencode_free
+        run: PYTHONPATH=. python3 -m unittest tests.test_persistent_worker tests.test_opencode_free
 
       - name: Run guarded worker cycle
-        run: PYTHONPATH=. python controller/persistent_worker.py
+        run: PYTHONPATH=. python3 controller/persistent_worker.py
 
       - name: Publish real AI completion evidence to staging
         if: always()

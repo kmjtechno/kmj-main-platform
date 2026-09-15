@@ -23,14 +23,8 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.13'
-          cache: pip
-
-      - name: Install controller dependencies
-        run: pip install -r requirements.txt
+      - name: Prepare resilient Python runtime
+        run: bash ops/self-hosted-runner/prepare-python-runtime.sh
 
       - name: Enforce platform safety boundaries
         shell: bash
@@ -41,15 +35,15 @@ jobs:
           grep -q 'cloud_nexus_policy: untouched' mission/main-platform.yaml
           grep -q 'paid_fallback: prohibited' config/free-cloud-routing.yaml
           grep -q 'unknown_cost_is_free: false' config/free-cloud-routing.yaml
-          PYTHONPATH=. python scripts/verify_free_router.py
+          PYTHONPATH=. python3 scripts/verify_free_router.py
 
       - name: Run autonomous recovery verification pack in parallel
         shell: bash
         run: |
           set -euo pipefail
-          PYTHONPATH=. python scripts/verify_architecture.py & p1=$!
-          PYTHONPATH=. python scripts/verify_contracts.py & p2=$!
-          PYTHONPATH=. python scripts/verify_runtime.py & p3=$!
+          PYTHONPATH=. python3 scripts/verify_architecture.py & p1=$!
+          PYTHONPATH=. python3 scripts/verify_contracts.py & p2=$!
+          PYTHONPATH=. python3 scripts/verify_runtime.py & p3=$!
           status=0
           wait "$p1" || status=1
           wait "$p2" || status=1
