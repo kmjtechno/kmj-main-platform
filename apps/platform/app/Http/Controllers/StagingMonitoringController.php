@@ -177,7 +177,7 @@ final class StagingMonitoringController extends Controller
             return null;
         }
 
-        $age = now()->timestamp - $proof['verified_at'];
+        $age = now()->getTimestamp() - $proof['verified_at'];
         $latency = (float) $proof['latency_ms'];
         if ($age < 0 || $age > 1800 || $latency < 0 || ! is_finite($latency)) {
             return null;
