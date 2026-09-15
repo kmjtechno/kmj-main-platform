@@ -31,7 +31,10 @@ jobs:
         run: python -m compileall controller
       - name: Verify persistent worker safety
         run: PYTHONPATH=. python -m unittest tests.test_persistent_worker tests.test_opencode_free tests.test_router_official_client
-      - name: Verify locked runtime invariants
+      - name: Verify staging QA failure classification
+        # Uses the existing Node runtime; no package installation or AI call.
+        run: node --test ops/staging/browser-qa.test.mjs
+      - name: Verify locked policy invariants
         run: |
           set -euo pipefail
           grep -q 'KMJ_PAID_FALLBACK' render.yaml
@@ -97,4 +100,3 @@ jobs:
         run: python scripts/verify_architecture.py
       - name: Verify platform runtime provenance
         run: python scripts/verify_runtime.py
-

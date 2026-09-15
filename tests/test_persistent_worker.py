@@ -1,6 +1,8 @@
 import json
 import os
 import unittest
+import tempfile
+from pathlib import Path
 from unittest.mock import Mock, patch
 
 import httpx
@@ -20,10 +22,49 @@ from controller.persistent_worker import (
     task_risk,
     validate_patch,
     worker_capacity,
+    task_files,
+    task_context,
+    execute_one,
 )
 
 
 class PersistentWorkerSafetyTests(unittest.TestCase):
+    def test_explicit_context_scope_rejects_sensitive_or_ambiguous_paths(self):
+        for path in (".env", "docs/../secrets/key.md", "docs/.env.md", "controller/main.py"):
+            with self.assertRaises(ValueError):
+                task_files({"body": f"## Task files\n- `{path}`\n"})
+        self.assertEqual(task_files({"body": "An older bounded task"}), [])
+        self.assertEqual(task_files({"body": "## Task files\n- `docs/a.md`\n\n## Acceptance\nKeep concise"}), ["docs/a.md"])
+
+    def test_context_is_bounded_and_rejects_symlinks(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            (root / "docs").mkdir()
+            (root / "docs/a.md").write_text("Current source")
+            self.assertIn("Current source", task_context(["docs/a.md"], root))
+            (root / "docs/link.md").symlink_to(root / "docs/a.md")
+            with self.assertRaisesRegex(ValueError, "SYMLINK"):
+                task_context(["docs/link.md"], root)
+            (root / "docs/a.md").write_text("x" * 24001)
+            with self.assertRaisesRegex(ValueError, "TOO_LARGE"):
+                task_context(["docs/a.md"], root)
+
+    def test_overlapping_declared_scope_does_not_call_ai(self):
+        gh = Mock()
+        issue = {"number": 200, "body": "## Task files\n- `docs/a.md`\n"}
+        with patch("controller.persistent_worker.select_issue", return_value=issue), patch("controller.persistent_worker.propose_patch") as propose:
+            self.assertEqual(execute_one(gh, {"docs/a.md"}), (False, set()))
+            propose.assert_not_called()
+
+    def test_patch_outside_declared_scope_is_never_applied(self):
+        gh = Mock()
+        issue = {"number": 200, "body": "## Task files\n- `docs/a.md`\n"}
+        payload = {"patch": "diff --git a/docs/b.md b/docs/b.md\n--- a/docs/b.md\n+++ b/docs/b.md\n"}
+        with patch("controller.persistent_worker.select_issue", return_value=issue), patch("controller.persistent_worker.prepare_branch"), patch("controller.persistent_worker.task_context", return_value="source"), patch("controller.persistent_worker.propose_patch", return_value=(payload, {})), patch("controller.persistent_worker.apply_patch") as apply:
+            execute_one(gh)
+            apply.assert_not_called()
+            gh.add_labels.assert_any_call(200, [BLOCKED_LABEL])
+
     def test_extracts_json_after_short_introduction_or_fence(self):
         payload = {"summary": "Guide", "patch": "diff --git a/docs/a.md b/docs/a.md\n", "tests": []}
         for content in (json.dumps(payload), "Here is the patch:\n" + json.dumps(payload), "Here is the patch:\n```json\n" + json.dumps(payload) + "\n```\nDone."):

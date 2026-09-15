@@ -236,7 +236,7 @@ export const deliveryMilestones: DeliveryMilestone[] = [
         id: 'verified-free-ai-route',
         title: 'Verified-free AI route',
         state: 'active',
-        detail: 'Real zero-cost task produced a verified branch on the VPS; prepared-commit checkpoints now preserve work and expose GitHub PR submission blockers',
+        detail: 'Free-cloud task completed through PR #140 and staging; bounded file context and scope review reduce retries, while GitHub bot CI approval remains required',
     },
     {
         id: 'revenue-working-phase',
@@ -256,7 +256,7 @@ export const deliveryMilestones: DeliveryMilestone[] = [
         id: 'ops-readiness-evidence',
         title: 'Ops readiness evidence',
         state: 'active',
-        detail: 'Backup freshness + worker/AI posture + fail-closed probes; cached-route authenticated smoke and shared deployment lock verified on staging',
+        detail: 'Backup freshness + worker/AI posture + authenticated smoke; desktop/mobile screenshot and timing evidence now runs with staging deployments',
         evidence:
             'PR #132 + deploy 34912567459 + authenticated smoke 34912692783',
     },
