@@ -129,6 +129,19 @@ jobs:
           set -euo pipefail
           STAGING_PATH="$1"
           DEPLOY_SHA="$2"
+          timer_script="$HOME/bin/kmj-stage-deploy.sh"
+          if [ ! -r "$timer_script" ] \
+            || ! grep -Fq '.kmj-stage-deploy.lock' "$timer_script" \
+            || ! grep -Eq 'flock[[:space:]]+-n[[:space:]]+9' "$timer_script" \
+            || ! grep -Fq 'staging-approved' "$timer_script"; then
+            echo 'ERROR: Could not verify the existing staging timer and its shared writer lock.' >&2
+            exit 46
+          fi
+          echo 'Verified staging-approved timer and shared deployment lock.'
+          exec 9>"$HOME/.kmj-stage-deploy.lock"
+          echo 'Waiting for the staging deployment writer lock.'
+          flock -w 600 9
+          echo 'Acquired the staging deployment writer lock.'
           cd "$STAGING_PATH"
           git fetch --prune origin staging-approved
           git checkout -B staging-approved origin/staging-approved
@@ -259,9 +272,9 @@ jobs:
           total_count="$(grep -c "id: '" "$progress_source")"
           test "$total_count" -gt 0
           expected_progress=$(( (verified_count * 100 + total_count / 2) / total_count ))
-          printf '%s' "$dom" | grep -Fq 'Verified delivery progress'
-          printf '%s' "$dom" | grep -Fq "${expected_progress}%"
-          printf '%s' "$dom" | grep -Fq "${verified_count}/${total_count} verified"
+          grep -Fq 'Verified delivery progress' <<< "$dom"
+          grep -Fq "${expected_progress}%" <<< "$dom"
+          grep -Fq "${verified_count}/${total_count} verified" <<< "$dom"
           echo 'result=pass' >> "$GITHUB_OUTPUT"
           echo "Rendered staging UI PASS: verified delivery progress = ${expected_progress}% (${verified_count}/${total_count})."
 
@@ -271,7 +284,7 @@ jobs:
           set -euo pipefail
           python3 ops/staging/verify-monitor.py "$DEPLOY_SHA"
           dom="$(timeout 45 "$KMJ_STAGING_CHROME" --no-sandbox --disable-gpu --virtual-time-budget=10000 --dump-dom 'https://staging.kmjtechno.com/info' 2>/dev/null)"
-          printf '%s' "$dom" | grep -Fq 'Staging live operations monitor'
+          grep -Fq 'Staging live operations monitor' <<< "$dom"
           echo 'Rendered staging monitor PASS.'
 
       - name: Deployment evidence summary

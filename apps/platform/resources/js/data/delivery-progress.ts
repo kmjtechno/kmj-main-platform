@@ -248,15 +248,15 @@ export const deliveryMilestones: DeliveryMilestone[] = [
     {
         id: 'staging-live-monitor',
         title: 'Staging live operations monitor',
-        state: 'active',
-        detail: 'Exact staging-host requests and production-host isolation for /info and /info/status are under verification; deployment recovery is in progress',
-        evidence: 'PR #129',
+        state: 'verified',
+        detail: 'Live /info and /info/status verified with a healthy database, exact deployed commit and rendered browser checks; production-host isolation is covered by CI',
+        evidence: 'PR #129 + deploy run 34909642182 (5e25dfdfc033)',
     },
     {
         id: 'ops-readiness-evidence',
         title: 'Ops readiness evidence',
         state: 'active',
-        detail: 'Backup freshness + worker/AI posture + fail-closed probes + transaction-scoped authenticated staging smoke under verification',
+        detail: 'Backup freshness + worker/AI posture + fail-closed probes; cached-route authenticated staging smoke and shared deployment lock under verification',
         evidence: 'PR #98 + PR #101 + authenticated surface smoke lane',
     },
     {
