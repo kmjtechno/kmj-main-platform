@@ -4,7 +4,7 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
-WATCHDOG_PATH = ROOT / "controller" / "continuity_watchdog.py"
+WATCHDOG_PATH = ROOT / "scripts" / "continuity_watchdog.py"
 CYCLE_WORKFLOW = ROOT / ".github" / "workflows" / "autonomous-cycle.yml"
 
 
@@ -89,7 +89,7 @@ class ContinuityWatchdogContractTests(unittest.TestCase):
         self.assertIn("cron: '*/5 * * * *'", workflow)
         self.assertIn("issues: write", workflow)
         self.assertIn("actions: write", workflow)
-        self.assertIn("python3 controller/continuity_watchdog.py", workflow)
+        self.assertIn("python3 scripts/continuity_watchdog.py", workflow)
         self.assertIn("GITHUB_TOKEN: ${{ github.token }}", workflow)
 
 
