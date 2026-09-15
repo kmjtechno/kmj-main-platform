@@ -123,6 +123,14 @@ def extract_model_json(result: dict[str, Any]) -> dict[str, Any]:
         raise ValueError("MODEL_RESPONSE_EMPTY")
     content = str(choices[0].get("message", {}).get("content", "")).strip()
     content = re.sub(r"^```(?:json)?\s*|\s*```$", "", content, flags=re.I | re.S)
+    # A single fenced object or a short introduction is allowed; the object
+    # itself must remain valid JSON and still passes the patch safety gate.
+    fenced = re.search(r"```(?:json)?\s*\n(.*?)\n```", content, flags=re.I | re.S)
+    if fenced:
+        content = fenced.group(1).strip()
+    start = content.find("{")
+    if start > 0:
+        content = content[start:]
     payload = json.loads(content)
     if not isinstance(payload, dict) or not isinstance(payload.get("patch"), str):
         raise ValueError("MODEL_RESPONSE_SCHEMA_INVALID")
@@ -251,15 +259,27 @@ production configuration, billing/payment, signing/private keys, or KMJ Cloud Ne
 If the task advances a material platform capability, update apps/platform/resources/js/data/delivery-progress.ts in the same patch with evidence-backed state. Never mark a milestone verified without implementation/test evidence.
 Keep the change minimal and reversible. Do not claim tests passed; only list tests to run.
 """
-    result = await router.complete(
-        [
-            {"role": "system", "content": SYSTEM_PROMPT},
-            {"role": "user", "content": prompt},
-        ],
-        route="coding",
-        temperature=0.05,
-    )
-    return extract_model_json(result), result
+    policy = SYSTEM_PROMPT.partition("Return a concise execution plan")[0].strip()
+    policy += "\nReturn one valid JSON object with summary, patch and tests. No prose or Markdown fences."
+    messages = [
+        {"role": "system", "content": policy},
+        {"role": "user", "content": prompt},
+    ]
+    for attempt in range(2):
+        result = await router.complete(messages, route="coding", temperature=0.05)
+        try:
+            return extract_model_json(result), result
+        except (json.JSONDecodeError, ValueError) as exc:
+            print(f"KMJ worker: response-format attempt={attempt + 1} error={type(exc).__name__}")
+            if attempt == 1:
+                raise
+            messages.append({
+                "role": "user",
+                "content": "The reply was not a valid JSON patch object. Return only JSON with summary, patch, tests. "
+                "Encode patch newlines as \"\\n\" escapes inside the JSON string; escape quotes correctly. "
+                "Do not return a plan. Do not use tools. Keep the patch minimal.",
+            })
+    raise ValueError("MODEL_RESPONSE_SCHEMA_INVALID")
 
 
 def run_verification(paths: list[str]) -> tuple[bool, str]:

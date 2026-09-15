@@ -87,6 +87,13 @@ def isolated_environment(directory: Path) -> dict[str, str]:
             "share": "disabled",
             "autoupdate": False,
             "permission": {"*": "deny"},
+            "agent": {"build": {
+                "prompt": "You are a text-only assistant. Use only the context provided in the request. "
+                "Return the requested answer and exactly the requested output format. "
+                "Do not inspect files, execute commands, delegate, or use tools. "
+                "When JSON is requested, output one valid JSON object with escaped string newlines and no surrounding prose.",
+                "permission": {"*": "deny"},
+            }},
         }),
     })
     return env
@@ -134,8 +141,8 @@ def complete(messages: list[dict[str, str]]) -> dict:
 
 
 if __name__ == "__main__":
-    response = complete([{"role": "user", "content": "Reply with exactly KMJ_FREE_ROUTE_OK. Do not use any tools."}])
+    response = complete([{"role": "user", "content": 'Return exactly one JSON object: {"marker":"KMJ_FREE_ROUTE_OK"}. No tools or prose.' }])
     answer = response["response"]["choices"][0]["message"]["content"]
-    if answer.strip() != "KMJ_FREE_ROUTE_OK":
+    if json.loads(answer).get("marker") != "KMJ_FREE_ROUTE_OK":
         raise SystemExit("OpenCode probe marker did not match")
     print(json.dumps({"provider": response["provider"], "model": MODEL, "cost": 0, "result": "PASS"}))

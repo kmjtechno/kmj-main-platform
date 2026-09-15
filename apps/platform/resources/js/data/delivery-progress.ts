@@ -236,7 +236,7 @@ export const deliveryMilestones: DeliveryMilestone[] = [
         id: 'verified-free-ai-route',
         title: 'Verified-free AI route',
         state: 'active',
-        detail: 'Pinned official OpenCode cloud client with per-request zero-price checks, isolated credentials and recent completion evidence; VPS task verification in progress',
+        detail: 'Real zero-cost cloud response verified on the VPS and published to the monitor; structured patch output is being verified end to end',
     },
     {
         id: 'revenue-working-phase',

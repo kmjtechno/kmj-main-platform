@@ -61,6 +61,8 @@ class OfficialFreeClientTests(unittest.TestCase):
         self.assertEqual(config["permission"], {"*": "deny"})
         self.assertEqual(config["small_model"], "opencode/big-pickle")
         self.assertEqual(config["enabled_providers"], ["opencode"])
+        self.assertEqual(config["agent"]["build"]["permission"], {"*": "deny"})
+        self.assertIn("exactly the requested output format", config["agent"]["build"]["prompt"])
 
 
 if __name__ == "__main__":
