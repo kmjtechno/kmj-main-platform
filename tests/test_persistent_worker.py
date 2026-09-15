@@ -1,9 +1,11 @@
+import json
 import os
 import unittest
 from unittest.mock import patch
 
 from controller.persistent_worker import (
     GitHubClient,
+    extract_model_json,
     patch_paths,
     paths_conflict,
     task_risk,
@@ -13,6 +15,18 @@ from controller.persistent_worker import (
 
 
 class PersistentWorkerSafetyTests(unittest.TestCase):
+    def test_extracts_json_after_short_introduction_or_fence(self):
+        payload = {"summary": "Guide", "patch": "diff --git a/docs/a.md b/docs/a.md\n", "tests": []}
+        for content in (json.dumps(payload), "Here is the patch:\n" + json.dumps(payload), "Here is the patch:\n```json\n" + json.dumps(payload) + "\n```\nDone."):
+            result = {"response": {"choices": [{"message": {"content": content}}]}}
+            self.assertEqual(extract_model_json(result), payload)
+
+    def test_malformed_json_is_not_repaired_into_an_accepted_patch(self):
+        for content in ('{"patch":"unescaped\nnewline"}', '{"patch":null}', 'An execution plan only'):
+            result = {"response": {"choices": [{"message": {"content": content}}]}}
+            with self.assertRaises(ValueError):
+                extract_model_json(result)
+
     def test_accepts_allowlisted_platform_patch(self):
         patch_text = """diff --git a/apps/platform/example.txt b/apps/platform/example.txt
 --- a/apps/platform/example.txt
