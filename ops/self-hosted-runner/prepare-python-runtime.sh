@@ -27,6 +27,16 @@ if [ -z "$python_bin" ]; then
   echo 'KMJ Python runtime unavailable: python3 is required.' >&2
   exit 20
 fi
+
+runtime_root="$(cd "$(dirname "$python_bin")/.." && pwd -P)"
+runtime_lib="$runtime_root/lib"
+if compgen -G "$runtime_lib/libpython*.so*" >/dev/null; then
+  export LD_LIBRARY_PATH="$runtime_lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+  if [ -n "${GITHUB_ENV:-}" ]; then
+    printf 'LD_LIBRARY_PATH=%s\n' "$LD_LIBRARY_PATH" >> "$GITHUB_ENV"
+  fi
+fi
+
 "$python_bin" - <<'PY'
 import sys
 if sys.version_info < (3, 11):
@@ -58,6 +68,7 @@ if ! check_imports "$python_bin"; then
     fi
   ) 9>"$lock_root/.prepare.lock"
 fi
+
 runtime_bin="$(dirname "$python_bin")"
 echo "$runtime_bin" >> "${GITHUB_PATH:?GITHUB_PATH is required}"
 echo "KMJ cached Python runtime ready: $python_bin"
