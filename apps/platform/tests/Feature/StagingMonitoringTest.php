@@ -125,4 +125,67 @@ final class StagingMonitoringTest extends TestCase
                 'safety',
             ]);
     }
+
+    public function test_recent_zero_cost_completion_is_visible_without_local_router(): void
+    {
+        Http::preventStrayRequests();
+        $this->withCompletionEvidence([], function (): void {
+            $this->getJson('https://staging.kmjtechno.com/info/status')
+                ->assertOk()
+                ->assertJsonPath('runtime.ai_router_online', true)
+                ->assertJsonPath('runtime.ai_router_model_count', 1)
+                ->assertJsonPath('runtime.ai_router_latency_ms', 25)
+                ->assertJsonPath('processes.4.status', 'online');
+        });
+        Http::assertNothingSent();
+    }
+
+    public function test_invalid_or_stale_completion_cannot_report_online(): void
+    {
+        Http::fake(['*' => Http::response([], 503)]);
+        foreach ([
+            ['cost' => 1],
+            ['cost' => false],
+            ['cost' => null],
+            ['verified_at' => now()->timestamp - 1801],
+            ['verified_at' => now()->timestamp + 60],
+            ['model' => 'unverified-model'],
+            ['latency_ms' => -1],
+        ] as $override) {
+            $this->withCompletionEvidence($override, function (): void {
+                $this->getJson('https://staging.kmjtechno.com/info/status')
+                    ->assertOk()
+                    ->assertJsonPath('runtime.ai_router_online', false)
+                    ->assertJsonPath('runtime.ai_last_verified_at', null)
+                    ->assertJsonPath('processes.4.status', 'blocked');
+            });
+        }
+    }
+
+    private function withCompletionEvidence(array $override, callable $assertions): void
+    {
+        $path = storage_path('app/monitoring/ai-worker.json');
+        $previous = is_file($path) ? file_get_contents($path) : null;
+        if (! is_dir(dirname($path))) {
+            mkdir(dirname($path), 0755, true);
+        }
+        file_put_contents($path, json_encode(array_replace([
+            'provider' => 'opencode-client',
+            'model' => 'opencode/big-pickle',
+            'status' => 'verified',
+            'cost' => 0,
+            'verified_at' => now()->timestamp,
+            'latency_ms' => 25,
+        ], $override)));
+
+        try {
+            $assertions();
+        } finally {
+            if ($previous === null) {
+                unlink($path);
+            } else {
+                file_put_contents($path, $previous);
+            }
+        }
+    }
 }

@@ -30,7 +30,7 @@ jobs:
       - name: Compile controller
         run: python -m compileall controller
       - name: Verify persistent worker safety
-        run: PYTHONPATH=. python -m unittest tests.test_persistent_worker
+        run: PYTHONPATH=. python -m unittest tests.test_persistent_worker tests.test_opencode_free tests.test_router_official_client
       - name: Verify locked runtime invariants
         run: |
           set -euo pipefail
@@ -97,3 +97,4 @@ jobs:
         run: python scripts/verify_architecture.py
       - name: Verify platform runtime provenance
         run: python scripts/verify_runtime.py
+

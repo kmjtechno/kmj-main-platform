@@ -297,7 +297,7 @@ class FreeCloudRouter:
     ) -> dict[str, Any]:
         ranked = self.rank(await self.discover(), route)
         if not ranked:
-            raise NoFreeRouteAvailable("NO_FREE_ROUTE_AVAILABLE")
+            return await self._official_free_client(messages)
 
         attempts: list[dict[str, str]] = []
         async with httpx.AsyncClient(timeout=self.timeout) as client:
@@ -346,7 +346,15 @@ class FreeCloudRouter:
                         }
                     )
 
-        raise NoFreeRouteAvailable("ALL_VERIFIED_FREE_ROUTES_FAILED")
+        return await self._official_free_client(messages)
+
+    async def _official_free_client(self, messages: list[dict[str, str]]) -> dict[str, Any]:
+        from controller.opencode_free import OpenCodeUnavailable, complete
+
+        try:
+            return await asyncio.to_thread(complete, messages)
+        except OpenCodeUnavailable as exc:
+            raise NoFreeRouteAvailable(str(exc)) from exc
 
     async def status(self) -> dict[str, Any]:
         models = await self.discover()
@@ -393,3 +401,4 @@ class FreeCloudRouter:
             "max_free_failover_models": self.max_failover_models,
             "models": eligible,
         }
+
