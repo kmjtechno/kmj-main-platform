@@ -128,7 +128,7 @@ export default function InfoControl({ pollIntervalMs }: { pollIntervalMs: number
                                     aria-valuenow={deliveryProgress}
                                 />
                             </div>
-                            <div className="mt-2 text-xs text-white/35">{deliveryProgressMeta}</div>
+                            <div className="mt-2 text-xs text-white/35">{deliveryProgressMeta.note}</div>
                         </div>
 
                         <div className="grid gap-3 sm:grid-cols-2 xl:w-[560px]">
