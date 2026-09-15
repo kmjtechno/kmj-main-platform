@@ -200,6 +200,23 @@ def github_failure(exc: httpx.HTTPStatusError) -> dict[str, Any]:
             "endpoint": exc.request.url.path, "reason": reason}
 
 
+def worker_failure(exc: Exception) -> str:
+    """Retain actionable categories without exposing arbitrary exception text."""
+    code = str(exc).partition(":")[0]
+    allowed = {"PATCH_CHECK_FAILED", "PATCH_APPLY_FAILED", "PATCH_PRODUCED_NO_CHANGES",
+               "GIT_PREP_FAILED", "GIT_ADD_FAILED", "GIT_COMMIT_FAILED", "GIT_PUSH_FAILED",
+               "PATCH_OUTSIDE_TASK_SCOPE", "TASK_CONTEXT_TOO_LARGE", "TASK_CONTEXT_FILE_MISSING",
+               "TASK_CONTEXT_SYMLINK_DENIED", "TASK_CONTEXT_PATH_DENIED"}
+    if code not in allowed:
+        return type(exc).__name__
+    if code == "PATCH_CHECK_FAILED":
+        for needle, reason in (("corrupt patch", "CORRUPT_DIFF"), ("patch does not apply", "CONTEXT_MISMATCH"),
+                               ("No valid patches", "EMPTY_DIFF")):
+            if needle in str(exc):
+                return code + "/" + reason
+    return code
+
+
 def validate_checkpoint(record: dict[str, Any], issue_number: int) -> dict[str, Any]:
     if not isinstance(record, dict):
         raise ValueError("PREPARED_CHECKPOINT_INVALID")
@@ -497,6 +514,7 @@ def execute_one(gh: GitHubClient, occupied_paths: set[str] | None = None) -> tup
         return False, set()
     issue_number = int(issue["number"])
     gh.add_labels(issue_number, [RUNNING_LABEL])
+    candidate = ""
     try:
         scope = task_files(issue)
         occupied_paths = occupied_paths or set()
@@ -511,6 +529,8 @@ def execute_one(gh: GitHubClient, occupied_paths: set[str] | None = None) -> tup
         paths = validate_patch(patch)
         if scope and not set(paths).issubset(scope):
             raise ValueError("PATCH_OUTSIDE_TASK_SCOPE")
+        if scope and len(patch.encode("utf-8")) <= 6000:
+            candidate = patch
         if paths_conflict(paths, occupied_paths):
             gh.remove_label(issue_number, RUNNING_LABEL)
             gh.comment(issue_number, "Autonomous worker deferred this task because its proposed changed paths overlap another running agent PR. No repository write was performed.")
@@ -540,7 +560,14 @@ def execute_one(gh: GitHubClient, occupied_paths: set[str] | None = None) -> tup
     except Exception as exc:
         gh.remove_label(issue_number, RUNNING_LABEL)
         gh.add_labels(issue_number, [BLOCKED_LABEL])
-        gh.comment(issue_number, f"Autonomous worker stopped safely: `{type(exc).__name__}`. No merge/deploy was performed.")
+        reason = worker_failure(exc)
+        print(f"KMJ worker failure: issue={issue_number} reason={reason}", flush=True)
+        message = f"Autonomous worker stopped safely: `{reason}`. No merge/deploy was performed."
+        if candidate and str(exc).startswith("PATCH_CHECK_FAILED:"):
+            # Only a small patch inside explicit public-source context scope is retained.
+            # This is diagnostic data, never a prepared or executable checkpoint.
+            message += "\n\nUnapplied candidate for review; do not treat as a verified checkpoint:\n```diff\n" + candidate.replace("```", "[fence]") + "\n```"
+        gh.comment(issue_number, message)
         return True, set()
 
 

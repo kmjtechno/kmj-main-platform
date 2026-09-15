@@ -25,10 +25,16 @@ from controller.persistent_worker import (
     task_files,
     task_context,
     execute_one,
+    worker_failure,
 )
 
 
 class PersistentWorkerSafetyTests(unittest.TestCase):
+    def test_worker_failure_retains_safe_categories_only(self):
+        self.assertEqual(worker_failure(RuntimeError("PATCH_CHECK_FAILED:error: corrupt patch at line 8")), "PATCH_CHECK_FAILED/CORRUPT_DIFF")
+        self.assertEqual(worker_failure(RuntimeError("PATCH_CHECK_FAILED:private response body")), "PATCH_CHECK_FAILED")
+        self.assertEqual(worker_failure(RuntimeError("secret-token-value")), "RuntimeError")
+
     def test_explicit_context_scope_rejects_sensitive_or_ambiguous_paths(self):
         for path in (".env", "docs/../secrets/key.md", "docs/.env.md", "controller/main.py"):
             with self.assertRaises(ValueError):
