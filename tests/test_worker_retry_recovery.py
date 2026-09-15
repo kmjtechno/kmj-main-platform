@@ -1,54 +1,85 @@
+import importlib.util
 import unittest
-from unittest.mock import Mock, patch
-
-from controller.persistent_worker import BLOCKED_LABEL, execute_one
+from pathlib import Path
 
 
-class TransientPatchRecoveryTests(unittest.TestCase):
-    def test_corrupt_generated_diff_stays_retryable(self):
-        gh = Mock()
-        issue = {
-            "number": 142,
-            "body": "## Task files\n- `docs/a.md`\n",
-        }
-        payload = {
-            "summary": "small safe change",
-            "patch": (
-                "diff --git a/docs/a.md b/docs/a.md\n"
-                "--- a/docs/a.md\n"
-                "+++ b/docs/a.md\n"
-                "@@ -1 +1 @@\n"
-                "-old\n"
-                "+new\n"
-            ),
-        }
+WATCHDOG_PATH = Path(__file__).resolve().parents[1] / "controller" / "continuity_watchdog.py"
 
-        with (
-            patch("controller.persistent_worker.select_issue", return_value=issue),
-            patch("controller.persistent_worker.prepare_branch"),
-            patch("controller.persistent_worker.task_context", return_value="source"),
-            patch(
-                "controller.persistent_worker.propose_patch",
-                return_value=(payload, {"model": "verified-free"}),
-            ),
-            patch(
-                "controller.persistent_worker.apply_patch",
-                side_effect=RuntimeError(
-                    "PATCH_CHECK_FAILED:error: corrupt patch at line 8"
-                ),
-            ),
-        ):
-            self.assertEqual(execute_one(gh), (False, set()))
 
-        blocked_calls = [call.args for call in gh.add_labels.call_args_list]
-        self.assertNotIn((142, [BLOCKED_LABEL]), blocked_calls)
-        gh.remove_label.assert_any_call(142, "autonomous-running")
+class ContinuityWatchdogContractTests(unittest.TestCase):
+    def load_watchdog(self):
         self.assertTrue(
-            any(
-                "retry" in str(call.args[1]).lower()
-                for call in gh.comment.call_args_list
+            WATCHDOG_PATH.is_file(),
+            "continuity watchdog module must exist",
+        )
+        spec = importlib.util.spec_from_file_location("continuity_watchdog", WATCHDOG_PATH)
+        self.assertIsNotNone(spec)
+        self.assertIsNotNone(spec.loader)
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        return module
+
+    def test_only_known_transient_patch_blocks_are_auto_recoverable(self):
+        watchdog = self.load_watchdog()
+
+        self.assertTrue(
+            watchdog.is_recoverable_block(
+                "Autonomous worker stopped safely: `PATCH_CHECK_FAILED/CORRUPT_DIFF`."
             )
         )
+        self.assertTrue(
+            watchdog.is_recoverable_block(
+                "Autonomous worker stopped safely: `PATCH_CHECK_FAILED/CONTEXT_MISMATCH`."
+            )
+        )
+        self.assertFalse(
+            watchdog.is_recoverable_block(
+                "Autonomous patch failed local verification and was not pushed."
+            )
+        )
+        self.assertFalse(
+            watchdog.is_recoverable_block(
+                "Autonomous worker blocked this task: high-risk term `production`."
+            )
+        )
+
+    def test_watchdog_requeues_and_dispatches_once_when_recovery_occurs(self):
+        watchdog = self.load_watchdog()
+
+        class FakeGitHub:
+            def __init__(self):
+                self.removed = []
+                self.comments = []
+                self.dispatched = 0
+
+            def request(self, method, path, **kwargs):
+                if path.startswith("/issues?state=open"):
+                    return [{"number": 142}]
+                if path == "/issues/142/comments?per_page=100":
+                    return [
+                        {
+                            "user": {"login": "github-actions[bot]"},
+                            "body": "Autonomous worker stopped safely: `PATCH_CHECK_FAILED/CORRUPT_DIFF`. No merge/deploy was performed.",
+                        }
+                    ]
+                if path == "/actions/workflows/autonomous-worker.yml/dispatches":
+                    self.dispatched += 1
+                    return None
+                raise AssertionError((method, path, kwargs))
+
+            def remove_label(self, issue_number, label):
+                self.removed.append((issue_number, label))
+
+            def comment(self, issue_number, body):
+                self.comments.append((issue_number, body))
+
+        gh = FakeGitHub()
+        recovered = watchdog.recover_and_restart(gh)
+
+        self.assertEqual(recovered, [142])
+        self.assertEqual(gh.removed, [(142, "autonomous-blocked")])
+        self.assertEqual(gh.dispatched, 1)
+        self.assertTrue(any("requeued" in body.lower() for _, body in gh.comments))
 
 
 if __name__ == "__main__":
