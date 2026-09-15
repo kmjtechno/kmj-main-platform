@@ -1,9 +1,10 @@
+import asyncio
 import json
 import os
 import unittest
 import tempfile
 from pathlib import Path
-from unittest.mock import Mock, patch
+from unittest.mock import AsyncMock, Mock, patch
 
 import httpx
 
@@ -18,6 +19,7 @@ from controller.persistent_worker import (
     resume_prepared_prs,
     extract_model_json,
     patch_paths,
+    propose_patch,
     paths_conflict,
     task_risk,
     validate_patch,
@@ -70,6 +72,30 @@ class PersistentWorkerSafetyTests(unittest.TestCase):
             execute_one(gh)
             apply.assert_not_called()
             gh.add_labels.assert_any_call(200, [BLOCKED_LABEL])
+
+    def test_invalid_patch_shape_is_reprompted_before_returning(self):
+        issue = {"number": 142, "body": "## Task files\n- `docs/a.md`\n"}
+        bad = {"response": {"choices": [{"message": {"content": json.dumps({"patch": "not-a-diff"})}}]}}
+        good_patch = "diff --git a/docs/a.md b/docs/a.md\n--- a/docs/a.md\n+++ b/docs/a.md\n@@ -1 +1 @@\n-old\n+new\n"
+        good = {"response": {"choices": [{"message": {"content": json.dumps({"summary": "fix", "patch": good_patch, "tests": []})}}]}}
+        router = Mock()
+        router.complete = AsyncMock(side_effect=[bad, good])
+        with patch("controller.persistent_worker.FreeCloudRouter", return_value=router):
+            payload, _ = asyncio.run(propose_patch(issue, "FILE docs/a.md\nold\nEND FILE", ["docs/a.md"]))
+        self.assertEqual(payload["patch"], good_patch)
+        self.assertEqual(router.complete.await_count, 2)
+
+    def test_invalid_model_output_remains_retryable_instead_of_blocked(self):
+        gh = Mock()
+        issue = {"number": 142, "body": "## Task files\n- `docs/a.md`\n"}
+        with patch("controller.persistent_worker.select_issue", return_value=issue), \
+             patch("controller.persistent_worker.prepare_branch"), \
+             patch("controller.persistent_worker.task_context", return_value="source"), \
+             patch("controller.persistent_worker.propose_patch", side_effect=ValueError("PATCH_NOT_UNIFIED_DIFF")):
+            self.assertEqual(execute_one(gh), (False, set()))
+        self.assertNotIn((142, [BLOCKED_LABEL]), [call.args for call in gh.add_labels.call_args_list])
+        gh.remove_label.assert_any_call(142, "autonomous-running")
+        self.assertTrue(any("retry" in str(call.args[1]).lower() for call in gh.comment.call_args_list))
 
     def test_extracts_json_after_short_introduction_or_fence(self):
         payload = {"summary": "Guide", "patch": "diff --git a/docs/a.md b/docs/a.md\n", "tests": []}

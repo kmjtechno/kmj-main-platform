@@ -365,7 +365,7 @@ def select_issue(gh: GitHubClient) -> dict[str, Any] | None:
     return None
 
 
-async def propose_patch(issue: dict[str, Any], context: str = "") -> tuple[dict[str, Any], dict[str, Any]]:
+async def propose_patch(issue: dict[str, Any], context: str = "", scope: list[str] | None = None) -> tuple[dict[str, Any], dict[str, Any]]:
     router = FreeCloudRouter()
     prompt = f"""Implement this GitHub issue as one small safe patch.
 Issue #{issue['number']}: {issue.get('title', '')}
@@ -397,16 +397,23 @@ Keep the change minimal and reversible. Do not claim tests passed; only list tes
     for attempt in range(2):
         result = await router.complete(messages, route="coding", temperature=0.05)
         try:
-            return extract_model_json(result), result
+            payload = extract_model_json(result)
+            paths = validate_patch(str(payload["patch"]))
+            if scope and not set(paths).issubset(scope):
+                raise ValueError("PATCH_OUTSIDE_TASK_SCOPE")
+            return payload, result
         except (json.JSONDecodeError, ValueError) as exc:
-            print(f"KMJ worker: response-format attempt={attempt + 1} error={type(exc).__name__}")
+            code = "MODEL_JSON_INVALID" if isinstance(exc, json.JSONDecodeError) else str(exc).partition(":")[0]
+            print(f"KMJ worker: response-validation attempt={attempt + 1} reason={code}")
             if attempt == 1:
                 raise
             messages.append({
                 "role": "user",
-                "content": "The reply was not a valid JSON patch object. Return only JSON with summary, patch, tests. "
+                "content": f"The previous reply was rejected by local safety validation: {code}. "
+                "Return only JSON with summary, patch, tests. The patch must begin with 'diff --git ', "
+                "use standard unified-diff headers and hunks, and modify only the declared Task files. "
                 "Encode patch newlines as \"\\n\" escapes inside the JSON string; escape quotes correctly. "
-                "Do not return a plan. Do not use tools. Keep the patch minimal.",
+                "Do not use tools and do not add unrelated files.",
             })
     raise ValueError("MODEL_RESPONSE_SCHEMA_INVALID")
 
@@ -524,7 +531,16 @@ def execute_one(gh: GitHubClient, occupied_paths: set[str] | None = None) -> tup
         branch = prepare_branch(issue_number)
         context = task_context(scope, ROOT)
         print(f"KMJ task context: files={len(scope)} bytes={len(context.encode('utf-8'))}", flush=True)
-        payload, model_result = asyncio.run(propose_patch(issue, context))
+        try:
+            payload, model_result = asyncio.run(propose_patch(issue, context, scope))
+        except (json.JSONDecodeError, ValueError) as exc:
+            code = "MODEL_JSON_INVALID" if isinstance(exc, json.JSONDecodeError) else str(exc).partition(":")[0]
+            if not (code.startswith("PATCH_") or code.startswith("MODEL_") or code in {"UNSAFE_PATH", "DENIED_PATH", "PATH_NOT_ALLOWLISTED"}):
+                code = "MODEL_OUTPUT_INVALID"
+            gh.remove_label(issue_number, RUNNING_LABEL)
+            print(f"KMJ worker retryable output: issue={issue_number} reason={code}", flush=True)
+            gh.comment(issue_number, f"Autonomous model output was rejected safely: `{code}`. Task remains open for automatic retry; no merge/deploy was performed.")
+            return False, set()
         patch = str(payload["patch"])
         paths = validate_patch(patch)
         if scope and not set(paths).issubset(scope):
