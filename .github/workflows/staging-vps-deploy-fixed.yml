@@ -21,7 +21,7 @@ jobs:
   deploy:
     name: Deploy approved commit to staging VPS
     if: ${{ github.event_name == 'workflow_dispatch' || github.event_name == 'schedule' || github.event.workflow_run.conclusion == 'success' }}
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux, x64, kmj-main-platform-ci]
     timeout-minutes: 25
     environment: staging
 
@@ -66,6 +66,10 @@ jobs:
           if [ "$missing" -ne 0 ]; then exit 1; fi
           echo 'Staging deployment configuration is present.'
 
+      - name: Prepare staging browser without privileged installation
+        shell: bash
+        run: bash ops/self-hosted-runner/prepare-staging-browser.sh
+
       - name: Configure SSH
         id: ssh
         env:
@@ -74,16 +78,18 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          install -m 700 -d ~/.ssh
-          printf '%s' "$STAGING_KEY" | sed 's/\\n/\n/g' | tr -d '\r' > ~/.ssh/id_ed25519
-          printf '\n' >> ~/.ssh/id_ed25519
-          chmod 600 ~/.ssh/id_ed25519
-          if ! ssh-keygen -y -f ~/.ssh/id_ed25519 >/dev/null 2>&1; then
+          STAGING_SSH_DIR="$(mktemp -d "$RUNNER_TEMP/kmj-staging-deploy.XXXXXX")"
+          echo "STAGING_SSH_DIR=$STAGING_SSH_DIR" >> "$GITHUB_ENV"
+          install -m 700 -d "$STAGING_SSH_DIR"
+          printf '%s' "$STAGING_KEY" | sed 's/\\n/\n/g' | tr -d '\r' > "$STAGING_SSH_DIR/id_ed25519"
+          printf '\n' >> "$STAGING_SSH_DIR/id_ed25519"
+          chmod 600 "$STAGING_SSH_DIR/id_ed25519"
+          if ! ssh-keygen -y -f "$STAGING_SSH_DIR/id_ed25519" >/dev/null 2>&1; then
             echo '::error title=Invalid staging SSH private key::STAGING_SSH_PRIVATE_KEY could not be parsed after newline normalization'
             exit 1
           fi
           for attempt in 1 2 3; do
-            if ssh-keyscan -T 10 -H "$STAGING_HOST" >> ~/.ssh/known_hosts 2>/dev/null; then
+            if ssh-keyscan -T 10 -H "$STAGING_HOST" >> "$STAGING_SSH_DIR/known_hosts" 2>/dev/null; then
               exit 0
             fi
             echo "SSH keyscan attempt $attempt failed; retrying..."
@@ -100,7 +106,7 @@ jobs:
         run: |
           set -euo pipefail
           for attempt in 1 2 3; do
-            if ssh -o BatchMode=yes -o ConnectTimeout=15 "$STAGING_USER@$STAGING_HOST" 'echo KMJ_STAGING_SSH_OK' >/dev/null; then
+            if ssh -i "$STAGING_SSH_DIR/id_ed25519" -o IdentitiesOnly=yes -o UserKnownHostsFile="$STAGING_SSH_DIR/known_hosts" -o StrictHostKeyChecking=yes -o BatchMode=yes -o ConnectTimeout=15 "$STAGING_USER@$STAGING_HOST" 'echo KMJ_STAGING_SSH_OK' >/dev/null; then
               echo 'Staging SSH connectivity verified.'
               exit 0
             fi
@@ -119,10 +125,23 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          ssh "$STAGING_USER@$STAGING_HOST" bash -s -- "$STAGING_PATH" "$DEPLOY_SHA" <<'REMOTE'
+          ssh -i "$STAGING_SSH_DIR/id_ed25519" -o IdentitiesOnly=yes -o UserKnownHostsFile="$STAGING_SSH_DIR/known_hosts" -o StrictHostKeyChecking=yes -o BatchMode=yes "$STAGING_USER@$STAGING_HOST" bash -s -- "$STAGING_PATH" "$DEPLOY_SHA" <<'REMOTE'
           set -euo pipefail
           STAGING_PATH="$1"
           DEPLOY_SHA="$2"
+          timer_script="$HOME/bin/kmj-stage-deploy.sh"
+          if [ ! -r "$timer_script" ] \
+            || ! grep -Fq '.kmj-stage-deploy.lock' "$timer_script" \
+            || ! grep -Eq 'flock[[:space:]]+-n[[:space:]]+9' "$timer_script" \
+            || ! grep -Fq 'staging-approved' "$timer_script"; then
+            echo 'ERROR: Could not verify the existing staging timer and its shared writer lock.' >&2
+            exit 46
+          fi
+          echo 'Verified staging-approved timer and shared deployment lock.'
+          exec 9>"$HOME/.kmj-stage-deploy.lock"
+          echo 'Waiting for the staging deployment writer lock.'
+          flock -w 600 9
+          echo 'Acquired the staging deployment writer lock.'
           cd "$STAGING_PATH"
           git fetch --prune origin staging-approved
           git checkout -B staging-approved origin/staging-approved
@@ -209,7 +228,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          actual_raw="$(ssh "$STAGING_USER@$STAGING_HOST" bash -s -- "$STAGING_PATH" <<'REMOTE'
+          actual_raw="$(ssh -i "$STAGING_SSH_DIR/id_ed25519" -o IdentitiesOnly=yes -o UserKnownHostsFile="$STAGING_SSH_DIR/known_hosts" -o StrictHostKeyChecking=yes -o BatchMode=yes "$STAGING_USER@$STAGING_HOST" bash -s -- "$STAGING_PATH" <<'REMOTE'
           set -euo pipefail
           cd "$1"
           git rev-parse HEAD
@@ -244,7 +263,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          chrome="$(command -v google-chrome || command -v chromium || command -v chromium-browser || true)"
+          chrome="$KMJ_STAGING_CHROME"
           test -n "$chrome"
           dom="$($chrome --headless --no-sandbox --disable-gpu --virtual-time-budget=10000 --dump-dom "$HEALTH_URL" 2>/dev/null)"
           progress_source='apps/platform/resources/js/data/delivery-progress.ts'
@@ -253,11 +272,20 @@ jobs:
           total_count="$(grep -c "id: '" "$progress_source")"
           test "$total_count" -gt 0
           expected_progress=$(( (verified_count * 100 + total_count / 2) / total_count ))
-          printf '%s' "$dom" | grep -Fq 'Verified delivery progress'
-          printf '%s' "$dom" | grep -Fq "${expected_progress}%"
-          printf '%s' "$dom" | grep -Fq "${verified_count}/${total_count} verified"
+          grep -Fq 'Verified delivery progress' <<< "$dom"
+          grep -Fq "${expected_progress}%" <<< "$dom"
+          grep -Fq "${verified_count}/${total_count} verified" <<< "$dom"
           echo 'result=pass' >> "$GITHUB_OUTPUT"
           echo "Rendered staging UI PASS: verified delivery progress = ${expected_progress}% (${verified_count}/${total_count})."
+
+      - name: Verify live monitor and deployed SHA
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 ops/staging/verify-monitor.py "$DEPLOY_SHA"
+          dom="$(timeout 45 "$KMJ_STAGING_CHROME" --no-sandbox --disable-gpu --virtual-time-budget=10000 --dump-dom 'https://staging.kmjtechno.com/info' 2>/dev/null)"
+          grep -Fq 'Staging live operations monitor' <<< "$dom"
+          echo 'Rendered staging monitor PASS.'
 
       - name: Deployment evidence summary
         if: always()
@@ -281,3 +309,11 @@ jobs:
             echo "- rendered UI: ${UI_RESULT:-not-run}"
             if [ -n "$HEALTH_URL" ]; then echo "- staging URL: $HEALTH_URL"; fi
           } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Remove temporary staging SSH credentials
+        if: always()
+        shell: bash
+        run: |
+          if [ -n "${STAGING_SSH_DIR:-}" ]; then
+            rm -rf -- "$STAGING_SSH_DIR"
+          fi

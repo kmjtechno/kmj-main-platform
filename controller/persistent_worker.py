@@ -253,19 +253,9 @@ def run_verification(paths: list[str]) -> tuple[bool, str]:
         (["python", "scripts/verify_free_router.py"], ROOT),
     ]
     if any(path.startswith("apps/platform/") for path in paths):
-        platform = ROOT / "apps" / "platform"
-        (platform / "database" / "database.sqlite").touch(exist_ok=True)
-        if not (platform / ".env").exists() and (platform / ".env.example").exists():
-            (platform / ".env").write_text(
-                (platform / ".env.example").read_text(encoding="utf-8"), encoding="utf-8"
-            )
-        commands.extend([
-            (["composer", "install", "--no-interaction", "--prefer-dist", "--no-progress"], platform),
-            (["php", "artisan", "key:generate", "--force"], platform),
-            (["php", "artisan", "migrate", "--force"], platform),
-            (["npm", "install", "--prefer-offline", "--no-audit", "--no-fund"], platform),
-            (["composer", "ci:check"], platform),
-        ])
+        commands.append((
+            ["bash", "ops/self-hosted-runner/verify-platform.sh"], ROOT,
+        ))
     if any(path.startswith("crates/") for path in paths) and (ROOT / "Cargo.toml").exists():
         commands.append((["cargo", "test", "--workspace"], ROOT))
     output: list[str] = []

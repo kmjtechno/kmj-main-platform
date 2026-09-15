@@ -1,8 +1,10 @@
-import { Head, router } from '@inertiajs/react';
+import type { FormEvent } from 'react';
+import { Head, router, useForm } from '@inertiajs/react';
 import {
     BadgeIndianRupee,
     Building2,
     KeyRound,
+    PackagePlus,
     ShieldCheck,
     ShoppingCart,
     Users,
@@ -77,6 +79,138 @@ function Metric({
     );
 }
 
+function CommercialProductForm() {
+    const form = useForm({ name: '', slug: '' });
+
+    const submit = (event: FormEvent<HTMLFormElement>) => {
+        event.preventDefault();
+        form.post('/operator/products', {
+            preserveScroll: true,
+            onSuccess: () => form.reset(),
+        });
+    };
+
+    return (
+        <form
+            onSubmit={submit}
+            className="grid gap-3 sm:grid-cols-[1fr_1fr_auto]"
+        >
+            <label className="space-y-1.5 text-xs font-semibold">
+                <span>Product name</span>
+                <input
+                    value={form.data.name}
+                    onChange={(event) =>
+                        form.setData('name', event.target.value)
+                    }
+                    placeholder="KMJ Calibration Pro"
+                    className="bg-background h-10 w-full rounded-lg border px-3 text-sm"
+                    required
+                />
+            </label>
+            <label className="space-y-1.5 text-xs font-semibold">
+                <span>Product slug</span>
+                <input
+                    value={form.data.slug}
+                    onChange={(event) =>
+                        form.setData('slug', event.target.value)
+                    }
+                    placeholder="kmj-calibration-pro"
+                    className="bg-background h-10 w-full rounded-lg border px-3 text-sm"
+                    pattern="[a-z0-9]+(?:-[a-z0-9]+)*"
+                    required
+                />
+            </label>
+            <button
+                type="submit"
+                disabled={form.processing}
+                className="mt-auto inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-red-600 px-4 text-xs font-bold text-white transition hover:bg-red-500 disabled:opacity-50"
+            >
+                <PackagePlus className="h-4 w-4" />
+                Activate product
+            </button>
+            {(form.errors.name || form.errors.slug) && (
+                <div className="text-xs text-red-500 sm:col-span-3">
+                    {form.errors.name || form.errors.slug}
+                </div>
+            )}
+        </form>
+    );
+}
+
+function ManualPaymentConfirmation({ order }: { order: RecentOrder }) {
+    const form = useForm({
+        currency: 'INR',
+        amount_minor: '',
+        confirmation_reference: '',
+    });
+
+    const submit = (event: FormEvent<HTMLFormElement>) => {
+        event.preventDefault();
+        form.post(`/operator/orders/${order.id}/confirm`, {
+            preserveScroll: true,
+        });
+    };
+
+    return (
+        <form onSubmit={submit} className="grid min-w-64 gap-2">
+            <div className="grid grid-cols-[72px_1fr] gap-2">
+                <input
+                    value={form.data.currency}
+                    onChange={(event) =>
+                        form.setData(
+                            'currency',
+                            event.target.value.toUpperCase(),
+                        )
+                    }
+                    maxLength={3}
+                    className="bg-background h-9 rounded-lg border px-2 text-xs font-bold uppercase"
+                    aria-label="Currency"
+                    required
+                />
+                <input
+                    type="number"
+                    min="1"
+                    step="1"
+                    value={form.data.amount_minor}
+                    onChange={(event) =>
+                        form.setData('amount_minor', event.target.value)
+                    }
+                    placeholder="Amount in paise/cents"
+                    className="bg-background h-9 rounded-lg border px-2 text-xs"
+                    aria-label="Amount in minor currency units"
+                    required
+                />
+            </div>
+            <input
+                value={form.data.confirmation_reference}
+                onChange={(event) =>
+                    form.setData('confirmation_reference', event.target.value)
+                }
+                placeholder="UTR / payment reference"
+                className="bg-background h-9 rounded-lg border px-2 text-xs"
+                aria-label="Payment confirmation reference"
+                required
+            />
+            <button
+                type="submit"
+                disabled={form.processing}
+                className="inline-flex h-9 items-center justify-center rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 text-[10px] font-bold text-amber-600 transition hover:bg-amber-500/15 disabled:opacity-50 dark:text-amber-400"
+            >
+                Confirm payment evidence
+            </button>
+            {(form.errors.currency ||
+                form.errors.amount_minor ||
+                form.errors.confirmation_reference) && (
+                <div className="text-[10px] text-red-500">
+                    {form.errors.currency ||
+                        form.errors.amount_minor ||
+                        form.errors.confirmation_reference}
+                </div>
+            )}
+        </form>
+    );
+}
+
 export default function Operator({ metrics, recentOrders }: OperatorProps) {
     return (
         <>
@@ -94,9 +228,9 @@ export default function Operator({ metrics, recentOrders }: OperatorProps) {
                             </h1>
                             <p className="text-muted-foreground mt-3 max-w-xl text-sm leading-6">
                                 Privileged platform authority is separated from
-                                customer access. Confirmed orders can be
-                                fulfilled into entitlements and handed directly
-                                into the governed sandbox license lifecycle.
+                                customer access. Manual payment evidence is
+                                confirmed first; entitlement fulfillment and
+                                license issuance remain explicit governed steps.
                             </p>
                         </div>
                         <div className="rounded-xl border border-emerald-500/15 bg-emerald-500/5 px-4 py-3 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
@@ -130,14 +264,26 @@ export default function Operator({ metrics, recentOrders }: OperatorProps) {
                 </section>
 
                 <section className="bg-card rounded-2xl border p-5 sm:p-6">
+                    <div className="mb-5">
+                        <h2 className="font-bold">Commercial catalog</h2>
+                        <p className="text-muted-foreground mt-1 text-xs">
+                            Activate a product so customers can submit governed
+                            purchase requests. Price is recorded only when
+                            payment evidence is confirmed.
+                        </p>
+                    </div>
+                    <CommercialProductForm />
+                </section>
+
+                <section className="bg-card rounded-2xl border p-5 sm:p-6">
                     <div className="flex items-center justify-between gap-4">
                         <div>
                             <h2 className="font-bold">
                                 Recent commercial orders
                             </h2>
                             <p className="text-muted-foreground mt-1 text-xs">
-                                Deterministic readiness, explicit entitlement
-                                fulfillment and governed license handoff.
+                                Confirm external payment evidence, then fulfill
+                                entitlement and license access explicitly.
                             </p>
                         </div>
                         <span className="text-muted-foreground rounded-full border px-3 py-1 text-[10px] font-bold">
@@ -154,7 +300,7 @@ export default function Operator({ metrics, recentOrders }: OperatorProps) {
                                 {recentOrders.map((order) => (
                                     <div
                                         key={order.id}
-                                        className="grid gap-3 px-4 py-4 text-xs sm:grid-cols-[1.2fr_1fr_0.8fr_1.2fr_auto_auto] sm:items-center"
+                                        className="grid gap-3 px-4 py-4 text-xs lg:grid-cols-[1.15fr_0.9fr_0.65fr_1fr_0.8fr_1.35fr] lg:items-center"
                                     >
                                         <div>
                                             <div className="font-bold">
@@ -182,15 +328,19 @@ export default function Operator({ metrics, recentOrders }: OperatorProps) {
                                                 }
                                             </span>
                                         </div>
-                                        <div className="font-bold sm:text-right">
+                                        <div className="font-bold lg:text-right">
                                             {order.amount_minor !== null &&
                                             order.currency
                                                 ? `${order.currency} ${(order.amount_minor / 100).toFixed(2)}`
                                                 : 'Pending'}
                                         </div>
-                                        <div className="sm:text-right">
-                                            {order.fulfillment_state ===
-                                            'ready' ? (
+                                        <div className="lg:text-right">
+                                            {order.status === 'requested' ? (
+                                                <ManualPaymentConfirmation
+                                                    order={order}
+                                                />
+                                            ) : order.fulfillment_state ===
+                                              'ready' ? (
                                                 <button
                                                     type="button"
                                                     className="inline-flex rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-[10px] font-bold text-red-500 transition hover:bg-red-500/15"

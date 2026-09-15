@@ -1,7 +1,8 @@
+import asyncio
 import os
-from unittest.mock import patch
+from unittest.mock import AsyncMock, patch
 
-from controller.model_router import FreeCloudRouter
+from controller.model_router import FreeCloudRouter, NoFreeRouteAvailable
 
 
 def main() -> None:
@@ -46,6 +47,20 @@ def main() -> None:
     with patch.dict(os.environ, {"OPENROUTER_API_KEY": "test-key"}, clear=False):
         provider_router = FreeCloudRouter()
         assert "openrouter" in {provider.name for provider in provider_router.providers()}
+
+    with patch.object(router, "discover", new=AsyncMock(return_value=[
+        {"id": "qwen/qwen-coder", "owned_by": "qwen"},
+    ])):
+        selected = asyncio.run(router.select("coding"))
+        assert selected.model_id == "qwen/qwen-coder"
+
+    with patch.object(router, "discover", new=AsyncMock(return_value=[])):
+        try:
+            asyncio.run(router.select("coding"))
+        except NoFreeRouteAvailable:
+            pass
+        else:
+            raise AssertionError("empty discovery must fail closed")
 
     print("KMJ federated free-cloud router policy PASS")
 

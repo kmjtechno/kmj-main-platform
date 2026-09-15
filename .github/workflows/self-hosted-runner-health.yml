@@ -5,6 +5,16 @@ on:
   pull_request:
     paths:
       - '.github/workflows/self-hosted-runner-health.yml'
+      - '.github/actionlint.yaml'
+      - '.github/workflows/autonomous-worker.yml'
+      - '.github/workflows/platform-ci.yml'
+      - 'controller/worker_preflight.py'
+      - 'tests/test_platform_verify_contract.py'
+      - '.github/workflows/staging-promotion-gate.yml'
+      - '.github/workflows/staging-vps-deploy-fixed.yml'
+      - '.github/workflows/staging-authenticated-smoke.yml'
+      - '.github/workflows/staging-deploy-recovery.yml'
+      - 'ops/staging/**'
       - 'ops/self-hosted-runner/**'
       - 'docs/ops/SELF_HOSTED_CI_RUNNER.md'
 
@@ -20,6 +30,34 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           persist-credentials: false
+
+      - name: Validate staging workflow expressions before merge
+        shell: bash
+        run: |
+          set -euo pipefail
+          lint_dir="$(mktemp -d "$RUNNER_TEMP/kmj-actionlint.XXXXXX")"
+          trap 'rm -rf -- "$lint_dir"' EXIT
+          curl --fail --silent --show-error --location --retry 2 --max-time 90 \
+            'https://github.com/rhysd/actionlint/releases/download/v1.7.12/actionlint_1.7.12_linux_amd64.tar.gz' \
+            --output "$lint_dir/actionlint.tar.gz"
+          printf '8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8  %s\n' \
+            "$lint_dir/actionlint.tar.gz" | sha256sum --check -
+          tar -xzf "$lint_dir/actionlint.tar.gz" -C "$lint_dir" actionlint
+          "$lint_dir/actionlint" -shellcheck= -pyflakes= \
+            .github/workflows/self-hosted-runner-health.yml \
+            .github/workflows/autonomous-worker.yml \
+            .github/workflows/platform-ci.yml \
+            .github/workflows/staging-promotion-gate.yml \
+            .github/workflows/staging-vps-deploy-fixed.yml \
+            .github/workflows/staging-authenticated-smoke.yml \
+            .github/workflows/staging-deploy-recovery.yml
+
+      - name: Verify parallel verification safety and report VPS capacity
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 tests/test_platform_verify_contract.py
+          python3 controller/worker_preflight.py --capacity-only
 
       - name: Verify runner identity and toolchain
         shell: bash
@@ -40,3 +78,42 @@ jobs:
           test -f apps/platform/composer.json
           test -f apps/platform/package.json
           git status --short
+
+      - name: Verify staging client tools
+        shell: bash
+        run: |
+          set -euo pipefail
+          for tool in ssh ssh-keygen ssh-keyscan curl python3 flock; do
+            command -v "$tool"
+          done
+          chrome="$(command -v google-chrome || command -v chromium || command -v chromium-browser || true)"
+          if [ -n "$chrome" ]; then
+            "$chrome" --version
+          else
+            echo 'No Chrome binary found; rendered staging verification needs browser setup.'
+          fi
+
+      - name: Inspect public staging HTTP availability
+        shell: bash
+        run: |
+          set -euo pipefail
+          for path in / /info /info/status; do
+            curl --silent --show-error --connect-timeout 5 --max-time 15 \
+              --output /dev/null --write-out "$path HTTP %{http_code}\\n" \
+              "https://staging.kmjtechno.com$path" || true
+          done
+
+      - name: Verify live staging monitor response
+        shell: bash
+        run: python3 ops/staging/verify-monitor.py
+
+      - name: Prepare staging browser without privileged installation
+        shell: bash
+        run: bash ops/self-hosted-runner/prepare-staging-browser.sh
+
+      - name: Verify browser runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          dom="$(timeout 30 "$KMJ_STAGING_CHROME" --no-sandbox --disable-gpu --dump-dom 'data:text/html,<body>KMJ_RUNNER_BROWSER_OK</body>' 2>/dev/null)"
+          grep -Fq 'KMJ_RUNNER_BROWSER_OK' <<< "$dom"

@@ -180,8 +180,15 @@ export const deliveryMilestones: DeliveryMilestone[] = [
     {
         id: 'issuer-positive-license-lifetime',
         title: 'Issuer positive lifetime parity',
-        state: 'active',
+        state: 'verified',
         detail: 'Reject same-second expiry before signing so the sandbox issuer cannot create a token that the validator must immediately reject',
+        evidence: 'PR #120',
+    },
+    {
+        id: 'manual-sales-earning-lane',
+        title: 'Manual sales earning lane',
+        state: 'active',
+        detail: 'Customer Purchase Center + commercial product activation + owner-confirmed external payment evidence before governed entitlement/license fulfillment',
     },
     {
         id: 'organization-capabilities',
@@ -222,14 +229,14 @@ export const deliveryMilestones: DeliveryMilestone[] = [
         id: 'guarded-worker-runtime',
         title: 'Guarded worker runtime',
         state: 'verified',
-        detail: 'Push trigger + bounded safe task capacity',
-        evidence: 'PR #72 + worker run evidence',
+        detail: 'Push + safe-issue wake-up, bounded task capacity and parallel verification',
+        evidence: 'PR #72 + PR #127 worker reliability',
     },
     {
         id: 'verified-free-ai-route',
         title: 'Verified-free AI route',
         state: 'blocked',
-        detail: 'Router ready; staging credential/9Router unavailable',
+        detail: 'No AI provider credential is configured and local 9Router is unavailable; safe tasks await a verified-free account',
     },
     {
         id: 'revenue-working-phase',
@@ -239,10 +246,17 @@ export const deliveryMilestones: DeliveryMilestone[] = [
         evidence: 'PR #90 / #91 / #93 + staging-approved 81137e0617c9',
     },
     {
+        id: 'staging-live-monitor',
+        title: 'Staging live operations monitor',
+        state: 'verified',
+        detail: 'Live /info and /info/status verified with a healthy database, exact deployed commit and rendered browser checks; production-host isolation is covered by CI',
+        evidence: 'PR #129 + deploy run 34909642182 (5e25dfdfc033)',
+    },
+    {
         id: 'ops-readiness-evidence',
         title: 'Ops readiness evidence',
         state: 'active',
-        detail: 'Backup freshness + worker/AI posture + fail-closed probes + transaction-scoped authenticated staging smoke under verification',
+        detail: 'Backup freshness + worker/AI posture + fail-closed probes; cached-route authenticated staging smoke and shared deployment lock under verification',
         evidence: 'PR #98 + PR #101 + authenticated surface smoke lane',
     },
     {
@@ -264,5 +278,5 @@ export const deliveryProgress = Math.round(
 export const deliveryProgressMeta = {
     label: 'Revenue-capable working phase',
     note: 'Evidence-based delivery milestones, not total product completion.',
-    refreshed: '2026-09-14',
+    refreshed: '2026-09-15',
 } as const;

@@ -26,6 +26,7 @@ permissions:
 
 jobs:
   worker:
+    if: ${{ github.event_name != 'issues' || contains(github.event.issue.labels.*.name, 'autonomous-safe') }}
     runs-on: [self-hosted, linux, x64, kmj-main-platform-ci]
     timeout-minutes: 60
     environment: staging
@@ -35,6 +36,15 @@ jobs:
       KMJ_AUTONOMOUS_WRITE_ENABLED: 'true'
       KMJ_AUTO_MERGE_ENABLED: 'true'
       KMJ_WORKER_MAX_TASKS_PER_CYCLE: '3'
+      KMJ_9ROUTER_BASE_URL: ${{ vars.KMJ_9ROUTER_BASE_URL || 'http://127.0.0.1:20128/v1' }}
+      KMJ_9ROUTER_API_KEY: ${{ secrets.KMJ_9ROUTER_API_KEY }}
+      OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+      GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+      CEREBRAS_API_KEY: ${{ secrets.CEREBRAS_API_KEY }}
+      MISTRAL_API_KEY: ${{ secrets.MISTRAL_API_KEY }}
+      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+      KMJ_VERIFIED_FREE_PROVIDERS: ${{ vars.KMJ_VERIFIED_FREE_PROVIDERS }}
+      KMJ_FREE_PROVIDER_ENDPOINTS_JSON: ${{ secrets.KMJ_FREE_PROVIDER_ENDPOINTS_JSON }}
       DB_CONNECTION: sqlite
       DB_DATABASE: ${{ github.workspace }}/apps/platform/database/database.sqlite
     steps:
@@ -42,6 +52,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
+          ref: main
           persist-credentials: true
 
       - name: Set up Python
@@ -64,47 +75,13 @@ jobs:
       - name: Install worker dependencies
         run: pip install -r requirements.txt
 
-      - name: Configure verified-free router
-        if: ${{ vars.KMJ_9ROUTER_BASE_URL != '' }}
-        shell: bash
-        run: echo "KMJ_9ROUTER_BASE_URL=${{ vars.KMJ_9ROUTER_BASE_URL }}" >> "$GITHUB_ENV"
-
-      - name: Tunnel to server-local 9Router when no public endpoint is configured
-        if: ${{ vars.KMJ_9ROUTER_BASE_URL == '' }}
-        env:
-          STAGING_HOST: ${{ secrets.STAGING_SSH_HOST }}
-          STAGING_USER: ${{ secrets.STAGING_SSH_USER }}
-          STAGING_KEY: ${{ secrets.STAGING_SSH_PRIVATE_KEY }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          install -m 700 -d ~/.ssh
-          printf '%s' "$STAGING_KEY" | sed 's/\\n/\n/g' | tr -d '\r' > ~/.ssh/id_ed25519
-          printf '\n' >> ~/.ssh/id_ed25519
-          chmod 600 ~/.ssh/id_ed25519
-          ssh-keyscan -T 10 -H "$STAGING_HOST" >> ~/.ssh/known_hosts 2>/dev/null
-          ssh -fN -o BatchMode=yes -o ExitOnForwardFailure=yes -o ConnectTimeout=15 \
-            -L 20128:127.0.0.1:20128 "$STAGING_USER@$STAGING_HOST"
-          if curl --fail --silent --max-time 8 http://127.0.0.1:20128/v1/models >/dev/null; then
-            echo 'KMJ_9ROUTER_BASE_URL=http://127.0.0.1:20128/v1' >> "$GITHUB_ENV"
-            echo 'Server-local 9Router tunnel is reachable.'
-          else
-            echo '::warning title=9Router unavailable::Server SSH works but local 9Router is not reachable on port 20128; worker will fail closed for AI tasks.'
-          fi
+      - name: Inspect VPS capacity and verified-free route
+        run: PYTHONPATH=. python controller/worker_preflight.py
 
       - name: Verify worker safety core
         run: PYTHONPATH=. python -m unittest tests.test_persistent_worker
 
       - name: Run guarded worker cycle
-        env:
-          KMJ_9ROUTER_API_KEY: ${{ secrets.KMJ_9ROUTER_API_KEY }}
-          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
-          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
-          CEREBRAS_API_KEY: ${{ secrets.CEREBRAS_API_KEY }}
-          MISTRAL_API_KEY: ${{ secrets.MISTRAL_API_KEY }}
-          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-          KMJ_VERIFIED_FREE_PROVIDERS: ${{ vars.KMJ_VERIFIED_FREE_PROVIDERS }}
-          KMJ_FREE_PROVIDER_ENDPOINTS_JSON: ${{ secrets.KMJ_FREE_PROVIDER_ENDPOINTS_JSON }}
         run: PYTHONPATH=. python controller/persistent_worker.py
 
       - name: Worker summary
@@ -113,6 +90,7 @@ jobs:
           echo '## KMJ persistent autonomous worker' >> "$GITHUB_STEP_SUMMARY"
           echo '- cadence: every 5 minutes plus immediate issue open/reopen/label wake-up' >> "$GITHUB_STEP_SUMMARY"
           echo '- capacity: up to 3 autonomous-safe, non-conflicting tasks per cycle' >> "$GITHUB_STEP_SUMMARY"
+          echo '- router transport: direct from the self-hosted VPS; no loopback SSH tunnel' >> "$GITHUB_STEP_SUMMARY"
           echo '- task gate: autonomous-safe label only' >> "$GITHUB_STEP_SUMMARY"
           echo '- paid AI fallback: prohibited' >> "$GITHUB_STEP_SUMMARY"
           echo '- local LLM inference: prohibited' >> "$GITHUB_STEP_SUMMARY"
