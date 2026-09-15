@@ -11,7 +11,8 @@ concurrency:
 
 permissions:
   contents: read
-  actions: read
+  actions: write
+  issues: write
 
 jobs:
   watchdog:
@@ -25,6 +26,11 @@ jobs:
 
       - name: Prepare resilient Python runtime
         run: bash ops/self-hosted-runner/prepare-python-runtime.sh
+
+      - name: Recover known transient autonomous stops
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: PYTHONPATH=. python3 scripts/continuity_watchdog.py
 
       - name: Enforce platform safety boundaries
         shell: bash
@@ -67,6 +73,7 @@ jobs:
             else
               echo '- promotion drift: detected; staging promotion/deploy chain must continue'
             fi
+            echo '- continuity recovery: known transient patch-format stops are requeued automatically'
             echo '- recovery verification: architecture/contracts/runtime executed in parallel'
             echo '- free-cloud policy: enforced'
             echo '- paid fallback: prohibited'
@@ -77,4 +84,4 @@ jobs:
       - name: Watchdog result
         run: |
           echo 'Autonomous watchdog PASS.'
-          echo 'The project is re-verified every 5 minutes; deployment recovery remains handled by the staging deploy workflow.'
+          echo 'The project is checked every 5 minutes; known transient patch stops are requeued and the worker is restarted automatically.'
