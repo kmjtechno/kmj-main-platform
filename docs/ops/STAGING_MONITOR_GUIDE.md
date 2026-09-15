@@ -45,3 +45,12 @@ This guide helps operators interpret the staging monitor and enqueue routine low
 ## Release confirmation
 
 A successful release is confirmed by exact deployed commit evidence, database health, and authenticated smoke results, not merely by a workflow that started.
+
+## Prepared PR recovery
+
+- `autonomous-pr-pending` means the AI patch already passed local checks and was pushed; the worker-authored KMJ-Prepared-PR comment records the branch and exact commit.
+- The worker reuses that exact commit when submitting the PR; it does not ask AI to generate the patch again.
+- A moved branch or invalid checkpoint requires review. An existing PR is adopted instead of duplicated.
+- Temporary server errors or rate limits keep the prepared work retryable on a later cycle.
+- Permission or validation errors add `autonomous-blocked`. Resolve the reported GitHub cause first, then remove that block to permit another attempt; preserve the pending label and checkpoint.
+- Required CI must succeed before merge.
