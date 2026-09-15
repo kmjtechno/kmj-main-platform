@@ -3,6 +3,7 @@ import unittest
 from unittest.mock import patch
 
 from controller.persistent_worker import (
+    GitHubClient,
     patch_paths,
     paths_conflict,
     task_risk,
@@ -67,6 +68,40 @@ class PersistentWorkerSafetyTests(unittest.TestCase):
 
     def test_disjoint_paths_do_not_conflict(self):
         self.assertFalse(paths_conflict({"apps/platform/a.php"}, {"docs/a.md"}))
+
+
+    def test_rejects_denied_deletion_hidden_beside_allowed_patch(self):
+        patch_text = """diff --git a/docs/a.md b/docs/a.md
+--- a/docs/a.md
++++ b/docs/a.md
+@@ -1 +1 @@
+-old
++new
+diff --git a/controller/main.py b/controller/main.py
+deleted file mode 100644
+--- a/controller/main.py
++++ /dev/null
+@@ -1 +0,0 @@
+-old
+"""
+        with self.assertRaisesRegex(ValueError, "DENIED_PATH"):
+            validate_patch(patch_text)
+
+    def test_rejects_rename_or_symlink_patch(self):
+        for patch_text in (
+            "diff --git a/controller/main.py b/docs/a.md\n+++ b/docs/a.md\n",
+            "diff --git a/docs/link b/docs/link\nnew file mode 120000\n+++ b/docs/link\n",
+        ):
+            with self.subTest(patch=patch_text), self.assertRaises(ValueError):
+                validate_patch(patch_text)
+
+    def test_required_checks_cannot_be_skipped(self):
+        client = object.__new__(GitHubClient)
+        for conclusion in ("skipped", "neutral", "success"):
+            with patch.object(client, "request", return_value={"check_runs": [
+                {"name": "verify", "status": "completed", "conclusion": conclusion},
+            ]}):
+                self.assertEqual(client.checks_green("sha", False), conclusion == "success")
 
 
 if __name__ == "__main__":

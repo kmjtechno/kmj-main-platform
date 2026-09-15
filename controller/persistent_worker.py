@@ -88,6 +88,23 @@ def validate_patch(patch: str) -> list[str]:
     if len(patch.encode("utf-8")) > MAX_PATCH_BYTES:
         raise ValueError("PATCH_TOO_LARGE")
     paths = patch_paths(patch)
+    headers = []
+    for line in patch.splitlines():
+        if line.startswith("diff --git "):
+            match = re.fullmatch(r"diff --git a/([^\s]+) b/([^\s]+)", line)
+            if not match or match.group(1) != match.group(2):
+                raise ValueError("PATCH_HEADER_UNSUPPORTED")
+            headers.append(match.group(1))
+        if line.startswith(("--- ", "+++ ")) and line[4:] != "/dev/null":
+            expected_prefix = "a/" if line.startswith("--- ") else "b/"
+            if not headers or line[4:] != expected_prefix + headers[-1]:
+                raise ValueError("PATCH_PATH_HEADER_MISMATCH")
+        if line.startswith(("old mode ", "new mode ", "rename from ", "rename to ", "copy from ", "copy to ", "GIT binary patch")):
+            raise ValueError("PATCH_METADATA_UNSUPPORTED")
+        if line.startswith("new file mode ") and line != "new file mode 100644":
+            raise ValueError("PATCH_FILE_MODE_UNSUPPORTED")
+    # Validate every diff header, including deletions omitted from +++ paths.
+    paths = sorted(set(paths + headers))
     if not paths or len(paths) > MAX_PATCH_FILES:
         raise ValueError("PATCH_FILE_COUNT_INVALID")
     for path in paths:
@@ -188,12 +205,12 @@ class GitHubClient:
         allowed = {"success", "neutral", "skipped"}
         if any(run.get("conclusion") not in allowed for run in runs):
             return False
-        names = {str(run.get("name", "")).lower() for run in runs}
-        if "verify" not in names:
-            return False
-        if require_platform and "platform" not in names:
-            return False
-        return True
+        required = {"verify", "platform"} if require_platform else {"verify"}
+        successful = {
+            str(run.get("name", "")).lower()
+            for run in runs if run.get("conclusion") == "success"
+        }
+        return required.issubset(successful)
 
     def merge_pr(self, pr_number: int, sha: str) -> dict[str, Any]:
         return self.request(

@@ -257,7 +257,8 @@ export const deliveryMilestones: DeliveryMilestone[] = [
         title: 'Ops readiness evidence',
         state: 'active',
         detail: 'Backup freshness + worker/AI posture + fail-closed probes; cached-route authenticated smoke and shared deployment lock verified on staging',
-        evidence: 'PR #132 + deploy 34912567459 + authenticated smoke 34912692783',
+        evidence:
+            'PR #132 + deploy 34912567459 + authenticated smoke 34912692783',
     },
     {
         id: 'production-hardening',
