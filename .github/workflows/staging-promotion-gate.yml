@@ -98,41 +98,11 @@ jobs:
           php -r 'exit(PHP_VERSION_ID >= 80300 && PHP_VERSION_ID < 80600 ? 0 : 1);'
           node -e 'const m=Number(process.versions.node.split(".")[0]); process.exit(m === 22 ? 0 : 1)'
 
-      - name: Prepare deterministic CI database
-        working-directory: apps/platform
-        shell: bash
-        run: |
-          set -euo pipefail
-          touch database/database.sqlite
-
-      - name: Install and build platform
-        working-directory: apps/platform
+      - name: Install, build and verify platform with parallel lanes
         env:
           DB_CONNECTION: sqlite
           DB_DATABASE: ${{ github.workspace }}/apps/platform/database/database.sqlite
-        run: |
-          set -euo pipefail
-          composer install --no-interaction --prefer-dist --no-progress
-          test -f .env || cp .env.example .env
-          php artisan key:generate --force
-          php artisan migrate --force
-          if [ -f package-lock.json ]; then
-            npm ci --no-audit --no-fund
-          else
-            npm install --no-audit --no-fund
-          fi
-          npm run build
-
-      - name: Run platform quality checks
-        working-directory: apps/platform
-        env:
-          DB_CONNECTION: sqlite
-          DB_DATABASE: ${{ github.workspace }}/apps/platform/database/database.sqlite
-          TMPDIR: ${{ runner.temp }}/phpstan-${{ github.run_id }}-${{ github.run_attempt }}
-        run: |
-          set -euo pipefail
-          mkdir -p "$TMPDIR"
-          composer ci:check
+        run: bash "$GITHUB_WORKSPACE/ops/self-hosted-runner/verify-platform.sh"
 
   promote:
     name: Promote verified commit to staging-approved

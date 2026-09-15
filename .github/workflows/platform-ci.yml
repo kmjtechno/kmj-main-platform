@@ -8,11 +8,15 @@ on:
       - 'apps/platform/**'
       - 'bootstrap/runtime-source.yaml'
       - '.github/workflows/platform-ci.yml'
+      - 'ops/self-hosted-runner/verify-platform.sh'
+      - 'tests/test_platform_verify_contract.py'
   pull_request:
     paths:
       - 'apps/platform/**'
       - 'bootstrap/runtime-source.yaml'
       - '.github/workflows/platform-ci.yml'
+      - 'ops/self-hosted-runner/verify-platform.sh'
+      - 'tests/test_platform_verify_contract.py'
 
 permissions:
   contents: read
@@ -44,39 +48,8 @@ jobs:
           php -r 'exit(PHP_VERSION_ID >= 80300 && PHP_VERSION_ID < 80600 ? 0 : 1);'
           node -e 'const m=Number(process.versions.node.split(".")[0]); process.exit(m === 22 ? 0 : 1)'
 
-      - name: Prepare deterministic CI database
-        run: |
-          set -euo pipefail
-          touch database/database.sqlite
-
-      - name: Install and build application
+      - name: Install, build and verify platform with parallel lanes
         env:
           DB_CONNECTION: sqlite
           DB_DATABASE: ${{ github.workspace }}/apps/platform/database/database.sqlite
-        run: |
-          set -euo pipefail
-          composer install --no-interaction --prefer-dist --no-progress
-          test -f .env || cp .env.example .env
-          php artisan key:generate --force
-          php artisan migrate --force
-          npm install --no-audit --no-fund
-          npm run build
-
-      - name: Check frontend format
-        run: ./node_modules/.bin/vp fmt --check
-
-      - name: Check frontend lint
-        run: ./node_modules/.bin/vp lint
-
-      - name: Check frontend types
-        run: npm run types:check
-
-      - name: Check PHP quality and tests
-        env:
-          DB_CONNECTION: sqlite
-          DB_DATABASE: ${{ github.workspace }}/apps/platform/database/database.sqlite
-          TMPDIR: ${{ runner.temp }}/phpstan-${{ github.run_id }}-${{ github.run_attempt }}
-        run: |
-          set -euo pipefail
-          mkdir -p "$TMPDIR"
-          composer test
+        run: bash "$GITHUB_WORKSPACE/ops/self-hosted-runner/verify-platform.sh"

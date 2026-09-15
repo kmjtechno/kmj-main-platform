@@ -229,14 +229,14 @@ export const deliveryMilestones: DeliveryMilestone[] = [
         id: 'guarded-worker-runtime',
         title: 'Guarded worker runtime',
         state: 'verified',
-        detail: 'Push trigger + bounded safe task capacity',
-        evidence: 'PR #72 + worker run evidence',
+        detail: 'Push + safe-issue wake-up, bounded task capacity and parallel verification',
+        evidence: 'PR #72 + PR #127 worker reliability',
     },
     {
         id: 'verified-free-ai-route',
         title: 'Verified-free AI route',
         state: 'blocked',
-        detail: 'Router ready; staging credential/9Router unavailable',
+        detail: 'No AI provider credential is configured and local 9Router is unavailable; safe tasks await a verified-free account',
     },
     {
         id: 'revenue-working-phase',
@@ -278,5 +278,5 @@ export const deliveryProgress = Math.round(
 export const deliveryProgressMeta = {
     label: 'Revenue-capable working phase',
     note: 'Evidence-based delivery milestones, not total product completion.',
-    refreshed: '2026-09-14',
+    refreshed: '2026-09-15',
 } as const;

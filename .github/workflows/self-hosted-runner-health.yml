@@ -6,6 +6,10 @@ on:
     paths:
       - '.github/workflows/self-hosted-runner-health.yml'
       - '.github/actionlint.yaml'
+      - '.github/workflows/autonomous-worker.yml'
+      - '.github/workflows/platform-ci.yml'
+      - 'controller/worker_preflight.py'
+      - 'tests/test_platform_verify_contract.py'
       - '.github/workflows/staging-promotion-gate.yml'
       - '.github/workflows/staging-vps-deploy-fixed.yml'
       - '.github/workflows/staging-authenticated-smoke.yml'
@@ -41,10 +45,19 @@ jobs:
           tar -xzf "$lint_dir/actionlint.tar.gz" -C "$lint_dir" actionlint
           "$lint_dir/actionlint" -shellcheck= -pyflakes= \
             .github/workflows/self-hosted-runner-health.yml \
+            .github/workflows/autonomous-worker.yml \
+            .github/workflows/platform-ci.yml \
             .github/workflows/staging-promotion-gate.yml \
             .github/workflows/staging-vps-deploy-fixed.yml \
             .github/workflows/staging-authenticated-smoke.yml \
             .github/workflows/staging-deploy-recovery.yml
+
+      - name: Verify parallel verification safety and report VPS capacity
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 tests/test_platform_verify_contract.py
+          python3 controller/worker_preflight.py --capacity-only
 
       - name: Verify runner identity and toolchain
         shell: bash
