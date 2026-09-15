@@ -287,6 +287,22 @@ jobs:
           grep -Fq 'Staging live operations monitor' <<< "$dom"
           echo 'Rendered staging monitor PASS.'
 
+      - name: Capture desktop and mobile staging QA
+        id: browser_qa
+        timeout-minutes: 4
+        env:
+          KMJ_QA_OUTPUT: ${{ runner.temp }}/kmj-staging-qa-${{ github.run_id }}
+        run: node ops/staging/browser-qa.mjs "$DEPLOY_SHA"
+
+      - name: Preserve staging QA screenshots and measurements
+        if: always() && steps.browser_qa.outcome != 'skipped'
+        uses: actions/upload-artifact@v4
+        with:
+          name: staging-qa-${{ github.run_id }}
+          path: ${{ runner.temp }}/kmj-staging-qa-${{ github.run_id }}
+          retention-days: 3
+          if-no-files-found: warn
+
       - name: Deployment evidence summary
         if: always()
         shell: bash
@@ -307,6 +323,7 @@ jobs:
             echo "- commit verification: ${{ steps.verify.conclusion }}"
             echo "- HTTP health: ${HEALTH_RESULT:-not-run}"
             echo "- rendered UI: ${UI_RESULT:-not-run}"
+            echo "- desktop/mobile QA: ${{ steps.browser_qa.conclusion }}"
             if [ -n "$HEALTH_URL" ]; then echo "- staging URL: $HEALTH_URL"; fi
           } >> "$GITHUB_STEP_SUMMARY"
 
