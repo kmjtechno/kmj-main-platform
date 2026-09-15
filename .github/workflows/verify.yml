@@ -21,16 +21,12 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.13'
-          cache: 'pip'
-          cache-dependency-path: requirements.txt
-      - run: pip install -r requirements.txt
+      - name: Prepare resilient Python runtime
+        run: bash ops/self-hosted-runner/prepare-python-runtime.sh
       - name: Compile controller
-        run: python -m compileall controller
+        run: python3 -m compileall controller
       - name: Verify persistent worker safety
-        run: PYTHONPATH=. python -m unittest tests.test_persistent_worker tests.test_opencode_free tests.test_router_official_client
+        run: PYTHONPATH=. python3 -m unittest tests.test_persistent_worker tests.test_opencode_free tests.test_router_official_client
       - name: Verify staging QA failure classification
         # Uses the existing Node runtime; no package installation or AI call.
         run: node --test ops/staging/browser-qa.test.mjs
@@ -54,8 +50,8 @@ jobs:
           grep -q 'BACKUP_AGE_RECIPIENT' scripts/backup_platform.sh
           grep -q 'sha256sum --check' scripts/verify_backup_bundle.sh
           grep -q 'No secret values were printed' scripts/backup_preflight.sh
-          python scripts/test_backup_contract.py
-          python scripts/test_restore_verification_contract.py
+          python3 scripts/test_backup_contract.py
+          python3 scripts/test_restore_verification_contract.py
       - name: Verify architecture foundation
         run: |
           set -euo pipefail
@@ -80,13 +76,13 @@ jobs:
         env:
           KMJ_PROGRESS_BASE_SHA: ${{ github.event.pull_request.base.sha }}
           KMJ_PROGRESS_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
-        run: python scripts/verify_delivery_progress.py
+        run: python3 scripts/verify_delivery_progress.py
       - name: Verify public surface inventory
-        run: python scripts/verify_public_surface.py
+        run: python3 scripts/verify_public_surface.py
       - name: Verify strict free-cloud router
-        run: PYTHONPATH=. python scripts/verify_free_router.py
+        run: PYTHONPATH=. python3 scripts/verify_free_router.py
       - name: Verify versioned contracts
-        run: python scripts/verify_contracts.py
+        run: python3 scripts/verify_contracts.py
       - name: Verify Rust sandbox license core
         run: |
           set -euo pipefail
@@ -97,6 +93,6 @@ jobs:
           cargo fmt --manifest-path services/license-core/Cargo.toml --check
           cargo test --manifest-path services/license-core/Cargo.toml --locked
       - name: Verify module architecture
-        run: python scripts/verify_architecture.py
+        run: python3 scripts/verify_architecture.py
       - name: Verify platform runtime provenance
-        run: python scripts/verify_runtime.py
+        run: python3 scripts/verify_runtime.py
