@@ -28,7 +28,10 @@ final class StagingMonitoringController extends Controller
         $requestStartedAt = hrtime(true);
         [$databaseHealthy, $databaseLatencyMs] = $this->databaseProbe();
         [$pendingJobs, $failedJobs] = $this->queueSnapshot();
-        [$routerOnline, $routerModelCount, $routerLatencyMs] = $this->routerProbe();
+        $completion = $this->completionEvidence();
+        [$routerOnline, $routerModelCount, $routerLatencyMs] = $completion !== null
+            ? [true, 1, $completion['latency_ms']]
+            : $this->routerProbe();
         $system = $this->systemSnapshot();
         $deployment = $this->deploymentSnapshot();
         $runnerCount = $this->processCount('Runner.Listener');
@@ -58,6 +61,7 @@ final class StagingMonitoringController extends Controller
                 'ai_router_online' => $routerOnline,
                 'ai_router_model_count' => $routerModelCount,
                 'ai_router_latency_ms' => $routerLatencyMs,
+                'ai_last_verified_at' => $completion['verified_at'] ?? null,
             ],
             'deployment' => $deployment,
             'processes' => [
@@ -91,9 +95,11 @@ final class StagingMonitoringController extends Controller
                     'key' => 'router',
                     'label' => 'Verified-free AI route',
                     'status' => $routerOnline ? 'online' : 'blocked',
-                    'detail' => $routerOnline
-                        ? "Local 9Router reachable · {$routerModelCount} model record(s)"
-                        : 'Local 9Router is not reachable; AI tasks remain fail-closed.',
+                    'detail' => $completion !== null
+                        ? "OpenCode Big Pickle · zero-cost response verified at {$completion['verified_at']} · scheduled worker"
+                        : ($routerOnline
+                            ? "Local 9Router reachable · {$routerModelCount} model record(s)"
+                            : 'No recent verified AI completion and local 9Router is unavailable; tasks wait for a free route.'),
                 ],
                 [
                     'key' => 'deploy',
@@ -150,6 +156,34 @@ final class StagingMonitoringController extends Controller
         } catch (Throwable) {
             return [0, 0];
         }
+    }
+
+    /** @return array{verified_at: string, latency_ms: float}|null */
+    private function completionEvidence(): ?array
+    {
+        $path = storage_path('app/monitoring/ai-worker.json');
+        $raw = @file_get_contents($path, false, null, 0, 4096);
+        $proof = is_string($raw) ? json_decode($raw, true) : null;
+        if (! is_array($proof)
+            || ($proof['provider'] ?? null) !== 'opencode-client'
+            || ($proof['model'] ?? null) !== 'opencode/big-pickle'
+            || ($proof['status'] ?? null) !== 'verified'
+            || ! in_array($proof['cost'] ?? null, [0, 0.0], true)
+            || ! is_int($proof['verified_at'] ?? null)
+            || ! is_numeric($proof['latency_ms'] ?? null)) {
+            return null;
+        }
+
+        $age = now()->timestamp - $proof['verified_at'];
+        $latency = (float) $proof['latency_ms'];
+        if ($age < 0 || $age > 1800 || $latency < 0 || ! is_finite($latency)) {
+            return null;
+        }
+
+        return [
+            'verified_at' => gmdate(DATE_ATOM, $proof['verified_at']),
+            'latency_ms' => $latency,
+        ];
     }
 
     /** @return array{0: bool, 1: int, 2: float|null} */
@@ -342,3 +376,4 @@ final class StagingMonitoringController extends Controller
         return round((hrtime(true) - $startedAt) / 1_000_000, 1);
     }
 }
+

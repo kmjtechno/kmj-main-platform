@@ -235,8 +235,8 @@ export const deliveryMilestones: DeliveryMilestone[] = [
     {
         id: 'verified-free-ai-route',
         title: 'Verified-free AI route',
-        state: 'blocked',
-        detail: 'No AI provider credential is configured and local 9Router is unavailable; safe tasks await a verified-free account',
+        state: 'active',
+        detail: 'Pinned official OpenCode cloud client with per-request zero-price checks, isolated credentials and recent completion evidence; VPS task verification in progress',
     },
     {
         id: 'revenue-working-phase',
@@ -256,8 +256,8 @@ export const deliveryMilestones: DeliveryMilestone[] = [
         id: 'ops-readiness-evidence',
         title: 'Ops readiness evidence',
         state: 'active',
-        detail: 'Backup freshness + worker/AI posture + fail-closed probes; cached-route authenticated staging smoke and shared deployment lock under verification',
-        evidence: 'PR #98 + PR #101 + authenticated surface smoke lane',
+        detail: 'Backup freshness + worker/AI posture + fail-closed probes; cached-route authenticated smoke and shared deployment lock verified on staging',
+        evidence: 'PR #132 + deploy 34912567459 + authenticated smoke 34912692783',
     },
     {
         id: 'production-hardening',
@@ -280,3 +280,4 @@ export const deliveryProgressMeta = {
     note: 'Evidence-based delivery milestones, not total product completion.',
     refreshed: '2026-09-15',
 } as const;
+

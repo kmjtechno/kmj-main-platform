@@ -9,6 +9,8 @@ on:
       - '.github/workflows/autonomous-worker.yml'
       - '.github/workflows/platform-ci.yml'
       - 'controller/worker_preflight.py'
+      - 'controller/opencode_free.py'
+      - 'tests/test_opencode_free.py'
       - 'tests/test_platform_verify_contract.py'
       - '.github/workflows/staging-promotion-gate.yml'
       - '.github/workflows/staging-vps-deploy-fixed.yml'
@@ -58,6 +60,15 @@ jobs:
           set -euo pipefail
           python3 tests/test_platform_verify_contract.py
           python3 controller/worker_preflight.py --capacity-only
+
+      - name: Verify official free client boundaries
+        run: PYTHONPATH=. python3 tests/test_opencode_free.py
+
+      - name: Prepare pinned official free client
+        run: bash ops/self-hosted-runner/prepare-free-client.sh
+
+      - name: Verify real zero-cost cloud response from VPS
+        run: PYTHONPATH=. python3 controller/opencode_free.py
 
       - name: Verify runner identity and toolchain
         shell: bash
@@ -117,3 +128,4 @@ jobs:
           set -euo pipefail
           dom="$(timeout 30 "$KMJ_STAGING_CHROME" --no-sandbox --disable-gpu --dump-dom 'data:text/html,<body>KMJ_RUNNER_BROWSER_OK</body>' 2>/dev/null)"
           grep -Fq 'KMJ_RUNNER_BROWSER_OK' <<< "$dom"
+

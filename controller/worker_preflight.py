@@ -58,7 +58,13 @@ async def main() -> None:
             )
         },
         "credential_present": credential_presence,
-        "route_state": (
+        "official_free_client": {
+            "configured": os.getenv("KMJ_OPENCODE_FREE_ENABLED") == "true"
+            and Path(os.getenv("KMJ_OPENCODE_BINARY", "")).is_file(),
+            "model": "opencode/big-pickle",
+            "verification": "fresh price check and zero-cost completion required per task",
+        },
+        "http_route_state": (
             "VERIFIED_FREE_CANDIDATES_AVAILABLE"
             if status["eligible_verified_zero"] else "NO_FREE_ROUTE_AVAILABLE"
         ),
@@ -71,3 +77,4 @@ if __name__ == "__main__":
         print(json.dumps(capacity_snapshot(), indent=2, sort_keys=True))
     else:
         asyncio.run(main())
+
