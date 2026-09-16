@@ -40,8 +40,8 @@ page = read_json('/info', {
     'X-Requested-With': 'XMLHttpRequest',
     'Accept': 'text/html, application/xhtml+xml',
 })
-if page.get('component') != 'info' or page.get('props', {}).get('pollIntervalMs') != 5000:
-    raise SystemExit('The staging URL did not return the live monitor component')
+if page.get('component') != 'info-control' or page.get('props', {}).get('pollIntervalMs') != 5000:
+    raise SystemExit('The staging URL did not return the delivery control monitor component')
 
 status = read_json('/info/status')
 if status.get('runtime', {}).get('application') is not True:
