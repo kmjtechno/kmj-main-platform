@@ -82,14 +82,15 @@ class StagingMonitorContractTests(unittest.TestCase):
             '--prefer-dist --no-progress --no-dev --optimize-autoloader --no-scripts'
         )
         install_index = workflow.index(install)
-        class_name = (
-            "KMJ\\\\MainPlatform\\\\Organizations\\\\Services\\\\"
-            "OrganizationCapabilityContext"
-        )
-        self.assertIn("class_exists", workflow)
-        self.assertIn(class_name, workflow)
-        self.assertGreater(workflow.index("class_exists"), install_index)
-        self.assertGreater(workflow.index(class_name), install_index)
+        guard_index = workflow.index("class_exists")
+        guard_line = next(line for line in workflow.splitlines() if "class_exists" in line)
+        while "\\\\" in guard_line:
+            guard_line = guard_line.replace("\\\\", "\\")
+        class_name = r"KMJ\MainPlatform\Organizations\Services\OrganizationCapabilityContext"
+
+        self.assertIn(class_name, guard_line)
+        self.assertGreater(guard_index, install_index)
+        self.assertIn("exit 47", workflow)
 
 
 if __name__ == "__main__":
