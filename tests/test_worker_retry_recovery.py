@@ -1,11 +1,109 @@
+import asyncio
 import importlib.util
+import json
 import unittest
 from pathlib import Path
+from unittest.mock import AsyncMock, Mock, patch
+
+from controller.persistent_worker import commit_and_push, propose_patch
 
 
 ROOT = Path(__file__).resolve().parents[1]
 WATCHDOG_PATH = ROOT / "scripts" / "continuity_watchdog.py"
 CYCLE_WORKFLOW = ROOT / ".github" / "workflows" / "autonomous-cycle.yml"
+
+
+class WorkerPatchPreflightTests(unittest.TestCase):
+    def test_unappliable_generated_patch_is_reprompted_before_returning(self):
+        issue = {
+            "number": 142,
+            "title": "Accessibility fix",
+            "body": "## Task files\n- `docs/a.md`\n",
+        }
+        bad_patch = (
+            "diff --git a/docs/a.md b/docs/a.md\n"
+            "--- a/docs/a.md\n"
+            "+++ b/docs/a.md\n"
+            "@@ -1 +1 @@\n"
+            "-wrong-context\n"
+            "+new\n"
+        )
+        good_patch = (
+            "diff --git a/docs/a.md b/docs/a.md\n"
+            "--- a/docs/a.md\n"
+            "+++ b/docs/a.md\n"
+            "@@ -1 +1 @@\n"
+            "-old\n"
+            "+new\n"
+        )
+        bad = {
+            "response": {
+                "choices": [
+                    {"message": {"content": json.dumps({"summary": "first", "patch": bad_patch, "tests": []})}}
+                ]
+            }
+        }
+        good = {
+            "response": {
+                "choices": [
+                    {"message": {"content": json.dumps({"summary": "fixed", "patch": good_patch, "tests": []})}}
+                ]
+            }
+        }
+        router = Mock()
+        router.complete = AsyncMock(side_effect=[bad, good])
+        check_runner = Mock(
+            side_effect=[
+                Mock(returncode=1, stdout="", stderr="error: corrupt patch at line 8"),
+                Mock(returncode=0, stdout="", stderr=""),
+            ]
+        )
+
+        with (
+            patch("controller.persistent_worker.FreeCloudRouter", return_value=router),
+            patch("controller.persistent_worker.run", check_runner),
+        ):
+            payload, _ = asyncio.run(
+                propose_patch(issue, "FILE docs/a.md\nold\nEND FILE", ["docs/a.md"])
+            )
+
+        self.assertEqual(payload["patch"], good_patch)
+        self.assertEqual(router.complete.await_count, 2)
+        apply_checks = [
+            call.args[0]
+            for call in check_runner.call_args_list
+            if call.args and call.args[0][:3] == ["git", "apply", "--check"]
+        ]
+        self.assertEqual(len(apply_checks), 2)
+
+    def test_commit_stages_only_verified_patch_paths(self):
+        target = "apps/platform/resources/js/components/alert-error.tsx"
+        runner = Mock(
+            side_effect=[
+                Mock(returncode=0, stdout="", stderr=""),
+                Mock(returncode=0, stdout="", stderr=""),
+                Mock(returncode=0, stdout="", stderr=""),
+                Mock(returncode=1, stdout="", stderr=""),
+                Mock(returncode=0, stdout="", stderr=""),
+                Mock(returncode=0, stdout="", stderr=""),
+            ]
+        )
+
+        with patch("controller.persistent_worker.run", runner):
+            commit_and_push(
+                "agent/auto-152-1",
+                {"title": "Scoped accessibility fix"},
+                "summary",
+                [target],
+            )
+
+        add_calls = [
+            call.args[0]
+            for call in runner.call_args_list
+            if call.args and call.args[0][:2] == ["git", "add"]
+        ]
+        self.assertEqual(add_calls, [["git", "add", "--", target]])
+        self.assertNotIn(["git", "add", "--all"], add_calls)
 
 
 class ContinuityWatchdogContractTests(unittest.TestCase):

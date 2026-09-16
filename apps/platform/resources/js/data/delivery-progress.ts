@@ -236,7 +236,8 @@ export const deliveryMilestones: DeliveryMilestone[] = [
         id: 'verified-free-ai-route',
         title: 'Verified-free AI route',
         state: 'active',
-        detail: 'Free-cloud task completed through PR #140; bounded file context, scoped patches, corrective patch-validation reprompting, retryable model-output rejection and deterministic changed-file formatting before platform verification are enabled. GitHub bot CI approval remains required',
+        detail: 'Free-cloud task completed through PR #140; bounded file context, scoped patches, corrective patch-validation reprompting, retryable model-output rejection, generated-diff apply preflight, deterministic changed-file formatting and verified-path-only commit staging are enabled. GitHub bot CI approval remains required',
+        evidence: 'PR #149 worker patch safeguards under CI',
     },
     {
         id: 'revenue-working-phase',
