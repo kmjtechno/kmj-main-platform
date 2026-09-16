@@ -2,7 +2,13 @@ from __future__ import annotations
 
 from typing import Any
 
-from controller.persistent_worker import BLOCKED_LABEL, SAFE_LABEL, GitHubClient
+from controller.persistent_worker import (
+    BLOCKED_LABEL,
+    PENDING_LABEL,
+    RUNNING_LABEL,
+    SAFE_LABEL,
+    GitHubClient,
+)
 
 RETRYABLE_MARKERS = (
     "Autonomous worker stopped safely: `PATCH_CHECK_FAILED/CORRUPT_DIFF`.",
@@ -23,6 +29,14 @@ def latest_bot_comment(gh: Any, issue_number: int) -> str:
         if comment.get("user", {}).get("login") == "github-actions[bot]":
             return str(comment.get("body") or "")
     return ""
+
+
+def dispatch_worker(gh: Any) -> None:
+    gh.request(
+        "POST",
+        "/actions/workflows/autonomous-worker.yml/dispatches",
+        json={"ref": "main"},
+    )
 
 
 def recover_and_restart(gh: Any) -> list[int]:
@@ -46,21 +60,45 @@ def recover_and_restart(gh: Any) -> list[int]:
         recovered.append(number)
 
     if recovered:
-        gh.request(
-            "POST",
-            "/actions/workflows/autonomous-worker.yml/dispatches",
-            json={"ref": "main"},
-        )
+        dispatch_worker(gh)
 
     return recovered
 
 
+def ensure_safe_work_progress(gh: Any) -> bool:
+    issues = gh.request(
+        "GET",
+        f"/issues?state=open&labels={SAFE_LABEL}&per_page=50",
+    )
+    inactive_labels = {RUNNING_LABEL, BLOCKED_LABEL, PENDING_LABEL}
+
+    for issue in issues:
+        if "pull_request" in issue:
+            continue
+        labels = {
+            str(label.get("name") or "")
+            for label in issue.get("labels", [])
+            if isinstance(label, dict)
+        }
+        if labels & inactive_labels:
+            continue
+        dispatch_worker(gh)
+        return True
+
+    return False
+
+
 def main() -> int:
-    recovered = recover_and_restart(GitHubClient())
+    gh = GitHubClient()
+    recovered = recover_and_restart(gh)
+    dispatched_idle = False if recovered else ensure_safe_work_progress(gh)
+
     if recovered:
         print("KMJ continuity watchdog requeued: " + ",".join(map(str, recovered)))
+    elif dispatched_idle:
+        print("KMJ continuity watchdog: dispatched idle autonomous-safe work")
     else:
-        print("KMJ continuity watchdog: no recoverable blocked tasks")
+        print("KMJ continuity watchdog: no recoverable or idle safe tasks")
     return 0
 
 

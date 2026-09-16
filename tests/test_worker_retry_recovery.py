@@ -181,6 +181,67 @@ class ContinuityWatchdogContractTests(unittest.TestCase):
         self.assertEqual(gh.dispatched, 1)
         self.assertTrue(any("requeued" in body.lower() for _, body in gh.comments))
 
+    def test_watchdog_dispatches_worker_when_safe_work_is_idle(self):
+        watchdog = self.load_watchdog()
+
+        class FakeGitHub:
+            def __init__(self):
+                self.dispatched = 0
+
+            def request(self, method, path, **kwargs):
+                if path == "/issues?state=open&labels=autonomous-safe&per_page=50":
+                    return [
+                        {
+                            "number": 201,
+                            "labels": [{"name": "autonomous-safe"}],
+                        }
+                    ]
+                if path == "/actions/workflows/autonomous-worker.yml/dispatches":
+                    self.dispatched += 1
+                    return None
+                raise AssertionError((method, path, kwargs))
+
+        gh = FakeGitHub()
+        dispatched = watchdog.ensure_safe_work_progress(gh)
+
+        self.assertTrue(dispatched)
+        self.assertEqual(gh.dispatched, 1)
+
+    def test_watchdog_does_not_duplicate_active_blocked_or_pending_work(self):
+        watchdog = self.load_watchdog()
+
+        for state_label in (
+            "autonomous-running",
+            "autonomous-blocked",
+            "autonomous-pr-pending",
+        ):
+            with self.subTest(state_label=state_label):
+                class FakeGitHub:
+                    def __init__(self):
+                        self.dispatched = 0
+
+                    def request(self, method, path, **kwargs):
+                        if path == "/issues?state=open&labels=autonomous-safe&per_page=50":
+                            return [
+                                {
+                                    "number": 202,
+                                    "labels": [
+                                        {"name": "autonomous-safe"},
+                                        {"name": state_label},
+                                    ],
+                                }
+                            ]
+                        if path == "/actions/workflows/autonomous-worker.yml/dispatches":
+                            self.dispatched += 1
+                            return None
+                        raise AssertionError((method, path, kwargs))
+
+                gh = FakeGitHub()
+                dispatched = watchdog.ensure_safe_work_progress(gh)
+
+                self.assertFalse(dispatched)
+                self.assertEqual(gh.dispatched, 0)
+
     def test_five_minute_cycle_runs_continuity_watchdog_with_minimum_write_scope(self):
         workflow = CYCLE_WORKFLOW.read_text(encoding="utf-8")
 
