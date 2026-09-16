@@ -9,7 +9,7 @@ export default function AlertError({
     title?: string;
 }) {
     return (
-        <Alert variant="destructive">
+        <Alert role="alert" variant="destructive">
             <AlertCircleIcon />
             <AlertTitle>{title || 'Something went wrong.'}</AlertTitle>
             <AlertDescription>
