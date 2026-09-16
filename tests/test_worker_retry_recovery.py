@@ -5,7 +5,7 @@ import unittest
 from pathlib import Path
 from unittest.mock import AsyncMock, Mock, patch
 
-from controller.persistent_worker import commit_and_push, propose_patch
+from controller.persistent_worker import commit_and_push, propose_patch, task_risk
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -104,6 +104,36 @@ class WorkerPatchPreflightTests(unittest.TestCase):
         ]
         self.assertEqual(add_calls, [["git", "add", "--", target]])
         self.assertNotIn(["git", "add", "--all"], add_calls)
+
+
+class RiskConstraintClassificationTests(unittest.TestCase):
+    def test_explicit_negative_high_risk_constraints_are_not_actions(self):
+        for text in (
+            "No production changes.",
+            "Do not modify DNS.",
+            "Production remains untouched.",
+            "Do not change billing or payment settings.",
+            "Never rotate the signing key.",
+        ):
+            with self.subTest(text=text):
+                self.assertIsNone(task_risk(text))
+
+    def test_real_high_risk_actions_remain_blocked(self):
+        for text, expected in (
+            ("deploy production now", "production"),
+            ("modify DNS for the live domain", "dns"),
+            ("change billing settings", "billing"),
+            ("rotate a signing key", "signing key"),
+            ("drop database customers", "drop database"),
+        ):
+            with self.subTest(text=text):
+                self.assertEqual(task_risk(text), expected)
+
+    def test_negative_constraint_does_not_hide_another_real_high_risk_action(self):
+        self.assertEqual(
+            task_risk("No production changes; modify DNS for the live domain."),
+            "dns",
+        )
 
 
 class ContinuityWatchdogContractTests(unittest.TestCase):
