@@ -53,7 +53,7 @@ final class StagingAuthenticatedSmokeCommandTest extends TestCase
 
         try {
             $this->artisan('staging:smoke-authenticated-surfaces')
-                ->expectsOutput('Authenticated staging surfaces PASS: /dashboard, /operator/ops')
+                ->expectsOutput('Authenticated staging surfaces PASS: /dashboard, /operator/ops, /purchase')
                 ->assertSuccessful();
         } finally {
             app()->detectEnvironment(static fn (): string => $originalEnvironment);
