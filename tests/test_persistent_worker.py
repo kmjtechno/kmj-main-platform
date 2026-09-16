@@ -82,10 +82,15 @@ class PersistentWorkerSafetyTests(unittest.TestCase):
         good = {"response": {"choices": [{"message": {"content": json.dumps({"summary": "fix", "patch": good_patch, "tests": []})}}]}}
         router = Mock()
         router.complete = AsyncMock(side_effect=[bad, good])
-        with patch("controller.persistent_worker.FreeCloudRouter", return_value=router):
+        preflight = Mock(return_value=Mock(returncode=0, stdout="", stderr=""))
+        with (
+            patch("controller.persistent_worker.FreeCloudRouter", return_value=router),
+            patch("controller.persistent_worker.run", preflight),
+        ):
             payload, _ = asyncio.run(propose_patch(issue, "FILE docs/a.md\nold\nEND FILE", ["docs/a.md"]))
         self.assertEqual(payload["patch"], good_patch)
         self.assertEqual(router.complete.await_count, 2)
+        self.assertEqual(preflight.call_count, 1)
 
     def test_invalid_model_output_remains_retryable_instead_of_blocked(self):
         gh = Mock()

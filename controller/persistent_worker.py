@@ -105,10 +105,16 @@ def paths_conflict(candidate: list[str] | set[str], occupied: list[str] | set[st
     return False
 
 
-def run(cmd: list[str], cwd: Path = ROOT, timeout: int = 900, env: dict[str, str] | None = None) -> subprocess.CompletedProcess[str]:
+def run(
+    cmd: list[str],
+    cwd: Path = ROOT,
+    timeout: int = 900,
+    env: dict[str, str] | None = None,
+    input_text: str | None = None,
+) -> subprocess.CompletedProcess[str]:
     return subprocess.run(
         cmd, cwd=cwd, text=True, capture_output=True, timeout=timeout, check=False,
-        env={**os.environ, **(env or {})},
+        env={**os.environ, **(env or {})}, input=input_text,
     )
 
 
@@ -399,9 +405,14 @@ Keep the change minimal and reversible. Do not claim tests passed; only list tes
         result = await router.complete(messages, route="coding", temperature=0.05)
         try:
             payload = extract_model_json(result)
-            paths = validate_patch(str(payload["patch"]))
+            patch = str(payload["patch"])
+            paths = validate_patch(patch)
             if scope and not set(paths).issubset(scope):
                 raise ValueError("PATCH_OUTSIDE_TASK_SCOPE")
+            preflight = run(["git", "apply", "--check", "-"], input_text=patch)
+            if preflight.returncode != 0:
+                detail = (preflight.stderr or preflight.stdout or "patch does not apply").strip()[-1000:]
+                raise ValueError(f"PATCH_CHECK_FAILED:{detail}")
             return payload, result
         except (json.JSONDecodeError, ValueError) as exc:
             code = "MODEL_JSON_INVALID" if isinstance(exc, json.JSONDecodeError) else str(exc).partition(":")[0]
@@ -491,10 +502,15 @@ def apply_patch(patch: str) -> None:
         patch_file.unlink(missing_ok=True)
 
 
-def commit_and_push(branch: str, issue: dict[str, Any], summary: str) -> None:
+def commit_and_push(
+    branch: str,
+    issue: dict[str, Any],
+    summary: str,
+    paths: list[str],
+) -> None:
     run(["git", "config", "user.name", "KMJ Autonomous Worker"])
     run(["git", "config", "user.email", "158804600+kmjtechno@users.noreply.github.com"])
-    add = run(["git", "add", "--all"])
+    add = run(["git", "add", "--", *paths])
     if add.returncode != 0:
         raise RuntimeError("GIT_ADD_FAILED")
     diff = run(["git", "diff", "--cached", "--quiet"])
@@ -561,7 +577,7 @@ def execute_one(gh: GitHubClient, occupied_paths: set[str] | None = None) -> tup
             gh.comment(issue_number, "Autonomous patch failed local verification and was not pushed.\n\n```text\n" + evidence[-5000:] + "\n```")
             return True, set()
         summary = str(payload.get("summary", "Autonomous safe task"))
-        commit_and_push(branch, issue, summary)
+        commit_and_push(branch, issue, summary, paths)
         model_name = str(model_result.get("model", "verified-free-cloud"))
         sha = run(["git", "rev-parse", "HEAD"]).stdout.strip()
         record = validate_checkpoint({"branch": branch, "sha": sha, "paths": paths, "model": model_name}, issue_number)
