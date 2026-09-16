@@ -1,4 +1,10 @@
-import { Activity, AlertTriangle, Bot, GitPullRequest, ServerCog } from 'lucide-react';
+import {
+    Activity,
+    AlertTriangle,
+    Bot,
+    GitPullRequest,
+    ServerCog,
+} from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import {
     deliveryMilestones,
@@ -28,11 +34,19 @@ type DeliverySnapshot = {
         state?: string;
     } | null;
     runners?: Array<{ name?: string; status?: string; busy?: boolean }>;
-    pull_request?: { number?: number; title?: string; state?: string } | null;
+    pull_request?: {
+        number?: number;
+        title?: string;
+        state?: string;
+    } | null;
     ci?: { status?: string; failed_checks?: number };
     staging?: { status?: string; deployed_sha?: string | null };
     pipeline?: DeliveryStage[];
-    blocker?: { code?: string | null; message?: string | null; recoverable?: boolean };
+    blocker?: {
+        code?: string | null;
+        message?: string | null;
+        recoverable?: boolean;
+    };
 };
 
 type StatusPayload = {
@@ -47,7 +61,11 @@ const stageClass: Record<string, string> = {
     failed: 'border-red-400/25 bg-red-400/10 text-red-200',
 };
 
-export default function InfoControl({ pollIntervalMs }: { pollIntervalMs: number }) {
+export default function InfoControl({
+    pollIntervalMs,
+}: {
+    pollIntervalMs: number;
+}) {
     const [delivery, setDelivery] = useState<DeliverySnapshot | null>(null);
 
     useEffect(() => {
@@ -85,15 +103,26 @@ export default function InfoControl({ pollIntervalMs }: { pollIntervalMs: number
     }, [pollIntervalMs]);
 
     const milestoneCounts = useMemo(() => {
-        const verified = deliveryMilestones.filter((item) => item.state === 'verified').length;
-        const active = deliveryMilestones.filter((item) => item.state === 'active').length;
-        return { verified, active, remaining: deliveryMilestones.length - verified };
+        const verified = deliveryMilestones.filter(
+            (item) => item.state === 'verified',
+        ).length;
+        const active = deliveryMilestones.filter(
+            (item) => item.state === 'active',
+        ).length;
+
+        return {
+            verified,
+            active,
+            remaining: deliveryMilestones.length - verified,
+        };
     }, []);
 
     const workerState = delivery?.current_worker?.status ?? 'unknown';
     const task = delivery?.current_task;
     const blocker = delivery?.blocker;
-    const onlineRunners = (delivery?.runners ?? []).filter((runner) => runner.status === 'online').length;
+    const onlineRunners = (delivery?.runners ?? []).filter(
+        (runner) => runner.status === 'online',
+    ).length;
 
     return (
         <div className="min-h-screen bg-[#08090b] text-white">
@@ -113,8 +142,10 @@ export default function InfoControl({ pollIntervalMs }: { pollIntervalMs: number
                                     {deliveryProgress}%
                                 </div>
                                 <div className="pb-1 text-sm text-white/45">
-                                    {milestoneCounts.verified}/{deliveryMilestones.length} verified ·{' '}
-                                    {milestoneCounts.active} active · {milestoneCounts.remaining} remaining
+                                    {milestoneCounts.verified}/
+                                    {deliveryMilestones.length} verified ·{' '}
+                                    {milestoneCounts.active} active ·{' '}
+                                    {milestoneCounts.remaining} remaining
                                 </div>
                             </div>
                             <div className="mt-4 h-3 overflow-hidden rounded-full border border-white/[0.08] bg-black/40">
@@ -128,15 +159,20 @@ export default function InfoControl({ pollIntervalMs }: { pollIntervalMs: number
                                     aria-valuenow={deliveryProgress}
                                 />
                             </div>
-                            <div className="mt-2 text-xs text-white/35">{deliveryProgressMeta.note}</div>
+                            <div className="mt-2 text-xs text-white/35">
+                                {deliveryProgressMeta.note}
+                            </div>
                         </div>
 
                         <div className="grid gap-3 sm:grid-cols-2 xl:w-[560px]">
                             <div className="rounded-2xl border border-white/[0.08] bg-black/25 p-4">
                                 <div className="flex items-center gap-2 text-xs font-bold text-white/45 uppercase">
-                                    <Bot className="h-4 w-4 text-[#ef3340]" /> Current worker
+                                    <Bot className="h-4 w-4 text-[#ef3340]" />
+                                    Current worker
                                 </div>
-                                <div className="mt-2 text-lg font-bold">{workerState}</div>
+                                <div className="mt-2 text-lg font-bold">
+                                    {workerState}
+                                </div>
                                 <div className="mt-1 truncate text-xs text-white/45">
                                     {delivery?.current_worker?.run_number
                                         ? `Run #${delivery.current_worker.run_number}`
@@ -148,13 +184,18 @@ export default function InfoControl({ pollIntervalMs }: { pollIntervalMs: number
                             </div>
                             <div className="rounded-2xl border border-white/[0.08] bg-black/25 p-4">
                                 <div className="flex items-center gap-2 text-xs font-bold text-white/45 uppercase">
-                                    <ServerCog className="h-4 w-4 text-[#ef3340]" /> Runners
+                                    <ServerCog className="h-4 w-4 text-[#ef3340]" />
+                                    Runners
                                 </div>
                                 <div className="mt-2 text-lg font-bold">
-                                    {onlineRunners}/{delivery?.runners?.length ?? 0} online
+                                    {onlineRunners}/
+                                    {delivery?.runners?.length ?? 0} online
                                 </div>
                                 <div className="mt-1 text-xs text-white/45">
-                                    {(delivery?.runners ?? []).filter((runner) => runner.busy).length} busy
+                                    {(delivery?.runners ?? []).filter(
+                                        (runner) => runner.busy,
+                                    ).length}{' '}
+                                    busy
                                 </div>
                             </div>
                         </div>
@@ -166,18 +207,27 @@ export default function InfoControl({ pollIntervalMs }: { pollIntervalMs: number
                                 Current task
                             </div>
                             <div className="mt-2 font-bold text-white/90">
-                                {task?.issue_number ? `#${task.issue_number} · ` : ''}
-                                {task?.title ?? 'Waiting for live task evidence'}
+                                {task?.issue_number
+                                    ? `#${task.issue_number} · `
+                                    : ''}
+                                {task?.title ??
+                                    'Waiting for live task evidence'}
                             </div>
                             <div className="mt-2 flex flex-wrap gap-3 text-xs text-white/45">
-                                <span>state: {task?.state ?? 'unknown'}</span>
-                                <span>CI: {delivery?.ci?.status ?? 'unknown'}</span>
                                 <span>
-                                    staging: {delivery?.staging?.status ?? 'unknown'}
+                                    state: {task?.state ?? 'unknown'}
+                                </span>
+                                <span>
+                                    CI: {delivery?.ci?.status ?? 'unknown'}
+                                </span>
+                                <span>
+                                    staging:{' '}
+                                    {delivery?.staging?.status ?? 'unknown'}
                                 </span>
                                 {delivery?.pull_request?.number ? (
                                     <span className="inline-flex items-center gap-1">
-                                        <GitPullRequest className="h-3.5 w-3.5" /> PR #{delivery.pull_request.number}
+                                        <GitPullRequest className="h-3.5 w-3.5" />
+                                        PR #{delivery.pull_request.number}
                                     </span>
                                 ) : null}
                             </div>
@@ -187,7 +237,11 @@ export default function InfoControl({ pollIntervalMs }: { pollIntervalMs: number
                                         <AlertTriangle className="h-4 w-4" />
                                         {blocker.code ?? 'Blocked'}
                                     </div>
-                                    {blocker.message ? <div className="mt-1 text-red-100/70">{blocker.message}</div> : null}
+                                    {blocker.message ? (
+                                        <div className="mt-1 text-red-100/70">
+                                            {blocker.message}
+                                        </div>
+                                    ) : null}
                                 </div>
                             ) : null}
                         </div>
@@ -203,12 +257,16 @@ export default function InfoControl({ pollIntervalMs }: { pollIntervalMs: number
                                             key={stage.key ?? stage.label}
                                             className={`rounded-xl border px-3 py-2 text-xs font-bold ${stageClass[stage.status ?? 'waiting'] ?? stageClass.waiting}`}
                                         >
-                                            {stage.label ?? stage.key ?? 'Stage'} · {stage.status ?? 'waiting'}
+                                            {stage.label ??
+                                                stage.key ??
+                                                'Stage'}{' '}
+                                            · {stage.status ?? 'waiting'}
                                         </div>
                                     ))
                                 ) : (
                                     <div className="text-sm text-white/35">
-                                        Live pipeline evidence is unavailable or stale.
+                                        Live pipeline evidence is unavailable or
+                                        stale.
                                     </div>
                                 )}
                             </div>
