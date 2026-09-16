@@ -109,17 +109,78 @@ final class DeliveryControlSnapshotTest extends TestCase
         $this->assertArrayNotHasKey('secret', $snapshot);
     }
 
-    public function test_stale_delivery_evidence_is_not_reported_as_live(): void
+    public function test_stale_delivery_evidence_preserves_sanitized_last_known_state(): void
     {
+        $capturedAt = now()->subMinutes(20)->toIso8601String();
+
         File::put($this->path, json_encode([
             'version' => 1,
-            'captured_at' => now()->subMinutes(20)->toIso8601String(),
+            'captured_at' => $capturedAt,
             'status' => 'active',
+            'current_worker' => [
+                'status' => 'in_progress',
+                'run_number' => 136,
+                'phase' => 'Run guarded worker cycle',
+                'private_note' => 'must-not-leak',
+            ],
+            'current_task' => [
+                'issue_number' => 162,
+                'title' => 'Preserve stale delivery evidence',
+                'state' => 'running',
+                'private_note' => 'must-not-leak',
+            ],
+            'runners' => [
+                ['name' => 'runner-1', 'status' => 'online', 'busy' => true, 'token' => 'must-not-leak'],
+                ['name' => 'runner-2', 'status' => 'online', 'busy' => false],
+            ],
+            'pull_request' => [
+                'number' => 164,
+                'title' => 'fix stale evidence',
+                'state' => 'open',
+                'head_sha' => str_repeat('d', 40),
+            ],
+            'ci' => [
+                'status' => 'in_progress',
+                'run_id' => 1001,
+                'failed_checks' => 0,
+            ],
+            'staging' => [
+                'approved_sha' => str_repeat('e', 40),
+                'deployed_sha' => str_repeat('f', 40),
+                'status' => 'healthy',
+            ],
+            'pipeline' => [
+                ['key' => 'worker', 'label' => 'AI Worker', 'status' => 'active', 'secret' => 'must-not-leak'],
+                ['key' => 'ci', 'label' => 'CI', 'status' => 'waiting'],
+            ],
+            'blocker' => [
+                'code' => 'NO_FREE_ROUTE_AVAILABLE',
+                'message' => 'Waiting for a verified zero-cost route.',
+                'recoverable' => true,
+                'secret' => 'must-not-leak',
+            ],
+            'recent_worker_runs' => [
+                ['run_number' => 136, 'status' => 'completed', 'conclusion' => 'success', 'secret' => 'must-not-leak'],
+            ],
+            'secret' => 'must-not-leak',
         ], JSON_THROW_ON_ERROR));
 
         $snapshot = app(DeliveryControlSnapshot::class)->capture();
 
         $this->assertSame('stale', $snapshot['status']);
-        $this->assertSame('unknown', $snapshot['current_worker']['status']);
+        $this->assertSame($capturedAt, $snapshot['captured_at']);
+        $this->assertSame(136, $snapshot['current_worker']['run_number']);
+        $this->assertSame(162, $snapshot['current_task']['issue_number']);
+        $this->assertCount(2, $snapshot['runners']);
+        $this->assertSame(164, $snapshot['pull_request']['number']);
+        $this->assertSame('in_progress', $snapshot['ci']['status']);
+        $this->assertSame(str_repeat('f', 40), $snapshot['staging']['deployed_sha']);
+        $this->assertCount(2, $snapshot['pipeline']);
+        $this->assertSame('NO_FREE_ROUTE_AVAILABLE', $snapshot['blocker']['code']);
+        $this->assertCount(1, $snapshot['recent_worker_runs']);
+        $this->assertArrayNotHasKey('private_note', $snapshot['current_worker']);
+        $this->assertArrayNotHasKey('token', $snapshot['runners'][0]);
+        $this->assertArrayNotHasKey('secret', $snapshot['blocker']);
+        $this->assertArrayNotHasKey('secret', $snapshot);
     }
 }
