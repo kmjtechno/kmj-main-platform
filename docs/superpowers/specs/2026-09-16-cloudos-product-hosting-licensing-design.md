@@ -1,3 +1,5 @@
+> **SUPERSEDED (2026-09-16):** Do not mirror the legacy `kmjtechno.com` website into staging. `staging.kmjtechno.com` must serve the native KMJ TECHNO Main Platform. The legacy site is reference material only for approved products, services and factual content.
+
 # KMJ CloudOS Product, Licensing, Hosting and Staging Mirror Design
 
 **Status:** Approved by owner on 2026-09-16.
