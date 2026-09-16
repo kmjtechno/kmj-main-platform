@@ -231,7 +231,7 @@ export const deliveryMilestones: DeliveryMilestone[] = [
         state: 'verified',
         detail: 'Push + safe-issue wake-up, five-minute no-idle dispatch, bounded task capacity, parallel verification, bounded explicit PHP platform context and owner-gate constraint classification that preserves real privileged-action blocking',
         evidence:
-            'PR #72 + PR #127 worker reliability + PR #157 scoped PHP context under CI + PR #165 no-idle continuity + PR #166 negative-constraint classification under CI',
+            'PR #72 + PR #127 worker reliability + PR #157 scoped PHP context under CI + PR #165 no-idle continuity + PR #166 negative-constraint classification under CI + PR #169 direct untouched-constraint classification',
     },
     {
         id: 'verified-free-ai-route',

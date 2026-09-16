@@ -126,7 +126,7 @@ def _risk_term_is_negated(text: str, start: int, end: int) -> bool:
 
     suffix = text[end:end + 64]
     return bool(re.match(
-        r"^\s+(?:(?:remains?|stays?|is|must remain)\s+(?:untouched|unchanged|unmodified)|(?:must|should)\s+not\s+be\s+(?:changed|modified|touched))\b",
+        r"^\s+(?:(?:untouched|unchanged|unmodified)|(?:remains?|stays?|is|must remain)\s+(?:untouched|unchanged|unmodified)|(?:must|should)\s+not\s+be\s+(?:changed|modified|touched))\b",
         suffix,
     ))
 

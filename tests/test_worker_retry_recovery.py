@@ -112,6 +112,7 @@ class RiskConstraintClassificationTests(unittest.TestCase):
             "No production changes.",
             "Do not modify DNS.",
             "Production remains untouched.",
+            "KMJ Cloud Nexus untouched.",
             "Do not change billing or payment settings.",
             "Never rotate the signing key.",
         ):
