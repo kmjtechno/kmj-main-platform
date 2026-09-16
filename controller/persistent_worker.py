@@ -34,7 +34,7 @@ HIGH_RISK_EXTRA = (
 MAX_PATCH_BYTES = int(os.getenv("KMJ_WORKER_MAX_PATCH_BYTES", "80000"))
 MAX_PATCH_FILES = int(os.getenv("KMJ_WORKER_MAX_PATCH_FILES", "12"))
 MAX_TASKS_PER_CYCLE_HARD_LIMIT = 3
-CONTEXT_PREFIXES = ("docs/", "apps/platform/resources/js/")
+CONTEXT_PREFIXES = ("docs/", "apps/platform/")
 MAX_CONTEXT_BYTES = 24000
 
 
@@ -54,7 +54,7 @@ def task_files(issue: dict[str, Any]) -> list[str]:
         path = match.group(1)
         if (not path.startswith(CONTEXT_PREFIXES) or ".." in Path(path).parts
                 or any(part.startswith(".") for part in Path(path).parts)
-                or Path(path).suffix not in {".md", ".tsx", ".ts", ".css"}):
+                or Path(path).suffix not in {".md", ".tsx", ".ts", ".css", ".php"}):
             raise ValueError("TASK_CONTEXT_PATH_DENIED")
         paths.append(path)
     if not 1 <= len(paths) <= 3 or len(set(paths)) != len(paths):
