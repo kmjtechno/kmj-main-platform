@@ -23,6 +23,9 @@ jobs:
           fetch-depth: 0
           persist-credentials: true
 
+      - name: Prepare resilient Python runtime
+        run: bash ops/self-hosted-runner/prepare-python-runtime.sh
+
       - name: Apply exact bounded worker repair
         shell: bash
         run: |
