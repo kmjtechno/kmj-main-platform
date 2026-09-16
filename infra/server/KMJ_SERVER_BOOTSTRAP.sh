@@ -378,6 +378,7 @@ p.write_text("\n".join(out) + "\n")
 PY
 
 php8.5 artisan migrate --force
+php8.5 artisan kmj:catalog:sync
 php8.5 artisan optimize:clear
 php8.5 artisan config:cache
 php8.5 artisan view:cache || true
