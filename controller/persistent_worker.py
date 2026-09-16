@@ -11,7 +11,7 @@ from typing import Any
 
 import httpx
 
-from controller.main import SYSTEM_PROMPT, high_risk_reason
+from controller.main import SYSTEM_PROMPT
 from controller.model_router import FreeCloudRouter, NoFreeRouteAvailable
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -118,12 +118,27 @@ def run(
     )
 
 
+def _risk_term_is_negated(text: str, start: int, end: int) -> bool:
+    clause_start = max(text.rfind(separator, 0, start) for separator in ("\n", ".", ";", ",")) + 1
+    prefix = text[clause_start:start]
+    if re.search(r"\b(?:no|not|never|without|avoid|avoiding|exclude|excluding|must not|do not|don't)\b[^.;,\n]{0,64}$", prefix):
+        return True
+
+    suffix = text[end:end + 64]
+    return bool(re.match(
+        r"^\s+(?:(?:remains?|stays?|is|must remain)\s+(?:untouched|unchanged|unmodified)|(?:must|should)\s+not\s+be\s+(?:changed|modified|touched))\b",
+        suffix,
+    ))
+
+
 def task_risk(text: str) -> str | None:
-    base = high_risk_reason(text)
-    if base:
-        return base
     lowered = text.lower()
-    return next((term for term in HIGH_RISK_EXTRA if term in lowered), None)
+    matches: list[tuple[int, str]] = []
+    for term in HIGH_RISK_EXTRA:
+        for match in re.finditer(re.escape(term), lowered):
+            if not _risk_term_is_negated(lowered, match.start(), match.end()):
+                matches.append((match.start(), term))
+    return min(matches, default=(0, None), key=lambda item: item[0])[1]
 
 
 def patch_paths(patch: str) -> list[str]:
