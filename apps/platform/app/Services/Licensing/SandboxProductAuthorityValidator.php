@@ -26,26 +26,21 @@ final class SandboxProductAuthorityValidator
             return 'product_unavailable';
         }
 
+        $now = now();
         $entitlement = Entitlement::query()
             ->whereKey($entitlementId)
             ->where('organization_id', $organizationId)
             ->where('product_id', $productId)
             ->where('status', 'active')
+            ->where(function ($query) use ($now): void {
+                $query->whereNull('starts_at')->orWhere('starts_at', '<=', $now);
+            })
+            ->where(function ($query) use ($now): void {
+                $query->whereNull('ends_at')->orWhere('ends_at', '>', $now);
+            })
             ->first();
 
         if ($entitlement === null) {
-            return 'entitlement_unavailable';
-        }
-
-        $startsAt = $entitlement->starts_at;
-        $endsAt = $entitlement->ends_at;
-        $now = now();
-
-        if ($startsAt !== null && $startsAt->isAfter($now)) {
-            return 'entitlement_unavailable';
-        }
-
-        if ($endsAt !== null && ! $endsAt->isAfter($now)) {
             return 'entitlement_unavailable';
         }
 
