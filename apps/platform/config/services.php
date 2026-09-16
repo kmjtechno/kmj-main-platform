@@ -35,13 +35,6 @@ return [
         ],
     ],
 
-    'kmj_staging_home_mirror' => [
-        'enabled' => env('KMJ_STAGING_HOME_MIRROR_ENABLED', env('APP_ENV') === 'staging'),
-        'origin' => env('KMJ_STAGING_HOME_MIRROR_ORIGIN', 'https://kmjtechno.com'),
-        'origin_ip' => env('KMJ_STAGING_HOME_MIRROR_ORIGIN_IP', '138.252.200.74'),
-        'cache_seconds' => (int) env('KMJ_STAGING_HOME_MIRROR_CACHE_SECONDS', 30),
-    ],
-
     'kmj_sandbox_licensing' => [
         'secret' => env('KMJ_SANDBOX_LICENSE_SECRET'),
         'validation_engine' => env('KMJ_SANDBOX_LICENSE_VALIDATION_ENGINE', 'php'),

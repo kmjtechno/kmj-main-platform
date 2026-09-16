@@ -132,7 +132,7 @@ export default function InfoControl({
                         <div className="min-w-0 flex-1">
                             <div className="flex flex-wrap items-center gap-2 text-[11px] font-bold tracking-[0.15em] text-white/45 uppercase">
                                 <Activity className="h-4 w-4 text-[#ef3340]" />
-                                Delivery progress
+                                Verified delivery progress
                                 <span className="rounded-full border border-white/10 px-2 py-1 text-white/35">
                                     evidence-based
                                 </span>

@@ -7,7 +7,7 @@ import { pathToFileURL } from 'node:url';
 
 const origin = 'https://staging.kmjtechno.com';
 const pages = [
-    { path: '/', marker: null, selector: 'meta[name="kmj-staging-mirror"][content="production-home"]' },
+    { path: '/', marker: null, selector: 'meta[name="kmj-main-platform"][content="native-home"]' },
     { path: '/info', marker: 'Staging live operations monitor' },
     { path: '/login', marker: null },
 ];
