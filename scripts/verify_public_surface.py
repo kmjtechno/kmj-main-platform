@@ -33,8 +33,7 @@ def main() -> None:
     root_readme = README.read_text(encoding="utf-8")
     boundary = BOUNDARY.read_text(encoding="utf-8")
 
-    require(web, "Route::get('/', function (Request $request, ProductionHomeMirror $mirror)", "home route")
-    require(web, "return Inertia::render('welcome');", "native home fallback")
+    require(web, "Route::get('/', fn () => Inertia::render('welcome'))->name('home');", "native home route")
     require(web, "Route::get('dashboard'", "dashboard route")
     require(web, "Route::get('sandbox-licenses'", "sandbox license route")
     require(settings, "Route::get('.well-known/passkey-endpoints'", "passkey discovery")

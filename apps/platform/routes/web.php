@@ -6,7 +6,6 @@ use App\Services\AuthorityBootstrapper;
 use App\Services\Licensing\LicenseAuditRecorder;
 use App\Services\Licensing\SandboxLicenseLifecycle;
 use App\Services\PlatformOwnerAccess;
-use App\Services\Staging\ProductionHomeMirror;
 use DateTimeImmutable as ImmutableDateTime;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -20,24 +19,7 @@ use KMJ\MainPlatform\Organizations\Models\Organization;
 use KMJ\MainPlatform\Organizations\Services\OrganizationCapabilityContext;
 use KMJ\MainPlatform\Organizations\Services\OrganizationDirectory;
 
-Route::get('/', function (Request $request, ProductionHomeMirror $mirror) {
-    if (! $mirror->shouldMirror($request)) {
-        return Inertia::render('welcome');
-    }
-
-    try {
-        return response($mirror->render(), 200, [
-            'Content-Type' => 'text/html; charset=UTF-8',
-            'Cache-Control' => 'no-cache, private',
-            'X-Robots-Tag' => 'noindex, nofollow',
-        ]);
-    } catch (RuntimeException) {
-        return response('Production homepage mirror is temporarily unavailable.', 503, [
-            'Content-Type' => 'text/plain; charset=UTF-8',
-            'X-Robots-Tag' => 'noindex, nofollow',
-        ]);
-    }
-})->name('home');
+Route::get('/', fn () => Inertia::render('welcome'))->name('home');
 
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('dashboard', function (

@@ -1,3 +1,5 @@
+> **SUPERSEDED (2026-09-16):** Do not mirror the legacy `kmjtechno.com` website into staging. `staging.kmjtechno.com` must serve the native KMJ TECHNO Main Platform. The legacy site is reference material only for approved products, services and factual content.
+
 # CloudOS Product + Staging Production Mirror Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.

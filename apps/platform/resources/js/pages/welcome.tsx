@@ -77,6 +77,7 @@ export default function Welcome() {
         <>
             {stagingSyncBadge}
             <Head title="KMJ TECHNO — Main Platform">
+                <meta name="kmj-main-platform" content="native-home" />
                 <meta
                     name="description"
                     content="KMJ TECHNO Main Platform — a secure operating platform for software products, licensing, releases, customer operations and governed automation."
