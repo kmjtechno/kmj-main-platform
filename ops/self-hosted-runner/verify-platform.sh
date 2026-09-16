@@ -82,9 +82,16 @@ start_task npm-install install_frontend
 wait_tasks
 echo "Dependency installation elapsed: $((SECONDS - started)) seconds"
 
+# TEMPORARY PR #148 diagnostic: use the repository-pinned formatter and print its exact diff.
+if [ -z "${KMJ_FORMAT_PATHS:-}" ]; then
+  KMJ_FORMAT_PATHS="resources/js/pages/info-control.tsx"
+fi
 if [ -n "${KMJ_FORMAT_PATHS:-}" ]; then
   mapfile -t format_paths <<< "$KMJ_FORMAT_PATHS"
   ./node_modules/.bin/vp fmt "${format_paths[@]}"
+  echo '::group::formatter-diagnostic-diff'
+  git diff -- resources/js/pages/info-control.tsx || true
+  echo '::endgroup::'
 fi
 
 php artisan key:generate --force
