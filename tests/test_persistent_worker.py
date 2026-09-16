@@ -46,6 +46,13 @@ class PersistentWorkerSafetyTests(unittest.TestCase):
         self.assertEqual(task_files({"body": "An older bounded task"}), [])
         self.assertEqual(task_files({"body": "## Task files\n- `docs/a.md`\n\n## Acceptance\nKeep concise"}), ["docs/a.md"])
 
+    def test_explicit_context_scope_accepts_platform_php_file(self):
+        path = "apps/platform/app/Console/Commands/StagingAuthenticatedSmokeCommand.php"
+        self.assertEqual(
+            task_files({"body": f"## Task files\n- `{path}`\n\n## Acceptance\nKeep bounded"}),
+            [path],
+        )
+
     def test_context_is_bounded_and_rejects_symlinks(self):
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
