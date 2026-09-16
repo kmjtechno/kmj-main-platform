@@ -256,9 +256,9 @@ export const deliveryMilestones: DeliveryMilestone[] = [
         id: 'ops-readiness-evidence',
         title: 'Ops readiness evidence',
         state: 'active',
-        detail: 'Backup freshness + worker/AI posture + authenticated smoke; desktop/mobile screenshot and timing evidence now runs with staging deployments',
+        detail: 'Backup freshness + worker/AI posture + authenticated smoke; PR #148 adds sanitized worker, runner, PR/CI and staging delivery snapshots plus a read-only public progress surface while owner-only safe controls remain gated behind passkey/password confirmation',
         evidence:
-            'PR #132 + deploy 34912567459 + authenticated smoke 34912692783',
+            'PR #132 + deploy 34912567459 + authenticated smoke 34912692783 + PR #148 TDD/CI',
     },
     {
         id: 'production-hardening',
@@ -279,5 +279,5 @@ export const deliveryProgress = Math.round(
 export const deliveryProgressMeta = {
     label: 'Revenue-capable working phase',
     note: 'Evidence-based delivery milestones, not total product completion.',
-    refreshed: '2026-09-15',
+    refreshed: '2026-09-16',
 } as const;

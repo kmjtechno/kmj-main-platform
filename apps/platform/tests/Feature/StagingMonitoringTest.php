@@ -27,7 +27,7 @@ final class StagingMonitoringTest extends TestCase
         $this->get('https://staging.kmjtechno.com/info')
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
-                ->component('info')
+                ->component('info-control')
                 ->where('pollIntervalMs', 5000));
 
         $this->getJson('https://staging.kmjtechno.com/info/status')
@@ -87,7 +87,7 @@ final class StagingMonitoringTest extends TestCase
             $this->get('/info')
                 ->assertOk()
                 ->assertInertia(fn (Assert $page) => $page
-                    ->component('info')
+                    ->component('info-control')
                     ->where('pollIntervalMs', 5000));
 
             $response = $this->getJson('/info/status');
@@ -121,6 +121,7 @@ final class StagingMonitoringTest extends TestCase
                     'ai_router_latency_ms',
                 ],
                 'deployment',
+                'delivery',
                 'processes',
                 'safety',
             ]);
