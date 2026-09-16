@@ -1,0 +1,45 @@
+name: Owner Format Progress
+
+on:
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  format:
+    if: >-
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.event.pull_request.head.ref == 'fix/autonomous-php-task-context'
+    runs-on: [self-hosted, linux, x64, kmj-main-platform-ci]
+    timeout-minutes: 10
+    steps:
+      - name: Checkout exact repair branch
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: fix/autonomous-php-task-context
+          fetch-depth: 0
+          persist-credentials: true
+
+      - name: Install frontend tooling
+        working-directory: apps/platform
+        run: npm install --no-audit --no-fund
+
+      - name: Format only delivery progress evidence
+        working-directory: apps/platform
+        run: ./node_modules/.bin/vp fmt resources/js/data/delivery-progress.ts
+
+      - name: Commit only formatter output
+        shell: bash
+        run: |
+          set -euo pipefail
+          git diff --check
+          changed="$(git diff --name-only)"
+          test "$changed" = 'apps/platform/resources/js/data/delivery-progress.ts'
+          git add -- apps/platform/resources/js/data/delivery-progress.ts
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git commit -m 'style(progress): apply pinned formatter'
+          git push origin HEAD:fix/autonomous-php-task-context
