@@ -1,0 +1,61 @@
+name: Owner Repair PHP Context
+
+on:
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  repair:
+    if: >-
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.event.pull_request.head.ref == 'fix/autonomous-php-task-context'
+    runs-on: [self-hosted, linux, x64, kmj-main-platform-ci]
+    timeout-minutes: 10
+    steps:
+      - name: Checkout exact repair branch
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: fix/autonomous-php-task-context
+          fetch-depth: 0
+          persist-credentials: true
+
+      - name: Apply exact bounded worker repair
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+
+          path = Path('controller/persistent_worker.py')
+          text = path.read_text(encoding='utf-8')
+          replacements = {
+              'CONTEXT_PREFIXES = ("docs/", "apps/platform/resources/js/")':
+                  'CONTEXT_PREFIXES = ("docs/", "apps/platform/")',
+              'Path(path).suffix not in {".md", ".tsx", ".ts", ".css"}':
+                  'Path(path).suffix not in {".md", ".tsx", ".ts", ".css", ".php"}',
+          }
+          for old, new in replacements.items():
+              if text.count(old) != 1:
+                  raise SystemExit(f'expected exactly one repair target: {old}')
+              text = text.replace(old, new)
+          path.write_text(text, encoding='utf-8')
+          PY
+          git diff --check
+          PYTHONPATH=. python3 -m unittest \
+            tests.test_persistent_worker.PersistentWorkerSafetyTests.test_explicit_context_scope_accepts_platform_php_file \
+            tests.test_persistent_worker.PersistentWorkerSafetyTests.test_explicit_context_scope_rejects_sensitive_or_ambiguous_paths
+
+      - name: Commit only the controller repair
+        shell: bash
+        run: |
+          set -euo pipefail
+          git add -- controller/persistent_worker.py
+          test "$(git diff --cached --name-only)" = 'controller/persistent_worker.py'
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git commit -m 'fix(worker): allow scoped platform PHP context'
+          git push origin HEAD:fix/autonomous-php-task-context
