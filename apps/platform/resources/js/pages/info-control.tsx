@@ -192,9 +192,11 @@ export default function InfoControl({
                                     {delivery?.runners?.length ?? 0} online
                                 </div>
                                 <div className="mt-1 text-xs text-white/45">
-                                    {(delivery?.runners ?? []).filter(
-                                        (runner) => runner.busy,
-                                    ).length}{' '}
+                                    {
+                                        (delivery?.runners ?? []).filter(
+                                            (runner) => runner.busy,
+                                        ).length
+                                    }{' '}
                                     busy
                                 </div>
                             </div>
@@ -214,9 +216,7 @@ export default function InfoControl({
                                     'Waiting for live task evidence'}
                             </div>
                             <div className="mt-2 flex flex-wrap gap-3 text-xs text-white/45">
-                                <span>
-                                    state: {task?.state ?? 'unknown'}
-                                </span>
+                                <span>state: {task?.state ?? 'unknown'}</span>
                                 <span>
                                     CI: {delivery?.ci?.status ?? 'unknown'}
                                 </span>
