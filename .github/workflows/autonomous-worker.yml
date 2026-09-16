@@ -58,6 +58,10 @@ jobs:
       - name: Prepare resilient Python runtime
         run: bash ops/self-hosted-runner/prepare-python-runtime.sh
 
+      - name: Publish worker-start delivery evidence
+        continue-on-error: true
+        run: PYTHONPATH=. python3 scripts/delivery_control_bridge.py
+
       - name: Verify pre-provisioned PHP and Node runtime
         shell: bash
         run: |
@@ -98,6 +102,11 @@ jobs:
           STAGING_PATH: ${{ vars.STAGING_APP_PATH }}
         run: bash ops/staging/publish-ai-evidence.sh
 
+      - name: Refresh live delivery evidence
+        if: always()
+        continue-on-error: true
+        run: PYTHONPATH=. python3 scripts/delivery_control_bridge.py
+
       - name: Remove temporary completion evidence
         if: always()
         shell: bash
@@ -118,4 +127,3 @@ jobs:
           echo '- local LLM inference: prohibited' >> "$GITHUB_STEP_SUMMARY"
           echo '- auto-merge: only after required CI is green' >> "$GITHUB_STEP_SUMMARY"
           echo '- deployment: existing staging promotion/deploy chain' >> "$GITHUB_STEP_SUMMARY"
-
