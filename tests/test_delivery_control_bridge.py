@@ -3,6 +3,7 @@ from __future__ import annotations
 import os
 import tempfile
 import unittest
+from unittest.mock import patch
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -106,6 +107,25 @@ class DeliveryControlBridgeTests(unittest.TestCase):
             if os.name != "nt":
                 self.assertEqual(target.stat().st_mode & 0o777, 0o644)
             self.assertIn('"status":"idle"', target.read_text(encoding="utf-8"))
+
+    def test_publish_tolerates_shared_directory_chmod_denied_when_directory_is_writable(self):
+        snapshot = {"version": 1, "status": "active", "captured_at": "2026-09-16T07:06:00+00:00"}
+        with tempfile.TemporaryDirectory() as temp:
+            target = Path(temp) / "status.json"
+            real_chmod = os.chmod
+
+            def chmod_with_foreign_owned_directory(path, mode):
+                if Path(path) == target.parent:
+                    raise PermissionError("foreign runner owns shared directory")
+                return real_chmod(path, mode)
+
+            with patch("scripts.delivery_control_bridge.DEFAULT_OUTPUT", target), \
+                 patch("scripts.delivery_control_bridge.os.chmod", side_effect=chmod_with_foreign_owned_directory), \
+                 patch("scripts.delivery_control_bridge.os.access", return_value=True):
+                publish_snapshot(target, snapshot)
+
+            self.assertTrue(target.is_file())
+            self.assertIn('"status":"active"', target.read_text(encoding="utf-8"))
 
 
 if __name__ == "__main__":

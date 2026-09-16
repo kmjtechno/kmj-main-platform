@@ -219,7 +219,13 @@ def build_snapshot(
 def publish_snapshot(path: Path, snapshot: dict[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     if path.parent == DEFAULT_OUTPUT.parent:
-        os.chmod(path.parent, 0o777)
+        try:
+            os.chmod(path.parent, 0o777)
+        except PermissionError:
+            # Another self-hosted runner may own the already shared directory.
+            # If this runner can write/traverse it, ownership is irrelevant.
+            if not os.access(path.parent, os.W_OK | os.X_OK):
+                raise
     fd, temp_name = tempfile.mkstemp(prefix=f".{path.name}.", dir=path.parent)
     try:
         with os.fdopen(fd, "w", encoding="utf-8") as handle:
