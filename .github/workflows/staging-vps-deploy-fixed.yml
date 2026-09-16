@@ -165,7 +165,19 @@ jobs:
           # Never boot Laravel while Composer removes dev-only packages.
           # Uninstall hooks can otherwise regenerate a stale services manifest.
           find bootstrap/cache -maxdepth 1 -type f -name '*.php' -delete
+          # Composer path repositories are copied (symlink=false). On a persistent
+          # staging vendor tree Composer can otherwise keep a stale local copy when
+          # package source changes without a root lock/version change.
+          rm -rf \
+            vendor/kmjtechno/domain-organizations \
+            vendor/kmjtechno/domain-catalog \
+            vendor/kmjtechno/domain-entitlements \
+            vendor/kmjtechno/domain-commerce
           COMPOSER_PHP="$PHP_BIN" composer install --no-interaction --prefer-dist --no-progress --no-dev --optimize-autoloader --no-scripts
+          if ! "$PHP_BIN" -r "require 'vendor/autoload.php'; exit(class_exists('KMJ\\\\MainPlatform\\\\Organizations\\\\Services\\\\OrganizationCapabilityContext') ? 0 : 1);"; then
+            echo 'ERROR: required Organizations capability context is not autoloadable after Composer install.' >&2
+            exit 47
+          fi
           find bootstrap/cache -maxdepth 1 -type f -name '*.php' -delete
           "$PHP_BIN" artisan package:discover --ansi
           "$PHP_BIN" artisan migrate --force
