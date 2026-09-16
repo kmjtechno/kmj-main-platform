@@ -7,7 +7,7 @@ import { pathToFileURL } from 'node:url';
 
 const origin = 'https://staging.kmjtechno.com';
 const pages = [
-    { path: '/', marker: 'Verified delivery progress' },
+    { path: '/', marker: null, selector: 'meta[name="kmj-staging-mirror"][content="production-home"]' },
     { path: '/info', marker: 'Staging live operations monitor' },
     { path: '/login', marker: null },
 ];
@@ -123,7 +123,7 @@ export async function main() {
                         await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
                         const nav = performance.getEntriesByType('navigation')[0];
                         return { url: location.href, bodyLength: document.body.innerText.length,
-                            markerFound: (${matchesMarker.toString()})(document.body.innerText, ${JSON.stringify(page.marker)}),
+                            markerFound: ${JSON.stringify(page.selector ?? null)} ? Boolean(document.querySelector(${JSON.stringify(page.selector ?? '')})) : (${matchesMarker.toString()})(document.body.innerText, ${JSON.stringify(page.marker)}),
                             overflowPx: Math.max(0, document.documentElement.scrollWidth - innerWidth),
                             domContentLoadedMs: nav ? Math.round(nav.domContentLoadedEventEnd) : null,
                             loadEventMs: nav ? Math.round(nav.loadEventEnd) : null,

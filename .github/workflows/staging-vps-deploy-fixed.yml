@@ -181,6 +181,7 @@ jobs:
           find bootstrap/cache -maxdepth 1 -type f -name '*.php' -delete
           "$PHP_BIN" artisan package:discover --ansi
           "$PHP_BIN" artisan migrate --force
+          "$PHP_BIN" artisan kmj:catalog:sync
           if [ -f package-lock.json ]; then
             quarantine_node_modules() {
               if [ -d node_modules ] || [ -L node_modules ]; then
@@ -268,7 +269,7 @@ jobs:
           echo 'result=pass' >> "$GITHUB_OUTPUT"
           echo "Staging health check PASS: $HEALTH_URL"
 
-      - name: Verify rendered staging progress UI
+      - name: Verify production-facing staging root and progress UI
         id: ui
         env:
           HEALTH_URL: ${{ vars.STAGING_HEALTHCHECK_URL }}
@@ -277,18 +278,20 @@ jobs:
           set -euo pipefail
           chrome="$KMJ_STAGING_CHROME"
           test -n "$chrome"
-          dom="$($chrome --headless --no-sandbox --disable-gpu --virtual-time-budget=10000 --dump-dom "$HEALTH_URL" 2>/dev/null)"
+          root_dom="$($chrome --headless --no-sandbox --disable-gpu --virtual-time-budget=10000 --dump-dom "$HEALTH_URL" 2>/dev/null)"
+          grep -Fq 'name="kmj-staging-mirror" content="production-home"' <<< "$root_dom"
+          info_dom="$($chrome --headless --no-sandbox --disable-gpu --virtual-time-budget=10000 --dump-dom 'https://staging.kmjtechno.com/info' 2>/dev/null)"
           progress_source='apps/platform/resources/js/data/delivery-progress.ts'
           test -f "$progress_source"
           verified_count="$(grep -c "state: 'verified'" "$progress_source")"
           total_count="$(grep -c "id: '" "$progress_source")"
           test "$total_count" -gt 0
           expected_progress=$(( (verified_count * 100 + total_count / 2) / total_count ))
-          grep -Fq 'Verified delivery progress' <<< "$dom"
-          grep -Fq "${expected_progress}%" <<< "$dom"
-          grep -Fq "${verified_count}/${total_count} verified" <<< "$dom"
+          grep -Fq 'Verified delivery progress' <<< "$info_dom"
+          grep -Fq "${expected_progress}%" <<< "$info_dom"
+          grep -Fq "${verified_count}/${total_count} verified" <<< "$info_dom"
           echo 'result=pass' >> "$GITHUB_OUTPUT"
-          echo "Rendered staging UI PASS: verified delivery progress = ${expected_progress}% (${verified_count}/${total_count})."
+          echo "Staging root mirror + /info progress PASS: ${expected_progress}% (${verified_count}/${total_count})."
 
       - name: Verify live monitor and deployed SHA
         shell: bash

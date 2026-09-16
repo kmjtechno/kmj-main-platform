@@ -6,7 +6,7 @@
 
 KMJ TECHNO Main Platform is the commercial, customer, entitlement and licensing authority for KMJ CloudOS. KMJ CloudOS remains a separate product/runtime repository and becomes a first-class commercial product in Main Platform. The final Main Platform deployment target is KMJ CloudOS itself.
 
-The temporary staging site keeps the Main Platform application and `/info` operations monitor available while the exact staging homepage `/` shows the current live production `kmjtechno.com` homepage.
+Until final cutover, `staging.kmjtechno.com` is the temporary production-facing domain: its public website mirrors the current live `kmjtechno.com` experience while defined Main Platform application routes and `/info` remain available for delivery work.
 
 ## Authority boundaries
 
@@ -44,7 +44,7 @@ Phase 2 additionally requires the data plane to survive control-plane restart an
 
 ## Temporary staging homepage mirror
 
-Only the exact public staging homepage `/` changes behavior. On the exact host `staging.kmjtechno.com`, when the staging mirror configuration is enabled, Main Platform fetches the current production homepage from `https://kmjtechno.com/` using the known production origin IP with TLS SNI/hostname validation preserved. A short cache limits origin load and a last-known-good cached copy may be served on transient fetch failure.
+The exact staging homepage `/` and otherwise-unmatched public GET paths use the temporary production-site mirror; defined Main Platform routes always keep priority. On the exact host `staging.kmjtechno.com`, when the staging mirror configuration is enabled, Main Platform fetches the current production homepage from `https://kmjtechno.com/` using the known production origin IP with TLS SNI/hostname validation preserved. A short cache limits origin load and a last-known-good cached copy may be served on transient fetch failure.
 
 The mirrored response:
 
