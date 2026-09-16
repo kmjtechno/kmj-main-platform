@@ -117,9 +117,8 @@ final class DeliveryControlSnapshot
     }
 
     /**
-     * @param mixed $value
-     * @param list<string> $keys
-     * @param array<string, mixed> $fallback
+     * @param  list<string>  $keys
+     * @param  array<string, mixed>  $fallback
      * @return array<string, mixed>
      */
     private function pick(mixed $value, array $keys, array $fallback = []): array
@@ -139,8 +138,7 @@ final class DeliveryControlSnapshot
     }
 
     /**
-     * @param mixed $value
-     * @param list<string> $keys
+     * @param  list<string>  $keys
      * @return array<string, mixed>|null
      */
     private function nullablePick(mixed $value, array $keys): ?array
@@ -155,8 +153,7 @@ final class DeliveryControlSnapshot
     }
 
     /**
-     * @param mixed $value
-     * @param list<string> $keys
+     * @param  list<string>  $keys
      * @return list<array<string, mixed>>
      */
     private function listOfPicks(mixed $value, array $keys, int $limit): array
