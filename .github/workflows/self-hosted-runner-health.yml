@@ -65,6 +65,9 @@ jobs:
           python3 tests/test_platform_verify_contract.py
           python3 controller/worker_preflight.py --capacity-only
 
+      - name: Prepare resilient Python runtime
+        run: bash ops/self-hosted-runner/prepare-python-runtime.sh
+
       - name: Verify delivery bridge contract
         run: PYTHONPATH=. python3 -m unittest tests.test_delivery_control_bridge
 
