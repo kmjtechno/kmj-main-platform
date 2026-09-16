@@ -42,15 +42,12 @@ final class DeliveryControlSnapshot
         }
 
         $maxAgeSeconds = max(30, (int) config('kmj.ops.delivery_status_max_age_seconds', 600));
-        if ($captured->diffInSeconds(now(), false) > $maxAgeSeconds) {
-            return [
-                ...$this->emptySnapshot('stale'),
-                'captured_at' => $captured->toIso8601String(),
-            ];
-        }
+        $isStale = $captured->diffInSeconds(now(), false) > $maxAgeSeconds;
 
         return [
-            'status' => $this->enum($payload['status'] ?? null, ['active', 'idle', 'blocked', 'degraded'], 'degraded'),
+            'status' => $isStale
+                ? 'stale'
+                : $this->enum($payload['status'] ?? null, ['active', 'idle', 'blocked', 'degraded'], 'degraded'),
             'captured_at' => $captured->toIso8601String(),
             'current_worker' => $this->pick(
                 $payload['current_worker'] ?? null,
