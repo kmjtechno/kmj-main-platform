@@ -9,6 +9,7 @@ use KMJ\MainPlatform\Catalog\Services\ProductCatalog;
 use KMJ\MainPlatform\Entitlements\Models\EntitlementPolicy;
 use KMJ\MainPlatform\Entitlements\Services\EntitlementIssuer;
 use KMJ\MainPlatform\Entitlements\Services\EntitlementPolicyRegistry;
+use KMJ\MainPlatform\Entitlements\Services\EntitlementRevoker;
 use KMJ\MainPlatform\Organizations\Services\OrganizationCreator;
 use Tests\TestCase;
 
@@ -51,6 +52,37 @@ final class AuthorityCoreTest extends TestCase
             'entitlement_id' => $first->getKey(),
             'organization_id' => $organization->getKey(),
             'event_type' => 'entitlement.issued',
+        ]);
+    }
+
+    public function test_entitlement_revocation_is_idempotent_and_audited(): void
+    {
+        $user = User::factory()->create();
+        $organization = app(OrganizationCreator::class)->create('Revocation Organization', $user->id);
+        $product = app(ProductCatalog::class)->ensureSandboxProduct('revocation-sandbox', 'Revocation Sandbox');
+        $policy = app(EntitlementPolicyRegistry::class)->ensure(
+            $product->getKey(),
+            'sandbox.revocation',
+            'sandbox.product.access',
+        );
+        $entitlement = app(EntitlementIssuer::class)->issue(
+            $organization->getKey(),
+            $policy,
+            'test-request-revocation',
+        );
+
+        $revoker = app(EntitlementRevoker::class);
+        $first = $revoker->revoke($entitlement->getKey());
+        $retry = $revoker->revoke($entitlement->getKey());
+
+        $this->assertSame($first->getKey(), $retry->getKey());
+        $this->assertSame('revoked', $retry->status);
+        $this->assertNotNull($retry->ends_at);
+        $this->assertDatabaseCount('entitlement_ledger', 2);
+        $this->assertDatabaseHas('entitlement_ledger', [
+            'entitlement_id' => $entitlement->getKey(),
+            'organization_id' => $organization->getKey(),
+            'event_type' => 'entitlement.revoked',
         ]);
     }
 
