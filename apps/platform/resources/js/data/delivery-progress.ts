@@ -56,8 +56,8 @@ export const deliveryMilestones: DeliveryMilestone[] = [
         id: 'license-lifecycle',
         title: 'License lifecycle',
         state: 'verified',
-        detail: 'Issue -> validate -> revoke operator flow',
-        evidence: 'PR #68',
+        detail: 'Issue -> validate -> authoritative product + entitlement binding -> revoke operator flow',
+        evidence: 'PR #68 + SandboxProductAuthorityValidationTest',
     },
     {
         id: 'license-claim-contract',
