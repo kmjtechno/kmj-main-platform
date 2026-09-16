@@ -229,8 +229,7 @@ export const deliveryMilestones: DeliveryMilestone[] = [
         id: 'guarded-worker-runtime',
         title: 'Guarded worker runtime',
         state: 'verified',
-        detail:
-            'Push + safe-issue wake-up, bounded task capacity, parallel verification and bounded explicit PHP platform context',
+        detail: 'Push + safe-issue wake-up, bounded task capacity, parallel verification and bounded explicit PHP platform context',
         evidence:
             'PR #72 + PR #127 worker reliability + PR #157 scoped PHP context under CI',
     },
