@@ -17,7 +17,7 @@ final class StagingAuthenticatedSmokeCommand extends Command
 {
     protected $signature = 'staging:smoke-authenticated-surfaces';
 
-    protected $description = 'Exercise authenticated staging dashboard and operator surfaces without persisting smoke data';
+    protected $description = 'Exercise authenticated staging dashboard, operator, and purchase surfaces without persisting smoke data';
 
     public function handle(Router $router): int
     {
@@ -54,8 +54,9 @@ final class StagingAuthenticatedSmokeCommand extends Command
 
             $this->probe($router, '/dashboard', $user);
             $this->probe($router, '/operator/ops', $user);
+            $this->probe($router, '/purchase', $user);
 
-            $this->info('Authenticated staging surfaces PASS: /dashboard, /operator/ops');
+            $this->info('Authenticated staging surfaces PASS: /dashboard, /operator/ops, /purchase');
 
             return self::SUCCESS;
         } catch (Throwable $exception) {
