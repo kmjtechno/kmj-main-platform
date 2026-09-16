@@ -1,11 +1,12 @@
 from __future__ import annotations
 
+import os
 import tempfile
 import unittest
 from datetime import datetime, timezone
 from pathlib import Path
 
-from scripts.delivery_control_bridge import build_snapshot, publish_snapshot
+from scripts.delivery_control_bridge import DEFAULT_OUTPUT, build_snapshot, publish_snapshot
 
 
 class FakeApi:
@@ -91,13 +92,19 @@ class DeliveryControlBridgeTests(unittest.TestCase):
         self.assertEqual(len(snapshot["recent_worker_runs"]), 2)
         self.assertTrue(any(stage["key"] == "worker" for stage in snapshot["pipeline"]))
 
+    def test_default_output_uses_shared_runner_directory(self):
+        self.assertEqual(DEFAULT_OUTPUT, Path("/var/tmp/kmj-delivery-control/status.json"))
+        config = (Path(__file__).resolve().parents[1] / "apps/platform/config/kmj.php").read_text(encoding="utf-8")
+        self.assertIn("/var/tmp/kmj-delivery-control/status.json", config)
+
     def test_publish_is_atomic_and_world_readable_sanitized_evidence(self):
         snapshot = {"version": 1, "status": "idle", "captured_at": "2026-09-16T07:05:00+00:00"}
         with tempfile.TemporaryDirectory() as temp:
             target = Path(temp) / "delivery-control.json"
             publish_snapshot(target, snapshot)
             self.assertTrue(target.is_file())
-            self.assertEqual(target.stat().st_mode & 0o777, 0o644)
+            if os.name != "nt":
+                self.assertEqual(target.stat().st_mode & 0o777, 0o644)
             self.assertIn('"status":"idle"', target.read_text(encoding="utf-8"))
 
 

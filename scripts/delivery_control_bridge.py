@@ -14,7 +14,7 @@ import httpx
 
 REPO = os.getenv("GITHUB_REPOSITORY", "kmjtechno/kmj-main-platform")
 API = os.getenv("GITHUB_API_URL", "https://api.github.com").rstrip("/")
-DEFAULT_OUTPUT = Path(os.getenv("KMJ_DELIVERY_STATUS_PATH", "/var/tmp/kmj-delivery-control.json"))
+DEFAULT_OUTPUT = Path(os.getenv("KMJ_DELIVERY_STATUS_PATH", "/var/tmp/kmj-delivery-control/status.json"))
 STAGING_STATUS_URL = os.getenv("KMJ_STAGING_STATUS_URL", "https://staging.kmjtechno.com/info/status")
 
 
@@ -218,6 +218,8 @@ def build_snapshot(
 
 def publish_snapshot(path: Path, snapshot: dict[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
+    if path.parent == DEFAULT_OUTPUT.parent:
+        os.chmod(path.parent, 0o777)
     fd, temp_name = tempfile.mkstemp(prefix=f".{path.name}.", dir=path.parent)
     try:
         with os.fdopen(fd, "w", encoding="utf-8") as handle:
