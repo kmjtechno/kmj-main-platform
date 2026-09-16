@@ -124,6 +124,16 @@ def _risk_term_is_negated(text: str, start: int, end: int) -> bool:
     if re.search(r"\b(?:no|not|never|without|avoid|avoiding|exclude|excluding|must not|do not|don't)\b[^.;,\n]{0,64}$", prefix):
         return True
 
+    sentence_start = max(text.rfind(separator, 0, start) for separator in ("\n", ".", ";")) + 1
+    sentence_prefix = text[sentence_start:start]
+    if re.match(r"^\s*(?:[-*]\s*)?no\b", sentence_prefix):
+        current_list_item = sentence_prefix.rsplit(",", 1)[-1]
+        positive_action = re.search(
+            r"\b(?:deploy|modify|change|update|rotate|enable|configure|set|remove|delete|drop|publish|promote|migrate|cutover|touch|alter)\b",
+            current_list_item,
+        )
+        if not positive_action:
+            return True
     suffix = text[end:end + 64]
     return bool(re.match(
         r"^\s+(?:(?:untouched|unchanged|unmodified)|(?:remains?|stays?|is|must remain)\s+(?:untouched|unchanged|unmodified)|(?:must|should)\s+not\s+be\s+(?:changed|modified|touched))\b",

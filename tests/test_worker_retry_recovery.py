@@ -109,6 +109,7 @@ class WorkerPatchPreflightTests(unittest.TestCase):
 class RiskConstraintClassificationTests(unittest.TestCase):
     def test_explicit_negative_high_risk_constraints_are_not_actions(self):
         for text in (
+            "No production deployment, DNS, billing/payment changes, destructive DB actions, signing/private-key operations, legal actions, or irreversible/high-risk actions.",
             "No production changes.",
             "Do not modify DNS.",
             "Production remains untouched.",
@@ -122,6 +123,7 @@ class RiskConstraintClassificationTests(unittest.TestCase):
     def test_real_high_risk_actions_remain_blocked(self):
         for text, expected in (
             ("deploy production now", "production"),
+            ("No production changes, modify DNS for the live domain.", "dns"),
             ("modify DNS for the live domain", "dns"),
             ("change billing settings", "billing"),
             ("rotate a signing key", "signing key"),
