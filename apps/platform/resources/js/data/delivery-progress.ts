@@ -13,8 +13,9 @@ export const deliveryMilestones: DeliveryMilestone[] = [
         id: 'authority-foundation',
         title: 'Authority foundation',
         state: 'verified',
-        detail: 'Architecture + authority chain',
-        evidence: 'Foundation verification',
+        detail: 'Architecture + authority chain with audited, idempotent entitlement issuance and revocation',
+        evidence:
+            'Foundation verification + PR #174 entitlement revocation exact-head evidence',
     },
     {
         id: 'staging-delivery',
