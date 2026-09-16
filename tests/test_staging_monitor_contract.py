@@ -11,6 +11,7 @@ from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[1]
 SCRIPT = ROOT / "ops" / "staging" / "verify-monitor.py"
+DEPLOY_WORKFLOW = ROOT / ".github" / "workflows" / "staging-vps-deploy-fixed.yml"
 ORIGIN = "https://staging.kmjtechno.com"
 
 
@@ -56,6 +57,39 @@ class StagingMonitorContractTests(unittest.TestCase):
             patch.object(sys, "argv", [str(SCRIPT)]),
         ):
             runpy.run_path(str(SCRIPT), run_name="__main__")
+
+    def test_staging_deploy_refreshes_local_path_packages_before_composer_install(self):
+        workflow = DEPLOY_WORKFLOW.read_text()
+        install = (
+            'COMPOSER_PHP="$PHP_BIN" composer install --no-interaction '
+            '--prefer-dist --no-progress --no-dev --optimize-autoloader --no-scripts'
+        )
+        install_index = workflow.index(install)
+        for package in (
+            "domain-organizations",
+            "domain-catalog",
+            "domain-entitlements",
+            "domain-commerce",
+        ):
+            path = f"vendor/kmjtechno/{package}"
+            self.assertIn(path, workflow)
+            self.assertLess(workflow.index(path), install_index)
+
+    def test_staging_deploy_fails_closed_when_required_org_context_is_missing(self):
+        workflow = DEPLOY_WORKFLOW.read_text()
+        install = (
+            'COMPOSER_PHP="$PHP_BIN" composer install --no-interaction '
+            '--prefer-dist --no-progress --no-dev --optimize-autoloader --no-scripts'
+        )
+        install_index = workflow.index(install)
+        class_name = (
+            "KMJ\\\\MainPlatform\\\\Organizations\\\\Services\\\\"
+            "OrganizationCapabilityContext"
+        )
+        self.assertIn("class_exists", workflow)
+        self.assertIn(class_name, workflow)
+        self.assertGreater(workflow.index("class_exists"), install_index)
+        self.assertGreater(workflow.index(class_name), install_index)
 
 
 if __name__ == "__main__":
