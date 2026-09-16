@@ -8,6 +8,7 @@ import subprocess
 import tempfile
 import time
 import tomllib
+from typing import Callable
 import urllib.request
 
 MODEL = "opencode/big-pickle"
@@ -140,9 +141,29 @@ def complete(messages: list[dict[str, str]]) -> dict:
     }
 
 
+def probe_zero_cost_route(
+    completion_client: Callable[[list[dict[str, str]]], dict] = complete,
+    *,
+    max_attempts: int = 2,
+) -> dict:
+    if max_attempts < 1:
+        raise ValueError("max_attempts must be positive")
+    messages = [{
+        "role": "user",
+        "content": 'Return exactly one JSON object: {"marker":"KMJ_FREE_ROUTE_OK"}. No tools or prose.',
+    }]
+    for _attempt in range(1, max_attempts + 1):
+        response = completion_client(messages)
+        try:
+            answer = response["response"]["choices"][0]["message"]["content"]
+            marker = json.loads(answer).get("marker")
+        except (KeyError, IndexError, TypeError, json.JSONDecodeError):
+            marker = None
+        if marker == "KMJ_FREE_ROUTE_OK":
+            return response
+    raise OpenCodeUnavailable("OPENCODE_PROBE_FORMAT_INVALID")
+
+
 if __name__ == "__main__":
-    response = complete([{"role": "user", "content": 'Return exactly one JSON object: {"marker":"KMJ_FREE_ROUTE_OK"}. No tools or prose.' }])
-    answer = response["response"]["choices"][0]["message"]["content"]
-    if json.loads(answer).get("marker") != "KMJ_FREE_ROUTE_OK":
-        raise SystemExit("OpenCode probe marker did not match")
+    response = probe_zero_cost_route()
     print(json.dumps({"provider": response["provider"], "model": MODEL, "cost": 0, "result": "PASS"}))
