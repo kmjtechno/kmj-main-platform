@@ -10,6 +10,7 @@ final class SandboxLicenseLifecycle
         private readonly SandboxLicenseIssuer $issuer,
         private readonly SandboxLicenseValidationEngine $validator,
         private readonly LicenseRevoker $revoker,
+        private readonly SandboxProductAuthorityValidator $productAuthority,
     ) {}
 
     public function issue(
@@ -26,7 +27,23 @@ final class SandboxLicenseLifecycle
      */
     public function validate(string $license): array
     {
-        return $this->validator->validate($license);
+        $result = $this->validator->validate($license);
+
+        if ($result['valid'] === false || ! is_array($result['claims'])) {
+            return $result;
+        }
+
+        $failureReason = $this->productAuthority->failureReason($result['claims']);
+
+        if ($failureReason !== null) {
+            return [
+                'valid' => false,
+                'reason' => $failureReason,
+                'claims' => $result['claims'],
+            ];
+        }
+
+        return $result;
     }
 
     public function revoke(string $jti, ?string $reason = null): void
