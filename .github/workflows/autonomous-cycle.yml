@@ -13,6 +13,8 @@ permissions:
   contents: read
   actions: write
   issues: write
+  pull-requests: read
+  checks: read
 
 jobs:
   watchdog:
@@ -80,6 +82,13 @@ jobs:
             echo '- local LLM inference: prohibited'
             echo '- KMJ Cloud Nexus: untouched'
           } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Publish sanitized live delivery evidence
+        if: always()
+        continue-on-error: true
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: PYTHONPATH=. python3 scripts/delivery_control_bridge.py
 
       - name: Watchdog result
         run: |
