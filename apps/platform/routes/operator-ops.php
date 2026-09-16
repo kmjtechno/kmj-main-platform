@@ -2,6 +2,7 @@
 
 use App\Models\OperatorActionAudit;
 use App\Models\User;
+use App\Services\Operations\DeliveryControlRequestQueue;
 use App\Services\Operations\OperationalReadinessSnapshot;
 use App\Services\Operations\OperatorActionRunner;
 use App\Services\Operations\ServerMetricsSnapshot;
@@ -148,4 +149,29 @@ Route::middleware(['auth', 'verified', 'password.confirm'])
 
             return redirect()->route('operator.ops.index');
         })->name('ops.queue-restart');
+
+        Route::post('ops/actions/delivery-control', function (
+            Request $request,
+            PlatformOwnerAccess $access,
+            DeliveryControlRequestQueue $controls,
+        ) {
+            $user = $request->user();
+            abort_unless($user instanceof User, 401);
+            $access->require($user);
+
+            $validated = $request->validate([
+                'action' => ['required', 'string', 'in:dispatch_worker,requeue_safe_issue,rerun_failed_ci'],
+                'issue_number' => ['required_if:action,requeue_safe_issue', 'nullable', 'integer', 'min:1'],
+                'run_id' => ['required_if:action,rerun_failed_ci', 'nullable', 'integer', 'min:1'],
+            ]);
+
+            $controls->enqueue(
+                $user,
+                $validated['action'],
+                isset($validated['issue_number']) ? (int) $validated['issue_number'] : null,
+                isset($validated['run_id']) ? (int) $validated['run_id'] : null,
+            );
+
+            return redirect()->route('operator.ops.index');
+        })->name('ops.delivery-control');
     });
