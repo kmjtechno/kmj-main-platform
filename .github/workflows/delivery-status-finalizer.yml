@@ -1,0 +1,36 @@
+name: Delivery Status Finalizer
+
+on:
+  workflow_run:
+    workflows: ["Autonomous Execution Worker"]
+    types: [completed]
+
+permissions:
+  actions: read
+  checks: read
+  contents: read
+  issues: read
+  pull-requests: read
+
+concurrency:
+  group: kmj-delivery-status-finalizer
+  cancel-in-progress: true
+
+jobs:
+  finalize:
+    runs-on: [self-hosted, linux, x64, kmj-main-platform-ci]
+    timeout-minutes: 5
+    env:
+      GITHUB_TOKEN: ${{ github.token }}
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: main
+          persist-credentials: false
+
+      - name: Prepare resilient Python runtime
+        run: bash ops/self-hosted-runner/prepare-python-runtime.sh
+
+      - name: Refresh completed worker delivery evidence
+        run: PYTHONPATH=. python3 scripts/delivery_control_bridge.py
