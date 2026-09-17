@@ -188,8 +188,10 @@ export const deliveryMilestones: DeliveryMilestone[] = [
     {
         id: 'manual-sales-earning-lane',
         title: 'Manual sales earning lane',
-        state: 'active',
+        state: 'verified',
         detail: 'Customer Purchase Center + commercial product activation + owner-confirmed external payment evidence before governed entitlement/license fulfillment',
+        evidence:
+            'PR #126 + ManualSalesFlowTest + authenticated Purchase Center staging smoke',
     },
     {
         id: 'organization-capabilities',
@@ -258,16 +260,18 @@ export const deliveryMilestones: DeliveryMilestone[] = [
     {
         id: 'ops-readiness-evidence',
         title: 'Ops readiness evidence',
-        state: 'active',
+        state: 'verified',
         detail: 'Backup freshness + worker/AI posture + authenticated smoke; the staging control panel now has a tested shared-VPS publisher for worker, runner, task, PR/CI and deployment evidence, refreshed by the five-minute watchdog and worker lifecycle; the native Main Platform staging-home cutover away from the legacy mirror is tracked under CI without changing milestone state',
         evidence:
-            'PR #132 + deploy 34912567459 + authenticated smoke 34912692783 + PR #148 control panel + PR #154 live-evidence publisher under CI + PR #159 Purchase Center authenticated smoke under CI + PR #164 stale delivery evidence preservation under CI + PR #170 native staging-home cutover',
+            'PR #132 + deploy 34912567459 + authenticated smoke 34912692783 + PR #148 control panel + PR #154 live-evidence publisher under CI + PR #159 Purchase Center authenticated smoke under CI + PR #164 stale delivery evidence preservation under CI + PR #170 native staging-home cutover + PR #179 post-worker delivery finalizer + finalizer run 35210616307 + authenticated smoke run 35210726834',
     },
     {
         id: 'production-hardening',
         title: 'Production hardening',
-        state: 'active',
+        state: 'verified',
         detail: 'Ops Command Center + owner-gated production readiness',
+        evidence:
+            'PR #97 + PR #98 + completed issue #95 + OperatorOpsConsoleTest',
     },
 ];
 
@@ -282,5 +286,5 @@ export const deliveryProgress = Math.round(
 export const deliveryProgressMeta = {
     label: 'Revenue-capable working phase',
     note: 'Evidence-based delivery milestones, not total product completion.',
-    refreshed: '2026-09-16',
+    refreshed: '2026-09-17',
 } as const;
