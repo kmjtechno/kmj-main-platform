@@ -190,7 +190,8 @@ export const deliveryMilestones: DeliveryMilestone[] = [
         title: 'Manual sales earning lane',
         state: 'verified',
         detail: 'Customer Purchase Center + commercial product activation + owner-confirmed external payment evidence before governed entitlement/license fulfillment',
-        evidence: 'PR #126 + ManualSalesFlowTest + authenticated Purchase Center staging smoke',
+        evidence:
+            'PR #126 + ManualSalesFlowTest + authenticated Purchase Center staging smoke',
     },
     {
         id: 'organization-capabilities',
