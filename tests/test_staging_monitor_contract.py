@@ -12,6 +12,7 @@ from unittest.mock import patch
 ROOT = Path(__file__).resolve().parents[1]
 SCRIPT = ROOT / "ops" / "staging" / "verify-monitor.py"
 DEPLOY_WORKFLOW = ROOT / ".github" / "workflows" / "staging-vps-deploy-fixed.yml"
+DELIVERY_FINALIZER_WORKFLOW = ROOT / ".github" / "workflows" / "delivery-status-finalizer.yml"
 ORIGIN = "https://staging.kmjtechno.com"
 
 
@@ -92,6 +93,16 @@ class StagingMonitorContractTests(unittest.TestCase):
         self.assertGreater(guard_index, install_index)
         self.assertIn("exit 47", workflow)
 
+
+
+    def test_worker_completion_has_delivery_status_finalizer(self):
+        workflow = DELIVERY_FINALIZER_WORKFLOW.read_text(encoding="utf-8")
+
+        self.assertIn("workflow_run:", workflow)
+        self.assertIn('workflows: ["Autonomous Execution Worker"]', workflow)
+        self.assertIn("types: [completed]", workflow)
+        self.assertIn("scripts/delivery_control_bridge.py", workflow)
+        self.assertIn("runs-on: [self-hosted, linux, x64, kmj-main-platform-ci]", workflow)
 
 if __name__ == "__main__":
     unittest.main()
