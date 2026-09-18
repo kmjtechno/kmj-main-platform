@@ -69,6 +69,11 @@ def task_context(paths: list[str], root: Path = ROOT) -> str:
         target = root / path
         if target.resolve() != root.resolve() / path or target.is_symlink():
             raise ValueError("TASK_CONTEXT_SYMLINK_DENIED")
+        if not target.exists():
+            chunks.append(
+                f"FILE {path}\nMISSING FILE: create this declared task file if required\nEND FILE"
+            )
+            continue
         if not target.is_file():
             raise ValueError("TASK_CONTEXT_FILE_MISSING")
         if target.stat().st_size > MAX_CONTEXT_BYTES - total:
