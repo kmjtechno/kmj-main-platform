@@ -118,15 +118,18 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          for path in / /info /info/status; do
-            curl --silent --show-error --connect-timeout 5 --max-time 15 \
+          for path in / /products /products/kmj-calibration-pro; do
+            curl --fail --silent --show-error --connect-timeout 5 --max-time 15 \
               --output /dev/null --write-out "$path HTTP %{http_code}\\n" \
-              "https://staging.kmjtechno.com$path" || true
+              "https://staging.kmjtechno.com$path"
           done
-
-      - name: Verify live staging monitor response
-        shell: bash
-        run: python3 ops/staging/verify-monitor.py
+          for path in /info /info/status; do
+            code="$(curl --silent --show-error --connect-timeout 5 --max-time 15 \
+              --output /dev/null --write-out '%{http_code}' \
+              "https://staging.kmjtechno.com$path" || true)"
+            test "$code" = "404"
+            echo "$path HTTP $code (public monitoring disabled)"
+          done
 
       - name: Prepare staging browser without privileged installation
         shell: bash
