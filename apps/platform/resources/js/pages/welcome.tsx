@@ -66,16 +66,10 @@ const authority = [
 ];
 
 export default function Welcome() {
-    const stagingSyncBadge = (
-        <div className="fixed right-4 bottom-4 z-50 rounded-full border border-emerald-400/20 bg-[#08110d]/95 px-3 py-2 text-[10px] font-bold tracking-[0.12em] text-emerald-300 uppercase shadow-2xl backdrop-blur">
-            Live staging · frontend sync
-        </div>
-    );
     const { auth } = usePage().props;
 
     return (
         <>
-            {stagingSyncBadge}
             <Head title="KMJ TECHNO — Main Platform">
                 <meta name="kmj-main-platform" content="native-home" />
                 <meta
@@ -113,6 +107,12 @@ export default function Welcome() {
                         </Link>
 
                         <nav className="flex items-center gap-2 sm:gap-3">
+                            <Link
+                                href="/products"
+                                className="hidden h-10 items-center px-3 text-sm font-medium text-white/65 transition hover:text-white md:inline-flex"
+                            >
+                                Products
+                            </Link>
                             {auth.user ? (
                                 <Link
                                     href={dashboard()}
@@ -147,8 +147,7 @@ export default function Welcome() {
                         <div>
                             <div className="mb-7 inline-flex items-center gap-2 rounded-full border border-[#e21b23]/25 bg-[#e21b23]/[0.07] px-3 py-1.5 text-xs font-semibold tracking-wide text-[#ff747a]">
                                 <span className="h-1.5 w-1.5 rounded-full bg-[#e21b23] shadow-[0_0_10px_#e21b23]" />
-                                Staging live · foundation + licensing validation
-                                in motion
+                                KMJ TECHNO · software products + licensing
                             </div>
 
                             <h1 className="max-w-4xl text-5xl leading-[0.98] font-black tracking-[-0.055em] sm:text-6xl lg:text-[5.4rem]">
@@ -163,11 +162,9 @@ export default function Welcome() {
                                 customer access, entitlements, licensing,
                                 releases and governed automation — built as an
                                 enterprise foundation instead of a collection of
-                                disconnected tools. The current staging track
-                                now includes governed commerce, tenant
-                                capability enforcement, passkey-first access,
-                                license lifecycle controls and verified delivery
-                                automation in parallel.
+                                disconnected tools. Product discovery, customer
+                                access, licensing and verified delivery are
+                                designed to work as one coherent experience.
                             </p>
 
                             <div className="mt-9 flex flex-col gap-3 sm:flex-row">
@@ -188,12 +185,12 @@ export default function Welcome() {
                                         <ArrowRight className="h-4 w-4" />
                                     </Link>
                                 )}
-                                <a
-                                    href="#platform"
+                                <Link
+                                    href="/products"
                                     className="inline-flex h-12 items-center justify-center rounded-xl border border-white/10 bg-white/[0.035] px-6 text-sm font-semibold text-white/80 transition hover:border-white/20 hover:bg-white/[0.07] hover:text-white"
                                 >
-                                    Explore the platform
-                                </a>
+                                    Explore products
+                                </Link>
                             </div>
 
                             <div className="mt-10 grid max-w-2xl grid-cols-2 gap-x-6 gap-y-4 border-t border-white/[0.08] pt-6 sm:grid-cols-4">
@@ -400,6 +397,63 @@ export default function Welcome() {
                         </div>
                     </section>
 
+                    <section className="border-t border-white/[0.07] bg-[#050608]">
+                        <div className="mx-auto grid max-w-7xl gap-8 px-5 py-16 sm:px-8 lg:grid-cols-[1fr_.9fr] lg:px-10 lg:py-20">
+                            <div>
+                                <div className="text-xs font-bold tracking-[0.2em] text-[#e21b23] uppercase">
+                                    Featured product · development preview
+                                </div>
+                                <h2 className="mt-4 text-3xl font-black tracking-[-0.04em] sm:text-5xl">
+                                    KMJ Calibration Pro
+                                </h2>
+                                <p className="mt-5 max-w-2xl text-lg leading-8 text-white/58">
+                                    Understand the intended projector-camera calibration workflow
+                                    in seconds through a guided virtual simulation.
+                                </p>
+                                <p className="mt-4 max-w-2xl text-sm leading-7 text-white/38">
+                                    The current repository is a buildable C++ foundation and
+                                    physical calibration capability is not yet certified. The
+                                    public experience keeps that status explicit while showing how
+                                    the product is designed to work.
+                                </p>
+                                <Link
+                                    href="/products/kmj-calibration-pro"
+                                    className="mt-7 inline-flex h-11 items-center gap-2 rounded-xl bg-[#e21b23] px-5 text-sm font-bold shadow-[0_10px_32px_rgba(226,27,35,0.18)] transition hover:bg-[#f1252e]"
+                                >
+                                    Open virtual demo
+                                    <ArrowRight className="h-4 w-4" />
+                                </Link>
+                            </div>
+
+                            <div className="rounded-[1.5rem] border border-white/[0.08] bg-white/[0.025] p-5">
+                                <div className="text-[10px] font-bold tracking-[0.16em] text-white/30 uppercase">
+                                    Workflow preview
+                                </div>
+                                <div className="mt-5 grid grid-cols-4 gap-2">
+                                    {['Setup', 'Capture', 'Analyze', 'Results'].map(
+                                        (step, index) => (
+                                            <div
+                                                key={step}
+                                                className="rounded-xl border border-white/[0.07] bg-black/20 p-3"
+                                            >
+                                                <div className="text-[10px] font-bold text-[#ff676e]">
+                                                    {'0' + (index + 1)}
+                                                </div>
+                                                <div className="mt-8 text-xs font-semibold text-white/65">
+                                                    {step}
+                                                </div>
+                                            </div>
+                                        ),
+                                    )}
+                                </div>
+                                <div className="mt-4 rounded-xl border border-amber-300/15 bg-amber-300/[0.035] px-4 py-3 text-xs leading-5 text-amber-100/55">
+                                    Browser-only simulation. No physical measurement is presented
+                                    as a certified result.
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
                     <section
                         id="platform"
                         className="border-y border-white/[0.07] bg-white/[0.018]"
@@ -522,7 +576,7 @@ export default function Welcome() {
                             <div className="flex items-center gap-5 text-xs text-white/35">
                                 <span>Main Platform</span>
                                 <span className="h-1 w-1 rounded-full bg-white/20" />
-                                <span>Staging Preview</span>
+                                <span>Public Platform</span>
                             </div>
                         </div>
                     </section>
