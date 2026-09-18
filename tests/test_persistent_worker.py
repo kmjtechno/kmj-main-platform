@@ -66,6 +66,14 @@ class PersistentWorkerSafetyTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "TOO_LARGE"):
                 task_context(["docs/a.md"], root)
 
+    def test_context_allows_explicit_missing_file_as_creation_target(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            (root / "docs").mkdir()
+            context = task_context(["docs/new.md"], root)
+            self.assertIn("FILE docs/new.md", context)
+            self.assertIn("MISSING FILE: create this declared task file if required", context)
+
     def test_overlapping_declared_scope_does_not_call_ai(self):
         gh = Mock()
         issue = {"number": 200, "body": "## Task files\n- `docs/a.md`\n"}
