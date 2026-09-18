@@ -25,7 +25,6 @@ final class StagingNativeMainPlatformTest extends TestCase
             ->assertInertia(fn (Assert $page) => $page->component('welcome'));
     }
 
-
     public function test_live_public_surface_does_not_expose_operations_monitor(): void
     {
         $this->get('https://staging.kmjtechno.com/info')->assertNotFound();
