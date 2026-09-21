@@ -7,6 +7,10 @@ use Throwable;
 
 final class OperationalReadinessSnapshot
 {
+    public function __construct(
+        private readonly ProviderCompliancePolicy $providerPolicy,
+    ) {}
+
     /**
      * @param  array<string, mixed>  $server
      * @return array<string, mixed>
@@ -188,6 +192,7 @@ final class OperationalReadinessSnapshot
      */
     private function complianceGuard(array $server, array $backups): array
     {
+        $providerPolicy = $this->providerPolicy->snapshot();
         $guardrails = (array) config('kmj.ops.guardrails', []);
         $warning = max(1, (float) ($guardrails['resource_warning_percent'] ?? 85));
         $critical = max($warning, (float) ($guardrails['resource_critical_percent'] ?? 95));
@@ -231,8 +236,13 @@ final class OperationalReadinessSnapshot
         return [
             'status' => $status,
             'mode' => 'internal_operational_guardrails',
-            'provider_policy_enforcement' => 'not_enabled',
-            'legal_interpretation' => false,
+            'provider_policy_status' => $providerPolicy['status'],
+            'provider_policy_enforcement' => $providerPolicy['enforcement'],
+            'provider_id' => $providerPolicy['provider_id'],
+            'policy_version' => $providerPolicy['policy_version'],
+            'approved_source_count' => count($providerPolicy['sources']),
+            'approved_rule_count' => count($providerPolicy['rules']),
+            'legal_interpretation' => $providerPolicy['legal_interpretation'],
             'signals' => $signals,
         ];
     }
