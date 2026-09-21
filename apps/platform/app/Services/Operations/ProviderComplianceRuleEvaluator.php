@@ -95,6 +95,7 @@ final class ProviderComplianceRuleEvaluator
     }
 
     /**
+     * @param  'not_enabled'|'clear'|'breach'|'unobserved'|'invalid'  $status
      * @param  array<int, array<string, mixed>>  $signals
      * @return array{
      *     status: 'not_enabled'|'clear'|'breach'|'unobserved'|'invalid',
