@@ -2,6 +2,7 @@ import { Head, Link } from '@inertiajs/react';
 import { ArrowLeft, CheckCircle2, Code2, ShieldCheck } from 'lucide-react';
 import CalibrationDemo from '@/components/products/calibration-demo';
 import CloudOSDemo from '@/components/products/cloudos-demo';
+import ProductEvidenceTable from '@/components/products/product-evidence-table';
 
 type Product = {
     slug: string;
@@ -21,6 +22,18 @@ type Product = {
         detail: string;
         state: string;
     }>;
+    evidence: Array<{
+        criterion: string;
+        value: string;
+        state: string;
+        evidence_ref: string;
+    }>;
+    trust: {
+        purchase_boundary: string;
+        demo_boundary: string;
+        license_authority: string;
+        production_signing: string;
+    };
     demo: {
         kind: 'cloudos' | 'calibration';
         simulation: boolean;
@@ -153,6 +166,27 @@ export default function ProductShow({ product }: { product: Product }) {
                 </section>
 
                 <section className="mx-auto max-w-7xl px-5 py-14 sm:px-8 lg:px-10">
+                    <div className="mb-8 max-w-3xl">
+                        <div className="text-xs font-bold tracking-[0.2em] text-[#ef3941] uppercase">
+                            Evidence + trust
+                        </div>
+                        <h2 className="mt-4 text-3xl font-black tracking-[-0.035em] sm:text-4xl">
+                            Verify the boundaries, not marketing claims.
+                        </h2>
+                        <p className="mt-4 text-sm leading-7 text-white/45">
+                            Lifecycle, purchase, licensing and demo boundaries are
+                            rendered from explicit product facts and authority
+                            state.
+                        </p>
+                    </div>
+
+                    <ProductEvidenceTable
+                        evidence={product.evidence}
+                        trust={product.trust}
+                    />
+                </section>
+
+                <section className="mx-auto max-w-7xl px-5 pb-14 sm:px-8 lg:px-10">
                     {product.purchase_enabled ? (
                         <div className="flex flex-col items-start justify-between gap-6 rounded-2xl border border-emerald-300/15 bg-emerald-300/[0.035] p-6 sm:flex-row sm:items-center">
                             <div>

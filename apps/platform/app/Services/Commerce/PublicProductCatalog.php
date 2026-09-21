@@ -105,6 +105,40 @@ final class PublicProductCatalog
                     'state' => 'simulation',
                 ],
             ],
+            'evidence' => [
+                [
+                    'criterion' => 'Lifecycle',
+                    'value' => $purchaseEnabled ? 'Commercial catalog active' : 'Commercial catalog unavailable',
+                    'state' => 'verified',
+                    'evidence_ref' => 'Canonical product status + CloudOS entitlement policy',
+                ],
+                [
+                    'criterion' => 'Purchase boundary',
+                    'value' => $purchaseEnabled
+                        ? 'Request access only; purchase or payment confirmation does not grant entitlement.'
+                        : 'Ordering disabled.',
+                    'state' => 'verified',
+                    'evidence_ref' => 'Main Platform purchase and fulfillment authority',
+                ],
+                [
+                    'criterion' => 'License authority',
+                    'value' => 'Organization, product and active entitlement remain server-authoritative.',
+                    'state' => 'verified',
+                    'evidence_ref' => 'Main Platform entitlement and license authority',
+                ],
+                [
+                    'criterion' => 'Demo boundary',
+                    'value' => 'Deterministic browser simulation with no live infrastructure mutation.',
+                    'state' => 'verified',
+                    'evidence_ref' => 'Public Product Hub simulation contract',
+                ],
+            ],
+            'trust' => [
+                'purchase_boundary' => $purchaseEnabled ? 'request-only' : 'disabled',
+                'demo_boundary' => 'simulation-only',
+                'license_authority' => 'server-authoritative',
+                'production_signing' => 'owner-gated-out-of-scope',
+            ],
             'demo' => [
                 'kind' => 'cloudos',
                 'simulation' => true,
@@ -157,6 +191,38 @@ final class PublicProductCatalog
                     'detail' => 'The public demo explains the intended Setup → Capture → Analyze → Results flow without claiming physical output.',
                     'state' => 'simulation',
                 ],
+            ],
+            'evidence' => [
+                [
+                    'criterion' => 'Lifecycle',
+                    'value' => 'Development preview',
+                    'state' => 'verified',
+                    'evidence_ref' => 'Canonical Main Platform product lifecycle',
+                ],
+                [
+                    'criterion' => 'Purchase boundary',
+                    'value' => 'Ordering disabled while the product remains in preview.',
+                    'state' => 'verified',
+                    'evidence_ref' => 'Main Platform purchase lifecycle gate',
+                ],
+                [
+                    'criterion' => 'Physical capability',
+                    'value' => 'Not certified for physical calibration output.',
+                    'state' => 'verified',
+                    'evidence_ref' => 'Calibration repository maturity evidence',
+                ],
+                [
+                    'criterion' => 'Demo boundary',
+                    'value' => 'Synthetic browser workflow only; no hardware result is presented as measured.',
+                    'state' => 'verified',
+                    'evidence_ref' => 'Public Product Hub simulation contract',
+                ],
+            ],
+            'trust' => [
+                'purchase_boundary' => 'disabled',
+                'demo_boundary' => 'simulation-only',
+                'license_authority' => 'preview-not-commercial',
+                'production_signing' => 'owner-gated-out-of-scope',
             ],
             'demo' => [
                 'kind' => 'calibration',
