@@ -25,7 +25,10 @@ final class SandboxLicenseContractTest extends TestCase
         );
 
         self::assertIsArray($vector);
-        $result = (new LicenseValidator($vector['secret']))->validate($vector['license']);
+        $result = (new LicenseValidator($vector['secret']))->validateAt(
+            $vector['license'],
+            $vector['claims']['issued_at'] + 1,
+        );
 
         self::assertTrue($result['valid']);
         self::assertSame(SandboxLicenseContract::CURRENT_VERSION, $result['claims']['contract_version']);
