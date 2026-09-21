@@ -63,6 +63,9 @@ final class ProviderCompliancePolicy
             'provider_id' => $providerId,
             'policy_version' => $policyVersion,
             'reviewed_at' => $reviewedAt?->toIso8601String(),
+            'policy_fingerprint' => $providerId !== null && $policyVersion !== null
+                ? $this->fingerprint($providerId, $policyVersion, $sources, $rules)
+                : null,
             'enforcement' => $status === 'active' && $rules !== []
                 ? 'approved_rules_registered'
                 : 'not_enabled',
@@ -167,6 +170,29 @@ final class ProviderCompliancePolicy
         }
 
         return $rules;
+    }
+
+    /**
+     * @param  array<int, array<string, mixed>>  $sources
+     * @param  array<int, array<string, mixed>>  $rules
+     */
+    private function fingerprint(
+        string $providerId,
+        string $policyVersion,
+        array $sources,
+        array $rules,
+    ): string {
+        usort($sources, fn (array $left, array $right): int => ($left['id'] ?? '') <=> ($right['id'] ?? ''));
+        usort($rules, fn (array $left, array $right): int => ($left['code'] ?? '') <=> ($right['code'] ?? ''));
+
+        $payload = json_encode([
+            'provider_id' => $providerId,
+            'policy_version' => $policyVersion,
+            'sources' => $sources,
+            'rules' => $rules,
+        ], JSON_THROW_ON_ERROR);
+
+        return hash('sha256', $payload);
     }
 
     private function reviewedAt(mixed $value): ?CarbonImmutable
