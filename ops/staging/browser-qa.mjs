@@ -122,9 +122,20 @@ export async function main() {
                         while ((document.body?.innerText.length || 0) < 40 && Date.now() < stop)
                             await new Promise(r => setTimeout(r, 100));
                         await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+                        const selector = ${JSON.stringify(page.selector ?? null)};
+                        const marker = ${JSON.stringify(page.marker)};
+                        const markerStop = Date.now() + 5000;
+                        let markerFound = false;
+                        do {
+                            markerFound = selector
+                                ? Boolean(document.querySelector(selector))
+                                : (${matchesMarker.toString()})(document.body.innerText, marker);
+                            if (markerFound) break;
+                            await new Promise(r => setTimeout(r, 100));
+                        } while (Date.now() < markerStop);
                         const nav = performance.getEntriesByType('navigation')[0];
                         return { url: location.href, bodyLength: document.body.innerText.length,
-                            markerFound: ${JSON.stringify(page.selector ?? null)} ? Boolean(document.querySelector(${JSON.stringify(page.selector ?? '')})) : (${matchesMarker.toString()})(document.body.innerText, ${JSON.stringify(page.marker)}),
+                            markerFound,
                             overflowPx: Math.max(0, document.documentElement.scrollWidth - innerWidth),
                             domContentLoadedMs: nav ? Math.round(nav.domContentLoadedEventEnd) : null,
                             loadEventMs: nav ? Math.round(nav.loadEventEnd) : null,
