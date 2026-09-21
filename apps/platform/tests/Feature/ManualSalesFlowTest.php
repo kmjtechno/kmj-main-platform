@@ -3,9 +3,12 @@
 namespace Tests\Feature;
 
 use App\Models\User;
+use App\Services\Commerce\CloudOSProductCatalog;
 use App\Services\Commerce\CommercialProductPublisher;
+use App\Services\Commerce\KmjProductCatalog;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use KMJ\MainPlatform\Catalog\Models\Product;
 use KMJ\MainPlatform\Catalog\Services\ProductCatalog;
 use KMJ\MainPlatform\Commerce\Models\CommercialOrder;
 use KMJ\MainPlatform\Commerce\Services\CommercialOrderService;
@@ -151,6 +154,43 @@ final class ManualSalesFlowTest extends TestCase
             'product_id' => $product->getKey(),
             'status' => 'active',
             'idempotency_key' => 'commercial-order:'.$order->getKey(),
+        ]);
+    }
+
+    public function test_canonical_lifecycle_blocks_calibration_purchase_and_allows_cloudos_request(): void
+    {
+        $customer = User::factory()->create(['email_verified_at' => now()]);
+        $organization = app(OrganizationCreator::class)->create('Canonical Buyer', $customer->id);
+        app(KmjProductCatalog::class)->syncAll();
+
+        $cloudOS = Product::query()->where('slug', CloudOSProductCatalog::SLUG)->firstOrFail();
+        $calibration = Product::query()
+            ->where('slug', KmjProductCatalog::CALIBRATION_SLUG)
+            ->firstOrFail();
+
+        $this->actingAs($customer)
+            ->post('/purchase/orders', [
+                'organization_id' => $organization->getKey(),
+                'product_id' => $calibration->getKey(),
+                'idempotency_key' => 'calibration-preview-order',
+            ])
+            ->assertNotFound();
+
+        $this->assertDatabaseCount('commerce_orders', 0);
+
+        $this->actingAs($customer)
+            ->post('/purchase/orders', [
+                'organization_id' => $organization->getKey(),
+                'product_id' => $cloudOS->getKey(),
+                'idempotency_key' => 'cloudos-order',
+            ])
+            ->assertRedirect('/purchase');
+
+        $this->assertDatabaseHas('commerce_orders', [
+            'organization_id' => $organization->getKey(),
+            'product_id' => $cloudOS->getKey(),
+            'status' => 'requested',
+            'idempotency_key' => 'cloudos-order',
         ]);
     }
 
