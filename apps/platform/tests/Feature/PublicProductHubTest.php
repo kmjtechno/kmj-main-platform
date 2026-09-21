@@ -47,7 +47,12 @@ final class PublicProductHubTest extends TestCase
                 ->where('product.lifecycle', 'active')
                 ->where('product.purchase_enabled', true)
                 ->where('product.demo.kind', 'cloudos')
-                ->where('product.demo.simulation', true));
+                ->where('product.demo.simulation', true)
+                ->has('product.evidence', 4)
+                ->where('product.evidence.0.criterion', 'Lifecycle')
+                ->where('product.evidence.0.state', 'verified')
+                ->where('product.trust.purchase_boundary', 'request-only')
+                ->where('product.trust.demo_boundary', 'simulation-only'));
     }
 
     public function test_calibration_detail_is_truthful_and_demo_first(): void
@@ -61,7 +66,12 @@ final class PublicProductHubTest extends TestCase
                 ->where('product.purchase_enabled', false)
                 ->where('product.demo.kind', 'calibration')
                 ->where('product.demo.simulation', true)
-                ->where('product.truth.physical_capability_certified', false));
+                ->where('product.truth.physical_capability_certified', false)
+                ->has('product.evidence', 4)
+                ->where('product.evidence.0.criterion', 'Lifecycle')
+                ->where('product.evidence.0.state', 'verified')
+                ->where('product.trust.purchase_boundary', 'disabled')
+                ->where('product.trust.demo_boundary', 'simulation-only'));
     }
 
     public function test_unknown_product_is_not_found(): void
