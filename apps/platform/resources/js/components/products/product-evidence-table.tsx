@@ -26,8 +26,8 @@ export default function ProductEvidenceTable({
                     Evidence-backed comparison
                 </div>
                 <p className="mt-2 text-sm leading-6 text-white/40">
-                    Only repository or authority-backed facts are shown here.
-                    No ratings, fabricated benchmarks or unsupported claims.
+                    Only repository or authority-backed facts are shown here. No
+                    ratings, fabricated benchmarks or unsupported claims.
                 </p>
             </div>
 
