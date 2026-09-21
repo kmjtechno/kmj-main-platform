@@ -107,6 +107,7 @@ type OperationalReadiness = {
         provider_policy_enforcement: string;
         provider_id: string | null;
         policy_version: string | null;
+        policy_fingerprint: string | null;
         approved_source_count: number;
         approved_rule_count: number;
         provider_rule_status: string;
@@ -466,6 +467,16 @@ export default function OperatorOps({
                                     }{' '}
                                     rules
                                 </div>
+                                {readiness.compliance_guard
+                                    .policy_fingerprint ? (
+                                    <div className="font-mono break-all">
+                                        fingerprint:{' '}
+                                        {
+                                            readiness.compliance_guard
+                                                .policy_fingerprint
+                                        }
+                                    </div>
+                                ) : null}
                                 <div>
                                     rule state:{' '}
                                     {
