@@ -25,6 +25,16 @@ final class LicenseValidator
      */
     public function validate(string $license): array
     {
+        return $this->validateAt($license, time());
+    }
+
+    /**
+     * Deterministic validation entry point used by shared cross-language vectors.
+     *
+     * @return array{valid: bool, reason: string|null, claims: array<string, mixed>|null}
+     */
+    public function validateAt(string $license, int $now): array
+    {
         $parts = explode('.', $license);
 
         if (count($parts) !== 2) {
@@ -95,8 +105,6 @@ final class LicenseValidator
         ) {
             return $this->invalid('non_canonical_identity');
         }
-
-        $now = time();
 
         if ($issuedAt > $now + SandboxLicensePolicy::MAX_FUTURE_ISSUED_AT_SKEW_SECONDS) {
             return $this->invalid('issued_in_future', $claims);
