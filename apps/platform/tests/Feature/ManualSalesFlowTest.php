@@ -3,9 +3,14 @@
 namespace Tests\Feature;
 
 use App\Models\User;
+use App\Services\Commerce\CloudOSProductCatalog;
 use App\Services\Commerce\CommercialProductPublisher;
+use App\Services\Commerce\KmjProductCatalog;
+use App\Services\Licensing\CloudOSLicenseEligibility;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use Inertia\Testing\AssertableInertia as Assert;
+use KMJ\MainPlatform\Catalog\Models\Product;
 use KMJ\MainPlatform\Catalog\Services\ProductCatalog;
 use KMJ\MainPlatform\Commerce\Models\CommercialOrder;
 use KMJ\MainPlatform\Commerce\Services\CommercialOrderService;
@@ -152,6 +157,100 @@ final class ManualSalesFlowTest extends TestCase
             'status' => 'active',
             'idempotency_key' => 'commercial-order:'.$order->getKey(),
         ]);
+    }
+
+    public function test_purchase_center_lists_cloudos_but_not_calibration_preview(): void
+    {
+        $customer = User::factory()->create(['email_verified_at' => now()]);
+        app(OrganizationCreator::class)->create('Catalog Buyer', $customer->id);
+        app(KmjProductCatalog::class)->syncAll();
+
+        $this->actingAs($customer)
+            ->get('/purchase')
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('purchase')
+                ->has('products', 1)
+                ->where('products.0.slug', CloudOSProductCatalog::SLUG)
+                ->where('products.0.name', CloudOSProductCatalog::NAME));
+    }
+
+    public function test_canonical_lifecycle_blocks_calibration_purchase_and_allows_cloudos_request(): void
+    {
+        $customer = User::factory()->create(['email_verified_at' => now()]);
+        $organization = app(OrganizationCreator::class)->create('Canonical Buyer', $customer->id);
+        app(KmjProductCatalog::class)->syncAll();
+
+        $cloudOS = Product::query()->where('slug', CloudOSProductCatalog::SLUG)->firstOrFail();
+        $calibration = Product::query()
+            ->where('slug', KmjProductCatalog::CALIBRATION_SLUG)
+            ->firstOrFail();
+
+        $this->actingAs($customer)
+            ->post('/purchase/orders', [
+                'organization_id' => $organization->getKey(),
+                'product_id' => $calibration->getKey(),
+                'idempotency_key' => 'calibration-preview-order',
+            ])
+            ->assertNotFound();
+
+        $this->assertDatabaseCount('commerce_orders', 0);
+
+        $this->actingAs($customer)
+            ->post('/purchase/orders', [
+                'organization_id' => $organization->getKey(),
+                'product_id' => $cloudOS->getKey(),
+                'idempotency_key' => 'cloudos-order',
+            ])
+            ->assertRedirect('/purchase');
+
+        $this->assertDatabaseHas('commerce_orders', [
+            'organization_id' => $organization->getKey(),
+            'product_id' => $cloudOS->getKey(),
+            'status' => 'requested',
+            'idempotency_key' => 'cloudos-order',
+        ]);
+    }
+
+    public function test_cloudos_license_eligibility_appears_only_after_explicit_fulfillment(): void
+    {
+        $customer = User::factory()->create(['email_verified_at' => now()]);
+        $operator = $this->createPasskeyOwner();
+        $organization = app(OrganizationCreator::class)->create('CloudOS License Buyer', $customer->id);
+        $products = app(KmjProductCatalog::class)->syncAll();
+        $cloudOS = $products[CloudOSProductCatalog::SLUG];
+        $orders = app(CommercialOrderService::class);
+        $order = $orders->request(
+            $organization->getKey(),
+            $cloudOS->getKey(),
+            $customer->id,
+            'cloudos-license-order',
+        );
+
+        $orders->confirm(
+            $order->getKey(),
+            $operator->id,
+            'INR',
+            10000,
+            'CLOUDOS-LICENSE-CONFIRMATION',
+        );
+
+        self::assertNull(
+            app(CloudOSLicenseEligibility::class)
+                ->eligibleEntitlement((string) $organization->getKey()),
+        );
+
+        $this->actingAs($operator)
+            ->withSession(['auth.password_confirmed_at' => time()])
+            ->post('/operator/orders/'.$order->getKey().'/fulfill')
+            ->assertRedirect('/operator');
+
+        $eligible = app(CloudOSLicenseEligibility::class)
+            ->eligibleEntitlement((string) $organization->getKey());
+
+        self::assertNotNull($eligible);
+        self::assertSame(CloudOSProductCatalog::CAPABILITY, $eligible->getAttribute('capability'));
+        self::assertSame($cloudOS->getKey(), $eligible->getAttribute('product_id'));
     }
 
     public function test_regular_user_cannot_confirm_payment(): void

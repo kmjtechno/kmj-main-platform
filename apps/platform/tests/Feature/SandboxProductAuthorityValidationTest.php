@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Services\Licensing\ProductLicenseProfileRegistry;
 use App\Services\Licensing\SandboxLicenseLifecycle;
 use DateTimeImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -16,7 +17,7 @@ final class SandboxProductAuthorityValidationTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_matching_active_product_and_entitlement_are_accepted(): void
+    public function test_matching_registered_product_and_entitlement_are_accepted(): void
     {
         [$organization, $product, $entitlement] = $this->authorityFixture();
         $licenses = app(SandboxLicenseLifecycle::class);
@@ -74,6 +75,49 @@ final class SandboxProductAuthorityValidationTest extends TestCase
         self::assertSame('entitlement_unavailable', $result['reason']);
     }
 
+    public function test_signed_license_is_rejected_when_entitlement_capability_does_not_match_profile(): void
+    {
+        [$organization, $product, $entitlement] = $this->authorityFixture();
+        $licenses = app(SandboxLicenseLifecycle::class);
+        $license = $this->issue($licenses, $organization, $product, $entitlement);
+
+        $entitlement->forceFill(['capability' => 'wrong.capability'])->save();
+
+        $result = $licenses->validate($license);
+
+        self::assertFalse($result['valid']);
+        self::assertSame('capability_mismatch', $result['reason']);
+    }
+
+    public function test_signed_license_is_rejected_for_unregistered_product(): void
+    {
+        $organization = Organization::query()->create(['name' => 'Unknown Product Lab']);
+        $product = Product::query()->create([
+            'slug' => 'unknown-product',
+            'name' => 'Unknown Product',
+            'status' => 'sandbox',
+        ]);
+        $policy = EntitlementPolicy::query()->create([
+            'product_id' => $product->getKey(),
+            'code' => 'unknown-product.default',
+            'capability' => 'sandbox.product.access',
+            'status' => 'active',
+        ]);
+        $entitlement = app(EntitlementIssuer::class)->issue(
+            $organization->getKey(),
+            $policy,
+            'unknown-product-entitlement',
+        );
+        $licenses = app(SandboxLicenseLifecycle::class);
+
+        $result = $licenses->validate(
+            $this->issue($licenses, $organization, $product, $entitlement),
+        );
+
+        self::assertFalse($result['valid']);
+        self::assertSame('unsupported_product', $result['reason']);
+    }
+
     private function issue(
         SandboxLicenseLifecycle $licenses,
         Organization $organization,
@@ -97,14 +141,14 @@ final class SandboxProductAuthorityValidationTest extends TestCase
             'name' => 'KMJ Product Validation Lab',
         ]);
         $product = Product::query()->create([
-            'slug' => 'product-validation-sandbox',
-            'name' => 'Product Validation Sandbox',
+            'slug' => ProductLicenseProfileRegistry::MAIN_PLATFORM_SANDBOX_SLUG,
+            'name' => 'KMJ Main Platform Sandbox',
             'status' => 'sandbox',
         ]);
         $policy = EntitlementPolicy::query()->create([
             'product_id' => $product->getKey(),
-            'code' => 'product-validation-sandbox-use',
-            'capability' => 'sandbox.use',
+            'code' => 'main-platform.sandbox.default',
+            'capability' => ProductLicenseProfileRegistry::MAIN_PLATFORM_SANDBOX_CAPABILITY,
             'status' => 'active',
         ]);
 

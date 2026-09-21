@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\LicenseRevocation;
 use App\Services\Licensing\LicenseRevoker;
 use App\Services\Licensing\LicenseValidator;
+use App\Services\Licensing\SandboxLicenseContract;
 use App\Services\Licensing\SandboxLicenseIssuer;
 use DateTimeImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -32,6 +33,7 @@ final class SandboxLicenseLifecycleTest extends TestCase
 
         self::assertTrue($valid['valid']);
         self::assertSame('sandbox', $valid['claims']['environment']);
+        self::assertSame(SandboxLicenseContract::CURRENT_VERSION, $valid['claims']['contract_version']);
         self::assertSame('10', $valid['claims']['organization_id']);
         self::assertSame('20', $valid['claims']['product_id']);
         self::assertSame('30', $valid['claims']['entitlement_id']);
