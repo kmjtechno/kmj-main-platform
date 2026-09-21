@@ -18,6 +18,7 @@ final class ProviderCompliancePolicyTest extends TestCase
         self::assertFalse($snapshot['legal_interpretation']);
         self::assertSame([], $snapshot['sources']);
         self::assertSame([], $snapshot['rules']);
+        self::assertNull($snapshot['policy_fingerprint']);
     }
 
     public function test_unapproved_policy_cannot_enable_provider_rules(): void
@@ -42,6 +43,7 @@ final class ProviderCompliancePolicyTest extends TestCase
         self::assertSame('2026-09-22', $snapshot['policy_version']);
         self::assertCount(1, $snapshot['sources']);
         self::assertCount(1, $snapshot['rules']);
+        self::assertMatchesRegularExpression('/^[0-9a-f]{64}$/', $snapshot['policy_fingerprint']);
         self::assertSame('resource.cpu.warning', $snapshot['rules'][0]['code']);
         self::assertFalse($snapshot['legal_interpretation']);
     }
