@@ -6,6 +6,7 @@ use App\Models\User;
 use App\Services\Commerce\CloudOSProductCatalog;
 use App\Services\Commerce\CommercialProductPublisher;
 use App\Services\Commerce\KmjProductCatalog;
+use App\Services\Licensing\CloudOSLicenseEligibility;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Inertia\Testing\AssertableInertia as Assert;
@@ -209,6 +210,47 @@ final class ManualSalesFlowTest extends TestCase
             'status' => 'requested',
             'idempotency_key' => 'cloudos-order',
         ]);
+    }
+
+    public function test_cloudos_license_eligibility_appears_only_after_explicit_fulfillment(): void
+    {
+        $customer = User::factory()->create(['email_verified_at' => now()]);
+        $operator = $this->createPasskeyOwner();
+        $organization = app(OrganizationCreator::class)->create('CloudOS License Buyer', $customer->id);
+        $products = app(KmjProductCatalog::class)->syncAll();
+        $cloudOS = $products[CloudOSProductCatalog::SLUG];
+        $orders = app(CommercialOrderService::class);
+        $order = $orders->request(
+            $organization->getKey(),
+            $cloudOS->getKey(),
+            $customer->id,
+            'cloudos-license-order',
+        );
+
+        $orders->confirm(
+            $order->getKey(),
+            $operator->id,
+            'INR',
+            10000,
+            'CLOUDOS-LICENSE-CONFIRMATION',
+        );
+
+        self::assertNull(
+            app(CloudOSLicenseEligibility::class)
+                ->eligibleEntitlement((string) $organization->getKey()),
+        );
+
+        $this->actingAs($operator)
+            ->withSession(['auth.password_confirmed_at' => time()])
+            ->post('/operator/orders/'.$order->getKey().'/fulfill')
+            ->assertRedirect('/operator');
+
+        $eligible = app(CloudOSLicenseEligibility::class)
+            ->eligibleEntitlement((string) $organization->getKey());
+
+        self::assertNotNull($eligible);
+        self::assertSame(CloudOSProductCatalog::CAPABILITY, $eligible->getAttribute('capability'));
+        self::assertSame($cloudOS->getKey(), $eligible->getAttribute('product_id'));
     }
 
     public function test_regular_user_cannot_confirm_payment(): void
