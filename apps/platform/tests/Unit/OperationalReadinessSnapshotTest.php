@@ -67,6 +67,54 @@ final class OperationalReadinessSnapshotTest extends TestCase
         }
     }
 
+    public function test_snapshot_evaluates_only_explicitly_approved_provider_rules(): void
+    {
+        $directory = sys_get_temp_dir().DIRECTORY_SEPARATOR.'kmj-ops-provider-'.bin2hex(random_bytes(6));
+        File::ensureDirectoryExists($directory, 0700, true);
+
+        config()->set('kmj.ops.backup_status_dir', $directory);
+        config()->set('kmj.ops.provider_policy', [
+            'provider_id' => 'web-host-example',
+            'policy_version' => '2026-09-22',
+            'approved' => true,
+            'reviewed_at' => now()->toIso8601String(),
+            'max_age_days' => 90,
+            'sources' => [[
+                'id' => 'resource-policy',
+                'url' => 'https://provider.example/policy',
+                'sha256' => str_repeat('a', 64),
+            ]],
+            'rules' => [[
+                'code' => 'resource.cpu.warning',
+                'source_id' => 'resource-policy',
+                'metric' => 'cpu.load_percent_estimate',
+                'operator' => 'gte',
+                'value' => 80,
+            ]],
+        ]);
+
+        try {
+            $snapshot = app(OperationalReadinessSnapshot::class)->capture([
+                'deployed_sha' => str_repeat('a', 40),
+                'database' => ['status' => 'healthy'],
+                'cpu' => ['load_percent_estimate' => 85],
+                'memory' => ['used_percent' => 30],
+                'disk' => ['used_percent' => 40],
+                'failed_jobs' => 0,
+            ]);
+
+            $this->assertSame('active', $snapshot['compliance_guard']['provider_policy_status']);
+            $this->assertSame('approved_rules_registered', $snapshot['compliance_guard']['provider_policy_enforcement']);
+            $this->assertMatchesRegularExpression('/^[0-9a-f]{64}$/', $snapshot['compliance_guard']['policy_fingerprint']);
+            $this->assertSame('breach', $snapshot['compliance_guard']['provider_rule_status']);
+            $this->assertSame('resource.cpu.warning', $snapshot['compliance_guard']['provider_rule_signals'][0]['code']);
+            $this->assertFalse($snapshot['compliance_guard']['provider_mitigation_allowed']);
+            $this->assertFalse($snapshot['compliance_guard']['legal_interpretation']);
+        } finally {
+            File::deleteDirectory($directory);
+        }
+    }
+
     private function marker(string $completedAt): string
     {
         return implode("\n", [
