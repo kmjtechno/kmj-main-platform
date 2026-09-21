@@ -18,6 +18,18 @@ return [
             'resource_warning_percent' => 85,
             'resource_critical_percent' => 95,
         ],
+        // Provider rules stay disabled until a human-approved, hash-addressed
+        // policy profile is committed/configured. Raw legal text is never
+        // interpreted as executable policy by this application.
+        'provider_policy' => [
+            'provider_id' => null,
+            'policy_version' => null,
+            'approved' => false,
+            'reviewed_at' => null,
+            'max_age_days' => 90,
+            'sources' => [],
+            'rules' => [],
+        ],
         'worker_execution_enabled' => env('KMJ_EXECUTION_ENABLED'),
         'worker_write_enabled' => env('KMJ_AUTONOMOUS_WRITE_ENABLED'),
         'free_ai_provider_credentials' => [
