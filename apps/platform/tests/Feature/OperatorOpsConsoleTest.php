@@ -46,6 +46,9 @@ final class OperatorOpsConsoleTest extends TestCase
                 ->has('readiness.compliance_guard.provider_policy_status')
                 ->has('readiness.compliance_guard.approved_source_count')
                 ->has('readiness.compliance_guard.approved_rule_count')
+                ->has('readiness.compliance_guard.provider_rule_status')
+                ->has('readiness.compliance_guard.provider_rule_signals')
+                ->where('readiness.compliance_guard.provider_mitigation_allowed', false)
                 ->where('readiness.free_ai_router.paid_fallback', false)
                 ->has('recentActions', 0));
     }
