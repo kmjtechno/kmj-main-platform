@@ -19,6 +19,7 @@ final class OperationalReadinessSnapshotTest extends TestCase
             'weekly' => 216,
             'monthly' => 840,
         ]);
+        config()->set('kmj.ops.provider_policy', []);
         config()->set('kmj.ops.worker_execution_enabled', null);
         config()->set('kmj.ops.worker_write_enabled', null);
         config()->set('kmj.ops.free_ai_provider_credentials', [
@@ -55,6 +56,7 @@ final class OperationalReadinessSnapshotTest extends TestCase
             $this->assertFalse($snapshot['free_ai_router']['live_route_observed']);
             $this->assertFalse($snapshot['free_ai_router']['paid_fallback']);
             $this->assertSame('warning', $snapshot['compliance_guard']['status']);
+            $this->assertSame('unconfigured', $snapshot['compliance_guard']['provider_policy_status']);
             $this->assertSame('not_enabled', $snapshot['compliance_guard']['provider_policy_enforcement']);
             $this->assertFalse($snapshot['compliance_guard']['legal_interpretation']);
         } finally {
