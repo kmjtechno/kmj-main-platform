@@ -4,13 +4,13 @@ namespace Tests\Feature;
 
 use App\Models\LicenseAuditEvent;
 use App\Models\User;
+use App\Services\Commerce\CloudOSProductCatalog;
+use App\Services\Commerce\KmjProductCatalog;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Inertia\Testing\AssertableInertia as Assert;
-use KMJ\MainPlatform\Catalog\Services\ProductCatalog;
 use KMJ\MainPlatform\Commerce\Services\CommercialOrderService;
 use KMJ\MainPlatform\Entitlements\Models\Entitlement;
-use KMJ\MainPlatform\Entitlements\Services\EntitlementPolicyRegistry;
 use KMJ\MainPlatform\Organizations\Services\OrganizationCreator;
 use Tests\TestCase;
 
@@ -188,15 +188,8 @@ final class PlatformOwnerConsoleTest extends TestCase
     private function createReadyOrder(User $user): array
     {
         $organization = app(OrganizationCreator::class)->create('Fulfillment Org', $user->id);
-        $product = app(ProductCatalog::class)->ensureSandboxProduct(
-            'fulfillment-ready-product',
-            'Fulfillment Ready Product',
-        );
-        app(EntitlementPolicyRegistry::class)->ensure(
-            $product->getKey(),
-            'fulfillment.ready.default',
-            'product.access',
-        );
+        $products = app(KmjProductCatalog::class)->syncAll();
+        $product = $products[CloudOSProductCatalog::SLUG];
         $orders = app(CommercialOrderService::class);
         $order = $orders->request(
             $organization->getKey(),
