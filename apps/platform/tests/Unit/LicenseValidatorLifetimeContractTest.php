@@ -3,6 +3,7 @@
 namespace Tests\Unit;
 
 use App\Services\Licensing\LicenseValidator;
+use App\Services\Licensing\SandboxLicenseContract;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -17,6 +18,7 @@ final class LicenseValidatorLifetimeContractTest extends TestCase
         $issuedAt = time() + 5;
         $claims = [
             'environment' => 'sandbox',
+            'contract_version' => SandboxLicenseContract::CURRENT_VERSION,
             'jti' => 'license-zero-lifetime',
             'organization_id' => 'org-1',
             'product_id' => 'product-1',
