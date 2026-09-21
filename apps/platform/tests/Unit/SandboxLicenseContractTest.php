@@ -4,6 +4,7 @@ namespace Tests\Unit;
 
 use App\Services\Licensing\LicenseValidator;
 use App\Services\Licensing\SandboxLicenseContract;
+use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -25,6 +26,7 @@ final class SandboxLicenseContractTest extends TestCase
         );
 
         self::assertIsArray($vector);
+        $this->travelTo(CarbonImmutable::createFromTimestamp($vector['claims']['issued_at'] + 1));
         $result = (new LicenseValidator($vector['secret']))->validate($vector['license']);
 
         self::assertTrue($result['valid']);
