@@ -2,15 +2,20 @@
 
 namespace Tests\Feature;
 
+use App\Services\Commerce\KmjProductCatalog;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
 
 final class PublicProductHubTest extends TestCase
 {
+    use RefreshDatabase;
+
     protected function setUp(): void
     {
         parent::setUp();
         $this->withoutVite();
+        app(KmjProductCatalog::class)->syncAll();
     }
 
     public function test_products_hub_exposes_cloudos_and_calibration_with_truthful_lifecycle(): void
