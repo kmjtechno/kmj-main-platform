@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Services\Commerce\CloudOSProductCatalog;
+use App\Services\Commerce\KmjProductCatalog;
 use DomainException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use KMJ\MainPlatform\Catalog\Models\Product;
@@ -38,13 +39,21 @@ final class CloudOSProductCatalogTest extends TestCase
         ]);
     }
 
-    public function test_sync_command_reuses_the_same_canonical_product(): void
+    public function test_sync_command_reuses_the_same_canonical_products(): void
     {
         $this->artisan('kmj:catalog:sync')->assertSuccessful();
         $this->artisan('kmj:catalog:sync')->assertSuccessful();
 
-        $this->assertDatabaseCount('products', 1);
+        $this->assertDatabaseCount('products', 2);
         $this->assertDatabaseCount('entitlement_policies', 1);
+        $this->assertDatabaseHas('products', [
+            'slug' => CloudOSProductCatalog::SLUG,
+            'status' => 'active',
+        ]);
+        $this->assertDatabaseHas('products', [
+            'slug' => KmjProductCatalog::CALIBRATION_SLUG,
+            'status' => 'sandbox',
+        ]);
     }
 
     public function test_conflicting_policy_facts_fail_closed(): void

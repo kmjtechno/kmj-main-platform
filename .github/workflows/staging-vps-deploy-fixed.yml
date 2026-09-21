@@ -269,7 +269,7 @@ jobs:
           echo 'result=pass' >> "$GITHUB_OUTPUT"
           echo "Staging health check PASS: $HEALTH_URL"
 
-      - name: Verify native Main Platform staging root and progress UI
+      - name: Verify native Main Platform root and public product experience
         id: ui
         env:
           HEALTH_URL: ${{ vars.STAGING_HEALTHCHECK_URL }}
@@ -281,27 +281,14 @@ jobs:
           root_dom="$($chrome --headless --no-sandbox --disable-gpu --virtual-time-budget=10000 --dump-dom "$HEALTH_URL" 2>/dev/null)"
           grep -Fq 'kmj-main-platform' <<< "$root_dom"
           grep -Fq 'native-home' <<< "$root_dom"
-          info_dom="$($chrome --headless --no-sandbox --disable-gpu --virtual-time-budget=10000 --dump-dom 'https://staging.kmjtechno.com/info' 2>/dev/null)"
-          progress_source='apps/platform/resources/js/data/delivery-progress.ts'
-          test -f "$progress_source"
-          verified_count="$(grep -c "state: 'verified'" "$progress_source")"
-          total_count="$(grep -c "id: '" "$progress_source")"
-          test "$total_count" -gt 0
-          expected_progress=$(( (verified_count * 100 + total_count / 2) / total_count ))
-          grep -Fq 'Verified delivery progress' <<< "$info_dom"
-          grep -Fq "${expected_progress}%" <<< "$info_dom"
-          grep -Fq "${verified_count}/${total_count} verified" <<< "$info_dom"
+          products_dom="$($chrome --headless --no-sandbox --disable-gpu --virtual-time-budget=10000 --dump-dom 'https://staging.kmjtechno.com/products' 2>/dev/null)"
+          calibration_dom="$($chrome --headless --no-sandbox --disable-gpu --virtual-time-budget=10000 --dump-dom 'https://staging.kmjtechno.com/products/kmj-calibration-pro' 2>/dev/null)"
+          grep -Fq 'KMJ Calibration Pro' <<< "$products_dom"
+          grep -Fq 'Interactive simulation only' <<< "$products_dom"
+          grep -Fq 'Virtual demo' <<< "$calibration_dom"
+          grep -Fq 'Commercial licensing is not enabled yet' <<< "$calibration_dom"
           echo 'result=pass' >> "$GITHUB_OUTPUT"
-          echo "Native Main Platform root + /info progress PASS: ${expected_progress}% (${verified_count}/${total_count})."
-
-      - name: Verify live monitor and deployed SHA
-        shell: bash
-        run: |
-          set -euo pipefail
-          python3 ops/staging/verify-monitor.py "$DEPLOY_SHA"
-          dom="$(timeout 45 "$KMJ_STAGING_CHROME" --no-sandbox --disable-gpu --virtual-time-budget=10000 --dump-dom 'https://staging.kmjtechno.com/info' 2>/dev/null)"
-          grep -Fq 'Staging live operations monitor' <<< "$dom"
-          echo 'Rendered staging monitor PASS.'
+          echo 'Native Main Platform root + calibration-first product experience PASS.'
 
       - name: Capture desktop and mobile staging QA
         id: browser_qa

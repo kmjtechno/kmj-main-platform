@@ -2,24 +2,27 @@
 
 namespace App\Console\Commands;
 
-use App\Services\Commerce\CloudOSProductCatalog;
+use App\Services\Commerce\KmjProductCatalog;
 use Illuminate\Console\Command;
 
 final class SyncCanonicalProductsCommand extends Command
 {
     protected $signature = 'kmj:catalog:sync';
 
-    protected $description = 'Synchronize canonical KMJ commercial products and entitlement policies';
+    protected $description = 'Synchronize canonical KMJ products and entitlement policy facts';
 
-    public function handle(CloudOSProductCatalog $cloudOS): int
+    public function handle(KmjProductCatalog $catalog): int
     {
-        $product = $cloudOS->sync();
+        $products = $catalog->syncAll();
 
-        $this->info(sprintf(
-            'Canonical product synced: %s (%s)',
-            CloudOSProductCatalog::NAME,
-            $product->getKey(),
-        ));
+        foreach ($products as $slug => $product) {
+            $this->info(sprintf(
+                'Canonical product synced: %s (%s, %s)',
+                $product->getAttribute('name'),
+                $slug,
+                $product->getKey(),
+            ));
+        }
 
         return self::SUCCESS;
     }

@@ -3,6 +3,7 @@
 use App\Models\LicenseAuditEvent;
 use App\Models\User;
 use App\Services\AuthorityBootstrapper;
+use App\Services\Commerce\PublicProductCatalog;
 use App\Services\Licensing\LicenseAuditRecorder;
 use App\Services\Licensing\SandboxLicenseLifecycle;
 use App\Services\PlatformOwnerAccess;
@@ -20,6 +21,21 @@ use KMJ\MainPlatform\Organizations\Services\OrganizationCapabilityContext;
 use KMJ\MainPlatform\Organizations\Services\OrganizationDirectory;
 
 Route::get('/', fn () => Inertia::render('welcome'))->name('home');
+
+Route::get('products', function (PublicProductCatalog $products) {
+    return Inertia::render('products/index', [
+        'products' => $products->all(),
+    ]);
+})->name('products.index');
+
+Route::get('products/{slug}', function (string $slug, PublicProductCatalog $products) {
+    $product = $products->find($slug);
+    abort_if($product === null, 404);
+
+    return Inertia::render('products/show', [
+        'product' => $product,
+    ]);
+})->name('products.show');
 
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('dashboard', function (

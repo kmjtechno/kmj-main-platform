@@ -1,63 +1,27 @@
 from __future__ import annotations
 
-import io
-import json
-import runpy
-import sys
 import unittest
 from pathlib import Path
-from unittest.mock import patch
 
 
 ROOT = Path(__file__).resolve().parents[1]
-SCRIPT = ROOT / "ops" / "staging" / "verify-monitor.py"
 DEPLOY_WORKFLOW = ROOT / ".github" / "workflows" / "staging-vps-deploy-fixed.yml"
 DELIVERY_FINALIZER_WORKFLOW = ROOT / ".github" / "workflows" / "delivery-status-finalizer.yml"
-ORIGIN = "https://staging.kmjtechno.com"
-
-
-class FakeResponse(io.BytesIO):
-    def __init__(self, payload: dict, url: str):
-        super().__init__(json.dumps(payload).encode("utf-8"))
-        self.status = 200
-        self._url = url
-
-    def geturl(self) -> str:
-        return self._url
-
-    def __enter__(self):
-        return self
-
-    def __exit__(self, exc_type, exc, tb):
-        self.close()
-        return False
+BOOTSTRAP = ROOT / "apps" / "platform" / "bootstrap" / "app.php"
 
 
 class StagingMonitorContractTests(unittest.TestCase):
-    def test_verifier_accepts_delivery_control_monitor_component(self):
-        def fake_urlopen(request, timeout=20):
-            url = request.full_url
-            if url == ORIGIN + "/info":
-                return FakeResponse(
-                    {"component": "info-control", "props": {"pollIntervalMs": 5000}},
-                    url,
-                )
-            if url == ORIGIN + "/info/status":
-                return FakeResponse(
-                    {
-                        "status": "healthy",
-                        "runtime": {"application": True, "database": True},
-                        "deployment": {"deployed_sha": "d" * 40},
-                    },
-                    url,
-                )
-            raise AssertionError(f"unexpected URL: {url}")
+    def test_public_monitoring_routes_are_not_registered_on_live_surface(self):
+        bootstrap = BOOTSTRAP.read_text(encoding="utf-8")
+        self.assertNotIn("routes/staging-monitoring.php", bootstrap)
 
-        with (
-            patch("urllib.request.urlopen", side_effect=fake_urlopen),
-            patch.object(sys, "argv", [str(SCRIPT)]),
-        ):
-            runpy.run_path(str(SCRIPT), run_name="__main__")
+    def test_staging_deploy_verifies_public_products_instead_of_monitor(self):
+        workflow = DEPLOY_WORKFLOW.read_text(encoding="utf-8")
+
+        self.assertIn("https://staging.kmjtechno.com/products", workflow)
+        self.assertIn("https://staging.kmjtechno.com/products/kmj-calibration-pro", workflow)
+        self.assertNotIn("ops/staging/verify-monitor.py", workflow)
+        self.assertNotIn("https://staging.kmjtechno.com/info", workflow)
 
     def test_staging_deploy_refreshes_local_path_packages_before_composer_install(self):
         workflow = DEPLOY_WORKFLOW.read_text()
@@ -93,8 +57,6 @@ class StagingMonitorContractTests(unittest.TestCase):
         self.assertGreater(guard_index, install_index)
         self.assertIn("exit 47", workflow)
 
-
-
     def test_worker_completion_has_delivery_status_finalizer(self):
         workflow = DELIVERY_FINALIZER_WORKFLOW.read_text(encoding="utf-8")
 
@@ -102,7 +64,11 @@ class StagingMonitorContractTests(unittest.TestCase):
         self.assertIn('workflows: ["Autonomous Execution Worker"]', workflow)
         self.assertIn("types: [completed]", workflow)
         self.assertIn("scripts/delivery_control_bridge.py", workflow)
-        self.assertIn("runs-on: [self-hosted, linux, x64, kmj-main-platform-ci]", workflow)
+        self.assertIn(
+            "runs-on: [self-hosted, linux, x64, kmj-main-platform-ci]",
+            workflow,
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -2,17 +2,17 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { assess, matchesMarker } from './browser-qa.mjs';
 
-const healthy = { path: '/info', url: 'https://staging.kmjtechno.com/info',
+const healthy = { path: '/products', url: 'https://staging.kmjtechno.com/products',
     httpStatus: 200, bodyLength: 200, markerFound: true, exceptions: 0, overflowPx: 0 };
 
 test('CSS uppercase and responsive whitespace preserve visible content identity', () => {
-    assert.equal(matchesMarker('STAGING LIVE\nOPERATIONS MONITOR', 'Staging live operations monitor'), true);
-    assert.equal(matchesMarker('VERIFIED  DELIVERY PROGRESS', 'Verified delivery progress'), true);
-    assert.equal(matchesMarker('Loading...', 'Verified delivery progress'), false);
+    assert.equal(matchesMarker('KMJ CALIBRATION\nPRO', 'KMJ Calibration Pro'), true);
+    assert.equal(matchesMarker('VIRTUAL  DEMO', 'Virtual demo'), true);
+    assert.equal(matchesMarker('Loading...', 'KMJ Calibration Pro'), false);
 });
 
 test('blank, redirected, failed and crashed pages cannot pass', () => {
-    for (const change of [{ bodyLength: 0 }, { url: 'https://kmjtechno.com/info' },
+    for (const change of [{ bodyLength: 0 }, { url: 'https://kmjtechno.com/products' },
         { httpStatus: 500 }, { markerFound: false }, { exceptions: 1 }]) {
         assert.ok(assess({ ...healthy, ...change }).failures.length > 0);
     }

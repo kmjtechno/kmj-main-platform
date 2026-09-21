@@ -28,8 +28,9 @@ export const deliveryMilestones: DeliveryMilestone[] = [
         id: 'frontend-live-sync',
         title: 'Frontend live sync',
         state: 'verified',
-        detail: 'Rendered staging + deterministic build',
-        evidence: 'PR #71 + rendered UI check',
+        detail: 'Rendered public platform + deterministic build + calibration-first product preview',
+        evidence:
+            'PR #71 + rendered UI check + PR #187 calibration-first public product surface under CI',
     },
     {
         id: 'registration-onboarding',
@@ -254,8 +255,9 @@ export const deliveryMilestones: DeliveryMilestone[] = [
         id: 'staging-live-monitor',
         title: 'Staging live operations monitor',
         state: 'verified',
-        detail: 'Live /info and /info/status verified with a healthy database, exact deployed commit and rendered browser checks; production-host isolation is covered by CI',
-        evidence: 'PR #129 + deploy run 34909642182 (5e25dfdfc033)',
+        detail: 'Live public platform verified with exact deployed commit and rendered browser checks; public operations monitoring is removed from the customer surface and operator telemetry remains behind authenticated owner controls',
+        evidence:
+            'PR #129 + deploy run 34909642182 (5e25dfdfc033) + PR #187 public-monitor removal under CI',
     },
     {
         id: 'ops-readiness-evidence',
