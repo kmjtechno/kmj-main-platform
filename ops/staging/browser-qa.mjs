@@ -19,6 +19,15 @@ export function matchesMarker(text, marker) {
     return normalize(text).includes(normalize(marker));
 }
 
+export async function waitForMarker(check, timeoutMs = 5000, intervalMs = 100) {
+    const stop = Date.now() + timeoutMs;
+    do {
+        if (check()) return true;
+        if (Date.now() >= stop) return false;
+        await new Promise(resolve => setTimeout(resolve, intervalMs));
+    } while (true);
+}
+
 export function assess(sample) {
     const failures = [];
     if (sample.url !== origin + sample.path) failures.push('unexpected_navigation');
@@ -124,15 +133,11 @@ export async function main() {
                         await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
                         const selector = ${JSON.stringify(page.selector ?? null)};
                         const marker = ${JSON.stringify(page.marker)};
-                        const markerStop = Date.now() + 5000;
-                        let markerFound = false;
-                        do {
-                            markerFound = selector
+                        const markerFound = await (${waitForMarker.toString()})(() =>
+                            selector
                                 ? Boolean(document.querySelector(selector))
-                                : (${matchesMarker.toString()})(document.body.innerText, marker);
-                            if (markerFound) break;
-                            await new Promise(r => setTimeout(r, 100));
-                        } while (Date.now() < markerStop);
+                                : (${matchesMarker.toString()})(document.body.innerText, marker),
+                        );
                         const nav = performance.getEntriesByType('navigation')[0];
                         return { url: location.href, bodyLength: document.body.innerText.length,
                             markerFound,
