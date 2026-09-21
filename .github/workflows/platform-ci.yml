@@ -81,7 +81,7 @@ jobs:
           fi
           git diff -- "${paths[@]}" > /tmp/kmj-format.patch
           git fetch origin "$HEAD_BRANCH"
-          git checkout -B "$HEAD_BRANCH" "origin/$HEAD_BRANCH"
+          git reset --hard "origin/$HEAD_BRANCH"
           git apply /tmp/kmj-format.patch
           git config user.name 'kmj-ci-bot'
           git config user.email 'actions@users.noreply.github.com'
