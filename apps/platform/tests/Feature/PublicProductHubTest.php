@@ -13,19 +13,36 @@ final class PublicProductHubTest extends TestCase
         $this->withoutVite();
     }
 
-    public function test_products_hub_leads_with_calibration_preview(): void
+    public function test_products_hub_exposes_cloudos_and_calibration_with_truthful_lifecycle(): void
     {
         $this->get('/products')
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->component('products/index')
-                ->has('products', 1)
-                ->where('products.0.slug', 'kmj-calibration-pro')
-                ->where('products.0.name', 'KMJ Calibration Pro')
-                ->where('products.0.lifecycle', 'development-preview')
-                ->where('products.0.purchase_enabled', false)
-                ->where('products.0.demo.kind', 'calibration')
-                ->where('products.0.demo.simulation', true));
+                ->has('products', 2)
+                ->where('products.0.slug', 'kmj-cloudos')
+                ->where('products.0.lifecycle', 'active')
+                ->where('products.0.purchase_enabled', true)
+                ->where('products.0.demo.kind', 'cloudos')
+                ->where('products.0.demo.simulation', true)
+                ->where('products.1.slug', 'kmj-calibration-pro')
+                ->where('products.1.lifecycle', 'development-preview')
+                ->where('products.1.purchase_enabled', false)
+                ->where('products.1.demo.kind', 'calibration')
+                ->where('products.1.demo.simulation', true));
+    }
+
+    public function test_cloudos_detail_exposes_simulation_and_commercial_cta_state(): void
+    {
+        $this->get('/products/kmj-cloudos')
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('products/show')
+                ->where('product.slug', 'kmj-cloudos')
+                ->where('product.lifecycle', 'active')
+                ->where('product.purchase_enabled', true)
+                ->where('product.demo.kind', 'cloudos')
+                ->where('product.demo.simulation', true));
     }
 
     public function test_calibration_detail_is_truthful_and_demo_first(): void
