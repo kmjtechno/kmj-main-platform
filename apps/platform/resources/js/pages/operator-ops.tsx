@@ -93,7 +93,12 @@ type OperationalReadiness = {
     compliance_guard: {
         status: string;
         mode: string;
+        provider_policy_status: string;
         provider_policy_enforcement: string;
+        provider_id: string | null;
+        policy_version: string | null;
+        approved_source_count: number;
+        approved_rule_count: number;
         legal_interpretation: boolean;
         signals: ComplianceSignal[];
     };
@@ -417,12 +422,37 @@ export default function OperatorOps({
                             status={readiness.compliance_guard.status}
                             detail="Internal operational thresholds only. Provider legal-policy enforcement stays off until approved policy rules exist."
                         >
-                            <div className="text-muted-foreground mt-3 text-[11px]">
-                                provider rules:{' '}
-                                {
-                                    readiness.compliance_guard
-                                        .provider_policy_enforcement
-                                }
+                            <div className="text-muted-foreground mt-3 space-y-1 text-[11px]">
+                                <div>
+                                    policy:{' '}
+                                    {
+                                        readiness.compliance_guard
+                                            .provider_policy_status
+                                    }
+                                </div>
+                                <div>
+                                    provider:{' '}
+                                    {readiness.compliance_guard.provider_id ??
+                                        'unconfigured'}
+                                </div>
+                                <div>
+                                    version:{' '}
+                                    {readiness.compliance_guard.policy_version ??
+                                        'unreviewed'}
+                                </div>
+                                <div>
+                                    evidence:{' '}
+                                    {
+                                        readiness.compliance_guard
+                                            .approved_source_count
+                                    }{' '}
+                                    sources ·{' '}
+                                    {
+                                        readiness.compliance_guard
+                                            .approved_rule_count
+                                    }{' '}
+                                    rules
+                                </div>
                             </div>
                         </ReadinessCard>
                     </div>
