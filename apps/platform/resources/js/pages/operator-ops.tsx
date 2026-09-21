@@ -67,6 +67,16 @@ type ComplianceSignal = {
     critical_threshold?: number;
 };
 
+type ProviderRuleSignal = {
+    code: string;
+    source_id: string;
+    metric: string;
+    operator: string;
+    threshold: number;
+    observed: number | null;
+    state: string;
+};
+
 type OperationalReadiness = {
     deployment: {
         status: string;
@@ -99,6 +109,9 @@ type OperationalReadiness = {
         policy_version: string | null;
         approved_source_count: number;
         approved_rule_count: number;
+        provider_rule_status: string;
+        provider_rule_signals: ProviderRuleSignal[];
+        provider_mitigation_allowed: boolean;
         legal_interpretation: boolean;
         signals: ComplianceSignal[];
     };
@@ -452,6 +465,20 @@ export default function OperatorOps({
                                             .approved_rule_count
                                     }{' '}
                                     rules
+                                </div>
+                                <div>
+                                    rule state:{' '}
+                                    {
+                                        readiness.compliance_guard
+                                            .provider_rule_status
+                                    }
+                                </div>
+                                <div>
+                                    mitigation:{' '}
+                                    {readiness.compliance_guard
+                                        .provider_mitigation_allowed
+                                        ? 'enabled'
+                                        : 'disabled'}
                                 </div>
                             </div>
                         </ReadinessCard>
