@@ -8,6 +8,7 @@ use App\Services\Commerce\CommercialProductPublisher;
 use App\Services\Commerce\KmjProductCatalog;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use Inertia\Testing\AssertableInertia as Assert;
 use KMJ\MainPlatform\Catalog\Models\Product;
 use KMJ\MainPlatform\Catalog\Services\ProductCatalog;
 use KMJ\MainPlatform\Commerce\Models\CommercialOrder;
@@ -155,6 +156,22 @@ final class ManualSalesFlowTest extends TestCase
             'status' => 'active',
             'idempotency_key' => 'commercial-order:'.$order->getKey(),
         ]);
+    }
+
+    public function test_purchase_center_lists_cloudos_but_not_calibration_preview(): void
+    {
+        $customer = User::factory()->create(['email_verified_at' => now()]);
+        app(OrganizationCreator::class)->create('Catalog Buyer', $customer->id);
+        app(KmjProductCatalog::class)->syncAll();
+
+        $this->actingAs($customer)
+            ->get('/purchase')
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('purchase')
+                ->has('products', 1)
+                ->where('products.0.slug', CloudOSProductCatalog::SLUG)
+                ->where('products.0.name', CloudOSProductCatalog::NAME));
     }
 
     public function test_canonical_lifecycle_blocks_calibration_purchase_and_allows_cloudos_request(): void
