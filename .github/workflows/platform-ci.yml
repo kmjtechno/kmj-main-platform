@@ -52,4 +52,26 @@ jobs:
         env:
           DB_CONNECTION: sqlite
           DB_DATABASE: ${{ github.workspace }}/apps/platform/database/database.sqlite
+          KMJ_FORMAT_PATHS: |
+            resources/js/components/products/calibration-demo.tsx
+            resources/js/components/products/cloudos-demo.tsx
+            resources/js/data/delivery-progress.ts
+            resources/js/pages/products/index.tsx
+            resources/js/pages/products/show.tsx
+            resources/js/pages/welcome.tsx
         run: bash "$GITHUB_WORKSPACE/ops/self-hosted-runner/verify-platform.sh"
+
+      - name: Emit authoritative frontend formatter patch
+        run: |
+          git diff -- resources/js/components/products/calibration-demo.tsx \
+            resources/js/components/products/cloudos-demo.tsx \
+            resources/js/data/delivery-progress.ts \
+            resources/js/pages/products/index.tsx \
+            resources/js/pages/products/show.tsx \
+            resources/js/pages/welcome.tsx
+          git diff --quiet -- resources/js/components/products/calibration-demo.tsx \
+            resources/js/components/products/cloudos-demo.tsx \
+            resources/js/data/delivery-progress.ts \
+            resources/js/pages/products/index.tsx \
+            resources/js/pages/products/show.tsx \
+            resources/js/pages/welcome.tsx
