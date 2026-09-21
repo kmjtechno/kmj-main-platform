@@ -244,6 +244,7 @@ final class OperationalReadinessSnapshot
             'provider_policy_enforcement' => $providerPolicy['enforcement'],
             'provider_id' => $providerPolicy['provider_id'],
             'policy_version' => $providerPolicy['policy_version'],
+            'policy_fingerprint' => $providerPolicy['policy_fingerprint'] ?? null,
             'approved_source_count' => count($providerSources),
             'approved_rule_count' => count($providerRules),
             'provider_rule_status' => $providerEvaluation['status'],
