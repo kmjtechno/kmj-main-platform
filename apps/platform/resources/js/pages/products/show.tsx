@@ -1,6 +1,7 @@
 import { Head, Link } from '@inertiajs/react';
 import { ArrowLeft, CheckCircle2, Code2, ShieldCheck } from 'lucide-react';
 import CalibrationDemo from '@/components/products/calibration-demo';
+import CloudOSDemo from '@/components/products/cloudos-demo';
 
 type Product = {
     slug: string;
@@ -12,8 +13,8 @@ type Product = {
     headline: string;
     summary: string;
     truth: {
-        physical_capability_certified: boolean;
         status: string;
+        physical_capability_certified?: boolean;
     };
     proof: Array<{
         title: string;
@@ -21,7 +22,7 @@ type Product = {
         state: string;
     }>;
     demo: {
-        kind: string;
+        kind: 'cloudos' | 'calibration';
         simulation: boolean;
         label: string;
         steps: Array<{
@@ -33,6 +34,8 @@ type Product = {
 };
 
 export default function ProductShow({ product }: { product: Product }) {
+    const Demo = product.demo.kind === 'cloudos' ? CloudOSDemo : CalibrationDemo;
+
     return (
         <>
             <Head title={product.name + ' — KMJ TECHNO'}>
@@ -61,7 +64,13 @@ export default function ProductShow({ product }: { product: Product }) {
                             <span className="rounded-full border border-[#ef3941]/30 bg-[#ef3941]/10 px-3 py-1 text-[11px] font-bold tracking-[0.14em] text-[#ff777c] uppercase">
                                 {product.eyebrow}
                             </span>
-                            <span className="rounded-full border border-amber-300/20 bg-amber-300/5 px-3 py-1 text-[11px] font-semibold text-amber-200/80">
+                            <span
+                                className={
+                                    product.purchase_enabled
+                                        ? 'rounded-full border border-emerald-300/20 bg-emerald-300/[0.06] px-3 py-1 text-[11px] font-semibold text-emerald-200/80'
+                                        : 'rounded-full border border-amber-300/20 bg-amber-300/[0.05] px-3 py-1 text-[11px] font-semibold text-amber-200/80'
+                                }
+                            >
                                 {product.lifecycle_label}
                             </span>
                         </div>
@@ -76,11 +85,11 @@ export default function ProductShow({ product }: { product: Product }) {
                             {product.summary}
                         </p>
 
-                        <div className="mt-8 rounded-2xl border border-amber-300/15 bg-amber-300/[0.035] p-5">
-                            <div className="text-xs font-bold tracking-[0.14em] text-amber-200/80 uppercase">
+                        <div className="mt-8 rounded-2xl border border-white/[0.09] bg-white/[0.025] p-5">
+                            <div className="text-xs font-bold tracking-[0.14em] text-white/45 uppercase">
                                 Current verified status
                             </div>
-                            <p className="mt-2 text-sm leading-6 text-amber-50/60">
+                            <p className="mt-2 text-sm leading-6 text-white/60">
                                 {product.truth.status}
                             </p>
                         </div>
@@ -123,28 +132,50 @@ export default function ProductShow({ product }: { product: Product }) {
                                 Learn the workflow by using it.
                             </h2>
                             <p className="mt-4 text-sm leading-7 text-white/45">
-                                This browser-only simulation is intentionally deterministic and
-                                never touches a real projector, camera or production control path.
+                                This deterministic browser simulation never controls production
+                                infrastructure or claims physical measurements.
                             </p>
                         </div>
 
-                        <CalibrationDemo steps={product.demo.steps} />
+                        <Demo steps={product.demo.steps} />
                     </div>
                 </section>
 
                 <section className="mx-auto max-w-7xl px-5 py-14 sm:px-8 lg:px-10">
-                    <div className="flex flex-col items-start justify-between gap-6 rounded-2xl border border-white/[0.08] bg-white/[0.025] p-6 sm:flex-row sm:items-center">
-                        <div>
-                            <div className="font-bold">Commercial licensing is not enabled yet.</div>
-                            <div className="mt-1 text-sm text-white/38">
-                                Purchase remains unavailable until product capability is verified
-                                and explicitly promoted.
+                    {product.purchase_enabled ? (
+                        <div className="flex flex-col items-start justify-between gap-6 rounded-2xl border border-emerald-300/15 bg-emerald-300/[0.035] p-6 sm:flex-row sm:items-center">
+                            <div>
+                                <div className="font-bold">
+                                    Commercial access is governed by KMJ Main Platform.
+                                </div>
+                                <div className="mt-1 text-sm text-white/42">
+                                    A purchase request does not grant access by itself; entitlement
+                                    fulfillment remains authoritative.
+                                </div>
                             </div>
+                            <Link
+                                href="/purchase"
+                                className="rounded-xl bg-[#e21b23] px-5 py-3 text-sm font-bold transition hover:bg-[#f1252e]"
+                            >
+                                Request access
+                            </Link>
                         </div>
-                        <span className="rounded-xl border border-white/10 px-4 py-2 text-sm font-semibold text-white/45">
-                            Preview only
-                        </span>
-                    </div>
+                    ) : (
+                        <div className="flex flex-col items-start justify-between gap-6 rounded-2xl border border-white/[0.08] bg-white/[0.025] p-6 sm:flex-row sm:items-center">
+                            <div>
+                                <div className="font-bold">
+                                    Commercial licensing is not enabled yet.
+                                </div>
+                                <div className="mt-1 text-sm text-white/38">
+                                    Purchase remains unavailable until product capability is
+                                    verified and explicitly promoted.
+                                </div>
+                            </div>
+                            <span className="rounded-xl border border-white/10 px-4 py-2 text-sm font-semibold text-white/45">
+                                Preview only
+                            </span>
+                        </div>
+                    )}
                 </section>
             </main>
         </>
