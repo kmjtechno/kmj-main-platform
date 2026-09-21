@@ -266,6 +266,13 @@ export const deliveryMilestones: DeliveryMilestone[] = [
             'PR #132 + deploy 34912567459 + authenticated smoke 34912692783 + PR #148 control panel + PR #154 live-evidence publisher under CI + PR #159 Purchase Center authenticated smoke under CI + PR #164 stale delivery evidence preservation under CI + PR #170 native staging-home cutover + PR #179 post-worker delivery finalizer + finalizer run 35210616307 + authenticated smoke run 35210726834',
     },
     {
+        id: 'product-license-contract-v1',
+        title: 'Product license contract v1',
+        state: 'active',
+        detail: 'Product-specific capability profiles, lifecycle-safe purchase boundaries and a shared versioned PHP/Rust sandbox license contract are under exact-head CI; product-side adapters remain the next integration step',
+        evidence: 'PR #188 exact-head verification in progress',
+    },
+    {
         id: 'production-hardening',
         title: 'Production hardening',
         state: 'verified',
@@ -286,5 +293,5 @@ export const deliveryProgress = Math.round(
 export const deliveryProgressMeta = {
     label: 'Revenue-capable working phase',
     note: 'Evidence-based delivery milestones, not total product completion.',
-    refreshed: '2026-09-17',
+    refreshed: '2026-09-22',
 } as const;
