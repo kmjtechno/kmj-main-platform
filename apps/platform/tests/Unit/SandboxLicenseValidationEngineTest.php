@@ -103,6 +103,22 @@ final class SandboxLicenseValidationEngineTest extends TestCase
         self::assertTrue($engine->validate($license)['valid']);
     }
 
+    public function test_rust_mode_rejects_unsupported_contract_version(): void
+    {
+        [$license, $phpValidator] = $this->licenseFixture();
+        $validResult = $phpValidator->validate($license);
+        self::assertIsArray($validResult['claims']);
+        $claims = $validResult['claims'];
+        $claims['contract_version'] = 'kmj.sandbox.v999';
+
+        $engine = $this->rustEngineWithClaims($phpValidator, $claims);
+        $validation = $engine->validate($license);
+
+        self::assertFalse($validation['valid']);
+        self::assertSame('unsupported_contract_version', $validation['reason']);
+        self::assertNull($validation['claims']);
+    }
+
     public function test_rust_mode_fails_closed_when_valid_response_omits_tenant_claims(): void
     {
         [$license, $phpValidator] = $this->licenseFixture();
