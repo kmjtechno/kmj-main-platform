@@ -58,6 +58,9 @@ final class OperationalReadinessSnapshotTest extends TestCase
             $this->assertSame('warning', $snapshot['compliance_guard']['status']);
             $this->assertSame('unconfigured', $snapshot['compliance_guard']['provider_policy_status']);
             $this->assertSame('not_enabled', $snapshot['compliance_guard']['provider_policy_enforcement']);
+            $this->assertSame('not_enabled', $snapshot['compliance_guard']['provider_rule_status']);
+            $this->assertSame([], $snapshot['compliance_guard']['provider_rule_signals']);
+            $this->assertFalse($snapshot['compliance_guard']['provider_mitigation_allowed']);
             $this->assertFalse($snapshot['compliance_guard']['legal_interpretation']);
         } finally {
             File::deleteDirectory($directory);
