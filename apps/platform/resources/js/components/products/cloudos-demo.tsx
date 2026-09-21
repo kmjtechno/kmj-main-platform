@@ -1,5 +1,11 @@
 import { useMemo, useState } from 'react';
-import { ArrowRight, CheckCircle2, Circle, RotateCcw, ServerCog } from 'lucide-react';
+import {
+    ArrowRight,
+    CheckCircle2,
+    Circle,
+    RotateCcw,
+    ServerCog,
+} from 'lucide-react';
 
 type Step = {
     key: string;
@@ -24,9 +30,13 @@ export default function CloudOSDemo({ steps }: { steps: Step[] }) {
                             <div className="text-[10px] font-bold tracking-[0.16em] text-[#ff6970] uppercase">
                                 Simulation
                             </div>
-                            <div className="mt-1 text-lg font-black">CloudOS workflow</div>
+                            <div className="mt-1 text-lg font-black">
+                                CloudOS workflow
+                            </div>
                         </div>
-                        <div className="text-sm font-bold text-white/35">{progress}%</div>
+                        <div className="text-sm font-bold text-white/35">
+                            {progress}%
+                        </div>
                     </div>
 
                     <div className="mt-8 space-y-2">
@@ -56,7 +66,9 @@ export default function CloudOSDemo({ steps }: { steps: Step[] }) {
                                             }
                                         />
                                     )}
-                                    <span className="text-sm font-semibold">{step.label}</span>
+                                    <span className="text-sm font-semibold">
+                                        {step.label}
+                                    </span>
                                 </button>
                             );
                         })}
@@ -69,36 +81,41 @@ export default function CloudOSDemo({ steps }: { steps: Step[] }) {
                         <div className="grid flex-1 place-items-center rounded-2xl border border-white/[0.075] bg-black/20 p-5">
                             <div className="w-full max-w-2xl">
                                 <div className="grid grid-cols-3 gap-3">
-                                    {['Control', 'Worker', 'Service'].map((label, index) => (
-                                        <div
-                                            key={label}
-                                            className="rounded-2xl border border-white/[0.07] bg-white/[0.025] p-4"
-                                        >
-                                            <ServerCog
-                                                className={
-                                                    index <= active % 3
-                                                        ? 'h-5 w-5 text-[#ef3941]'
-                                                        : 'h-5 w-5 text-white/20'
-                                                }
-                                            />
-                                            <div className="mt-8 text-xs font-semibold text-white/60">
-                                                {label}
+                                    {['Control', 'Worker', 'Service'].map(
+                                        (label, index) => (
+                                            <div
+                                                key={label}
+                                                className="rounded-2xl border border-white/[0.07] bg-white/[0.025] p-4"
+                                            >
+                                                <ServerCog
+                                                    className={
+                                                        index <= active % 3
+                                                            ? 'h-5 w-5 text-[#ef3941]'
+                                                            : 'h-5 w-5 text-white/20'
+                                                    }
+                                                />
+                                                <div className="mt-8 text-xs font-semibold text-white/60">
+                                                    {label}
+                                                </div>
                                             </div>
-                                        </div>
-                                    ))}
+                                        ),
+                                    )}
                                 </div>
 
                                 <div className="mt-5 rounded-2xl border border-white/[0.08] bg-[#090b0f]/95 p-5">
                                     <div className="text-xs font-bold tracking-[0.14em] text-white/30 uppercase">
                                         Step {active + 1} of {steps.length}
                                     </div>
-                                    <div className="mt-2 text-2xl font-black">{current.label}</div>
+                                    <div className="mt-2 text-2xl font-black">
+                                        {current.label}
+                                    </div>
                                     <p className="mt-3 text-sm leading-6 text-white/48">
                                         {current.detail}
                                     </p>
                                     <div className="mt-4 text-xs leading-5 text-amber-100/55">
-                                        Seeded browser simulation only — no live service, worker or
-                                        infrastructure is controlled from this demo.
+                                        Seeded browser simulation only — no live
+                                        service, worker or infrastructure is
+                                        controlled from this demo.
                                     </div>
                                 </div>
                             </div>
@@ -116,7 +133,9 @@ export default function CloudOSDemo({ steps }: { steps: Step[] }) {
                             <button
                                 type="button"
                                 onClick={() =>
-                                    setActive((value) => Math.min(value + 1, steps.length - 1))
+                                    setActive((value) =>
+                                        Math.min(value + 1, steps.length - 1),
+                                    )
                                 }
                                 disabled={active === steps.length - 1}
                                 className="inline-flex h-10 items-center gap-2 rounded-lg bg-[#e21b23] px-4 text-sm font-bold transition hover:bg-[#f1252e] disabled:cursor-not-allowed disabled:opacity-35"

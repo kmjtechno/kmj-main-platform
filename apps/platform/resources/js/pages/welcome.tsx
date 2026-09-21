@@ -407,14 +407,16 @@ export default function Welcome() {
                                     KMJ Calibration Pro
                                 </h2>
                                 <p className="mt-5 max-w-2xl text-lg leading-8 text-white/58">
-                                    Understand the intended projector-camera calibration workflow
-                                    in seconds through a guided virtual simulation.
+                                    Understand the intended projector-camera
+                                    calibration workflow in seconds through a
+                                    guided virtual simulation.
                                 </p>
                                 <p className="mt-4 max-w-2xl text-sm leading-7 text-white/38">
-                                    The current repository is a buildable C++ foundation and
-                                    physical calibration capability is not yet certified. The
-                                    public experience keeps that status explicit while showing how
-                                    the product is designed to work.
+                                    The current repository is a buildable C++
+                                    foundation and physical calibration
+                                    capability is not yet certified. The public
+                                    experience keeps that status explicit while
+                                    showing how the product is designed to work.
                                 </p>
                                 <Link
                                     href="/products/kmj-calibration-pro"
@@ -430,25 +432,29 @@ export default function Welcome() {
                                     Workflow preview
                                 </div>
                                 <div className="mt-5 grid grid-cols-4 gap-2">
-                                    {['Setup', 'Capture', 'Analyze', 'Results'].map(
-                                        (step, index) => (
-                                            <div
-                                                key={step}
-                                                className="rounded-xl border border-white/[0.07] bg-black/20 p-3"
-                                            >
-                                                <div className="text-[10px] font-bold text-[#ff676e]">
-                                                    {'0' + (index + 1)}
-                                                </div>
-                                                <div className="mt-8 text-xs font-semibold text-white/65">
-                                                    {step}
-                                                </div>
+                                    {[
+                                        'Setup',
+                                        'Capture',
+                                        'Analyze',
+                                        'Results',
+                                    ].map((step, index) => (
+                                        <div
+                                            key={step}
+                                            className="rounded-xl border border-white/[0.07] bg-black/20 p-3"
+                                        >
+                                            <div className="text-[10px] font-bold text-[#ff676e]">
+                                                {'0' + (index + 1)}
                                             </div>
-                                        ),
-                                    )}
+                                            <div className="mt-8 text-xs font-semibold text-white/65">
+                                                {step}
+                                            </div>
+                                        </div>
+                                    ))}
                                 </div>
                                 <div className="mt-4 rounded-xl border border-amber-300/15 bg-amber-300/[0.035] px-4 py-3 text-xs leading-5 text-amber-100/55">
-                                    Browser-only simulation. No physical measurement is presented
-                                    as a certified result.
+                                    Browser-only simulation. No physical
+                                    measurement is presented as a certified
+                                    result.
                                 </div>
                             </div>
                         </div>

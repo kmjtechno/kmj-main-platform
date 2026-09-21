@@ -1,5 +1,11 @@
 import { Head, Link } from '@inertiajs/react';
-import { ArrowRight, CheckCircle2, FlaskConical, ServerCog, ShieldCheck } from 'lucide-react';
+import {
+    ArrowRight,
+    CheckCircle2,
+    FlaskConical,
+    ServerCog,
+    ShieldCheck,
+} from 'lucide-react';
 
 type Product = {
     slug: string;
@@ -35,7 +41,10 @@ export default function ProductsIndex({ products }: { products: Product[] }) {
             <main className="min-h-screen bg-[#07090c] text-white">
                 <header className="border-b border-white/[0.07] bg-[#07090c]/95">
                     <div className="mx-auto flex h-20 max-w-7xl items-center justify-between px-5 sm:px-8 lg:px-10">
-                        <Link href="/" className="text-sm font-black tracking-[0.16em]">
+                        <Link
+                            href="/"
+                            className="text-sm font-black tracking-[0.16em]"
+                        >
                             KMJ TECHNO
                         </Link>
                         <div className="flex items-center gap-4 text-sm text-white/55">
@@ -62,8 +71,9 @@ export default function ProductsIndex({ products }: { products: Product[] }) {
                             </span>
                         </h1>
                         <p className="mt-6 max-w-2xl text-base leading-7 text-white/50 sm:text-lg">
-                            Product lifecycle, purchase availability and demo state are shown
-                            separately so presentation never outruns verified authority.
+                            Product lifecycle, purchase availability and demo
+                            state are shown separately so presentation never
+                            outruns verified authority.
                         </p>
                     </div>
                 </section>
@@ -71,7 +81,9 @@ export default function ProductsIndex({ products }: { products: Product[] }) {
                 <section className="mx-auto grid max-w-7xl gap-5 px-5 pb-24 sm:px-8 lg:grid-cols-2 lg:px-10">
                     {products.map((product) => {
                         const ProductIcon =
-                            product.demo.kind === 'cloudos' ? ServerCog : FlaskConical;
+                            product.demo.kind === 'cloudos'
+                                ? ServerCog
+                                : FlaskConical;
 
                         return (
                             <article
@@ -108,22 +120,24 @@ export default function ProductsIndex({ products }: { products: Product[] }) {
                                     </p>
 
                                     <div className="mt-7 space-y-3">
-                                        {product.proof.slice(0, 2).map((item) => (
-                                            <div
-                                                key={item.title}
-                                                className="flex gap-3 rounded-xl border border-white/[0.07] bg-black/20 p-4"
-                                            >
-                                                <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-[#ef3941]" />
-                                                <div>
-                                                    <div className="text-sm font-bold">
-                                                        {item.title}
-                                                    </div>
-                                                    <div className="mt-1 text-xs leading-5 text-white/40">
-                                                        {item.detail}
+                                        {product.proof
+                                            .slice(0, 2)
+                                            .map((item) => (
+                                                <div
+                                                    key={item.title}
+                                                    className="flex gap-3 rounded-xl border border-white/[0.07] bg-black/20 p-4"
+                                                >
+                                                    <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-[#ef3941]" />
+                                                    <div>
+                                                        <div className="text-sm font-bold">
+                                                            {item.title}
+                                                        </div>
+                                                        <div className="mt-1 text-xs leading-5 text-white/40">
+                                                            {item.detail}
+                                                        </div>
                                                     </div>
                                                 </div>
-                                            </div>
-                                        ))}
+                                            ))}
                                     </div>
                                 </div>
 

@@ -28,9 +28,13 @@ export default function CalibrationDemo({ steps }: { steps: Step[] }) {
                             <div className="text-[10px] font-bold tracking-[0.16em] text-[#ff6970] uppercase">
                                 Simulation
                             </div>
-                            <div className="mt-1 text-lg font-black">Calibration workflow</div>
+                            <div className="mt-1 text-lg font-black">
+                                Calibration workflow
+                            </div>
                         </div>
-                        <div className="text-sm font-bold text-white/35">{progress}%</div>
+                        <div className="text-sm font-bold text-white/35">
+                            {progress}%
+                        </div>
                     </div>
 
                     <div className="mt-8 space-y-2">
@@ -59,7 +63,9 @@ export default function CalibrationDemo({ steps }: { steps: Step[] }) {
                                             }
                                         />
                                     )}
-                                    <span className="text-sm font-semibold">{step.label}</span>
+                                    <span className="text-sm font-semibold">
+                                        {step.label}
+                                    </span>
                                 </button>
                             );
                         })}
@@ -72,32 +78,38 @@ export default function CalibrationDemo({ steps }: { steps: Step[] }) {
                         <div className="grid flex-1 place-items-center rounded-2xl border border-white/[0.075] bg-black/20 p-5">
                             <div className="w-full max-w-2xl">
                                 <div className="grid grid-cols-6 gap-2 opacity-70">
-                                    {Array.from({ length: 36 }).map((_, index) => {
-                                        const activeCell = index % 7 === active;
-                                        return (
-                                            <div
-                                                key={index}
-                                                className={
-                                                    activeCell
-                                                        ? 'aspect-square rounded-[4px] border border-[#ef3941]/65 bg-[#e21b23]/20'
-                                                        : 'aspect-square rounded-[4px] border border-white/[0.07] bg-white/[0.025]'
-                                                }
-                                            />
-                                        );
-                                    })}
+                                    {Array.from({ length: 36 }).map(
+                                        (_, index) => {
+                                            const activeCell =
+                                                index % 7 === active;
+                                            return (
+                                                <div
+                                                    key={index}
+                                                    className={
+                                                        activeCell
+                                                            ? 'aspect-square rounded-[4px] border border-[#ef3941]/65 bg-[#e21b23]/20'
+                                                            : 'aspect-square rounded-[4px] border border-white/[0.07] bg-white/[0.025]'
+                                                    }
+                                                />
+                                            );
+                                        },
+                                    )}
                                 </div>
 
                                 <div className="mt-8 rounded-2xl border border-white/[0.08] bg-[#090b0f]/95 p-5">
                                     <div className="text-xs font-bold tracking-[0.14em] text-white/30 uppercase">
                                         Step {active + 1} of {steps.length}
                                     </div>
-                                    <div className="mt-2 text-2xl font-black">{current.label}</div>
+                                    <div className="mt-2 text-2xl font-black">
+                                        {current.label}
+                                    </div>
                                     <p className="mt-3 text-sm leading-6 text-white/48">
                                         {current.detail}
                                     </p>
                                     <div className="mt-4 text-xs leading-5 text-amber-100/55">
-                                        Synthetic walkthrough only — no hardware measurement or
-                                        certified calibration result is being generated.
+                                        Synthetic walkthrough only — no hardware
+                                        measurement or certified calibration
+                                        result is being generated.
                                     </div>
                                 </div>
                             </div>

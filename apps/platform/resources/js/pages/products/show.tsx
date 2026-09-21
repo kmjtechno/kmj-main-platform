@@ -34,7 +34,8 @@ type Product = {
 };
 
 export default function ProductShow({ product }: { product: Product }) {
-    const Demo = product.demo.kind === 'cloudos' ? CloudOSDemo : CalibrationDemo;
+    const Demo =
+        product.demo.kind === 'cloudos' ? CloudOSDemo : CalibrationDemo;
 
     return (
         <>
@@ -45,7 +46,10 @@ export default function ProductShow({ product }: { product: Product }) {
             <main className="min-h-screen bg-[#07090c] text-white">
                 <header className="border-b border-white/[0.07] bg-[#07090c]/95">
                     <div className="mx-auto flex h-20 max-w-7xl items-center justify-between px-5 sm:px-8 lg:px-10">
-                        <Link href="/" className="text-sm font-black tracking-[0.16em]">
+                        <Link
+                            href="/"
+                            className="text-sm font-black tracking-[0.16em]"
+                        >
                             KMJ TECHNO
                         </Link>
                         <Link
@@ -98,7 +102,11 @@ export default function ProductShow({ product }: { product: Product }) {
                     <div className="grid gap-3">
                         {product.proof.map((item, index) => {
                             const Icon =
-                                index === 0 ? Code2 : index === 1 ? ShieldCheck : CheckCircle2;
+                                index === 0
+                                    ? Code2
+                                    : index === 1
+                                      ? ShieldCheck
+                                      : CheckCircle2;
 
                             return (
                                 <div
@@ -110,7 +118,9 @@ export default function ProductShow({ product }: { product: Product }) {
                                             <Icon className="h-5 w-5 text-[#ef3941]" />
                                         </div>
                                         <div>
-                                            <div className="font-bold">{item.title}</div>
+                                            <div className="font-bold">
+                                                {item.title}
+                                            </div>
                                             <div className="mt-2 text-sm leading-6 text-white/42">
                                                 {item.detail}
                                             </div>
@@ -132,8 +142,9 @@ export default function ProductShow({ product }: { product: Product }) {
                                 Learn the workflow by using it.
                             </h2>
                             <p className="mt-4 text-sm leading-7 text-white/45">
-                                This deterministic browser simulation never controls production
-                                infrastructure or claims physical measurements.
+                                This deterministic browser simulation never
+                                controls production infrastructure or claims
+                                physical measurements.
                             </p>
                         </div>
 
@@ -146,11 +157,13 @@ export default function ProductShow({ product }: { product: Product }) {
                         <div className="flex flex-col items-start justify-between gap-6 rounded-2xl border border-emerald-300/15 bg-emerald-300/[0.035] p-6 sm:flex-row sm:items-center">
                             <div>
                                 <div className="font-bold">
-                                    Commercial access is governed by KMJ Main Platform.
+                                    Commercial access is governed by KMJ Main
+                                    Platform.
                                 </div>
                                 <div className="mt-1 text-sm text-white/42">
-                                    A purchase request does not grant access by itself; entitlement
-                                    fulfillment remains authoritative.
+                                    A purchase request does not grant access by
+                                    itself; entitlement fulfillment remains
+                                    authoritative.
                                 </div>
                             </div>
                             <Link
@@ -167,8 +180,9 @@ export default function ProductShow({ product }: { product: Product }) {
                                     Commercial licensing is not enabled yet.
                                 </div>
                                 <div className="mt-1 text-sm text-white/38">
-                                    Purchase remains unavailable until product capability is
-                                    verified and explicitly promoted.
+                                    Purchase remains unavailable until product
+                                    capability is verified and explicitly
+                                    promoted.
                                 </div>
                             </div>
                             <span className="rounded-xl border border-white/10 px-4 py-2 text-sm font-semibold text-white/45">
