@@ -193,6 +193,8 @@ final class OperationalReadinessSnapshot
     private function complianceGuard(array $server, array $backups): array
     {
         $providerPolicy = $this->providerPolicy->snapshot();
+        $providerSources = (array) ($providerPolicy['sources'] ?? []);
+        $providerRules = (array) ($providerPolicy['rules'] ?? []);
         $guardrails = (array) config('kmj.ops.guardrails', []);
         $warning = max(1, (float) ($guardrails['resource_warning_percent'] ?? 85));
         $critical = max($warning, (float) ($guardrails['resource_critical_percent'] ?? 95));
@@ -240,8 +242,8 @@ final class OperationalReadinessSnapshot
             'provider_policy_enforcement' => $providerPolicy['enforcement'],
             'provider_id' => $providerPolicy['provider_id'],
             'policy_version' => $providerPolicy['policy_version'],
-            'approved_source_count' => count($providerPolicy['sources']),
-            'approved_rule_count' => count($providerPolicy['rules']),
+            'approved_source_count' => count($providerSources),
+            'approved_rule_count' => count($providerRules),
             'legal_interpretation' => $providerPolicy['legal_interpretation'],
             'signals' => $signals,
         ];
