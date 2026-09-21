@@ -96,7 +96,7 @@ final class LicenseValidator
             return $this->invalid('non_canonical_identity');
         }
 
-        $now = time();
+        $now = now()->getTimestamp();
 
         if ($issuedAt > $now + SandboxLicensePolicy::MAX_FUTURE_ISSUED_AT_SKEW_SECONDS) {
             return $this->invalid('issued_in_future', $claims);
