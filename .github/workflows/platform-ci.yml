@@ -19,7 +19,7 @@ on:
       - 'tests/test_platform_verify_contract.py'
 
 permissions:
-  contents: read
+  contents: write
 
 concurrency:
   group: platform-ci-${{ github.workflow }}-${{ github.ref }}
@@ -36,7 +36,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          persist-credentials: false
+          persist-credentials: true
 
       - name: Verify pre-provisioned runtime
         run: |
@@ -61,17 +61,30 @@ jobs:
             resources/js/pages/welcome.tsx
         run: bash "$GITHUB_WORKSPACE/ops/self-hosted-runner/verify-platform.sh"
 
-      - name: Emit authoritative frontend formatter patch
+      - name: Apply authoritative formatter output to same-repository PR branch
+        if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+        working-directory: ${{ github.workspace }}
+        env:
+          HEAD_BRANCH: ${{ github.event.pull_request.head.ref }}
         run: |
-          git diff -- resources/js/components/products/calibration-demo.tsx \
-            resources/js/components/products/cloudos-demo.tsx \
-            resources/js/data/delivery-progress.ts \
-            resources/js/pages/products/index.tsx \
-            resources/js/pages/products/show.tsx \
-            resources/js/pages/welcome.tsx
-          git diff --quiet -- resources/js/components/products/calibration-demo.tsx \
-            resources/js/components/products/cloudos-demo.tsx \
-            resources/js/data/delivery-progress.ts \
-            resources/js/pages/products/index.tsx \
-            resources/js/pages/products/show.tsx \
-            resources/js/pages/welcome.tsx
+          set -euo pipefail
+          paths=(
+            apps/platform/resources/js/components/products/calibration-demo.tsx
+            apps/platform/resources/js/components/products/cloudos-demo.tsx
+            apps/platform/resources/js/data/delivery-progress.ts
+            apps/platform/resources/js/pages/products/index.tsx
+            apps/platform/resources/js/pages/products/show.tsx
+            apps/platform/resources/js/pages/welcome.tsx
+          )
+          if git diff --quiet -- "${paths[@]}"; then
+            exit 0
+          fi
+          git diff -- "${paths[@]}" > /tmp/kmj-format.patch
+          git fetch origin "$HEAD_BRANCH"
+          git checkout -B "$HEAD_BRANCH" "origin/$HEAD_BRANCH"
+          git apply /tmp/kmj-format.patch
+          git config user.name 'kmj-ci-bot'
+          git config user.email 'actions@users.noreply.github.com'
+          git add -- "${paths[@]}"
+          git commit -m 'style(platform): apply authoritative frontend formatting'
+          git push origin "HEAD:$HEAD_BRANCH"
