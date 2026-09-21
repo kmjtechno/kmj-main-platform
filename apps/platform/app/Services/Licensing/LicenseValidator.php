@@ -64,6 +64,10 @@ final class LicenseValidator
             return $this->invalid('wrong_environment');
         }
 
+        if (! SandboxLicenseContract::supports($claims['contract_version'] ?? null)) {
+            return $this->invalid('unsupported_contract_version');
+        }
+
         $jti = $claims['jti'] ?? null;
         $organizationId = $claims['organization_id'] ?? null;
         $productId = $claims['product_id'] ?? null;
