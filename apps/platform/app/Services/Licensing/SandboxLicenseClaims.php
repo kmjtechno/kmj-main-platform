@@ -6,6 +6,7 @@ final readonly class SandboxLicenseClaims
 {
     public function __construct(
         public string $jti,
+        public string $contractVersion,
         public string $organizationId,
         public string $productId,
         public string $entitlementId,
