@@ -174,9 +174,9 @@ export default function ProductShow({ product }: { product: Product }) {
                             Verify the boundaries, not marketing claims.
                         </h2>
                         <p className="mt-4 text-sm leading-7 text-white/45">
-                            Lifecycle, purchase, licensing and demo boundaries are
-                            rendered from explicit product facts and authority
-                            state.
+                            Lifecycle, purchase, licensing and demo boundaries
+                            are rendered from explicit product facts and
+                            authority state.
                         </p>
                     </div>
 
