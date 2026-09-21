@@ -2,6 +2,9 @@
 
 namespace App\Services\Commerce;
 
+use KMJ\MainPlatform\Catalog\Models\Product;
+use KMJ\MainPlatform\Entitlements\Models\EntitlementPolicy;
+
 final class PublicProductCatalog
 {
     /**
@@ -9,7 +12,22 @@ final class PublicProductCatalog
      */
     public function all(): array
     {
-        return [$this->cloudOS(), $this->calibration()];
+        $products = Product::query()
+            ->whereIn('slug', [
+                CloudOSProductCatalog::SLUG,
+                KmjProductCatalog::CALIBRATION_SLUG,
+            ])
+            ->get()
+            ->keyBy('slug');
+
+        return collect([
+            CloudOSProductCatalog::SLUG,
+            KmjProductCatalog::CALIBRATION_SLUG,
+        ])
+            ->map(fn (string $slug): ?array => $this->present($products->get($slug)))
+            ->filter()
+            ->values()
+            ->all();
     }
 
     /**
@@ -17,8 +35,27 @@ final class PublicProductCatalog
      */
     public function find(string $slug): ?array
     {
-        return match ($slug) {
-            CloudOSProductCatalog::SLUG => $this->cloudOS(),
+        if (! in_array($slug, [
+            CloudOSProductCatalog::SLUG,
+            KmjProductCatalog::CALIBRATION_SLUG,
+        ], true)) {
+            return null;
+        }
+
+        return $this->present(Product::query()->where('slug', $slug)->first());
+    }
+
+    /**
+     * @return array<string, mixed>|null
+     */
+    private function present(?Product $product): ?array
+    {
+        if ($product === null) {
+            return null;
+        }
+
+        return match ((string) $product->getAttribute('slug')) {
+            CloudOSProductCatalog::SLUG => $this->cloudOS($product),
             KmjProductCatalog::CALIBRATION_SLUG => $this->calibration(),
             default => null,
         };
@@ -27,24 +64,34 @@ final class PublicProductCatalog
     /**
      * @return array<string, mixed>
      */
-    private function cloudOS(): array
+    private function cloudOS(Product $product): array
     {
+        $purchaseEnabled = (string) $product->getAttribute('status') === 'active'
+            && EntitlementPolicy::query()
+                ->where('product_id', $product->getKey())
+                ->where('code', CloudOSProductCatalog::POLICY_CODE)
+                ->where('capability', CloudOSProductCatalog::CAPABILITY)
+                ->where('status', 'active')
+                ->exists();
+
         return [
             'slug' => CloudOSProductCatalog::SLUG,
             'name' => CloudOSProductCatalog::NAME,
-            'lifecycle' => 'active',
-            'lifecycle_label' => 'Commercial catalog',
-            'purchase_enabled' => true,
+            'lifecycle' => $purchaseEnabled ? 'active' : 'unavailable',
+            'lifecycle_label' => $purchaseEnabled ? 'Commercial catalog' : 'Unavailable',
+            'purchase_enabled' => $purchaseEnabled,
             'eyebrow' => 'Cloud operating platform',
             'headline' => 'Explore the governed CloudOS operating workflow before requesting access.',
-            'summary' => 'KMJ CloudOS is the active commercial cloud product in Main Platform. Product access is governed through organization, purchase, entitlement and licensing authority rather than browser state.',
+            'summary' => 'KMJ CloudOS is the canonical cloud product in Main Platform. Product access is governed through organization, purchase, entitlement and licensing authority rather than browser state.',
             'truth' => [
-                'status' => 'Active canonical catalog product with Main Platform entitlement authority.',
+                'status' => $purchaseEnabled
+                    ? 'Active canonical catalog product with Main Platform entitlement authority.'
+                    : 'Commercial access is unavailable until canonical product and policy authority are active.',
             ],
             'proof' => [
                 [
                     'title' => 'Canonical product authority',
-                    'detail' => 'The Main Platform catalog binds the kmj-cloudos slug to an active commercial product.',
+                    'detail' => 'The Main Platform catalog binds the kmj-cloudos slug to the governed commercial product.',
                     'state' => 'repository-verified',
                 ],
                 [
@@ -71,7 +118,7 @@ final class PublicProductCatalog
             ],
             'cta' => [
                 'primary' => 'Launch virtual demo',
-                'secondary' => 'Request access',
+                'secondary' => $purchaseEnabled ? 'Request access' : 'Unavailable',
             ],
         ];
     }
