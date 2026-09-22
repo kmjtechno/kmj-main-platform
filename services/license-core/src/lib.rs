@@ -140,10 +140,7 @@ mod tests {
         mac.update(encoded_payload.as_bytes());
         let signature = mac.finalize().into_bytes();
 
-        format!(
-            "{encoded_payload}.{}",
-            URL_SAFE_NO_PAD.encode(signature)
-        )
+        format!("{encoded_payload}.{}", URL_SAFE_NO_PAD.encode(signature))
     }
 
     #[test]
@@ -169,11 +166,7 @@ mod tests {
         let license = sign_claims(&claims, vector.secret.as_bytes());
         let revoked = HashSet::new();
 
-        let result = verify_sandbox_license(
-            &license,
-            vector.secret.as_bytes(),
-            &context(&revoked),
-        );
+        let result = verify_sandbox_license(&license, vector.secret.as_bytes(), &context(&revoked));
 
         assert_eq!(result.reason, Some("unsupported_contract_version"));
     }
@@ -222,11 +215,8 @@ mod tests {
         let revoked = HashSet::new();
         let tampered = vector.license.replacen("eyJ", "eyK", 1);
 
-        let result = verify_sandbox_license(
-            &tampered,
-            vector.secret.as_bytes(),
-            &context(&revoked),
-        );
+        let result =
+            verify_sandbox_license(&tampered, vector.secret.as_bytes(), &context(&revoked));
 
         assert_eq!(result.reason, Some("invalid_signature"));
     }
