@@ -245,13 +245,6 @@ export const deliveryMilestones: DeliveryMilestone[] = [
         evidence: 'PR #149 worker patch safeguards under CI',
     },
     {
-        id: 'product-evidence-trust',
-        title: 'Product evidence and trust boundaries',
-        state: 'active',
-        detail: 'Public product details expose repository-backed lifecycle, purchase, licensing and demo boundaries without fabricated rankings, benchmarks or certification claims',
-        evidence: 'PR #191 exact-head verification in progress',
-    },
-    {
         id: 'revenue-working-phase',
         title: 'Revenue working phase',
         state: 'verified',
@@ -295,5 +288,5 @@ export const deliveryProgress = Math.round(
 export const deliveryProgressMeta = {
     label: 'Revenue-capable working phase',
     note: 'Evidence-based delivery milestones, not total product completion.',
-    refreshed: '2026-09-22',
+    refreshed: '2026-09-17',
 } as const;

@@ -55,6 +55,7 @@ final class SandboxLicenseIssuer
 
         $payload = [
             'environment' => 'sandbox',
+            'contract_version' => SandboxLicenseContract::CURRENT_VERSION,
             'jti' => (string) Str::uuid(),
             'organization_id' => $organizationId,
             'product_id' => $productId,

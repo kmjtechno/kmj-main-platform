@@ -6,9 +6,13 @@ use std::collections::HashSet;
 
 type HmacSha256 = Hmac<Sha256>;
 
+pub const SANDBOX_CONTRACT_VERSION: &str = "kmj.sandbox.v1";
+
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
 pub struct SandboxClaims {
     pub environment: String,
+    #[serde(default)]
+    pub contract_version: String,
     pub jti: String,
     pub organization_id: String,
     pub product_id: String,
@@ -77,6 +81,9 @@ pub fn verify_sandbox_license(
     if claims.environment != "sandbox" {
         return VerifyResult::invalid("wrong_environment", Some(claims));
     }
+    if claims.contract_version != SANDBOX_CONTRACT_VERSION {
+        return VerifyResult::invalid("unsupported_contract_version", Some(claims));
+    }
     if claims.jti.is_empty() {
         return VerifyResult::invalid("missing_claims", Some(claims));
     }
@@ -105,8 +112,17 @@ mod tests {
     use super::*;
     use pretty_assertions::assert_eq;
 
-    const SECRET: &[u8] = b"kmj-sandbox-test-secret-32-bytes-minimum!";
-    const VECTOR: &str = "eyJlbnZpcm9ubWVudCI6InNhbmRib3giLCJqdGkiOiIxMTExMTExMS0yMjIyLTMzMzMtNDQ0NC01NTU1NTU1NTU1NTUiLCJvcmdhbml6YXRpb25faWQiOiJvcmctMDAxIiwicHJvZHVjdF9pZCI6InByb2R1Y3QtMDAxIiwiZW50aXRsZW1lbnRfaWQiOiJlbnRpdGxlbWVudC0wMDEiLCJpc3N1ZWRfYXQiOjE3ODkwMDAwMDAsImV4cGlyZXNfYXQiOjE4OTM0NTYwMDB9.seV8O6qgsMDtnUMkUz--PLeevJcIsv9FDnG_ZFxG3xI";
+    #[derive(Debug, Deserialize)]
+    struct GoldenVector {
+        secret: String,
+        license: String,
+        claims: SandboxClaims,
+    }
+
+    fn vector() -> GoldenVector {
+        serde_json::from_str(include_str!("../vectors/sandbox-v1.json"))
+            .expect("sandbox v1 golden vector must be valid JSON")
+    }
 
     fn context<'a>(revoked: &'a HashSet<String>) -> VerifyContext<'a> {
         VerifyContext {
@@ -116,53 +132,114 @@ mod tests {
             revoked_jtis: revoked,
         }
     }
+
+    fn sign_claims(claims: &SandboxClaims, secret: &[u8]) -> String {
+        let payload = serde_json::to_vec(claims).expect("claims must serialize");
+        let encoded_payload = URL_SAFE_NO_PAD.encode(payload);
+        let mut mac = HmacSha256::new_from_slice(secret).expect("test secret is valid");
+        mac.update(encoded_payload.as_bytes());
+        let signature = mac.finalize().into_bytes();
+
+        format!(
+            "{encoded_payload}.{}",
+            URL_SAFE_NO_PAD.encode(signature)
+        )
+    }
+
     #[test]
-    fn deterministic_vector_validates() {
+    fn shared_v1_golden_vector_validates() {
+        let vector = vector();
         let revoked = HashSet::new();
-        let result = verify_sandbox_license(VECTOR, SECRET, &context(&revoked));
+        let result = verify_sandbox_license(
+            &vector.license,
+            vector.secret.as_bytes(),
+            &context(&revoked),
+        );
+
         assert!(result.valid);
         assert_eq!(result.reason, None);
-        assert_eq!(result.claims.unwrap().organization_id, "org-001");
+        assert_eq!(result.claims, Some(vector.claims));
+    }
+
+    #[test]
+    fn unsupported_contract_version_is_rejected() {
+        let vector = vector();
+        let mut claims = vector.claims;
+        claims.contract_version = "kmj.sandbox.v999".to_string();
+        let license = sign_claims(&claims, vector.secret.as_bytes());
+        let revoked = HashSet::new();
+
+        let result = verify_sandbox_license(
+            &license,
+            vector.secret.as_bytes(),
+            &context(&revoked),
+        );
+
+        assert_eq!(result.reason, Some("unsupported_contract_version"));
     }
 
     #[test]
     fn product_binding_is_enforced() {
+        let vector = vector();
         let revoked = HashSet::new();
         let mut ctx = context(&revoked);
         ctx.expected_product_id = "product-other";
-        let result = verify_sandbox_license(VECTOR, SECRET, &ctx);
+
+        let result = verify_sandbox_license(&vector.license, vector.secret.as_bytes(), &ctx);
+
         assert_eq!(result.reason, Some("wrong_product"));
     }
 
     #[test]
     fn revocation_is_enforced() {
+        let vector = vector();
         let revoked = HashSet::from(["11111111-2222-3333-4444-555555555555".to_string()]);
-        let result = verify_sandbox_license(VECTOR, SECRET, &context(&revoked));
+
+        let result = verify_sandbox_license(
+            &vector.license,
+            vector.secret.as_bytes(),
+            &context(&revoked),
+        );
+
         assert_eq!(result.reason, Some("revoked"));
     }
+
     #[test]
     fn entitlement_binding_is_enforced() {
+        let vector = vector();
         let revoked = HashSet::new();
         let mut ctx = context(&revoked);
         ctx.expected_entitlement_id = "entitlement-other";
-        let result = verify_sandbox_license(VECTOR, SECRET, &ctx);
+
+        let result = verify_sandbox_license(&vector.license, vector.secret.as_bytes(), &ctx);
+
         assert_eq!(result.reason, Some("wrong_entitlement"));
     }
 
     #[test]
     fn tampering_is_rejected() {
+        let vector = vector();
         let revoked = HashSet::new();
-        let tampered = VECTOR.replacen("eyJ", "eyK", 1);
-        let result = verify_sandbox_license(&tampered, SECRET, &context(&revoked));
+        let tampered = vector.license.replacen("eyJ", "eyK", 1);
+
+        let result = verify_sandbox_license(
+            &tampered,
+            vector.secret.as_bytes(),
+            &context(&revoked),
+        );
+
         assert_eq!(result.reason, Some("invalid_signature"));
     }
 
     #[test]
     fn expiry_is_deterministic() {
+        let vector = vector();
         let revoked = HashSet::new();
         let mut ctx = context(&revoked);
-        ctx.now = 1_893_456_000;
-        let result = verify_sandbox_license(VECTOR, SECRET, &ctx);
+        ctx.now = 1_789_001_800;
+
+        let result = verify_sandbox_license(&vector.license, vector.secret.as_bytes(), &ctx);
+
         assert_eq!(result.reason, Some("expired"));
     }
 }

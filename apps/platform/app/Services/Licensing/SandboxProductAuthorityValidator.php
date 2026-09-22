@@ -7,6 +7,10 @@ use KMJ\MainPlatform\Entitlements\Models\Entitlement;
 
 final class SandboxProductAuthorityValidator
 {
+    public function __construct(
+        private readonly ProductLicenseProfileRegistry $profiles,
+    ) {}
+
     /**
      * @param  array<string, mixed>  $claims
      */
@@ -22,7 +26,17 @@ final class SandboxProductAuthorityValidator
 
         $product = Product::query()->find($productId);
 
-        if ($product === null || ! in_array((string) $product->getAttribute('status'), ['sandbox', 'active'], true)) {
+        if ($product === null) {
+            return 'product_unavailable';
+        }
+
+        $profile = $this->profiles->forSlug((string) $product->getAttribute('slug'));
+
+        if ($profile === null) {
+            return 'unsupported_product';
+        }
+
+        if (! $profile->allowsStatus((string) $product->getAttribute('status'))) {
             return 'product_unavailable';
         }
 
@@ -42,6 +56,10 @@ final class SandboxProductAuthorityValidator
 
         if ($entitlement === null) {
             return 'entitlement_unavailable';
+        }
+
+        if ((string) $entitlement->getAttribute('capability') !== $profile->capability) {
+            return 'capability_mismatch';
         }
 
         return null;
