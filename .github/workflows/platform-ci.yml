@@ -19,7 +19,7 @@ on:
       - 'tests/test_platform_verify_contract.py'
 
 permissions:
-  contents: read
+  contents: write
 
 concurrency:
   group: platform-ci-${{ github.workflow }}-${{ github.ref }}
@@ -36,7 +36,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          persist-credentials: false
+          persist-credentials: true
 
       - name: Verify pre-provisioned runtime
         run: |
@@ -52,5 +52,27 @@ jobs:
         env:
           DB_CONNECTION: sqlite
           DB_DATABASE: ${{ github.workspace }}/apps/platform/database/database.sqlite
+          KMJ_FORMAT_PATHS: resources/js/data/delivery-progress.ts
         run: bash "$GITHUB_WORKSPACE/ops/self-hosted-runner/verify-platform.sh"
+
+      - name: Apply authoritative formatter output
+        if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+        working-directory: ${{ github.workspace }}
+        env:
+          HEAD_BRANCH: ${{ github.event.pull_request.head.ref }}
+        run: |
+          set -euo pipefail
+          path=apps/platform/resources/js/data/delivery-progress.ts
+          if git diff --quiet -- "$path"; then
+            exit 0
+          fi
+          git diff -- "$path" > /tmp/kmj-format.patch
+          git fetch origin "$HEAD_BRANCH"
+          git reset --hard "origin/$HEAD_BRANCH"
+          git apply /tmp/kmj-format.patch
+          git config user.name 'kmj-ci-bot'
+          git config user.email 'actions@users.noreply.github.com'
+          git add -- "$path"
+          git commit -m 'style(platform): apply delivery progress formatting'
+          git push origin "HEAD:$HEAD_BRANCH"
 
