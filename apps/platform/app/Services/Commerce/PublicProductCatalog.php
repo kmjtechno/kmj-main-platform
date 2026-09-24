@@ -287,7 +287,7 @@ final class PublicProductCatalog
     }
 
     /**
-     * @param array<int, array<string, string>> $proof
+     * @param  array<int, array<string, string>>  $proof
      * @return array<string, mixed>
      */
     private function developmentProduct(
