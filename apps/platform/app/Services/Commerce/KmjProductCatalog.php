@@ -15,6 +15,30 @@ final class KmjProductCatalog
 
     public const CALIBRATION_NAME = 'KMJ Calibration Pro';
 
+    public const CLOUD_NEXUS_SLUG = 'kmj-cloud-nexus';
+
+    public const CLOUD_NEXUS_NAME = 'KMJ Cloud Nexus';
+
+    public const FORGE_SLUG = 'kmj-forge';
+
+    public const FORGE_NAME = 'KMJ Forge';
+
+    public const AGENT_SLUG = 'kmj-agent';
+
+    public const AGENT_NAME = 'KMJ Agent';
+
+    public const CONNECT_SLUG = 'kmj-connect';
+
+    public const CONNECT_NAME = 'KMJ Connect';
+
+    private const SANDBOX_PRODUCTS = [
+        self::CALIBRATION_SLUG => self::CALIBRATION_NAME,
+        self::CLOUD_NEXUS_SLUG => self::CLOUD_NEXUS_NAME,
+        self::FORGE_SLUG => self::FORGE_NAME,
+        self::AGENT_SLUG => self::AGENT_NAME,
+        self::CONNECT_SLUG => self::CONNECT_NAME,
+    ];
+
     public function __construct(
         private readonly CloudOSProductCatalog $cloudOS,
         private readonly ProductCatalog $products,
@@ -26,25 +50,26 @@ final class KmjProductCatalog
     public function syncAll(): array
     {
         return DB::transaction(function (): array {
-            $cloudOS = $this->cloudOS->sync();
-            $calibration = $this->products->ensureSandboxProduct(
-                self::CALIBRATION_SLUG,
-                self::CALIBRATION_NAME,
-            );
+            $catalog = [
+                self::CLOUDOS_SLUG => $this->cloudOS->sync(),
+            ];
 
-            if (
-                (string) $calibration->getAttribute('name') !== self::CALIBRATION_NAME
-                || (string) $calibration->getAttribute('status') !== 'sandbox'
-            ) {
-                throw new DomainException(
-                    'Calibration Pro slug is already bound to conflicting catalog facts.',
-                );
+            foreach (self::SANDBOX_PRODUCTS as $slug => $name) {
+                $product = $this->products->ensureSandboxProduct($slug, $name);
+
+                if (
+                    (string) $product->getAttribute('name') !== $name
+                    || (string) $product->getAttribute('status') !== 'sandbox'
+                ) {
+                    throw new DomainException(
+                        sprintf('%s slug is already bound to conflicting catalog facts.', $name),
+                    );
+                }
+
+                $catalog[$slug] = $product;
             }
 
-            return [
-                self::CLOUDOS_SLUG => $cloudOS,
-                self::CALIBRATION_SLUG => $calibration,
-            ];
+            return $catalog;
         });
     }
 }

@@ -1,10 +1,14 @@
 import { Head, Link, usePage } from '@inertiajs/react';
 import {
     ArrowRight,
+    Bot,
     CheckCircle2,
+    Code2,
     FlaskConical,
+    Hammer,
     KeyRound,
     Layers3,
+    MonitorUp,
     ServerCog,
     ShieldCheck,
     Sparkles,
@@ -31,6 +35,25 @@ type Product = {
         label: string;
     };
 };
+
+function iconForProduct(slug: string) {
+    switch (slug) {
+        case 'kmj-cloudos':
+            return ServerCog;
+        case 'kmj-calibration-pro':
+            return FlaskConical;
+        case 'kmj-cloud-nexus':
+            return Code2;
+        case 'kmj-forge':
+            return Hammer;
+        case 'kmj-agent':
+            return Bot;
+        case 'kmj-connect':
+            return MonitorUp;
+        default:
+            return Layers3;
+    }
+}
 
 const platformCapabilities = [
     {
@@ -76,17 +99,12 @@ export default function Welcome({ products }: { products: Product[] }) {
 
                 <header className="relative z-20 border-b border-white/[0.07] bg-[#07090c]/85 backdrop-blur-xl">
                     <div className="mx-auto flex h-20 max-w-7xl items-center justify-between px-5 sm:px-8 lg:px-10">
-                        <Link href="/" className="flex items-center gap-3">
-                            <span className="grid h-10 w-10 place-items-center rounded-xl border border-[#e21b23]/40 bg-[#e21b23]/10 text-lg font-black text-[#f1252e]">
-                                K
+                        <Link href="/" className="leading-none">
+                            <span className="block text-[15px] font-extrabold tracking-[0.16em]">
+                                KMJ TECHNO
                             </span>
-                            <span>
-                                <span className="block text-[15px] font-extrabold tracking-[0.16em]">
-                                    KMJ TECHNO
-                                </span>
-                                <span className="mt-0.5 block text-[9px] font-medium tracking-[0.22em] text-white/35 uppercase">
-                                    Technology ecosystem
-                                </span>
+                            <span className="mt-1 block text-[8px] font-semibold tracking-[0.18em] text-white/35">
+                                INNOVATE | BUILD | SCALE
                             </span>
                         </Link>
 
@@ -195,12 +213,11 @@ export default function Welcome({ products }: { products: Product[] }) {
                                 </Link>
                             </div>
 
-                            <div className="mt-10 grid gap-5 lg:grid-cols-2">
+                            <div className="mt-10 grid gap-5 lg:grid-cols-2 xl:grid-cols-3">
                                 {products.map((product) => {
-                                    const ProductIcon =
-                                        product.demo.kind === 'cloudos'
-                                            ? ServerCog
-                                            : FlaskConical;
+                                    const ProductIcon = iconForProduct(
+                                        product.slug,
+                                    );
 
                                     return (
                                         <article

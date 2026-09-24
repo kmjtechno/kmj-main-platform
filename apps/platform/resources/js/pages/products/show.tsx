@@ -22,7 +22,7 @@ type Product = {
         state: string;
     }>;
     demo: {
-        kind: 'cloudos' | 'calibration';
+        kind: 'cloudos' | 'calibration' | 'none';
         simulation: boolean;
         label: string;
         steps: Array<{
@@ -35,7 +35,11 @@ type Product = {
 
 export default function ProductShow({ product }: { product: Product }) {
     const Demo =
-        product.demo.kind === 'cloudos' ? CloudOSDemo : CalibrationDemo;
+        product.demo.kind === 'cloudos'
+            ? CloudOSDemo
+            : product.demo.kind === 'calibration'
+              ? CalibrationDemo
+              : null;
 
     return (
         <>
@@ -46,11 +50,13 @@ export default function ProductShow({ product }: { product: Product }) {
             <main className="min-h-screen bg-[#07090c] text-white">
                 <header className="border-b border-white/[0.07] bg-[#07090c]/95">
                     <div className="mx-auto flex h-20 max-w-7xl items-center justify-between px-5 sm:px-8 lg:px-10">
-                        <Link
-                            href="/"
-                            className="text-sm font-black tracking-[0.16em]"
-                        >
-                            KMJ TECHNO
+                        <Link href="/" className="leading-none">
+                            <span className="block text-sm font-black tracking-[0.16em]">
+                                KMJ TECHNO
+                            </span>
+                            <span className="mt-1 block text-[8px] font-semibold tracking-[0.18em] text-white/35">
+                                INNOVATE | BUILD | SCALE
+                            </span>
                         </Link>
                         <Link
                             href="/products"
@@ -132,25 +138,47 @@ export default function ProductShow({ product }: { product: Product }) {
                     </div>
                 </section>
 
-                <section className="border-y border-white/[0.07] bg-white/[0.015]">
-                    <div className="mx-auto max-w-7xl px-5 py-16 sm:px-8 lg:px-10 lg:py-20">
-                        <div className="mb-8 max-w-3xl">
-                            <div className="text-xs font-bold tracking-[0.2em] text-[#ef3941] uppercase">
-                                Virtual demo
+                {Demo ? (
+                    <section className="border-y border-white/[0.07] bg-white/[0.015]">
+                        <div className="mx-auto max-w-7xl px-5 py-16 sm:px-8 lg:px-10 lg:py-20">
+                            <div className="mb-8 max-w-3xl">
+                                <div className="text-xs font-bold tracking-[0.2em] text-[#ef3941] uppercase">
+                                    Virtual demo
+                                </div>
+                                <h2 className="mt-4 text-3xl font-black tracking-[-0.035em] sm:text-4xl">
+                                    Learn the workflow by using it.
+                                </h2>
+                                <p className="mt-4 text-sm leading-7 text-white/45">
+                                    This deterministic browser simulation never
+                                    controls production infrastructure or claims
+                                    physical measurements.
+                                </p>
                             </div>
-                            <h2 className="mt-4 text-3xl font-black tracking-[-0.035em] sm:text-4xl">
-                                Learn the workflow by using it.
-                            </h2>
-                            <p className="mt-4 text-sm leading-7 text-white/45">
-                                This deterministic browser simulation never
-                                controls production infrastructure or claims
-                                physical measurements.
-                            </p>
-                        </div>
 
-                        <Demo steps={product.demo.steps} />
-                    </div>
-                </section>
+                            <Demo steps={product.demo.steps} />
+                        </div>
+                    </section>
+                ) : (
+                    <section className="border-y border-white/[0.07] bg-white/[0.015]">
+                        <div className="mx-auto max-w-7xl px-5 py-16 sm:px-8 lg:px-10 lg:py-20">
+                            <div className="max-w-3xl">
+                                <div className="text-xs font-bold tracking-[0.2em] text-[#ef3941] uppercase">
+                                    Product media policy
+                                </div>
+                                <h2 className="mt-4 text-3xl font-black tracking-[-0.035em] sm:text-4xl">
+                                    Real application imagery only.
+                                </h2>
+                                <p className="mt-4 text-sm leading-7 text-white/48">
+                                    No synthetic, CGI-style or invented product
+                                    screenshot is published here. Product media
+                                    will be added from verified application
+                                    captures and approved KMJ TECHNO brand
+                                    assets as those builds become available.
+                                </p>
+                            </div>
+                        </div>
+                    </section>
+                )}
 
                 <section className="mx-auto max-w-7xl px-5 py-14 sm:px-8 lg:px-10">
                     {product.purchase_enabled ? (
@@ -180,13 +208,13 @@ export default function ProductShow({ product }: { product: Product }) {
                                     Commercial licensing is not enabled yet.
                                 </div>
                                 <div className="mt-1 text-sm text-white/38">
-                                    Purchase remains unavailable until product
-                                    capability is verified and explicitly
-                                    promoted.
+                                    Availability remains disabled until product
+                                    capability and release evidence are
+                                    explicitly verified.
                                 </div>
                             </div>
                             <span className="rounded-xl border border-white/10 px-4 py-2 text-sm font-semibold text-white/45">
-                                Preview only
+                                {product.lifecycle_label}
                             </span>
                         </div>
                     )}

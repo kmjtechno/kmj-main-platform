@@ -44,16 +44,25 @@ final class CloudOSProductCatalogTest extends TestCase
         $this->artisan('kmj:catalog:sync')->assertSuccessful();
         $this->artisan('kmj:catalog:sync')->assertSuccessful();
 
-        $this->assertDatabaseCount('products', 2);
+        $this->assertDatabaseCount('products', 6);
         $this->assertDatabaseCount('entitlement_policies', 1);
         $this->assertDatabaseHas('products', [
             'slug' => CloudOSProductCatalog::SLUG,
             'status' => 'active',
         ]);
-        $this->assertDatabaseHas('products', [
-            'slug' => KmjProductCatalog::CALIBRATION_SLUG,
-            'status' => 'sandbox',
-        ]);
+
+        foreach ([
+            KmjProductCatalog::CALIBRATION_SLUG,
+            KmjProductCatalog::CLOUD_NEXUS_SLUG,
+            KmjProductCatalog::FORGE_SLUG,
+            KmjProductCatalog::AGENT_SLUG,
+            KmjProductCatalog::CONNECT_SLUG,
+        ] as $slug) {
+            $this->assertDatabaseHas('products', [
+                'slug' => $slug,
+                'status' => 'sandbox',
+            ]);
+        }
     }
 
     public function test_conflicting_policy_facts_fail_closed(): void

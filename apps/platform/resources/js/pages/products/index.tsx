@@ -1,8 +1,12 @@
 import { Head, Link } from '@inertiajs/react';
 import {
     ArrowRight,
+    Bot,
     CheckCircle2,
+    Code2,
     FlaskConical,
+    Hammer,
+    MonitorUp,
     ServerCog,
     ShieldCheck,
 } from 'lucide-react';
@@ -28,24 +32,45 @@ type Product = {
     };
 };
 
+function iconForProduct(slug: string) {
+    switch (slug) {
+        case 'kmj-cloudos':
+            return ServerCog;
+        case 'kmj-calibration-pro':
+            return FlaskConical;
+        case 'kmj-cloud-nexus':
+            return Code2;
+        case 'kmj-forge':
+            return Hammer;
+        case 'kmj-agent':
+            return Bot;
+        case 'kmj-connect':
+            return MonitorUp;
+        default:
+            return Code2;
+    }
+}
+
 export default function ProductsIndex({ products }: { products: Product[] }) {
     return (
         <>
             <Head title="Products — KMJ TECHNO">
                 <meta
                     name="description"
-                    content="Explore KMJ TECHNO software products through evidence-backed product pages and deterministic virtual demos."
+                    content="Explore the KMJ TECHNO product portfolio with explicit lifecycle, evidence and availability status."
                 />
             </Head>
 
             <main className="min-h-screen bg-[#07090c] text-white">
                 <header className="border-b border-white/[0.07] bg-[#07090c]/95">
                     <div className="mx-auto flex h-20 max-w-7xl items-center justify-between px-5 sm:px-8 lg:px-10">
-                        <Link
-                            href="/"
-                            className="text-sm font-black tracking-[0.16em]"
-                        >
-                            KMJ TECHNO
+                        <Link href="/" className="leading-none">
+                            <span className="block text-sm font-black tracking-[0.16em]">
+                                KMJ TECHNO
+                            </span>
+                            <span className="mt-1 block text-[8px] font-semibold tracking-[0.18em] text-white/35">
+                                INNOVATE | BUILD | SCALE
+                            </span>
                         </Link>
                         <div className="flex items-center gap-4 text-sm text-white/55">
                             <span className="hidden sm:inline">Products</span>
@@ -65,32 +90,30 @@ export default function ProductsIndex({ products }: { products: Product[] }) {
                             KMJ product portfolio
                         </div>
                         <h1 className="mt-5 text-4xl font-black tracking-[-0.045em] sm:text-6xl">
-                            Understand the product in seconds.
+                            One portfolio.
                             <span className="block text-white/38">
-                                Explore the workflow before you decide.
+                                Every lifecycle shown truthfully.
                             </span>
                         </h1>
                         <p className="mt-6 max-w-2xl text-base leading-7 text-white/50 sm:text-lg">
-                            Product lifecycle, purchase availability and demo
-                            state are shown separately so presentation never
-                            outruns verified authority.
+                            Available, preview, early-development and planned
+                            products are separated explicitly. Product imagery
+                            is published only from verified application captures
+                            or approved KMJ brand assets.
                         </p>
                     </div>
                 </section>
 
-                <section className="mx-auto grid max-w-7xl gap-5 px-5 pb-24 sm:px-8 lg:grid-cols-2 lg:px-10">
+                <section className="mx-auto grid max-w-7xl gap-5 px-5 pb-24 sm:px-8 lg:grid-cols-2 lg:px-10 xl:grid-cols-3">
                     {products.map((product) => {
-                        const ProductIcon =
-                            product.demo.kind === 'cloudos'
-                                ? ServerCog
-                                : FlaskConical;
+                        const ProductIcon = iconForProduct(product.slug);
 
                         return (
                             <article
                                 key={product.slug}
                                 className="flex flex-col overflow-hidden rounded-[2rem] border border-white/[0.09] bg-gradient-to-br from-white/[0.055] to-white/[0.015]"
                             >
-                                <div className="p-7 sm:p-9">
+                                <div className="p-7 sm:p-8">
                                     <div className="flex flex-wrap items-center justify-between gap-3">
                                         <div className="grid h-11 w-11 place-items-center rounded-xl border border-[#ef3941]/20 bg-[#ef3941]/10">
                                             <ProductIcon className="h-5 w-5 text-[#ef3941]" />
@@ -144,14 +167,18 @@ export default function ProductsIndex({ products }: { products: Product[] }) {
                                 <div className="mt-auto border-t border-white/[0.07] bg-black/20 p-6">
                                     <div className="mb-4 flex items-center gap-2 text-xs text-white/42">
                                         <CheckCircle2 className="h-4 w-4 text-emerald-300/70" />
-                                        Interactive simulation only
+                                        {product.demo.simulation
+                                            ? 'Interactive simulation only'
+                                            : 'Verified status — no synthetic product UI'}
                                     </div>
                                     <div className="flex flex-col gap-3 sm:flex-row">
                                         <Link
                                             href={'/products/' + product.slug}
                                             className="inline-flex h-11 flex-1 items-center justify-center gap-2 rounded-xl bg-[#e21b23] px-5 text-sm font-bold transition hover:bg-[#f1252e]"
                                         >
-                                            Open virtual demo
+                                            {product.demo.simulation
+                                                ? 'Open virtual demo'
+                                                : 'View product'}
                                             <ArrowRight className="h-4 w-4" />
                                         </Link>
                                         {product.purchase_enabled && (

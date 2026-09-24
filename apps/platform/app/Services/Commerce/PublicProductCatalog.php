@@ -7,23 +7,26 @@ use KMJ\MainPlatform\Entitlements\Models\EntitlementPolicy;
 
 final class PublicProductCatalog
 {
+    private const PUBLIC_SLUGS = [
+        CloudOSProductCatalog::SLUG,
+        KmjProductCatalog::CALIBRATION_SLUG,
+        KmjProductCatalog::CLOUD_NEXUS_SLUG,
+        KmjProductCatalog::FORGE_SLUG,
+        KmjProductCatalog::AGENT_SLUG,
+        KmjProductCatalog::CONNECT_SLUG,
+    ];
+
     /**
      * @return array<int, array<string, mixed>>
      */
     public function all(): array
     {
         $products = Product::query()
-            ->whereIn('slug', [
-                CloudOSProductCatalog::SLUG,
-                KmjProductCatalog::CALIBRATION_SLUG,
-            ])
+            ->whereIn('slug', self::PUBLIC_SLUGS)
             ->get()
             ->keyBy('slug');
 
-        return collect([
-            CloudOSProductCatalog::SLUG,
-            KmjProductCatalog::CALIBRATION_SLUG,
-        ])
+        return collect(self::PUBLIC_SLUGS)
             ->map(fn (string $slug): ?array => $this->present($products->get($slug)))
             ->filter()
             ->values()
@@ -35,10 +38,7 @@ final class PublicProductCatalog
      */
     public function find(string $slug): ?array
     {
-        if (! in_array($slug, [
-            CloudOSProductCatalog::SLUG,
-            KmjProductCatalog::CALIBRATION_SLUG,
-        ], true)) {
+        if (! in_array($slug, self::PUBLIC_SLUGS, true)) {
             return null;
         }
 
@@ -57,6 +57,10 @@ final class PublicProductCatalog
         return match ((string) $product->getAttribute('slug')) {
             CloudOSProductCatalog::SLUG => $this->cloudOS($product),
             KmjProductCatalog::CALIBRATION_SLUG => $this->calibration(),
+            KmjProductCatalog::CLOUD_NEXUS_SLUG => $this->cloudNexus(),
+            KmjProductCatalog::FORGE_SLUG => $this->forge(),
+            KmjProductCatalog::AGENT_SLUG => $this->agent(),
+            KmjProductCatalog::CONNECT_SLUG => $this->connect(),
             default => null,
         };
     }
@@ -172,6 +176,183 @@ final class PublicProductCatalog
             'cta' => [
                 'primary' => 'Launch virtual demo',
                 'secondary' => 'Development preview',
+            ],
+        ];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function cloudNexus(): array
+    {
+        return $this->developmentProduct(
+            KmjProductCatalog::CLOUD_NEXUS_SLUG,
+            KmjProductCatalog::CLOUD_NEXUS_NAME,
+            'development',
+            'Development',
+            'Autonomous cloud IDE',
+            'A KMJ-branded Code-OSS workbench for autonomous engineering workflows.',
+            'KMJ Cloud Nexus is the roadmap identity for the separate engineering IDE. Repository product metadata currently names the application KMJ Autonomous Cloud IDE / KMJ Cloud IDE.',
+            'Repository and KMJ-branded product metadata are present; no commercial release is claimed.',
+            [
+                [
+                    'title' => 'KMJ product metadata',
+                    'detail' => 'The product definition declares KMJ Autonomous Cloud IDE, KMJ Cloud IDE and KMJ-specific application identifiers.',
+                    'state' => 'repository-verified',
+                ],
+                [
+                    'title' => 'Separate system boundary',
+                    'detail' => 'Cloud Nexus remains an independent engineering IDE and does not become the Main Platform website or database.',
+                    'state' => 'roadmap-verified',
+                ],
+                [
+                    'title' => 'Release truth',
+                    'detail' => 'The public portfolio shows development status until a separately verified commercial release exists.',
+                    'state' => 'fail-closed',
+                ],
+            ],
+        );
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function forge(): array
+    {
+        return $this->developmentProduct(
+            KmjProductCatalog::FORGE_SLUG,
+            KmjProductCatalog::FORGE_NAME,
+            'early-development',
+            'Early development',
+            'AI software engineering framework',
+            'A free-first, local-capable and provider-agnostic engineering framework from KMJ TECHNO.',
+            'KMJ Forge is a separate open-source engineering framework intended for reusable workflows, skills, tools, adapters and evidence-driven software delivery.',
+            'Repository status is explicitly early development / v0.1.x bootstrap.',
+            [
+                [
+                    'title' => 'Open-source foundation',
+                    'detail' => 'The repository ships an executable Python bootstrap, tests, schemas, adapters and an Apache-2.0 project structure.',
+                    'state' => 'repository-verified',
+                ],
+                [
+                    'title' => 'Provider-agnostic direction',
+                    'detail' => 'The project is explicitly model-, provider-, language-, IDE- and platform-agnostic.',
+                    'state' => 'repository-verified',
+                ],
+                [
+                    'title' => 'Lifecycle boundary',
+                    'detail' => 'Early-development status is shown publicly; no production-readiness claim is made.',
+                    'state' => 'fail-closed',
+                ],
+            ],
+        );
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function agent(): array
+    {
+        return $this->developmentProduct(
+            KmjProductCatalog::AGENT_SLUG,
+            KmjProductCatalog::AGENT_NAME,
+            'development',
+            'Development',
+            'Autonomous software engineering agent',
+            'An autonomous software engineering agent project in the KMJ TECHNO portfolio.',
+            'The KMJ Agent repository exists with an autonomous software engineering scope, but current public repository evidence is still minimal.',
+            'Repository scaffold is present; commercial availability and production capability are not declared.',
+            [
+                [
+                    'title' => 'Dedicated project',
+                    'detail' => 'KMJ Agent is maintained as its own repository rather than being presented as a hidden Main Platform capability.',
+                    'state' => 'repository-verified',
+                ],
+                [
+                    'title' => 'Conservative public claims',
+                    'detail' => 'The site publishes only the repository-declared autonomous software engineering scope.',
+                    'state' => 'evidence-limited',
+                ],
+                [
+                    'title' => 'No commercial claim',
+                    'detail' => 'Purchase and production-readiness remain disabled until stronger release evidence exists.',
+                    'state' => 'fail-closed',
+                ],
+            ],
+        );
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function connect(): array
+    {
+        return $this->developmentProduct(
+            KmjProductCatalog::CONNECT_SLUG,
+            KmjProductCatalog::CONNECT_NAME,
+            'planned-development',
+            'Planned / development',
+            'Secure remote desktop',
+            'Secure Remote Desktop by KMJ Techno — a roadmap product for governed remote access.',
+            'KMJ Connect is the locked working roadmap name for the remote-desktop product. Commercial launch is intentionally after the shared licensing platform is proven.',
+            'Roadmap-defined product; a working commercial release is not yet verified.',
+            [
+                [
+                    'title' => 'Roadmap product identity',
+                    'detail' => 'The master product roadmap names KMJ Connect as the secure remote-desktop product and second consumer of the shared commercial platform.',
+                    'state' => 'roadmap-verified',
+                ],
+                [
+                    'title' => 'Commercial dependency',
+                    'detail' => 'The roadmap explicitly places shared licensing and Calibration integration ahead of KMJ Connect commercial launch.',
+                    'state' => 'roadmap-verified',
+                ],
+                [
+                    'title' => 'Real-media rule',
+                    'detail' => 'Product screenshots must come from the actual application as it matures; fake UI screenshots are not published.',
+                    'state' => 'truth-locked',
+                ],
+            ],
+        );
+    }
+
+    /**
+     * @param  array<int, array<string, string>>  $proof
+     * @return array<string, mixed>
+     */
+    private function developmentProduct(
+        string $slug,
+        string $name,
+        string $lifecycle,
+        string $lifecycleLabel,
+        string $eyebrow,
+        string $headline,
+        string $summary,
+        string $status,
+        array $proof,
+    ): array {
+        return [
+            'slug' => $slug,
+            'name' => $name,
+            'lifecycle' => $lifecycle,
+            'lifecycle_label' => $lifecycleLabel,
+            'purchase_enabled' => false,
+            'eyebrow' => $eyebrow,
+            'headline' => $headline,
+            'summary' => $summary,
+            'truth' => [
+                'status' => $status,
+            ],
+            'proof' => $proof,
+            'demo' => [
+                'kind' => 'none',
+                'simulation' => false,
+                'label' => 'Verified product status',
+                'steps' => [],
+            ],
+            'cta' => [
+                'primary' => 'View product status',
+                'secondary' => $lifecycleLabel,
             ],
         ];
     }
