@@ -13,6 +13,11 @@ const pages = [
     { path: '/login', marker: null },
 ];
 
+export function screenshotName(viewport, path) {
+    const slug = path === '/' ? 'home' : path.slice(1).replace(/[^a-z0-9._-]+/gi, '-');
+    return `${viewport}-${slug || 'home'}.png`;
+}
+
 export function matchesMarker(text, marker) {
     if (marker === null) return true;
     const normalize = value => value.replace(/\s+/g, ' ').trim().toLowerCase();
@@ -143,7 +148,7 @@ export async function main() {
                 const sample = { path: page.path, viewport: viewport.name, ...result.value,
                     httpStatus: state.httpStatus, exceptions: state.exceptions };
                 Object.assign(sample, assess(sample));
-                const screenshot = `${viewport.name}-${page.path === '/' ? 'home' : page.path.slice(1)}.png`;
+                const screenshot = screenshotName(viewport.name, page.path);
                 const capture = await send('Page.captureScreenshot', { format: 'png' }, sessionId);
                 await writeFile(join(output, screenshot), Buffer.from(capture.data, 'base64'));
                 sample.screenshot = screenshot;
