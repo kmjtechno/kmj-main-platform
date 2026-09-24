@@ -200,7 +200,10 @@ export default function Welcome({ products }: { products: Product[] }) {
                                     const ProductIcon =
                                         product.demo.kind === 'cloudos'
                                             ? ServerCog
-                                            : FlaskConical;
+                                            : product.demo.kind ===
+                                                'calibration'
+                                              ? FlaskConical
+                                              : ShieldCheck;
 
                                     return (
                                         <article
