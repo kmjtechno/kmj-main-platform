@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { assess, matchesMarker } from './browser-qa.mjs';
+import { assess, matchesMarker, screenshotName } from './browser-qa.mjs';
 
 const healthy = { path: '/products', url: 'https://staging.kmjtechno.com/products',
     httpStatus: 200, bodyLength: 200, markerFound: true, exceptions: 0, overflowPx: 0 };
@@ -23,4 +23,14 @@ test('layout overflow is visible as an advisory without blocking deployment', ()
     const result = assess({ ...healthy, overflowPx: 24 });
     assert.deepEqual(result.failures, []);
     assert.deepEqual(result.warnings, ['horizontal_overflow']);
+});
+
+test('nested routes produce flat safe screenshot filenames', () => {
+    assert.equal(screenshotName('desktop', '/'), 'desktop-home.png');
+    assert.equal(screenshotName('desktop', '/products'), 'desktop-products.png');
+    assert.equal(
+        screenshotName('desktop', '/products/kmj-calibration-pro'),
+        'desktop-products-kmj-calibration-pro.png',
+    );
+    assert.equal(screenshotName('mobile', '/login'), 'mobile-login.png');
 });
