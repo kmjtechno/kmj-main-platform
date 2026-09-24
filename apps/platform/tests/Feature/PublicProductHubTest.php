@@ -18,6 +18,19 @@ final class PublicProductHubTest extends TestCase
         app(KmjProductCatalog::class)->syncAll();
     }
 
+    public function test_homepage_exposes_the_canonical_public_product_portfolio(): void
+    {
+        $this->get('/')
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('welcome')
+                ->has('products', 2)
+                ->where('products.0.slug', 'kmj-cloudos')
+                ->where('products.0.purchase_enabled', true)
+                ->where('products.1.slug', 'kmj-calibration-pro')
+                ->where('products.1.purchase_enabled', false));
+    }
+
     public function test_products_hub_exposes_cloudos_and_calibration_with_truthful_lifecycle(): void
     {
         $this->get('/products')
