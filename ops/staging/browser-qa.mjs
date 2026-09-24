@@ -119,12 +119,20 @@ export async function main() {
                     expression: `(async () => {
                         await document.fonts.ready;
                         const stop = Date.now() + 5000;
-                        while ((document.body?.innerText.length || 0) < 40 && Date.now() < stop)
+                        let bodyLength = 0;
+                        let markerFound = false;
+                        do {
+                            bodyLength = document.body?.innerText.length || 0;
+                            markerFound = ${JSON.stringify(page.selector ?? null)}
+                                ? Boolean(document.querySelector(${JSON.stringify(page.selector ?? '')}))
+                                : (${matchesMarker.toString()})(document.body?.innerText || '', ${JSON.stringify(page.marker)});
+                            if (bodyLength >= 40 && markerFound) break;
                             await new Promise(r => setTimeout(r, 100));
+                        } while (Date.now() < stop);
                         await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
                         const nav = performance.getEntriesByType('navigation')[0];
-                        return { url: location.href, bodyLength: document.body.innerText.length,
-                            markerFound: ${JSON.stringify(page.selector ?? null)} ? Boolean(document.querySelector(${JSON.stringify(page.selector ?? '')})) : (${matchesMarker.toString()})(document.body.innerText, ${JSON.stringify(page.marker)}),
+                        return { url: location.href, bodyLength,
+                            markerFound,
                             overflowPx: Math.max(0, document.documentElement.scrollWidth - innerWidth),
                             domContentLoadedMs: nav ? Math.round(nav.domContentLoadedEventEnd) : null,
                             loadEventMs: nav ? Math.round(nav.loadEventEnd) : null,
