@@ -296,5 +296,5 @@ export const deliveryProgress = Math.round(
 export const deliveryProgressMeta = {
     label: 'Revenue-capable working phase',
     note: 'Evidence-based delivery milestones, not total product completion.',
-    refreshed: '2026-09-22',
+    refreshed: '2026-09-24',
 } as const;
