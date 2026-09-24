@@ -19,6 +19,11 @@ export function matchesMarker(text, marker) {
     return normalize(text).includes(normalize(marker));
 }
 
+export function screenshotName(viewport, path) {
+    const page = path === '/' ? 'home' : path.slice(1).replaceAll('/', '-');
+    return `${viewport}-${page}.png`;
+}
+
 export function assess(sample) {
     const failures = [];
     if (sample.url !== origin + sample.path) failures.push('unexpected_navigation');
@@ -143,7 +148,7 @@ export async function main() {
                 const sample = { path: page.path, viewport: viewport.name, ...result.value,
                     httpStatus: state.httpStatus, exceptions: state.exceptions };
                 Object.assign(sample, assess(sample));
-                const screenshot = `${viewport.name}-${page.path === '/' ? 'home' : page.path.slice(1)}.png`;
+                const screenshot = screenshotName(viewport.name, page.path);
                 const capture = await send('Page.captureScreenshot', { format: 'png' }, sessionId);
                 await writeFile(join(output, screenshot), Buffer.from(capture.data, 'base64'));
                 sample.screenshot = screenshot;
