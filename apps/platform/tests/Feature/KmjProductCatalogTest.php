@@ -13,40 +13,49 @@ final class KmjProductCatalogTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_sync_all_creates_canonical_cloudos_and_calibration_products_idempotently(): void
+    public function test_sync_all_creates_canonical_product_portfolio_idempotently(): void
     {
         $catalog = app(KmjProductCatalog::class);
 
         $first = $catalog->syncAll();
         $second = $catalog->syncAll();
 
-        self::assertSame(
-            $first[KmjProductCatalog::CLOUDOS_SLUG]->getKey(),
-            $second[KmjProductCatalog::CLOUDOS_SLUG]->getKey(),
-        );
-        self::assertSame(
-            $first[KmjProductCatalog::CALIBRATION_SLUG]->getKey(),
-            $second[KmjProductCatalog::CALIBRATION_SLUG]->getKey(),
-        );
+        foreach ([
+            KmjProductCatalog::CLOUDOS_SLUG,
+            KmjProductCatalog::CALIBRATION_SLUG,
+            KmjProductCatalog::FORGE_SLUG,
+            KmjProductCatalog::CONNECT_SLUG,
+            KmjProductCatalog::CLOUD_NEXUS_SLUG,
+        ] as $slug) {
+            self::assertSame($first[$slug]->getKey(), $second[$slug]->getKey());
+        }
 
-        $this->assertDatabaseCount('products', 2);
+        $this->assertDatabaseCount('products', 5);
         $this->assertDatabaseHas('products', [
             'slug' => CloudOSProductCatalog::SLUG,
             'name' => CloudOSProductCatalog::NAME,
             'status' => 'active',
         ]);
-        $this->assertDatabaseHas('products', [
-            'slug' => KmjProductCatalog::CALIBRATION_SLUG,
-            'name' => KmjProductCatalog::CALIBRATION_NAME,
-            'status' => 'sandbox',
-        ]);
+
+        foreach ([
+            KmjProductCatalog::CALIBRATION_SLUG => KmjProductCatalog::CALIBRATION_NAME,
+            KmjProductCatalog::FORGE_SLUG => KmjProductCatalog::FORGE_NAME,
+            KmjProductCatalog::CONNECT_SLUG => KmjProductCatalog::CONNECT_NAME,
+            KmjProductCatalog::CLOUD_NEXUS_SLUG => KmjProductCatalog::CLOUD_NEXUS_NAME,
+        ] as $slug => $name) {
+            $this->assertDatabaseHas('products', [
+                'slug' => $slug,
+                'name' => $name,
+                'status' => 'sandbox',
+            ]);
+        }
     }
 
-    public function test_calibration_preview_fails_closed_if_slug_is_bound_to_conflicting_facts(): void
+    public function test_sandbox_product_fails_closed_if_slug_is_bound_to_conflicting_facts(): void
     {
         Product::query()->create([
-            'slug' => KmjProductCatalog::CALIBRATION_SLUG,
-            'name' => 'Conflicting Calibration Product',
+            'slug' => KmjProductCatalog::FORGE_SLUG,
+            'name' => 'Conflicting Forge Product',
             'status' => 'active',
         ]);
 

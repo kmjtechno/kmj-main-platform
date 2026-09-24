@@ -24,30 +24,49 @@ final class PublicProductHubTest extends TestCase
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->component('welcome')
-                ->has('products', 2)
+                ->has('products', 5)
                 ->where('products.0.slug', 'kmj-cloudos')
                 ->where('products.0.purchase_enabled', true)
                 ->where('products.1.slug', 'kmj-calibration-pro')
-                ->where('products.1.purchase_enabled', false));
+                ->where('products.1.purchase_enabled', false)
+                ->where('products.2.slug', 'kmj-forge')
+                ->where('products.2.lifecycle', 'early-development')
+                ->where('products.2.purchase_enabled', false)
+                ->where('products.3.slug', 'kmj-connect')
+                ->where('products.3.lifecycle', 'planned')
+                ->where('products.3.purchase_enabled', false)
+                ->where('products.4.slug', 'kmj-cloud-nexus')
+                ->where('products.4.lifecycle', 'development')
+                ->where('products.4.purchase_enabled', false));
     }
 
-    public function test_products_hub_exposes_cloudos_and_calibration_with_truthful_lifecycle(): void
+    public function test_products_hub_exposes_truthful_lifecycle_for_all_roadmap_products(): void
     {
         $this->get('/products')
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->component('products/index')
-                ->has('products', 2)
+                ->has('products', 5)
                 ->where('products.0.slug', 'kmj-cloudos')
                 ->where('products.0.lifecycle', 'active')
-                ->where('products.0.purchase_enabled', true)
                 ->where('products.0.demo.kind', 'cloudos')
                 ->where('products.0.demo.simulation', true)
                 ->where('products.1.slug', 'kmj-calibration-pro')
                 ->where('products.1.lifecycle', 'development-preview')
-                ->where('products.1.purchase_enabled', false)
                 ->where('products.1.demo.kind', 'calibration')
-                ->where('products.1.demo.simulation', true));
+                ->where('products.1.demo.simulation', true)
+                ->where('products.2.slug', 'kmj-forge')
+                ->where('products.2.lifecycle', 'early-development')
+                ->where('products.2.demo.kind', 'none')
+                ->where('products.2.demo.simulation', false)
+                ->where('products.3.slug', 'kmj-connect')
+                ->where('products.3.lifecycle', 'planned')
+                ->where('products.3.demo.kind', 'none')
+                ->where('products.3.demo.simulation', false)
+                ->where('products.4.slug', 'kmj-cloud-nexus')
+                ->where('products.4.lifecycle', 'development')
+                ->where('products.4.demo.kind', 'none')
+                ->where('products.4.demo.simulation', false));
     }
 
     public function test_cloudos_detail_exposes_simulation_and_commercial_cta_state(): void
@@ -75,6 +94,25 @@ final class PublicProductHubTest extends TestCase
                 ->where('product.demo.kind', 'calibration')
                 ->where('product.demo.simulation', true)
                 ->where('product.truth.physical_capability_certified', false));
+    }
+
+    public function test_development_products_remain_non_commercial_and_without_fake_demo(): void
+    {
+        foreach ([
+            'kmj-forge' => 'early-development',
+            'kmj-connect' => 'planned',
+            'kmj-cloud-nexus' => 'development',
+        ] as $slug => $lifecycle) {
+            $this->get('/products/'.$slug)
+                ->assertOk()
+                ->assertInertia(fn (Assert $page) => $page
+                    ->component('products/show')
+                    ->where('product.slug', $slug)
+                    ->where('product.lifecycle', $lifecycle)
+                    ->where('product.purchase_enabled', false)
+                    ->where('product.demo.kind', 'none')
+                    ->where('product.demo.simulation', false));
+        }
     }
 
     public function test_unknown_product_is_not_found(): void
