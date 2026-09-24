@@ -20,7 +20,11 @@ use KMJ\MainPlatform\Organizations\Models\Organization;
 use KMJ\MainPlatform\Organizations\Services\OrganizationCapabilityContext;
 use KMJ\MainPlatform\Organizations\Services\OrganizationDirectory;
 
-Route::get('/', fn () => Inertia::render('welcome'))->name('home');
+Route::get('/', function (PublicProductCatalog $products) {
+    return Inertia::render('welcome', [
+        'products' => $products->all(),
+    ]);
+})->name('home');
 
 Route::get('products', function (PublicProductCatalog $products) {
     return Inertia::render('products/index', [
