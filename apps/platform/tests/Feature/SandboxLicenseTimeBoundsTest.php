@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Services\Licensing\LicenseValidator;
+use App\Services\Licensing\SandboxLicenseContract;
 use App\Services\Licensing\SandboxLicenseIssuer;
 use DateTimeImmutable;
 use InvalidArgumentException;
@@ -27,6 +28,7 @@ final class SandboxLicenseTimeBoundsTest extends TestCase
         $now = time();
         $license = $this->signedLicense([
             'environment' => 'sandbox',
+            'contract_version' => SandboxLicenseContract::CURRENT_VERSION,
             'jti' => 'future-jti',
             'organization_id' => 'org-1',
             'product_id' => 'product-1',
@@ -46,6 +48,7 @@ final class SandboxLicenseTimeBoundsTest extends TestCase
         $now = time();
         $license = $this->signedLicense([
             'environment' => 'sandbox',
+            'contract_version' => SandboxLicenseContract::CURRENT_VERSION,
             'jti' => 'long-lived-jti',
             'organization_id' => 'org-1',
             'product_id' => 'product-1',

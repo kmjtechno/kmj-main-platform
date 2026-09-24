@@ -1,0 +1,15 @@
+{
+  "name": "kmj-sandbox-v1",
+  "secret": "kmj-sandbox-test-secret-32-bytes-minimum!",
+  "license": "eyJlbnZpcm9ubWVudCI6InNhbmRib3giLCJjb250cmFjdF92ZXJzaW9uIjoia21qLnNhbmRib3gudjEiLCJqdGkiOiIxMTExMTExMS0yMjIyLTMzMzMtNDQ0NC01NTU1NTU1NTU1NTUiLCJvcmdhbml6YXRpb25faWQiOiJvcmctMDAxIiwicHJvZHVjdF9pZCI6InByb2R1Y3QtMDAxIiwiZW50aXRsZW1lbnRfaWQiOiJlbnRpdGxlbWVudC0wMDEiLCJpc3N1ZWRfYXQiOjE3ODkwMDAwMDAsImV4cGlyZXNfYXQiOjE3ODkwMDE4MDB9.ov4kY4ONr_W8AxyjkleCJoLNhPOHYBHNvKuZWBEX_SI",
+  "claims": {
+    "environment": "sandbox",
+    "contract_version": "kmj.sandbox.v1",
+    "jti": "11111111-2222-3333-4444-555555555555",
+    "organization_id": "org-001",
+    "product_id": "product-001",
+    "entitlement_id": "entitlement-001",
+    "issued_at": 1789000000,
+    "expires_at": 1789001800
+  }
+}

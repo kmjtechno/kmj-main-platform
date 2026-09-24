@@ -3,6 +3,7 @@
 namespace Tests\Unit;
 
 use App\Services\Licensing\LicenseValidator;
+use App\Services\Licensing\SandboxLicenseContract;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -18,6 +19,7 @@ final class LicenseValidatorIdentityClaimContractTest extends TestCase
         foreach (['jti', 'organization_id', 'product_id', 'entitlement_id'] as $claim) {
             $claims = [
                 'environment' => 'sandbox',
+                'contract_version' => SandboxLicenseContract::CURRENT_VERSION,
                 'jti' => 'license-1',
                 'organization_id' => 'org-1',
                 'product_id' => 'product-1',
@@ -43,6 +45,7 @@ final class LicenseValidatorIdentityClaimContractTest extends TestCase
         foreach (['jti', 'organization_id', 'product_id', 'entitlement_id'] as $claim) {
             $claims = [
                 'environment' => 'sandbox',
+                'contract_version' => SandboxLicenseContract::CURRENT_VERSION,
                 'jti' => 'license-1',
                 'organization_id' => 'org-1',
                 'product_id' => 'product-1',

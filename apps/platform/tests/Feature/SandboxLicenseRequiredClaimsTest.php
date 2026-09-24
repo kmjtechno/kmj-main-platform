@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Services\Licensing\LicenseValidator;
+use App\Services\Licensing\SandboxLicenseContract;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -18,6 +19,7 @@ final class SandboxLicenseRequiredClaimsTest extends TestCase
 
         $license = $this->sign([
             'environment' => 'sandbox',
+            'contract_version' => SandboxLicenseContract::CURRENT_VERSION,
             'jti' => 'claim-contract-test',
             'product_id' => 'product-1',
             'entitlement_id' => 'entitlement-1',
@@ -39,6 +41,7 @@ final class SandboxLicenseRequiredClaimsTest extends TestCase
 
         $license = $this->sign([
             'environment' => 'sandbox',
+            'contract_version' => SandboxLicenseContract::CURRENT_VERSION,
             'jti' => 'claim-time-order-test',
             'organization_id' => 'organization-1',
             'product_id' => 'product-1',

@@ -30,6 +30,10 @@ final class SandboxLicenseValidationEngine
 
             $claims = $rustResult['claims'];
 
+            if (! is_array($claims) || ! SandboxLicenseContract::supports($claims['contract_version'] ?? null)) {
+                return $this->invalid('unsupported_contract_version');
+            }
+
             if ($this->claimsComplete($claims) === false) {
                 return $this->invalid('missing_claims');
             }
@@ -118,7 +122,7 @@ final class SandboxLicenseValidationEngine
             return false;
         }
 
-        foreach (['environment', 'jti', 'organization_id', 'product_id', 'entitlement_id', 'issued_at', 'expires_at'] as $claim) {
+        foreach (['environment', 'contract_version', 'jti', 'organization_id', 'product_id', 'entitlement_id', 'issued_at', 'expires_at'] as $claim) {
             if (($phpClaims[$claim] ?? null) !== ($rustClaims[$claim] ?? null)) {
                 return false;
             }

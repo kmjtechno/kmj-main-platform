@@ -64,6 +64,10 @@ final class LicenseValidator
             return $this->invalid('wrong_environment');
         }
 
+        if (! SandboxLicenseContract::supports($claims['contract_version'] ?? null)) {
+            return $this->invalid('unsupported_contract_version');
+        }
+
         $jti = $claims['jti'] ?? null;
         $organizationId = $claims['organization_id'] ?? null;
         $productId = $claims['product_id'] ?? null;
@@ -92,7 +96,7 @@ final class LicenseValidator
             return $this->invalid('non_canonical_identity');
         }
 
-        $now = time();
+        $now = now()->getTimestamp();
 
         if ($issuedAt > $now + SandboxLicensePolicy::MAX_FUTURE_ISSUED_AT_SKEW_SECONDS) {
             return $this->invalid('issued_in_future', $claims);

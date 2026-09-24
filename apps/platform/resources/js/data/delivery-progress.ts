@@ -245,13 +245,6 @@ export const deliveryMilestones: DeliveryMilestone[] = [
         evidence: 'PR #149 worker patch safeguards under CI',
     },
     {
-        id: 'product-evidence-trust',
-        title: 'Product evidence and trust boundaries',
-        state: 'active',
-        detail: 'Public product details expose repository-backed lifecycle, purchase, licensing and demo boundaries without fabricated rankings, benchmarks or certification claims',
-        evidence: 'PR #191 exact-head verification in progress',
-    },
-    {
         id: 'revenue-working-phase',
         title: 'Revenue working phase',
         state: 'verified',
@@ -273,6 +266,14 @@ export const deliveryMilestones: DeliveryMilestone[] = [
         detail: 'Backup freshness + worker/AI posture + authenticated smoke; the staging control panel now has a tested shared-VPS publisher for worker, runner, task, PR/CI and deployment evidence, refreshed by the five-minute watchdog and worker lifecycle; the native Main Platform staging-home cutover away from the legacy mirror is tracked under CI without changing milestone state',
         evidence:
             'PR #132 + deploy 34912567459 + authenticated smoke 34912692783 + PR #148 control panel + PR #154 live-evidence publisher under CI + PR #159 Purchase Center authenticated smoke under CI + PR #164 stale delivery evidence preservation under CI + PR #170 native staging-home cutover + PR #179 post-worker delivery finalizer + finalizer run 35210616307 + authenticated smoke run 35210726834',
+    },
+    {
+        id: 'sandbox-v1-product-contract',
+        title: 'Sandbox v1 product contract',
+        state: 'active',
+        detail: 'Product-specific capability profiles, fail-closed purchase boundaries, and the shared versioned PHP/Rust kmj.sandbox.v1 contract are implemented on PR #190 and await exact-head Foundation acceptance before merge',
+        evidence:
+            'PR #190 Platform Runtime CI #352 PASS; Verify Foundation exact-head re-verification required',
     },
     {
         id: 'production-hardening',
