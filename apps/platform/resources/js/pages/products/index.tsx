@@ -34,7 +34,7 @@ export default function ProductsIndex({ products }: { products: Product[] }) {
             <Head title="Products — KMJ TECHNO">
                 <meta
                     name="description"
-                    content="Explore KMJ TECHNO software products through evidence-backed product pages and deterministic virtual demos."
+                    content="Explore the KMJ TECHNO product portfolio with evidence-backed lifecycle, availability and product status."
                 />
             </Head>
 
@@ -83,7 +83,9 @@ export default function ProductsIndex({ products }: { products: Product[] }) {
                         const ProductIcon =
                             product.demo.kind === 'cloudos'
                                 ? ServerCog
-                                : FlaskConical;
+                                : product.demo.kind === 'calibration'
+                                  ? FlaskConical
+                                  : ShieldCheck;
 
                         return (
                             <article
@@ -143,15 +145,26 @@ export default function ProductsIndex({ products }: { products: Product[] }) {
 
                                 <div className="mt-auto border-t border-white/[0.07] bg-black/20 p-6">
                                     <div className="mb-4 flex items-center gap-2 text-xs text-white/42">
-                                        <CheckCircle2 className="h-4 w-4 text-emerald-300/70" />
-                                        Interactive simulation only
+                                        {product.demo.simulation ? (
+                                            <>
+                                                <CheckCircle2 className="h-4 w-4 text-emerald-300/70" />
+                                                Interactive simulation only
+                                            </>
+                                        ) : (
+                                            <>
+                                                <ShieldCheck className="h-4 w-4 text-amber-200/70" />
+                                                {product.demo.label}
+                                            </>
+                                        )}
                                     </div>
                                     <div className="flex flex-col gap-3 sm:flex-row">
                                         <Link
                                             href={'/products/' + product.slug}
                                             className="inline-flex h-11 flex-1 items-center justify-center gap-2 rounded-xl bg-[#e21b23] px-5 text-sm font-bold transition hover:bg-[#f1252e]"
                                         >
-                                            Open virtual demo
+                                            {product.demo.simulation
+                                                ? 'Open virtual demo'
+                                                : 'View product status'}
                                             <ArrowRight className="h-4 w-4" />
                                         </Link>
                                         {product.purchase_enabled && (
