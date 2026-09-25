@@ -36,22 +36,33 @@ phases:
         status: done
   - id: P2
     name: Enterprise Core
-    status: pending
+    status: done
+    evidence:
+      - tenant isolation and capability authorization focused suite: 30 tests / 257 assertions PASS on main 334022917ff35f06628aa2815ea87ea56158d6ec
+      - issue #177 completed
   - id: P3
     name: Commerce and Licensing
-    status: pending
+    status: active
+    note: Provider-neutral order, entitlement and sandbox licensing authority is implemented. External payment-gateway API configuration is explicitly deferred by owner decision.
   - id: P4
     name: Kristi Operations
-    status: pending
+    status: active
+    note: Guarded worker, verification lanes and verified-free routing foundations are implemented; broader governed operations remain active work.
   - id: P5
     name: Public Experience
-    status: pending
+    status: active
+    note: Production corporate/product experience is live at kmjtechno.com with eight truthful roadmap products; broader docs, trust, multilingual and content surfaces remain active work.
   - id: P6
     name: Product Integration
-    status: pending
+    status: active
+    evidence:
+      - KMJ CloudOS Main Platform sandbox-v1 verifier adapter merged as kmj-cloudos PR #4
+      - KMJ Calibration Pro fail-closed preview adapter merged as kmj-calibration-pro PR #9
+    note: Additional product integrations remain evidence-gated.
   - id: P7
     name: Migration and Cutover
-    status: pending
+    status: active
+    note: kmjtechno.com is running the new Main Platform in production with HTTPS, exact-SHA release pointers, queue worker and rollback release; post-cutover hardening and content migration remain active.
 
 first_vertical_slice:
   - organization
