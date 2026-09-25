@@ -1,22 +1,13 @@
 import { Link } from '@inertiajs/react';
 import { ArrowUpRight } from 'lucide-react';
+import LockedBrand from '@/components/locked-brand';
 
 export default function PublicSiteFooter() {
     return (
         <footer className="border-t border-white/[0.07] bg-[#05070a]">
             <div className="mx-auto grid max-w-[1440px] gap-12 px-5 py-14 sm:px-8 md:grid-cols-[1.3fr_.7fr_.7fr] lg:px-12">
                 <div>
-                    <div className="flex items-center gap-4">
-                        <span className="h-8 w-[3px] rounded-full bg-[#ef2430]" />
-                        <div>
-                            <div className="text-[14px] font-black tracking-[0.19em] text-white">
-                                KMJ TECHNO
-                            </div>
-                            <div className="mt-1 text-[10px] font-semibold tracking-[0.22em] text-white/30 uppercase">
-                                Build beyond ordinary
-                            </div>
-                        </div>
-                    </div>
+                    <LockedBrand />
                     <p className="mt-5 max-w-md text-sm leading-7 text-white/38">
                         Software, cloud systems and intelligent products
                         designed around clear product boundaries, governed
