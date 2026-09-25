@@ -40,6 +40,14 @@ export const deliveryMilestones: DeliveryMilestone[] = [
         evidence: 'PR #201 exact-head verification in progress',
     },
     {
+        id: 'public-locale-foundation',
+        title: 'Public English/Hindi locale foundation',
+        state: 'active',
+        detail: 'Validated en/hi locale selection, persisted public preference and shared Inertia language-switch state are implemented without claiming full catalog translation',
+        evidence:
+            'Stacked branch feat/public-locale-foundation pending exact-head CI after PR #201',
+    },
+    {
         id: 'registration-onboarding',
         title: 'Registration onboarding',
         state: 'verified',
@@ -247,9 +255,10 @@ export const deliveryMilestones: DeliveryMilestone[] = [
     {
         id: 'verified-free-ai-route',
         title: 'Verified-free AI route',
-        state: 'active',
-        detail: 'Free-cloud task completed through PR #140; bounded file context, scoped patches, corrective patch-validation reprompting, retryable model-output rejection, generated-diff apply preflight, deterministic changed-file formatting and verified-path-only commit staging are enabled. GitHub bot CI approval remains required',
-        evidence: 'PR #149 worker patch safeguards under CI',
+        state: 'verified',
+        detail: 'Free-cloud task completion and worker patch safeguards are verified with bounded file context, scoped patches, corrective patch-validation reprompting, retryable model-output rejection, generated-diff apply preflight, deterministic changed-file formatting and verified-path-only commit staging',
+        evidence:
+            'PR #140 + Verify Foundation run 34918844470 success; PR #149 + Verify Foundation run 35064856704 success + Platform Runtime CI run 35064856695 success',
     },
     {
         id: 'revenue-working-phase',
