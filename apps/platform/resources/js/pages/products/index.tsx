@@ -6,6 +6,7 @@ import {
     ServerCog,
     ShieldCheck,
 } from 'lucide-react';
+import PublicLanguageSwitch from '@/components/public-language-switch';
 
 type Product = {
     slug: string;
@@ -55,6 +56,7 @@ export default function ProductsIndex({ products }: { products: Product[] }) {
                             >
                                 Trust
                             </Link>
+                            <PublicLanguageSwitch className="font-semibold transition hover:text-white" />
                             <Link
                                 href="/"
                                 className="rounded-lg border border-white/10 px-4 py-2 font-semibold text-white/80 transition hover:border-white/20 hover:text-white"

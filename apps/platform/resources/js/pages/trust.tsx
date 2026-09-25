@@ -1,5 +1,6 @@
 import { Head, Link } from '@inertiajs/react';
 import { ArrowLeft, CheckCircle2, KeyRound, ShieldCheck } from 'lucide-react';
+import PublicLanguageSwitch from '@/components/public-language-switch';
 
 const trustPrinciples = [
     {
@@ -46,13 +47,16 @@ export default function Trust() {
                         >
                             KMJ TECHNO
                         </Link>
-                        <Link
-                            href="/products"
-                            className="inline-flex items-center gap-2 text-sm font-semibold text-white/55 transition hover:text-white"
-                        >
-                            <ArrowLeft className="h-4 w-4" />
-                            Products
-                        </Link>
+                        <div className="flex items-center gap-4">
+                            <PublicLanguageSwitch className="text-sm font-semibold text-white/55 transition hover:text-white" />
+                            <Link
+                                href="/products"
+                                className="inline-flex items-center gap-2 text-sm font-semibold text-white/55 transition hover:text-white"
+                            >
+                                <ArrowLeft className="h-4 w-4" />
+                                Products
+                            </Link>
+                        </div>
                     </div>
                 </header>
 

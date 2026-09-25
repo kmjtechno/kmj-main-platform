@@ -38,10 +38,22 @@ class HandleInertiaRequests extends Middleware
     public function share(Request $request): array
     {
         $user = $request->user();
+        $locale = app()->getLocale();
+        $switchLocale = $locale === 'hi' ? 'en' : 'hi';
+        $switchQuery = $request->query();
+        $switchQuery['lang'] = $switchLocale;
+        $switchUrl = $request->getPathInfo().'?'.http_build_query($switchQuery);
 
         return [
             ...parent::share($request),
             'name' => config('app.name'),
+            'localization' => [
+                'locale' => $locale,
+                'supported' => ['en', 'hi'],
+                'switch_locale' => $switchLocale,
+                'switch_label' => $switchLocale === 'hi' ? 'हिंदी' : 'English',
+                'switch_url' => $switchUrl,
+            ],
             'auth' => [
                 'user' => $user,
             ],

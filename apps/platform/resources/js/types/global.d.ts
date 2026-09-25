@@ -10,6 +10,13 @@ declare module '@inertiajs/core' {
     export interface InertiaConfig {
         sharedPageProps: {
             name: string;
+            localization: {
+                locale: 'en' | 'hi';
+                supported: Array<'en' | 'hi'>;
+                switch_locale: 'en' | 'hi';
+                switch_label: string;
+                switch_url: string;
+            };
             auth: Auth;
             sidebarOpen: boolean;
             [key: string]: unknown;

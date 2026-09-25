@@ -1,5 +1,6 @@
 import { Head, Link } from '@inertiajs/react';
 import { ArrowLeft, CheckCircle2, Code2, ShieldCheck } from 'lucide-react';
+import PublicLanguageSwitch from '@/components/public-language-switch';
 import CalibrationDemo from '@/components/products/calibration-demo';
 import CloudOSDemo from '@/components/products/cloudos-demo';
 
@@ -57,6 +58,7 @@ export default function ProductShow({ product }: { product: Product }) {
                             KMJ TECHNO
                         </Link>
                         <div className="flex items-center gap-4">
+                            <PublicLanguageSwitch className="text-sm font-semibold text-white/55 transition hover:text-white" />
                             <Link
                                 href="/trust"
                                 className="hidden text-sm font-semibold text-white/55 transition hover:text-white sm:inline"

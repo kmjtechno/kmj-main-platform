@@ -9,6 +9,7 @@ import {
     ShieldCheck,
     Sparkles,
 } from 'lucide-react';
+import PublicLanguageSwitch from '@/components/public-language-switch';
 import { dashboard, login, register } from '@/routes';
 
 type Product = {
@@ -103,6 +104,7 @@ export default function Welcome({ products }: { products: Product[] }) {
                             >
                                 Trust
                             </Link>
+                            <PublicLanguageSwitch className="hidden h-10 items-center px-3 text-sm font-medium text-white/65 transition hover:text-white sm:inline-flex" />
                             {auth.user ? (
                                 <Link
                                     href={dashboard()}
