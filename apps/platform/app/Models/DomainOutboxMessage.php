@@ -6,6 +6,8 @@ use Illuminate\Database\Eloquent\Model;
 
 final class DomainOutboxMessage extends Model
 {
+    protected $table = 'outbox_messages';
+
     public $incrementing = false;
 
     protected $keyType = 'string';
