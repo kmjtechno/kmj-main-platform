@@ -10,6 +10,9 @@ declare module '@inertiajs/core' {
     export interface InertiaConfig {
         sharedPageProps: {
             name: string;
+            publicSite: {
+                base_url: string;
+            };
             localization: {
                 locale: 'en' | 'hi';
                 supported: Array<'en' | 'hi'>;
