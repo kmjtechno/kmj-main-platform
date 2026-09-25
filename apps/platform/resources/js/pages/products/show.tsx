@@ -49,7 +49,11 @@ function ProductVisual({ product }: { product: Product }) {
     const steps = product.demo.steps.length
         ? product.demo.steps
         : [
-              { key: 'discover', label: 'Discover', detail: 'Product boundary' },
+              {
+                  key: 'discover',
+                  label: 'Discover',
+                  detail: 'Product boundary',
+              },
               { key: 'govern', label: 'Govern', detail: 'Access authority' },
               { key: 'verify', label: 'Verify', detail: 'Release evidence' },
           ];
@@ -103,7 +107,9 @@ function ProductVisual({ product }: { product: Product }) {
                                 Access
                             </div>
                             <div className="mt-1 text-sm font-black text-white/86">
-                                {product.purchase_enabled ? 'Governed' : 'Closed'}
+                                {product.purchase_enabled
+                                    ? 'Governed'
+                                    : 'Closed'}
                             </div>
                         </div>
                         <div className="rounded-2xl border border-white/[0.07] bg-[#080a0e] p-4">
@@ -209,7 +215,9 @@ export default function ProductShow({ product }: { product: Product }) {
                             >
                                 Products
                                 <span className="text-white/18">/</span>
-                                <span className="text-white/62">{product.name}</span>
+                                <span className="text-white/62">
+                                    {product.name}
+                                </span>
                             </Link>
 
                             <div className="mt-8 flex flex-wrap items-center gap-3">
@@ -270,7 +278,10 @@ export default function ProductShow({ product }: { product: Product }) {
                                     ['Access', 'Entitlement governed'],
                                     ['Safety', 'Production isolated'],
                                 ].map(([label, value]) => (
-                                    <div key={label} className="bg-[#080b0f] px-5 py-4">
+                                    <div
+                                        key={label}
+                                        className="bg-[#080b0f] px-5 py-4"
+                                    >
                                         <div className="text-[9px] font-black tracking-[0.16em] text-white/25 uppercase">
                                             {label}
                                         </div>
@@ -294,10 +305,15 @@ export default function ProductShow({ product }: { product: Product }) {
                                         Product foundation
                                     </div>
                                     <h2 className="mt-4 text-3xl font-black tracking-[-0.045em] sm:text-4xl">
-                                        Built around verifiable authority, not marketing shortcuts.
+                                        Built around verifiable authority, not
+                                        marketing shortcuts.
                                     </h2>
                                     <p className="mt-5 text-sm leading-7 text-white/42">
-                                        The public experience stays aligned with product lifecycle, access authority and release evidence. Internal engineering controls remain outside the customer surface.
+                                        The public experience stays aligned with
+                                        product lifecycle, access authority and
+                                        release evidence. Internal engineering
+                                        controls remain outside the customer
+                                        surface.
                                     </p>
                                 </div>
 
@@ -325,7 +341,10 @@ export default function ProductShow({ product }: { product: Product }) {
                                                     {item.detail}
                                                 </p>
                                                 <div className="mt-6 text-[9px] font-black tracking-[0.15em] text-white/24 uppercase">
-                                                    {item.state.replaceAll('-', ' ')}
+                                                    {item.state.replaceAll(
+                                                        '-',
+                                                        ' ',
+                                                    )}
                                                 </div>
                                             </article>
                                         );
@@ -347,7 +366,11 @@ export default function ProductShow({ product }: { product: Product }) {
                                             Understand the workflow by using it.
                                         </h2>
                                         <p className="mt-5 max-w-lg text-sm leading-7 text-white/42">
-                                            This deterministic browser simulation explains the product flow without controlling production infrastructure or claiming unverified physical capability.
+                                            This deterministic browser
+                                            simulation explains the product flow
+                                            without controlling production
+                                            infrastructure or claiming
+                                            unverified physical capability.
                                         </p>
                                         <div className="mt-7 rounded-2xl border border-white/[0.08] bg-white/[0.025] p-5">
                                             <div className="text-[9px] font-black tracking-[0.15em] text-white/25 uppercase">
@@ -373,10 +396,14 @@ export default function ProductShow({ product }: { product: Product }) {
                                         Product lifecycle
                                     </div>
                                     <h2 className="mt-4 text-3xl font-black tracking-[-0.04em] sm:text-4xl">
-                                        Public demo stays closed until real evidence is ready.
+                                        Public demo stays closed until real
+                                        evidence is ready.
                                     </h2>
                                     <p className="mt-5 text-sm leading-7 text-white/40">
-                                        KMJ TECHNO publishes customer-facing screenshots, downloads and performance claims only after the corresponding product gates are verified.
+                                        KMJ TECHNO publishes customer-facing
+                                        screenshots, downloads and performance
+                                        claims only after the corresponding
+                                        product gates are verified.
                                     </p>
                                 </div>
                             </div>
@@ -390,7 +417,8 @@ export default function ProductShow({ product }: { product: Product }) {
                                     KMJ TECHNO
                                 </div>
                                 <h2 className="mt-3 text-3xl font-black tracking-[-0.04em] sm:text-4xl">
-                                    One product ecosystem. Clear authority at every layer.
+                                    One product ecosystem. Clear authority at
+                                    every layer.
                                 </h2>
                             </div>
                             <div className="flex flex-col gap-3 sm:flex-row">
