@@ -2,11 +2,48 @@ import os
 import unittest
 from unittest.mock import AsyncMock, patch
 
-from controller.model_router import FreeCloudRouter, NoFreeRouteAvailable
+from controller.model_router import (
+    FreeCloudRouter,
+    NoFreeRouteAvailable,
+    ProviderEndpoint,
+)
 from controller.opencode_free import OpenCodeUnavailable
 
 
 class RouterOfficialClientTests(unittest.IsolatedAsyncioTestCase):
+    async def test_local_aggregator_headers_follow_data_classification(self):
+        router = FreeCloudRouter()
+        local = ProviderEndpoint(
+            name="9router",
+            base_url="http://127.0.0.1:18765/v1",
+        )
+        direct = ProviderEndpoint(
+            name="groq",
+            base_url="https://api.groq.com/openai/v1",
+            api_key="test",
+        )
+        self.assertEqual(
+            router._provider_headers(local, "public")["X-KMJ-Sensitivity"],
+            "public",
+        )
+        self.assertEqual(
+            router._provider_headers(local, "confidential")[
+                "X-KMJ-Sensitivity"
+            ],
+            "confidential",
+        )
+        self.assertNotIn(
+            "X-KMJ-Sensitivity",
+            router._provider_headers(direct, "public"),
+        )
+
+    async def test_invalid_classification_fails_closed_to_confidential(self):
+        router = FreeCloudRouter()
+        self.assertEqual(
+            router._normalize_classification("unexpected"),
+            "confidential",
+        )
+
     async def test_empty_http_catalog_uses_official_client_result(self):
         router = FreeCloudRouter()
         router.discover = AsyncMock(return_value=[])
