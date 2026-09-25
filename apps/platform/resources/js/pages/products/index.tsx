@@ -1,4 +1,5 @@
 import { Head, Link } from '@inertiajs/react';
+import { lockedKmjLogoDataUri } from '@/brand/locked-kmj-logo';
 import {
     ArrowRight,
     CheckCircle2,
@@ -43,9 +44,14 @@ export default function ProductsIndex({ products }: { products: Product[] }) {
                     <div className="mx-auto flex h-20 max-w-7xl items-center justify-between px-5 sm:px-8 lg:px-10">
                         <Link
                             href="/"
-                            className="text-sm font-black tracking-[0.16em]"
+                            aria-label="KMJ TECHNO home"
+                            className="flex items-center"
                         >
-                            KMJ TECHNO
+                            <img
+                                src={lockedKmjLogoDataUri}
+                                alt="KMJ TECHNO — Innovate | Build | Scale"
+                                className="h-14 w-auto rounded-md object-contain"
+                            />
                         </Link>
                         <div className="flex items-center gap-4 text-sm text-white/55">
                             <span className="hidden sm:inline">Products</span>
