@@ -3,13 +3,16 @@
 namespace KMJ\MainPlatform\Commerce\Services;
 
 use DomainException;
-use InvalidArgumentException;
 use Illuminate\Support\Facades\DB;
+use InvalidArgumentException;
+use KMJ\MainPlatform\Commerce\Contracts\DomainEventRecorder;
 use KMJ\MainPlatform\Commerce\Models\CommercialLedgerEntry;
 use KMJ\MainPlatform\Commerce\Models\CommercialOrder;
 
 final class CommercialOrderService
 {
+    public function __construct(private readonly DomainEventRecorder $events) {}
+
     public function request(
         string $organizationId,
         string $productId,
@@ -167,7 +170,7 @@ final class CommercialOrderService
     /** @param array<string, mixed> $payload */
     private function record(CommercialOrder $order, ?int $actorUserId, string $eventType, array $payload): void
     {
-        CommercialLedgerEntry::query()->create([
+        $ledger = CommercialLedgerEntry::query()->create([
             'order_id' => $order->getKey(),
             'organization_id' => $order->organization_id,
             'actor_user_id' => $actorUserId,
@@ -175,5 +178,19 @@ final class CommercialOrderService
             'payload' => $payload,
             'occurred_at' => now(),
         ]);
+
+        $this->events->recordDomainEvent(
+            eventType: $eventType,
+            aggregateType: 'commercial_order',
+            aggregateId: (string) $order->getKey(),
+            organizationId: (string) $order->organization_id,
+            payload: [
+                'ledger_sequence' => (int) $ledger->getKey(),
+                'actor_user_id' => $actorUserId,
+                'facts' => $payload,
+            ],
+            idempotencyKey: 'commerce-ledger:'.$ledger->getKey(),
+            occurredAt: $ledger->occurred_at,
+        );
     }
 }
