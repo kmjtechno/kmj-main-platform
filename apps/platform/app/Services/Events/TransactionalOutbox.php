@@ -44,12 +44,15 @@ final class TransactionalOutbox
             ],
         );
 
+        $existingPayload = $message->getAttribute('payload');
+
         if (
-            $message->event_type !== $eventType
-            || $message->aggregate_type !== $aggregateType
-            || $message->aggregate_id !== $aggregateId
-            || $message->organization_id !== $organizationId
-            || $message->payload !== $payload
+            $message->getAttribute('event_type') !== $eventType
+            || $message->getAttribute('aggregate_type') !== $aggregateType
+            || $message->getAttribute('aggregate_id') !== $aggregateId
+            || $message->getAttribute('organization_id') !== $organizationId
+            || ! is_array($existingPayload)
+            || $existingPayload !== $payload
         ) {
             throw new DomainException('Outbox idempotency key was already used for a different event.');
         }
