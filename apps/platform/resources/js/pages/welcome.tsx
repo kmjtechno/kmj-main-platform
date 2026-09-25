@@ -147,9 +147,10 @@ export default function Welcome({ products }: { products: Product[] }) {
                                         experience.
                                     </h2>
                                     <p className="mt-4 max-w-2xl text-sm leading-7 text-white/45 sm:text-base">
-                                        Discover products spanning cloud operations,
-                                        immersive systems, autonomous engineering
-                                        and secure access. Every product shows its
+                                        Discover products spanning cloud
+                                        operations, immersive systems,
+                                        autonomous engineering and secure
+                                        access. Every product shows its
                                         lifecycle and access state clearly.
                                     </p>
                                 </div>
@@ -261,7 +262,8 @@ export default function Welcome({ products }: { products: Product[] }) {
                                 Unified platform
                             </div>
                             <h2 className="mt-4 text-3xl font-black tracking-[-0.04em] sm:text-4xl">
-                                One identity, governed access, clear product boundaries.
+                                One identity, governed access, clear product
+                                boundaries.
                             </h2>
                             <p className="mt-4 text-sm leading-7 text-white/45 sm:text-base">
                                 KMJ Main Platform unifies customer accounts,
