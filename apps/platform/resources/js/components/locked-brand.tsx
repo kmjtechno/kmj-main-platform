@@ -28,7 +28,7 @@ export default function LockedBrand({
             <span className="min-w-0 leading-none">
                 <span
                     className={
-                        'block whitespace-nowrap font-black tracking-[0.08em] ' +
+                        'block font-black tracking-[0.08em] whitespace-nowrap ' +
                         (compact ? 'text-[13px]' : 'text-base')
                     }
                 >
@@ -37,7 +37,7 @@ export default function LockedBrand({
                 </span>
                 <span
                     className={
-                        'mt-1 block whitespace-nowrap font-semibold tracking-[0.18em] text-white/38 uppercase ' +
+                        'mt-1 block font-semibold tracking-[0.18em] whitespace-nowrap text-white/38 uppercase ' +
                         (compact ? 'text-[7px]' : 'text-[8px]')
                     }
                 >
