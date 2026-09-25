@@ -21,6 +21,18 @@ export default function PublicSiteFooter() {
                     </div>
                     <div className="mt-4 grid gap-3">
                         <Link
+                            href="/company"
+                            className="text-sm font-semibold text-white/62 transition hover:text-white"
+                        >
+                            Company
+                        </Link>
+                        <Link
+                            href="/capabilities"
+                            className="text-sm font-semibold text-white/62 transition hover:text-white"
+                        >
+                            Capabilities
+                        </Link>
+                        <Link
                             href="/products"
                             className="text-sm font-semibold text-white/62 transition hover:text-white"
                         >
@@ -31,12 +43,6 @@ export default function PublicSiteFooter() {
                             className="text-sm font-semibold text-white/62 transition hover:text-white"
                         >
                             Trust center
-                        </Link>
-                        <Link
-                            href="/"
-                            className="text-sm font-semibold text-white/62 transition hover:text-white"
-                        >
-                            Company platform
                         </Link>
                     </div>
                 </div>
