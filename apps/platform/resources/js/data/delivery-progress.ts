@@ -33,6 +33,13 @@ export const deliveryMilestones: DeliveryMilestone[] = [
             'PR #71 + rendered UI check + PR #187 public product surface + PR #199 expanded roadmap portfolio under CI',
     },
     {
+        id: 'public-trust-center',
+        title: 'Public trust center',
+        state: 'active',
+        detail: 'Evidence-backed public Trust Center with governed access, licensing, security-boundary and authentic product-evidence policy is implemented on PR #201 and awaiting exact-head CI acceptance',
+        evidence: 'PR #201 exact-head verification in progress',
+    },
+    {
         id: 'registration-onboarding',
         title: 'Registration onboarding',
         state: 'verified',
