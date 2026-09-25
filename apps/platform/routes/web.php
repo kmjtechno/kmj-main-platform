@@ -46,6 +46,8 @@ Route::get('company', fn () => Inertia::render('company'))->name('company');
 Route::get('capabilities', fn () => Inertia::render('capabilities'))->name('capabilities');
 
 Route::get('sitemap.xml', function (PublicProductCatalog $products) {
+    abort_unless((bool) config('app.public_indexing', false), 404);
+
     $origin = rtrim((string) config('app.url'), '/');
     $paths = [
         '/',
