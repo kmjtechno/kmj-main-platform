@@ -28,9 +28,9 @@ export const deliveryMilestones: DeliveryMilestone[] = [
         id: 'frontend-live-sync',
         title: 'Frontend live sync',
         state: 'verified',
-        detail: 'Rendered public platform + deterministic build + calibration-first product preview',
+        detail: 'Rendered public platform + deterministic build + evidence-backed multi-product portfolio',
         evidence:
-            'PR #71 + rendered UI check + PR #187 calibration-first public product surface under CI',
+            'PR #71 + rendered UI check + PR #187 public product surface + PR #199 expanded roadmap portfolio under CI',
     },
     {
         id: 'registration-onboarding',

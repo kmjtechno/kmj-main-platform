@@ -27,6 +27,18 @@ final class KmjProductCatalog
 
     public const CLOUD_NEXUS_NAME = 'KMJ Cloud Nexus';
 
+    public const AGENT_SLUG = 'kmj-agent';
+
+    public const AGENT_NAME = 'KMJ Agent';
+
+    public const CREATIVE_STUDIO_SLUG = 'kmj-creative-studio';
+
+    public const CREATIVE_STUDIO_NAME = 'KMJ Creative Studio';
+
+    public const CINEMA_PLATFORM_SLUG = 'kmj-cinema-platform';
+
+    public const CINEMA_PLATFORM_NAME = 'KMJ Cinema Platform';
+
     public function __construct(
         private readonly CloudOSProductCatalog $cloudOS,
         private readonly ProductCatalog $products,
@@ -45,6 +57,9 @@ final class KmjProductCatalog
                 self::FORGE_SLUG => self::FORGE_NAME,
                 self::CONNECT_SLUG => self::CONNECT_NAME,
                 self::CLOUD_NEXUS_SLUG => self::CLOUD_NEXUS_NAME,
+                self::AGENT_SLUG => self::AGENT_NAME,
+                self::CREATIVE_STUDIO_SLUG => self::CREATIVE_STUDIO_NAME,
+                self::CINEMA_PLATFORM_SLUG => self::CINEMA_PLATFORM_NAME,
             ];
 
             $synced = [];

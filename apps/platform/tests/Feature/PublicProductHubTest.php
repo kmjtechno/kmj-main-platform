@@ -24,7 +24,7 @@ final class PublicProductHubTest extends TestCase
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->component('welcome')
-                ->has('products', 5)
+                ->has('products', 8)
                 ->where('products.0.slug', 'kmj-cloudos')
                 ->where('products.0.purchase_enabled', true)
                 ->where('products.1.slug', 'kmj-calibration-pro')
@@ -37,7 +37,16 @@ final class PublicProductHubTest extends TestCase
                 ->where('products.3.purchase_enabled', false)
                 ->where('products.4.slug', 'kmj-cloud-nexus')
                 ->where('products.4.lifecycle', 'development')
-                ->where('products.4.purchase_enabled', false));
+                ->where('products.4.purchase_enabled', false)
+                ->where('products.5.slug', 'kmj-agent')
+                ->where('products.5.lifecycle', 'development')
+                ->where('products.5.purchase_enabled', false)
+                ->where('products.6.slug', 'kmj-creative-studio')
+                ->where('products.6.lifecycle', 'roadmap')
+                ->where('products.6.purchase_enabled', false)
+                ->where('products.7.slug', 'kmj-cinema-platform')
+                ->where('products.7.lifecycle', 'development')
+                ->where('products.7.purchase_enabled', false));
     }
 
     public function test_products_hub_exposes_truthful_lifecycle_for_all_roadmap_products(): void
@@ -46,7 +55,7 @@ final class PublicProductHubTest extends TestCase
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->component('products/index')
-                ->has('products', 5)
+                ->has('products', 8)
                 ->where('products.0.slug', 'kmj-cloudos')
                 ->where('products.0.lifecycle', 'active')
                 ->where('products.0.demo.kind', 'cloudos')
@@ -66,7 +75,19 @@ final class PublicProductHubTest extends TestCase
                 ->where('products.4.slug', 'kmj-cloud-nexus')
                 ->where('products.4.lifecycle', 'development')
                 ->where('products.4.demo.kind', 'none')
-                ->where('products.4.demo.simulation', false));
+                ->where('products.4.demo.simulation', false)
+                ->where('products.5.slug', 'kmj-agent')
+                ->where('products.5.lifecycle', 'development')
+                ->where('products.5.demo.kind', 'none')
+                ->where('products.5.demo.simulation', false)
+                ->where('products.6.slug', 'kmj-creative-studio')
+                ->where('products.6.lifecycle', 'roadmap')
+                ->where('products.6.demo.kind', 'none')
+                ->where('products.6.demo.simulation', false)
+                ->where('products.7.slug', 'kmj-cinema-platform')
+                ->where('products.7.lifecycle', 'development')
+                ->where('products.7.demo.kind', 'none')
+                ->where('products.7.demo.simulation', false));
     }
 
     public function test_cloudos_detail_exposes_simulation_and_commercial_cta_state(): void
@@ -102,6 +123,9 @@ final class PublicProductHubTest extends TestCase
             'kmj-forge' => 'early-development',
             'kmj-connect' => 'planned',
             'kmj-cloud-nexus' => 'development',
+            'kmj-agent' => 'development',
+            'kmj-creative-studio' => 'roadmap',
+            'kmj-cinema-platform' => 'development',
         ] as $slug => $lifecycle) {
             $this->get('/products/'.$slug)
                 ->assertOk()

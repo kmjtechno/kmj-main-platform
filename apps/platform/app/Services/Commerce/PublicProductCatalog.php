@@ -47,6 +47,9 @@ final class PublicProductCatalog
             KmjProductCatalog::FORGE_SLUG,
             KmjProductCatalog::CONNECT_SLUG,
             KmjProductCatalog::CLOUD_NEXUS_SLUG,
+            KmjProductCatalog::AGENT_SLUG,
+            KmjProductCatalog::CREATIVE_STUDIO_SLUG,
+            KmjProductCatalog::CINEMA_PLATFORM_SLUG,
         ];
     }
 
@@ -65,6 +68,9 @@ final class PublicProductCatalog
             KmjProductCatalog::FORGE_SLUG => $this->forge(),
             KmjProductCatalog::CONNECT_SLUG => $this->connect(),
             KmjProductCatalog::CLOUD_NEXUS_SLUG => $this->cloudNexus(),
+            KmjProductCatalog::AGENT_SLUG => $this->agent(),
+            KmjProductCatalog::CREATIVE_STUDIO_SLUG => $this->creativeStudio(),
+            KmjProductCatalog::CINEMA_PLATFORM_SLUG => $this->cinemaPlatform(),
             default => null,
         };
     }
@@ -280,6 +286,108 @@ final class PublicProductCatalog
                 [
                     'title' => 'Public release not asserted',
                     'detail' => 'No production download or commercial access is published until product-specific release evidence is verified.',
+                    'state' => 'fail-closed',
+                ],
+            ],
+        );
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function agent(): array
+    {
+        return $this->developmentProduct(
+            slug: KmjProductCatalog::AGENT_SLUG,
+            name: KmjProductCatalog::AGENT_NAME,
+            lifecycle: 'development',
+            lifecycleLabel: 'Development',
+            eyebrow: 'Autonomous software engineering agent',
+            headline: 'An autonomous engineering agent for inspecting, changing, testing and verifying real software projects.',
+            summary: 'KMJ Agent is a separate autonomous software-engineering product under active P1 development. Its repository contains a working desktop/daemon direction, durable task state and verified-free provider routing work.',
+            status: 'Repository state identifies KMJ Agent as IN_PROGRESS in P1. A customer-ready public release and commercial entitlement are not yet verified.',
+            proof: [
+                [
+                    'title' => 'Independent product identity',
+                    'detail' => 'The repository contract defines KMJ Agent as an autonomous software-engineering AI agent rather than an IDE or CLI wrapper.',
+                    'state' => 'repository-verified',
+                ],
+                [
+                    'title' => 'Active implementation',
+                    'detail' => 'Current repository state tracks native desktop, daemon, approvals, diff review and verified-free execution work.',
+                    'state' => 'repository-observed',
+                ],
+                [
+                    'title' => 'Commercial access disabled',
+                    'detail' => 'No public download or paid entitlement is asserted until release evidence is verified.',
+                    'state' => 'fail-closed',
+                ],
+            ],
+        );
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function creativeStudio(): array
+    {
+        return $this->developmentProduct(
+            slug: KmjProductCatalog::CREATIVE_STUDIO_SLUG,
+            name: KmjProductCatalog::CREATIVE_STUDIO_NAME,
+            lifecycle: 'roadmap',
+            lifecycleLabel: 'Roadmap',
+            eyebrow: 'Autonomous creative production studio',
+            headline: 'A roadmap product for turning an idea into a finished creative production through an automated media workflow.',
+            summary: 'KMJ Creative Studio is defined in the product roadmap as a separate autonomous production system for scripted image, video, voice, sound, editing, quality review and export workflows.',
+            status: 'Architecture and product roadmap exist, but a verified customer-ready repository/release is not currently published in the connected KMJ GitHub portfolio.',
+            proof: [
+                [
+                    'title' => 'Roadmap-defined product',
+                    'detail' => 'The KMJ Creative Studio master roadmap defines a separate product under the KMJ TECHNO platform.',
+                    'state' => 'roadmap-verified',
+                ],
+                [
+                    'title' => 'Shared-platform boundary',
+                    'detail' => 'The roadmap keeps Creative Studio separate while reusing shared KMJ account and platform services.',
+                    'state' => 'roadmap-verified',
+                ],
+                [
+                    'title' => 'No synthetic release claim',
+                    'detail' => 'Downloads, benchmarks and production readiness remain unpublished until implementation evidence exists.',
+                    'state' => 'fail-closed',
+                ],
+            ],
+        );
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function cinemaPlatform(): array
+    {
+        return $this->developmentProduct(
+            slug: KmjProductCatalog::CINEMA_PLATFORM_SLUG,
+            name: KmjProductCatalog::CINEMA_PLATFORM_NAME,
+            lifecycle: 'development',
+            lifecycleLabel: 'Active development',
+            eyebrow: 'Professional cinema playback + motion platform',
+            headline: 'A professional cinema platform roadmap covering playback, stereoscopic dual-projector output and synchronized motion workflows.',
+            summary: 'KMJ Cinema Platform is an active product-development stream with a dedicated runtime and visual-verification handoff. Public commercial availability is kept separate from engineering progress.',
+            status: 'Project handoff evidence documents an active Windows cinema-player development stream. A current customer-ready public release is not independently verified here.',
+            proof: [
+                [
+                    'title' => 'Dedicated product architecture',
+                    'detail' => 'The project handoff defines professional playback, stereoscopic dual-projector presentation and Motion Digital Twin boundaries.',
+                    'state' => 'roadmap-verified',
+                ],
+                [
+                    'title' => 'Live-verification discipline',
+                    'detail' => 'The project workflow requires build, live executable launch, screenshot capture and regression verification after meaningful changes.',
+                    'state' => 'roadmap-verified',
+                ],
+                [
+                    'title' => 'Commercial release not asserted',
+                    'detail' => 'No production download or purchase is exposed until a current release is independently accepted.',
                     'state' => 'fail-closed',
                 ],
             ],
