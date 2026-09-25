@@ -41,6 +41,10 @@ Route::get('products/{slug}', function (string $slug, PublicProductCatalog $prod
     ]);
 })->name('products.show');
 
+Route::get('company', fn () => Inertia::render('company'))->name('company');
+
+Route::get('capabilities', fn () => Inertia::render('capabilities'))->name('capabilities');
+
 Route::get('trust', fn () => Inertia::render('trust'))->name('trust');
 
 Route::middleware(['auth', 'verified'])->group(function () {
