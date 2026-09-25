@@ -1,4 +1,4 @@
-import { Head, Link } from '@inertiajs/react';
+import { Link } from '@inertiajs/react';
 import {
     ArrowRight,
     CheckCircle2,
@@ -7,6 +7,7 @@ import {
     ShieldCheck,
 } from 'lucide-react';
 import PublicLanguageSwitch from '@/components/public-language-switch';
+import PublicSeo from '@/components/public-seo';
 
 type Product = {
     slug: string;
@@ -32,12 +33,16 @@ type Product = {
 export default function ProductsIndex({ products }: { products: Product[] }) {
     return (
         <>
-            <Head title="Products — KMJ TECHNO">
-                <meta
-                    name="description"
-                    content="Explore the KMJ TECHNO product portfolio with evidence-backed lifecycle, availability and product status."
-                />
-            </Head>
+            <PublicSeo
+                title="Products — KMJ TECHNO"
+                description="Explore the KMJ TECHNO product portfolio with evidence-backed lifecycle, availability and product status."
+                path="/products"
+                structuredData={{
+                    '@context': 'https://schema.org',
+                    '@type': 'CollectionPage',
+                    name: 'KMJ TECHNO Products',
+                }}
+            />
 
             <main className="min-h-screen bg-[#07090c] text-white">
                 <header className="border-b border-white/[0.07] bg-[#07090c]/95">
