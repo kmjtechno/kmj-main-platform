@@ -26,11 +26,14 @@ final class KmjProductCatalogTest extends TestCase
             KmjProductCatalog::FORGE_SLUG,
             KmjProductCatalog::CONNECT_SLUG,
             KmjProductCatalog::CLOUD_NEXUS_SLUG,
+            KmjProductCatalog::AGENT_SLUG,
+            KmjProductCatalog::CREATIVE_STUDIO_SLUG,
+            KmjProductCatalog::CINEMA_PLATFORM_SLUG,
         ] as $slug) {
             self::assertSame($first[$slug]->getKey(), $second[$slug]->getKey());
         }
 
-        $this->assertDatabaseCount('products', 5);
+        $this->assertDatabaseCount('products', 8);
         $this->assertDatabaseHas('products', [
             'slug' => CloudOSProductCatalog::SLUG,
             'name' => CloudOSProductCatalog::NAME,
@@ -42,6 +45,9 @@ final class KmjProductCatalogTest extends TestCase
             KmjProductCatalog::FORGE_SLUG => KmjProductCatalog::FORGE_NAME,
             KmjProductCatalog::CONNECT_SLUG => KmjProductCatalog::CONNECT_NAME,
             KmjProductCatalog::CLOUD_NEXUS_SLUG => KmjProductCatalog::CLOUD_NEXUS_NAME,
+            KmjProductCatalog::AGENT_SLUG => KmjProductCatalog::AGENT_NAME,
+            KmjProductCatalog::CREATIVE_STUDIO_SLUG => KmjProductCatalog::CREATIVE_STUDIO_NAME,
+            KmjProductCatalog::CINEMA_PLATFORM_SLUG => KmjProductCatalog::CINEMA_PLATFORM_NAME,
         ] as $slug => $name) {
             $this->assertDatabaseHas('products', [
                 'slug' => $slug,
