@@ -20,6 +20,7 @@ final class PublicSitemapTest extends TestCase
     public function test_sitemap_exposes_canonical_public_and_product_urls(): void
     {
         config()->set('app.url', 'https://kmjtechno.example/');
+        config()->set('app.public_indexing', true);
 
         $response = $this->get('/sitemap.xml');
 
