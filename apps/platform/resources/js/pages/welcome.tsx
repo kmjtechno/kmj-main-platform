@@ -291,7 +291,6 @@ export default function Welcome({ products }: { products: Product[] }) {
                             )}
                         </div>
                     </section>
-
                 </main>
                 <PublicSiteFooter />
             </div>
