@@ -70,8 +70,8 @@ export default function Trust() {
                         <p className="mt-6 max-w-3xl text-base leading-8 text-white/52 sm:text-lg">
                             This page explains the public rules KMJ TECHNO uses
                             for product status, commercial access, licensing and
-                            release evidence. It intentionally separates verified
-                            capability from roadmap intent.
+                            release evidence. It intentionally separates
+                            verified capability from roadmap intent.
                         </p>
                     </div>
                 </section>
