@@ -11,7 +11,7 @@ final class LicenseAuditRecorder
     public function __construct(private readonly TransactionalOutbox $outbox) {}
 
     /**
-     * @param array<string, mixed> $metadata
+     * @param  array<string, mixed>  $metadata
      */
     public function record(
         string $action,
