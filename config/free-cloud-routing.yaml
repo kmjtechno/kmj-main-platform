@@ -34,6 +34,11 @@ verified_zero:
     - "qwen"
     - "kiro"
     - "opencode"
+    # The local 9router-compatible gateway exposes these owners only after
+    # its public-sensitivity and live zero-cost gates accept the route.
+    - "kilo"
+    - "llm7"
+    - "ovh"
   # OpenRouter free auto-router is always zero-price; all other direct
   # providers must be explicitly verified as free-tier before use.
   explicit_models:
