@@ -37,6 +37,18 @@ final class PublicSeoFoundationTest extends TestCase
                 ->where('publicSite.indexable', true));
     }
 
+    public function test_private_surfaces_remain_noindex_when_public_indexing_is_enabled(): void
+    {
+        config()->set('app.public_indexing', true);
+
+        $this->get('/login')
+            ->assertOk()
+            ->assertSee(
+                '<meta name="robots" content="noindex,nofollow">',
+                false,
+            );
+    }
+
     public function test_non_indexable_environment_emits_server_rendered_robots_policy(): void
     {
         config()->set('app.public_indexing', false);
