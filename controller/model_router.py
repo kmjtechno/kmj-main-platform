@@ -24,6 +24,7 @@ class ProviderEndpoint:
     base_url: str
     api_key: str = ""
     priority: int = 0
+    allow_confidential: bool = True
 
 
 @dataclass(frozen=True)
@@ -35,6 +36,7 @@ class RouteCandidate:
     provider: str = "9router"
     base_url: str = ""
     api_key: str = ""
+    allow_confidential: bool = True
 
 
 class FreeCloudRouter:
@@ -47,14 +49,22 @@ class FreeCloudRouter:
     """
 
     BUILTIN_PROVIDERS = {
-        "openrouter": ("https://openrouter.ai/api/v1", "OPENROUTER_API_KEY"),
-        "groq": ("https://api.groq.com/openai/v1", "GROQ_API_KEY"),
-        "cerebras": ("https://api.cerebras.ai/v1", "CEREBRAS_API_KEY"),
-        "mistral": ("https://api.mistral.ai/v1", "MISTRAL_API_KEY"),
+        "openrouter": ("https://openrouter.ai/api/v1", "OPENROUTER_API_KEY", True),
+        "groq": ("https://api.groq.com/openai/v1", "GROQ_API_KEY", False),
+        "cerebras": ("https://api.cerebras.ai/v1", "CEREBRAS_API_KEY", False),
+        "mistral": ("https://api.mistral.ai/v1", "MISTRAL_API_KEY", False),
         "gemini": (
             "https://generativelanguage.googleapis.com/v1beta/openai",
             "GEMINI_API_KEY",
+            False,
         ),
+        "nvidia": ("https://integrate.api.nvidia.com/v1", "NVIDIA_API_KEY", False),
+        "zai": ("https://api.z.ai/api/paas/v4", "ZAI_API_KEY", False),
+        "ollama-cloud": ("https://ollama.com/v1", "OLLAMA_API_KEY", False),
+    }
+
+    ANONYMOUS_PUBLIC_PROVIDERS = {
+        "kilo": "https://api.kilo.ai/api/gateway",
     }
 
     def __init__(self) -> None:
@@ -114,10 +124,11 @@ class FreeCloudRouter:
                 base_url=self.base_url,
                 api_key=self.api_key,
                 priority=self._provider_priority("9router"),
+                allow_confidential=True,
             )
         ]
 
-        for name, (base_url, key_env) in self.BUILTIN_PROVIDERS.items():
+        for name, (base_url, key_env, allow_confidential) in self.BUILTIN_PROVIDERS.items():
             key = os.getenv(key_env, "").strip()
             if key:
                 providers.append(
@@ -126,6 +137,18 @@ class FreeCloudRouter:
                         base_url=base_url.rstrip("/"),
                         api_key=key,
                         priority=self._provider_priority(name),
+                        allow_confidential=allow_confidential,
+                    )
+                )
+
+        if os.getenv("KMJ_ENABLE_PUBLIC_FREE_PROVIDERS", "").strip().lower() in {"1", "true", "yes", "on"}:
+            for name, base_url in self.ANONYMOUS_PUBLIC_PROVIDERS.items():
+                providers.append(
+                    ProviderEndpoint(
+                        name=name,
+                        base_url=base_url.rstrip("/"),
+                        priority=self._provider_priority(name),
+                        allow_confidential=False,
                     )
                 )
 
@@ -143,6 +166,7 @@ class FreeCloudRouter:
                     base_url = str(item.get("base_url", "")).strip().rstrip("/")
                     key_env = str(item.get("api_key_env", "")).strip()
                     api_key = os.getenv(key_env, "").strip() if key_env else ""
+                    allow_confidential = bool(item.get("allow_confidential", False))
                     if name and base_url:
                         providers.append(
                             ProviderEndpoint(
@@ -150,6 +174,7 @@ class FreeCloudRouter:
                                 base_url=base_url,
                                 api_key=api_key,
                                 priority=self._provider_priority(name),
+                                allow_confidential=allow_confidential,
                             )
                         )
 
@@ -223,6 +248,7 @@ class FreeCloudRouter:
             enriched["_kmj_base_url"] = provider.base_url
             enriched["_kmj_api_key"] = provider.api_key
             enriched["_kmj_provider_priority"] = provider.priority
+            enriched["_kmj_allow_confidential"] = provider.allow_confidential
             models.append(enriched)
         return models
 
@@ -241,13 +267,21 @@ class FreeCloudRouter:
             models.extend(result)
         return models
 
-    def rank(self, models: list[dict[str, Any]], route: str) -> list[RouteCandidate]:
+    def rank(
+        self,
+        models: list[dict[str, Any]],
+        route: str,
+        data_classification: str = "confidential",
+    ) -> list[RouteCandidate]:
         profile = self.config.get("routes", {}).get(
             route,
             self.config.get("routes", {}).get("coding", {}),
         )
         preferences = [x.lower() for x in profile.get("prefer", [])]
         candidates: list[RouteCandidate] = []
+        classification = (data_classification or "confidential").strip().lower()
+        if classification not in {"public", "confidential"}:
+            classification = "confidential"
 
         for item in models:
             model_id = str(item.get("id", ""))
@@ -255,6 +289,9 @@ class FreeCloudRouter:
             provider = str(item.get("_kmj_provider", "9router"))
             eligible, reason = self._eligible(model_id, owner, provider)
             if not eligible:
+                continue
+            allow_confidential = bool(item.get("_kmj_allow_confidential", True))
+            if classification == "confidential" and not allow_confidential:
                 continue
 
             text = f"{model_id} {owner} {provider}".lower()
@@ -271,6 +308,7 @@ class FreeCloudRouter:
                     provider=provider,
                     base_url=str(item.get("_kmj_base_url", self.base_url)),
                     api_key=str(item.get("_kmj_api_key", self.api_key)),
+                    allow_confidential=allow_confidential,
                 )
             )
 
@@ -283,8 +321,12 @@ class FreeCloudRouter:
             ),
         )
 
-    async def select(self, route: str = "coding") -> RouteCandidate:
-        ranked = self.rank(await self.discover(), route)
+    async def select(
+        self,
+        route: str = "coding",
+        data_classification: str = "confidential",
+    ) -> RouteCandidate:
+        ranked = self.rank(await self.discover(), route, data_classification)
         if not ranked:
             raise NoFreeRouteAvailable("NO_FREE_ROUTE_AVAILABLE")
         return ranked[0]
@@ -294,8 +336,9 @@ class FreeCloudRouter:
         messages: list[dict[str, str]],
         route: str = "coding",
         temperature: float = 0.1,
+        data_classification: str = "confidential",
     ) -> dict[str, Any]:
-        ranked = self.rank(await self.discover(), route)
+        ranked = self.rank(await self.discover(), route, data_classification)
         if not ranked:
             return await self._official_free_client(messages)
 
@@ -401,4 +444,3 @@ class FreeCloudRouter:
             "max_free_failover_models": self.max_failover_models,
             "models": eligible,
         }
-
