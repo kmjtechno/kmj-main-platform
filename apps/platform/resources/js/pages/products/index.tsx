@@ -32,8 +32,12 @@ type Product = {
 };
 
 export default function ProductsIndex({ products }: { products: Product[] }) {
-    const activeCount = products.filter((product) => product.purchase_enabled).length;
-    const demoCount = products.filter((product) => product.demo.simulation).length;
+    const activeCount = products.filter(
+        (product) => product.purchase_enabled,
+    ).length;
+    const demoCount = products.filter(
+        (product) => product.demo.simulation,
+    ).length;
 
     return (
         <>
@@ -70,7 +74,10 @@ export default function ProductsIndex({ products }: { products: Product[] }) {
                                     </span>
                                 </h1>
                                 <p className="mt-7 max-w-3xl text-base leading-8 text-white/48 sm:text-lg">
-                                    Explore the complete KMJ product ecosystem with lifecycle, access and public evidence kept explicit. Engineering progress never masquerades as commercial availability.
+                                    Explore the complete KMJ product ecosystem
+                                    with lifecycle, access and public evidence
+                                    kept explicit. Engineering progress never
+                                    masquerades as commercial availability.
                                 </p>
                             </div>
 
@@ -84,10 +91,14 @@ export default function ProductsIndex({ products }: { products: Product[] }) {
                                         key={label}
                                         className={
                                             'px-4 py-5 text-center ' +
-                                            (index > 0 ? 'border-l border-white/[0.07]' : '')
+                                            (index > 0
+                                                ? 'border-l border-white/[0.07]'
+                                                : '')
                                         }
                                     >
-                                        <div className="text-2xl font-black tracking-[-0.04em]">{value}</div>
+                                        <div className="text-2xl font-black tracking-[-0.04em]">
+                                            {value}
+                                        </div>
                                         <div className="mt-1 text-[9px] font-black tracking-[0.12em] text-white/28 uppercase">
                                             {label}
                                         </div>
@@ -113,17 +124,23 @@ export default function ProductsIndex({ products }: { products: Product[] }) {
                                         key={product.slug}
                                         className={
                                             'group relative flex min-h-[31rem] flex-col overflow-hidden rounded-[2rem] border border-white/[0.09] bg-[#090c10] transition duration-300 hover:-translate-y-1 hover:border-white/[0.16] ' +
-                                            (featured ? 'lg:col-span-2 lg:min-h-[28rem]' : '')
+                                            (featured
+                                                ? 'lg:col-span-2 lg:min-h-[28rem]'
+                                                : '')
                                         }
                                     >
                                         <div className="pointer-events-none absolute inset-0 opacity-0 transition duration-500 group-hover:opacity-100">
                                             <div className="absolute -top-36 right-[-5rem] h-80 w-80 rounded-full bg-[#ef2632]/10 blur-[100px]" />
                                         </div>
 
-                                        <div className={
-                                            'relative flex flex-1 flex-col p-7 sm:p-9 ' +
-                                            (featured ? 'lg:grid lg:grid-cols-[1.05fr_.95fr] lg:gap-14 lg:p-11' : '')
-                                        }>
+                                        <div
+                                            className={
+                                                'relative flex flex-1 flex-col p-7 sm:p-9 ' +
+                                                (featured
+                                                    ? 'lg:grid lg:grid-cols-[1.05fr_.95fr] lg:gap-14 lg:p-11'
+                                                    : '')
+                                            }
+                                        >
                                             <div className="flex flex-col">
                                                 <div className="flex items-start justify-between gap-4">
                                                     <div className="flex items-center gap-4">
@@ -132,28 +149,44 @@ export default function ProductsIndex({ products }: { products: Product[] }) {
                                                         </div>
                                                         <div>
                                                             <div className="text-[9px] font-black tracking-[0.16em] text-white/25 uppercase">
-                                                                Product {String(index + 1).padStart(2, '0')}
+                                                                Product{' '}
+                                                                {String(
+                                                                    index + 1,
+                                                                ).padStart(
+                                                                    2,
+                                                                    '0',
+                                                                )}
                                                             </div>
                                                             <div className="mt-1 text-xs font-bold text-white/45">
-                                                                {product.eyebrow}
+                                                                {
+                                                                    product.eyebrow
+                                                                }
                                                             </div>
                                                         </div>
                                                     </div>
 
-                                                    <span className={
-                                                        'rounded-full border px-3 py-1.5 text-[9px] font-black tracking-[0.1em] uppercase ' +
-                                                        (product.purchase_enabled
-                                                            ? 'border-emerald-300/20 bg-emerald-300/[0.06] text-emerald-200/75'
-                                                            : 'border-white/10 bg-white/[0.03] text-white/38')
-                                                    }>
-                                                        {product.lifecycle_label}
+                                                    <span
+                                                        className={
+                                                            'rounded-full border px-3 py-1.5 text-[9px] font-black tracking-[0.1em] uppercase ' +
+                                                            (product.purchase_enabled
+                                                                ? 'border-emerald-300/20 bg-emerald-300/[0.06] text-emerald-200/75'
+                                                                : 'border-white/10 bg-white/[0.03] text-white/38')
+                                                        }
+                                                    >
+                                                        {
+                                                            product.lifecycle_label
+                                                        }
                                                     </span>
                                                 </div>
 
-                                                <h2 className={
-                                                    'mt-8 font-black tracking-[-0.05em] ' +
-                                                    (featured ? 'text-4xl sm:text-5xl lg:text-6xl' : 'text-3xl sm:text-4xl')
-                                                }>
+                                                <h2
+                                                    className={
+                                                        'mt-8 font-black tracking-[-0.05em] ' +
+                                                        (featured
+                                                            ? 'text-4xl sm:text-5xl lg:text-6xl'
+                                                            : 'text-3xl sm:text-4xl')
+                                                    }
+                                                >
                                                     {product.name}
                                                 </h2>
                                                 <p className="mt-5 max-w-2xl text-base leading-7 font-medium text-white/62">
@@ -165,7 +198,10 @@ export default function ProductsIndex({ products }: { products: Product[] }) {
 
                                                 <div className="mt-auto pt-8">
                                                     <Link
-                                                        href={'/products/' + product.slug}
+                                                        href={
+                                                            '/products/' +
+                                                            product.slug
+                                                        }
                                                         className="inline-flex h-11 items-center gap-2 rounded-xl bg-white px-5 text-sm font-black text-[#07090c] transition hover:bg-white/90"
                                                     >
                                                         Explore product
@@ -174,39 +210,58 @@ export default function ProductsIndex({ products }: { products: Product[] }) {
                                                 </div>
                                             </div>
 
-                                            <div className={
-                                                'mt-8 grid gap-3 border-t border-white/[0.07] pt-7 ' +
-                                                (featured ? 'lg:mt-0 lg:border-t-0 lg:border-l lg:pt-0 lg:pl-10' : '')
-                                            }>
+                                            <div
+                                                className={
+                                                    'mt-8 grid gap-3 border-t border-white/[0.07] pt-7 ' +
+                                                    (featured
+                                                        ? 'lg:mt-0 lg:border-t-0 lg:border-l lg:pt-0 lg:pl-10'
+                                                        : '')
+                                                }
+                                            >
                                                 <div className="text-[9px] font-black tracking-[0.16em] text-white/24 uppercase">
                                                     Evidence-led foundation
                                                 </div>
-                                                {product.proof.slice(0, 3).map((item) => (
-                                                    <div
-                                                        key={item.title}
-                                                        className="rounded-2xl border border-white/[0.065] bg-white/[0.022] p-4"
-                                                    >
-                                                        <div className="flex items-start gap-3">
-                                                            <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-300/55" />
-                                                            <div>
-                                                                <div className="text-sm font-black text-white/78">
-                                                                    {item.title}
+                                                {product.proof
+                                                    .slice(0, 3)
+                                                    .map((item) => (
+                                                        <div
+                                                            key={item.title}
+                                                            className="rounded-2xl border border-white/[0.065] bg-white/[0.022] p-4"
+                                                        >
+                                                            <div className="flex items-start gap-3">
+                                                                <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-300/55" />
+                                                                <div>
+                                                                    <div className="text-sm font-black text-white/78">
+                                                                        {
+                                                                            item.title
+                                                                        }
+                                                                    </div>
+                                                                    <p className="mt-1.5 text-xs leading-5 text-white/32">
+                                                                        {
+                                                                            item.detail
+                                                                        }
+                                                                    </p>
                                                                 </div>
-                                                                <p className="mt-1.5 text-xs leading-5 text-white/32">
-                                                                    {item.detail}
-                                                                </p>
                                                             </div>
                                                         </div>
-                                                    </div>
-                                                ))}
+                                                    ))}
                                                 <div className="mt-1 flex items-center justify-between rounded-xl border border-white/[0.055] bg-black/20 px-4 py-3 text-[10px] font-bold text-white/32">
                                                     <span>
                                                         {product.demo.simulation
                                                             ? 'Interactive simulation available'
-                                                            : product.demo.label}
+                                                            : product.demo
+                                                                  .label}
                                                     </span>
-                                                    <span className={product.purchase_enabled ? 'text-emerald-300/60' : 'text-white/25'}>
-                                                        {product.purchase_enabled ? 'ACCESS OPEN' : 'GATED'}
+                                                    <span
+                                                        className={
+                                                            product.purchase_enabled
+                                                                ? 'text-emerald-300/60'
+                                                                : 'text-white/25'
+                                                        }
+                                                    >
+                                                        {product.purchase_enabled
+                                                            ? 'ACCESS OPEN'
+                                                            : 'GATED'}
                                                     </span>
                                                 </div>
                                             </div>
@@ -224,10 +279,14 @@ export default function ProductsIndex({ products }: { products: Product[] }) {
                                     One commercial authority
                                 </div>
                                 <h2 className="mt-3 text-3xl font-black tracking-[-0.04em] sm:text-4xl">
-                                    Products stay independent. Customer access stays governed.
+                                    Products stay independent. Customer access
+                                    stays governed.
                                 </h2>
                                 <p className="mt-4 max-w-2xl text-sm leading-7 text-white/38">
-                                    KMJ Main Platform provides the shared customer, organization, entitlement and licensing authority while each product keeps its own engineering boundary.
+                                    KMJ Main Platform provides the shared
+                                    customer, organization, entitlement and
+                                    licensing authority while each product keeps
+                                    its own engineering boundary.
                                 </p>
                             </div>
                             <Link
