@@ -1,5 +1,6 @@
 import { Head, Link } from '@inertiajs/react';
 import { ArrowLeft, CheckCircle2, Code2, ShieldCheck } from 'lucide-react';
+import { lockedKmjLogoDataUri } from '@/brand/locked-kmj-logo';
 import CalibrationDemo from '@/components/products/calibration-demo';
 import CloudOSDemo from '@/components/products/cloudos-demo';
 
@@ -52,9 +53,14 @@ export default function ProductShow({ product }: { product: Product }) {
                     <div className="mx-auto flex h-20 max-w-7xl items-center justify-between px-5 sm:px-8 lg:px-10">
                         <Link
                             href="/"
-                            className="text-sm font-black tracking-[0.16em]"
+                            aria-label="KMJ TECHNO home"
+                            className="flex items-center"
                         >
-                            KMJ TECHNO
+                            <img
+                                src={lockedKmjLogoDataUri}
+                                alt="KMJ TECHNO — Innovate | Build | Scale"
+                                className="h-14 w-auto rounded-md object-contain"
+                            />
                         </Link>
                         <Link
                             href="/products"
