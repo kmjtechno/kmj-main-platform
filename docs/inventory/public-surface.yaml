@@ -15,6 +15,18 @@ public_urls:
     access: public
     purpose: Main Platform welcome surface
     source: apps/platform/routes/web.php
+  - path: /products
+    access: public
+    purpose: Evidence-backed KMJ product portfolio
+    source: apps/platform/routes/web.php
+  - path: /products/{slug}
+    access: public
+    purpose: Product lifecycle, demo and commercial-status detail
+    source: apps/platform/routes/web.php
+  - path: /trust
+    access: public
+    purpose: Public trust, governance and product-evidence policy
+    source: apps/platform/routes/web.php
   - path: /login
     access: guest
     purpose: Account sign-in

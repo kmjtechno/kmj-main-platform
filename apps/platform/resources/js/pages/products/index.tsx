@@ -50,6 +50,12 @@ export default function ProductsIndex({ products }: { products: Product[] }) {
                         <div className="flex items-center gap-4 text-sm text-white/55">
                             <span className="hidden sm:inline">Products</span>
                             <Link
+                                href="/trust"
+                                className="hidden font-semibold transition hover:text-white sm:inline"
+                            >
+                                Trust
+                            </Link>
+                            <Link
                                 href="/"
                                 className="rounded-lg border border-white/10 px-4 py-2 font-semibold text-white/80 transition hover:border-white/20 hover:text-white"
                             >

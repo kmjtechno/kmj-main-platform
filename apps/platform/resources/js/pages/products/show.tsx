@@ -56,13 +56,21 @@ export default function ProductShow({ product }: { product: Product }) {
                         >
                             KMJ TECHNO
                         </Link>
-                        <Link
-                            href="/products"
-                            className="inline-flex items-center gap-2 text-sm font-semibold text-white/55 transition hover:text-white"
-                        >
-                            <ArrowLeft className="h-4 w-4" />
-                            All products
-                        </Link>
+                        <div className="flex items-center gap-4">
+                            <Link
+                                href="/trust"
+                                className="hidden text-sm font-semibold text-white/55 transition hover:text-white sm:inline"
+                            >
+                                Trust
+                            </Link>
+                            <Link
+                                href="/products"
+                                className="inline-flex items-center gap-2 text-sm font-semibold text-white/55 transition hover:text-white"
+                            >
+                                <ArrowLeft className="h-4 w-4" />
+                                All products
+                            </Link>
+                        </div>
                     </div>
                 </header>
 

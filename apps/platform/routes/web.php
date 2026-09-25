@@ -41,6 +41,8 @@ Route::get('products/{slug}', function (string $slug, PublicProductCatalog $prod
     ]);
 })->name('products.show');
 
+Route::get('trust', fn () => Inertia::render('trust'))->name('trust');
+
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('dashboard', function (
         Request $request,
