@@ -417,11 +417,17 @@ class FreeCloudRouter:
                         "owned_by": item.get("owned_by"),
                         "provider": provider,
                         "verification": reason,
+                        "allow_confidential": bool(
+                            item.get("_kmj_allow_confidential", True)
+                        ),
                     }
                 )
             else:
                 rejected += 1
 
+        confidential_eligible = [
+            item for item in eligible if item["allow_confidential"]
+        ]
         configured = [provider.name for provider in self.providers()]
         reachable = sorted(
             {
@@ -437,6 +443,8 @@ class FreeCloudRouter:
             "reachable": bool(reachable),
             "discovered": len(models),
             "eligible_verified_zero": len(eligible),
+            "eligible_public_verified_zero": len(eligible),
+            "eligible_confidential_verified_zero": len(confidential_eligible),
             "rejected_unknown_or_paid": rejected,
             "paid_fallback": "PROHIBITED",
             "unknown_cost_is_free": False,

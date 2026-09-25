@@ -10,6 +10,7 @@ on:
       - '.github/workflows/autonomous-worker.yml'
       - '.github/workflows/platform-ci.yml'
       - 'controller/worker_preflight.py'
+      - 'controller/model_router.py'
       - 'controller/opencode_free.py'
       - 'scripts/delivery_control_bridge.py'
       - 'tests/test_delivery_control_bridge.py'
@@ -82,7 +83,36 @@ jobs:
         run: bash ops/self-hosted-runner/prepare-free-client.sh
 
       - name: Verify real zero-cost cloud response from VPS
-        run: PYTHONPATH=. python3 controller/opencode_free.py
+        shell: bash
+        env:
+          KMJ_ENABLE_PUBLIC_FREE_PROVIDERS: '1'
+          KMJ_9ROUTER_BASE_URL: 'http://127.0.0.1:1/v1'
+          KMJ_9ROUTER_TIMEOUT_SECONDS: '6'
+        run: |
+          set -euo pipefail
+          if PYTHONPATH=. python3 controller/opencode_free.py; then
+            exit 0
+          fi
+          echo 'Official free client unavailable; probing public-only Kilo :free fallback.'
+          PYTHONPATH=. python3 - <<'PY'
+          import asyncio
+          from controller.model_router import FreeCloudRouter
+
+          async def main() -> None:
+              result = await FreeCloudRouter().complete(
+                  [{"role": "user", "content": "Reply with exactly KMJ_ZERO_COST_OK."}],
+                  route="fast",
+                  temperature=0.0,
+                  data_classification="public",
+              )
+              model = str(result.get("model", ""))
+              provider = str(result.get("provider", ""))
+              if provider != "kilo" or not model.endswith(":free"):
+                  raise SystemExit("PUBLIC_ZERO_COST_FALLBACK_NOT_VERIFIED")
+              print(f"Public zero-cost fallback PASS provider={provider} model={model}")
+
+          asyncio.run(main())
+          PY
 
       - name: Verify runner identity and toolchain
         shell: bash

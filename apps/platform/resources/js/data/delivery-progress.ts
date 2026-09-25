@@ -266,7 +266,7 @@ export const deliveryMilestones: DeliveryMilestone[] = [
         state: 'verified',
         detail: 'Free-cloud task completion and worker patch safeguards are verified with bounded file context, scoped patches, fail-closed zero-cost routing, public-only anonymous provider isolation, and key-detected provider federation for additional verified-free capacity',
         evidence:
-            'PR #140 + Verify Foundation run 34918844470 success; PR #149 + Verify Foundation run 35064856704 success + Platform Runtime CI run 35064856695 success; PR #204 exact-head verification in progress',
+            'PR #140 + Verify Foundation run 34918844470 success; PR #149 + Verify Foundation run 35064856704 success + Platform Runtime CI run 35064856695 success; PR #204 merged after Verify Foundation #1231 + Platform Runtime CI #385; preflight compatibility hotfix in progress',
     },
     {
         id: 'revenue-working-phase',
