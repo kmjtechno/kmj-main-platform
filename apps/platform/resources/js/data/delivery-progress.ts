@@ -270,10 +270,10 @@ export const deliveryMilestones: DeliveryMilestone[] = [
     {
         id: 'sandbox-v1-product-contract',
         title: 'Sandbox v1 product contract',
-        state: 'active',
-        detail: 'Product-specific capability profiles, fail-closed purchase boundaries, and the shared versioned PHP/Rust kmj.sandbox.v1 contract are implemented on PR #190 and await exact-head Foundation acceptance before merge',
+        state: 'verified',
+        detail: 'Product-specific capability profiles, fail-closed purchase boundaries, and the shared versioned PHP/Rust kmj.sandbox.v1 contract are merged with product-side integration evidence',
         evidence:
-            'PR #190 Platform Runtime CI #352 PASS; Verify Foundation exact-head re-verification required',
+            'Main Platform PR #190 merged + KMJ CloudOS adapter PR #4 merged after 6/6 verifier tests + KMJ Calibration Pro adapter PR #9 merged after Debug 7/7 and Release 7/7 tests',
     },
     {
         id: 'production-hardening',
