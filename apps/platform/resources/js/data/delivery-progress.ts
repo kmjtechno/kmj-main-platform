@@ -35,17 +35,25 @@ export const deliveryMilestones: DeliveryMilestone[] = [
     {
         id: 'public-trust-center',
         title: 'Public trust center',
-        state: 'active',
-        detail: 'Evidence-backed public Trust Center with governed access, licensing, security-boundary and authentic product-evidence policy is implemented on PR #201 and awaiting exact-head CI acceptance',
-        evidence: 'PR #201 exact-head verification in progress',
+        state: 'verified',
+        detail: 'Evidence-backed public Trust Center with governed access, licensing, security-boundary and authentic product-evidence policy is merged and staging-approved',
+        evidence:
+            'PR #201 + Verify Foundation #1222 + Platform Runtime CI #380 + staging-approved a55934ee9830',
     },
     {
         id: 'public-locale-foundation',
         title: 'Public English/Hindi locale foundation',
-        state: 'active',
-        detail: 'Validated en/hi locale selection, persisted public preference and shared Inertia language-switch state are implemented without claiming full catalog translation',
+        state: 'verified',
+        detail: 'Validated en/hi locale selection, persisted public preference and shared Inertia language-switch state are merged without claiming full catalog translation',
         evidence:
-            'Stacked branch feat/public-locale-foundation pending exact-head CI after PR #201',
+            'PR #202 + Verify Foundation #1225 + Platform Runtime CI #382 + Staging Promotion Gate #163 + staging-approved 26738902ca37',
+    },
+    {
+        id: 'public-seo-foundation',
+        title: 'Public SEO metadata foundation',
+        state: 'active',
+        detail: 'Canonical URL, Open Graph, Twitter summary and truthful JSON-LD metadata are implemented for core public surfaces while hreflang remains gated on real translated URLs',
+        evidence: 'PR #203 exact-head verification in progress',
     },
     {
         id: 'registration-onboarding',
