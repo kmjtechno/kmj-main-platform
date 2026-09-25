@@ -6,8 +6,9 @@ import {
     ServerCog,
     ShieldCheck,
 } from 'lucide-react';
-import PublicLanguageSwitch from '@/components/public-language-switch';
 import PublicSeo from '@/components/public-seo';
+import PublicSiteFooter from '@/components/public-site-footer';
+import PublicSiteHeader from '@/components/public-site-header';
 
 type Product = {
     slug: string;
@@ -31,6 +32,13 @@ type Product = {
 };
 
 export default function ProductsIndex({ products }: { products: Product[] }) {
+    const activeCount = products.filter(
+        (product) => product.purchase_enabled,
+    ).length;
+    const demoCount = products.filter(
+        (product) => product.demo.simulation,
+    ).length;
+
     return (
         <>
             <PublicSeo
@@ -44,157 +52,256 @@ export default function ProductsIndex({ products }: { products: Product[] }) {
                 }}
             />
 
-            <main className="min-h-screen bg-[#07090c] text-white">
-                <header className="border-b border-white/[0.07] bg-[#07090c]/95">
-                    <div className="mx-auto flex h-20 max-w-7xl items-center justify-between px-5 sm:px-8 lg:px-10">
-                        <Link
-                            href="/"
-                            className="text-sm font-black tracking-[0.16em]"
-                        >
-                            KMJ TECHNO
-                        </Link>
-                        <div className="flex items-center gap-4 text-sm text-white/55">
-                            <span className="hidden sm:inline">Products</span>
-                            <Link
-                                href="/trust"
-                                className="hidden font-semibold transition hover:text-white sm:inline"
-                            >
-                                Trust
-                            </Link>
-                            <PublicLanguageSwitch className="font-semibold transition hover:text-white" />
-                            <Link
-                                href="/"
-                                className="rounded-lg border border-white/10 px-4 py-2 font-semibold text-white/80 transition hover:border-white/20 hover:text-white"
-                            >
-                                Main Platform
-                            </Link>
-                        </div>
-                    </div>
-                </header>
+            <div className="min-h-screen overflow-hidden bg-[#06080b] text-white selection:bg-[#ef2632] selection:text-white">
+                <div className="pointer-events-none fixed inset-0">
+                    <div className="absolute -top-64 right-[4%] h-[42rem] w-[42rem] rounded-full bg-[#a30f18]/12 blur-[150px]" />
+                    <div className="absolute top-[55rem] -left-64 h-[34rem] w-[34rem] rounded-full bg-[#ef2632]/7 blur-[140px]" />
+                </div>
 
-                <section className="mx-auto max-w-7xl px-5 pt-16 pb-10 sm:px-8 lg:px-10 lg:pt-24">
-                    <div className="max-w-4xl">
-                        <div className="text-xs font-bold tracking-[0.22em] text-[#ef3941] uppercase">
-                            KMJ product portfolio
-                        </div>
-                        <h1 className="mt-5 text-4xl font-black tracking-[-0.045em] sm:text-6xl">
-                            Understand the product in seconds.
-                            <span className="block text-white/38">
-                                Explore the workflow before you decide.
-                            </span>
-                        </h1>
-                        <p className="mt-6 max-w-2xl text-base leading-7 text-white/50 sm:text-lg">
-                            Product lifecycle, purchase availability and demo
-                            state are shown separately so presentation never
-                            outruns verified authority.
-                        </p>
-                    </div>
-                </section>
+                <PublicSiteHeader />
 
-                <section className="mx-auto grid max-w-7xl gap-5 px-5 pb-24 sm:px-8 lg:grid-cols-2 lg:px-10">
-                    {products.map((product) => {
-                        const ProductIcon =
-                            product.demo.kind === 'cloudos'
-                                ? ServerCog
-                                : product.demo.kind === 'calibration'
-                                  ? FlaskConical
-                                  : ShieldCheck;
+                <main className="relative z-10">
+                    <section className="mx-auto max-w-[1440px] px-5 pt-16 pb-12 sm:px-8 lg:px-12 lg:pt-24 lg:pb-16">
+                        <div className="grid gap-10 lg:grid-cols-[1fr_auto] lg:items-end">
+                            <div className="max-w-5xl">
+                                <div className="text-[10px] font-black tracking-[0.22em] text-[#ff5962] uppercase">
+                                    KMJ TECHNO product portfolio
+                                </div>
+                                <h1 className="mt-5 text-5xl leading-[0.96] font-black tracking-[-0.06em] sm:text-6xl lg:text-[5.4rem]">
+                                    Products built to move
+                                    <span className="block text-white/32">
+                                        from idea to governed operation.
+                                    </span>
+                                </h1>
+                                <p className="mt-7 max-w-3xl text-base leading-8 text-white/48 sm:text-lg">
+                                    Explore the complete KMJ product ecosystem
+                                    with lifecycle, access and public evidence
+                                    kept explicit. Engineering progress never
+                                    masquerades as commercial availability.
+                                </p>
+                            </div>
 
-                        return (
-                            <article
-                                key={product.slug}
-                                className="flex flex-col overflow-hidden rounded-[2rem] border border-white/[0.09] bg-gradient-to-br from-white/[0.055] to-white/[0.015]"
-                            >
-                                <div className="p-7 sm:p-9">
-                                    <div className="flex flex-wrap items-center justify-between gap-3">
-                                        <div className="grid h-11 w-11 place-items-center rounded-xl border border-[#ef3941]/20 bg-[#ef3941]/10">
-                                            <ProductIcon className="h-5 w-5 text-[#ef3941]" />
+                            <div className="grid grid-cols-3 overflow-hidden rounded-2xl border border-white/[0.08] bg-white/[0.025] lg:w-[390px]">
+                                {[
+                                    ['Portfolio', String(products.length)],
+                                    ['Commercial', String(activeCount)],
+                                    ['Interactive', String(demoCount)],
+                                ].map(([label, value], index) => (
+                                    <div
+                                        key={label}
+                                        className={
+                                            'px-4 py-5 text-center ' +
+                                            (index > 0
+                                                ? 'border-l border-white/[0.07]'
+                                                : '')
+                                        }
+                                    >
+                                        <div className="text-2xl font-black tracking-[-0.04em]">
+                                            {value}
                                         </div>
-                                        <span
+                                        <div className="mt-1 text-[9px] font-black tracking-[0.12em] text-white/28 uppercase">
+                                            {label}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    </section>
+
+                    <section className="mx-auto max-w-[1440px] px-5 pb-24 sm:px-8 lg:px-12 lg:pb-28">
+                        <div className="grid gap-5 lg:grid-cols-2">
+                            {products.map((product, index) => {
+                                const ProductIcon =
+                                    product.demo.kind === 'cloudos'
+                                        ? ServerCog
+                                        : product.demo.kind === 'calibration'
+                                          ? FlaskConical
+                                          : ShieldCheck;
+                                const featured = index === 0;
+
+                                return (
+                                    <article
+                                        key={product.slug}
+                                        className={
+                                            'group relative flex min-h-[31rem] flex-col overflow-hidden rounded-[2rem] border border-white/[0.09] bg-[#090c10] transition duration-300 hover:-translate-y-1 hover:border-white/[0.16] ' +
+                                            (featured
+                                                ? 'lg:col-span-2 lg:min-h-[28rem]'
+                                                : '')
+                                        }
+                                    >
+                                        <div className="pointer-events-none absolute inset-0 opacity-0 transition duration-500 group-hover:opacity-100">
+                                            <div className="absolute -top-36 right-[-5rem] h-80 w-80 rounded-full bg-[#ef2632]/10 blur-[100px]" />
+                                        </div>
+
+                                        <div
                                             className={
-                                                product.purchase_enabled
-                                                    ? 'rounded-full border border-emerald-300/20 bg-emerald-300/[0.06] px-3 py-1 text-[11px] font-semibold text-emerald-200/80'
-                                                    : 'rounded-full border border-amber-300/20 bg-amber-300/[0.05] px-3 py-1 text-[11px] font-semibold text-amber-200/80'
+                                                'relative flex flex-1 flex-col p-7 sm:p-9 ' +
+                                                (featured
+                                                    ? 'lg:grid lg:grid-cols-[1.05fr_.95fr] lg:gap-14 lg:p-11'
+                                                    : '')
                                             }
                                         >
-                                            {product.lifecycle_label}
-                                        </span>
-                                    </div>
-
-                                    <div className="mt-7 text-sm font-bold text-white/45">
-                                        {product.eyebrow}
-                                    </div>
-                                    <h2 className="mt-2 text-3xl font-black tracking-[-0.035em]">
-                                        {product.name}
-                                    </h2>
-                                    <p className="mt-4 text-base leading-7 text-white/62">
-                                        {product.headline}
-                                    </p>
-                                    <p className="mt-3 text-sm leading-7 text-white/42">
-                                        {product.summary}
-                                    </p>
-
-                                    <div className="mt-7 space-y-3">
-                                        {product.proof
-                                            .slice(0, 2)
-                                            .map((item) => (
-                                                <div
-                                                    key={item.title}
-                                                    className="flex gap-3 rounded-xl border border-white/[0.07] bg-black/20 p-4"
-                                                >
-                                                    <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-[#ef3941]" />
-                                                    <div>
-                                                        <div className="text-sm font-bold">
-                                                            {item.title}
+                                            <div className="flex flex-col">
+                                                <div className="flex items-start justify-between gap-4">
+                                                    <div className="flex items-center gap-4">
+                                                        <div className="grid h-11 w-11 place-items-center rounded-xl border border-[#ef3340]/18 bg-[#ef3340]/8">
+                                                            <ProductIcon className="h-5 w-5 text-[#ff5962]" />
                                                         </div>
-                                                        <div className="mt-1 text-xs leading-5 text-white/40">
-                                                            {item.detail}
+                                                        <div>
+                                                            <div className="text-[9px] font-black tracking-[0.16em] text-white/25 uppercase">
+                                                                Product{' '}
+                                                                {String(
+                                                                    index + 1,
+                                                                ).padStart(
+                                                                    2,
+                                                                    '0',
+                                                                )}
+                                                            </div>
+                                                            <div className="mt-1 text-xs font-bold text-white/45">
+                                                                {
+                                                                    product.eyebrow
+                                                                }
+                                                            </div>
                                                         </div>
                                                     </div>
-                                                </div>
-                                            ))}
-                                    </div>
-                                </div>
 
-                                <div className="mt-auto border-t border-white/[0.07] bg-black/20 p-6">
-                                    <div className="mb-4 flex items-center gap-2 text-xs text-white/42">
-                                        {product.demo.simulation ? (
-                                            <>
-                                                <CheckCircle2 className="h-4 w-4 text-emerald-300/70" />
-                                                Interactive simulation only
-                                            </>
-                                        ) : (
-                                            <>
-                                                <ShieldCheck className="h-4 w-4 text-amber-200/70" />
-                                                {product.demo.label}
-                                            </>
-                                        )}
-                                    </div>
-                                    <div className="flex flex-col gap-3 sm:flex-row">
-                                        <Link
-                                            href={'/products/' + product.slug}
-                                            className="inline-flex h-11 flex-1 items-center justify-center gap-2 rounded-xl bg-[#e21b23] px-5 text-sm font-bold transition hover:bg-[#f1252e]"
-                                        >
-                                            {product.demo.simulation
-                                                ? 'Open virtual demo'
-                                                : 'View product status'}
-                                            <ArrowRight className="h-4 w-4" />
-                                        </Link>
-                                        {product.purchase_enabled && (
-                                            <Link
-                                                href="/purchase"
-                                                className="inline-flex h-11 items-center justify-center rounded-xl border border-white/10 px-5 text-sm font-semibold text-white/65 transition hover:border-white/20 hover:text-white"
+                                                    <span
+                                                        className={
+                                                            'rounded-full border px-3 py-1.5 text-[9px] font-black tracking-[0.1em] uppercase ' +
+                                                            (product.purchase_enabled
+                                                                ? 'border-emerald-300/20 bg-emerald-300/[0.06] text-emerald-200/75'
+                                                                : 'border-white/10 bg-white/[0.03] text-white/38')
+                                                        }
+                                                    >
+                                                        {
+                                                            product.lifecycle_label
+                                                        }
+                                                    </span>
+                                                </div>
+
+                                                <h2
+                                                    className={
+                                                        'mt-8 font-black tracking-[-0.05em] ' +
+                                                        (featured
+                                                            ? 'text-4xl sm:text-5xl lg:text-6xl'
+                                                            : 'text-3xl sm:text-4xl')
+                                                    }
+                                                >
+                                                    {product.name}
+                                                </h2>
+                                                <p className="mt-5 max-w-2xl text-base leading-7 font-medium text-white/62">
+                                                    {product.headline}
+                                                </p>
+                                                <p className="mt-3 max-w-2xl text-sm leading-7 text-white/37">
+                                                    {product.summary}
+                                                </p>
+
+                                                <div className="mt-auto pt-8">
+                                                    <Link
+                                                        href={
+                                                            '/products/' +
+                                                            product.slug
+                                                        }
+                                                        className="inline-flex h-11 items-center gap-2 rounded-xl bg-white px-5 text-sm font-black text-[#07090c] transition hover:bg-white/90"
+                                                    >
+                                                        Explore product
+                                                        <ArrowRight className="h-4 w-4" />
+                                                    </Link>
+                                                </div>
+                                            </div>
+
+                                            <div
+                                                className={
+                                                    'mt-8 grid gap-3 border-t border-white/[0.07] pt-7 ' +
+                                                    (featured
+                                                        ? 'lg:mt-0 lg:border-t-0 lg:border-l lg:pt-0 lg:pl-10'
+                                                        : '')
+                                                }
                                             >
-                                                Request access
-                                            </Link>
-                                        )}
-                                    </div>
+                                                <div className="text-[9px] font-black tracking-[0.16em] text-white/24 uppercase">
+                                                    Evidence-led foundation
+                                                </div>
+                                                {product.proof
+                                                    .slice(0, 3)
+                                                    .map((item) => (
+                                                        <div
+                                                            key={item.title}
+                                                            className="rounded-2xl border border-white/[0.065] bg-white/[0.022] p-4"
+                                                        >
+                                                            <div className="flex items-start gap-3">
+                                                                <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-300/55" />
+                                                                <div>
+                                                                    <div className="text-sm font-black text-white/78">
+                                                                        {
+                                                                            item.title
+                                                                        }
+                                                                    </div>
+                                                                    <p className="mt-1.5 text-xs leading-5 text-white/32">
+                                                                        {
+                                                                            item.detail
+                                                                        }
+                                                                    </p>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    ))}
+                                                <div className="mt-1 flex items-center justify-between rounded-xl border border-white/[0.055] bg-black/20 px-4 py-3 text-[10px] font-bold text-white/32">
+                                                    <span>
+                                                        {product.demo.simulation
+                                                            ? 'Interactive simulation available'
+                                                            : product.demo
+                                                                  .label}
+                                                    </span>
+                                                    <span
+                                                        className={
+                                                            product.purchase_enabled
+                                                                ? 'text-emerald-300/60'
+                                                                : 'text-white/25'
+                                                        }
+                                                    >
+                                                        {product.purchase_enabled
+                                                            ? 'ACCESS OPEN'
+                                                            : 'GATED'}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </article>
+                                );
+                            })}
+                        </div>
+                    </section>
+
+                    <section className="border-y border-white/[0.07] bg-[#090b0f]">
+                        <div className="mx-auto grid max-w-[1440px] gap-8 px-5 py-16 sm:px-8 lg:grid-cols-[1fr_auto] lg:items-center lg:px-12 lg:py-20">
+                            <div className="max-w-3xl">
+                                <div className="text-[10px] font-black tracking-[0.18em] text-[#ff5962] uppercase">
+                                    One commercial authority
                                 </div>
-                            </article>
-                        );
-                    })}
-                </section>
-            </main>
+                                <h2 className="mt-3 text-3xl font-black tracking-[-0.04em] sm:text-4xl">
+                                    Products stay independent. Customer access
+                                    stays governed.
+                                </h2>
+                                <p className="mt-4 max-w-2xl text-sm leading-7 text-white/38">
+                                    KMJ Main Platform provides the shared
+                                    customer, organization, entitlement and
+                                    licensing authority while each product keeps
+                                    its own engineering boundary.
+                                </p>
+                            </div>
+                            <Link
+                                href="/trust"
+                                className="inline-flex h-12 items-center justify-center gap-2 rounded-xl border border-white/10 px-5 text-sm font-bold text-white/70 transition hover:border-white/20 hover:text-white"
+                            >
+                                Open trust center
+                                <ArrowRight className="h-4 w-4" />
+                            </Link>
+                        </div>
+                    </section>
+                </main>
+
+                <PublicSiteFooter />
+            </div>
         </>
     );
 }

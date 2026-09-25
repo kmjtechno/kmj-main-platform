@@ -9,9 +9,10 @@ import {
     ShieldCheck,
     Sparkles,
 } from 'lucide-react';
-import PublicLanguageSwitch from '@/components/public-language-switch';
 import PublicSeo from '@/components/public-seo';
-import { dashboard, login, register } from '@/routes';
+import PublicSiteFooter from '@/components/public-site-footer';
+import PublicSiteHeader from '@/components/public-site-header';
+import { register } from '@/routes';
 
 type Product = {
     slug: string;
@@ -89,64 +90,7 @@ export default function Welcome({ products }: { products: Product[] }) {
                     <div className="absolute top-[48rem] -right-56 h-[34rem] w-[34rem] rounded-full bg-[#8f1016]/10 blur-[120px]" />
                 </div>
 
-                <header className="relative z-20 border-b border-white/[0.07] bg-[#07090c]/85 backdrop-blur-xl">
-                    <div className="mx-auto flex h-20 max-w-7xl items-center justify-between px-5 sm:px-8 lg:px-10">
-                        <Link href="/" className="flex items-center gap-3">
-                            <span className="grid h-10 w-10 place-items-center rounded-xl border border-[#e21b23]/40 bg-[#e21b23]/10 text-lg font-black text-[#f1252e]">
-                                K
-                            </span>
-                            <span>
-                                <span className="block text-[15px] font-extrabold tracking-[0.16em]">
-                                    KMJ TECHNO
-                                </span>
-                                <span className="mt-0.5 block text-[9px] font-medium tracking-[0.22em] text-white/35 uppercase">
-                                    Technology ecosystem
-                                </span>
-                            </span>
-                        </Link>
-
-                        <nav className="flex items-center gap-2 sm:gap-3">
-                            <Link
-                                href="/products"
-                                className="hidden h-10 items-center px-3 text-sm font-medium text-white/65 transition hover:text-white md:inline-flex"
-                            >
-                                Products
-                            </Link>
-                            <Link
-                                href="/trust"
-                                className="hidden h-10 items-center px-3 text-sm font-medium text-white/65 transition hover:text-white lg:inline-flex"
-                            >
-                                Trust
-                            </Link>
-                            <PublicLanguageSwitch className="hidden h-10 items-center px-3 text-sm font-medium text-white/65 transition hover:text-white sm:inline-flex" />
-                            {auth.user ? (
-                                <Link
-                                    href={dashboard()}
-                                    className="inline-flex h-10 items-center gap-2 rounded-lg border border-white/10 bg-white/[0.04] px-4 text-sm font-semibold transition hover:border-white/20"
-                                >
-                                    Dashboard
-                                    <ArrowRight className="h-4 w-4" />
-                                </Link>
-                            ) : (
-                                <>
-                                    <Link
-                                        href={login()}
-                                        className="hidden h-10 items-center px-3 text-sm font-medium text-white/65 transition hover:text-white sm:inline-flex"
-                                    >
-                                        Sign in
-                                    </Link>
-                                    <Link
-                                        href={register()}
-                                        className="inline-flex h-10 items-center gap-2 rounded-lg bg-[#e21b23] px-4 text-sm font-bold transition hover:bg-[#f1252e]"
-                                    >
-                                        Create account
-                                        <ArrowRight className="h-4 w-4" />
-                                    </Link>
-                                </>
-                            )}
-                        </nav>
-                    </div>
-                </header>
+                <PublicSiteHeader />
 
                 <main className="relative z-10">
                     <section className="mx-auto max-w-7xl px-5 pt-20 pb-20 sm:px-8 sm:pt-28 lg:px-10 lg:pt-32 lg:pb-28">
@@ -347,36 +291,8 @@ export default function Welcome({ products }: { products: Product[] }) {
                             )}
                         </div>
                     </section>
-
-                    <section className="border-t border-white/[0.07] bg-[#050608]">
-                        <div className="mx-auto flex max-w-7xl flex-col justify-between gap-8 px-5 py-16 sm:px-8 lg:flex-row lg:items-center lg:px-10">
-                            <div>
-                                <div className="text-2xl font-black tracking-[-0.03em]">
-                                    KMJ TECHNO
-                                </div>
-                                <p className="mt-2 max-w-xl text-sm leading-6 text-white/40">
-                                    Software products, governed customer access
-                                    and product experiences from one evolving
-                                    platform.
-                                </p>
-                            </div>
-                            <div className="flex items-center gap-5 text-sm text-white/50">
-                                <Link
-                                    href="/products"
-                                    className="hover:text-white"
-                                >
-                                    Products
-                                </Link>
-                                <Link
-                                    href={login()}
-                                    className="hover:text-white"
-                                >
-                                    Sign in
-                                </Link>
-                            </div>
-                        </div>
-                    </section>
                 </main>
+                <PublicSiteFooter />
             </div>
         </>
     );
