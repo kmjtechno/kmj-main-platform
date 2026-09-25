@@ -9,6 +9,7 @@ import {
     ShieldCheck,
     Sparkles,
 } from 'lucide-react';
+import { lockedKmjLogoDataUri } from '@/brand/locked-kmj-logo';
 import { dashboard, login, register } from '@/routes';
 
 type Product = {
@@ -76,18 +77,16 @@ export default function Welcome({ products }: { products: Product[] }) {
 
                 <header className="relative z-20 border-b border-white/[0.07] bg-[#07090c]/85 backdrop-blur-xl">
                     <div className="mx-auto flex h-20 max-w-7xl items-center justify-between px-5 sm:px-8 lg:px-10">
-                        <Link href="/" className="flex items-center gap-3">
-                            <span className="grid h-10 w-10 place-items-center rounded-xl border border-[#e21b23]/40 bg-[#e21b23]/10 text-lg font-black text-[#f1252e]">
-                                K
-                            </span>
-                            <span>
-                                <span className="block text-[15px] font-extrabold tracking-[0.16em]">
-                                    KMJ TECHNO
-                                </span>
-                                <span className="mt-0.5 block text-[9px] font-medium tracking-[0.22em] text-white/35 uppercase">
-                                    Technology ecosystem
-                                </span>
-                            </span>
+                        <Link
+                            href="/"
+                            aria-label="KMJ TECHNO home"
+                            className="flex items-center"
+                        >
+                            <img
+                                src={lockedKmjLogoDataUri}
+                                alt="KMJ TECHNO — Innovate | Build | Scale"
+                                className="h-14 w-auto rounded-md object-contain"
+                            />
                         </Link>
 
                         <nav className="flex items-center gap-2 sm:gap-3">
