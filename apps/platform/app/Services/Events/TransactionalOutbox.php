@@ -11,7 +11,7 @@ use InvalidArgumentException;
 final class TransactionalOutbox
 {
     /**
-     * @param array<string, mixed> $payload
+     * @param  array<string, mixed>  $payload
      */
     public function record(
         string $eventType,
