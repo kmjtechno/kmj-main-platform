@@ -48,6 +48,13 @@ final class CommercialOrderServiceTest extends TestCase
             'order_id' => $first->getKey(),
             'event_type' => 'commerce.order.requested',
         ]);
+        $this->assertDatabaseHas('outbox_messages', [
+            'event_type' => 'commerce.order.requested',
+            'aggregate_type' => 'commercial_order',
+            'aggregate_id' => $first->getKey(),
+            'organization_id' => $organization->getKey(),
+        ]);
+        $this->assertDatabaseCount('outbox_messages', 1);
     }
 
     public function test_confirmation_records_commercial_fact_but_still_does_not_grant_entitlement(): void
@@ -97,6 +104,13 @@ final class CommercialOrderServiceTest extends TestCase
         );
         self::assertSame($order->getKey(), $replayed->getKey());
         $this->assertDatabaseCount('commerce_ledger', 2);
+        $this->assertDatabaseHas('outbox_messages', [
+            'event_type' => 'commerce.order.confirmed',
+            'aggregate_type' => 'commercial_order',
+            'aggregate_id' => $order->getKey(),
+            'organization_id' => $organization->getKey(),
+        ]);
+        $this->assertDatabaseCount('outbox_messages', 2);
     }
 
     public function test_confirmation_rejects_zero_value_payment_evidence(): void
