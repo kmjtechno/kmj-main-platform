@@ -3,14 +3,17 @@
 namespace KMJ\MainPlatform\Entitlements\Services;
 
 use DomainException;
-use InvalidArgumentException;
 use Illuminate\Support\Facades\DB;
+use InvalidArgumentException;
+use KMJ\MainPlatform\Entitlements\Contracts\DomainEventRecorder;
 use KMJ\MainPlatform\Entitlements\Models\Entitlement;
 use KMJ\MainPlatform\Entitlements\Models\EntitlementLedgerEntry;
 use KMJ\MainPlatform\Entitlements\Models\EntitlementPolicy;
 
 final class EntitlementIssuer
 {
+    public function __construct(private readonly DomainEventRecorder $events) {}
+
     public function issue(
         string $organizationId,
         EntitlementPolicy $policy,
@@ -43,18 +46,32 @@ final class EntitlementIssuer
             $this->assertIdempotencyMatches($entitlement, $organizationId, $policy);
 
             if ($entitlement->wasRecentlyCreated) {
-                EntitlementLedgerEntry::query()->create([
+                $payload = [
+                    'product_id' => $policy->product_id,
+                    'policy_id' => $policy->getKey(),
+                    'capability' => $policy->capability,
+                    'status' => 'active',
+                ];
+                $ledger = EntitlementLedgerEntry::query()->create([
                     'entitlement_id' => $entitlement->getKey(),
                     'organization_id' => $organizationId,
                     'event_type' => 'entitlement.issued',
-                    'payload' => [
-                        'product_id' => $policy->product_id,
-                        'policy_id' => $policy->getKey(),
-                        'capability' => $policy->capability,
-                        'status' => 'active',
-                    ],
+                    'payload' => $payload,
                     'occurred_at' => now(),
                 ]);
+
+                $this->events->recordDomainEvent(
+                    eventType: 'entitlement.issued',
+                    aggregateType: 'entitlement',
+                    aggregateId: (string) $entitlement->getKey(),
+                    organizationId: $organizationId,
+                    payload: [
+                        'ledger_sequence' => (int) $ledger->getKey(),
+                        'facts' => $payload,
+                    ],
+                    idempotencyKey: 'entitlement-ledger:'.$ledger->getKey(),
+                    occurredAt: $ledger->occurred_at,
+                );
             }
 
             return $entitlement;
