@@ -1,7 +1,8 @@
 import { Link } from '@inertiajs/react';
-import { ArrowLeft, CheckCircle2, KeyRound, ShieldCheck } from 'lucide-react';
-import PublicLanguageSwitch from '@/components/public-language-switch';
+import { CheckCircle2, KeyRound, ShieldCheck } from 'lucide-react';
 import PublicSeo from '@/components/public-seo';
+import PublicSiteFooter from '@/components/public-site-footer';
+import PublicSiteHeader from '@/components/public-site-header';
 
 const trustPrinciples = [
     {
@@ -43,34 +44,15 @@ export default function Trust() {
                 }}
             />
 
-            <main className="min-h-screen bg-[#07090c] text-white">
-                <header className="border-b border-white/[0.07] bg-[#07090c]/95">
-                    <div className="mx-auto flex h-20 max-w-7xl items-center justify-between px-5 sm:px-8 lg:px-10">
-                        <Link
-                            href="/"
-                            className="text-sm font-black tracking-[0.16em]"
-                        >
-                            KMJ TECHNO
-                        </Link>
-                        <div className="flex items-center gap-4">
-                            <PublicLanguageSwitch className="text-sm font-semibold text-white/55 transition hover:text-white" />
-                            <Link
-                                href="/products"
-                                className="inline-flex items-center gap-2 text-sm font-semibold text-white/55 transition hover:text-white"
-                            >
-                                <ArrowLeft className="h-4 w-4" />
-                                Products
-                            </Link>
-                        </div>
-                    </div>
-                </header>
+            <div className="min-h-screen overflow-hidden bg-[#06080b] text-white selection:bg-[#ef2632] selection:text-white">\n                <PublicSiteHeader />\n                <main>
 
-                <section className="mx-auto max-w-7xl px-5 pt-16 pb-12 sm:px-8 lg:px-10 lg:pt-24">
+
+                <section className="mx-auto max-w-[1440px] px-5 pt-16 pb-12 sm:px-8 lg:px-10 lg:pt-24">
                     <div className="max-w-4xl">
                         <div className="text-xs font-bold tracking-[0.22em] text-[#ef3941] uppercase">
                             KMJ TECHNO Trust Center
                         </div>
-                        <h1 className="mt-5 text-4xl font-black tracking-[-0.05em] sm:text-6xl">
+                        <h1 className="mt-5 text-5xl leading-[0.96] font-black tracking-[-0.06em] sm:text-6xl lg:text-[5.1rem]">
                             Trust is a product contract.
                             <span className="block text-white/38">
                                 Claims stay behind evidence.
@@ -85,7 +67,7 @@ export default function Trust() {
                     </div>
                 </section>
 
-                <section className="mx-auto grid max-w-7xl gap-4 px-5 pb-16 sm:px-8 md:grid-cols-2 lg:px-10">
+                <section className="mx-auto grid max-w-[1440px] gap-4 px-5 pb-16 sm:px-8 md:grid-cols-2 lg:px-10">
                     {trustPrinciples.map((item, index) => {
                         const Icon =
                             index === 1
@@ -114,7 +96,7 @@ export default function Trust() {
                 </section>
 
                 <section className="border-y border-white/[0.07] bg-white/[0.015]">
-                    <div className="mx-auto grid max-w-7xl gap-10 px-5 py-16 sm:px-8 lg:grid-cols-2 lg:px-10 lg:py-20">
+                    <div className="mx-auto grid max-w-[1440px] gap-10 px-5 py-16 sm:px-8 lg:grid-cols-2 lg:px-10 lg:py-20">
                         <div>
                             <div className="text-xs font-bold tracking-[0.2em] text-[#ef3941] uppercase">
                                 Commercial authority
@@ -170,7 +152,7 @@ export default function Trust() {
                     </div>
                 </section>
 
-                <section className="mx-auto max-w-7xl px-5 py-16 sm:px-8 lg:px-10">
+                <section className="mx-auto max-w-[1440px] px-5 py-16 sm:px-8 lg:px-10">
                     <div className="rounded-2xl border border-white/[0.08] bg-white/[0.025] p-6 sm:p-8">
                         <div className="text-xs font-bold tracking-[0.2em] text-[#ef3941] uppercase">
                             Product evidence policy
@@ -201,7 +183,9 @@ export default function Trust() {
                         </div>
                     </div>
                 </section>
-            </main>
+                </main>
+                <PublicSiteFooter />
+            </div>
         </>
     );
 }
