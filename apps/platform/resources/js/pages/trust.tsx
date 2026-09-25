@@ -1,10 +1,5 @@
 import { Head, Link } from '@inertiajs/react';
-import {
-    ArrowLeft,
-    CheckCircle2,
-    KeyRound,
-    ShieldCheck,
-} from 'lucide-react';
+import { ArrowLeft, CheckCircle2, KeyRound, ShieldCheck } from 'lucide-react';
 
 const trustPrinciples = [
     {
