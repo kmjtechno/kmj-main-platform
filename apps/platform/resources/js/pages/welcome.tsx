@@ -65,7 +65,7 @@ export default function Welcome({ products }: { products: Product[] }) {
         <>
             <PublicSeo
                 title="KMJ TECHNO — Software, Cloud & Intelligent Systems"
-                description="Explore Product portfolio, product demos and governed software access from one customer-facing platform."
+                description="Explore the KMJ TECHNO product portfolio, product demos and governed software access from one customer-facing platform."
                 path="/"
                 structuredData={[
                     {
