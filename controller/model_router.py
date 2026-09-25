@@ -71,7 +71,7 @@ class FreeCloudRouter:
         self.config = yaml.safe_load(ROUTER_CONFIG.read_text(encoding="utf-8"))
         self.base_url = (
             os.getenv("KMJ_9ROUTER_BASE_URL", "").strip()
-            or "http://127.0.0.1:20128/v1"
+            or "http://127.0.0.1:18765/v1"
         ).rstrip("/")
         self.api_key = os.getenv("KMJ_9ROUTER_API_KEY", "")
         self.timeout = float(os.getenv("KMJ_9ROUTER_TIMEOUT_SECONDS", "12"))
@@ -88,6 +88,23 @@ class FreeCloudRouter:
         }
         if api_key:
             headers["Authorization"] = f"Bearer {api_key}"
+        return headers
+
+    @staticmethod
+    def _normalize_classification(data_classification: str) -> str:
+        value = (data_classification or "confidential").strip().lower()
+        return value if value in {"public", "confidential"} else "confidential"
+
+    def _provider_headers(
+        self,
+        provider: ProviderEndpoint,
+        data_classification: str = "confidential",
+    ) -> dict[str, str]:
+        headers = self._headers(provider.api_key)
+        if provider.name == "9router":
+            headers["X-KMJ-Sensitivity"] = self._normalize_classification(
+                data_classification
+            )
         return headers
 
     def _explicit_zero_models(self) -> set[str]:
@@ -229,11 +246,12 @@ class FreeCloudRouter:
     async def _discover_provider(
         self,
         provider: ProviderEndpoint,
+        data_classification: str = "confidential",
     ) -> list[dict[str, Any]]:
         async with httpx.AsyncClient(timeout=self.timeout) as client:
             response = await client.get(
                 f"{provider.base_url}/models",
-                headers=self._headers(provider.api_key),
+                headers=self._provider_headers(provider, data_classification),
             )
             response.raise_for_status()
             payload = response.json()
@@ -248,14 +266,26 @@ class FreeCloudRouter:
             enriched["_kmj_base_url"] = provider.base_url
             enriched["_kmj_api_key"] = provider.api_key
             enriched["_kmj_provider_priority"] = provider.priority
-            enriched["_kmj_allow_confidential"] = provider.allow_confidential
+            enriched["_kmj_allow_confidential"] = bool(
+                item.get(
+                    "kmj_allow_confidential",
+                    provider.allow_confidential,
+                )
+            )
             models.append(enriched)
         return models
 
-    async def discover(self) -> list[dict[str, Any]]:
+    async def discover(
+        self,
+        data_classification: str = "confidential",
+    ) -> list[dict[str, Any]]:
+        classification = self._normalize_classification(data_classification)
         providers = self.providers()
         results = await asyncio.gather(
-            *(self._discover_provider(provider) for provider in providers),
+            *(
+                self._discover_provider(provider, classification)
+                for provider in providers
+            ),
             return_exceptions=True,
         )
         models: list[dict[str, Any]] = []
@@ -326,7 +356,11 @@ class FreeCloudRouter:
         route: str = "coding",
         data_classification: str = "confidential",
     ) -> RouteCandidate:
-        ranked = self.rank(await self.discover(), route, data_classification)
+        ranked = self.rank(
+            await self.discover(data_classification),
+            route,
+            data_classification,
+        )
         if not ranked:
             raise NoFreeRouteAvailable("NO_FREE_ROUTE_AVAILABLE")
         return ranked[0]
@@ -338,7 +372,11 @@ class FreeCloudRouter:
         temperature: float = 0.1,
         data_classification: str = "confidential",
     ) -> dict[str, Any]:
-        ranked = self.rank(await self.discover(), route, data_classification)
+        ranked = self.rank(
+            await self.discover(data_classification),
+            route,
+            data_classification,
+        )
         if not ranked:
             return await self._official_free_client(messages)
 
@@ -348,7 +386,19 @@ class FreeCloudRouter:
                 try:
                     response = await client.post(
                         f"{candidate.base_url}/chat/completions",
-                        headers=self._headers(candidate.api_key),
+                        headers={
+                            **self._headers(candidate.api_key),
+                            **(
+                                {
+                                    "X-KMJ-Sensitivity":
+                                        self._normalize_classification(
+                                            data_classification
+                                        )
+                                }
+                                if candidate.provider == "9router"
+                                else {}
+                            ),
+                        },
                         json={
                             "model": candidate.model_id,
                             "messages": messages,
@@ -400,7 +450,7 @@ class FreeCloudRouter:
             raise NoFreeRouteAvailable(str(exc)) from exc
 
     async def status(self) -> dict[str, Any]:
-        models = await self.discover()
+        models = await self.discover("public")
         eligible: list[dict[str, Any]] = []
         rejected = 0
         for item in models:

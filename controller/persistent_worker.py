@@ -432,7 +432,12 @@ Keep the change minimal and reversible. Do not claim tests passed; only list tes
         {"role": "user", "content": prompt},
     ]
     for attempt in range(2):
-        result = await router.complete(messages, route="coding", temperature=0.05)
+        result = await router.complete(
+            messages,
+            route="coding",
+            temperature=0.05,
+            data_classification="confidential",
+        )
         try:
             payload = extract_model_json(result)
             patch = str(payload["patch"])

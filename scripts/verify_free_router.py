@@ -39,6 +39,11 @@ def main() -> None:
     direct_paid_risk, _ = router._eligible("qwen/qwen-coder", "qwen", "groq")
     assert not direct_paid_risk, "direct provider account must not inherit 9Router owner trust"
 
+    aggregated_llm7, reason = router._eligible("minimax-m2.7", "llm7", "9router")
+    assert aggregated_llm7 and reason == "trusted-free-provider-owner"
+    direct_llm7, _ = router._eligible("minimax-m2.7", "llm7", "llm7")
+    assert not direct_llm7, "local aggregator trust must not leak to direct provider"
+
     with patch.dict(os.environ, {"KMJ_VERIFIED_FREE_PROVIDERS": "groq"}, clear=False):
         verified_router = FreeCloudRouter()
         verified_ok, reason = verified_router._eligible("qwen/qwen-coder", "qwen", "groq")
