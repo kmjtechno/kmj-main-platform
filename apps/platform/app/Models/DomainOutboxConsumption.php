@@ -6,6 +6,8 @@ use Illuminate\Database\Eloquent\Model;
 
 final class DomainOutboxConsumption extends Model
 {
+    protected $table = 'outbox_consumptions';
+
     /** @var list<string> */
     protected $fillable = [
         'message_id',
