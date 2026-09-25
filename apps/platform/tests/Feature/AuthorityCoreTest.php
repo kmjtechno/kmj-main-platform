@@ -53,6 +53,12 @@ final class AuthorityCoreTest extends TestCase
             'organization_id' => $organization->getKey(),
             'event_type' => 'entitlement.issued',
         ]);
+        $this->assertDatabaseHas('outbox_messages', [
+            'event_type' => 'entitlement.issued',
+            'aggregate_type' => 'entitlement',
+            'aggregate_id' => $first->getKey(),
+            'organization_id' => $organization->getKey(),
+        ]);
     }
 
     public function test_entitlement_revocation_is_idempotent_and_audited(): void
@@ -84,6 +90,13 @@ final class AuthorityCoreTest extends TestCase
             'organization_id' => $organization->getKey(),
             'event_type' => 'entitlement.revoked',
         ]);
+        $this->assertDatabaseHas('outbox_messages', [
+            'event_type' => 'entitlement.revoked',
+            'aggregate_type' => 'entitlement',
+            'aggregate_id' => $entitlement->getKey(),
+            'organization_id' => $organization->getKey(),
+        ]);
+        $this->assertDatabaseCount('outbox_messages', 2);
     }
 
     public function test_inactive_policy_cannot_issue_an_entitlement(): void
