@@ -21,6 +21,17 @@ export default function PublicSeo({
     const origin = publicSite.base_url.replace(/\/$/, '');
     const normalizedPath = path === '/' ? '/' : '/' + path.replace(/^\/+/, '');
     const canonical = origin + normalizedPath;
+    const structuredDataWithUrl = Array.isArray(structuredData)
+        ? structuredData.map((item) => ({
+              ...item,
+              url: item.url ?? canonical,
+          }))
+        : structuredData
+          ? {
+                ...structuredData,
+                url: structuredData.url ?? canonical,
+            }
+          : null;
 
     return (
         <Head title={title}>
@@ -33,9 +44,9 @@ export default function PublicSeo({
             <meta name="twitter:card" content="summary" />
             <meta name="twitter:title" content={title} />
             <meta name="twitter:description" content={description} />
-            {structuredData && (
+            {structuredDataWithUrl && (
                 <script type="application/ld+json">
-                    {JSON.stringify(structuredData)}
+                    {JSON.stringify(structuredDataWithUrl)}
                 </script>
             )}
         </Head>
