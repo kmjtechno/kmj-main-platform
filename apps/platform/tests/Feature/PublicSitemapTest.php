@@ -17,6 +17,13 @@ final class PublicSitemapTest extends TestCase
         app(KmjProductCatalog::class)->syncAll();
     }
 
+    public function test_sitemap_fails_closed_when_public_indexing_is_disabled(): void
+    {
+        config()->set('app.public_indexing', false);
+
+        $this->get('/sitemap.xml')->assertNotFound();
+    }
+
     public function test_sitemap_exposes_canonical_public_and_product_urls(): void
     {
         config()->set('app.url', 'https://kmjtechno.example/');
