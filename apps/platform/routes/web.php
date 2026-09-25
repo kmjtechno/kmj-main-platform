@@ -45,6 +45,40 @@ Route::get('company', fn () => Inertia::render('company'))->name('company');
 
 Route::get('capabilities', fn () => Inertia::render('capabilities'))->name('capabilities');
 
+Route::get('sitemap.xml', function (PublicProductCatalog $products) {
+    $origin = rtrim((string) config('app.url'), '/');
+    $paths = [
+        '/',
+        '/company',
+        '/capabilities',
+        '/products',
+        '/trust',
+        ...collect($products->all())
+            ->pluck('slug')
+            ->filter(fn (mixed $slug): bool => is_string($slug) && $slug !== '')
+            ->map(fn (string $slug): string => '/products/'.$slug)
+            ->all(),
+    ];
+
+    $urls = collect($paths)
+        ->unique()
+        ->map(fn (string $path): string => '<url><loc>'.htmlspecialchars(
+            $origin.$path,
+            ENT_XML1 | ENT_QUOTES,
+            'UTF-8',
+        ).'</loc></url>')
+        ->implode('');
+
+    $xml = '<?xml version="1.0" encoding="UTF-8"?>'
+        .'<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'
+        .$urls
+        .'</urlset>';
+
+    return response($xml, 200, [
+        'Content-Type' => 'application/xml; charset=UTF-8',
+    ]);
+})->name('sitemap');
+
 Route::get('trust', fn () => Inertia::render('trust'))->name('trust');
 
 Route::middleware(['auth', 'verified'])->group(function () {
