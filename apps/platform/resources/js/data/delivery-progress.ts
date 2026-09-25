@@ -264,9 +264,9 @@ export const deliveryMilestones: DeliveryMilestone[] = [
         id: 'verified-free-ai-route',
         title: 'Verified-free AI route',
         state: 'verified',
-        detail: 'Free-cloud task completion and worker patch safeguards are verified with bounded file context, scoped patches, fail-closed zero-cost routing, public-only anonymous provider isolation, and key-detected provider federation for additional verified-free capacity',
+        detail: 'Free-cloud task completion and worker patch safeguards are verified with bounded file context, scoped patches, fail-closed zero-cost routing, public-only anonymous provider isolation, key-detected provider federation, and a local classification-aware verified-free gateway for additional public-safe capacity',
         evidence:
-            'PR #140 + Verify Foundation run 34918844470 success; PR #149 + Verify Foundation run 35064856704 success + Platform Runtime CI run 35064856695 success; PR #204 merged after Verify Foundation #1231 + Platform Runtime CI #385; preflight compatibility hotfix in progress',
+            'PR #140 + Verify Foundation run 34918844470 success; PR #149 + Verify Foundation run 35064856704 success + Platform Runtime CI run 35064856695 success; PR #204 merged after Verify Foundation #1231 + Platform Runtime CI #385; PR #205 merged after Verify Foundation #1235 + Platform Runtime CI #388; PR #207 exact-head verification in progress',
     },
     {
         id: 'revenue-working-phase',
