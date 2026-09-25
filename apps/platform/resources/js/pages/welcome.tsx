@@ -97,6 +97,12 @@ export default function Welcome({ products }: { products: Product[] }) {
                             >
                                 Products
                             </Link>
+                            <Link
+                                href="/trust"
+                                className="hidden h-10 items-center px-3 text-sm font-medium text-white/65 transition hover:text-white lg:inline-flex"
+                            >
+                                Trust
+                            </Link>
                             {auth.user ? (
                                 <Link
                                     href={dashboard()}
