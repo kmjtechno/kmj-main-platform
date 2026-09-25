@@ -8,7 +8,14 @@ paid_ai_fallback: prohibited
 unknown_cost_is_free: false
 no_free_route_status: NO_FREE_ROUTE_AVAILABLE
 production_requires_owner_approval: true
+payment_gateway_configuration: deferred_by_owner
 writer_policy: single_authoritative_writer
+branding_policy:
+  logo_identity: locked_approved_master_only
+  product_visuals: authentic_evidence_only
+  ai_or_cgi_looking_product_imagery: prohibited
+  synthetic_product_ui_screenshots: prohibited
+  real_product_screenshots_preferred: true
 first_vertical_slice:
   - organization
   - product
@@ -25,19 +32,19 @@ phases:
     status: READY
   - id: P2
     name: Enterprise Core
-    status: PENDING
+    status: DONE
   - id: P3
     name: Commerce and Licensing
-    status: PENDING
+    status: ACTIVE
   - id: P4
     name: Kristi Operations
-    status: PENDING
+    status: ACTIVE
   - id: P5
     name: Public Experience
-    status: PENDING
+    status: ACTIVE
   - id: P6
     name: Product Integration
-    status: PENDING
+    status: ACTIVE
   - id: P7
     name: Migration and Cutover
-    status: PENDING
+    status: ACTIVE
