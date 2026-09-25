@@ -43,7 +43,7 @@ async def main() -> None:
     status = await FreeCloudRouter().status()
     credential_names = {
         "9router": "KMJ_9ROUTER_API_KEY",
-        **{name: env for name, (_, env) in FreeCloudRouter.BUILTIN_PROVIDERS.items()},
+        **{name: provider[1] for name, provider in FreeCloudRouter.BUILTIN_PROVIDERS.items()},
     }
     credential_presence = {
         provider: bool(os.getenv(env, "").strip())
