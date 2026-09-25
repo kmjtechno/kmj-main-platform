@@ -12,9 +12,13 @@ providers:
     - 9router
     - openrouter
     - groq
+    - nvidia
+    - zai
     - cerebras
     - gemini
     - mistral
+    - ollama-cloud
+    - kilo
 
 verified_zero:
   # Models are discovered from configured providers and filtered by the strict-zero gate.
