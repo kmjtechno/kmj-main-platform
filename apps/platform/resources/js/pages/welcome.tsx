@@ -10,6 +10,7 @@ import {
     Sparkles,
 } from 'lucide-react';
 import PublicLanguageSwitch from '@/components/public-language-switch';
+import PublicSeo from '@/components/public-seo';
 import { dashboard, login, register } from '@/routes';
 
 type Product = {
@@ -61,12 +62,25 @@ export default function Welcome({ products }: { products: Product[] }) {
 
     return (
         <>
-            <Head title="KMJ TECHNO — Software, Cloud & Intelligent Systems">
+            <PublicSeo
+                title="KMJ TECHNO — Software, Cloud & Intelligent Systems"
+                description="Explore KMJ TECHNO products, product demos and governed software access from one customer-facing platform."
+                path="/"
+                structuredData={[
+                    {
+                        '@context': 'https://schema.org',
+                        '@type': 'Organization',
+                        name: 'KMJ TECHNO',
+                    },
+                    {
+                        '@context': 'https://schema.org',
+                        '@type': 'WebSite',
+                        name: 'KMJ TECHNO',
+                    },
+                ]}
+            />
+            <Head>
                 <meta name="kmj-main-platform" content="native-home" />
-                <meta
-                    name="description"
-                    content="Explore KMJ TECHNO products, product demos and governed software access from one customer-facing platform."
-                />
             </Head>
 
             <div className="min-h-screen overflow-hidden bg-[#07090c] text-white selection:bg-[#e21b23] selection:text-white">

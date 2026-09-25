@@ -1,6 +1,7 @@
-import { Head, Link } from '@inertiajs/react';
+import { Link } from '@inertiajs/react';
 import { ArrowLeft, CheckCircle2, Code2, ShieldCheck } from 'lucide-react';
 import PublicLanguageSwitch from '@/components/public-language-switch';
+import PublicSeo from '@/components/public-seo';
 import CalibrationDemo from '@/components/products/calibration-demo';
 import CloudOSDemo from '@/components/products/cloudos-demo';
 
@@ -44,9 +45,26 @@ export default function ProductShow({ product }: { product: Product }) {
 
     return (
         <>
-            <Head title={product.name + ' — KMJ TECHNO'}>
-                <meta name="description" content={product.summary} />
-            </Head>
+            <PublicSeo
+                title={product.name + ' — KMJ TECHNO'}
+                description={product.summary}
+                path={'/products/' + product.slug}
+                structuredData={{
+                    '@context': 'https://schema.org',
+                    '@type': 'SoftwareApplication',
+                    name: product.name,
+                    description: product.summary,
+                    brand: {
+                        '@type': 'Brand',
+                        name: 'KMJ TECHNO',
+                    },
+                    additionalProperty: {
+                        '@type': 'PropertyValue',
+                        name: 'Lifecycle',
+                        value: product.lifecycle_label,
+                    },
+                }}
+            />
 
             <main className="min-h-screen bg-[#07090c] text-white">
                 <header className="border-b border-white/[0.07] bg-[#07090c]/95">

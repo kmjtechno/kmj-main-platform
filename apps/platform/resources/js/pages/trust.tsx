@@ -1,6 +1,7 @@
-import { Head, Link } from '@inertiajs/react';
+import { Link } from '@inertiajs/react';
 import { ArrowLeft, CheckCircle2, KeyRound, ShieldCheck } from 'lucide-react';
 import PublicLanguageSwitch from '@/components/public-language-switch';
+import PublicSeo from '@/components/public-seo';
 
 const trustPrinciples = [
     {
@@ -31,12 +32,16 @@ const securityControls = [
 export default function Trust() {
     return (
         <>
-            <Head title="Trust Center — KMJ TECHNO">
-                <meta
-                    name="description"
-                    content="KMJ TECHNO Trust Center: evidence-backed product lifecycle, governed access, licensing boundaries and release integrity."
-                />
-            </Head>
+            <PublicSeo
+                title="Trust Center — KMJ TECHNO"
+                description="KMJ TECHNO Trust Center: evidence-backed product lifecycle, governed access, licensing boundaries and release integrity."
+                path="/trust"
+                structuredData={{
+                    '@context': 'https://schema.org',
+                    '@type': 'WebPage',
+                    name: 'KMJ TECHNO Trust Center',
+                }}
+            />
 
             <main className="min-h-screen bg-[#07090c] text-white">
                 <header className="border-b border-white/[0.07] bg-[#07090c]/95">
