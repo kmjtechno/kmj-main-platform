@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\DomainOutboxMessage;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
@@ -75,6 +76,7 @@ final class SandboxLicenseControlCenterTest extends TestCase
             'status' => 'revoked',
         ]);
         $this->assertDatabaseCount('license_audit_events', 3);
+        self::assertSame(3, DomainOutboxMessage::query()->count());
     }
 
     public function test_license_audit_history_is_visible_only_for_managed_organizations(): void
