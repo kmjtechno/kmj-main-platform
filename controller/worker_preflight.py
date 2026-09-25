@@ -54,7 +54,8 @@ async def main() -> None:
         "ai": {
             key: status[key] for key in (
                 "configured_providers", "reachable_providers", "provider_errors",
-                "eligible_verified_zero", "paid_fallback", "local_llm",
+                "eligible_verified_zero", "eligible_public_verified_zero",
+                "eligible_confidential_verified_zero", "paid_fallback", "local_llm",
             )
         },
         "credential_present": credential_presence,
@@ -66,7 +67,8 @@ async def main() -> None:
         },
         "http_route_state": (
             "VERIFIED_FREE_CANDIDATES_AVAILABLE"
-            if status["eligible_verified_zero"] else "NO_FREE_ROUTE_AVAILABLE"
+            if status["eligible_confidential_verified_zero"]
+            else "NO_CONFIDENTIAL_FREE_ROUTE_AVAILABLE"
         ),
     }
     print(json.dumps(result, indent=2, sort_keys=True))
