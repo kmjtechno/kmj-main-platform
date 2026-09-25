@@ -4,7 +4,16 @@
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
 
-        @unless (config('app.public_indexing', false))
+        @php
+            $publicIndexableRoute = request()->routeIs(
+                'home',
+                'company',
+                'capabilities',
+                'products.*',
+                'trust',
+            );
+        @endphp
+        @unless (config('app.public_indexing', false) && $publicIndexableRoute)
             <meta name="robots" content="noindex,nofollow">
         @endunless
 
