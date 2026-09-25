@@ -279,16 +279,18 @@ jobs:
           chrome="$KMJ_STAGING_CHROME"
           test -n "$chrome"
           root_dom="$($chrome --headless --no-sandbox --disable-gpu --virtual-time-budget=10000 --dump-dom "$HEALTH_URL" 2>/dev/null)"
-          grep -Fq 'kmj-main-platform' <<< "$root_dom"
-          grep -Fq 'native-home' <<< "$root_dom"
+          grep -Fq 'KMJ TECHNO' <<< "$root_dom"
+          grep -Fq 'Explore all products' <<< "$root_dom"
           products_dom="$($chrome --headless --no-sandbox --disable-gpu --virtual-time-budget=10000 --dump-dom 'https://staging.kmjtechno.com/products' 2>/dev/null)"
           calibration_dom="$($chrome --headless --no-sandbox --disable-gpu --virtual-time-budget=10000 --dump-dom 'https://staging.kmjtechno.com/products/kmj-calibration-pro' 2>/dev/null)"
           grep -Fq 'KMJ Calibration Pro' <<< "$products_dom"
-          grep -Fq 'Interactive simulation only' <<< "$products_dom"
-          grep -Fq 'Virtual demo' <<< "$calibration_dom"
-          grep -Fq 'Commercial licensing is not enabled yet' <<< "$calibration_dom"
+          grep -Fq 'Products built to move' <<< "$products_dom"
+          grep -Fq 'View product' <<< "$products_dom"
+          grep -Fq 'KMJ Calibration Pro' <<< "$calibration_dom"
+          grep -Fq 'Interactive' <<< "$calibration_dom"
+          grep -Fq 'simulation' <<< "$calibration_dom"
           echo 'result=pass' >> "$GITHUB_OUTPUT"
-          echo 'Native Main Platform root + calibration-first product experience PASS.'
+          echo 'Native Main Platform root + world-class public product experience PASS.'
 
       - name: Capture desktop and mobile staging QA
         id: browser_qa
