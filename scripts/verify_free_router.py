@@ -48,6 +48,24 @@ def main() -> None:
         provider_router = FreeCloudRouter()
         assert "openrouter" in {provider.name for provider in provider_router.providers()}
 
+    with patch.dict(os.environ, {"NVIDIA_API_KEY": "test-key"}, clear=False):
+        provider_router = FreeCloudRouter()
+        assert "nvidia" in {provider.name for provider in provider_router.providers()}
+
+    with patch.dict(os.environ, {"KMJ_ENABLE_PUBLIC_FREE_PROVIDERS": "1"}, clear=False):
+        public_router = FreeCloudRouter()
+        kilo = next(provider for provider in public_router.providers() if provider.name == "kilo")
+        assert kilo.allow_confidential is False
+        public_models = [{
+            "id": "example/coder:free",
+            "owned_by": "example",
+            "_kmj_provider": "kilo",
+            "_kmj_base_url": kilo.base_url,
+            "_kmj_allow_confidential": False,
+        }]
+        assert not public_router.rank(public_models, "coding", "confidential")
+        assert public_router.rank(public_models, "coding", "public")
+
     with patch.object(router, "discover", new=AsyncMock(return_value=[
         {"id": "qwen/qwen-coder", "owned_by": "qwen"},
     ])):
