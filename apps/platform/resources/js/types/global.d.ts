@@ -12,6 +12,7 @@ declare module '@inertiajs/core' {
             name: string;
             publicSite: {
                 base_url: string;
+                indexable: boolean;
             };
             localization: {
                 locale: 'en' | 'hi';
