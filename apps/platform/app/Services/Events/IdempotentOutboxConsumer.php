@@ -10,7 +10,7 @@ use InvalidArgumentException;
 final class IdempotentOutboxConsumer
 {
     /**
-     * @param callable(DomainOutboxMessage): void $handler
+     * @param  callable(DomainOutboxMessage): void  $handler
      */
     public function consume(
         DomainOutboxMessage $message,
