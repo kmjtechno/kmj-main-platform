@@ -27,6 +27,37 @@ final class ProductLicenseProfileTest extends TestCase
         self::assertFalse($calibration->allowsStatus('active'));
     }
 
+    public function test_all_canonical_roadmap_products_have_active_only_main_platform_license_profiles(): void
+    {
+        $profiles = new ProductLicenseProfileRegistry;
+
+        foreach ([
+            KmjProductCatalog::FORGE_SLUG,
+            KmjProductCatalog::CONNECT_SLUG,
+            KmjProductCatalog::CLOUD_NEXUS_SLUG,
+            KmjProductCatalog::AGENT_SLUG,
+            KmjProductCatalog::CREATIVE_STUDIO_SLUG,
+            KmjProductCatalog::CINEMA_PLATFORM_SLUG,
+            KmjProductCatalog::DOME_360_SLUG,
+            KmjProductCatalog::CINEMA_5D_SLUG,
+            KmjProductCatalog::CINEMA_7D_SLUG,
+            KmjProductCatalog::CINEMA_9D_SLUG,
+            KmjProductCatalog::CINEMA_12D_SLUG,
+            KmjProductCatalog::CINEMA_14D_SLUG,
+            KmjProductCatalog::CINEMA_16D_SLUG,
+            KmjProductCatalog::CINEMA_5DX_SLUG,
+            KmjProductCatalog::CINEMA_PLAYER_SLUG,
+        ] as $slug) {
+            $profile = $profiles->forSlug($slug);
+
+            self::assertNotNull($profile);
+            self::assertSame($slug, $profile->slug);
+            self::assertSame(ProductLicenseProfileRegistry::GENERIC_PRODUCT_CAPABILITY, $profile->capability);
+            self::assertTrue($profile->allowsStatus('active'));
+            self::assertFalse($profile->allowsStatus('sandbox'));
+        }
+    }
+
     public function test_main_platform_sandbox_profile_remains_explicitly_registered(): void
     {
         $profile = (new ProductLicenseProfileRegistry)
