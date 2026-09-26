@@ -57,6 +57,14 @@ export const deliveryMilestones: DeliveryMilestone[] = [
             'PR #203 SEO foundation + PR #211 corporate surfaces, sitemap and fail-closed indexing verification',
     },
     {
+        id: 'transactional-outbox-foundation',
+        title: 'Transactional outbox foundation',
+        state: 'active',
+        detail: 'Durable domain-event outbox persistence, producer idempotency enforcement, rollback-safe consumer receipts, and transactional licensing audit publication are under exact-head verification',
+        evidence:
+            'PR #212 exact-head Foundation + Platform Runtime verification in progress',
+    },
+    {
         id: 'registration-onboarding',
         title: 'Registration onboarding',
         state: 'verified',
