@@ -52,8 +52,8 @@ export const deliveryMilestones: DeliveryMilestone[] = [
         id: 'public-seo-foundation',
         title: 'Public SEO metadata foundation',
         state: 'active',
-        detail: 'Canonical URL, Open Graph, Twitter summary and truthful JSON-LD metadata are implemented for core public surfaces while hreflang remains gated on real translated URLs',
-        evidence: 'PR #203 exact-head verification in progress',
+        detail: 'Canonical metadata, truthful JSON-LD, public Company/Capabilities surfaces, canonical sitemap, and fail-closed indexing controls are implemented while hreflang remains gated on real translated URLs',
+        evidence: 'PR #203 SEO foundation + PR #211 corporate surfaces, sitemap and fail-closed indexing verification',
     },
     {
         id: 'registration-onboarding',
@@ -320,5 +320,5 @@ export const deliveryProgress = Math.round(
 export const deliveryProgressMeta = {
     label: 'Revenue-capable working phase',
     note: 'Evidence-based delivery milestones, not total product completion.',
-    refreshed: '2026-09-25',
+    refreshed: '2026-09-26',
 } as const;
