@@ -90,6 +90,6 @@ final class PublicSitemapTest extends TestCase
             '<loc>https://kmjtechno.example/products/kmj-calibration-pro</loc>',
             $xml,
         );
-        $this->assertSame(19, substr_count($xml, '<url>'));
+        $this->assertSame(28, substr_count($xml, '<url>'));
     }
 }

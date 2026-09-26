@@ -14,6 +14,8 @@ type Product = {
     eyebrow: string;
     headline: string;
     summary: string;
+    category: string;
+    family: string | null;
     proof: Array<{
         title: string;
         detail: string;
@@ -30,9 +32,10 @@ export default function ProductsIndex({ products }: { products: Product[] }) {
     const activeCount = products.filter(
         (product) => product.purchase_enabled,
     ).length;
-    const demoCount = products.filter(
-        (product) => product.demo.simulation,
-    ).length;
+    const categories = Array.from(
+        new Set(products.map((product) => product.category)),
+    );
+    const categoryCount = categories.length;
 
     return (
         <>
@@ -79,8 +82,8 @@ export default function ProductsIndex({ products }: { products: Product[] }) {
                             <div className="grid grid-cols-3 overflow-hidden rounded-2xl border border-white/[0.08] bg-white/[0.025] lg:w-[390px]">
                                 {[
                                     ['Portfolio', String(products.length)],
+                                    ['Categories', String(categoryCount)],
                                     ['Commercial', String(activeCount)],
-                                    ['Interactive', String(demoCount)],
                                 ].map(([label, value], index) => (
                                     <div
                                         key={label}
@@ -104,6 +107,16 @@ export default function ProductsIndex({ products }: { products: Product[] }) {
                     </section>
 
                     <section className="mx-auto max-w-[1440px] px-5 pb-24 sm:px-8 lg:px-12 lg:pb-28">
+                        <div className="mb-7 flex flex-wrap gap-2">
+                            {categories.map((category) => (
+                                <span
+                                    key={category}
+                                    className="rounded-full border border-white/[0.08] bg-white/[0.025] px-3 py-2 text-[10px] font-black tracking-[0.12em] text-white/42 uppercase"
+                                >
+                                    {category}
+                                </span>
+                            ))}
+                        </div>
                         <div className="grid gap-5 lg:grid-cols-2">
                             {products.map((product, index) => {
                                 const featured = index === 0;
@@ -158,6 +171,11 @@ export default function ProductsIndex({ products }: { products: Product[] }) {
                                                                 )}
                                                             </div>
                                                             <div className="mt-1 text-xs font-bold text-white/45">
+                                                                {
+                                                                    product.category
+                                                                }
+                                                            </div>
+                                                            <div className="mt-1 text-[10px] font-semibold text-white/28">
                                                                 {
                                                                     product.eyebrow
                                                                 }

@@ -55,7 +55,7 @@ final class PublicProductHubTest extends TestCase
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->component('products/index')
-                ->has('products', 8)
+                ->has('products', 17)
                 ->where('products.0.slug', 'kmj-cloudos')
                 ->where('products.0.lifecycle', 'active')
                 ->where('products.0.demo.kind', 'cloudos')
@@ -86,8 +86,20 @@ final class PublicProductHubTest extends TestCase
                 ->where('products.6.demo.simulation', false)
                 ->where('products.7.slug', 'kmj-cinema-platform')
                 ->where('products.7.lifecycle', 'development')
+                ->where('products.7.category', 'Media & Immersive Experience')
                 ->where('products.7.demo.kind', 'none')
-                ->where('products.7.demo.simulation', false));
+                ->where('products.7.demo.simulation', false)
+                ->where('products.8.slug', 'kmj-360-dome')
+                ->where('products.8.lifecycle', 'roadmap')
+                ->where('products.9.slug', 'kmj-5d-cinema')
+                ->where('products.10.slug', 'kmj-7d-cinema')
+                ->where('products.11.slug', 'kmj-9d-cinema')
+                ->where('products.12.slug', 'kmj-12d-cinema')
+                ->where('products.13.slug', 'kmj-14d-cinema')
+                ->where('products.14.slug', 'kmj-16d-cinema')
+                ->where('products.15.slug', 'kmj-5dx-cinema')
+                ->where('products.16.slug', 'kmj-cinema-player')
+                ->where('products.16.category', 'Media & Immersive Experience'));
     }
 
     public function test_cloudos_detail_exposes_simulation_and_commercial_cta_state(): void
@@ -126,6 +138,15 @@ final class PublicProductHubTest extends TestCase
             'kmj-agent' => 'development',
             'kmj-creative-studio' => 'roadmap',
             'kmj-cinema-platform' => 'development',
+            'kmj-360-dome' => 'roadmap',
+            'kmj-5d-cinema' => 'roadmap',
+            'kmj-7d-cinema' => 'roadmap',
+            'kmj-9d-cinema' => 'roadmap',
+            'kmj-12d-cinema' => 'roadmap',
+            'kmj-14d-cinema' => 'roadmap',
+            'kmj-16d-cinema' => 'roadmap',
+            'kmj-5dx-cinema' => 'roadmap',
+            'kmj-cinema-player' => 'roadmap',
         ] as $slug => $lifecycle) {
             $this->get('/products/'.$slug)
                 ->assertOk()
