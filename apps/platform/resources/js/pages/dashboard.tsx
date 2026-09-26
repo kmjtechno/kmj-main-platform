@@ -5,6 +5,7 @@ import {
     BadgeCheck,
     Building2,
     CheckCircle2,
+    Download,
     KeyRound,
     Layers3,
     Plus,
@@ -19,6 +20,14 @@ type Entitlement = {
     capability: string;
     status: string;
     starts_at: string;
+    release: {
+        id: string;
+        version: string;
+        digest: string;
+        filename: string;
+        size_bytes: number | null;
+        download_url: string;
+    } | null;
 };
 
 type Organization = {
@@ -216,6 +225,22 @@ export default function Dashboard({
                                                     >
                                                         License control →
                                                     </Link>
+                                                )}
+                                                {entitlement.release && (
+                                                    <a
+                                                        href={
+                                                            entitlement.release
+                                                                .download_url
+                                                        }
+                                                        className="inline-flex items-center gap-1 text-[11px] font-black text-emerald-600 dark:text-emerald-400"
+                                                    >
+                                                        <Download className="h-3 w-3" />
+                                                        Download v
+                                                        {
+                                                            entitlement.release
+                                                                .version
+                                                        }
+                                                    </a>
                                                 )}
                                             </div>
                                         </div>
