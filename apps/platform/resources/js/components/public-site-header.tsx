@@ -1,6 +1,7 @@
 import { Link, usePage } from '@inertiajs/react';
 import { ArrowUpRight, Menu, X } from 'lucide-react';
 import { useState } from 'react';
+import LockedBrand from '@/components/locked-brand';
 import PublicLanguageSwitch from '@/components/public-language-switch';
 import { dashboard, login, register } from '@/routes';
 
@@ -13,21 +14,25 @@ export default function PublicSiteHeader() {
             <div className="mx-auto flex h-[76px] max-w-[1440px] items-center justify-between px-5 sm:px-8 lg:px-12">
                 <Link
                     href="/"
-                    className="group flex items-center gap-4"
+                    className="group flex min-w-0 items-center"
                     aria-label="KMJ TECHNO home"
                 >
-                    <span className="h-8 w-[3px] rounded-full bg-[#ef2430] shadow-[0_0_24px_rgba(239,36,48,.55)]" />
-                    <span>
-                        <span className="block text-[14px] font-black tracking-[0.19em] text-white">
-                            KMJ TECHNO
-                        </span>
-                        <span className="mt-0.5 block text-[9px] font-semibold tracking-[0.28em] text-white/34 uppercase">
-                            Intelligent systems
-                        </span>
-                    </span>
+                    <LockedBrand compact />
                 </Link>
 
                 <nav className="hidden items-center gap-1 lg:flex">
+                    <Link
+                        href="/company"
+                        className="rounded-lg px-4 py-2 text-sm font-semibold text-white/58 transition hover:bg-white/[0.05] hover:text-white"
+                    >
+                        Company
+                    </Link>
+                    <Link
+                        href="/capabilities"
+                        className="rounded-lg px-4 py-2 text-sm font-semibold text-white/58 transition hover:bg-white/[0.05] hover:text-white"
+                    >
+                        Capabilities
+                    </Link>
                     <Link
                         href="/products"
                         className="rounded-lg px-4 py-2 text-sm font-semibold text-white/58 transition hover:bg-white/[0.05] hover:text-white"
@@ -89,6 +94,20 @@ export default function PublicSiteHeader() {
             {open && (
                 <div className="border-t border-white/[0.06] bg-[#07090c] px-5 py-5 sm:hidden">
                     <div className="mx-auto grid max-w-[1440px] gap-2">
+                        <Link
+                            href="/company"
+                            onClick={() => setOpen(false)}
+                            className="rounded-xl px-4 py-3 text-sm font-bold text-white/75 hover:bg-white/[0.05]"
+                        >
+                            Company
+                        </Link>
+                        <Link
+                            href="/capabilities"
+                            onClick={() => setOpen(false)}
+                            className="rounded-xl px-4 py-3 text-sm font-bold text-white/75 hover:bg-white/[0.05]"
+                        >
+                            Capabilities
+                        </Link>
                         <Link
                             href="/products"
                             onClick={() => setOpen(false)}

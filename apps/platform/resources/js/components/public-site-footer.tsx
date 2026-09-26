@@ -1,22 +1,13 @@
 import { Link } from '@inertiajs/react';
 import { ArrowUpRight } from 'lucide-react';
+import LockedBrand from '@/components/locked-brand';
 
 export default function PublicSiteFooter() {
     return (
         <footer className="border-t border-white/[0.07] bg-[#05070a]">
-            <div className="mx-auto grid max-w-[1440px] gap-12 px-5 py-14 sm:px-8 md:grid-cols-[1.3fr_.7fr_.7fr] lg:px-12">
+            <div className="mx-auto grid max-w-[1440px] gap-12 px-5 py-14 sm:px-8 md:grid-cols-2 lg:grid-cols-[1.4fr_.7fr_.7fr_.8fr] lg:px-12">
                 <div>
-                    <div className="flex items-center gap-4">
-                        <span className="h-8 w-[3px] rounded-full bg-[#ef2430]" />
-                        <div>
-                            <div className="text-[14px] font-black tracking-[0.19em] text-white">
-                                KMJ TECHNO
-                            </div>
-                            <div className="mt-1 text-[10px] font-semibold tracking-[0.22em] text-white/30 uppercase">
-                                Build beyond ordinary
-                            </div>
-                        </div>
-                    </div>
+                    <LockedBrand />
                     <p className="mt-5 max-w-md text-sm leading-7 text-white/38">
                         Software, cloud systems and intelligent products
                         designed around clear product boundaries, governed
@@ -30,6 +21,18 @@ export default function PublicSiteFooter() {
                     </div>
                     <div className="mt-4 grid gap-3">
                         <Link
+                            href="/company"
+                            className="text-sm font-semibold text-white/62 transition hover:text-white"
+                        >
+                            Company
+                        </Link>
+                        <Link
+                            href="/capabilities"
+                            className="text-sm font-semibold text-white/62 transition hover:text-white"
+                        >
+                            Capabilities
+                        </Link>
+                        <Link
                             href="/products"
                             className="text-sm font-semibold text-white/62 transition hover:text-white"
                         >
@@ -41,12 +44,30 @@ export default function PublicSiteFooter() {
                         >
                             Trust center
                         </Link>
-                        <Link
-                            href="/"
-                            className="text-sm font-semibold text-white/62 transition hover:text-white"
-                        >
-                            Company platform
-                        </Link>
+                    </div>
+                </div>
+
+                <div>
+                    <div className="text-[11px] font-black tracking-[0.18em] text-white/32 uppercase">
+                        Legal
+                    </div>
+                    <div className="mt-4 grid gap-3">
+                        {[
+                            ['/legal', 'Legal center'],
+                            ['/terms', 'Terms & Conditions'],
+                            ['/privacy', 'Privacy Policy'],
+                            ['/refund-policy', 'Refund Policy'],
+                            ['/acceptable-use', 'Acceptable Use'],
+                            ['/cookie-policy', 'Cookie Policy'],
+                        ].map(([href, label]) => (
+                            <Link
+                                key={href}
+                                href={href}
+                                className="text-sm font-semibold text-white/62 transition hover:text-white"
+                            >
+                                {label}
+                            </Link>
+                        ))}
                     </div>
                 </div>
 
@@ -77,9 +98,9 @@ export default function PublicSiteFooter() {
                         © {new Date().getFullYear()} KMJ TECHNO. All rights
                         reserved.
                     </span>
-                    <span>
-                        Public product claims remain bound to verified platform
-                        authority.
+                    <span className="flex flex-wrap items-center gap-x-4 gap-y-1">
+                        <span>Public product claims remain bound to verified platform authority.</span>
+                        <span className="font-semibold text-white/45">Build &amp; Design by KMJ TECHNO</span>
                     </span>
                 </div>
             </div>
