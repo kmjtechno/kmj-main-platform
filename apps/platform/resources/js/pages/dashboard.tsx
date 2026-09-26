@@ -170,7 +170,7 @@ export default function Dashboard({
                                                 productImages[
                                                     entitlement.product_slug
                                                 ] ??
-                                                '/assets/products/kmj-brand-system.webp'
+                                                '/assets/brand/kmj-social-card.webp'
                                             }
                                             alt={entitlement.product_name}
                                             loading="lazy"
