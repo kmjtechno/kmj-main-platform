@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\DomainOutboxConsumption;
 use App\Models\DomainOutboxMessage;
 use App\Services\Events\IdempotentOutboxConsumer;
+use App\Services\Events\OutboxPublisher;
 use App\Services\Events\TransactionalOutbox;
 use DomainException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -110,5 +111,73 @@ final class TransactionalOutboxTest extends TestCase
 
         self::assertTrue($consumer->consume($message, 'test.consumer', static function (): void {}));
         self::assertSame(1, DomainOutboxConsumption::query()->count());
+    }
+
+    public function test_publisher_processes_oldest_pending_messages_once(): void
+    {
+        $outbox = app(TransactionalOutbox::class);
+        $newer = $outbox->record(
+            eventType: 'example.newer',
+            aggregateType: 'example',
+            aggregateId: 'newer',
+            payload: ['sequence' => 2],
+            idempotencyKey: 'publisher-newer',
+            occurredAt: now()->subMinute(),
+        );
+        $older = $outbox->record(
+            eventType: 'example.older',
+            aggregateType: 'example',
+            aggregateId: 'older',
+            payload: ['sequence' => 1],
+            idempotencyKey: 'publisher-older',
+            occurredAt: now()->subMinutes(2),
+        );
+
+        $published = [];
+        $publisher = app(OutboxPublisher::class);
+        $result = $publisher->publishPending(function (DomainOutboxMessage $message) use (&$published): void {
+            $published[] = $message->getAttribute('event_type');
+        });
+
+        self::assertSame(['example.older', 'example.newer'], $published);
+        self::assertSame(['published' => 2, 'failed' => 0, 'skipped' => 0], $result);
+        self::assertNotNull($older->refresh()->getAttribute('published_at'));
+        self::assertNotNull($newer->refresh()->getAttribute('published_at'));
+        self::assertSame(1, $older->getAttribute('attempts'));
+        self::assertSame(1, $newer->getAttribute('attempts'));
+
+        self::assertSame(
+            ['published' => 0, 'failed' => 0, 'skipped' => 0],
+            $publisher->publishPending(static function (): void {
+                self::fail('Published messages must not be delivered twice.');
+            }),
+        );
+    }
+
+    public function test_failed_publish_remains_pending_and_is_retryable(): void
+    {
+        $message = app(TransactionalOutbox::class)->record(
+            eventType: 'example.retry',
+            aggregateType: 'example',
+            aggregateId: 'retry',
+            payload: ['status' => 'pending'],
+            idempotencyKey: 'publisher-retry',
+        );
+        $publisher = app(OutboxPublisher::class);
+
+        $failed = $publisher->publishPending(static function (): void {
+            throw new RuntimeException('transport unavailable');
+        });
+
+        self::assertSame(['published' => 0, 'failed' => 1, 'skipped' => 0], $failed);
+        self::assertNull($message->refresh()->getAttribute('published_at'));
+        self::assertSame(1, $message->getAttribute('attempts'));
+        self::assertSame('transport unavailable', $message->getAttribute('last_error'));
+
+        $retried = $publisher->publishPending(static function (): void {});
+        self::assertSame(['published' => 1, 'failed' => 0, 'skipped' => 0], $retried);
+        self::assertNotNull($message->refresh()->getAttribute('published_at'));
+        self::assertSame(2, $message->getAttribute('attempts'));
+        self::assertNull($message->getAttribute('last_error'));
     }
 }

@@ -60,9 +60,9 @@ export const deliveryMilestones: DeliveryMilestone[] = [
         id: 'transactional-outbox-foundation',
         title: 'Transactional outbox foundation',
         state: 'active',
-        detail: 'Durable domain-event outbox persistence, producer idempotency enforcement, rollback-safe consumer receipts, and transactional licensing audit publication are under exact-head verification',
+        detail: 'Durable domain-event persistence, producer idempotency enforcement, rollback-safe consumer receipts, transactional licensing audit publication, and retry-safe oldest-first publishing are implemented',
         evidence:
-            'PR #212 exact-head Foundation + Platform Runtime verification in progress',
+            'PR #212 foundation + roadmap/p4-outbox-publisher-v2 exact-head verification',
     },
     {
         id: 'registration-onboarding',
