@@ -101,6 +101,42 @@ export default function ProductsIndex({ products }: { products: Product[] }) {
                     '@context': 'https://schema.org',
                     '@type': 'CollectionPage',
                     name: 'KMJ TECHNO Products',
+                    description:
+                        'Canonical KMJ TECHNO product portfolio with lifecycle, category and configuration metadata.',
+                    mainEntity: {
+                        '@type': 'ItemList',
+                        numberOfItems: products.length,
+                        itemListElement: products.map((product, index) => ({
+                            '@type': 'ListItem',
+                            position: index + 1,
+                            item: {
+                                '@type': 'SoftwareApplication',
+                                name: product.name,
+                                url:
+                                    'https://kmjtechno.com/products/' +
+                                    product.slug,
+                                applicationCategory: product.category,
+                                additionalProperty: [
+                                    {
+                                        '@type': 'PropertyValue',
+                                        name: 'Lifecycle',
+                                        value: product.lifecycle_label,
+                                    },
+                                    ...(product.variants?.length
+                                        ? [
+                                              {
+                                                  '@type': 'PropertyValue',
+                                                  name: 'Configurations',
+                                                  value: product.variants.join(
+                                                      ', ',
+                                                  ),
+                                              },
+                                          ]
+                                        : []),
+                                ],
+                            },
+                        })),
+                    },
                 }}
             />
 
