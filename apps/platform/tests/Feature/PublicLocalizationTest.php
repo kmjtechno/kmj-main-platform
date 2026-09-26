@@ -2,15 +2,20 @@
 
 namespace Tests\Feature;
 
+use App\Services\Commerce\KmjProductCatalog;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
 
 final class PublicLocalizationTest extends TestCase
 {
+    use RefreshDatabase;
+
     protected function setUp(): void
     {
         parent::setUp();
         $this->withoutVite();
+        app(KmjProductCatalog::class)->syncAll();
     }
 
     public function test_supported_hindi_locale_is_shared_and_persisted(): void
