@@ -78,6 +78,11 @@ export default function Welcome({
                         '@context': 'https://schema.org',
                         '@type': 'Organization',
                         name: 'KMJ TECHNO',
+                        slogan: 'INNOVATE | BUILD | SCALE',
+                        logo: 'https://kmjtechno.com/assets/brand/kmj-logo-horizontal.webp',
+                        image: 'https://kmjtechno.com/assets/brand/kmj-social-card.webp',
+                        description:
+                            'KMJ TECHNO develops software, cloud platforms, AI engineering systems, immersive calibration, secure connectivity and cinema technology.',
                     },
                     {
                         '@context': 'https://schema.org',

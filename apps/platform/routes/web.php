@@ -24,9 +24,20 @@ use KMJ\MainPlatform\Organizations\Services\OrganizationDirectory;
 
 Route::get('/', function (PublicProductCatalog $products) {
     $portfolio = $products->all();
+    $featuredSlugs = [
+        KmjProductCatalog::CLOUDOS_SLUG,
+        KmjProductCatalog::CALIBRATION_SLUG,
+        KmjProductCatalog::CINEMA_PLATFORM_SLUG,
+        KmjProductCatalog::LICENSING_HUB_SLUG,
+    ];
+    $featured = collect($portfolio)
+        ->filter(fn (array $product): bool => in_array($product['slug'], $featuredSlugs, true))
+        ->sortBy(fn (array $product): int => (int) array_search($product['slug'], $featuredSlugs, true))
+        ->values()
+        ->all();
 
     return Inertia::render('welcome', [
-        'products' => array_slice($portfolio, 0, 8),
+        'products' => $featured,
         'portfolioCount' => count($portfolio),
     ]);
 })->name('home');

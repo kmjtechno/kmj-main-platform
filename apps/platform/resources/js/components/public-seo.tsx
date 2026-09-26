@@ -7,6 +7,7 @@ type PublicSeoProps = {
     description: string;
     path: string;
     type?: 'website' | 'article';
+    image?: string;
     structuredData?: StructuredData;
 };
 
@@ -15,12 +16,14 @@ export default function PublicSeo({
     description,
     path,
     type = 'website',
+    image = '/assets/brand/kmj-social-card.webp',
     structuredData,
 }: PublicSeoProps) {
     const { publicSite } = usePage().props;
     const origin = publicSite.base_url.replace(/\/$/, '');
     const normalizedPath = path === '/' ? '/' : '/' + path.replace(/^\/+/, '');
     const canonical = origin + normalizedPath;
+    const socialImage = image.startsWith('http') ? image : origin + image;
     const structuredDataWithUrl = Array.isArray(structuredData)
         ? structuredData.map((item) => ({
               ...item,
@@ -43,13 +46,25 @@ export default function PublicSeo({
                 }
             />
             <link rel="canonical" href={canonical} />
+            <link
+                rel="alternate"
+                type="text/plain"
+                href={origin + '/llms.txt'}
+                title="KMJ TECHNO AI-readable product authority"
+            />
             <meta property="og:title" content={title} />
             <meta property="og:description" content={description} />
             <meta property="og:type" content={type} />
             <meta property="og:url" content={canonical} />
-            <meta name="twitter:card" content="summary" />
+            <meta property="og:image" content={socialImage} />
+            <meta
+                property="og:image:alt"
+                content="KMJ TECHNO — INNOVATE | BUILD | SCALE"
+            />
+            <meta name="twitter:card" content="summary_large_image" />
             <meta name="twitter:title" content={title} />
             <meta name="twitter:description" content={description} />
+            <meta name="twitter:image" content={socialImage} />
             {structuredDataWithUrl && (
                 <script type="application/ld+json">
                     {JSON.stringify(structuredDataWithUrl)}
