@@ -76,7 +76,12 @@ final class SandboxLicenseControlCenterTest extends TestCase
             'status' => 'revoked',
         ]);
         $this->assertDatabaseCount('license_audit_events', 3);
-        self::assertSame(3, DomainOutboxMessage::query()->count());
+        $this->assertDatabaseHas('outbox_messages', [
+            'event_type' => 'entitlement.issued',
+            'aggregate_type' => 'entitlement',
+            'organization_id' => $entitlement->organization_id,
+        ]);
+        self::assertSame(4, DomainOutboxMessage::query()->count());
     }
 
     public function test_license_audit_history_is_visible_only_for_managed_organizations(): void
