@@ -10,12 +10,13 @@ providers:
   # Direct provider adapters are dormant until their API key exists.
   priority:
     - 9router
-    - openrouter
     - groq
+    - cloudflare
+    - gemini
+    - openrouter
     - nvidia
     - zai
     - cerebras
-    - gemini
     - mistral
     - ollama-cloud
     - kilo
