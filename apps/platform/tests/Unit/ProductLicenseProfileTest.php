@@ -39,13 +39,6 @@ final class ProductLicenseProfileTest extends TestCase
             KmjProductCatalog::CREATIVE_STUDIO_SLUG,
             KmjProductCatalog::CINEMA_PLATFORM_SLUG,
             KmjProductCatalog::DOME_360_SLUG,
-            KmjProductCatalog::CINEMA_5D_SLUG,
-            KmjProductCatalog::CINEMA_7D_SLUG,
-            KmjProductCatalog::CINEMA_9D_SLUG,
-            KmjProductCatalog::CINEMA_12D_SLUG,
-            KmjProductCatalog::CINEMA_14D_SLUG,
-            KmjProductCatalog::CINEMA_16D_SLUG,
-            KmjProductCatalog::CINEMA_5DX_SLUG,
             KmjProductCatalog::CINEMA_PLAYER_SLUG,
         ] as $slug) {
             $profile = $profiles->forSlug($slug);
@@ -55,6 +48,15 @@ final class ProductLicenseProfileTest extends TestCase
             self::assertSame(ProductLicenseProfileRegistry::GENERIC_PRODUCT_CAPABILITY, $profile->capability);
             self::assertTrue($profile->allowsStatus('active'));
             self::assertFalse($profile->allowsStatus('sandbox'));
+        }
+    }
+
+    public function test_legacy_cinema_variant_slugs_are_not_independently_licensable(): void
+    {
+        $profiles = new ProductLicenseProfileRegistry;
+
+        foreach (KmjProductCatalog::LEGACY_CINEMA_VARIANT_SLUGS as $slug) {
+            self::assertNull($profiles->forSlug($slug));
         }
     }
 

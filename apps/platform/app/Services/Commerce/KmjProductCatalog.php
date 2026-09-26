@@ -43,33 +43,17 @@ final class KmjProductCatalog
 
     public const DOME_360_NAME = 'KMJ 360 Dome';
 
-    public const CINEMA_5D_SLUG = 'kmj-5d-cinema';
+    public const CINEMA_VARIANTS = ['5D', '7D', '9D', '12D', '14D', '16D', '5DX'];
 
-    public const CINEMA_5D_NAME = 'KMJ 5D Cinema';
-
-    public const CINEMA_7D_SLUG = 'kmj-7d-cinema';
-
-    public const CINEMA_7D_NAME = 'KMJ 7D Cinema';
-
-    public const CINEMA_9D_SLUG = 'kmj-9d-cinema';
-
-    public const CINEMA_9D_NAME = 'KMJ 9D Cinema';
-
-    public const CINEMA_12D_SLUG = 'kmj-12d-cinema';
-
-    public const CINEMA_12D_NAME = 'KMJ 12D Cinema';
-
-    public const CINEMA_14D_SLUG = 'kmj-14d-cinema';
-
-    public const CINEMA_14D_NAME = 'KMJ 14D Cinema';
-
-    public const CINEMA_16D_SLUG = 'kmj-16d-cinema';
-
-    public const CINEMA_16D_NAME = 'KMJ 16D Cinema';
-
-    public const CINEMA_5DX_SLUG = 'kmj-5dx-cinema';
-
-    public const CINEMA_5DX_NAME = 'KMJ 5DX Cinema';
+    public const LEGACY_CINEMA_VARIANT_SLUGS = [
+        'kmj-5d-cinema',
+        'kmj-7d-cinema',
+        'kmj-9d-cinema',
+        'kmj-12d-cinema',
+        'kmj-14d-cinema',
+        'kmj-16d-cinema',
+        'kmj-5dx-cinema',
+    ];
 
     public const CINEMA_PLAYER_SLUG = 'kmj-cinema-player';
 
@@ -97,13 +81,6 @@ final class KmjProductCatalog
                 self::CREATIVE_STUDIO_SLUG => self::CREATIVE_STUDIO_NAME,
                 self::CINEMA_PLATFORM_SLUG => self::CINEMA_PLATFORM_NAME,
                 self::DOME_360_SLUG => self::DOME_360_NAME,
-                self::CINEMA_5D_SLUG => self::CINEMA_5D_NAME,
-                self::CINEMA_7D_SLUG => self::CINEMA_7D_NAME,
-                self::CINEMA_9D_SLUG => self::CINEMA_9D_NAME,
-                self::CINEMA_12D_SLUG => self::CINEMA_12D_NAME,
-                self::CINEMA_14D_SLUG => self::CINEMA_14D_NAME,
-                self::CINEMA_16D_SLUG => self::CINEMA_16D_NAME,
-                self::CINEMA_5DX_SLUG => self::CINEMA_5DX_NAME,
                 self::CINEMA_PLAYER_SLUG => self::CINEMA_PLAYER_NAME,
             ];
 

@@ -25,6 +25,14 @@ final class PublicProductCatalog
     }
 
     /**
+     * @return array<int, string>
+     */
+    public function slugs(): array
+    {
+        return $this->publicSlugs();
+    }
+
+    /**
      * @return array<string, mixed>|null
      */
     public function find(string $slug): ?array
@@ -51,13 +59,6 @@ final class PublicProductCatalog
             KmjProductCatalog::CREATIVE_STUDIO_SLUG,
             KmjProductCatalog::CINEMA_PLATFORM_SLUG,
             KmjProductCatalog::DOME_360_SLUG,
-            KmjProductCatalog::CINEMA_5D_SLUG,
-            KmjProductCatalog::CINEMA_7D_SLUG,
-            KmjProductCatalog::CINEMA_9D_SLUG,
-            KmjProductCatalog::CINEMA_12D_SLUG,
-            KmjProductCatalog::CINEMA_14D_SLUG,
-            KmjProductCatalog::CINEMA_16D_SLUG,
-            KmjProductCatalog::CINEMA_5DX_SLUG,
             KmjProductCatalog::CINEMA_PLAYER_SLUG,
         ];
     }
@@ -87,48 +88,6 @@ final class PublicProductCatalog
                 KmjProductCatalog::DOME_360_NAME,
                 '360° immersive dome systems',
                 'A roadmap product family for panoramic dome playback, projection and synchronized immersive experiences.',
-            ),
-            KmjProductCatalog::CINEMA_5D_SLUG => $this->immersiveCinemaProduct(
-                KmjProductCatalog::CINEMA_5D_SLUG,
-                KmjProductCatalog::CINEMA_5D_NAME,
-                '5D motion cinema systems',
-                'A roadmap cinema experience combining synchronized playback, motion and environmental effects.',
-            ),
-            KmjProductCatalog::CINEMA_7D_SLUG => $this->immersiveCinemaProduct(
-                KmjProductCatalog::CINEMA_7D_SLUG,
-                KmjProductCatalog::CINEMA_7D_NAME,
-                '7D interactive cinema systems',
-                'A roadmap interactive cinema product for synchronized media, motion and audience interaction.',
-            ),
-            KmjProductCatalog::CINEMA_9D_SLUG => $this->immersiveCinemaProduct(
-                KmjProductCatalog::CINEMA_9D_SLUG,
-                KmjProductCatalog::CINEMA_9D_NAME,
-                '9D immersive cinema systems',
-                'A roadmap immersive cinema platform extending synchronized playback, motion and environmental effects.',
-            ),
-            KmjProductCatalog::CINEMA_12D_SLUG => $this->immersiveCinemaProduct(
-                KmjProductCatalog::CINEMA_12D_SLUG,
-                KmjProductCatalog::CINEMA_12D_NAME,
-                '12D immersive cinema systems',
-                'A roadmap multi-sensory cinema product designed for synchronized media, motion and venue effects.',
-            ),
-            KmjProductCatalog::CINEMA_14D_SLUG => $this->immersiveCinemaProduct(
-                KmjProductCatalog::CINEMA_14D_SLUG,
-                KmjProductCatalog::CINEMA_14D_NAME,
-                '14D immersive cinema systems',
-                'A roadmap high-effects cinema product for coordinated playback, motion and multi-sensory experiences.',
-            ),
-            KmjProductCatalog::CINEMA_16D_SLUG => $this->immersiveCinemaProduct(
-                KmjProductCatalog::CINEMA_16D_SLUG,
-                KmjProductCatalog::CINEMA_16D_NAME,
-                '16D immersive cinema systems',
-                'A roadmap flagship immersive cinema system for advanced synchronized venue experiences.',
-            ),
-            KmjProductCatalog::CINEMA_5DX_SLUG => $this->immersiveCinemaProduct(
-                KmjProductCatalog::CINEMA_5DX_SLUG,
-                KmjProductCatalog::CINEMA_5DX_NAME,
-                '5DX cinema experience platform',
-                'A roadmap premium motion-cinema product combining synchronized media, motion and extended environmental effects.',
             ),
             KmjProductCatalog::CINEMA_PLAYER_SLUG => $this->immersiveCinemaProduct(
                 KmjProductCatalog::CINEMA_PLAYER_SLUG,
@@ -167,13 +126,6 @@ final class PublicProductCatalog
             KmjProductCatalog::CREATIVE_STUDIO_SLUG,
             KmjProductCatalog::CINEMA_PLATFORM_SLUG,
             KmjProductCatalog::DOME_360_SLUG,
-            KmjProductCatalog::CINEMA_5D_SLUG,
-            KmjProductCatalog::CINEMA_7D_SLUG,
-            KmjProductCatalog::CINEMA_9D_SLUG,
-            KmjProductCatalog::CINEMA_12D_SLUG,
-            KmjProductCatalog::CINEMA_14D_SLUG,
-            KmjProductCatalog::CINEMA_16D_SLUG,
-            KmjProductCatalog::CINEMA_5DX_SLUG,
             KmjProductCatalog::CINEMA_PLAYER_SLUG => 'Media & Immersive Experience',
             default => 'KMJ TECHNO Products',
         };
@@ -469,33 +421,37 @@ final class PublicProductCatalog
      */
     private function cinemaPlatform(): array
     {
-        return $this->developmentProduct(
-            slug: KmjProductCatalog::CINEMA_PLATFORM_SLUG,
-            name: KmjProductCatalog::CINEMA_PLATFORM_NAME,
-            lifecycle: 'development',
-            lifecycleLabel: 'Active development',
-            eyebrow: 'Professional cinema playback + motion platform',
-            headline: 'A professional cinema platform roadmap covering playback, stereoscopic dual-projector output and synchronized motion workflows.',
-            summary: 'KMJ Cinema Platform is an active product-development stream with a dedicated runtime and visual-verification handoff. Public commercial availability is kept separate from engineering progress.',
-            status: 'Project handoff evidence documents an active Windows cinema-player development stream. A current customer-ready public release is not independently verified here.',
-            proof: [
-                [
-                    'title' => 'Dedicated product architecture',
-                    'detail' => 'The project handoff defines professional playback, stereoscopic dual-projector presentation and Motion Digital Twin boundaries.',
-                    'state' => 'roadmap-verified',
+        return [
+            ...$this->developmentProduct(
+                slug: KmjProductCatalog::CINEMA_PLATFORM_SLUG,
+                name: KmjProductCatalog::CINEMA_PLATFORM_NAME,
+                lifecycle: 'development',
+                lifecycleLabel: 'Active development',
+                eyebrow: 'Professional immersive cinema platform',
+                headline: 'One governed cinema platform spanning 5D through 16D and 5DX configurations.',
+                summary: 'KMJ Cinema Platform is the canonical product family for synchronized playback, motion, environmental effects and immersive cinema configurations. 5D, 7D, 9D, 12D, 14D, 16D and 5DX are deployment variants of this platform, not separate software products.',
+                status: 'Active product-development stream. Variant labels describe supported roadmap configurations; commercial availability remains fail-closed until verified release and licensing gates are complete.',
+                proof: [
+                    [
+                        'title' => 'One canonical product authority',
+                        'detail' => 'All D/5DX configurations bind to the KMJ Cinema Platform product identity for access, entitlement and licensing.',
+                        'state' => 'platform-verified',
+                    ],
+                    [
+                        'title' => 'Variant-based architecture',
+                        'detail' => '5D, 7D, 9D, 12D, 14D, 16D and 5DX are configuration variants within the same product family.',
+                        'state' => 'roadmap-verified',
+                    ],
+                    [
+                        'title' => 'Commercial release not asserted',
+                        'detail' => 'No production download or purchase is exposed until a current release is independently accepted.',
+                        'state' => 'fail-closed',
+                    ],
                 ],
-                [
-                    'title' => 'Live-verification discipline',
-                    'detail' => 'The project workflow requires build, live executable launch, screenshot capture and regression verification after meaningful changes.',
-                    'state' => 'roadmap-verified',
-                ],
-                [
-                    'title' => 'Commercial release not asserted',
-                    'detail' => 'No production download or purchase is exposed until a current release is independently accepted.',
-                    'state' => 'fail-closed',
-                ],
-            ],
-        );
+            ),
+            'variants' => KmjProductCatalog::CINEMA_VARIANTS,
+            'family' => 'KMJ Cinema & Immersive Systems',
+        ];
     }
 
     /**

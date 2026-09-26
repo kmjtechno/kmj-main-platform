@@ -16,6 +16,7 @@ type Product = {
     summary: string;
     category: string;
     family: string | null;
+    variants?: string[];
     proof: Array<{
         title: string;
         detail: string;
@@ -213,6 +214,35 @@ export default function ProductsIndex({ products }: { products: Product[] }) {
                                                 <p className="mt-3 max-w-2xl text-sm leading-7 text-white/37">
                                                     {product.summary}
                                                 </p>
+
+                                                {product.variants &&
+                                                    product.variants.length >
+                                                        0 && (
+                                                        <div className="mt-5">
+                                                            <div className="text-[9px] font-black tracking-[0.14em] text-white/25 uppercase">
+                                                                Available
+                                                                configurations
+                                                            </div>
+                                                            <div className="mt-2 flex flex-wrap gap-2">
+                                                                {product.variants.map(
+                                                                    (
+                                                                        variant,
+                                                                    ) => (
+                                                                        <span
+                                                                            key={
+                                                                                variant
+                                                                            }
+                                                                            className="rounded-full border border-[#ef2632]/20 bg-[#ef2632]/[0.06] px-3 py-1.5 text-[10px] font-black tracking-[0.08em] text-[#ff737b]"
+                                                                        >
+                                                                            {
+                                                                                variant
+                                                                            }
+                                                                        </span>
+                                                                    ),
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                    )}
 
                                                 <div className="mt-auto pt-8">
                                                     <Link
