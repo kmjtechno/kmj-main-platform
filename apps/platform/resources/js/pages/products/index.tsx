@@ -1,11 +1,6 @@
 import { Link } from '@inertiajs/react';
-import {
-    ArrowRight,
-    CheckCircle2,
-    FlaskConical,
-    ServerCog,
-    ShieldCheck,
-} from 'lucide-react';
+import { ArrowRight, CheckCircle2 } from 'lucide-react';
+import ProductVisual from '@/components/public/product-visual';
 import PublicSeo from '@/components/public-seo';
 import PublicSiteFooter from '@/components/public-site-footer';
 import PublicSiteHeader from '@/components/public-site-header';
@@ -111,12 +106,6 @@ export default function ProductsIndex({ products }: { products: Product[] }) {
                     <section className="mx-auto max-w-[1440px] px-5 pb-24 sm:px-8 lg:px-12 lg:pb-28">
                         <div className="grid gap-5 lg:grid-cols-2">
                             {products.map((product, index) => {
-                                const ProductIcon =
-                                    product.demo.kind === 'cloudos'
-                                        ? ServerCog
-                                        : product.demo.kind === 'calibration'
-                                          ? FlaskConical
-                                          : ShieldCheck;
                                 const featured = index === 0;
 
                                 return (
@@ -133,6 +122,15 @@ export default function ProductsIndex({ products }: { products: Product[] }) {
                                             <div className="absolute -top-36 right-[-5rem] h-80 w-80 rounded-full bg-[#ef2632]/10 blur-[100px]" />
                                         </div>
 
+                                        <div className="relative p-4 pb-0 sm:p-5 sm:pb-0">
+                                            <ProductVisual
+                                                slug={product.slug}
+                                                name={product.name}
+                                                kind={product.demo.kind}
+                                                compact={!featured}
+                                            />
+                                        </div>
+
                                         <div
                                             className={
                                                 'relative flex flex-1 flex-col p-7 sm:p-9 ' +
@@ -144,8 +142,10 @@ export default function ProductsIndex({ products }: { products: Product[] }) {
                                             <div className="flex flex-col">
                                                 <div className="flex items-start justify-between gap-4">
                                                     <div className="flex items-center gap-4">
-                                                        <div className="grid h-11 w-11 place-items-center rounded-xl border border-[#ef3340]/18 bg-[#ef3340]/8">
-                                                            <ProductIcon className="h-5 w-5 text-[#ff5962]" />
+                                                        <div className="grid h-11 w-11 place-items-center rounded-xl border border-white/[0.08] bg-white/[0.035] text-[10px] font-black tracking-[.12em] text-white/46">
+                                                            {String(
+                                                                index + 1,
+                                                            ).padStart(2, '0')}
                                                         </div>
                                                         <div>
                                                             <div className="text-[9px] font-black tracking-[0.16em] text-white/25 uppercase">
