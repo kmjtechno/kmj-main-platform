@@ -1,6 +1,7 @@
 import { Link, usePage } from '@inertiajs/react';
 import { ArrowUpRight, Menu, X } from 'lucide-react';
 import { useState } from 'react';
+import LockedBrand from '@/components/locked-brand';
 import PublicLanguageSwitch from '@/components/public-language-switch';
 import { dashboard, login, register } from '@/routes';
 
@@ -13,18 +14,10 @@ export default function PublicSiteHeader() {
             <div className="mx-auto flex h-[76px] max-w-[1440px] items-center justify-between px-5 sm:px-8 lg:px-12">
                 <Link
                     href="/"
-                    className="group flex items-center gap-4"
+                    className="group flex min-w-0 items-center"
                     aria-label="KMJ TECHNO home"
                 >
-                    <span className="h-8 w-[3px] rounded-full bg-[#ef2430] shadow-[0_0_24px_rgba(239,36,48,.55)]" />
-                    <span>
-                        <span className="block text-[14px] font-black tracking-[0.19em] text-white">
-                            KMJ TECHNO
-                        </span>
-                        <span className="mt-0.5 block text-[9px] font-semibold tracking-[0.28em] text-white/34 uppercase">
-                            Intelligent systems
-                        </span>
-                    </span>
+                    <LockedBrand compact />
                 </Link>
 
                 <nav className="hidden items-center gap-1 lg:flex">

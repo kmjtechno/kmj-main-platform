@@ -65,7 +65,7 @@ export default function Welcome({ products }: { products: Product[] }) {
         <>
             <PublicSeo
                 title="KMJ TECHNO — Software, Cloud & Intelligent Systems"
-                description="Explore KMJ TECHNO products, product demos and governed software access from one customer-facing platform."
+                description="Explore the KMJ TECHNO product portfolio, product demos and governed software access from one customer-facing platform."
                 path="/"
                 structuredData={[
                     {
@@ -97,21 +97,22 @@ export default function Welcome({ products }: { products: Product[] }) {
                         <div className="max-w-5xl">
                             <div className="inline-flex items-center gap-2 rounded-full border border-[#e21b23]/25 bg-[#e21b23]/[0.07] px-3 py-1.5 text-xs font-semibold text-[#ff747a]">
                                 <span className="h-1.5 w-1.5 rounded-full bg-[#e21b23]" />
-                                KMJ TECHNO product ecosystem
+                                KMJ TECHNO · INNOVATE | BUILD | SCALE
                             </div>
 
                             <h1 className="mt-7 text-5xl leading-[0.96] font-black tracking-[-0.055em] sm:text-6xl lg:text-[5.6rem]">
-                                Build. Operate.
+                                Technology built for ambitious operations.
                                 <span className="block bg-gradient-to-r from-[#ff3b44] via-[#e21b23] to-[#941018] bg-clip-text text-transparent">
-                                    Experience KMJ products.
+                                    Software. Cloud. Intelligent systems.
                                 </span>
                             </h1>
 
                             <p className="mt-7 max-w-3xl text-base leading-8 text-white/55 sm:text-lg">
-                                One customer-facing destination for KMJ TECHNO
-                                software products, product experiences, governed
-                                access and licensing. Explore what is available
-                                today and what is still in verified development.
+                                Explore KMJ TECHNO’s growing portfolio across
+                                cloud infrastructure, immersive calibration,
+                                autonomous engineering and secure digital
+                                products—with clear availability and verified
+                                product status.
                             </p>
 
                             <div className="mt-9 flex flex-col gap-3 sm:flex-row">
@@ -142,14 +143,15 @@ export default function Welcome({ products }: { products: Product[] }) {
                                         KMJ TECHNO products
                                     </div>
                                     <h2 className="mt-4 text-3xl font-black tracking-[-0.04em] sm:text-5xl">
-                                        Products first. Internal engineering
-                                        stays internal.
+                                        A focused portfolio. One trusted KMJ
+                                        experience.
                                     </h2>
                                     <p className="mt-4 max-w-2xl text-sm leading-7 text-white/45 sm:text-base">
-                                        Only products backed by the canonical
-                                        public catalog appear here.
-                                        Availability, preview state and purchase
-                                        access remain explicit.
+                                        Discover products spanning cloud
+                                        operations, immersive systems,
+                                        autonomous engineering and secure
+                                        access. Every product shows its
+                                        lifecycle and access state clearly.
                                     </p>
                                 </div>
                                 <Link
@@ -257,16 +259,16 @@ export default function Welcome({ products }: { products: Product[] }) {
                     <section className="mx-auto max-w-7xl px-5 py-20 sm:px-8 lg:px-10 lg:py-24">
                         <div className="max-w-3xl">
                             <div className="text-xs font-bold tracking-[0.2em] text-[#e21b23] uppercase">
-                                Platform foundation
+                                Unified platform
                             </div>
                             <h2 className="mt-4 text-3xl font-black tracking-[-0.04em] sm:text-4xl">
-                                One KMJ ecosystem, clear product boundaries.
+                                One identity, governed access, clear product
+                                boundaries.
                             </h2>
                             <p className="mt-4 text-sm leading-7 text-white/45 sm:text-base">
-                                The Main Platform provides the customer,
-                                entitlement and licensing layer.
-                                Product-specific engineering remains behind the
-                                product experience, not on the public homepage.
+                                KMJ Main Platform unifies customer accounts,
+                                product access, entitlements and licensing while
+                                each product remains independently engineered.
                             </p>
                         </div>
 
