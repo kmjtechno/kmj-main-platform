@@ -22,6 +22,18 @@ export default function PublicSiteHeader() {
 
                 <nav className="hidden items-center gap-1 lg:flex">
                     <Link
+                        href="/company"
+                        className="rounded-lg px-4 py-2 text-sm font-semibold text-white/58 transition hover:bg-white/[0.05] hover:text-white"
+                    >
+                        Company
+                    </Link>
+                    <Link
+                        href="/capabilities"
+                        className="rounded-lg px-4 py-2 text-sm font-semibold text-white/58 transition hover:bg-white/[0.05] hover:text-white"
+                    >
+                        Capabilities
+                    </Link>
+                    <Link
                         href="/products"
                         className="rounded-lg px-4 py-2 text-sm font-semibold text-white/58 transition hover:bg-white/[0.05] hover:text-white"
                     >
@@ -82,6 +94,20 @@ export default function PublicSiteHeader() {
             {open && (
                 <div className="border-t border-white/[0.06] bg-[#07090c] px-5 py-5 sm:hidden">
                     <div className="mx-auto grid max-w-[1440px] gap-2">
+                        <Link
+                            href="/company"
+                            onClick={() => setOpen(false)}
+                            className="rounded-xl px-4 py-3 text-sm font-bold text-white/75 hover:bg-white/[0.05]"
+                        >
+                            Company
+                        </Link>
+                        <Link
+                            href="/capabilities"
+                            onClick={() => setOpen(false)}
+                            className="rounded-xl px-4 py-3 text-sm font-bold text-white/75 hover:bg-white/[0.05]"
+                        >
+                            Capabilities
+                        </Link>
                         <Link
                             href="/products"
                             onClick={() => setOpen(false)}

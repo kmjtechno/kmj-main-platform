@@ -36,6 +36,12 @@ export default function PublicSeo({
     return (
         <Head title={title}>
             <meta name="description" content={description} />
+            <meta
+                name="robots"
+                content={
+                    publicSite.indexable ? 'index,follow' : 'noindex,nofollow'
+                }
+            />
             <link rel="canonical" href={canonical} />
             <meta property="og:title" content={title} />
             <meta property="og:description" content={description} />

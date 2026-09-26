@@ -49,6 +49,7 @@ class HandleInertiaRequests extends Middleware
             'name' => config('app.name'),
             'publicSite' => [
                 'base_url' => rtrim((string) config('app.url'), '/'),
+                'indexable' => (bool) config('app.public_indexing', false),
             ],
             'localization' => [
                 'locale' => $locale,

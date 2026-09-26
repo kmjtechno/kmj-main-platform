@@ -4,6 +4,19 @@
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
 
+        @php
+            $publicIndexableRoute = request()->routeIs(
+                'home',
+                'company',
+                'capabilities',
+                'products.*',
+                'trust',
+            );
+        @endphp
+        @unless (config('app.public_indexing', false) && $publicIndexableRoute)
+            <meta name="robots" content="noindex,nofollow">
+        @endunless
+
         {{-- Inline script to detect system dark mode preference and apply it immediately --}}
         <script>
             (function() {
