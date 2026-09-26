@@ -190,15 +190,12 @@ export default function Welcome({
                             <div className="relative grid min-h-[430px] grid-cols-[1.18fr_.82fr] grid-rows-2 gap-3 overflow-hidden rounded-[2rem] border border-white/[0.08] bg-[#090c12] p-3 shadow-[0_35px_100px_rgba(0,0,0,.35)] sm:min-h-[500px]">
                                 <Link
                                     href="/products/kmj-cloudos"
-                                    className="group relative row-span-2 overflow-hidden rounded-[1.45rem] border border-white/[0.07]"
+                                    className="group relative row-span-2 overflow-hidden rounded-[1.45rem] border border-white/[0.07] bg-cover bg-center transition duration-700 hover:bg-[length:102.5%]"
+                                    style={{
+                                        backgroundImage:
+                                            "url('/assets/products/kmj-cloudos.webp')",
+                                    }}
                                 >
-                                    <img
-                                        src="/assets/products/kmj-cloudos.webp"
-                                        alt="KMJ CloudOS"
-                                        fetchPriority="high"
-                                        decoding="async"
-                                        className="absolute inset-0 h-full w-full object-cover transition duration-700 group-hover:scale-[1.025]"
-                                    />
                                     <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-transparent to-transparent" />
                                     <div className="absolute right-5 bottom-5 left-5">
                                         <div className="text-[10px] font-black tracking-[.15em] text-white/50 uppercase">
@@ -211,16 +208,12 @@ export default function Welcome({
                                 </Link>
                                 <Link
                                     href="/products/kmj-calibration-pro"
-                                    className="group relative overflow-hidden rounded-[1.45rem] border border-white/[0.07]"
+                                    className="group relative overflow-hidden rounded-[1.45rem] border border-white/[0.07] bg-cover bg-center transition duration-700 hover:bg-[length:103%]"
+                                    style={{
+                                        backgroundImage:
+                                            "url('/assets/products/kmj-calibration.webp')",
+                                    }}
                                 >
-                                    <img
-                                        src="/assets/products/kmj-calibration.webp"
-                                        alt="KMJ Calibration Pro"
-                                        loading="eager"
-                                        fetchPriority="high"
-                                        decoding="async"
-                                        className="absolute inset-0 h-full w-full object-cover transition duration-700 group-hover:scale-[1.03]"
-                                    />
                                     <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-transparent to-transparent" />
                                     <div className="absolute right-4 bottom-4 left-4 text-sm font-black">
                                         Calibration Pro
@@ -228,16 +221,12 @@ export default function Welcome({
                                 </Link>
                                 <Link
                                     href="/products/kmj-cinema-platform"
-                                    className="group relative overflow-hidden rounded-[1.45rem] border border-white/[0.07]"
+                                    className="group relative overflow-hidden rounded-[1.45rem] border border-white/[0.07] bg-cover bg-center transition duration-700 hover:bg-[length:103%]"
+                                    style={{
+                                        backgroundImage:
+                                            "url('/assets/products/kmj-cinema-platform.webp')",
+                                    }}
                                 >
-                                    <img
-                                        src="/assets/products/kmj-cinema-platform.webp"
-                                        alt="KMJ Cinema Platform"
-                                        loading="eager"
-                                        fetchPriority="high"
-                                        decoding="async"
-                                        className="absolute inset-0 h-full w-full object-cover transition duration-700 group-hover:scale-[1.03]"
-                                    />
                                     <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-transparent to-transparent" />
                                     <div className="absolute right-4 bottom-4 left-4 text-sm font-black">
                                         Cinema Platform
