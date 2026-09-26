@@ -197,7 +197,7 @@ export default function Welcome({
                                         alt="KMJ CloudOS"
                                         fetchPriority="high"
                                         decoding="async"
-                                        className="h-full w-full object-cover transition duration-700 group-hover:scale-[1.025]"
+                                        className="absolute inset-0 h-full w-full object-cover transition duration-700 group-hover:scale-[1.025]"
                                     />
                                     <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-transparent to-transparent" />
                                     <div className="absolute right-5 bottom-5 left-5">
@@ -219,7 +219,7 @@ export default function Welcome({
                                         loading="eager"
                                         fetchPriority="high"
                                         decoding="async"
-                                        className="h-full w-full object-cover transition duration-700 group-hover:scale-[1.03]"
+                                        className="absolute inset-0 h-full w-full object-cover transition duration-700 group-hover:scale-[1.03]"
                                     />
                                     <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-transparent to-transparent" />
                                     <div className="absolute right-4 bottom-4 left-4 text-sm font-black">
@@ -236,7 +236,7 @@ export default function Welcome({
                                         loading="eager"
                                         fetchPriority="high"
                                         decoding="async"
-                                        className="h-full w-full object-cover transition duration-700 group-hover:scale-[1.03]"
+                                        className="absolute inset-0 h-full w-full object-cover transition duration-700 group-hover:scale-[1.03]"
                                     />
                                     <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-transparent to-transparent" />
                                     <div className="absolute right-4 bottom-4 left-4 text-sm font-black">
