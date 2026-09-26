@@ -44,6 +44,7 @@ verified_zero:
   # providers must be explicitly verified as free-tier before use.
   explicit_models:
     - "openrouter/free"
+    - "oc/muse-spark-1.3-contributor-free"
   verified_free_provider_accounts: []
 
 deny:
@@ -55,12 +56,14 @@ deny:
 routes:
   fast:
     prefer:
+      - "muse"
       - "coder"
       - "flash"
       - "mini"
       - "qwen"
   coding:
     prefer:
+      - "muse"
       - "coder"
       - "code"
       - "qwen"

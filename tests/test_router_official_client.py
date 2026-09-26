@@ -108,12 +108,48 @@ class RouterOfficialClientTests(unittest.IsolatedAsyncioTestCase):
             "confidential",
         )
 
+    async def test_local_9router_is_public_only_by_default(self):
+        router = FreeCloudRouter()
+        local = next(provider for provider in router.providers() if provider.name == "9router")
+        self.assertFalse(local.allow_confidential)
+
+    async def test_confidential_workload_never_falls_back_to_unverified_free_client(self):
+        router = FreeCloudRouter()
+        router.discover = AsyncMock(return_value=[])
+        with patch("controller.opencode_free.complete") as client:
+            with self.assertRaisesRegex(
+                NoFreeRouteAvailable,
+                "NO_CONFIDENTIAL_FREE_ROUTE_AVAILABLE",
+            ):
+                await router.complete(
+                    [{"role": "user", "content": "private source"}],
+                    data_classification="confidential",
+                )
+            client.assert_not_called()
+
+    async def test_explicit_opencode_free_model_is_zero_cost_allowlisted_for_public_route(self):
+        router = FreeCloudRouter()
+        self.assertEqual(
+            router._eligible(
+                "oc/muse-spark-1.3-contributor-free",
+                "opencode",
+                "9router",
+            ),
+            (True, "explicit-zero-allowlist"),
+        )
+
     async def test_empty_http_catalog_uses_official_client_result(self):
         router = FreeCloudRouter()
         router.discover = AsyncMock(return_value=[])
         expected = {"model": "opencode/big-pickle", "response": {"choices": []}}
         with patch("controller.opencode_free.complete", return_value=expected) as client:
-            self.assertEqual(await router.complete([{"role": "user", "content": "test"}]), expected)
+            self.assertEqual(
+                await router.complete(
+                    [{"role": "user", "content": "test"}],
+                    data_classification="public",
+                ),
+                expected,
+            )
             client.assert_called_once_with([{"role": "user", "content": "test"}])
 
     async def test_unavailable_official_client_preserves_fail_closed(self):
@@ -121,14 +157,14 @@ class RouterOfficialClientTests(unittest.IsolatedAsyncioTestCase):
         router.discover = AsyncMock(return_value=[])
         with patch("controller.opencode_free.complete", side_effect=OpenCodeUnavailable("OPENCODE_COST_NOT_VERIFIED_ZERO")):
             with self.assertRaisesRegex(NoFreeRouteAvailable, "COST_NOT_VERIFIED_ZERO"):
-                await router.complete([])
+                await router.complete([], data_classification="public")
 
     async def test_disabled_client_cannot_be_selected_as_free(self):
         router = FreeCloudRouter()
         router.discover = AsyncMock(return_value=[])
         with patch.dict(os.environ, {}, clear=True):
             with self.assertRaisesRegex(NoFreeRouteAvailable, "NOT_CONFIGURED"):
-                await router.complete([])
+                await router.complete([], data_classification="public")
 
 
 if __name__ == "__main__":
