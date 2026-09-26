@@ -25,6 +25,7 @@ final class DomainOutboxMessage extends Model
         'published_at',
         'attempts',
         'last_error',
+        'next_attempt_at',
     ];
 
     protected function casts(): array
@@ -34,6 +35,7 @@ final class DomainOutboxMessage extends Model
             'occurred_at' => 'immutable_datetime',
             'published_at' => 'immutable_datetime',
             'attempts' => 'integer',
+            'next_attempt_at' => 'immutable_datetime',
         ];
     }
 }
