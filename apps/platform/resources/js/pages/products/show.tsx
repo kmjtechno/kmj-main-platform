@@ -9,6 +9,7 @@ import {
     ShieldCheck,
     Sparkles,
 } from 'lucide-react';
+import ProductBrandVisual from '@/components/public/product-visual';
 import PublicSeo from '@/components/public-seo';
 import PublicSiteFooter from '@/components/public-site-footer';
 import PublicSiteHeader from '@/components/public-site-header';
@@ -74,6 +75,12 @@ function ProductVisual({ product }: { product: Product }) {
                 </div>
 
                 <div className="grid gap-4 p-5 sm:p-6">
+                    <ProductBrandVisual
+                        slug={product.slug}
+                        name={product.name}
+                        kind={product.demo.kind}
+                    />
+
                     <div className="flex items-start justify-between gap-6 rounded-2xl border border-white/[0.07] bg-white/[0.025] p-5">
                         <div>
                             <div className="text-[10px] font-bold tracking-[0.16em] text-white/30 uppercase">
