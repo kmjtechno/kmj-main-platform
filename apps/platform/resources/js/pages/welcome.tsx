@@ -92,6 +92,21 @@ export default function Welcome({
             />
             <Head>
                 <meta name="kmj-main-platform" content="native-home" />
+                <link
+                    rel="preload"
+                    as="image"
+                    href="/assets/products/kmj-cloudos.webp"
+                />
+                <link
+                    rel="preload"
+                    as="image"
+                    href="/assets/products/kmj-calibration.webp"
+                />
+                <link
+                    rel="preload"
+                    as="image"
+                    href="/assets/products/kmj-cinema-platform.webp"
+                />
             </Head>
 
             <div className="min-h-screen overflow-hidden bg-[#05070a] text-white selection:bg-[#e21b23] selection:text-white">
@@ -201,6 +216,8 @@ export default function Welcome({
                                     <img
                                         src="/assets/products/kmj-calibration.webp"
                                         alt="KMJ Calibration Pro"
+                                        loading="eager"
+                                        fetchPriority="high"
                                         decoding="async"
                                         className="h-full w-full object-cover transition duration-700 group-hover:scale-[1.03]"
                                     />
@@ -216,6 +233,8 @@ export default function Welcome({
                                     <img
                                         src="/assets/products/kmj-cinema-platform.webp"
                                         alt="KMJ Cinema Platform"
+                                        loading="eager"
+                                        fetchPriority="high"
                                         decoding="async"
                                         className="h-full w-full object-cover transition duration-700 group-hover:scale-[1.03]"
                                     />
