@@ -35,13 +35,6 @@ final class ProductLicenseProfileRegistry
             KmjProductCatalog::CREATIVE_STUDIO_SLUG,
             KmjProductCatalog::CINEMA_PLATFORM_SLUG,
             KmjProductCatalog::DOME_360_SLUG,
-            KmjProductCatalog::CINEMA_5D_SLUG,
-            KmjProductCatalog::CINEMA_7D_SLUG,
-            KmjProductCatalog::CINEMA_9D_SLUG,
-            KmjProductCatalog::CINEMA_12D_SLUG,
-            KmjProductCatalog::CINEMA_14D_SLUG,
-            KmjProductCatalog::CINEMA_16D_SLUG,
-            KmjProductCatalog::CINEMA_5DX_SLUG,
             KmjProductCatalog::CINEMA_PLAYER_SLUG => new ProductLicenseProfile(
                 $slug,
                 self::GENERIC_PRODUCT_CAPABILITY,

@@ -27,6 +27,7 @@ type Product = {
     summary: string;
     category: string;
     family: string | null;
+    variants?: string[];
     truth: {
         status: string;
         physical_capability_certified?: boolean;
@@ -266,6 +267,25 @@ export default function ProductShow({ product }: { product: Product }) {
                             <p className="mt-5 max-w-2xl text-sm leading-7 text-white/42 sm:text-[15px]">
                                 {product.summary}
                             </p>
+
+                            {product.variants &&
+                                product.variants.length > 0 && (
+                                    <div className="mt-7">
+                                        <div className="text-[10px] font-black tracking-[0.14em] text-white/28 uppercase">
+                                            Platform configurations
+                                        </div>
+                                        <div className="mt-3 flex flex-wrap gap-2">
+                                            {product.variants.map((variant) => (
+                                                <span
+                                                    key={variant}
+                                                    className="rounded-full border border-[#ef3340]/25 bg-[#ef3340]/[0.07] px-3.5 py-2 text-xs font-black tracking-[0.08em] text-[#ff727a]"
+                                                >
+                                                    {variant}
+                                                </span>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
 
                             <div className="mt-9 flex flex-col gap-3 sm:flex-row">
                                 {Demo ? (

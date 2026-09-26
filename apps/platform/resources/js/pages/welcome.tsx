@@ -23,6 +23,7 @@ type Product = {
     eyebrow: string;
     headline: string;
     summary: string;
+    variants?: string[];
     proof: Array<{
         title: string;
         detail: string;
@@ -58,7 +59,13 @@ const platformCapabilities = [
     },
 ];
 
-export default function Welcome({ products }: { products: Product[] }) {
+export default function Welcome({
+    products,
+    portfolioCount,
+}: {
+    products: Product[];
+    portfolioCount: number;
+}) {
     const { auth } = usePage().props;
 
     return (
@@ -137,7 +144,7 @@ export default function Welcome({ products }: { products: Product[] }) {
                                 <div className="mt-10 grid max-w-xl grid-cols-3 gap-5 border-t border-white/[0.07] pt-6">
                                     <div>
                                         <div className="text-2xl font-black">
-                                            8
+                                            {portfolioCount}
                                         </div>
                                         <div className="mt-1 text-[10px] font-bold tracking-[.12em] text-white/30 uppercase">
                                             Product lines

@@ -3,6 +3,7 @@
 use App\Models\LicenseAuditEvent;
 use App\Models\User;
 use App\Services\AuthorityBootstrapper;
+use App\Services\Commerce\KmjProductCatalog;
 use App\Services\Commerce\PublicProductCatalog;
 use App\Services\Licensing\LicenseAuditRecorder;
 use App\Services\Licensing\SandboxLicenseLifecycle;
@@ -22,8 +23,11 @@ use KMJ\MainPlatform\Organizations\Services\OrganizationCapabilityContext;
 use KMJ\MainPlatform\Organizations\Services\OrganizationDirectory;
 
 Route::get('/', function (PublicProductCatalog $products) {
+    $portfolio = $products->all();
+
     return Inertia::render('welcome', [
-        'products' => array_slice($products->all(), 0, 8),
+        'products' => array_slice($portfolio, 0, 8),
+        'portfolioCount' => count($portfolio),
     ]);
 })->name('home');
 
@@ -34,6 +38,12 @@ Route::get('products', function (PublicProductCatalog $products) {
 })->name('products.index');
 
 Route::get('products/{slug}', function (string $slug, PublicProductCatalog $products) {
+    if (in_array($slug, KmjProductCatalog::LEGACY_CINEMA_VARIANT_SLUGS, true)) {
+        return redirect()->route('products.show', [
+            'slug' => KmjProductCatalog::CINEMA_PLATFORM_SLUG,
+        ], 301);
+    }
+
     $product = $products->find($slug);
     abort_if($product === null, 404);
 
@@ -48,13 +58,20 @@ Route::get('capabilities', fn () => Inertia::render('capabilities'))->name('capa
 
 Route::get('llms.txt', function (PublicProductCatalog $products) {
     $items = collect($products->all())
-        ->map(fn (array $product): string => sprintf(
-            '- %s | %s | %s | https://kmjtechno.com/products/%s',
-            $product['name'],
-            $product['category'],
-            $product['lifecycle_label'],
-            $product['slug'],
-        ))
+        ->map(function (array $product): string {
+            $variants = isset($product['variants']) && is_array($product['variants'])
+                ? ' | Configurations: '.implode(', ', $product['variants'])
+                : '';
+
+            return sprintf(
+                '- %s | %s | %s%s | https://kmjtechno.com/products/%s',
+                $product['name'],
+                $product['category'],
+                $product['lifecycle_label'],
+                $variants,
+                $product['slug'],
+            );
+        })
         ->implode("\n");
 
     $body = implode("\n", [
@@ -164,6 +181,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Request $request,
         PlatformOwnerAccess $access,
         OrganizationCapabilityContext $capabilities,
+        PublicProductCatalog $publicProducts,
     ) {
         $user = $request->user();
         abort_unless($user instanceof User, 401);
@@ -210,6 +228,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
             })->all();
 
         $catalogProducts = Product::query()
+            ->whereIn('slug', $publicProducts->slugs())
             ->orderBy('name')
             ->get(['id', 'slug', 'name', 'status'])
             ->map(function (Product $product): array {
