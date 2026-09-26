@@ -8,6 +8,8 @@ use App\Services\Commerce\PublicProductCatalog;
 use App\Services\Licensing\LicenseAuditRecorder;
 use App\Services\Licensing\SandboxLicenseLifecycle;
 use App\Services\PlatformOwnerAccess;
+use App\Services\Releases\CustomerReleaseAccess;
+use App\Services\Releases\ReleaseArtifactDelivery;
 use DateTimeImmutable as ImmutableDateTime;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -169,13 +171,40 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Request $request,
         OrganizationDirectory $organizations,
         EntitlementReader $entitlements,
+        CustomerReleaseAccess $releaseAccess,
     ) {
         $user = $request->user();
         abort_unless($user instanceof User, 401);
 
         $items = collect($organizations->forUser($user->id))
-            ->map(function (array $organization) use ($entitlements): array {
-                $organization['entitlements'] = $entitlements->forOrganization($organization['id']);
+            ->map(function (array $organization) use ($entitlements, $releaseAccess, $user): array {
+                $organization['entitlements'] = collect(
+                    $entitlements->forOrganization($organization['id']),
+                )->map(function (array $entitlement) use ($organization, $releaseAccess, $user): array {
+                    $release = $releaseAccess->latestForOrganizationProduct(
+                        $user->id,
+                        $organization['id'],
+                        $entitlement['product_id'],
+                    );
+                    $artifact = $release?->artifact;
+
+                    $entitlement['release'] = $release !== null && $artifact !== null
+                        ? [
+                            'id' => (string) $release->getKey(),
+                            'version' => (string) $release->version,
+                            'digest' => (string) $release->artifact_digest,
+                            'filename' => (string) $artifact->filename,
+                            'size_bytes' => $artifact->size_bytes,
+                            'download_url' => route(
+                                'customer.releases.download',
+                                ['release' => $release->getKey()],
+                                false,
+                            ),
+                        ]
+                        : null;
+
+                    return $entitlement;
+                })->values()->all();
 
                 return $organization;
             })
@@ -187,6 +216,26 @@ Route::middleware(['auth', 'verified'])->group(function () {
             'hasPasskey' => $user->passkeys()->exists(),
         ]);
     })->name('dashboard');
+
+    Route::get('customer/releases/{release}/download', function (
+        Request $request,
+        string $release,
+        CustomerReleaseAccess $releaseAccess,
+        ReleaseArtifactDelivery $delivery,
+    ) {
+        $user = $request->user();
+        abort_unless($user instanceof User, 401);
+
+        $downloadable = $releaseAccess->downloadableForUser($user->id, $release);
+        abort_unless($downloadable !== null, 404);
+
+        try {
+            return $delivery->download($downloadable);
+        } catch (Throwable $exception) {
+            report($exception);
+            abort(503, 'The verified release artifact is temporarily unavailable.');
+        }
+    })->name('customer.releases.download');
 
     Route::get('operator', function (
         Request $request,
