@@ -107,9 +107,31 @@ type ActionAudit = {
     created_at: string | null;
 };
 
+type OutboxHealth = {
+    status: string;
+    max_attempts: number;
+    pending: number;
+    due: number;
+    retrying: number;
+    exhausted: number;
+    published: number;
+    recent_exhausted: Array<{
+        id: string;
+        event_type: string;
+        aggregate_type: string;
+        aggregate_id: string;
+        organization_id: string | null;
+        attempts: number;
+        last_error: string | null;
+        occurred_at: string | null;
+        updated_at: string | null;
+    }>;
+};
+
 type Props = {
     snapshot: OpsSnapshot;
     readiness: OperationalReadiness;
+    outbox: OutboxHealth;
     recentActions: ActionAudit[];
 };
 
@@ -248,6 +270,7 @@ export default function OperatorOps({
     snapshot,
     readiness,
     recentActions,
+    outbox,
 }: Props) {
     const [refreshing, setRefreshing] = useState(false);
     const [restarting, setRestarting] = useState(false);
@@ -255,7 +278,7 @@ export default function OperatorOps({
     const refresh = () => {
         setRefreshing(true);
         router.reload({
-            only: ['snapshot', 'readiness', 'recentActions'],
+            only: ['snapshot', 'readiness', 'outbox', 'recentActions'],
             onFinish: () => setRefreshing(false),
         });
     };
@@ -263,7 +286,7 @@ export default function OperatorOps({
     useEffect(() => {
         const timer = window.setInterval(() => {
             router.reload({
-                only: ['snapshot', 'readiness', 'recentActions'],
+                only: ['snapshot', 'readiness', 'outbox', 'recentActions'],
             });
         }, 15_000);
 
@@ -426,6 +449,81 @@ export default function OperatorOps({
                             </div>
                         </ReadinessCard>
                     </div>
+                </section>
+
+                <section className="bg-card rounded-2xl border p-5 sm:p-6">
+                    <div className="flex flex-col justify-between gap-4 md:flex-row md:items-start">
+                        <div>
+                            <div className="flex items-center gap-2">
+                                <RotateCw className="h-4 w-4 text-red-500" />
+                                <h2 className="font-bold">
+                                    Transactional outbox
+                                </h2>
+                            </div>
+                            <p className="text-muted-foreground mt-1 text-xs leading-5">
+                                Pending delivery, scheduled retry and
+                                exhausted-message state from the durable event
+                                outbox.
+                            </p>
+                        </div>
+                        <StatusPill status={outbox.status} />
+                    </div>
+
+                    <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+                        {[
+                            ['Pending', outbox.pending],
+                            ['Due now', outbox.due],
+                            ['Retrying', outbox.retrying],
+                            ['Exhausted', outbox.exhausted],
+                            ['Published', outbox.published],
+                        ].map(([label, value]) => (
+                            <div
+                                key={String(label)}
+                                className="rounded-xl border p-4"
+                            >
+                                <div className="text-muted-foreground text-[10px] font-black tracking-wide uppercase">
+                                    {label}
+                                </div>
+                                <div className="mt-2 text-2xl font-black">
+                                    {value}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+
+                    {outbox.recent_exhausted.length > 0 ? (
+                        <div className="mt-5 overflow-hidden rounded-xl border">
+                            <div className="border-b px-4 py-3 text-xs font-black">
+                                Recent exhausted messages
+                            </div>
+                            <div className="divide-y">
+                                {outbox.recent_exhausted.map((message) => (
+                                    <div
+                                        key={message.id}
+                                        className="grid gap-1 px-4 py-3 text-xs md:grid-cols-[1fr_1fr_auto]"
+                                    >
+                                        <div>
+                                            <div className="font-black">
+                                                {message.event_type}
+                                            </div>
+                                            <div className="text-muted-foreground mt-1 font-mono text-[10px]">
+                                                {message.aggregate_type}:
+                                                {message.aggregate_id}
+                                            </div>
+                                        </div>
+                                        <div className="text-muted-foreground">
+                                            {message.last_error ??
+                                                'No failure detail recorded'}
+                                        </div>
+                                        <div className="font-black">
+                                            {message.attempts}/
+                                            {outbox.max_attempts}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    ) : null}
                 </section>
 
                 <section className="bg-card rounded-2xl border p-5 sm:p-6">
