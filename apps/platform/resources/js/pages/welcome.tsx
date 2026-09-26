@@ -1,7 +1,6 @@
 import { Head, Link, usePage } from '@inertiajs/react';
 import {
     ArrowRight,
-    CheckCircle2,
     KeyRound,
     Layers3,
     ShieldCheck,
@@ -173,15 +172,58 @@ export default function Welcome({
                                 </div>
                             </div>
 
-                            <div className="relative overflow-hidden rounded-[2rem] border border-white/[0.08] bg-[#090c12] shadow-[0_35px_100px_rgba(0,0,0,.35)]">
-                                <img
-                                    src="/assets/products/kmj-brand-system.webp"
-                                    alt="KMJ TECHNO unified technology ecosystem"
-                                    fetchPriority="high"
-                                    decoding="async"
-                                    className="aspect-[4/3] h-full w-full object-cover"
-                                />
-                                <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-[#05070a]/25 via-transparent to-transparent" />
+                            <div className="relative grid min-h-[430px] grid-cols-[1.18fr_.82fr] grid-rows-2 gap-3 overflow-hidden rounded-[2rem] border border-white/[0.08] bg-[#090c12] p-3 shadow-[0_35px_100px_rgba(0,0,0,.35)] sm:min-h-[500px]">
+                                <Link
+                                    href="/products/kmj-cloudos"
+                                    className="group relative row-span-2 overflow-hidden rounded-[1.45rem] border border-white/[0.07]"
+                                >
+                                    <img
+                                        src="/assets/products/kmj-cloudos.webp"
+                                        alt="KMJ CloudOS"
+                                        fetchPriority="high"
+                                        decoding="async"
+                                        className="h-full w-full object-cover transition duration-700 group-hover:scale-[1.025]"
+                                    />
+                                    <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-transparent to-transparent" />
+                                    <div className="absolute right-5 bottom-5 left-5">
+                                        <div className="text-[10px] font-black tracking-[.15em] text-white/50 uppercase">
+                                            Cloud platform
+                                        </div>
+                                        <div className="mt-1 text-lg font-black">
+                                            KMJ CloudOS
+                                        </div>
+                                    </div>
+                                </Link>
+                                <Link
+                                    href="/products/kmj-calibration-pro"
+                                    className="group relative overflow-hidden rounded-[1.45rem] border border-white/[0.07]"
+                                >
+                                    <img
+                                        src="/assets/products/kmj-calibration.webp"
+                                        alt="KMJ Calibration Pro"
+                                        decoding="async"
+                                        className="h-full w-full object-cover transition duration-700 group-hover:scale-[1.03]"
+                                    />
+                                    <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-transparent to-transparent" />
+                                    <div className="absolute right-4 bottom-4 left-4 text-sm font-black">
+                                        Calibration Pro
+                                    </div>
+                                </Link>
+                                <Link
+                                    href="/products/kmj-cinema-platform"
+                                    className="group relative overflow-hidden rounded-[1.45rem] border border-white/[0.07]"
+                                >
+                                    <img
+                                        src="/assets/products/kmj-cinema-platform.webp"
+                                        alt="KMJ Cinema Platform"
+                                        decoding="async"
+                                        className="h-full w-full object-cover transition duration-700 group-hover:scale-[1.03]"
+                                    />
+                                    <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-transparent to-transparent" />
+                                    <div className="absolute right-4 bottom-4 left-4 text-sm font-black">
+                                        Cinema Platform
+                                    </div>
+                                </Link>
                             </div>
                         </div>
                     </section>
@@ -194,17 +236,16 @@ export default function Welcome({
                                         KMJ TECHNO product ecosystem
                                     </div>
                                     <h2 className="mt-4 text-4xl font-black tracking-[-0.045em] sm:text-5xl">
-                                        Products that look and operate like
+                                        Flagship systems.
                                         <span className="block text-white/35">
-                                            parts of one serious technology
-                                            company.
+                                            One governed KMJ ecosystem.
                                         </span>
                                     </h2>
                                     <p className="mt-5 max-w-2xl text-sm leading-7 text-white/46 sm:text-base">
-                                        Each product has its own visual
-                                        identity, lifecycle and engineering
-                                        boundary while sharing the same KMJ
-                                        customer experience.
+                                        A focused view of the platforms that
+                                        define KMJ TECHNO. Explore the full
+                                        portfolio for every product, solution
+                                        and roadmap line.
                                     </p>
                                 </div>
                                 <Link
@@ -216,80 +257,56 @@ export default function Welcome({
                                 </Link>
                             </div>
 
-                            <div className="mt-12 grid gap-6 lg:grid-cols-2">
+                            <div className="mt-10 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
                                 {products.map((product) => (
-                                    <article
+                                    <Link
                                         key={product.slug}
-                                        className="group overflow-hidden rounded-[2rem] border border-white/[0.08] bg-[#0a0d12] transition duration-300 hover:-translate-y-1 hover:border-white/[0.15]"
+                                        href={'/products/' + product.slug}
+                                        className="group overflow-hidden rounded-[1.35rem] border border-white/[0.08] bg-[#0a0d12] transition duration-300 hover:-translate-y-1 hover:border-white/[0.16]"
                                     >
-                                        <ProductVisual
-                                            slug={product.slug}
-                                            name={product.name}
-                                            kind={product.demo.kind}
-                                            compact
-                                        />
-
-                                        <div className="p-6 sm:p-7">
-                                            <div className="flex items-start justify-between gap-4">
-                                                <div>
-                                                    <div className="text-[10px] font-black tracking-[.16em] text-[#ee3942] uppercase">
+                                        <div className="relative h-44 overflow-hidden">
+                                            <ProductVisual
+                                                slug={product.slug}
+                                                name={product.name}
+                                                kind={product.demo.kind}
+                                                compact
+                                            />
+                                            <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-[#080b10] via-transparent to-transparent" />
+                                        </div>
+                                        <div className="p-5">
+                                            <div className="flex items-center justify-between gap-3">
+                                                <div className="min-w-0">
+                                                    <div className="text-[9px] font-black tracking-[.14em] text-[#ee3942] uppercase">
                                                         {product.eyebrow}
                                                     </div>
-                                                    <h3 className="mt-2 text-3xl font-black tracking-[-0.04em]">
+                                                    <h3 className="mt-2 truncate text-xl font-black tracking-[-0.03em]">
                                                         {product.name}
                                                     </h3>
                                                 </div>
-                                                <span
-                                                    className={
-                                                        product.purchase_enabled
-                                                            ? 'shrink-0 rounded-full border border-emerald-300/15 bg-emerald-300/[0.05] px-3 py-1 text-[10px] font-bold text-emerald-200/72'
-                                                            : 'shrink-0 rounded-full border border-white/[0.08] bg-white/[0.035] px-3 py-1 text-[10px] font-bold text-white/42'
-                                                    }
-                                                >
-                                                    {product.lifecycle_label}
-                                                </span>
+                                                <ArrowRight className="h-4 w-4 shrink-0 text-white/35 transition group-hover:translate-x-0.5 group-hover:text-white" />
                                             </div>
-
-                                            <p className="mt-4 text-base leading-7 font-semibold text-white/64">
-                                                {product.headline}
-                                            </p>
-                                            <p className="mt-3 text-sm leading-7 text-white/38">
-                                                {product.summary}
-                                            </p>
-
-                                            <div className="mt-5 grid gap-2 sm:grid-cols-2">
-                                                {product.proof
-                                                    .slice(0, 2)
-                                                    .map((item) => (
-                                                        <div
-                                                            key={item.title}
-                                                            className="flex items-start gap-2.5 rounded-xl border border-white/[0.055] bg-white/[0.02] px-3 py-3"
-                                                        >
-                                                            <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-300/65" />
-                                                            <div className="text-xs leading-5 font-semibold text-white/48">
-                                                                {item.title}
-                                                            </div>
-                                                        </div>
-                                                    ))}
-                                            </div>
-
-                                            <div className="mt-6 flex items-center justify-between border-t border-white/[0.06] pt-5">
-                                                <span className="text-[10px] font-bold tracking-[.14em] text-white/24 uppercase">
-                                                    KMJ verified product profile
-                                                </span>
-                                                <Link
-                                                    href={
-                                                        '/products/' +
-                                                        product.slug
-                                                    }
-                                                    className="inline-flex items-center gap-2 text-sm font-black text-white/78 transition group-hover:text-white"
-                                                >
-                                                    Explore
-                                                    <ArrowRight className="h-4 w-4" />
-                                                </Link>
+                                            {product.variants &&
+                                                product.variants.length > 0 && (
+                                                    <div className="mt-4 flex flex-wrap gap-1.5">
+                                                        {product.variants.map(
+                                                            (variant) => (
+                                                                <span
+                                                                    key={
+                                                                        variant
+                                                                    }
+                                                                    className="rounded-full border border-white/[0.08] bg-white/[0.025] px-2 py-1 text-[9px] font-bold text-white/42"
+                                                                >
+                                                                    {variant}
+                                                                </span>
+                                                            ),
+                                                        )}
+                                                    </div>
+                                                )}
+                                            <div className="mt-4 text-[10px] font-bold text-white/32">
+                                                {product.lifecycle_label}
                                             </div>
                                         </div>
-                                    </article>
+                                    </Link>
                                 ))}
                             </div>
                         </div>
