@@ -59,6 +59,10 @@ final class KmjProductCatalog
 
     public const CINEMA_PLAYER_NAME = 'KMJ Cinema Player';
 
+    public const LICENSING_HUB_SLUG = 'kmj-licensing-hub';
+
+    public const LICENSING_HUB_NAME = 'KMJ Licensing Hub';
+
     public function __construct(
         private readonly CloudOSProductCatalog $cloudOS,
         private readonly ProductCatalog $products,
@@ -82,6 +86,7 @@ final class KmjProductCatalog
                 self::CINEMA_PLATFORM_SLUG => self::CINEMA_PLATFORM_NAME,
                 self::DOME_360_SLUG => self::DOME_360_NAME,
                 self::CINEMA_PLAYER_SLUG => self::CINEMA_PLAYER_NAME,
+                self::LICENSING_HUB_SLUG => self::LICENSING_HUB_NAME,
             ];
 
             $synced = [];

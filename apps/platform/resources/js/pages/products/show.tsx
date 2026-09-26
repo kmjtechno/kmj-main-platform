@@ -220,6 +220,15 @@ export default function ProductShow({ product }: { product: Product }) {
                                 ? 'Governed access available'
                                 : 'Not commercially available',
                         },
+                        ...(product.variants?.length
+                            ? [
+                                  {
+                                      '@type': 'PropertyValue',
+                                      name: 'Configurations',
+                                      value: product.variants.join(', '),
+                                  },
+                              ]
+                            : []),
                     ],
                 }}
             />

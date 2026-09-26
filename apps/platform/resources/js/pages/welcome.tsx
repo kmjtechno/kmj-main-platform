@@ -7,7 +7,6 @@ import {
     ShieldCheck,
     Sparkles,
 } from 'lucide-react';
-import HeroVisual from '@/components/public/hero-visual';
 import ProductVisual from '@/components/public/product-visual';
 import PublicSeo from '@/components/public-seo';
 import PublicSiteFooter from '@/components/public-site-footer';
@@ -169,7 +168,16 @@ export default function Welcome({
                                 </div>
                             </div>
 
-                            <HeroVisual />
+                            <div className="relative overflow-hidden rounded-[2rem] border border-white/[0.08] bg-[#090c12] shadow-[0_35px_100px_rgba(0,0,0,.35)]">
+                                <img
+                                    src="/assets/products/kmj-brand-system.webp"
+                                    alt="KMJ TECHNO unified technology ecosystem"
+                                    fetchPriority="high"
+                                    decoding="async"
+                                    className="aspect-[4/3] h-full w-full object-cover"
+                                />
+                                <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-[#05070a]/25 via-transparent to-transparent" />
+                            </div>
                         </div>
                     </section>
 
@@ -303,25 +311,36 @@ export default function Welcome({
                             </p>
                         </div>
 
-                        <div className="mt-10 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                            {platformCapabilities.map(
-                                ({ icon: Icon, title, text }) => (
-                                    <article
-                                        key={title}
-                                        className="rounded-[1.4rem] border border-white/[0.075] bg-[#0a0d12] p-5"
-                                    >
-                                        <span className="grid h-10 w-10 place-items-center rounded-xl border border-[#e21b23]/15 bg-[#e21b23]/[0.07] text-[#ee3942]">
-                                            <Icon className="h-4.5 w-4.5" />
-                                        </span>
-                                        <h3 className="mt-5 text-base font-black">
-                                            {title}
-                                        </h3>
-                                        <p className="mt-2 text-[13px] leading-6 text-white/38">
-                                            {text}
-                                        </p>
-                                    </article>
-                                ),
-                            )}
+                        <div className="mt-10 grid gap-6 lg:grid-cols-[1.1fr_.9fr] lg:items-stretch">
+                            <div className="overflow-hidden rounded-[1.6rem] border border-white/[0.075] bg-[#0a0d12]">
+                                <img
+                                    src="/assets/products/kmj-licensing-hub.webp"
+                                    alt="KMJ Licensing and entitlement control system"
+                                    loading="lazy"
+                                    decoding="async"
+                                    className="h-full min-h-[320px] w-full object-cover"
+                                />
+                            </div>
+                            <div className="grid gap-4 sm:grid-cols-2">
+                                {platformCapabilities.map(
+                                    ({ icon: Icon, title, text }) => (
+                                        <article
+                                            key={title}
+                                            className="rounded-[1.4rem] border border-white/[0.075] bg-[#0a0d12] p-5"
+                                        >
+                                            <span className="grid h-10 w-10 place-items-center rounded-xl border border-[#e21b23]/15 bg-[#e21b23]/[0.07] text-[#ee3942]">
+                                                <Icon className="h-4.5 w-4.5" />
+                                            </span>
+                                            <h3 className="mt-5 text-base font-black">
+                                                {title}
+                                            </h3>
+                                            <p className="mt-2 text-[13px] leading-6 text-white/38">
+                                                {text}
+                                            </p>
+                                        </article>
+                                    ),
+                                )}
+                            </div>
                         </div>
                     </section>
                 </main>

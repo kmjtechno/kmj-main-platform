@@ -24,7 +24,7 @@ final class PublicProductHubTest extends TestCase
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->component('welcome')
-                ->where('portfolioCount', 10)
+                ->where('portfolioCount', 11)
                 ->has('products', 8)
                 ->where('products.0.slug', 'kmj-cloudos')
                 ->where('products.0.purchase_enabled', true)
@@ -56,7 +56,7 @@ final class PublicProductHubTest extends TestCase
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->component('products/index')
-                ->has('products', 10)
+                ->has('products', 11)
                 ->where('products.0.slug', 'kmj-cloudos')
                 ->where('products.0.lifecycle', 'active')
                 ->where('products.0.demo.kind', 'cloudos')
@@ -100,7 +100,10 @@ final class PublicProductHubTest extends TestCase
                 ->where('products.8.slug', 'kmj-360-dome')
                 ->where('products.8.lifecycle', 'roadmap')
                 ->where('products.9.slug', 'kmj-cinema-player')
-                ->where('products.9.category', 'Media & Immersive Experience'));
+                ->where('products.9.category', 'Media & Immersive Experience')
+                ->where('products.10.slug', 'kmj-licensing-hub')
+                ->where('products.10.category', 'Commerce & Licensing')
+                ->where('products.10.lifecycle', 'roadmap'));
     }
 
     public function test_cloudos_detail_exposes_simulation_and_commercial_cta_state(): void
@@ -141,6 +144,7 @@ final class PublicProductHubTest extends TestCase
             'kmj-cinema-platform' => 'development',
             'kmj-360-dome' => 'roadmap',
             'kmj-cinema-player' => 'roadmap',
+            'kmj-licensing-hub' => 'roadmap',
         ] as $slug => $lifecycle) {
             $this->get('/products/'.$slug)
                 ->assertOk()
