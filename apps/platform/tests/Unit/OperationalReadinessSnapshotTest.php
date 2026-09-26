@@ -52,6 +52,8 @@ final class OperationalReadinessSnapshotTest extends TestCase
             $this->assertSame('external_unobserved', $snapshot['autonomous_worker']['status']);
             $this->assertFalse($snapshot['autonomous_worker']['live_run_observed']);
             $this->assertSame('dormant_no_credentials', $snapshot['free_ai_router']['status']);
+            $this->assertFalse($snapshot['free_ai_router']['opencode_client_ready']);
+            $this->assertFalse($snapshot['free_ai_router']['cloudflare_pair_ready']);
             $this->assertFalse($snapshot['free_ai_router']['live_route_observed']);
             $this->assertFalse($snapshot['free_ai_router']['paid_fallback']);
             $this->assertSame('warning', $snapshot['compliance_guard']['status']);
@@ -59,6 +61,43 @@ final class OperationalReadinessSnapshotTest extends TestCase
             $this->assertFalse($snapshot['compliance_guard']['legal_interpretation']);
         } finally {
             File::deleteDirectory($directory);
+        }
+    }
+
+    public function test_free_ai_posture_requires_complete_cloudflare_pair_and_real_opencode_binary(): void
+    {
+        $binary = tempnam(sys_get_temp_dir(), 'kmj-opencode-');
+        file_put_contents($binary, '#!/bin/sh'.PHP_EOL.'exit 0'.PHP_EOL);
+
+        config()->set('kmj.ops.free_ai_provider_credentials', [
+            'groq' => 'configured',
+            'openrouter' => null,
+        ]);
+        config()->set('kmj.ops.cloudflare_ai_token', 'configured');
+        config()->set('kmj.ops.cloudflare_ai_account_id', 'account');
+        config()->set('kmj.ops.opencode_free_enabled', true);
+        config()->set('kmj.ops.opencode_binary', $binary);
+
+        try {
+            $snapshot = app(OperationalReadinessSnapshot::class)->capture([
+                'deployed_sha' => str_repeat('a', 40),
+                'database' => ['status' => 'healthy'],
+                'cpu' => ['load_percent_estimate' => 10],
+                'memory' => ['used_percent' => 10],
+                'disk' => ['used_percent' => 10],
+                'failed_jobs' => 0,
+            ]);
+
+            $this->assertSame('configured_not_probed', $snapshot['free_ai_router']['status']);
+            $this->assertSame(
+                ['cloudflare', 'groq', 'opencode-client'],
+                $snapshot['free_ai_router']['configured_providers'],
+            );
+            $this->assertTrue($snapshot['free_ai_router']['cloudflare_pair_ready']);
+            $this->assertTrue($snapshot['free_ai_router']['opencode_client_ready']);
+            $this->assertFalse($snapshot['free_ai_router']['live_route_observed']);
+        } finally {
+            @unlink($binary);
         }
     }
 
