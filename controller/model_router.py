@@ -158,6 +158,22 @@ class FreeCloudRouter:
                     )
                 )
 
+        cloudflare_token = os.getenv("CLOUDFLARE_API_TOKEN", "").strip()
+        cloudflare_account = os.getenv("CLOUDFLARE_ACCOUNT_ID", "").strip()
+        if cloudflare_token and cloudflare_account:
+            providers.append(
+                ProviderEndpoint(
+                    name="cloudflare",
+                    base_url=(
+                        "https://api.cloudflare.com/client/v4/accounts/"
+                        f"{cloudflare_account}/ai/v1"
+                    ),
+                    api_key=cloudflare_token,
+                    priority=self._provider_priority("cloudflare"),
+                    allow_confidential=False,
+                )
+            )
+
         if os.getenv("KMJ_ENABLE_PUBLIC_FREE_PROVIDERS", "").strip().lower() in {"1", "true", "yes", "on"}:
             for name, base_url in self.ANONYMOUS_PUBLIC_PROVIDERS.items():
                 providers.append(

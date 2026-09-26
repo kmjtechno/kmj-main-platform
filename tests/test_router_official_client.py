@@ -11,6 +11,70 @@ from controller.opencode_free import OpenCodeUnavailable
 
 
 class RouterOfficialClientTests(unittest.IsolatedAsyncioTestCase):
+    async def test_cloudflare_provider_requires_token_and_account_and_is_public_only(self):
+        with patch.dict(
+            os.environ,
+            {
+                "CLOUDFLARE_API_TOKEN": "test-token",
+                "CLOUDFLARE_ACCOUNT_ID": "abc123",
+            },
+            clear=True,
+        ):
+            router = FreeCloudRouter()
+            providers = {provider.name: provider for provider in router.providers()}
+
+        self.assertIn("cloudflare", providers)
+        self.assertEqual(
+            providers["cloudflare"].base_url,
+            "https://api.cloudflare.com/client/v4/accounts/abc123/ai/v1",
+        )
+        self.assertEqual(providers["cloudflare"].api_key, "test-token")
+        self.assertFalse(providers["cloudflare"].allow_confidential)
+
+    async def test_cloudflare_provider_is_dormant_when_configuration_is_incomplete(self):
+        for environment in (
+            {"CLOUDFLARE_API_TOKEN": "token-only"},
+            {"CLOUDFLARE_ACCOUNT_ID": "account-only"},
+            {},
+        ):
+            with self.subTest(environment=environment), patch.dict(
+                os.environ,
+                environment,
+                clear=True,
+            ):
+                router = FreeCloudRouter()
+                self.assertNotIn(
+                    "cloudflare",
+                    {provider.name for provider in router.providers()},
+                )
+
+    async def test_direct_provider_remains_ineligible_until_free_account_is_verified(self):
+        with patch.dict(os.environ, {}, clear=True):
+            router = FreeCloudRouter()
+            self.assertEqual(
+                router._eligible(
+                    "@cf/openai/gpt-oss-20b",
+                    "cloudflare",
+                    "cloudflare",
+                ),
+                (False, "cost-not-verified-zero"),
+            )
+
+        with patch.dict(
+            os.environ,
+            {"KMJ_VERIFIED_FREE_PROVIDERS": "cloudflare"},
+            clear=True,
+        ):
+            router = FreeCloudRouter()
+            self.assertEqual(
+                router._eligible(
+                    "@cf/openai/gpt-oss-20b",
+                    "cloudflare",
+                    "cloudflare",
+                ),
+                (True, "verified-free-provider-account"),
+            )
+
     async def test_local_aggregator_headers_follow_data_classification(self):
         router = FreeCloudRouter()
         local = ProviderEndpoint(
