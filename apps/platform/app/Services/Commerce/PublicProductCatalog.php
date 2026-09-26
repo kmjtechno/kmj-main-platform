@@ -50,6 +50,15 @@ final class PublicProductCatalog
             KmjProductCatalog::AGENT_SLUG,
             KmjProductCatalog::CREATIVE_STUDIO_SLUG,
             KmjProductCatalog::CINEMA_PLATFORM_SLUG,
+            KmjProductCatalog::DOME_360_SLUG,
+            KmjProductCatalog::CINEMA_5D_SLUG,
+            KmjProductCatalog::CINEMA_7D_SLUG,
+            KmjProductCatalog::CINEMA_9D_SLUG,
+            KmjProductCatalog::CINEMA_12D_SLUG,
+            KmjProductCatalog::CINEMA_14D_SLUG,
+            KmjProductCatalog::CINEMA_16D_SLUG,
+            KmjProductCatalog::CINEMA_5DX_SLUG,
+            KmjProductCatalog::CINEMA_PLAYER_SLUG,
         ];
     }
 
@@ -62,7 +71,9 @@ final class PublicProductCatalog
             return null;
         }
 
-        return match ((string) $product->getAttribute('slug')) {
+        $slug = (string) $product->getAttribute('slug');
+
+        $presented = match ($slug) {
             CloudOSProductCatalog::SLUG => $this->cloudOS($product),
             KmjProductCatalog::CALIBRATION_SLUG => $this->calibration(),
             KmjProductCatalog::FORGE_SLUG => $this->forge(),
@@ -71,7 +82,100 @@ final class PublicProductCatalog
             KmjProductCatalog::AGENT_SLUG => $this->agent(),
             KmjProductCatalog::CREATIVE_STUDIO_SLUG => $this->creativeStudio(),
             KmjProductCatalog::CINEMA_PLATFORM_SLUG => $this->cinemaPlatform(),
+            KmjProductCatalog::DOME_360_SLUG => $this->immersiveCinemaProduct(
+                KmjProductCatalog::DOME_360_SLUG,
+                KmjProductCatalog::DOME_360_NAME,
+                '360° immersive dome systems',
+                'A roadmap product family for panoramic dome playback, projection and synchronized immersive experiences.',
+            ),
+            KmjProductCatalog::CINEMA_5D_SLUG => $this->immersiveCinemaProduct(
+                KmjProductCatalog::CINEMA_5D_SLUG,
+                KmjProductCatalog::CINEMA_5D_NAME,
+                '5D motion cinema systems',
+                'A roadmap cinema experience combining synchronized playback, motion and environmental effects.',
+            ),
+            KmjProductCatalog::CINEMA_7D_SLUG => $this->immersiveCinemaProduct(
+                KmjProductCatalog::CINEMA_7D_SLUG,
+                KmjProductCatalog::CINEMA_7D_NAME,
+                '7D interactive cinema systems',
+                'A roadmap interactive cinema product for synchronized media, motion and audience interaction.',
+            ),
+            KmjProductCatalog::CINEMA_9D_SLUG => $this->immersiveCinemaProduct(
+                KmjProductCatalog::CINEMA_9D_SLUG,
+                KmjProductCatalog::CINEMA_9D_NAME,
+                '9D immersive cinema systems',
+                'A roadmap immersive cinema platform extending synchronized playback, motion and environmental effects.',
+            ),
+            KmjProductCatalog::CINEMA_12D_SLUG => $this->immersiveCinemaProduct(
+                KmjProductCatalog::CINEMA_12D_SLUG,
+                KmjProductCatalog::CINEMA_12D_NAME,
+                '12D immersive cinema systems',
+                'A roadmap multi-sensory cinema product designed for synchronized media, motion and venue effects.',
+            ),
+            KmjProductCatalog::CINEMA_14D_SLUG => $this->immersiveCinemaProduct(
+                KmjProductCatalog::CINEMA_14D_SLUG,
+                KmjProductCatalog::CINEMA_14D_NAME,
+                '14D immersive cinema systems',
+                'A roadmap high-effects cinema product for coordinated playback, motion and multi-sensory experiences.',
+            ),
+            KmjProductCatalog::CINEMA_16D_SLUG => $this->immersiveCinemaProduct(
+                KmjProductCatalog::CINEMA_16D_SLUG,
+                KmjProductCatalog::CINEMA_16D_NAME,
+                '16D immersive cinema systems',
+                'A roadmap flagship immersive cinema system for advanced synchronized venue experiences.',
+            ),
+            KmjProductCatalog::CINEMA_5DX_SLUG => $this->immersiveCinemaProduct(
+                KmjProductCatalog::CINEMA_5DX_SLUG,
+                KmjProductCatalog::CINEMA_5DX_NAME,
+                '5DX cinema experience platform',
+                'A roadmap premium motion-cinema product combining synchronized media, motion and extended environmental effects.',
+            ),
+            KmjProductCatalog::CINEMA_PLAYER_SLUG => $this->immersiveCinemaProduct(
+                KmjProductCatalog::CINEMA_PLAYER_SLUG,
+                KmjProductCatalog::CINEMA_PLAYER_NAME,
+                'Professional cinema playback software',
+                'A roadmap playback product for reliable professional cinema and immersive-system media delivery.',
+            ),
             default => null,
+        };
+
+        if ($presented === null) {
+            return null;
+        }
+
+        return [
+            ...$presented,
+            'category' => $this->categoryForSlug($slug),
+            'family' => str_starts_with($slug, 'kmj-') && (
+                str_contains($slug, 'cinema')
+                || $slug === KmjProductCatalog::DOME_360_SLUG
+            )
+                ? 'KMJ Cinema & Immersive Systems'
+                : null,
+        ];
+    }
+
+    private function categoryForSlug(string $slug): string
+    {
+        return match ($slug) {
+            CloudOSProductCatalog::SLUG,
+            KmjProductCatalog::CLOUD_NEXUS_SLUG => 'Platform & Infrastructure',
+            KmjProductCatalog::FORGE_SLUG,
+            KmjProductCatalog::AGENT_SLUG => 'Engineering & Automation',
+            KmjProductCatalog::CALIBRATION_SLUG => 'Calibration & Vision Systems',
+            KmjProductCatalog::CONNECT_SLUG => 'Secure Access & Connectivity',
+            KmjProductCatalog::CREATIVE_STUDIO_SLUG,
+            KmjProductCatalog::CINEMA_PLATFORM_SLUG,
+            KmjProductCatalog::DOME_360_SLUG,
+            KmjProductCatalog::CINEMA_5D_SLUG,
+            KmjProductCatalog::CINEMA_7D_SLUG,
+            KmjProductCatalog::CINEMA_9D_SLUG,
+            KmjProductCatalog::CINEMA_12D_SLUG,
+            KmjProductCatalog::CINEMA_14D_SLUG,
+            KmjProductCatalog::CINEMA_16D_SLUG,
+            KmjProductCatalog::CINEMA_5DX_SLUG,
+            KmjProductCatalog::CINEMA_PLAYER_SLUG => 'Media & Immersive Experience',
+            default => 'KMJ TECHNO Products',
         };
     }
 
@@ -388,6 +492,44 @@ final class PublicProductCatalog
                 [
                     'title' => 'Commercial release not asserted',
                     'detail' => 'No production download or purchase is exposed until a current release is independently accepted.',
+                    'state' => 'fail-closed',
+                ],
+            ],
+        );
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function immersiveCinemaProduct(
+        string $slug,
+        string $name,
+        string $eyebrow,
+        string $summary,
+    ): array {
+        return $this->developmentProduct(
+            slug: $slug,
+            name: $name,
+            lifecycle: 'roadmap',
+            lifecycleLabel: 'Roadmap',
+            eyebrow: $eyebrow,
+            headline: 'Part of the KMJ Cinema & Immersive Systems roadmap.',
+            summary: $summary,
+            status: 'Roadmap-defined product. Commercial availability, hardware compatibility and customer release are not asserted until product-specific evidence and licensing gates are complete.',
+            proof: [
+                [
+                    'title' => 'Main Platform catalog authority',
+                    'detail' => 'The product has a canonical KMJ Main Platform identity so future entitlement and licensing can bind to one authoritative slug.',
+                    'state' => 'platform-verified',
+                ],
+                [
+                    'title' => 'Cinema-family boundary',
+                    'detail' => 'The product belongs to the KMJ Cinema & Immersive Systems family while remaining independently licensable.',
+                    'state' => 'roadmap-verified',
+                ],
+                [
+                    'title' => 'Commercial access fail-closed',
+                    'detail' => 'Purchase, download and production claims remain disabled until a verified release and active entitlement policy exist.',
                     'state' => 'fail-closed',
                 ],
             ],

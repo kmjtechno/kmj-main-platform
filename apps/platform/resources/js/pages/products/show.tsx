@@ -25,6 +25,8 @@ type Product = {
     eyebrow: string;
     headline: string;
     summary: string;
+    category: string;
+    family: string | null;
     truth: {
         status: string;
         physical_capability_certified?: boolean;
@@ -197,11 +199,27 @@ export default function ProductShow({ product }: { product: Product }) {
                         '@type': 'Brand',
                         name: 'KMJ TECHNO',
                     },
-                    additionalProperty: {
-                        '@type': 'PropertyValue',
-                        name: 'Lifecycle',
-                        value: product.lifecycle_label,
-                    },
+                    applicationCategory: product.category,
+                    isPartOf: product.family
+                        ? {
+                              '@type': 'ProductGroup',
+                              name: product.family,
+                          }
+                        : undefined,
+                    additionalProperty: [
+                        {
+                            '@type': 'PropertyValue',
+                            name: 'Lifecycle',
+                            value: product.lifecycle_label,
+                        },
+                        {
+                            '@type': 'PropertyValue',
+                            name: 'Commercial availability',
+                            value: product.purchase_enabled
+                                ? 'Governed access available'
+                                : 'Not commercially available',
+                        },
+                    ],
                 }}
             />
 
@@ -228,6 +246,9 @@ export default function ProductShow({ product }: { product: Product }) {
                             </Link>
 
                             <div className="mt-8 flex flex-wrap items-center gap-3">
+                                <span className="rounded-full border border-white/10 bg-white/[0.035] px-3.5 py-1.5 text-[10px] font-black tracking-[0.12em] text-white/45 uppercase">
+                                    {product.category}
+                                </span>
                                 <span className="rounded-full border border-[#ef3340]/30 bg-[#ef3340]/10 px-3.5 py-1.5 text-[10px] font-black tracking-[0.16em] text-[#ff6a72] uppercase">
                                     {product.eyebrow}
                                 </span>
