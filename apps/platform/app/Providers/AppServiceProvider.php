@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use App\Services\Events\TransactionalOutbox;
 use App\Services\Licensing\LicenseRevoker;
 use App\Services\Licensing\LicenseValidator;
 use App\Services\Licensing\RustSandboxLicenseVerifier;
@@ -14,6 +15,8 @@ use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\Rules\Password;
+use KMJ\MainPlatform\Commerce\Contracts\DomainEventRecorder as CommerceDomainEventRecorder;
+use KMJ\MainPlatform\Entitlements\Contracts\DomainEventRecorder as EntitlementDomainEventRecorder;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -22,6 +25,10 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
+        $this->app->singleton(TransactionalOutbox::class);
+        $this->app->bind(CommerceDomainEventRecorder::class, fn (Application $app): TransactionalOutbox => $app->make(TransactionalOutbox::class));
+        $this->app->bind(EntitlementDomainEventRecorder::class, fn (Application $app): TransactionalOutbox => $app->make(TransactionalOutbox::class));
+
         $this->app->singleton(SandboxLicenseIssuer::class, function (): SandboxLicenseIssuer {
             return new SandboxLicenseIssuer($this->sandboxLicenseSecret());
         });

@@ -5,11 +5,14 @@ namespace KMJ\MainPlatform\Entitlements\Services;
 use DomainException;
 use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
+use KMJ\MainPlatform\Entitlements\Contracts\DomainEventRecorder;
 use KMJ\MainPlatform\Entitlements\Models\Entitlement;
 use KMJ\MainPlatform\Entitlements\Models\EntitlementLedgerEntry;
 
 final class EntitlementRevoker
 {
+    public function __construct(private readonly DomainEventRecorder $events) {}
+
     public function revoke(string $entitlementId): Entitlement
     {
         $entitlementId = trim($entitlementId);

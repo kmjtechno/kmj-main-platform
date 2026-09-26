@@ -7,9 +7,31 @@ use DateTimeInterface;
 use DomainException;
 use Illuminate\Support\Str;
 use InvalidArgumentException;
+use KMJ\MainPlatform\Commerce\Contracts\DomainEventRecorder as CommerceDomainEventRecorder;
+use KMJ\MainPlatform\Entitlements\Contracts\DomainEventRecorder as EntitlementDomainEventRecorder;
 
-final class TransactionalOutbox
+final class TransactionalOutbox implements CommerceDomainEventRecorder, EntitlementDomainEventRecorder
 {
+    public function recordDomainEvent(
+        string $eventType,
+        string $aggregateType,
+        string $aggregateId,
+        array $payload,
+        ?string $organizationId,
+        string $idempotencyKey,
+        DateTimeInterface $occurredAt,
+    ): void {
+        $this->record(
+            $eventType,
+            $aggregateType,
+            $aggregateId,
+            $payload,
+            $organizationId,
+            $idempotencyKey,
+            $occurredAt,
+        );
+    }
+
     /**
      * @param  array<string, mixed>  $payload
      */

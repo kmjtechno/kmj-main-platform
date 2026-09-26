@@ -3,14 +3,17 @@
 namespace KMJ\MainPlatform\Entitlements\Services;
 
 use DomainException;
-use InvalidArgumentException;
 use Illuminate\Support\Facades\DB;
+use InvalidArgumentException;
+use KMJ\MainPlatform\Entitlements\Contracts\DomainEventRecorder;
 use KMJ\MainPlatform\Entitlements\Models\Entitlement;
 use KMJ\MainPlatform\Entitlements\Models\EntitlementLedgerEntry;
 use KMJ\MainPlatform\Entitlements\Models\EntitlementPolicy;
 
 final class EntitlementIssuer
 {
+    public function __construct(private readonly DomainEventRecorder $events) {}
+
     public function issue(
         string $organizationId,
         EntitlementPolicy $policy,
