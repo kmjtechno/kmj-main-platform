@@ -2,6 +2,8 @@
 
 namespace App\Providers;
 
+use App\Contracts\Events\OutboxPublisher;
+use App\Services\Events\LaravelEventOutboxPublisher;
 use App\Services\Events\TransactionalOutbox;
 use App\Services\Licensing\LicenseRevoker;
 use App\Services\Licensing\LicenseValidator;
@@ -26,6 +28,7 @@ class AppServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->app->singleton(TransactionalOutbox::class);
+        $this->app->bind(OutboxPublisher::class, LaravelEventOutboxPublisher::class);
         $this->app->bind(CommerceDomainEventRecorder::class, fn (Application $app): TransactionalOutbox => $app->make(TransactionalOutbox::class));
         $this->app->bind(EntitlementDomainEventRecorder::class, fn (Application $app): TransactionalOutbox => $app->make(TransactionalOutbox::class));
 

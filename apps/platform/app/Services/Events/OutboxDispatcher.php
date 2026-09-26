@@ -39,6 +39,7 @@ final class OutboxDispatcher
                 'published_at' => now(),
                 'attempts' => $message->attempts + 1,
                 'last_error' => null,
+                'next_attempt_at' => null,
             ])->save();
 
             return true;
