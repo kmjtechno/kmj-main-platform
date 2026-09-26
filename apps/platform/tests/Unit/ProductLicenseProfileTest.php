@@ -40,6 +40,7 @@ final class ProductLicenseProfileTest extends TestCase
             KmjProductCatalog::CINEMA_PLATFORM_SLUG,
             KmjProductCatalog::DOME_360_SLUG,
             KmjProductCatalog::CINEMA_PLAYER_SLUG,
+            KmjProductCatalog::LICENSING_HUB_SLUG,
         ] as $slug) {
             $profile = $profiles->forSlug($slug);
 

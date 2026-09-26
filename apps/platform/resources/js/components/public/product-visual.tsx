@@ -5,6 +5,20 @@ type ProductVisualProps = {
     compact?: boolean;
 };
 
+const generatedVisuals: Record<string, string> = {
+    'kmj-cloudos': '/assets/products/kmj-cloudos.webp',
+    'kmj-calibration-pro': '/assets/products/kmj-calibration.webp',
+    'kmj-forge': '/assets/products/kmj-forge.webp',
+    'kmj-connect': '/assets/products/kmj-connect.webp',
+    'kmj-cloud-nexus': '/assets/products/kmj-cloud-nexus.webp',
+    'kmj-agent': '/assets/products/kmj-agent.webp',
+    'kmj-creative-studio': '/assets/products/kmj-creative-studio.webp',
+    'kmj-cinema-platform': '/assets/products/kmj-cinema-platform.webp',
+    'kmj-360-dome': '/assets/products/kmj-cinema-platform.webp',
+    'kmj-cinema-player': '/assets/products/kmj-cinema-platform.webp',
+    'kmj-licensing-hub': '/assets/products/kmj-licensing-hub.webp',
+};
+
 const palette: Record<string, [string, string]> = {
     'kmj-cloudos': ['#25b4ff', '#5f6fff'],
     'kmj-calibration-pro': ['#ff2d55', '#ff8a3d'],
@@ -32,8 +46,31 @@ export default function ProductVisual({
     kind,
     compact = false,
 }: ProductVisualProps) {
+    const generatedVisual = generatedVisuals[slug];
     const [accent, accent2] = palette[slug] ?? ['#e21b23', '#6d28d9'];
     const isCloud = kind === 'cloudos' || slug === 'kmj-cloudos';
+
+    if (generatedVisual) {
+        return (
+            <div
+                className={
+                    'relative isolate overflow-hidden border border-white/[0.08] bg-[#090c12] ' +
+                    (compact
+                        ? 'h-52 rounded-[1.35rem]'
+                        : 'h-72 rounded-[1.75rem]')
+                }
+            >
+                <img
+                    src={generatedVisual}
+                    alt={name + ' — KMJ TECHNO'}
+                    loading={compact ? 'lazy' : 'eager'}
+                    decoding="async"
+                    className="h-full w-full object-cover"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-[#05070a]/45 via-transparent to-transparent" />
+            </div>
+        );
+    }
     const isCalibration =
         kind === 'calibration' || slug === 'kmj-calibration-pro';
 

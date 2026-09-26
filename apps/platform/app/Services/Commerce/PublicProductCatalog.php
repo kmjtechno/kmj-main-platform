@@ -60,6 +60,7 @@ final class PublicProductCatalog
             KmjProductCatalog::CINEMA_PLATFORM_SLUG,
             KmjProductCatalog::DOME_360_SLUG,
             KmjProductCatalog::CINEMA_PLAYER_SLUG,
+            KmjProductCatalog::LICENSING_HUB_SLUG,
         ];
     }
 
@@ -95,6 +96,7 @@ final class PublicProductCatalog
                 'Professional cinema playback software',
                 'A roadmap playback product for reliable professional cinema and immersive-system media delivery.',
             ),
+            KmjProductCatalog::LICENSING_HUB_SLUG => $this->licensingHub(),
             default => null,
         };
 
@@ -123,6 +125,7 @@ final class PublicProductCatalog
             KmjProductCatalog::AGENT_SLUG => 'Engineering & Automation',
             KmjProductCatalog::CALIBRATION_SLUG => 'Calibration & Vision Systems',
             KmjProductCatalog::CONNECT_SLUG => 'Secure Access & Connectivity',
+            KmjProductCatalog::LICENSING_HUB_SLUG => 'Commerce & Licensing',
             KmjProductCatalog::CREATIVE_STUDIO_SLUG,
             KmjProductCatalog::CINEMA_PLATFORM_SLUG,
             KmjProductCatalog::DOME_360_SLUG,
@@ -452,6 +455,40 @@ final class PublicProductCatalog
             'variants' => KmjProductCatalog::CINEMA_VARIANTS,
             'family' => 'KMJ Cinema & Immersive Systems',
         ];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function licensingHub(): array
+    {
+        return $this->developmentProduct(
+            slug: KmjProductCatalog::LICENSING_HUB_SLUG,
+            name: KmjProductCatalog::LICENSING_HUB_NAME,
+            lifecycle: 'roadmap',
+            lifecycleLabel: 'Roadmap',
+            eyebrow: 'Software licensing & subscription platform',
+            headline: 'A governed licensing platform for selling and controlling software access online.',
+            summary: 'KMJ Licensing Hub is the roadmap commercial licensing product for customer organizations that need software entitlements, subscription access, license issuance, validation, revocation and centralized product control from the KMJ Main Platform.',
+            status: 'Roadmap-defined SaaS product. Commercial self-service, billing and external customer release remain disabled until product-specific release and payment gates are verified.',
+            proof: [
+                [
+                    'title' => 'Main Platform licensing authority',
+                    'detail' => 'The platform already provides entitlement, issuance, validation and revocation foundations that this product can expose as a governed customer service.',
+                    'state' => 'platform-verified',
+                ],
+                [
+                    'title' => 'Recurring-revenue direction',
+                    'detail' => 'The roadmap supports subscription and licensed software access without treating payment confirmation as authorization by itself.',
+                    'state' => 'roadmap-verified',
+                ],
+                [
+                    'title' => 'Commercial release fail-closed',
+                    'detail' => 'No paid self-service or third-party licensing claim is exposed until billing, support and production release gates are verified.',
+                    'state' => 'fail-closed',
+                ],
+            ],
+        );
     }
 
     /**

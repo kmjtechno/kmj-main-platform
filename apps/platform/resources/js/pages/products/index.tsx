@@ -11,6 +11,7 @@ const categoryOrder = [
     'Engineering & Automation',
     'Calibration & Vision Systems',
     'Secure Access & Connectivity',
+    'Commerce & Licensing',
     'Media & Immersive Experience',
 ] as const;
 
@@ -23,6 +24,8 @@ const categoryDescriptions: Record<string, string> = {
         'Projection, camera and spatial-calibration technology for immersive environments.',
     'Secure Access & Connectivity':
         'Governed remote access and secure product connectivity.',
+    'Commerce & Licensing':
+        'Software licensing, subscriptions, entitlements and governed digital-product access.',
     'Media & Immersive Experience':
         'Cinema, dome, playback and creative systems for immersive venues and media workflows.',
 };
