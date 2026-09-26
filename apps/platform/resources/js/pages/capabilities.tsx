@@ -88,11 +88,12 @@ export default function Capabilities() {
                                 </span>
                             </h1>
                             <p className="mt-8 max-w-3xl text-base leading-8 text-white/52 sm:text-lg">
-                                KMJ TECHNO combines product engineering, platform
-                                authority and governed automation across several
-                                focus areas. Capability does not imply every feature
-                                is commercially released; product pages remain the
-                                source of lifecycle and availability truth.
+                                KMJ TECHNO combines product engineering,
+                                platform authority and governed automation
+                                across several focus areas. Capability does not
+                                imply every feature is commercially released;
+                                product pages remain the source of lifecycle and
+                                availability truth.
                             </p>
                         </div>
                     </section>
@@ -125,13 +126,15 @@ export default function Capabilities() {
                                     Delivery model
                                 </div>
                                 <h2 className="mt-4 text-3xl font-black tracking-[-0.045em] sm:text-5xl">
-                                    A platform layer that connects the experience.
+                                    A platform layer that connects the
+                                    experience.
                                 </h2>
                                 <p className="mt-5 max-w-xl text-sm leading-7 text-white/42 sm:text-base">
-                                    Shared authority belongs in the Main Platform.
-                                    Product-specific engineering remains inside each
-                                    independent product. That separation keeps the
-                                    system easier to secure, test and evolve.
+                                    Shared authority belongs in the Main
+                                    Platform. Product-specific engineering
+                                    remains inside each independent product.
+                                    That separation keeps the system easier to
+                                    secure, test and evolve.
                                 </p>
                             </div>
 
@@ -159,12 +162,12 @@ export default function Capabilities() {
                                 Explore the portfolio
                             </div>
                             <h2 className="mt-4 text-3xl font-black tracking-[-0.04em] sm:text-4xl">
-                                See which capabilities are active, in preview or on
-                                the roadmap.
+                                See which capabilities are active, in preview or
+                                on the roadmap.
                             </h2>
                             <p className="mt-4 text-sm leading-7 text-white/40">
-                                Product pages expose lifecycle and access state so
-                                presentation never substitutes for verified
+                                Product pages expose lifecycle and access state
+                                so presentation never substitutes for verified
                                 availability.
                             </p>
                         </div>

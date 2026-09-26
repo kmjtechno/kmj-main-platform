@@ -39,9 +39,7 @@ export default function PublicSeo({
             <meta
                 name="robots"
                 content={
-                    publicSite.indexable
-                        ? 'index,follow'
-                        : 'noindex,nofollow'
+                    publicSite.indexable ? 'index,follow' : 'noindex,nofollow'
                 }
             />
             <link rel="canonical" href={canonical} />

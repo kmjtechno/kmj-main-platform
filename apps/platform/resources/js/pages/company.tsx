@@ -77,12 +77,12 @@ export default function Company() {
                                 </span>
                             </h1>
                             <p className="mt-8 max-w-3xl text-base leading-8 text-white/52 sm:text-lg">
-                                KMJ TECHNO is building a portfolio across software,
-                                cloud systems, intelligent automation, secure digital
-                                access and immersive technology. The goal is not to
-                                look large before the work is ready; it is to build
-                                products and operating systems that can earn trust as
-                                they scale.
+                                KMJ TECHNO is building a portfolio across
+                                software, cloud systems, intelligent automation,
+                                secure digital access and immersive technology.
+                                The goal is not to look large before the work is
+                                ready; it is to build products and operating
+                                systems that can earn trust as they scale.
                             </p>
                             <div className="mt-9 flex flex-col gap-3 sm:flex-row">
                                 <Link
@@ -105,22 +105,24 @@ export default function Company() {
 
                     <section className="border-y border-white/[0.07] bg-[#050608]">
                         <div className="mx-auto grid max-w-[1440px] gap-6 px-5 py-20 sm:px-8 md:grid-cols-2 lg:px-12 lg:py-24">
-                            {operatingPrinciples.map(({ icon: Icon, title, text }) => (
-                                <article
-                                    key={title}
-                                    className="rounded-[1.75rem] border border-white/[0.08] bg-gradient-to-br from-white/[0.05] to-white/[0.015] p-7 sm:p-8"
-                                >
-                                    <span className="grid h-11 w-11 place-items-center rounded-xl border border-[#e21b23]/18 bg-[#e21b23]/8 text-[#ff5962]">
-                                        <Icon className="h-5 w-5" />
-                                    </span>
-                                    <h2 className="mt-6 text-2xl font-black tracking-[-0.035em]">
-                                        {title}
-                                    </h2>
-                                    <p className="mt-3 text-sm leading-7 text-white/42">
-                                        {text}
-                                    </p>
-                                </article>
-                            ))}
+                            {operatingPrinciples.map(
+                                ({ icon: Icon, title, text }) => (
+                                    <article
+                                        key={title}
+                                        className="rounded-[1.75rem] border border-white/[0.08] bg-gradient-to-br from-white/[0.05] to-white/[0.015] p-7 sm:p-8"
+                                    >
+                                        <span className="grid h-11 w-11 place-items-center rounded-xl border border-[#e21b23]/18 bg-[#e21b23]/8 text-[#ff5962]">
+                                            <Icon className="h-5 w-5" />
+                                        </span>
+                                        <h2 className="mt-6 text-2xl font-black tracking-[-0.035em]">
+                                            {title}
+                                        </h2>
+                                        <p className="mt-3 text-sm leading-7 text-white/42">
+                                            {text}
+                                        </p>
+                                    </article>
+                                ),
+                            )}
                         </div>
                     </section>
 
@@ -136,10 +138,11 @@ export default function Company() {
                                 </span>
                             </h2>
                             <p className="mt-5 max-w-xl text-sm leading-7 text-white/42 sm:text-base">
-                                The Main Platform is the central customer, product,
-                                entitlement, licensing and operational authority.
-                                Independent KMJ products remain separate engineering
-                                systems and integrate through governed contracts.
+                                The Main Platform is the central customer,
+                                product, entitlement, licensing and operational
+                                authority. Independent KMJ products remain
+                                separate engineering systems and integrate
+                                through governed contracts.
                             </p>
                         </div>
 
@@ -171,9 +174,10 @@ export default function Company() {
                                     Product ambition without false certainty.
                                 </h2>
                                 <p className="mt-4 text-sm leading-7 text-white/40">
-                                    Availability, access and product status remain
-                                    explicit. Public presentation does not override
-                                    verified technical or commercial state.
+                                    Availability, access and product status
+                                    remain explicit. Public presentation does
+                                    not override verified technical or
+                                    commercial state.
                                 </p>
                             </div>
                             <Link

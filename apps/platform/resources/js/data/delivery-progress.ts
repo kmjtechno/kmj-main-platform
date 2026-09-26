@@ -53,7 +53,8 @@ export const deliveryMilestones: DeliveryMilestone[] = [
         title: 'Public SEO metadata foundation',
         state: 'active',
         detail: 'Canonical metadata, truthful JSON-LD, public Company/Capabilities surfaces, canonical sitemap, and fail-closed indexing controls are implemented while hreflang remains gated on real translated URLs',
-        evidence: 'PR #203 SEO foundation + PR #211 corporate surfaces, sitemap and fail-closed indexing verification',
+        evidence:
+            'PR #203 SEO foundation + PR #211 corporate surfaces, sitemap and fail-closed indexing verification',
     },
     {
         id: 'registration-onboarding',
