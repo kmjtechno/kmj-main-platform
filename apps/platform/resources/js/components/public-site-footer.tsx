@@ -5,7 +5,7 @@ import LockedBrand from '@/components/locked-brand';
 export default function PublicSiteFooter() {
     return (
         <footer className="border-t border-white/[0.07] bg-[#05070a]">
-            <div className="mx-auto grid max-w-[1440px] gap-12 px-5 py-14 sm:px-8 md:grid-cols-[1.3fr_.7fr_.7fr] lg:px-12">
+            <div className="mx-auto grid max-w-[1440px] gap-12 px-5 py-14 sm:px-8 md:grid-cols-2 lg:grid-cols-[1.4fr_.7fr_.7fr_.8fr] lg:px-12">
                 <div>
                     <LockedBrand />
                     <p className="mt-5 max-w-md text-sm leading-7 text-white/38">
@@ -44,6 +44,30 @@ export default function PublicSiteFooter() {
                         >
                             Trust center
                         </Link>
+                    </div>
+                </div>
+
+                <div>
+                    <div className="text-[11px] font-black tracking-[0.18em] text-white/32 uppercase">
+                        Legal
+                    </div>
+                    <div className="mt-4 grid gap-3">
+                        {[
+                            ['/legal', 'Legal center'],
+                            ['/terms', 'Terms & Conditions'],
+                            ['/privacy', 'Privacy Policy'],
+                            ['/refund-policy', 'Refund Policy'],
+                            ['/acceptable-use', 'Acceptable Use'],
+                            ['/cookie-policy', 'Cookie Policy'],
+                        ].map(([href, label]) => (
+                            <Link
+                                key={href}
+                                href={href}
+                                className="text-sm font-semibold text-white/62 transition hover:text-white"
+                            >
+                                {label}
+                            </Link>
+                        ))}
                     </div>
                 </div>
 
