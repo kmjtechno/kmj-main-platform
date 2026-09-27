@@ -99,8 +99,13 @@ export default function PublicSiteFooter() {
                         reserved.
                     </span>
                     <span className="flex flex-wrap items-center gap-x-4 gap-y-1">
-                        <span>Public product claims remain bound to verified platform authority.</span>
-                        <span className="font-semibold text-white/45">Build &amp; Design by KMJ TECHNO</span>
+                        <span>
+                            Public product claims remain bound to verified
+                            platform authority.
+                        </span>
+                        <span className="font-semibold text-white/45">
+                            Build &amp; Design by KMJ TECHNO
+                        </span>
                     </span>
                 </div>
             </div>
