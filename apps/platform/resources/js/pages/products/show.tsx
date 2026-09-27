@@ -10,10 +10,25 @@ import {
     Sparkles,
 } from 'lucide-react';
 import PublicSeo from '@/components/public-seo';
+import ProductShare from '@/components/public/product-share';
 import PublicSiteFooter from '@/components/public-site-footer';
 import PublicSiteHeader from '@/components/public-site-header';
 import CalibrationDemo from '@/components/products/calibration-demo';
 import CloudOSDemo from '@/components/products/cloudos-demo';
+
+const productSocialImages: Record<string, string> = {
+    'kmj-cloudos': '/assets/products/kmj-cloudos.webp',
+    'kmj-calibration-pro': '/assets/products/kmj-calibration.webp',
+    'kmj-forge': '/assets/products/kmj-forge.webp',
+    'kmj-connect': '/assets/products/kmj-connect.webp',
+    'kmj-cloud-nexus': '/assets/products/kmj-cloud-nexus.webp',
+    'kmj-agent': '/assets/products/kmj-agent.webp',
+    'kmj-creative-studio': '/assets/products/kmj-creative-studio.webp',
+    'kmj-cinema-platform': '/assets/products/kmj-cinema-platform.webp',
+    'kmj-360-dome': '/assets/products/kmj-360-dome.webp',
+    'kmj-cinema-player': '/assets/products/kmj-cinema-player.webp',
+    'kmj-licensing-hub': '/assets/products/kmj-licensing-hub.webp',
+};
 
 type Product = {
     slug: string;
@@ -181,6 +196,8 @@ export default function ProductShow({ product }: { product: Product }) {
                 title={product.name + ' — KMJ TECHNO'}
                 description={product.summary}
                 path={'/products/' + product.slug}
+                image={productSocialImages[product.slug]}
+                imageAlt={product.name + ' — KMJ TECHNO'}
                 structuredData={{
                     '@context': 'https://schema.org',
                     '@type': 'SoftwareApplication',
@@ -271,6 +288,11 @@ export default function ProductShow({ product }: { product: Product }) {
                                     </span>
                                 )}
                             </div>
+
+                            <ProductShare
+                                name={product.name}
+                                slug={product.slug}
+                            />
 
                             <div className="mt-10 grid max-w-2xl gap-px overflow-hidden rounded-2xl border border-white/[0.07] bg-white/[0.07] sm:grid-cols-3">
                                 {[

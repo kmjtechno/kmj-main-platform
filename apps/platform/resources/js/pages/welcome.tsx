@@ -6,6 +6,7 @@ import {
     ShieldCheck,
     Sparkles,
 } from 'lucide-react';
+import LandingJourney from '@/components/public/landing-journey';
 import ProductVisual from '@/components/public/product-visual';
 import PublicSeo from '@/components/public-seo';
 import PublicSiteFooter from '@/components/public-site-footer';
@@ -34,6 +35,13 @@ type Product = {
     };
 };
 
+const flagshipSlugs = [
+    'kmj-cloudos',
+    'kmj-calibration-pro',
+    'kmj-cinema-platform',
+    'kmj-360-dome',
+];
+
 const platformCapabilities = [
     {
         icon: Layers3,
@@ -59,7 +67,6 @@ const platformCapabilities = [
 
 export default function Welcome({
     products,
-    portfolioCount,
 }: {
     products: Product[];
     portfolioCount: number;
@@ -96,16 +103,7 @@ export default function Welcome({
                     rel="preload"
                     as="image"
                     href="/assets/products/kmj-cloudos.webp"
-                />
-                <link
-                    rel="preload"
-                    as="image"
-                    href="/assets/products/kmj-calibration.webp"
-                />
-                <link
-                    rel="preload"
-                    as="image"
-                    href="/assets/products/kmj-cinema-platform.webp"
+                    fetchPriority="high"
                 />
             </Head>
 
@@ -123,20 +121,24 @@ export default function Welcome({
                             <div>
                                 <div className="inline-flex items-center gap-2 rounded-full border border-[#e21b23]/20 bg-[#e21b23]/[0.06] px-3 py-1.5 text-[10px] font-black tracking-[0.16em] text-[#ff6d75] uppercase">
                                     <span className="h-1.5 w-1.5 rounded-full bg-[#e21b23]" />
-                                    KMJ TECHNO · Innovate · Build · Scale
+                                    KMJ TECHNO · CLOUD · ENGINEERING · IMMERSIVE
+                                    SYSTEMS
                                 </div>
 
-                                <h1 className="mt-7 max-w-[760px] text-5xl leading-[0.94] font-black tracking-[-0.058em] sm:text-6xl lg:text-[5.35rem]">
-                                    One platform for KMJ products.
-                                    <span className="block text-white/32">
-                                        Clear access. Verifiable delivery.
+                                <h1 className="mt-7 max-w-[780px] text-5xl leading-[0.94] font-black tracking-[-0.058em] sm:text-6xl lg:text-[5.15rem]">
+                                    Technology engineered to connect
+                                    <span className="block text-[#ff3d47]">
+                                        complex systems.
                                     </span>
                                 </h1>
 
-                                <p className="mt-7 max-w-2xl text-base leading-8 text-white/55 sm:text-lg">
-                                    Discover KMJ cloud, calibration and cinema
-                                    systems through one governed customer platform
-                                    for product access, entitlements and delivery.
+                                <p className="mt-7 max-w-2xl text-base leading-8 text-white/68 sm:text-lg">
+                                    KMJ TECHNO brings cloud infrastructure,
+                                    professional calibration, immersive cinema,
+                                    secure connectivity and intelligent
+                                    engineering products together through one
+                                    governed customer platform for access,
+                                    licensing and controlled delivery.
                                 </p>
 
                                 <div className="mt-9 flex flex-col gap-3 sm:flex-row">
@@ -157,44 +159,36 @@ export default function Welcome({
                                     )}
                                 </div>
 
-                                <div className="mt-10 grid max-w-xl grid-cols-3 gap-5 border-t border-white/[0.07] pt-6">
-                                    <div>
-                                        <div className="text-2xl font-black">
-                                            {portfolioCount}
-                                        </div>
-                                        <div className="mt-1 text-[10px] font-bold tracking-[.12em] text-white/30 uppercase">
-                                            Product lines
-                                        </div>
+                                <div className="mt-10 max-w-2xl border-t border-white/[0.08] pt-6">
+                                    <div className="flex flex-wrap gap-x-6 gap-y-3 text-[10px] font-black tracking-[0.13em] text-white/58 uppercase">
+                                        <span>Central Licensing</span>
+                                        <span>Secure Access</span>
+                                        <span>Product Entitlements</span>
+                                        <span>Clear Lifecycle Status</span>
                                     </div>
-                                    <div>
-                                        <div className="text-2xl font-black">
-                                            1
-                                        </div>
-                                        <div className="mt-1 text-[10px] font-bold tracking-[.12em] text-white/30 uppercase">
-                                            KMJ platform
-                                        </div>
-                                    </div>
-                                    <div>
-                                        <div className="text-2xl font-black">
-                                            Governed
-                                        </div>
-                                        <div className="mt-1 text-[10px] font-bold tracking-[.12em] text-white/30 uppercase">
-                                            Product access
-                                        </div>
-                                    </div>
+                                    <p className="mt-4 text-xs leading-5 text-white/38">
+                                        Product availability, access and
+                                        lifecycle status reflect the current
+                                        verified platform state.
+                                    </p>
                                 </div>
                             </div>
 
                             <div className="relative grid min-h-[430px] grid-cols-[1.18fr_.82fr] grid-rows-2 gap-3 overflow-hidden rounded-[2rem] border border-white/[0.08] bg-[#090c12] p-3 shadow-[0_35px_100px_rgba(0,0,0,.35)] sm:min-h-[500px]">
                                 <Link
                                     href="/products/kmj-cloudos"
-                                    className="group relative row-span-2 overflow-hidden rounded-[1.45rem] border border-white/[0.07] bg-cover bg-center transition duration-700 hover:bg-[length:102.5%]"
-                                    style={{
-                                        backgroundImage:
-                                            "url('/assets/products/kmj-cloudos.webp')",
-                                    }}
+                                    className="group relative row-span-2 overflow-hidden rounded-[1.45rem] border border-white/[0.07]"
                                 >
-                                    <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-transparent to-transparent" />
+                                    <img
+                                        src="/assets/products/kmj-cloudos.webp"
+                                        alt="KMJ CloudOS platform"
+                                        width={1280}
+                                        height={960}
+                                        fetchPriority="high"
+                                        decoding="async"
+                                        className="absolute inset-0 h-full w-full object-cover transition duration-700 group-hover:scale-[1.025]"
+                                    />
+                                    <div className="absolute inset-0 bg-gradient-to-t from-black/65 via-black/5 to-transparent" />
                                     <div className="absolute right-5 bottom-5 left-5">
                                         <div className="text-[10px] font-black tracking-[.15em] text-white/50 uppercase">
                                             Cloud platform
@@ -206,26 +200,36 @@ export default function Welcome({
                                 </Link>
                                 <Link
                                     href="/products/kmj-calibration-pro"
-                                    className="group relative overflow-hidden rounded-[1.45rem] border border-white/[0.07] bg-cover bg-center transition duration-700 hover:bg-[length:103%]"
-                                    style={{
-                                        backgroundImage:
-                                            "url('/assets/products/kmj-calibration.webp')",
-                                    }}
+                                    className="group relative overflow-hidden rounded-[1.45rem] border border-white/[0.07]"
                                 >
-                                    <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-transparent to-transparent" />
+                                    <img
+                                        src="/assets/products/kmj-calibration.webp"
+                                        alt="KMJ Calibration Pro"
+                                        width={1280}
+                                        height={960}
+                                        loading="eager"
+                                        decoding="async"
+                                        className="absolute inset-0 h-full w-full object-cover transition duration-700 group-hover:scale-[1.03]"
+                                    />
+                                    <div className="absolute inset-0 bg-gradient-to-t from-black/65 via-transparent to-transparent" />
                                     <div className="absolute right-4 bottom-4 left-4 text-sm font-black">
                                         Calibration Pro
                                     </div>
                                 </Link>
                                 <Link
                                     href="/products/kmj-cinema-platform"
-                                    className="group relative overflow-hidden rounded-[1.45rem] border border-white/[0.07] bg-cover bg-center transition duration-700 hover:bg-[length:103%]"
-                                    style={{
-                                        backgroundImage:
-                                            "url('/assets/products/kmj-cinema-platform.webp')",
-                                    }}
+                                    className="group relative overflow-hidden rounded-[1.45rem] border border-white/[0.07]"
                                 >
-                                    <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-transparent to-transparent" />
+                                    <img
+                                        src="/assets/products/kmj-cinema-platform.webp"
+                                        alt="KMJ Cinema Platform"
+                                        width={1280}
+                                        height={960}
+                                        loading="eager"
+                                        decoding="async"
+                                        className="absolute inset-0 h-full w-full object-cover transition duration-700 group-hover:scale-[1.03]"
+                                    />
+                                    <div className="absolute inset-0 bg-gradient-to-t from-black/65 via-transparent to-transparent" />
                                     <div className="absolute right-4 bottom-4 left-4 text-sm font-black">
                                         Cinema Platform
                                     </div>
@@ -248,9 +252,10 @@ export default function Welcome({
                                         </span>
                                     </h2>
                                     <p className="mt-5 max-w-2xl text-sm leading-7 text-white/46 sm:text-base">
-                                        Explore real product visuals, current lifecycle
-                                        state and available configurations before
-                                        opening the full product detail.
+                                        Explore real product visuals, current
+                                        lifecycle state and available
+                                        configurations before opening the full
+                                        product detail.
                                     </p>
                                 </div>
                                 <Link
@@ -267,9 +272,25 @@ export default function Welcome({
                                     <Link
                                         key={product.slug}
                                         href={'/products/' + product.slug}
-                                        className="group overflow-hidden rounded-[1.35rem] border border-white/[0.08] bg-[#0a0d12] transition duration-300 hover:-translate-y-1 hover:border-white/[0.16]"
+                                        className={
+                                            'group overflow-hidden rounded-[1.35rem] border border-white/[0.08] bg-[#0a0d12] transition duration-300 hover:-translate-y-1 hover:border-white/[0.16] ' +
+                                            (flagshipSlugs.includes(
+                                                product.slug,
+                                            )
+                                                ? 'xl:col-span-2'
+                                                : '')
+                                        }
                                     >
-                                        <div className="relative h-44 overflow-hidden">
+                                        <div
+                                            className={
+                                                'relative overflow-hidden ' +
+                                                (flagshipSlugs.includes(
+                                                    product.slug,
+                                                )
+                                                    ? 'h-56 sm:h-64'
+                                                    : 'h-44')
+                                            }
+                                        >
                                             <ProductVisual
                                                 slug={product.slug}
                                                 name={product.name}
@@ -290,6 +311,13 @@ export default function Welcome({
                                                 </div>
                                                 <ArrowRight className="h-4 w-4 shrink-0 text-white/35 transition group-hover:translate-x-0.5 group-hover:text-white" />
                                             </div>
+                                            {flagshipSlugs.includes(
+                                                product.slug,
+                                            ) && (
+                                                <p className="mt-3 max-w-xl text-sm leading-6 text-white/48">
+                                                    {product.summary}
+                                                </p>
+                                            )}
                                             {product.variants &&
                                                 product.variants.length > 0 && (
                                                     <div className="mt-4 flex flex-wrap gap-1.5">
@@ -369,6 +397,8 @@ export default function Welcome({
                             </div>
                         </div>
                     </section>
+
+                    <LandingJourney showCreateAccount={!auth.user} />
                 </main>
 
                 <PublicSiteFooter />

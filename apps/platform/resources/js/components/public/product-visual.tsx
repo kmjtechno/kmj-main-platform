@@ -3,6 +3,7 @@ type ProductVisualProps = {
     name: string;
     kind?: string;
     compact?: boolean;
+    className?: string;
 };
 
 const generatedVisuals: Record<string, string> = {
@@ -45,6 +46,7 @@ export default function ProductVisual({
     name,
     kind,
     compact = false,
+    className,
 }: ProductVisualProps) {
     const generatedVisual = generatedVisuals[slug];
     const [accent, accent2] = palette[slug] ?? ['#e21b23', '#6d28d9'];
@@ -55,14 +57,17 @@ export default function ProductVisual({
             <div
                 className={
                     'relative isolate overflow-hidden border border-white/[0.08] bg-[#090c12] ' +
-                    (compact
-                        ? 'h-52 rounded-[1.35rem]'
-                        : 'h-72 rounded-[1.75rem]')
+                    (className ??
+                        (compact
+                            ? 'h-52 rounded-[1.35rem]'
+                            : 'h-72 rounded-[1.75rem]'))
                 }
             >
                 <img
                     src={generatedVisual}
                     alt={name + ' — KMJ TECHNO'}
+                    width={1280}
+                    height={960}
                     loading={compact ? 'lazy' : 'eager'}
                     decoding="async"
                     className="h-full w-full object-cover"
@@ -78,7 +83,10 @@ export default function ProductVisual({
         <div
             className={
                 'relative isolate overflow-hidden border border-white/[0.08] bg-[#090c12] ' +
-                (compact ? 'h-52 rounded-[1.35rem]' : 'h-72 rounded-[1.75rem]')
+                (className ??
+                    (compact
+                        ? 'h-52 rounded-[1.35rem]'
+                        : 'h-72 rounded-[1.75rem]'))
             }
         >
             <div
