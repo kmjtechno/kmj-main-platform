@@ -43,6 +43,9 @@ final class KmjProductCatalog
     public const CINEMA_PLAYER_SLUG = 'kmj-cinema-player';
     public const CINEMA_PLAYER_NAME = 'KMJ Cinema Player';
 
+    public const IMMERSIVE_CINEMA_SUITE_SLUG = 'kmj-immersive-cinema-suite';
+    public const IMMERSIVE_CINEMA_SUITE_NAME = 'KMJ Immersive Cinema Suite';
+
     public const LICENSING_HUB_SLUG = 'kmj-licensing-hub';
     public const LICENSING_HUB_NAME = 'KMJ Licensing Hub';
 
@@ -81,6 +84,7 @@ final class KmjProductCatalog
                 self::CINEMA_PLATFORM_SLUG => self::CINEMA_PLATFORM_NAME,
                 self::DOME_SLUG => self::DOME_NAME,
                 self::CINEMA_PLAYER_SLUG => self::CINEMA_PLAYER_NAME,
+                self::IMMERSIVE_CINEMA_SUITE_SLUG => self::IMMERSIVE_CINEMA_SUITE_NAME,
                 self::LICENSING_HUB_SLUG => self::LICENSING_HUB_NAME,
             ];
 

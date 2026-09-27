@@ -72,6 +72,12 @@ export default function Welcome({
     portfolioCount: number;
 }) {
     const { auth } = usePage().props;
+    const immersiveCinemaSuite = products.find(
+        (product) => product.slug === 'kmj-immersive-cinema-suite',
+    );
+    const ecosystemProducts = products.filter(
+        (product) => product.slug !== 'kmj-immersive-cinema-suite',
+    );
 
     return (
         <>
@@ -268,7 +274,7 @@ export default function Welcome({
                             </div>
 
                             <div className="mt-10 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-                                {products.map((product) => (
+                                {ecosystemProducts.map((product) => (
                                     <Link
                                         key={product.slug}
                                         href={'/products/' + product.slug}
@@ -344,6 +350,87 @@ export default function Welcome({
                             </div>
                         </div>
                     </section>
+
+                    {immersiveCinemaSuite && (
+                        <section className="mx-auto max-w-[1440px] px-5 py-20 sm:px-8 lg:px-12 lg:py-24">
+                            <div className="relative overflow-hidden rounded-[2rem] border border-[#e21b23]/20 bg-[#080a0e] p-6 sm:p-8 lg:p-10">
+                                <div className="pointer-events-none absolute -top-24 -right-24 h-80 w-80 rounded-full bg-[#e21b23]/12 blur-[100px]" />
+                                <div className="relative grid gap-8 lg:grid-cols-[.9fr_1.1fr] lg:items-center">
+                                    <div>
+                                        <div className="text-[10px] font-black tracking-[0.2em] text-[#ee3942] uppercase">
+                                            KMJ immersive cinema suite
+                                        </div>
+                                        <h2 className="mt-4 text-4xl font-black tracking-[-0.05em] sm:text-5xl">
+                                            One product family.
+                                            <span className="block text-white/42">
+                                                Multiple immersive formats.
+                                            </span>
+                                        </h2>
+                                        <p className="mt-5 max-w-2xl text-sm leading-7 text-white/56 sm:text-base">
+                                            {immersiveCinemaSuite.summary}
+                                        </p>
+                                        <div className="mt-6 flex flex-wrap gap-2">
+                                            {immersiveCinemaSuite.variants?.map(
+                                                (variant) => (
+                                                    <span
+                                                        key={variant}
+                                                        className="rounded-full border border-[#e21b23]/25 bg-[#e21b23]/[0.07] px-3 py-1.5 text-xs font-black text-white/78"
+                                                    >
+                                                        {variant}
+                                                    </span>
+                                                ),
+                                            )}
+                                        </div>
+                                        <div className="mt-7 flex flex-wrap items-center gap-4">
+                                            <Link
+                                                href={
+                                                    '/products/' +
+                                                    immersiveCinemaSuite.slug
+                                                }
+                                                className="inline-flex h-12 items-center gap-2 rounded-xl bg-[#e21b23] px-6 text-sm font-black transition hover:-translate-y-0.5 hover:bg-[#f22b34]"
+                                            >
+                                                Explore Cinema Suite
+                                                <ArrowRight className="h-4 w-4" />
+                                            </Link>
+                                            <span className="text-xs font-bold text-white/34">
+                                                {
+                                                    immersiveCinemaSuite.lifecycle_label
+                                                }
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <div className="overflow-hidden rounded-[1.5rem] border border-white/[0.08] bg-[#0a0d12] p-4">
+                                        <div className="grid min-h-[320px] grid-cols-2 gap-3 sm:grid-cols-4">
+                                            {(
+                                                immersiveCinemaSuite.variants ??
+                                                []
+                                            ).map((variant, index) => (
+                                                <div
+                                                    key={variant}
+                                                    className={
+                                                        'relative overflow-hidden rounded-xl border border-white/[0.08] bg-gradient-to-br from-[#151820] to-[#07090d] p-4 ' +
+                                                        (index === 6
+                                                            ? 'sm:col-span-2'
+                                                            : '')
+                                                    }
+                                                >
+                                                    <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_20%,rgba(226,27,35,.18),transparent_45%)]" />
+                                                    <div className="relative flex h-full min-h-28 flex-col justify-between">
+                                                        <span className="text-[10px] font-bold tracking-[.14em] text-white/28 uppercase">
+                                                            Immersive format
+                                                        </span>
+                                                        <span className="text-3xl font-black tracking-[-0.04em] text-white">
+                                                            {variant}
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </section>
+                    )}
 
                     <section className="mx-auto max-w-[1440px] px-5 py-20 sm:px-8 lg:px-12 lg:py-24">
                         <div className="grid gap-10 lg:grid-cols-[.72fr_1.28fr] lg:items-end">

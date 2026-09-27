@@ -76,6 +76,49 @@ export default function ProductVisual({
             </div>
         );
     }
+    const isImmersiveSuite = slug === 'kmj-immersive-cinema-suite';
+
+    if (isImmersiveSuite) {
+        const formats = ['5D', '7D', '9D', '12D', '14D', '16D', '5DX'];
+
+        return (
+            <div
+                className={
+                    'relative isolate overflow-hidden border border-white/[0.08] bg-[#090c12] ' +
+                    (className ??
+                        (compact
+                            ? 'h-52 rounded-[1.35rem]'
+                            : 'h-72 rounded-[1.75rem]'))
+                }
+            >
+                <div className="absolute inset-0 bg-[radial-gradient(circle_at_72%_18%,rgba(226,27,35,.22),transparent_36%),linear-gradient(145deg,#151820,#07090e_72%)]" />
+                <div className="absolute inset-x-5 top-5 bottom-5 flex flex-col justify-between">
+                    <div>
+                        <div className="text-[9px] font-black tracking-[.16em] text-[#ff5962] uppercase">
+                            KMJ Immersive Cinema Suite
+                        </div>
+                        <div className="mt-2 max-w-sm text-lg font-black tracking-[-0.03em] text-white sm:text-xl">
+                            One product family. Multiple immersive formats.
+                        </div>
+                    </div>
+                    <div className="grid grid-cols-4 gap-2">
+                        {formats.map((format, index) => (
+                            <div
+                                key={format}
+                                className={
+                                    'rounded-lg border border-white/[0.08] bg-black/30 px-2 py-2 text-center text-xs font-black text-white/78 ' +
+                                    (index === 6 ? 'col-span-2' : '')
+                                }
+                            >
+                                {format}
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
     const isCalibration =
         kind === 'calibration' || slug === 'kmj-calibration-pro';
 
