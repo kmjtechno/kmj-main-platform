@@ -8,10 +8,13 @@ use Tests\TestCase;
 
 final class StagingNativeMainPlatformTest extends TestCase
 {
+    use RefreshDatabase;
+
     protected function setUp(): void
     {
         parent::setUp();
         $this->withoutVite();
+        app(KmjProductCatalog::class)->syncAll();
         config()->set('services.kmj_staging_home_mirror.enabled', true);
         config()->set('services.kmj_staging_home_mirror.origin', 'https://kmjtechno.com');
     }
