@@ -8,7 +8,7 @@ final class KslpLicenseControlPlane {
   return DB::transaction(function()use($customer,$plan,$actor,$reason){$now=now();$trial=$plan==="trial"?hash("sha256",$customer."|KMJ_CLOUDOS"):null;
    if($trial&&DB::table("kslp_licenses")->where("trial_subject_hash",$trial)->exists()) throw new DomainException("KSLP_TRIAL_ALREADY_USED");
    $id=(string)Str::uuid();$exp=$plan==="trial"?$now->copy()->addDays(30):$now->copy()->addYear();
-   DB::table("kslp_licenses")->insert(["id"=>$id,"customer_id"=>$customer,"product"=>$l["product"],"plan"=>$plan,"status"=>"active","trial_subject_hash"=>$trial,"sequence"=>1,"starts_at"=>$now,"expires_at"=>$exp,"grace_until"=>$exp->copy()->addDays(7),"created_at"=>$now,"updated_at"=>$now]);
+   DB::table("kslp_licenses")->insert(["id"=>$id,"customer_id"=>$customer,"product"=>"KMJ_CLOUDOS","plan"=>$plan,"status"=>"active","trial_subject_hash"=>$trial,"sequence"=>1,"starts_at"=>$now,"expires_at"=>$exp,"grace_until"=>$exp->copy()->addDays(7),"created_at"=>$now,"updated_at"=>$now]);
    $this->event($id,$actor,"issued",$reason,["plan"=>$plan]); return $this->license($id);
   },3);
  }
