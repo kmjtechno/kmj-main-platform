@@ -198,21 +198,49 @@ export default function ProductShow({ product }: { product: Product }) {
                 path={'/products/' + product.slug}
                 image={productSocialImages[product.slug]}
                 imageAlt={product.name + ' — KMJ TECHNO'}
-                structuredData={{
-                    '@context': 'https://schema.org',
-                    '@type': 'SoftwareApplication',
-                    name: product.name,
-                    description: product.summary,
-                    brand: {
-                        '@type': 'Brand',
-                        name: 'KMJ TECHNO',
+                structuredData={[
+                    {
+                        '@context': 'https://schema.org',
+                        '@type': 'SoftwareApplication',
+                        name: product.name,
+                        description: product.summary,
+                        brand: {
+                            '@type': 'Brand',
+                            name: 'KMJ TECHNO',
+                        },
+                        additionalProperty: {
+                            '@type': 'PropertyValue',
+                            name: 'Lifecycle',
+                            value: product.lifecycle_label,
+                        },
                     },
-                    additionalProperty: {
-                        '@type': 'PropertyValue',
-                        name: 'Lifecycle',
-                        value: product.lifecycle_label,
+                    {
+                        '@context': 'https://schema.org',
+                        '@type': 'BreadcrumbList',
+                        itemListElement: [
+                            {
+                                '@type': 'ListItem',
+                                position: 1,
+                                name: 'Home',
+                                item: 'https://kmjtechno.com/',
+                            },
+                            {
+                                '@type': 'ListItem',
+                                position: 2,
+                                name: 'Products',
+                                item: 'https://kmjtechno.com/products',
+                            },
+                            {
+                                '@type': 'ListItem',
+                                position: 3,
+                                name: product.name,
+                                item:
+                                    'https://kmjtechno.com/products/' +
+                                    product.slug,
+                            },
+                        ],
                     },
-                }}
+                ]}
             />
 
             <div className="min-h-screen overflow-hidden bg-[#06080b] text-white selection:bg-[#ef2632] selection:text-white">

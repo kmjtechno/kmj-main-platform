@@ -165,9 +165,9 @@ export default function Trust() {
                                 Product screenshots, downloads, benchmarks and
                                 production-readiness claims are published only
                                 when the relevant product gate has evidence.
-                                Roadmap products stay visibly labelled as
-                                roadmap, development or preview until that
-                                changes.
+                                Products stay visibly labelled as Available,
+                                Preview, Research or Planned until verified
+                                evidence supports a lifecycle change.
                             </p>
                             <div className="mt-7 flex flex-wrap gap-3">
                                 <Link

@@ -27,7 +27,7 @@ const options = [
     {
         label: 'Early access',
         message:
-            'Development and roadmap products do not pretend to be generally available. Open the product page to review its current verified status and available access path.',
+            'Research and Planned products do not pretend to be generally available. Open the product page to review its current verified status and available access path.',
         href: '/products',
         cta: 'View product status',
     },

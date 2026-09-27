@@ -130,7 +130,7 @@ $publicPages = [
         'title' => 'Refund decisions should match the product, order and applicable law.',
         'description' => 'Where paid access is enabled, refund eligibility is determined by the purchase terms, delivery state, license or entitlement usage, and mandatory consumer-law requirements that apply to the transaction.',
         'sections' => [
-            ['title' => 'Before purchase', 'body' => 'Customers should review the product lifecycle, access requirements, pricing and delivery terms before completing an order. Development products should not expose a standard purchase flow unless approved for sale.'],
+            ['title' => 'Before purchase', 'body' => 'Customers should review the product lifecycle, access requirements, pricing and delivery terms before completing an order. Research or Planned products should not expose a standard purchase flow unless approved for sale.'],
             ['title' => 'Digital delivery', 'body' => 'Once a digital license, entitlement, download or service has been delivered or materially used, refund eligibility may be limited where permitted by law and the applicable order terms.'],
             ['title' => 'Incorrect or failed delivery', 'body' => 'If KMJ confirms that an eligible paid order was not delivered as promised due to a KMJ-controlled failure, the appropriate remedy may include correction, replacement, credit or refund depending on the transaction and law.'],
             ['title' => 'Mandatory rights', 'body' => 'Nothing in this policy is intended to remove consumer rights that cannot legally be waived.'],
@@ -162,6 +162,27 @@ foreach ($publicPages as $path => $page) {
         'path' => '/'.$path,
     ]))->name('public.'.$path);
 }
+
+Route::get('sitemap.xml', function (PublicProductCatalog $products) use ($publicPages) {
+    $base = rtrim((string) config('app.url'), '/');
+    $paths = collect(['/','/products','/trust'])
+        ->merge(array_map(fn (string $path): string => '/'.$path, array_keys($publicPages)))
+        ->merge(collect($products->all())->map(fn (array $product): string => '/products/'.$product['slug']))
+        ->unique()
+        ->values();
+
+    $urls = $paths->map(function (string $path) use ($base): string {
+        $loc = htmlspecialchars($base.($path === '/' ? '/' : $path), ENT_XML1 | ENT_QUOTES, 'UTF-8');
+
+        return "  <url><loc>{$loc}</loc></url>";
+    })->implode("\n");
+
+    $xml = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
+        ."<urlset xmlns=\"http://www.sitemaps.org/schemas/sitemap/0.9\">\n"
+        .$urls."\n</urlset>\n";
+
+    return response($xml, 200, ['Content-Type' => 'application/xml; charset=UTF-8']);
+})->name('sitemap');
 
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('dashboard', function (

@@ -1,8 +1,10 @@
 import { Link } from '@inertiajs/react';
+import { useMemo, useState } from 'react';
 import {
     ArrowRight,
     CheckCircle2,
     FlaskConical,
+    Search,
     ServerCog,
     ShieldCheck,
 } from 'lucide-react';
@@ -33,12 +35,36 @@ type Product = {
 };
 
 export default function ProductsIndex({ products }: { products: Product[] }) {
+    const [query, setQuery] = useState('');
+    const [lifecycle, setLifecycle] = useState('all');
     const activeCount = products.filter(
         (product) => product.purchase_enabled,
     ).length;
     const demoCount = products.filter(
         (product) => product.demo.simulation,
     ).length;
+    const lifecycleOptions = ['Available', 'Preview', 'Research', 'Planned'];
+    const filteredProducts = useMemo(() => {
+        const normalizedQuery = query.trim().toLowerCase();
+
+        return products.filter((product) => {
+            const matchesLifecycle =
+                lifecycle === 'all' || product.lifecycle_label === lifecycle;
+            const haystack = [
+                product.name,
+                product.eyebrow,
+                product.headline,
+                product.summary,
+            ]
+                .join(' ')
+                .toLowerCase();
+
+            return (
+                matchesLifecycle &&
+                (normalizedQuery === '' || haystack.includes(normalizedQuery))
+            );
+        });
+    }, [lifecycle, products, query]);
 
     return (
         <>
@@ -46,11 +72,31 @@ export default function ProductsIndex({ products }: { products: Product[] }) {
                 title="Products — KMJ TECHNO"
                 description="Explore the KMJ TECHNO product portfolio with evidence-backed lifecycle, availability and product status."
                 path="/products"
-                structuredData={{
-                    '@context': 'https://schema.org',
-                    '@type': 'CollectionPage',
-                    name: 'KMJ TECHNO Products',
-                }}
+                structuredData={[
+                    {
+                        '@context': 'https://schema.org',
+                        '@type': 'CollectionPage',
+                        name: 'KMJ TECHNO Products',
+                    },
+                    {
+                        '@context': 'https://schema.org',
+                        '@type': 'BreadcrumbList',
+                        itemListElement: [
+                            {
+                                '@type': 'ListItem',
+                                position: 1,
+                                name: 'Home',
+                                item: 'https://kmjtechno.com/',
+                            },
+                            {
+                                '@type': 'ListItem',
+                                position: 2,
+                                name: 'Products',
+                                item: 'https://kmjtechno.com/products',
+                            },
+                        ],
+                    },
+                ]}
             />
 
             <div className="min-h-screen overflow-hidden bg-[#06080b] text-white selection:bg-[#ef2632] selection:text-white">
@@ -110,8 +156,49 @@ export default function ProductsIndex({ products }: { products: Product[] }) {
                     </section>
 
                     <section className="mx-auto max-w-[1440px] px-5 pb-24 sm:px-8 lg:px-12 lg:pb-28">
+                        <div
+                            id="product-search"
+                            role="search"
+                            className="mb-8 grid scroll-mt-28 gap-4 rounded-[1.4rem] border border-white/[0.08] bg-white/[0.025] p-4 sm:p-5 lg:grid-cols-[1fr_auto] lg:items-center"
+                        >
+                            <label className="relative block">
+                                <span className="sr-only">
+                                    Search KMJ products
+                                </span>
+                                <Search className="pointer-events-none absolute top-1/2 left-4 h-4 w-4 -translate-y-1/2 text-white/28" />
+                                <input
+                                    value={query}
+                                    onChange={(event) =>
+                                        setQuery(event.target.value)
+                                    }
+                                    placeholder="Search products, capabilities or use cases"
+                                    className="h-12 w-full rounded-xl border border-white/[0.08] bg-[#07090c] pr-4 pl-11 text-sm text-white outline-none placeholder:text-white/24 focus:border-[#e21b23]/45"
+                                />
+                            </label>
+                            <div className="flex flex-wrap gap-2">
+                                {['all', ...lifecycleOptions].map((option) => (
+                                    <button
+                                        key={option}
+                                        type="button"
+                                        aria-pressed={lifecycle === option}
+                                        onClick={() => setLifecycle(option)}
+                                        className={
+                                            'rounded-full border px-3 py-2 text-[10px] font-black tracking-[0.08em] uppercase transition ' +
+                                            (lifecycle === option
+                                                ? 'border-[#e21b23]/35 bg-[#e21b23]/10 text-white'
+                                                : 'border-white/[0.08] bg-white/[0.025] text-white/38 hover:border-white/15 hover:text-white/68')
+                                        }
+                                    >
+                                        {option === 'all'
+                                            ? 'All products'
+                                            : option}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+
                         <div className="grid gap-5 lg:grid-cols-2">
-                            {products.map((product, index) => {
+                            {filteredProducts.map((product, index) => {
                                 const ProductIcon =
                                     product.demo.kind === 'cloudos'
                                         ? ServerCog
@@ -278,6 +365,18 @@ export default function ProductsIndex({ products }: { products: Product[] }) {
                                 );
                             })}
                         </div>
+
+                        {filteredProducts.length === 0 && (
+                            <div className="mt-6 rounded-[1.35rem] border border-white/[0.08] bg-white/[0.025] px-6 py-10 text-center">
+                                <div className="text-lg font-black">
+                                    No matching KMJ product found.
+                                </div>
+                                <p className="mt-2 text-sm text-white/38">
+                                    Clear the search or select another lifecycle
+                                    state.
+                                </p>
+                            </div>
+                        )}
                     </section>
 
                     <section className="border-y border-white/[0.07] bg-[#090b0f]">
