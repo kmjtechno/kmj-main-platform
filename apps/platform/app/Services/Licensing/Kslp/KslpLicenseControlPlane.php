@@ -12,6 +12,11 @@ final class KslpLicenseControlPlane {
    $this->event($id,$actor,"issued",$reason,["plan"=>$plan]); return $this->license($id);
   },3);
  }
+ public function issueDelegated(string $issuerOrganizationId,string $customer,string $product,string $plan,string $actor,string $reason=""):array{
+  if(!in_array($plan,self::PLANS,true)) throw new DomainException("KSLP_INVALID_PLAN");
+  $authority=app(KslpIssuerSubscriptionAuthority::class);$authority->authorizeIssue($issuerOrganizationId,$product);
+  return DB::transaction(function()use($issuerOrganizationId,$customer,$product,$plan,$actor,$reason,$authority){$sub=DB::table("kslp_issuer_subscriptions")->where("organization_id",$issuerOrganizationId)->lockForUpdate()->first();$used=DB::table("kslp_licenses")->where("issuer_organization_id",$issuerOrganizationId)->where("created_at",">=",now()->startOfMonth())->count();if($used>=(int)$sub->monthly_issue_limit)throw new DomainException("KSLP_ISSUER_MONTHLY_LIMIT");$now=now();$trial=$plan==="trial"?hash("sha256",$issuerOrganizationId."|".$customer."|".$product):null;if($trial&&DB::table("kslp_licenses")->where("trial_subject_hash",$trial)->exists())throw new DomainException("KSLP_TRIAL_ALREADY_USED");$id=(string)Str::uuid();$exp=$plan==="trial"?$now->copy()->addDays(30):$now->copy()->addYear();DB::table("kslp_licenses")->insert(["id"=>$id,"customer_id"=>$customer,"issuer_organization_id"=>$issuerOrganizationId,"product"=>$product,"plan"=>$plan,"status"=>"active","trial_subject_hash"=>$trial,"sequence"=>1,"starts_at"=>$now,"expires_at"=>$exp,"grace_until"=>$exp->copy()->addDays(7),"created_at"=>$now,"updated_at"=>$now]);$this->event($id,$actor,"delegated_issued",$reason,["issuer_organization_id"=>$issuerOrganizationId,"product"=>$product]);return $this->license($id);},3);
+ }
  public function activate(string $licenseId,string $serverIdentity,string $machineHash,string $idempotencyKey,string $actor):array{
   return DB::transaction(function()use($licenseId,$serverIdentity,$machineHash,$idempotencyKey,$actor){$existing=DB::table("kslp_activations")->where("idempotency_key",$idempotencyKey)->first();if($existing)return (array)$existing;
    $lic=DB::table("kslp_licenses")->where("id",$licenseId)->lockForUpdate()->first();if(!$lic)throw new DomainException("KSLP_LICENSE_NOT_FOUND");if($lic->revoked_at)throw new DomainException("KSLP_REVOKED");
