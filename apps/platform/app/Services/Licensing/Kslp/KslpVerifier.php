@@ -2,12 +2,12 @@
 namespace App\Services\Licensing\Kslp;
 use DomainException;
 final class KslpVerifier {
-    public function verify(string $token, callable $publicKeyForKid, string $serverIdentity, int $now): array {
+    public function verify(string $token, callable $publicKeyForKid, string $serverIdentity, int $now, string $expectedProduct = "KMJ_CLOUDOS"): array {
         [$h,$c,$sig,$signed]=KslpCodec::decode($token);
         $required=["protocol_version","license_id","customer_id","product","plan","server_identity","activation_id","features","limits","iat","nbf","exp","sequence","nonce","kid","jti","aud"];
         foreach($required as $k) if(!array_key_exists($k,$c)) throw new DomainException("KSLP_MALFORMED");
         if($c["protocol_version"]!=="KSLP-v1") throw new DomainException("KSLP_UNSUPPORTED_VERSION");
-        if($c["product"]!=="KMJ_CLOUDOS") throw new DomainException("KSLP_WRONG_PRODUCT");
+        if($c["product"]!==$expectedProduct) throw new DomainException("KSLP_WRONG_PRODUCT");
         if($c["aud"]!=="kmj-cloudos") throw new DomainException("KSLP_WRONG_AUDIENCE");
         if($c["server_identity"]!==$serverIdentity) throw new DomainException("KSLP_SERVER_MISMATCH");
         if($c["kid"]!==($h["kid"]??null)) throw new DomainException("KSLP_MALFORMED");

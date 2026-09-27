@@ -1,20 +1,122 @@
 {
-  "$schema":"https://json-schema.org/draft/2020-12/schema",
-  "$id":"urn:kmj:kslp:v1:entitlement",
-  "title":"KMJ Secure Licensing Protocol v1 Entitlement",
-  "type":"object","additionalProperties":false,
-  "required":["protocol_version","license_id","customer_id","product","plan","server_identity","activation_id","features","limits","iat","nbf","exp","sequence","nonce","kid","jti","aud"],
-  "properties":{
-    "protocol_version":{"const":"KSLP-v1"},"license_id":{"type":"string","minLength":8,"maxLength":128},
-    "customer_id":{"type":"string","minLength":1,"maxLength":128},"product":{"const":"KMJ_CLOUDOS"},
-    "plan":{"enum":["trial","professional","business","enterprise","custom_oem"]},
-    "server_identity":{"type":"string","pattern":"^ed25519:[A-Za-z0-9_-]{20,128}$"},
-    "activation_id":{"type":"string","minLength":8,"maxLength":128},
-    "features":{"type":"object","additionalProperties":{"type":"boolean"}},
-    "limits":{"type":"object","additionalProperties":{"type":["integer","number","string","boolean","null"]}},
-    "iat":{"type":"integer","minimum":0},"nbf":{"type":"integer","minimum":0},"exp":{"type":"integer","minimum":1},
-    "sequence":{"type":"integer","minimum":1},"nonce":{"type":"string","minLength":16,"maxLength":128},
-    "kid":{"type":"string","minLength":3,"maxLength":128},"jti":{"type":"string","minLength":8,"maxLength":128},
-    "aud":{"const":"kmj-cloudos"},"grace_until":{"type":["integer","null"],"minimum":0}
-  }
+  "$id": "urn:kmj:kslp:v1:entitlement",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "activation_id": {
+      "maxLength": 128,
+      "minLength": 8,
+      "type": "string"
+    },
+    "aud": {
+      "const": "kmj-cloudos"
+    },
+    "customer_id": {
+      "maxLength": 128,
+      "minLength": 1,
+      "type": "string"
+    },
+    "exp": {
+      "minimum": 1,
+      "type": "integer"
+    },
+    "features": {
+      "additionalProperties": {
+        "type": "boolean"
+      },
+      "type": "object"
+    },
+    "grace_until": {
+      "minimum": 0,
+      "type": [
+        "integer",
+        "null"
+      ]
+    },
+    "iat": {
+      "minimum": 0,
+      "type": "integer"
+    },
+    "jti": {
+      "maxLength": 128,
+      "minLength": 8,
+      "type": "string"
+    },
+    "kid": {
+      "maxLength": 128,
+      "minLength": 3,
+      "type": "string"
+    },
+    "license_id": {
+      "maxLength": 128,
+      "minLength": 8,
+      "type": "string"
+    },
+    "limits": {
+      "additionalProperties": {
+        "type": [
+          "integer",
+          "number",
+          "string",
+          "boolean",
+          "null"
+        ]
+      },
+      "type": "object"
+    },
+    "nbf": {
+      "minimum": 0,
+      "type": "integer"
+    },
+    "nonce": {
+      "maxLength": 128,
+      "minLength": 16,
+      "type": "string"
+    },
+    "plan": {
+      "enum": [
+        "trial",
+        "professional",
+        "business",
+        "enterprise",
+        "custom_oem"
+      ]
+    },
+    "product": {
+      "pattern": "^[A-Z0-9][A-Z0-9_.:-]{2,95}$",
+      "type": "string"
+    },
+    "protocol_version": {
+      "const": "KSLP-v1"
+    },
+    "sequence": {
+      "minimum": 1,
+      "type": "integer"
+    },
+    "server_identity": {
+      "pattern": "^ed25519:[A-Za-z0-9_-]{20,128}$",
+      "type": "string"
+    }
+  },
+  "required": [
+    "protocol_version",
+    "license_id",
+    "customer_id",
+    "product",
+    "plan",
+    "server_identity",
+    "activation_id",
+    "features",
+    "limits",
+    "iat",
+    "nbf",
+    "exp",
+    "sequence",
+    "nonce",
+    "kid",
+    "jti",
+    "aud"
+  ],
+  "title": "KMJ Secure Licensing Protocol v1 Entitlement",
+  "type": "object"
 }
