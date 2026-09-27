@@ -7,10 +7,13 @@ use Tests\TestCase;
 
 final class PublicSeoFoundationTest extends TestCase
 {
+    use RefreshDatabase;
+
     protected function setUp(): void
     {
         parent::setUp();
         $this->withoutVite();
+        app(KmjProductCatalog::class)->syncAll();
     }
 
     public function test_public_pages_share_configured_canonical_origin(): void
