@@ -31,11 +31,11 @@ const lifecycleStates = [
     ],
     ['Preview', 'Controlled evaluation access while validation continues.'],
     [
-        'Development',
-        'Actively being engineered and tested; customer-ready availability is not implied.',
+        'Research',
+        'Active engineering or validation work; customer-ready availability is not implied.',
     ],
     [
-        'Roadmap',
+        'Planned',
         'Planned product direction that has not yet reached a customer-ready release.',
     ],
 ];

@@ -6,7 +6,7 @@ const options = [
     {
         label: 'Recommend a product',
         message:
-            'Start with the product portfolio, then open the product that best matches your use case. Lifecycle labels show whether a product is available, in preview, development or roadmap.',
+            'Start with the product portfolio, then open the product that best matches your use case. Lifecycle labels show whether a product is Available, Preview, Research or Planned.',
         href: '/products',
         cta: 'Explore products',
     },

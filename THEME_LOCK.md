@@ -15,7 +15,7 @@ Status: LOCKED
 - KMJ 360 Dome is a separate immersive product.
 - KMJ Immersive Cinema Suite is one product family containing 5D, 7D, 9D, 12D, 14D, 16D and 5DX formats.
 - Remaining products stay within the governed KMJ ecosystem and retain independent lifecycle boundaries.
-- Never present roadmap/development capability as customer-ready without verified release evidence.
+- Never present Research/Planned capability as customer-ready without verified release evidence.
 
 ## Experience hierarchy
 Hero → Flagship products → Product ecosystem → Immersive Cinema Suite → Main Platform / Licensing authority → Discovery & lifecycle → Kristi Support → Trust / conversion → Footer.
