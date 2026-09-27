@@ -1,4 +1,5 @@
 import { Head, router, useForm } from "@inertiajs/react";
+import { useState } from "react";
 import {
     KeyRound,
     ShieldCheck,
@@ -43,6 +44,8 @@ type Props = {
 };
 
 export default function OperatorKslp({ metrics, licenses, events }: Props) {
+    const [actionReason, setActionReason] = useState("");
+    const [pendingPlans, setPendingPlans] = useState<Record<string, string>>({});
     const issue = useForm({
         customer_id: "",
         plan: "trial",
@@ -60,12 +63,19 @@ export default function OperatorKslp({ metrics, licenses, events }: Props) {
         id: string,
         a: string,
         extra: Record<string, unknown> = {},
-    ) =>
+    ) => {
+        const reason = actionReason.trim();
+        if (reason.length < 3) return;
+
         router.post(
             `/operator/kslp/licenses/${id}/action`,
-            { action: a, reason: `Owner approved ${a}`, ...extra },
-            { preserveScroll: true },
+            { action: a, reason, ...extra },
+            {
+                preserveScroll: true,
+                onSuccess: () => setActionReason(""),
+            },
         );
+    };
     return (
         <>
             <Head title="KSLP License Control Plane" />
@@ -174,6 +184,23 @@ export default function OperatorKslp({ metrics, licenses, events }: Props) {
                         </div>
                         <Server className="h-5 w-5 text-red-500" />
                     </div>
+                    <div className="mt-4 grid gap-2 rounded-xl border border-red-500/20 bg-red-500/5 p-3 sm:grid-cols-[1fr_auto]">
+                        <div>
+                            <label htmlFor="kslp-action-reason" className="text-xs font-bold">
+                                Required reason for lifecycle changes
+                            </label>
+                            <input
+                                id="kslp-action-reason"
+                                value={actionReason}
+                                onChange={(e) => setActionReason(e.target.value)}
+                                placeholder="Enter the specific approved reason before revoke, renew, reactivate, or plan change"
+                                className="mt-2 h-10 w-full rounded-lg border bg-background px-3 text-sm"
+                            />
+                        </div>
+                        <div className="self-end text-xs text-muted-foreground">
+                            Minimum 3 characters · recorded in audit trail
+                        </div>
+                    </div>
                     <div className="mt-4 overflow-x-auto">
                         <table className="w-full min-w-[980px] text-left text-xs">
                             <thead className="text-muted-foreground">
@@ -229,7 +256,8 @@ export default function OperatorKslp({ metrics, licenses, events }: Props) {
                                                                 "reactivate",
                                                             )
                                                         }
-                                                        className="rounded border px-2 py-1"
+                                                        disabled={actionReason.trim().length < 3}
+                                                        className="rounded border px-2 py-1 disabled:cursor-not-allowed disabled:opacity-40"
                                                     >
                                                         <RefreshCw className="inline h-3 w-3" />{" "}
                                                         Reactivate
@@ -242,7 +270,8 @@ export default function OperatorKslp({ metrics, licenses, events }: Props) {
                                                                 "revoke",
                                                             )
                                                         }
-                                                        className="rounded border px-2 py-1"
+                                                        disabled={actionReason.trim().length < 3}
+                                                        className="rounded border px-2 py-1 disabled:cursor-not-allowed disabled:opacity-40"
                                                     >
                                                         <Ban className="inline h-3 w-3" />{" "}
                                                         Revoke
@@ -259,21 +288,18 @@ export default function OperatorKslp({ metrics, licenses, events }: Props) {
                                                     Renew 1y
                                                 </button>
                                                 <select
-                                                    aria-label="Change plan"
+                                                    aria-label="Select new plan"
                                                     value={
-                                                        l.plan === "trial"
+                                                        pendingPlans[l.id] ??
+                                                        (l.plan === "trial"
                                                             ? "professional"
-                                                            : l.plan
+                                                            : l.plan)
                                                     }
                                                     onChange={(e) =>
-                                                        action(
-                                                            l.id,
-                                                            "change_plan",
-                                                            {
-                                                                plan: e.target
-                                                                    .value,
-                                                            },
-                                                        )
+                                                        setPendingPlans((current) => ({
+                                                            ...current,
+                                                            [l.id]: e.target.value,
+                                                        }))
                                                     }
                                                     className="rounded border bg-background px-2 py-1"
                                                 >
@@ -283,11 +309,26 @@ export default function OperatorKslp({ metrics, licenses, events }: Props) {
                                                         "enterprise",
                                                         "custom_oem",
                                                     ].map((p) => (
-                                                        <option key={p}>
+                                                        <option key={p} value={p}>
                                                             {p}
                                                         </option>
                                                     ))}
                                                 </select>
+                                                <button
+                                                    disabled={actionReason.trim().length < 3}
+                                                    onClick={() =>
+                                                        action(l.id, "change_plan", {
+                                                            plan:
+                                                                pendingPlans[l.id] ??
+                                                                (l.plan === "trial"
+                                                                    ? "professional"
+                                                                    : l.plan),
+                                                        })
+                                                    }
+                                                    className="rounded border px-2 py-1 disabled:cursor-not-allowed disabled:opacity-40"
+                                                >
+                                                    Apply plan
+                                                </button>
                                             </div>
                                         </td>
                                     </tr>
