@@ -1,0 +1,72 @@
+name: KMJ Main Platform CI
+
+on:
+  push:
+    branches:
+      - feat/homepage-worldclass
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: kmj-main-platform-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  platform:
+    name: Laravel + TypeScript
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/platform
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.5'
+          extensions: mbstring, sqlite3, pdo_sqlite
+          coverage: none
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: apps/platform/package-lock.json
+      - name: Install PHP dependencies
+        run: composer install --no-interaction --prefer-dist
+      - name: Install JS dependencies
+        run: npm ci
+      - name: Prepare test environment
+        run: |
+          cp .env.example .env
+          php artisan key:generate
+          mkdir -p database
+          touch database/database.sqlite
+          php artisan migrate --force
+      - name: PHP formatting
+        run: composer lint:check
+      - name: PHP static analysis
+        run: composer types:check
+      - name: PHP tests
+        run: php artisan test
+      - name: Frontend checks
+        run: npm run check
+      - name: TypeScript
+        run: npm run types:check
+      - name: Production build
+        run: npm run build
+
+  license-core:
+    name: Native Rust license verifier
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: services/license-core
+      - name: Rust tests
+        run: cargo test --locked --manifest-path services/license-core/Cargo.toml
+      - name: Contract integrity
+        run: sha256sum -c contracts/kslp-v1/CONTRACT.sha256
