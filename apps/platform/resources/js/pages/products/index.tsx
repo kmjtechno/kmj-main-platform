@@ -9,6 +9,7 @@ import {
 import PublicSeo from '@/components/public-seo';
 import PublicSiteFooter from '@/components/public-site-footer';
 import PublicSiteHeader from '@/components/public-site-header';
+import ProductVisual from '@/components/public/product-visual';
 
 type Product = {
     slug: string;
@@ -142,6 +143,13 @@ export default function ProductsIndex({ products }: { products: Product[] }) {
                                             }
                                         >
                                             <div className="flex flex-col">
+                                                <div className="mb-7 overflow-hidden rounded-2xl border border-white/[0.08] bg-black/30">
+                                                    <ProductVisual
+                                                        slug={product.slug}
+                                                        name={product.name}
+                                                        className="aspect-[4/3] w-full object-cover"
+                                                    />
+                                                </div>
                                                 <div className="flex items-start justify-between gap-4">
                                                     <div className="flex items-center gap-4">
                                                         <div className="grid h-11 w-11 place-items-center rounded-xl border border-[#ef3340]/18 bg-[#ef3340]/8">
