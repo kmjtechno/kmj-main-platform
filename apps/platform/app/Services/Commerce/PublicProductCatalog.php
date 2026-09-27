@@ -50,6 +50,9 @@ final class PublicProductCatalog
             KmjProductCatalog::AGENT_SLUG,
             KmjProductCatalog::CREATIVE_STUDIO_SLUG,
             KmjProductCatalog::CINEMA_PLATFORM_SLUG,
+            KmjProductCatalog::DOME_SLUG,
+            KmjProductCatalog::CINEMA_PLAYER_SLUG,
+            KmjProductCatalog::LICENSING_HUB_SLUG,
         ];
     }
 
@@ -71,6 +74,9 @@ final class PublicProductCatalog
             KmjProductCatalog::AGENT_SLUG => $this->agent(),
             KmjProductCatalog::CREATIVE_STUDIO_SLUG => $this->creativeStudio(),
             KmjProductCatalog::CINEMA_PLATFORM_SLUG => $this->cinemaPlatform(),
+            KmjProductCatalog::DOME_SLUG => $this->developmentProduct(slug: KmjProductCatalog::DOME_SLUG, name: KmjProductCatalog::DOME_NAME, lifecycle: 'development', lifecycleLabel: 'Development', eyebrow: 'Immersive 360° experience', headline: 'A dedicated immersive experience product for 360° dome and curved-screen environments.', summary: 'KMJ 360 Dome is presented as a distinct immersive product line. Commercial availability remains disabled until dedicated release evidence and deployment requirements are verified.', status: 'Dedicated product identity is defined; a customer-ready commercial release is not yet independently verified.', proof: [['title'=>'Dedicated product boundary','detail'=>'The Main Platform exposes KMJ 360 Dome as its own product rather than re-labelling Cinema Platform.','state'=>'platform-verified'],['title'=>'Release gate preserved','detail'=>'Purchase remains disabled until product-specific release and deployment evidence is accepted.','state'=>'fail-closed']]),
+            KmjProductCatalog::CINEMA_PLAYER_SLUG => $this->developmentProduct(slug: KmjProductCatalog::CINEMA_PLAYER_SLUG, name: KmjProductCatalog::CINEMA_PLAYER_NAME, lifecycle: 'development', lifecycleLabel: 'Active development', eyebrow: 'Professional cinema playback', headline: 'A dedicated cinema playback product within the wider KMJ cinema technology direction.', summary: 'KMJ Cinema Player is the focused playback product identity. Engineering evidence supports an active cinema-player development stream, while public commercial release remains gated.', status: 'Active development; a current customer-ready public release is not independently verified.', proof: [['title'=>'Playback product identity','detail'=>'Cinema Player is kept distinct from the broader Cinema Platform product boundary.','state'=>'platform-verified'],['title'=>'Commercial release not asserted','detail'=>'Download and purchase remain disabled until an accepted release is available.','state'=>'fail-closed']]),
+            KmjProductCatalog::LICENSING_HUB_SLUG => $this->developmentProduct(slug: KmjProductCatalog::LICENSING_HUB_SLUG, name: KmjProductCatalog::LICENSING_HUB_NAME, lifecycle: 'development', lifecycleLabel: 'Platform development', eyebrow: 'Entitlement + licensing authority', headline: 'The governed licensing layer designed to connect KMJ products with customer entitlements and controlled access.', summary: 'KMJ Licensing Hub represents the Main Platform licensing and entitlement capability. Sandbox issuance, validation and revocation boundaries exist; production signing and key custody remain release-gated.', status: 'Sandbox licensing capability exists; production signing authority is not yet declared customer-ready.', proof: [['title'=>'Licensing boundary','detail'=>'Sandbox license issuance, validation and revocation are implemented behind explicit product authority.','state'=>'repository-verified'],['title'=>'Production keys fail closed','detail'=>'Production signing and key custody remain outside the sandbox boundary until separately approved and verified.','state'=>'fail-closed']]),
             default => null,
         };
     }

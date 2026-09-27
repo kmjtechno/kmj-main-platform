@@ -14,8 +14,8 @@ const generatedVisuals: Record<string, string> = {
     'kmj-agent': '/assets/products/kmj-agent.webp',
     'kmj-creative-studio': '/assets/products/kmj-creative-studio.webp',
     'kmj-cinema-platform': '/assets/products/kmj-cinema-platform.webp',
-    'kmj-360-dome': '/assets/products/kmj-cinema-platform.webp',
-    'kmj-cinema-player': '/assets/products/kmj-cinema-platform.webp',
+    'kmj-360-dome': '/assets/products/kmj-360-dome.webp',
+    'kmj-cinema-player': '/assets/products/kmj-cinema-player.webp',
     'kmj-licensing-hub': '/assets/products/kmj-licensing-hub.webp',
 };
 

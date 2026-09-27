@@ -37,6 +37,25 @@ final class KmjProductCatalog
 
     public const CINEMA_PLATFORM_SLUG = 'kmj-cinema-platform';
 
+    public const DOME_SLUG = 'kmj-360-dome';
+    public const DOME_NAME = 'KMJ 360 Dome';
+
+    public const CINEMA_PLAYER_SLUG = 'kmj-cinema-player';
+    public const CINEMA_PLAYER_NAME = 'KMJ Cinema Player';
+
+    public const LICENSING_HUB_SLUG = 'kmj-licensing-hub';
+    public const LICENSING_HUB_NAME = 'KMJ Licensing Hub';
+
+    // Focused SaaS roadmap: shared AI foundation, distinct customer outcomes.
+    public const AI_SUPPORT_SLUG = 'kmj-ai-support';
+    public const AI_SUPPORT_NAME = 'KMJ AI Support';
+
+    public const AUTOMATE_SLUG = 'kmj-automate';
+    public const AUTOMATE_NAME = 'KMJ Automate';
+
+    public const AI_GATEWAY_SLUG = 'kmj-ai-gateway';
+    public const AI_GATEWAY_NAME = 'KMJ AI Gateway';
+
     public const CINEMA_PLATFORM_NAME = 'KMJ Cinema Platform';
 
     public function __construct(

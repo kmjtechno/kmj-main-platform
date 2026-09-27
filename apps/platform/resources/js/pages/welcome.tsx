@@ -112,7 +112,7 @@ export default function Welcome({
             <div className="min-h-screen overflow-hidden bg-[#05070a] text-white selection:bg-[#e21b23] selection:text-white">
                 <div className="pointer-events-none fixed inset-0">
                     <div className="absolute -top-64 left-[54%] h-[42rem] w-[52rem] rounded-full bg-[#e21b23]/[0.09] blur-[150px]" />
-                    <div className="absolute top-[58rem] -left-56 h-[36rem] w-[36rem] rounded-full bg-indigo-600/[0.06] blur-[150px]" />
+                    <div className="absolute top-[58rem] -left-56 h-[36rem] w-[36rem] rounded-full bg-[#e21b23]/[0.045] blur-[150px]" />
                 </div>
 
                 <PublicSiteHeader />
