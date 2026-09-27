@@ -12,13 +12,13 @@ final class PublicProductCatalog
      */
     public function all(): array
     {
-        $products = Product::query()
+        return Product::query()
             ->whereIn('slug', $this->publicSlugs())
+            ->where('is_public', true)
+            ->orderBy('sort_order')
+            ->orderBy('name')
             ->get()
-            ->keyBy('slug');
-
-        return collect($this->publicSlugs())
-            ->map(fn (string $slug): ?array => $this->present($products->get($slug)))
+            ->map(fn (Product $product): ?array => $this->present($product))
             ->filter()
             ->values()
             ->all();
@@ -33,7 +33,12 @@ final class PublicProductCatalog
             return null;
         }
 
-        return $this->present(Product::query()->where('slug', $slug)->first());
+        return $this->present(
+            Product::query()
+                ->where('slug', $slug)
+                ->where('is_public', true)
+                ->first(),
+        );
     }
 
     /**
@@ -66,7 +71,7 @@ final class PublicProductCatalog
             return null;
         }
 
-        return match ((string) $product->getAttribute('slug')) {
+        $presented = match ((string) $product->getAttribute('slug')) {
             CloudOSProductCatalog::SLUG => $this->cloudOS($product),
             KmjProductCatalog::CALIBRATION_SLUG => $this->calibration(),
             KmjProductCatalog::FORGE_SLUG => $this->forge(),
@@ -81,6 +86,37 @@ final class PublicProductCatalog
             KmjProductCatalog::LICENSING_HUB_SLUG => $this->developmentProduct(slug: KmjProductCatalog::LICENSING_HUB_SLUG, name: KmjProductCatalog::LICENSING_HUB_NAME, lifecycle: 'development', lifecycleLabel: 'Research', eyebrow: 'Entitlement + licensing authority', headline: 'The governed licensing layer designed to connect KMJ products with customer entitlements and controlled access.', summary: 'KMJ Licensing Hub represents the Main Platform licensing and entitlement capability. Sandbox issuance, validation and revocation boundaries exist; production signing and key custody remain release-gated.', status: 'Sandbox licensing capability exists; production signing authority is not yet declared customer-ready.', proof: [['title'=>'Licensing boundary','detail'=>'Sandbox license issuance, validation and revocation are implemented behind explicit product authority.','state'=>'repository-verified'],['title'=>'Production keys fail closed','detail'=>'Production signing and key custody remain outside the sandbox boundary until separately approved and verified.','state'=>'fail-closed']]),
             default => null,
         };
+
+        return $presented === null
+            ? null
+            : $this->applyManagement($product, $presented);
+    }
+
+    /**
+     * @param  array<string, mixed>  $presented
+     * @return array<string, mixed>
+     */
+    private function applyManagement(Product $product, array $presented): array
+    {
+        $lifecycle = (string) $product->getAttribute('lifecycle');
+        $lifecycleLabel = match ($lifecycle) {
+            'available' => 'Available',
+            'preview' => 'Preview',
+            'research' => 'Research',
+            'planned' => 'Planned',
+            default => $presented['lifecycle_label'],
+        };
+        $summary = trim((string) ($product->getAttribute('summary') ?? ''));
+        $imagePath = trim((string) ($product->getAttribute('image_path') ?? ''));
+
+        $presented['lifecycle'] = $lifecycle !== '' ? $lifecycle : $presented['lifecycle'];
+        $presented['lifecycle_label'] = $lifecycleLabel;
+        $presented['summary'] = $summary !== '' ? $summary : $presented['summary'];
+        $presented['image_path'] = $imagePath !== '' ? $imagePath : null;
+        $presented['sort_order'] = (int) $product->getAttribute('sort_order');
+        $presented['licensing_enabled'] = (bool) $product->getAttribute('licensing_enabled');
+
+        return $presented;
     }
 
     /**
@@ -89,6 +125,7 @@ final class PublicProductCatalog
     private function cloudOS(Product $product): array
     {
         $purchaseEnabled = (string) $product->getAttribute('status') === 'active'
+            && (bool) $product->getAttribute('purchase_enabled')
             && EntitlementPolicy::query()
                 ->where('product_id', $product->getKey())
                 ->where('code', CloudOSProductCatalog::POLICY_CODE)

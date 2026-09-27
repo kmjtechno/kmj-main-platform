@@ -38,6 +38,20 @@ type OperatorProps = {
         confirmed_orders: number;
     };
     recentOrders: RecentOrder[];
+    products: ManagedProduct[];
+};
+
+type ManagedProduct = {
+    id: string;
+    slug: string;
+    name: string;
+    lifecycle: string;
+    is_public: boolean;
+    sort_order: number;
+    image_path: string | null;
+    summary: string | null;
+    purchase_enabled: boolean;
+    licensing_enabled: boolean;
 };
 
 const fulfillmentLabels: Record<FulfillmentState, string> = {
@@ -79,8 +93,25 @@ function Metric({
     );
 }
 
+const productLifecycleOptions = [
+    ['available', 'Available'],
+    ['preview', 'Preview'],
+    ['research', 'Research'],
+    ['planned', 'Planned'],
+    ['retired', 'Retired'],
+] as const;
+
 function CommercialProductForm() {
-    const form = useForm({ name: '', slug: '' });
+    const form = useForm({
+        name: '',
+        slug: '',
+        lifecycle: 'planned',
+        is_public: false,
+        image_path: '',
+        summary: '',
+        purchase_enabled: false,
+        licensing_enabled: false,
+    });
 
     const submit = (event: FormEvent<HTMLFormElement>) => {
         event.preventDefault();
@@ -91,46 +122,303 @@ function CommercialProductForm() {
     };
 
     return (
-        <form
-            onSubmit={submit}
-            className="grid gap-3 sm:grid-cols-[1fr_1fr_auto]"
-        >
+        <form onSubmit={submit} className="grid gap-4">
+            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+                <label className="space-y-1.5 text-xs font-semibold">
+                    <span>Product name</span>
+                    <input
+                        value={form.data.name}
+                        onChange={(event) =>
+                            form.setData('name', event.target.value)
+                        }
+                        placeholder="KMJ Product"
+                        className="bg-background h-10 w-full rounded-lg border px-3 text-sm"
+                        required
+                    />
+                </label>
+                <label className="space-y-1.5 text-xs font-semibold">
+                    <span>Product slug</span>
+                    <input
+                        value={form.data.slug}
+                        onChange={(event) =>
+                            form.setData('slug', event.target.value)
+                        }
+                        placeholder="kmj-product"
+                        className="bg-background h-10 w-full rounded-lg border px-3 text-sm"
+                        pattern="[a-z0-9]+(?:-[a-z0-9]+)*"
+                        required
+                    />
+                </label>
+                <label className="space-y-1.5 text-xs font-semibold">
+                    <span>Lifecycle</span>
+                    <select
+                        value={form.data.lifecycle}
+                        onChange={(event) =>
+                            form.setData('lifecycle', event.target.value)
+                        }
+                        className="bg-background h-10 w-full rounded-lg border px-3 text-sm"
+                    >
+                        {productLifecycleOptions.map(([value, label]) => (
+                            <option key={value} value={value}>
+                                {label}
+                            </option>
+                        ))}
+                    </select>
+                </label>
+                <label className="space-y-1.5 text-xs font-semibold">
+                    <span>Image path</span>
+                    <input
+                        value={form.data.image_path}
+                        onChange={(event) =>
+                            form.setData('image_path', event.target.value)
+                        }
+                        placeholder="/assets/products/product.webp"
+                        className="bg-background h-10 w-full rounded-lg border px-3 text-sm"
+                    />
+                </label>
+            </div>
+
             <label className="space-y-1.5 text-xs font-semibold">
-                <span>Product name</span>
+                <span>Customer-facing summary</span>
+                <textarea
+                    value={form.data.summary}
+                    onChange={(event) =>
+                        form.setData('summary', event.target.value)
+                    }
+                    rows={3}
+                    maxLength={2000}
+                    className="bg-background w-full rounded-lg border px-3 py-2 text-sm"
+                    placeholder="Verified product summary"
+                />
+            </label>
+
+            <div className="flex flex-wrap items-center gap-4 text-xs font-semibold">
+                <label className="flex items-center gap-2">
+                    <input
+                        type="checkbox"
+                        checked={form.data.is_public}
+                        onChange={(event) =>
+                            form.setData('is_public', event.target.checked)
+                        }
+                    />
+                    Publicly visible
+                </label>
+                <label className="flex items-center gap-2">
+                    <input
+                        type="checkbox"
+                        checked={form.data.purchase_enabled}
+                        onChange={(event) =>
+                            form.setData(
+                                'purchase_enabled',
+                                event.target.checked,
+                            )
+                        }
+                    />
+                    Purchase enabled
+                </label>
+                <label className="flex items-center gap-2">
+                    <input
+                        type="checkbox"
+                        checked={form.data.licensing_enabled}
+                        onChange={(event) =>
+                            form.setData(
+                                'licensing_enabled',
+                                event.target.checked,
+                            )
+                        }
+                    />
+                    Licensing enabled
+                </label>
+                <button
+                    type="submit"
+                    disabled={form.processing}
+                    className="ml-auto inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-red-600 px-4 text-xs font-bold text-white transition hover:bg-red-500 disabled:opacity-50"
+                >
+                    <PackagePlus className="h-4 w-4" />
+                    Create product
+                </button>
+            </div>
+
+            {Object.keys(form.errors).length > 0 && (
+                <div className="text-xs text-red-500">
+                    {Object.values(form.errors)[0]}
+                </div>
+            )}
+        </form>
+    );
+}
+
+function ManagedProductEditor({
+    product,
+    products,
+}: {
+    product: ManagedProduct;
+    products: ManagedProduct[];
+}) {
+    const form = useForm({
+        name: product.name,
+        lifecycle: product.lifecycle,
+        is_public: product.is_public,
+        image_path: product.image_path ?? '',
+        summary: product.summary ?? '',
+        purchase_enabled: product.purchase_enabled,
+        licensing_enabled: product.licensing_enabled,
+    });
+
+    const save = (event: FormEvent<HTMLFormElement>) => {
+        event.preventDefault();
+        form.put(`/operator/products/${product.id}`, {
+            preserveScroll: true,
+        });
+    };
+
+    const move = (offset: -1 | 1) => {
+        const index = products.findIndex((item) => item.id === product.id);
+        const target = index + offset;
+        if (index < 0 || target < 0 || target >= products.length) return;
+        const ids = products.map((item) => item.id);
+        [ids[index], ids[target]] = [ids[target], ids[index]];
+        router.post(
+            '/operator/products/reorder',
+            { ids },
+            { preserveScroll: true },
+        );
+    };
+
+    return (
+        <form
+            onSubmit={save}
+            className="grid gap-4 rounded-xl border p-4 xl:grid-cols-[1.1fr_.75fr_.85fr_auto]"
+        >
+            <div className="grid gap-2">
                 <input
                     value={form.data.name}
                     onChange={(event) =>
                         form.setData('name', event.target.value)
                     }
-                    placeholder="KMJ Calibration Pro"
-                    className="bg-background h-10 w-full rounded-lg border px-3 text-sm"
+                    aria-label={`Name for ${product.name}`}
+                    className="bg-background h-9 rounded-lg border px-3 text-sm font-bold"
                     required
                 />
-            </label>
-            <label className="space-y-1.5 text-xs font-semibold">
-                <span>Product slug</span>
-                <input
-                    value={form.data.slug}
+                <div className="text-muted-foreground text-[11px]">
+                    {product.slug}
+                </div>
+                <textarea
+                    value={form.data.summary}
                     onChange={(event) =>
-                        form.setData('slug', event.target.value)
+                        form.setData('summary', event.target.value)
                     }
-                    placeholder="kmj-calibration-pro"
-                    className="bg-background h-10 w-full rounded-lg border px-3 text-sm"
-                    pattern="[a-z0-9]+(?:-[a-z0-9]+)*"
-                    required
+                    aria-label={`Summary for ${product.name}`}
+                    rows={2}
+                    maxLength={2000}
+                    placeholder="Customer-facing summary"
+                    className="bg-background rounded-lg border px-3 py-2 text-xs"
                 />
-            </label>
-            <button
-                type="submit"
-                disabled={form.processing}
-                className="mt-auto inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-red-600 px-4 text-xs font-bold text-white transition hover:bg-red-500 disabled:opacity-50"
-            >
-                <PackagePlus className="h-4 w-4" />
-                Activate product
-            </button>
-            {(form.errors.name || form.errors.slug) && (
-                <div className="text-xs text-red-500 sm:col-span-3">
-                    {form.errors.name || form.errors.slug}
+            </div>
+
+            <div className="grid content-start gap-2">
+                <select
+                    value={form.data.lifecycle}
+                    onChange={(event) =>
+                        form.setData('lifecycle', event.target.value)
+                    }
+                    aria-label={`Lifecycle for ${product.name}`}
+                    className="bg-background h-9 rounded-lg border px-2 text-xs"
+                >
+                    {productLifecycleOptions.map(([value, label]) => (
+                        <option key={value} value={value}>
+                            {label}
+                        </option>
+                    ))}
+                </select>
+                <input
+                    value={form.data.image_path}
+                    onChange={(event) =>
+                        form.setData('image_path', event.target.value)
+                    }
+                    aria-label={`Image path for ${product.name}`}
+                    placeholder="/assets/products/..."
+                    className="bg-background h-9 rounded-lg border px-2 text-xs"
+                />
+            </div>
+
+            <div className="grid content-start gap-2 text-xs">
+                <label className="flex items-center justify-between gap-3 rounded-lg border px-3 py-2">
+                    Public
+                    <input
+                        type="checkbox"
+                        checked={form.data.is_public}
+                        onChange={(event) =>
+                            form.setData('is_public', event.target.checked)
+                        }
+                    />
+                </label>
+                <label className="flex items-center justify-between gap-3 rounded-lg border px-3 py-2">
+                    Purchase
+                    <input
+                        type="checkbox"
+                        checked={form.data.purchase_enabled}
+                        onChange={(event) =>
+                            form.setData(
+                                'purchase_enabled',
+                                event.target.checked,
+                            )
+                        }
+                    />
+                </label>
+                <label className="flex items-center justify-between gap-3 rounded-lg border px-3 py-2">
+                    Licensing
+                    <input
+                        type="checkbox"
+                        checked={form.data.licensing_enabled}
+                        onChange={(event) =>
+                            form.setData(
+                                'licensing_enabled',
+                                event.target.checked,
+                            )
+                        }
+                    />
+                </label>
+            </div>
+
+            <div className="flex flex-col gap-2">
+                <button
+                    type="submit"
+                    disabled={form.processing}
+                    className="rounded-lg bg-red-600 px-3 py-2 text-xs font-bold text-white disabled:opacity-50"
+                >
+                    Save
+                </button>
+                <div className="flex gap-1">
+                    <button
+                        type="button"
+                        aria-label={`Move ${product.name} up`}
+                        disabled={products[0]?.id === product.id}
+                        onClick={() => move(-1)}
+                        className="rounded-lg border px-3 py-2 text-xs font-bold disabled:opacity-30"
+                    >
+                        ↑
+                    </button>
+                    <button
+                        type="button"
+                        aria-label={`Move ${product.name} down`}
+                        disabled={
+                            products[products.length - 1]?.id === product.id
+                        }
+                        onClick={() => move(1)}
+                        className="rounded-lg border px-3 py-2 text-xs font-bold disabled:opacity-30"
+                    >
+                        ↓
+                    </button>
+                </div>
+                <span className="text-muted-foreground text-[10px]">
+                    Order {product.sort_order}
+                </span>
+            </div>
+
+            {Object.keys(form.errors).length > 0 && (
+                <div className="text-xs text-red-500 xl:col-span-4">
+                    {Object.values(form.errors)[0]}
                 </div>
             )}
         </form>
@@ -211,7 +499,11 @@ function ManualPaymentConfirmation({ order }: { order: RecentOrder }) {
     );
 }
 
-export default function Operator({ metrics, recentOrders }: OperatorProps) {
+export default function Operator({
+    metrics,
+    recentOrders,
+    products,
+}: OperatorProps) {
     return (
         <>
             <Head title="Platform Operator" />
@@ -273,6 +565,30 @@ export default function Operator({ metrics, recentOrders }: OperatorProps) {
                         </p>
                     </div>
                     <CommercialProductForm />
+                </section>
+
+                <section className="bg-card rounded-2xl border p-5 sm:p-6">
+                    <div className="mb-5 flex items-center justify-between gap-4">
+                        <div>
+                            <h2 className="font-bold">Product manager</h2>
+                            <p className="text-muted-foreground mt-1 text-xs">
+                                Lifecycle, visibility and commercial authority
+                                from one governed list.
+                            </p>
+                        </div>
+                        <span className="text-muted-foreground rounded-full border px-3 py-1 text-[10px] font-bold">
+                            {products.length} products
+                        </span>
+                    </div>
+                    <div className="grid gap-3">
+                        {products.map((product) => (
+                            <ManagedProductEditor
+                                key={product.id}
+                                product={product}
+                                products={products}
+                            />
+                        ))}
+                    </div>
                 </section>
 
                 <section className="bg-card rounded-2xl border p-5 sm:p-6">

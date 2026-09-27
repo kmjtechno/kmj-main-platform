@@ -2,6 +2,7 @@ type ProductVisualProps = {
     slug: string;
     name: string;
     kind?: string;
+    imagePath?: string | null;
     compact?: boolean;
     className?: string;
 };
@@ -45,10 +46,13 @@ export default function ProductVisual({
     slug,
     name,
     kind,
+    imagePath,
     compact = false,
     className,
 }: ProductVisualProps) {
-    const generatedVisual = generatedVisuals[slug];
+    const managedVisual =
+        imagePath?.startsWith('/assets/products/') === true ? imagePath : null;
+    const generatedVisual = managedVisual ?? generatedVisuals[slug];
     const [accent, accent2] = palette[slug] ?? ['#e21b23', '#6d28d9'];
     const isCloud = kind === 'cloudos' || slug === 'kmj-cloudos';
 

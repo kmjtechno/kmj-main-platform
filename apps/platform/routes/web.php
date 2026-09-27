@@ -11,6 +11,7 @@ use DateTimeImmutable as ImmutableDateTime;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
+use KMJ\MainPlatform\Catalog\Models\Product;
 use KMJ\MainPlatform\Commerce\Models\CommercialOrder;
 use KMJ\MainPlatform\Entitlements\Models\Entitlement;
 use KMJ\MainPlatform\Entitlements\Models\EntitlementPolicy;
@@ -257,6 +258,23 @@ Route::middleware(['auth', 'verified'])->group(function () {
                 ];
             })->all();
 
+        $managedProducts = Product::query()
+            ->orderBy('sort_order')
+            ->orderBy('name')
+            ->get([
+                'id',
+                'slug',
+                'name',
+                'status',
+                'lifecycle',
+                'is_public',
+                'sort_order',
+                'image_path',
+                'summary',
+                'purchase_enabled',
+                'licensing_enabled',
+            ]);
+
         return Inertia::render('operator', [
             'metrics' => [
                 'users' => User::query()->count(),
@@ -266,6 +284,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
                 'confirmed_orders' => CommercialOrder::query()->where('status', 'confirmed')->count(),
             ],
             'recentOrders' => $recentOrders,
+            'products' => $managedProducts,
         ]);
     })->name('operator.index')->middleware('password.confirm');
 

@@ -22,6 +22,7 @@ type Product = {
     eyebrow: string;
     headline: string;
     summary: string;
+    image_path?: string | null;
     variants?: string[];
     proof: Array<{
         title: string;
@@ -301,6 +302,7 @@ export default function Welcome({
                                                 slug={product.slug}
                                                 name={product.name}
                                                 kind={product.demo.kind}
+                                                imagePath={product.image_path}
                                                 compact
                                             />
                                             <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-[#080b10] via-transparent to-transparent" />

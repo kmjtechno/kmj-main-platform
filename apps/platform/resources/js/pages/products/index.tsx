@@ -22,6 +22,7 @@ type Product = {
     eyebrow: string;
     headline: string;
     summary: string;
+    image_path?: string | null;
     proof: Array<{
         title: string;
         detail: string;
@@ -234,6 +235,9 @@ export default function ProductsIndex({ products }: { products: Product[] }) {
                                                     <ProductVisual
                                                         slug={product.slug}
                                                         name={product.name}
+                                                        imagePath={
+                                                            product.image_path
+                                                        }
                                                         className="aspect-[4/3] w-full object-cover"
                                                     />
                                                 </div>

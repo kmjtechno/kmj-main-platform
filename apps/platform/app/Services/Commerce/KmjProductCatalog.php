@@ -96,11 +96,67 @@ final class KmjProductCatalog
                 $synced[$slug] = $product;
             }
 
-            return [
+            $catalog = [
                 self::CLOUDOS_SLUG => $cloudOS,
                 ...$synced,
             ];
+
+            foreach ($catalog as $slug => $product) {
+                $this->seedManagementDefaults($product, $slug);
+            }
+
+            return $catalog;
         });
+    }
+
+    private function seedManagementDefaults(Product $product, string $slug): void
+    {
+        $attributes = $product->getAttributes();
+
+        if (! array_key_exists('lifecycle', $attributes)) {
+            return;
+        }
+
+        $untouched = (bool) $product->getAttribute('is_public') === false
+            && (int) $product->getAttribute('sort_order') === 100
+            && (string) $product->getAttribute('lifecycle') === 'planned'
+            && $product->getAttribute('image_path') === null
+            && $product->getAttribute('summary') === null;
+
+        if (! $untouched) {
+            return;
+        }
+
+        $defaults = match ($slug) {
+            self::CLOUDOS_SLUG => ['available', 10, '/assets/products/kmj-cloudos.webp', true, true],
+            self::CALIBRATION_SLUG => ['preview', 20, '/assets/products/kmj-calibration.webp', false, false],
+            self::CINEMA_PLATFORM_SLUG => ['research', 30, '/assets/products/kmj-cinema-platform.webp', false, false],
+            self::DOME_SLUG => ['research', 40, '/assets/products/kmj-360-dome.webp', false, false],
+            self::IMMERSIVE_CINEMA_SUITE_SLUG => ['planned', 50, null, false, false],
+            self::CINEMA_PLAYER_SLUG => ['research', 60, '/assets/products/kmj-cinema-player.webp', false, false],
+            self::LICENSING_HUB_SLUG => ['research', 70, '/assets/products/kmj-licensing-hub.webp', false, true],
+            self::FORGE_SLUG => ['research', 80, '/assets/products/kmj-forge.webp', false, false],
+            self::CONNECT_SLUG => ['planned', 90, '/assets/products/kmj-connect.webp', false, false],
+            self::CLOUD_NEXUS_SLUG => ['research', 100, '/assets/products/kmj-cloud-nexus.webp', false, false],
+            self::AGENT_SLUG => ['research', 110, '/assets/products/kmj-agent.webp', false, false],
+            self::CREATIVE_STUDIO_SLUG => ['planned', 120, '/assets/products/kmj-creative-studio.webp', false, false],
+            default => null,
+        };
+
+        if ($defaults === null) {
+            return;
+        }
+
+        [$lifecycle, $sortOrder, $imagePath, $purchaseEnabled, $licensingEnabled] = $defaults;
+
+        $product->forceFill([
+            'lifecycle' => $lifecycle,
+            'is_public' => true,
+            'sort_order' => $sortOrder,
+            'image_path' => $imagePath,
+            'purchase_enabled' => $purchaseEnabled,
+            'licensing_enabled' => $licensingEnabled,
+        ])->save();
     }
 
     private function assertSandboxProduct(

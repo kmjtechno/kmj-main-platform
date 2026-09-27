@@ -14,6 +14,7 @@ return Application::configure(basePath: dirname(__DIR__))
         web: [
             __DIR__.'/../routes/web.php',
             __DIR__.'/../routes/commerce-sales.php',
+            __DIR__.'/../routes/product-manager.php',
             __DIR__.'/../routes/operator-ops.php',
         ],
         commands: __DIR__.'/../routes/console.php',

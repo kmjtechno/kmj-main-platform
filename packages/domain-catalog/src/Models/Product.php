@@ -15,5 +15,22 @@ final class Product extends Model
         'slug',
         'name',
         'status',
+        'lifecycle',
+        'is_public',
+        'sort_order',
+        'image_path',
+        'summary',
+        'purchase_enabled',
+        'licensing_enabled',
     ];
+
+    protected function casts(): array
+    {
+        return [
+            'is_public' => 'boolean',
+            'purchase_enabled' => 'boolean',
+            'licensing_enabled' => 'boolean',
+            'sort_order' => 'integer',
+        ];
+    }
 }
