@@ -115,7 +115,7 @@ export default function Welcome({
 
                 <PublicSiteHeader />
 
-                <main className="relative z-10">
+                <main id="main-content" className="relative z-10">
                     <section className="mx-auto max-w-[1440px] px-5 pt-14 pb-20 sm:px-8 sm:pt-20 lg:px-12 lg:pt-24 lg:pb-28">
                         <div className="grid items-center gap-12 lg:grid-cols-[.95fr_1.05fr] lg:gap-16">
                             <div>

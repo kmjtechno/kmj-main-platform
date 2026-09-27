@@ -11,6 +11,12 @@ export default function PublicSiteHeader() {
 
     return (
         <header className="sticky top-0 z-50 border-b border-white/[0.07] bg-[#06080b]/88 backdrop-blur-2xl">
+            <a
+                href="#main-content"
+                className="absolute top-3 left-4 z-[70] -translate-y-20 rounded-lg bg-white px-4 py-2 text-sm font-black text-black shadow-xl transition focus:translate-y-0"
+            >
+                Skip to main content
+            </a>
             <div className="mx-auto flex h-[76px] max-w-[1440px] items-center justify-between px-5 sm:px-8 lg:px-12">
                 <Link
                     href="/"

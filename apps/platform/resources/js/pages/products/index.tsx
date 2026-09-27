@@ -61,7 +61,7 @@ export default function ProductsIndex({ products }: { products: Product[] }) {
 
                 <PublicSiteHeader />
 
-                <main className="relative z-10">
+                <main id="main-content" className="relative z-10">
                     <section className="mx-auto max-w-[1440px] px-5 pt-16 pb-12 sm:px-8 lg:px-12 lg:pt-24 lg:pb-16">
                         <div className="grid gap-10 lg:grid-cols-[1fr_auto] lg:items-end">
                             <div className="max-w-5xl">

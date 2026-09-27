@@ -223,7 +223,7 @@ export default function ProductShow({ product }: { product: Product }) {
 
                 <PublicSiteHeader />
 
-                <main className="relative z-10">
+                <main id="main-content" className="relative z-10">
                     <section className="mx-auto grid max-w-[1440px] gap-14 px-5 pt-16 pb-20 sm:px-8 lg:grid-cols-[1.02fr_.98fr] lg:items-center lg:px-12 lg:pt-24 lg:pb-28">
                         <div>
                             <Link
