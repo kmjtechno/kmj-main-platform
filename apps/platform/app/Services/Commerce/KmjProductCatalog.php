@@ -79,6 +79,9 @@ final class KmjProductCatalog
                 self::AGENT_SLUG => self::AGENT_NAME,
                 self::CREATIVE_STUDIO_SLUG => self::CREATIVE_STUDIO_NAME,
                 self::CINEMA_PLATFORM_SLUG => self::CINEMA_PLATFORM_NAME,
+                self::DOME_SLUG => self::DOME_NAME,
+                self::CINEMA_PLAYER_SLUG => self::CINEMA_PLAYER_NAME,
+                self::LICENSING_HUB_SLUG => self::LICENSING_HUB_NAME,
             ];
 
             $synced = [];
