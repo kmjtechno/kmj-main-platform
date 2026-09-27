@@ -278,12 +278,16 @@ export default function OperatorKslp({ metrics, licenses, events }: Props) {
                                                     </button>
                                                 )}
                                                 <button
+                                                    disabled={
+                                                        actionReason.trim()
+                                                            .length < 3
+                                                    }
                                                     onClick={() =>
                                                         action(l.id, "renew", {
                                                             days: 365,
                                                         })
                                                     }
-                                                    className="rounded border px-2 py-1"
+                                                    className="rounded border px-2 py-1 disabled:cursor-not-allowed disabled:opacity-40"
                                                 >
                                                     Renew 1y
                                                 </button>
