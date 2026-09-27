@@ -1,0 +1,3 @@
+<?php
+use Illuminate\Database\Migrations\Migration;use Illuminate\Database\Schema\Blueprint;use Illuminate\Support\Facades\Schema;
+return new class extends Migration{public function up():void{Schema::create("kslp_activation_challenges",function(Blueprint $t):void{$t->uuid("id")->primary();$t->uuid("license_id");$t->string("server_identity",160);$t->string("nonce_hash",64);$t->timestamp("expires_at");$t->timestamp("used_at")->nullable();$t->timestamp("created_at");$t->foreign("license_id")->references("id")->on("kslp_licenses")->cascadeOnDelete();$t->index(["license_id","expires_at"]);});}public function down():void{Schema::dropIfExists("kslp_activation_challenges");}};
