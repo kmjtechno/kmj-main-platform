@@ -1,0 +1,13 @@
+{"version":"KSLP-v1","gates":[
+{"id":"CONTRACT","acceptance":"Versioned schema and identical golden vectors pass on Main Platform and CloudOS."},
+{"id":"CRYPTO","acceptance":"Ed25519 signing/verification is fail-closed; tampering is rejected; customer artifacts contain no private signing key."},
+{"id":"TRIAL","acceptance":"30-day trial lifecycle is enforced and trial reset/reuse is rejected."},
+{"id":"ACT","acceptance":"Activation, renewal, deactivation/transfer and retry idempotency are verified."},
+{"id":"BIND","acceptance":"Entitlements are server-bound and cloned/mismatched server identities are rejected."},
+{"id":"ENT","acceptance":"Plans, features and limits are enforced at privileged service boundaries."},
+{"id":"OFFLINE","acceptance":"Signed offline lease/cache/grace works; restricted mode preserves recovery/export and existing customer data."},
+{"id":"REVOKE","acceptance":"License revocation/reactivation plus signing-key rotation/revocation are verified."},
+{"id":"TENANT","acceptance":"Tenant and RBAC isolation prevents cross-tenant licensing/control actions."},
+{"id":"UPDATE","acceptance":"Release/update signatures use a separate trust domain; tampered/wrong-scope updates fail and rollback policy is verified."},
+{"id":"SECRET","acceptance":"No license/release/evidence private signing key is present in repos, dumps, frontend or CloudOS customer artifacts."},
+{"id":"E2E","acceptance":"Real Main Platform to real CloudOS lifecycle passes on the exact commits and contract hash."}]}
