@@ -15,6 +15,10 @@ final class KmjProductCatalog
 
     public const CALIBRATION_NAME = 'KMJ Calibration Pro';
 
+    public const DESKTOP_COMMANDER_SLUG = 'kmj-desktop-commander';
+
+    public const DESKTOP_COMMANDER_NAME = 'KMJ Desktop Commander';
+
     public const FORGE_SLUG = 'kmj-forge';
 
     public const FORGE_NAME = 'KMJ Forge';
@@ -78,6 +82,7 @@ final class KmjProductCatalog
 
             $sandboxProducts = [
                 self::CALIBRATION_SLUG => self::CALIBRATION_NAME,
+                self::DESKTOP_COMMANDER_SLUG => self::DESKTOP_COMMANDER_NAME,
                 self::FORGE_SLUG => self::FORGE_NAME,
                 self::CONNECT_SLUG => self::CONNECT_NAME,
                 self::CLOUD_NEXUS_SLUG => self::CLOUD_NEXUS_NAME,
