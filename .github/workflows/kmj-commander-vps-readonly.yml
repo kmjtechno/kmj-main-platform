@@ -2,6 +2,10 @@ name: KMJ Commander VPS Read-Only Check
 
 on:
   workflow_dispatch:
+  push:
+    branches: ["main"]
+    paths:
+      - ".github/workflows/kmj-commander-vps-readonly.yml"
 
 permissions:
   contents: read
