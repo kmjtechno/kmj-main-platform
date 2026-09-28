@@ -353,6 +353,9 @@ final class PublicProductCatalog
         );
     }
 
+    /**
+     * @return array<string, mixed>
+     */
     private function cloudNexus(): array
     {
         return $this->developmentProduct(
