@@ -44,38 +44,38 @@ final class OutboxHealthSnapshot
             ->where('next_attempt_at', '>', now())
             ->count();
 
-        $recentExhausted = DomainOutboxMessage::query()
-            ->whereNull('published_at')
-            ->where('attempts', '>=', $maxAttempts)
-            ->latest('updated_at')
-            ->limit(10)
-            ->get([
-                'id',
-                'event_type',
-                'aggregate_type',
-                'aggregate_id',
-                'organization_id',
-                'attempts',
-                'last_error',
-                'occurred_at',
-                'updated_at',
-            ])
-            ->map(fn (DomainOutboxMessage $message): array => [
+        $recentExhausted = [];
+
+        foreach (
+            DomainOutboxMessage::query()
+                ->whereNull('published_at')
+                ->where('attempts', '>=', $maxAttempts)
+                ->latest('updated_at')
+                ->limit(10)
+                ->get([
+                    'id',
+                    'event_type',
+                    'aggregate_type',
+                    'aggregate_id',
+                    'organization_id',
+                    'attempts',
+                    'last_error',
+                    'occurred_at',
+                    'updated_at',
+                ]) as $message
+        ) {
+            $recentExhausted[] = [
                 'id' => (string) $message->getKey(),
-                'event_type' => (string) $message->event_type,
-                'aggregate_type' => (string) $message->aggregate_type,
-                'aggregate_id' => (string) $message->aggregate_id,
-                'organization_id' => $message->organization_id !== null
-                    ? (string) $message->organization_id
-                    : null,
-                'attempts' => (int) $message->attempts,
-                'last_error' => $message->last_error !== null
-                    ? (string) $message->last_error
-                    : null,
+                'event_type' => $message->event_type,
+                'aggregate_type' => $message->aggregate_type,
+                'aggregate_id' => $message->aggregate_id,
+                'organization_id' => $message->organization_id,
+                'attempts' => $message->attempts,
+                'last_error' => $message->last_error,
                 'occurred_at' => $message->occurred_at?->toIso8601String(),
                 'updated_at' => $message->updated_at?->toIso8601String(),
-            ])
-            ->all();
+            ];
+        }
 
         $status = $exhausted > 0
             ? 'critical'

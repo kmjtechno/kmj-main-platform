@@ -15,6 +15,8 @@ final class ProductLicenseProfileRegistry
 
     public const GENERIC_PRODUCT_CAPABILITY = 'product.access';
 
+    public const OMNIDESK_CAPABILITY = 'omnidesk.remote_access';
+
     public function forSlug(string $slug): ?ProductLicenseProfile
     {
         return match ($slug) {
@@ -27,6 +29,11 @@ final class ProductLicenseProfileRegistry
                 KmjProductCatalog::CALIBRATION_SLUG,
                 self::CALIBRATION_CAPABILITY,
                 ['sandbox'],
+            ),
+            KmjProductCatalog::OMNIDESK_SLUG => new ProductLicenseProfile(
+                KmjProductCatalog::OMNIDESK_SLUG,
+                self::OMNIDESK_CAPABILITY,
+                ['active'],
             ),
             KmjProductCatalog::FORGE_SLUG,
             KmjProductCatalog::CONNECT_SLUG,

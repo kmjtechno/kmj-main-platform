@@ -24,6 +24,7 @@ const palette: Record<string, [string, string]> = {
     'kmj-calibration-pro': ['#ff2d55', '#ff8a3d'],
     'kmj-forge': ['#a87cff', '#5f6fff'],
     'kmj-connect': ['#27d3a2', '#22a6f2'],
+    'kmj-omnidesk': ['#e21b23', '#ff3347'],
     'kmj-cloud-nexus': ['#ff3347', '#8b5cf6'],
     'kmj-agent': ['#f15b3a', '#ff2d55'],
     'kmj-creative-studio': ['#ff7a18', '#af4cff'],

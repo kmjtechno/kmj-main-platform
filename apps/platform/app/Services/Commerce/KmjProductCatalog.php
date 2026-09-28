@@ -23,6 +23,10 @@ final class KmjProductCatalog
 
     public const CONNECT_NAME = 'KMJ Connect';
 
+    public const OMNIDESK_SLUG = 'kmj-omnidesk';
+
+    public const OMNIDESK_NAME = 'KMJ OmniDesk';
+
     public const CLOUD_NEXUS_SLUG = 'kmj-cloud-nexus';
 
     public const CLOUD_NEXUS_NAME = 'KMJ Cloud Nexus';
@@ -87,6 +91,7 @@ final class KmjProductCatalog
                 self::DOME_360_SLUG => self::DOME_360_NAME,
                 self::CINEMA_PLAYER_SLUG => self::CINEMA_PLAYER_NAME,
                 self::LICENSING_HUB_SLUG => self::LICENSING_HUB_NAME,
+                self::OMNIDESK_SLUG => self::OMNIDESK_NAME,
             ];
 
             $synced = [];

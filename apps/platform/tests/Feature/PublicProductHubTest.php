@@ -58,8 +58,8 @@ final class PublicProductHubTest extends TestCase
                 ->where('products.2.lifecycle', 'early-development')
                 ->where('products.2.demo.kind', 'none')
                 ->where('products.2.demo.simulation', false)
-                ->where('products.3.slug', 'kmj-connect')
-                ->where('products.3.lifecycle', 'planned')
+                ->where('products.3.slug', 'kmj-omnidesk')
+                ->where('products.3.lifecycle', 'pre-alpha')
                 ->where('products.3.demo.kind', 'none')
                 ->where('products.3.demo.simulation', false)
                 ->where('products.4.slug', 'kmj-cloud-nexus')
@@ -126,7 +126,7 @@ final class PublicProductHubTest extends TestCase
     {
         foreach ([
             'kmj-forge' => 'early-development',
-            'kmj-connect' => 'planned',
+            'kmj-omnidesk' => 'pre-alpha',
             'kmj-cloud-nexus' => 'development',
             'kmj-agent' => 'development',
             'kmj-creative-studio' => 'roadmap',
