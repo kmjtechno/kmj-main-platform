@@ -57,7 +57,13 @@ final class DesktopCommanderCommercialPolicy
             'default_plan' => 'free',
             'billing_enabled' => false,
             'execution_model' => 'local-first',
+            'license_authority' => 'kmj-main-platform',
+            'entitlement_protocol' => 'KSLP-v1',
+            'entitlement_verification' => 'offline-ed25519',
             'entitlement_refresh_seconds' => 604800,
+            'bootstrap_refresh_seconds' => 86400,
+            'bootstrap_refresh_jitter_seconds' => 21600,
+            'idle_license_heartbeat' => false,
             'plans' => $this->plans(),
             'platform_support' => [
                 'windows' => 'full',
