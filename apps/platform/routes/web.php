@@ -28,7 +28,8 @@ use KMJ\MainPlatform\Organizations\Services\OrganizationDirectory;
 Route::get('api/public/commander/bootstrap', function (DesktopCommanderCommercialPolicy $policy) {
     return response()
         ->json($policy->publicBootstrap())
-        ->header('Cache-Control', 'public, max-age=3600, stale-while-revalidate=86400');
+        ->header('Cache-Control', 'public, max-age=3600, stale-while-revalidate=86400')
+        ->header('Access-Control-Allow-Origin', '*');
 })->name('commander.bootstrap');
 
 Route::get('/', function (PublicProductCatalog $products) {
