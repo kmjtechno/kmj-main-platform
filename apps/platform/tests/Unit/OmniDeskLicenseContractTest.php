@@ -22,6 +22,47 @@ final class OmniDeskLicenseContractTest extends TestCase
         self::assertSame('Ed25519', OmniDeskLicenseContract::SIGNING_ALGORITHM);
     }
 
+    public function test_main_platform_scope_is_billing_and_licensing_only(): void
+    {
+        self::assertSame([
+            'billing',
+            'plans',
+            'subscriptions',
+            'commercial_reconciliation',
+            'entitlements',
+            'license_issuance',
+            'device_activation_licensing',
+            'lease_renewal',
+            'revocation',
+            'commercial_audit',
+            'signing_key_custody',
+        ], OmniDeskLicenseContract::MAIN_PLATFORM_SCOPE);
+
+        foreach ([
+            'remote_session_transport',
+            'p2p_connectivity',
+            'session_signaling',
+            'relay_data_plane',
+            'screen_or_video_streaming',
+            'audio_streaming',
+            'remote_input_transport',
+            'clipboard_transport',
+            'file_transfer_data_plane',
+            'media_encoding_or_decoding',
+            'nat_traversal_runtime',
+            'omnidesk_device_runtime',
+        ] as $runtimeResponsibility) {
+            self::assertContains(
+                $runtimeResponsibility,
+                OmniDeskLicenseContract::FORBIDDEN_RUNTIME_SCOPE,
+            );
+            self::assertNotContains(
+                $runtimeResponsibility,
+                OmniDeskLicenseContract::MAIN_PLATFORM_SCOPE,
+            );
+        }
+    }
+
     public function test_signed_entitlement_requires_replay_device_and_time_claims(): void
     {
         foreach ([
