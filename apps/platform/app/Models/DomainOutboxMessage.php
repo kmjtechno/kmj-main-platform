@@ -1,8 +1,12 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Models;
 
+use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Carbon;
 
 /**
  * @property string $id
@@ -12,11 +16,11 @@ use Illuminate\Database\Eloquent\Model;
  * @property string|null $organization_id
  * @property int $attempts
  * @property string|null $last_error
- * @property \Carbon\CarbonImmutable|null $occurred_at
- * @property \Carbon\CarbonImmutable|null $published_at
- * @property \Carbon\CarbonImmutable|null $next_attempt_at
- * @property \Illuminate\Support\Carbon|null $created_at
- * @property \Illuminate\Support\Carbon|null $updated_at
+ * @property CarbonImmutable|null $occurred_at
+ * @property CarbonImmutable|null $published_at
+ * @property CarbonImmutable|null $next_attempt_at
+ * @property Carbon|null $created_at
+ * @property Carbon|null $updated_at
  */
 final class DomainOutboxMessage extends Model
 {
