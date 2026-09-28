@@ -4,7 +4,9 @@
 
 ## Authority
 
-KMJ Main Platform is the sole billing, entitlement, activation, renewal, revocation, and commercial audit authority for KMJ OmniDesk.
+KMJ Main Platform is the **billing and licensing control plane only** for KMJ OmniDesk. Its OmniDesk responsibilities are limited to plans/subscriptions, payment reconciliation, entitlements, license issuance, licensing-bound device activation, lease renewal, revocation, commercial audit, and signing-key custody.
+
+It is explicitly **not** an OmniDesk runtime or remote-session backend.
 
 Canonical identity:
 
@@ -14,7 +16,22 @@ Canonical identity:
 - protocol: `KSLP-v1`
 - contract: `kmj.omnidesk.license.v1`
 
-OmniDesk is a separate product/runtime repository. It consumes released Main Platform APIs/contracts and must never read Main Platform databases directly.
+OmniDesk is a separate product/runtime repository. It consumes released Main Platform billing/licensing APIs and contracts and must never read Main Platform databases directly.
+
+### Hard runtime boundary
+
+The following responsibilities are forbidden in KMJ Main Platform for OmniDesk:
+
+- remote-session transport and session signaling;
+- P2P connectivity and NAT traversal runtime;
+- relay data plane;
+- screen/video/audio streaming;
+- remote input and clipboard transport;
+- file-transfer data plane;
+- media encoding/decoding;
+- OmniDesk device/session runtime.
+
+Those responsibilities belong outside Main Platform. No future OmniDesk feature may expand Main Platform beyond the billing/licensing control plane merely for implementation convenience.
 
 ## Production signing boundary
 
