@@ -146,7 +146,10 @@ export default function OperatorKslp({ metrics, licenses, events }: Props) {
                                 "enterprise",
                                 "custom_oem",
                             ].map((p) => (
-                                <option key={p} value={p}>
+                                <option
+                                                            key={p}
+                                                            value={p}
+                                                        >
                                     {p}
                                 </option>
                             ))}
@@ -186,7 +189,10 @@ export default function OperatorKslp({ metrics, licenses, events }: Props) {
                     </div>
                     <div className="mt-4 grid gap-2 rounded-xl border border-red-500/20 bg-red-500/5 p-3 sm:grid-cols-[1fr_auto]">
                         <div>
-                            <label htmlFor="kslp-action-reason" className="text-xs font-bold">
+                            <label
+                                htmlFor="kslp-action-reason"
+                                className="text-xs font-bold"
+                            >
                                 Required reason for lifecycle changes
                             </label>
                             <input
@@ -256,7 +262,10 @@ export default function OperatorKslp({ metrics, licenses, events }: Props) {
                                                                 "reactivate",
                                                             )
                                                         }
-                                                        disabled={actionReason.trim().length < 3}
+                                                        disabled={
+                                                            actionReason.trim()
+                                                                .length < 3
+                                                        }
                                                         className="rounded border px-2 py-1 disabled:cursor-not-allowed disabled:opacity-40"
                                                     >
                                                         <RefreshCw className="inline h-3 w-3" />{" "}
@@ -270,7 +279,10 @@ export default function OperatorKslp({ metrics, licenses, events }: Props) {
                                                                 "revoke",
                                                             )
                                                         }
-                                                        disabled={actionReason.trim().length < 3}
+                                                        disabled={
+                                                            actionReason.trim()
+                                                                .length < 3
+                                                        }
                                                         className="rounded border px-2 py-1 disabled:cursor-not-allowed disabled:opacity-40"
                                                     >
                                                         <Ban className="inline h-3 w-3" />{" "}
@@ -300,10 +312,14 @@ export default function OperatorKslp({ metrics, licenses, events }: Props) {
                                                             : l.plan)
                                                     }
                                                     onChange={(e) =>
-                                                        setPendingPlans((current) => ({
-                                                            ...current,
-                                                            [l.id]: e.target.value,
-                                                        }))
+                                                        setPendingPlans(
+                                                            (current) => ({
+                                                                ...current,
+                                                                [l.id]:
+                                                                    e.target
+                                                                        .value,
+                                                            }),
+                                                        )
                                                     }
                                                     className="rounded border bg-background px-2 py-1"
                                                 >
@@ -319,15 +335,25 @@ export default function OperatorKslp({ metrics, licenses, events }: Props) {
                                                     ))}
                                                 </select>
                                                 <button
-                                                    disabled={actionReason.trim().length < 3}
+                                                    disabled={
+                                                            actionReason.trim()
+                                                                .length < 3
+                                                        }
                                                     onClick={() =>
-                                                        action(l.id, "change_plan", {
-                                                            plan:
-                                                                pendingPlans[l.id] ??
-                                                                (l.plan === "trial"
-                                                                    ? "professional"
-                                                                    : l.plan),
-                                                        })
+                                                        action(
+                                                            l.id,
+                                                            "change_plan",
+                                                            {
+                                                                plan:
+                                                                    pendingPlans[
+                                                                        l.id
+                                                                    ] ??
+                                                                    (l.plan ===
+                                                                    "trial"
+                                                                        ? "professional"
+                                                                        : l.plan),
+                                                            },
+                                                        )
                                                     }
                                                     className="rounded border px-2 py-1 disabled:cursor-not-allowed disabled:opacity-40"
                                                 >
