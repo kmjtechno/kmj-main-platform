@@ -61,6 +61,7 @@ final class PublicProductCatalog
             KmjProductCatalog::DOME_360_SLUG,
             KmjProductCatalog::CINEMA_PLAYER_SLUG,
             KmjProductCatalog::LICENSING_HUB_SLUG,
+            KmjProductCatalog::OMNIDESK_SLUG,
         ];
     }
 
@@ -97,6 +98,7 @@ final class PublicProductCatalog
                 'A roadmap playback product for reliable professional cinema and immersive-system media delivery.',
             ),
             KmjProductCatalog::LICENSING_HUB_SLUG => $this->licensingHub(),
+            KmjProductCatalog::OMNIDESK_SLUG => $this->omniDesk(),
             default => null,
         };
 
@@ -124,7 +126,8 @@ final class PublicProductCatalog
             KmjProductCatalog::FORGE_SLUG,
             KmjProductCatalog::AGENT_SLUG => 'Engineering & Automation',
             KmjProductCatalog::CALIBRATION_SLUG => 'Calibration & Vision Systems',
-            KmjProductCatalog::CONNECT_SLUG => 'Secure Access & Connectivity',
+            KmjProductCatalog::CONNECT_SLUG,
+            KmjProductCatalog::OMNIDESK_SLUG => 'Secure Access & Connectivity',
             KmjProductCatalog::LICENSING_HUB_SLUG => 'Commerce & Licensing',
             KmjProductCatalog::CREATIVE_STUDIO_SLUG,
             KmjProductCatalog::CINEMA_PLATFORM_SLUG,
@@ -320,6 +323,37 @@ final class PublicProductCatalog
     /**
      * @return array<string, mixed>
      */
+    private function omniDesk(): array
+    {
+        return $this->developmentProduct(
+            slug: KmjProductCatalog::OMNIDESK_SLUG,
+            name: KmjProductCatalog::OMNIDESK_NAME,
+            lifecycle: 'pre-alpha',
+            lifecycleLabel: 'Pre-alpha',
+            eyebrow: 'Ultra-fast secure remote access',
+            headline: 'Remote access engineered around direct connectivity, low bandwidth and minimal infrastructure overhead.',
+            summary: 'KMJ OmniDesk is the active next-generation remote-access product under development by KMJ TECHNO. Its architecture prioritizes encrypted direct peer-to-peer sessions, relay only when required, adaptive weak-network behavior, native performance and commercial licensing through the KMJ Main Platform.',
+            status: 'Private repository foundation is active. Customer download, production performance claims and paid access remain disabled until implementation, security, weak-network and release gates are verified.',
+            proof: [
+                [
+                    'title' => 'Direct-first architecture',
+                    'detail' => 'The product contract keeps screen and audio traffic peer-to-peer when connectivity permits, with KMJ relay infrastructure reserved for fallback or policy-required paths.',
+                    'state' => 'repository-verified',
+                ],
+                [
+                    'title' => 'Measured-performance discipline',
+                    'detail' => 'Latency, bandwidth, CPU/GPU overhead, connection time, reconnect behavior and relay utilization are explicit release metrics rather than unverified marketing claims.',
+                    'state' => 'repository-verified',
+                ],
+                [
+                    'title' => 'Main Platform commercial authority',
+                    'detail' => 'Trials, plans, activations and future paid entitlements are designed to remain governed by the KMJ Main Platform instead of hard-coded client unlocks.',
+                    'state' => 'architecture-locked',
+                ],
+            ],
+        );
+    }
+
     private function cloudNexus(): array
     {
         return $this->developmentProduct(
