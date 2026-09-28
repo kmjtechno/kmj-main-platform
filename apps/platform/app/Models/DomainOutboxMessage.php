@@ -4,6 +4,19 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 
+/**
+ * @property string $event_type
+ * @property string $aggregate_type
+ * @property string $aggregate_id
+ * @property string|null $organization_id
+ * @property int $attempts
+ * @property string|null $last_error
+ * @property \Carbon\CarbonImmutable|null $occurred_at
+ * @property \Carbon\CarbonImmutable|null $published_at
+ * @property \Carbon\CarbonImmutable|null $next_attempt_at
+ * @property \Illuminate\Support\Carbon|null $created_at
+ * @property \Illuminate\Support\Carbon|null $updated_at
+ */
 final class DomainOutboxMessage extends Model
 {
     protected $table = 'outbox_messages';
