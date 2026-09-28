@@ -1,45 +1,51 @@
 {
-  "schema": 1,
-  "product": "kmj-desktop-commander",
-  "channel": "public-beta",
-  "default_plan": "free",
-  "billing_enabled": false,
-  "execution_model": "local-first",
-  "entitlement_refresh_seconds": 604800,
-  "plans": {
-    "free": {
-      "label": "Free",
-      "price_enabled": false,
-      "server_profiles": 3,
-      "devices": 1,
-      "manual_operations": "unlimited",
-      "autopilot_runs_per_month": 50,
-      "execution_location": "customer"
+    "schema": 1,
+    "product": "kmj-desktop-commander",
+    "channel": "public-beta",
+    "default_plan": "free",
+    "billing_enabled": false,
+    "execution_model": "local-first",
+    "license_authority": "kmj-main-platform",
+    "entitlement_protocol": "KSLP-v1",
+    "entitlement_verification": "offline-ed25519",
+    "entitlement_refresh_seconds": 604800,
+    "bootstrap_refresh_seconds": 86400,
+    "bootstrap_refresh_jitter_seconds": 21600,
+    "idle_license_heartbeat": false,
+    "plans": {
+        "free": {
+            "label": "Free",
+            "price_enabled": false,
+            "server_profiles": 3,
+            "devices": 1,
+            "manual_operations": "unlimited",
+            "autopilot_runs_per_month": 50,
+            "execution_location": "customer"
+        },
+        "pro": {
+            "label": "Pro",
+            "price_enabled": false,
+            "server_profiles": 25,
+            "devices": 3,
+            "manual_operations": "unlimited",
+            "autopilot_runs_per_month": 2000,
+            "execution_location": "customer"
+        },
+        "team": {
+            "label": "Team",
+            "price_enabled": false,
+            "server_profiles": 100,
+            "devices": 10,
+            "manual_operations": "unlimited",
+            "autopilot_runs_per_month": 10000,
+            "execution_location": "customer"
+        }
     },
-    "pro": {
-      "label": "Pro",
-      "price_enabled": false,
-      "server_profiles": 25,
-      "devices": 3,
-      "manual_operations": "unlimited",
-      "autopilot_runs_per_month": 2000,
-      "execution_location": "customer"
-    },
-    "team": {
-      "label": "Team",
-      "price_enabled": false,
-      "server_profiles": 100,
-      "devices": 10,
-      "manual_operations": "unlimited",
-      "autopilot_runs_per_month": 10000,
-      "execution_location": "customer"
+    "platform_support": {
+        "windows": "full",
+        "linux": "full",
+        "macos": "full",
+        "android": "companion",
+        "ios": "companion"
     }
-  },
-  "platform_support": {
-    "windows": "full",
-    "linux": "full",
-    "macos": "full",
-    "android": "companion",
-    "ios": "companion"
-  }
 }
