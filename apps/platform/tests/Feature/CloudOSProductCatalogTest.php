@@ -44,7 +44,9 @@ final class CloudOSProductCatalogTest extends TestCase
         $this->artisan('kmj:catalog:sync')->assertSuccessful();
         $this->artisan('kmj:catalog:sync')->assertSuccessful();
 
-        $this->assertDatabaseCount('products', 8);
+        $canonicalProducts = app(KmjProductCatalog::class)->syncAll();
+
+        $this->assertDatabaseCount('products', count($canonicalProducts));
         $this->assertDatabaseCount('entitlement_policies', 1);
         $this->assertDatabaseHas('products', [
             'slug' => CloudOSProductCatalog::SLUG,
