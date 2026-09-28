@@ -24,7 +24,7 @@ final class PublicProductHubTest extends TestCase
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->component('welcome')
-                ->where('portfolioCount', 11)
+                ->where('portfolioCount', 12)
                 ->has('products', 4)
                 ->where('products.0.slug', 'kmj-cloudos')
                 ->where('products.0.purchase_enabled', true)
@@ -45,7 +45,7 @@ final class PublicProductHubTest extends TestCase
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->component('products/index')
-                ->has('products', 11)
+                ->has('products', 12)
                 ->where('products.0.slug', 'kmj-cloudos')
                 ->where('products.0.lifecycle', 'active')
                 ->where('products.0.demo.kind', 'cloudos')
@@ -92,7 +92,10 @@ final class PublicProductHubTest extends TestCase
                 ->where('products.9.category', 'Media & Immersive Experience')
                 ->where('products.10.slug', 'kmj-licensing-hub')
                 ->where('products.10.category', 'Commerce & Licensing')
-                ->where('products.10.lifecycle', 'roadmap'));
+                ->where('products.10.lifecycle', 'roadmap')
+                ->where('products.11.slug', 'kmj-desktop-commander')
+                ->where('products.11.lifecycle', 'public-beta')
+                ->where('products.11.purchase_enabled', false));
     }
 
     public function test_cloudos_detail_exposes_simulation_and_commercial_cta_state(): void
@@ -125,6 +128,7 @@ final class PublicProductHubTest extends TestCase
     public function test_development_products_remain_non_commercial_and_without_fake_demo(): void
     {
         foreach ([
+            'kmj-desktop-commander' => 'public-beta',
             'kmj-forge' => 'early-development',
             'kmj-connect' => 'planned',
             'kmj-cloud-nexus' => 'development',
