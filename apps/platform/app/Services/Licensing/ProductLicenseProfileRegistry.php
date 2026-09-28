@@ -28,6 +28,7 @@ final class ProductLicenseProfileRegistry
                 self::CALIBRATION_CAPABILITY,
                 ['sandbox'],
             ),
+            KmjProductCatalog::DESKTOP_COMMANDER_SLUG,
             KmjProductCatalog::FORGE_SLUG,
             KmjProductCatalog::CONNECT_SLUG,
             KmjProductCatalog::CLOUD_NEXUS_SLUG,
