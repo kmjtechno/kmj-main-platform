@@ -64,6 +64,34 @@ final class OmniDeskLicenseContractTest extends TestCase
             '/api/v1/licensing/omnidesk/entitlements/current',
             OmniDeskLicenseContract::CURRENT_ENTITLEMENT_ENDPOINT,
         );
+        self::assertSame(
+            '/api/v1/licensing/omnidesk/activations/{activation_id}/status',
+            OmniDeskLicenseContract::ACTIVATION_STATUS_ENDPOINT,
+        );
+        self::assertSame(
+            '/api/v1/licensing/omnidesk/activations/{activation_id}/deactivate',
+            OmniDeskLicenseContract::DEACTIVATE_ENDPOINT,
+        );
+        self::assertSame(
+            '/api/v1/licensing/omnidesk/activations/{activation_id}/transfer',
+            OmniDeskLicenseContract::TRANSFER_ENDPOINT,
+        );
+    }
+
+    public function test_verification_order_checks_signature_before_authorization_facts(): void
+    {
+        self::assertSame([
+            'parse_strict_schema',
+            'resolve_trusted_kid',
+            'verify_ed25519_signature',
+            'verify_protocol_and_contract_version',
+            'verify_product_binding',
+            'verify_time_bounds',
+            'verify_activation_binding',
+            'reject_replayed_or_older_sequence',
+            'apply_revocation_state',
+            'enforce_capabilities_and_limits',
+        ], OmniDeskLicenseContract::VERIFICATION_ORDER);
     }
 
     public function test_error_contract_contains_security_failures(): void
