@@ -53,7 +53,7 @@ final class PublicProductCatalog
             CloudOSProductCatalog::SLUG,
             KmjProductCatalog::CALIBRATION_SLUG,
             KmjProductCatalog::FORGE_SLUG,
-            KmjProductCatalog::CONNECT_SLUG,
+            KmjProductCatalog::OMNIDESK_SLUG,
             KmjProductCatalog::CLOUD_NEXUS_SLUG,
             KmjProductCatalog::AGENT_SLUG,
             KmjProductCatalog::CREATIVE_STUDIO_SLUG,
@@ -61,7 +61,6 @@ final class PublicProductCatalog
             KmjProductCatalog::DOME_360_SLUG,
             KmjProductCatalog::CINEMA_PLAYER_SLUG,
             KmjProductCatalog::LICENSING_HUB_SLUG,
-            KmjProductCatalog::OMNIDESK_SLUG,
         ];
     }
 
