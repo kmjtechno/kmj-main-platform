@@ -23,6 +23,7 @@ use KMJ\MainPlatform\Entitlements\Services\EntitlementReader;
 use KMJ\MainPlatform\Organizations\Models\Organization;
 use KMJ\MainPlatform\Organizations\Services\OrganizationCapabilityContext;
 use KMJ\MainPlatform\Organizations\Services\OrganizationDirectory;
+use KMJ\MainPlatform\Releases\Models\ReleaseArtifact;
 
 Route::get('/', function (PublicProductCatalog $products) {
     $portfolio = $products->all();
@@ -176,40 +177,40 @@ Route::middleware(['auth', 'verified'])->group(function () {
         $user = $request->user();
         abort_unless($user instanceof User, 401);
 
-        $items = collect($organizations->forUser($user->id))
-            ->map(function (array $organization) use ($entitlements, $releaseAccess, $user): array {
-                $organization['entitlements'] = collect(
-                    $entitlements->forOrganization($organization['id']),
-                )->map(function (array $entitlement) use ($organization, $releaseAccess, $user): array {
-                    $release = $releaseAccess->latestForOrganizationProduct(
-                        $user->id,
-                        $organization['id'],
-                        $entitlement['product_id'],
-                    );
-                    $artifact = $release?->artifact;
+        $items = [];
 
-                    $entitlement['release'] = $release !== null && $artifact !== null
-                        ? [
-                            'id' => (string) $release->getKey(),
-                            'version' => (string) $release->version,
-                            'digest' => (string) $release->artifact_digest,
-                            'filename' => (string) $artifact->filename,
-                            'size_bytes' => $artifact->size_bytes,
-                            'download_url' => route(
-                                'customer.releases.download',
-                                ['release' => $release->getKey()],
-                                false,
-                            ),
-                        ]
-                        : null;
+        foreach ($organizations->forUser($user->id) as $organization) {
+            $presentedEntitlements = [];
 
-                    return $entitlement;
-                })->values()->all();
+            foreach ($entitlements->forOrganization($organization['id']) as $entitlement) {
+                $release = $releaseAccess->latestForOrganizationProduct(
+                    $user->id,
+                    $organization['id'],
+                    $entitlement['product_id'],
+                );
+                $artifact = $release?->artifact;
 
-                return $organization;
-            })
-            ->values()
-            ->all();
+                $entitlement['release'] = $release !== null && $artifact instanceof ReleaseArtifact
+                    ? [
+                        'id' => (string) $release->getKey(),
+                        'version' => $release->version,
+                        'digest' => $release->artifact_digest,
+                        'filename' => $artifact->filename,
+                        'size_bytes' => $artifact->size_bytes,
+                        'download_url' => route(
+                            'customer.releases.download',
+                            ['release' => $release->getKey()],
+                            false,
+                        ),
+                    ]
+                    : null;
+
+                $presentedEntitlements[] = $entitlement;
+            }
+
+            $organization['entitlements'] = $presentedEntitlements;
+            $items[] = $organization;
+        }
 
         return Inertia::render('dashboard', [
             'organizations' => $items,
