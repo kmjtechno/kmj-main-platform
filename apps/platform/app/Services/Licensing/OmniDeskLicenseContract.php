@@ -26,6 +26,12 @@ final class OmniDeskLicenseContract
 
     public const CURRENT_ENTITLEMENT_ENDPOINT = '/api/v1/licensing/omnidesk/entitlements/current';
 
+    public const ACTIVATION_STATUS_ENDPOINT = '/api/v1/licensing/omnidesk/activations/{activation_id}/status';
+
+    public const DEACTIVATE_ENDPOINT = '/api/v1/licensing/omnidesk/activations/{activation_id}/deactivate';
+
+    public const TRANSFER_ENDPOINT = '/api/v1/licensing/omnidesk/activations/{activation_id}/transfer';
+
     public const STATES = [
         'ACTIVE',
         'RENEWAL_DUE',
@@ -67,6 +73,19 @@ final class OmniDeskLicenseContract
         'lease_expires_at',
         'sequence',
         'nonce',
+    ];
+
+    public const VERIFICATION_ORDER = [
+        'parse_strict_schema',
+        'resolve_trusted_kid',
+        'verify_ed25519_signature',
+        'verify_protocol_and_contract_version',
+        'verify_product_binding',
+        'verify_time_bounds',
+        'verify_activation_binding',
+        'reject_replayed_or_older_sequence',
+        'apply_revocation_state',
+        'enforce_capabilities_and_limits',
     ];
 
     public const ERROR_CODES = [
