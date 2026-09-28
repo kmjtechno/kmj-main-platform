@@ -55,7 +55,7 @@ class HandleInertiaRequests extends Middleware
                 'locale' => $locale,
                 'supported' => ['en', 'hi'],
                 'switch_locale' => $switchLocale,
-                'switch_label' => $switchLocale === 'hi' ? 'Hindi' : 'English',
+                'switch_label' => $switchLocale === 'hi' ? 'हिंदी' : 'English',
                 'switch_url' => $switchUrl,
             ],
             'auth' => [
