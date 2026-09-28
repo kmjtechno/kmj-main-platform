@@ -2,9 +2,8 @@
 
 namespace Tests\Feature;
 
-use Tests\TestCase;
-
 use App\Services\Commerce\DesktopCommanderCommercialPolicy;
+use Tests\TestCase;
 
 final class DesktopCommanderBootstrapTest extends TestCase
 {
