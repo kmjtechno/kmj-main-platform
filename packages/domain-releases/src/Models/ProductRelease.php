@@ -6,6 +6,16 @@ use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 
+/**
+ * @property string $product_id
+ * @property string $version
+ * @property string $artifact_digest
+ * @property string|null $provenance_ref
+ * @property string $status
+ * @property \Carbon\CarbonImmutable|null $promoted_at
+ * @property \Carbon\CarbonImmutable|null $revoked_at
+ * @property-read ReleaseArtifact|null $artifact
+ */
 final class ProductRelease extends Model
 {
     use HasUuids;
