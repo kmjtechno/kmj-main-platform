@@ -24,7 +24,7 @@ final class PublicProductHubTest extends TestCase
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->component('welcome')
-                ->where('portfolioCount', 12)
+                ->where('portfolioCount', 11)
                 ->has('products', 4)
                 ->where('products.0.slug', 'kmj-cloudos')
                 ->where('products.0.purchase_enabled', true)
@@ -45,7 +45,7 @@ final class PublicProductHubTest extends TestCase
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->component('products/index')
-                ->has('products', 12)
+                ->has('products', 11)
                 ->where('products.0.slug', 'kmj-cloudos')
                 ->where('products.0.lifecycle', 'active')
                 ->where('products.0.demo.kind', 'cloudos')
@@ -58,8 +58,8 @@ final class PublicProductHubTest extends TestCase
                 ->where('products.2.lifecycle', 'early-development')
                 ->where('products.2.demo.kind', 'none')
                 ->where('products.2.demo.simulation', false)
-                ->where('products.3.slug', 'kmj-connect')
-                ->where('products.3.lifecycle', 'planned')
+                ->where('products.3.slug', 'kmj-omnidesk')
+                ->where('products.3.lifecycle', 'pre-alpha')
                 ->where('products.3.demo.kind', 'none')
                 ->where('products.3.demo.simulation', false)
                 ->where('products.4.slug', 'kmj-cloud-nexus')
@@ -92,11 +92,7 @@ final class PublicProductHubTest extends TestCase
                 ->where('products.9.category', 'Media & Immersive Experience')
                 ->where('products.10.slug', 'kmj-licensing-hub')
                 ->where('products.10.category', 'Commerce & Licensing')
-                ->where('products.10.lifecycle', 'roadmap')
-                ->where('products.11.slug', 'kmj-omnidesk')
-                ->where('products.11.category', 'Secure Access & Connectivity')
-                ->where('products.11.lifecycle', 'pre-alpha')
-                ->where('products.11.purchase_enabled', false));
+                ->where('products.10.lifecycle', 'roadmap'));
     }
 
     public function test_cloudos_detail_exposes_simulation_and_commercial_cta_state(): void
@@ -130,7 +126,7 @@ final class PublicProductHubTest extends TestCase
     {
         foreach ([
             'kmj-forge' => 'early-development',
-            'kmj-connect' => 'planned',
+            'kmj-omnidesk' => 'pre-alpha',
             'kmj-cloud-nexus' => 'development',
             'kmj-agent' => 'development',
             'kmj-creative-studio' => 'roadmap',
@@ -138,7 +134,6 @@ final class PublicProductHubTest extends TestCase
             'kmj-360-dome' => 'roadmap',
             'kmj-cinema-player' => 'roadmap',
             'kmj-licensing-hub' => 'roadmap',
-            'kmj-omnidesk' => 'pre-alpha',
         ] as $slug => $lifecycle) {
             $this->get('/products/'.$slug)
                 ->assertOk()
