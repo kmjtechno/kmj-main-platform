@@ -33,6 +33,7 @@ final class AdminProductManager
             $attributes['status'] ??= 'sandbox';
             $attributes['lifecycle'] ??= 'planned';
             $attributes['sort_order'] ??= ((int) Product::query()->max('sort_order')) + 10;
+
             return Product::query()->create($this->normalized($attributes));
         });
     }
@@ -41,6 +42,7 @@ final class AdminProductManager
     {
         $product->fill($this->normalized($attributes));
         $product->save();
+
         return $product->refresh();
     }
 
@@ -48,7 +50,9 @@ final class AdminProductManager
     {
         DB::transaction(function () use ($ids): void {
             $products = Product::query()->whereIn('id', $ids)->get()->keyBy(fn (Product $p) => (string) $p->getKey());
-            if ($products->count() !== count($ids)) throw new DomainException('Product ordering contains unknown products.');
+            if ($products->count() !== count($ids)) {
+                throw new DomainException('Product ordering contains unknown products.');
+            }
             foreach (array_values($ids) as $index => $id) {
                 $products->get($id)->forceFill(['sort_order' => ($index + 1) * 10])->save();
             }
@@ -61,8 +65,11 @@ final class AdminProductManager
             throw new DomainException('Unsupported product lifecycle.');
         }
         foreach (['is_public', 'purchase_enabled', 'licensing_enabled'] as $key) {
-            if (array_key_exists($key, $attributes)) $attributes[$key] = (bool) $attributes[$key];
+            if (array_key_exists($key, $attributes)) {
+                $attributes[$key] = (bool) $attributes[$key];
+            }
         }
+
         return $attributes;
     }
 }

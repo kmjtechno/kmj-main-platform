@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\DB;
 final class KslpKeyRegistry
 {
     public const PURPOSES = ['license', 'release', 'evidence'];
+
     public const PUBLISHABLE_STATUSES = ['active', 'retiring'];
 
     public function publish(

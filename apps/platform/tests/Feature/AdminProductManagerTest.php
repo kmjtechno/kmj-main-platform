@@ -5,7 +5,6 @@ namespace Tests\Feature;
 use App\Services\Commerce\AdminProductManager;
 use DomainException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use KMJ\MainPlatform\Catalog\Models\Product;
 use Tests\TestCase;
 
 final class AdminProductManagerTest extends TestCase
@@ -36,8 +35,8 @@ final class AdminProductManagerTest extends TestCase
     public function test_reorder_is_deterministic_and_rejects_unknown_products(): void
     {
         $manager = app(AdminProductManager::class);
-        $a = $manager->create(['slug'=>'a-product','name'=>'A Product','status'=>'sandbox','lifecycle'=>'research']);
-        $b = $manager->create(['slug'=>'b-product','name'=>'B Product','status'=>'sandbox','lifecycle'=>'research']);
+        $a = $manager->create(['slug' => 'a-product', 'name' => 'A Product', 'status' => 'sandbox', 'lifecycle' => 'research']);
+        $b = $manager->create(['slug' => 'b-product', 'name' => 'B Product', 'status' => 'sandbox', 'lifecycle' => 'research']);
         $manager->reorder([(string) $b->getKey(), (string) $a->getKey()]);
         self::assertSame(10, $b->refresh()->sort_order);
         self::assertSame(20, $a->refresh()->sort_order);

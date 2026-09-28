@@ -166,7 +166,7 @@ foreach ($publicPages as $path => $page) {
 
 Route::get('sitemap.xml', function (PublicProductCatalog $products) use ($publicPages) {
     $base = rtrim((string) config('app.url'), '/');
-    $paths = collect(['/','/products','/trust'])
+    $paths = collect(['/', '/products', '/trust'])
         ->merge(array_map(fn (string $path): string => '/'.$path, array_keys($publicPages)))
         ->merge(collect($products->all())->map(fn (array $product): string => '/products/'.$product['slug']))
         ->unique()

@@ -1,5 +1,5 @@
-import { Head, router, useForm } from "@inertiajs/react";
-import { useState } from "react";
+import { Head, router, useForm } from '@inertiajs/react';
+import { useState } from 'react';
 import {
     KeyRound,
     ShieldCheck,
@@ -7,7 +7,7 @@ import {
     RefreshCw,
     Ban,
     Activity,
-} from "lucide-react";
+} from 'lucide-react';
 
 type License = {
     id: string;
@@ -44,20 +44,22 @@ type Props = {
 };
 
 export default function OperatorKslp({ metrics, licenses, events }: Props) {
-    const [actionReason, setActionReason] = useState("");
-    const [pendingPlans, setPendingPlans] = useState<Record<string, string>>({});
+    const [actionReason, setActionReason] = useState('');
+    const [pendingPlans, setPendingPlans] = useState<Record<string, string>>(
+        {},
+    );
     const issue = useForm({
-        customer_id: "",
-        plan: "trial",
-        reason: "Commercial license issued by platform owner",
+        customer_id: '',
+        plan: 'trial',
+        reason: 'Commercial license issued by platform owner',
     });
     const cards = [
-        ["Licenses", metrics.licenses],
-        ["Active", metrics.active],
-        ["Trials", metrics.trials],
-        ["Activations", metrics.activations],
-        ["Revoked", metrics.revoked],
-        ["Issuer subscriptions", metrics.issuerSubscriptions],
+        ['Licenses', metrics.licenses],
+        ['Active', metrics.active],
+        ['Trials', metrics.trials],
+        ['Activations', metrics.activations],
+        ['Revoked', metrics.revoked],
+        ['Issuer subscriptions', metrics.issuerSubscriptions],
     ] as const;
     const action = (
         id: string,
@@ -72,7 +74,7 @@ export default function OperatorKslp({ metrics, licenses, events }: Props) {
             { action: a, reason, ...extra },
             {
                 preserveScroll: true,
-                onSuccess: () => setActionReason(""),
+                onSuccess: () => setActionReason(''),
             },
         );
     };
@@ -80,19 +82,19 @@ export default function OperatorKslp({ metrics, licenses, events }: Props) {
         <>
             <Head title="KSLP License Control Plane" />
             <div className="flex h-full flex-1 flex-col gap-6 overflow-x-auto p-4 sm:p-6">
-                <section className="rounded-2xl border bg-card p-6">
+                <section className="bg-card rounded-2xl border p-6">
                     <div className="flex gap-4">
                         <span className="grid h-11 w-11 place-items-center rounded-xl bg-red-500/10 text-red-500">
                             <ShieldCheck className="h-5 w-5" />
                         </span>
                         <div>
-                            <div className="text-xs font-bold uppercase tracking-wider text-red-500">
+                            <div className="text-xs font-bold tracking-wider text-red-500 uppercase">
                                 KMJ Main Platform authority
                             </div>
                             <h1 className="mt-1 text-2xl font-black">
                                 KSLP Commercial License Control Plane
                             </h1>
-                            <p className="mt-2 max-w-3xl text-sm text-muted-foreground">
+                            <p className="text-muted-foreground mt-2 max-w-3xl text-sm">
                                 CloudOS is a licensed product. Main Platform
                                 remains the commercial authority for issue,
                                 lifecycle, server activations and audit
@@ -103,62 +105,59 @@ export default function OperatorKslp({ metrics, licenses, events }: Props) {
                 </section>
                 <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-6">
                     {cards.map(([l, v]) => (
-                        <div key={l} className="rounded-xl border bg-card p-4">
-                            <div className="text-xs text-muted-foreground">
+                        <div key={l} className="bg-card rounded-xl border p-4">
+                            <div className="text-muted-foreground text-xs">
                                 {l}
                             </div>
                             <div className="mt-2 text-2xl font-black">{v}</div>
                         </div>
                     ))}
                 </section>
-                <section className="rounded-2xl border bg-card p-5">
+                <section className="bg-card rounded-2xl border p-5">
                     <h2 className="font-bold">Issue KMJ CloudOS license</h2>
                     <form
                         className="mt-4 grid gap-3 lg:grid-cols-[1.2fr_.7fr_1.5fr_auto]"
                         onSubmit={(e) => {
                             e.preventDefault();
-                            issue.post("/operator/kslp/licenses", {
+                            issue.post('/operator/kslp/licenses', {
                                 preserveScroll: true,
-                                onSuccess: () => issue.reset("customer_id"),
+                                onSuccess: () => issue.reset('customer_id'),
                             });
                         }}
                     >
                         <input
-                            className="h-10 rounded-lg border bg-background px-3 text-sm"
+                            className="bg-background h-10 rounded-lg border px-3 text-sm"
                             placeholder="Customer / organization ID"
                             value={issue.data.customer_id}
                             onChange={(e) =>
-                                issue.setData("customer_id", e.target.value)
+                                issue.setData('customer_id', e.target.value)
                             }
                             required
                         />
                         <select
-                            className="h-10 rounded-lg border bg-background px-3 text-sm"
+                            className="bg-background h-10 rounded-lg border px-3 text-sm"
                             value={issue.data.plan}
                             onChange={(e) =>
-                                issue.setData("plan", e.target.value)
+                                issue.setData('plan', e.target.value)
                             }
                         >
                             {[
-                                "trial",
-                                "professional",
-                                "business",
-                                "enterprise",
-                                "custom_oem",
+                                'trial',
+                                'professional',
+                                'business',
+                                'enterprise',
+                                'custom_oem',
                             ].map((p) => (
-                                <option
-                                                            key={p}
-                                                            value={p}
-                                                        >
+                                <option key={p} value={p}>
                                     {p}
                                 </option>
                             ))}
                         </select>
                         <input
-                            className="h-10 rounded-lg border bg-background px-3 text-sm"
+                            className="bg-background h-10 rounded-lg border px-3 text-sm"
                             value={issue.data.reason}
                             onChange={(e) =>
-                                issue.setData("reason", e.target.value)
+                                issue.setData('reason', e.target.value)
                             }
                             required
                         />
@@ -176,11 +175,11 @@ export default function OperatorKslp({ metrics, licenses, events }: Props) {
                         </p>
                     )}
                 </section>
-                <section className="rounded-2xl border bg-card p-5">
+                <section className="bg-card rounded-2xl border p-5">
                     <div className="flex items-center justify-between">
                         <div>
                             <h2 className="font-bold">Commercial licenses</h2>
-                            <p className="mt-1 text-xs text-muted-foreground">
+                            <p className="text-muted-foreground mt-1 text-xs">
                                 Lifecycle mutations require platform-owner
                                 access and recent password confirmation.
                             </p>
@@ -198,12 +197,14 @@ export default function OperatorKslp({ metrics, licenses, events }: Props) {
                             <input
                                 id="kslp-action-reason"
                                 value={actionReason}
-                                onChange={(e) => setActionReason(e.target.value)}
+                                onChange={(e) =>
+                                    setActionReason(e.target.value)
+                                }
                                 placeholder="Enter the specific approved reason before revoke, renew, reactivate, or plan change"
-                                className="mt-2 h-10 w-full rounded-lg border bg-background px-3 text-sm"
+                                className="bg-background mt-2 h-10 w-full rounded-lg border px-3 text-sm"
                             />
                         </div>
-                        <div className="self-end text-xs text-muted-foreground">
+                        <div className="text-muted-foreground self-end text-xs">
                             Minimum 3 characters · recorded in audit trail
                         </div>
                     </div>
@@ -212,13 +213,13 @@ export default function OperatorKslp({ metrics, licenses, events }: Props) {
                             <thead className="text-muted-foreground">
                                 <tr>
                                     {[
-                                        "License / customer",
-                                        "Product / plan",
-                                        "State",
-                                        "Sequence",
-                                        "Expiry",
-                                        "Activations",
-                                        "Actions",
+                                        'License / customer',
+                                        'Product / plan',
+                                        'State',
+                                        'Sequence',
+                                        'Expiry',
+                                        'Activations',
+                                        'Actions',
                                     ].map((x) => (
                                         <th key={x} className="border-b p-3">
                                             {x}
@@ -236,7 +237,7 @@ export default function OperatorKslp({ metrics, licenses, events }: Props) {
                                             <div className="font-mono font-semibold">
                                                 {l.id}
                                             </div>
-                                            <div className="mt-1 text-muted-foreground">
+                                            <div className="text-muted-foreground mt-1">
                                                 {l.customer_id}
                                             </div>
                                         </td>
@@ -254,12 +255,12 @@ export default function OperatorKslp({ metrics, licenses, events }: Props) {
                                         </td>
                                         <td className="p-3">
                                             <div className="flex flex-wrap gap-2">
-                                                {l.state === "REVOKED" ? (
+                                                {l.state === 'REVOKED' ? (
                                                     <button
                                                         onClick={() =>
                                                             action(
                                                                 l.id,
-                                                                "reactivate",
+                                                                'reactivate',
                                                             )
                                                         }
                                                         disabled={
@@ -268,7 +269,7 @@ export default function OperatorKslp({ metrics, licenses, events }: Props) {
                                                         }
                                                         className="rounded border px-2 py-1 disabled:cursor-not-allowed disabled:opacity-40"
                                                     >
-                                                        <RefreshCw className="inline h-3 w-3" />{" "}
+                                                        <RefreshCw className="inline h-3 w-3" />{' '}
                                                         Reactivate
                                                     </button>
                                                 ) : (
@@ -276,7 +277,7 @@ export default function OperatorKslp({ metrics, licenses, events }: Props) {
                                                         onClick={() =>
                                                             action(
                                                                 l.id,
-                                                                "revoke",
+                                                                'revoke',
                                                             )
                                                         }
                                                         disabled={
@@ -285,7 +286,7 @@ export default function OperatorKslp({ metrics, licenses, events }: Props) {
                                                         }
                                                         className="rounded border px-2 py-1 disabled:cursor-not-allowed disabled:opacity-40"
                                                     >
-                                                        <Ban className="inline h-3 w-3" />{" "}
+                                                        <Ban className="inline h-3 w-3" />{' '}
                                                         Revoke
                                                     </button>
                                                 )}
@@ -295,7 +296,7 @@ export default function OperatorKslp({ metrics, licenses, events }: Props) {
                                                             .length < 3
                                                     }
                                                     onClick={() =>
-                                                        action(l.id, "renew", {
+                                                        action(l.id, 'renew', {
                                                             days: 365,
                                                         })
                                                     }
@@ -307,50 +308,52 @@ export default function OperatorKslp({ metrics, licenses, events }: Props) {
                                                     aria-label="Select new plan"
                                                     value={
                                                         pendingPlans[l.id] ??
-                                                        (l.plan === "trial"
-                                                            ? "professional"
+                                                        (l.plan === 'trial'
+                                                            ? 'professional'
                                                             : l.plan)
                                                     }
                                                     onChange={(e) =>
                                                         setPendingPlans(
                                                             (current) => ({
                                                                 ...current,
-                                                                [l.id]:
-                                                                    e.target
-                                                                        .value,
+                                                                [l.id]: e.target
+                                                                    .value,
                                                             }),
                                                         )
                                                     }
-                                                    className="rounded border bg-background px-2 py-1"
+                                                    className="bg-background rounded border px-2 py-1"
                                                 >
                                                     {[
-                                                        "professional",
-                                                        "business",
-                                                        "enterprise",
-                                                        "custom_oem",
+                                                        'professional',
+                                                        'business',
+                                                        'enterprise',
+                                                        'custom_oem',
                                                     ].map((p) => (
-                                                        <option key={p} value={p}>
+                                                        <option
+                                                            key={p}
+                                                            value={p}
+                                                        >
                                                             {p}
                                                         </option>
                                                     ))}
                                                 </select>
                                                 <button
                                                     disabled={
-                                                            actionReason.trim()
-                                                                .length < 3
-                                                        }
+                                                        actionReason.trim()
+                                                            .length < 3
+                                                    }
                                                     onClick={() =>
                                                         action(
                                                             l.id,
-                                                            "change_plan",
+                                                            'change_plan',
                                                             {
                                                                 plan:
                                                                     pendingPlans[
                                                                         l.id
                                                                     ] ??
                                                                     (l.plan ===
-                                                                    "trial"
-                                                                        ? "professional"
+                                                                    'trial'
+                                                                        ? 'professional'
                                                                         : l.plan),
                                                             },
                                                         )
@@ -367,7 +370,7 @@ export default function OperatorKslp({ metrics, licenses, events }: Props) {
                         </table>
                     </div>
                 </section>
-                <section className="rounded-2xl border bg-card p-5">
+                <section className="bg-card rounded-2xl border p-5">
                     <div className="flex items-center gap-2">
                         <Activity className="h-4 w-4 text-red-500" />
                         <h2 className="font-bold">
@@ -386,7 +389,7 @@ export default function OperatorKslp({ metrics, licenses, events }: Props) {
                                     {e.license_id}
                                 </span>
                                 <span className="text-muted-foreground">
-                                    {e.reason ?? "—"}
+                                    {e.reason ?? '—'}
                                 </span>
                             </div>
                         ))}
