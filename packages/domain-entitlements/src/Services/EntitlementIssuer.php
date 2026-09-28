@@ -46,18 +46,31 @@ final class EntitlementIssuer
             $this->assertIdempotencyMatches($entitlement, $organizationId, $policy);
 
             if ($entitlement->wasRecentlyCreated) {
+                $occurredAt = now();
+                $payload = [
+                    'product_id' => $policy->product_id,
+                    'policy_id' => $policy->getKey(),
+                    'capability' => $policy->capability,
+                    'status' => 'active',
+                ];
+
                 EntitlementLedgerEntry::query()->create([
                     'entitlement_id' => $entitlement->getKey(),
                     'organization_id' => $organizationId,
                     'event_type' => 'entitlement.issued',
-                    'payload' => [
-                        'product_id' => $policy->product_id,
-                        'policy_id' => $policy->getKey(),
-                        'capability' => $policy->capability,
-                        'status' => 'active',
-                    ],
-                    'occurred_at' => now(),
+                    'payload' => $payload,
+                    'occurred_at' => $occurredAt,
                 ]);
+
+                $this->events->recordDomainEvent(
+                    'entitlement.issued',
+                    'entitlement',
+                    (string) $entitlement->getKey(),
+                    $payload,
+                    $organizationId,
+                    sprintf('entitlement:%s:issued', $entitlement->getKey()),
+                    $occurredAt,
+                );
             }
 
             return $entitlement;
