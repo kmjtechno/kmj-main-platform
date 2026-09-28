@@ -86,6 +86,14 @@ export const deliveryMilestones: DeliveryMilestone[] = [
         evidence: 'PR #74',
     },
     {
+        id: 'desktop-commander-commercial-control-plane',
+        title: 'Desktop Commander commercial control plane',
+        state: 'active',
+        detail: 'Main Platform-authoritative local-first licensing with cacheable bootstrap, seven-day signed entitlement cadence, offline Ed25519 verification contract, refresh jitter and no idle licensing heartbeat',
+        evidence:
+            'PR #241 Commander commercial bootstrap + Commander offline KSLP-v1 verifier under exact-head CI',
+    },
+    {
         id: 'license-lifecycle',
         title: 'License lifecycle',
         state: 'verified',
@@ -329,5 +337,5 @@ export const deliveryProgress = Math.round(
 export const deliveryProgressMeta = {
     label: 'Revenue-capable working phase',
     note: 'Evidence-based delivery milestones, not total product completion.',
-    refreshed: '2026-09-26',
+    refreshed: '2026-09-28',
 } as const;
