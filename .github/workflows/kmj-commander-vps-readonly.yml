@@ -21,7 +21,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           repository: kmjtechno/kmj-desktop-commander
-          ref: 13b896511c0346af8a347c8673c0acf019cd1ed3
+          ref: 239b38c08d4e354ba592b4380378ee5632cd3b42
           path: .kmj-desktop-commander
           persist-credentials: false
 
