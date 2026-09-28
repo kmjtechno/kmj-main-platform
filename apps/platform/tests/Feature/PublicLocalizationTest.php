@@ -39,6 +39,6 @@ final class PublicLocalizationTest extends TestCase
                 ->component('products/index')
                 ->where('localization.locale', 'en')
                 ->where('localization.switch_locale', 'hi')
-                ->where('localization.switch_label', 'हिंदी'));
+                ->where('localization.switch_label', 'Hindi'));
     }
 }
