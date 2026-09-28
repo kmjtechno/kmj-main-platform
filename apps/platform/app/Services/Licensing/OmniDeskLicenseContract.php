@@ -18,6 +18,45 @@ final class OmniDeskLicenseContract
 
     public const SIGNING_ALGORITHM = 'Ed25519';
 
+    /**
+     * Main Platform's complete OmniDesk integration scope.
+     *
+     * @var list<string>
+     */
+    public const MAIN_PLATFORM_SCOPE = [
+        'billing',
+        'plans',
+        'subscriptions',
+        'commercial_reconciliation',
+        'entitlements',
+        'license_issuance',
+        'device_activation_licensing',
+        'lease_renewal',
+        'revocation',
+        'commercial_audit',
+        'signing_key_custody',
+    ];
+
+    /**
+     * OmniDesk runtime/data-plane responsibilities that must never move into Main Platform.
+     *
+     * @var list<string>
+     */
+    public const FORBIDDEN_RUNTIME_SCOPE = [
+        'remote_session_transport',
+        'p2p_connectivity',
+        'session_signaling',
+        'relay_data_plane',
+        'screen_or_video_streaming',
+        'audio_streaming',
+        'remote_input_transport',
+        'clipboard_transport',
+        'file_transfer_data_plane',
+        'media_encoding_or_decoding',
+        'nat_traversal_runtime',
+        'omnidesk_device_runtime',
+    ];
+
     public const KEYS_ENDPOINT = '/api/v1/licensing/keys';
 
     public const ACTIVATIONS_ENDPOINT = '/api/v1/licensing/omnidesk/activations';
