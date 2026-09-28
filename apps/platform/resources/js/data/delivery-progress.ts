@@ -309,6 +309,14 @@ export const deliveryMilestones: DeliveryMilestone[] = [
             'Main Platform PR #190 merged + KMJ CloudOS adapter PR #4 merged after 6/6 verifier tests + KMJ Calibration Pro adapter PR #9 merged after Debug 7/7 and Release 7/7 tests',
     },
     {
+        id: 'omnidesk-licensing-contract',
+        title: 'KMJ OmniDesk licensing contract',
+        state: 'active',
+        detail: 'Dedicated omnidesk.remote_access authority, KSLP-v1 identity, signed-entitlement claims, device activation, renewable lease, offline grace, revocation and versioned API boundaries are contract-locked while production Ed25519 signing remains KMS/HSM-gated',
+        evidence:
+            'PR #246 contract + ProductLicenseProfileRegistry dedicated capability + OmniDeskLicenseContractTest; production signer intentionally not enabled',
+    },
+    {
         id: 'production-hardening',
         title: 'Production hardening',
         state: 'verified',
