@@ -23,17 +23,21 @@ final class KmjProductCatalogTest extends TestCase
         foreach ([
             KmjProductCatalog::CLOUDOS_SLUG,
             KmjProductCatalog::CALIBRATION_SLUG,
+            KmjProductCatalog::DESKTOP_COMMANDER_SLUG,
             KmjProductCatalog::FORGE_SLUG,
             KmjProductCatalog::CONNECT_SLUG,
             KmjProductCatalog::CLOUD_NEXUS_SLUG,
             KmjProductCatalog::AGENT_SLUG,
             KmjProductCatalog::CREATIVE_STUDIO_SLUG,
             KmjProductCatalog::CINEMA_PLATFORM_SLUG,
+            KmjProductCatalog::DOME_360_SLUG,
+            KmjProductCatalog::CINEMA_PLAYER_SLUG,
+            KmjProductCatalog::LICENSING_HUB_SLUG,
         ] as $slug) {
             self::assertSame($first[$slug]->getKey(), $second[$slug]->getKey());
         }
 
-        $this->assertDatabaseCount('products', 8);
+        $this->assertDatabaseCount('products', 12);
         $this->assertDatabaseHas('products', [
             'slug' => CloudOSProductCatalog::SLUG,
             'name' => CloudOSProductCatalog::NAME,
@@ -42,12 +46,16 @@ final class KmjProductCatalogTest extends TestCase
 
         foreach ([
             KmjProductCatalog::CALIBRATION_SLUG => KmjProductCatalog::CALIBRATION_NAME,
+            KmjProductCatalog::DESKTOP_COMMANDER_SLUG => KmjProductCatalog::DESKTOP_COMMANDER_NAME,
             KmjProductCatalog::FORGE_SLUG => KmjProductCatalog::FORGE_NAME,
             KmjProductCatalog::CONNECT_SLUG => KmjProductCatalog::CONNECT_NAME,
             KmjProductCatalog::CLOUD_NEXUS_SLUG => KmjProductCatalog::CLOUD_NEXUS_NAME,
             KmjProductCatalog::AGENT_SLUG => KmjProductCatalog::AGENT_NAME,
             KmjProductCatalog::CREATIVE_STUDIO_SLUG => KmjProductCatalog::CREATIVE_STUDIO_NAME,
             KmjProductCatalog::CINEMA_PLATFORM_SLUG => KmjProductCatalog::CINEMA_PLATFORM_NAME,
+            KmjProductCatalog::DOME_360_SLUG => KmjProductCatalog::DOME_360_NAME,
+            KmjProductCatalog::CINEMA_PLAYER_SLUG => KmjProductCatalog::CINEMA_PLAYER_NAME,
+            KmjProductCatalog::LICENSING_HUB_SLUG => KmjProductCatalog::LICENSING_HUB_NAME,
         ] as $slug => $name) {
             $this->assertDatabaseHas('products', [
                 'slug' => $slug,
