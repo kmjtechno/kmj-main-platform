@@ -1,0 +1,28 @@
+name: Integrate main into PR240 safely
+
+on:
+  push:
+    branches:
+      - fix/pr240-main-integration
+    paths:
+      - .github/workflows/pr240-integrate-main.yml
+
+permissions:
+  contents: write
+
+jobs:
+  integrate:
+    runs-on: [self-hosted, linux, x64, kmj-main-platform-ci]
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Merge current main with conflict-hunk preference for staging
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git merge --no-edit --no-ff -Xours origin/main
+          git push origin HEAD:fix/pr240-main-integration
