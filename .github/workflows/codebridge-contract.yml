@@ -55,7 +55,7 @@ jobs:
 
   concurrency-database:
     name: CodeBridge concurrency (${{ matrix.database }})
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux, x64, kmj-main-platform-ci]
     timeout-minutes: 10
     strategy:
       fail-fast: false
@@ -85,13 +85,12 @@ jobs:
             for i in {1..30}; do docker exec codebridge-db pg_isready -U postgres -d codebridge && break; sleep 2; done
             docker exec codebridge-db pg_isready -U postgres -d codebridge
           fi
-      - name: Install PHP database drivers and verify concurrency runtime
+      - name: Verify PHP database drivers and concurrency runtime
         run: |
           set -euo pipefail
-          sudo apt-get update
-          sudo apt-get install -y php-mysql php-pgsql
           php -m | grep -E 'pdo_mysql|pdo_pgsql'
           php -r 'exit(function_exists("pcntl_fork") ? 0 : 1);'
+          docker version
       - name: Select isolated database
         run: |
           set -euo pipefail
