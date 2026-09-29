@@ -1,0 +1,30 @@
+name: Preserve current main ancestry for PR240
+
+on:
+  push:
+    branches:
+      - fix/pr240-main-ancestry
+    paths:
+      - .github/workflows/pr240-main-ancestry.yml
+
+permissions:
+  contents: write
+
+jobs:
+  integrate:
+    runs-on: [self-hosted, linux, x64, kmj-main-platform-ci]
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Merge current main preserving repaired staging conflict hunks
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git fetch origin main
+          test "$(git rev-parse origin/main)" = "2a59c3e5225d57cc7a2cecccc846e0c12b6267c7"
+          git merge --no-edit --no-ff -Xours origin/main
+          git push origin HEAD:fix/pr240-main-ancestry
