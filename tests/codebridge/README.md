@@ -67,3 +67,12 @@ activation-proof test reproduces the previous SodiumException and now passes fiv
 signature cases with a stub database; it does not replace Laravel transaction tests.
 Missing contract-file reads return unavailable. These changes do not disable any
 static-analysis rules or regenerate trusted contract checksums.
+
+## User working rule — 2026-09-29
+
+Continue dependency-ready CodeBridge engineering work during active sessions without
+repeated requests to continue. Verify each change, inspect exact-head CI, and merge
+only after required gates pass. Stop only for an actual access/configuration blocker
+or an action requiring authorization not already supplied. Report the concrete
+blocker and preserve completed work. Do not claim background work outside active
+execution, zero resource usage, or a complete live product without evidence.
