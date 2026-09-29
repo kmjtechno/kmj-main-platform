@@ -1,5 +1,5 @@
-import { Link } from '@inertiajs/react';
-import { Fragment, useMemo, useState } from 'react';
+import { Link } from "@inertiajs/react";
+import { Fragment, useMemo, useState } from "react";
 import {
     ArrowRight,
     CheckCircle2,
@@ -7,19 +7,19 @@ import {
     Search,
     ServerCog,
     ShieldCheck,
-} from 'lucide-react';
-import PublicSeo from '@/components/public-seo';
-import PublicSiteFooter from '@/components/public-site-footer';
-import PublicSiteHeader from '@/components/public-site-header';
-import ProductVisual from '@/components/public/product-visual';
+} from "lucide-react";
+import PublicSeo from "@/components/public-seo";
+import PublicSiteFooter from "@/components/public-site-footer";
+import PublicSiteHeader from "@/components/public-site-header";
+import ProductVisual from "@/components/public/product-visual";
 
 const categoryOrder = [
-    'Platform & Infrastructure',
-    'Engineering & Automation',
-    'Calibration & Vision Systems',
-    'Secure Access & Connectivity',
-    'Commerce & Licensing',
-    'Media & Immersive Experience',
+    "Platform & Infrastructure",
+    "Engineering & Automation",
+    "Calibration & Vision Systems",
+    "Secure Access & Connectivity",
+    "Commerce & Licensing",
+    "Media & Immersive Experience",
 ] as const;
 
 const categoryRank = new Map<string, number>(
@@ -27,18 +27,18 @@ const categoryRank = new Map<string, number>(
 );
 
 const categoryDescriptions: Record<string, string> = {
-    'Platform & Infrastructure':
-        'Governed cloud and platform foundations for KMJ products and operations.',
-    'Engineering & Automation':
-        'Autonomous engineering systems for building, testing and operating software.',
-    'Calibration & Vision Systems':
-        'Projection, camera and spatial-calibration technology for immersive environments.',
-    'Secure Access & Connectivity':
-        'Governed remote access and secure product connectivity.',
-    'Commerce & Licensing':
-        'Software licensing, subscriptions, entitlements and governed digital-product access.',
-    'Media & Immersive Experience':
-        'Cinema, dome, playback and creative systems for immersive venues and media workflows.',
+    "Platform & Infrastructure":
+        "Governed cloud and platform foundations for KMJ products and operations.",
+    "Engineering & Automation":
+        "Autonomous engineering systems for building, testing and operating software.",
+    "Calibration & Vision Systems":
+        "Projection, camera and spatial-calibration technology for immersive environments.",
+    "Secure Access & Connectivity":
+        "Governed remote access and secure product connectivity.",
+    "Commerce & Licensing":
+        "Software licensing, subscriptions, entitlements and governed digital-product access.",
+    "Media & Immersive Experience":
+        "Cinema, dome, playback and creative systems for immersive venues and media workflows.",
 };
 
 type Product = {
@@ -66,20 +66,21 @@ type Product = {
 };
 
 export default function ProductsIndex({ products }: { products: Product[] }) {
-    const [query, setQuery] = useState('');
-    const [lifecycle, setLifecycle] = useState('all');
+    const [query, setQuery] = useState("");
+    const [lifecycle, setLifecycle] = useState("all");
     const activeCount = products.filter(
         (product) => product.purchase_enabled,
     ).length;
-    const categoryCount = new Set(products.map((product) => product.category)).size;
-    const lifecycleOptions = ['Available', 'Preview', 'Research', 'Planned'];
+    const categoryCount = new Set(products.map((product) => product.category))
+        .size;
+    const lifecycleOptions = ["Available", "Preview", "Research", "Planned"];
     const filteredProducts = useMemo(() => {
         const normalizedQuery = query.trim().toLowerCase();
 
         return products
             .filter((product) => {
                 const matchesLifecycle =
-                    lifecycle === 'all' ||
+                    lifecycle === "all" ||
                     product.lifecycle_label === lifecycle;
                 const haystack = [
                     product.name,
@@ -87,12 +88,12 @@ export default function ProductsIndex({ products }: { products: Product[] }) {
                     product.headline,
                     product.summary,
                 ]
-                    .join(' ')
+                    .join(" ")
                     .toLowerCase();
 
                 return (
                     matchesLifecycle &&
-                    (normalizedQuery === '' ||
+                    (normalizedQuery === "" ||
                         haystack.includes(normalizedQuery))
                 );
             })
@@ -113,25 +114,25 @@ export default function ProductsIndex({ products }: { products: Product[] }) {
                 path="/products"
                 structuredData={[
                     {
-                        '@context': 'https://schema.org',
-                        '@type': 'CollectionPage',
-                        name: 'KMJ TECHNO Products',
+                        "@context": "https://schema.org",
+                        "@type": "CollectionPage",
+                        name: "KMJ TECHNO Products",
                     },
                     {
-                        '@context': 'https://schema.org',
-                        '@type': 'BreadcrumbList',
+                        "@context": "https://schema.org",
+                        "@type": "BreadcrumbList",
                         itemListElement: [
                             {
-                                '@type': 'ListItem',
+                                "@type": "ListItem",
                                 position: 1,
-                                name: 'Home',
-                                item: 'https://kmjtechno.com/',
+                                name: "Home",
+                                item: "https://kmjtechno.com/",
                             },
                             {
-                                '@type': 'ListItem',
+                                "@type": "ListItem",
                                 position: 2,
-                                name: 'Products',
-                                item: 'https://kmjtechno.com/products',
+                                name: "Products",
+                                item: "https://kmjtechno.com/products",
                             },
                         ],
                     },
@@ -169,17 +170,17 @@ export default function ProductsIndex({ products }: { products: Product[] }) {
 
                             <div className="grid grid-cols-3 overflow-hidden rounded-2xl border border-white/[0.08] bg-white/[0.025] lg:w-[390px]">
                                 {[
-                                    ['Portfolio', String(products.length)],
-                                    ['Categories', String(categoryCount)],
-                                    ['Commercial', String(activeCount)],
+                                    ["Portfolio", String(products.length)],
+                                    ["Categories", String(categoryCount)],
+                                    ["Commercial", String(activeCount)],
                                 ].map(([label, value], index) => (
                                     <div
                                         key={label}
                                         className={
-                                            'px-4 py-5 text-center ' +
+                                            "px-4 py-5 text-center " +
                                             (index > 0
-                                                ? 'border-l border-white/[0.07]'
-                                                : '')
+                                                ? "border-l border-white/[0.07]"
+                                                : "")
                                         }
                                     >
                                         <div className="text-2xl font-black tracking-[-0.04em]">
@@ -215,21 +216,21 @@ export default function ProductsIndex({ products }: { products: Product[] }) {
                                 />
                             </label>
                             <div className="flex flex-wrap gap-2">
-                                {['all', ...lifecycleOptions].map((option) => (
+                                {["all", ...lifecycleOptions].map((option) => (
                                     <button
                                         key={option}
                                         type="button"
                                         aria-pressed={lifecycle === option}
                                         onClick={() => setLifecycle(option)}
                                         className={
-                                            'rounded-full border px-3 py-2 text-[10px] font-black tracking-[0.08em] uppercase transition ' +
+                                            "rounded-full border px-3 py-2 text-[10px] font-black tracking-[0.08em] uppercase transition " +
                                             (lifecycle === option
-                                                ? 'border-[#e21b23]/35 bg-[#e21b23]/10 text-white'
-                                                : 'border-white/[0.08] bg-white/[0.025] text-white/38 hover:border-white/15 hover:text-white/68')
+                                                ? "border-[#e21b23]/35 bg-[#e21b23]/10 text-white"
+                                                : "border-white/[0.08] bg-white/[0.025] text-white/38 hover:border-white/15 hover:text-white/68")
                                         }
                                     >
-                                        {option === 'all'
-                                            ? 'All products'
+                                        {option === "all"
+                                            ? "All products"
                                             : option}
                                     </button>
                                 ))}
@@ -239,15 +240,16 @@ export default function ProductsIndex({ products }: { products: Product[] }) {
                         <div className="grid gap-5 lg:grid-cols-2">
                             {filteredProducts.map((product, index) => {
                                 const ProductIcon =
-                                    product.demo.kind === 'cloudos'
+                                    product.demo.kind === "cloudos"
                                         ? ServerCog
-                                        : product.demo.kind === 'calibration'
+                                        : product.demo.kind === "calibration"
                                           ? FlaskConical
                                           : ShieldCheck;
                                 const featured = index === 0;
                                 const startsCategory =
                                     index === 0 ||
-                                    filteredProducts[index - 1]?.category !== product.category;
+                                    filteredProducts[index - 1]?.category !==
+                                        product.category;
 
                                 return (
                                     <Fragment key={product.slug}>
@@ -264,17 +266,17 @@ export default function ProductsIndex({ products }: { products: Product[] }) {
                                                         {categoryDescriptions[
                                                             product.category
                                                         ] ??
-                                                            'KMJ TECHNO product family.'}
+                                                            "KMJ TECHNO product family."}
                                                     </p>
                                                 </div>
                                             </div>
                                         )}
                                         <article
                                             className={
-                                                'group relative flex min-h-[31rem] flex-col overflow-hidden rounded-[2rem] border border-white/[0.09] bg-[#090c10] transition duration-300 hover:-translate-y-1 hover:border-white/[0.16] ' +
+                                                "group relative flex min-h-[31rem] flex-col overflow-hidden rounded-[2rem] border border-white/[0.09] bg-[#090c10] transition duration-300 hover:-translate-y-1 hover:border-white/[0.16] " +
                                                 (featured
-                                                    ? 'lg:col-span-2 lg:min-h-[28rem]'
-                                                    : '')
+                                                    ? "lg:col-span-2 lg:min-h-[28rem]"
+                                                    : "")
                                             }
                                         >
                                             <div className="flex flex-col">
@@ -295,23 +297,23 @@ export default function ProductsIndex({ products }: { products: Product[] }) {
                                                         </div>
                                                         <div>
                                                             <div className="text-[9px] font-black tracking-[0.16em] text-white/25 uppercase">
-                                                                Product{' '}
+                                                                Product{" "}
                                                                 {String(
                                                                     index + 1,
                                                                 ).padStart(
                                                                     2,
-                                                                    '0',
+                                                                    "0",
                                                                 )}
                                                             </div>
                                                             <div>
                                                                 <div className="text-[9px] font-black tracking-[0.16em] text-white/25 uppercase">
-                                                                    Product{' '}
+                                                                    Product{" "}
                                                                     {String(
                                                                         index +
                                                                             1,
                                                                     ).padStart(
                                                                         2,
-                                                                        '0',
+                                                                        "0",
                                                                     )}
                                                                 </div>
                                                                 <div className="mt-1 text-xs font-bold text-white/45">
@@ -329,10 +331,10 @@ export default function ProductsIndex({ products }: { products: Product[] }) {
 
                                                         <span
                                                             className={
-                                                                'rounded-full border px-3 py-1.5 text-[9px] font-black tracking-[0.1em] uppercase ' +
+                                                                "rounded-full border px-3 py-1.5 text-[9px] font-black tracking-[0.1em] uppercase " +
                                                                 (product.purchase_enabled
-                                                                    ? 'border-emerald-300/20 bg-emerald-300/[0.06] text-emerald-200/75'
-                                                                    : 'border-white/10 bg-white/[0.03] text-white/38')
+                                                                    ? "border-emerald-300/20 bg-emerald-300/[0.06] text-emerald-200/75"
+                                                                    : "border-white/10 bg-white/[0.03] text-white/38")
                                                             }
                                                         >
                                                             {
@@ -343,10 +345,10 @@ export default function ProductsIndex({ products }: { products: Product[] }) {
 
                                                     <h2
                                                         className={
-                                                            'mt-8 font-black tracking-[-0.05em] ' +
+                                                            "mt-8 font-black tracking-[-0.05em] " +
                                                             (featured
-                                                                ? 'text-4xl sm:text-5xl lg:text-6xl'
-                                                                : 'text-3xl sm:text-4xl')
+                                                                ? "text-4xl sm:text-5xl lg:text-6xl"
+                                                                : "text-3xl sm:text-4xl")
                                                         }
                                                     >
                                                         {product.name}
@@ -390,7 +392,7 @@ export default function ProductsIndex({ products }: { products: Product[] }) {
                                                     <div className="mt-auto pt-8">
                                                         <Link
                                                             href={
-                                                                '/products/' +
+                                                                "/products/" +
                                                                 product.slug
                                                             }
                                                             className="inline-flex h-11 items-center gap-2 rounded-xl bg-white px-5 text-sm font-black text-[#07090c] transition hover:bg-white/90"
@@ -403,10 +405,10 @@ export default function ProductsIndex({ products }: { products: Product[] }) {
 
                                                 <div
                                                     className={
-                                                        'mt-8 grid gap-3 border-t border-white/[0.07] pt-7 ' +
+                                                        "mt-8 grid gap-3 border-t border-white/[0.07] pt-7 " +
                                                         (featured
-                                                            ? 'lg:mt-0 lg:border-t-0 lg:border-l lg:pt-0 lg:pl-10'
-                                                            : '')
+                                                            ? "lg:mt-0 lg:border-t-0 lg:border-l lg:pt-0 lg:pl-10"
+                                                            : "")
                                                     }
                                                 >
                                                     <div className="text-[9px] font-black tracking-[0.16em] text-white/24 uppercase">
@@ -440,20 +442,20 @@ export default function ProductsIndex({ products }: { products: Product[] }) {
                                                         <span>
                                                             {product.demo
                                                                 .simulation
-                                                                ? 'Interactive simulation available'
+                                                                ? "Interactive simulation available"
                                                                 : product.demo
                                                                       .label}
                                                         </span>
                                                         <span
                                                             className={
                                                                 product.purchase_enabled
-                                                                    ? 'text-emerald-300/60'
-                                                                    : 'text-white/25'
+                                                                    ? "text-emerald-300/60"
+                                                                    : "text-white/25"
                                                             }
                                                         >
                                                             {product.purchase_enabled
-                                                                ? 'ACCESS OPEN'
-                                                                : 'GATED'}
+                                                                ? "ACCESS OPEN"
+                                                                : "GATED"}
                                                         </span>
                                                     </div>
                                                 </div>
