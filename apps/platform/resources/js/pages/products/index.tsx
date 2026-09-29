@@ -76,27 +76,33 @@ export default function ProductsIndex({ products }: { products: Product[] }) {
     const filteredProducts = useMemo(() => {
         const normalizedQuery = query.trim().toLowerCase();
 
-        return products.filter((product) => {
-            const matchesLifecycle =
-                lifecycle === 'all' || product.lifecycle_label === lifecycle;
-            const haystack = [
-                product.name,
-                product.eyebrow,
-                product.headline,
-                product.summary,
-            ]
-                .join(' ')
-                .toLowerCase();
+        return products
+            .filter((product) => {
+                const matchesLifecycle =
+                    lifecycle === 'all' ||
+                    product.lifecycle_label === lifecycle;
+                const haystack = [
+                    product.name,
+                    product.eyebrow,
+                    product.headline,
+                    product.summary,
+                ]
+                    .join(' ')
+                    .toLowerCase();
 
-            return (
-                matchesLifecycle &&
-                (normalizedQuery === '' || haystack.includes(normalizedQuery))
+                return (
+                    matchesLifecycle &&
+                    (normalizedQuery === '' ||
+                        haystack.includes(normalizedQuery))
+                );
+            })
+            .sort(
+                (left, right) =>
+                    (categoryRank.get(left.category) ??
+                        Number.MAX_SAFE_INTEGER) -
+                    (categoryRank.get(right.category) ??
+                        Number.MAX_SAFE_INTEGER),
             );
-        }).sort(
-            (left, right) =>
-                (categoryRank.get(left.category) ?? Number.MAX_SAFE_INTEGER) -
-                (categoryRank.get(right.category) ?? Number.MAX_SAFE_INTEGER),
-        );
     }, [lifecycle, products, query]);
 
     return (
