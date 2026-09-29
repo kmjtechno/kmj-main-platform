@@ -53,17 +53,17 @@ final class CodeBridgeAdminHttpTest extends TestCase
         $payload = ['license_id' => $license, 'activation_id' => $activation, 'tenant_id' => 'tenant-a', 'device_id' => 'device-a'];
 
         $enroll = $this->actingAs($owner)->withSession($session)->postJson('/operator/codebridge/devices/enroll', $payload)
-            ->assertCreated()->assertHeader('Cache-Control', 'no-store');
+            ->assertCreated()->assertHeader('Cache-Control', 'no-store, private');
         $old = $enroll->json('credential');
         self::assertIsString($old);
 
         $manage = ['license_id' => $license, 'tenant_id' => 'tenant-a', 'device_id' => 'device-a'];
         $rotate = $this->actingAs($owner)->withSession($session)->postJson('/operator/codebridge/devices/rotate', $manage)
-            ->assertOk()->assertHeader('Cache-Control', 'no-store');
+            ->assertOk()->assertHeader('Cache-Control', 'no-store, private');
         self::assertNotSame($old, $rotate->json('credential'));
 
         $this->actingAs($owner)->withSession($session)->postJson('/operator/codebridge/devices/revoke', $manage)
-            ->assertOk()->assertHeader('Cache-Control', 'no-store')->assertJson(['revoked' => true]);
+            ->assertOk()->assertHeader('Cache-Control', 'no-store, private')->assertJson(['revoked' => true]);
         self::assertNotNull(DB::table('codebridge_device_credentials')->where('license_id', $license)->value('revoked_at'));
     }
 
