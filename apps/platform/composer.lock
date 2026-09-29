@@ -1290,7 +1290,7 @@
             "dist": {
                 "type": "path",
                 "url": "../../packages/domain-catalog",
-                "reference": "313aa80f0ac7fb5e75716c4cad3a82520c4bbaf1"
+                "reference": "829c3b4f67cb8105fe6b3f7dd3e983bbbdf818f9"
             },
             "require": {
                 "illuminate/database": "^13.0",

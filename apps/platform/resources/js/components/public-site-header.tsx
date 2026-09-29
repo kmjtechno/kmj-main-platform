@@ -1,5 +1,5 @@
 import { Link, usePage } from '@inertiajs/react';
-import { ArrowUpRight, Menu, X } from 'lucide-react';
+import { ArrowUpRight, Menu, Search, X } from 'lucide-react';
 import { useState } from 'react';
 import LockedBrand from '@/components/locked-brand';
 import PublicLanguageSwitch from '@/components/public-language-switch';
@@ -11,6 +11,12 @@ export default function PublicSiteHeader() {
 
     return (
         <header className="sticky top-0 z-50 border-b border-white/[0.07] bg-[#06080b]/88 backdrop-blur-2xl">
+            <a
+                href="#main-content"
+                className="absolute top-3 left-4 z-[70] -translate-y-20 rounded-lg bg-white px-4 py-2 text-sm font-black text-black shadow-xl transition focus:translate-y-0"
+            >
+                Skip to main content
+            </a>
             <div className="mx-auto flex h-[76px] max-w-[1440px] items-center justify-between px-5 sm:px-8 lg:px-12">
                 <Link
                     href="/"
@@ -44,6 +50,14 @@ export default function PublicSiteHeader() {
                         className="rounded-lg px-4 py-2 text-sm font-semibold text-white/58 transition hover:bg-white/[0.05] hover:text-white"
                     >
                         Trust
+                    </Link>
+                    <Link
+                        href="/products#product-search"
+                        aria-label="Search KMJ products"
+                        className="inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold text-white/58 transition hover:bg-white/[0.05] hover:text-white"
+                    >
+                        <Search className="h-3.5 w-3.5" />
+                        Search
                     </Link>
                     <PublicLanguageSwitch className="rounded-lg px-4 py-2 text-sm font-semibold text-white/58 transition hover:bg-white/[0.05] hover:text-white" />
                 </nav>
@@ -121,6 +135,14 @@ export default function PublicSiteHeader() {
                             className="rounded-xl px-4 py-3 text-sm font-bold text-white/75 hover:bg-white/[0.05]"
                         >
                             Trust
+                        </Link>
+                        <Link
+                            href="/products#product-search"
+                            onClick={() => setOpen(false)}
+                            className="flex items-center gap-2 rounded-xl px-4 py-3 text-sm font-bold text-white/75 hover:bg-white/[0.05]"
+                        >
+                            <Search className="h-4 w-4" />
+                            Search products
                         </Link>
                         <PublicLanguageSwitch className="rounded-xl px-4 py-3 text-sm font-bold text-white/75 hover:bg-white/[0.05]" />
                         <div className="mt-2 border-t border-white/[0.07] pt-4">

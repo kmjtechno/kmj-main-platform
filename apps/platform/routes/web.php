@@ -31,7 +31,7 @@ Route::get('/', function (PublicProductCatalog $products) {
         KmjProductCatalog::CLOUDOS_SLUG,
         KmjProductCatalog::CALIBRATION_SLUG,
         KmjProductCatalog::CINEMA_PLATFORM_SLUG,
-        KmjProductCatalog::LICENSING_HUB_SLUG,
+        KmjProductCatalog::DOME_SLUG,
     ];
     $featured = collect($portfolio)
         ->filter(fn (array $product): bool => in_array($product['slug'], $featuredSlugs, true))
@@ -288,10 +288,24 @@ Route::middleware(['auth', 'verified'])->group(function () {
                 ];
             })->all();
 
-        $catalogProducts = Product::query()
-            ->whereIn('slug', $publicProducts->slugs())
+        $managedProducts = Product::query()
+            ->orderBy('sort_order')
             ->orderBy('name')
-            ->get(['id', 'slug', 'name', 'status'])
+            ->get([
+                'id',
+                'slug',
+                'name',
+                'status',
+                'lifecycle',
+                'is_public',
+                'sort_order',
+                'image_path',
+                'summary',
+                'purchase_enabled',
+                'licensing_enabled',
+            ]);
+
+        $catalogProducts = $managedProducts
             ->map(function (Product $product): array {
                 $productId = (string) $product->getKey();
 
@@ -322,6 +336,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
             ],
             'catalogProducts' => $catalogProducts,
             'recentOrders' => $recentOrders,
+            'products' => $managedProducts,
         ]);
     })->name('operator.index')->middleware('password.confirm');
 
@@ -631,6 +646,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
             ->route('sandbox-licenses.index')
             ->with('sandbox_license_validation', $licenses->validate($validated['license']));
     })->name('sandbox-licenses.revoke')->middleware('password.confirm');
+    require __DIR__.'/kslp-admin.php';
+    require __DIR__.'/codebridge-admin.php';
 });
 
 require __DIR__.'/settings.php';

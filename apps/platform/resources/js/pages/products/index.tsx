@@ -1,10 +1,17 @@
 import { Link } from '@inertiajs/react';
-import { Fragment } from 'react';
-import { ArrowRight, CheckCircle2 } from 'lucide-react';
-import ProductVisual from '@/components/public/product-visual';
+import { Fragment, useMemo, useState } from 'react';
+import {
+    ArrowRight,
+    CheckCircle2,
+    FlaskConical,
+    Search,
+    ServerCog,
+    ShieldCheck,
+} from 'lucide-react';
 import PublicSeo from '@/components/public-seo';
 import PublicSiteFooter from '@/components/public-site-footer';
 import PublicSiteHeader from '@/components/public-site-header';
+import ProductVisual from '@/components/public/product-visual';
 
 const categoryOrder = [
     'Platform & Infrastructure',
@@ -14,6 +21,10 @@ const categoryOrder = [
     'Commerce & Licensing',
     'Media & Immersive Experience',
 ] as const;
+
+const categoryRank = new Map<string, number>(
+    categoryOrder.map((category, index) => [category, index]),
+);
 
 const categoryDescriptions: Record<string, string> = {
     'Platform & Infrastructure':
@@ -39,8 +50,8 @@ type Product = {
     eyebrow: string;
     headline: string;
     summary: string;
+    image_path?: string | null;
     category: string;
-    family: string | null;
     variants?: string[];
     proof: Array<{
         title: string;
@@ -55,41 +66,45 @@ type Product = {
 };
 
 export default function ProductsIndex({ products }: { products: Product[] }) {
+    const [query, setQuery] = useState('');
+    const [lifecycle, setLifecycle] = useState('all');
     const activeCount = products.filter(
         (product) => product.purchase_enabled,
     ).length;
-    const categories = Array.from(
-        new Set(products.map((product) => product.category)),
-    );
-    const categoryCount = categories.length;
-    const orderedProducts = [...products].sort((left, right) => {
-        const leftIndex = categoryOrder.indexOf(
-            left.category as (typeof categoryOrder)[number],
-        );
-        const rightIndex = categoryOrder.indexOf(
-            right.category as (typeof categoryOrder)[number],
-        );
+    const categoryCount = new Set(products.map((product) => product.category))
+        .size;
+    const lifecycleOptions = ['Available', 'Preview', 'Research', 'Planned'];
+    const filteredProducts = useMemo(() => {
+        const normalizedQuery = query.trim().toLowerCase();
 
-        if (leftIndex !== rightIndex) {
-            return leftIndex - rightIndex;
-        }
+        return products
+            .filter((product) => {
+                const matchesLifecycle =
+                    lifecycle === 'all' ||
+                    product.lifecycle_label === lifecycle;
+                const haystack = [
+                    product.name,
+                    product.eyebrow,
+                    product.headline,
+                    product.summary,
+                ]
+                    .join(' ')
+                    .toLowerCase();
 
-        if (
-            left.slug === 'kmj-cloudos' ||
-            left.slug === 'kmj-cinema-platform'
-        ) {
-            return -1;
-        }
-
-        if (
-            right.slug === 'kmj-cloudos' ||
-            right.slug === 'kmj-cinema-platform'
-        ) {
-            return 1;
-        }
-
-        return left.name.localeCompare(right.name);
-    });
+                return (
+                    matchesLifecycle &&
+                    (normalizedQuery === '' ||
+                        haystack.includes(normalizedQuery))
+                );
+            })
+            .sort(
+                (left, right) =>
+                    (categoryRank.get(left.category) ??
+                        Number.MAX_SAFE_INTEGER) -
+                    (categoryRank.get(right.category) ??
+                        Number.MAX_SAFE_INTEGER),
+            );
+    }, [lifecycle, products, query]);
 
     return (
         <>
@@ -97,47 +112,31 @@ export default function ProductsIndex({ products }: { products: Product[] }) {
                 title="Products — KMJ TECHNO"
                 description="Explore the KMJ TECHNO product portfolio with evidence-backed lifecycle, availability and product status."
                 path="/products"
-                structuredData={{
-                    '@context': 'https://schema.org',
-                    '@type': 'CollectionPage',
-                    name: 'KMJ TECHNO Products',
-                    description:
-                        'Canonical KMJ TECHNO product portfolio with lifecycle, category and configuration metadata.',
-                    mainEntity: {
-                        '@type': 'ItemList',
-                        numberOfItems: products.length,
-                        itemListElement: products.map((product, index) => ({
-                            '@type': 'ListItem',
-                            position: index + 1,
-                            item: {
-                                '@type': 'SoftwareApplication',
-                                name: product.name,
-                                url:
-                                    'https://kmjtechno.com/products/' +
-                                    product.slug,
-                                applicationCategory: product.category,
-                                additionalProperty: [
-                                    {
-                                        '@type': 'PropertyValue',
-                                        name: 'Lifecycle',
-                                        value: product.lifecycle_label,
-                                    },
-                                    ...(product.variants?.length
-                                        ? [
-                                              {
-                                                  '@type': 'PropertyValue',
-                                                  name: 'Configurations',
-                                                  value: product.variants.join(
-                                                      ', ',
-                                                  ),
-                                              },
-                                          ]
-                                        : []),
-                                ],
-                            },
-                        })),
+                structuredData={[
+                    {
+                        '@context': 'https://schema.org',
+                        '@type': 'CollectionPage',
+                        name: 'KMJ TECHNO Products',
                     },
-                }}
+                    {
+                        '@context': 'https://schema.org',
+                        '@type': 'BreadcrumbList',
+                        itemListElement: [
+                            {
+                                '@type': 'ListItem',
+                                position: 1,
+                                name: 'Home',
+                                item: 'https://kmjtechno.com/',
+                            },
+                            {
+                                '@type': 'ListItem',
+                                position: 2,
+                                name: 'Products',
+                                item: 'https://kmjtechno.com/products',
+                            },
+                        ],
+                    },
+                ]}
             />
 
             <div className="min-h-screen overflow-hidden bg-[#06080b] text-white selection:bg-[#ef2632] selection:text-white">
@@ -148,7 +147,7 @@ export default function ProductsIndex({ products }: { products: Product[] }) {
 
                 <PublicSiteHeader />
 
-                <main className="relative z-10">
+                <main id="main-content" className="relative z-10">
                     <section className="mx-auto max-w-[1440px] px-5 pt-16 pb-12 sm:px-8 lg:px-12 lg:pt-24 lg:pb-16">
                         <div className="grid gap-10 lg:grid-cols-[1fr_auto] lg:items-end">
                             <div className="max-w-5xl">
@@ -197,24 +196,60 @@ export default function ProductsIndex({ products }: { products: Product[] }) {
                     </section>
 
                     <section className="mx-auto max-w-[1440px] px-5 pb-24 sm:px-8 lg:px-12 lg:pb-28">
-                        <div className="mb-7 flex flex-wrap gap-2">
-                            {categories.map((category) => (
-                                <span
-                                    key={category}
-                                    className="rounded-full border border-white/[0.08] bg-white/[0.025] px-3 py-2 text-[10px] font-black tracking-[0.12em] text-white/42 uppercase"
-                                >
-                                    {category}
+                        <div
+                            id="product-search"
+                            role="search"
+                            className="mb-8 grid scroll-mt-28 gap-4 rounded-[1.4rem] border border-white/[0.08] bg-white/[0.025] p-4 sm:p-5 lg:grid-cols-[1fr_auto] lg:items-center"
+                        >
+                            <label className="relative block">
+                                <span className="sr-only">
+                                    Search KMJ products
                                 </span>
-                            ))}
+                                <Search className="pointer-events-none absolute top-1/2 left-4 h-4 w-4 -translate-y-1/2 text-white/28" />
+                                <input
+                                    value={query}
+                                    onChange={(event) =>
+                                        setQuery(event.target.value)
+                                    }
+                                    placeholder="Search products, capabilities or use cases"
+                                    className="h-12 w-full rounded-xl border border-white/[0.08] bg-[#07090c] pr-4 pl-11 text-sm text-white outline-none placeholder:text-white/24 focus:border-[#e21b23]/45"
+                                />
+                            </label>
+                            <div className="flex flex-wrap gap-2">
+                                {['all', ...lifecycleOptions].map((option) => (
+                                    <button
+                                        key={option}
+                                        type="button"
+                                        aria-pressed={lifecycle === option}
+                                        onClick={() => setLifecycle(option)}
+                                        className={
+                                            'rounded-full border px-3 py-2 text-[10px] font-black tracking-[0.08em] uppercase transition ' +
+                                            (lifecycle === option
+                                                ? 'border-[#e21b23]/35 bg-[#e21b23]/10 text-white'
+                                                : 'border-white/[0.08] bg-white/[0.025] text-white/38 hover:border-white/15 hover:text-white/68')
+                                        }
+                                    >
+                                        {option === 'all'
+                                            ? 'All products'
+                                            : option}
+                                    </button>
+                                ))}
+                            </div>
                         </div>
+
                         <div className="grid gap-5 lg:grid-cols-2">
-                            {orderedProducts.map((product, index) => {
-                                const previous = orderedProducts[index - 1];
+                            {filteredProducts.map((product, index) => {
+                                const ProductIcon =
+                                    product.demo.kind === 'cloudos'
+                                        ? ServerCog
+                                        : product.demo.kind === 'calibration'
+                                          ? FlaskConical
+                                          : ShieldCheck;
+                                const featured = index === 0;
                                 const startsCategory =
-                                    previous?.category !== product.category;
-                                const featured =
-                                    product.slug === 'kmj-cloudos' ||
-                                    product.slug === 'kmj-cinema-platform';
+                                    index === 0 ||
+                                    filteredProducts[index - 1]?.category !==
+                                        product.category;
 
                                 return (
                                     <Fragment key={product.slug}>
@@ -244,31 +279,25 @@ export default function ProductsIndex({ products }: { products: Product[] }) {
                                                     : '')
                                             }
                                         >
-                                            <div className="pointer-events-none absolute inset-0 opacity-0 transition duration-500 group-hover:opacity-100">
-                                                <div className="absolute -top-36 right-[-5rem] h-80 w-80 rounded-full bg-[#ef2632]/10 blur-[100px]" />
-                                            </div>
-
-                                            <div className="relative p-4 pb-0 sm:p-5 sm:pb-0">
-                                                <ProductVisual
-                                                    slug={product.slug}
-                                                    name={product.name}
-                                                    kind={product.demo.kind}
-                                                    compact={!featured}
-                                                />
-                                            </div>
-
-                                            <div
-                                                className={
-                                                    'relative flex flex-1 flex-col p-7 sm:p-9 ' +
-                                                    (featured
-                                                        ? 'lg:grid lg:grid-cols-[1.05fr_.95fr] lg:gap-14 lg:p-11'
-                                                        : '')
-                                                }
-                                            >
-                                                <div className="flex flex-col">
-                                                    <div className="flex items-start justify-between gap-4">
-                                                        <div className="flex items-center gap-4">
-                                                            <div className="grid h-11 w-11 place-items-center rounded-xl border border-white/[0.08] bg-white/[0.035] text-[10px] font-black tracking-[.12em] text-white/46">
+                                            <div className="flex flex-col">
+                                                <div className="mb-7 overflow-hidden rounded-2xl border border-white/[0.08] bg-black/30">
+                                                    <ProductVisual
+                                                        slug={product.slug}
+                                                        name={product.name}
+                                                        imagePath={
+                                                            product.image_path
+                                                        }
+                                                        className="aspect-[4/3] w-full object-cover"
+                                                    />
+                                                </div>
+                                                <div className="flex items-start justify-between gap-4">
+                                                    <div className="flex items-center gap-4">
+                                                        <div className="grid h-11 w-11 place-items-center rounded-xl border border-[#ef3340]/18 bg-[#ef3340]/8">
+                                                            <ProductIcon className="h-5 w-5 text-[#ff5962]" />
+                                                        </div>
+                                                        <div>
+                                                            <div className="text-[9px] font-black tracking-[0.16em] text-white/25 uppercase">
+                                                                Product{' '}
                                                                 {String(
                                                                     index + 1,
                                                                 ).padStart(
@@ -436,6 +465,18 @@ export default function ProductsIndex({ products }: { products: Product[] }) {
                                 );
                             })}
                         </div>
+
+                        {filteredProducts.length === 0 && (
+                            <div className="mt-6 rounded-[1.35rem] border border-white/[0.08] bg-white/[0.025] px-6 py-10 text-center">
+                                <div className="text-lg font-black">
+                                    No matching KMJ product found.
+                                </div>
+                                <p className="mt-2 text-sm text-white/38">
+                                    Clear the search or select another lifecycle
+                                    state.
+                                </p>
+                            </div>
+                        )}
                     </section>
 
                     <section className="border-y border-white/[0.07] bg-[#090b0f]">

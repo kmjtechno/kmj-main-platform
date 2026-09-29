@@ -30,13 +30,13 @@ final class PublicAiDiscoveryTest extends TestCase
         self::assertStringContainsString('# KMJ TECHNO', $body);
         self::assertStringContainsString('INNOVATE | BUILD | SCALE', $body);
         self::assertStringContainsString('Roadmap, development and preview labels must not be interpreted as production availability.', $body);
-        self::assertStringContainsString('KMJ 360 Dome | Media & Immersive Experience | Roadmap', $body);
+        self::assertStringContainsString('KMJ 360 Dome | Media & Immersive Experience | Research', $body);
         self::assertStringContainsString(
-            'KMJ Cinema Platform | Media & Immersive Experience | Active development | Configurations: 5D, 7D, 9D, 12D, 14D, 16D, 5DX',
+            'KMJ Cinema Platform | Media & Immersive Experience | Research | Configurations: 5D, 7D, 9D, 12D, 14D, 16D, 5DX',
             $body,
         );
-        self::assertStringContainsString('KMJ Cinema Player | Media & Immersive Experience | Roadmap', $body);
-        self::assertStringContainsString('KMJ Licensing Hub | Commerce & Licensing | Roadmap', $body);
-        self::assertSame(11, substr_count($body, 'https://kmjtechno.com/products/'));
+        self::assertStringContainsString('KMJ Cinema Player | Media & Immersive Experience | Research', $body);
+        self::assertStringContainsString('KMJ Licensing Hub | Commerce & Licensing | Research', $body);
+        self::assertSame(13, substr_count($body, 'https://kmjtechno.com/products/'));
     }
 }

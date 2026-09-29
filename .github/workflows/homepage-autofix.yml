@@ -1,0 +1,51 @@
+name: Homepage Autofix
+
+on:
+  push:
+    branches:
+      - feat/homepage-worldclass
+
+concurrency:
+  group: homepage-autofix
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+
+jobs:
+  format:
+    if: ${{ !contains(github.event.head_commit.message, '[skip autofix]') }}
+    runs-on: [self-hosted, linux, x64, kmj-main-platform-ci]
+    timeout-minutes: 15
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: feat/homepage-worldclass
+      - name: Install formatters
+        working-directory: apps/platform
+        run: |
+          set -euo pipefail
+          composer install --no-interaction --prefer-dist --no-progress
+          if [ -f package-lock.json ]; then npm ci --prefer-offline --no-audit --no-fund; else npm install --prefer-offline --no-audit --no-fund; fi
+      - name: Apply canonical formatting
+        run: |
+          set -euo pipefail
+          cd apps/platform
+          composer lint
+          npm run check:fix
+          cd "$GITHUB_WORKSPACE"
+          source "$(getent passwd "$(id -un)" | cut -d: -f6)/.cargo/env"
+          cargo fmt --manifest-path services/license-core/Cargo.toml
+      - name: Commit formatter output
+        run: |
+          set -euo pipefail
+          if git diff --quiet; then
+            echo "No formatter changes required."
+            exit 0
+          fi
+          git config user.name "KMJ Automation"
+          git config user.email "kmjtechno.net@gmail.com"
+          git add -A
+          git commit -m "style: apply canonical platform formatting [skip autofix]"
+          git push origin HEAD:feat/homepage-worldclass

@@ -2,16 +2,21 @@
 
 namespace Tests\Feature;
 
+use App\Services\Commerce\KmjProductCatalog;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
 use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
 
 final class StagingNativeMainPlatformTest extends TestCase
 {
+    use RefreshDatabase;
+
     protected function setUp(): void
     {
         parent::setUp();
         $this->withoutVite();
+        app(KmjProductCatalog::class)->syncAll();
         config()->set('services.kmj_staging_home_mirror.enabled', true);
         config()->set('services.kmj_staging_home_mirror.origin', 'https://kmjtechno.com');
     }

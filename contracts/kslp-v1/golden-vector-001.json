@@ -1,0 +1,33 @@
+{
+  "expected_claims": {
+    "activation_id": "act-golden-0001",
+    "aud": "kmj-cloudos",
+    "customer_id": "cust-golden",
+    "exp": 1800086400,
+    "features": {
+      "hosting": true,
+      "updates": true
+    },
+    "grace_until": 1800604800,
+    "iat": 1800000000,
+    "jti": "jti-golden-0001",
+    "kid": "golden-v1",
+    "license_id": "lic-golden-0001",
+    "limits": {
+      "nodes": 3
+    },
+    "nbf": 1799999995,
+    "nonce": "golden-nonce-000000000001",
+    "plan": "professional",
+    "product": "KMJ_CLOUDOS",
+    "protocol_version": "KSLP-v1",
+    "sequence": 7,
+    "server_identity": "ed25519:golden_server_identity_000001"
+  },
+  "expected_product": "KMJ_CLOUDOS",
+  "name": "kslp-v1-cloudos-golden-001",
+  "now": 1800000000,
+  "public_key_b64": "Plt3tvBCwmfm25458f9/nxWsX/xHeM41Cv7k/q0QGDo=",
+  "server_identity": "ed25519:golden_server_identity_000001",
+  "token": "eyJhbGciOiJFZERTQSIsImtpZCI6ImdvbGRlbi12MSIsInR5cCI6IktTTFAtdjEifQ.eyJhY3RpdmF0aW9uX2lkIjoiYWN0LWdvbGRlbi0wMDAxIiwiYXVkIjoia21qLWNsb3Vkb3MiLCJjdXN0b21lcl9pZCI6ImN1c3QtZ29sZGVuIiwiZXhwIjoxODAwMDg2NDAwLCJmZWF0dXJlcyI6eyJob3N0aW5nIjp0cnVlLCJ1cGRhdGVzIjp0cnVlfSwiZ3JhY2VfdW50aWwiOjE4MDA2MDQ4MDAsImlhdCI6MTgwMDAwMDAwMCwianRpIjoianRpLWdvbGRlbi0wMDAxIiwia2lkIjoiZ29sZGVuLXYxIiwibGljZW5zZV9pZCI6ImxpYy1nb2xkZW4tMDAwMSIsImxpbWl0cyI6eyJub2RlcyI6M30sIm5iZiI6MTc5OTk5OTk5NSwibm9uY2UiOiJnb2xkZW4tbm9uY2UtMDAwMDAwMDAwMDAxIiwicGxhbiI6InByb2Zlc3Npb25hbCIsInByb2R1Y3QiOiJLTUpfQ0xPVURPUyIsInByb3RvY29sX3ZlcnNpb24iOiJLU0xQLXYxIiwic2VxdWVuY2UiOjcsInNlcnZlcl9pZGVudGl0eSI6ImVkMjU1MTk6Z29sZGVuX3NlcnZlcl9pZGVudGl0eV8wMDAwMDEifQ.gUFqz7W7m5CAgNBWu_WDYrGk55jA38EolOR95Po6UDTWryRb-shGFx53SIhQsC8Tzyg8ykqbpXAWS79V8XTaDA"
+}
