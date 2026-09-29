@@ -13,9 +13,9 @@ export const deliveryMilestones: DeliveryMilestone[] = [
         id: 'codebridge-license-renewal',
         title: 'CodeBridge license renewal',
         state: 'active',
-        detail: 'Signed device leases and a default-disabled renewal API are implemented; production enrollment, signing configuration and integration gates remain pending',
+        detail: 'Signed device leases, default-disabled renewal, and proof-bound device credential enrollment are implemented; production exposure, signing configuration and integration gates remain pending',
         evidence:
-            'Draft PR #247; local encoder, SQLite renewal and Node consumer checks passed; platform CI pending',
+            'PR #247 merged with all required gates green; PR #248 adds hash-only, device-limit-enforced enrollment and is under exact-head CI',
     },
     {
         id: 'authority-foundation',
