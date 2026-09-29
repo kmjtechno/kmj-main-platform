@@ -55,8 +55,8 @@ jobs:
           php tests/codebridge/renewal.php "$RUNNER_TEMP/codebridge-fixture.json"
           node tests/codebridge/verify.mjs "$RUNNER_TEMP/codebridge-fixture.json"
 
-  concurrency-127.0.0.1:
-    name: CodeBridge concurrency (127.0.0.1)
+  concurrency-postgres:
+    name: CodeBridge concurrency (postgres)
     runs-on: [self-hosted, linux, x64, kmj-main-platform-ci]
     timeout-minutes: 10
     env:
