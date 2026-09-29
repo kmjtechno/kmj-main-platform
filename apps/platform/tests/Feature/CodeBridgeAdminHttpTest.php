@@ -10,7 +10,7 @@ use Tests\TestCase;
 
 final class CodeBridgeAdminHttpTest extends TestCase
 {
-use RefreshDatabase;
+    use RefreshDatabase;
 
     public function test_guest_and_regular_user_cannot_manage_codebridge_credentials(): void
     {
@@ -18,17 +18,17 @@ use RefreshDatabase;
 
         $user = User::factory()->create(['email_verified_at' => now()]);
         $this->actingAs($user)->withSession(['auth.password_confirmed_at' => time()])
-        ->postJson('/operator/codebridge/devices/enroll', $this->validPayload())
-        ->assertForbidden();
+            ->postJson('/operator/codebridge/devices/enroll', $this->validPayload())
+            ->assertForbidden();
     }
 
     public function test_owner_requests_are_strictly_validated_before_mutation(): void
     {
         $owner = $this->platformOwner();
         $this->actingAs($owner)->withSession(['auth.password_confirmed_at' => time()])
-        ->postJson('/operator/codebridge/devices/enroll', ['license_id' => 'not-a-uuid', 'activation_id' => 'x', 'tenant_id' => '../tenant', 'device_id' => ''])
-        ->assertUnprocessable()
-        ->assertJsonValidationErrors(['license_id', 'activation_id', 'tenant_id', 'device_id']);
+            ->postJson('/operator/codebridge/devices/enroll', ['license_id' => 'not-a-uuid', 'activation_id' => 'x', 'tenant_id' => '../tenant', 'device_id' => ''])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(['license_id', 'activation_id', 'tenant_id', 'device_id']);
 
         self::assertSame(0, DB::table('codebridge_device_credentials')->count());
     }
@@ -39,8 +39,8 @@ use RefreshDatabase;
         $owner = $this->platformOwner();
 
         $this->actingAs($owner)->withSession(['auth.password_confirmed_at' => time()])
-        ->postJson('/operator/codebridge/devices/enroll', ['license_id' => $license, 'activation_id' => $activation, 'tenant_id' => 'tenant-b', 'device_id' => 'device-a'])
-        ->assertNotFound();
+            ->postJson('/operator/codebridge/devices/enroll', ['license_id' => $license, 'activation_id' => $activation, 'tenant_id' => 'tenant-b', 'device_id' => 'device-a'])
+            ->assertNotFound();
 
         self::assertSame(0, DB::table('codebridge_device_credentials')->count());
     }
@@ -53,17 +53,17 @@ use RefreshDatabase;
         $payload = ['license_id' => $license, 'activation_id' => $activation, 'tenant_id' => 'tenant-a', 'device_id' => 'device-a'];
 
         $enroll = $this->actingAs($owner)->withSession($session)->postJson('/operator/codebridge/devices/enroll', $payload)
-        ->assertCreated()->assertHeader('Cache-Control', 'no-store');
+            ->assertCreated()->assertHeader('Cache-Control', 'no-store');
         $old = $enroll->json('credential');
         self::assertIsString($old);
 
         $manage = ['license_id' => $license, 'tenant_id' => 'tenant-a', 'device_id' => 'device-a'];
         $rotate = $this->actingAs($owner)->withSession($session)->postJson('/operator/codebridge/devices/rotate', $manage)
-        ->assertOk()->assertHeader('Cache-Control', 'no-store');
+            ->assertOk()->assertHeader('Cache-Control', 'no-store');
         self::assertNotSame($old, $rotate->json('credential'));
 
         $this->actingAs($owner)->withSession($session)->postJson('/operator/codebridge/devices/revoke', $manage)
-        ->assertOk()->assertHeader('Cache-Control', 'no-store')->assertJson(['revoked' => true]);
+            ->assertOk()->assertHeader('Cache-Control', 'no-store')->assertJson(['revoked' => true]);
         self::assertNotNull(DB::table('codebridge_device_credentials')->where('license_id', $license)->value('revoked_at'));
     }
 
