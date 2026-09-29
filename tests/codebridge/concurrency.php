@@ -51,6 +51,8 @@ for($i=0;$i<2;$i++){
     $pids[]=$pid;
 }
 foreach($pids as $pid){pcntl_waitpid($pid,$status);}
+$db=null;
+$db=new PDO($dsn,$user,$pass,[PDO::ATTR_ERRMODE=>PDO::ERRMODE_EXCEPTION]);
 $results=[file_get_contents("{$dir}/0"),file_get_contents("{$dir}/1")];
 $success=count(array_filter($results,fn($v)=>$v==='ok'));
 $sequence=(int)$db->query("SELECT lease_sequence FROM codebridge_device_credentials WHERE id='race-credential'")->fetchColumn();
