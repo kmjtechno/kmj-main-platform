@@ -60,7 +60,7 @@ final class CodeBridgeDeviceEnrollmentTest extends TestCase
             'activated_at' => now(), 'created_at' => now(), 'updated_at' => now(),
         ]);
         DB::table('plans')->insert([
-            'code' => 'codebridge.professional', 'name' => 'CodeBridge Professional', 'status' => 'active',
+            'id' => (string) Str::uuid(), 'code' => 'codebridge.professional', 'name' => 'CodeBridge Professional', 'status' => 'active',
             'features' => json_encode(['read' => true, 'write' => true, 'execute' => false]),
             'limits' => json_encode(['devices' => $devices]), 'created_at' => now(), 'updated_at' => now(),
         ]);
