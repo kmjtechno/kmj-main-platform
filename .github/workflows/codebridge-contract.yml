@@ -57,10 +57,25 @@ jobs:
 
   concurrency-postgres:
     name: CodeBridge concurrency (postgres)
-    runs-on: [self-hosted, linux, x64, kmj-main-platform-ci]
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: codebridge
+          POSTGRES_PASSWORD: codebridge
+          POSTGRES_DB: codebridge
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U codebridge -d codebridge"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
     env:
       CODEBRIDGE_CONCURRENCY_REQUIRED: '1'
+      PGPASSWORD: codebridge
     steps:
       - uses: actions/checkout@v4
         with:
@@ -69,10 +84,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          if ! php -m | grep -Fxq pdo_pgsql; then
-            sudo apt-get update
-            sudo DEBIAN_FRONTEND=noninteractive apt-get install -y php-pgsql
-          fi
+          sudo apt-get update
+          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y php-pgsql postgresql-client
           php -m | grep -Fxq pdo_pgsql
 
       - name: Verify native PostgreSQL concurrency runtime
@@ -91,11 +104,11 @@ jobs:
           set -euo pipefail
           db="codebridge_ci_${GITHUB_RUN_ID}_${GITHUB_RUN_ATTEMPT}"
           db="${db//-/_}"
-          createdb -h 127.0.0.1 "$db"
+          createdb -h 127.0.0.1 -U codebridge "$db"
           echo "CODEBRIDGE_CI_DATABASE=$db" >> "$GITHUB_ENV"
           echo "CODEBRIDGE_CONCURRENCY_DSN=pgsql:host=127.0.0.1;dbname=$db" >> "$GITHUB_ENV"
-          echo "CODEBRIDGE_CONCURRENCY_USER=${USER}" >> "$GITHUB_ENV"
-          echo 'CODEBRIDGE_CONCURRENCY_PASSWORD=' >> "$GITHUB_ENV"
+          echo "CODEBRIDGE_CONCURRENCY_USER=codebridge" >> "$GITHUB_ENV"
+          echo "CODEBRIDGE_CONCURRENCY_PASSWORD=codebridge" >> "$GITHUB_ENV"
       - name: Create isolated concurrency schema
         run: php tests/codebridge/concurrency-schema.php
       - name: Run mandatory real-database concurrency regression
@@ -110,5 +123,5 @@ jobs:
         shell: bash
         run: |
           if [[ -n "${CODEBRIDGE_CI_DATABASE:-}" ]]; then
-            dropdb -h 127.0.0.1 --if-exists "$CODEBRIDGE_CI_DATABASE"
+            dropdb -h 127.0.0.1 -U codebridge --if-exists "$CODEBRIDGE_CI_DATABASE"
           fi
