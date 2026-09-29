@@ -54,7 +54,7 @@ final class KslpCodec
             throw new DomainException('KSLP_MALFORMED');
         }
 
-return $x;
+        return $x;
     }
 
     private static function sortRecursive(array &$v): void

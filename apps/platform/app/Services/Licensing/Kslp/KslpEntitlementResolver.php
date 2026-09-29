@@ -26,6 +26,6 @@ final class KslpEntitlementResolver
             throw new DomainException('KSLP_ENTITLEMENT_POLICY_NOT_CONFIGURED');
         }
 
-return [$features, $limits];
+        return [$features, $limits];
     }
 }

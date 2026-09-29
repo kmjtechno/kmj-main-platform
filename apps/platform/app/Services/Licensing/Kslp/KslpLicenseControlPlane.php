@@ -97,7 +97,7 @@ final class KslpLicenseControlPlane
             throw new DomainException('KSLP_INVALID_PLAN');
         }
 
-return $this->mutate($id, $actor, 'plan_changed', $reason, function ($q) use ($plan) {
+        return $this->mutate($id, $actor, 'plan_changed', $reason, function ($q) use ($plan) {
             $q->update(['plan' => $plan, 'sequence' => DB::raw('sequence+1'), 'updated_at' => now()]);
         });
     }
@@ -143,7 +143,7 @@ return $this->mutate($id, $actor, 'plan_changed', $reason, function ($q) use ($p
             return 'GRACE';
         }
 
-return 'RESTRICTED';
+        return 'RESTRICTED';
     }
 
     public function lease(string $id, string $activationId, KslpSigner $signer, ?Carbon $now = null): string
@@ -186,15 +186,15 @@ return 'RESTRICTED';
 
     private function license(string $id): array
     {
-        $x = DB::table('kslp_licenses')->where('id',$id)->first();
+        $x = DB::table('kslp_licenses')->where('id', $id)->first();
         if (! $x) {
             throw new DomainException('KSLP_LICENSE_NOT_FOUND');
         }
 
-return (array) $x;
+        return (array) $x;
     }
 
-    private function event(string $id,string $actor,string $action,?string $reason,array $meta = []): void
+    private function event(string $id, string $actor, string $action, ?string $reason, array $meta = []): void
     {
         DB::table('kslp_license_events')->insert(['license_id' => $id, 'actor_id' => $actor, 'action' => $action, 'reason' => $reason, 'correlation_id' => (string) Str::uuid(), 'metadata' => $meta ? json_encode($meta) : null, 'created_at' => now()]);
     }

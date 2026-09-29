@@ -48,7 +48,7 @@ final class KslpActivationProof
             throw new DomainException('KSLP_SERVER_IDENTITY_INVALID');
         }
 
-return $pk;
+        return $pk;
     }
 
     private function b64(string $v): string
@@ -63,6 +63,6 @@ return $pk;
             throw new DomainException('KSLP_ACTIVATION_PROOF_INVALID');
         }
 
-return $x;
+        return $x;
     }
 }
