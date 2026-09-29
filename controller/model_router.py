@@ -141,7 +141,7 @@ class FreeCloudRouter:
                 base_url=self.base_url,
                 api_key=self.api_key,
                 priority=self._provider_priority("9router"),
-                allow_confidential=True,
+                allow_confidential=False,
             )
         ]
 
@@ -157,6 +157,22 @@ class FreeCloudRouter:
                         allow_confidential=allow_confidential,
                     )
                 )
+
+        cloudflare_token = os.getenv("CLOUDFLARE_API_TOKEN", "").strip()
+        cloudflare_account = os.getenv("CLOUDFLARE_ACCOUNT_ID", "").strip()
+        if cloudflare_token and cloudflare_account:
+            providers.append(
+                ProviderEndpoint(
+                    name="cloudflare",
+                    base_url=(
+                        "https://api.cloudflare.com/client/v4/accounts/"
+                        f"{cloudflare_account}/ai/v1"
+                    ),
+                    api_key=cloudflare_token,
+                    priority=self._provider_priority("cloudflare"),
+                    allow_confidential=False,
+                )
+            )
 
         if os.getenv("KMJ_ENABLE_PUBLIC_FREE_PROVIDERS", "").strip().lower() in {"1", "true", "yes", "on"}:
             for name, base_url in self.ANONYMOUS_PUBLIC_PROVIDERS.items():
@@ -378,7 +394,10 @@ class FreeCloudRouter:
             data_classification,
         )
         if not ranked:
-            return await self._official_free_client(messages)
+            return await self._official_free_client(
+                messages,
+                data_classification=data_classification,
+            )
 
         attempts: list[dict[str, str]] = []
         async with httpx.AsyncClient(timeout=self.timeout) as client:
@@ -439,10 +458,21 @@ class FreeCloudRouter:
                         }
                     )
 
-        return await self._official_free_client(messages)
+        return await self._official_free_client(
+            messages,
+            data_classification=data_classification,
+        )
 
-    async def _official_free_client(self, messages: list[dict[str, str]]) -> dict[str, Any]:
+    async def _official_free_client(
+        self,
+        messages: list[dict[str, str]],
+        *,
+        data_classification: str = "confidential",
+    ) -> dict[str, Any]:
         from controller.opencode_free import OpenCodeUnavailable, complete
+
+        if self._normalize_classification(data_classification) != "public":
+            raise NoFreeRouteAvailable("NO_CONFIDENTIAL_FREE_ROUTE_AVAILABLE")
 
         try:
             return await asyncio.to_thread(complete, messages)

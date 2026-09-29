@@ -90,6 +90,18 @@ export default function Register({ passwordRules }: Props) {
                                 />
                             </div>
 
+                            <div className="text-muted-foreground text-xs leading-5">
+                                By creating an account, you agree to the{' '}
+                                <TextLink href="/terms">
+                                    Terms & Conditions
+                                </TextLink>{' '}
+                                and acknowledge the{' '}
+                                <TextLink href="/privacy">
+                                    Privacy Policy
+                                </TextLink>
+                                .
+                            </div>
+
                             <Button
                                 type="submit"
                                 className="mt-2 w-full"

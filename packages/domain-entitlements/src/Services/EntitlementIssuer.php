@@ -3,14 +3,17 @@
 namespace KMJ\MainPlatform\Entitlements\Services;
 
 use DomainException;
-use InvalidArgumentException;
 use Illuminate\Support\Facades\DB;
+use InvalidArgumentException;
+use KMJ\MainPlatform\Entitlements\Contracts\DomainEventRecorder;
 use KMJ\MainPlatform\Entitlements\Models\Entitlement;
 use KMJ\MainPlatform\Entitlements\Models\EntitlementLedgerEntry;
 use KMJ\MainPlatform\Entitlements\Models\EntitlementPolicy;
 
 final class EntitlementIssuer
 {
+    public function __construct(private readonly DomainEventRecorder $events) {}
+
     public function issue(
         string $organizationId,
         EntitlementPolicy $policy,
@@ -43,18 +46,31 @@ final class EntitlementIssuer
             $this->assertIdempotencyMatches($entitlement, $organizationId, $policy);
 
             if ($entitlement->wasRecentlyCreated) {
+                $occurredAt = now();
+                $payload = [
+                    'product_id' => $policy->product_id,
+                    'policy_id' => $policy->getKey(),
+                    'capability' => $policy->capability,
+                    'status' => 'active',
+                ];
+
                 EntitlementLedgerEntry::query()->create([
                     'entitlement_id' => $entitlement->getKey(),
                     'organization_id' => $organizationId,
                     'event_type' => 'entitlement.issued',
-                    'payload' => [
-                        'product_id' => $policy->product_id,
-                        'policy_id' => $policy->getKey(),
-                        'capability' => $policy->capability,
-                        'status' => 'active',
-                    ],
-                    'occurred_at' => now(),
+                    'payload' => $payload,
+                    'occurred_at' => $occurredAt,
                 ]);
+
+                $this->events->recordDomainEvent(
+                    'entitlement.issued',
+                    'entitlement',
+                    (string) $entitlement->getKey(),
+                    $payload,
+                    $organizationId,
+                    'entitlement:'.$entitlement->getKey().':issued',
+                    $occurredAt,
+                );
             }
 
             return $entitlement;

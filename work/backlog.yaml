@@ -51,7 +51,7 @@ phases:
   - id: P5
     name: Public Experience
     status: active
-    note: Production corporate/product experience is live at kmjtechno.com with eight truthful roadmap products; broader docs, trust, multilingual and content surfaces remain active work.
+    note: Production corporate/product experience is live at kmjtechno.com with 10 canonical products. KMJ Cinema Platform governs 5D, 7D, 9D, 12D, 14D, 16D and 5DX as configuration variants rather than separate products; broader premium imagery, docs, trust, multilingual and content surfaces remain active work.
   - id: P6
     name: Product Integration
     status: active

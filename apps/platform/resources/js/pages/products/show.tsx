@@ -9,6 +9,7 @@ import {
     ShieldCheck,
     Sparkles,
 } from 'lucide-react';
+import ProductBrandVisual from '@/components/public/product-visual';
 import PublicSeo from '@/components/public-seo';
 import ProductShare from '@/components/public/product-share';
 import PublicSiteFooter from '@/components/public-site-footer';
@@ -39,6 +40,9 @@ type Product = {
     eyebrow: string;
     headline: string;
     summary: string;
+    category: string;
+    family: string | null;
+    variants?: string[];
     truth: {
         status: string;
         physical_capability_certified?: boolean;
@@ -89,6 +93,12 @@ function ProductVisual({ product }: { product: Product }) {
                 </div>
 
                 <div className="grid gap-4 p-5 sm:p-6">
+                    <ProductBrandVisual
+                        slug={product.slug}
+                        name={product.name}
+                        kind={product.demo.kind}
+                    />
+
                     <div className="flex items-start justify-between gap-6 rounded-2xl border border-white/[0.07] bg-white/[0.025] p-5">
                         <div>
                             <div className="text-[10px] font-bold tracking-[0.16em] text-white/30 uppercase">
@@ -266,6 +276,9 @@ export default function ProductShow({ product }: { product: Product }) {
                             </Link>
 
                             <div className="mt-8 flex flex-wrap items-center gap-3">
+                                <span className="rounded-full border border-white/10 bg-white/[0.035] px-3.5 py-1.5 text-[10px] font-black tracking-[0.12em] text-white/45 uppercase">
+                                    {product.category}
+                                </span>
                                 <span className="rounded-full border border-[#ef3340]/30 bg-[#ef3340]/10 px-3.5 py-1.5 text-[10px] font-black tracking-[0.16em] text-[#ff6a72] uppercase">
                                     {product.eyebrow}
                                 </span>
@@ -283,6 +296,25 @@ export default function ProductShow({ product }: { product: Product }) {
                             <p className="mt-5 max-w-2xl text-sm leading-7 text-white/42 sm:text-[15px]">
                                 {product.summary}
                             </p>
+
+                            {product.variants &&
+                                product.variants.length > 0 && (
+                                    <div className="mt-7">
+                                        <div className="text-[10px] font-black tracking-[0.14em] text-white/28 uppercase">
+                                            Platform configurations
+                                        </div>
+                                        <div className="mt-3 flex flex-wrap gap-2">
+                                            {product.variants.map((variant) => (
+                                                <span
+                                                    key={variant}
+                                                    className="rounded-full border border-[#ef3340]/25 bg-[#ef3340]/[0.07] px-3.5 py-2 text-xs font-black tracking-[0.08em] text-[#ff727a]"
+                                                >
+                                                    {variant}
+                                                </span>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
 
                             <div className="mt-9 flex flex-col gap-3 sm:flex-row">
                                 {Demo ? (

@@ -27,6 +27,52 @@ final class ProductLicenseProfileTest extends TestCase
         self::assertFalse($calibration->allowsStatus('active'));
     }
 
+    public function test_omnidesk_has_dedicated_active_only_remote_access_capability(): void
+    {
+        $profile = (new ProductLicenseProfileRegistry)->forSlug(KmjProductCatalog::OMNIDESK_SLUG);
+
+        self::assertNotNull($profile);
+        self::assertSame(KmjProductCatalog::OMNIDESK_SLUG, $profile->slug);
+        self::assertSame(ProductLicenseProfileRegistry::OMNIDESK_CAPABILITY, $profile->capability);
+        self::assertTrue($profile->allowsStatus('active'));
+        self::assertFalse($profile->allowsStatus('sandbox'));
+        self::assertNotSame(ProductLicenseProfileRegistry::GENERIC_PRODUCT_CAPABILITY, $profile->capability);
+    }
+
+    public function test_all_canonical_roadmap_products_have_active_only_main_platform_license_profiles(): void
+    {
+        $profiles = new ProductLicenseProfileRegistry;
+
+        foreach ([
+            KmjProductCatalog::FORGE_SLUG,
+            KmjProductCatalog::CONNECT_SLUG,
+            KmjProductCatalog::CLOUD_NEXUS_SLUG,
+            KmjProductCatalog::AGENT_SLUG,
+            KmjProductCatalog::CREATIVE_STUDIO_SLUG,
+            KmjProductCatalog::CINEMA_PLATFORM_SLUG,
+            KmjProductCatalog::DOME_360_SLUG,
+            KmjProductCatalog::CINEMA_PLAYER_SLUG,
+            KmjProductCatalog::LICENSING_HUB_SLUG,
+        ] as $slug) {
+            $profile = $profiles->forSlug($slug);
+
+            self::assertNotNull($profile);
+            self::assertSame($slug, $profile->slug);
+            self::assertSame(ProductLicenseProfileRegistry::GENERIC_PRODUCT_CAPABILITY, $profile->capability);
+            self::assertTrue($profile->allowsStatus('active'));
+            self::assertFalse($profile->allowsStatus('sandbox'));
+        }
+    }
+
+    public function test_legacy_cinema_variant_slugs_are_not_independently_licensable(): void
+    {
+        $profiles = new ProductLicenseProfileRegistry;
+
+        foreach (KmjProductCatalog::LEGACY_CINEMA_VARIANT_SLUGS as $slug) {
+            self::assertNull($profiles->forSlug($slug));
+        }
+    }
+
     public function test_main_platform_sandbox_profile_remains_explicitly_registered(): void
     {
         $profile = (new ProductLicenseProfileRegistry)

@@ -43,7 +43,19 @@ export default function PublicSeo({
     return (
         <Head title={title}>
             <meta name="description" content={description} />
+            <meta
+                name="robots"
+                content={
+                    publicSite.indexable ? 'index,follow' : 'noindex,nofollow'
+                }
+            />
             <link rel="canonical" href={canonical} />
+            <link
+                rel="alternate"
+                type="text/plain"
+                href={origin + '/llms.txt'}
+                title="KMJ TECHNO AI-readable product authority"
+            />
             <meta property="og:title" content={title} />
             <meta property="og:description" content={description} />
             <meta property="og:type" content={type} />

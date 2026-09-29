@@ -24,32 +24,16 @@ final class PublicProductHubTest extends TestCase
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->component('welcome')
-                ->has('products', 12)
+                ->where('portfolioCount', 13)
+                ->has('products', 4)
                 ->where('products.0.slug', 'kmj-cloudos')
                 ->where('products.0.lifecycle', 'available')
-                ->where('products.0.purchase_enabled', true)
                 ->where('products.1.slug', 'kmj-calibration-pro')
                 ->where('products.1.lifecycle', 'preview')
                 ->where('products.2.slug', 'kmj-cinema-platform')
                 ->where('products.2.lifecycle', 'research')
                 ->where('products.3.slug', 'kmj-360-dome')
-                ->where('products.3.lifecycle', 'research')
-                ->where('products.4.slug', 'kmj-immersive-cinema-suite')
-                ->where('products.4.lifecycle', 'planned')
-                ->where('products.5.slug', 'kmj-cinema-player')
-                ->where('products.5.lifecycle', 'research')
-                ->where('products.6.slug', 'kmj-licensing-hub')
-                ->where('products.6.lifecycle', 'research')
-                ->where('products.7.slug', 'kmj-forge')
-                ->where('products.7.lifecycle', 'research')
-                ->where('products.8.slug', 'kmj-connect')
-                ->where('products.8.lifecycle', 'planned')
-                ->where('products.9.slug', 'kmj-cloud-nexus')
-                ->where('products.9.lifecycle', 'research')
-                ->where('products.10.slug', 'kmj-agent')
-                ->where('products.10.lifecycle', 'research')
-                ->where('products.11.slug', 'kmj-creative-studio')
-                ->where('products.11.lifecycle', 'planned'));
+                ->where('products.3.lifecycle', 'research'));
     }
 
     public function test_products_hub_uses_only_canonical_public_lifecycle_vocabulary(): void
@@ -58,7 +42,7 @@ final class PublicProductHubTest extends TestCase
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->component('products/index')
-                ->has('products', 12)
+                ->has('products', 13)
                 ->where('products', function ($products): bool {
                     $allowed = ['available', 'preview', 'research', 'planned'];
 
@@ -109,6 +93,7 @@ final class PublicProductHubTest extends TestCase
             'kmj-cinema-player' => 'research',
             'kmj-licensing-hub' => 'research',
             'kmj-forge' => 'research',
+            'kmj-omnidesk' => 'research',
             'kmj-connect' => 'planned',
             'kmj-cloud-nexus' => 'research',
             'kmj-agent' => 'research',
@@ -121,6 +106,15 @@ final class PublicProductHubTest extends TestCase
                     ->where('product.slug', $slug)
                     ->where('product.lifecycle', $lifecycle)
                     ->where('product.purchase_enabled', false));
+        }
+    }
+
+    public function test_legacy_cinema_variant_urls_redirect_to_the_master_platform(): void
+    {
+        foreach (KmjProductCatalog::LEGACY_CINEMA_VARIANT_SLUGS as $slug) {
+            $this->get('/products/'.$slug)
+                ->assertRedirect('/products/'.KmjProductCatalog::CINEMA_PLATFORM_SLUG)
+                ->assertStatus(301);
         }
     }
 

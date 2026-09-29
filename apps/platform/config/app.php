@@ -54,6 +54,8 @@ return [
 
     'url' => env('APP_URL', 'http://localhost'),
 
+    'public_indexing' => (bool) env('PUBLIC_INDEXING_ENABLED', false),
+
     /*
     |--------------------------------------------------------------------------
     | Application Timezone

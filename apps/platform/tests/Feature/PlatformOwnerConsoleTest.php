@@ -63,6 +63,23 @@ final class PlatformOwnerConsoleTest extends TestCase
             ->has('recentOrders', 0));
     }
 
+    public function test_operator_console_exposes_canonical_product_and_licensing_matrix(): void
+    {
+        $user = $this->createPasskeyOwner();
+        app(KmjProductCatalog::class)->syncAll();
+
+        $response = $this->actingAs($user)
+            ->withSession(['auth.password_confirmed_at' => time()])
+            ->get('/operator');
+
+        $response->assertOk();
+        $response->assertInertia(fn (Assert $page) => $page
+            ->component('operator')
+            ->has('catalogProducts', 13)
+            ->where('catalogProducts.0.active_policy_count', 1)
+            ->where('catalogProducts.0.active_entitlement_count', 0));
+    }
+
     public function test_operator_console_exposes_ready_fulfillment_state_for_confirmed_order(): void
     {
         $user = $this->createPasskeyOwner();

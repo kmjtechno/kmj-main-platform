@@ -25,6 +25,14 @@ final class PublicProductCatalog
     }
 
     /**
+     * @return array<int, string>
+     */
+    public function slugs(): array
+    {
+        return $this->publicSlugs();
+    }
+
+    /**
      * @return array<string, mixed>|null
      */
     public function find(string $slug): ?array
@@ -51,6 +59,7 @@ final class PublicProductCatalog
             KmjProductCatalog::CALIBRATION_SLUG,
             KmjProductCatalog::FORGE_SLUG,
             KmjProductCatalog::CONNECT_SLUG,
+            KmjProductCatalog::OMNIDESK_SLUG,
             KmjProductCatalog::CLOUD_NEXUS_SLUG,
             KmjProductCatalog::AGENT_SLUG,
             KmjProductCatalog::CREATIVE_STUDIO_SLUG,
@@ -75,6 +84,7 @@ final class PublicProductCatalog
             CloudOSProductCatalog::SLUG => $this->cloudOS($product),
             KmjProductCatalog::CALIBRATION_SLUG => $this->calibration(),
             KmjProductCatalog::FORGE_SLUG => $this->forge(),
+            KmjProductCatalog::OMNIDESK_SLUG => $this->omniDesk(),
             KmjProductCatalog::CONNECT_SLUG => $this->connect(),
             KmjProductCatalog::CLOUD_NEXUS_SLUG => $this->cloudNexus(),
             KmjProductCatalog::AGENT_SLUG => $this->agent(),
@@ -87,9 +97,39 @@ final class PublicProductCatalog
             default => null,
         };
 
-        return $presented === null
-            ? null
-            : $this->applyManagement($product, $presented);
+        if ($presented === null) {
+            return null;
+        }
+
+        $slug = (string) $product->getAttribute('slug');
+
+        return [
+            ...$this->applyManagement($product, $presented),
+            'category' => $this->categoryForSlug($slug),
+            'family' => str_contains($slug, 'cinema') || $slug === KmjProductCatalog::DOME_SLUG
+                ? 'KMJ Cinema & Immersive Systems'
+                : null,
+        ];
+    }
+
+    private function categoryForSlug(string $slug): string
+    {
+        return match ($slug) {
+            CloudOSProductCatalog::SLUG,
+            KmjProductCatalog::CLOUD_NEXUS_SLUG => 'Platform & Infrastructure',
+            KmjProductCatalog::FORGE_SLUG,
+            KmjProductCatalog::AGENT_SLUG => 'Engineering & Automation',
+            KmjProductCatalog::CALIBRATION_SLUG => 'Calibration & Vision Systems',
+            KmjProductCatalog::CONNECT_SLUG,
+            KmjProductCatalog::OMNIDESK_SLUG => 'Secure Access & Connectivity',
+            KmjProductCatalog::LICENSING_HUB_SLUG => 'Commerce & Licensing',
+            KmjProductCatalog::CREATIVE_STUDIO_SLUG,
+            KmjProductCatalog::CINEMA_PLATFORM_SLUG,
+            KmjProductCatalog::DOME_SLUG,
+            KmjProductCatalog::CINEMA_PLAYER_SLUG,
+            KmjProductCatalog::IMMERSIVE_CINEMA_SUITE_SLUG => 'Media & Immersive Experience',
+            default => 'KMJ TECHNO Products',
+        };
     }
 
     /**
@@ -306,6 +346,40 @@ final class PublicProductCatalog
     /**
      * @return array<string, mixed>
      */
+    private function omniDesk(): array
+    {
+        return $this->developmentProduct(
+            slug: KmjProductCatalog::OMNIDESK_SLUG,
+            name: KmjProductCatalog::OMNIDESK_NAME,
+            lifecycle: 'pre-alpha',
+            lifecycleLabel: 'Pre-alpha',
+            eyebrow: 'Ultra-fast secure remote access',
+            headline: 'Remote access engineered around direct connectivity, low bandwidth and minimal infrastructure overhead.',
+            summary: 'KMJ OmniDesk is the active next-generation remote-access product under development by KMJ TECHNO. Its architecture prioritizes encrypted direct peer-to-peer sessions, relay only when required, adaptive weak-network behavior, native performance and commercial licensing through the KMJ Main Platform.',
+            status: 'Private repository foundation is active. Customer download, production performance claims and paid access remain disabled until implementation, security, weak-network and release gates are verified.',
+            proof: [
+                [
+                    'title' => 'Direct-first architecture',
+                    'detail' => 'The product contract keeps screen and audio traffic peer-to-peer when connectivity permits, with KMJ relay infrastructure reserved for fallback or policy-required paths.',
+                    'state' => 'repository-verified',
+                ],
+                [
+                    'title' => 'Measured-performance discipline',
+                    'detail' => 'Latency, bandwidth, CPU/GPU overhead, connection time, reconnect behavior and relay utilization are explicit release metrics rather than unverified marketing claims.',
+                    'state' => 'repository-verified',
+                ],
+                [
+                    'title' => 'Main Platform commercial authority',
+                    'detail' => 'Trials, plans, activations and future paid entitlements are designed to remain governed by the KMJ Main Platform instead of hard-coded client unlocks.',
+                    'state' => 'architecture-locked',
+                ],
+            ],
+        );
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
     private function cloudNexus(): array
     {
         return $this->developmentProduct(
@@ -410,33 +484,37 @@ final class PublicProductCatalog
      */
     private function cinemaPlatform(): array
     {
-        return $this->developmentProduct(
-            slug: KmjProductCatalog::CINEMA_PLATFORM_SLUG,
-            name: KmjProductCatalog::CINEMA_PLATFORM_NAME,
-            lifecycle: 'development',
-            lifecycleLabel: 'Research',
-            eyebrow: 'Professional cinema playback + motion platform',
-            headline: 'A professional cinema platform roadmap covering playback, stereoscopic dual-projector output and synchronized motion workflows.',
-            summary: 'KMJ Cinema Platform is an active product-development stream with a dedicated runtime and visual-verification handoff. Public commercial availability is kept separate from engineering progress.',
-            status: 'Project handoff evidence documents an active Windows cinema-player development stream. A current customer-ready public release is not independently verified here.',
-            proof: [
-                [
-                    'title' => 'Dedicated product architecture',
-                    'detail' => 'The project handoff defines professional playback, stereoscopic dual-projector presentation and Motion Digital Twin boundaries.',
-                    'state' => 'roadmap-verified',
+        return [
+            ...$this->developmentProduct(
+                slug: KmjProductCatalog::CINEMA_PLATFORM_SLUG,
+                name: KmjProductCatalog::CINEMA_PLATFORM_NAME,
+                lifecycle: 'development',
+                lifecycleLabel: 'Active development',
+                eyebrow: 'Professional immersive cinema platform',
+                headline: 'One governed cinema platform spanning 5D through 16D and 5DX configurations.',
+                summary: 'KMJ Cinema Platform is the canonical product family for synchronized playback, motion, environmental effects and immersive cinema configurations. 5D, 7D, 9D, 12D, 14D, 16D and 5DX are deployment variants of this platform, not separate software products.',
+                status: 'Active product-development stream. Variant labels describe supported roadmap configurations; commercial availability remains fail-closed until verified release and licensing gates are complete.',
+                proof: [
+                    [
+                        'title' => 'One canonical product authority',
+                        'detail' => 'All D/5DX configurations bind to the KMJ Cinema Platform product identity for access, entitlement and licensing.',
+                        'state' => 'platform-verified',
+                    ],
+                    [
+                        'title' => 'Variant-based architecture',
+                        'detail' => '5D, 7D, 9D, 12D, 14D, 16D and 5DX are configuration variants within the same product family.',
+                        'state' => 'roadmap-verified',
+                    ],
+                    [
+                        'title' => 'Commercial release not asserted',
+                        'detail' => 'No production download or purchase is exposed until a current release is independently accepted.',
+                        'state' => 'fail-closed',
+                    ],
                 ],
-                [
-                    'title' => 'Live-verification discipline',
-                    'detail' => 'The project workflow requires build, live executable launch, screenshot capture and regression verification after meaningful changes.',
-                    'state' => 'roadmap-verified',
-                ],
-                [
-                    'title' => 'Commercial release not asserted',
-                    'detail' => 'No production download or purchase is exposed until a current release is independently accepted.',
-                    'state' => 'fail-closed',
-                ],
-            ],
-        );
+            ),
+            'variants' => KmjProductCatalog::CINEMA_VARIANTS,
+            'family' => 'KMJ Cinema & Immersive Systems',
+        ];
     }
 
     /**

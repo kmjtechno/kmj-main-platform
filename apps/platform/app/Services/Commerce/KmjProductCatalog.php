@@ -23,6 +23,10 @@ final class KmjProductCatalog
 
     public const CONNECT_NAME = 'KMJ Connect';
 
+    public const OMNIDESK_SLUG = 'kmj-omnidesk';
+
+    public const OMNIDESK_NAME = 'KMJ OmniDesk';
+
     public const CLOUD_NEXUS_SLUG = 'kmj-cloud-nexus';
 
     public const CLOUD_NEXUS_NAME = 'KMJ Cloud Nexus';
@@ -68,6 +72,22 @@ final class KmjProductCatalog
 
     public const CINEMA_PLATFORM_NAME = 'KMJ Cinema Platform';
 
+    public const DOME_360_SLUG = 'kmj-360-dome';
+
+    public const DOME_360_NAME = 'KMJ 360 Dome';
+
+    public const CINEMA_VARIANTS = ['5D', '7D', '9D', '12D', '14D', '16D', '5DX'];
+
+    public const LEGACY_CINEMA_VARIANT_SLUGS = [
+        'kmj-5d-cinema',
+        'kmj-7d-cinema',
+        'kmj-9d-cinema',
+        'kmj-12d-cinema',
+        'kmj-14d-cinema',
+        'kmj-16d-cinema',
+        'kmj-5dx-cinema',
+    ];
+
     public function __construct(
         private readonly CloudOSProductCatalog $cloudOS,
         private readonly ProductCatalog $products,
@@ -84,6 +104,7 @@ final class KmjProductCatalog
             $sandboxProducts = [
                 self::CALIBRATION_SLUG => self::CALIBRATION_NAME,
                 self::FORGE_SLUG => self::FORGE_NAME,
+                self::OMNIDESK_SLUG => self::OMNIDESK_NAME,
                 self::CONNECT_SLUG => self::CONNECT_NAME,
                 self::CLOUD_NEXUS_SLUG => self::CLOUD_NEXUS_NAME,
                 self::AGENT_SLUG => self::AGENT_NAME,
@@ -146,6 +167,7 @@ final class KmjProductCatalog
             self::CINEMA_PLAYER_SLUG => ['research', 60, '/assets/products/kmj-cinema-player.webp', false, false],
             self::LICENSING_HUB_SLUG => ['research', 70, '/assets/products/kmj-licensing-hub.webp', false, true],
             self::FORGE_SLUG => ['research', 80, '/assets/products/kmj-forge.webp', false, false],
+            self::OMNIDESK_SLUG => ['research', 85, null, false, true],
             self::CONNECT_SLUG => ['planned', 90, '/assets/products/kmj-connect.webp', false, false],
             self::CLOUD_NEXUS_SLUG => ['research', 100, '/assets/products/kmj-cloud-nexus.webp', false, false],
             self::AGENT_SLUG => ['research', 110, '/assets/products/kmj-agent.webp', false, false],

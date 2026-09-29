@@ -5,6 +5,7 @@ use Illuminate\Console\Command;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Schedule;
 
 Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());
@@ -93,3 +94,7 @@ Artisan::command('staging:promote-platform-owner {email}', function () {
 
     return Command::SUCCESS;
 })->purpose('Promote an existing passkey-enabled staging user to platform owner');
+
+Schedule::command('outbox:work --limit=25 --max-attempts=8 --base-delay=15')
+    ->everyMinute()
+    ->withoutOverlapping(2);

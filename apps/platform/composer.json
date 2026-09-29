@@ -36,6 +36,13 @@
             "options": {
                 "symlink": false
             }
+        },
+        {
+            "type": "path",
+            "url": "../../packages/domain-releases",
+            "options": {
+                "symlink": false
+            }
         }
     ],
     "require": {
@@ -44,6 +51,7 @@
         "kmjtechno/domain-commerce": "0.1.0",
         "kmjtechno/domain-entitlements": "0.1.0",
         "kmjtechno/domain-organizations": "0.1.0",
+        "kmjtechno/domain-releases": "0.1.0",
         "laravel/chisel": "^0.1.0",
         "laravel/fortify": "^1.37.2",
         "laravel/framework": "^13.17",

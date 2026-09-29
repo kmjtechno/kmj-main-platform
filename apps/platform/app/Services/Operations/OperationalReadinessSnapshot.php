@@ -169,6 +169,30 @@ final class OperationalReadinessSnapshot
             }
         }
 
+        $cloudflareToken = config('kmj.ops.cloudflare_ai_token');
+        $cloudflareAccount = config('kmj.ops.cloudflare_ai_account_id');
+        if (
+            is_string($cloudflareToken) && trim($cloudflareToken) !== ''
+            && is_string($cloudflareAccount) && trim($cloudflareAccount) !== ''
+        ) {
+            $configured[] = 'cloudflare';
+        }
+
+        $opencodeEnabled = filter_var(
+            config('kmj.ops.opencode_free_enabled', false),
+            FILTER_VALIDATE_BOOL,
+        );
+        $opencodeBinary = config('kmj.ops.opencode_binary');
+        $opencodeReady = $opencodeEnabled
+            && is_string($opencodeBinary)
+            && trim($opencodeBinary) !== ''
+            && is_file($opencodeBinary);
+
+        if ($opencodeReady) {
+            $configured[] = 'opencode-client';
+        }
+
+        $configured = array_values(array_unique($configured));
         sort($configured);
 
         return [
@@ -176,6 +200,8 @@ final class OperationalReadinessSnapshot
             'policy' => 'verified_zero_only',
             'configured_provider_count' => count($configured),
             'configured_providers' => $configured,
+            'opencode_client_ready' => $opencodeReady,
+            'cloudflare_pair_ready' => in_array('cloudflare', $configured, true),
             'live_route_observed' => false,
             'paid_fallback' => false,
         ];

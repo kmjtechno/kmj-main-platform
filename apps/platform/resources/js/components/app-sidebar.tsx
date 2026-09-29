@@ -1,11 +1,10 @@
 import { Link, usePage } from '@inertiajs/react';
 import {
     Activity,
-    BookOpen,
     Crown,
-    FolderGit2,
     KeyRound,
     LayoutGrid,
+    PackageOpen,
     ShieldCheck,
     ShoppingCart,
 } from 'lucide-react';
@@ -38,7 +37,7 @@ const baseNavItems: NavItem[] = [
         icon: ShoppingCart,
     },
     {
-        title: 'Sandbox Licensing',
+        title: 'License Center',
         href: '/sandbox-licenses',
         icon: KeyRound,
     },
@@ -51,14 +50,14 @@ const baseNavItems: NavItem[] = [
 
 const footerNavItems: NavItem[] = [
     {
-        title: 'Repository',
-        href: 'https://github.com/laravel/react-starter-kit',
-        icon: FolderGit2,
+        title: 'KMJ Products',
+        href: '/products',
+        icon: PackageOpen,
     },
     {
-        title: 'Documentation',
-        href: 'https://laravel.com/docs/starter-kits#react',
-        icon: BookOpen,
+        title: 'Trust Center',
+        href: '/trust',
+        icon: ShieldCheck,
     },
 ];
 
