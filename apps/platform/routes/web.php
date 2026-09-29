@@ -160,6 +160,13 @@ Route::get('sitemap.xml', function (PublicProductCatalog $products) {
 
 Route::get('trust', fn () => Inertia::render('trust'))->name('trust');
 
+Route::get('legal', fn () => Inertia::render('legal/index'))->name('legal.index');
+Route::get('terms', fn () => Inertia::render('legal/terms'))->name('legal.terms');
+Route::get('privacy', fn () => Inertia::render('legal/privacy'))->name('legal.privacy');
+Route::get('refund-policy', fn () => Inertia::render('legal/refund-policy'))->name('legal.refund');
+Route::get('acceptable-use', fn () => Inertia::render('legal/acceptable-use'))->name('legal.acceptable-use');
+Route::get('cookie-policy', fn () => Inertia::render('legal/cookie-policy'))->name('legal.cookies');
+
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('dashboard', function (
         Request $request,
