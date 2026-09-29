@@ -55,37 +55,33 @@ jobs:
 
   concurrency-postgres:
     name: CodeBridge concurrency (postgres)
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux, x64, kmj-main-platform-ci]
     timeout-minutes: 10
-    services:
-      postgres:
-        image: postgres:17
-        env:
-          POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: codebridge
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd="pg_isready -U postgres -d codebridge"
-          --health-interval=5s
-          --health-timeout=5s
-          --health-retries=20
     env:
-      CODEBRIDGE_CONCURRENCY_DSN: pgsql:host=127.0.0.1;port=5432;dbname=codebridge
-      CODEBRIDGE_CONCURRENCY_USER: postgres
-      CODEBRIDGE_CONCURRENCY_PASSWORD: postgres
       CODEBRIDGE_CONCURRENCY_REQUIRED: '1'
     steps:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
-      - name: Prepare PostgreSQL concurrency runtime
+      - name: Verify native PostgreSQL concurrency runtime
+        shell: bash
         run: |
           set -euo pipefail
-          sudo apt-get update -qq
-          sudo apt-get install -y php-pgsql
           php -m | grep -F pdo_pgsql
           php -r 'exit(function_exists("pcntl_fork") ? 0 : 1);'
+          command -v psql
+          pg_isready -h 127.0.0.1
+      - name: Create isolated PostgreSQL database
+        shell: bash
+        run: |
+          set -euo pipefail
+          db="codebridge_ci_${GITHUB_RUN_ID}_${GITHUB_RUN_ATTEMPT}"
+          db="${db//-/_}"
+          createdb -h 127.0.0.1 "$db"
+          echo "CODEBRIDGE_CI_DATABASE=$db" >> "$GITHUB_ENV"
+          echo "CODEBRIDGE_CONCURRENCY_DSN=pgsql:host=127.0.0.1;dbname=$db" >> "$GITHUB_ENV"
+          echo "CODEBRIDGE_CONCURRENCY_USER=${USER}" >> "$GITHUB_ENV"
+          echo 'CODEBRIDGE_CONCURRENCY_PASSWORD=' >> "$GITHUB_ENV"
       - name: Create isolated concurrency schema
         run: php tests/codebridge/concurrency-schema.php
       - name: Run mandatory real-database concurrency regression
@@ -95,3 +91,10 @@ jobs:
           printf '%s\n' "$output"
           grep -F 'CodeBridge real-DB concurrency checks: PASS' <<<"$output"
           if grep -Fq 'SKIP:' <<<"$output"; then exit 1; fi
+      - name: Drop isolated PostgreSQL database
+        if: always()
+        shell: bash
+        run: |
+          if [[ -n "${CODEBRIDGE_CI_DATABASE:-}" ]]; then
+            dropdb -h 127.0.0.1 --if-exists "$CODEBRIDGE_CI_DATABASE"
+          fi
