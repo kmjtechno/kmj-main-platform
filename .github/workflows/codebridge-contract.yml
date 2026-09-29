@@ -91,9 +91,13 @@ jobs:
         run: php tests/codebridge/concurrency-schema.php
       - name: Run mandatory real-database concurrency regression
         run: |
-          set -euo pipefail
+          set -uo pipefail
+          set +e
           output="$(php tests/codebridge/concurrency.php 2>&1)"
+          status=$?
+          set -e
           printf '%s\n' "$output"
+          if (( status != 0 )); then exit "$status"; fi
           grep -F 'CodeBridge real-DB concurrency checks: PASS' <<<"$output"
           if grep -Fq 'SKIP:' <<<"$output"; then exit 1; fi
       - name: Drop isolated PostgreSQL database
