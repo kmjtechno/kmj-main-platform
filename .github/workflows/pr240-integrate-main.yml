@@ -1,4 +1,4 @@
-name: Integrate main into PR240 safely
+name: PR240 repair formatter
 
 on:
   push:
@@ -11,18 +11,26 @@ permissions:
   contents: write
 
 jobs:
-  integrate:
+  format:
     runs-on: [self-hosted, linux, x64, kmj-main-platform-ci]
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 0
-      - name: Merge current main with conflict-hunk preference for staging
+          fetch-depth: 1
+      - name: Apply repository Prettier rules to repaired product index
+        working-directory: apps/platform
         shell: bash
         run: |
           set -euo pipefail
+          npm ci --prefer-offline --no-audit --no-fund
+          npx prettier --write resources/js/pages/products/index.tsx
+          if git diff --quiet -- resources/js/pages/products/index.tsx; then
+            echo "Already formatted."
+            exit 0
+          fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git merge --no-edit --no-ff -Xours origin/main
+          git add resources/js/pages/products/index.tsx
+          git commit -m "style(products): apply repository prettier rules"
           git push origin HEAD:fix/pr240-main-integration
