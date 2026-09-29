@@ -88,14 +88,6 @@ final class KmjProductCatalog
         'kmj-5dx-cinema',
     ];
 
-    public const CINEMA_PLAYER_SLUG = 'kmj-cinema-player';
-
-    public const CINEMA_PLAYER_NAME = 'KMJ Cinema Player';
-
-    public const LICENSING_HUB_SLUG = 'kmj-licensing-hub';
-
-    public const LICENSING_HUB_NAME = 'KMJ Licensing Hub';
-
     public function __construct(
         private readonly CloudOSProductCatalog $cloudOS,
         private readonly ProductCatalog $products,
@@ -112,6 +104,7 @@ final class KmjProductCatalog
             $sandboxProducts = [
                 self::CALIBRATION_SLUG => self::CALIBRATION_NAME,
                 self::FORGE_SLUG => self::FORGE_NAME,
+                self::OMNIDESK_SLUG => self::OMNIDESK_NAME,
                 self::CONNECT_SLUG => self::CONNECT_NAME,
                 self::CLOUD_NEXUS_SLUG => self::CLOUD_NEXUS_NAME,
                 self::AGENT_SLUG => self::AGENT_NAME,
@@ -174,6 +167,7 @@ final class KmjProductCatalog
             self::CINEMA_PLAYER_SLUG => ['research', 60, '/assets/products/kmj-cinema-player.webp', false, false],
             self::LICENSING_HUB_SLUG => ['research', 70, '/assets/products/kmj-licensing-hub.webp', false, true],
             self::FORGE_SLUG => ['research', 80, '/assets/products/kmj-forge.webp', false, false],
+            self::OMNIDESK_SLUG => ['research', 85, null, false, true],
             self::CONNECT_SLUG => ['planned', 90, '/assets/products/kmj-connect.webp', false, false],
             self::CLOUD_NEXUS_SLUG => ['research', 100, '/assets/products/kmj-cloud-nexus.webp', false, false],
             self::AGENT_SLUG => ['research', 110, '/assets/products/kmj-agent.webp', false, false],
