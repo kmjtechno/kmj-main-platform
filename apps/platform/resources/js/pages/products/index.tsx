@@ -41,6 +41,30 @@ const categoryDescriptions: Record<string, string> = {
         'Cinema, dome, playback and creative systems for immersive venues and media workflows.',
 };
 
+const categoryOrder = [
+    'Platform & Infrastructure',
+    'Engineering & Automation',
+    'Calibration & Vision Systems',
+    'Secure Access & Connectivity',
+    'Commerce & Licensing',
+    'Media & Immersive Experience',
+] as const;
+
+const categoryDescriptions: Record<string, string> = {
+    'Platform & Infrastructure':
+        'Governed cloud and platform foundations for KMJ products and operations.',
+    'Engineering & Automation':
+        'Autonomous engineering systems for building, testing and operating software.',
+    'Calibration & Vision Systems':
+        'Projection, camera and spatial-calibration technology for immersive environments.',
+    'Secure Access & Connectivity':
+        'Governed remote access and secure product connectivity.',
+    'Commerce & Licensing':
+        'Software licensing, subscriptions, entitlements and governed digital-product access.',
+    'Media & Immersive Experience':
+        'Cinema, dome, playback and creative systems for immersive venues and media workflows.',
+};
+
 type Product = {
     slug: string;
     name: string;
