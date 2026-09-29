@@ -2,7 +2,7 @@
 
 namespace Tests\Feature;
 
-use App\Support\KmjProductCatalog;
+use App\Services\Commerce\KmjProductCatalog;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
 use Inertia\Testing\AssertableInertia as Assert;
