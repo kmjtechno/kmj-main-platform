@@ -441,6 +441,7 @@ final class PublicProductCatalog
 
     /**
      * @param  array<int, array<string, string>>  $proof
+     * @param  array<array-key, mixed>  $variants
      * @return array<string, mixed>
      */
     private function developmentProduct(

@@ -82,6 +82,9 @@ final class KslpKeyRegistry
         }
     }
 
+    /**
+     * @return array<array-key, mixed>
+     */
     public function discovery(string $purpose): array
     {
         if (! in_array($purpose, self::PURPOSES, true)) {

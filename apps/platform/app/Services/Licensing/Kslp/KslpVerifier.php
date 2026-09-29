@@ -6,6 +6,9 @@ use DomainException;
 
 final class KslpVerifier
 {
+    /**
+     * @return array<array-key, mixed>
+     */
     public function verify(string $token, callable $publicKeyForKid, string $serverIdentity, int $now, string $expectedProduct = 'KMJ_CLOUDOS'): array
     {
         [$h,$c,$sig,$signed] = KslpCodec::decode($token);

@@ -6,6 +6,9 @@ use DomainException;
 
 final class KslpCodec
 {
+    /**
+     * @param  array<array-key, mixed>  $claims
+     */
     public static function canonical(array $claims): string
     {
         self::sortRecursive($claims);
@@ -13,6 +16,9 @@ final class KslpCodec
         return json_encode($claims, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR);
     }
 
+    /**
+     * @param  array<array-key, mixed>  $claims
+     */
     public static function encode(array $claims, string $kid, callable $sign): string
     {
         $header = ['alg' => 'EdDSA', 'kid' => $kid, 'typ' => 'KSLP-v1'];
@@ -23,6 +29,9 @@ final class KslpCodec
         return $h.'.'.$p.'.'.self::b64($sign($h.'.'.$p));
     }
 
+    /**
+     * @return array<array-key, mixed>
+     */
     public static function decode(string $token): array
     {
         $parts = explode('.', $token);
@@ -57,6 +66,9 @@ final class KslpCodec
         return $x;
     }
 
+    /**
+     * @param  array<array-key, mixed>  $v
+     */
     private static function sortRecursive(array &$v): void
     {
         ksort($v);

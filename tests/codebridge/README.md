@@ -57,3 +57,13 @@ Full Laravel HTTP/kernel tests, migrations on real platform databases, MySQL/Pos
 locking/concurrency, production key binding and end-to-end enrollment/payment testing
 remain required. The SQLite tests exercise the service against real SQL but do not
 constitute those platform gates. This draft has not been deployed or enabled.
+
+## KSLP CI compatibility follow-up
+
+Existing KSLP boundary arrays now declare their value types; optional lease dates
+accept CarbonInterface and use integer timestamps. Empty or wrong-length activation
+signatures return the protocol denial before calling sodium. The standalone
+activation-proof test reproduces the previous SodiumException and now passes five
+signature cases with a stub database; it does not replace Laravel transaction tests.
+Missing contract-file reads return unavailable. These changes do not disable any
+static-analysis rules or regenerate trusted contract checksums.

@@ -10,6 +10,9 @@ final class KslpIssuerSubscriptionAuthority
 {
     public const TIERS = ['professional', 'business', 'enterprise', 'custom_oem'];
 
+    /**
+     * @return array<array-key, mixed>
+     */
     public function subscribe(
         string $organizationId,
         string $tier,
@@ -57,6 +60,11 @@ final class KslpIssuerSubscriptionAuthority
         }, 3);
     }
 
+    /**
+     * @param  array<array-key, mixed>  $features
+     * @param  array<array-key, mixed>  $limits
+     * @return array<array-key, mixed>
+     */
     public function registerProduct(
         string $organizationId,
         string $code,
@@ -103,6 +111,9 @@ final class KslpIssuerSubscriptionAuthority
         }, 3);
     }
 
+    /**
+     * @return array<array-key, mixed>
+     */
     public function authorizeIssue(string $organizationId, string $productCode): array
     {
         $this->requireActive($organizationId);
@@ -120,7 +131,7 @@ final class KslpIssuerSubscriptionAuthority
         return (array) $product;
     }
 
-    private function requireActive(string $organizationId): object
+    private function requireActive(string $organizationId): \stdClass
     {
         $subscription = DB::table('kslp_issuer_subscriptions')
             ->where('organization_id', $organizationId)
@@ -131,7 +142,7 @@ final class KslpIssuerSubscriptionAuthority
         return $subscription;
     }
 
-    private function assertActive(?object $subscription): void
+    private function assertActive(?\stdClass $subscription): void
     {
         if (! $subscription || $subscription->status !== 'active') {
             throw new DomainException('KSLP_ISSUER_SUBSCRIPTION_REQUIRED');

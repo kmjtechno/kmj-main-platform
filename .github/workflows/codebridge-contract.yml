@@ -44,5 +44,6 @@ jobs:
       - name: Verify PHP encoder and Node consumer
         run: |
           php -l apps/platform/app/Services/Licensing/CodeBridge/CodeBridgeLeaseEncoder.php
+          php tests/codebridge/activation-proof.php apps/platform/app/Services/Licensing/Kslp/KslpActivationProof.php
           php tests/codebridge/renewal.php "$RUNNER_TEMP/codebridge-fixture.json"
           node tests/codebridge/verify.mjs "$RUNNER_TEMP/codebridge-fixture.json"

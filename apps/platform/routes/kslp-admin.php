@@ -54,6 +54,7 @@ Route::post('operator/kslp/licenses/{license}/action', function (Request $reques
         'revoke' => $control->revoke($license, (string) $user->id, $v['reason']),
         'reactivate' => $control->reactivate($license, (string) $user->id, $v['reason']),
         'renew' => $control->renew($license, Carbon::now()->addDays((int) ($v['days'] ?? 365)), (string) $user->id, $v['reason']),
+        default => abort(422),
         'change_plan' => $control->changePlan($license, (string) ($v['plan'] ?? ''), (string) $user->id, $v['reason']),
     };
 
