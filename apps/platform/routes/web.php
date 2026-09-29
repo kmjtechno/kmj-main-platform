@@ -595,6 +595,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
             ->with('sandbox_license_validation', $licenses->validate($validated['license']));
     })->name('sandbox-licenses.revoke')->middleware('password.confirm');
     require __DIR__.'/kslp-admin.php';
+    require __DIR__.'/codebridge-admin.php';
 });
 
 require __DIR__.'/settings.php';
