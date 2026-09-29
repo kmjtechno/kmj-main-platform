@@ -10,6 +10,14 @@ export type DeliveryMilestone = {
 
 export const deliveryMilestones: DeliveryMilestone[] = [
     {
+        id: 'codebridge-license-renewal',
+        title: 'CodeBridge license renewal',
+        state: 'active',
+        detail: 'Signed device leases and a default-disabled renewal API are implemented; production enrollment, signing configuration and integration gates remain pending',
+        evidence:
+            'Draft PR #247; local encoder, SQLite renewal and Node consumer checks passed; platform CI pending',
+    },
+    {
         id: 'authority-foundation',
         title: 'Authority foundation',
         state: 'verified',
@@ -320,5 +328,5 @@ export const deliveryProgress = Math.round(
 export const deliveryProgressMeta = {
     label: 'Revenue-capable working phase',
     note: 'Evidence-based delivery milestones, not total product completion.',
-    refreshed: '2026-09-25',
+    refreshed: '2026-09-29',
 } as const;

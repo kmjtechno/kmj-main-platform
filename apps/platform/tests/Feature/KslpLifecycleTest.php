@@ -96,9 +96,9 @@ final class KslpLifecycleTest extends TestCase
     public function test_sensitive_mutation_requires_a_specific_audit_reason(): void
     {
         $c = app(KslpLicenseControlPlane::class);
-        $l = $c->issue('cust-reason','business','owner');
+        $l = $c->issue('cust-reason', 'business', 'owner');
         $this->expectException(\DomainException::class);
         $this->expectExceptionMessage('KSLP_REASON_REQUIRED');
-        $c->revoke($l['id'],'owner',' ');
+        $c->revoke($l['id'], 'owner', ' ');
     }
 }
