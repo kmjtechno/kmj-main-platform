@@ -1,0 +1,36 @@
+name: PR240 Merge Probe
+
+on:
+  push:
+    branches:
+      - probe/pr240-main-merge
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: [self-hosted, linux, x64, kmj-main-platform-ci]
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Probe main merge conflicts without changing repository
+        shell: bash
+        run: |
+          set -u
+          git config merge.conflictstyle diff3
+          git fetch --no-tags origin main
+          set +e
+          git merge --no-commit --no-ff origin/main
+          rc=$?
+          set -e
+          echo "MERGE_EXIT=$rc"
+          echo "=== UNMERGED FILES ==="
+          git diff --name-only --diff-filter=U || true
+          echo "=== CONFLICT DIFF ==="
+          git diff --cc || true
+          git merge --abort >/dev/null 2>&1 || true
+          exit 0
