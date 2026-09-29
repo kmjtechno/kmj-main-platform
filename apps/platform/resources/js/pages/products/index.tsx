@@ -13,15 +13,6 @@ import PublicSiteFooter from '@/components/public-site-footer';
 import PublicSiteHeader from '@/components/public-site-header';
 import ProductVisual from '@/components/public/product-visual';
 
-const categoryOrder = [
-    'Platform & Infrastructure',
-    'Engineering & Automation',
-    'Calibration & Vision Systems',
-    'Secure Access & Connectivity',
-    'Commerce & Licensing',
-    'Media & Immersive Experience',
-] as const;
-
 const categoryDescriptions: Record<string, string> = {
     'Platform & Infrastructure':
         'Governed cloud and platform foundations for KMJ products and operations.',
@@ -64,9 +55,6 @@ export default function ProductsIndex({ products }: { products: Product[] }) {
     const [lifecycle, setLifecycle] = useState('all');
     const activeCount = products.filter(
         (product) => product.purchase_enabled,
-    ).length;
-    const demoCount = products.filter(
-        (product) => product.demo.simulation,
     ).length;
     const lifecycleOptions = ['Available', 'Preview', 'Research', 'Planned'];
     const filteredProducts = useMemo(() => {
