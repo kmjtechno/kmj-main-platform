@@ -70,7 +70,9 @@ final class CodeBridgeAdminHttpTest extends TestCase
   /** @return array{string, string} */
   private function fixture(string $tenant): array
   {
-    $license = (string) Str::uuid();\n        $activation = (string) Str::uuid();\n        $now = now();
+    $license = (string) Str::uuid();
+    $activation = (string) Str::uuid();
+    $now = now();
     DB::table('kslp_licenses')->insert(['id' => $license, 'customer_id' => $tenant, 'product' => 'KMJ_CODEBRIDGE', 'plan' => 'professional', 'status' => 'active', 'sequence' => 1, 'starts_at' => $now->copy()->subMinute(), 'expires_at' => $now->copy()->addYear(), 'grace_until' => $now->copy()->addYear()->addDays(2), 'created_at' => $now, 'updated_at' => $now]);
     DB::table('kslp_activations')->insert(['id' => $activation, 'license_id' => $license, 'server_identity' => 'ed25519:http-test', 'machine_identity_hash' => str_repeat('a', 64), 'idempotency_key' => 'http-'.Str::uuid(), 'activated_at' => $now, 'created_at' => $now, 'updated_at' => $now]);
     $product=(string) Str::uuid();
