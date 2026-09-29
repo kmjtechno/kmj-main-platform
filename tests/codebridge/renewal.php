@@ -59,6 +59,24 @@ $q->execute(['credential-old','license-1','activation-old','customer-1','device-
 check(decode((new CodeBridgeRenewalService($db,$signer))->renew(str_repeat('a',48),$request,$now))['sequence']===1);$count++;
 $db->exec("UPDATE kslp_activations SET deactivated_at=NULL WHERE id='activation-old'");
 try{(new CodeBridgeRenewalService($db,$signer))->renew(str_repeat('a',48),$request,$now);throw new RuntimeException('Expected active device limit denial');}catch(DomainException){}$count++;
+// Revocation propagation: once either the device credential or license is revoked, no later lease may be issued.
+$db=database($now); $service=new CodeBridgeRenewalService($db,$signer);
+check(decode($service->renew(str_repeat('a',48),$request,$now))['sequence']===1);
+$db->exec("UPDATE codebridge_device_credentials SET revoked_at='".gmdate('Y-m-d H:i:s',$now)."' WHERE id='credential-1'");
+try{$service->renew(str_repeat('a',48),$request,$now);throw new RuntimeException('Expected propagated device revocation');}catch(DomainException $error){check($error->getMessage()==='CODEBRIDGE_ACCESS_DENIED');}
+check((int)$db->query('SELECT lease_sequence FROM codebridge_device_credentials')->fetchColumn()===1);$count++;
+
+$db=database($now); $service=new CodeBridgeRenewalService($db,$signer);
+$db->exec("UPDATE kslp_licenses SET revoked_at='".gmdate('Y-m-d H:i:s',$now)."' WHERE id='license-1'");
+try{$service->renew(str_repeat('a',48),$request,$now);throw new RuntimeException('Expected propagated license revocation');}catch(DomainException $error){check($error->getMessage()==='CODEBRIDGE_ACCESS_DENIED');}
+check((int)$db->query('SELECT lease_sequence FROM codebridge_device_credentials')->fetchColumn()===0);$count++;
+
+// Lease enforcement: a client cannot claim a sequence ahead of authoritative storage.
+$db=database($now); $service=new CodeBridgeRenewalService($db,$signer);
+try{$service->renew(str_repeat('a',48),array_replace($request,['sequence'=>1]),$now);throw new RuntimeException('Expected sequence conflict');}catch(DomainException $error){check($error->getMessage()==='CODEBRIDGE_SEQUENCE_CONFLICT');}
+check((int)$db->query('SELECT lease_sequence FROM codebridge_device_credentials')->fetchColumn()===0);
+check((int)$db->query('SELECT COUNT(*) FROM kslp_license_events')->fetchColumn()===0);$count++;
+
 $fixture=json_decode(file_get_contents($argv[1]),true,32,JSON_THROW_ON_ERROR);
 $fixture['token']=$validToken;
 file_put_contents($argv[1],json_encode($fixture,JSON_THROW_ON_ERROR));
