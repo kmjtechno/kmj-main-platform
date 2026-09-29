@@ -21,6 +21,8 @@ on:
       - 'apps/platform/app/Services/Licensing/Kslp/KslpSigner.php'
       - 'apps/platform/routes/codebridge-api.php'
       - 'apps/platform/routes/codebridge-admin.php'
+      - 'apps/platform/routes/web.php'
+      - 'apps/platform/tests/Feature/CodeBridge*.php'
       - 'apps/platform/config/codebridge.php'
       - 'apps/platform/database/migrations/*codebridge*'
       - 'apps/platform/bootstrap/app.php'
@@ -67,10 +69,12 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          php -m | grep -F pdo_pgsql
-          php -r 'exit(function_exists("pcntl_fork") ? 0 : 1);'
-          command -v psql
-          pg_isready -h 127.0.0.1
+          failed=0
+          if php -m | grep -Fxq pdo_pgsql; then echo 'PASS pdo_pgsql'; else echo 'FAIL pdo_pgsql'; failed=1; fi
+          if php -r 'exit(function_exists("pcntl_fork") ? 0 : 1);'; then echo 'PASS pcntl_fork'; else echo 'FAIL pcntl_fork'; failed=1; fi
+          if command -v psql; then echo 'PASS psql'; else echo 'FAIL psql'; failed=1; fi
+          if command -v pg_isready >/dev/null 2>&1 && pg_isready -h 127.0.0.1; then echo 'PASS pg_isready'; else echo 'FAIL pg_isready'; failed=1; fi
+          exit "$failed"
       - name: Create isolated PostgreSQL database
         shell: bash
         run: |
