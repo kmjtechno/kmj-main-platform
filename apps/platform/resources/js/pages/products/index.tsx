@@ -1,5 +1,5 @@
 import { Link } from '@inertiajs/react';
-import { useMemo, useState } from 'react';
+import { Fragment, useMemo, useState } from 'react';
 import {
     ArrowRight,
     CheckCircle2,
@@ -12,6 +12,15 @@ import PublicSeo from '@/components/public-seo';
 import PublicSiteFooter from '@/components/public-site-footer';
 import PublicSiteHeader from '@/components/public-site-header';
 import ProductVisual from '@/components/public/product-visual';
+
+const categoryOrder = [
+    'Platform & Infrastructure',
+    'Engineering & Automation',
+    'Calibration & Vision Systems',
+    'Secure Access & Connectivity',
+    'Commerce & Licensing',
+    'Media & Immersive Experience',
+] as const;
 
 const categoryDescriptions: Record<string, string> = {
     'Platform & Infrastructure':
@@ -38,6 +47,8 @@ type Product = {
     headline: string;
     summary: string;
     image_path?: string | null;
+    category: string;
+    variants?: string[];
     proof: Array<{
         title: string;
         detail: string;
@@ -56,6 +67,7 @@ export default function ProductsIndex({ products }: { products: Product[] }) {
     const activeCount = products.filter(
         (product) => product.purchase_enabled,
     ).length;
+    const categoryCount = new Set(products.map((product) => product.category)).size;
     const lifecycleOptions = ['Available', 'Preview', 'Research', 'Planned'];
     const filteredProducts = useMemo(() => {
         const normalizedQuery = query.trim().toLowerCase();
@@ -219,6 +231,9 @@ export default function ProductsIndex({ products }: { products: Product[] }) {
                                           ? FlaskConical
                                           : ShieldCheck;
                                 const featured = index === 0;
+                                const startsCategory =
+                                    index === 0 ||
+                                    filteredProducts[index - 1]?.category !== product.category;
 
                                 return (
                                     <Fragment key={product.slug}>
