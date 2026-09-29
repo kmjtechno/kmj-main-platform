@@ -58,6 +58,7 @@ final class PublicProductCatalog
             CloudOSProductCatalog::SLUG,
             KmjProductCatalog::CALIBRATION_SLUG,
             KmjProductCatalog::FORGE_SLUG,
+            KmjProductCatalog::CONNECT_SLUG,
             KmjProductCatalog::OMNIDESK_SLUG,
             KmjProductCatalog::CLOUD_NEXUS_SLUG,
             KmjProductCatalog::AGENT_SLUG,
@@ -96,9 +97,39 @@ final class PublicProductCatalog
             default => null,
         };
 
-        return $presented === null
-            ? null
-            : $this->applyManagement($product, $presented);
+        if ($presented === null) {
+            return null;
+        }
+
+        $slug = (string) $product->getAttribute('slug');
+
+        return [
+            ...$this->applyManagement($product, $presented),
+            'category' => $this->categoryForSlug($slug),
+            'family' => str_contains($slug, 'cinema') || $slug === KmjProductCatalog::DOME_SLUG
+                ? 'KMJ Cinema & Immersive Systems'
+                : null,
+        ];
+    }
+
+    private function categoryForSlug(string $slug): string
+    {
+        return match ($slug) {
+            CloudOSProductCatalog::SLUG,
+            KmjProductCatalog::CLOUD_NEXUS_SLUG => 'Platform & Infrastructure',
+            KmjProductCatalog::FORGE_SLUG,
+            KmjProductCatalog::AGENT_SLUG => 'Engineering & Automation',
+            KmjProductCatalog::CALIBRATION_SLUG => 'Calibration & Vision Systems',
+            KmjProductCatalog::CONNECT_SLUG,
+            KmjProductCatalog::OMNIDESK_SLUG => 'Secure Access & Connectivity',
+            KmjProductCatalog::LICENSING_HUB_SLUG => 'Commerce & Licensing',
+            KmjProductCatalog::CREATIVE_STUDIO_SLUG,
+            KmjProductCatalog::CINEMA_PLATFORM_SLUG,
+            KmjProductCatalog::DOME_SLUG,
+            KmjProductCatalog::CINEMA_PLAYER_SLUG,
+            KmjProductCatalog::IMMERSIVE_CINEMA_SUITE_SLUG => 'Media & Immersive Experience',
+            default => 'KMJ TECHNO Products',
+        };
     }
 
     /**
