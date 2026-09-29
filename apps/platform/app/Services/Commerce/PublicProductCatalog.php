@@ -83,6 +83,7 @@ final class PublicProductCatalog
             CloudOSProductCatalog::SLUG => $this->cloudOS($product),
             KmjProductCatalog::CALIBRATION_SLUG => $this->calibration(),
             KmjProductCatalog::FORGE_SLUG => $this->forge(),
+            KmjProductCatalog::OMNIDESK_SLUG => $this->omniDesk(),
             KmjProductCatalog::CONNECT_SLUG => $this->connect(),
             KmjProductCatalog::CLOUD_NEXUS_SLUG => $this->cloudNexus(),
             KmjProductCatalog::AGENT_SLUG => $this->agent(),
