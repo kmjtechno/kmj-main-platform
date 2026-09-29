@@ -11,7 +11,7 @@ use Tests\TestCase;
 
 final class CodeBridgeDeviceCredentialTest extends TestCase
 {
-use RefreshDatabase;
+    use RefreshDatabase;
 
     public function test_rotation_replaces_hash_preserves_sequence_and_never_persists_raw_secret(): void
     {
