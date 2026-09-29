@@ -22,6 +22,10 @@ const categoryOrder = [
     'Media & Immersive Experience',
 ] as const;
 
+const categoryRank = new Map<string, number>(
+    categoryOrder.map((category, index) => [category, index]),
+);
+
 const categoryDescriptions: Record<string, string> = {
     'Platform & Infrastructure':
         'Governed cloud and platform foundations for KMJ products and operations.',
@@ -88,7 +92,11 @@ export default function ProductsIndex({ products }: { products: Product[] }) {
                 matchesLifecycle &&
                 (normalizedQuery === '' || haystack.includes(normalizedQuery))
             );
-        });
+        }).sort(
+            (left, right) =>
+                (categoryRank.get(left.category) ?? Number.MAX_SAFE_INTEGER) -
+                (categoryRank.get(right.category) ?? Number.MAX_SAFE_INTEGER),
+        );
     }, [lifecycle, products, query]);
 
     return (
