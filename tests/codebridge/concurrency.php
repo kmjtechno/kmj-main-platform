@@ -16,7 +16,7 @@ $user=getenv('CODEBRIDGE_CONCURRENCY_USER') ?: null;
 $pass=getenv('CODEBRIDGE_CONCURRENCY_PASSWORD') ?: null;
 $db=new PDO($dsn,$user,$pass,[PDO::ATTR_ERRMODE=>PDO::ERRMODE_EXCEPTION]);
 $driver=$db->getAttribute(PDO::ATTR_DRIVER_NAME);
-if (!in_array($driver,['mysql','pgsql'],true)) { fwrite(STDERR,"Unsupported concurrency driver: {$driver}\n"); exit(2); }
+if ($driver !== 'pgsql') { fwrite(STDERR,"PostgreSQL is required for CodeBridge concurrency verification\n"); exit(2); }
 
 require __DIR__.'/../../apps/platform/app/Services/Licensing/Kslp/KslpSigner.php';
 require __DIR__.'/../../apps/platform/app/Services/Licensing/CodeBridge/CodeBridgeLeaseEncoder.php';
