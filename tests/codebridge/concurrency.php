@@ -7,8 +7,9 @@ declare(strict_types=1);
  * Run only with CODEBRIDGE_CONCURRENCY_DSN pointing at an isolated MySQL/PostgreSQL test database.
  * The harness deliberately refuses SQLite because SQLite does not model the row-lock behavior used in production.
  */
+$strict=getenv('CODEBRIDGE_CONCURRENCY_REQUIRED') === '1';
 $dsn=getenv('CODEBRIDGE_CONCURRENCY_DSN') ?: '';
-if ($dsn === '') { echo "SKIP: CODEBRIDGE_CONCURRENCY_DSN not configured\n"; exit(0); }
+if ($dsn === '') { fwrite($strict ? STDERR : STDOUT, "SKIP: CODEBRIDGE_CONCURRENCY_DSN not configured\n"); exit($strict ? 2 : 0); }
 if (str_starts_with($dsn,'sqlite:')) { fwrite(STDERR,"SQLite is not a valid CodeBridge concurrency target\n"); exit(2); }
 
 $user=getenv('CODEBRIDGE_CONCURRENCY_USER') ?: null;
@@ -35,7 +36,7 @@ try {
     $db->commit();
 } catch(Throwable $e){$db->rollBack();throw $e;}
 
-if (!function_exists('pcntl_fork')) { echo "SKIP: pcntl unavailable\n"; exit(0); }
+if (!function_exists('pcntl_fork')) { fwrite($strict ? STDERR : STDOUT, "SKIP: pcntl unavailable\n"); exit($strict ? 2 : 0); }
 $dir=sys_get_temp_dir().'/codebridge-race-'.bin2hex(random_bytes(5)); mkdir($dir);
 $request=['product'=>'KMJ_CODEBRIDGE','tenant'=>'race-tenant','device'=>'race-device','sequence'=>0];
 $pids=[];
