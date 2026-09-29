@@ -15,6 +15,7 @@ final class CodeBridgeRenewalService
 {
     public function __construct(private PDO $db, private KslpSigner $signer) {}
 
+    /** @param array<string, mixed> $request */
     public function renew(string $credential, array $request, int $now): string
     {
         if (strlen($credential) < 32 || strlen($credential) > 4096 || ($request['product'] ?? null) !== 'KMJ_CODEBRIDGE' || ! is_int($request['sequence'] ?? null) || $request['sequence'] < -1 || count($request) !== 4) {
@@ -63,7 +64,7 @@ final class CodeBridgeRenewalService
                 }
             }
             $count = $this->one('SELECT COUNT(*) AS total FROM codebridge_device_credentials c JOIN kslp_activations a ON a.id = c.activation_id AND a.license_id = c.license_id WHERE c.license_id = ? AND c.revoked_at IS NULL AND c.expires_at_epoch > ? AND a.deactivated_at IS NULL', [$license['id'], $now]);
-            if (! is_int($limits['devices'] ?? null) || (int) $count['total'] > $limits['devices']) {
+            if ($count === false || ! is_int($limits['devices'] ?? null) || (int) $count['total'] > $limits['devices']) {
                 throw new DomainException('CODEBRIDGE_DEVICE_LIMIT');
             }
             $previous = (int) $device['lease_sequence'];
@@ -86,13 +87,22 @@ final class CodeBridgeRenewalService
 
             return $token;
         } catch (Throwable $error) {
-            if ($this->db->inTransaction()) {
-                $this->db->rollBack();
-            }
+            $this->rollbackIfActive();
             throw $error;
         }
     }
 
+    private function rollbackIfActive(): void
+    {
+        if ($this->db->inTransaction()) {
+            $this->db->rollBack();
+        }
+    }
+
+    /**
+     * @param  list<mixed>  $values
+     * @return array<string, mixed>|false
+     */
     private function one(string $sql, array $values): array|false
     {
         $statement = $this->db->prepare($sql);

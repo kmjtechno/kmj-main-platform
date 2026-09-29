@@ -10,6 +10,7 @@ use DomainException;
 /** Encodes already-authorized entitlements; never decides purchase or trial eligibility. */
 final class CodeBridgeLeaseEncoder
 {
+    /** @param array<string, mixed> $claims */
     public function encode(array $claims, KslpSigner $signer, int $now): string
     {
         $required = ['v', 'product', 'tenant', 'device', 'license_id', 'activation_id', 'jti', 'sequence', 'iat', 'nbf', 'exp', 'grace_until', 'features', 'limits'];
