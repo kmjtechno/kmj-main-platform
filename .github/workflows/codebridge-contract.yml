@@ -5,12 +5,20 @@ on:
     paths:
       - 'apps/platform/app/Services/Licensing/CodeBridge/**'
       - 'apps/platform/app/Services/Licensing/Kslp/KslpSigner.php'
+      - 'apps/platform/routes/codebridge-api.php'
+      - 'apps/platform/config/codebridge.php'
+      - 'apps/platform/database/migrations/*codebridge*'
+      - 'apps/platform/bootstrap/app.php'
       - 'tests/codebridge/**'
       - '.github/workflows/codebridge-contract.yml'
   pull_request:
     paths:
       - 'apps/platform/app/Services/Licensing/CodeBridge/**'
       - 'apps/platform/app/Services/Licensing/Kslp/KslpSigner.php'
+      - 'apps/platform/routes/codebridge-api.php'
+      - 'apps/platform/config/codebridge.php'
+      - 'apps/platform/database/migrations/*codebridge*'
+      - 'apps/platform/bootstrap/app.php'
       - 'tests/codebridge/**'
       - '.github/workflows/codebridge-contract.yml' 
   workflow_dispatch:
@@ -36,5 +44,5 @@ jobs:
       - name: Verify PHP encoder and Node consumer
         run: |
           php -l apps/platform/app/Services/Licensing/CodeBridge/CodeBridgeLeaseEncoder.php
-          php tests/codebridge/encoder.php "$RUNNER_TEMP/codebridge-fixture.json"
+          php tests/codebridge/renewal.php "$RUNNER_TEMP/codebridge-fixture.json"
           node tests/codebridge/verify.mjs "$RUNNER_TEMP/codebridge-fixture.json"

@@ -18,6 +18,7 @@ return Application::configure(basePath: dirname(__DIR__))
             __DIR__.'/../routes/operator-ops.php',
             __DIR__.'/../routes/kslp-public.php',
         ],
+        api: __DIR__.'/../routes/codebridge-api.php',
         commands: __DIR__.'/../routes/console.php',
         health: '/up',
     )
@@ -36,3 +37,4 @@ return Application::configure(basePath: dirname(__DIR__))
             fn (Request $request) => $request->is('api/*') || $request->expectsJson(),
         );
     })->create();
+
