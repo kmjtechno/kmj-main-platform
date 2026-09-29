@@ -57,7 +57,8 @@ jobs:
 
   concurrency-postgres:
     name: CodeBridge concurrency (postgres)
-    runs-on: ubuntu-24.04
+    runs-on: [self-hosted, linux, x64, kmj-main-platform-ci]
+    container: php:8.3-cli
     timeout-minutes: 10
     services:
       postgres:
@@ -66,8 +67,6 @@ jobs:
           POSTGRES_USER: codebridge
           POSTGRES_PASSWORD: codebridge
           POSTGRES_DB: codebridge
-        ports:
-          - 5432:5432
         options: >-
           --health-cmd "pg_isready -U codebridge -d codebridge"
           --health-interval 5s
@@ -84,8 +83,9 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          sudo apt-get update
-          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y php-pgsql postgresql-client
+          apt-get update
+          DEBIAN_FRONTEND=noninteractive apt-get install -y libpq-dev postgresql-client
+          docker-php-ext-install pdo_pgsql
           php -m | grep -Fxq pdo_pgsql
 
       - name: Verify native PostgreSQL concurrency runtime
@@ -96,7 +96,7 @@ jobs:
           if php -m | grep -Fxq pdo_pgsql; then echo 'PASS pdo_pgsql'; else echo 'FAIL pdo_pgsql'; failed=1; fi
           if php -r 'exit(function_exists("pcntl_fork") ? 0 : 1);'; then echo 'PASS pcntl_fork'; else echo 'FAIL pcntl_fork'; failed=1; fi
           if command -v psql; then echo 'PASS psql'; else echo 'FAIL psql'; failed=1; fi
-          if command -v pg_isready >/dev/null 2>&1 && pg_isready -h 127.0.0.1; then echo 'PASS pg_isready'; else echo 'FAIL pg_isready'; failed=1; fi
+          if command -v pg_isready >/dev/null 2>&1 && pg_isready -h postgres; then echo 'PASS pg_isready'; else echo 'FAIL pg_isready'; failed=1; fi
           exit "$failed"
       - name: Create isolated PostgreSQL database
         shell: bash
@@ -104,9 +104,9 @@ jobs:
           set -euo pipefail
           db="codebridge_ci_${GITHUB_RUN_ID}_${GITHUB_RUN_ATTEMPT}"
           db="${db//-/_}"
-          createdb -h 127.0.0.1 -U codebridge "$db"
+          createdb -h postgres -U codebridge "$db"
           echo "CODEBRIDGE_CI_DATABASE=$db" >> "$GITHUB_ENV"
-          echo "CODEBRIDGE_CONCURRENCY_DSN=pgsql:host=127.0.0.1;dbname=$db" >> "$GITHUB_ENV"
+          echo "CODEBRIDGE_CONCURRENCY_DSN=pgsql:host=postgres;dbname=$db" >> "$GITHUB_ENV"
           echo "CODEBRIDGE_CONCURRENCY_USER=codebridge" >> "$GITHUB_ENV"
           echo "CODEBRIDGE_CONCURRENCY_PASSWORD=codebridge" >> "$GITHUB_ENV"
       - name: Create isolated concurrency schema
@@ -123,5 +123,5 @@ jobs:
         shell: bash
         run: |
           if [[ -n "${CODEBRIDGE_CI_DATABASE:-}" ]]; then
-            dropdb -h 127.0.0.1 -U codebridge --if-exists "$CODEBRIDGE_CI_DATABASE"
+            dropdb -h postgres -U codebridge --if-exists "$CODEBRIDGE_CI_DATABASE"
           fi
