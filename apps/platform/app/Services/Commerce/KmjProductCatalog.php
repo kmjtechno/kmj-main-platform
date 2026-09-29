@@ -109,6 +109,7 @@ final class KmjProductCatalog
             ];
 
             foreach ($catalog as $slug => $product) {
+                $product->refresh();
                 $this->seedManagementDefaults($product, $slug);
             }
 
