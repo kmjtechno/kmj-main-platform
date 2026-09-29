@@ -1,7 +1,18 @@
 name: CodeBridge License Contract
 on:
   push:
-    branches: [feat/codebridge-license-encoder]
+    branches: [feat/codebridge-license-encoder, main, feat/homepage-worldclass]
+    paths:
+      - 'apps/platform/app/Services/Licensing/CodeBridge/**'
+      - 'apps/platform/app/Services/Licensing/Kslp/KslpSigner.php'
+      - 'tests/codebridge/**'
+      - '.github/workflows/codebridge-contract.yml'
+  pull_request:
+    paths:
+      - 'apps/platform/app/Services/Licensing/CodeBridge/**'
+      - 'apps/platform/app/Services/Licensing/Kslp/KslpSigner.php'
+      - 'tests/codebridge/**'
+      - '.github/workflows/codebridge-contract.yml' 
   workflow_dispatch:
 permissions:
   contents: read

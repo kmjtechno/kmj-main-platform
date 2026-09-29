@@ -16,3 +16,9 @@ The isolated CI job generates only an ephemeral test key. It checks PHP rejectio
 cases, then verifies the produced token with the exact public CodeBridge consumer
 commit a09fae60677ed2ab17a3a4c9601afea793e62a55. No private key is emitted or committed.
 This proves encoder/consumer compatibility, not an operational billing endpoint.
+
+Cloud workspace validation (2026-09-29): Ubuntu PHP 8.3.6 with sodium passed syntax
+validation and all 15 encoder checks; Node.js 24 passed all 3 consumer compatibility
+checks. GitHub run 36562077316 failed before executing any steps; no remote CI pass
+is claimed. Full Laravel integration and the renewal endpoint are not part of this
+isolated encoding adapter.
