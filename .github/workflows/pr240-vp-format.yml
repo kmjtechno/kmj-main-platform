@@ -1,0 +1,39 @@
+name: PR240 repository formatter
+
+on:
+  push:
+    branches:
+      - fix/pr240-main-integration
+    paths:
+      - .github/workflows/pr240-vp-format.yml
+
+permissions:
+  contents: write
+
+jobs:
+  format:
+    runs-on: [self-hosted, linux, x64, kmj-main-platform-ci]
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Apply repository vp formatter
+        working-directory: apps/platform
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm ci --prefer-offline --no-audit --no-fund
+          npm run check:fix
+          git diff --exit-code -- . ':(exclude)resources/js/pages/products/index.tsx' || {
+            echo "Unexpected formatter changes outside product index." >&2
+            git diff -- . ':(exclude)resources/js/pages/products/index.tsx'
+            exit 1
+          }
+          if git diff --quiet -- resources/js/pages/products/index.tsx; then
+            echo "No product-index formatting changes required."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add resources/js/pages/products/index.tsx
+          git commit -m "style(products): apply vp formatter"
+          git push origin HEAD:fix/pr240-main-integration
