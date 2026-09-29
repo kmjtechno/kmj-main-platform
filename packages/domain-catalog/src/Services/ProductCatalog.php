@@ -43,10 +43,17 @@ final class ProductCatalog
             ],
         );
 
-        if (
-            (string) $product->getAttribute('name') !== $name
-            || (string) $product->getAttribute('status') !== 'active'
-        ) {
+        if ((string) $product->getAttribute('name') !== $name) {
+            throw new DomainException('Product slug is already bound to different catalog facts.');
+        }
+
+        if ((string) $product->getAttribute('status') === 'sandbox') {
+            $product->forceFill(['status' => 'active'])->save();
+
+            return $product->refresh();
+        }
+
+        if ((string) $product->getAttribute('status') !== 'active') {
             throw new DomainException('Product slug is already bound to different catalog facts.');
         }
 
