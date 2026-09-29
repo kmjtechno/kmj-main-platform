@@ -76,7 +76,7 @@ final class PlatformOwnerConsoleTest extends TestCase
         $response->assertInertia(fn (Assert $page) => $page
             ->component('operator')
             ->has('catalogProducts', 13)
-            ->where('catalogProducts.0.active_policy_count', 0)
+            ->where('catalogProducts.0.active_policy_count', 1)
             ->where('catalogProducts.0.active_entitlement_count', 0));
     }
 
