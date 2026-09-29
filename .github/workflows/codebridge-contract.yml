@@ -57,28 +57,31 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        database: [mysql, postgres]
-    services:
-      mysql:
-        image: mysql:8.4
-        env:
-          MYSQL_ROOT_PASSWORD: root
-          MYSQL_DATABASE: codebridge
-        ports: ['3306:3306']
-        options: >-
-          --health-cmd="mysqladmin ping -h 127.0.0.1 -proot" --health-interval=5s --health-timeout=5s --health-retries=20
-      postgres:
-        image: postgres:17
-        env:
-          POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: codebridge
-        ports: ['5432:5432']
-        options: >-
-          --health-cmd="pg_isready -U postgres -d codebridge" --health-interval=5s --health-timeout=5s --health-retries=20
+        include:
+          - database: mysql
+            image: mysql:8.4
+            port: 3306
+            health: mysqladmin ping -h 127.0.0.1 -proot
+          - database: postgres
+            image: postgres:17
+            port: 5432
+            health: pg_isready -U postgres -d codebridge
     steps:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
+      - name: Start isolated ${{ matrix.database }} service
+        run: |
+          set -euo pipefail
+          if [[ "${{ matrix.database }}" == "mysql" ]]; then
+            docker run -d --name codebridge-db -e MYSQL_ROOT_PASSWORD=root -e MYSQL_DATABASE=codebridge -p 3306:3306 mysql:8.4
+            for i in {1..30}; do docker exec codebridge-db mysqladmin ping -h 127.0.0.1 -proot && break; sleep 2; done
+            docker exec codebridge-db mysqladmin ping -h 127.0.0.1 -proot
+          else
+            docker run -d --name codebridge-db -e POSTGRES_PASSWORD=postgres -e POSTGRES_DB=codebridge -p 5432:5432 postgres:17
+            for i in {1..30}; do docker exec codebridge-db pg_isready -U postgres -d codebridge && break; sleep 2; done
+            docker exec codebridge-db pg_isready -U postgres -d codebridge
+          fi
       - name: Install PHP database drivers and verify concurrency runtime
         run: |
           set -euo pipefail
