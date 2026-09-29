@@ -56,7 +56,7 @@ final class AdminProductManager
     }
 
     /**
-     * @param  list<string>  $ids
+     * @param  array<array-key, string>  $ids
      */
     public function reorder(array $ids): void
     {
