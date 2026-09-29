@@ -59,8 +59,16 @@ final class CodeBridgeDeviceEnrollmentTest extends TestCase
             'machine_identity_hash' => str_repeat('a', 64), 'idempotency_key' => 'idem-1',
             'activated_at' => now(), 'created_at' => now(), 'updated_at' => now(),
         ]);
+        $product = (string) Str::uuid();
+        DB::table('products')->insert([
+            'id' => $product, 'slug' => 'codebridge', 'name' => 'CodeBridge', 'status' => 'active',
+            'lifecycle' => 'available', 'is_public' => false, 'sort_order' => 100,
+            'purchase_enabled' => false, 'licensing_enabled' => true, 'created_at' => now(), 'updated_at' => now(),
+        ]);
         DB::table('plans')->insert([
-            'id' => (string) Str::uuid(), 'code' => 'codebridge.professional', 'name' => 'CodeBridge Professional', 'status' => 'active',
+            'id' => (string) Str::uuid(), 'product_id' => $product, 'code' => 'codebridge.professional',
+            'name' => 'CodeBridge Professional', 'pricing_model' => 'license', 'billing_interval' => null,
+            'currency' => null, 'amount_minor' => null, 'status' => 'active', 'trial_days' => 0,
             'features' => json_encode(['read' => true, 'write' => true, 'execute' => false]),
             'limits' => json_encode(['devices' => $devices]), 'created_at' => now(), 'updated_at' => now(),
         ]);
