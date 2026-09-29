@@ -57,4 +57,4 @@ jobs:
           rustup component add rustfmt
           cargo fmt --manifest-path services/license-core/Cargo.toml --check
           cargo test --locked --manifest-path services/license-core/Cargo.toml
-          sha256sum -c contracts/kslp-v1/CONTRACT.sha256
+          bash contracts/kslp-v1/verify-contract.sh
