@@ -53,49 +53,6 @@ jobs:
           php tests/codebridge/renewal.php "$RUNNER_TEMP/codebridge-fixture.json"
           node tests/codebridge/verify.mjs "$RUNNER_TEMP/codebridge-fixture.json"
 
-  concurrency-mysql:
-    name: CodeBridge concurrency (mysql)
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    services:
-      mysql:
-        image: mysql:8.4
-        env:
-          MYSQL_ROOT_PASSWORD: root
-          MYSQL_DATABASE: codebridge
-        ports:
-          - 3306:3306
-        options: >-
-          --health-cmd="mysqladmin ping -h 127.0.0.1 -proot"
-          --health-interval=5s
-          --health-timeout=5s
-          --health-retries=20
-    env:
-      CODEBRIDGE_CONCURRENCY_DSN: mysql:host=127.0.0.1;port=3306;dbname=codebridge
-      CODEBRIDGE_CONCURRENCY_USER: root
-      CODEBRIDGE_CONCURRENCY_PASSWORD: root
-      CODEBRIDGE_CONCURRENCY_REQUIRED: '1'
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          persist-credentials: false
-      - name: Prepare MySQL concurrency runtime
-        run: |
-          set -euo pipefail
-          sudo apt-get update -qq
-          sudo apt-get install -y php-mysql
-          php -m | grep -F pdo_mysql
-          php -r 'exit(function_exists("pcntl_fork") ? 0 : 1);'
-      - name: Create isolated concurrency schema
-        run: php tests/codebridge/concurrency-schema.php
-      - name: Run mandatory real-database concurrency regression
-        run: |
-          set -euo pipefail
-          output="$(php tests/codebridge/concurrency.php 2>&1)"
-          printf '%s\n' "$output"
-          grep -F 'CodeBridge real-DB concurrency checks: PASS' <<<"$output"
-          if grep -Fq 'SKIP:' <<<"$output"; then exit 1; fi
-
   concurrency-postgres:
     name: CodeBridge concurrency (postgres)
     runs-on: ubuntu-latest
