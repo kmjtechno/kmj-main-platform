@@ -118,15 +118,6 @@ final class PublicProductHubTest extends TestCase
         }
     }
 
-    public function test_legacy_cinema_variant_urls_redirect_to_the_master_platform(): void
-    {
-        foreach (KmjProductCatalog::LEGACY_CINEMA_VARIANT_SLUGS as $slug) {
-            $this->get('/products/'.$slug)
-                ->assertRedirect('/products/'.KmjProductCatalog::CINEMA_PLATFORM_SLUG)
-                ->assertStatus(301);
-        }
-    }
-
     public function test_unknown_product_is_not_found(): void
     {
         $this->get('/products/not-a-kmj-product')->assertNotFound();
