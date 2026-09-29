@@ -1,4 +1,5 @@
 name: CodeBridge License Contract
+# Registered on the default branch; PR updates must admit this workflow.
 on:
   push:
     branches: [feat/codebridge-license-encoder, feat/codebridge-completion, main, feat/homepage-worldclass]
