@@ -41,7 +41,7 @@ try {
     $q=$db->prepare('INSERT INTO kslp_activations (id,license_id,server_identity,deactivated_at) VALUES (?,?,?,NULL)');$q->execute(['race-activation','race-license','ed25519:race']);
     $q=$db->prepare('INSERT INTO codebridge_device_credentials (id,license_id,activation_id,tenant_id,device_id,server_identity,token_hash,lease_sequence,expires_at_epoch,revoked_at) VALUES (?,?,?,?,?,?,?,?,?,NULL)');
     $q->execute(['race-credential','race-license','race-activation','race-tenant','race-device','ed25519:race',hash('sha256',$credential),0,$now+86400]);
-    $q=$db->prepare('INSERT INTO plans (code,features,limits,status) VALUES (?,?,?,?)');$q->execute(['codebridge.professional','{"read":true}','{"devices":1}','active']);
+    $q=$db->prepare('INSERT INTO plans (code,features,limits,status) VALUES (?,?,?,?)');$q->execute(['codebridge.professional','{"read":true}','{"devices":1,"concurrent_jobs":2}','active']);
     $db->commit();
 } catch(Throwable $e){$db->rollBack();throw $e;}
 
