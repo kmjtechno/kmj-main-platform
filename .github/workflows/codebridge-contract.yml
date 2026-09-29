@@ -53,57 +53,82 @@ jobs:
           php tests/codebridge/renewal.php "$RUNNER_TEMP/codebridge-fixture.json"
           node tests/codebridge/verify.mjs "$RUNNER_TEMP/codebridge-fixture.json"
 
-  concurrency-database:
-    name: CodeBridge concurrency (${{ matrix.database }})
-    runs-on: [self-hosted, linux, x64, kmj-main-platform-ci]
+  concurrency-mysql:
+    name: CodeBridge concurrency (mysql)
+    runs-on: ubuntu-latest
     timeout-minutes: 10
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - database: mysql
-            image: mysql:8.4
-            port: 3306
-            health: mysqladmin ping -h 127.0.0.1 -proot
-          - database: postgres
-            image: postgres:17
-            port: 5432
-            health: pg_isready -U postgres -d codebridge
+    services:
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: codebridge
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -proot"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=20
+    env:
+      CODEBRIDGE_CONCURRENCY_DSN: mysql:host=127.0.0.1;port=3306;dbname=codebridge
+      CODEBRIDGE_CONCURRENCY_USER: root
+      CODEBRIDGE_CONCURRENCY_PASSWORD: root
+      CODEBRIDGE_CONCURRENCY_REQUIRED: '1'
     steps:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
-      - name: Start isolated ${{ matrix.database }} service
+      - name: Prepare MySQL concurrency runtime
         run: |
           set -euo pipefail
-          if [[ "${{ matrix.database }}" == "mysql" ]]; then
-            docker run -d --name codebridge-db -e MYSQL_ROOT_PASSWORD=root -e MYSQL_DATABASE=codebridge -p 3306:3306 mysql:8.4
-            for i in {1..30}; do docker exec codebridge-db mysqladmin ping -h 127.0.0.1 -proot && break; sleep 2; done
-            docker exec codebridge-db mysqladmin ping -h 127.0.0.1 -proot
-          else
-            docker run -d --name codebridge-db -e POSTGRES_PASSWORD=postgres -e POSTGRES_DB=codebridge -p 5432:5432 postgres:17
-            for i in {1..30}; do docker exec codebridge-db pg_isready -U postgres -d codebridge && break; sleep 2; done
-            docker exec codebridge-db pg_isready -U postgres -d codebridge
-          fi
-      - name: Verify PHP database drivers and concurrency runtime
-        run: |
-          set -euo pipefail
-          php -m | grep -E 'pdo_mysql|pdo_pgsql'
+          sudo apt-get update -qq
+          sudo apt-get install -y php-mysql
+          php -m | grep -F pdo_mysql
           php -r 'exit(function_exists("pcntl_fork") ? 0 : 1);'
-          docker version
-      - name: Select isolated database
+      - name: Create isolated concurrency schema
+        run: php tests/codebridge/concurrency-schema.php
+      - name: Run mandatory real-database concurrency regression
         run: |
           set -euo pipefail
-          if [[ "${{ matrix.database }}" == "mysql" ]]; then
-            echo 'CODEBRIDGE_CONCURRENCY_DSN=mysql:host=127.0.0.1;port=3306;dbname=codebridge' >> "$GITHUB_ENV"
-            echo 'CODEBRIDGE_CONCURRENCY_USER=root' >> "$GITHUB_ENV"
-            echo 'CODEBRIDGE_CONCURRENCY_PASSWORD=root' >> "$GITHUB_ENV"
-          else
-            echo 'CODEBRIDGE_CONCURRENCY_DSN=pgsql:host=127.0.0.1;port=5432;dbname=codebridge' >> "$GITHUB_ENV"
-            echo 'CODEBRIDGE_CONCURRENCY_USER=postgres' >> "$GITHUB_ENV"
-            echo 'CODEBRIDGE_CONCURRENCY_PASSWORD=postgres' >> "$GITHUB_ENV"
-          fi
-          echo 'CODEBRIDGE_CONCURRENCY_REQUIRED=1' >> "$GITHUB_ENV"
+          output="$(php tests/codebridge/concurrency.php 2>&1)"
+          printf '%s\n' "$output"
+          grep -F 'CodeBridge real-DB concurrency checks: PASS' <<<"$output"
+          if grep -Fq 'SKIP:' <<<"$output"; then exit 1; fi
+
+  concurrency-postgres:
+    name: CodeBridge concurrency (postgres)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: codebridge
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U postgres -d codebridge"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=20
+    env:
+      CODEBRIDGE_CONCURRENCY_DSN: pgsql:host=127.0.0.1;port=5432;dbname=codebridge
+      CODEBRIDGE_CONCURRENCY_USER: postgres
+      CODEBRIDGE_CONCURRENCY_PASSWORD: postgres
+      CODEBRIDGE_CONCURRENCY_REQUIRED: '1'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Prepare PostgreSQL concurrency runtime
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y php-pgsql
+          php -m | grep -F pdo_pgsql
+          php -r 'exit(function_exists("pcntl_fork") ? 0 : 1);'
       - name: Create isolated concurrency schema
         run: php tests/codebridge/concurrency-schema.php
       - name: Run mandatory real-database concurrency regression
