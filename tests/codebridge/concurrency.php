@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 /*
  * Real-database concurrency regression for CodeBridge renewal.
- * Run only with CODEBRIDGE_CONCURRENCY_DSN pointing at an isolated MySQL/PostgreSQL test database.
+ * Run only with CODEBRIDGE_CONCURRENCY_DSN pointing at an isolated PostgreSQL test database.
  * The harness deliberately refuses SQLite because SQLite does not model the row-lock behavior used in production.
  */
 $strict=getenv('CODEBRIDGE_CONCURRENCY_REQUIRED') === '1';
@@ -18,10 +18,19 @@ $db=new PDO($dsn,$user,$pass,[PDO::ATTR_ERRMODE=>PDO::ERRMODE_EXCEPTION]);
 $driver=$db->getAttribute(PDO::ATTR_DRIVER_NAME);
 if (!in_array($driver,['mysql','pgsql'],true)) { fwrite(STDERR,"Unsupported concurrency driver: {$driver}\n"); exit(2); }
 
-require __DIR__.'/encoder.php';
+require __DIR__.'/../../apps/platform/app/Services/Licensing/Kslp/KslpSigner.php';
+require __DIR__.'/../../apps/platform/app/Services/Licensing/CodeBridge/CodeBridgeLeaseEncoder.php';
 require __DIR__.'/../../apps/platform/app/Services/Licensing/CodeBridge/CodeBridgeRenewalService.php';
 
 use App\Services\Licensing\CodeBridge\CodeBridgeRenewalService;
+use App\Services\Licensing\Kslp\KslpSigner;
+
+$pair=sodium_crypto_sign_keypair();
+$signer=new class(sodium_crypto_sign_secretkey($pair)) implements KslpSigner {
+    public function __construct(private string $key) {}
+    public function kid(): string { return 'codebridge-concurrency-test'; }
+    public function sign(string $message): string { return sodium_crypto_sign_detached($message,$this->key); }
+};
 
 $now=time(); $credential=str_repeat('r',48);
 $db->beginTransaction();
