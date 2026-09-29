@@ -61,6 +61,7 @@ jobs:
     timeout-minutes: 10
     env:
       CODEBRIDGE_CONCURRENCY_REQUIRED: '1'
+      PGCONNECT_TIMEOUT: '5'
     steps:
       - uses: actions/checkout@v4
         with:
@@ -73,7 +74,7 @@ jobs:
           if php -m | grep -Fxq pdo_pgsql; then echo 'PASS pdo_pgsql'; else echo 'FAIL pdo_pgsql'; failed=1; fi
           if php -r 'exit(function_exists("pcntl_fork") ? 0 : 1);'; then echo 'PASS pcntl_fork'; else echo 'FAIL pcntl_fork'; failed=1; fi
           if command -v psql; then echo 'PASS psql'; else echo 'FAIL psql'; failed=1; fi
-          if command -v pg_isready >/dev/null 2>&1 && pg_isready -h 127.0.0.1; then echo 'PASS pg_isready'; else echo 'FAIL pg_isready'; failed=1; fi
+          if command -v pg_isready >/dev/null 2>&1 && pg_isready; then echo 'PASS pg_isready'; else echo 'FAIL pg_isready'; failed=1; fi
           exit "$failed"
       - name: Create isolated PostgreSQL database
         shell: bash
@@ -81,9 +82,9 @@ jobs:
           set -euo pipefail
           db="codebridge_ci_${GITHUB_RUN_ID}_${GITHUB_RUN_ATTEMPT}"
           db="${db//-/_}"
-          createdb -h 127.0.0.1 "$db"
+          createdb "$db"
           echo "CODEBRIDGE_CI_DATABASE=$db" >> "$GITHUB_ENV"
-          echo "CODEBRIDGE_CONCURRENCY_DSN=pgsql:host=127.0.0.1;dbname=$db" >> "$GITHUB_ENV"
+          echo "CODEBRIDGE_CONCURRENCY_DSN=pgsql:dbname=$db" >> "$GITHUB_ENV"
           echo "CODEBRIDGE_CONCURRENCY_USER=${USER}" >> "$GITHUB_ENV"
           echo 'CODEBRIDGE_CONCURRENCY_PASSWORD=' >> "$GITHUB_ENV"
       - name: Create isolated concurrency schema
@@ -100,5 +101,5 @@ jobs:
         shell: bash
         run: |
           if [[ -n "${CODEBRIDGE_CI_DATABASE:-}" ]]; then
-            dropdb -h 127.0.0.1 --if-exists "$CODEBRIDGE_CI_DATABASE"
+            dropdb --if-exists "$CODEBRIDGE_CI_DATABASE"
           fi
