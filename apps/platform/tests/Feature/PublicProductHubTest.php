@@ -24,34 +24,16 @@ final class PublicProductHubTest extends TestCase
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->component('welcome')
-                ->has('products', 13)
+                ->where('portfolioCount', 13)
+                ->has('products', 4)
                 ->where('products.0.slug', 'kmj-cloudos')
                 ->where('products.0.lifecycle', 'available')
-                ->where('products.0.purchase_enabled', true)
                 ->where('products.1.slug', 'kmj-calibration-pro')
                 ->where('products.1.lifecycle', 'preview')
                 ->where('products.2.slug', 'kmj-cinema-platform')
                 ->where('products.2.lifecycle', 'research')
                 ->where('products.3.slug', 'kmj-360-dome')
-                ->where('products.3.lifecycle', 'research')
-                ->where('products.4.slug', 'kmj-immersive-cinema-suite')
-                ->where('products.4.lifecycle', 'planned')
-                ->where('products.5.slug', 'kmj-cinema-player')
-                ->where('products.5.lifecycle', 'research')
-                ->where('products.6.slug', 'kmj-licensing-hub')
-                ->where('products.6.lifecycle', 'research')
-                ->where('products.7.slug', 'kmj-forge')
-                ->where('products.7.lifecycle', 'research')
-                ->where('products.8.slug', 'kmj-omnidesk')
-                ->where('products.8.lifecycle', 'research')
-                ->where('products.9.slug', 'kmj-connect')
-                ->where('products.9.lifecycle', 'planned')
-                ->where('products.10.slug', 'kmj-cloud-nexus')
-                ->where('products.10.lifecycle', 'research')
-                ->where('products.11.slug', 'kmj-agent')
-                ->where('products.11.lifecycle', 'research')
-                ->where('products.12.slug', 'kmj-creative-studio')
-                ->where('products.12.lifecycle', 'planned'));
+                ->where('products.3.lifecycle', 'research'));
     }
 
     public function test_products_hub_uses_only_canonical_public_lifecycle_vocabulary(): void
