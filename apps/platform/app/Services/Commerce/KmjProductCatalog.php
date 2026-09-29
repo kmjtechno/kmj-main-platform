@@ -128,7 +128,9 @@ final class KmjProductCatalog
             && (int) $product->getAttribute('sort_order') === 100
             && (string) $product->getAttribute('lifecycle') === 'planned'
             && $product->getAttribute('image_path') === null
-            && $product->getAttribute('summary') === null;
+            && $product->getAttribute('summary') === null
+            && (bool) $product->getAttribute('purchase_enabled') === false
+            && (bool) $product->getAttribute('licensing_enabled') === false;
 
         if (! $untouched) {
             return;
