@@ -511,6 +511,7 @@ function ManualPaymentConfirmation({ order }: { order: RecentOrder }) {
 
 export default function Operator({
     metrics,
+    catalogProducts,
     recentOrders,
     products,
 }: OperatorProps) {
