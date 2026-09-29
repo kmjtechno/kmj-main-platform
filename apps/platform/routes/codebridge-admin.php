@@ -26,6 +26,7 @@ Route::middleware(['auth', 'verified', 'password.confirm'])
 
             try {
                 $result = $service->enroll($v['license_id'], $v['activation_id'], $v['tenant_id'], $v['device_id'], time());
+
                 return response()->json($result, 201)->header('Cache-Control', 'no-store');
             } catch (DomainException $e) {
                 return response()->json(['error' => $e->getMessage()], 409)->header('Cache-Control', 'no-store');
@@ -64,6 +65,7 @@ Route::middleware(['auth', 'verified', 'password.confirm'])
 
             try {
                 $service->revoke($v['license_id'], $v['tenant_id'], $v['device_id'], time());
+
                 return response()->json(['revoked' => true])->header('Cache-Control', 'no-store');
             } catch (DomainException $e) {
                 return response()->json(['error' => $e->getMessage()], 409)->header('Cache-Control', 'no-store');
