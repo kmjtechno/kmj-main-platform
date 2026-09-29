@@ -8,6 +8,9 @@ use Illuminate\Support\Str;
 
 final class KslpActivationProof
 {
+    /**
+     * @return array<array-key, mixed>
+     */
     public function challenge(string $licenseId, string $serverIdentity): array
     {
         $pk = $this->publicKey($serverIdentity);
@@ -33,22 +36,23 @@ final class KslpActivationProof
                 throw new DomainException('KSLP_ACTIVATION_PROOF_INVALID');
             }$sig = $this->unb64($signature);
             $msg = 'KSLP-ACTIVATE-v1|'.$licenseId.'|'.$nonce;
-            if (! sodium_crypto_sign_verify_detached($sig, $msg, $this->publicKey($serverIdentity))) {
+            if ($sig === '' || strlen($sig) !== SODIUM_CRYPTO_SIGN_BYTES || ! sodium_crypto_sign_verify_detached($sig, $msg, $this->publicKey($serverIdentity))) {
                 throw new DomainException('KSLP_ACTIVATION_PROOF_INVALID');
             }DB::table('kslp_activation_challenges')->where('id', $challengeId)->update(['used_at' => now()]);
         }, 3);
     }
 
+    /** @return non-empty-string */
     private function publicKey(string $identity): string
     {
         if (! str_starts_with($identity, 'ed25519:')) {
             throw new DomainException('KSLP_SERVER_IDENTITY_INVALID');
         }$pk = $this->unb64(substr($identity, 8));
-        if (strlen($pk) !== SODIUM_CRYPTO_SIGN_PUBLICKEYBYTES) {
+        if ($pk === '' || strlen($pk) !== SODIUM_CRYPTO_SIGN_PUBLICKEYBYTES) {
             throw new DomainException('KSLP_SERVER_IDENTITY_INVALID');
         }
 
-return $pk;
+        return $pk;
     }
 
     private function b64(string $v): string
@@ -63,6 +67,6 @@ return $pk;
             throw new DomainException('KSLP_ACTIVATION_PROOF_INVALID');
         }
 
-return $x;
+        return $x;
     }
 }

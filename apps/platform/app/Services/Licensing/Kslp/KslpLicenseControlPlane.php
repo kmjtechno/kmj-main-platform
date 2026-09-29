@@ -2,6 +2,7 @@
 
 namespace App\Services\Licensing\Kslp;
 
+use Carbon\CarbonInterface;
 use DomainException;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -11,6 +12,9 @@ final class KslpLicenseControlPlane
 {
     public const PLANS = ['trial', 'professional', 'business', 'enterprise', 'custom_oem'];
 
+    /**
+     * @return array<array-key, mixed>
+     */
     public function issue(string $customer, string $plan, string $actor, string $reason = ''): array
     {
         if (! in_array($plan, self::PLANS, true)) {
@@ -32,6 +36,9 @@ final class KslpLicenseControlPlane
         }, 3);
     }
 
+    /**
+     * @return array<array-key, mixed>
+     */
     public function issueDelegated(string $issuerOrganizationId, string $customer, string $product, string $plan, string $actor, string $reason = ''): array
     {
         if (! in_array($plan, self::PLANS, true)) {
@@ -58,6 +65,9 @@ final class KslpLicenseControlPlane
         }, 3);
     }
 
+    /**
+     * @return array<array-key, mixed>
+     */
     public function activate(string $licenseId, string $serverIdentity, string $machineHash, string $idempotencyKey, string $actor, string $challengeId, string $nonce, string $proof): array
     {
         $existing = DB::table('kslp_activations')->where('idempotency_key', $idempotencyKey)->first();
@@ -91,17 +101,23 @@ final class KslpLicenseControlPlane
         }, 3);
     }
 
+    /**
+     * @return array<array-key, mixed>
+     */
     public function changePlan(string $id, string $plan, string $actor, string $reason): array
     {
         if (! in_array($plan, self::PLANS, true) || $plan === 'trial') {
             throw new DomainException('KSLP_INVALID_PLAN');
         }
 
-return $this->mutate($id, $actor, 'plan_changed', $reason, function ($q) use ($plan) {
+        return $this->mutate($id, $actor, 'plan_changed', $reason, function ($q) use ($plan) {
             $q->update(['plan' => $plan, 'sequence' => DB::raw('sequence+1'), 'updated_at' => now()]);
         });
     }
 
+    /**
+     * @return array<array-key, mixed>
+     */
     public function renew(string $id, Carbon $expires, string $actor, string $reason): array
     {
         return $this->mutate($id, $actor, 'renewed', $reason, function ($q) use ($expires) {
@@ -109,16 +125,25 @@ return $this->mutate($id, $actor, 'plan_changed', $reason, function ($q) use ($p
         });
     }
 
+    /**
+     * @return array<array-key, mixed>
+     */
     public function revoke(string $id, string $actor, string $reason): array
     {
         return $this->mutate($id, $actor, 'revoked', $reason, fn ($q) => $q->update(['status' => 'revoked', 'revoked_at' => now(), 'sequence' => DB::raw('sequence+1'), 'updated_at' => now()]));
     }
 
+    /**
+     * @return array<array-key, mixed>
+     */
     public function reactivate(string $id, string $actor, string $reason): array
     {
         return $this->mutate($id, $actor, 'reactivated', $reason, fn ($q) => $q->update(['status' => 'active', 'revoked_at' => null, 'sequence' => DB::raw('sequence+1'), 'updated_at' => now()]));
     }
 
+    /**
+     * @return array<array-key, mixed>
+     */
     public function transfer(string $id, string $server, string $machine, string $key, string $actor, string $reason, string $challengeId, string $nonce, string $proof): array
     {
         $this->requireReason($reason);
@@ -131,7 +156,7 @@ return $this->mutate($id, $actor, 'plan_changed', $reason, function ($q) use ($p
         }, 3);
     }
 
-    public function state(string $id, ?Carbon $at = null): string
+    public function state(string $id, ?CarbonInterface $at = null): string
     {
         $l = $this->license($id);
         $at ??= now();
@@ -143,10 +168,10 @@ return $this->mutate($id, $actor, 'plan_changed', $reason, function ($q) use ($p
             return 'GRACE';
         }
 
-return 'RESTRICTED';
+        return 'RESTRICTED';
     }
 
-    public function lease(string $id, string $activationId, KslpSigner $signer, ?Carbon $now = null): string
+    public function lease(string $id, string $activationId, KslpSigner $signer, ?CarbonInterface $now = null): string
     {
         $now ??= now();
         $l = $this->license($id);
@@ -157,11 +182,14 @@ return 'RESTRICTED';
         if (! $a) {
             throw new DomainException('KSLP_ACTIVATION_CONFLICT');
         }[$features,$limits] = app(KslpEntitlementResolver::class)->resolve($l);
-        $claims = ['protocol_version' => 'KSLP-v1', 'license_id' => $id, 'customer_id' => $l['customer_id'], 'product' => $l['product'], 'plan' => $l['plan'], 'server_identity' => $a['server_identity'], 'activation_id' => $activationId, 'features' => $features, 'limits' => $limits, 'iat' => $now->timestamp, 'nbf' => $now->timestamp - 5, 'exp' => min($now->copy()->addHours(24)->timestamp, Carbon::parse($l['grace_until'] ?? $l['expires_at'])->timestamp), 'sequence' => (int) $l['sequence'], 'nonce' => Str::random(32), 'kid' => $signer->kid(), 'jti' => (string) Str::uuid(), 'aud' => 'kmj-cloudos', 'grace_until' => $l['grace_until'] ? Carbon::parse($l['grace_until'])->timestamp : null];
+        $claims = ['protocol_version' => 'KSLP-v1', 'license_id' => $id, 'customer_id' => $l['customer_id'], 'product' => $l['product'], 'plan' => $l['plan'], 'server_identity' => $a['server_identity'], 'activation_id' => $activationId, 'features' => $features, 'limits' => $limits, 'iat' => $now->getTimestamp(), 'nbf' => $now->getTimestamp() - 5, 'exp' => min($now->copy()->addHours(24)->getTimestamp(), Carbon::parse($l['grace_until'] ?? $l['expires_at'])->timestamp), 'sequence' => (int) $l['sequence'], 'nonce' => Str::random(32), 'kid' => $signer->kid(), 'jti' => (string) Str::uuid(), 'aud' => 'kmj-cloudos', 'grace_until' => $l['grace_until'] ? Carbon::parse($l['grace_until'])->timestamp : null];
 
         return KslpCodec::encode($claims, $signer->kid(), fn ($m) => $signer->sign($m));
     }
 
+    /**
+     * @return array<array-key, mixed>
+     */
     private function mutate(string $id, string $actor, string $action, string $reason, callable $fn): array
     {
         $this->requireReason($reason);
@@ -184,17 +212,23 @@ return 'RESTRICTED';
         }
     }
 
+    /**
+     * @return array<array-key, mixed>
+     */
     private function license(string $id): array
     {
-        $x = DB::table('kslp_licenses')->where('id',$id)->first();
+        $x = DB::table('kslp_licenses')->where('id', $id)->first();
         if (! $x) {
             throw new DomainException('KSLP_LICENSE_NOT_FOUND');
         }
 
-return (array) $x;
+        return (array) $x;
     }
 
-    private function event(string $id,string $actor,string $action,?string $reason,array $meta = []): void
+    /**
+     * @param  array<array-key, mixed>  $meta
+     */
+    private function event(string $id, string $actor, string $action, ?string $reason, array $meta = []): void
     {
         DB::table('kslp_license_events')->insert(['license_id' => $id, 'actor_id' => $actor, 'action' => $action, 'reason' => $reason, 'correlation_id' => (string) Str::uuid(), 'metadata' => $meta ? json_encode($meta) : null, 'created_at' => now()]);
     }

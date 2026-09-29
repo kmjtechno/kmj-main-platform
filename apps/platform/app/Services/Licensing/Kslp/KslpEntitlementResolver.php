@@ -7,6 +7,10 @@ use Illuminate\Support\Facades\DB;
 
 final class KslpEntitlementResolver
 {
+    /**
+     * @param  array<array-key, mixed>  $license
+     * @return array<array-key, mixed>
+     */
     public function resolve(array $license): array
     {
         if ($license['product'] === 'KMJ_CLOUDOS') {
@@ -26,6 +30,6 @@ final class KslpEntitlementResolver
             throw new DomainException('KSLP_ENTITLEMENT_POLICY_NOT_CONFIGURED');
         }
 
-return [$features, $limits];
+        return [$features, $limits];
     }
 }

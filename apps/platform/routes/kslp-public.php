@@ -5,7 +5,10 @@ use Illuminate\Support\Facades\Route;
 
 Route::prefix('api/v1/kslp')->group(function (): void {
     Route::get('contract', function () {
-        return response()->json(['protocol_version' => 'KSLP-v1', 'contract_sha256' => trim(file_get_contents(base_path('../../contracts/kslp-v1/CONTRACT.sha256'))), 'algorithms' => ['Ed25519']])->header('Cache-Control', 'public, max-age=300');
+        $digest = file_get_contents(base_path('../../contracts/kslp-v1/CONTRACT.sha256'));
+        abort_if($digest === false, 503);
+
+        return response()->json(['protocol_version' => 'KSLP-v1', 'contract_sha256' => trim($digest), 'algorithms' => ['Ed25519']])->header('Cache-Control', 'public, max-age=300');
     });
     Route::get('keys/{purpose}', function (string $purpose, KslpKeyRegistry $keys) {
         abort_unless(in_array($purpose, KslpKeyRegistry::PURPOSES, true), 404);

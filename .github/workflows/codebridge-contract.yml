@@ -1,0 +1,49 @@
+name: CodeBridge License Contract
+on:
+  push:
+    branches: [feat/codebridge-license-encoder, main, feat/homepage-worldclass]
+    paths:
+      - 'apps/platform/app/Services/Licensing/CodeBridge/**'
+      - 'apps/platform/app/Services/Licensing/Kslp/KslpSigner.php'
+      - 'apps/platform/routes/codebridge-api.php'
+      - 'apps/platform/config/codebridge.php'
+      - 'apps/platform/database/migrations/*codebridge*'
+      - 'apps/platform/bootstrap/app.php'
+      - 'tests/codebridge/**'
+      - '.github/workflows/codebridge-contract.yml'
+  pull_request:
+    paths:
+      - 'apps/platform/app/Services/Licensing/CodeBridge/**'
+      - 'apps/platform/app/Services/Licensing/Kslp/KslpSigner.php'
+      - 'apps/platform/routes/codebridge-api.php'
+      - 'apps/platform/config/codebridge.php'
+      - 'apps/platform/database/migrations/*codebridge*'
+      - 'apps/platform/bootstrap/app.php'
+      - 'tests/codebridge/**'
+      - '.github/workflows/codebridge-contract.yml' 
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  interoperability:
+    runs-on: [self-hosted, linux, x64, kmj-main-platform-ci]
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          repository: kmjtechno/kmj-codebridge
+          ref: a09fae60677ed2ab17a3a4c9601afea793e62a55
+          path: .codebridge-contract
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Verify PHP encoder and Node consumer
+        run: |
+          php -l apps/platform/app/Services/Licensing/CodeBridge/CodeBridgeLeaseEncoder.php
+          php tests/codebridge/activation-proof.php apps/platform/app/Services/Licensing/Kslp/KslpActivationProof.php
+          php tests/codebridge/renewal.php "$RUNNER_TEMP/codebridge-fixture.json"
+          node tests/codebridge/verify.mjs "$RUNNER_TEMP/codebridge-fixture.json"

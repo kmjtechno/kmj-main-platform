@@ -11,6 +11,9 @@ final class AdminProductManager
 {
     public const LIFECYCLES = ['available', 'preview', 'research', 'planned', 'retired'];
 
+    /**
+     * @return array<string, mixed>
+     */
     public static function rules(?Product $product = null, bool $partial = false): array
     {
         $presence = $partial ? 'sometimes' : 'required';
@@ -27,6 +30,9 @@ final class AdminProductManager
         ];
     }
 
+    /**
+     * @param  array<string, mixed>  $attributes
+     */
     public function create(array $attributes): Product
     {
         return DB::transaction(function () use ($attributes): Product {
@@ -38,6 +44,9 @@ final class AdminProductManager
         });
     }
 
+    /**
+     * @param  array<string, mixed>  $attributes
+     */
     public function update(Product $product, array $attributes): Product
     {
         $product->fill($this->normalized($attributes));
@@ -46,6 +55,9 @@ final class AdminProductManager
         return $product->refresh();
     }
 
+    /**
+     * @param  array<array-key, string>  $ids
+     */
     public function reorder(array $ids): void
     {
         DB::transaction(function () use ($ids): void {
@@ -59,6 +71,10 @@ final class AdminProductManager
         });
     }
 
+    /**
+     * @param  array<string, mixed>  $attributes
+     * @return array<string, mixed>
+     */
     private function normalized(array $attributes): array
     {
         if (isset($attributes['lifecycle']) && ! in_array($attributes['lifecycle'], self::LIFECYCLES, true)) {

@@ -6,6 +6,10 @@ use DomainException;
 
 final class KslpEvidenceManifest
 {
+    /**
+     * @param  array<array-key, mixed>  $facts
+     * @return array<array-key, mixed>
+     */
     public function sign(array $facts, KslpEvidenceSigner $signer): array
     {
         $required = ['gate_id', 'verdict', 'release_id', 'contract_sha256', 'main_platform_sha', 'cloudos_sha', 'started_at', 'finished_at', 'environment', 'node_ids', 'test_command', 'tests', 'artifacts', 'previous_manifest_sha256'];
@@ -27,6 +31,9 @@ final class KslpEvidenceManifest
         return $m;
     }
 
+    /**
+     * @param  array<array-key, mixed>  $v
+     */
     private static function sort(array &$v): void
     {
         ksort($v);

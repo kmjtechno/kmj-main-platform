@@ -50,6 +50,6 @@ final class KslpActivationProofTest extends TestCase
         $msg = 'KSLP-ACTIVATE-v1|'.$l['id'].'|'.$ch['nonce'];
         $sig = rtrim(strtr(base64_encode(sodium_crypto_sign_detached($msg, $wrong)), '+/', '-_'), '=');
         $this->expectExceptionMessage('KSLP_ACTIVATION_PROOF_INVALID');
-        $p->consume($ch['challenge_id'],$l['id'],$id,$ch['nonce'],$sig);
+        $p->consume($ch['challenge_id'], $l['id'], $id, $ch['nonce'], $sig);
     }
 }
