@@ -439,6 +439,27 @@ Route::middleware(['auth', 'verified'])->group(function () {
                 'licensing_enabled',
             ]);
 
+        $catalogProducts = $managedProducts
+            ->map(function (Product $product): array {
+                $productId = (string) $product->getKey();
+
+                return [
+                    'id' => $productId,
+                    'slug' => (string) $product->getAttribute('slug'),
+                    'name' => (string) $product->getAttribute('name'),
+                    'status' => (string) $product->getAttribute('status'),
+                    'active_policy_count' => EntitlementPolicy::query()
+                        ->where('product_id', $productId)
+                        ->where('status', 'active')
+                        ->count(),
+                    'active_entitlement_count' => Entitlement::query()
+                        ->where('product_id', $productId)
+                        ->where('status', 'active')
+                        ->count(),
+                ];
+            })
+            ->all();
+
         return Inertia::render('operator', [
             'metrics' => [
                 'users' => User::query()->count(),
