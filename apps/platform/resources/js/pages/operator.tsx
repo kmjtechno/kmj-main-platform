@@ -29,6 +29,15 @@ type RecentOrder = {
     can_manage_license: boolean;
 };
 
+type CatalogProduct = {
+    id: string;
+    slug: string;
+    name: string;
+    status: string;
+    active_policy_count: number;
+    active_entitlement_count: number;
+};
+
 type OperatorProps = {
     metrics: {
         users: number;
@@ -37,6 +46,7 @@ type OperatorProps = {
         orders: number;
         confirmed_orders: number;
     };
+    catalogProducts: CatalogProduct[];
     recentOrders: RecentOrder[];
     products: ManagedProduct[];
 };
@@ -553,6 +563,63 @@ export default function Operator({
                         label="Confirmed orders"
                         value={metrics.confirmed_orders}
                     />
+                </section>
+
+                <section className="bg-card rounded-2xl border p-5 sm:p-6">
+                    <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
+                        <div>
+                            <h2 className="font-bold">
+                                Product & licensing matrix
+                            </h2>
+                            <p className="text-muted-foreground mt-1 text-xs">
+                                Canonical products stay visible even before
+                                commercial activation. Licensing remains
+                                fail-closed until an active entitlement policy
+                                exists.
+                            </p>
+                        </div>
+                        <span className="text-muted-foreground rounded-full border px-3 py-1 text-[10px] font-bold">
+                            {catalogProducts.length} canonical products
+                        </span>
+                    </div>
+                    <div className="mt-5 overflow-hidden rounded-xl border">
+                        <div className="divide-y">
+                            {catalogProducts.map((product) => (
+                                <div
+                                    key={product.id}
+                                    className="grid gap-3 px-4 py-3 text-xs md:grid-cols-[1.2fr_.9fr_.7fr_.7fr] md:items-center"
+                                >
+                                    <div>
+                                        <div className="font-black">
+                                            {product.name}
+                                        </div>
+                                        <div className="text-muted-foreground mt-1 font-mono text-[10px]">
+                                            {product.slug}
+                                        </div>
+                                    </div>
+                                    <div className="font-bold tracking-wide uppercase">
+                                        {product.status}
+                                    </div>
+                                    <div>
+                                        <span className="text-muted-foreground">
+                                            Policies{' '}
+                                        </span>
+                                        <span className="font-black">
+                                            {product.active_policy_count}
+                                        </span>
+                                    </div>
+                                    <div>
+                                        <span className="text-muted-foreground">
+                                            Entitlements{' '}
+                                        </span>
+                                        <span className="font-black">
+                                            {product.active_entitlement_count}
+                                        </span>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
                 </section>
 
                 <section className="bg-card rounded-2xl border p-5 sm:p-6">

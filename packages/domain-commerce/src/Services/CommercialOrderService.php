@@ -3,13 +3,16 @@
 namespace KMJ\MainPlatform\Commerce\Services;
 
 use DomainException;
-use InvalidArgumentException;
 use Illuminate\Support\Facades\DB;
+use InvalidArgumentException;
+use KMJ\MainPlatform\Commerce\Contracts\DomainEventRecorder;
 use KMJ\MainPlatform\Commerce\Models\CommercialLedgerEntry;
 use KMJ\MainPlatform\Commerce\Models\CommercialOrder;
 
 final class CommercialOrderService
 {
+    public function __construct(private readonly DomainEventRecorder $events) {}
+
     public function request(
         string $organizationId,
         string $productId,
@@ -167,13 +170,25 @@ final class CommercialOrderService
     /** @param array<string, mixed> $payload */
     private function record(CommercialOrder $order, ?int $actorUserId, string $eventType, array $payload): void
     {
+        $occurredAt = now();
+
         CommercialLedgerEntry::query()->create([
             'order_id' => $order->getKey(),
             'organization_id' => $order->organization_id,
             'actor_user_id' => $actorUserId,
             'event_type' => $eventType,
             'payload' => $payload,
-            'occurred_at' => now(),
+            'occurred_at' => $occurredAt,
         ]);
+
+        $this->events->recordDomainEvent(
+            $eventType,
+            'commercial_order',
+            (string) $order->getKey(),
+            $payload,
+            $order->organization_id,
+            'commercial-order:'.$order->getKey().':'.$eventType,
+            $occurredAt,
+        );
     }
 }

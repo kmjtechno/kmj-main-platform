@@ -8,7 +8,9 @@ from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from controller.opencode_free import (
+    DEFAULT_MODELS,
     OpenCodeUnavailable,
+    configured_models,
     isolated_environment,
     parse_completion,
     probe_zero_cost_route,
@@ -89,13 +91,13 @@ class OfficialFreeClientTests(unittest.TestCase):
             "OPENROUTER_API_KEY": "must-not-propagate",
             "STAGING_SSH_PRIVATE_KEY": "must-not-propagate",
         }):
-            env = isolated_environment(Path(temporary))
+            env = isolated_environment(Path(temporary), DEFAULT_MODELS[0])
         self.assertNotIn("GITHUB_TOKEN", env)
         self.assertNotIn("OPENROUTER_API_KEY", env)
         self.assertNotIn("STAGING_SSH_PRIVATE_KEY", env)
         config = json.loads(env["OPENCODE_CONFIG_CONTENT"])
         self.assertEqual(config["permission"], {"*": "deny"})
-        self.assertEqual(config["small_model"], "opencode/big-pickle")
+        self.assertEqual(config["small_model"], DEFAULT_MODELS[0])
         self.assertEqual(config["enabled_providers"], ["opencode"])
         self.assertEqual(config["agent"]["build"]["permission"], {"*": "deny"})
         self.assertIn("exactly the requested output format", config["agent"]["build"]["prompt"])

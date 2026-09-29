@@ -13,6 +13,30 @@ import PublicSiteFooter from '@/components/public-site-footer';
 import PublicSiteHeader from '@/components/public-site-header';
 import ProductVisual from '@/components/public/product-visual';
 
+const categoryOrder = [
+    'Platform & Infrastructure',
+    'Engineering & Automation',
+    'Calibration & Vision Systems',
+    'Secure Access & Connectivity',
+    'Commerce & Licensing',
+    'Media & Immersive Experience',
+] as const;
+
+const categoryDescriptions: Record<string, string> = {
+    'Platform & Infrastructure':
+        'Governed cloud and platform foundations for KMJ products and operations.',
+    'Engineering & Automation':
+        'Autonomous engineering systems for building, testing and operating software.',
+    'Calibration & Vision Systems':
+        'Projection, camera and spatial-calibration technology for immersive environments.',
+    'Secure Access & Connectivity':
+        'Governed remote access and secure product connectivity.',
+    'Commerce & Licensing':
+        'Software licensing, subscriptions, entitlements and governed digital-product access.',
+    'Media & Immersive Experience':
+        'Cinema, dome, playback and creative systems for immersive venues and media workflows.',
+};
+
 type Product = {
     slug: string;
     name: string;
@@ -132,8 +156,8 @@ export default function ProductsIndex({ products }: { products: Product[] }) {
                             <div className="grid grid-cols-3 overflow-hidden rounded-2xl border border-white/[0.08] bg-white/[0.025] lg:w-[390px]">
                                 {[
                                     ['Portfolio', String(products.length)],
+                                    ['Categories', String(categoryCount)],
                                     ['Commercial', String(activeCount)],
-                                    ['Interactive', String(demoCount)],
                                 ].map(([label, value], index) => (
                                     <div
                                         key={label}
@@ -209,24 +233,30 @@ export default function ProductsIndex({ products }: { products: Product[] }) {
                                 const featured = index === 0;
 
                                 return (
-                                    <article
-                                        key={product.slug}
-                                        className={
-                                            'group relative flex min-h-[31rem] flex-col overflow-hidden rounded-[2rem] border border-white/[0.09] bg-[#090c10] transition duration-300 hover:-translate-y-1 hover:border-white/[0.16] ' +
-                                            (featured
-                                                ? 'lg:col-span-2 lg:min-h-[28rem]'
-                                                : '')
-                                        }
-                                    >
-                                        <div className="pointer-events-none absolute inset-0 opacity-0 transition duration-500 group-hover:opacity-100">
-                                            <div className="absolute -top-36 right-[-5rem] h-80 w-80 rounded-full bg-[#ef2632]/10 blur-[100px]" />
-                                        </div>
-
-                                        <div
+                                    <Fragment key={product.slug}>
+                                        {startsCategory && (
+                                            <div className="mt-10 border-t border-white/[0.07] pt-10 first:mt-0 first:border-t-0 first:pt-0 lg:col-span-2">
+                                                <div className="text-[10px] font-black tracking-[0.18em] text-[#ff5962] uppercase">
+                                                    KMJ TECHNO · Product family
+                                                </div>
+                                                <div className="mt-3 grid gap-3 lg:grid-cols-[.8fr_1.2fr] lg:items-end">
+                                                    <h2 className="text-3xl font-black tracking-[-0.04em] sm:text-4xl">
+                                                        {product.category}
+                                                    </h2>
+                                                    <p className="max-w-2xl text-sm leading-7 text-white/38 lg:justify-self-end">
+                                                        {categoryDescriptions[
+                                                            product.category
+                                                        ] ??
+                                                            'KMJ TECHNO product family.'}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        )}
+                                        <article
                                             className={
-                                                'relative flex flex-1 flex-col p-7 sm:p-9 ' +
+                                                'group relative flex min-h-[31rem] flex-col overflow-hidden rounded-[2rem] border border-white/[0.09] bg-[#090c10] transition duration-300 hover:-translate-y-1 hover:border-white/[0.16] ' +
                                                 (featured
-                                                    ? 'lg:grid lg:grid-cols-[1.05fr_.95fr] lg:gap-14 lg:p-11'
+                                                    ? 'lg:col-span-2 lg:min-h-[28rem]'
                                                     : '')
                                             }
                                         >
@@ -256,116 +286,163 @@ export default function ProductsIndex({ products }: { products: Product[] }) {
                                                                     '0',
                                                                 )}
                                                             </div>
-                                                            <div className="mt-1 text-xs font-bold text-white/45">
-                                                                {
-                                                                    product.eyebrow
-                                                                }
-                                                            </div>
-                                                        </div>
-                                                    </div>
-
-                                                    <span
-                                                        className={
-                                                            'rounded-full border px-3 py-1.5 text-[9px] font-black tracking-[0.1em] uppercase ' +
-                                                            (product.purchase_enabled
-                                                                ? 'border-emerald-300/20 bg-emerald-300/[0.06] text-emerald-200/75'
-                                                                : 'border-white/10 bg-white/[0.03] text-white/38')
-                                                        }
-                                                    >
-                                                        {
-                                                            product.lifecycle_label
-                                                        }
-                                                    </span>
-                                                </div>
-
-                                                <h2
-                                                    className={
-                                                        'mt-8 font-black tracking-[-0.05em] ' +
-                                                        (featured
-                                                            ? 'text-4xl sm:text-5xl lg:text-6xl'
-                                                            : 'text-3xl sm:text-4xl')
-                                                    }
-                                                >
-                                                    {product.name}
-                                                </h2>
-                                                <p className="mt-5 max-w-2xl text-base leading-7 font-medium text-white/62">
-                                                    {product.headline}
-                                                </p>
-                                                <p className="mt-3 max-w-2xl text-sm leading-7 text-white/37">
-                                                    {product.summary}
-                                                </p>
-
-                                                <div className="mt-auto pt-8">
-                                                    <Link
-                                                        href={
-                                                            '/products/' +
-                                                            product.slug
-                                                        }
-                                                        className="inline-flex h-11 items-center gap-2 rounded-xl bg-white px-5 text-sm font-black text-[#07090c] transition hover:bg-white/90"
-                                                    >
-                                                        Explore product
-                                                        <ArrowRight className="h-4 w-4" />
-                                                    </Link>
-                                                </div>
-                                            </div>
-
-                                            <div
-                                                className={
-                                                    'mt-8 grid gap-3 border-t border-white/[0.07] pt-7 ' +
-                                                    (featured
-                                                        ? 'lg:mt-0 lg:border-t-0 lg:border-l lg:pt-0 lg:pl-10'
-                                                        : '')
-                                                }
-                                            >
-                                                <div className="text-[9px] font-black tracking-[0.16em] text-white/24 uppercase">
-                                                    Evidence-led foundation
-                                                </div>
-                                                {product.proof
-                                                    .slice(0, 3)
-                                                    .map((item) => (
-                                                        <div
-                                                            key={item.title}
-                                                            className="rounded-2xl border border-white/[0.065] bg-white/[0.022] p-4"
-                                                        >
-                                                            <div className="flex items-start gap-3">
-                                                                <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-300/55" />
-                                                                <div>
-                                                                    <div className="text-sm font-black text-white/78">
-                                                                        {
-                                                                            item.title
-                                                                        }
-                                                                    </div>
-                                                                    <p className="mt-1.5 text-xs leading-5 text-white/32">
-                                                                        {
-                                                                            item.detail
-                                                                        }
-                                                                    </p>
+                                                            <div>
+                                                                <div className="text-[9px] font-black tracking-[0.16em] text-white/25 uppercase">
+                                                                    Product{' '}
+                                                                    {String(
+                                                                        index +
+                                                                            1,
+                                                                    ).padStart(
+                                                                        2,
+                                                                        '0',
+                                                                    )}
+                                                                </div>
+                                                                <div className="mt-1 text-xs font-bold text-white/45">
+                                                                    {
+                                                                        product.category
+                                                                    }
+                                                                </div>
+                                                                <div className="mt-1 text-[10px] font-semibold text-white/28">
+                                                                    {
+                                                                        product.eyebrow
+                                                                    }
                                                                 </div>
                                                             </div>
                                                         </div>
-                                                    ))}
-                                                <div className="mt-1 flex items-center justify-between rounded-xl border border-white/[0.055] bg-black/20 px-4 py-3 text-[10px] font-bold text-white/32">
-                                                    <span>
-                                                        {product.demo.simulation
-                                                            ? 'Interactive simulation available'
-                                                            : product.demo
-                                                                  .label}
-                                                    </span>
-                                                    <span
+
+                                                        <span
+                                                            className={
+                                                                'rounded-full border px-3 py-1.5 text-[9px] font-black tracking-[0.1em] uppercase ' +
+                                                                (product.purchase_enabled
+                                                                    ? 'border-emerald-300/20 bg-emerald-300/[0.06] text-emerald-200/75'
+                                                                    : 'border-white/10 bg-white/[0.03] text-white/38')
+                                                            }
+                                                        >
+                                                            {
+                                                                product.lifecycle_label
+                                                            }
+                                                        </span>
+                                                    </div>
+
+                                                    <h2
                                                         className={
-                                                            product.purchase_enabled
-                                                                ? 'text-emerald-300/60'
-                                                                : 'text-white/25'
+                                                            'mt-8 font-black tracking-[-0.05em] ' +
+                                                            (featured
+                                                                ? 'text-4xl sm:text-5xl lg:text-6xl'
+                                                                : 'text-3xl sm:text-4xl')
                                                         }
                                                     >
-                                                        {product.purchase_enabled
-                                                            ? 'ACCESS OPEN'
-                                                            : 'GATED'}
-                                                    </span>
+                                                        {product.name}
+                                                    </h2>
+                                                    <p className="mt-5 max-w-2xl text-base leading-7 font-medium text-white/62">
+                                                        {product.headline}
+                                                    </p>
+                                                    <p className="mt-3 max-w-2xl text-sm leading-7 text-white/37">
+                                                        {product.summary}
+                                                    </p>
+
+                                                    {product.variants &&
+                                                        product.variants
+                                                            .length > 0 && (
+                                                            <div className="mt-5">
+                                                                <div className="text-[9px] font-black tracking-[0.14em] text-white/25 uppercase">
+                                                                    Available
+                                                                    configurations
+                                                                </div>
+                                                                <div className="mt-2 flex flex-wrap gap-2">
+                                                                    {product.variants.map(
+                                                                        (
+                                                                            variant,
+                                                                        ) => (
+                                                                            <span
+                                                                                key={
+                                                                                    variant
+                                                                                }
+                                                                                className="rounded-full border border-[#ef2632]/20 bg-[#ef2632]/[0.06] px-3 py-1.5 text-[10px] font-black tracking-[0.08em] text-[#ff737b]"
+                                                                            >
+                                                                                {
+                                                                                    variant
+                                                                                }
+                                                                            </span>
+                                                                        ),
+                                                                    )}
+                                                                </div>
+                                                            </div>
+                                                        )}
+
+                                                    <div className="mt-auto pt-8">
+                                                        <Link
+                                                            href={
+                                                                '/products/' +
+                                                                product.slug
+                                                            }
+                                                            className="inline-flex h-11 items-center gap-2 rounded-xl bg-white px-5 text-sm font-black text-[#07090c] transition hover:bg-white/90"
+                                                        >
+                                                            Explore product
+                                                            <ArrowRight className="h-4 w-4" />
+                                                        </Link>
+                                                    </div>
+                                                </div>
+
+                                                <div
+                                                    className={
+                                                        'mt-8 grid gap-3 border-t border-white/[0.07] pt-7 ' +
+                                                        (featured
+                                                            ? 'lg:mt-0 lg:border-t-0 lg:border-l lg:pt-0 lg:pl-10'
+                                                            : '')
+                                                    }
+                                                >
+                                                    <div className="text-[9px] font-black tracking-[0.16em] text-white/24 uppercase">
+                                                        Evidence-led foundation
+                                                    </div>
+                                                    {product.proof
+                                                        .slice(0, 3)
+                                                        .map((item) => (
+                                                            <div
+                                                                key={item.title}
+                                                                className="rounded-2xl border border-white/[0.065] bg-white/[0.022] p-4"
+                                                            >
+                                                                <div className="flex items-start gap-3">
+                                                                    <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-300/55" />
+                                                                    <div>
+                                                                        <div className="text-sm font-black text-white/78">
+                                                                            {
+                                                                                item.title
+                                                                            }
+                                                                        </div>
+                                                                        <p className="mt-1.5 text-xs leading-5 text-white/32">
+                                                                            {
+                                                                                item.detail
+                                                                            }
+                                                                        </p>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        ))}
+                                                    <div className="mt-1 flex items-center justify-between rounded-xl border border-white/[0.055] bg-black/20 px-4 py-3 text-[10px] font-bold text-white/32">
+                                                        <span>
+                                                            {product.demo
+                                                                .simulation
+                                                                ? 'Interactive simulation available'
+                                                                : product.demo
+                                                                      .label}
+                                                        </span>
+                                                        <span
+                                                            className={
+                                                                product.purchase_enabled
+                                                                    ? 'text-emerald-300/60'
+                                                                    : 'text-white/25'
+                                                            }
+                                                        >
+                                                            {product.purchase_enabled
+                                                                ? 'ACCESS OPEN'
+                                                                : 'GATED'}
+                                                        </span>
+                                                    </div>
                                                 </div>
                                             </div>
-                                        </div>
-                                    </article>
+                                        </article>
+                                    </Fragment>
                                 );
                             })}
                         </div>

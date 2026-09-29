@@ -28,5 +28,9 @@ return [
             'mistral' => env('MISTRAL_API_KEY'),
             'gemini' => env('GEMINI_API_KEY'),
         ],
+        'cloudflare_ai_token' => env('CLOUDFLARE_API_TOKEN'),
+        'cloudflare_ai_account_id' => env('CLOUDFLARE_ACCOUNT_ID'),
+        'opencode_free_enabled' => env('KMJ_OPENCODE_FREE_ENABLED', false),
+        'opencode_binary' => env('KMJ_OPENCODE_BINARY'),
     ],
 ];

@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "68e21bc99445f47a64efe752b272f77b",
+    "content-hash": "1d2a25fca8caa90adaf41c1c85a4cc3b",
     "packages": [
         {
             "name": "bacon/bacon-qr-code",
@@ -1412,6 +1412,39 @@
                 }
             },
             "description": "KMJ Main Platform Organizations domain module.",
+            "transport-options": {
+                "symlink": false,
+                "relative": true
+            }
+        },
+        {
+            "name": "kmjtechno/domain-releases",
+            "version": "0.1.0",
+            "dist": {
+                "type": "path",
+                "url": "../../packages/domain-releases",
+                "reference": "ae0201d2bb94d09288b1fae61e646406f5102869"
+            },
+            "require": {
+                "illuminate/database": "^13.0",
+                "illuminate/support": "^13.0",
+                "kmjtechno/domain-catalog": "0.1.0",
+                "php": "^8.3"
+            },
+            "type": "library",
+            "extra": {
+                "laravel": {
+                    "providers": [
+                        "KMJ\\MainPlatform\\Releases\\ReleasesServiceProvider"
+                    ]
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "KMJ\\MainPlatform\\Releases\\": "src/"
+                }
+            },
+            "description": "KMJ Main Platform Releases domain module.",
             "transport-options": {
                 "symlink": false,
                 "relative": true

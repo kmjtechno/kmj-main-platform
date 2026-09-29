@@ -60,8 +60,17 @@ export const deliveryMilestones: DeliveryMilestone[] = [
         id: 'public-seo-foundation',
         title: 'Public SEO metadata foundation',
         state: 'active',
-        detail: 'Canonical URL, Open Graph, Twitter summary and truthful JSON-LD metadata are implemented for core public surfaces while hreflang remains gated on real translated URLs',
-        evidence: 'PR #203 exact-head verification in progress',
+        detail: 'Canonical metadata, truthful JSON-LD, public Company/Capabilities surfaces, canonical sitemap, and fail-closed indexing controls are implemented while hreflang remains gated on real translated URLs',
+        evidence:
+            'PR #203 SEO foundation + PR #211 corporate surfaces, sitemap and fail-closed indexing verification',
+    },
+    {
+        id: 'transactional-outbox-foundation',
+        title: 'Transactional outbox foundation',
+        state: 'active',
+        detail: 'Durable domain-event outbox persistence, producer idempotency enforcement, rollback-safe consumer receipts, and transactional licensing audit publication are under exact-head verification',
+        evidence:
+            'PR #212 exact-head Foundation + Platform Runtime verification in progress',
     },
     {
         id: 'registration-onboarding',
@@ -306,6 +315,14 @@ export const deliveryMilestones: DeliveryMilestone[] = [
         detail: 'Product-specific capability profiles, fail-closed purchase boundaries, and the shared versioned PHP/Rust kmj.sandbox.v1 contract are merged with product-side integration evidence',
         evidence:
             'Main Platform PR #190 merged + KMJ CloudOS adapter PR #4 merged after 6/6 verifier tests + KMJ Calibration Pro adapter PR #9 merged after Debug 7/7 and Release 7/7 tests',
+    },
+    {
+        id: 'omnidesk-licensing-contract',
+        title: 'KMJ OmniDesk licensing contract',
+        state: 'active',
+        detail: 'Dedicated omnidesk.remote_access authority, KSLP-v1 identity, signed-entitlement claims, device activation, renewable lease, offline grace, revocation and versioned API boundaries are contract-locked; Main Platform is explicitly limited to OmniDesk billing/licensing and cannot become its session, signaling, relay or media runtime; production Ed25519 signing remains KMS/HSM-gated',
+        evidence:
+            'PR #246 contract + ProductLicenseProfileRegistry dedicated capability + OmniDeskLicenseContractTest; production signer intentionally not enabled',
     },
     {
         id: 'production-hardening',

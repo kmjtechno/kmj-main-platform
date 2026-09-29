@@ -2,6 +2,7 @@
 
 use App\Models\OperatorActionAudit;
 use App\Models\User;
+use App\Services\Events\OutboxHealthSnapshot;
 use App\Services\Operations\DeliveryControlRequestQueue;
 use App\Services\Operations\OperationalReadinessSnapshot;
 use App\Services\Operations\OperatorActionRunner;
@@ -20,6 +21,7 @@ Route::middleware(['auth', 'verified', 'password.confirm'])
             PlatformOwnerAccess $access,
             ServerMetricsSnapshot $metrics,
             OperationalReadinessSnapshot $readiness,
+            OutboxHealthSnapshot $outboxHealth,
         ) {
             $user = $request->user();
             abort_unless($user instanceof User, 401);
@@ -130,9 +132,26 @@ Route::middleware(['auth', 'verified', 'password.confirm'])
                 ];
             }
 
+            try {
+                $outboxSnapshot = $outboxHealth->capture(8);
+            } catch (Throwable $exception) {
+                report($exception);
+                $outboxSnapshot = [
+                    'status' => 'degraded',
+                    'max_attempts' => 8,
+                    'pending' => 0,
+                    'due' => 0,
+                    'retrying' => 0,
+                    'exhausted' => 0,
+                    'published' => 0,
+                    'recent_exhausted' => [],
+                ];
+            }
+
             return Inertia::render('operator-ops', [
                 'snapshot' => $snapshot,
                 'readiness' => $readinessSnapshot,
+                'outbox' => $outboxSnapshot,
                 'recentActions' => $recentActions,
             ]);
         })->name('ops.index');

@@ -3,10 +3,13 @@
 use App\Models\LicenseAuditEvent;
 use App\Models\User;
 use App\Services\AuthorityBootstrapper;
+use App\Services\Commerce\KmjProductCatalog;
 use App\Services\Commerce\PublicProductCatalog;
 use App\Services\Licensing\LicenseAuditRecorder;
 use App\Services\Licensing\SandboxLicenseLifecycle;
 use App\Services\PlatformOwnerAccess;
+use App\Services\Releases\CustomerReleaseAccess;
+use App\Services\Releases\ReleaseArtifactDelivery;
 use DateTimeImmutable as ImmutableDateTime;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -20,10 +23,25 @@ use KMJ\MainPlatform\Entitlements\Services\EntitlementReader;
 use KMJ\MainPlatform\Organizations\Models\Organization;
 use KMJ\MainPlatform\Organizations\Services\OrganizationCapabilityContext;
 use KMJ\MainPlatform\Organizations\Services\OrganizationDirectory;
+use KMJ\MainPlatform\Releases\Models\ReleaseArtifact;
 
 Route::get('/', function (PublicProductCatalog $products) {
+    $portfolio = $products->all();
+    $featuredSlugs = [
+        KmjProductCatalog::CLOUDOS_SLUG,
+        KmjProductCatalog::CALIBRATION_SLUG,
+        KmjProductCatalog::CINEMA_PLATFORM_SLUG,
+        KmjProductCatalog::LICENSING_HUB_SLUG,
+    ];
+    $featured = collect($portfolio)
+        ->filter(fn (array $product): bool => in_array($product['slug'], $featuredSlugs, true))
+        ->sortBy(fn (array $product): int => (int) array_search($product['slug'], $featuredSlugs, true))
+        ->values()
+        ->all();
+
     return Inertia::render('welcome', [
-        'products' => $products->all(),
+        'products' => $featured,
+        'portfolioCount' => count($portfolio),
     ]);
 })->name('home');
 
@@ -34,6 +52,12 @@ Route::get('products', function (PublicProductCatalog $products) {
 })->name('products.index');
 
 Route::get('products/{slug}', function (string $slug, PublicProductCatalog $products) {
+    if (in_array($slug, KmjProductCatalog::LEGACY_CINEMA_VARIANT_SLUGS, true)) {
+        return redirect()->route('products.show', [
+            'slug' => KmjProductCatalog::CINEMA_PLATFORM_SLUG,
+        ], 301);
+    }
+
     $product = $products->find($slug);
     abort_if($product === null, 404);
 
@@ -41,6 +65,98 @@ Route::get('products/{slug}', function (string $slug, PublicProductCatalog $prod
         'product' => $product,
     ]);
 })->name('products.show');
+
+Route::get('company', fn () => Inertia::render('company'))->name('company');
+
+Route::get('capabilities', fn () => Inertia::render('capabilities'))->name('capabilities');
+
+Route::get('llms.txt', function (PublicProductCatalog $products) {
+    $items = collect($products->all())
+        ->map(function (array $product): string {
+            $variants = isset($product['variants']) && is_array($product['variants'])
+                ? ' | Configurations: '.implode(', ', $product['variants'])
+                : '';
+
+            return sprintf(
+                '- %s | %s | %s%s | https://kmjtechno.com/products/%s',
+                $product['name'],
+                $product['category'],
+                $product['lifecycle_label'],
+                $variants,
+                $product['slug'],
+            );
+        })
+        ->implode("\n");
+
+    $body = implode("\n", [
+        '# KMJ TECHNO',
+        '',
+        '> INNOVATE | BUILD | SCALE',
+        '',
+        'KMJ TECHNO builds software, cloud infrastructure, AI engineering systems, immersive calibration, secure connectivity and cinema/experience products.',
+        '',
+        '## Product authority',
+        'Public product claims are lifecycle-bound. Roadmap, development and preview labels must not be interpreted as production availability.',
+        '',
+        '## Products',
+        $items,
+        '',
+        '## Important URLs',
+        '- https://kmjtechno.com/products',
+        '- https://kmjtechno.com/company',
+        '- https://kmjtechno.com/capabilities',
+        '- https://kmjtechno.com/trust',
+        '- https://kmjtechno.com/legal',
+        '',
+        'For current facts, prefer the canonical product page and lifecycle label over third-party summaries.',
+    ]);
+
+    return response($body."\n", 200, [
+        'Content-Type' => 'text/plain; charset=UTF-8',
+    ]);
+})->name('llms');
+
+Route::get('sitemap.xml', function (PublicProductCatalog $products) {
+    abort_unless((bool) config('app.public_indexing', false), 404);
+
+    $origin = rtrim((string) config('app.url'), '/');
+    $paths = [
+        '/',
+        '/company',
+        '/capabilities',
+        '/products',
+        '/trust',
+        '/legal',
+        '/terms',
+        '/privacy',
+        '/refund-policy',
+        '/acceptable-use',
+        '/cookie-policy',
+        ...collect($products->all())
+            ->pluck('slug')
+            ->filter(fn (mixed $slug): bool => is_string($slug) && $slug !== '')
+            ->map(fn (string $slug): string => '/products/'.$slug)
+            ->all(),
+    ];
+
+    $urls = collect($paths)
+        ->unique()
+        ->map(fn (string $path): string => '<url><loc>'.htmlspecialchars(
+            $origin.$path,
+            ENT_XML1 | ENT_QUOTES,
+            'UTF-8',
+        ).'</loc></url>')
+        ->implode('');
+
+    $xml = '<?xml version="1.0" encoding="UTF-8"?>'
+        .'<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'
+        .$urls
+        .'</urlset>';
+
+    return response($xml, 200, [
+        'Content-Type' => 'application/xml; charset=UTF-8',
+    ]);
+})->name('sitemap');
 
 Route::get('trust', fn () => Inertia::render('trust'))->name('trust');
 
@@ -190,18 +306,45 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Request $request,
         OrganizationDirectory $organizations,
         EntitlementReader $entitlements,
+        CustomerReleaseAccess $releaseAccess,
     ) {
         $user = $request->user();
         abort_unless($user instanceof User, 401);
 
-        $items = collect($organizations->forUser($user->id))
-            ->map(function (array $organization) use ($entitlements): array {
-                $organization['entitlements'] = $entitlements->forOrganization($organization['id']);
+        $items = [];
 
-                return $organization;
-            })
-            ->values()
-            ->all();
+        foreach ($organizations->forUser($user->id) as $organization) {
+            $presentedEntitlements = [];
+
+            foreach ($entitlements->forOrganization($organization['id']) as $entitlement) {
+                $release = $releaseAccess->latestForOrganizationProduct(
+                    $user->id,
+                    $organization['id'],
+                    $entitlement['product_id'],
+                );
+                $artifact = $release?->artifact;
+
+                $entitlement['release'] = $release !== null && $artifact instanceof ReleaseArtifact
+                    ? [
+                        'id' => (string) $release->getKey(),
+                        'version' => $release->version,
+                        'digest' => $release->artifact_digest,
+                        'filename' => $artifact->filename,
+                        'size_bytes' => $artifact->size_bytes,
+                        'download_url' => route(
+                            'customer.releases.download',
+                            ['release' => $release->getKey()],
+                            false,
+                        ),
+                    ]
+                    : null;
+
+                $presentedEntitlements[] = $entitlement;
+            }
+
+            $organization['entitlements'] = $presentedEntitlements;
+            $items[] = $organization;
+        }
 
         return Inertia::render('dashboard', [
             'organizations' => $items,
@@ -209,10 +352,31 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ]);
     })->name('dashboard');
 
+    Route::get('customer/releases/{release}/download', function (
+        Request $request,
+        string $release,
+        CustomerReleaseAccess $releaseAccess,
+        ReleaseArtifactDelivery $delivery,
+    ) {
+        $user = $request->user();
+        abort_unless($user instanceof User, 401);
+
+        $downloadable = $releaseAccess->downloadableForUser($user->id, $release);
+        abort_unless($downloadable !== null, 404);
+
+        try {
+            return $delivery->download($downloadable);
+        } catch (Throwable $exception) {
+            report($exception);
+            abort(503, 'The verified release artifact is temporarily unavailable.');
+        }
+    })->name('customer.releases.download');
+
     Route::get('operator', function (
         Request $request,
         PlatformOwnerAccess $access,
         OrganizationCapabilityContext $capabilities,
+        PublicProductCatalog $publicProducts,
     ) {
         $user = $request->user();
         abort_unless($user instanceof User, 401);
@@ -283,6 +447,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
                 'orders' => CommercialOrder::query()->count(),
                 'confirmed_orders' => CommercialOrder::query()->where('status', 'confirmed')->count(),
             ],
+            'catalogProducts' => $catalogProducts,
             'recentOrders' => $recentOrders,
             'products' => $managedProducts,
         ]);
