@@ -15,7 +15,7 @@ export const deliveryMilestones: DeliveryMilestone[] = [
         state: 'active',
         detail: 'Signed device leases, proof-bound enrollment, authenticated credential rotation/revocation, and real-database concurrency gates are implemented; production exposure and signing configuration remain pending',
         evidence:
-            'PR #247 signed renewal + PR #248 hash-only enrollment + PR #249 authenticated credential management and MySQL/PostgreSQL concurrency verification under exact-head CI',
+            'PR #247 signed renewal + PR #248 hash-only enrollment + PR #249 authenticated credential management and PostgreSQL concurrency verification under exact-head CI',
     },
     {
         id: 'authority-foundation',
