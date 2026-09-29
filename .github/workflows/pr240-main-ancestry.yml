@@ -25,6 +25,6 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git fetch origin main
-          test "$(git rev-parse origin/main)" = "2a59c3e5225d57cc7a2cecccc846e0c12b6267c7"
+          test "$(git rev-parse origin/main)" = "eb39870116e0f2a1520a081dc98e5b5f1da6b847"
           git merge --no-edit --no-ff -Xours origin/main
           git push origin HEAD:fix/pr240-main-ancestry
