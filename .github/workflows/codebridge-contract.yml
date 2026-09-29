@@ -7,6 +7,8 @@ on:
       - 'apps/platform/app/Services/Licensing/Kslp/KslpSigner.php'
       - 'apps/platform/routes/codebridge-api.php'
       - 'apps/platform/routes/codebridge-admin.php'
+      - 'apps/platform/routes/web.php'
+      - 'apps/platform/tests/Feature/CodeBridge*.php'
       - 'apps/platform/config/codebridge.php'
       - 'apps/platform/database/migrations/*codebridge*'
       - 'apps/platform/bootstrap/app.php'
