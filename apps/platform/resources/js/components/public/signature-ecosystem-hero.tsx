@@ -106,7 +106,7 @@ export default function SignatureEcosystemHero({
                                     (item) => item.slug === slug,
                                 )?.lifecycle_label;
                                 return (
-                                <article
+                                    <article
                                     key={id}
                                     onMouseEnter={() => setSelected(id)}
                                     onMouseLeave={() => setSelected(null)}
@@ -159,7 +159,7 @@ export default function SignatureEcosystemHero({
                                             <ArrowRight className="h-3 w-3" />
                                         </Link>
                                     </div>
-                                </article>
+                                    </article>
                                 );
                             },
                         )}
