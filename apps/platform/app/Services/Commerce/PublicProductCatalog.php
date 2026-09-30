@@ -318,7 +318,6 @@ final class PublicProductCatalog
     /**
      * @return array<string, mixed>
      */
-
     private function forge(): array
     {
         return $this->developmentProduct(
