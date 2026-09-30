@@ -102,3 +102,25 @@ Before merging a public-experience change, verify:
 - production is not deployed merely because a design change merged.
 
 When visual preference conflicts with factual accuracy, security, accessibility, lifecycle governance or purchase controls, those safety/truth constraints win.
+## 11. P0 world-class quality principle
+
+This is a **P0 project priority**, not a cosmetic preference.
+
+Every public-experience decision must be evaluated holistically across visual design, UX, product comprehension, factual accuracy, conversion, SEO/AEO discoverability, interactive demonstration, accessibility, responsive behavior, performance, security, maintainability and operational governance.
+
+Do not optimize one dimension by damaging another. A visually impressive page that is slow, confusing, inaccessible, misleading or difficult to maintain does not meet the bar. Likewise, a technically correct page that feels generic, forgettable or commercially unclear does not meet the bar.
+
+For each meaningful landing/product change, actively ask:
+- Is the purpose immediately understandable?
+- Is the visual hierarchy compelling and intentional from first glance through the next action?
+- Are colour, imagery, motion and interaction meaningful rather than decorative noise?
+- Does the experience feel mature, cooperative, professional and trustworthy?
+- Are claims, lifecycle, pricing/access and demos truthful?
+- Is the content useful to both humans and search/AI systems without keyword stuffing?
+- Is there a clear conversion path appropriate to the product state?
+- Does it work exceptionally well on mobile and desktop?
+- Is it fast, accessible, secure and maintainable?
+- Is this materially better than a generic template or ordinary product page?
+
+The target is world-class execution quality. Never publish unsupported superiority claims merely to express that internal quality target.
+
