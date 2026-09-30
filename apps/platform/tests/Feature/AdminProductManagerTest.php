@@ -32,6 +32,25 @@ final class AdminProductManagerTest extends TestCase
         self::assertTrue($updated->licensing_enabled);
     }
 
+    public function test_public_beta_is_a_supported_governed_lifecycle(): void
+    {
+        $manager = app(AdminProductManager::class);
+        $product = $manager->create([
+            'slug' => 'kmj-beta-product',
+            'name' => 'KMJ Beta Product',
+            'status' => 'sandbox',
+            'lifecycle' => 'public-beta',
+            'is_public' => true,
+            'purchase_enabled' => false,
+            'licensing_enabled' => true,
+        ]);
+
+        self::assertSame('public-beta', $product->lifecycle);
+        self::assertTrue($product->is_public);
+        self::assertFalse($product->purchase_enabled);
+        self::assertTrue($product->licensing_enabled);
+    }
+
     public function test_reorder_is_deterministic_and_rejects_unknown_products(): void
     {
         $manager = app(AdminProductManager::class);
