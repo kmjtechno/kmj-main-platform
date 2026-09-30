@@ -26,6 +26,14 @@ export const deliveryMilestones: DeliveryMilestone[] = [
             'PR #258 merged as 606ecf279172; staging promotion, exact-SHA deploy, desktop/mobile browser QA and authenticated surface smoke all passed; CodeBridge remains non-commercial until hosted identity, packaging and production security gates pass',
     },
     {
+        id: 'codebridge-hosted-oauth',
+        title: 'CodeBridge hosted OAuth',
+        state: 'active',
+        detail: 'OAuth 2.1 authorization server for the hosted CodeBridge MCP gateway: dynamic public-client registration, PKCE S256, resource-bound Ed25519 access tokens and rotating refresh tokens with reuse revocation; ships disabled until signing key and resource are provisioned',
+        evidence:
+            'CodeBridgeOAuthCoreTest + CodeBridgeOAuthServerTest under CI; not yet deployed',
+    },
+    {
         id: 'authority-foundation',
         title: 'Authority foundation',
         state: 'verified',
