@@ -165,3 +165,77 @@ Create a distinctive, performant hero/early-page interaction that communicates t
 ### No fabricated proof
 Concept artwork may contain illustrative visual placeholders during exploration, but production UI must not publish invented testimonials, customer identities, global deployment claims, reliability percentages, awards or numerical proof. Only evidence-backed proof may ship.
 
+## 13. Signature KMJ ecosystem experience — implementation contract
+
+### Hero interaction
+Preserve the owner-locked headline: **Technology engineered to connect complex systems.**
+
+The hero's signature interaction is a connected ecosystem constellation with four truthful domain nodes:
+1. **Cloud** — infrastructure and CloudOS.
+2. **Calibration** — precision mapping and Calibration Pro.
+3. **Immersive** — cinema, dome and playback systems.
+4. **AI + Remote** — engineering automation, secure remote/control products.
+
+The interaction must communicate that these are distinct products/domains connected through the governed KMJ customer platform. It must not imply that unfinished products are generally available.
+
+On capable pointers, focus/hover may emphasize one domain and reveal a concise factual outcome plus canonical product route. Keyboard focus must provide the same information. On touch/mobile, the nodes remain directly tappable and readable without requiring hover.
+
+Use restrained CSS-first motion: slow ambient orbit/connection energy, small depth/parallax only where inexpensive, and short state transitions. Avoid scroll-jacking, autoplay video backgrounds, WebGL as a requirement, cursor hijacking, or continuous high-cost animation.
+
+Under `prefers-reduced-motion: reduce`, render the complete ecosystem as a stable composition with no information loss.
+
+### Eye-travel sequence
+The intended visual reading path is:
+**brand/domain eyebrow -> locked headline -> concise value proposition -> primary CTA -> ecosystem constellation -> proof/lifecycle cues -> next section**.
+
+The visual focal point must never compete with the headline or CTA. Product meaning comes before spectacle.
+
+### Landing narrative
+The canonical section sequence is:
+1. Signature hero / connected ecosystem.
+2. Flagship product handoff.
+3. Governed product ecosystem.
+4. Immersive Cinema Suite.
+5. Main Platform trust, licensing and controlled access.
+6. Industries / customer-intent pathways backed by real product capabilities.
+7. Truthful roadmap / lifecycle outlook.
+8. Final conversion CTA and footer.
+
+Sections may be combined when this improves mobile comprehension or performance, but the narrative order must remain recognizable.
+
+### Section transitions
+Transitions should feel like one continuous KMJ system rather than unrelated templates. Use shared grid/radius/typography/surface language plus semantic atmosphere shifts:
+- Cloud/infrastructure: cool blue/cyan technical light.
+- Calibration: precision optics, measured grids and controlled spectral cues.
+- Immersive cinema: richer cinematic light and depth.
+- AI/remote engineering: violet/cyan or other restrained computational cues.
+- Licensing/security/control: neutral graphite with selective verified/status accents.
+- KMJ red: brand signature and high-value action emphasis, not a blanket page colour.
+
+Use gradients, edge light, subtle grid/line continuity and controlled background handoffs rather than hard decorative separators.
+
+### Product handoff behavior
+Each hero domain must lead to real canonical product destinations or a truthful grouped discovery surface. Never create dead visual controls. Lifecycle state remains visible when relevant, and CTA language must follow governed availability.
+
+### Performance/accessibility gates
+The signature experience must:
+- remain understandable with CSS/JS motion disabled;
+- preserve semantic headings and crawlable copy;
+- support keyboard navigation and visible focus;
+- avoid information encoded by colour alone;
+- avoid horizontal overflow at 390px;
+- avoid layout shift from hero media;
+- keep critical hero media bounded and responsive;
+- introduce no console/runtime errors;
+- treat Core Web Vitals regressions as defects.
+
+### Acceptance test
+The experience passes only if a first-time visitor can answer, without scrolling deeply:
+- What does KMJ TECHNO build?
+- What are the major solution domains?
+- How are they connected?
+- Which product/path should I explore next?
+- What is actually available versus preview/research/planned?
+
+Visual magnetism is required, but comprehension, truth, performance and professional trust are hard constraints.
+
