@@ -9,7 +9,7 @@ const origin = 'https://staging.kmjtechno.com';
 const pages = [
     { path: '/', marker: null, selector: 'meta[name="kmj-main-platform"][content="native-home"]' },
     { path: '/products', marker: 'KMJ Calibration Pro' },
-    { path: '/products/kmj-calibration-pro', marker: 'Virtual demo' },
+    { path: '/products/kmj-calibration-pro', marker: 'Interactive browser simulation' },
     { path: '/login', marker: null },
 ];
 
