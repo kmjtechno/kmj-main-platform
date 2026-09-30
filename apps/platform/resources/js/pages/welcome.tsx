@@ -167,6 +167,20 @@ export default function Welcome({
                                 </div>
 
                                 <div className="mt-10 max-w-2xl border-t border-white/[0.08] pt-6">
+                                    <div className="mb-5 grid max-w-lg grid-cols-3 gap-2">
+                                        <div className="rounded-xl border border-white/[0.07] bg-white/[0.025] px-3 py-3">
+                                            <div className="text-xl font-black">{products.length}</div>
+                                            <div className="mt-1 text-[9px] font-black tracking-[.13em] text-white/35 uppercase">Products</div>
+                                        </div>
+                                        <div className="rounded-xl border border-white/[0.07] bg-white/[0.025] px-3 py-3">
+                                            <div className="text-xl font-black">{products.filter((product) => product.lifecycle === 'available').length}</div>
+                                            <div className="mt-1 text-[9px] font-black tracking-[.13em] text-white/35 uppercase">Available</div>
+                                        </div>
+                                        <div className="rounded-xl border border-red-500/15 bg-red-500/[0.04] px-3 py-3">
+                                            <div className="text-xl font-black text-[#ff4b54]">{products.filter((product) => product.purchase_enabled).length}</div>
+                                            <div className="mt-1 text-[9px] font-black tracking-[.13em] text-white/35 uppercase">Purchasable</div>
+                                        </div>
+                                    </div>
                                     <div className="flex flex-wrap gap-x-6 gap-y-3 text-[10px] font-black tracking-[0.13em] text-white/58 uppercase">
                                         <span>Central Licensing</span>
                                         <span>Secure Access</span>
