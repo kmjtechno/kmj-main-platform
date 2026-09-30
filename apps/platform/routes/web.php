@@ -27,20 +27,9 @@ use KMJ\MainPlatform\Releases\Models\ReleaseArtifact;
 
 Route::get('/', function (PublicProductCatalog $products) {
     $portfolio = $products->all();
-    $featuredSlugs = [
-        KmjProductCatalog::CLOUDOS_SLUG,
-        KmjProductCatalog::CALIBRATION_SLUG,
-        KmjProductCatalog::CINEMA_PLATFORM_SLUG,
-        KmjProductCatalog::DOME_SLUG,
-    ];
-    $featured = collect($portfolio)
-        ->filter(fn (array $product): bool => in_array($product['slug'], $featuredSlugs, true))
-        ->sortBy(fn (array $product): int => (int) array_search($product['slug'], $featuredSlugs, true))
-        ->values()
-        ->all();
 
     return Inertia::render('welcome', [
-        'products' => $featured,
+        'products' => $portfolio,
         'portfolioCount' => count($portfolio),
     ]);
 })->name('home');
