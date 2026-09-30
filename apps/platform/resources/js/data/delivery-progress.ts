@@ -20,10 +20,10 @@ export const deliveryMilestones: DeliveryMilestone[] = [
     {
         id: 'locked-landing-product-portfolio',
         title: 'Locked landing product portfolio',
-        state: 'active',
+        state: 'verified',
         detail: 'The locked black-and-red landing now receives the complete governed product portfolio, including OmniDesk and CodeBridge, with canonical product-detail routing; public commercial actions remain lifecycle-gated',
         evidence:
-            'PR #258 exact-head verification in progress; CodeBridge remains non-commercial until hosted identity, packaging and production security gates pass',
+            'PR #258 merged as 606ecf279172; staging promotion, exact-SHA deploy, desktop/mobile browser QA and authenticated surface smoke all passed; CodeBridge remains non-commercial until hosted identity, packaging and production security gates pass',
     },
     {
         id: 'authority-foundation',
@@ -75,10 +75,10 @@ export const deliveryMilestones: DeliveryMilestone[] = [
     {
         id: 'transactional-outbox-foundation',
         title: 'Transactional outbox foundation',
-        state: 'active',
-        detail: 'Durable domain-event outbox persistence, producer idempotency enforcement, rollback-safe consumer receipts, and transactional licensing audit publication are under exact-head verification',
+        state: 'verified',
+        detail: 'Durable domain-event outbox persistence, producer idempotency enforcement, rollback-safe consumer receipts, retry scheduling/backoff, bounded attempts and transactional licensing audit publication are implemented and verified',
         evidence:
-            'PR #212 exact-head Foundation + Platform Runtime verification in progress',
+            'PR #212 merged + current OutboxDispatcherTest, OutboxBatchWorkerTest and DomainEventAtomicityTest green on main; stale PR #213 closed as superseded',
     },
     {
         id: 'registration-onboarding',
@@ -100,6 +100,14 @@ export const deliveryMilestones: DeliveryMilestone[] = [
         state: 'verified',
         detail: 'Provider-neutral reconciliation boundary',
         evidence: 'PR #74',
+    },
+    {
+        id: 'desktop-commander-commercial-control-plane',
+        title: 'Desktop Commander commercial control plane',
+        state: 'active',
+        detail: 'Main Platform-authoritative local-first licensing with a cacheable public-beta bootstrap, seven-day signed entitlement cadence, offline Ed25519 verification contract, refresh jitter and no idle licensing heartbeat; billing remains disabled',
+        evidence:
+            'Clean current-main integration of PR #241 contract; exact-head CI required before merge',
     },
     {
         id: 'license-lifecycle',

@@ -23,6 +23,7 @@ final class KmjProductCatalogTest extends TestCase
         foreach ([
             KmjProductCatalog::CLOUDOS_SLUG,
             KmjProductCatalog::CALIBRATION_SLUG,
+            KmjProductCatalog::DESKTOP_COMMANDER_SLUG,
             KmjProductCatalog::FORGE_SLUG,
             KmjProductCatalog::OMNIDESK_SLUG,
             KmjProductCatalog::CODEBRIDGE_SLUG,
@@ -39,7 +40,7 @@ final class KmjProductCatalogTest extends TestCase
             self::assertSame($first[$slug]->getKey(), $second[$slug]->getKey());
         }
 
-        $this->assertDatabaseCount('products', 14);
+        $this->assertDatabaseCount('products', 15);
         $this->assertDatabaseHas('products', [
             'slug' => CloudOSProductCatalog::SLUG,
             'name' => CloudOSProductCatalog::NAME,
@@ -48,6 +49,7 @@ final class KmjProductCatalogTest extends TestCase
 
         foreach ([
             KmjProductCatalog::CALIBRATION_SLUG => KmjProductCatalog::CALIBRATION_NAME,
+            KmjProductCatalog::DESKTOP_COMMANDER_SLUG => KmjProductCatalog::DESKTOP_COMMANDER_NAME,
             KmjProductCatalog::FORGE_SLUG => KmjProductCatalog::FORGE_NAME,
             KmjProductCatalog::OMNIDESK_SLUG => KmjProductCatalog::OMNIDESK_NAME,
             KmjProductCatalog::CODEBRIDGE_SLUG => KmjProductCatalog::CODEBRIDGE_NAME,
