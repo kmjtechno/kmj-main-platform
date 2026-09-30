@@ -587,7 +587,9 @@ function ProductManager({ products }: { products: ManagedProduct[] }) {
                 </div>
             </div>
             <div className="relative mb-4 rounded-xl border border-white/[0.07] bg-white/[0.025] px-4 py-3 text-[11px] leading-5 text-white/50">
-                Changes here are the governed source for public visibility, lifecycle, artwork and landing-page order. Purchase remains fail-closed unless the product is Available.
+                Changes here are the governed source for public visibility,
+                lifecycle, artwork and landing-page order. Purchase remains
+                fail-closed unless the product is Available.
             </div>
             <div className="relative grid gap-3">
                 {orderedProducts.map((product) => (
