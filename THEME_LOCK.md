@@ -20,6 +20,15 @@ Status: LOCKED
 ## Experience hierarchy
 Hero → Flagship products → Product ecosystem → Immersive Cinema Suite → Main Platform / Licensing authority → Discovery & lifecycle → Kristi Support → Trust / conversion → Footer.
 
+## Admin product manager
+- Platform-owner access remains passkey and password-confirm gated.
+- The governed product list is the authority for public visibility, lifecycle, artwork path, purchase enablement and licensing enablement.
+- Product ordering is deterministic and drives the public landing/product portfolio order.
+- Drag-and-drop reordering must persist the complete catalog order; partial reorder payloads fail closed.
+- Purchase enablement is allowed only for lifecycle `Available`; moving a product out of `Available` must disable purchase.
+- Public Beta is a governed lifecycle state and must remain non-purchasable unless promoted to a verified Available release.
+- Admin controls must never manufacture release evidence or bypass entitlement/licensing gates.
+
 ## Conversion and promotion
 - Product pages include Share, WhatsApp, LinkedIn, X, Facebook and Copy Link where technically supported.
 - Product share metadata must use canonical title, description and image data.
