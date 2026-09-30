@@ -5,6 +5,8 @@ import {
     BadgeIndianRupee,
     Building2,
     ExternalLink,
+    Eye,
+    EyeOff,
     GripVertical,
     KeyRound,
     PackagePlus,
@@ -317,7 +319,7 @@ function ManagedProductEditor({
                 event.preventDefault();
                 onDrop(product.id);
             }}
-            className="group grid gap-4 rounded-xl border p-4 transition hover:border-red-500/30 xl:grid-cols-[1.1fr_.75fr_.85fr_auto]"
+            className="group grid gap-4 rounded-2xl border border-white/[0.08] bg-white/[0.025] p-4 transition hover:border-red-500/30 hover:bg-white/[0.04] xl:grid-cols-[1.1fr_.75fr_.85fr_auto]"
         >
             <div className="flex items-center gap-2 xl:col-span-4">
                 <button
@@ -357,7 +359,7 @@ function ManagedProductEditor({
                         form.setData('name', event.target.value)
                     }
                     aria-label={`Name for ${product.name}`}
-                    className="bg-background h-9 rounded-lg border px-3 text-sm font-bold"
+                    className="h-9 rounded-lg border border-white/10 bg-black/20 px-3 text-sm font-bold text-white"
                     required
                 />
                 <div className="text-muted-foreground text-[11px]">
@@ -372,7 +374,7 @@ function ManagedProductEditor({
                     rows={2}
                     maxLength={2000}
                     placeholder="Customer-facing summary"
-                    className="bg-background rounded-lg border px-3 py-2 text-xs"
+                    className="rounded-lg border border-white/10 bg-black/20 px-3 py-2 text-xs text-white"
                 />
             </div>
 
@@ -387,7 +389,7 @@ function ManagedProductEditor({
                         }
                     }}
                     aria-label={`Lifecycle for ${product.name}`}
-                    className="bg-background h-9 rounded-lg border px-2 text-xs"
+                    className="h-9 rounded-lg border border-white/10 bg-black/20 px-2 text-xs text-white"
                 >
                     {productLifecycleOptions.map(([value, label]) => (
                         <option key={value} value={value}>
@@ -402,7 +404,7 @@ function ManagedProductEditor({
                     }
                     aria-label={`Image path for ${product.name}`}
                     placeholder="/assets/products/..."
-                    className="bg-background h-9 rounded-lg border px-2 text-xs"
+                    className="h-9 rounded-lg border border-white/10 bg-black/20 px-2 text-xs text-white"
                 />
             </div>
 
@@ -538,13 +540,18 @@ function ProductManager({ products }: { products: ManagedProduct[] }) {
     const purchasableCount = orderedProducts.filter(
         (product) => product.purchase_enabled,
     ).length;
+    const licensingCount = orderedProducts.filter(
+        (product) => product.licensing_enabled,
+    ).length;
+    const hiddenCount = orderedProducts.length - publicCount;
 
     return (
         <section
             id="product-manager"
-            className="bg-card scroll-mt-6 rounded-2xl border p-5 sm:p-6"
+            className="relative scroll-mt-6 overflow-hidden rounded-[1.75rem] border border-red-500/15 bg-gradient-to-br from-[#0b0c10] via-[#08090c] to-red-950/20 p-5 text-white shadow-[0_24px_80px_rgba(0,0,0,.18)] sm:p-6"
         >
-            <div className="mb-5 flex flex-col justify-between gap-4 lg:flex-row lg:items-end">
+            <div className="pointer-events-none absolute -top-28 right-0 h-64 w-64 rounded-full bg-red-600/10 blur-3xl" />
+            <div className="relative mb-6 flex flex-col justify-between gap-4 lg:flex-row lg:items-end">
                 <div>
                     <div className="text-[10px] font-black tracking-[.14em] text-red-500 uppercase">
                         Governed product authority
@@ -556,15 +563,21 @@ function ProductManager({ products }: { products: ManagedProduct[] }) {
                         landing-page and portfolio order.
                     </p>
                 </div>
-                <div className="flex flex-wrap gap-2 text-[10px] font-bold">
-                    <span className="rounded-full border px-3 py-1.5">
+                <div className="grid grid-cols-2 gap-2 text-[10px] font-black sm:grid-cols-5">
+                    <span className="rounded-xl border border-white/10 bg-white/[0.035] px-3 py-2.5">
                         {orderedProducts.length} products
                     </span>
-                    <span className="rounded-full border px-3 py-1.5">
-                        {publicCount} public
+                    <span className="inline-flex items-center gap-1.5 rounded-xl border border-emerald-500/20 bg-emerald-500/10 px-3 py-2.5 text-emerald-300">
+                        <Eye className="h-3 w-3" /> {publicCount} public
                     </span>
-                    <span className="rounded-full border px-3 py-1.5">
+                    <span className="inline-flex items-center gap-1.5 rounded-xl border border-white/10 bg-white/[0.035] px-3 py-2.5 text-white/60">
+                        <EyeOff className="h-3 w-3" /> {hiddenCount} hidden
+                    </span>
+                    <span className="rounded-xl border border-red-500/20 bg-red-500/10 px-3 py-2.5 text-red-300">
                         {purchasableCount} purchasable
+                    </span>
+                    <span className="rounded-xl border border-white/10 bg-white/[0.035] px-3 py-2.5 text-white/70">
+                        {licensingCount} licensed
                     </span>
                     {reordering ? (
                         <span className="rounded-full border border-amber-500/30 bg-amber-500/10 px-3 py-1.5 text-amber-600 dark:text-amber-400">
@@ -573,7 +586,12 @@ function ProductManager({ products }: { products: ManagedProduct[] }) {
                     ) : null}
                 </div>
             </div>
-            <div className="grid gap-3">
+            <div className="relative mb-4 rounded-xl border border-white/[0.07] bg-white/[0.025] px-4 py-3 text-[11px] leading-5 text-white/50">
+                Changes here are the governed source for public visibility,
+                lifecycle, artwork and landing-page order. Purchase remains
+                fail-closed unless the product is Available.
+            </div>
+            <div className="relative grid gap-3">
                 {orderedProducts.map((product) => (
                     <ManagedProductEditor
                         key={product.id}
@@ -627,7 +645,7 @@ function ManualPaymentConfirmation({ order }: { order: RecentOrder }) {
                         form.setData('amount_minor', event.target.value)
                     }
                     placeholder="Amount in paise/cents"
-                    className="bg-background h-9 rounded-lg border px-2 text-xs"
+                    className="h-9 rounded-lg border border-white/10 bg-black/20 px-2 text-xs text-white"
                     aria-label="Amount in minor currency units"
                     required
                 />
@@ -638,7 +656,7 @@ function ManualPaymentConfirmation({ order }: { order: RecentOrder }) {
                     form.setData('confirmation_reference', event.target.value)
                 }
                 placeholder="UTR / payment reference"
-                className="bg-background h-9 rounded-lg border px-2 text-xs"
+                className="h-9 rounded-lg border border-white/10 bg-black/20 px-2 text-xs text-white"
                 aria-label="Payment confirmation reference"
                 required
             />
