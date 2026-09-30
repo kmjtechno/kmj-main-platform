@@ -21,7 +21,7 @@ final class DesktopCommanderBootstrapTest extends TestCase
     {
         $this->getJson('/api/public/commander/bootstrap')
             ->assertOk()
-            ->assertHeader('Cache-Control', 'public, max-age=3600, stale-while-revalidate=86400')
+            ->assertHeader('Cache-Control', 'max-age=3600, public, stale-while-revalidate=86400')
             ->assertJsonPath('schema', 1)
             ->assertJsonPath('product', 'kmj-desktop-commander')
             ->assertJsonPath('channel', 'public-beta')
