@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Services\Commerce\AdminProductManager;
 use App\Services\Commerce\KmjProductCatalog;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Inertia\Testing\AssertableInertia as Assert;
@@ -48,7 +49,7 @@ final class PublicProductHubTest extends TestCase
         $cloudOS = Product::query()->where('slug', 'kmj-cloudos')->firstOrFail();
         $calibration = Product::query()->where('slug', 'kmj-calibration-pro')->firstOrFail();
 
-        app(\App\Services\Commerce\AdminProductManager::class)->reorder([
+        app(AdminProductManager::class)->reorder([
             (string) $calibration->getKey(),
             (string) $cloudOS->getKey(),
             ...Product::query()
