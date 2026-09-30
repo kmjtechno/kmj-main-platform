@@ -66,7 +66,6 @@ final class AdminProductManagerTest extends TestCase
         $manager->update($product, ['purchase_enabled' => true]);
     }
 
-
     public function test_partial_update_preserves_fail_closed_purchase_state(): void
     {
         $manager = app(AdminProductManager::class);
