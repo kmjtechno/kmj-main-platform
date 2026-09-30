@@ -124,3 +124,44 @@ For each meaningful landing/product change, actively ask:
 
 The target is world-class execution quality. Never publish unsupported superiority claims merely to express that internal quality target.
 
+## 12. Interactive product showroom standard
+
+Treat the public platform as an interactive product showroom, not a conventional brochure website.
+
+### Ten-second comprehension
+Within roughly ten seconds on a product's first screen, a new visitor should be able to understand what the product is, who it serves, the primary problem/outcome, its current lifecycle state and the appropriate next action.
+
+### Product-specific visual storytelling
+Allow each product family to have meaningful visual atmosphere while preserving KMJ cohesion. Cloud/infrastructure may use cooler technical tones; calibration may use optical/precision cues; immersive cinema may use richer cinematic spectrum; security/licensing may use restrained enterprise cues. Colour must communicate, not merely decorate.
+
+### Interactive demos as explanation
+When a workflow benefits from interaction, make a lightweight interactive demo/simulation a primary explanation surface. Candidate experiences include calibration mapping/warping, CloudOS infrastructure control, remote-session flows, licensing activation/entitlements and cinema playback/show control. Simulations must be explicitly identified when they are not a real connected product environment.
+
+### Contextual Kristi guidance
+Kristi should behave as a contextual product guide rather than a generic chat bubble. On a product surface, guidance should be grounded in verified facts for that product and help visitors understand use cases, lifecycle, demos and appropriate next steps. Kristi must not invent capabilities, availability, pricing or proof.
+
+### Evidence-first trust
+Pair persuasive communication with verifiable product facts, lifecycle state, documentation/demo evidence and relevant security/architecture information. Do not fabricate customer counts, deployments, testimonials, awards, benchmarks, uptime/reliability percentages or other social proof.
+
+### Intent-based discovery
+In addition to product-name navigation, provide paths based on customer intent where useful: cloud infrastructure, immersive experiences, remote access, AI engineering, calibration, licensing and other evidence-backed solution groups.
+
+### Search/AI entity architecture
+Each product should have one canonical entity page with consistent naming and facts, appropriate structured data, crawlable use cases/FAQs, meaningful related-product links, sitemap discoverability and terminology consistent with the governed catalog.
+
+### Performance budget
+Cinematic presentation is subject to hard performance discipline. Prefer responsive AVIF/WebP where supported, correctly sized sources, critical-media prioritization, below-fold lazy loading, restrained animation and reduced-motion support. Core Web Vitals regressions must be treated as product defects, not accepted as a visual-design cost.
+
+### Lifecycle-specific conversion
+Calls to action must follow governed state:
+- Available: eligible purchase/trial/demo/contact actions only when actually supported.
+- Preview/Early Access/Public Beta: appropriate access/request/demo actions.
+- Research/Planned: roadmap, learn-more or interest actions; never imply immediate purchase.
+Purchase remains fail-closed under platform authority.
+
+### Signature KMJ moment
+Create a distinctive, performant hero/early-page interaction that communicates the connected KMJ ecosystem rather than looking like a generic template. A preferred concept is a controlled visual transition connecting Cloud -> Calibration -> Immersive Cinema -> AI/Remote systems as one governed ecosystem. It must remain usable, accessible and reduced-motion friendly.
+
+### No fabricated proof
+Concept artwork may contain illustrative visual placeholders during exploration, but production UI must not publish invented testimonials, customer identities, global deployment claims, reliability percentages, awards or numerical proof. Only evidence-backed proof may ship.
+
