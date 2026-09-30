@@ -11,6 +11,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
 use KMJ\MainPlatform\Catalog\Models\Plan;
 use KMJ\MainPlatform\Catalog\Models\Product;
+use KMJ\MainPlatform\Commerce\Models\CommercialOrder;
 use KMJ\MainPlatform\Commerce\Services\CommercialOrderService;
 use KMJ\MainPlatform\Organizations\Services\OrganizationCreator;
 use Tests\TestCase;
@@ -175,7 +176,7 @@ final class RazorpayIntegrationTest extends TestCase
         config()->set('services.razorpay.base_url', 'https://api.razorpay.com/v1');
     }
 
-    /** @return array{0: \KMJ\MainPlatform\Commerce\Models\CommercialOrder, 1: Plan} */
+    /** @return array{0: CommercialOrder, 1: Plan} */
     private function orderAndPlan(): array
     {
         $user = User::factory()->create();
