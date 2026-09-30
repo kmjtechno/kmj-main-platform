@@ -3,6 +3,7 @@
 use App\Models\LicenseAuditEvent;
 use App\Models\User;
 use App\Services\AuthorityBootstrapper;
+use App\Services\Commerce\DesktopCommanderCommercialPolicy;
 use App\Services\Commerce\KmjProductCatalog;
 use App\Services\Commerce\PublicProductCatalog;
 use App\Services\Licensing\LicenseAuditRecorder;
@@ -24,6 +25,13 @@ use KMJ\MainPlatform\Organizations\Models\Organization;
 use KMJ\MainPlatform\Organizations\Services\OrganizationCapabilityContext;
 use KMJ\MainPlatform\Organizations\Services\OrganizationDirectory;
 use KMJ\MainPlatform\Releases\Models\ReleaseArtifact;
+
+Route::get('api/public/commander/bootstrap', function (DesktopCommanderCommercialPolicy $policy) {
+    return response()
+        ->json($policy->publicBootstrap())
+        ->header('Cache-Control', 'public, max-age=3600, stale-while-revalidate=86400')
+        ->header('Access-Control-Allow-Origin', '*');
+})->name('commander.bootstrap');
 
 Route::get('/', function (PublicProductCatalog $products) {
     $portfolio = $products->all();

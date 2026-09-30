@@ -35,6 +35,7 @@ final class ProductLicenseProfileRegistry
                 self::OMNIDESK_CAPABILITY,
                 ['active'],
             ),
+            KmjProductCatalog::DESKTOP_COMMANDER_SLUG,
             KmjProductCatalog::FORGE_SLUG,
             KmjProductCatalog::CONNECT_SLUG,
             KmjProductCatalog::CLOUD_NEXUS_SLUG,

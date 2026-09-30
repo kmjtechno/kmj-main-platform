@@ -57,6 +57,7 @@ final class PublicProductCatalog
         return [
             CloudOSProductCatalog::SLUG,
             KmjProductCatalog::CALIBRATION_SLUG,
+            KmjProductCatalog::DESKTOP_COMMANDER_SLUG,
             KmjProductCatalog::FORGE_SLUG,
             KmjProductCatalog::CONNECT_SLUG,
             KmjProductCatalog::OMNIDESK_SLUG,
@@ -84,6 +85,7 @@ final class PublicProductCatalog
         $presented = match ((string) $product->getAttribute('slug')) {
             CloudOSProductCatalog::SLUG => $this->cloudOS($product),
             KmjProductCatalog::CALIBRATION_SLUG => $this->calibration(),
+            KmjProductCatalog::DESKTOP_COMMANDER_SLUG => $this->desktopCommander(),
             KmjProductCatalog::FORGE_SLUG => $this->forge(),
             KmjProductCatalog::OMNIDESK_SLUG => $this->omniDesk(),
             KmjProductCatalog::CODEBRIDGE_SLUG => $this->codeBridge(),
@@ -124,7 +126,8 @@ final class PublicProductCatalog
             KmjProductCatalog::CALIBRATION_SLUG => 'Calibration & Vision Systems',
             KmjProductCatalog::CONNECT_SLUG,
             KmjProductCatalog::OMNIDESK_SLUG,
-            KmjProductCatalog::CODEBRIDGE_SLUG => 'Secure Access & Connectivity',
+            KmjProductCatalog::CODEBRIDGE_SLUG,
+            KmjProductCatalog::DESKTOP_COMMANDER_SLUG => 'Secure Access & Connectivity',
             KmjProductCatalog::LICENSING_HUB_SLUG => 'Commerce & Licensing',
             KmjProductCatalog::CREATIVE_STUDIO_SLUG,
             KmjProductCatalog::CINEMA_PLATFORM_SLUG,
@@ -276,6 +279,40 @@ final class PublicProductCatalog
                 'secondary' => 'Preview',
             ],
         ];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function desktopCommander(): array
+    {
+        return $this->developmentProduct(
+            slug: KmjProductCatalog::DESKTOP_COMMANDER_SLUG,
+            name: KmjProductCatalog::DESKTOP_COMMANDER_NAME,
+            lifecycle: 'public-beta',
+            lifecycleLabel: 'Free public beta',
+            eyebrow: 'Local-first engineering command center',
+            headline: 'Operate projects and servers from one secure desktop control plane.',
+            summary: 'KMJ Desktop Commander runs engineering operations on the customer device and customer-controlled servers. The KMJ Main Platform is reserved for lightweight account, entitlement, release and billing control rather than carrying project workloads.',
+            status: 'The v0.1 line is being verified for Windows distribution. Public-beta access is free while release, entitlement and safety gates mature; paid plans are not enabled until those gates pass.',
+            proof: [
+                [
+                    'title' => 'Local-first execution',
+                    'detail' => 'Project inspection, Git checks and quality gates execute through the customer-controlled OpenSSH path instead of consuming KMJ server compute.',
+                    'state' => 'repository-verified',
+                ],
+                [
+                    'title' => 'Deny-by-default policy',
+                    'detail' => 'Remote operations use fixed policy-gated presets and do not expose arbitrary shell execution through the desktop UI.',
+                    'state' => 'repository-verified',
+                ],
+                [
+                    'title' => 'Free before monetization',
+                    'detail' => 'Commercial purchase remains disabled during public beta. Paid conversion will be enabled only after signed releases, entitlement enforcement and billing are verified end to end.',
+                    'state' => 'fail-closed',
+                ],
+            ],
+        );
     }
 
     /**
