@@ -168,9 +168,13 @@ function CommercialProductForm() {
                     <span>Lifecycle</span>
                     <select
                         value={form.data.lifecycle}
-                        onChange={(event) =>
-                            form.setData('lifecycle', event.target.value)
-                        }
+                        onChange={(event) => {
+                            const lifecycle = event.target.value;
+                            form.setData('lifecycle', lifecycle);
+                            if (lifecycle !== 'available') {
+                                form.setData('purchase_enabled', false);
+                            }
+                        }}
                         className="bg-background h-10 w-full rounded-lg border px-3 text-sm"
                     >
                         {productLifecycleOptions.map(([value, label]) => (
@@ -222,6 +226,7 @@ function CommercialProductForm() {
                     <input
                         type="checkbox"
                         checked={form.data.purchase_enabled}
+                        disabled={form.data.lifecycle !== 'available'}
                         onChange={(event) =>
                             form.setData(
                                 'purchase_enabled',
@@ -374,9 +379,13 @@ function ManagedProductEditor({
             <div className="grid content-start gap-2">
                 <select
                     value={form.data.lifecycle}
-                    onChange={(event) =>
-                        form.setData('lifecycle', event.target.value)
-                    }
+                    onChange={(event) => {
+                        const lifecycle = event.target.value;
+                        form.setData('lifecycle', lifecycle);
+                        if (lifecycle !== 'available') {
+                            form.setData('purchase_enabled', false);
+                        }
+                    }}
                     aria-label={`Lifecycle for ${product.name}`}
                     className="bg-background h-9 rounded-lg border px-2 text-xs"
                 >
@@ -413,6 +422,7 @@ function ManagedProductEditor({
                     <input
                         type="checkbox"
                         checked={form.data.purchase_enabled}
+                        disabled={form.data.lifecycle !== 'available'}
                         onChange={(event) =>
                             form.setData(
                                 'purchase_enabled',
