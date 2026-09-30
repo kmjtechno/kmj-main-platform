@@ -27,6 +27,10 @@ final class KmjProductCatalog
 
     public const OMNIDESK_NAME = 'KMJ OmniDesk';
 
+    public const CODEBRIDGE_SLUG = 'kmj-codebridge';
+
+    public const CODEBRIDGE_NAME = 'KMJ CodeBridge';
+
     public const CLOUD_NEXUS_SLUG = 'kmj-cloud-nexus';
 
     public const CLOUD_NEXUS_NAME = 'KMJ Cloud Nexus';
@@ -105,6 +109,7 @@ final class KmjProductCatalog
                 self::CALIBRATION_SLUG => self::CALIBRATION_NAME,
                 self::FORGE_SLUG => self::FORGE_NAME,
                 self::OMNIDESK_SLUG => self::OMNIDESK_NAME,
+                self::CODEBRIDGE_SLUG => self::CODEBRIDGE_NAME,
                 self::CONNECT_SLUG => self::CONNECT_NAME,
                 self::CLOUD_NEXUS_SLUG => self::CLOUD_NEXUS_NAME,
                 self::AGENT_SLUG => self::AGENT_NAME,
@@ -168,6 +173,7 @@ final class KmjProductCatalog
             self::LICENSING_HUB_SLUG => ['research', 70, '/assets/products/kmj-licensing-hub.webp', false, true],
             self::FORGE_SLUG => ['research', 80, '/assets/products/kmj-forge.webp', false, false],
             self::OMNIDESK_SLUG => ['research', 85, null, false, true],
+            self::CODEBRIDGE_SLUG => ['research', 87, null, false, true],
             self::CONNECT_SLUG => ['planned', 90, '/assets/products/kmj-connect.webp', false, false],
             self::CLOUD_NEXUS_SLUG => ['research', 100, '/assets/products/kmj-cloud-nexus.webp', false, false],
             self::AGENT_SLUG => ['research', 110, '/assets/products/kmj-agent.webp', false, false],

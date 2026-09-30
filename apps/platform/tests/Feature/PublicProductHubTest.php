@@ -24,16 +24,20 @@ final class PublicProductHubTest extends TestCase
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->component('welcome')
-                ->where('portfolioCount', 13)
-                ->has('products', 4)
-                ->where('products.0.slug', 'kmj-cloudos')
-                ->where('products.0.lifecycle', 'available')
-                ->where('products.1.slug', 'kmj-calibration-pro')
-                ->where('products.1.lifecycle', 'preview')
-                ->where('products.2.slug', 'kmj-cinema-platform')
-                ->where('products.2.lifecycle', 'research')
-                ->where('products.3.slug', 'kmj-360-dome')
-                ->where('products.3.lifecycle', 'research'));
+                ->where('portfolioCount', 14)
+                ->has('products', 14)
+                ->where('products', function ($products): bool {
+                    $bySlug = collect($products)->keyBy('slug');
+
+                    return $bySlug->has('kmj-cloudos')
+                        && $bySlug->has('kmj-calibration-pro')
+                        && $bySlug->has('kmj-cinema-platform')
+                        && $bySlug->has('kmj-360-dome')
+                        && $bySlug->has('kmj-omnidesk')
+                        && $bySlug->has('kmj-codebridge')
+                        && $bySlug['kmj-cloudos']['lifecycle'] === 'available'
+                        && $bySlug['kmj-codebridge']['lifecycle'] === 'research';
+                }));
     }
 
     public function test_products_hub_uses_only_canonical_public_lifecycle_vocabulary(): void
@@ -42,7 +46,7 @@ final class PublicProductHubTest extends TestCase
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->component('products/index')
-                ->has('products', 13)
+                ->has('products', 14)
                 ->where('products', function ($products): bool {
                     $allowed = ['available', 'preview', 'research', 'planned'];
 
@@ -94,6 +98,7 @@ final class PublicProductHubTest extends TestCase
             'kmj-licensing-hub' => 'research',
             'kmj-forge' => 'research',
             'kmj-omnidesk' => 'research',
+            'kmj-codebridge' => 'research',
             'kmj-connect' => 'planned',
             'kmj-cloud-nexus' => 'research',
             'kmj-agent' => 'research',

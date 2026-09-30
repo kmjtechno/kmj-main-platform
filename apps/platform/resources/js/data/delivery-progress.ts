@@ -18,6 +18,14 @@ export const deliveryMilestones: DeliveryMilestone[] = [
             'PR #247 signed renewal + PR #248 hash-only enrollment + PR #249 authenticated credential management and PostgreSQL concurrency verification merged with exact-head CI green',
     },
     {
+        id: 'locked-landing-product-portfolio',
+        title: 'Locked landing product portfolio',
+        state: 'active',
+        detail: 'The locked black-and-red landing now receives the complete governed product portfolio, including OmniDesk and CodeBridge, with canonical product-detail routing; public commercial actions remain lifecycle-gated',
+        evidence:
+            'PR #258 exact-head verification in progress; CodeBridge remains non-commercial until hosted identity, packaging and production security gates pass',
+    },
+    {
         id: 'authority-foundation',
         title: 'Authority foundation',
         state: 'verified',
@@ -345,5 +353,5 @@ export const deliveryProgress = Math.round(
 export const deliveryProgressMeta = {
     label: 'Revenue-capable working phase',
     note: 'Evidence-based delivery milestones, not total product completion.',
-    refreshed: '2026-09-29',
+    refreshed: '2026-09-30',
 } as const;
