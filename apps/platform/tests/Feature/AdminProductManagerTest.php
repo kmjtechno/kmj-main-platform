@@ -51,6 +51,32 @@ final class AdminProductManagerTest extends TestCase
         self::assertTrue($product->licensing_enabled);
     }
 
+    public function test_purchase_cannot_be_enabled_before_product_is_available(): void
+    {
+        $manager = app(AdminProductManager::class);
+        $product = $manager->create([
+            'slug' => 'kmj-research-product',
+            'name' => 'KMJ Research Product',
+            'status' => 'sandbox',
+            'lifecycle' => 'research',
+            'purchase_enabled' => false,
+        ]);
+
+        $this->expectException(DomainException::class);
+        $manager->update($product, ['purchase_enabled' => true]);
+    }
+
+    public function test_reorder_requires_the_complete_catalog(): void
+    {
+        $manager = app(AdminProductManager::class);
+        $manager->create(['slug' => 'a-product', 'name' => 'A Product', 'status' => 'sandbox', 'lifecycle' => 'research']);
+        $manager->create(['slug' => 'b-product', 'name' => 'B Product', 'status' => 'sandbox', 'lifecycle' => 'research']);
+        $c = $manager->create(['slug' => 'c-product', 'name' => 'C Product', 'status' => 'sandbox', 'lifecycle' => 'research']);
+
+        $this->expectException(DomainException::class);
+        $manager->reorder([(string) $c->getKey()]);
+    }
+
     public function test_reorder_is_deterministic_and_rejects_unknown_products(): void
     {
         $manager = app(AdminProductManager::class);
