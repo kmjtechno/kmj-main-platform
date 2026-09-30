@@ -22,8 +22,11 @@ class StagingMonitorContractTests(unittest.TestCase):
         self.assertIn("https://staging.kmjtechno.com/products/kmj-calibration-pro", workflow)
         self.assertNotIn("ops/staging/verify-monitor.py", workflow)
         self.assertNotIn("https://staging.kmjtechno.com/info", workflow)
-        self.assertIn("grep -Fq 'Explore product'", workflow)
+        self.assertIn("assert_dom 'root' 'Explore KMJ products'", workflow)
+        self.assertNotIn("grep -Fq 'Explore all products' <<< \"$root_dom\"", workflow)
+        self.assertIn("assert_dom 'products' 'Explore product'", workflow)
         self.assertNotIn("grep -Fq 'View product'", workflow)
+        self.assertIn("Staging UI assertion failed", workflow)
 
     def test_staging_deploy_refreshes_local_path_packages_before_composer_install(self):
         workflow = DEPLOY_WORKFLOW.read_text()

@@ -279,16 +279,25 @@ jobs:
           chrome="$KMJ_STAGING_CHROME"
           test -n "$chrome"
           root_dom="$($chrome --headless --no-sandbox --disable-gpu --virtual-time-budget=10000 --dump-dom "$HEALTH_URL" 2>/dev/null)"
-          grep -Fq 'KMJ TECHNO' <<< "$root_dom"
-          grep -Fq 'Explore all products' <<< "$root_dom"
+          assert_dom() {
+            local surface="$1"
+            local needle="$2"
+            local dom="$3"
+            if ! grep -Fq "$needle" <<< "$dom"; then
+              echo "::error title=Staging UI assertion failed::${surface} is missing expected text: ${needle}"
+              return 1
+            fi
+          }
+          assert_dom 'root' 'KMJ TECHNO' "$root_dom"
+          assert_dom 'root' 'Explore KMJ products' "$root_dom"
           products_dom="$($chrome --headless --no-sandbox --disable-gpu --virtual-time-budget=10000 --dump-dom 'https://staging.kmjtechno.com/products' 2>/dev/null)"
           calibration_dom="$($chrome --headless --no-sandbox --disable-gpu --virtual-time-budget=10000 --dump-dom 'https://staging.kmjtechno.com/products/kmj-calibration-pro' 2>/dev/null)"
-          grep -Fq 'KMJ Calibration Pro' <<< "$products_dom"
-          grep -Fq 'Products built to move' <<< "$products_dom"
-          grep -Fq 'Explore product' <<< "$products_dom"
-          grep -Fq 'KMJ Calibration Pro' <<< "$calibration_dom"
-          grep -Fq 'Interactive' <<< "$calibration_dom"
-          grep -Fq 'simulation' <<< "$calibration_dom"
+          assert_dom 'products' 'KMJ Calibration Pro' "$products_dom"
+          assert_dom 'products' 'Products built to move' "$products_dom"
+          assert_dom 'products' 'Explore product' "$products_dom"
+          assert_dom 'calibration product' 'KMJ Calibration Pro' "$calibration_dom"
+          assert_dom 'calibration product' 'Interactive' "$calibration_dom"
+          assert_dom 'calibration product' 'simulation' "$calibration_dom"
           echo 'result=pass' >> "$GITHUB_OUTPUT"
           echo 'Native Main Platform root + world-class public product experience PASS.'
 
