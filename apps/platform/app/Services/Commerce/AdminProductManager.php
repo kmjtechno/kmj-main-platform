@@ -9,7 +9,7 @@ use KMJ\MainPlatform\Catalog\Models\Product;
 
 final class AdminProductManager
 {
-    public const LIFECYCLES = ['available', 'preview', 'research', 'planned', 'retired'];
+    public const LIFECYCLES = ['available', 'preview', 'public-beta', 'research', 'planned', 'retired'];
 
     /**
      * @return array<string, mixed>
