@@ -9,7 +9,7 @@ use KMJ\MainPlatform\Catalog\Models\Product;
 
 final class AdminProductManager
 {
-    public const LIFECYCLES = ['available', 'preview', 'research', 'planned', 'retired'];
+    public const LIFECYCLES = ['available', 'preview', 'public-beta', 'research', 'planned', 'retired'];
 
     /**
      * @return array<string, mixed>
@@ -40,7 +40,10 @@ final class AdminProductManager
             $attributes['lifecycle'] ??= 'planned';
             $attributes['sort_order'] ??= ((int) Product::query()->max('sort_order')) + 10;
 
-            return Product::query()->create($this->normalized($attributes));
+            $attributes = $this->normalized($attributes);
+            $this->assertCommercialState($attributes);
+
+            return Product::query()->create($attributes);
         });
     }
 
@@ -49,7 +52,14 @@ final class AdminProductManager
      */
     public function update(Product $product, array $attributes): Product
     {
-        $product->fill($this->normalized($attributes));
+        $attributes = $this->normalized($attributes);
+        $resultingState = [
+            'lifecycle' => $attributes['lifecycle'] ?? $product->getAttribute('lifecycle'),
+            'purchase_enabled' => $attributes['purchase_enabled'] ?? $product->getAttribute('purchase_enabled'),
+        ];
+        $this->assertCommercialState($resultingState);
+
+        $product->fill($attributes);
         $product->save();
 
         return $product->refresh();
@@ -61,14 +71,36 @@ final class AdminProductManager
     public function reorder(array $ids): void
     {
         DB::transaction(function () use ($ids): void {
+            if (count($ids) !== count(array_unique($ids))) {
+                throw new DomainException('Product ordering contains duplicate products.');
+            }
+
             $products = Product::query()->whereIn('id', $ids)->get()->keyBy(fn (Product $p) => (string) $p->getKey());
             if ($products->count() !== count($ids)) {
                 throw new DomainException('Product ordering contains unknown products.');
             }
+
+            if (Product::query()->count() !== count($ids)) {
+                throw new DomainException('Product ordering must include the complete catalog.');
+            }
+
             foreach (array_values($ids) as $index => $id) {
                 $products->get($id)->forceFill(['sort_order' => ($index + 1) * 10])->save();
             }
         });
+    }
+
+    /**
+     * @param  array<string, mixed>  $attributes
+     */
+    private function assertCommercialState(array $attributes): void
+    {
+        if (
+            (bool) ($attributes['purchase_enabled'] ?? false)
+            && ($attributes['lifecycle'] ?? null) !== 'available'
+        ) {
+            throw new DomainException('Purchase can only be enabled for an available product.');
+        }
     }
 
     /**

@@ -71,6 +71,11 @@ export function AppSidebar() {
             ? [
                   { title: 'Operator', href: '/operator', icon: Crown },
                   {
+                      title: 'Product Manager',
+                      href: '/operator#product-manager',
+                      icon: PackageOpen,
+                  },
+                  {
                       title: 'Ops Command Center',
                       href: '/operator/ops',
                       icon: Activity,
