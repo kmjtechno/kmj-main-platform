@@ -2,11 +2,13 @@
 
 use App\Models\User;
 use App\Services\Commerce\CommercialProductPublisher;
+use App\Services\Commerce\RazorpayGateway;
 use App\Services\PlatformOwnerAccess;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
+use KMJ\MainPlatform\Catalog\Models\Plan;
 use KMJ\MainPlatform\Catalog\Models\Product;
 use KMJ\MainPlatform\Commerce\Models\CommercialOrder;
 use KMJ\MainPlatform\Commerce\Services\CommercialOrderService;
@@ -94,6 +96,52 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
             'requestKey' => (string) Str::uuid(),
         ]);
     })->name('purchase.index');
+
+    Route::post('purchase/orders/{order}/razorpay', function (
+        Request $request,
+        string $order,
+        OrganizationCapabilityContext $capabilities,
+        RazorpayGateway $razorpay,
+    ) {
+        $user = $request->user();
+        abort_unless($user instanceof User, 401);
+
+        $validated = $request->validate([
+            'plan_id' => ['required', 'uuid'],
+            'idempotency_key' => ['required', 'string', 'max:160'],
+        ]);
+
+        $commercialOrder = CommercialOrder::query()
+            ->whereKey($order)
+            ->where('requester_user_id', $user->id)
+            ->where('status', 'requested')
+            ->firstOrFail();
+
+        abort_unless(
+            $capabilities->allows(
+                $user->id,
+                (string) $commercialOrder->getAttribute('organization_id'),
+                'commerce.purchase',
+            ),
+            403,
+        );
+
+        $plan = Plan::query()
+            ->whereKey($validated['plan_id'])
+            ->where('product_id', $commercialOrder->getAttribute('product_id'))
+            ->where('status', 'active')
+            ->firstOrFail();
+
+        $attempt = $razorpay->initiate($commercialOrder, $plan, $validated['idempotency_key']);
+
+        return response()->json([
+            'provider' => 'razorpay',
+            'key_id' => $razorpay->publicKeyId(),
+            'provider_order_id' => $attempt->provider_order_id,
+            'amount_minor' => $attempt->amount_minor,
+            'currency' => $attempt->currency,
+        ], 201);
+    })->name('purchase.razorpay.store');
 
     Route::post('purchase/orders', function (
         Request $request,

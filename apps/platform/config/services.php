@@ -35,6 +35,15 @@ return [
         ],
     ],
 
+    'razorpay' => [
+        'enabled' => (bool) env('RAZORPAY_ENABLED', false),
+        'key_id' => env('RAZORPAY_KEY_ID'),
+        'key_secret' => env('RAZORPAY_KEY_SECRET'),
+        'webhook_secret' => env('RAZORPAY_WEBHOOK_SECRET'),
+        'base_url' => env('RAZORPAY_BASE_URL', 'https://api.razorpay.com/v1'),
+        'timeout_seconds' => (float) env('RAZORPAY_TIMEOUT_SECONDS', 10),
+    ],
+
     'kmj_sandbox_licensing' => [
         'secret' => env('KMJ_SANDBOX_LICENSE_SECRET'),
         'validation_engine' => env('KMJ_SANDBOX_LICENSE_VALIDATION_ENGINE', 'php'),

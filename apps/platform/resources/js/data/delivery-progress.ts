@@ -88,6 +88,13 @@ export const deliveryMilestones: DeliveryMilestone[] = [
         evidence: 'PR #62',
     },
     {
+        id: 'razorpay-provider-preparation',
+        title: 'Razorpay provider preparation',
+        state: 'active',
+        detail: 'Default-disabled provider configuration, plan-bound checkout initiation, replay-safe signed webhook ingestion and backend captured-payment reconciliation are prepared without credentials or live charges',
+        evidence: 'Issue #245 review branch; financial activation remains human-review and owner-approval gated',
+    },
+    {
         id: 'commerce-ledger',
         title: 'Commerce order ledger',
         state: 'verified',
