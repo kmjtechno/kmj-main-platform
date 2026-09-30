@@ -530,7 +530,10 @@ function ProductManager({ products }: { products: ManagedProduct[] }) {
     ).length;
 
     return (
-        <section id="product-manager" className="bg-card scroll-mt-6 rounded-2xl border p-5 sm:p-6">
+        <section
+            id="product-manager"
+            className="bg-card scroll-mt-6 rounded-2xl border p-5 sm:p-6"
+        >
             <div className="mb-5 flex flex-col justify-between gap-4 lg:flex-row lg:items-end">
                 <div>
                     <div className="text-[10px] font-black tracking-[.14em] text-red-500 uppercase">
