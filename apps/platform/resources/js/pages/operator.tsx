@@ -1,8 +1,11 @@
-import type { FormEvent } from 'react';
-import { Head, router, useForm } from '@inertiajs/react';
+import type { DragEvent, FormEvent } from 'react';
+import { useEffect, useState } from 'react';
+import { Head, Link, router, useForm } from '@inertiajs/react';
 import {
     BadgeIndianRupee,
     Building2,
+    ExternalLink,
+    GripVertical,
     KeyRound,
     PackagePlus,
     ShieldCheck,
@@ -53,6 +56,7 @@ type OperatorProps = {
 
 type ManagedProduct = {
     id: string;
+    status: string;
     slug: string;
     name: string;
     lifecycle: string;
@@ -106,6 +110,7 @@ function Metric({
 const productLifecycleOptions = [
     ['available', 'Available'],
     ['preview', 'Preview'],
+    ['public-beta', 'Public beta'],
     ['research', 'Research'],
     ['planned', 'Planned'],
     ['retired', 'Retired'],
@@ -261,9 +266,13 @@ function CommercialProductForm() {
 function ManagedProductEditor({
     product,
     products,
+    onDragStart,
+    onDrop,
 }: {
     product: ManagedProduct;
     products: ManagedProduct[];
+    onDragStart: (productId: string) => void;
+    onDrop: (productId: string) => void;
 }) {
     const form = useForm({
         name: product.name,
@@ -298,8 +307,44 @@ function ManagedProductEditor({
     return (
         <form
             onSubmit={save}
-            className="grid gap-4 rounded-xl border p-4 xl:grid-cols-[1.1fr_.75fr_.85fr_auto]"
+            onDragOver={(event) => event.preventDefault()}
+            onDrop={(event: DragEvent<HTMLFormElement>) => {
+                event.preventDefault();
+                onDrop(product.id);
+            }}
+            className="group grid gap-4 rounded-xl border p-4 transition hover:border-red-500/30 xl:grid-cols-[1.1fr_.75fr_.85fr_auto]"
         >
+            <div className="flex items-center gap-2 xl:col-span-4">
+                <button
+                    type="button"
+                    draggable
+                    onDragStart={() => onDragStart(product.id)}
+                    aria-label={`Drag ${product.name} to reorder`}
+                    className="text-muted-foreground hover:text-foreground cursor-grab rounded-lg border p-2 active:cursor-grabbing"
+                >
+                    <GripVertical className="h-4 w-4" />
+                </button>
+                <span className="text-muted-foreground rounded-full border px-2.5 py-1 text-[10px] font-black tracking-wide uppercase">
+                    {product.status}
+                </span>
+                <span className="text-muted-foreground text-[10px] font-bold">
+                    Order {product.sort_order}
+                </span>
+                {product.is_public ? (
+                    <Link
+                        href={`/products/${product.slug}`}
+                        target="_blank"
+                        className="ml-auto inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-[10px] font-bold transition hover:border-red-500/30 hover:text-red-500"
+                    >
+                        Public preview
+                        <ExternalLink className="h-3 w-3" />
+                    </Link>
+                ) : (
+                    <span className="text-muted-foreground ml-auto text-[10px] font-bold">
+                        Hidden from public catalog
+                    </span>
+                )}
+            </div>
             <div className="grid gap-2">
                 <input
                     value={form.data.name}
@@ -421,9 +466,6 @@ function ManagedProductEditor({
                         ↓
                     </button>
                 </div>
-                <span className="text-muted-foreground text-[10px]">
-                    Order {product.sort_order}
-                </span>
             </div>
 
             {Object.keys(form.errors).length > 0 && (
@@ -432,6 +474,104 @@ function ManagedProductEditor({
                 </div>
             )}
         </form>
+    );
+}
+
+function ProductManager({ products }: { products: ManagedProduct[] }) {
+    const [orderedProducts, setOrderedProducts] = useState(products);
+    const [draggedId, setDraggedId] = useState<string | null>(null);
+    const [reordering, setReordering] = useState(false);
+
+    useEffect(() => {
+        setOrderedProducts(products);
+    }, [products]);
+
+    const drop = (targetId: string) => {
+        if (draggedId === null || draggedId === targetId || reordering) {
+            setDraggedId(null);
+            return;
+        }
+
+        const sourceIndex = orderedProducts.findIndex(
+            (product) => product.id === draggedId,
+        );
+        const targetIndex = orderedProducts.findIndex(
+            (product) => product.id === targetId,
+        );
+
+        if (sourceIndex < 0 || targetIndex < 0) {
+            setDraggedId(null);
+            return;
+        }
+
+        const next = [...orderedProducts];
+        const [moved] = next.splice(sourceIndex, 1);
+        next.splice(targetIndex, 0, moved);
+        setOrderedProducts(next);
+        setDraggedId(null);
+        setReordering(true);
+
+        router.post(
+            '/operator/products/reorder',
+            { ids: next.map((product) => product.id) },
+            {
+                preserveScroll: true,
+                onError: () => setOrderedProducts(products),
+                onFinish: () => setReordering(false),
+            },
+        );
+    };
+
+    const publicCount = orderedProducts.filter(
+        (product) => product.is_public,
+    ).length;
+    const purchasableCount = orderedProducts.filter(
+        (product) => product.purchase_enabled,
+    ).length;
+
+    return (
+        <section className="bg-card rounded-2xl border p-5 sm:p-6">
+            <div className="mb-5 flex flex-col justify-between gap-4 lg:flex-row lg:items-end">
+                <div>
+                    <div className="text-[10px] font-black tracking-[.14em] text-red-500 uppercase">
+                        Governed product authority
+                    </div>
+                    <h2 className="mt-2 text-xl font-black">Product manager</h2>
+                    <p className="text-muted-foreground mt-1 max-w-2xl text-xs leading-5">
+                        Edit lifecycle, public visibility, artwork, purchase and
+                        licensing controls. Drag products to change the exact
+                        landing-page and portfolio order.
+                    </p>
+                </div>
+                <div className="flex flex-wrap gap-2 text-[10px] font-bold">
+                    <span className="rounded-full border px-3 py-1.5">
+                        {orderedProducts.length} products
+                    </span>
+                    <span className="rounded-full border px-3 py-1.5">
+                        {publicCount} public
+                    </span>
+                    <span className="rounded-full border px-3 py-1.5">
+                        {purchasableCount} purchasable
+                    </span>
+                    {reordering ? (
+                        <span className="rounded-full border border-amber-500/30 bg-amber-500/10 px-3 py-1.5 text-amber-600 dark:text-amber-400">
+                            Saving order…
+                        </span>
+                    ) : null}
+                </div>
+            </div>
+            <div className="grid gap-3">
+                {orderedProducts.map((product) => (
+                    <ManagedProductEditor
+                        key={product.id}
+                        product={product}
+                        products={orderedProducts}
+                        onDragStart={setDraggedId}
+                        onDrop={drop}
+                    />
+                ))}
+            </div>
+        </section>
     );
 }
 
@@ -635,29 +775,7 @@ export default function Operator({
                     <CommercialProductForm />
                 </section>
 
-                <section className="bg-card rounded-2xl border p-5 sm:p-6">
-                    <div className="mb-5 flex items-center justify-between gap-4">
-                        <div>
-                            <h2 className="font-bold">Product manager</h2>
-                            <p className="text-muted-foreground mt-1 text-xs">
-                                Lifecycle, visibility and commercial authority
-                                from one governed list.
-                            </p>
-                        </div>
-                        <span className="text-muted-foreground rounded-full border px-3 py-1 text-[10px] font-bold">
-                            {products.length} products
-                        </span>
-                    </div>
-                    <div className="grid gap-3">
-                        {products.map((product) => (
-                            <ManagedProductEditor
-                                key={product.id}
-                                product={product}
-                                products={products}
-                            />
-                        ))}
-                    </div>
-                </section>
+                <ProductManager products={products} />
 
                 <section className="bg-card rounded-2xl border p-5 sm:p-6">
                     <div className="flex items-center justify-between gap-4">
