@@ -26,6 +26,14 @@ export const deliveryMilestones: DeliveryMilestone[] = [
             'PR #258 merged as 606ecf279172; staging promotion, exact-SHA deploy, desktop/mobile browser QA and authenticated surface smoke all passed; CodeBridge remains non-commercial until hosted identity, packaging and production security gates pass',
     },
     {
+        id: 'admin-product-authority',
+        title: 'Admin product authority',
+        state: 'active',
+        detail: 'Platform-owner product management now binds lifecycle, public visibility, artwork, purchase/licensing controls and deterministic drag-and-drop ordering to the locked public landing while commercial state fails closed',
+        evidence:
+            'PR #263 implementation + regression coverage for public-beta lifecycle, complete-catalog ordering, landing-order propagation and non-available purchase rejection; exact-head CI pending',
+    },
+    {
         id: 'authority-foundation',
         title: 'Authority foundation',
         state: 'verified',
