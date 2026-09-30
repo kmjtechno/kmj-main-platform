@@ -101,8 +101,8 @@ export default function SignatureEcosystemHero({
                                 accent,
                                 Icon,
                             }) => {
-                            const active = selected === id;
-                            const lifecycle = products.find(
+                                const active = selected === id;
+                                const lifecycle = products.find(
                                     (item) => item.slug === slug,
                                 )?.lifecycle_label;
                             return (
@@ -119,7 +119,10 @@ export default function SignatureEcosystemHero({
                                     }}
                                 >
                                     <div className="flex items-start justify-between gap-3">
-                                        <span className="grid h-10 w-10 place-items-center rounded-xl border border-white/[.08] bg-white/[.035]" style={{ color: accent }}>
+                                        <span
+                                            className="grid h-10 w-10 place-items-center rounded-xl border border-white/[.08] bg-white/[.035]"
+                                            style={{ color: accent }}
+                                        >
                                             <Icon className="h-4 w-4" />
                                         </span>
                                         {lifecycle && (
@@ -152,62 +155,97 @@ export default function SignatureEcosystemHero({
                                             href={href}
                                             className="mt-2 inline-flex items-center gap-1 text-[10px] font-bold text-white/70 outline-none transition hover:text-white focus-visible:ring-2 focus-visible:ring-white/70"
                                         >
-                                            Explore <ArrowRight className="h-3 w-3" />
+                                            Explore
+                                            <ArrowRight className="h-3 w-3" />
                                         </Link>
                                     </div>
                                 </article>
                             );
-                        })}
+                        },
+                    )}
                     </div>
                 </div>
 
                 <div className="mt-5 grid flex-1 gap-2 sm:hidden">
                     {domains.map(
-                            ({
-                                id,
-                                title,
-                                product,
-                                slug,
-                                href,
-                                summary,
-                                accent,
-                                Icon,
-                            }) => {
-                        const active = selected === id;
-                        const lifecycle = products.find(
-                                    (item) => item.slug === slug,
-                                )?.lifecycle_label;
-                        return (
-                            <article key={id} className="rounded-2xl border bg-black/25" style={{
+                        ({
+                            id,
+                            title,
+                            product,
+                            slug,
+                            href,
+                            summary,
+                            accent,
+                            Icon,
+                        }) => {
+                            const active = selected === id;
+                            const lifecycle = products.find(
+                                (item) => item.slug === slug,
+                            )?.lifecycle_label;
+
+                            return (
+                                <article
+                                    key={id}
+                                    className="rounded-2xl border bg-black/25"
+                                    style={{
                                         borderColor: active
                                             ? accent + '66'
                                             : 'rgba(255,255,255,.08)',
-                                    }}>
-                                <button
-                                    type="button"
-                                    aria-expanded={active}
-                                    aria-controls={'kmj-domain-' + id}
-                                    onClick={() => setSelected(active ? null : id)}
-                                    className="flex min-h-14 w-full items-center gap-3 rounded-2xl px-3 py-2 text-left outline-none focus-visible:ring-2 focus-visible:ring-white/70"
+                                    }}
                                 >
-                                    <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl border border-white/[.08] bg-white/[.035]" style={{ color: accent }}><Icon className="h-4 w-4" /></span>
-                                    <span className="min-w-0 flex-1">
-                                        <span className="block text-[9px] font-black tracking-[.13em] uppercase" style={{ color: accent }}>{title}</span>
-                                        <span className="block text-sm font-black">{product}</span>
-                                    </span>
-                                    {lifecycle && <span className="text-[8px] font-black tracking-[.1em] text-white/38 uppercase">{lifecycle}</span>}
-                                </button>
-                                {active && (
-                                    <div id={'kmj-domain-' + id} className="px-3 pb-3 motion-reduce:transition-none">
-                                        <p className="text-xs leading-5 text-white/52">{summary}</p>
-                                        <Link href={href} className="mt-3 inline-flex min-h-11 items-center gap-2 rounded-xl border border-white/[.09] bg-white/[.04] px-4 text-xs font-black text-white/80 outline-none focus-visible:ring-2 focus-visible:ring-white/70">
-                                            Explore {title} <ArrowRight className="h-3.5 w-3.5" />
-                                        </Link>
-                                    </div>
-                                )}
-                            </article>
-                        );
-                    })}
+                                    <button
+                                        type="button"
+                                        aria-expanded={active}
+                                        aria-controls={'kmj-domain-' + id}
+                                        onClick={() =>
+                                            setSelected(active ? null : id)
+                                        }
+                                        className="flex min-h-14 w-full items-center gap-3 rounded-2xl px-3 py-2 text-left outline-none focus-visible:ring-2 focus-visible:ring-white/70"
+                                    >
+                                        <span
+                                            className="grid h-11 w-11 shrink-0 place-items-center rounded-xl border border-white/[.08] bg-white/[.035]"
+                                            style={{ color: accent }}
+                                        >
+                                            <Icon className="h-4 w-4" />
+                                        </span>
+                                        <span className="min-w-0 flex-1">
+                                            <span
+                                                className="block text-[9px] font-black tracking-[.13em] uppercase"
+                                                style={{ color: accent }}
+                                            >
+                                                {title}
+                                            </span>
+                                            <span className="block text-sm font-black">
+                                                {product}
+                                            </span>
+                                        </span>
+                                        {lifecycle && (
+                                            <span className="text-[8px] font-black tracking-[.1em] text-white/38 uppercase">
+                                                {lifecycle}
+                                            </span>
+                                        )}
+                                    </button>
+                                    {active && (
+                                        <div
+                                            id={'kmj-domain-' + id}
+                                            className="px-3 pb-3 motion-reduce:transition-none"
+                                        >
+                                            <p className="text-xs leading-5 text-white/52">
+                                                {summary}
+                                            </p>
+                                            <Link
+                                                href={href}
+                                                className="mt-3 inline-flex min-h-11 items-center gap-2 rounded-xl border border-white/[.09] bg-white/[.04] px-4 text-xs font-black text-white/80 outline-none focus-visible:ring-2 focus-visible:ring-white/70"
+                                            >
+                                                Explore {title}
+                                                <ArrowRight className="h-3.5 w-3.5" />
+                                            </Link>
+                                        </div>
+                                    )}
+                                </article>
+                            );
+                        },
+                    )}
                 </div>
             </div>
         </div>
