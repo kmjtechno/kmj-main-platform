@@ -92,10 +92,6 @@ final class AdminProductManager
 
     /**
      * @param  array<string, mixed>  $attributes
-     * @return array<string, mixed>
-     */
-    /**
-     * @param  array<string, mixed>  $attributes
      */
     private function assertCommercialState(array $attributes): void
     {
@@ -107,6 +103,10 @@ final class AdminProductManager
         }
     }
 
+    /**
+     * @param  array<string, mixed>  $attributes
+     * @return array<string, mixed>
+     */
     private function normalized(array $attributes): array
     {
         if (isset($attributes['lifecycle']) && ! in_array($attributes['lifecycle'], self::LIFECYCLES, true)) {
