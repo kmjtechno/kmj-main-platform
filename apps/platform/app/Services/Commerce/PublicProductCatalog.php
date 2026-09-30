@@ -388,7 +388,7 @@ final class PublicProductCatalog
         return $this->developmentProduct(
             slug: KmjProductCatalog::CODEBRIDGE_SLUG,
             name: KmjProductCatalog::CODEBRIDGE_NAME,
-            lifecycle: 'development',
+            lifecycle: 'research',
             lifecycleLabel: 'Research',
             eyebrow: 'Secure developer bridge',
             headline: 'A governed bridge for connecting AI-assisted engineering workflows to scoped development environments.',
