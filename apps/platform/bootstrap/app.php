@@ -18,7 +18,10 @@ return Application::configure(basePath: dirname(__DIR__))
             __DIR__.'/../routes/operator-ops.php',
             __DIR__.'/../routes/kslp-public.php',
         ],
-        api: __DIR__.'/../routes/codebridge-api.php',
+        api: [
+            __DIR__.'/../routes/codebridge-api.php',
+            __DIR__.'/../routes/razorpay-api.php',
+        ],
         commands: __DIR__.'/../routes/console.php',
         health: '/up',
     )
