@@ -285,7 +285,7 @@ jobs:
           calibration_dom="$($chrome --headless --no-sandbox --disable-gpu --virtual-time-budget=10000 --dump-dom 'https://staging.kmjtechno.com/products/kmj-calibration-pro' 2>/dev/null)"
           grep -Fq 'KMJ Calibration Pro' <<< "$products_dom"
           grep -Fq 'Products built to move' <<< "$products_dom"
-          grep -Fq 'View product' <<< "$products_dom"
+          grep -Fq 'Explore product' <<< "$products_dom"
           grep -Fq 'KMJ Calibration Pro' <<< "$calibration_dom"
           grep -Fq 'Interactive' <<< "$calibration_dom"
           grep -Fq 'simulation' <<< "$calibration_dom"
