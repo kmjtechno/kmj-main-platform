@@ -1,5 +1,11 @@
 import { Link } from '@inertiajs/react';
-import { ArrowRight, Bot, Cloud, Projector, RadioTower } from 'lucide-react';
+import {
+    ArrowRight,
+    Bot,
+    Cloud,
+    Projector,
+    RadioTower,
+} from 'lucide-react';
 import { useState } from 'react';
 
 type ProductState = { slug: string; lifecycle_label: string };
@@ -41,7 +47,8 @@ const domains = [
         product: 'KMJ engineering systems',
         slug: 'kmj-desktop-commander',
         href: '/products/kmj-desktop-commander',
-        summary: 'Secure remote control and intelligent engineering workflows.',
+        summary:
+            'Secure remote control and intelligent engineering workflows.',
         accent: '#27d3a2',
         Icon: Bot,
     },
@@ -83,9 +90,21 @@ export default function SignatureEcosystemHero({
                     </div>
 
                     <div className="absolute inset-0 grid grid-cols-2 grid-rows-2 gap-x-32 gap-y-16">
-                        {domains.map(({ id, title, product, slug, href, summary, accent, Icon }) => {
+                        {domains.map(
+                            ({
+                                id,
+                                title,
+                                product,
+                                slug,
+                                href,
+                                summary,
+                                accent,
+                                Icon,
+                            }) => {
                             const active = selected === id;
-                            const lifecycle = products.find((item) => item.slug === slug)?.lifecycle_label;
+                            const lifecycle = products.find(
+                                    (item) => item.slug === slug,
+                                )?.lifecycle_label;
                             return (
                                 <article
                                     key={id}
@@ -93,19 +112,46 @@ export default function SignatureEcosystemHero({
                                     onMouseLeave={() => setSelected(null)}
                                     onFocus={() => setSelected(id)}
                                     className="group relative flex min-h-32 flex-col justify-between rounded-[1.35rem] border bg-black/25 p-4 transition duration-200 motion-reduce:transform-none"
-                                    style={{ borderColor: active ? accent + '66' : 'rgba(255,255,255,.08)' }}
+                                    style={{
+                                        borderColor: active
+                                            ? accent + '66'
+                                            : 'rgba(255,255,255,.08)',
+                                    }}
                                 >
                                     <div className="flex items-start justify-between gap-3">
                                         <span className="grid h-10 w-10 place-items-center rounded-xl border border-white/[.08] bg-white/[.035]" style={{ color: accent }}>
                                             <Icon className="h-4 w-4" />
                                         </span>
-                                        {lifecycle && <span className="text-[8px] font-black tracking-[.12em] text-white/38 uppercase">{lifecycle}</span>}
+                                        {lifecycle && (
+                                            <span className="text-[8px] font-black tracking-[.12em] text-white/38 uppercase">
+                                                {lifecycle}
+                                            </span>
+                                        )}
                                     </div>
                                     <div>
-                                        <div className="text-[9px] font-black tracking-[.14em] uppercase" style={{ color }}>{title}</div>
-                                        <h2 className="mt-1 text-sm font-black">{product}</h2>
-                                        <p className={"mt-1 text-[10px] leading-4 text-white/45 transition-opacity duration-200 motion-reduce:transition-none " + (active ? 'opacity-100' : 'opacity-70')}>{summary}</p>
-                                        <Link href={href} className="mt-2 inline-flex items-center gap-1 text-[10px] font-bold text-white/70 outline-none transition hover:text-white focus-visible:ring-2 focus-visible:ring-white/70">
+                                        <div
+                                            className="text-[9px] font-black tracking-[.14em] uppercase"
+                                            style={{ color }}
+                                        >
+                                            {title}
+                                        </div>
+                                        <h2 className="mt-1 text-sm font-black">
+                                            {product}
+                                        </h2>
+                                        <p
+                                            className={
+                                                'mt-1 text-[10px] leading-4 text-white/45 transition-opacity duration-200 motion-reduce:transition-none ' +
+                                                (active
+                                                    ? 'opacity-100'
+                                                    : 'opacity-70')
+                                            }
+                                        >
+                                            {summary}
+                                        </p>
+                                        <Link
+                                            href={href}
+                                            className="mt-2 inline-flex items-center gap-1 text-[10px] font-bold text-white/70 outline-none transition hover:text-white focus-visible:ring-2 focus-visible:ring-white/70"
+                                        >
                                             Explore <ArrowRight className="h-3 w-3" />
                                         </Link>
                                     </div>
@@ -116,11 +162,27 @@ export default function SignatureEcosystemHero({
                 </div>
 
                 <div className="mt-5 grid flex-1 gap-2 sm:hidden">
-                    {domains.map(({ id, title, product, slug, href, summary, accent, Icon }) => {
+                    {domains.map(
+                            ({
+                                id,
+                                title,
+                                product,
+                                slug,
+                                href,
+                                summary,
+                                accent,
+                                Icon,
+                            }) => {
                         const active = selected === id;
-                        const lifecycle = products.find((item) => item.slug === slug)?.lifecycle_label;
+                        const lifecycle = products.find(
+                                    (item) => item.slug === slug,
+                                )?.lifecycle_label;
                         return (
-                            <article key={id} className="rounded-2xl border bg-black/25" style={{ borderColor: active ? accent + '66' : 'rgba(255,255,255,.08)' }}>
+                            <article key={id} className="rounded-2xl border bg-black/25" style={{
+                                        borderColor: active
+                                            ? accent + '66'
+                                            : 'rgba(255,255,255,.08)',
+                                    }}>
                                 <button
                                     type="button"
                                     aria-expanded={active}
