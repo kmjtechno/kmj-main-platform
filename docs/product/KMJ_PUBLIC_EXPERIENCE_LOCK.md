@@ -399,3 +399,159 @@ The next section must be readable even if IntersectionObserver or animation enha
 
 A build is not accepted if any input mode receives materially less product meaning than another.
 
+## 15. Signature hero — exact mobile touch choreography
+
+### Mobile composition
+
+At narrow/mobile widths, preserve the hero narrative in this order:
+1. eyebrow;
+2. locked headline and value proposition;
+3. primary CTA;
+4. compact governed-ecosystem anchor;
+5. four domain cards: Cloud, Calibration, Immersive, AI + Remote.
+
+Prefer a single-column card stack at the narrowest widths. A 2x2 arrangement is allowed only when labels, lifecycle cues and tap targets remain comfortably readable. Never reproduce the desktop orbit at a scale that makes targets or labels small.
+
+### Tap targets
+
+- Every interactive domain trigger must provide a practical minimum 44x44 CSS px target.
+- Primary/secondary hero CTAs should target approximately 48px height.
+- Keep at least 8px practical separation between independent adjacent tap targets.
+- The entire clearly bounded domain-card header/summary area may act as the disclosure trigger.
+- A navigation CTA inside an expanded card remains a separate explicit target.
+- Decorative connection lines, glow, artwork and status ornaments are never tap targets.
+- Do not place two different destinations behind overlapping hit areas.
+
+### Initial state
+
+On first render, all four domain names and a one-line identity/outcome are visible without interaction. No card is secretly preselected.
+
+The central ecosystem anchor communicates connection/governance but is not an unexplained button. If it is interactive, its purpose and destination must be explicitly labelled.
+
+### First tap — select/disclose
+
+Tapping a disclosure-enabled domain card enters SELECTED(domain).
+
+Selection feedback occurs immediately:
+- border/surface emphasis changes;
+- domain icon/title receives stronger contrast;
+- connection motif to the ecosystem anchor may brighten;
+- concise factual detail, lifecycle cue and canonical CTA become visible;
+- other cards remain fully legible and tappable.
+
+Do not navigate on this first disclosure tap. Do not require a long press.
+
+### Selected card behavior
+
+Only one domain disclosure is expanded at a time.
+
+Tapping a different domain transfers selection directly to it; do not require closing the current card first.
+
+Tapping the selected card's disclosure trigger again may collapse it to IDLE, but the explicit CTA must remain a normal navigation action and must never be overloaded as collapse.
+
+Selection must not reset because of small incidental scroll movement.
+
+### Navigation
+
+Navigation occurs only through a clearly labelled canonical product/group CTA unless the card is intentionally designed as a direct-link card with no disclosure state.
+
+Do not implement double-tap-to-navigate.
+
+Opening links must preserve normal browser behavior. Do not intercept long-press link behavior, context menus or browser navigation gestures.
+
+### Swipe and scroll behavior
+
+The four primary domains must **not** depend on horizontal swipe, carousel pagination or drag gestures.
+
+Vertical page scrolling always wins over decorative hero interaction.
+
+- No custom vertical swipe interception.
+- No `preventDefault` on ordinary touch scrolling.
+- No scroll-jacking or mandatory snap sequence.
+- No drag-to-orbit requirement.
+- No edge-swipe interception; browser back/forward gestures remain untouched.
+
+A decorative visual may react subtly after a completed selection, but finger movement itself must not continuously steer expensive animation.
+
+### Outside tap / dismissal
+
+If an expanded disclosure behaves like an overlay/popover, tapping outside dismisses it. Prefer inline expansion on mobile so outside-tap logic is unnecessary.
+
+Scrolling into the next section may leave the selection state behind naturally; there is no requirement to animate a forced close.
+
+Any explicit close affordance must have an accessible name and >=44x44 practical target.
+
+### Selection feedback timing
+
+Normal-motion path:
+- touch-down/native press feedback: immediate;
+- surface/border emphasis: 100–140ms;
+- detail reveal: 160–220ms ease-out;
+- connection highlight: may overlap detail reveal;
+- collapse/transfer: <=200ms.
+
+Avoid bounce, elastic springs, flashing, repeated pulse or large zoom. Maximum emphasis scale should be subtle (about 1.01) or omitted entirely on mobile.
+
+Haptic feedback must not be required and should not be triggered by the website.
+
+### Scroll-position stability
+
+Expanding a card must not unexpectedly move the tapped trigger out from under the user's finger or jump the viewport.
+
+Prefer reserved/controlled disclosure space or modest inline expansion. If content expansion would push substantial content, keep the selected card's heading visually anchored.
+
+No automatic `scrollIntoView` on ordinary selection. It may be used only when necessary to recover an obscured focused control and must respect reduced motion.
+
+### Orientation and resize
+
+Do not persist geometry-dependent animation state across orientation changes. Preserve the semantic selected domain where practical, recompute layout, and render it in the new geometry.
+
+No content may become inaccessible after portrait <-> landscape change.
+
+### Reduced-motion mobile behavior
+
+Under `prefers-reduced-motion: reduce`:
+- remove orbit, pulse, parallax, animated connection travel and scale emphasis;
+- selection feedback becomes static border/surface/typography change;
+- disclosure appears immediately or with <=100ms opacity;
+- no animated auto-scroll;
+- selected state, lifecycle cue, outcome and CTA remain identical in meaning;
+- domain connection is represented with static lines/grid/grouping.
+
+Reduced motion must not change navigation structure or require extra taps.
+
+### Slow device / constrained network fallback
+
+The touch experience must remain fully usable without decorative hero artwork.
+
+Do not wait for large media before enabling domain controls. Render text, lifecycle and links first. Decorative imagery may progressively appear afterward without changing target positions.
+
+Avoid loading all product artwork as a consequence of selecting one domain. A selection must not cause an unbounded network burst.
+
+### Accessibility semantics
+
+Use native buttons for disclosure triggers and native anchors for navigation.
+
+For a disclosure button:
+- expose `aria-expanded`;
+- associate it with the disclosed region using `aria-controls` when appropriate;
+- keep accessible name stable as state changes.
+
+Do not announce decorative animation. Lifecycle text must be real readable text, not encoded only in badge colour.
+
+### Mobile acceptance scenarios
+
+**One-handed portrait at 390px:** visitor can read all four domains, select any domain and reach its CTA without horizontal scrolling.
+
+**Fast repeated taps:** state resolves deterministically to the latest explicit domain; no stacked disclosures or queued animation cascade.
+
+**Tap then scroll:** vertical scroll remains native and selection does not hijack the gesture.
+
+**Touchscreen + keyboard:** keyboard focus semantics still work and visibly override purely visual touch emphasis while focused.
+
+**Reduced motion:** same number of taps, same content and same destinations, with continuous/nonessential motion removed.
+
+**Image failure/slow network:** cards and CTAs remain positioned, readable and actionable.
+
+The mobile hero fails acceptance if understanding a primary domain requires a swipe, hover, long press, precision tap, animation completion or successful decorative-media download.
+
