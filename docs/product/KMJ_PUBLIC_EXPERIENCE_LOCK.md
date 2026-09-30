@@ -239,3 +239,163 @@ The experience passes only if a first-time visitor can answer, without scrolling
 
 Visual magnetism is required, but comprehension, truth, performance and professional trust are hard constraints.
 
+## 14. Signature hero — exact interaction state machine
+
+### Shared semantic states
+
+The hero has one semantic state model across every input mode:
+
+- **IDLE** — all four ecosystem domains are visible with equal semantic availability; the central governed-platform connection is visible; no product is implied to be selected.
+- **PREVIEW(domain)** — one domain receives visual emphasis and its short factual outcome is exposed. This is exploratory only and must not navigate.
+- **FOCUS(domain)** — keyboard focus equivalent of PREVIEW. It exposes the same information and visible focus treatment.
+- **SELECTED(domain)** — touch/mobile persistent disclosure state. The domain summary and canonical CTA remain open until another domain is selected, the user dismisses it, or navigation occurs.
+- **NAVIGATING(domain)** — entered only after an explicit activation of the domain CTA/link. Normal browser navigation semantics apply.
+
+Lifecycle/availability labels are data-driven and are never changed by interaction state.
+
+### Desktop: fine pointer + hover
+
+**Initial:** IDLE.
+
+**Trigger to PREVIEW:** pointer enters a domain node or its associated visual region.
+
+**Transition:** 180–240ms ease-out. Selected domain may scale no more than ~1.02, edge/connection luminance increases, supporting copy fades/translates in by no more than 6–8px, and unrelated nodes reduce emphasis slightly but remain readable. Do not blur essential text.
+
+**Pointer movement:** no cursor-following animation and no high-frequency React state updates. Optional parallax must be CSS/compositor-friendly, bounded to a few pixels and disabled on low-motion/reduced-motion paths.
+
+**Exit:** pointer leaving the complete interactive domain region returns to IDLE after a short 80–120ms grace period to avoid flicker while moving toward its CTA.
+
+**Click:** clicking the actual canonical link/CTA navigates. Clicking decorative background must do nothing. If the whole node is implemented as a link, it must have one unambiguous destination and accessible name.
+
+**No auto-selection:** ambient motion must never cycle PREVIEW between products.
+
+### Keyboard
+
+All four domain controls/links are reachable in logical DOM order: Cloud -> Calibration -> Immersive -> AI + Remote.
+
+**Tab/focus:** enters FOCUS(domain). Use a clearly visible focus ring that is not colour-only. Expose exactly the same summary/status/CTA information available on pointer preview.
+
+**Enter:** activates the focused canonical link/CTA.
+
+**Space:** if the control is a button disclosure, toggles disclosure; if it is a normal link, preserve native link semantics rather than inventing button behavior.
+
+**Escape:** closes an optional disclosure and returns to the domain trigger; it must never trap focus.
+
+No custom arrow-key navigation is required unless the nodes are implemented with a composite ARIA widget. Prefer ordinary links/buttons and native keyboard behavior.
+
+### Touch / coarse pointer
+
+Hover is not required and must not be the only way to reveal information.
+
+**Initial:** IDLE with every domain name and essential identity visible.
+
+**First tap on a disclosure-style domain:** enters SELECTED(domain), revealing concise outcome, lifecycle cue and canonical CTA without navigation.
+
+**Second action:** the explicit CTA navigates. Tapping another domain moves SELECTED to that domain.
+
+**Dismiss:** tapping outside the disclosure or an explicit close control returns to IDLE. Do not make users discover a hidden gesture.
+
+If a domain card is already self-explanatory and uses a direct link, a single tap may navigate; never require double-tap merely to follow a link.
+
+No swipe/carousel dependency for the four primary domains.
+
+### Mobile layout (target includes 390px)
+
+At narrow widths, do not shrink the desktop constellation into an unreadable diagram.
+
+Render:
+1. locked eyebrow/headline/value/primary CTA;
+2. a compact central 'governed KMJ ecosystem' visual anchor;
+3. four vertically readable domain cards or a 2x2 layout when width permits;
+4. lifecycle/status and canonical action inside the selected/expanded card.
+
+The visual connection between domains may become a static line/grid motif rather than literal orbit geometry.
+
+Touch targets should be at least 44x44 CSS px where practical. No horizontal scrolling is allowed. Essential product/domain text must not be truncated solely to preserve artwork.
+
+Mobile transition duration: approximately 160–220ms. Prefer opacity, transform and grid/height techniques that avoid large layout shifts. Do not use long accordion animation for substantial content.
+
+### Reduced motion
+
+When `prefers-reduced-motion: reduce` is active:
+
+- disable orbiting, pulsing, parallax and continuous connection-energy movement;
+- remove nonessential transform travel;
+- use immediate state changes or a short <=100ms opacity transition;
+- preserve every label, connection meaning, lifecycle cue and CTA;
+- keep hover/focus/selection differentiation through border, surface, typography and static luminance;
+- never autoplay video or animated canvas as a substitute.
+
+Reduced motion is a complete first-class experience, not a degraded fallback.
+
+### JavaScript unavailable / hydration failure
+
+The server-rendered/Inertia-delivered hero must remain useful before interaction code runs:
+- locked headline and value proposition visible;
+- all four domain names visible;
+- canonical links present as real anchors;
+- lifecycle/status copy rendered from governed data where shown;
+- no content hidden behind JS-only state.
+
+CSS may provide progressive hover/focus enhancement. Navigation must not depend on animation state.
+
+### Asset/network fallback
+
+Hero meaning must not depend on successful loading of a decorative image.
+
+For each critical visual:
+- reserve dimensions/aspect ratio to prevent CLS;
+- provide meaningful alt text when the image conveys product information, otherwise use decorative empty alt;
+- use a designed gradient/surface fallback behind the asset;
+- if an image fails, domain labels, outcome and CTA remain fully readable;
+- never show broken-image UI as the primary hero focal point.
+
+### Visibility and performance behavior
+
+Continuous ambient animation pauses or becomes inert when the document is not visible. Avoid timers for semantic state. Do not preload every product artwork; preload only the genuinely critical hero asset(s).
+
+Interaction must not trigger network requests merely from hover/focus. Prefetching, if used, must follow framework/browser policy and must not create excessive bandwidth use.
+
+### Transition tokens
+
+Use a small shared motion vocabulary rather than per-card animation inventions:
+- micro feedback: 100–140ms;
+- preview/focus reveal: 180–240ms;
+- mobile disclosure: 160–220ms;
+- section atmospheric handoff: 300–500ms and only when compositor-friendly;
+- easing: a consistent ease-out for entering/emphasis and ease-in-out for ambient transforms.
+
+Avoid bounce/spring effects for enterprise controls.
+
+### Input-mode switching
+
+Do not permanently infer input mode from viewport width. A touchscreen laptop may use keyboard, mouse and touch in one session.
+
+Semantic state follows the latest explicit interaction:
+- keyboard focus always wins while focused;
+- pointer hover may preview only when hover capability exists;
+- touch selection persists until explicit dismissal/another selection;
+- focus-visible styling is preserved regardless of pointer history.
+
+### Hero-to-next-section handoff
+
+As the visitor scrolls naturally past the hero, the ecosystem connection motif may visually resolve into the first flagship/product section through a subtle background/grid/edge-light continuation. No scroll-jacking, pinned mandatory sequence or forced animation timeline.
+
+The next section must be readable even if IntersectionObserver or animation enhancement is unavailable.
+
+### Acceptance matrix
+
+**Desktop mouse:** hover preview, stable CTA travel, click navigation, no auto-selection, no cursor hijack.
+
+**Desktop keyboard:** logical tab order, visible focus, equivalent information, Enter/native activation, Escape only for disclosures, no focus trap.
+
+**Touch:** no hover dependency, clear first-tap disclosure where used, explicit navigation action, simple dismissal.
+
+**390px mobile:** no horizontal overflow, readable four-domain story, >=44px practical targets, no desktop diagram shrinkage.
+
+**Reduced motion:** no continuous motion; all meaning and actions preserved.
+
+**JS/asset failure:** headline, domain identity and real links remain usable; no blank hero.
+
+A build is not accepted if any input mode receives materially less product meaning than another.
+
