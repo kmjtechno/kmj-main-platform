@@ -60,6 +60,7 @@ final class PublicProductCatalog
             KmjProductCatalog::FORGE_SLUG,
             KmjProductCatalog::CONNECT_SLUG,
             KmjProductCatalog::OMNIDESK_SLUG,
+            KmjProductCatalog::CODEBRIDGE_SLUG,
             KmjProductCatalog::CLOUD_NEXUS_SLUG,
             KmjProductCatalog::AGENT_SLUG,
             KmjProductCatalog::CREATIVE_STUDIO_SLUG,
@@ -85,6 +86,7 @@ final class PublicProductCatalog
             KmjProductCatalog::CALIBRATION_SLUG => $this->calibration(),
             KmjProductCatalog::FORGE_SLUG => $this->forge(),
             KmjProductCatalog::OMNIDESK_SLUG => $this->omniDesk(),
+            KmjProductCatalog::CODEBRIDGE_SLUG => $this->codeBridge(),
             KmjProductCatalog::CONNECT_SLUG => $this->connect(),
             KmjProductCatalog::CLOUD_NEXUS_SLUG => $this->cloudNexus(),
             KmjProductCatalog::AGENT_SLUG => $this->agent(),
@@ -121,7 +123,8 @@ final class PublicProductCatalog
             KmjProductCatalog::AGENT_SLUG => 'Engineering & Automation',
             KmjProductCatalog::CALIBRATION_SLUG => 'Calibration & Vision Systems',
             KmjProductCatalog::CONNECT_SLUG,
-            KmjProductCatalog::OMNIDESK_SLUG => 'Secure Access & Connectivity',
+            KmjProductCatalog::OMNIDESK_SLUG,
+            KmjProductCatalog::CODEBRIDGE_SLUG => 'Secure Access & Connectivity',
             KmjProductCatalog::LICENSING_HUB_SLUG => 'Commerce & Licensing',
             KmjProductCatalog::CREATIVE_STUDIO_SLUG,
             KmjProductCatalog::CINEMA_PLATFORM_SLUG,
@@ -372,6 +375,40 @@ final class PublicProductCatalog
                     'title' => 'Main Platform commercial authority',
                     'detail' => 'Trials, plans, activations and future paid entitlements are designed to remain governed by the KMJ Main Platform instead of hard-coded client unlocks.',
                     'state' => 'architecture-locked',
+                ],
+            ],
+        );
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function codeBridge(): array
+    {
+        return $this->developmentProduct(
+            slug: KmjProductCatalog::CODEBRIDGE_SLUG,
+            name: KmjProductCatalog::CODEBRIDGE_NAME,
+            lifecycle: 'development',
+            lifecycleLabel: 'Research',
+            eyebrow: 'Secure developer bridge',
+            headline: 'A governed bridge for connecting AI-assisted engineering workflows to scoped development environments.',
+            summary: 'KMJ CodeBridge is an active developer-bridge product with a dedicated runtime and Main Platform licensing integration. Public commercial availability remains disabled while hosted OAuth, release packaging and production security gates are completed.',
+            status: 'Executable developer-preview and licensing evidence exist. Production GA, paid access and customer download remain disabled until the remaining release and security gates are verified.',
+            proof: [
+                [
+                    'title' => 'Dedicated bridge runtime',
+                    'detail' => 'The CodeBridge project provides a separate gateway and agent architecture rather than running customer development workloads inside the Main Platform.',
+                    'state' => 'repository-verified',
+                ],
+                [
+                    'title' => 'Governed licensing boundary',
+                    'detail' => 'Main Platform contains proof-bound CodeBridge enrollment, credential and renewable lease controls while product execution remains outside the commercial control plane.',
+                    'state' => 'platform-verified',
+                ],
+                [
+                    'title' => 'Fail-closed commercial state',
+                    'detail' => 'Purchase and customer download stay disabled until hosted identity, packaging and production security evidence are complete.',
+                    'state' => 'fail-closed',
                 ],
             ],
         );
