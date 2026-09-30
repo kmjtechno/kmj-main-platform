@@ -66,6 +66,29 @@ final class AdminProductManagerTest extends TestCase
         $manager->update($product, ['purchase_enabled' => true]);
     }
 
+
+    public function test_partial_update_preserves_fail_closed_purchase_state(): void
+    {
+        $manager = app(AdminProductManager::class);
+        $product = $manager->create([
+            'slug' => 'kmj-guarded-product',
+            'name' => 'KMJ Guarded Product',
+            'status' => 'sandbox',
+            'lifecycle' => 'research',
+            'is_public' => true,
+            'purchase_enabled' => false,
+            'licensing_enabled' => true,
+        ]);
+
+        $updated = $manager->update($product, [
+            'summary' => 'Updated public copy without changing commercial state.',
+        ]);
+
+        self::assertSame('research', $updated->lifecycle);
+        self::assertFalse($updated->purchase_enabled);
+        self::assertTrue($updated->licensing_enabled);
+    }
+
     public function test_reorder_requires_the_complete_catalog(): void
     {
         $manager = app(AdminProductManager::class);
