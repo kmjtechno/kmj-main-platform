@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Services\Commerce\KmjProductCatalog;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Inertia\Testing\AssertableInertia as Assert;
+use KMJ\MainPlatform\Catalog\Models\Product;
 use Tests\TestCase;
 
 final class PublicProductHubTest extends TestCase
@@ -40,6 +41,31 @@ final class PublicProductHubTest extends TestCase
                         && $bySlug['kmj-codebridge']['lifecycle'] === 'research'
                         && $bySlug['kmj-desktop-commander']['lifecycle'] === 'public-beta';
                 }));
+    }
+
+    public function test_admin_product_order_drives_the_locked_landing_order(): void
+    {
+        $cloudOS = Product::query()->where('slug', 'kmj-cloudos')->firstOrFail();
+        $calibration = Product::query()->where('slug', 'kmj-calibration-pro')->firstOrFail();
+
+        app(\App\Services\Commerce\AdminProductManager::class)->reorder([
+            (string) $calibration->getKey(),
+            (string) $cloudOS->getKey(),
+            ...Product::query()
+                ->whereNotIn('id', [$cloudOS->getKey(), $calibration->getKey()])
+                ->orderBy('sort_order')
+                ->orderBy('name')
+                ->pluck('id')
+                ->map(fn ($id): string => (string) $id)
+                ->all(),
+        ]);
+
+        $this->get('/')
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('welcome')
+                ->where('products.0.slug', 'kmj-calibration-pro')
+                ->where('products.1.slug', 'kmj-cloudos'));
     }
 
     public function test_products_hub_uses_only_canonical_public_lifecycle_vocabulary(): void
