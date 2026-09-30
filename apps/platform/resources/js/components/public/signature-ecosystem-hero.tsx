@@ -105,7 +105,7 @@ export default function SignatureEcosystemHero({
                                 const lifecycle = products.find(
                                     (item) => item.slug === slug,
                                 )?.lifecycle_label;
-                            return (
+                                return (
                                 <article
                                     key={id}
                                     onMouseEnter={() => setSelected(id)}
@@ -160,9 +160,9 @@ export default function SignatureEcosystemHero({
                                         </Link>
                                     </div>
                                 </article>
-                            );
-                        },
-                    )}
+                                );
+                            },
+                        )}
                     </div>
                 </div>
 
