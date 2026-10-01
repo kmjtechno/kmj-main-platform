@@ -187,7 +187,6 @@ export default function SignatureEcosystemHero({
                             accent,
                             Icon,
                         }) => {
-                            const active = selected === id;
                             const lifecycle = products.find(
                                 (item) => item.slug === slug,
                             )?.lifecycle_label;
@@ -195,21 +194,11 @@ export default function SignatureEcosystemHero({
                             return (
                                 <article
                                     key={id}
-                                    className="rounded-2xl border bg-black/25"
-                                    style={{
-                                        borderColor: active
-                                            ? accent + '66'
-                                            : 'rgba(255,255,255,.08)',
-                                    }}
+                                    className="rounded-2xl border border-white/[.08] bg-black/25"
                                 >
-                                    <button
-                                        type="button"
-                                        aria-expanded={active}
-                                        aria-controls={'kmj-domain-' + id}
-                                        onClick={() =>
-                                            setSelected(active ? null : id)
-                                        }
-                                        className="flex min-h-14 w-full items-center gap-3 rounded-2xl px-3 py-2 text-left outline-none focus-visible:ring-2 focus-visible:ring-white/70"
+                                    <Link
+                                        href={href}
+                                        className="flex min-h-24 w-full items-start gap-3 rounded-2xl px-3 py-3 text-left outline-none transition duration-200 hover:bg-white/[.035] focus-visible:ring-2 focus-visible:ring-white/70 motion-reduce:transition-none"
                                     >
                                         <span
                                             className="grid h-11 w-11 shrink-0 place-items-center rounded-xl border border-white/[.08] bg-white/[.035]"
@@ -218,39 +207,33 @@ export default function SignatureEcosystemHero({
                                             <Icon className="h-4 w-4" />
                                         </span>
                                         <span className="min-w-0 flex-1">
-                                            <span
-                                                className="block text-[9px] font-black tracking-[.13em] uppercase"
-                                                style={{ color: accent }}
-                                            >
-                                                {title}
+                                            <span className="flex items-start justify-between gap-2">
+                                                <span>
+                                                    <span
+                                                        className="block text-[9px] font-black tracking-[.13em] uppercase"
+                                                        style={{ color: accent }}
+                                                    >
+                                                        {title}
+                                                    </span>
+                                                    <span className="block text-sm font-black">
+                                                        {product}
+                                                    </span>
+                                                </span>
+                                                {lifecycle && (
+                                                    <span className="shrink-0 text-[8px] font-black tracking-[.1em] text-white/38 uppercase">
+                                                        {lifecycle}
+                                                    </span>
+                                                )}
                                             </span>
-                                            <span className="block text-sm font-black">
-                                                {product}
-                                            </span>
-                                        </span>
-                                        {lifecycle && (
-                                            <span className="text-[8px] font-black tracking-[.1em] text-white/38 uppercase">
-                                                {lifecycle}
-                                            </span>
-                                        )}
-                                    </button>
-                                    {active && (
-                                        <div
-                                            id={'kmj-domain-' + id}
-                                            className="px-3 pb-3 motion-reduce:transition-none"
-                                        >
-                                            <p className="text-xs leading-5 text-white/52">
+                                            <span className="mt-1 block text-xs leading-5 text-white/52">
                                                 {summary}
-                                            </p>
-                                            <Link
-                                                href={href}
-                                                className="mt-3 inline-flex min-h-11 items-center gap-2 rounded-xl border border-white/[.09] bg-white/[.04] px-4 text-xs font-black text-white/80 outline-none focus-visible:ring-2 focus-visible:ring-white/70"
-                                            >
+                                            </span>
+                                            <span className="mt-2 inline-flex min-h-11 items-center gap-2 text-xs font-black text-white/80">
                                                 Explore {title}
                                                 <ArrowRight className="h-3.5 w-3.5" />
-                                            </Link>
-                                        </div>
-                                    )}
+                                            </span>
+                                        </span>
+                                    </Link>
                                 </article>
                             );
                         },
