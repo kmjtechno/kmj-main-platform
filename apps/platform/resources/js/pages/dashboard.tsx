@@ -73,6 +73,8 @@ export default function Dashboard({
     ).length;
     const hasOrganization = organizations.length > 0;
     const hasActiveEntitlement = activeEntitlementCount > 0;
+    const primaryService =
+        productAccess.length === 1 ? productAccess[0] : null;
 
     const submit = (event: FormEvent<HTMLFormElement>) => {
         event.preventDefault();
@@ -95,13 +97,14 @@ export default function Dashboard({
                                 KMJ Customer Platform · Secure access
                             </div>
                             <h1 className="text-3xl font-black tracking-tight sm:text-4xl">
-                                Your products, licenses and organizations
+                                {primaryService
+                                    ? `Your ${primaryService.product_name} service`
+                                    : 'Your products, licenses and organizations'}
                             </h1>
                             <p className="text-muted-foreground mt-3 max-w-xl text-sm leading-6">
-                                Manage KMJ product access from one customer
-                                control center. Organizations, entitlements and
-                                licensing stay connected to the same governed
-                                Main Platform authority.
+                                {primaryService
+                                    ? `This account is linked to ${primaryService.product_name}. Your service status, access, licensing and available release details are shown here after sign-in.`
+                                    : 'Manage KMJ product access from one customer control center. Organizations, entitlements and licensing stay connected to the same governed Main Platform authority.'}
                             </p>
                         </div>
 
@@ -126,22 +129,27 @@ export default function Dashboard({
                             <div className="flex items-center gap-2">
                                 <BadgeCheck className="h-5 w-5 text-red-500" />
                                 <h2 className="font-bold">
-                                    My products & licenses
+                                    {primaryService
+                                        ? 'My registered service'
+                                        : 'My products & licenses'}
                                 </h2>
                             </div>
                             <p className="text-muted-foreground mt-1 text-xs">
-                                Product access granted to your organizations
-                                from the KMJ Main Platform.
+                                {primaryService
+                                    ? `${primaryService.product_name} details linked to this authenticated customer account.`
+                                    : 'Product access granted to your organizations from the KMJ Main Platform.'}
                             </p>
                         </div>
                         <div className="flex flex-wrap gap-2">
-                            <Link
-                                href="/products"
-                                className="inline-flex h-9 items-center justify-center gap-2 rounded-xl border px-3 text-xs font-bold transition hover:border-red-500/40 hover:text-red-500"
-                            >
-                                Explore products
-                                <ArrowRight className="h-3.5 w-3.5" />
-                            </Link>
+                            {!primaryService && (
+                                <Link
+                                    href="/products"
+                                    className="inline-flex h-9 items-center justify-center gap-2 rounded-xl border px-3 text-xs font-bold transition hover:border-red-500/40 hover:text-red-500"
+                                >
+                                    Explore products
+                                    <ArrowRight className="h-3.5 w-3.5" />
+                                </Link>
+                            )}
                             {hasOrganization && (
                                 <Link
                                     href="/purchase"
