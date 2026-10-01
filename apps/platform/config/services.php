@@ -44,6 +44,7 @@ return [
 
     'codebridge_oauth' => [
         'link_secret' => env('CODEBRIDGE_OAUTH_LINK_SECRET'),
+        'link_secret_file' => env('CODEBRIDGE_OAUTH_LINK_SECRET_FILE', '/etc/kmj-codebridge-oauth/bridge-secret'),
     ],
 
 ];
