@@ -27,6 +27,12 @@ jobs:
         working-directory: apps/platform
     steps:
       - uses: actions/checkout@v4
+      - name: Setup PHP 8.4
+        uses: shivammathur/setup-php@87d00bde2555f25eb54fedf940384e99cbdc55ef
+        with:
+          php-version: '8.4'
+          extensions: pdo_sqlite, sqlite3
+          coverage: none
       - name: Runtime
         run: |
           php --version
