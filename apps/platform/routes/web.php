@@ -1,8 +1,8 @@
 <?php
 
 use App\Models\LicenseAuditEvent;
-use App\Services\Licensing\CodeBridge\CodeBridgeDevicePairingService;
 use App\Models\User;
+use App\Services\Licensing\CodeBridge\CodeBridgeDevicePairingService;
 use App\Services\AuthorityBootstrapper;
 use App\Services\Commerce\DesktopCommanderCommercialPolicy;
 use App\Services\Commerce\KmjProductCatalog;
