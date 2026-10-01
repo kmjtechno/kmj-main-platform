@@ -2,11 +2,11 @@
 
 use App\Models\LicenseAuditEvent;
 use App\Models\User;
-use App\Services\Licensing\CodeBridge\CodeBridgeDevicePairingService;
 use App\Services\AuthorityBootstrapper;
 use App\Services\Commerce\DesktopCommanderCommercialPolicy;
 use App\Services\Commerce\KmjProductCatalog;
 use App\Services\Commerce\PublicProductCatalog;
+use App\Services\Licensing\CodeBridge\CodeBridgeDevicePairingService;
 use App\Services\Licensing\LicenseAuditRecorder;
 use App\Services\Licensing\SandboxLicenseLifecycle;
 use App\Services\PlatformOwnerAccess;
