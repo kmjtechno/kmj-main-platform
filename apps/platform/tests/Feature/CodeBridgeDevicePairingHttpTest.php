@@ -66,6 +66,16 @@ final class CodeBridgeDevicePairingHttpTest extends TestCase
         self::assertDatabaseHas('codebridge_device_pairings', ['status' => 'consumed']);
         self::assertDatabaseHas('codebridge_device_credentials', ['tenant_id' => $tenant, 'device_id' => 'vps1']);
 
+        $this->withToken($redeemed['agent']['token'])
+            ->postJson('/api/codebridge/v1/device-credentials/introspect')
+            ->assertOk()
+            ->assertJson([
+                'active' => true,
+                'device_id' => 'vps1',
+                'tenant_id' => $tenant,
+                'projects' => ['project1'],
+            ]);
+
         $this->postJson('/api/codebridge/v1/device-enrollments/token', [
             'product' => 'KMJ_CODEBRIDGE',
             'device_code' => $created['device_code'],
