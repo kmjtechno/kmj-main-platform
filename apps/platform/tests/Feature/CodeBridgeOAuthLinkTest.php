@@ -41,7 +41,12 @@ class CodeBridgeOAuthLinkTest extends TestCase
         $response->assertRedirect();
         $location = $response->headers->get('Location');
         $this->assertIsString($location);
-        $this->assertStringStartsWith('/codebridge-oauth-link/abcdefghijklmnop/complete?assertion=', $location);
+        $parts = parse_url($location);
+        $this->assertIsArray($parts);
+        $this->assertSame('/codebridge-oauth-link/abcdefghijklmnop/complete', $parts['path'] ?? null);
+        parse_str((string) ($parts['query'] ?? ''), $query);
+        $this->assertIsString($query['assertion'] ?? null);
+        $this->assertNotSame('', $query['assertion'] ?? '');
         $this->assertStringNotContainsString((string) $user->password, $location);
         $this->assertStringNotContainsString('password', $location);
     }
