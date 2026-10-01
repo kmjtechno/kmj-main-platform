@@ -87,3 +87,39 @@ Route::post('codebridge/v1/device-enrollments/token', function (Request $request
         return response()->json(['error' => $e->getMessage()], $status)->header('Cache-Control', 'no-store');
     }
 })->middleware('throttle:60,1');
+
+
+Route::post('codebridge/v1/device-credentials/introspect', function (Request $request) {
+    if (! config('codebridge.enabled', false)) {
+        abort(503);
+    }
+    $credential = $request->bearerToken();
+    if (! is_string($credential) || strlen($credential) < 32 || strlen($credential) > 4096) {
+        abort(401);
+    }
+
+    $row = DB::table('codebridge_device_credentials as c')
+        ->join('kslp_licenses as l', 'l.id', '=', 'c.license_id')
+        ->leftJoin('codebridge_device_pairings as p', 'p.activation_id', '=', 'c.activation_id')
+        ->where('c.token_hash', hash('sha256', $credential))
+        ->whereNull('c.revoked_at')
+        ->where('c.expires_at_epoch', '>', time())
+        ->where('l.product', 'KMJ_CODEBRIDGE')
+        ->where('l.status', 'active')
+        ->whereNull('l.revoked_at')
+        ->where('l.starts_at', '<=', now())
+        ->where('l.expires_at', '>', now())
+        ->select(['c.device_id', 'c.tenant_id', 'p.project_id'])
+        ->first();
+
+    if (! $row) {
+        return response()->json(['active' => false], 401)->header('Cache-Control', 'no-store');
+    }
+
+    return response()->json([
+        'active' => true,
+        'device_id' => $row->device_id,
+        'tenant_id' => $row->tenant_id,
+        'projects' => is_string($row->project_id) && $row->project_id !== '' ? [$row->project_id] : [],
+    ])->header('Cache-Control', 'no-store');
+})->middleware('throttle:120,1');
