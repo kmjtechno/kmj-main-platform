@@ -107,12 +107,6 @@ export default function Welcome({
             />
             <Head>
                 <meta name="kmj-main-platform" content="native-home" />
-                <link
-                    rel="preload"
-                    as="image"
-                    href="/assets/products/kmj-cloudos.webp"
-                    fetchPriority="high"
-                />
             </Head>
 
             <div className="min-h-screen overflow-hidden bg-[#05070a] text-white selection:bg-[#e21b23] selection:text-white">
