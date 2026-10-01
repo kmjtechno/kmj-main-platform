@@ -51,6 +51,20 @@ class CodeBridgeOAuthLinkTest extends TestCase
         $this->assertStringNotContainsString('password', $location);
     }
 
+    public function test_approval_falls_back_to_app_key_when_link_secret_is_missing(): void
+    {
+        config()->set('services.codebridge_oauth.link_secret', null);
+        config()->set('app.key', 'base64:'.base64_encode(str_repeat('k', 32)));
+        $user = User::factory()->create();
+
+        $response = $this->actingAs($user)->post('/codebridge-oauth-link/abcdefghijklmnop');
+
+        $response->assertRedirect();
+        $location = $response->headers->get('Location');
+        $this->assertIsString($location);
+        $this->assertStringContainsString('/codebridge-oauth-link/abcdefghijklmnop/complete?assertion=', $location);
+    }
+
     public function test_invalid_interaction_uid_is_rejected(): void
     {
         $user = User::factory()->create();
