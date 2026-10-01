@@ -51,7 +51,7 @@ class CodeBridgeOAuthLinkController extends Controller
 
         $signature = $this->base64UrlEncode(hash_hmac('sha256', $payload, $secret, true));
 
-        return redirect()->to('/codebridge-oauth-link/'.$uid.'/complete?assertion='.$payload.'.'.$signature);
+        return redirect()->to('/codebridge-oauth/interaction/'.$uid.'/complete?assertion='.$payload.'.'.$signature);
     }
 
     private function assertUid(string $uid): void
