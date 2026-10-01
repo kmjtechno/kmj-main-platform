@@ -107,18 +107,27 @@ export default function SignatureEcosystemHero({
                                 )?.lifecycle_label;
                                 return (
                                     <article
-                                    key={id}
-                                    onMouseEnter={() => setSelected(id)}
-                                    onMouseLeave={() => setSelected(null)}
-                                    onFocus={() => setSelected(id)}
-                                    className="group relative flex min-h-32 flex-col justify-between rounded-[1.35rem] border bg-black/25 p-4 transition duration-200 motion-reduce:transform-none"
-                                    style={{
-                                        borderColor: active
-                                            ? accent + '66'
-                                            : 'rgba(255,255,255,.08)',
-                                    }}
-                                >
-                                    <div className="flex items-start justify-between gap-3">
+                                        key={id}
+                                        onMouseEnter={() => setSelected(id)}
+                                        onMouseLeave={() => setSelected(null)}
+                                        onFocus={() => setSelected(id)}
+                                        onBlur={(event) => {
+                                            if (
+                                                !event.currentTarget.contains(
+                                                    event.relatedTarget,
+                                                )
+                                            ) {
+                                                setSelected(null);
+                                            }
+                                        }}
+                                        className="group relative flex min-h-32 flex-col justify-between rounded-[1.35rem] border bg-black/25 p-4 transition duration-200 motion-reduce:transform-none"
+                                        style={{
+                                            borderColor: active
+                                                ? accent + '66'
+                                                : 'rgba(255,255,255,.08)',
+                                        }}
+                                    >
+                                        <div className="flex items-start justify-between gap-3">
                                         <span
                                             className="grid h-10 w-10 place-items-center rounded-xl border border-white/[.08] bg-white/[.035]"
                                             style={{ color: accent }}
@@ -158,7 +167,7 @@ export default function SignatureEcosystemHero({
                                             Explore
                                             <ArrowRight className="h-3 w-3" />
                                         </Link>
-                                    </div>
+                                        </div>
                                     </article>
                                 );
                             },
