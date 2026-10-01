@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\CodeBridgeOAuthLinkController;
 use App\Models\LicenseAuditEvent;
 use App\Models\User;
 use App\Services\AuthorityBootstrapper;
@@ -166,6 +167,11 @@ Route::get('acceptable-use', fn () => Inertia::render('legal/acceptable-use'))->
 Route::get('cookie-policy', fn () => Inertia::render('legal/cookie-policy'))->name('legal.cookies');
 
 Route::middleware(['auth', 'verified'])->group(function () {
+    Route::get('codebridge-oauth-link/{uid}', [CodeBridgeOAuthLinkController::class, 'show'])
+        ->name('codebridge.oauth.show');
+    Route::post('codebridge-oauth-link/{uid}', [CodeBridgeOAuthLinkController::class, 'approve'])
+        ->name('codebridge.oauth.approve');
+
     Route::get('codebridge/pair', function (Request $request, CodeBridgeDevicePairingService $pairings) {
         $user = $request->user();
         abort_unless($user instanceof User, 401);
