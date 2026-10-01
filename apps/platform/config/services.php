@@ -42,4 +42,8 @@ return [
         'rust_verifier_timeout' => (float) env('KMJ_SANDBOX_RUST_VERIFIER_TIMEOUT', 5),
     ],
 
+    'codebridge_oauth' => [
+        'link_secret' => env('CODEBRIDGE_OAUTH_LINK_SECRET'),
+    ],
+
 ];
