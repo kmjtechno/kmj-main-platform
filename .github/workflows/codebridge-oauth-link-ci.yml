@@ -1,0 +1,49 @@
+name: CodeBridge OAuth Link CI
+
+on:
+  pull_request:
+    paths:
+      - 'apps/platform/app/Http/Controllers/CodeBridgeOAuthLinkController.php'
+      - 'apps/platform/resources/views/codebridge-oauth-link.blade.php'
+      - 'apps/platform/tests/Feature/CodeBridgeOAuthLinkTest.php'
+      - 'apps/platform/config/services.php'
+      - 'apps/platform/routes/web.php'
+      - '.github/workflows/codebridge-oauth-link-ci.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: codebridge-oauth-link-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: apps/platform
+    steps:
+      - uses: actions/checkout@v4
+      - name: Runtime
+        run: |
+          php --version
+          composer --version
+          php -m | grep -Ei 'pdo|sqlite'
+      - name: Install PHP dependencies
+        run: composer install --no-interaction --prefer-dist --no-progress
+      - name: Prepare test environment
+        run: |
+          cp .env.example .env
+          php artisan key:generate --force
+      - name: Syntax
+        run: |
+          php -l app/Http/Controllers/CodeBridgeOAuthLinkController.php
+          php -l routes/web.php
+          php -l config/services.php
+      - name: OAuth link feature tests
+        run: php artisan test tests/Feature/CodeBridgeOAuthLinkTest.php --no-ansi
+      - name: Full PHP verification
+        run: composer test
