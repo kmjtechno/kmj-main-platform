@@ -86,6 +86,7 @@ Route::middleware(['auth', 'verified'])->group(function () use ($noStore): void 
         ]);
         $pending = $request->session()->pull('codebridge_oauth.'.$data['request_id']);
         abort_unless(is_array($pending), 400, 'This authorization request expired. Start again from your AI app.');
+        /** @var array{client_id:string,client_name:string,redirect_uri:string,redirect_host:string,scopes:list<string>,state:?string,code_challenge:string,resource:string} $pending */
 
         $target = $data['decision'] === 'approve'
             ? $server->approve($pending, (int) $request->user()->getAuthIdentifier())
