@@ -64,7 +64,7 @@ final class CodeBridgeDevicePairingService
     public function preview(string $displayCode, int $userId, int $now): ?array
     {
         $code = strtoupper(str_replace('-', '', trim($displayCode)));
-        if (! preg_match('/\A[A-Z2-9]{8}\z/D', $code)) {
+        if (!preg_match('/\A[A-Z2-9]{8}\z/D', $code)) {
             return null;
         }
         $row = DB::table('codebridge_device_pairings')
@@ -72,7 +72,7 @@ final class CodeBridgeDevicePairingService
             ->where('status', 'pending')
             ->where('expires_at', '>', gmdate('Y-m-d H:i:s', $now))
             ->first();
-        if (! $row) {
+        if (!$row) {
             return null;
         }
 
@@ -105,7 +105,7 @@ final class CodeBridgeDevicePairingService
 
     public function approve(string $displayCode, int $userId, string $tenantId, int $now): void
     {
-        if (! $this->organizations->userCanManage($userId, $tenantId)) {
+        if (!$this->organizations->userCanManage($userId, $tenantId)) {
             throw new DomainException('CODEBRIDGE_PAIRING_DENIED');
         }
         $code = strtoupper(str_replace('-', '', trim($displayCode)));
@@ -115,7 +115,7 @@ final class CodeBridgeDevicePairingService
                 ->where('user_code_hash', hash('sha256', $code))
                 ->lockForUpdate()
                 ->first();
-            if (! $row || $row->status !== 'pending' || strtotime($row->expires_at) <= $now) {
+            if (!$row || $row->status !== 'pending' || strtotime($row->expires_at) <= $now) {
                 throw new DomainException('CODEBRIDGE_PAIRING_EXPIRED');
             }
             $license = DB::table('kslp_licenses')
@@ -128,7 +128,7 @@ final class CodeBridgeDevicePairingService
                 ->oldest('created_at')
                 ->lockForUpdate()
                 ->first();
-            if (! $license) {
+            if (!$license) {
                 throw new DomainException('CODEBRIDGE_PAIRING_NO_LICENSE');
             }
 
@@ -172,7 +172,7 @@ final class CodeBridgeDevicePairingService
                 ->where('device_code_hash', hash('sha256', $deviceCode))
                 ->lockForUpdate()
                 ->first();
-            if (! $row || strtotime($row->expires_at) <= $now) {
+            if (!$row || strtotime($row->expires_at) <= $now) {
                 throw new DomainException('CODEBRIDGE_PAIRING_EXPIRED');
             }
             if ($row->status === 'pending') {
@@ -181,14 +181,14 @@ final class CodeBridgeDevicePairingService
             if ($row->status === 'denied') {
                 throw new DomainException('CODEBRIDGE_PAIRING_DENIED');
             }
-            if ($row->status !== 'approved' || $row->consumed_at !== null || ! is_string($row->credential_ciphertext)) {
+            if ($row->status !== 'approved' || $row->consumed_at !== null || !is_string($row->credential_ciphertext)) {
                 throw new DomainException('CODEBRIDGE_PAIRING_CONSUMED');
             }
-            if (! hash_equals((string) $row->device_id, $deviceId)) {
+            if (!hash_equals((string) $row->device_id, $deviceId)) {
                 throw new DomainException('CODEBRIDGE_PAIRING_INVALID');
             }
             $challenge = rtrim(strtr(base64_encode(hash('sha256', $verifier, true)), '+/', '-_'), '=');
-            if (! hash_equals((string) $row->code_challenge, $challenge)) {
+            if (!hash_equals((string) $row->code_challenge, $challenge)) {
                 throw new DomainException('CODEBRIDGE_PAIRING_INVALID');
             }
 
