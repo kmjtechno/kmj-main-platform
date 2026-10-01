@@ -202,7 +202,10 @@ final class OAuthServer
         };
     }
 
-    /** @param array<string, mixed> $input */
+    /**
+     * @param  array<string, mixed>  $input
+     * @return array<string, mixed>
+     */
     private function exchangeCode(array $input): array
     {
         foreach (['code', 'client_id', 'redirect_uri', 'code_verifier'] as $key) {
@@ -229,7 +232,10 @@ final class OAuthServer
         }, 3);
     }
 
-    /** @param array<string, mixed> $input */
+    /**
+     * @param  array<string, mixed>  $input
+     * @return array<string, mixed>
+     */
     private function refresh(array $input): array
     {
         if (! is_string($input['refresh_token'] ?? null) || ! is_string($input['client_id'] ?? null)) {
