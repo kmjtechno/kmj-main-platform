@@ -64,25 +64,35 @@ class CodeBridgeOAuthLinkController extends Controller
         $user = $request->user();
         abort_unless($user instanceof User, 401);
 
-        $secret = (string) config('services.codebridge_oauth.link_secret');
+        $secret = trim((string) config('services.codebridge_oauth.link_secret'));
+        if (strlen($secret) < 32) {
+            $secretFile = (string) config(
+                'services.codebridge_oauth.link_secret_file',
+                '/etc/kmj-codebridge-oauth/bridge-secret',
+            );
+            $secret = is_readable($secretFile)
+                ? trim((string) file_get_contents($secretFile))
+                : '';
+        }
         if (strlen($secret) < 32) {
             throw new RuntimeException('CodeBridge OAuth link secret is not configured.');
         }
 
         $payload = $this->base64UrlEncode(json_encode([
-            'v' => 1,
             'uid' => $uid,
             'sub' => (string) $user->getKey(),
             'email' => (string) $user->email,
             'name' => (string) $user->name,
-            'iat' => time(),
             'exp' => time() + 60,
-            'nonce' => bin2hex(random_bytes(16)),
         ], JSON_THROW_ON_ERROR));
 
-        $signature = $this->base64UrlEncode(hash_hmac('sha256', $payload, $secret, true));
+        $signature = hash_hmac('sha256', $payload, $secret);
 
-        return redirect()->to('/codebridge-oauth/interaction/'.$uid.'/complete?assertion='.$payload.'.'.$signature);
+        return redirect()->to(
+            '/codebridge-oauth/interaction/'.$uid.'/resume'
+            .'?assertion='.rawurlencode($payload)
+            .'&sig='.rawurlencode($signature),
+        );
     }
 
     private function assertUid(string $uid): void
