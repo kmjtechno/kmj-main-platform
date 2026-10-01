@@ -166,6 +166,13 @@ Route::get('refund-policy', fn () => Inertia::render('legal/refund-policy'))->na
 Route::get('acceptable-use', fn () => Inertia::render('legal/acceptable-use'))->name('legal.acceptable-use');
 Route::get('cookie-policy', fn () => Inertia::render('legal/cookie-policy'))->name('legal.cookies');
 
+Route::middleware(['auth'])->group(function () {
+    Route::get('codebridge/oauth/continue/{uid}', [CodeBridgeOAuthLinkController::class, 'show'])
+        ->name('codebridge.oauth.continue');
+    Route::post('codebridge/oauth/continue/{uid}', [CodeBridgeOAuthLinkController::class, 'approve'])
+        ->name('codebridge.oauth.continue.approve');
+});
+
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('codebridge-oauth-link/{uid}', [CodeBridgeOAuthLinkController::class, 'show'])
         ->name('codebridge.oauth.show');
