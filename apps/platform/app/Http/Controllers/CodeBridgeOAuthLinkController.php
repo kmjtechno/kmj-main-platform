@@ -3,22 +3,53 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
+use App\Services\Commerce\KmjProductCatalog;
+use App\Services\Commerce\PublicProductCatalog;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
+use KMJ\MainPlatform\Entitlements\Services\EntitlementReader;
+use KMJ\MainPlatform\Organizations\Services\OrganizationDirectory;
 use RuntimeException;
 
 class CodeBridgeOAuthLinkController extends Controller
 {
-    public function show(Request $request, string $uid): View
-    {
+    public function show(
+        Request $request,
+        string $uid,
+        PublicProductCatalog $products,
+        OrganizationDirectory $organizations,
+        EntitlementReader $entitlements,
+    ): View {
+
         $this->assertUid($uid);
         $user = $request->user();
         abort_unless($user instanceof User, 401);
 
+        $service = $products->find(KmjProductCatalog::CODEBRIDGE_SLUG);
+        $registrations = [];
+
+        foreach ($organizations->forUser($user->id) as $organization) {
+            $codeBridgeEntitlements = collect($entitlements->forOrganization($organization['id']))
+                ->filter(fn (array $entitlement): bool => $entitlement['product_slug'] === KmjProductCatalog::CODEBRIDGE_SLUG)
+                ->values()
+                ->all();
+
+            if ($codeBridgeEntitlements === []) {
+                continue;
+            }
+
+            $registrations[] = [
+                'organization' => $organization,
+                'entitlements' => $codeBridgeEntitlements,
+            ];
+        }
+
         return view('codebridge-oauth-link', [
             'uid' => $uid,
             'user' => $user,
+            'service' => $service,
+            'registrations' => $registrations,
             'scopes' => [
                 'codebridge:read' => 'Inspect authorized devices, projects, Git status, and approved files.',
                 'codebridge:write' => 'Apply hash-guarded changes only inside authorized project paths.',
