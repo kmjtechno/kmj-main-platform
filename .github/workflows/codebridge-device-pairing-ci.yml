@@ -40,7 +40,5 @@ jobs:
           php -l tests/Feature/CodeBridgeDevicePairingHttpTest.php
       - name: Pairing feature tests
         run: php artisan test tests/Feature/CodeBridgeDevicePairingHttpTest.php --no-ansi
-      - name: Diagnostic Pint diff
-        run: |
-          vendor/bin/pint app/Services/Licensing/CodeBridge/CodeBridgeDevicePairingService.php routes/codebridge-api.php tests/Feature/CodeBridgeDevicePairingHttpTest.php database/migrations/2026_10_01_120000_create_codebridge_device_pairings.php
-          git diff -- app/Services/Licensing/CodeBridge/CodeBridgeDevicePairingService.php routes/codebridge-api.php tests/Feature/CodeBridgeDevicePairingHttpTest.php database/migrations/2026_10_01_120000_create_codebridge_device_pairings.php
+      - name: Pint changed pairing files
+        run: vendor/bin/pint --test app/Services/Licensing/CodeBridge/CodeBridgeDevicePairingService.php routes/codebridge-api.php tests/Feature/CodeBridgeDevicePairingHttpTest.php database/migrations/2026_10_01_120000_create_codebridge_device_pairings.php
