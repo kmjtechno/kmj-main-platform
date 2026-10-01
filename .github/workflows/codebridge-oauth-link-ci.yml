@@ -44,13 +44,6 @@ jobs:
           cache-dependency-path: apps/platform/package-lock.json
       - run: composer install --no-interaction --prefer-dist --no-progress
       - run: npm ci --ignore-scripts
-      - name: Print exact Pint-formatted OAuth route
-        run: |
-          ./vendor/bin/pint routes/codebridge-oauth.php
-          echo '---PINT-FORMATTED-BEGIN---'
-          cat routes/codebridge-oauth.php
-          echo '---PINT-FORMATTED-END---'
-          exit 1
       - run: npm run build
       - run: cp .env.example .env && php artisan key:generate --force
       - name: Syntax
