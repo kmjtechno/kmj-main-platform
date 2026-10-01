@@ -1,5 +1,6 @@
 <?php
 
+use App\Services\Licensing\CodeBridge\CodeBridgeDevicePairingService;
 use App\Services\Licensing\CodeBridge\CodeBridgeRenewalService;
 use App\Services\Licensing\Kslp\KslpSigner;
 use Illuminate\Http\Request;
@@ -31,3 +32,92 @@ Route::post('v1/codebridge/renew', function (Request $request) {
         return response()->json(['error' => 'CODEBRIDGE_RENEWAL_UNAVAILABLE'], 503)->header('Cache-Control', 'no-store');
     }
 })->middleware('throttle:30,1');
+
+Route::post('codebridge/v1/device-enrollments', function (Request $request, CodeBridgeDevicePairingService $pairings) {
+    if (! config('codebridge.enabled', false)) {
+        abort(503);
+    }
+    if (strlen($request->getContent()) > 16384) {
+        abort(413);
+    }
+    $v = $request->validate([
+        'product' => ['required', 'in:KMJ_CODEBRIDGE'],
+        'device.id' => ['required', 'string', 'regex:/\A[A-Za-z0-9_-]{1,64}\z/'],
+        'device.name' => ['required', 'string', 'min:1', 'max:128'],
+        'device.platform' => ['required', 'string', 'max:32'],
+        'device.arch' => ['required', 'string', 'max:32'],
+        'project.id' => ['required', 'string', 'regex:/\A[A-Za-z0-9_-]{1,64}\z/'],
+        'project.name' => ['required', 'string', 'min:1', 'max:128'],
+        'requested_permissions' => ['required', 'array', 'min:1', 'max:3'],
+        'requested_permissions.*' => ['required', 'in:read,write,execute'],
+        'code_challenge' => ['required', 'string', 'regex:/\A[A-Za-z0-9_-]{43,128}\z/'],
+        'code_challenge_method' => ['required', 'in:S256'],
+    ]);
+
+    return response()->json($pairings->create($v, time()), 201)->header('Cache-Control', 'no-store');
+})->middleware('throttle:10,1');
+
+Route::post('codebridge/v1/device-enrollments/token', function (Request $request, CodeBridgeDevicePairingService $pairings) {
+    if (! config('codebridge.enabled', false)) {
+        abort(503);
+    }
+    if (strlen($request->getContent()) > 8192) {
+        abort(413);
+    }
+    $v = $request->validate([
+        'product' => ['required', 'in:KMJ_CODEBRIDGE'],
+        'device_code' => ['required', 'string', 'min:32', 'max:4096'],
+        'code_verifier' => ['required', 'string', 'min:43', 'max:128'],
+        'device_id' => ['required', 'string', 'regex:/\A[A-Za-z0-9_-]{1,64}\z/'],
+    ]);
+
+    try {
+        return response()->json(
+            $pairings->redeem($v['device_code'], $v['code_verifier'], $v['device_id'], time())
+        )->header('Cache-Control', 'no-store');
+    } catch (DomainException $e) {
+        $status = match ($e->getMessage()) {
+            'CODEBRIDGE_PAIRING_PENDING' => 428,
+            'CODEBRIDGE_PAIRING_DENIED' => 403,
+            'CODEBRIDGE_PAIRING_EXPIRED', 'CODEBRIDGE_PAIRING_CONSUMED' => 410,
+            default => 400,
+        };
+
+        return response()->json(['error' => $e->getMessage()], $status)->header('Cache-Control', 'no-store');
+    }
+})->middleware('throttle:60,1');
+
+Route::post('codebridge/v1/device-credentials/introspect', function (Request $request) {
+    if (! config('codebridge.enabled', false)) {
+        abort(503);
+    }
+    $credential = $request->bearerToken();
+    if (! is_string($credential) || strlen($credential) < 32 || strlen($credential) > 4096) {
+        abort(401);
+    }
+
+    $row = DB::table('codebridge_device_credentials as c')
+        ->join('kslp_licenses as l', 'l.id', '=', 'c.license_id')
+        ->leftJoin('codebridge_device_pairings as p', 'p.activation_id', '=', 'c.activation_id')
+        ->where('c.token_hash', hash('sha256', $credential))
+        ->whereNull('c.revoked_at')
+        ->where('c.expires_at_epoch', '>', time())
+        ->where('l.product', 'KMJ_CODEBRIDGE')
+        ->where('l.status', 'active')
+        ->whereNull('l.revoked_at')
+        ->where('l.starts_at', '<=', now())
+        ->where('l.expires_at', '>', now())
+        ->select(['c.device_id', 'c.tenant_id', 'p.project_id'])
+        ->first();
+
+    if (! $row) {
+        return response()->json(['active' => false], 401)->header('Cache-Control', 'no-store');
+    }
+
+    return response()->json([
+        'active' => true,
+        'device_id' => $row->device_id,
+        'tenant_id' => $row->tenant_id,
+        'projects' => is_string($row->project_id) && $row->project_id !== '' ? [$row->project_id] : [],
+    ])->header('Cache-Control', 'no-store');
+})->middleware('throttle:120,1');

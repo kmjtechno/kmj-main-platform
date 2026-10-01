@@ -6,6 +6,7 @@ use App\Services\AuthorityBootstrapper;
 use App\Services\Commerce\DesktopCommanderCommercialPolicy;
 use App\Services\Commerce\KmjProductCatalog;
 use App\Services\Commerce\PublicProductCatalog;
+use App\Services\Licensing\CodeBridge\CodeBridgeDevicePairingService;
 use App\Services\Licensing\LicenseAuditRecorder;
 use App\Services\Licensing\SandboxLicenseLifecycle;
 use App\Services\PlatformOwnerAccess;
@@ -165,6 +166,32 @@ Route::get('acceptable-use', fn () => Inertia::render('legal/acceptable-use'))->
 Route::get('cookie-policy', fn () => Inertia::render('legal/cookie-policy'))->name('legal.cookies');
 
 Route::middleware(['auth', 'verified'])->group(function () {
+    Route::get('codebridge/pair', function (Request $request, CodeBridgeDevicePairingService $pairings) {
+        $user = $request->user();
+        abort_unless($user instanceof User, 401);
+        $code = (string) $request->query('code', '');
+        $pairing = $code !== '' ? $pairings->preview($code, $user->id, time()) : null;
+
+        return view('codebridge-pair', ['pairing' => $pairing, 'code' => $code]);
+    })->name('codebridge.pair');
+
+    Route::post('codebridge/pair', function (Request $request, CodeBridgeDevicePairingService $pairings) {
+        $user = $request->user();
+        abort_unless($user instanceof User, 401);
+        $v = $request->validate([
+            'code' => ['required', 'string', 'max:32'],
+            'tenant_id' => ['required', 'string', 'max:64'],
+        ]);
+        try {
+            $pairings->approve($v['code'], $user->id, $v['tenant_id'], time());
+        } catch (DomainException $e) {
+            return back()->withErrors(['code' => $e->getMessage()]);
+        }
+
+        return redirect()->route('codebridge.pair', ['code' => $v['code']])
+            ->with('status', 'CodeBridge device approved. You can return to the installer.');
+    })->name('codebridge.pair.approve');
+
     Route::get('dashboard', function (
         Request $request,
         OrganizationDirectory $organizations,
