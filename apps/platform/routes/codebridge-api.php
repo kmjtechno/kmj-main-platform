@@ -8,18 +8,18 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
 
 Route::post('v1/codebridge/renew', function (Request $request) {
-    if (! config('codebridge.enabled', false)) {
+    if (!config('codebridge.enabled', false)) {
         abort(503);
     }
     if (strlen($request->getContent()) > 4096) {
         abort(413);
     }
     $credential = $request->bearerToken();
-    if (! is_string($credential) || strlen($credential) < 32 || strlen($credential) > 4096) {
+    if (!is_string($credential) || strlen($credential) < 32 || strlen($credential) > 4096) {
         abort(401);
     }
     try {
-        if (! app()->bound(KslpSigner::class)) {
+        if (!app()->bound(KslpSigner::class)) {
             abort(503);
         }
         $service = new CodeBridgeRenewalService(DB::connection()->getPdo(), app(KslpSigner::class));
@@ -35,7 +35,7 @@ Route::post('v1/codebridge/renew', function (Request $request) {
 
 
 Route::post('codebridge/v1/device-enrollments', function (Request $request, CodeBridgeDevicePairingService $pairings) {
-    if (! config('codebridge.enabled', false)) {
+    if (!config('codebridge.enabled', false)) {
         abort(503);
     }
     if (strlen($request->getContent()) > 16384) {
@@ -59,7 +59,7 @@ Route::post('codebridge/v1/device-enrollments', function (Request $request, Code
 })->middleware('throttle:10,1');
 
 Route::post('codebridge/v1/device-enrollments/token', function (Request $request, CodeBridgeDevicePairingService $pairings) {
-    if (! config('codebridge.enabled', false)) {
+    if (!config('codebridge.enabled', false)) {
         abort(503);
     }
     if (strlen($request->getContent()) > 8192) {
