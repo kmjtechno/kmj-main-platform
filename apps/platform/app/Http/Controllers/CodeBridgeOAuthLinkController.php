@@ -6,7 +6,6 @@ use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
-use RuntimeException;
 
 class CodeBridgeOAuthLinkController extends Controller
 {
@@ -33,10 +32,7 @@ class CodeBridgeOAuthLinkController extends Controller
         $user = $request->user();
         abort_unless($user instanceof User, 401);
 
-        $secret = (string) config('services.codebridge_oauth.link_secret');
-        if (strlen($secret) < 32) {
-            throw new RuntimeException('CodeBridge OAuth link secret is not configured.');
-        }
+        $secret = $this->linkSecret();
 
         $payload = $this->base64UrlEncode(json_encode([
             'v' => 1,
@@ -52,6 +48,23 @@ class CodeBridgeOAuthLinkController extends Controller
         $signature = $this->base64UrlEncode(hash_hmac('sha256', $payload, $secret, true));
 
         return redirect()->to('/codebridge-oauth-link/'.$uid.'/complete?assertion='.$payload.'.'.$signature);
+    }
+
+    private function linkSecret(): string
+    {
+        $configured = (string) config('services.codebridge_oauth.link_secret');
+        if (strlen($configured) >= 32) {
+            return $configured;
+        }
+
+        $appKey = (string) config('app.key');
+        $rawAppKey = str_starts_with($appKey, 'base64:')
+            ? base64_decode(substr($appKey, 7), true)
+            : $appKey;
+
+        abort_unless(is_string($rawAppKey) && strlen($rawAppKey) >= 32, 503, 'CodeBridge authorization is temporarily unavailable.');
+
+        return hash_hmac('sha256', 'kmj-codebridge-oauth-link-v1', $rawAppKey);
     }
 
     private function assertUid(string $uid): void
