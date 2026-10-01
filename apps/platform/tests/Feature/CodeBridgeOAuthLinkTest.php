@@ -43,10 +43,11 @@ class CodeBridgeOAuthLinkTest extends TestCase
         $this->assertIsString($location);
         $parts = parse_url($location);
         $this->assertIsArray($parts);
-        $this->assertSame('/codebridge-oauth/interaction/abcdefghijklmnop/complete', $parts['path'] ?? null);
+        $this->assertSame('/codebridge-oauth/interaction/abcdefghijklmnop/resume', $parts['path'] ?? null);
         parse_str((string) ($parts['query'] ?? ''), $query);
         $this->assertIsString($query['assertion'] ?? null);
         $this->assertNotSame('', $query['assertion'] ?? '');
+        $this->assertMatchesRegularExpression('/^[a-f0-9]{64}$/', (string) ($query['sig'] ?? ''));
         $this->assertStringNotContainsString((string) $user->password, $location);
         $this->assertStringNotContainsString('password', $location);
     }
