@@ -1,13 +1,21 @@
-name: CodeBridge OAuth Link CI
+name: CodeBridge OAuth CI
 
 on:
   pull_request:
     paths:
       - 'apps/platform/app/Http/Controllers/CodeBridgeOAuthLinkController.php'
-      - 'apps/platform/resources/views/codebridge-oauth-link.blade.php'
-      - 'apps/platform/tests/Feature/CodeBridgeOAuthLinkTest.php'
+      - 'apps/platform/app/Services/CodeBridge/OAuth/**'
+      - 'apps/platform/bootstrap/app.php'
+      - 'apps/platform/config/codebridge_oauth.php'
       - 'apps/platform/config/services.php'
+      - 'apps/platform/database/migrations/*codebridge_oauth*'
+      - 'apps/platform/resources/js/pages/auth/oauth-authorize.tsx'
+      - 'apps/platform/resources/views/codebridge-oauth-link.blade.php'
+      - 'apps/platform/routes/codebridge-oauth.php'
       - 'apps/platform/routes/web.php'
+      - 'apps/platform/tests/Feature/CodeBridgeOAuthLinkTest.php'
+      - 'apps/platform/tests/Feature/CodeBridgeOAuthServerTest.php'
+      - 'apps/platform/tests/Unit/CodeBridgeOAuthCoreTest.php'
       - '.github/workflows/codebridge-oauth-link-ci.yml'
   workflow_dispatch:
 
@@ -27,7 +35,7 @@ jobs:
         uses: shivammathur/setup-php@87d00bde2555f25eb54fedf940384e99cbdc55ef
         with:
           php-version: '8.4'
-          extensions: pdo_sqlite, sqlite3
+          extensions: pdo_sqlite, sqlite3, sodium
           coverage: none
       - uses: actions/setup-node@v4
         with:
@@ -41,9 +49,17 @@ jobs:
       - name: Syntax
         run: |
           php -l app/Http/Controllers/CodeBridgeOAuthLinkController.php
+          php -l app/Services/CodeBridge/OAuth/OAuthCore.php
+          php -l app/Services/CodeBridge/OAuth/OAuthError.php
+          php -l app/Services/CodeBridge/OAuth/OAuthServer.php
+          php -l bootstrap/app.php
+          php -l config/codebridge_oauth.php
+          php -l routes/codebridge-oauth.php
           php -l routes/web.php
-          php -l config/services.php
-      - name: OAuth link feature tests
-        run: php artisan test tests/Feature/CodeBridgeOAuthLinkTest.php --no-ansi
+      - name: OAuth unit and feature tests
+        run: |
+          php artisan test tests/Unit/CodeBridgeOAuthCoreTest.php --no-ansi
+          php artisan test tests/Feature/CodeBridgeOAuthServerTest.php --no-ansi
+          php artisan test tests/Feature/CodeBridgeOAuthLinkTest.php --no-ansi
       - name: Full PHP verification
         run: composer test
