@@ -17,6 +17,7 @@ return Application::configure(basePath: dirname(__DIR__))
             __DIR__.'/../routes/product-manager.php',
             __DIR__.'/../routes/operator-ops.php',
             __DIR__.'/../routes/kslp-public.php',
+            __DIR__.'/../routes/codebridge-oauth.php',
         ],
         api: __DIR__.'/../routes/codebridge-api.php',
         commands: __DIR__.'/../routes/console.php',
@@ -24,6 +25,8 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->encryptCookies(except: ['appearance', 'sidebar_state']);
+        // OAuth machine endpoints authenticate with authorization codes/refresh tokens, not CSRF cookies.
+        $middleware->validateCsrfTokens(except: ['oauth/token', 'oauth/register']);
 
         $middleware->web(append: [
             HandleAppearance::class,
