@@ -46,4 +46,8 @@ return [
         'link_secret' => env('CODEBRIDGE_OAUTH_LINK_SECRET'),
     ],
 
+    'codebridge_gateway' => [
+        'url' => env('CODEBRIDGE_GATEWAY_URL', 'https://kmj-codebridge-gateway.onrender.com'),
+    ],
+
 ];
