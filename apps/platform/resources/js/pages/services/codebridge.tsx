@@ -1,5 +1,3 @@
-[Reading 359 lines from start (total: 359 lines, 0 remaining)]
-
 import { Head, Link } from "@inertiajs/react";
 import {
     ArrowLeft,
@@ -359,5 +357,3 @@ function formatDate(value?: string | null): string {
         day: "2-digit",
     }).format(date);
 }
-
-[executed on device: kmjtechnonetgmailcom (cbe1c3e2-c299-4851-9d11-9fafa86b4357)]
