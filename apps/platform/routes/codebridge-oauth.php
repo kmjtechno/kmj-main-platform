@@ -31,10 +31,11 @@ Route::get('.well-known/oauth-protected-resource', function (OAuthServer $server
     return response()->json([
         'resource' => $server->resource(),
         'authorization_servers' => [$server->issuer()],
-        'scopes_supported' => array_values(array_filter(
-            OAuthCore::SCOPES,
-            fn (string $scope): bool => $scope !== 'offline_access',
-        )),
+        'scopes_supported' => [
+            'codebridge:read',
+            'codebridge:write',
+            'codebridge:execute',
+        ],
     ]);
 })->name('codebridge.oauth.resource');
 
@@ -44,10 +45,11 @@ Route::get('.well-known/oauth-protected-resource/mcp', function (OAuthServer $se
     return response()->json([
         'resource' => $server->resource(),
         'authorization_servers' => [$server->issuer()],
-        'scopes_supported' => array_values(array_filter(
-            OAuthCore::SCOPES,
-            fn (string $scope): bool => $scope !== 'offline_access',
-        )),
+        'scopes_supported' => [
+            'codebridge:read',
+            'codebridge:write',
+            'codebridge:execute',
+        ],
     ]);
 })->name('codebridge.oauth.resource.mcp');
 
@@ -86,7 +88,7 @@ Route::post('mcp', function (Request $request, OAuthServer $server) {
     $responseHeaders = ['Cache-Control' => 'no-store'];
     foreach (['Content-Type', 'WWW-Authenticate'] as $name) {
         $value = $upstreamResponse->header($name);
-        if (is_string($value) && $value !== '') {
+        if ($value !== '') {
             $responseHeaders[$name] = $value;
         }
     }
