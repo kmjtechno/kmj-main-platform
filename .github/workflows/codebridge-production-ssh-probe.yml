@@ -1,0 +1,65 @@
+name: CodeBridge Production SSH Probe
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/codebridge-production-ssh-probe.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    environment: staging
+    timeout-minutes: 10
+    steps:
+      - name: Validate existing SSH configuration
+        env:
+          SSH_HOST: ${{ secrets.STAGING_SSH_HOST }}
+          SSH_USER: ${{ secrets.STAGING_SSH_USER }}
+          SSH_KEY: ${{ secrets.STAGING_SSH_PRIVATE_KEY }}
+          STAGING_PATH: ${{ vars.STAGING_APP_PATH }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          for name in SSH_HOST SSH_USER SSH_KEY STAGING_PATH; do
+            if [ -z "${!name:-}" ]; then
+              echo "::error::Missing existing staging SSH setting: $name"
+              exit 2
+            fi
+          done
+          dir="$(mktemp -d)"
+          trap 'rm -rf "$dir"' EXIT
+          printf '%s' "$SSH_KEY" | sed 's/\\n/\n/g' | tr -d '\r' > "$dir/id_ed25519"
+          printf '\n' >> "$dir/id_ed25519"
+          chmod 600 "$dir/id_ed25519"
+          ssh-keygen -y -f "$dir/id_ed25519" >/dev/null
+          ssh-keyscan -T 10 -H "$SSH_HOST" > "$dir/known_hosts" 2>/dev/null
+          ssh -i "$dir/id_ed25519" \
+            -o IdentitiesOnly=yes \
+            -o UserKnownHostsFile="$dir/known_hosts" \
+            -o StrictHostKeyChecking=yes \
+            -o BatchMode=yes \
+            -o ConnectTimeout=15 \
+            "$SSH_USER@$SSH_HOST" bash -s -- "$STAGING_PATH" <<'REMOTE'
+          set -euo pipefail
+          STAGING_PATH="$1"
+          echo "remote_hostname=$(hostname)"
+          echo "remote_user=$(id -un)"
+          echo "staging_path_real=$(readlink -f "$STAGING_PATH" 2>/dev/null || printf missing)"
+          if [ -e /home/kmjprod/current ]; then
+            echo "production_path_visible=yes"
+            echo "production_current_real=$(readlink -f /home/kmjprod/current)"
+            if [ -r /home/kmjprod/current/apps/platform/app/Services/CodeBridge/OAuth/OAuthServer.php ]; then
+              echo "production_codebridge_readable=yes"
+              printf 'production_oauth_server_blob='
+              git hash-object /home/kmjprod/current/apps/platform/app/Services/CodeBridge/OAuth/OAuthServer.php
+            else
+              echo "production_codebridge_readable=no"
+            fi
+          else
+            echo "production_path_visible=no"
+          fi
+          REMOTE
