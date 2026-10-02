@@ -238,7 +238,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
                     : null;
 
                 $entitlement['service'] = null;
-                if (($entitlement['product_slug'] ?? null) === 'kmj-codebridge') {
+                if ($entitlement['product_slug'] === 'kmj-codebridge') {
                     $license = DB::table('kslp_licenses')
                         ->where('customer_id', $organization['id'])
                         ->where('product', 'KMJ_CODEBRIDGE')
@@ -264,7 +264,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
                     $entitlement['service'] = [
                         'kind' => 'codebridge',
                         'plan' => $license?->plan,
-                        'license_status' => $license?->status ?? 'setup_required',
+                        'license_status' => $license !== null ? (string) $license->status : 'setup_required',
                         'license_expires_at' => $license?->expires_at,
                         'managed_devices' => DB::table('codebridge_device_credentials')
                             ->where('tenant_id', $organization['id'])
@@ -306,8 +306,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
         $access = collect($organizations->forUser($user->id))
             ->map(function (array $organization) use ($entitlements): ?array {
                 $entitlement = collect($entitlements->forOrganization($organization['id']))
-                    ->first(fn (array $item): bool => ($item['product_slug'] ?? null) === 'kmj-codebridge'
-                        && ($item['status'] ?? null) === 'active');
+                    ->first(fn (array $item): bool => $item['product_slug'] === 'kmj-codebridge'
+                        && $item['status'] === 'active');
 
                 return is_array($entitlement)
                     ? ['organization' => $organization, 'entitlement' => $entitlement]
