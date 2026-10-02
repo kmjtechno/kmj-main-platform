@@ -320,6 +320,90 @@ final class OAuthServer
         ];
     }
 
+    /**
+     * Verify a CodeBridge OAuth access token issued by this server.
+     *
+     * @return array<string, mixed>|null
+     */
+    public function verifyAccessToken(string $token, ?int $now = null): ?array
+    {
+        if (! $this->enabled() || strlen($token) > 16384) {
+            return null;
+        }
+
+        $parts = explode('.', $token);
+        if (count($parts) !== 3) {
+            return null;
+        }
+
+        try {
+            $header = json_decode($this->decodeBase64Url($parts[0]), true, 16, JSON_THROW_ON_ERROR);
+            $claims = json_decode($this->decodeBase64Url($parts[1]), true, 32, JSON_THROW_ON_ERROR);
+            $signature = $this->decodeBase64Url($parts[2]);
+        } catch (\Throwable) {
+            return null;
+        }
+
+        if (! is_array($header) || ! is_array($claims)
+            || ($header['alg'] ?? null) !== 'EdDSA'
+            || ($header['typ'] ?? null) !== 'at+jwt'
+            || ($header['kid'] ?? null) !== (string) config('codebridge_oauth.kid')) {
+            return null;
+        }
+
+        $secret = $this->signingKey();
+        if ($secret === '' || strlen($signature) !== SODIUM_CRYPTO_SIGN_BYTES) {
+            return null;
+        }
+        $public = sodium_crypto_sign_publickey_from_secretkey($secret);
+        if (! sodium_crypto_sign_verify_detached($signature, $parts[0].'.'.$parts[1], $public)) {
+            return null;
+        }
+
+        $now ??= time();
+        if (($claims['iss'] ?? null) !== $this->issuer()
+            || ($claims['aud'] ?? null) !== $this->resource()
+            || ! is_string($claims['sub'] ?? null)
+            || ! preg_match('/\Akmj-user:[1-9][0-9]*\z/D', $claims['sub'])
+            || ! is_int($claims['iat'] ?? null)
+            || ! is_int($claims['nbf'] ?? null)
+            || ! is_int($claims['exp'] ?? null)
+            || $claims['iat'] > $now
+            || $claims['nbf'] > $now
+            || $claims['exp'] <= $now
+            || ! is_string($claims['scope'] ?? null)) {
+            return null;
+        }
+
+        try {
+            $scopes = OAuthCore::parseScopes($claims['scope']);
+        } catch (DomainException) {
+            return null;
+        }
+        if (in_array('offline_access', $scopes, true)) {
+            return null;
+        }
+
+        $claims['scopes'] = $scopes;
+
+        return $claims;
+    }
+
+    private function decodeBase64Url(string $value): string
+    {
+        if ($value === '' || preg_match('/[^A-Za-z0-9_-]/', $value)) {
+            throw new DomainException('OAUTH_TOKEN_INVALID');
+        }
+        $padded = strtr($value, '-_', '+/');
+        $padded .= str_repeat('=', (4 - strlen($padded) % 4) % 4);
+        $decoded = base64_decode($padded, true);
+        if ($decoded === false) {
+            throw new DomainException('OAUTH_TOKEN_INVALID');
+        }
+
+        return $decoded;
+    }
+
     private function signingKey(): string
     {
         return OAuthCore::decodeSigningKey(config('codebridge_oauth.signing_key'));
