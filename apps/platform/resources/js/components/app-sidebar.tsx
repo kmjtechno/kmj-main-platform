@@ -1,15 +1,8 @@
+[Reading 73 lines from start (total: 73 lines, 0 remaining)]
+
 import { Link, usePage } from '@inertiajs/react';
-import {
-    Activity,
-    Crown,
-    KeyRound,
-    LayoutGrid,
-    PackageOpen,
-    ShieldCheck,
-    ShoppingCart,
-} from 'lucide-react';
+import { Activity, Crown, LayoutGrid, ShieldCheck } from 'lucide-react';
 import AppLogo from '@/components/app-logo';
-import { NavFooter } from '@/components/nav-footer';
 import { NavMain } from '@/components/nav-main';
 import { NavUser } from '@/components/nav-user';
 import {
@@ -25,38 +18,15 @@ import { dashboard } from '@/routes';
 import { edit as securitySettings } from '@/routes/security';
 import type { NavItem } from '@/types';
 
-const baseNavItems: NavItem[] = [
+const customerNavItems: NavItem[] = [
     {
-        title: 'Dashboard',
+        title: 'My Services',
         href: dashboard(),
         icon: LayoutGrid,
     },
     {
-        title: 'Purchase Center',
-        href: '/purchase',
-        icon: ShoppingCart,
-    },
-    {
-        title: 'License Center',
-        href: '/sandbox-licenses',
-        icon: KeyRound,
-    },
-    {
         title: 'Security',
         href: securitySettings(),
-        icon: ShieldCheck,
-    },
-];
-
-const footerNavItems: NavItem[] = [
-    {
-        title: 'KMJ Products',
-        href: '/products',
-        icon: PackageOpen,
-    },
-    {
-        title: 'Trust Center',
-        href: '/trust',
         icon: ShieldCheck,
     },
 ];
@@ -66,15 +36,10 @@ export function AppSidebar() {
         | { enabled?: boolean }
         | undefined;
     const mainNavItems: NavItem[] = [
-        ...baseNavItems,
+        ...customerNavItems,
         ...(operator?.enabled
             ? [
                   { title: 'Operator', href: '/operator', icon: Crown },
-                  {
-                      title: 'Product Manager',
-                      href: '/operator#product-manager',
-                      icon: PackageOpen,
-                  },
                   {
                       title: 'Ops Command Center',
                       href: '/operator/ops',
@@ -103,9 +68,10 @@ export function AppSidebar() {
             </SidebarContent>
 
             <SidebarFooter>
-                <NavFooter items={footerNavItems} className="mt-auto" />
                 <NavUser />
             </SidebarFooter>
         </Sidebar>
     );
 }
+
+[executed on device: kmjtechnonetgmailcom (cbe1c3e2-c299-4851-9d11-9fafa86b4357)]

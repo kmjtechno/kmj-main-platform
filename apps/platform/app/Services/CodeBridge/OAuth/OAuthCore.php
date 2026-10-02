@@ -16,7 +16,7 @@ use DomainException;
  */
 final class OAuthCore
 {
-    public const SCOPES = ['codebridge:read', 'codebridge:write', 'codebridge:execute', 'offline_access'];
+    public const SCOPES = ['openid', 'codebridge:read', 'codebridge:write', 'codebridge:execute', 'offline_access'];
 
     private const LOOPBACK_HOSTS = ['127.0.0.1', 'localhost', '[::1]'];
 
