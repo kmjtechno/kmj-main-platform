@@ -57,6 +57,7 @@ final class CodeBridgeOAuthServerTest extends TestCase
                 'authorization_endpoint' => 'https://kmj.example/oauth/authorize',
                 'token_endpoint' => 'https://kmj.example/oauth/token',
                 'registration_endpoint' => 'https://kmj.example/oauth/register',
+                'userinfo_endpoint' => 'https://kmj.example/oauth/userinfo',
                 'code_challenge_methods_supported' => ['S256'],
                 'token_endpoint_auth_methods_supported' => ['none'],
                 'authorization_response_iss_parameter_supported' => true,
@@ -137,6 +138,44 @@ final class CodeBridgeOAuthServerTest extends TestCase
             'grant_type' => 'authorization_code', 'code' => $params['code'], 'client_id' => $clientId,
             'redirect_uri' => self::REDIRECT, 'code_verifier' => $this->verifier,
         ])->assertStatus(400)->assertJson(['error' => 'invalid_grant']);
+    }
+
+    public function test_userinfo_returns_verified_identity_for_openid_access_token(): void
+    {
+        $user = User::factory()->create(['email_verified_at' => now()]);
+        $clientId = $this->registerClient();
+        $page = $this->actingAs($user)->get('/oauth/authorize?'.$this->authorizeQuery($clientId, [
+            'scope' => 'openid codebridge:read',
+        ]))->assertOk();
+        $requestId = $page->viewData('page')['props']['requestId'];
+        $location = $this->actingAs($user)->post('/oauth/authorize', [
+            'request_id' => $requestId,
+            'decision' => 'approve',
+        ])->headers->get('Location');
+        parse_str((string) parse_url((string) $location, PHP_URL_QUERY), $params);
+
+        $token = $this->post('/oauth/token', [
+            'grant_type' => 'authorization_code',
+            'code' => $params['code'],
+            'client_id' => $clientId,
+            'redirect_uri' => self::REDIRECT,
+            'code_verifier' => $this->verifier,
+            'resource' => self::RESOURCE,
+        ])->assertOk()->json('access_token');
+
+        $this->withToken($token)->getJson('/oauth/userinfo')
+            ->assertOk()
+            ->assertHeader('Cache-Control', 'no-store, private')
+            ->assertJson([
+                'sub' => 'kmj-user:'.$user->id,
+                'email' => $user->email,
+                'email_verified' => true,
+                'name' => $user->name,
+            ]);
+
+        $this->getJson('/oauth/userinfo')
+            ->assertUnauthorized()
+            ->assertJson(['error' => 'invalid_token']);
     }
 
     public function test_wrong_verifier_redirect_or_client_cannot_redeem_a_code(): void
