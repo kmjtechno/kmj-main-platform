@@ -59,7 +59,10 @@ Route::post('mcp', function (Request $request, OAuthServer $server) {
     }
 
     $upstream = rtrim((string) config('services.codebridge_gateway.url'), '/');
-    abort_unless(str_starts_with($upstream, 'https://'), 503);
+    abort_unless(
+        str_starts_with($upstream, 'https://') || str_starts_with($upstream, 'http://127.0.0.1:'),
+        503,
+    );
 
     $headers = [
         'Accept' => (string) $request->header('Accept', 'application/json, text/event-stream'),
