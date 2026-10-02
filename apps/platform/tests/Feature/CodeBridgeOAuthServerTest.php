@@ -40,6 +40,7 @@ final class CodeBridgeOAuthServerTest extends TestCase
         config(['codebridge_oauth.enabled' => false]);
 
         $this->get('/.well-known/oauth-authorization-server')->assertNotFound();
+        $this->get('/.well-known/openid-configuration')->assertNotFound();
         $this->get('/oauth/jwks.json')->assertNotFound();
         $this->postJson('/oauth/register', ['redirect_uris' => [self::REDIRECT]])->assertNotFound();
         $this->post('/oauth/token', ['grant_type' => 'authorization_code'])->assertNotFound();
@@ -61,6 +62,16 @@ final class CodeBridgeOAuthServerTest extends TestCase
                 'code_challenge_methods_supported' => ['S256'],
                 'token_endpoint_auth_methods_supported' => ['none'],
                 'authorization_response_iss_parameter_supported' => true,
+                'subject_types_supported' => ['public'],
+                'id_token_signing_alg_values_supported' => ['EdDSA'],
+            ]);
+
+        $this->get('/.well-known/openid-configuration')
+            ->assertOk()
+            ->assertJson([
+                'issuer' => 'https://kmj.example',
+                'userinfo_endpoint' => 'https://kmj.example/oauth/userinfo',
+                'id_token_signing_alg_values_supported' => ['EdDSA'],
             ]);
 
         $jwks = $this->get('/oauth/jwks.json')->assertOk()->json('keys');
@@ -126,6 +137,7 @@ final class CodeBridgeOAuthServerTest extends TestCase
         $this->assertSame('codebridge:read codebridge:write', $claims['scope']);
         $this->assertSame($claims['iat'] + 900, $claims['exp']);
         $this->assertSame('Bearer', $token['token_type']);
+        $this->assertArrayNotHasKey('id_token', $token);
 
         $verified = app(OAuthServer::class)->verifyAccessToken($token['access_token']);
         $this->assertIsArray($verified);
@@ -154,15 +166,30 @@ final class CodeBridgeOAuthServerTest extends TestCase
         ])->headers->get('Location');
         parse_str((string) parse_url((string) $location, PHP_URL_QUERY), $params);
 
-        $token = $this->post('/oauth/token', [
+        $tokens = $this->post('/oauth/token', [
             'grant_type' => 'authorization_code',
             'code' => $params['code'],
             'client_id' => $clientId,
             'redirect_uri' => self::REDIRECT,
             'code_verifier' => $this->verifier,
             'resource' => self::RESOURCE,
-        ])->assertOk()->json('access_token');
+        ])->assertOk()->json();
 
+        $this->assertArrayHasKey('id_token', $tokens);
+        $idParts = explode('.', $tokens['id_token']);
+        $this->assertCount(3, $idParts);
+        $idHeader = json_decode(base64_decode(strtr($idParts[0], '-_', '+/')), true);
+        $idClaims = json_decode(base64_decode(strtr($idParts[1], '-_', '+/')), true);
+        $this->assertSame('JWT', $idHeader['typ']);
+        $this->assertSame('EdDSA', $idHeader['alg']);
+        $this->assertSame('https://kmj.example', $idClaims['iss']);
+        $this->assertSame($clientId, $idClaims['aud']);
+        $this->assertSame('kmj-user:'.$user->id, $idClaims['sub']);
+        $this->assertSame($user->email, $idClaims['email']);
+        $this->assertTrue($idClaims['email_verified']);
+        $this->assertSame($user->name, $idClaims['name']);
+
+        $token = $tokens['access_token'];
         $this->withToken($token)->getJson('/oauth/userinfo')
             ->assertOk()
             ->assertHeader('Cache-Control', 'no-store, private')
