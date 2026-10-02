@@ -26,7 +26,7 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->encryptCookies(except: ['appearance', 'sidebar_state']);
         // OAuth machine endpoints authenticate with authorization codes/refresh tokens, not CSRF cookies.
-        $middleware->validateCsrfTokens(except: ['oauth/token', 'oauth/register']);
+        $middleware->validateCsrfTokens(except: ['oauth/token', 'oauth/register', 'mcp']);
 
         $middleware->web(append: [
             HandleAppearance::class,
