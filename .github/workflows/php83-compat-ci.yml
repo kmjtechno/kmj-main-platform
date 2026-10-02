@@ -1,0 +1,37 @@
+name: PHP 8.3 Compatibility CI
+
+on:
+  pull_request:
+    paths:
+      - 'apps/platform/composer.json'
+      - 'apps/platform/composer.lock'
+      - '.github/workflows/php83-compat-ci.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: apps/platform
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup PHP 8.3
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: pdo_sqlite, sqlite3, sodium
+          coverage: none
+      - name: Install production dependencies on PHP 8.3
+        run: composer install --no-interaction --prefer-dist --no-progress --no-dev --optimize-autoloader
+      - name: Verify platform requirements
+        run: composer check-platform-reqs
+      - name: Laravel boot smoke
+        run: |
+          cp .env.example .env
+          php artisan key:generate --force
+          php artisan about --only=environment
