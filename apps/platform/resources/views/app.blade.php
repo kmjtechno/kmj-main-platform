@@ -43,10 +43,10 @@
             }
         </style>
 
-        {{-- Locked KMJ TECHNO brand icon. Do not fall back to Laravel starter favicons. --}}
-        <link rel="icon" type="image/png" sizes="512x512" href="/assets/brand/kmj-app-icon.png?v=kmj-brand-20261002">
-        <link rel="shortcut icon" type="image/png" href="/assets/brand/kmj-app-icon.png?v=kmj-brand-20261002">
-        <link rel="apple-touch-icon" href="/assets/brand/kmj-app-icon.png?v=kmj-brand-20261002">
+        {{-- Locked KMJ TECHNO favicon generated from the approved KMJ app icon. --}}
+        <link rel="icon" type="image/png" sizes="512x512" href="/favicon.png?v=kmj-brand-20261002">
+        <link rel="shortcut icon" type="image/png" href="/favicon.png?v=kmj-brand-20261002">
+        <link rel="apple-touch-icon" href="/favicon.png?v=kmj-brand-20261002">
 
         @fonts
 
