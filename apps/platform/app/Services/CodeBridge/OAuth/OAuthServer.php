@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Services\CodeBridge\OAuth;
 
+use App\Models\User;
 use DomainException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -49,6 +50,9 @@ final class OAuthServer
             'userinfo_endpoint' => $issuer.'/oauth/userinfo',
             'scopes_supported' => OAuthCore::SCOPES,
             'response_types_supported' => ['code'],
+            'subject_types_supported' => ['public'],
+            'id_token_signing_alg_values_supported' => ['EdDSA'],
+            'claims_supported' => ['sub', 'iss', 'aud', 'exp', 'iat', 'email', 'email_verified', 'name'],
             'response_modes_supported' => ['query'],
             'grant_types_supported' => ['authorization_code', 'refresh_token'],
             'token_endpoint_auth_methods_supported' => ['none'],
@@ -312,13 +316,33 @@ final class OAuthServer
             'updated_at' => now(),
         ]);
 
-        return [
+        $response = [
             'access_token' => $access,
             'token_type' => 'Bearer',
             'expires_in' => $ttl,
             'refresh_token' => $refresh,
             'scope' => $accessScope,
         ];
+
+        if (in_array('openid', explode(' ', $scope), true)) {
+            $user = User::query()->find($userId);
+            if (! $user instanceof User || $user->email_verified_at === null) {
+                throw new OAuthError('invalid_grant', 400);
+            }
+
+            $response['id_token'] = OAuthCore::signJwt([
+                'iss' => $this->issuer(),
+                'aud' => $clientId,
+                'sub' => 'kmj-user:'.$userId,
+                'iat' => $now,
+                'exp' => $now + $ttl,
+                'email' => (string) $user->email,
+                'email_verified' => true,
+                'name' => (string) $user->name,
+            ], $this->signingKey(), (string) config('codebridge_oauth.kid'), 'JWT');
+        }
+
+        return $response;
     }
 
     /**
