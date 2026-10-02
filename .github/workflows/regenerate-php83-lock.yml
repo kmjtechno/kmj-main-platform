@@ -1,0 +1,46 @@
+name: Regenerate PHP 8.3 Composer Lock
+
+on:
+  push:
+    branches:
+      - fix/php83-production-compat
+    paths:
+      - 'apps/platform/composer.json'
+      - '.github/workflows/regenerate-php83-lock.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  regenerate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: apps/platform
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/php83-production-compat
+          fetch-depth: 0
+          persist-credentials: true
+      - name: Setup PHP 8.3
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          coverage: none
+      - name: Regenerate lock for PHP 8.3
+        run: composer update 'symfony/*' --with-all-dependencies --no-interaction --no-progress
+      - name: Verify no locked package requires PHP 8.4+
+        run: composer check-platform-reqs
+      - name: Commit regenerated lock and remove helper workflow
+        working-directory: .
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add apps/platform/composer.lock apps/platform/composer.json
+          git rm .github/workflows/regenerate-php83-lock.yml
+          git commit -m 'fix(runtime): regenerate Composer lock for PHP 8.3'
+          git push origin HEAD:fix/php83-production-compat
