@@ -1,5 +1,3 @@
-[Reading 495 lines from start (total: 495 lines, 0 remaining)]
-
 import { Head, Link } from "@inertiajs/react";
 import {
     ArrowRight,
@@ -495,5 +493,3 @@ Dashboard.layout = {
         },
     ],
 };
-
-[executed on device: kmjtechnonetgmailcom (cbe1c3e2-c299-4851-9d11-9fafa86b4357)]
