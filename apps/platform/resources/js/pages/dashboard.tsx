@@ -1,4 +1,6 @@
-import { Head, Link } from '@inertiajs/react';
+[Reading 495 lines from start (total: 495 lines, 0 remaining)]
+
+import { Head, Link } from "@inertiajs/react";
 import {
     ArrowRight,
     BadgeCheck,
@@ -11,11 +13,11 @@ import {
     ShieldCheck,
     TerminalSquare,
     Wrench,
-} from 'lucide-react';
-import { dashboard } from '@/routes';
+} from "lucide-react";
+import { dashboard } from "@/routes";
 
 type CodeBridgeService = {
-    kind: 'codebridge';
+    kind: "codebridge";
     plan: string | null;
     license_status: string;
     license_expires_at: string | null;
@@ -58,20 +60,23 @@ type DashboardProps = {
 };
 
 const productImages: Record<string, string> = {
-    'kmj-cloudos': '/assets/products/kmj-cloudos.webp',
-    'kmj-calibration-pro': '/assets/products/kmj-calibration.webp',
-    'kmj-forge': '/assets/products/kmj-forge.webp',
-    'kmj-connect': '/assets/products/kmj-connect.webp',
-    'kmj-cloud-nexus': '/assets/products/kmj-cloud-nexus.webp',
-    'kmj-agent': '/assets/products/kmj-agent.webp',
-    'kmj-creative-studio': '/assets/products/kmj-creative-studio.webp',
-    'kmj-cinema-platform': '/assets/products/kmj-cinema-platform.webp',
-    'kmj-360-dome': '/assets/products/kmj-cinema-platform.webp',
-    'kmj-cinema-player': '/assets/products/kmj-cinema-platform.webp',
-    'kmj-licensing-hub': '/assets/products/kmj-licensing-hub.webp',
+    "kmj-cloudos": "/assets/products/kmj-cloudos.webp",
+    "kmj-calibration-pro": "/assets/products/kmj-calibration.webp",
+    "kmj-forge": "/assets/products/kmj-forge.webp",
+    "kmj-connect": "/assets/products/kmj-connect.webp",
+    "kmj-cloud-nexus": "/assets/products/kmj-cloud-nexus.webp",
+    "kmj-agent": "/assets/products/kmj-agent.webp",
+    "kmj-creative-studio": "/assets/products/kmj-creative-studio.webp",
+    "kmj-cinema-platform": "/assets/products/kmj-cinema-platform.webp",
+    "kmj-360-dome": "/assets/products/kmj-cinema-platform.webp",
+    "kmj-cinema-player": "/assets/products/kmj-cinema-platform.webp",
+    "kmj-licensing-hub": "/assets/products/kmj-licensing-hub.webp",
 };
 
-export default function Dashboard({ organizations, hasPasskey }: DashboardProps) {
+export default function Dashboard({
+    organizations,
+    hasPasskey,
+}: DashboardProps) {
     const services = organizations.flatMap((organization) =>
         organization.entitlements.map((entitlement) => ({
             ...entitlement,
@@ -79,7 +84,7 @@ export default function Dashboard({ organizations, hasPasskey }: DashboardProps)
         })),
     );
     const activeServices = services.filter(
-        (entitlement) => entitlement.status === 'active',
+        (entitlement) => entitlement.status === "active",
     );
 
     return (
@@ -98,15 +103,21 @@ export default function Dashboard({ organizations, hasPasskey }: DashboardProps)
                                 My KMJ Services
                             </h1>
                             <p className="text-muted-foreground mt-3 max-w-xl text-sm leading-6">
-                                Your dashboard shows only services authorized for
-                                your account, with live access, licensing and
-                                connection information in one place.
+                                Your dashboard shows only services authorized
+                                for your account, with live access, licensing
+                                and connection information in one place.
                             </p>
                         </div>
 
                         <div className="grid grid-cols-2 gap-3">
-                            <Metric label="Authorized services" value={services.length} />
-                            <Metric label="Active" value={activeServices.length} />
+                            <Metric
+                                label="Authorized services"
+                                value={services.length}
+                            />
+                            <Metric
+                                label="Active"
+                                value={activeServices.length}
+                            />
                         </div>
                     </div>
                 </section>
@@ -116,10 +127,13 @@ export default function Dashboard({ organizations, hasPasskey }: DashboardProps)
                         <div>
                             <div className="flex items-center gap-2">
                                 <BadgeCheck className="h-5 w-5 text-red-500" />
-                                <h2 className="font-bold">Your authorized services</h2>
+                                <h2 className="font-bold">
+                                    Your authorized services
+                                </h2>
                             </div>
                             <p className="text-muted-foreground mt-1 text-xs">
-                                Service data is isolated to access granted to your account.
+                                Service data is isolated to access granted to
+                                your account.
                             </p>
                         </div>
                     </div>
@@ -131,17 +145,23 @@ export default function Dashboard({ organizations, hasPasskey }: DashboardProps)
                                 No authorized service yet
                             </div>
                             <p className="text-muted-foreground mx-auto mt-1 max-w-xl text-xs leading-5">
-                                When a KMJ service is assigned to your account it
-                                will appear here automatically.
+                                When a KMJ service is assigned to your account
+                                it will appear here automatically.
                             </p>
                         </div>
                     ) : (
                         <div className="mt-5 grid gap-4">
                             {services.map((service) =>
-                                service.product_slug === 'kmj-codebridge' ? (
-                                    <CodeBridgeCard key={service.id} service={service} />
+                                service.product_slug === "kmj-codebridge" ? (
+                                    <CodeBridgeCard
+                                        key={service.id}
+                                        service={service}
+                                    />
                                 ) : (
-                                    <GenericServiceCard key={service.id} service={service} />
+                                    <GenericServiceCard
+                                        key={service.id}
+                                        service={service}
+                                    />
                                 ),
                             )}
                         </div>
@@ -160,13 +180,13 @@ export default function Dashboard({ organizations, hasPasskey }: DashboardProps)
                                 </div>
                                 <h2 className="mt-1 font-bold">
                                     {hasPasskey
-                                        ? 'Security protection is active'
-                                        : 'Add a phishing-resistant passkey'}
+                                        ? "Security protection is active"
+                                        : "Add a phishing-resistant passkey"}
                                 </h2>
                                 <p className="text-muted-foreground mt-1 max-w-2xl text-xs leading-5">
                                     {hasPasskey
-                                        ? 'Your KMJ account has a passkey. Manage sign-in and security settings here.'
-                                        : 'Add a passkey for stronger sign-in to your KMJ services.'}
+                                        ? "Your KMJ account has a passkey. Manage sign-in and security settings here."
+                                        : "Add a passkey for stronger sign-in to your KMJ services."}
                                 </p>
                             </div>
                         </div>
@@ -202,7 +222,9 @@ function CodeBridgeCard({
                         </span>
                         <div className="min-w-0">
                             <div className="flex flex-wrap items-center gap-2">
-                                <h3 className="text-lg font-black">KMJ CodeBridge</h3>
+                                <h3 className="text-lg font-black">
+                                    KMJ CodeBridge
+                                </h3>
                                 <StatusBadge status={service.status} />
                             </div>
                             <p className="text-muted-foreground mt-1 text-xs">
@@ -211,8 +233,8 @@ function CodeBridgeCard({
                             <p className="text-muted-foreground mt-3 max-w-2xl text-sm leading-6">
                                 Secure, project-scoped AI coding for authorized
                                 computers and VPSs. Inspect code, apply guarded
-                                edits and run administrator-approved quality gates
-                                from ChatGPT.
+                                edits and run administrator-approved quality
+                                gates from ChatGPT.
                             </p>
                         </div>
                     </div>
@@ -241,11 +263,15 @@ function CodeBridgeCard({
                     <ServiceMetric
                         label="License"
                         value={detail?.license_status ?? service.status}
-                        hint={detail?.plan ? titleCase(detail.plan) + ' plan' : 'Account access'}
+                        hint={
+                            detail?.plan
+                                ? titleCase(detail.plan) + " plan"
+                                : "Account access"
+                        }
                     />
                     <ServiceMetric
                         label="OAuth"
-                        value={detail?.oauth_ready ? 'Ready' : 'Setup required'}
+                        value={detail?.oauth_ready ? "Ready" : "Setup required"}
                         hint="Secure ChatGPT sign-in"
                     />
                     <ServiceMetric
@@ -253,8 +279,8 @@ function CodeBridgeCard({
                         value={detail?.managed_devices ?? 0}
                         hint={
                             detail?.pending_pairings
-                                ? detail.pending_pairings + ' pairing pending'
-                                : 'Project-scoped access'
+                                ? detail.pending_pairings + " pairing pending"
+                                : "Project-scoped access"
                         }
                     />
                     <ServiceMetric
@@ -272,7 +298,8 @@ function CodeBridgeCard({
                         </div>
                         <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                             <code className="bg-muted/60 overflow-x-auto rounded-lg px-3 py-2 text-[11px]">
-                                {detail?.endpoint || 'https://kmjtechno.com/mcp'}
+                                {detail?.endpoint ||
+                                    "https://kmjtechno.com/mcp"}
                             </code>
                             <span className="inline-flex items-center gap-1.5 text-[11px] font-bold text-emerald-600 dark:text-emerald-400">
                                 <CheckCircle2 className="h-3.5 w-3.5" />
@@ -282,11 +309,13 @@ function CodeBridgeCard({
                     </div>
 
                     <div className="rounded-xl border bg-black/5 p-4 dark:bg-white/[0.02]">
-                        <div className="text-xs font-black">Authorized capabilities</div>
+                        <div className="text-xs font-black">
+                            Authorized capabilities
+                        </div>
                         <div className="mt-3 flex flex-wrap gap-2">
                             {(permissions.length
                                 ? permissions
-                                : ['read', 'write', 'execute']
+                                : ["read", "write", "execute"]
                             ).map((permission) => (
                                 <span
                                     key={permission}
@@ -333,7 +362,7 @@ function GenericServiceCard({
                     <img
                         src={
                             productImages[service.product_slug] ??
-                            '/assets/brand/kmj-social-card.webp'
+                            "/assets/brand/kmj-social-card.webp"
                         }
                         alt={service.product_name}
                         loading="lazy"
@@ -344,7 +373,9 @@ function GenericServiceCard({
                 <div className="min-w-0">
                     <div className="flex items-start justify-between gap-3">
                         <div>
-                            <h3 className="font-black">{service.product_name}</h3>
+                            <h3 className="font-black">
+                                {service.product_name}
+                            </h3>
                             <p className="text-muted-foreground mt-1 text-[11px]">
                                 {service.organization_name}
                             </p>
@@ -356,7 +387,7 @@ function GenericServiceCard({
                     </p>
                     <div className="mt-4 flex flex-wrap gap-3">
                         <Link
-                            href={'/products/' + service.product_slug}
+                            href={"/products/" + service.product_slug}
                             className="inline-flex items-center gap-1 text-[11px] font-bold text-red-500"
                         >
                             Service details
@@ -430,7 +461,9 @@ function Metric({ label, value }: { label: string; value: number | string }) {
     return (
         <div className="bg-background/70 min-w-28 rounded-xl border px-4 py-3">
             <div className="text-lg font-black">{value}</div>
-            <div className="text-muted-foreground mt-0.5 text-[10px]">{label}</div>
+            <div className="text-muted-foreground mt-0.5 text-[10px]">
+                {label}
+            </div>
         </div>
     );
 }
@@ -440,25 +473,27 @@ function titleCase(value: string): string {
         .split(/[-_]/)
         .filter(Boolean)
         .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-        .join(' ');
+        .join(" ");
 }
 
 function formatDate(value?: string | null): string {
-    if (!value) return '—';
+    if (!value) return "—";
     const date = new Date(value);
     if (Number.isNaN(date.getTime())) return value;
-    return new Intl.DateTimeFormat('en', {
-        year: 'numeric',
-        month: 'short',
-        day: '2-digit',
+    return new Intl.DateTimeFormat("en", {
+        year: "numeric",
+        month: "short",
+        day: "2-digit",
     }).format(date);
 }
 
 Dashboard.layout = {
     breadcrumbs: [
         {
-            title: 'My Services',
+            title: "My Services",
             href: dashboard(),
         },
     ],
 };
+
+[executed on device: kmjtechnonetgmailcom (cbe1c3e2-c299-4851-9d11-9fafa86b4357)]
