@@ -1,6 +1,5 @@
 <?php
 
-use App\Services\CodeBridge\OAuth\OAuthCore;
 use App\Services\CodeBridge\OAuth\OAuthError;
 use App\Services\CodeBridge\OAuth\OAuthServer;
 use Illuminate\Http\JsonResponse;
