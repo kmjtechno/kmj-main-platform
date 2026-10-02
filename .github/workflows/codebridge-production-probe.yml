@@ -1,0 +1,80 @@
+name: CodeBridge Production Probe
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/codebridge-production-probe.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: [self-hosted, linux, x64, kmj-main-platform-ci]
+    timeout-minutes: 10
+    steps:
+      - name: Probe production layout and CodeBridge endpoints
+        shell: bash
+        run: |
+          set -euo pipefail
+          PROD=/home/kmjprod/current
+          echo "host=$(hostname)"
+          echo "user=$(id -un)"
+          echo "prod_path=$PROD"
+          if [ -e "$PROD" ]; then
+            echo "prod_exists=yes"
+            ls -ld "$PROD"
+            readlink -f "$PROD" || true
+          else
+            echo "prod_exists=no"
+          fi
+          if [ -d "$PROD/.git" ] || git -C "$PROD" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+            echo "git=yes"
+            echo "sha=$(git -C "$PROD" rev-parse HEAD)"
+            echo "branch=$(git -C "$PROD" branch --show-current || true)"
+            echo "origin=$(git -C "$PROD" remote get-url origin || true)"
+            echo "status_begin"
+            git -C "$PROD" status --porcelain=v1 || true
+            echo "status_end"
+          else
+            echo "git=no"
+          fi
+          for svc in php8.4-fpm php8.3-fpm nginx; do
+            systemctl is-active "$svc" 2>/dev/null && echo "service:$svc=active" || true
+          done
+          python3 - <<'PY'
+          import urllib.request, urllib.error
+          urls = [
+            "https://kmjtechno.com/.well-known/oauth-authorization-server",
+            "https://kmjtechno.com/.well-known/oauth-protected-resource",
+            "https://kmjtechno.com/.well-known/oauth-protected-resource/mcp",
+            "https://kmjtechno.com/oauth/jwks.json",
+          ]
+          for u in urls:
+              try:
+                  with urllib.request.urlopen(u, timeout=10) as r:
+                      body=r.read(800).decode("utf-8","replace")
+                      print("http", r.status, u, body.replace("\n"," ")[:800])
+              except urllib.error.HTTPError as e:
+                  body=e.read(800).decode("utf-8","replace")
+                  print("http", e.code, u, body.replace("\n"," ")[:800])
+              except Exception as e:
+                  print("http_error", u, type(e).__name__, str(e)[:200])
+          req=urllib.request.Request(
+              "https://kmjtechno.com/mcp",
+              method="POST",
+              data=b'{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{}}',
+              headers={"Content-Type":"application/json","Accept":"application/json, text/event-stream"},
+          )
+          try:
+              with urllib.request.urlopen(req, timeout=15) as r:
+                  body=r.read(4000).decode("utf-8","replace")
+                  print("mcp", r.status, body.replace("\n"," ")[:4000])
+          except urllib.error.HTTPError as e:
+              body=e.read(4000).decode("utf-8","replace")
+              print("mcp", e.code, body.replace("\n"," ")[:4000])
+          except Exception as e:
+              print("mcp_error", type(e).__name__, str(e)[:300])
+          PY
