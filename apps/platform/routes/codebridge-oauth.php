@@ -1,9 +1,11 @@
 <?php
 
+use App\Services\CodeBridge\OAuth\OAuthCore;
 use App\Services\CodeBridge\OAuth\OAuthError;
 use App\Services\CodeBridge\OAuth\OAuthServer;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
@@ -22,6 +24,75 @@ Route::get('.well-known/oauth-authorization-server', function (OAuthServer $serv
 
     return response()->json($server->metadata());
 })->name('codebridge.oauth.metadata');
+
+Route::get('.well-known/oauth-protected-resource', function (OAuthServer $server) {
+    abort_unless($server->enabled(), 404);
+
+    return response()->json([
+        'resource' => $server->resource(),
+        'authorization_servers' => [$server->issuer()],
+        'scopes_supported' => array_values(array_filter(
+            OAuthCore::SCOPES,
+            fn (string $scope): bool => $scope !== 'offline_access',
+        )),
+    ]);
+})->name('codebridge.oauth.resource');
+
+Route::get('.well-known/oauth-protected-resource/mcp', function (OAuthServer $server) {
+    abort_unless($server->enabled(), 404);
+
+    return response()->json([
+        'resource' => $server->resource(),
+        'authorization_servers' => [$server->issuer()],
+        'scopes_supported' => array_values(array_filter(
+            OAuthCore::SCOPES,
+            fn (string $scope): bool => $scope !== 'offline_access',
+        )),
+    ]);
+})->name('codebridge.oauth.resource.mcp');
+
+Route::post('mcp', function (Request $request, OAuthServer $server) {
+    abort_unless($server->enabled(), 404);
+    if (strlen($request->getContent()) > 1048576) {
+        abort(413);
+    }
+
+    $upstream = rtrim((string) config('services.codebridge_gateway.url'), '/');
+    abort_unless(str_starts_with($upstream, 'https://'), 503);
+
+    $headers = [
+        'Accept' => (string) $request->header('Accept', 'application/json, text/event-stream'),
+        'Content-Type' => (string) $request->header('Content-Type', 'application/json'),
+    ];
+    foreach (['Authorization', 'MCP-Protocol-Version'] as $name) {
+        $value = $request->header($name);
+        if (is_string($value) && $value !== '') {
+            $headers[$name] = $value;
+        }
+    }
+
+    try {
+        $upstreamResponse = Http::timeout(25)
+            ->connectTimeout(5)
+            ->withoutRedirecting()
+            ->withHeaders($headers)
+            ->withBody($request->getContent(), $headers['Content-Type'])
+            ->post($upstream.'/mcp');
+    } catch (Throwable) {
+        return response()->json(['error' => 'CODEBRIDGE_GATEWAY_UNAVAILABLE'], 503)
+            ->header('Cache-Control', 'no-store');
+    }
+
+    $responseHeaders = ['Cache-Control' => 'no-store'];
+    foreach (['Content-Type', 'WWW-Authenticate'] as $name) {
+        $value = $upstreamResponse->header($name);
+        if (is_string($value) && $value !== '') {
+            $responseHeaders[$name] = $value;
+        }
+    }
+
+    return response($upstreamResponse->body(), $upstreamResponse->status(), $responseHeaders);
+})->middleware('throttle:240,1')->name('codebridge.mcp');
 
 Route::get('oauth/jwks.json', function (OAuthServer $server) {
     abort_unless($server->enabled(), 404);
