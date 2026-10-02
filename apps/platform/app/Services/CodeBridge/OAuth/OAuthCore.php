@@ -111,12 +111,16 @@ final class OAuthCore
     }
 
     /** @param array<string, mixed> $claims */
-    public static function signJwt(array $claims, string $secretKey, string $kid): string
-    {
+    public static function signJwt(
+        array $claims,
+        string $secretKey,
+        string $kid,
+        string $type = 'at+jwt',
+    ): string {
         if (strlen($secretKey) !== SODIUM_CRYPTO_SIGN_SECRETKEYBYTES) {
             throw new DomainException('OAUTH_SIGNING_KEY_INVALID');
         }
-        $header = self::base64Url(json_encode(['alg' => 'EdDSA', 'typ' => 'at+jwt', 'kid' => $kid], JSON_THROW_ON_ERROR));
+        $header = self::base64Url(json_encode(['alg' => 'EdDSA', 'typ' => $type, 'kid' => $kid], JSON_THROW_ON_ERROR));
         $payload = self::base64Url(json_encode($claims, JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES));
         $signature = sodium_crypto_sign_detached($header.'.'.$payload, $secretKey);
 
