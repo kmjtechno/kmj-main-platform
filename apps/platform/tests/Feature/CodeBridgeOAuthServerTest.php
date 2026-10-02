@@ -6,6 +6,7 @@ namespace Tests\Feature;
 
 use App\Models\User;
 use App\Services\CodeBridge\OAuth\OAuthCore;
+use App\Services\CodeBridge\OAuth\OAuthServer;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Inertia\Testing\AssertableInertia as Assert;
@@ -124,6 +125,12 @@ final class CodeBridgeOAuthServerTest extends TestCase
         $this->assertSame('codebridge:read codebridge:write', $claims['scope']);
         $this->assertSame($claims['iat'] + 900, $claims['exp']);
         $this->assertSame('Bearer', $token['token_type']);
+
+        $verified = app(OAuthServer::class)->verifyAccessToken($token['access_token']);
+        $this->assertIsArray($verified);
+        $this->assertSame('kmj-user:'.$user->id, $verified['sub']);
+        $this->assertSame(['codebridge:read', 'codebridge:write'], $verified['scopes']);
+        $this->assertNull(app(OAuthServer::class)->verifyAccessToken($token['access_token'].'x'));
 
         // The code is single use.
         $this->post('/oauth/token', [

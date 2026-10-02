@@ -1,11 +1,13 @@
 <?php
 
+use App\Services\CodeBridge\OAuth\OAuthServer;
 use App\Services\Licensing\CodeBridge\CodeBridgeDevicePairingService;
 use App\Services\Licensing\CodeBridge\CodeBridgeRenewalService;
 use App\Services\Licensing\Kslp\KslpSigner;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
+use KMJ\MainPlatform\Organizations\Services\OrganizationDirectory;
 
 Route::post('v1/codebridge/renew', function (Request $request) {
     if (! config('codebridge.enabled', false)) {
@@ -107,10 +109,28 @@ Route::post('codebridge/v1/device-credentials/introspect', function (Request $re
         ->whereNull('l.revoked_at')
         ->where('l.starts_at', '<=', now())
         ->where('l.expires_at', '>', now())
-        ->select(['c.device_id', 'c.tenant_id', 'p.project_id'])
+        ->select(['c.device_id', 'c.tenant_id', 'p.project_id', 'p.requested_permissions'])
         ->first();
 
     if (! $row) {
+        return response()->json(['active' => false], 401)->header('Cache-Control', 'no-store');
+    }
+
+    $permissions = [];
+    if (is_string($row->requested_permissions) && $row->requested_permissions !== '') {
+        try {
+            $decoded = json_decode($row->requested_permissions, true, 8, JSON_THROW_ON_ERROR);
+            if (is_array($decoded)) {
+                $permissions = array_values(array_unique(array_values(array_intersect(
+                    ['read', 'write', 'execute'],
+                    array_filter($decoded, 'is_string'),
+                ))));
+            }
+        } catch (Throwable) {
+            $permissions = [];
+        }
+    }
+    if ($permissions === []) {
         return response()->json(['active' => false], 401)->header('Cache-Control', 'no-store');
     }
 
@@ -119,5 +139,63 @@ Route::post('codebridge/v1/device-credentials/introspect', function (Request $re
         'device_id' => $row->device_id,
         'tenant_id' => $row->tenant_id,
         'projects' => is_string($row->project_id) && $row->project_id !== '' ? [$row->project_id] : [],
+        'permissions' => $permissions,
+    ])->header('Cache-Control', 'no-store');
+})->middleware('throttle:120,1');
+
+Route::post('codebridge/v1/user-access/introspect', function (
+    Request $request,
+    OAuthServer $oauth,
+    OrganizationDirectory $organizations,
+) {
+    if (! config('codebridge.enabled', false) || ! $oauth->enabled()) {
+        abort(503);
+    }
+    $token = $request->bearerToken();
+    $claims = is_string($token) ? $oauth->verifyAccessToken($token) : null;
+    if (! is_array($claims) || ! preg_match('/\Akmj-user:([1-9][0-9]*)\z/D', (string) ($claims['sub'] ?? ''), $match)) {
+        return response()->json(['active' => false], 401)->header('Cache-Control', 'no-store');
+    }
+
+    $scopePermissions = [];
+    foreach (($claims['scopes'] ?? []) as $scope) {
+        if (is_string($scope) && str_starts_with($scope, 'codebridge:')) {
+            $permission = substr($scope, strlen('codebridge:'));
+            if (in_array($permission, ['read', 'write', 'execute'], true)) {
+                $scopePermissions[] = $permission;
+            }
+        }
+    }
+    $scopePermissions = array_values(array_unique($scopePermissions));
+    if ($scopePermissions === []) {
+        return response()->json(['active' => false], 403)->header('Cache-Control', 'no-store');
+    }
+
+    $userId = (int) $match[1];
+    $memberships = collect($organizations->forUser($userId))
+        ->filter(fn (array $org): bool => $organizations->userCanManage($userId, $org['id']))
+        ->filter(fn (array $org): bool => DB::table('kslp_licenses')
+            ->where('customer_id', $org['id'])
+            ->where('product', 'KMJ_CODEBRIDGE')
+            ->where('status', 'active')
+            ->whereNull('revoked_at')
+            ->where('starts_at', '<=', now())
+            ->where('expires_at', '>', now())
+            ->exists())
+        ->map(fn (array $org): array => [
+            'tenant_id' => $org['id'],
+            'permissions' => $scopePermissions,
+        ])
+        ->values()
+        ->all();
+
+    if ($memberships === []) {
+        return response()->json(['active' => false], 403)->header('Cache-Control', 'no-store');
+    }
+
+    return response()->json([
+        'active' => true,
+        'user_id' => $claims['sub'],
+        'memberships' => $memberships,
     ])->header('Cache-Control', 'no-store');
 })->middleware('throttle:120,1');
