@@ -173,8 +173,7 @@ Route::post('codebridge/v1/user-access/introspect', function (
 
     $userId = (int) $match[1];
     $memberships = collect($organizations->forUser($userId))
-        ->filter(fn (array $org): bool => isset($org['id']) && is_string($org['id'])
-            && $organizations->userCanManage($userId, $org['id']))
+        ->filter(fn (array $org): bool => $organizations->userCanManage($userId, $org['id']))
         ->filter(fn (array $org): bool => DB::table('kslp_licenses')
             ->where('customer_id', $org['id'])
             ->where('product', 'KMJ_CODEBRIDGE')
