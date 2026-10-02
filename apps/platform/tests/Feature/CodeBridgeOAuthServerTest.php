@@ -173,7 +173,7 @@ final class CodeBridgeOAuthServerTest extends TestCase
                 'name' => $user->name,
             ]);
 
-        $this->getJson('/oauth/userinfo')
+        $this->withHeader('Authorization', '')->getJson('/oauth/userinfo')
             ->assertUnauthorized()
             ->assertJson(['error' => 'invalid_token']);
     }
