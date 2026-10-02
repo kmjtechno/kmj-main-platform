@@ -46,6 +46,7 @@ final class OAuthServer
             'token_endpoint' => $issuer.'/oauth/token',
             'registration_endpoint' => $issuer.'/oauth/register',
             'jwks_uri' => $issuer.'/oauth/jwks.json',
+            'userinfo_endpoint' => $issuer.'/oauth/userinfo',
             'scopes_supported' => OAuthCore::SCOPES,
             'response_types_supported' => ['code'],
             'response_modes_supported' => ['query'],

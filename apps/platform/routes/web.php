@@ -4,6 +4,7 @@ use App\Http\Controllers\CodeBridgeOAuthLinkController;
 use App\Models\LicenseAuditEvent;
 use App\Models\User;
 use App\Services\AuthorityBootstrapper;
+use App\Services\CodeBridge\OAuth\OAuthServer;
 use App\Services\Commerce\DesktopCommanderCommercialPolicy;
 use App\Services\Commerce\KmjProductCatalog;
 use App\Services\Commerce\PublicProductCatalog;
@@ -15,6 +16,7 @@ use App\Services\Releases\CustomerReleaseAccess;
 use App\Services\Releases\ReleaseArtifactDelivery;
 use DateTimeImmutable as ImmutableDateTime;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 use KMJ\MainPlatform\Catalog\Models\Product;
@@ -235,6 +237,50 @@ Route::middleware(['auth', 'verified'])->group(function () {
                     ]
                     : null;
 
+                $entitlement['service'] = null;
+                if ($entitlement['product_slug'] === 'kmj-codebridge') {
+                    $license = DB::table('kslp_licenses')
+                        ->where('customer_id', $organization['id'])
+                        ->where('product', 'KMJ_CODEBRIDGE')
+                        ->where('status', 'active')
+                        ->whereNull('revoked_at')
+                        ->where('starts_at', '<=', now())
+                        ->where('expires_at', '>', now())
+                        ->oldest('created_at')
+                        ->first();
+                    $plan = $license
+                        ? DB::table('plans')->where('code', 'codebridge.'.$license->plan)->where('status', 'active')->first()
+                        : null;
+                    $features = $plan && is_string($plan->features)
+                        ? json_decode($plan->features, true)
+                        : null;
+                    $permissions = collect(is_array($features) ? $features : [])
+                        ->filter(fn (mixed $enabled, string $permission): bool => $enabled === true
+                            && in_array($permission, ['read', 'write', 'execute'], true))
+                        ->keys()
+                        ->values()
+                        ->all();
+
+                    $entitlement['service'] = [
+                        'kind' => 'codebridge',
+                        'plan' => $license?->plan,
+                        'license_status' => $license !== null ? (string) $license->status : 'setup_required',
+                        'license_expires_at' => $license?->expires_at,
+                        'managed_devices' => DB::table('codebridge_device_credentials')
+                            ->where('tenant_id', $organization['id'])
+                            ->whereNull('revoked_at')
+                            ->where('expires_at_epoch', '>', time())
+                            ->count(),
+                        'pending_pairings' => DB::table('codebridge_device_pairings')
+                            ->where('status', 'pending')
+                            ->where('expires_at', '>', now())
+                            ->count(),
+                        'endpoint' => (string) config('codebridge_oauth.resource'),
+                        'oauth_ready' => app(OAuthServer::class)->enabled(),
+                        'permissions' => $permissions,
+                    ];
+                }
+
                 $presentedEntitlements[] = $entitlement;
             }
 
@@ -247,6 +293,78 @@ Route::middleware(['auth', 'verified'])->group(function () {
             'hasPasskey' => $user->passkeys()->exists(),
         ]);
     })->name('dashboard');
+
+    Route::get('services/kmj-codebridge', function (
+        Request $request,
+        OrganizationDirectory $organizations,
+        EntitlementReader $entitlements,
+        OAuthServer $oauth,
+    ) {
+        $user = $request->user();
+        abort_unless($user instanceof User, 401);
+
+        $access = collect($organizations->forUser($user->id))
+            ->map(function (array $organization) use ($entitlements): ?array {
+                $entitlement = collect($entitlements->forOrganization($organization['id']))
+                    ->first(fn (array $item): bool => $item['product_slug'] === 'kmj-codebridge'
+                        && $item['status'] === 'active');
+
+                return is_array($entitlement)
+                    ? ['organization' => $organization, 'entitlement' => $entitlement]
+                    : null;
+            })
+            ->filter()
+            ->first();
+
+        abort_unless(is_array($access), 404);
+        $organization = $access['organization'];
+        $entitlement = $access['entitlement'];
+
+        $license = DB::table('kslp_licenses')
+            ->where('customer_id', $organization['id'])
+            ->where('product', 'KMJ_CODEBRIDGE')
+            ->where('status', 'active')
+            ->whereNull('revoked_at')
+            ->where('starts_at', '<=', now())
+            ->where('expires_at', '>', now())
+            ->oldest('created_at')
+            ->first();
+        $plan = $license
+            ? DB::table('plans')->where('code', 'codebridge.'.$license->plan)->where('status', 'active')->first()
+            : null;
+        $features = $plan && is_string($plan->features) ? json_decode($plan->features, true) : null;
+        $limits = $plan && is_string($plan->limits) ? json_decode($plan->limits, true) : null;
+        $permissions = collect(is_array($features) ? $features : [])
+            ->filter(fn (mixed $enabled, string $permission): bool => $enabled === true
+                && in_array($permission, ['read', 'write', 'execute'], true))
+            ->keys()
+            ->values()
+            ->all();
+
+        return Inertia::render('services/codebridge', [
+            'organization' => $organization,
+            'entitlement' => $entitlement,
+            'service' => [
+                'endpoint' => $oauth->resource(),
+                'oauth_ready' => $oauth->enabled(),
+                'plan' => $license?->plan,
+                'license_status' => $license !== null ? (string) $license->status : 'setup_required',
+                'license_starts_at' => $license?->starts_at,
+                'license_expires_at' => $license?->expires_at,
+                'permissions' => $permissions,
+                'device_limit' => is_array($limits) && is_int($limits['devices'] ?? null) ? $limits['devices'] : null,
+                'managed_devices' => DB::table('codebridge_device_credentials')
+                    ->where('tenant_id', $organization['id'])
+                    ->whereNull('revoked_at')
+                    ->where('expires_at_epoch', '>', time())
+                    ->count(),
+                'pending_pairings' => DB::table('codebridge_device_pairings')
+                    ->where('status', 'pending')
+                    ->where('expires_at', '>', now())
+                    ->count(),
+            ],
+        ]);
+    })->name('services.codebridge');
 
     Route::get('customer/releases/{release}/download', function (
         Request $request,

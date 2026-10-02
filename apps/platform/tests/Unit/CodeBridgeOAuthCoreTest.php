@@ -61,6 +61,7 @@ final class CodeBridgeOAuthCoreTest extends TestCase
     {
         self::assertSame(['codebridge:read'], OAuthCore::parseScopes(null));
         self::assertSame(['codebridge:read', 'codebridge:write'], OAuthCore::parseScopes('codebridge:read  codebridge:write codebridge:read'));
+        self::assertSame(['openid', 'codebridge:read'], OAuthCore::parseScopes('openid codebridge:read'));
         $this->expectException(DomainException::class);
         OAuthCore::parseScopes('codebridge:read admin');
     }

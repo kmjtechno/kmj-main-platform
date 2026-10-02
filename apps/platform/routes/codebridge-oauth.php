@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\User;
 use App\Services\CodeBridge\OAuth\OAuthError;
 use App\Services\CodeBridge\OAuth\OAuthServer;
 use Illuminate\Http\JsonResponse;
@@ -103,6 +104,35 @@ Route::get('oauth/jwks.json', function (OAuthServer $server) {
 
     return response()->json($server->jwks());
 })->name('codebridge.oauth.jwks');
+
+Route::get('oauth/userinfo', function (Request $request, OAuthServer $server) use ($noStore) {
+    abort_unless($server->enabled(), 404);
+
+    $token = $request->bearerToken();
+    $claims = is_string($token) ? $server->verifyAccessToken($token) : null;
+    if (! is_array($claims) || ! preg_match('/\Akmj-user:([1-9][0-9]*)\z/D', (string) ($claims['sub'] ?? ''), $match)) {
+        return response()->json(['error' => 'invalid_token'], 401, $noStore)
+            ->header('WWW-Authenticate', 'Bearer error="invalid_token"');
+    }
+
+    if (! in_array('openid', $claims['scopes'] ?? [], true)) {
+        return response()->json(['error' => 'insufficient_scope'], 403, $noStore)
+            ->header('WWW-Authenticate', 'Bearer error="insufficient_scope", scope="openid"');
+    }
+
+    $user = User::query()->find((int) $match[1]);
+    if (! $user instanceof User) {
+        return response()->json(['error' => 'invalid_token'], 401, $noStore)
+            ->header('WWW-Authenticate', 'Bearer error="invalid_token"');
+    }
+
+    return response()->json([
+        'sub' => (string) $claims['sub'],
+        'email' => (string) $user->email,
+        'email_verified' => $user->email_verified_at !== null,
+        'name' => (string) $user->name,
+    ], 200, $noStore);
+})->name('codebridge.oauth.userinfo');
 
 Route::post('oauth/register', function (Request $request, OAuthServer $server) use ($noStore, $oauthError) {
     abort_unless($server->enabled(), 404);
