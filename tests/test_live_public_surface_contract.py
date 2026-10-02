@@ -7,6 +7,8 @@ ROOT = Path(__file__).resolve().parents[1]
 BOOTSTRAP = ROOT / "apps/platform/bootstrap/app.php"
 WELCOME = ROOT / "apps/platform/resources/js/pages/welcome.tsx"
 APP_VIEW = ROOT / "apps/platform/resources/views/app.blade.php"
+FAVICON = ROOT / "apps/platform/public/favicon.png"
+LOCKED_APP_ICON = ROOT / "apps/platform/public/assets/brand/kmj-app-icon.png"
 DEPLOY = ROOT / ".github/workflows/staging-vps-deploy-fixed.yml"
 HEALTH = ROOT / ".github/workflows/self-hosted-runner-health.yml"
 BROWSER_QA = ROOT / "ops/staging/browser-qa.mjs"
@@ -24,13 +26,21 @@ class LivePublicSurfaceContractTests(unittest.TestCase):
 
     def test_public_shell_uses_locked_kmj_favicon(self):
         app_view = APP_VIEW.read_text(encoding="utf-8")
-        locked_icon = "/assets/brand/kmj-app-icon.png?v=kmj-brand-20261002"
+        locked_icon = "/favicon.png?v=kmj-brand-20261002"
 
-        self.assertIn(f'rel="icon" type="image/png" sizes="512x512" href="{locked_icon}"', app_view)
-        self.assertIn(f'rel="shortcut icon" type="image/png" href="{locked_icon}"', app_view)
+        self.assertIn(
+            f'rel="icon" type="image/png" sizes="512x512" href="{locked_icon}"',
+            app_view,
+        )
+        self.assertIn(
+            f'rel="shortcut icon" type="image/png" href="{locked_icon}"',
+            app_view,
+        )
         self.assertIn(f'rel="apple-touch-icon" href="{locked_icon}"', app_view)
         self.assertNotIn('href="/favicon.ico"', app_view)
         self.assertNotIn('href="/favicon.svg"', app_view)
+        self.assertTrue(FAVICON.is_file())
+        self.assertEqual(FAVICON.read_bytes(), LOCKED_APP_ICON.read_bytes())
 
     def test_deploy_and_health_checks_do_not_depend_on_public_info_monitor(self):
         deploy = DEPLOY.read_text(encoding="utf-8")
