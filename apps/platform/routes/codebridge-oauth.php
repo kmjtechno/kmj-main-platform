@@ -25,6 +25,12 @@ Route::get('.well-known/oauth-authorization-server', function (OAuthServer $serv
     return response()->json($server->metadata());
 })->name('codebridge.oauth.metadata');
 
+Route::get('.well-known/openid-configuration', function (OAuthServer $server) {
+    abort_unless($server->enabled(), 404);
+
+    return response()->json($server->metadata());
+})->name('codebridge.oauth.openid');
+
 Route::get('.well-known/oauth-protected-resource', function (OAuthServer $server) {
     abort_unless($server->enabled(), 404);
 
