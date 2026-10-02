@@ -348,7 +348,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
                 'endpoint' => $oauth->resource(),
                 'oauth_ready' => $oauth->enabled(),
                 'plan' => $license?->plan,
-                'license_status' => $license?->status ?? 'setup_required',
+                'license_status' => $license !== null ? (string) $license->status : 'setup_required',
                 'license_starts_at' => $license?->starts_at,
                 'license_expires_at' => $license?->expires_at,
                 'permissions' => $permissions,
