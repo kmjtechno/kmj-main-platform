@@ -1,4 +1,6 @@
-import { Head, Link } from '@inertiajs/react';
+[Reading 359 lines from start (total: 359 lines, 0 remaining)]
+
+import { Head, Link } from "@inertiajs/react";
 import {
     ArrowLeft,
     Cable,
@@ -10,7 +12,7 @@ import {
     ShieldCheck,
     TerminalSquare,
     Wrench,
-} from 'lucide-react';
+} from "lucide-react";
 
 type Organization = {
     id: string;
@@ -81,10 +83,11 @@ export default function CodeBridgeService({
                                     {organization.name}
                                 </p>
                                 <p className="text-muted-foreground mt-4 max-w-2xl text-sm leading-6">
-                                    Connect ChatGPT to authorized computers and VPS
-                                    projects through a secure, project-scoped MCP
-                                    bridge. CodeBridge exposes only approved files,
-                                    Git operations and quality gates.
+                                    Connect ChatGPT to authorized computers and
+                                    VPS projects through a secure,
+                                    project-scoped MCP bridge. CodeBridge
+                                    exposes only approved files, Git operations
+                                    and quality gates.
                                 </p>
                             </div>
                         </div>
@@ -112,11 +115,15 @@ export default function CodeBridgeService({
                     <Metric
                         label="License"
                         value={service.license_status}
-                        hint={service.plan ? titleCase(service.plan) + ' plan' : 'Setup required'}
+                        hint={
+                            service.plan
+                                ? titleCase(service.plan) + " plan"
+                                : "Setup required"
+                        }
                     />
                     <Metric
                         label="OAuth"
-                        value={service.oauth_ready ? 'Ready' : 'Unavailable'}
+                        value={service.oauth_ready ? "Ready" : "Unavailable"}
                         hint="ChatGPT account linking"
                     />
                     <Metric
@@ -124,8 +131,8 @@ export default function CodeBridgeService({
                         value={service.managed_devices}
                         hint={
                             service.device_limit
-                                ? 'Limit ' + service.device_limit
-                                : 'No plan limit reported'
+                                ? "Limit " + service.device_limit
+                                : "No plan limit reported"
                         }
                     />
                     <Metric
@@ -142,8 +149,8 @@ export default function CodeBridgeService({
                             <h2 className="font-black">Connection</h2>
                         </div>
                         <p className="text-muted-foreground mt-1 text-xs">
-                            Use this endpoint when connecting KMJ CodeBridge as an
-                            MCP service.
+                            Use this endpoint when connecting KMJ CodeBridge as
+                            an MCP service.
                         </p>
 
                         <div className="mt-5 rounded-xl border bg-black/5 p-4 dark:bg-white/[0.02]">
@@ -160,7 +167,9 @@ export default function CodeBridgeService({
                         </div>
 
                         <div className="mt-5">
-                            <div className="text-xs font-black">Connect from ChatGPT</div>
+                            <div className="text-xs font-black">
+                                Connect from ChatGPT
+                            </div>
                             <ol className="text-muted-foreground mt-3 space-y-3 text-xs leading-5">
                                 <li className="flex gap-3">
                                     <StepNumber value="1" />
@@ -169,8 +178,8 @@ export default function CodeBridgeService({
                                 </li>
                                 <li className="flex gap-3">
                                     <StepNumber value="2" />
-                                    Sign in with this KMJ account and approve the
-                                    requested CodeBridge permissions.
+                                    Sign in with this KMJ account and approve
+                                    the requested CodeBridge permissions.
                                 </li>
                                 <li className="flex gap-3">
                                     <StepNumber value="3" />
@@ -188,14 +197,19 @@ export default function CodeBridgeService({
                         </div>
 
                         <div className="mt-5 space-y-3">
-                            <InfoRow label="Organization" value={organization.name} />
+                            <InfoRow
+                                label="Organization"
+                                value={organization.name}
+                            />
                             <InfoRow
                                 label="Capability"
                                 value={entitlement.capability}
                             />
                             <InfoRow
                                 label="Plan"
-                                value={service.plan ? titleCase(service.plan) : '—'}
+                                value={
+                                    service.plan ? titleCase(service.plan) : "—"
+                                }
                             />
                             <InfoRow
                                 label="Started"
@@ -214,7 +228,7 @@ export default function CodeBridgeService({
                             <div className="mt-3 flex flex-wrap gap-2">
                                 {(service.permissions.length
                                     ? service.permissions
-                                    : ['read', 'write', 'execute']
+                                    : ["read", "write", "execute"]
                                 ).map((permission) => (
                                     <span
                                         key={permission}
@@ -240,8 +254,8 @@ export default function CodeBridgeService({
                     <div>
                         <h2 className="font-black">What CodeBridge can do</h2>
                         <p className="text-muted-foreground mt-1 text-xs">
-                            Capabilities remain scoped to authorized projects and
-                            administrator-approved operations.
+                            Capabilities remain scoped to authorized projects
+                            and administrator-approved operations.
                         </p>
                     </div>
 
@@ -332,16 +346,18 @@ function titleCase(value: string): string {
         .split(/[-_]/)
         .filter(Boolean)
         .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-        .join(' ');
+        .join(" ");
 }
 
 function formatDate(value?: string | null): string {
-    if (!value) return '—';
+    if (!value) return "—";
     const date = new Date(value);
     if (Number.isNaN(date.getTime())) return value;
-    return new Intl.DateTimeFormat('en', {
-        year: 'numeric',
-        month: 'short',
-        day: '2-digit',
+    return new Intl.DateTimeFormat("en", {
+        year: "numeric",
+        month: "short",
+        day: "2-digit",
     }).format(date);
 }
+
+[executed on device: kmjtechnonetgmailcom (cbe1c3e2-c299-4851-9d11-9fafa86b4357)]
