@@ -43,10 +43,10 @@
             }
         </style>
 
-        {{-- Locked KMJ TECHNO favicon generated from the approved KMJ app icon. --}}
-        <link rel="icon" type="image/png" sizes="512x512" href="/kmj-favicon-20261002.png">
-        <link rel="shortcut icon" type="image/png" href="/kmj-favicon-20261002.png">
-        <link rel="apple-touch-icon" href="/kmj-favicon-20261002.png">
+        {{-- Approved transparent high-visibility KMJ TECHNO favicon. --}}
+        <link rel="icon" type="image/png" sizes="64x64" href="/kmj-favicon-v2-20261002.png">
+        <link rel="shortcut icon" type="image/png" href="/kmj-favicon-v2-20261002.png">
+        <link rel="apple-touch-icon" href="/assets/brand/kmj-app-icon.png">
 
         @fonts
 
