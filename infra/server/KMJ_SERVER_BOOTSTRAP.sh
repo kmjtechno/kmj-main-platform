@@ -49,6 +49,36 @@ yellow(){ printf '\033[1;33m%s\033[0m\n' "$*"; }
 red(){ printf '\033[1;31m%s\033[0m\n' "$*"; }
 phase(){ printf '\n\033[1;36m[%s] %s\033[0m\n' "$1" "$2"; }
 
+certificate_covers_domain() {
+  local domain="$1"
+  local cert
+  cert="$(mktemp)"
+  if ! timeout 20 openssl s_client -connect 127.0.0.1:443 -servername "$domain" -showcerts </dev/null 2>/dev/null \
+      | openssl x509 -outform PEM >"$cert"; then
+    rm -f "$cert"
+    return 1
+  fi
+  if openssl x509 -in "$cert" -noout -ext subjectAltName 2>/dev/null \
+      | grep -Fq "DNS:$domain"; then
+    rm -f "$cert"
+    return 0
+  fi
+  rm -f "$cert"
+  return 1
+}
+
+staging_vhost_routes_locally() {
+  local domain="$1"
+  local headers location
+  headers="$(curl -sSI --max-time 10 -H "Host: $domain" http://127.0.0.1/ || true)"
+  [[ -n "$headers" ]] || return 1
+  location="$(printf '%s\n' "$headers" | awk -F': *' 'tolower($1)=="location" {gsub("\r","",$2); print $2; exit}')"
+  case "$location" in
+    ""|"https://$domain"|"https://$domain/"|"https://$domain/"*) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
 trap 'red "Bootstrap failed at line $LINENO. Re-run the SAME script after fixing the reported cause. Log: $LOG"' ERR
 
 [[ $EUID -eq 0 ]] || { red "Run as root."; exit 1; }
@@ -494,11 +524,19 @@ if grep -Eq "successfully authenticated|shell access is disabled" <<<"$AUTH_OUT"
 fi
 
 DNS_READY=false
+TLS_READY=false
 if [[ -n "$SERVER_IP" ]]; then
   RESOLVED="$(getent ahostsv4 "$DOMAIN" 2>/dev/null | awk 'NR==1{print $1}' || true)"
   if [[ "$RESOLVED" == "$SERVER_IP" ]]; then
     DNS_READY=true
-    clpctl lets-encrypt:install:certificate --domainName="$DOMAIN" || true
+    if clpctl lets-encrypt:install:certificate --domainName="$DOMAIN" \
+      && certificate_covers_domain "$DOMAIN" \
+      && staging_vhost_routes_locally "$DOMAIN"; then
+      TLS_READY=true
+    else
+      red "Staging DNS is correct but its nginx vhost/TLS certificate is not valid for $DOMAIN."
+      red "Re-run: bash /root/KMJ_SERVER_BOOTSTRAP.sh after correcting the CloudPanel site/vhost."
+    fi
   fi
 fi
 
@@ -519,6 +557,7 @@ $DOMAIN -> ${SERVER_IP:-<this-server-public-ip>}
 Current readiness:
 GitHub deploy key authorized: $GITHUB_READY
 DNS points to this server: $DNS_READY
+Staging TLS/vhost valid: $TLS_READY
 
 After either pending account-level action is completed, re-run THE SAME:
   bash /root/KMJ_SERVER_BOOTSTRAP.sh
@@ -551,8 +590,9 @@ echo "Deploy timer: $(systemctl is-active kmj-stage-deploy.timer)"
 echo "Firewall: $(ufw status | head -1)"
 echo "GitHub ready: $GITHUB_READY"
 echo "DNS ready: $DNS_READY"
+echo "TLS/vhost ready: $TLS_READY"
 
-if [[ "$GITHUB_READY" == "true" && "$DNS_READY" == "true" ]]; then
+if [[ "$GITHUB_READY" == "true" && "$DNS_READY" == "true" && "$TLS_READY" == "true" ]]; then
   HTTP="$(curl -s -o /dev/null -w '%{http_code}' --max-time 15 "https://$DOMAIN" || true)"
   ROBOTS="$(curl -s --max-time 15 "https://$DOMAIN/robots.txt" || true)"
   echo "HTTPS status: $HTTP"
