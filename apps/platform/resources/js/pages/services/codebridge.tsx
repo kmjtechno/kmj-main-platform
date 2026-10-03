@@ -159,13 +159,30 @@ export default function CodeBridgeService({
                             </div>
                         </div>
 
+                        <div className="mt-5 rounded-xl border p-4">
+                            <div className="flex items-center gap-2 text-xs font-black">
+                                <TerminalSquare className="h-3.5 w-3.5 text-red-500" />
+                                Install on Linux / VPS
+                            </div>
+                            <p className="text-muted-foreground mt-2 text-[11px] leading-5">
+                                Run this from the project directory. The installer
+                                opens a short-lived browser pairing flow; no manual
+                                agent token is required.
+                            </p>
+                            <code className="mt-3 block overflow-x-auto rounded-lg bg-black/5 px-3 py-2 text-[11px] dark:bg-white/[0.03]">
+                                curl -fsSL https://kmjtechno.com/install | sudo bash
+                            </code>
+                        </div>
+
                         <div className="mt-5">
-                            <div className="text-xs font-black">Connect from ChatGPT</div>
+                            <div className="text-xs font-black">
+                                Connect from ChatGPT or Claude
+                            </div>
                             <ol className="text-muted-foreground mt-3 space-y-3 text-xs leading-5">
                                 <li className="flex gap-3">
                                     <StepNumber value="1" />
-                                    Open KMJ CodeBridge in ChatGPT and choose
-                                    Connect.
+                                    Add KMJ CodeBridge in ChatGPT or Claude and
+                                    choose Connect.
                                 </li>
                                 <li className="flex gap-3">
                                     <StepNumber value="2" />
@@ -174,8 +191,8 @@ export default function CodeBridgeService({
                                 </li>
                                 <li className="flex gap-3">
                                     <StepNumber value="3" />
-                                    Return to ChatGPT and select an authorized
-                                    device and project.
+                                    Return to the AI client and select an
+                                    authorized device and project.
                                 </li>
                             </ol>
                         </div>
