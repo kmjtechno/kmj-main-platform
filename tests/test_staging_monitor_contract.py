@@ -6,8 +6,11 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 DEPLOY_WORKFLOW = ROOT / ".github" / "workflows" / "staging-vps-deploy-fixed.yml"
+RECOVERY_WORKFLOW = ROOT / ".github" / "workflows" / "staging-deploy-recovery.yml"
+AUTH_SMOKE_WORKFLOW = ROOT / ".github" / "workflows" / "staging-authenticated-smoke.yml"
 DELIVERY_FINALIZER_WORKFLOW = ROOT / ".github" / "workflows" / "delivery-status-finalizer.yml"
 BOOTSTRAP = ROOT / "apps" / "platform" / "bootstrap" / "app.php"
+SERVER_BOOTSTRAP = ROOT / "infra" / "server" / "KMJ_SERVER_BOOTSTRAP.sh"
 
 
 class StagingMonitorContractTests(unittest.TestCase):
@@ -15,52 +18,48 @@ class StagingMonitorContractTests(unittest.TestCase):
         bootstrap = BOOTSTRAP.read_text(encoding="utf-8")
         self.assertNotIn("routes/staging-monitoring.php", bootstrap)
 
-    def test_staging_deploy_verifies_public_products_instead_of_monitor(self):
+    def test_staging_deploy_uses_public_exact_sha_evidence_without_ssh(self):
         workflow = DEPLOY_WORKFLOW.read_text(encoding="utf-8")
 
+        self.assertIn("x-kmj-deploy-sha", workflow.lower())
+        self.assertIn("VPS systemd auto-deploy timer", workflow)
         self.assertIn("https://staging.kmjtechno.com/products", workflow)
-        self.assertIn("https://staging.kmjtechno.com/products/kmj-calibration-pro", workflow)
+        self.assertIn(
+            "https://staging.kmjtechno.com/products/kmj-calibration-pro",
+            workflow,
+        )
+        self.assertIn("assert_dom 'root' 'Explore KMJ products'", workflow)
+        self.assertIn("assert_dom 'products' 'Explore product'", workflow)
+        self.assertIn("Staging UI assertion failed", workflow)
+        self.assertNotIn("STAGING_SSH_PRIVATE_KEY", workflow)
+        self.assertNotIn("ssh -i", workflow)
         self.assertNotIn("ops/staging/verify-monitor.py", workflow)
         self.assertNotIn("https://staging.kmjtechno.com/info", workflow)
-        self.assertIn("assert_dom 'root' 'Explore KMJ products'", workflow)
-        self.assertNotIn("grep -Fq 'Explore all products' <<< \"$root_dom\"", workflow)
-        self.assertIn("assert_dom 'products' 'Explore product'", workflow)
-        self.assertNotIn("grep -Fq 'View product'", workflow)
-        self.assertIn("Staging UI assertion failed", workflow)
 
-    def test_staging_deploy_refreshes_local_path_packages_before_composer_install(self):
-        workflow = DEPLOY_WORKFLOW.read_text()
-        install = (
-            'COMPOSER_PHP="$PHP_BIN" composer install --no-interaction '
-            '--prefer-dist --no-progress --no-dev --optimize-autoloader --no-scripts'
-        )
-        install_index = workflow.index(install)
-        for package in (
-            "domain-organizations",
-            "domain-catalog",
-            "domain-entitlements",
-            "domain-commerce",
-        ):
-            path = f"vendor/kmjtechno/{package}"
-            self.assertIn(path, workflow)
-            self.assertLess(workflow.index(path), install_index)
+    def test_server_bootstrap_remains_the_staging_deploy_authority(self):
+        bootstrap = SERVER_BOOTSTRAP.read_text(encoding="utf-8")
 
-    def test_staging_deploy_fails_closed_when_required_org_context_is_missing(self):
-        workflow = DEPLOY_WORKFLOW.read_text()
-        install = (
-            'COMPOSER_PHP="$PHP_BIN" composer install --no-interaction '
-            '--prefer-dist --no-progress --no-dev --optimize-autoloader --no-scripts'
-        )
-        install_index = workflow.index(install)
-        guard_index = workflow.index("class_exists")
-        guard_line = next(line for line in workflow.splitlines() if "class_exists" in line)
-        while "\\\\" in guard_line:
-            guard_line = guard_line.replace("\\\\", "\\")
-        class_name = r"KMJ\MainPlatform\Organizations\Services\OrganizationCapabilityContext"
+        self.assertIn('DEPLOY_BRANCH="${KMJ_DEPLOY_BRANCH:-staging-approved}"', bootstrap)
+        self.assertIn("kmj-stage-deploy.timer", bootstrap)
+        self.assertIn("OnUnitActiveSec=2min", bootstrap)
+        self.assertIn(r'SUCCESS_FILE="\$HOME/.kmj-stage-last-success"', bootstrap)
+        self.assertIn(r'git -C "\$REPO_DIR" reset --hard "origin/\$BRANCH"', bootstrap)
 
-        self.assertIn(class_name, guard_line)
-        self.assertGreater(guard_index, install_index)
-        self.assertIn("exit 47", workflow)
+    def test_authenticated_surface_smoke_no_longer_depends_on_vps_ssh(self):
+        workflow = AUTH_SMOKE_WORKFLOW.read_text(encoding="utf-8")
+
+        self.assertIn("runs-on: ubuntu-latest", workflow)
+        self.assertIn("staging:smoke-authenticated-surfaces", workflow)
+        self.assertIn("DB_CONNECTION: sqlite", workflow)
+        self.assertNotIn("STAGING_SSH_PRIVATE_KEY", workflow)
+        self.assertNotIn("ssh -i", workflow)
+
+    def test_staging_recovery_no_longer_depends_on_offline_runner(self):
+        workflow = RECOVERY_WORKFLOW.read_text(encoding="utf-8")
+
+        self.assertIn("runs-on: ubuntu-latest", workflow)
+        self.assertNotIn("kmj-main-platform-ci", workflow)
+        self.assertIn("rerun-failed-jobs", workflow)
 
     def test_worker_completion_has_delivery_status_finalizer(self):
         workflow = DELIVERY_FINALIZER_WORKFLOW.read_text(encoding="utf-8")

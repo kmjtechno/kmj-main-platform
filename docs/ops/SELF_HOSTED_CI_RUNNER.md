@@ -29,10 +29,12 @@ Run the `Self-Hosted Runner Health` workflow manually. It must complete on the `
 
 Only after the health gate is green should `Platform Runtime CI` and `Verify Foundation` be switched to the dedicated self-hosted label. Until then GitHub-hosted workflows remain unchanged so existing CI semantics do not regress.
 
-## Staging delivery on the existing runner pool
+## Staging delivery
 
-Staging deploy, bounded recovery and authenticated smoke use the repository-scoped `kmj-main-platform-ci` pool. They continue to consume only `staging-approved`; production access is not introduced. Deployment keys exist only in per-run directories under `runner.temp` and are removed in an `always()` step.
+The staging VPS owns deployment through its systemd `kmj-stage-deploy.timer`. The timer consumes only the machine-maintained `staging-approved` branch and serializes writes with the server-local deployment lock. GitHub Actions no longer needs a reusable VPS SSH private key to force a deployment.
 
-The health workflow verifies SSH clients, public staging responses and a real headless browser launch. `ops/self-hosted-runner/prepare-staging-browser.sh` downloads the pinned official Chrome for Testing headless shell into the runner tool cache without sudo. On Ubuntu 24.04, missing desktop libraries are downloaded through the configured authenticated APT indexes and extracted into the browser cache; no package installation or maintainer scripts run. Library paths apply only to the browser wrapper. The health gate still requires a successful browser launch. This does not install system packages or change the host configuration.
+`Staging VPS Deploy` runs on GitHub-hosted Ubuntu and verifies the exact approved commit through the staging-only `X-KMJ-Deploy-SHA` response header. The middleware emits that header only for `staging.kmjtechno.com`, derives it from the checked-out repository metadata without executing a shell, and never exposes it on the production host. The workflow waits for the timer to converge, then runs HTTP health, rendered UI checks, and desktop/mobile browser QA.
 
-The deployment workflow must pass the existing rendered homepage check plus `ops/staging/verify-monitor.py`, which checks the Inertia monitor component and matches the public deployed SHA to the approved commit. A successful HTTP response alone is insufficient proof of rollout.
+Authenticated route smoke also runs on GitHub-hosted Ubuntu against the same approved commit with an isolated SQLite database and transaction-scoped synthetic owner. This separates authenticated source regression from live public deployment proof while removing the stale SSH-key dependency.
+
+The self-hosted runner remains available for workflows that genuinely require its local AI/runtime environment, but staging deployment verification and bounded recovery do not depend on it.

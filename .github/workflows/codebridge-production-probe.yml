@@ -67,8 +67,15 @@ jobs:
                               payload=json.loads(body)
                               if payload.get("status") != "ok":
                                   raise RuntimeError("gateway health is not ok")
-                              if payload.get("version") != "0.2.0":
-                                  raise RuntimeError(f"gateway version drift: {payload.get('version')!r}")
+                              version = str(payload.get("version", ""))
+                              try:
+                                  parts = tuple(int(part) for part in version.split("."))
+                              except ValueError as exc:
+                                  raise RuntimeError(f"invalid gateway version: {version!r}") from exc
+                              if parts < (0, 2, 1):
+                                  raise RuntimeError(f"gateway version is too old: {version!r}")
+                              if payload.get("capabilities", {}).get("github") is not True:
+                                  raise RuntimeError("hosted GitHub capability is not enabled")
                           last_error = None
                           break
                   except urllib.error.HTTPError as e:
