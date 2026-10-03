@@ -12,7 +12,7 @@ permissions:
 
 jobs:
   probe:
-    runs-on: [self-hosted, linux, x64, kmj-main-platform-ci]
+    runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
       - name: Probe production layout and CodeBridge endpoints
@@ -47,6 +47,7 @@ jobs:
           python3 - <<'PY'
           import urllib.request, urllib.error
           urls = [
+            "https://kmj-codebridge-gateway.onrender.com/healthz",
             "https://kmjtechno.com/.well-known/oauth-authorization-server",
             "https://kmjtechno.com/.well-known/oauth-protected-resource",
             "https://kmjtechno.com/.well-known/oauth-protected-resource/mcp",
@@ -57,6 +58,13 @@ jobs:
                   with urllib.request.urlopen(u, timeout=10) as r:
                       body=r.read(800).decode("utf-8","replace")
                       print("http", r.status, u, body.replace("\n"," ")[:800])
+                      if u.endswith("/healthz"):
+                          import json
+                          payload=json.loads(body)
+                          if payload.get("status") != "ok":
+                              raise RuntimeError("gateway health is not ok")
+                          if payload.get("version") != "0.2.0":
+                              raise RuntimeError(f"gateway version drift: {payload.get('version')!r}")
               except urllib.error.HTTPError as e:
                   body=e.read(800).decode("utf-8","replace")
                   print("http", e.code, u, body.replace("\n"," ")[:800])
