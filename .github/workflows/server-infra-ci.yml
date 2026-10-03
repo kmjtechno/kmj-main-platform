@@ -15,7 +15,7 @@ permissions:
 
 jobs:
   verify-server-infra:
-    runs-on: [self-hosted, linux, x64, kmj-main-platform-ci]
+    runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
       - name: Checkout
@@ -29,6 +29,7 @@ jobs:
           bash -n infra/server/KMJ_SERVER_BOOTSTRAP.sh
           bash -n infra/server/KMJ_SERVER_VERIFY.sh
           bash -n infra/server/KMJ_SERVER_EXPORT.sh
+          bash -n infra/server/KMJ_STAGE_TLS_REPAIR.sh
 
       - name: Locked server invariants
         run: |
