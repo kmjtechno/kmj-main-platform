@@ -13,9 +13,9 @@ export const deliveryMilestones: DeliveryMilestone[] = [
         id: 'codebridge-hosted-client-onboarding',
         title: 'CodeBridge hosted client onboarding',
         state: 'active',
-        detail: 'Hosted OAuth account linking, browser/Claude client connectivity, pinned one-click Linux/VPS installer bootstrap, and customer-facing setup guidance are implemented; production deployment and fresh-device pairing evidence remain release gates',
+        detail: 'Hosted OAuth account linking, browser/Claude client connectivity, pinned one-click Linux/VPS installer bootstrap, customer-facing setup guidance, and a secure allowlisted GitHub bridge are implemented; production deployment and fresh-device pairing evidence remain release gates',
         evidence:
-            'CodeBridge 0.1.9 exact-head CI green and merged; Main Platform PR #283 adds /install bootstrap, CodeBridge service UI guidance, and hosted-runner CI migration for exact-head verification',
+            'CodeBridge 0.2.0 exact-head Linux/Windows/client/distribution CI green and merged as 2ff02f3146cc; GitHub repository/PR/Actions support is server-side and credential-isolated; Main Platform /install bootstrap is pinned to the immutable 0.2.0 commit',
     },
     {
         id: 'codebridge-license-renewal',
