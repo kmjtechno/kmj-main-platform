@@ -68,6 +68,27 @@ jobs:
       - name: Prepare staging browser without privileged installation
         shell: bash
         run: bash ops/self-hosted-runner/prepare-staging-browser.sh
+      - name: Verify staging TLS identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          host=staging.kmjtechno.com
+          cert="$(mktemp)"
+          trap 'rm -f "$cert"' EXIT
+          if ! timeout 20 openssl s_client -connect "$host:443" -servername "$host" -showcerts </dev/null 2>/dev/null \
+              | openssl x509 -outform PEM >"$cert"; then
+            echo '::error title=Staging TLS unavailable::Unable to read the staging certificate'
+            exit 1
+          fi
+          san="$(openssl x509 -in "$cert" -noout -ext subjectAltName 2>/dev/null || true)"
+          if ! grep -Fq "DNS:$host" <<<"$san"; then
+            subject="$(openssl x509 -in "$cert" -noout -subject 2>/dev/null || true)"
+            issuer="$(openssl x509 -in "$cert" -noout -issuer 2>/dev/null || true)"
+            echo "::error title=Staging TLS hostname mismatch::Certificate does not cover $host. $subject; $issuer"
+            echo 'Repair on the staging VPS by re-running /root/KMJ_SERVER_BOOTSTRAP.sh after confirming the CloudPanel staging site exists.'
+            exit 60
+          fi
+          echo 'Staging TLS certificate covers the canonical staging hostname.'
 
       - name: Wait for VPS auto-deploy exact commit
         id: deploy
@@ -93,7 +114,12 @@ jobs:
               fi
               echo "Attempt $attempt: staging reports ${deployed_sha:-no deployment header}; waiting for $DEPLOY_SHA"
             else
-              echo "Attempt $attempt: staging HTTP probe failed; retrying."
+              curl_status=$?
+              if [ "$curl_status" -eq 60 ]; then
+                echo '::error title=Staging TLS hostname mismatch::TLS validation failed; fix the staging certificate/vhost before deployment verification can continue.'
+                exit 60
+              fi
+              echo "Attempt $attempt: staging HTTP probe failed with curl status $curl_status; retrying."
             fi
             sleep 10
           done
@@ -173,8 +199,8 @@ jobs:
           {
             echo '## KMJ staging deployment evidence'
             echo
-            echo "- approved commit: `${APPROVED_SHA:-unresolved}`"
-            echo "- deployed commit: `${DEPLOYED_SHA:-not-verified}`"
+            printf -- '- approved commit: `%s`\n' "${APPROVED_SHA:-unresolved}"
+            printf -- '- deployed commit: `%s`\n' "${DEPLOYED_SHA:-not-verified}"
             echo "- deployment authority: VPS systemd auto-deploy timer consuming staging-approved"
             echo "- exact commit verification: ${{ steps.deploy.conclusion }}"
             echo "- HTTP health: ${HEALTH_RESULT:-not-run}"
