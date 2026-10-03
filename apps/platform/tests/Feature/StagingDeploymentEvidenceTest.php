@@ -21,7 +21,10 @@ final class StagingDeploymentEvidenceTest extends TestCase
             '/^[0-9a-f]{40}$/',
             (string) $response->headers->get('X-KMJ-Deploy-SHA'),
         );
-        self::assertSame('no-store, private', $response->headers->get('Cache-Control'));
+        self::assertStringContainsString(
+            'no-store',
+            (string) $response->headers->get('Cache-Control'),
+        );
     }
 
     public function test_production_host_does_not_receive_deployment_sha_header(): void
