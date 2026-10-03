@@ -53,23 +53,35 @@ jobs:
             "https://kmjtechno.com/.well-known/oauth-protected-resource/mcp",
             "https://kmjtechno.com/oauth/jwks.json",
           ]
+          import json, time
           for u in urls:
-              try:
-                  with urllib.request.urlopen(u, timeout=10) as r:
-                      body=r.read(800).decode("utf-8","replace")
-                      print("http", r.status, u, body.replace("\n"," ")[:800])
-                      if u.endswith("/healthz"):
-                          import json
-                          payload=json.loads(body)
-                          if payload.get("status") != "ok":
-                              raise RuntimeError("gateway health is not ok")
-                          if payload.get("version") != "0.2.0":
-                              raise RuntimeError(f"gateway version drift: {payload.get('version')!r}")
-              except urllib.error.HTTPError as e:
-                  body=e.read(800).decode("utf-8","replace")
-                  print("http", e.code, u, body.replace("\n"," ")[:800])
-              except Exception as e:
-                  print("http_error", u, type(e).__name__, str(e)[:200])
+              is_gateway_health = u.endswith("/healthz")
+              attempts = 6 if is_gateway_health else 1
+              last_error = None
+              for attempt in range(1, attempts + 1):
+                  try:
+                      with urllib.request.urlopen(u, timeout=20) as r:
+                          body=r.read(800).decode("utf-8","replace")
+                          print("http", r.status, u, body.replace("\n"," ")[:800])
+                          if is_gateway_health:
+                              payload=json.loads(body)
+                              if payload.get("status") != "ok":
+                                  raise RuntimeError("gateway health is not ok")
+                              if payload.get("version") != "0.2.0":
+                                  raise RuntimeError(f"gateway version drift: {payload.get('version')!r}")
+                          last_error = None
+                          break
+                  except urllib.error.HTTPError as e:
+                      body=e.read(800).decode("utf-8","replace")
+                      print("http", e.code, u, body.replace("\n"," ")[:800])
+                      last_error = RuntimeError(f"HTTP {e.code}")
+                  except Exception as e:
+                      print("http_error", u, type(e).__name__, str(e)[:200])
+                      last_error = e
+                  if attempt < attempts:
+                      time.sleep(attempt * 5)
+              if is_gateway_health and last_error is not None:
+                  raise RuntimeError(f"gateway health/version verification failed after {attempts} attempts: {last_error}")
           req=urllib.request.Request(
               "https://kmjtechno.com/mcp",
               method="POST",
