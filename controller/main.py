@@ -128,7 +128,14 @@ def validate_codebridge_github_write(suffix: str, payload: object) -> None:
             raise HTTPException(400, "CODEBRIDGE_GITHUB_BODY_INVALID")
         ref = payload.get("ref")
         sha = payload.get("sha")
-        if not isinstance(ref, str) or not re.fullmatch(r"refs/heads/[A-Za-z0-9._/-]{1,255}", ref):
+        if (
+            not isinstance(ref, str)
+            or not re.fullmatch(r"refs/heads/[A-Za-z0-9._/-]{1,255}", ref)
+            or ".." in ref
+            or "//" in ref
+            or ref.endswith(("/", ".lock"))
+            or "@{" in ref
+        ):
             raise HTTPException(400, "CODEBRIDGE_GITHUB_BODY_INVALID")
         if not isinstance(sha, str) or not re.fullmatch(r"[a-fA-F0-9]{40}", sha):
             raise HTTPException(400, "CODEBRIDGE_GITHUB_BODY_INVALID")
@@ -142,7 +149,15 @@ def validate_codebridge_github_write(suffix: str, payload: object) -> None:
             raise HTTPException(400, "CODEBRIDGE_GITHUB_BODY_INVALID")
         for field in ("head", "base"):
             value = payload.get(field)
-            if not isinstance(value, str) or not re.fullmatch(r"[A-Za-z0-9._/-]{1,255}", value):
+            if (
+                not isinstance(value, str)
+                or not re.fullmatch(r"[A-Za-z0-9._/-]{1,255}", value)
+                or ".." in value
+                or "//" in value
+                or value.startswith("/")
+                or value.endswith(("/", ".lock"))
+                or "@{" in value
+            ):
                 raise HTTPException(400, "CODEBRIDGE_GITHUB_BODY_INVALID")
         if "draft" in payload and not isinstance(payload["draft"], bool):
             raise HTTPException(400, "CODEBRIDGE_GITHUB_BODY_INVALID")
