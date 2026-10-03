@@ -33,7 +33,7 @@ permissions:
   contents: read
 jobs:
   interoperability:
-    runs-on: [self-hosted, linux, x64, kmj-main-platform-ci]
+    runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@v4
@@ -45,6 +45,12 @@ jobs:
           ref: a09fae60677ed2ab17a3a4c9601afea793e62a55
           path: .codebridge-contract
           persist-credentials: false
+      - name: Setup PHP 8.4
+        uses: shivammathur/setup-php@87d00bde2555f25eb54fedf940384e99cbdc55ef
+        with:
+          php-version: '8.4'
+          extensions: sodium
+          coverage: none
       - uses: actions/setup-node@v4
         with:
           node-version: '24'
@@ -57,15 +63,36 @@ jobs:
 
   concurrency-postgres:
     name: CodeBridge concurrency (postgres)
-    runs-on: [self-hosted, linux, x64, kmj-main-platform-ci]
+    runs-on: ubuntu-latest
     timeout-minutes: 10
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
     env:
       CODEBRIDGE_CONCURRENCY_REQUIRED: '1'
       PGCONNECT_TIMEOUT: '5'
+      PGPASSWORD: postgres
     steps:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
+      - name: Setup PHP 8.4
+        uses: shivammathur/setup-php@87d00bde2555f25eb54fedf940384e99cbdc55ef
+        with:
+          php-version: '8.4'
+          extensions: pdo_pgsql
+          coverage: none
       - name: Verify native PostgreSQL concurrency runtime
         shell: bash
         run: |
@@ -74,7 +101,7 @@ jobs:
           if php -m | grep -Fxq pdo_pgsql; then echo 'PASS pdo_pgsql'; else echo 'FAIL pdo_pgsql'; failed=1; fi
           if php -r 'exit(function_exists("pcntl_fork") ? 0 : 1);'; then echo 'PASS pcntl_fork'; else echo 'FAIL pcntl_fork'; failed=1; fi
           if command -v psql; then echo 'PASS psql'; else echo 'FAIL psql'; failed=1; fi
-          if command -v pg_isready >/dev/null 2>&1 && pg_isready; then echo 'PASS pg_isready'; else echo 'FAIL pg_isready'; failed=1; fi
+          if command -v pg_isready >/dev/null 2>&1 && pg_isready -h 127.0.0.1 -U postgres; then echo 'PASS pg_isready'; else echo 'FAIL pg_isready'; failed=1; fi
           exit "$failed"
       - name: Create isolated PostgreSQL database
         shell: bash
@@ -82,11 +109,11 @@ jobs:
           set -euo pipefail
           db="codebridge_ci_${GITHUB_RUN_ID}_${GITHUB_RUN_ATTEMPT}"
           db="${db//-/_}"
-          createdb "$db"
+          createdb -h 127.0.0.1 -U postgres "$db"
           echo "CODEBRIDGE_CI_DATABASE=$db" >> "$GITHUB_ENV"
-          echo "CODEBRIDGE_CONCURRENCY_DSN=pgsql:dbname=$db" >> "$GITHUB_ENV"
-          echo "CODEBRIDGE_CONCURRENCY_USER=${USER}" >> "$GITHUB_ENV"
-          echo 'CODEBRIDGE_CONCURRENCY_PASSWORD=' >> "$GITHUB_ENV"
+          echo "CODEBRIDGE_CONCURRENCY_DSN=pgsql:host=127.0.0.1;port=5432;dbname=$db" >> "$GITHUB_ENV"
+          echo "CODEBRIDGE_CONCURRENCY_USER=postgres" >> "$GITHUB_ENV"
+          echo 'CODEBRIDGE_CONCURRENCY_PASSWORD=postgres' >> "$GITHUB_ENV"
       - name: Create isolated concurrency schema
         run: php tests/codebridge/concurrency-schema.php
       - name: Run mandatory real-database concurrency regression
@@ -105,5 +132,5 @@ jobs:
         shell: bash
         run: |
           if [[ -n "${CODEBRIDGE_CI_DATABASE:-}" ]]; then
-            dropdb --if-exists "$CODEBRIDGE_CI_DATABASE"
+            dropdb -h 127.0.0.1 -U postgres --if-exists "$CODEBRIDGE_CI_DATABASE"
           fi
