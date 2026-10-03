@@ -15,12 +15,19 @@ concurrency:
 
 jobs:
   verify:
-    runs-on: [self-hosted, linux, x64, kmj-main-platform-ci]
+    runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+          cache: pip
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
       - name: Prepare resilient Python runtime
         run: bash ops/self-hosted-runner/prepare-python-runtime.sh
       - name: Compile controller
@@ -86,8 +93,6 @@ jobs:
       - name: Verify Rust sandbox license core
         run: |
           set -euo pipefail
-          RUNNER_USER_HOME="$(getent passwd "$(id -un)" | cut -d: -f6)"
-          source "${RUNNER_USER_HOME}/.cargo/env"
           rustup default stable
           rustup component add rustfmt
           cargo fmt --manifest-path services/license-core/Cargo.toml --check
