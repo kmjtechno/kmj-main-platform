@@ -21,7 +21,7 @@ class StagingMonitorContractTests(unittest.TestCase):
     def test_staging_deploy_uses_public_exact_sha_evidence_without_ssh(self):
         workflow = DEPLOY_WORKFLOW.read_text(encoding="utf-8")
 
-        self.assertIn("X-KMJ-Deploy-SHA", workflow)
+        self.assertIn("x-kmj-deploy-sha", workflow.lower())
         self.assertIn("VPS systemd auto-deploy timer", workflow)
         self.assertIn("https://staging.kmjtechno.com/products", workflow)
         self.assertIn(
@@ -42,8 +42,8 @@ class StagingMonitorContractTests(unittest.TestCase):
         self.assertIn('DEPLOY_BRANCH="${KMJ_DEPLOY_BRANCH:-staging-approved}"', bootstrap)
         self.assertIn("kmj-stage-deploy.timer", bootstrap)
         self.assertIn("OnUnitActiveSec=2min", bootstrap)
-        self.assertIn('SUCCESS_FILE="\$HOME/.kmj-stage-last-success"', bootstrap)
-        self.assertIn('git -C "\$REPO_DIR" reset --hard "origin/\$BRANCH"', bootstrap)
+        self.assertIn(r'SUCCESS_FILE="\$HOME/.kmj-stage-last-success"', bootstrap)
+        self.assertIn(r'git -C "\$REPO_DIR" reset --hard "origin/\$BRANCH"', bootstrap)
 
     def test_authenticated_surface_smoke_no_longer_depends_on_vps_ssh(self):
         workflow = AUTH_SMOKE_WORKFLOW.read_text(encoding="utf-8")
