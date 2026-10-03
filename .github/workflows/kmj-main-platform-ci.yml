@@ -17,14 +17,25 @@ permissions:
 jobs:
   platform:
     name: Laravel + TypeScript
-    runs-on: [self-hosted, linux, x64, kmj-main-platform-ci]
+    runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
       - name: Checkout code
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           persist-credentials: false
-      - name: Verify pre-provisioned runtime
+      - name: Setup PHP 8.4
+        uses: shivammathur/setup-php@87d00bde2555f25eb54fedf940384e99cbdc55ef
+        with:
+          php-version: '8.4'
+          extensions: pdo_sqlite, sqlite3, sodium
+          coverage: none
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: apps/platform/package-lock.json
+      - name: Verify hosted runtime
         run: |
           set -euo pipefail
           php --version
@@ -41,7 +52,7 @@ jobs:
 
   license-core:
     name: Native Rust license verifier
-    runs-on: [self-hosted, linux, x64, kmj-main-platform-ci]
+    runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
       - name: Checkout code
