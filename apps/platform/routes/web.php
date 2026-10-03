@@ -37,6 +37,32 @@ Route::get('api/public/commander/bootstrap', function (DesktopCommanderCommercia
         ->header('Access-Control-Allow-Origin', '*');
 })->name('commander.bootstrap');
 
+Route::get('install', function () {
+    $script = <<<'BASH'
+#!/usr/bin/env bash
+set -euo pipefail
+
+CODEBRIDGE_RELEASE_REF='88d5f92e174db51f4e5009ee2737f75b75d83eda'
+CODEBRIDGE_INSTALLER_URL='https://raw.githubusercontent.com/kmjtechno/kmj-codebridge/88d5f92e174db51f4e5009ee2737f75b75d83eda/scripts/install-vps.sh'
+
+tmp="$(mktemp)"
+cleanup() {
+  rm -f "$tmp"
+}
+trap cleanup EXIT
+
+curl -fsSL --proto '=https' --tlsv1.2 "$CODEBRIDGE_INSTALLER_URL" -o "$tmp"
+export CODEBRIDGE_REF="$CODEBRIDGE_RELEASE_REF"
+bash "$tmp" "$@"
+BASH;
+
+    return response($script."\n", 200, [
+        'Content-Type' => 'text/x-shellscript; charset=UTF-8',
+        'Cache-Control' => 'public, max-age=300',
+        'X-Content-Type-Options' => 'nosniff',
+    ]);
+})->name('codebridge.install');
+
 Route::get('/', function (PublicProductCatalog $products) {
     $portfolio = $products->all();
 
