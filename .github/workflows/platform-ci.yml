@@ -19,7 +19,7 @@ on:
       - 'tests/test_platform_verify_contract.py'
 
 permissions:
-  contents: read
+  contents: write
 
 concurrency:
   group: platform-ci-${{ github.workflow }}-${{ github.ref }}
@@ -36,7 +36,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          persist-credentials: false
+          persist-credentials: true
 
       - name: Setup PHP 8.4
         uses: shivammathur/setup-php@87d00bde2555f25eb54fedf940384e99cbdc55ef
@@ -68,12 +68,18 @@ jobs:
             resources/js/pages/dashboard.tsx
             resources/js/pages/services/codebridge.tsx
         run: bash "$GITHUB_WORKSPACE/ops/self-hosted-runner/verify-platform.sh"
-      - name: Upload normalized frontend sources
-        uses: actions/upload-artifact@v4
-        with:
-          name: normalized-frontend-sources
-          path: |
-            apps/platform/resources/js/pages/auth/oauth-authorize.tsx
-            apps/platform/resources/js/pages/dashboard.tsx
-            apps/platform/resources/js/pages/services/codebridge.tsx
-          if-no-files-found: error
+      - name: Commit formatter normalization to PR branch
+        if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+        shell: bash
+        working-directory: ${{ github.workspace }}
+        run: |
+          set -euo pipefail
+          if git diff --quiet -- apps/platform/resources/js/pages/auth/oauth-authorize.tsx apps/platform/resources/js/pages/dashboard.tsx apps/platform/resources/js/pages/services/codebridge.tsx; then
+            echo 'Frontend sources already normalized.'
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -- apps/platform/resources/js/pages/auth/oauth-authorize.tsx apps/platform/resources/js/pages/dashboard.tsx apps/platform/resources/js/pages/services/codebridge.tsx
+          git commit -m 'style: normalize existing frontend sources'
+          git push origin "HEAD:${GITHUB_HEAD_REF}"
