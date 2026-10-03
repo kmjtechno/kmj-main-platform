@@ -42,8 +42,8 @@ Route::get('install', function () {
 #!/usr/bin/env bash
 set -euo pipefail
 
-CODEBRIDGE_RELEASE_REF='2ff02f3146cca78cf07dae4e3d8a7f48e68917ac'
-CODEBRIDGE_INSTALLER_URL='https://raw.githubusercontent.com/kmjtechno/kmj-codebridge/2ff02f3146cca78cf07dae4e3d8a7f48e68917ac/scripts/install-vps.sh'
+CODEBRIDGE_RELEASE_REF='60bf446c40ce43aecd970ab703c224888671596f'
+CODEBRIDGE_INSTALLER_URL='https://raw.githubusercontent.com/kmjtechno/kmj-codebridge/60bf446c40ce43aecd970ab703c224888671596f/scripts/install-vps.sh'
 
 tmp="$(mktemp)"
 cleanup() {

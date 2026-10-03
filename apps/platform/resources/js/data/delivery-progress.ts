@@ -13,9 +13,9 @@ export const deliveryMilestones: DeliveryMilestone[] = [
         id: 'codebridge-hosted-client-onboarding',
         title: 'CodeBridge hosted client onboarding',
         state: 'active',
-        detail: 'Hosted OAuth account linking, browser/Claude client connectivity, pinned one-click Linux/VPS installer bootstrap, customer-facing setup guidance, a secure allowlisted GitHub bridge, and a private Main Platform GitHub credential broker are implemented; live hosted deployment, GitHub-capability smoke, and fresh-device pairing evidence remain release gates',
+        detail: 'Hosted OAuth account linking, browser/Claude client connectivity, pinned one-click Linux/VPS installer bootstrap, customer-facing setup guidance, a secure allowlisted GitHub bridge, and a private Main Platform GitHub credential broker are implemented; the live hosted gateway now verifies GitHub capability in scheduled production smoke, while fresh-device pairing and device runtime rollout remain release gates',
         evidence:
-            'CodeBridge 0.2.0 exact-head Linux/Windows/client/distribution CI is merged; hosted GitHub bridge uses a token-gated allowlisted broker so the GitHub credential stays on the Main Platform controller; Main Platform /install bootstrap remains pinned to the immutable CodeBridge release',
+            'CodeBridge 0.2.1 exact-head Linux/Windows/client/distribution CI is green and merged as 60bf446c40ce; Render deployed the hosted gateway and Hosted Deployment Smoke passed with status=ok, version=0.2.0 before the 0.2.1 release bump and GitHub capability=true; Main Platform /install is now pinned to the immutable 0.2.1 release commit',
     },
     {
         id: 'codebridge-license-renewal',
