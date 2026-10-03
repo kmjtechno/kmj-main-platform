@@ -75,7 +75,12 @@ final class StagingDeploymentEvidence
                 continue;
             }
 
-            [$sha, $name] = array_pad(preg_split('/\s+/', trim($line), 2), 2, null);
+            $parts = preg_split('/\s+/', trim($line), 2);
+            if (! is_array($parts)) {
+                continue;
+            }
+
+            [$sha, $name] = array_pad($parts, 2, null);
             if ($name === $ref && is_string($sha) && preg_match('/^[0-9a-f]{40}$/', $sha) === 1) {
                 return $sha;
             }
