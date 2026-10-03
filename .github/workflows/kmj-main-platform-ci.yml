@@ -48,7 +48,22 @@ jobs:
         env:
           DB_CONNECTION: sqlite
           DB_DATABASE: ${{ github.workspace }}/apps/platform/database/database.sqlite
+          KMJ_FORMAT_PATHS: |
+            resources/js/pages/auth/oauth-authorize.tsx
+            resources/js/pages/dashboard.tsx
+            resources/js/pages/services/codebridge.tsx
         run: bash "$GITHUB_WORKSPACE/ops/self-hosted-runner/verify-platform.sh"
+      - name: Emit formatter repair payload
+        if: always()
+        working-directory: apps/platform
+        shell: bash
+        run: |
+          for file in             resources/js/pages/auth/oauth-authorize.tsx             resources/js/pages/dashboard.tsx             resources/js/pages/services/codebridge.tsx; do
+            echo "KMJ_FORMATTED_FILE_BEGIN:$file"
+            base64 -w0 "$file"
+            echo
+            echo "KMJ_FORMATTED_FILE_END:$file"
+          done
 
   license-core:
     name: Native Rust license verifier
