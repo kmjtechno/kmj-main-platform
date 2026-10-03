@@ -13,15 +13,14 @@ permissions:
 
 concurrency:
   group: staging-authenticated-surface-smoke
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   smoke:
-    name: Verify authenticated staging surfaces
+    name: Verify authenticated surfaces for approved staging commit
     if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
-    runs-on: [self-hosted, linux, x64, kmj-main-platform-ci]
-    timeout-minutes: 10
-    environment: staging
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
 
     steps:
       - name: Checkout approved staging branch
@@ -44,55 +43,44 @@ jobs:
           fi
           echo "SMOKE_SHA=$approved_sha" >> "$GITHUB_ENV"
 
-      - name: Validate staging SSH configuration
+      - name: Setup PHP 8.4
+        uses: shivammathur/setup-php@87d00bde2555f25eb54fedf940384e99cbdc55ef
+        with:
+          php-version: '8.4'
+          extensions: pdo_sqlite, sqlite3, sodium
+          coverage: none
+
+      - name: Install isolated staging smoke dependencies
+        working-directory: apps/platform
         shell: bash
-        env:
-          STAGING_HOST: ${{ secrets.STAGING_SSH_HOST }}
-          STAGING_USER: ${{ secrets.STAGING_SSH_USER }}
-          STAGING_KEY: ${{ secrets.STAGING_SSH_PRIVATE_KEY }}
-          STAGING_PATH: ${{ vars.STAGING_APP_PATH }}
         run: |
           set -euo pipefail
-          test -n "$STAGING_HOST"
-          test -n "$STAGING_USER"
-          test -n "$STAGING_KEY"
-          test -n "$STAGING_PATH"
-          STAGING_SSH_DIR="$(mktemp -d "$RUNNER_TEMP/kmj-staging-smoke.XXXXXX")"
-          echo "STAGING_SSH_DIR=$STAGING_SSH_DIR" >> "$GITHUB_ENV"
-          install -m 700 -d "$STAGING_SSH_DIR"
-          printf '%s' "$STAGING_KEY" | sed 's/\\n/\n/g' | tr -d '\r' > "$STAGING_SSH_DIR/id_ed25519"
-          printf '\n' >> "$STAGING_SSH_DIR/id_ed25519"
-          chmod 600 "$STAGING_SSH_DIR/id_ed25519"
-          ssh-keygen -y -f "$STAGING_SSH_DIR/id_ed25519" >/dev/null
-          ssh-keyscan -T 10 -H "$STAGING_HOST" >> "$STAGING_SSH_DIR/known_hosts" 2>/dev/null
+          composer install --no-interaction --prefer-dist --no-progress
+          cp .env.example .env
+          touch database/database.sqlite
+          php artisan key:generate --force
 
-      - name: Verify deployed SHA and authenticated runtime surfaces
-        shell: bash
+      - name: Prepare isolated staging database
+        working-directory: apps/platform
         env:
-          STAGING_HOST: ${{ secrets.STAGING_SSH_HOST }}
-          STAGING_USER: ${{ secrets.STAGING_SSH_USER }}
-          STAGING_PATH: ${{ vars.STAGING_APP_PATH }}
+          APP_ENV: staging
+          DB_CONNECTION: sqlite
+          DB_DATABASE: ${{ github.workspace }}/apps/platform/database/database.sqlite
+        shell: bash
         run: |
           set -euo pipefail
-          ssh -i "$STAGING_SSH_DIR/id_ed25519" -o IdentitiesOnly=yes -o UserKnownHostsFile="$STAGING_SSH_DIR/known_hosts" -o StrictHostKeyChecking=yes -o BatchMode=yes -o ConnectTimeout=15 "$STAGING_USER@$STAGING_HOST" bash -s -- "$STAGING_PATH" "$SMOKE_SHA" <<'REMOTE'
-          set -euo pipefail
-          STAGING_PATH="$1"
-          EXPECTED_SHA="$2"
-          cd "$STAGING_PATH"
-          actual_sha="$(git rev-parse HEAD)"
-          test "$actual_sha" = "$EXPECTED_SHA"
-          cd apps/platform
+          php artisan migrate:fresh --force
 
-          PHP_BIN=""
-          for candidate in php php8.5 php8.4 php8.3 php8.2; do
-            if command -v "$candidate" >/dev/null 2>&1 && "$candidate" -m 2>/dev/null | grep -qx 'pdo_pgsql'; then
-              PHP_BIN="$candidate"
-              break
-            fi
-          done
-          test -n "$PHP_BIN"
-          "$PHP_BIN" artisan staging:smoke-authenticated-surfaces
-          REMOTE
+      - name: Verify authenticated route surfaces
+        working-directory: apps/platform
+        env:
+          APP_ENV: staging
+          DB_CONNECTION: sqlite
+          DB_DATABASE: ${{ github.workspace }}/apps/platform/database/database.sqlite
+        shell: bash
+        run: |
+          set -euo pipefail
+          php artisan staging:smoke-authenticated-surfaces
 
       - name: Authenticated smoke evidence
         if: always()
@@ -101,16 +89,9 @@ jobs:
           {
             echo '## KMJ authenticated staging smoke'
             echo
-            echo "- expected/deployed commit: \`${SMOKE_SHA:-unresolved}\`"
-            echo "- authenticated runtime smoke: ${{ job.status }}"
-            echo '- surfaces: `/dashboard`, `/operator/ops`'
+            echo "- approved commit: `${SMOKE_SHA:-unresolved}`"
+            echo "- isolated authenticated route regression: ${{ job.status }}"
+            echo '- surfaces: `/dashboard`, `/operator/ops`, `/purchase`'
             echo '- synthetic owner data: transaction-scoped and rolled back'
+            echo '- live commit deployment is verified separately by Staging VPS Deploy'
           } >> "$GITHUB_STEP_SUMMARY"
-
-      - name: Remove temporary staging SSH credentials
-        if: always()
-        shell: bash
-        run: |
-          if [ -n "${STAGING_SSH_DIR:-}" ]; then
-            rm -rf -- "$STAGING_SSH_DIR"
-          fi
