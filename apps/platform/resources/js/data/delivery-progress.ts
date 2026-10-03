@@ -52,9 +52,10 @@ export const deliveryMilestones: DeliveryMilestone[] = [
     {
         id: 'staging-delivery',
         title: 'Staging delivery',
-        state: 'verified',
-        detail: 'CI + promotion + deploy + HTTP health',
-        evidence: 'Exact-SHA deployment evidence',
+        state: 'active',
+        detail: 'Promotion remains exact-SHA gated; the VPS systemd timer is now the sole deployment authority and GitHub-hosted verification waits for a staging-only exact-SHA response header before HTTP, rendered UI, and browser QA can pass',
+        evidence:
+            'PR #293 replaces the stale reusable SSH deploy-key path with timer convergence + X-KMJ-Deploy-SHA evidence and moves bounded recovery/authenticated route regression off the offline self-hosted runner; exact live rollout evidence is required before returning this milestone to verified',
     },
     {
         id: 'frontend-live-sync',
