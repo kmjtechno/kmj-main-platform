@@ -81,10 +81,11 @@ export default function CodeBridgeService({
                                     {organization.name}
                                 </p>
                                 <p className="text-muted-foreground mt-4 max-w-2xl text-sm leading-6">
-                                    Connect ChatGPT to authorized computers and VPS
-                                    projects through a secure, project-scoped MCP
-                                    bridge. CodeBridge exposes only approved files,
-                                    Git operations and quality gates.
+                                    Connect ChatGPT to authorized computers and
+                                    VPS projects through a secure,
+                                    project-scoped MCP bridge. CodeBridge
+                                    exposes only approved files, Git operations
+                                    and quality gates.
                                 </p>
                             </div>
                         </div>
@@ -112,7 +113,11 @@ export default function CodeBridgeService({
                     <Metric
                         label="License"
                         value={service.license_status}
-                        hint={service.plan ? titleCase(service.plan) + ' plan' : 'Setup required'}
+                        hint={
+                            service.plan
+                                ? titleCase(service.plan) + ' plan'
+                                : 'Setup required'
+                        }
                     />
                     <Metric
                         label="OAuth"
@@ -142,12 +147,12 @@ export default function CodeBridgeService({
                             <h2 className="font-black">Connection</h2>
                         </div>
                         <p className="text-muted-foreground mt-1 text-xs">
-                            Use this endpoint when connecting KMJ CodeBridge as an
-                            MCP service.
+                            Use this endpoint when connecting KMJ CodeBridge as
+                            an MCP service.
                         </p>
 
                         <div className="mt-5 rounded-xl border bg-black/5 p-4 dark:bg-white/[0.02]">
-                            <div className="text-muted-foreground text-[10px] font-bold uppercase tracking-wider">
+                            <div className="text-muted-foreground text-[10px] font-bold tracking-wider uppercase">
                                 MCP endpoint
                             </div>
                             <code className="mt-2 block overflow-x-auto rounded-lg bg-black/5 px-3 py-2 text-xs dark:bg-white/[0.03]">
@@ -165,12 +170,13 @@ export default function CodeBridgeService({
                                 Install on Linux / VPS
                             </div>
                             <p className="text-muted-foreground mt-2 text-[11px] leading-5">
-                                Run this from the project directory. The installer
-                                opens a short-lived browser pairing flow; no manual
-                                agent token is required.
+                                Run this from the project directory. The
+                                installer opens a short-lived browser pairing
+                                flow; no manual agent token is required.
                             </p>
                             <code className="mt-3 block overflow-x-auto rounded-lg bg-black/5 px-3 py-2 text-[11px] dark:bg-white/[0.03]">
-                                curl -fsSL https://kmjtechno.com/install | sudo bash
+                                curl -fsSL https://kmjtechno.com/install | sudo
+                                bash
                             </code>
                         </div>
 
@@ -186,8 +192,8 @@ export default function CodeBridgeService({
                                 </li>
                                 <li className="flex gap-3">
                                     <StepNumber value="2" />
-                                    Sign in with this KMJ account and approve the
-                                    requested CodeBridge permissions.
+                                    Sign in with this KMJ account and approve
+                                    the requested CodeBridge permissions.
                                 </li>
                                 <li className="flex gap-3">
                                     <StepNumber value="3" />
@@ -205,14 +211,19 @@ export default function CodeBridgeService({
                         </div>
 
                         <div className="mt-5 space-y-3">
-                            <InfoRow label="Organization" value={organization.name} />
+                            <InfoRow
+                                label="Organization"
+                                value={organization.name}
+                            />
                             <InfoRow
                                 label="Capability"
                                 value={entitlement.capability}
                             />
                             <InfoRow
                                 label="Plan"
-                                value={service.plan ? titleCase(service.plan) : '—'}
+                                value={
+                                    service.plan ? titleCase(service.plan) : '—'
+                                }
                             />
                             <InfoRow
                                 label="Started"
@@ -257,8 +268,8 @@ export default function CodeBridgeService({
                     <div>
                         <h2 className="font-black">What CodeBridge can do</h2>
                         <p className="text-muted-foreground mt-1 text-xs">
-                            Capabilities remain scoped to authorized projects and
-                            administrator-approved operations.
+                            Capabilities remain scoped to authorized projects
+                            and administrator-approved operations.
                         </p>
                     </div>
 
@@ -296,7 +307,7 @@ function Metric({
 }) {
     return (
         <div className="bg-card rounded-2xl border p-4">
-            <div className="text-muted-foreground text-[10px] font-bold uppercase tracking-wider">
+            <div className="text-muted-foreground text-[10px] font-bold tracking-wider uppercase">
                 {label}
             </div>
             <div className="mt-1 text-lg font-black">{value}</div>
