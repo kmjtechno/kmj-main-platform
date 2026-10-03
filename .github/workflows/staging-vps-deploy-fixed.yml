@@ -105,15 +105,26 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          for attempt in 1 2 3; do
-            if ssh -i "$STAGING_SSH_DIR/id_ed25519" -o IdentitiesOnly=yes -o UserKnownHostsFile="$STAGING_SSH_DIR/known_hosts" -o StrictHostKeyChecking=yes -o BatchMode=yes -o ConnectTimeout=15 "$STAGING_USER@$STAGING_HOST" 'echo KMJ_STAGING_SSH_OK' >/dev/null; then
-              echo 'Staging SSH connectivity verified.'
-              exit 0
-            fi
-            echo "SSH connection attempt $attempt failed; retrying..."
-            sleep $((attempt * 5))
+          candidates=("$STAGING_USER")
+          if [ "$STAGING_USER" != "kmjstage" ]; then
+            candidates+=("kmjstage")
+          fi
+          for candidate in "${candidates[@]}"; do
+            for attempt in 1 2 3; do
+              if ssh -i "$STAGING_SSH_DIR/id_ed25519" -o IdentitiesOnly=yes -o UserKnownHostsFile="$STAGING_SSH_DIR/known_hosts" -o StrictHostKeyChecking=yes -o BatchMode=yes -o ConnectTimeout=15 "$candidate@$STAGING_HOST" 'echo KMJ_STAGING_SSH_OK' >/dev/null; then
+                echo "STAGING_DEPLOY_USER=$candidate" >> "$GITHUB_ENV"
+                if [ "$candidate" = "$STAGING_USER" ]; then
+                  echo 'Staging SSH connectivity verified with configured user.'
+                else
+                  echo 'Staging SSH connectivity verified with canonical staging user.'
+                fi
+                exit 0
+              fi
+              echo "SSH connection attempt $attempt failed; retrying..."
+              sleep $((attempt * 5))
+            done
           done
-          echo '::error title=Staging SSH connection failed::Host is reachable by workflow but SSH authentication/connectivity did not succeed after 3 attempts'
+          echo '::error title=Staging SSH connection failed::Host is reachable but neither the configured user nor the canonical staging user authenticated with the configured key'
           exit 1
 
       - name: Deploy approved commit
@@ -125,7 +136,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          ssh -i "$STAGING_SSH_DIR/id_ed25519" -o IdentitiesOnly=yes -o UserKnownHostsFile="$STAGING_SSH_DIR/known_hosts" -o StrictHostKeyChecking=yes -o BatchMode=yes "$STAGING_USER@$STAGING_HOST" bash -s -- "$STAGING_PATH" "$DEPLOY_SHA" <<'REMOTE'
+          ssh -i "$STAGING_SSH_DIR/id_ed25519" -o IdentitiesOnly=yes -o UserKnownHostsFile="$STAGING_SSH_DIR/known_hosts" -o StrictHostKeyChecking=yes -o BatchMode=yes "$STAGING_DEPLOY_USER@$STAGING_HOST" bash -s -- "$STAGING_PATH" "$DEPLOY_SHA" <<'REMOTE'
           set -euo pipefail
           STAGING_PATH="$1"
           DEPLOY_SHA="$2"
@@ -241,7 +252,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          actual_raw="$(ssh -i "$STAGING_SSH_DIR/id_ed25519" -o IdentitiesOnly=yes -o UserKnownHostsFile="$STAGING_SSH_DIR/known_hosts" -o StrictHostKeyChecking=yes -o BatchMode=yes "$STAGING_USER@$STAGING_HOST" bash -s -- "$STAGING_PATH" <<'REMOTE'
+          actual_raw="$(ssh -i "$STAGING_SSH_DIR/id_ed25519" -o IdentitiesOnly=yes -o UserKnownHostsFile="$STAGING_SSH_DIR/known_hosts" -o StrictHostKeyChecking=yes -o BatchMode=yes "$STAGING_DEPLOY_USER@$STAGING_HOST" bash -s -- "$STAGING_PATH" <<'REMOTE'
           set -euo pipefail
           cd "$1"
           git rev-parse HEAD
