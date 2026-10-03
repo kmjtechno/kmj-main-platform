@@ -63,4 +63,17 @@ jobs:
         env:
           DB_CONNECTION: sqlite
           DB_DATABASE: ${{ github.workspace }}/apps/platform/database/database.sqlite
+          KMJ_FORMAT_PATHS: |
+            resources/js/pages/auth/oauth-authorize.tsx
+            resources/js/pages/dashboard.tsx
+            resources/js/pages/services/codebridge.tsx
         run: bash "$GITHUB_WORKSPACE/ops/self-hosted-runner/verify-platform.sh"
+      - name: Upload normalized frontend sources
+        uses: actions/upload-artifact@v4
+        with:
+          name: normalized-frontend-sources
+          path: |
+            apps/platform/resources/js/pages/auth/oauth-authorize.tsx
+            apps/platform/resources/js/pages/dashboard.tsx
+            apps/platform/resources/js/pages/services/codebridge.tsx
+          if-no-files-found: error
