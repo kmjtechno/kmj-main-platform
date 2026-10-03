@@ -44,7 +44,7 @@ export default function OAuthAuthorize({
                     <h1 className="text-xl font-semibold">
                         Connect {clientName} to KMJ CodeBridge
                     </h1>
-                    <p className="text-sm text-muted-foreground">
+                    <p className="text-muted-foreground text-sm">
                         After you approve, you will be returned to{' '}
                         <strong className="text-foreground">
                             {redirectHost}
@@ -60,7 +60,7 @@ export default function OAuthAuthorize({
                             <li key={scope}>{scopeText[scope] ?? scope}</li>
                         ))}
                     </ul>
-                    <p className="text-xs text-muted-foreground">
+                    <p className="text-muted-foreground text-xs">
                         Access is limited to the devices and projects your
                         organization has authorized. You can revoke devices at
                         any time.

@@ -10,6 +10,14 @@ export type DeliveryMilestone = {
 
 export const deliveryMilestones: DeliveryMilestone[] = [
     {
+        id: 'codebridge-hosted-client-onboarding',
+        title: 'CodeBridge hosted client onboarding',
+        state: 'active',
+        detail: 'Hosted OAuth account linking, browser/Claude client connectivity, pinned one-click Linux/VPS installer bootstrap, and customer-facing setup guidance are implemented; production deployment and fresh-device pairing evidence remain release gates',
+        evidence:
+            'CodeBridge 0.1.9 exact-head CI green and merged; Main Platform PR #283 adds /install bootstrap, CodeBridge service UI guidance, and hosted-runner CI migration for exact-head verification',
+    },
+    {
         id: 'codebridge-license-renewal',
         title: 'CodeBridge license renewal',
         state: 'active',
@@ -369,5 +377,5 @@ export const deliveryProgress = Math.round(
 export const deliveryProgressMeta = {
     label: 'Revenue-capable working phase',
     note: 'Evidence-based delivery milestones, not total product completion.',
-    refreshed: '2026-09-30',
+    refreshed: '2026-10-03',
 } as const;
