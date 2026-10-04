@@ -195,6 +195,21 @@ final class CodeBridgeDevicePairingService
 
             $credential = Crypt::decryptString($row->credential_ciphertext);
             $permissions = json_decode($row->requested_permissions, true, flags: JSON_THROW_ON_ERROR);
+            $gateway = rtrim((string) config('services.codebridge_gateway.url'), '/');
+            $parts = parse_url($gateway);
+            if (
+                ! is_array($parts)
+                || ($parts['scheme'] ?? null) !== 'https'
+                || ! is_string($parts['host'] ?? null)
+                || ($parts['host'] ?? '') === ''
+                || isset($parts['user'])
+                || isset($parts['pass'])
+                || isset($parts['query'])
+                || isset($parts['fragment'])
+                || (($parts['path'] ?? '') !== '' && ($parts['path'] ?? '') !== '/')
+            ) {
+                throw new DomainException('CODEBRIDGE_PAIRING_GATEWAY_UNAVAILABLE');
+            }
             DB::table('codebridge_device_pairings')->where('id', $row->id)->update([
                 'status' => 'consumed',
                 'credential_ciphertext' => null,
@@ -203,6 +218,7 @@ final class CodeBridgeDevicePairingService
             ]);
 
             return [
+                'gateway' => $gateway,
                 'agent' => [
                     'token' => $credential,
                     'id' => $row->device_id,
