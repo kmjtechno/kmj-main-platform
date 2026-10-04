@@ -105,6 +105,51 @@ Route::post('mcp', function (Request $request, OAuthServer $server) {
     return response($upstreamResponse->body(), $upstreamResponse->status(), $responseHeaders);
 })->middleware('throttle:240,1')->name('codebridge.mcp');
 
+Route::post('agent/{operation}', function (Request $request, OAuthServer $server, string $operation) {
+    abort_unless($server->enabled(), 404);
+    abort_unless(in_array($operation, ['health', 'poll', 'result'], true), 404);
+    if (strlen($request->getContent()) > 1048576) {
+        abort(413);
+    }
+
+    $upstream = rtrim((string) config('services.codebridge_gateway.url'), '/');
+    abort_unless(
+        str_starts_with($upstream, 'https://') || str_starts_with($upstream, 'http://127.0.0.1:'),
+        503,
+    );
+
+    $headers = [
+        'Accept' => (string) $request->header('Accept', 'application/json'),
+        'Content-Type' => (string) $request->header('Content-Type', 'application/json'),
+    ];
+    $authorization = $request->header('Authorization');
+    if (is_string($authorization) && $authorization !== '') {
+        $headers['Authorization'] = $authorization;
+    }
+
+    try {
+        $upstreamResponse = Http::timeout(70)
+            ->connectTimeout(5)
+            ->withoutRedirecting()
+            ->withHeaders($headers)
+            ->withBody($request->getContent(), $headers['Content-Type'])
+            ->post($upstream.'/agent/'.$operation);
+    } catch (Throwable) {
+        return response()->json(['error' => 'CODEBRIDGE_GATEWAY_UNAVAILABLE'], 503)
+            ->header('Cache-Control', 'no-store');
+    }
+
+    $responseHeaders = ['Cache-Control' => 'no-store'];
+    $contentType = $upstreamResponse->header('Content-Type');
+    if ($contentType !== '') {
+        $responseHeaders['Content-Type'] = $contentType;
+    }
+
+    return response($upstreamResponse->body(), $upstreamResponse->status(), $responseHeaders);
+})->where('operation', 'health|poll|result')
+    ->middleware('throttle:240,1')
+    ->name('codebridge.agent.compat');
+
 Route::get('oauth/jwks.json', function (OAuthServer $server) {
     abort_unless($server->enabled(), 404);
 
