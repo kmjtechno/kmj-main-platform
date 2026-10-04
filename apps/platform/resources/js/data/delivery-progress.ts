@@ -13,9 +13,9 @@ export const deliveryMilestones: DeliveryMilestone[] = [
         id: 'codebridge-hosted-client-onboarding',
         title: 'CodeBridge hosted client onboarding',
         state: 'active',
-        detail: 'Hosted OAuth account linking, browser/Claude client connectivity, pinned one-click Linux/VPS installer bootstrap, customer-facing setup guidance, a secure allowlisted GitHub bridge, and a private Main Platform GitHub credential broker are implemented; the live hosted gateway now verifies GitHub capability in scheduled production smoke, while fresh-device pairing and device runtime rollout remain release gates',
+        detail: 'Hosted OAuth account linking, browser/Claude client connectivity, pinned one-click Linux/VPS installer bootstrap, customer-facing setup guidance, product-specific CodeBridge terms/privacy/support surfaces, a secure allowlisted GitHub bridge, and a private Main Platform GitHub credential broker are implemented; the live hosted gateway now verifies GitHub capability in scheduled production smoke, while fresh-device pairing and device runtime rollout remain release gates',
         evidence:
-            'CodeBridge 0.2.1 exact-head Linux/Windows/client/distribution CI is green and merged as 60bf446c40ce; Render deployed the hosted gateway and Hosted Deployment Smoke passed with status=ok, version=0.2.0 before the 0.2.1 release bump and GitHub capability=true; Main Platform /install is now pinned to the immutable 0.2.1 release commit',
+            'CodeBridge 0.2.1 exact-head Linux/Windows/client/distribution CI is green and merged as 60bf446c40ce; Render deployed the hosted gateway and Hosted Deployment Smoke passed with status=ok, version=0.2.0 before the 0.2.1 release bump and GitHub capability=true; Main Platform /install is pinned to the immutable 0.2.1 release commit; PR #296 adds product-specific plugin legal/support URLs required for current plugin metadata',
     },
     {
         id: 'codebridge-license-renewal',
@@ -378,5 +378,5 @@ export const deliveryProgress = Math.round(
 export const deliveryProgressMeta = {
     label: 'Revenue-capable working phase',
     note: 'Evidence-based delivery milestones, not total product completion.',
-    refreshed: '2026-10-03',
+    refreshed: '2026-10-04',
 } as const;
