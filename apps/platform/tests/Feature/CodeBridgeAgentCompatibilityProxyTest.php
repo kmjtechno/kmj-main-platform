@@ -38,7 +38,7 @@ final class CodeBridgeAgentCompatibilityProxyTest extends TestCase
             ->postJson('/agent/health', [])
             ->assertOk()
             ->assertJson(['ok' => true])
-            ->assertHeader('Cache-Control', 'no-store');
+            ->assertHeader('Cache-Control', 'no-store, private');
 
         Http::assertSent(fn (Request $request): bool => $request->url() === 'https://gateway.example/agent/health'
             && $request->method() === 'POST'
