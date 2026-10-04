@@ -5,6 +5,9 @@ on:
     branches: [main]
     paths:
       - '.github/workflows/codebridge-production-probe.yml'
+  pull_request:
+    paths:
+      - '.github/workflows/codebridge-production-probe.yml'
   workflow_dispatch:
 
 permissions:
