@@ -1,0 +1,81 @@
+name: CodeBridge Live DCR Diagnostic
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/codebridge-live-dcr-diagnostic.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Probe public OAuth DCR and authorize lookup
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          python3 - <<'PY'
+          import base64, hashlib, json, urllib.parse, urllib.request, urllib.error
+
+          origin = "https://kmjtechno.com"
+          redirect = "http://127.0.0.1:9876/callback"
+
+          register_body = json.dumps({
+              "client_name": "KMJ CodeBridge live diagnostic",
+              "redirect_uris": [redirect],
+              "token_endpoint_auth_method": "none",
+              "grant_types": ["authorization_code", "refresh_token"],
+              "response_types": ["code"],
+          }).encode()
+
+          req = urllib.request.Request(
+              origin + "/oauth/register",
+              method="POST",
+              data=register_body,
+              headers={"Content-Type": "application/json", "Accept": "application/json"},
+          )
+          with urllib.request.urlopen(req, timeout=20) as r:
+              body = r.read().decode()
+              print("register_status", r.status)
+              data = json.loads(body)
+              client_id = data["client_id"]
+              print("client_id_prefix", client_id[:6])
+              assert client_id.startswith("cb_")
+
+          verifier = "v" * 64
+          challenge = base64.urlsafe_b64encode(
+              hashlib.sha256(verifier.encode()).digest()
+          ).rstrip(b"=").decode()
+
+          query = urllib.parse.urlencode({
+              "response_type": "code",
+              "client_id": client_id,
+              "redirect_uri": redirect,
+              "code_challenge": challenge,
+              "code_challenge_method": "S256",
+              "scope": "codebridge:read codebridge:write",
+              "state": "diag",
+              "resource": origin + "/mcp",
+          })
+          opener = urllib.request.build_opener(urllib.request.HTTPRedirectHandler())
+          req2 = urllib.request.Request(origin + "/oauth/authorize?" + query, method="GET")
+          try:
+              with opener.open(req2, timeout=20) as r:
+                  print("authorize_final_status", r.status)
+                  print("authorize_final_url", r.geturl())
+                  if "invalid_client" in r.read(2000).decode("utf-8", "replace"):
+                      raise RuntimeError("freshly registered client was rejected")
+          except urllib.error.HTTPError as e:
+              body = e.read(2000).decode("utf-8", "replace")
+              print("authorize_status", e.code)
+              print("authorize_body", body[:500].replace("\n"," "))
+              if "invalid_client" in body:
+                  raise RuntimeError("freshly registered client was rejected")
+              raise
+
+          print("DCR_AUTHORIZE_LOOKUP=PASS")
+          PY
