@@ -199,6 +199,7 @@ final class CodeBridgeDevicePairingService
             $parts = parse_url($gateway);
             if (
                 ! is_array($parts)
+                || ! isset($parts['scheme'], $parts['host'])
                 || $parts['scheme'] !== 'https'
                 || $parts['host'] === ''
                 || isset($parts['user'])
