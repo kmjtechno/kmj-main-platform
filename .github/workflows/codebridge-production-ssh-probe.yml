@@ -5,6 +5,9 @@ on:
     branches: [main]
     paths:
       - '.github/workflows/codebridge-production-ssh-probe.yml'
+  pull_request:
+    paths:
+      - '.github/workflows/codebridge-production-ssh-probe.yml'
 
 permissions:
   contents: read
@@ -93,6 +96,15 @@ jobs:
           echo "remote_hostname=$(hostname)"
           echo "remote_user=$(id -un)"
           echo "staging_path_real=$(readlink -f "$STAGING_PATH" 2>/dev/null || printf missing)"
+          echo "nginx_active=$(systemctl is-active nginx 2>/dev/null || true)"
+          echo "php83_active=$(systemctl is-active php8.3-fpm 2>/dev/null || true)"
+          echo "php84_active=$(systemctl is-active php8.4-fpm 2>/dev/null || true)"
+          echo "local_http_begin"
+          curl -sS -o /dev/null -w 'local_http_status=%{http_code} total=%{time_total}\n' --max-time 10 -H 'Host: kmjtechno.com' http://127.0.0.1/ || true
+          echo "local_https_begin"
+          curl -k -sS -o /dev/null -w 'local_https_status=%{http_code} total=%{time_total}\n' --max-time 10 --resolve kmjtechno.com:443:127.0.0.1 https://kmjtechno.com/.well-known/oauth-authorization-server || true
+          echo "render_outbound_begin"
+          curl -sS -o /dev/null -w 'render_status=%{http_code} total=%{time_total}\n' --max-time 20 https://kmj-codebridge-gateway.onrender.com/healthz || true
           if [ -e /home/kmjprod/current ]; then
             echo "production_path_visible=yes"
             echo "production_current_real=$(readlink -f /home/kmjprod/current)"
