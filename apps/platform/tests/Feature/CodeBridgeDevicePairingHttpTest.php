@@ -15,6 +15,7 @@ final class CodeBridgeDevicePairingHttpTest extends TestCase
     public function test_fresh_device_can_create_approve_redeem_once_without_manual_agent_token(): void
     {
         config()->set('codebridge.enabled', true);
+        config()->set('services.codebridge_gateway.url', 'https://gateway.example');
         $user = User::factory()->create();
         [$tenant] = $this->fixture($user);
 
@@ -58,6 +59,7 @@ final class CodeBridgeDevicePairingHttpTest extends TestCase
             'device_id' => 'vps1',
         ])->assertOk()->json();
 
+        self::assertSame('https://gateway.example', $redeemed['gateway']);
         self::assertSame('vps1', $redeemed['agent']['id']);
         self::assertSame($tenant, $redeemed['agent']['tenant']);
         self::assertGreaterThanOrEqual(32, strlen($redeemed['agent']['token']));

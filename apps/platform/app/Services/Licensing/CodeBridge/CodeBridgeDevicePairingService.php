@@ -202,7 +202,13 @@ final class CodeBridgeDevicePairingService
                 'updated_at' => now(),
             ]);
 
+            $gateway = rtrim((string) config('services.codebridge_gateway.url'), '/');
+            if (! preg_match('/\Ahttps:\/\/[^\/?#]+(?::[0-9]{1,5})?\z/D', $gateway)) {
+                throw new DomainException('CODEBRIDGE_GATEWAY_UNAVAILABLE');
+            }
+
             return [
+                'gateway' => $gateway,
                 'agent' => [
                     'token' => $credential,
                     'id' => $row->device_id,
