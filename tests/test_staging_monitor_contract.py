@@ -61,6 +61,20 @@ class StagingMonitorContractTests(unittest.TestCase):
         self.assertNotIn("kmj-main-platform-ci", workflow)
         self.assertIn("rerun-failed-jobs", workflow)
 
+    def test_staging_recovery_repairs_only_the_canonical_tls_mismatch(self):
+        workflow = RECOVERY_WORKFLOW.read_text(encoding="utf-8")
+
+        self.assertIn("environment: staging", workflow)
+        self.assertIn(
+            "Certificate does not cover staging.kmjtechno.com",
+            workflow,
+        )
+        self.assertIn("/root/KMJ_STAGE_TLS_REPAIR.sh", workflow)
+        self.assertIn("sudo -n /root/KMJ_STAGE_TLS_REPAIR.sh", workflow)
+        self.assertIn("STAGING_SSH_PRIVATE_KEY", workflow)
+        self.assertNotIn("KMJ_STAGE_DOMAIN=", workflow)
+        self.assertNotIn("KMJ_PRODUCTION_DOMAIN=", workflow)
+
     def test_worker_completion_has_delivery_status_finalizer(self):
         workflow = DELIVERY_FINALIZER_WORKFLOW.read_text(encoding="utf-8")
 
