@@ -13,9 +13,9 @@ export const deliveryMilestones: DeliveryMilestone[] = [
         id: 'codebridge-hosted-client-onboarding',
         title: 'CodeBridge hosted client onboarding',
         state: 'active',
-        detail: 'Hosted OAuth account linking, browser/Claude client connectivity, pinned one-click Linux/VPS installer bootstrap, customer-facing setup guidance, product-specific CodeBridge terms/privacy/support surfaces, a secure allowlisted GitHub bridge, a private Main Platform GitHub credential broker, authoritative pairing gateway discovery, and account-authorized device/project grants are implemented; live rollout of the zero-manual-config device path remains a release gate',
+        detail: 'Hosted OAuth account linking, browser/Claude client connectivity, pinned one-click Linux/VPS installer bootstrap, customer-facing setup guidance, product-specific CodeBridge terms/privacy/support surfaces, a secure allowlisted GitHub bridge, a private Main Platform GitHub credential broker, authoritative pairing gateway discovery, account-authorized device/project grants, and the current exact-head one-click runtime pin are implemented; live rollout of the zero-manual-config device path remains a release gate',
         evidence:
-            'CodeBridge 0.2.1 exact-head Linux/Windows/client/distribution CI is green and merged as 60bf446c40ce; Render deployed the hosted gateway and Hosted Deployment Smoke passed with status=ok, version=0.2.0 before the 0.2.1 release bump and GitHub capability=true; Main Platform /install is pinned to the immutable 0.2.1 release commit; PR #296 adds product-specific plugin legal/support URLs; PR #300 merged the authoritative agent-gateway pairing contract; PR #302 adds account-authorized device/project grants to OAuth user introspection and remains exact-head CI gated',
+            'CodeBridge 0.2.3-line exact-head commit 19c9a13cd6a0 passed CodeBridge CI after PR #89; Main Platform /install is pinned to that immutable runtime so fresh devices inherit the authoritative agent-gateway fix from ed9d1f3 and current client/runtime code; PR #300 merged the authoritative pairing gateway contract and PR #302 merged account-authorized device/project grants; hosted smoke and live fresh-device rollout remain explicit production evidence gates',
     },
     {
         id: 'codebridge-license-renewal',
