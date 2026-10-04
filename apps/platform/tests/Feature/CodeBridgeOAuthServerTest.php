@@ -20,6 +20,8 @@ final class CodeBridgeOAuthServerTest extends TestCase
 
     private const REDIRECT = 'https://claude.ai/api/mcp/auth_callback';
 
+    private const STATIC_CLIENT = 'kmj_codebridge_claude';
+
     private string $verifier;
 
     protected function setUp(): void
@@ -31,6 +33,12 @@ final class CodeBridgeOAuthServerTest extends TestCase
             'codebridge_oauth.resource' => self::RESOURCE,
             'codebridge_oauth.signing_key' => base64_encode(str_repeat("\x07", SODIUM_CRYPTO_SIGN_SEEDBYTES)),
             'codebridge_oauth.kid' => 'test-kid',
+            'codebridge_oauth.static_clients' => [
+                self::STATIC_CLIENT => [
+                    'client_name' => 'Claude',
+                    'redirect_uris' => [self::REDIRECT],
+                ],
+            ],
         ]);
         $this->verifier = str_repeat('v', 64);
     }
@@ -97,6 +105,42 @@ final class CodeBridgeOAuthServerTest extends TestCase
         ] as $body) {
             $this->postJson('/oauth/register', $body)->assertStatus(400);
         }
+    }
+
+    public function test_static_public_client_rehydrates_and_completes_pkce_flow(): void
+    {
+        $user = User::factory()->create();
+
+        $first = $this->actingAs($user)->get('/oauth/authorize?'.$this->authorizeQuery(self::STATIC_CLIENT))
+            ->assertOk();
+        $this->assertSame(1, DB::table('codebridge_oauth_clients')->where('client_id', self::STATIC_CLIENT)->count());
+
+        DB::table('codebridge_oauth_clients')->where('client_id', self::STATIC_CLIENT)->delete();
+        $this->assertSame(0, DB::table('codebridge_oauth_clients')->where('client_id', self::STATIC_CLIENT)->count());
+
+        $page = $this->actingAs($user)->get('/oauth/authorize?'.$this->authorizeQuery(self::STATIC_CLIENT))
+            ->assertOk()
+            ->assertInertia(fn (Assert $p) => $p->component('auth/oauth-authorize')
+                ->where('clientName', 'Claude')
+                ->where('redirectHost', 'claude.ai'));
+        $this->assertSame(1, DB::table('codebridge_oauth_clients')->where('client_id', self::STATIC_CLIENT)->count());
+
+        $location = $this->actingAs($user)->post('/oauth/authorize', [
+            'request_id' => $page->viewData('page')['props']['requestId'],
+            'decision' => 'approve',
+        ])->assertRedirect()->headers->get('Location');
+        parse_str((string) parse_url((string) $location, PHP_URL_QUERY), $params);
+
+        $this->post('/oauth/token', [
+            'grant_type' => 'authorization_code',
+            'code' => $params['code'],
+            'client_id' => self::STATIC_CLIENT,
+            'redirect_uri' => self::REDIRECT,
+            'code_verifier' => $this->verifier,
+            'resource' => self::RESOURCE,
+        ])->assertOk()->assertJson(['token_type' => 'Bearer']);
+
+        $this->assertNotNull($first->viewData('page')['props']['requestId']);
     }
 
     public function test_full_authorization_code_flow_issues_a_resource_bound_token(): void
