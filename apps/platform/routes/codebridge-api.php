@@ -182,10 +182,37 @@ Route::post('codebridge/v1/user-access/introspect', function (
             ->where('starts_at', '<=', now())
             ->where('expires_at', '>', now())
             ->exists())
-        ->map(fn (array $org): array => [
-            'tenant_id' => $org['id'],
-            'permissions' => $scopePermissions,
-        ])
+        ->map(function (array $org) use ($scopePermissions): array {
+            $devices = DB::table('codebridge_device_credentials as c')
+                ->join('kslp_licenses as l', 'l.id', '=', 'c.license_id')
+                ->leftJoin('codebridge_device_pairings as p', 'p.activation_id', '=', 'c.activation_id')
+                ->where('c.tenant_id', $org['id'])
+                ->whereNull('c.revoked_at')
+                ->where('c.expires_at_epoch', '>', time())
+                ->where('l.customer_id', $org['id'])
+                ->where('l.product', 'KMJ_CODEBRIDGE')
+                ->where('l.status', 'active')
+                ->whereNull('l.revoked_at')
+                ->where('l.starts_at', '<=', now())
+                ->where('l.expires_at', '>', now())
+                ->select(['c.device_id', 'p.project_id'])
+                ->get()
+                ->groupBy('device_id')
+                ->map(fn ($rows): array => $rows
+                    ->pluck('project_id')
+                    ->filter(fn ($project): bool => is_string($project) && $project !== '')
+                    ->unique()
+                    ->values()
+                    ->all())
+                ->filter(fn (array $projects): bool => $projects !== [])
+                ->all();
+
+            return [
+                'tenant_id' => $org['id'],
+                'permissions' => $scopePermissions,
+                'devices' => $devices,
+            ];
+        })
         ->values()
         ->all();
 
