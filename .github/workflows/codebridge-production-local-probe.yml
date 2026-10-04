@@ -1,0 +1,49 @@
+name: CodeBridge Production Local Probe
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/codebridge-production-local-probe.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: [self-hosted, linux, x64, kmj-main-platform-ci]
+    timeout-minutes: 5
+    steps:
+      - name: Probe production CodeBridge route from VPS runner
+        shell: bash
+        run: |
+          set -euo pipefail
+          PROD=/home/kmjprod/current
+          ROUTES="$PROD/apps/platform/routes/codebridge-oauth.php"
+          echo "host=$(hostname)"
+          echo "user=$(id -un)"
+          echo "prod_path=$PROD"
+          if [ ! -e "$PROD" ]; then
+            echo "production_path_visible=no"
+            exit 2
+          fi
+          echo "production_path_visible=yes"
+          echo "production_current_real=$(readlink -f "$PROD")"
+          if [ ! -r "$ROUTES" ]; then
+            echo "production_codebridge_routes_readable=no"
+            exit 3
+          fi
+          echo "production_codebridge_routes_readable=yes"
+          printf 'production_codebridge_routes_blob='
+          git hash-object "$ROUTES"
+          if grep -q "codebridge.agent.compat" "$ROUTES"; then
+            echo "production_legacy_agent_proxy=present"
+          else
+            echo "production_legacy_agent_proxy=missing"
+          fi
+          if [ -w "$ROUTES" ]; then
+            echo "production_codebridge_routes_writable=yes"
+          else
+            echo "production_codebridge_routes_writable=no"
+          fi
