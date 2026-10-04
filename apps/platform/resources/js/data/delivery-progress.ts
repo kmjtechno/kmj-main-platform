@@ -13,9 +13,9 @@ export const deliveryMilestones: DeliveryMilestone[] = [
         id: 'codebridge-hosted-client-onboarding',
         title: 'CodeBridge hosted client onboarding',
         state: 'active',
-        detail: 'Hosted OAuth account linking, browser/Claude client connectivity, pinned one-click Linux/VPS installer bootstrap, customer-facing setup guidance, product-specific CodeBridge terms/privacy/support surfaces, a secure allowlisted GitHub bridge, and a private Main Platform GitHub credential broker are implemented; the live hosted gateway now verifies GitHub capability in scheduled production smoke, while fresh-device pairing and device runtime rollout remain release gates',
+        detail: 'Hosted OAuth account linking, browser/Claude client connectivity, pinned one-click Linux/VPS installer bootstrap, customer-facing setup guidance, product-specific CodeBridge terms/privacy/support surfaces, a secure allowlisted GitHub bridge, and a private Main Platform GitHub credential broker are implemented; device pairing redemption now returns the authoritative outbound agent gateway so account/enrollment traffic and /agent/* traffic cannot be accidentally conflated, while exact-head CI, deployment, fresh-device proof and device runtime rollout remain release gates',
         evidence:
-            'CodeBridge 0.2.1 exact-head Linux/Windows/client/distribution CI is green and merged as 60bf446c40ce; Render deployed the hosted gateway and Hosted Deployment Smoke passed with status=ok, version=0.2.0 before the 0.2.1 release bump and GitHub capability=true; Main Platform /install is pinned to the immutable 0.2.1 release commit; PR #296 adds product-specific plugin legal/support URLs required for current plugin metadata',
+            'CodeBridge 0.2.3 is the current released runtime; PR #299 adds authoritative agent-gateway delivery to pairing redemption as the server half of CodeBridge issue #71 / PR #72 universal onboarding work; production proof still requires both coordinated changes to pass exact-head CI and deploy before a new fresh-device pairing is recorded',
     },
     {
         id: 'codebridge-license-renewal',
