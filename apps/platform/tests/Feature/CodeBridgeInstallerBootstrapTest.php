@@ -17,11 +17,11 @@ final class CodeBridgeInstallerBootstrapTest extends TestCase
         self::assertIsString($script);
         self::assertStringStartsWith("#!/usr/bin/env bash\n", $script);
         self::assertStringContainsString(
-            "CODEBRIDGE_RELEASE_REF='19c9a13cd6a04250fd9ce5976c25d00d1bfedbba'",
+            "CODEBRIDGE_RELEASE_REF='ff8a64273ce46e6ddcae1c62e054917be8572b4e'",
             $script,
         );
         self::assertStringContainsString(
-            'https://raw.githubusercontent.com/kmjtechno/kmj-codebridge/19c9a13cd6a04250fd9ce5976c25d00d1bfedbba/scripts/install-vps.sh',
+            'https://raw.githubusercontent.com/kmjtechno/kmj-codebridge/ff8a64273ce46e6ddcae1c62e054917be8572b4e/scripts/install-vps.sh',
             $script,
         );
         self::assertStringContainsString("curl -fsSL --proto '=https' --tlsv1.2", $script);
