@@ -13,9 +13,9 @@ export const deliveryMilestones: DeliveryMilestone[] = [
         id: 'codebridge-hosted-client-onboarding',
         title: 'CodeBridge hosted client onboarding',
         state: 'active',
-        detail: 'Hosted OAuth account linking, browser/Claude client connectivity, pinned one-click Linux/VPS installer bootstrap, customer-facing setup guidance, product-specific CodeBridge terms/privacy/support surfaces, a secure allowlisted GitHub bridge, a private Main Platform GitHub credential broker, and an authoritative pairing response for the outbound agent gateway are implemented; live rollout of the zero-manual-config device path remains a release gate',
+        detail: 'Hosted OAuth account linking, browser/Claude client connectivity, pinned one-click Linux/VPS installer bootstrap, customer-facing setup guidance, product-specific CodeBridge terms/privacy/support surfaces, a secure allowlisted GitHub bridge, a private Main Platform GitHub credential broker, authoritative pairing gateway discovery, and account-authorized device/project grants are implemented; live rollout of the zero-manual-config device path remains a release gate',
         evidence:
-            'CodeBridge 0.2.1 exact-head Linux/Windows/client/distribution CI is green and merged as 60bf446c40ce; Render deployed the hosted gateway and Hosted Deployment Smoke passed with status=ok, version=0.2.0 before the 0.2.1 release bump and GitHub capability=true; Main Platform /install is pinned to the immutable 0.2.1 release commit; PR #296 adds product-specific plugin legal/support URLs; PR #300 adds the authoritative agent-gateway field to pairing redemption and is gated on exact-head CI before merge',
+            'CodeBridge 0.2.1 exact-head Linux/Windows/client/distribution CI is green and merged as 60bf446c40ce; Render deployed the hosted gateway and Hosted Deployment Smoke passed with status=ok, version=0.2.0 before the 0.2.1 release bump and GitHub capability=true; Main Platform /install is pinned to the immutable 0.2.1 release commit; PR #296 adds product-specific plugin legal/support URLs; PR #300 merged the authoritative agent-gateway pairing contract; PR #302 adds account-authorized device/project grants to OAuth user introspection and remains exact-head CI gated',
     },
     {
         id: 'codebridge-license-renewal',
