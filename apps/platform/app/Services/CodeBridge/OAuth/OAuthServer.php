@@ -128,7 +128,7 @@ final class OAuthServer
     public function validateAuthorization(array $query): array
     {
         $clientId = is_string($query['client_id'] ?? null) ? $query['client_id'] : '';
-        $client = $clientId === '' ? null : DB::table('codebridge_oauth_clients')->where('client_id', $clientId)->first();
+        $client = $clientId === '' ? null : $this->resolveClient($clientId);
         if (! $client) {
             throw new OAuthError('invalid_client', 400);
         }
@@ -427,6 +427,43 @@ final class OAuthServer
         }
 
         return $decoded;
+    }
+
+    private function resolveClient(string $clientId): ?object
+    {
+        $client = DB::table('codebridge_oauth_clients')->where('client_id', $clientId)->first();
+        if ($client) {
+            return $client;
+        }
+
+        $configured = config('codebridge_oauth.static_clients.'.$clientId);
+        if (! is_array($configured)
+            || ! preg_match('/\\A[A-Za-z0-9._-]{1,64}\\z/D', $clientId)
+            || ! is_string($configured['client_name'] ?? null)
+            || trim($configured['client_name']) === ''
+            || mb_strlen($configured['client_name']) > 120
+            || ! is_array($configured['redirect_uris'] ?? null)
+            || $configured['redirect_uris'] === []
+            || count($configured['redirect_uris']) > (int) config('codebridge_oauth.max_redirect_uris')) {
+            return null;
+        }
+
+        $redirects = array_values(array_unique($configured['redirect_uris']));
+        foreach ($redirects as $redirect) {
+            if (! is_string($redirect) || ! OAuthCore::isRegistrableRedirect($redirect)) {
+                return null;
+            }
+        }
+
+        DB::table('codebridge_oauth_clients')->insertOrIgnore([
+            'client_id' => $clientId,
+            'client_name' => trim($configured['client_name']),
+            'redirect_uris' => json_encode($redirects, JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES),
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        return DB::table('codebridge_oauth_clients')->where('client_id', $clientId)->first();
     }
 
     private function signingKey(): string
