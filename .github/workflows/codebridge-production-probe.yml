@@ -105,3 +105,74 @@ jobs:
           except Exception as e:
               print("mcp_error", type(e).__name__, str(e)[:300])
           PY
+
+      - name: Register fresh Claude recovery OAuth client
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json, urllib.request, urllib.error, urllib.parse, hashlib, base64
+
+          issuer = "https://kmjtechno.com"
+          callback = "https://claude.ai/api/mcp/auth_callback"
+
+          with urllib.request.urlopen(issuer + "/.well-known/oauth-authorization-server", timeout=20) as r:
+              meta = json.load(r)
+          if meta.get("issuer") != issuer:
+              raise SystemExit("issuer mismatch")
+          register_url = meta.get("registration_endpoint")
+          if register_url != issuer + "/oauth/register":
+              raise SystemExit("unexpected registration endpoint")
+
+          payload = json.dumps({
+              "client_name": "KMJ Claude recovery",
+              "redirect_uris": [callback],
+              "token_endpoint_auth_method": "none",
+              "grant_types": ["authorization_code", "refresh_token"],
+              "response_types": ["code"],
+          }).encode()
+
+          req = urllib.request.Request(
+              register_url,
+              data=payload,
+              method="POST",
+              headers={"Content-Type": "application/json", "Accept": "application/json"},
+          )
+          with urllib.request.urlopen(req, timeout=20) as r:
+              if r.status != 201:
+                  raise SystemExit(f"registration status {r.status}")
+              client = json.load(r)
+
+          client_id = client.get("client_id")
+          if not isinstance(client_id, str) or not client_id.startswith("cb_"):
+              raise SystemExit("invalid client_id")
+          if client.get("token_endpoint_auth_method") != "none":
+              raise SystemExit("unexpected auth method")
+          if client.get("redirect_uris") != [callback]:
+              raise SystemExit("callback mismatch")
+
+          verifier = "v" * 64
+          challenge = base64.urlsafe_b64encode(hashlib.sha256(verifier.encode()).digest()).rstrip(b"=").decode()
+          params = urllib.parse.urlencode({
+              "response_type": "code",
+              "client_id": client_id,
+              "redirect_uri": callback,
+              "code_challenge": challenge,
+              "code_challenge_method": "S256",
+              "scope": "codebridge:read",
+              "state": "probe",
+              "resource": issuer + "/mcp",
+          })
+          opener = urllib.request.build_opener(urllib.request.HTTPRedirectHandler())
+          try:
+              with opener.open(issuer + "/oauth/authorize?" + params, timeout=20) as r:
+                  final = r.geturl()
+                  if "/login" not in final:
+                      raise SystemExit(f"authorize did not reach login: {final}")
+          except urllib.error.HTTPError as e:
+              body = e.read(1000).decode("utf-8", "replace")
+              raise SystemExit(f"authorize failed HTTP {e.code}: {body[:500]}")
+
+          print("RECOVERY_CLIENT_ID=" + client_id)
+          print("RECOVERY_CLIENT_VALID=1")
+          PY
