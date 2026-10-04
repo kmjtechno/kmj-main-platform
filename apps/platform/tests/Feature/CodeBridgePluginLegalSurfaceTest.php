@@ -13,7 +13,7 @@ final class CodeBridgePluginLegalSurfaceTest extends TestCase
         $this->withoutVite();
     }
 
-    public function test_codebridge_plugin_legal_and_support_pages_are_public(): void
+    public function test_product_specific_codebridge_plugin_legal_and_support_pages_are_public(): void
     {
         $pages = [
             '/products/kmj-codebridge/terms' => 'products/codebridge/terms',
