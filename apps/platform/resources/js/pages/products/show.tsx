@@ -354,6 +354,29 @@ export default function ProductShow({ product }: { product: Product }) {
                                 slug={product.slug}
                             />
 
+                            {product.slug === 'kmj-codebridge' && (
+                                <div className="mt-6 flex flex-wrap gap-2 text-xs font-bold text-white/48">
+                                    <Link
+                                        href="/products/kmj-codebridge/terms"
+                                        className="rounded-lg border border-white/10 bg-white/[0.025] px-3 py-2 transition hover:border-white/20 hover:text-white/80"
+                                    >
+                                        Terms of Service
+                                    </Link>
+                                    <Link
+                                        href="/products/kmj-codebridge/privacy"
+                                        className="rounded-lg border border-white/10 bg-white/[0.025] px-3 py-2 transition hover:border-white/20 hover:text-white/80"
+                                    >
+                                        Privacy Policy
+                                    </Link>
+                                    <Link
+                                        href="/products/kmj-codebridge/support"
+                                        className="rounded-lg border border-white/10 bg-white/[0.025] px-3 py-2 transition hover:border-white/20 hover:text-white/80"
+                                    >
+                                        Support
+                                    </Link>
+                                </div>
+                            )}
+
                             <div className="mt-10 grid max-w-2xl gap-px overflow-hidden rounded-2xl border border-white/[0.07] bg-white/[0.07] sm:grid-cols-3">
                                 {[
                                     ['Authority', 'Canonical product'],
