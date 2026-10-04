@@ -199,14 +199,13 @@ final class CodeBridgeDevicePairingService
             $parts = parse_url($gateway);
             if (
                 ! is_array($parts)
-                || ($parts['scheme'] ?? null) !== 'https'
-                || ! is_string($parts['host'] ?? null)
-                || ($parts['host'] ?? '') === ''
+                || $parts['scheme'] !== 'https'
+                || $parts['host'] === ''
                 || isset($parts['user'])
                 || isset($parts['pass'])
                 || isset($parts['query'])
                 || isset($parts['fragment'])
-                || (($parts['path'] ?? '') !== '' && ($parts['path'] ?? '') !== '/')
+                || (isset($parts['path']) && $parts['path'] !== '' && $parts['path'] !== '/')
             ) {
                 throw new DomainException('CODEBRIDGE_PAIRING_GATEWAY_UNAVAILABLE');
             }
