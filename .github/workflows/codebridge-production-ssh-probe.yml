@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - '.github/workflows/codebridge-production-ssh-probe.yml'
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -102,6 +103,19 @@ jobs:
               git hash-object /home/kmjprod/current/apps/platform/app/Services/CodeBridge/OAuth/OAuthServer.php
             else
               echo "production_codebridge_readable=no"
+            fi
+            ROUTES=/home/kmjprod/current/apps/platform/routes/codebridge-oauth.php
+            if [ -r "$ROUTES" ]; then
+              echo "production_codebridge_routes_readable=yes"
+              printf 'production_codebridge_routes_blob='
+              git hash-object "$ROUTES"
+              if grep -q "codebridge.agent.compat" "$ROUTES"; then
+                echo "production_legacy_agent_proxy=present"
+              else
+                echo "production_legacy_agent_proxy=missing"
+              fi
+            else
+              echo "production_codebridge_routes_readable=no"
             fi
           else
             echo "production_path_visible=no"
