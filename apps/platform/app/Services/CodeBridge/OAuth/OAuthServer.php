@@ -128,12 +128,12 @@ final class OAuthServer
     public function validateAuthorization(array $query): array
     {
         $clientId = is_string($query['client_id'] ?? null) ? $query['client_id'] : '';
-        $client = $clientId === '' ? null : DB::table('codebridge_oauth_clients')->where('client_id', $clientId)->first();
+        $client = $clientId === '' ? null : $this->resolveClient($clientId);
         if (! $client) {
             throw new OAuthError('invalid_client', 400);
         }
         $redirect = is_string($query['redirect_uri'] ?? null) ? $query['redirect_uri'] : '';
-        $registered = json_decode((string) $client->redirect_uris, true, 4, JSON_THROW_ON_ERROR);
+        $registered = json_decode($client['redirect_uris'], true, 4, JSON_THROW_ON_ERROR);
         if ($redirect === '' || ! OAuthCore::redirectMatches($registered, $redirect)) {
             throw new OAuthError('invalid_redirect_uri', 400);
         }
@@ -158,7 +158,7 @@ final class OAuthServer
 
         return [
             'client_id' => $clientId,
-            'client_name' => (string) $client->client_name,
+            'client_name' => $client['client_name'],
             'redirect_uri' => $redirect,
             'redirect_host' => (string) parse_url($redirect, PHP_URL_HOST),
             'scopes' => $scopes,
@@ -427,6 +427,61 @@ final class OAuthServer
         }
 
         return $decoded;
+    }
+
+    /** @return array{client_name:string,redirect_uris:string}|null */
+    private function resolveClient(string $clientId): ?array
+    {
+        $readClient = static function (string $id): ?array {
+            $row = DB::table('codebridge_oauth_clients')->where('client_id', $id)->first();
+            if (! $row) {
+                return null;
+            }
+
+            $data = (array) $row;
+            if (! is_string($data['client_name'] ?? null) || ! is_string($data['redirect_uris'] ?? null)) {
+                return null;
+            }
+
+            return [
+                'client_name' => $data['client_name'],
+                'redirect_uris' => $data['redirect_uris'],
+            ];
+        };
+
+        $client = $readClient($clientId);
+        if ($client !== null) {
+            return $client;
+        }
+
+        $configured = config('codebridge_oauth.static_clients.'.$clientId);
+        if (! is_array($configured)
+            || ! preg_match('/\\A[A-Za-z0-9._-]{1,64}\\z/D', $clientId)
+            || ! is_string($configured['client_name'] ?? null)
+            || trim($configured['client_name']) === ''
+            || mb_strlen($configured['client_name']) > 120
+            || ! is_array($configured['redirect_uris'] ?? null)
+            || $configured['redirect_uris'] === []
+            || count($configured['redirect_uris']) > (int) config('codebridge_oauth.max_redirect_uris')) {
+            return null;
+        }
+
+        $redirects = array_values(array_unique($configured['redirect_uris']));
+        foreach ($redirects as $redirect) {
+            if (! is_string($redirect) || ! OAuthCore::isRegistrableRedirect($redirect)) {
+                return null;
+            }
+        }
+
+        DB::table('codebridge_oauth_clients')->insertOrIgnore([
+            'client_id' => $clientId,
+            'client_name' => trim($configured['client_name']),
+            'redirect_uris' => json_encode($redirects, JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES),
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        return $readClient($clientId);
     }
 
     private function signingKey(): string
