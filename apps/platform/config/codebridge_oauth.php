@@ -35,4 +35,12 @@ return [
     'refresh_token_ttl' => 2592000,
     'code_ttl' => 60,
     'max_redirect_uris' => 10,
+    // Stable public clients avoid vendor-side stale DCR caches while preserving
+    // PKCE and exact redirect binding. No client secret is used.
+    'static_clients' => [
+        'kmj_codebridge_claude' => [
+            'client_name' => 'Claude',
+            'redirect_uris' => ['https://claude.ai/api/mcp/auth_callback'],
+        ],
+    ],
 ];
