@@ -55,9 +55,9 @@ type Props = {
     service: Service;
 };
 
-const CHATGPT_DESKTOP_SETUP_URL = '/install-chatgpt-desktop.ps1';
+const CHATGPT_DESKTOP_SETUP_URL = '/install-chatgpt-desktop.cmd';
 const DESKTOP_INSTALL_DESCRIPTION =
-    'Download the KMJ Desktop setup once. It adds the official KMJ marketplace; CodeBridge is installed by default and opens browser OAuth on first use.';
+    'Download the verified KMJ Desktop launcher once, double-click it, then restart ChatGPT Desktop. It verifies the pinned setup payload before installing CodeBridge and opens browser OAuth on first use.';
 const CONNECTED_CLIENTS_DESCRIPTION =
     'Review OAuth clients connected to this KMJ account and revoke refresh access at any time.';
 const NO_CONNECTED_CLIENTS =
@@ -209,7 +209,7 @@ export default function CodeBridgeService({
                                     className="inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-xl bg-red-600 px-4 text-xs font-black text-white transition hover:bg-red-500"
                                 >
                                     <Link2 className="h-3.5 w-3.5" />
-                                    Download setup
+                                    Download one-click setup
                                 </a>
                             </div>
                         </div>
