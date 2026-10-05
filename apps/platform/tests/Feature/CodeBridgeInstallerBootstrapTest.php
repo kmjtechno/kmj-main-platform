@@ -79,7 +79,45 @@ final class CodeBridgeInstallerBootstrapTest extends TestCase
             'https://github.com/kmjtechno/kmj-codebridge/archive/refs/heads/main.zip',
             $script,
         );
+        self::assertStringContainsString(
+            'winget install --id OpenJS.NodeJS.LTS',
+            $script,
+        );
+        self::assertStringContainsString('Refresh-ProcessPath', $script);
+        self::assertStringNotContain
+    public function test_chatgpt_desktop_launcher_is_pinned_verified_and_credential_free(): void
+    {
+        $response = $this->get('/install-chatgpt-desktop.cmd')
+            ->assertOk()
+            ->assertHeader('Content-Type', 'application/octet-stream')
+            ->assertHeader(
+                'Content-Disposition',
+                'attachment; filename="KMJ-CodeBridge-ChatGPT-Desktop.cmd"',
+            )
+            ->assertHeader('X-Content-Type-Options', 'nosniff');
+
+        $script = $response->getContent();
+        self::assertIsString($script);
+        self::assertStringStartsWith('@echo off', $script);
+        self::assertStringContainsString(
+            'KMJ_SETUP_REF=9b27cfa3fb38c7cb08e1fda0da8cec384e625b06',
+            $script,
+        );
+        self::assertStringContainsString(
+            'KMJ_SETUP_SHA256=ab82687d5ec6463925f415ae62bbdf0527073dac414de0ba0ad29c921c9a4bca',
+            $script,
+        );
+        self::assertStringContainsString(
+            'raw.githubusercontent.com/kmjtechno/kmj-codebridge/%KMJ_SETUP_REF%/scripts/install-chatgpt-desktop.ps1',
+            $script,
+        );
+        self::assertStringContainsString('Get-FileHash -Algorithm SHA256', $script);
+        self::assertStringContainsString('ExecutionPolicy Bypass', $script);
         self::assertStringNotContainsString('Authorization: Bearer ', $script);
+        self::assertStringNotContainsString('client_secret', $script);
+        self::assertStringNotContainsString('CODEBRIDGE_AGENT_TOKEN=', $script);
+    }
+sString('Authorization: Bearer ', $script);
         self::assertStringNotContainsString('client_secret', $script);
         self::assertStringNotContainsString('CODEBRIDGE_AGENT_TOKEN=', $script);
     }
