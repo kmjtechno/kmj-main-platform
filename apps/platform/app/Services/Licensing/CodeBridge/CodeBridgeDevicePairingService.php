@@ -153,6 +153,42 @@ final class CodeBridgeDevicePairingService
                 $now,
             );
 
+            $credential = DB::table('codebridge_device_credentials')
+                ->where('activation_id', $activationId)
+                ->first();
+            if (! $credential) {
+                throw new DomainException('CODEBRIDGE_DEVICE_CREDENTIAL_MISSING');
+            }
+
+            $permissions = json_decode($row->requested_permissions, true, 8, JSON_THROW_ON_ERROR);
+            $permissions = array_values(array_unique(array_values(array_intersect(
+                ['read', 'write', 'execute'],
+                array_filter(is_array($permissions) ? $permissions : [], 'is_string'),
+            ))));
+            if ($permissions === []) {
+                throw new DomainException('CODEBRIDGE_PAIRING_INVALID');
+            }
+
+            DB::table('codebridge_device_project_grants')->updateOrInsert(
+                [
+                    'tenant_id' => $tenantId,
+                    'device_id' => (string) $row->device_id,
+                    'project_id' => (string) $row->project_id,
+                ],
+                [
+                    'id' => (string) Str::uuid(),
+                    'credential_id' => $credential->id,
+                    'project_name' => (string) $row->project_name,
+                    'repository' => null,
+                    'permissions' => json_encode($permissions, JSON_THROW_ON_ERROR),
+                    'gate_preset' => 'standard',
+                    'status' => 'authorized',
+                    'revoked_at' => null,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ],
+            );
+
             DB::table('codebridge_device_pairings')->where('id', $row->id)->update([
                 'status' => 'approved',
                 'tenant_id' => $tenantId,
