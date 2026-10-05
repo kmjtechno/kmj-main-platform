@@ -3,6 +3,7 @@
 use App\Models\User;
 use App\Services\Licensing\CodeBridge\CodeBridgeDeviceCredentialService;
 use App\Services\Licensing\CodeBridge\CodeBridgeDeviceEnrollmentService;
+use App\Services\Licensing\CodeBridge\CodeBridgeOwnerTierService;
 use App\Services\PlatformOwnerAccess;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -12,6 +13,29 @@ Route::middleware(['auth', 'verified', 'password.confirm'])
     ->prefix('operator/codebridge')
     ->name('operator.codebridge.')
     ->group(function (): void {
+        Route::post('licenses/owner-tier', function (Request $request, PlatformOwnerAccess $access, CodeBridgeOwnerTierService $service) {
+            $user = $request->user();
+            abort_unless($user instanceof User, 401);
+            $access->require($user);
+            $v = $request->validate([
+                'license_id' => ['required', 'uuid'],
+                'tenant_id' => ['required', 'string', 'regex:/\\A[A-Za-z0-9_-]{1,64}\\z/'],
+                'confirm' => ['required', 'in:UPGRADE_CODEBRIDGE_OWNER'],
+            ]);
+
+            try {
+                return response()->json(
+                    $service->upgrade(
+                        $v['license_id'],
+                        $v['tenant_id'],
+                        'platform-owner:'.$user->getKey(),
+                    ),
+                )->header('Cache-Control', 'no-store');
+            } catch (DomainException $e) {
+                return response()->json(['error' => $e->getMessage()], 409)->header('Cache-Control', 'no-store');
+            }
+        })->name('licenses.owner-tier');
+
         Route::post('devices/enroll', function (Request $request, PlatformOwnerAccess $access, CodeBridgeDeviceEnrollmentService $service) {
             $user = $request->user();
             abort_unless($user instanceof User, 401);
