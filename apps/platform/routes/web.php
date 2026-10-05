@@ -377,6 +377,43 @@ Route::middleware(['auth', 'verified'])->group(function () {
             ->values()
             ->all();
 
+        $connectedClients = DB::table('codebridge_oauth_refresh_tokens as tokens')
+            ->join('codebridge_oauth_clients as clients', 'clients.client_id', '=', 'tokens.client_id')
+            ->where('tokens.user_id', $user->id)
+            ->whereNull('tokens.revoked_at_epoch')
+            ->where('tokens.expires_at_epoch', '>', time())
+            ->get([
+                'tokens.client_id',
+                'tokens.family_id',
+                'tokens.scope',
+                'tokens.created_at',
+                'tokens.updated_at',
+                'clients.client_name',
+            ])
+            ->groupBy('client_id')
+            ->map(function ($rows): array {
+                $first = $rows->first();
+                $scopes = $rows
+                    ->pluck('scope')
+                    ->filter(fn (mixed $scope): bool => is_string($scope) && $scope !== '')
+                    ->flatMap(fn (string $scope): array => preg_split('/\\s+/', trim($scope)) ?: [])
+                    ->filter()
+                    ->unique()
+                    ->values()
+                    ->all();
+
+                return [
+                    'client_id' => (string) $first->client_id,
+                    'client_name' => (string) $first->client_name,
+                    'sessions' => $rows->pluck('family_id')->unique()->count(),
+                    'scopes' => $scopes,
+                    'connected_at' => $rows->min('created_at'),
+                    'last_active_at' => $rows->max('updated_at'),
+                ];
+            })
+            ->values()
+            ->all();
+
         return Inertia::render('services/codebridge', [
             'organization' => $organization,
             'entitlement' => $entitlement,
@@ -398,9 +435,46 @@ Route::middleware(['auth', 'verified'])->group(function () {
                     ->where('status', 'pending')
                     ->where('expires_at', '>', now())
                     ->count(),
+                'connected_clients' => $connectedClients,
+                'access_token_ttl_seconds' => (int) config('codebridge_oauth.access_token_ttl', 900),
             ],
         ]);
     })->name('services.codebridge');
+
+    Route::post('services/kmj-codebridge/oauth-clients/{clientId}/revoke', function (
+        Request $request,
+        string $clientId,
+    ) {
+        $user = $request->user();
+        abort_unless($user instanceof User, 401);
+        abort_unless((bool) preg_match('/\\A[A-Za-z0-9._-]{1,64}\\z/D', $clientId), 404);
+
+        $now = time();
+        $revoked = DB::table('codebridge_oauth_refresh_tokens')
+            ->where('user_id', $user->id)
+            ->where('client_id', $clientId)
+            ->whereNull('revoked_at_epoch')
+            ->update([
+                'revoked_at_epoch' => $now,
+                'updated_at' => now(),
+            ]);
+
+        DB::table('codebridge_oauth_codes')
+            ->where('user_id', $user->id)
+            ->where('client_id', $clientId)
+            ->whereNull('consumed_at_epoch')
+            ->update([
+                'consumed_at_epoch' => $now,
+                'updated_at' => now(),
+            ]);
+
+        return back()->with(
+            'status',
+            $revoked > 0
+                ? 'CodeBridge client access revoked. Existing access tokens expire shortly.'
+                : 'No active CodeBridge client access was found.',
+        );
+    })->name('services.codebridge.oauth.revoke');
 
     Route::get('customer/releases/{release}/download', function (
         Request $request,
