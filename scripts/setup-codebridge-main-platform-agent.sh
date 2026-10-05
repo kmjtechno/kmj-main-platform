@@ -34,7 +34,13 @@ fi
 [[ -n "$NODE" && -x "$NODE" ]] || { echo 'Node.js runtime not found.' >&2; exit 2; }
 
 if [[ -z "$SOURCE_ROOT" ]]; then
-  if [[ -d /home/kmjprod/current/.git ]]; then SOURCE_ROOT=/home/kmjprod/current; else SOURCE_ROOT="$(pwd -P)"; fi
+  if [[ -d /home/kmjstage/repos/kmj-main-platform/.git ]]; then
+    SOURCE_ROOT=/home/kmjstage/repos/kmj-main-platform
+  elif [[ -d /home/kmjprod/current/.git ]]; then
+    SOURCE_ROOT=/home/kmjprod/current
+  else
+    SOURCE_ROOT="$(pwd -P)"
+  fi
 fi
 SOURCE_ROOT="$(readlink -f "$SOURCE_ROOT")"
 [[ -d "$SOURCE_ROOT/.git" ]] || { echo "Source checkout is not a Git repository: $SOURCE_ROOT" >&2; exit 2; }
