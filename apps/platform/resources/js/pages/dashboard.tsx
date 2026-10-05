@@ -57,7 +57,7 @@ type DashboardProps = {
     hasPasskey: boolean;
 };
 
-const CHATGPT_DESKTOP_SETUP_URL = '/install-chatgpt-desktop.ps1';
+const CHATGPT_DESKTOP_SETUP_URL = '/install-chatgpt-desktop.cmd';
 
 const productImages: Record<string, string> = {
     'kmj-cloudos': '/assets/products/kmj-cloudos.webp',
@@ -245,7 +245,7 @@ function CodeBridgeCard({
                             download
                             className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-red-600 px-4 text-xs font-black text-white transition hover:bg-red-500"
                         >
-                            Set up ChatGPT Desktop
+                            One-click ChatGPT Desktop setup
                             <ArrowRight className="h-3.5 w-3.5" />
                         </a>
                         <Link
