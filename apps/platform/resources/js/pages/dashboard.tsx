@@ -57,7 +57,7 @@ type DashboardProps = {
     hasPasskey: boolean;
 };
 
-const CHATGPT_DESKTOP_SETUP_URL = '/install-chatgpt-desktop.ps1';
+const CHATGPT_DESKTOP_SETUP_URL = '/install-chatgpt-desktop.cmd';
 
 const productImages: Record<string, string> = {
     'kmj-cloudos': '/assets/products/kmj-cloudos.webp',
