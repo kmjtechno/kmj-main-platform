@@ -545,6 +545,50 @@ Route::middleware(['auth', 'verified'])->group(function () {
             ->values()
             ->all();
 
+        $managedProjects = DB::table('codebridge_device_project_grants as g')
+            ->join('codebridge_device_credentials as c', 'c.id', '=', 'g.credential_id')
+            ->where('g.tenant_id', $organization['id'])
+            ->whereNull('g.revoked_at')
+            ->whereNull('c.revoked_at')
+            ->where('c.expires_at_epoch', '>', time())
+            ->orderBy('g.created_at')
+            ->get([
+                'g.device_id',
+                'g.project_id',
+                'g.project_name',
+                'g.repository',
+                'g.permissions',
+                'g.gate_preset',
+                'g.status',
+                'g.updated_at',
+            ])
+            ->map(function ($project): array {
+                $permissions = [];
+                if (is_string($project->permissions) && $project->permissions !== '') {
+                    try {
+                        $decoded = json_decode($project->permissions, true, 8, JSON_THROW_ON_ERROR);
+                        $permissions = array_values(array_intersect(
+                            ['read', 'write', 'execute'],
+                            array_filter(is_array($decoded) ? $decoded : [], 'is_string'),
+                        ));
+                    } catch (Throwable) {
+                        $permissions = [];
+                    }
+                }
+
+                return [
+                    'device_id' => (string) $project->device_id,
+                    'project_id' => (string) $project->project_id,
+                    'project_name' => (string) $project->project_name,
+                    'repository' => is_string($project->repository) ? $project->repository : null,
+                    'permissions' => $permissions,
+                    'gate_preset' => (string) $project->gate_preset,
+                    'status' => (string) $project->status,
+                    'updated_at' => $project->updated_at,
+                ];
+            })
+            ->all();
+
         return Inertia::render('services/codebridge', [
             'organization' => $organization,
             'entitlement' => $entitlement,
@@ -566,6 +610,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
                     ->where('status', 'pending')
                     ->where('expires_at', '>', now())
                     ->count(),
+                'projects' => $managedProjects,
                 'connected_clients' => $connectedClients,
                 'access_token_ttl_seconds' => (int) config('codebridge_oauth.access_token_ttl', 900),
             ],
