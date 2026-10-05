@@ -57,7 +57,6 @@ type Props = {
 
 const CHATGPT_PLUGIN_URL =
     'https://chatgpt.com/plugins/plugins_6abe0c47ee7c81919ac29cb5bc2531e6';
-const CHATGPT_PLUGIN_VERSION = '0.3.2';
 const DESKTOP_INSTALL_DESCRIPTION =
     'Install CodeBridge once. The Desktop bridge opens KMJ OAuth on first use. No manual MCP URL or bearer token is required.';
 const CONNECTED_CLIENTS_DESCRIPTION =
