@@ -63,6 +63,53 @@ BASH;
     ]);
 })->name('codebridge.install');
 
+Route::get('install-chatgpt-desktop.ps1', function () {
+    $script = <<<'POWERSHELL'
+$ErrorActionPreference = 'Stop'
+
+Write-Host 'KMJ CodeBridge - ChatGPT Desktop setup' -ForegroundColor Cyan
+
+if (-not (Get-Command codex -ErrorAction SilentlyContinue)) {
+    throw 'Codex CLI was not found. Install or update the ChatGPT Desktop app, then run this setup again.'
+}
+
+$marketplace = 'kmj-techno'
+$repository = 'kmjtechno/kmj-codebridge'
+$existing = & codex plugin marketplace list 2>&1 | Out-String
+
+if ($LASTEXITCODE -ne 0) {
+    throw 'Unable to read ChatGPT plugin marketplaces.'
+}
+
+if ($existing -match [regex]::Escape($marketplace)) {
+    Write-Host 'Refreshing the KMJ TECHNO marketplace...'
+    & codex plugin marketplace upgrade $marketplace
+    if ($LASTEXITCODE -ne 0) {
+        throw 'Failed to refresh the KMJ TECHNO marketplace.'
+    }
+} else {
+    Write-Host 'Adding the KMJ TECHNO marketplace...'
+    & codex plugin marketplace add $repository --ref main
+    if ($LASTEXITCODE -ne 0) {
+        throw 'Failed to add the KMJ TECHNO marketplace.'
+    }
+}
+
+Write-Host ''
+Write-Host 'KMJ CodeBridge is ready for ChatGPT Desktop.' -ForegroundColor Green
+Write-Host 'Fully quit and reopen ChatGPT Desktop once.'
+Write-Host 'The KMJ marketplace installs CodeBridge by default.'
+Write-Host 'On first CodeBridge use, browser OAuth opens automatically.'
+POWERSHELL;
+
+    return response($script."\r\n", 200, [
+        'Content-Type' => 'text/plain; charset=UTF-8',
+        'Content-Disposition' => 'attachment; filename="KMJ-CodeBridge-ChatGPT-Desktop.ps1"',
+        'Cache-Control' => 'public, max-age=300',
+        'X-Content-Type-Options' => 'nosniff',
+    ]);
+})->name('codebridge.chatgpt.desktop.install');
+
 Route::get('/', function (PublicProductCatalog $products) {
     $portfolio = $products->all();
 
