@@ -114,7 +114,14 @@ jobs:
           import json, urllib.request, urllib.error, urllib.parse, hashlib, base64
 
           issuer = "https://kmjtechno.com"
-          callback = "https://claude.ai/api/mcp/auth_callback"
+          callbacks = [
+              "https://claude.ai/api/mcp/auth_callback",
+              "https://claude.com/api/mcp/auth_callback",
+              "http://127.0.0.1/callback",
+              "http://localhost/callback",
+              "http://[::1]/callback",
+          ]
+          callback = callbacks[0]
 
           with urllib.request.urlopen(issuer + "/.well-known/oauth-authorization-server", timeout=20) as r:
               meta = json.load(r)
@@ -126,7 +133,7 @@ jobs:
 
           payload = json.dumps({
               "client_name": "KMJ Claude recovery",
-              "redirect_uris": [callback],
+              "redirect_uris": callbacks,
               "token_endpoint_auth_method": "none",
               "grant_types": ["authorization_code", "refresh_token"],
               "response_types": ["code"],
@@ -148,7 +155,7 @@ jobs:
               raise SystemExit("invalid client_id")
           if client.get("token_endpoint_auth_method") != "none":
               raise SystemExit("unexpected auth method")
-          if client.get("redirect_uris") != [callback]:
+          if client.get("redirect_uris") != callbacks:
               raise SystemExit("callback mismatch")
 
           verifier = "v" * 64
@@ -156,7 +163,7 @@ jobs:
           params = urllib.parse.urlencode({
               "response_type": "code",
               "client_id": client_id,
-              "redirect_uri": callback,
+              "redirect_uri": "http://127.0.0.1:33418/callback",
               "code_challenge": challenge,
               "code_challenge_method": "S256",
               "scope": "codebridge:read",
@@ -174,5 +181,6 @@ jobs:
               raise SystemExit(f"authorize failed HTTP {e.code}: {body[:500]}")
 
           print("RECOVERY_CLIENT_ID=" + client_id)
+          print("RECOVERY_REDIRECTS=" + ",".join(callbacks))
           print("RECOVERY_CLIENT_VALID=1")
           PY
