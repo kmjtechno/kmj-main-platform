@@ -57,6 +57,9 @@ type DashboardProps = {
     hasPasskey: boolean;
 };
 
+const CHATGPT_PLUGIN_URL =
+    'https://chatgpt.com/plugins/plugins_6abe0c47ee7c81919ac29cb5bc2531e6';
+
 const productImages: Record<string, string> = {
     'kmj-cloudos': '/assets/products/kmj-cloudos.webp',
     'kmj-calibration-pro': '/assets/products/kmj-calibration.webp',
@@ -238,11 +241,20 @@ function CodeBridgeCard({
                     </div>
 
                     <div className="flex flex-wrap gap-2">
-                        <Link
-                            href="/services/kmj-codebridge"
+                        <a
+                            href={CHATGPT_PLUGIN_URL}
+                            target="_blank"
+                            rel="noreferrer"
                             className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-red-600 px-4 text-xs font-black text-white transition hover:bg-red-500"
                         >
-                            Open CodeBridge
+                            Install in ChatGPT
+                            <ArrowRight className="h-3.5 w-3.5" />
+                        </a>
+                        <Link
+                            href="/services/kmj-codebridge"
+                            className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border px-4 text-xs font-bold transition hover:border-red-500/40 hover:text-red-500"
+                        >
+                            Manage CodeBridge
                             <ArrowRight className="h-3.5 w-3.5" />
                         </Link>
                         {service.release && (
