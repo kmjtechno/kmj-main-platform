@@ -44,15 +44,35 @@ final class CodeBridgeInstallerBootstrapTest extends TestCase
         $script = $response->getContent();
         self::assertIsString($script);
         self::assertStringContainsString(
-            'codex plugin marketplace add $repository --ref main',
+            'codex plugin marketplace add $repo --ref main',
             $script,
         );
         self::assertStringContainsString(
-            '$repository = \'kmjtechno/kmj-codebridge\'',
+            '$repo = \'kmjtechno/kmj-codebridge\'',
             $script,
         );
         self::assertStringContainsString(
             'codex plugin marketplace upgrade $marketplace',
+            $script,
+        );
+        self::assertStringContainsString(
+            'Codex CLI was not found; using the ChatGPT Desktop personal-marketplace fallback.',
+            $script,
+        );
+        self::assertStringContainsString(
+            '.codex\\plugins\\kmj-codebridge',
+            $script,
+        );
+        self::assertStringContainsString(
+            '.agents\\plugins\\marketplace.json',
+            $script,
+        );
+        self::assertStringContainsString(
+            'INSTALLED_BY_DEFAULT',
+            $script,
+        );
+        self::assertStringContainsString(
+            'https://github.com/kmjtechno/kmj-codebridge/archive/refs/heads/main.zip',
             $script,
         );
         self::assertStringNotContainsString('Authorization: Bearer ', $script);
