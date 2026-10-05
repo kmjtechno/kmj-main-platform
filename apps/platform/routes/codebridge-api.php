@@ -100,7 +100,6 @@ Route::post('codebridge/v1/device-credentials/introspect', function (Request $re
 
     $row = DB::table('codebridge_device_credentials as c')
         ->join('kslp_licenses as l', 'l.id', '=', 'c.license_id')
-        ->leftJoin('codebridge_device_pairings as p', 'p.activation_id', '=', 'c.activation_id')
         ->where('c.token_hash', hash('sha256', $credential))
         ->whereNull('c.revoked_at')
         ->where('c.expires_at_epoch', '>', time())
@@ -109,28 +108,48 @@ Route::post('codebridge/v1/device-credentials/introspect', function (Request $re
         ->whereNull('l.revoked_at')
         ->where('l.starts_at', '<=', now())
         ->where('l.expires_at', '>', now())
-        ->select(['c.device_id', 'c.tenant_id', 'p.project_id', 'p.requested_permissions'])
+        ->select(['c.id', 'c.device_id', 'c.tenant_id'])
         ->first();
 
     if (! $row) {
         return response()->json(['active' => false], 401)->header('Cache-Control', 'no-store');
     }
 
-    $permissions = [];
-    if (is_string($row->requested_permissions) && $row->requested_permissions !== '') {
-        try {
-            $decoded = json_decode($row->requested_permissions, true, 8, JSON_THROW_ON_ERROR);
-            if (is_array($decoded)) {
-                $permissions = array_values(array_unique(array_values(array_intersect(
-                    ['read', 'write', 'execute'],
-                    array_filter($decoded, 'is_string'),
-                ))));
+    $grants = DB::table('codebridge_device_project_grants')
+        ->where('credential_id', $row->id)
+        ->where('status', 'authorized')
+        ->whereNull('revoked_at')
+        ->orderBy('created_at')
+        ->get(['project_id', 'permissions']);
+
+    $projects = $grants
+        ->pluck('project_id')
+        ->filter(fn ($project): bool => is_string($project) && $project !== '')
+        ->unique()
+        ->values()
+        ->all();
+
+    $permissions = $grants
+        ->flatMap(function ($grant): array {
+            if (! is_string($grant->permissions) || $grant->permissions === '') {
+                return [];
             }
-        } catch (Throwable) {
-            $permissions = [];
-        }
-    }
-    if ($permissions === []) {
+            try {
+                $decoded = json_decode($grant->permissions, true, 8, JSON_THROW_ON_ERROR);
+            } catch (Throwable) {
+                return [];
+            }
+
+            return array_values(array_intersect(
+                ['read', 'write', 'execute'],
+                array_filter(is_array($decoded) ? $decoded : [], 'is_string'),
+            ));
+        })
+        ->unique()
+        ->values()
+        ->all();
+
+    if ($projects === [] || $permissions === []) {
         return response()->json(['active' => false], 401)->header('Cache-Control', 'no-store');
     }
 
@@ -138,7 +157,7 @@ Route::post('codebridge/v1/device-credentials/introspect', function (Request $re
         'active' => true,
         'device_id' => $row->device_id,
         'tenant_id' => $row->tenant_id,
-        'projects' => is_string($row->project_id) && $row->project_id !== '' ? [$row->project_id] : [],
+        'projects' => $projects,
         'permissions' => $permissions,
     ])->header('Cache-Control', 'no-store');
 })->middleware('throttle:120,1');
@@ -185,7 +204,7 @@ Route::post('codebridge/v1/user-access/introspect', function (
         ->map(function (array $org) use ($scopePermissions): array {
             $devices = DB::table('codebridge_device_credentials as c')
                 ->join('kslp_licenses as l', 'l.id', '=', 'c.license_id')
-                ->leftJoin('codebridge_device_pairings as p', 'p.activation_id', '=', 'c.activation_id')
+                ->join('codebridge_device_project_grants as g', 'g.credential_id', '=', 'c.id')
                 ->where('c.tenant_id', $org['id'])
                 ->whereNull('c.revoked_at')
                 ->where('c.expires_at_epoch', '>', time())
@@ -195,7 +214,9 @@ Route::post('codebridge/v1/user-access/introspect', function (
                 ->whereNull('l.revoked_at')
                 ->where('l.starts_at', '<=', now())
                 ->where('l.expires_at', '>', now())
-                ->select(['c.device_id', 'p.project_id'])
+                ->where('g.status', 'authorized')
+                ->whereNull('g.revoked_at')
+                ->select(['c.device_id', 'g.project_id'])
                 ->get()
                 ->groupBy('device_id')
                 ->map(fn ($rows): array => $rows
