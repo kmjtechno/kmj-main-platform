@@ -55,10 +55,9 @@ type Props = {
     service: Service;
 };
 
-const CHATGPT_PLUGIN_URL =
-    'https://chatgpt.com/plugins/plugins_6abe0c47ee7c81919ac29cb5bc2531e6';
+const CHATGPT_DESKTOP_SETUP_URL = '/install-chatgpt-desktop.ps1';
 const DESKTOP_INSTALL_DESCRIPTION =
-    'Install CodeBridge once. The Desktop bridge opens KMJ OAuth on first use. No manual MCP URL or bearer token is required.';
+    'Download the KMJ Desktop setup once. It adds the official KMJ marketplace; CodeBridge is installed by default and opens browser OAuth on first use.';
 const CONNECTED_CLIENTS_DESCRIPTION =
     'Review OAuth clients connected to this KMJ account and revoke refresh access at any time.';
 const NO_CONNECTED_CLIENTS =
@@ -120,13 +119,12 @@ export default function CodeBridgeService({
 
                         <div className="flex flex-wrap gap-2">
                             <a
-                                href={CHATGPT_PLUGIN_URL}
-                                target="_blank"
-                                rel="noreferrer"
+                                href={CHATGPT_DESKTOP_SETUP_URL}
+                                download
                                 className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-red-600 px-4 text-xs font-black text-white transition hover:bg-red-500"
                             >
                                 <Link2 className="h-3.5 w-3.5" />
-                                Install in ChatGPT
+                                Set up ChatGPT Desktop
                             </a>
                             <Link
                                 href="/codebridge/pair"
@@ -206,13 +204,12 @@ export default function CodeBridgeService({
                                     </p>
                                 </div>
                                 <a
-                                    href={CHATGPT_PLUGIN_URL}
-                                    target="_blank"
-                                    rel="noreferrer"
+                                    href={CHATGPT_DESKTOP_SETUP_URL}
+                                    download
                                     className="inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-xl bg-red-600 px-4 text-xs font-black text-white transition hover:bg-red-500"
                                 >
                                     <Link2 className="h-3.5 w-3.5" />
-                                    Install
+                                    Download setup
                                 </a>
                             </div>
                         </div>
@@ -240,19 +237,18 @@ export default function CodeBridgeService({
                             <ol className="text-muted-foreground mt-3 space-y-3 text-xs leading-5">
                                 <li className="flex gap-3">
                                     <StepNumber value="1" />
-                                    Click Install in ChatGPT once and enable KMJ
-                                    CodeBridge.
+                                    Download and run the KMJ ChatGPT Desktop
+                                    setup once.
                                 </li>
                                 <li className="flex gap-3">
                                     <StepNumber value="2" />
-                                    Ask CodeBridge to connect your KMJ account.
-                                    The Desktop bridge opens browser OAuth
-                                    automatically.
+                                    Fully quit and reopen ChatGPT Desktop. KMJ
+                                    CodeBridge is installed by default.
                                 </li>
                                 <li className="flex gap-3">
                                     <StepNumber value="3" />
-                                    Return to ChatGPT and select an authorized
-                                    device and project.
+                                    Use CodeBridge. Its local bridge opens KMJ
+                                    browser OAuth automatically on first use.
                                 </li>
                             </ol>
                         </div>

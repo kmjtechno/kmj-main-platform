@@ -29,4 +29,34 @@ final class CodeBridgeInstallerBootstrapTest extends TestCase
         self::assertStringNotContainsString('CODEBRIDGE_AGENT_TOKEN=', $script);
         self::assertStringNotContainsString('Authorization: Bearer ', $script);
     }
+
+    public function test_chatgpt_desktop_setup_uses_public_marketplace_without_credentials(): void
+    {
+        $response = $this->get('/install-chatgpt-desktop.ps1')
+            ->assertOk()
+            ->assertHeader('Content-Type', 'text/plain; charset=UTF-8')
+            ->assertHeader(
+                'Content-Disposition',
+                'attachment; filename="KMJ-CodeBridge-ChatGPT-Desktop.ps1"',
+            )
+            ->assertHeader('X-Content-Type-Options', 'nosniff');
+
+        $script = $response->getContent();
+        self::assertIsString($script);
+        self::assertStringContainsString(
+            'codex plugin marketplace add $repository --ref main',
+            $script,
+        );
+        self::assertStringContainsString(
+            '$repository = \'kmjtechno/kmj-codebridge\'',
+            $script,
+        );
+        self::assertStringContainsString(
+            'codex plugin marketplace upgrade $marketplace',
+            $script,
+        );
+        self::assertStringNotContainsString('Authorization: Bearer ', $script);
+        self::assertStringNotContainsString('client_secret', $script);
+        self::assertStringNotContainsString('CODEBRIDGE_AGENT_TOKEN=', $script);
+    }
 }
