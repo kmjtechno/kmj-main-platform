@@ -7,6 +7,7 @@ use App\Services\Commerce\KmjProductCatalog;
 use DomainException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use KMJ\MainPlatform\Catalog\Models\Product;
+use KMJ\MainPlatform\Catalog\Services\PlanCatalog;
 use KMJ\MainPlatform\Entitlements\Models\EntitlementPolicy;
 use Tests\TestCase;
 
@@ -53,6 +54,12 @@ final class CloudOSProductCatalogTest extends TestCase
         $this->assertDatabaseHas('products', [
             'slug' => KmjProductCatalog::CALIBRATION_SLUG,
             'status' => 'sandbox',
+        ]);
+        $this->assertDatabaseHas('plans', [
+            'code' => PlanCatalog::CODEBRIDGE_OWNER_CODE,
+            'name' => 'CodeBridge Owner',
+            'pricing_model' => 'internal',
+            'status' => 'active',
         ]);
     }
 
