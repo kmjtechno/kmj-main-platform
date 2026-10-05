@@ -711,7 +711,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         $grantId = (string) Str::uuid();
         $jobId = (string) Str::uuid();
 
-        DB::transaction(function () use ($v, $credential, $permissions, $grantId, $jobId, $license): void {
+        DB::transaction(function () use ($v, $credential, $permissions, $grantId, $jobId, $license, $user): void {
             DB::table('codebridge_device_project_grants')->insert([
                 'id' => $grantId,
                 'credential_id' => $credential->id,
@@ -744,7 +744,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
             DB::table('kslp_license_events')->insert([
                 'license_id' => $license->id,
-                'actor_id' => 'kmj-user:'.auth()->id(),
+                'actor_id' => 'kmj-user:'.$user->id,
                 'action' => 'codebridge_project_requested',
                 'reason' => 'Project requested from KMJ CodeBridge UI',
                 'correlation_id' => $jobId,
