@@ -48,7 +48,7 @@ final class CodeBridgeInstallerBootstrapTest extends TestCase
             $script,
         );
         self::assertStringContainsString(
-            "$"+"repository = 'kmjtechno/kmj-codebridge'",
+            '$repository = \'kmjtechno/kmj-codebridge\'',
             $script,
         );
         self::assertStringContainsString(
