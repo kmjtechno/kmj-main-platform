@@ -29,6 +29,8 @@ Do not request or expose a generic shell through CodeBridge. Use only administra
 ## Project identity
 Preferred CodeBridge project id: `kmj-main-platform`.
 
+The existing `project1` is the `kmj-codebridge` implementation repository. Treat it as a hard boundary: do not repoint, rename, overwrite, or use it for Main Platform work. A free/community agent is one-project-only, so Main Platform should be enrolled as a separate CodeBridge device/agent unless a signed entitlement explicitly authorizes multiple projects.
+
 The production checkout is known as `/home/kmjprod/current`, but production must not be used as an unrestricted development scratch tree. If the authorized CodeBridge project points there, preserve production safety: no destructive database actions, no secret rotation, no live deployment, no DNS/billing/signing-key mutation, and no destructive migration without explicit owner approval.
 
 ## Locked architecture
