@@ -189,9 +189,11 @@ export default function CodeBridgeService({
                                         ChatGPT Desktop
                                     </div>
                                     <p className="text-muted-foreground mt-2 text-[11px] leading-5">
-                                        Install CodeBridge v{CHATGPT_PLUGIN_VERSION} once. The bundled
-                                        Desktop bridge opens KMJ OAuth automatically on first use; no
-                                        manual MCP URL or bearer token is required.
+                                        Install CodeBridge v
+                                        {CHATGPT_PLUGIN_VERSION} once. The
+                                        Desktop bridge opens KMJ OAuth on first
+                                        use. No manual MCP URL or bearer token
+                                        is required.
                                     </p>
                                 </div>
                                 <a
@@ -312,8 +314,8 @@ export default function CodeBridgeService({
                         <div>
                             <h2 className="font-black">Connected AI clients</h2>
                             <p className="text-muted-foreground mt-1 text-xs leading-5">
-                                Review OAuth clients connected to this KMJ account and revoke
-                                refresh access at any time.
+                                Review OAuth clients connected to this KMJ
+                                account and revoke refresh access at any time.
                             </p>
                         </div>
                         <span className="rounded-full border px-3 py-1 text-[10px] font-bold">
@@ -323,7 +325,8 @@ export default function CodeBridgeService({
 
                     {service.connected_clients.length === 0 ? (
                         <div className="text-muted-foreground mt-5 rounded-xl border border-dashed p-5 text-xs">
-                            No active CodeBridge OAuth client is connected to this account.
+                            No active CodeBridge OAuth client is connected to
+                            this account.
                         </div>
                     ) : (
                         <div className="mt-5 grid gap-3">
@@ -337,9 +340,14 @@ export default function CodeBridgeService({
                                             {client.client_name}
                                         </div>
                                         <div className="text-muted-foreground mt-1 text-[11px]">
-                                            {client.sessions} session
-                                            {client.sessions === 1 ? '' : 's'} · Last active{' '}
-                                            {formatDateTime(client.last_active_at)}
+                                            {client.sessions} active{' '}
+                                            {client.sessions === 1
+                                                ? 'session'
+                                                : 'sessions'}
+                                            {' · '}Last active{' '}
+                                            {formatDateTime(
+                                                client.last_active_at,
+                                            )}
                                         </div>
                                         <div className="mt-2 flex flex-wrap gap-2">
                                             {client.scopes.map((scope) => (
@@ -373,8 +381,8 @@ export default function CodeBridgeService({
                     )}
 
                     <p className="text-muted-foreground mt-4 text-[10px] leading-4">
-                        Revocation stops refresh access immediately. An already issued access
-                        token can remain valid for up to{' '}
+                        Revocation stops refresh access immediately. An
+                        already-issued access token can remain valid for up to{' '}
                         {Math.max(
                             1,
                             Math.ceil(service.access_token_ttl_seconds / 60),
