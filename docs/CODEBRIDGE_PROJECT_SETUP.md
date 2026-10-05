@@ -9,7 +9,20 @@ This file is intentionally secret-free. CodeBridge credentials and the real `age
 - Production path currently used by platform probes: `/home/kmjprod/current`
 - Safe default: read-only until the project identity is verified.
 - Enable `writable: true` only for the explicitly authorized development checkout.
-- Do not create a second project when a free/community agent is already using its one-project allowance; first verify whether the existing authorized project is this repository.
+- The existing CodeBridge `project1` is the `kmj-codebridge` implementation repository. It is NOT this Main Platform repository and must not be repointed or overwritten.
+- Community/free agent mode allows only one project per agent. Therefore do NOT add `project2` to the existing free-mode agent. Use a separately enrolled CodeBridge device/agent for Main Platform, or a signed entitlement that explicitly permits multiple projects.
+
+## Existing project1 boundary
+
+`project1` belongs to `kmjtechno/kmj-codebridge`. Keep that project and its service/config intact.
+
+Preferred Main Platform binding:
+- separate CodeBridge device/agent identity;
+- project id `kmj-main-platform`;
+- root pointing at the authorized Main Platform development/staging checkout;
+- separate private state/config from the CodeBridge implementation agent.
+
+Do not use `request_cowork_directory` as a substitute when the goal is specifically to exercise CodeBridge. Cowork/local filesystem access is a fallback only if the owner explicitly chooses it.
 
 ## Verification before enabling writes
 
