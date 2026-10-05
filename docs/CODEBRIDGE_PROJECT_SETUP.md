@@ -30,12 +30,14 @@ The repository now contains a dedicated isolated project-agent installer:
 
 `scripts/setup-codebridge-main-platform-agent.sh`
 
-On the authorized VPS, run:
+On the authorized VPS, the shortest path is the public CodeBridge installer helper:
 
 ```bash
-cd /home/kmjprod/current
-sudo bash scripts/setup-codebridge-main-platform-agent.sh
+curl -fsSL https://raw.githubusercontent.com/kmjtechno/kmj-codebridge/main/scripts/setup-main-platform-agent.sh | sudo bash
 ```
+
+This avoids depending on whether the production Main Platform checkout has already
+received the latest repository helper commit.
 
 The script intentionally leaves the existing `project1` agent untouched. It creates a
 separate project checkout at `/srv/kmj-codebridge-projects/kmj-main-platform`, a
