@@ -44,11 +44,11 @@ final class CodeBridgeInstallerBootstrapTest extends TestCase
         $script = $response->getContent();
         self::assertIsString($script);
         self::assertStringContainsString(
-            "codex plugin marketplace add $repository --ref main",
+            'codex plugin marketplace add $repository --ref main',
             $script,
         );
         self::assertStringContainsString(
-            "$repository = 'kmjtechno/kmj-codebridge'",
+            "$"+"repository = 'kmjtechno/kmj-codebridge'",
             $script,
         );
         self::assertStringContainsString(
