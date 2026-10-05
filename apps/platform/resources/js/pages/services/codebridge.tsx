@@ -44,6 +44,10 @@ type Props = {
     service: Service;
 };
 
+const CHATGPT_PLUGIN_URL =
+    'https://chatgpt.com/plugins/plugins_6abe0c47ee7c81919ac29cb5bc2531e6';
+const CHATGPT_PLUGIN_VERSION = '0.3.2';
+
 export default function CodeBridgeService({
     organization,
     entitlement,
@@ -92,11 +96,13 @@ export default function CodeBridgeService({
 
                         <div className="flex flex-wrap gap-2">
                             <a
-                                href="https://chatgpt.com/"
+                                href={CHATGPT_PLUGIN_URL}
+                                target="_blank"
+                                rel="noreferrer"
                                 className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-red-600 px-4 text-xs font-black text-white transition hover:bg-red-500"
                             >
                                 <Link2 className="h-3.5 w-3.5" />
-                                Open ChatGPT
+                                Install in ChatGPT
                             </a>
                             <Link
                                 href="/codebridge/pair"
@@ -122,7 +128,7 @@ export default function CodeBridgeService({
                     <Metric
                         label="OAuth"
                         value={service.oauth_ready ? 'Ready' : 'Unavailable'}
-                        hint="ChatGPT account linking"
+                        hint="Browser OAuth + Desktop bridge"
                     />
                     <Metric
                         label="Managed devices"
@@ -164,6 +170,31 @@ export default function CodeBridgeService({
                             </div>
                         </div>
 
+                        <div className="mt-5 rounded-xl border border-red-500/20 bg-red-500/[0.03] p-4">
+                            <div className="flex items-center justify-between gap-3">
+                                <div>
+                                    <div className="flex items-center gap-2 text-xs font-black">
+                                        <Laptop2 className="h-3.5 w-3.5 text-red-500" />
+                                        ChatGPT Desktop
+                                    </div>
+                                    <p className="text-muted-foreground mt-2 text-[11px] leading-5">
+                                        Install CodeBridge v{CHATGPT_PLUGIN_VERSION} once. The bundled
+                                        Desktop bridge opens KMJ OAuth automatically on first use; no
+                                        manual MCP URL or bearer token is required.
+                                    </p>
+                                </div>
+                                <a
+                                    href={CHATGPT_PLUGIN_URL}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-xl bg-red-600 px-4 text-xs font-black text-white transition hover:bg-red-500"
+                                >
+                                    <Link2 className="h-3.5 w-3.5" />
+                                    Install
+                                </a>
+                            </div>
+                        </div>
+
                         <div className="mt-5 rounded-xl border p-4">
                             <div className="flex items-center gap-2 text-xs font-black">
                                 <TerminalSquare className="h-3.5 w-3.5 text-red-500" />
@@ -182,23 +213,24 @@ export default function CodeBridgeService({
 
                         <div className="mt-5">
                             <div className="text-xs font-black">
-                                Connect from ChatGPT or Claude
+                                Connect from ChatGPT Desktop
                             </div>
                             <ol className="text-muted-foreground mt-3 space-y-3 text-xs leading-5">
                                 <li className="flex gap-3">
                                     <StepNumber value="1" />
-                                    Add KMJ CodeBridge in ChatGPT or Claude and
-                                    choose Connect.
+                                    Click Install in ChatGPT once and enable KMJ
+                                    CodeBridge.
                                 </li>
                                 <li className="flex gap-3">
                                     <StepNumber value="2" />
-                                    Sign in with this KMJ account and approve
-                                    the requested CodeBridge permissions.
+                                    Ask CodeBridge to connect your KMJ account.
+                                    The Desktop bridge opens browser OAuth
+                                    automatically.
                                 </li>
                                 <li className="flex gap-3">
                                     <StepNumber value="3" />
-                                    Return to the AI client and select an
-                                    authorized device and project.
+                                    Return to ChatGPT and select an authorized
+                                    device and project.
                                 </li>
                             </ol>
                         </div>
