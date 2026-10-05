@@ -58,12 +58,26 @@ type Props = {
 const CHATGPT_PLUGIN_URL =
     'https://chatgpt.com/plugins/plugins_6abe0c47ee7c81919ac29cb5bc2531e6';
 const CHATGPT_PLUGIN_VERSION = '0.3.2';
+const DESKTOP_INSTALL_DESCRIPTION =
+    'Install CodeBridge once. The Desktop bridge opens KMJ OAuth on first use. No manual MCP URL or bearer token is required.';
+const CONNECTED_CLIENTS_DESCRIPTION =
+    'Review OAuth clients connected to this KMJ account and revoke refresh access at any time.';
+const NO_CONNECTED_CLIENTS =
+    'No active CodeBridge OAuth client is connected to this account.';
 
 export default function CodeBridgeService({
     organization,
     entitlement,
     service,
 }: Props) {
+    const revokeClient = (clientId: string) => {
+        router.post(
+            `/services/kmj-codebridge/oauth-clients/${encodeURIComponent(clientId)}/revoke`,
+            {},
+            { preserveScroll: true },
+        );
+    };
+
     return (
         <>
             <Head title="KMJ CodeBridge" />
@@ -189,11 +203,7 @@ export default function CodeBridgeService({
                                         ChatGPT Desktop
                                     </div>
                                     <p className="text-muted-foreground mt-2 text-[11px] leading-5">
-                                        Install CodeBridge v
-                                        {CHATGPT_PLUGIN_VERSION} once. The
-                                        Desktop bridge opens KMJ OAuth on first
-                                        use. No manual MCP URL or bearer token
-                                        is required.
+                                        {DESKTOP_INSTALL_DESCRIPTION}
                                     </p>
                                 </div>
                                 <a
@@ -314,8 +324,7 @@ export default function CodeBridgeService({
                         <div>
                             <h2 className="font-black">Connected AI clients</h2>
                             <p className="text-muted-foreground mt-1 text-xs leading-5">
-                                Review OAuth clients connected to this KMJ
-                                account and revoke refresh access at any time.
+                                {CONNECTED_CLIENTS_DESCRIPTION}
                             </p>
                         </div>
                         <span className="rounded-full border px-3 py-1 text-[10px] font-bold">
@@ -325,8 +334,7 @@ export default function CodeBridgeService({
 
                     {service.connected_clients.length === 0 ? (
                         <div className="text-muted-foreground mt-5 rounded-xl border border-dashed p-5 text-xs">
-                            No active CodeBridge OAuth client is connected to
-                            this account.
+                            {NO_CONNECTED_CLIENTS}
                         </div>
                     ) : (
                         <div className="mt-5 grid gap-3">
@@ -340,14 +348,7 @@ export default function CodeBridgeService({
                                             {client.client_name}
                                         </div>
                                         <div className="text-muted-foreground mt-1 text-[11px]">
-                                            {client.sessions} active{' '}
-                                            {client.sessions === 1
-                                                ? 'session'
-                                                : 'sessions'}
-                                            {' · '}Last active{' '}
-                                            {formatDateTime(
-                                                client.last_active_at,
-                                            )}
+                                            {clientSummary(client)}
                                         </div>
                                         <div className="mt-2 flex flex-wrap gap-2">
                                             {client.scopes.map((scope) => (
@@ -363,13 +364,7 @@ export default function CodeBridgeService({
                                     <button
                                         type="button"
                                         onClick={() =>
-                                            router.post(
-                                                '/services/kmj-codebridge/oauth-clients/' +
-                                                    encodeURIComponent(client.client_id) +
-                                                    '/revoke',
-                                                {},
-                                                { preserveScroll: true },
-                                            )
+                                            revokeClient(client.client_id)
                                         }
                                         className="inline-flex h-9 shrink-0 items-center justify-center rounded-xl border border-red-500/30 px-3 text-[11px] font-black text-red-500 transition hover:bg-red-500/10"
                                     >
@@ -381,8 +376,8 @@ export default function CodeBridgeService({
                     )}
 
                     <p className="text-muted-foreground mt-4 text-[10px] leading-4">
-                        Revocation stops refresh access immediately. An
-                        already-issued access token can remain valid for up to{' '}
+                        Refresh access stops immediately. Existing access tokens
+                        expire within{' '}
                         {Math.max(
                             1,
                             Math.ceil(service.access_token_ttl_seconds / 60),
@@ -488,6 +483,15 @@ function titleCase(value: string): string {
         .filter(Boolean)
         .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
         .join(' ');
+}
+
+function clientSummary(client: ConnectedClient): string {
+    const sessions =
+        client.sessions === 1
+            ? '1 active session'
+            : `${client.sessions} active sessions`;
+
+    return `${sessions} · Last active ${formatDateTime(client.last_active_at)}`;
 }
 
 function formatDateTime(value?: string | null): string {
