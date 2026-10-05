@@ -83,4 +83,29 @@ final class CodeBridgeInstallerBootstrapTest extends TestCase
         self::assertStringNotContainsString('client_secret', $script);
         self::assertStringNotContainsString('CODEBRIDGE_AGENT_TOKEN=', $script);
     }
+
+    public function test_chatgpt_desktop_launcher_is_double_clickable_and_credential_free(): void
+    {
+        $response = $this->get('/install-chatgpt-desktop.cmd')
+            ->assertOk()
+            ->assertHeader('Content-Type', 'application/octet-stream')
+            ->assertHeader(
+                'Content-Disposition',
+                'attachment; filename="KMJ-CodeBridge-ChatGPT-Desktop.cmd"',
+            )
+            ->assertHeader('X-Content-Type-Options', 'nosniff');
+
+        $script = $response->getContent();
+        self::assertIsString($script);
+        self::assertStringContainsString('@echo off', $script);
+        self::assertStringContainsString(
+            'raw.githubusercontent.com/kmjtechno/kmj-codebridge/main/scripts/install-chatgpt-desktop.ps1',
+            $script,
+        );
+        self::assertStringContainsString('ExecutionPolicy Bypass', $script);
+        self::assertStringNotContainsString('Authorization: Bearer ', $script);
+        self::assertStringNotContainsString('client_secret', $script);
+        self::assertStringNotContainsString('CODEBRIDGE_AGENT_TOKEN=', $script);
+    }
+
 }
