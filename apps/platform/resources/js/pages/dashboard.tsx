@@ -57,8 +57,7 @@ type DashboardProps = {
     hasPasskey: boolean;
 };
 
-const CHATGPT_PLUGIN_URL =
-    'https://chatgpt.com/plugins/plugins_6abe0c47ee7c81919ac29cb5bc2531e6';
+const CHATGPT_DESKTOP_SETUP_URL = '/install-chatgpt-desktop.ps1';
 
 const productImages: Record<string, string> = {
     'kmj-cloudos': '/assets/products/kmj-cloudos.webp',
@@ -242,12 +241,11 @@ function CodeBridgeCard({
 
                     <div className="flex flex-wrap gap-2">
                         <a
-                            href={CHATGPT_PLUGIN_URL}
-                            target="_blank"
-                            rel="noreferrer"
+                            href={CHATGPT_DESKTOP_SETUP_URL}
+                            download
                             className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-red-600 px-4 text-xs font-black text-white transition hover:bg-red-500"
                         >
-                            Install in ChatGPT
+                            Set up ChatGPT Desktop
                             <ArrowRight className="h-3.5 w-3.5" />
                         </a>
                         <Link
