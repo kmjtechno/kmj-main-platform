@@ -7,6 +7,9 @@ final class PlanCatalog {
   "trial"=>["Trial",30], "professional"=>["Professional",0], "business"=>["Business",0],
   "enterprise"=>["Enterprise",0], "custom_oem"=>["Custom/OEM",0],
  ];
+ public const CODEBRIDGE_OWNER_CODE="codebridge.owner";
+ public const CODEBRIDGE_OWNER_DEVICES=64;
+ public const CODEBRIDGE_OWNER_CONCURRENCY=16;
  public function ensureCloudOSPlans(string $productId): array {
   $out=[];
   foreach(self::CLOUDOS_PLANS as $code=>[$name,$trialDays]){
@@ -19,5 +22,24 @@ final class PlanCatalog {
    $out[$code]=$plan;
   }
   return $out;
+ }
+ public function ensureCodeBridgeOwnerPlan(string $productId): Plan {
+  $features=["read"=>true,"write"=>true,"execute"=>true];
+  $limits=["devices"=>self::CODEBRIDGE_OWNER_DEVICES,"concurrent_jobs"=>self::CODEBRIDGE_OWNER_CONCURRENCY];
+  $plan=Plan::query()->firstOrCreate(["code"=>self::CODEBRIDGE_OWNER_CODE],[
+   "product_id"=>$productId,"name"=>"CodeBridge Owner","pricing_model"=>"internal",
+   "billing_interval"=>null,"currency"=>null,"amount_minor"=>null,"status"=>"active","trial_days"=>0,
+   "features"=>$features,"limits"=>$limits,
+  ]);
+  if(
+   (string)$plan->product_id!==$productId||
+   (string)$plan->name!=="CodeBridge Owner"||
+   (string)$plan->pricing_model!=="internal"||
+   (string)$plan->status!=="active"||
+   (int)$plan->trial_days!==0||
+   $plan->features!==$features||
+   $plan->limits!==$limits
+  ) throw new DomainException("CodeBridge owner plan conflicts with canonical catalog facts.");
+  return $plan;
  }
 }
