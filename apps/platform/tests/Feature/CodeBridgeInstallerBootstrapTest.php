@@ -68,6 +68,10 @@ final class CodeBridgeInstallerBootstrapTest extends TestCase
             $script,
         );
         self::assertStringContainsString(
+            './../../.codex/plugins/kmj-codebridge',
+            $script,
+        );
+        self::assertStringContainsString(
             'INSTALLED_BY_DEFAULT',
             $script,
         );
