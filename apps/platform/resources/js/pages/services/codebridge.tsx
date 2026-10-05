@@ -382,7 +382,10 @@ export default function CodeBridgeService({
                     </div>
                 </section>
 
-                <section className="border-sidebar-border/70 bg-card dark:border-sidebar-border rounded-2xl border p-5 sm:p-6">
+                <section
+                    id="projects"
+                    className="border-sidebar-border/70 bg-card dark:border-sidebar-border scroll-mt-6 rounded-2xl border p-5 sm:p-6"
+                >
                     <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-start">
                         <div>
                             <div className="flex items-center gap-2">
