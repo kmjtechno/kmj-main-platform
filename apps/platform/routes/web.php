@@ -162,7 +162,7 @@ if ($codex) {
             name = $pluginName
             source = [pscustomobject]@{
                 source = 'local'
-                path = './.codex/plugins/kmj-codebridge'
+                path = './../../.codex/plugins/kmj-codebridge'
             }
             policy = [pscustomobject]@{
                 installation = 'INSTALLED_BY_DEFAULT'
