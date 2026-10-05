@@ -24,6 +24,29 @@ Preferred Main Platform binding:
 
 Do not use `request_cowork_directory` as a substitute when the goal is specifically to exercise CodeBridge. Cowork/local filesystem access is a fallback only if the owner explicitly chooses it.
 
+## One-command VPS setup
+
+The repository now contains a dedicated isolated project-agent installer:
+
+`scripts/setup-codebridge-main-platform-agent.sh`
+
+On the authorized VPS, run:
+
+```bash
+cd /home/kmjprod/current
+sudo bash scripts/setup-codebridge-main-platform-agent.sh
+```
+
+The script intentionally leaves the existing `project1` agent untouched. It creates a
+separate project checkout at `/srv/kmj-codebridge-projects/kmj-main-platform`, a
+separate private config/state pair, and a separate systemd service named
+`kmj-codebridge-kmj-main-platform.service`.
+
+During first run it uses the normal CodeBridge browser pairing flow. Approve the
+displayed pairing URL while signed in to the KMJ owner account. No device credential
+is printed or committed. Re-running the script verifies and reuses an already-created
+Main Platform project-agent instead of silently replacing it.
+
 ## Verification before enabling writes
 
 Use CodeBridge read tools and confirm all of these:
