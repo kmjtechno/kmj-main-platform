@@ -1,4 +1,4 @@
-import { Head, Link } from '@inertiajs/react';
+import { Head, Link, router } from '@inertiajs/react';
 import {
     ArrowLeft,
     Cable,
@@ -25,6 +25,15 @@ type Entitlement = {
     starts_at: string;
 };
 
+type ConnectedClient = {
+    client_id: string;
+    client_name: string;
+    sessions: number;
+    scopes: string[];
+    connected_at: string | null;
+    last_active_at: string | null;
+};
+
 type Service = {
     endpoint: string;
     oauth_ready: boolean;
@@ -36,6 +45,8 @@ type Service = {
     device_limit: number | null;
     managed_devices: number;
     pending_pairings: number;
+    connected_clients: ConnectedClient[];
+    access_token_ttl_seconds: number;
 };
 
 type Props = {
@@ -297,6 +308,82 @@ export default function CodeBridgeService({
                 </section>
 
                 <section className="border-sidebar-border/70 bg-card dark:border-sidebar-border rounded-2xl border p-5 sm:p-6">
+                    <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-start">
+                        <div>
+                            <h2 className="font-black">Connected AI clients</h2>
+                            <p className="text-muted-foreground mt-1 text-xs leading-5">
+                                Review OAuth clients connected to this KMJ account and revoke
+                                refresh access at any time.
+                            </p>
+                        </div>
+                        <span className="rounded-full border px-3 py-1 text-[10px] font-bold">
+                            {service.connected_clients.length} active
+                        </span>
+                    </div>
+
+                    {service.connected_clients.length === 0 ? (
+                        <div className="text-muted-foreground mt-5 rounded-xl border border-dashed p-5 text-xs">
+                            No active CodeBridge OAuth client is connected to this account.
+                        </div>
+                    ) : (
+                        <div className="mt-5 grid gap-3">
+                            {service.connected_clients.map((client) => (
+                                <div
+                                    key={client.client_id}
+                                    className="flex flex-col justify-between gap-4 rounded-xl border p-4 lg:flex-row lg:items-center"
+                                >
+                                    <div className="min-w-0">
+                                        <div className="text-sm font-black">
+                                            {client.client_name}
+                                        </div>
+                                        <div className="text-muted-foreground mt-1 text-[11px]">
+                                            {client.sessions} session
+                                            {client.sessions === 1 ? '' : 's'} · Last active{' '}
+                                            {formatDateTime(client.last_active_at)}
+                                        </div>
+                                        <div className="mt-2 flex flex-wrap gap-2">
+                                            {client.scopes.map((scope) => (
+                                                <span
+                                                    key={scope}
+                                                    className="rounded-lg border px-2 py-1 text-[9px] font-bold"
+                                                >
+                                                    {scope}
+                                                </span>
+                                            ))}
+                                        </div>
+                                    </div>
+                                    <button
+                                        type="button"
+                                        onClick={() =>
+                                            router.post(
+                                                '/services/kmj-codebridge/oauth-clients/' +
+                                                    encodeURIComponent(client.client_id) +
+                                                    '/revoke',
+                                                {},
+                                                { preserveScroll: true },
+                                            )
+                                        }
+                                        className="inline-flex h-9 shrink-0 items-center justify-center rounded-xl border border-red-500/30 px-3 text-[11px] font-black text-red-500 transition hover:bg-red-500/10"
+                                    >
+                                        Revoke access
+                                    </button>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+
+                    <p className="text-muted-foreground mt-4 text-[10px] leading-4">
+                        Revocation stops refresh access immediately. An already issued access
+                        token can remain valid for up to{' '}
+                        {Math.max(
+                            1,
+                            Math.ceil(service.access_token_ttl_seconds / 60),
+                        )}{' '}
+                        minutes.
+                    </p>
+                </section>
+
+                <section className="border-sidebar-border/70 bg-card dark:border-sidebar-border rounded-2xl border p-5 sm:p-6">
                     <div>
                         <h2 className="font-black">What CodeBridge can do</h2>
                         <p className="text-muted-foreground mt-1 text-xs">
@@ -393,6 +480,19 @@ function titleCase(value: string): string {
         .filter(Boolean)
         .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
         .join(' ');
+}
+
+function formatDateTime(value?: string | null): string {
+    if (!value) return '—';
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return value;
+    return new Intl.DateTimeFormat('en', {
+        year: 'numeric',
+        month: 'short',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+    }).format(date);
 }
 
 function formatDate(value?: string | null): string {
