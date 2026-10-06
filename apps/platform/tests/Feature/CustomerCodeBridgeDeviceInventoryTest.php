@@ -54,6 +54,16 @@ final class CustomerCodeBridgeDeviceInventoryTest extends TestCase
                 ->where('service.managed_devices', 1)
                 ->etc());
 
+        $this->actingAs($user)
+            ->get('/services/kmj-codebridge?organization='.$mine->getKey())
+            ->assertOk();
+        $this->actingAs($user)
+            ->get('/services/kmj-codebridge?organization='.$theirs->getKey())
+            ->assertNotFound();
+        $this->actingAs($user)
+            ->get('/services/kmj-codebridge?organization[]=invalid')
+            ->assertNotFound();
+
         $response = $this->actingAs($user)->get('/services/kmj-codebridge');
         self::assertStringNotContainsString('hidden-vps', $response->getContent());
         self::assertStringNotContainsString('confidential-project', $response->getContent());
