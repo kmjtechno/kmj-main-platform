@@ -43,8 +43,8 @@ const baseNavItems: NavItem[] = [
         icon: ShoppingCart,
     },
     {
-        title: 'License Center',
-        href: '/sandbox-licenses',
+        title: 'Access & Licenses',
+        href: '/dashboard#access-security',
         icon: KeyRound,
     },
     {
