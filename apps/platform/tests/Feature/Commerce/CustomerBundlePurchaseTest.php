@@ -8,6 +8,7 @@ use Illuminate\Support\Str;
 use KMJ\MainPlatform\Catalog\Models\Product;
 use KMJ\MainPlatform\Entitlements\Models\EntitlementPolicy;
 use KMJ\MainPlatform\Organizations\Services\OrganizationCreator;
+use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
 
 final class CustomerBundlePurchaseTest extends TestCase
@@ -80,6 +81,42 @@ final class CustomerBundlePurchaseTest extends TestCase
             'product_ids' => [$first->getKey(), $unavailable->getKey()],
         ])->assertNotFound();
         $this->assertDatabaseCount('commerce_orders', 0);
+    }
+
+    public function test_bundle_checkout_preserves_only_an_authorized_organization_selection(): void
+    {
+        $user = User::factory()->create(['email_verified_at' => now()]);
+        $otherUser = User::factory()->create(['email_verified_at' => now()]);
+        $first = app(OrganizationCreator::class)->create('My First Business', $user->id);
+        $second = app(OrganizationCreator::class)->create('My Second Business', $user->id);
+        $private = app(OrganizationCreator::class)->create('Another Customer', $otherUser->id);
+
+        $this->actingAs($user)
+            ->get('/purchase?organization='.$second->getKey())
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('purchase')
+                ->where('selectedOrganizationId', $second->getKey())
+                ->has('organizations', 2)
+                ->etc());
+
+        $this->actingAs($user)
+            ->get('/purchase?organization='.$private->getKey())
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('purchase')
+                ->where('selectedOrganizationId', $first->getKey())
+                ->has('organizations', 2)
+                ->etc());
+
+        $this->actingAs($user)
+            ->get('/purchase?organization[]=invalid')
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('purchase')
+                ->where('selectedOrganizationId', $first->getKey())
+                ->has('organizations', 2)
+                ->etc());
     }
 
     public function test_bundle_cannot_cross_organization_permissions(): void
