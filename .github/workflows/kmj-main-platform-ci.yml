@@ -17,7 +17,8 @@ permissions:
 jobs:
   platform:
     name: Laravel + TypeScript
-    runs-on: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository && 'ubuntu-latest' || 'kmj-main-platform-ci' }}
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: [self-hosted, linux, x64, kmj-main-platform-ci]
     timeout-minutes: 20
     steps:
       - name: Checkout code
@@ -53,7 +54,8 @@ jobs:
 
   license-core:
     name: Native Rust license verifier
-    runs-on: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository && 'ubuntu-latest' || 'kmj-main-platform-ci' }}
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: [self-hosted, linux, x64, kmj-main-platform-ci]
     timeout-minutes: 10
     steps:
       - name: Checkout code
