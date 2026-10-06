@@ -476,6 +476,77 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ]);
     })->name('dashboard');
 
+    Route::get('services/entitlements/{entitlement}', function (
+        Request $request,
+        string $entitlement,
+        OrganizationDirectory $organizations,
+        EntitlementReader $entitlements,
+        CustomerReleaseAccess $releaseAccess,
+        PublicProductCatalog $catalog,
+    ) {
+        $user = $request->user();
+        abort_unless($user instanceof User, 401);
+
+        $organization = null;
+        $authorizedEntitlement = null;
+
+        foreach ($organizations->forUser($user->id) as $ownedOrganization) {
+            foreach ($entitlements->forOrganization($ownedOrganization['id']) as $item) {
+                if ($item['id'] === $entitlement) {
+                    $organization = [
+                        'id' => $ownedOrganization['id'],
+                        'name' => $ownedOrganization['name'],
+                    ];
+                    $authorizedEntitlement = $item;
+                    break 2;
+                }
+            }
+        }
+
+        abort_unless($organization !== null && $authorizedEntitlement !== null, 404);
+
+        $release = $releaseAccess->latestForOrganizationProduct(
+            $user->id,
+            $organization['id'],
+            $authorizedEntitlement['product_id'],
+        );
+        $artifact = $release?->artifact;
+        $download = $release !== null && $artifact instanceof ReleaseArtifact
+            ? [
+                'version' => $release->version,
+                'filename' => $artifact->filename,
+                'download_url' => route(
+                    'customer.releases.download',
+                    ['release' => $release->getKey()],
+                    false,
+                ),
+            ]
+            : null;
+        $product = $catalog->find($authorizedEntitlement['product_slug']);
+
+        return Inertia::render('services/show', [
+            'organization' => $organization,
+            'entitlement' => [
+                'id' => $authorizedEntitlement['id'],
+                'product_name' => $authorizedEntitlement['product_name'],
+                'product_slug' => $authorizedEntitlement['product_slug'],
+                'capability' => $authorizedEntitlement['capability'],
+                'status' => $authorizedEntitlement['status'],
+                'starts_at' => $authorizedEntitlement['starts_at'],
+            ],
+            'product' => $product !== null
+                ? [
+                    'summary' => $product['summary'],
+                    'category' => $product['category'],
+                    'lifecycle_label' => $product['lifecycle_label'],
+                    'purchase_enabled' => (bool) $product['purchase_enabled'],
+                    'image_path' => $product['image_path'] ?? null,
+                ]
+                : null,
+            'release' => $download,
+        ]);
+    })->name('services.entitlements.show');
+
     Route::get('services/kmj-codebridge', function (
         Request $request,
         OrganizationDirectory $organizations,
