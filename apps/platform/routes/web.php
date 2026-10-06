@@ -578,6 +578,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
                     ->where('expires_at_epoch', '>', time())
                     ->count(),
                 'pending_pairings' => DB::table('codebridge_device_pairings')
+                    ->where('tenant_id', $organization['id'])
                     ->where('status', 'pending')
                     ->where('expires_at', '>', now())
                     ->count(),
