@@ -89,7 +89,9 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
         $selectedOrganizationId = $organizationItems
             ->contains(fn (array $organization): bool => $organization['id'] === $preferredOrganizationId)
             ? $preferredOrganizationId
-            : (string) ($organizationItems->first()['id'] ?? '');
+            : ($organizationItems->count() === 1
+                ? (string) $organizationItems->first()['id']
+                : '');
 
         return Inertia::render('purchase', [
             'organizations' => $organizationItems->all(),
