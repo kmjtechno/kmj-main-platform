@@ -28,7 +28,8 @@ final class CustomerBundlePurchaseTest extends TestCase
             'idempotency_key' => $key,
         ];
 
-        $this->actingAs($user)->post('/purchase/bundles', $payload)->assertRedirect('/purchase');
+        $this->actingAs($user)->post('/purchase/bundles', $payload)
+            ->assertRedirect('/purchase?organization='.$organization->getKey());
         $this->assertDatabaseCount('commerce_orders', 2);
         $this->assertDatabaseCount('commerce_ledger', 2);
         $this->assertDatabaseCount('entitlements', 0);
@@ -45,7 +46,8 @@ final class CustomerBundlePurchaseTest extends TestCase
             'idempotency_key' => 'bundle:'.$key.':'.$second->getKey(),
         ]);
 
-        $this->actingAs($user)->post('/purchase/bundles', $payload)->assertRedirect('/purchase');
+        $this->actingAs($user)->post('/purchase/bundles', $payload)
+            ->assertRedirect('/purchase?organization='.$organization->getKey());
         $this->assertDatabaseCount('commerce_orders', 2);
         $this->assertDatabaseCount('commerce_ledger', 2);
 
