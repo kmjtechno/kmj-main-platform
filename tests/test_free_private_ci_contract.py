@@ -6,10 +6,10 @@ import unittest
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 LABEL = "kmj-main-platform-ci"
-RUNNER_EXPRESSION = (
-    "runs-on: ${{ github.event_name == 'pull_request' && "
-    "github.event.pull_request.head.repo.full_name != github.repository && "
-    "'ubuntu-latest' || 'kmj-main-platform-ci' }}"
+RUNNER_EXPRESSION = "runs-on: [self-hosted, linux, x64, kmj-main-platform-ci]"
+FORK_GUARD = (
+    "if: github.event_name != 'pull_request' || "
+    "github.event.pull_request.head.repo.full_name == github.repository"
 )
 REQUIRED_WORKFLOWS = {
     "kmj-main-platform-ci.yml": 2,
@@ -31,11 +31,13 @@ class FreePrivateCiContract(unittest.TestCase):
                 jobs,
                 msg=f"{filename} must use the free isolated runner",
             )
-            # Other forks must not receive privileged execution on the private VM.
-            self.assertIn(
-                "github.event.pull_request.head.repo.full_name != github.repository",
-                source,
+            # Forks must be skipped entirely: no private runner, no paid minutes.
+            self.assertEqual(
+                source.count(FORK_GUARD),
+                jobs,
+                msg=f"{filename} must skip all fork jobs",
             )
+            self.assertNotIn("runs-on: ubuntu-latest", source)
             count += jobs
         self.assertEqual(count, 8)
 
