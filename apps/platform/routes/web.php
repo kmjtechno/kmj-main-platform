@@ -372,6 +372,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         OrganizationDirectory $organizations,
         EntitlementReader $entitlements,
         CustomerReleaseAccess $releaseAccess,
+        PublicProductCatalog $catalog,
     ) {
         $user = $request->user();
         abort_unless($user instanceof User, 401);
@@ -458,6 +459,18 @@ Route::middleware(['auth', 'verified'])->group(function () {
         return Inertia::render('dashboard', [
             'organizations' => $items,
             'hasPasskey' => $user->passkeys()->exists(),
+            'catalog' => collect($catalog->all())
+                ->map(fn (array $product): array => [
+                    'slug' => $product['slug'],
+                    'name' => $product['name'],
+                    'summary' => $product['summary'],
+                    'category' => $product['category'],
+                    'lifecycle_label' => $product['lifecycle_label'],
+                    'purchase_enabled' => (bool) $product['purchase_enabled'],
+                    'image_path' => $product['image_path'] ?? null,
+                ])
+                ->values()
+                ->all(),
         ]);
     })->name('dashboard');
 
