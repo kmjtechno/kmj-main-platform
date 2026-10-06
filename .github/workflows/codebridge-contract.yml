@@ -46,6 +46,7 @@ jobs:
           path: .codebridge-contract
           persist-credentials: false
       - name: Setup PHP 8.4
+        if: runner.environment == 'github-hosted'
         uses: shivammathur/setup-php@87d00bde2555f25eb54fedf940384e99cbdc55ef
         with:
           php-version: '8.4'
@@ -88,6 +89,7 @@ jobs:
         with:
           persist-credentials: false
       - name: Setup PHP 8.4
+        if: runner.environment == 'github-hosted'
         uses: shivammathur/setup-php@87d00bde2555f25eb54fedf940384e99cbdc55ef
         with:
           php-version: '8.4'
