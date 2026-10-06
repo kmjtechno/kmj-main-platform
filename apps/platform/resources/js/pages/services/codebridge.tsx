@@ -84,9 +84,28 @@ export default function CodeBridgeService({
 }: Props) {
     const [showDeviceSetup, setShowDeviceSetup] = useState(false);
     const [copiedInstaller, setCopiedInstaller] = useState(false);
-    const installerCommand = 'curl -fsSL --proto \'=https\' --tlsv1.2 https://kmjtechno.com/install | sudo bash';
+    const [newDeviceId, setNewDeviceId] = useState('');
+    const [newProjectId, setNewProjectId] = useState('');
+    const validIdentity = /^[A-Za-z0-9_-]{1,64}$/.test(newDeviceId) &&
+        /^[A-Za-z0-9_-]{1,64}$/.test(newProjectId);
+    const installerCommand =
+        'curl -fsSL --proto \'=https\' --tlsv1.2 https://kmjtechno.com/install | sudo bash -s -- --device ' +
+        newDeviceId +
+        ' --project-id ' +
+        newProjectId;
+
+    const suggestIdentity = () => {
+        const suffix =
+            typeof crypto !== 'undefined' && crypto.randomUUID
+                ? crypto.randomUUID().slice(0, 8)
+                : Date.now().toString(36).slice(-8);
+        setNewDeviceId('device-' + suffix);
+        setNewProjectId('project-' + suffix);
+        setCopiedInstaller(false);
+    };
 
     const copyInstaller = async () => {
+        if (!validIdentity) return;
         try {
             await navigator.clipboard.writeText(installerCommand);
             setCopiedInstaller(true);
@@ -154,13 +173,13 @@ export default function CodeBridgeService({
                                 <Link2 className="h-3.5 w-3.5" />
                                 Set up ChatGPT Desktop
                             </a>
-                            <Link
+                            <a
                                 href="#device-center"
                                 className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border px-4 text-xs font-bold transition hover:border-red-500/40 hover:text-red-500"
                             >
                                 <Laptop2 className="h-3.5 w-3.5" />
                                 Devices & projects
-                            </Link>
+                            </a>
                         </div>
                     </div>
                 </section>
@@ -294,23 +313,72 @@ export default function CodeBridgeService({
                                     1. Run the KMJ agent installer on the target
                                     Linux/VPS machine
                                 </div>
-                                <div className="mt-2 flex min-w-0 flex-wrap items-center gap-2">
+                                <div className="mt-3 grid gap-3 md:grid-cols-2">
+                                    <label className="text-xs font-semibold">
+                                        Device ID
+                                        <input
+                                            type="text"
+                                            value={newDeviceId}
+                                            onChange={(event) => {
+                                                setNewDeviceId(event.target.value);
+                                                setCopiedInstaller(false);
+                                            }}
+                                            maxLength={64}
+                                            placeholder="my-vps"
+                                            autoComplete="off"
+                                            className="bg-background mt-1 block h-10 w-full rounded-lg border px-3 font-mono text-xs"
+                                        />
+                                    </label>
+                                    <label className="text-xs font-semibold">
+                                        Project ID
+                                        <input
+                                            type="text"
+                                            value={newProjectId}
+                                            onChange={(event) => {
+                                                setNewProjectId(event.target.value);
+                                                setCopiedInstaller(false);
+                                            }}
+                                            maxLength={64}
+                                            placeholder="my-application"
+                                            autoComplete="off"
+                                            className="bg-background mt-1 block h-10 w-full rounded-lg border px-3 font-mono text-xs"
+                                        />
+                                    </label>
+                                </div>
+                                <button
+                                    type="button"
+                                    onClick={suggestIdentity}
+                                    className="mt-3 rounded-lg border px-3 py-2 text-xs font-semibold hover:border-red-500/40"
+                                >
+                                    Suggest unique IDs
+                                </button>
+                                <p className="text-muted-foreground mt-2">
+                                    Only letters, digits, hyphens and underscores
+                                    are allowed. Use a new identity for each
+                                    additional device or project.
+                                </p>
+                                <div className="mt-3 flex min-w-0 flex-wrap items-center gap-2">
                                     <code className="bg-background min-w-0 flex-1 overflow-x-auto rounded-lg border p-3 text-[11px]">
-                                        {installerCommand}
+                                        {validIdentity
+                                            ? installerCommand
+                                            : 'Enter device and project IDs to prepare the installer.'}
                                     </code>
                                     <button
                                         type="button"
                                         onClick={copyInstaller}
-                                        className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border px-3 text-xs font-semibold hover:border-red-500/40"
+                                        disabled={!validIdentity}
+                                        className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border px-3 text-xs font-semibold hover:border-red-500/40 disabled:cursor-not-allowed disabled:opacity-40"
                                     >
                                         <Copy className="h-4 w-4" />
                                         {copiedInstaller ? 'Copied' : 'Copy command'}
                                     </button>
                                 </div>
                                 <p className="text-muted-foreground mt-2">
-                                    Review the installer and ensure you trust
-                                    the target machine before running an
-                                    administrative command.
+                                    Open a terminal in the intended project
+                                    directory on the target machine. Review the
+                                    installer before running an administrative
+                                    command. This creates a new identity; it
+                                    does not repair or replace an old project.
                                 </p>
                             </li>
                             <li>
