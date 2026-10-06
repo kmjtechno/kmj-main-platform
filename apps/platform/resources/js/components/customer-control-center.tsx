@@ -247,11 +247,19 @@ export default function CustomerControlCenter({
     const services = useMemo<ServiceRow[]>(
         () =>
             selectedOrganizations.flatMap((organization) =>
-                organization.entitlements.map((entitlement) => ({
-                    ...entitlement,
-                    organization_id: organization.id,
-                    organization_name: organization.name,
-                })),
+                organization.entitlements
+                    .filter(
+                        (entitlement) =>
+                            entitlement.product_slug !==
+                                'kmj-main-platform-sandbox' &&
+                            entitlement.capability !==
+                                'sandbox.product.access',
+                    )
+                    .map((entitlement) => ({
+                        ...entitlement,
+                        organization_id: organization.id,
+                        organization_name: organization.name,
+                    })),
             ),
         [selectedOrganizations],
     );
@@ -406,7 +414,7 @@ export default function CustomerControlCenter({
                     icon={Layers3}
                     label="Owned products"
                     value={ownedSlugs.size}
-                    detail="Unique authorized products"
+                    detail="Unique commercial products"
                 />
                 <Stat
                     icon={CheckCircle2}
@@ -508,7 +516,7 @@ export default function CustomerControlCenter({
                 {visibleServices.length === 0 ? (
                     <div className="mt-4 rounded-xl border border-dashed border-white/15 px-5 py-8 text-center text-sm text-zinc-300">
                         {services.length === 0
-                            ? 'No services are assigned to the selected organization yet.'
+                            ? 'No commercial services are assigned yet. Sandbox access remains available in Sandbox license tools.'
                             : 'No services match your filters.'}
                         {services.length === 0 && (
                             <div className="mt-4">
