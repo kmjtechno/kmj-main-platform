@@ -44,6 +44,7 @@ type PurchaseProps = {
     products: Product[];
     recentOrders: Order[];
     requestKey: string;
+    requestedProductSlug: string;
 };
 
 const actionStyle =
@@ -55,17 +56,13 @@ export default function Purchase({
     products,
     recentOrders,
     requestKey,
+    requestedProductSlug,
 }: PurchaseProps) {
     const [query, setQuery] = useState('');
-    const preferredSlug =
-        typeof window === 'undefined'
-            ? ''
-            : new URLSearchParams(window.location.search).get('product') ??
-              '';
     const form = useForm({
         organization_id: organizations[0]?.id ?? '',
         product_ids: products
-            .filter((product) => product.slug === preferredSlug)
+            .filter((product) => product.slug === requestedProductSlug)
             .map((product) => product.id),
         idempotency_key: requestKey,
     });
@@ -107,10 +104,14 @@ export default function Purchase({
         form.post('/purchase/bundles', {
             preserveScroll: true,
             onSuccess: () => {
-                form.setData('product_ids', []);
-                if (typeof crypto !== 'undefined' && crypto.randomUUID) {
-                    form.setData('idempotency_key', crypto.randomUUID());
-                }
+                form.setData({
+                    ...form.data,
+                    product_ids: [],
+                    idempotency_key:
+                        typeof crypto !== 'undefined' && crypto.randomUUID
+                            ? crypto.randomUUID()
+                            : requestKey,
+                });
             },
         });
     };
