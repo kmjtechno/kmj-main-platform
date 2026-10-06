@@ -93,6 +93,7 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
                 ->all(),
             'recentOrders' => $recentOrders,
             'requestKey' => (string) Str::uuid(),
+            'requestedProductSlug' => (string) $request->query('product', ''),
         ]);
     })->name('purchase.index');
 
