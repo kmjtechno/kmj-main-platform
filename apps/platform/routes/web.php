@@ -560,6 +560,40 @@ Route::middleware(['auth', 'verified'])->group(function () {
             ->values()
             ->all();
 
+        $enrolledCredentials = DB::table('codebridge_device_credentials')
+            ->where('tenant_id', $organization['id'])
+            ->whereNull('revoked_at')
+            ->where('expires_at_epoch', '>', time())
+            ->orderBy('device_id')
+            ->limit(100)
+            ->get(['device_id', 'activation_id', 'expires_at_epoch']);
+
+        // A consumed pairing describes the original approved project only.
+        // It must never be represented as proof of a currently-online agent.
+        $activationIds = $enrolledCredentials->pluck('activation_id')->filter()->all();
+        $pairedProjects = $activationIds === []
+            ? collect()
+            : DB::table('codebridge_device_pairings')
+                ->where('tenant_id', $organization['id'])
+                ->where('status', 'consumed')
+                ->whereIn('activation_id', $activationIds)
+                ->latest('consumed_at')
+                ->limit(100)
+                ->get(['activation_id', 'project_id', 'project_name'])
+                ->unique('activation_id')
+                ->keyBy('activation_id');
+
+        $enrolledDevices = $enrolledCredentials->map(function ($credential) use ($pairedProjects): array {
+            $pairing = $pairedProjects->get($credential->activation_id);
+
+            return [
+                'device_id' => (string) $credential->device_id,
+                'last_paired_project' => $pairing?->project_id,
+                'last_paired_project_name' => $pairing?->project_name,
+                'credential_expires_at_epoch' => (int) $credential->expires_at_epoch,
+            ];
+        })->values()->all();
+
         return Inertia::render('services/codebridge', [
             'organization' => $organization,
             'entitlement' => $entitlement,
@@ -577,6 +611,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
                     ->whereNull('revoked_at')
                     ->where('expires_at_epoch', '>', time())
                     ->count(),
+                'enrolled_devices' => $enrolledDevices,
                 'pending_pairings' => DB::table('codebridge_device_pairings')
                     ->where('tenant_id', $organization['id'])
                     ->where('status', 'pending')
