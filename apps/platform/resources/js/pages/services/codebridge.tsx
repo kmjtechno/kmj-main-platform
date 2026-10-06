@@ -93,9 +93,14 @@ export default function CodeBridgeService({
         !newProjectPath.split('/').some((segment) =>
             segment === '.' || segment === '..',
         );
+    const deviceAlreadyEnrolled = service.enrolled_devices.some(
+        (device) => device.device_id === newDeviceId,
+    );
     const validIdentity =
         /^[A-Za-z0-9_-]{1,64}$/.test(newDeviceId) &&
         /^[A-Za-z0-9_-]{1,64}$/.test(newProjectId) &&
+        !deviceAlreadyEnrolled &&
+        !(newDeviceId === 'device1' && newProjectId === 'project1') &&
         safeProjectPath;
     const installerCommand =
         'curl -fsSL --proto \'=https\' --tlsv1.2 https://kmjtechno.com/install | sudo bash -s -- --device ' +
@@ -381,10 +386,23 @@ export default function CodeBridgeService({
                                 <p className="text-muted-foreground mt-2">
                                     Only letters, digits, hyphens and underscores
                                     are allowed. Use a new identity for each
-                                    additional device or project. The folder must
-                                    be an existing absolute Linux path with no
-                                    spaces or traversal segments.
+                                    additional device. Already enrolled
+                                    device IDs and the legacy device1/project1
+                                    pair cannot be used for a new enrollment.
+                                    The folder must be an existing absolute
+                                    Linux path with no spaces or traversal
+                                    segments. The current installer supports
+                                    one authorized project per agent; a second
+                                    project on the same machine requires a
+                                    separately isolated agent setup.
                                 </p>
+                                {deviceAlreadyEnrolled && (
+                                    <p role="alert" className="mt-2 text-xs font-semibold text-amber-500">
+                                        This device ID is already enrolled.
+                                        Use a different ID; do not overwrite
+                                        an existing device.
+                                    </p>
+                                )}
                                 <div className="mt-3 flex min-w-0 flex-wrap items-center gap-2">
                                     <code className="bg-background min-w-0 flex-1 overflow-x-auto rounded-lg border p-3 text-[11px]">
                                         {validIdentity
