@@ -556,7 +556,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
         $user = $request->user();
         abort_unless($user instanceof User, 401);
 
+        $requestedOrganization = $request->query('organization');
+        abort_unless($requestedOrganization === null || is_string($requestedOrganization), 404);
+
         $access = collect($organizations->forUser($user->id))
+            ->filter(fn (array $organization): bool => $requestedOrganization === null
+                || $organization['id'] === $requestedOrganization)
             ->map(function (array $organization) use ($entitlements): ?array {
                 $entitlement = collect($entitlements->forOrganization($organization['id']))
                     ->first(fn (array $item): bool => $item['product_slug'] === 'kmj-codebridge'
