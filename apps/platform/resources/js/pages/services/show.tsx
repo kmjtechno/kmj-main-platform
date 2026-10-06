@@ -236,7 +236,11 @@ export default function CustomerServiceDetails({
                         <div className="mt-5 flex flex-wrap gap-2">
                             {codebridge && active && (
                                 <Link
-                                    href="/services/kmj-codebridge#device-center"
+                                    href={
+                                        '/services/kmj-codebridge?organization=' +
+                                        encodeURIComponent(organization.id) +
+                                        '#device-center'
+                                    }
                                     className={actionClass}
                                 >
                                     <FolderKanban className="h-4 w-4" />
