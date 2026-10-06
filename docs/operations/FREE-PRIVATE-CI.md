@@ -10,7 +10,7 @@ The customer work is in [PR #325](https://github.com/kmjtechno/kmj-main-platform
 
 ## Easiest safe setup
 
-Use a **dedicated testing VM that you already own**, not the production website/VPS, and not `device1/project1`. This runner executes repository code, so isolate it from production credentials, database mounts, SSH keys, Docker socket and deployment keys. Restrict access to trusted branches; fork PRs are kept on GitHub-hosted runners instead.
+Use a **dedicated testing VM that you already own**, not the production website/VPS, and not `device1/project1`. This runner executes repository code, so isolate it from production credentials, database mounts, SSH keys, Docker socket and deployment keys. Restrict access to trusted repository branches. Fork PR jobs are skipped entirely: they must not consume paid hosted minutes or execute untrusted code on your private runner.
 
 1. On GitHub (same personal account as the private repository), open:
    [Settings → Actions → Runners](https://github.com/kmjtechno/kmj-main-platform/settings/actions/runners).
@@ -26,7 +26,7 @@ Use a **dedicated testing VM that you already own**, not the production website/
    
    The installer prompts invisibly for the one-time registration token. It refuses to overwrite existing runner credentials and pins the runner archive to its SHA-256 checksum. The preflight is read-only. Do not paste the token as a shell argument.
 6. The VM needs PHP 8.4 with SQLite/Sodium, Composer, Node.js 22/24, Git, Python 3, Rustup/Cargo and the required PHP extensions. The CI workflows deliberately skip the privileged PHP setup action on self-hosted machines; toolchains must be provisioned on the isolated VM beforehand.
-7. Ensure GitHub shows **Online** and custom label `kmj-main-platform-ci). The PR CI jobs for trusted branches can then run without spending GitHub-hosted minutes.
+7. Ensure GitHub shows **Online** and custom label `kmj-main-platform-ci`. The PR CI jobs for trusted branches can then run without spending GitHub-hosted minutes.
 
 The `kmj-main-platform-ci` label is intentionally required; a generic self-hosted runner cannot accidentally receive the private build.
 
@@ -41,7 +41,7 @@ These existing workflows now select the free testing runner when trusted reposit
 - CodeBridge Device Pairing CI
 - Verify Foundation
 
-A PR originating from a different repository continues to use `ubuntu-latest` rather than running untrusted fork code on your private VM. All other production, deploy and autonomous workflows stay unchanged.
+A PR originating from a different repository is skipped completely. It cannot run on the private VM or spend GitHub-hosted minutes. Review external changes on a trusted internal branch before running tests. All other production, deploy and autonomous workflows stay unchanged.
 
 ## Exact-head release gate
 
