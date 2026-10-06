@@ -137,7 +137,14 @@ function Stat({
                 <Icon className="h-4 w-4 text-red-400" aria-hidden="true" />
                 <span className="text-xs font-medium">{label}</span>
             </div>
-            <div className="mt-3 text-3xl font-bold tracking-tight text-white">
+            <div
+                className={
+                    'mt-3 font-bold tracking-tight text-white ' +
+                    (typeof value === 'string' && value.length > 8
+                        ? 'text-base sm:text-lg'
+                        : 'text-3xl')
+                }
+            >
                 {value}
             </div>
             <div className="mt-1 text-[11px] text-zinc-400">{detail}</div>
@@ -271,7 +278,10 @@ export default function CustomerControlCenter({
         [query, services, statusFilter],
     );
     const catalogBySlug = useMemo(
-        () => new Map(catalog.map((product) => [product.slug, product])),
+        () =>
+            new Map<string, CatalogProduct>(
+                catalog.map((product) => [product.slug, product] as const),
+            ),
         [catalog],
     );
     const availableProducts = catalog.filter(
