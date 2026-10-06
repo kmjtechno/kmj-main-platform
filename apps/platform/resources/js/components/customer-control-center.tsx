@@ -162,8 +162,9 @@ function ServiceCard({
     const isCodeBridge = row.product_slug === 'kmj-codebridge';
     const managedUrl =
         isCodeBridge && row.status === 'active'
-            ? '/services/kmj-codebridge'
-            : '/products/' + encodeURIComponent(row.product_slug);
+            ? '/services/kmj-codebridge?organization=' +
+              encodeURIComponent(row.organization_id)
+            : '/services/entitlements/' + encodeURIComponent(row.id);
 
     return (
         <article className="flex min-w-0 flex-col justify-between rounded-2xl border border-white/10 bg-[#14161c] p-4 transition hover:border-red-500/35">
@@ -206,9 +207,7 @@ function ServiceCard({
             </div>
             <div className="mt-5 flex flex-wrap items-center gap-2">
                 <Link href={managedUrl} className={primaryClass}>
-                    {isCodeBridge && row.status === 'active'
-                        ? 'Manage'
-                        : 'Service details'}
+                    Manage service
                     <ArrowUpRight className="h-3.5 w-3.5" />
                 </Link>
                 {row.release && (
