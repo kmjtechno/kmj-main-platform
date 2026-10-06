@@ -225,7 +225,7 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
         }, 3);
 
         return redirect()
-            ->route('purchase.index')
+            ->route('purchase.index', ['organization' => $validated['organization_id']])
             ->with('success', 'Bundle request submitted. Each product awaits operator confirmation and entitlement fulfillment.');
     })->name('purchase.bundles.store');
 });
