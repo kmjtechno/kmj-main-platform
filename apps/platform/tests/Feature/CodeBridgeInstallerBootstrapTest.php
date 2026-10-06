@@ -68,11 +68,15 @@ final class CodeBridgeInstallerBootstrapTest extends TestCase
             $script,
         );
         self::assertStringContainsString(
-            './../../.codex/plugins/kmj-codebridge',
+            './.codex/plugins/kmj-codebridge',
             $script,
         );
         self::assertStringContainsString(
             'INSTALLED_BY_DEFAULT',
+            $script,
+        );
+        self::assertStringContainsString(
+            'This installer does not bypass plugin installation, access approval or OAuth.',
             $script,
         );
         self::assertStringContainsString(
