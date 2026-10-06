@@ -101,11 +101,20 @@ final class CustomerBundlePurchaseTest extends TestCase
                 ->etc());
 
         $this->actingAs($user)
+            ->get('/purchase')
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('purchase')
+                ->where('selectedOrganizationId', '')
+                ->has('organizations', 2)
+                ->etc());
+
+        $this->actingAs($user)
             ->get('/purchase?organization='.$private->getKey())
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->component('purchase')
-                ->where('selectedOrganizationId', $first->getKey())
+                ->where('selectedOrganizationId', '')
                 ->has('organizations', 2)
                 ->etc());
 
@@ -114,7 +123,7 @@ final class CustomerBundlePurchaseTest extends TestCase
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->component('purchase')
-                ->where('selectedOrganizationId', $first->getKey())
+                ->where('selectedOrganizationId', '')
                 ->has('organizations', 2)
                 ->etc());
     }
