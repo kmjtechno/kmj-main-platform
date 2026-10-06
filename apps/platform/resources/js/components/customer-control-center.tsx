@@ -13,7 +13,6 @@ import {
     KeyRound,
     Layers3,
     LockKeyhole,
-    PackageCheck,
     Plus,
     Search,
     ShieldCheck,
