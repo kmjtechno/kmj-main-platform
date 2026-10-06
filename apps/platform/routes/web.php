@@ -162,7 +162,7 @@ if ($codex) {
             name = $pluginName
             source = [pscustomobject]@{
                 source = 'local'
-                path = './../../.codex/plugins/kmj-codebridge'
+                path = './.codex/plugins/kmj-codebridge'
             }
             policy = [pscustomobject]@{
                 installation = 'INSTALLED_BY_DEFAULT'
@@ -180,10 +180,11 @@ if ($codex) {
 }
 
 Write-Host ''
-Write-Host 'KMJ CodeBridge is ready for ChatGPT Desktop.' -ForegroundColor Green
-Write-Host 'Fully quit and reopen ChatGPT Desktop once.'
-Write-Host 'The KMJ marketplace installs CodeBridge by default.'
-Write-Host 'On first CodeBridge use, your browser will open KMJ OAuth automatically.'
+Write-Host 'KMJ CodeBridge marketplace has been configured.' -ForegroundColor Green
+Write-Host 'Fully quit and reopen ChatGPT Desktop, then open Plugins > KMJ TECHNO.'
+Write-Host 'Install or enable KMJ CodeBridge if prompted and connect the existing app.'
+Write-Host 'Complete any browser authorization requested by ChatGPT or KMJ.'
+Write-Host 'This installer does not bypass plugin installation, access approval or OAuth.'
 POWERSHELL;
 
     return response($script."\r\n", 200, [
