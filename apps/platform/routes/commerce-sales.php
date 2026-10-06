@@ -82,8 +82,18 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
             })
             ->all();
 
+        $preferredOrganizationId = $request->query('organization');
+        $preferredOrganizationId = is_string($preferredOrganizationId)
+            ? $preferredOrganizationId
+            : '';
+        $selectedOrganizationId = $organizationItems
+            ->contains(fn (array $organization): bool => $organization['id'] === $preferredOrganizationId)
+            ? $preferredOrganizationId
+            : (string) ($organizationItems->first()['id'] ?? '');
+
         return Inertia::render('purchase', [
             'organizations' => $organizationItems->all(),
+            'selectedOrganizationId' => $selectedOrganizationId,
             'products' => $products
                 ->map(fn (Product $product): array => [
                     'id' => (string) $product->getKey(),
