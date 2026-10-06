@@ -45,6 +45,7 @@ type PurchaseProps = {
     recentOrders: Order[];
     requestKey: string;
     requestedProductSlug: string;
+    selectedOrganizationId: string;
 };
 
 const actionStyle =
@@ -57,10 +58,11 @@ export default function Purchase({
     recentOrders,
     requestKey,
     requestedProductSlug,
+    selectedOrganizationId,
 }: PurchaseProps) {
     const [query, setQuery] = useState('');
     const form = useForm({
-        organization_id: organizations[0]?.id ?? '',
+        organization_id: selectedOrganizationId,
         product_ids: products
             .filter((product) => product.slug === requestedProductSlug)
             .map((product) => product.id),
