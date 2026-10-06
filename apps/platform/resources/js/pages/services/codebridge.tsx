@@ -1,7 +1,12 @@
 import { Head, Link, router } from '@inertiajs/react';
+import { useState } from 'react';
 import {
     ArrowLeft,
     Cable,
+    Copy,
+    FolderKanban,
+    Plus,
+    RefreshCcw,
     CheckCircle2,
     KeyRound,
     Laptop2,
@@ -11,6 +16,7 @@ import {
     TerminalSquare,
     Wrench,
 } from 'lucide-react';
+import LockedBrand from '@/components/locked-brand';
 
 type Organization = {
     id: string;
@@ -34,6 +40,13 @@ type ConnectedClient = {
     last_active_at: string | null;
 };
 
+type EnrolledDevice = {
+    device_id: string;
+    last_paired_project: string | null;
+    last_paired_project_name: string | null;
+    credential_expires_at_epoch: number;
+};
+
 type Service = {
     endpoint: string;
     oauth_ready: boolean;
@@ -44,6 +57,7 @@ type Service = {
     permissions: string[];
     device_limit: number | null;
     managed_devices: number;
+    enrolled_devices: EnrolledDevice[];
     pending_pairings: number;
     connected_clients: ConnectedClient[];
     access_token_ttl_seconds: number;
@@ -57,7 +71,7 @@ type Props = {
 
 const CHATGPT_DESKTOP_SETUP_URL = '/install-chatgpt-desktop.ps1';
 const DESKTOP_INSTALL_DESCRIPTION =
-    'Download the KMJ Desktop setup once. It adds the official KMJ marketplace; CodeBridge is installed by default and opens browser OAuth on first use.';
+    'Download the official KMJ setup, then enable CodeBridge in ChatGPT Desktop and approve the requested connection. Installation alone does not grant access.';
 const CONNECTED_CLIENTS_DESCRIPTION =
     'Review OAuth clients connected to this KMJ account and revoke refresh access at any time.';
 const NO_CONNECTED_CLIENTS =
@@ -68,6 +82,19 @@ export default function CodeBridgeService({
     entitlement,
     service,
 }: Props) {
+    const [showDeviceSetup, setShowDeviceSetup] = useState(false);
+    const [copiedInstaller, setCopiedInstaller] = useState(false);
+    const installerCommand = 'curl -fsSL --proto \'=https\' --tlsv1.2 https://kmjtechno.com/install | sudo bash';
+
+    const copyInstaller = async () => {
+        try {
+            await navigator.clipboard.writeText(installerCommand);
+            setCopiedInstaller(true);
+        } catch {
+            setCopiedInstaller(false);
+        }
+    };
+
     const revokeClient = (clientId: string) => {
         router.post(
             `/services/kmj-codebridge/oauth-clients/${encodeURIComponent(clientId)}/revoke`,
@@ -90,6 +117,7 @@ export default function CodeBridgeService({
                         Back to My Services
                     </Link>
 
+                    <LockedBrand compact className="mt-5" />
                     <div className="mt-6 flex flex-col justify-between gap-6 lg:flex-row lg:items-start">
                         <div className="flex items-start gap-4">
                             <span className="grid h-14 w-14 shrink-0 place-items-center rounded-2xl border border-red-500/20 bg-red-500/10 text-red-500">
@@ -127,11 +155,11 @@ export default function CodeBridgeService({
                                 Set up ChatGPT Desktop
                             </a>
                             <Link
-                                href="/codebridge/pair"
+                                href="#device-center"
                                 className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border px-4 text-xs font-bold transition hover:border-red-500/40 hover:text-red-500"
                             >
                                 <Laptop2 className="h-3.5 w-3.5" />
-                                Pair a device
+                                Devices & projects
                             </Link>
                         </div>
                     </div>
@@ -166,6 +194,165 @@ export default function CodeBridgeService({
                         value={formatDate(service.license_expires_at)}
                         hint="Main Platform license authority"
                     />
+                </section>
+
+                <section
+                    id="device-center"
+                    className="border-sidebar-border/70 bg-card dark:border-sidebar-border scroll-mt-6 rounded-2xl border p-5 sm:p-6"
+                    aria-labelledby="device-center-title"
+                >
+                    <div className="flex flex-wrap items-start justify-between gap-4">
+                        <div>
+                            <h2 id="device-center-title" className="flex items-center gap-2 text-lg font-black">
+                                <FolderKanban className="h-5 w-5 text-red-500" />
+                                Devices & projects
+                            </h2>
+                            <p className="text-muted-foreground mt-2 max-w-2xl text-xs leading-5">
+                                Manage enrolled credentials and their last
+                                approved projects in one place. Enrollment is
+                                not proof of a live connection; check actual
+                                gateway heartbeat from CodeBridge.
+                            </p>
+                        </div>
+                        <button
+                            type="button"
+                            className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-red-600 px-4 text-xs font-black text-white transition hover:bg-red-500"
+                            onClick={() => setShowDeviceSetup((open) => !open)}
+                            aria-expanded={showDeviceSetup}
+                            aria-controls="codebridge-add-device-steps"
+                        >
+                            <Plus className="h-4 w-4" />
+                            {showDeviceSetup ? 'Close setup' : 'Add device / project'}
+                        </button>
+                    </div>
+
+                    <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                        {service.enrolled_devices.length === 0 ? (
+                            <div className="text-muted-foreground rounded-xl border border-dashed p-5 text-xs sm:col-span-2 xl:col-span-3">
+                                No active device credential is enrolled for this
+                                organization. Start the setup on the computer
+                                or VPS you want to authorize.
+                            </div>
+                        ) : (
+                            service.enrolled_devices.map((device) => (
+                                <article
+                                    key={device.device_id}
+                                    className="rounded-xl border bg-background/50 p-4"
+                                >
+                                    <div className="flex flex-wrap items-start justify-between gap-2">
+                                        <div className="min-w-0">
+                                            <h3 className="break-all text-sm font-black">
+                                                {device.device_id}
+                                            </h3>
+                                            <div className="text-muted-foreground mt-1 text-[11px]">
+                                                Enrolled credential
+                                            </div>
+                                        </div>
+                                        <span className="rounded-lg border border-sky-500/30 bg-sky-500/5 px-2 py-1 text-[10px] font-bold text-sky-600 dark:text-sky-300">
+                                            Not live-verified
+                                        </span>
+                                    </div>
+                                    <div className="mt-4 flex items-start gap-2 text-[11px]">
+                                        <FolderKanban className="mt-0.5 h-3.5 w-3.5 shrink-0 text-red-500" />
+                                        <span className="min-w-0 break-words">
+                                            {device.last_paired_project
+                                                ? 'Last paired project: ' +
+                                                  (device.last_paired_project_name ||
+                                                      device.last_paired_project)
+                                                : 'Project pairing record unavailable'}
+                                        </span>
+                                    </div>
+                                    <p className="text-muted-foreground mt-3 text-[11px]">
+                                        Credential valid until{' '}
+                                        {new Intl.DateTimeFormat('en', {
+                                            year: 'numeric',
+                                            month: 'short',
+                                            day: '2-digit',
+                                        }).format(
+                                            new Date(
+                                                device.credential_expires_at_epoch *
+                                                    1000,
+                                            ),
+                                        )}
+                                    </p>
+                                </article>
+                            ))
+                        )}
+                    </div>
+
+                    <div
+                        id="codebridge-add-device-steps"
+                        hidden={!showDeviceSetup}
+                        className="mt-5 space-y-4 rounded-xl border border-red-500/25 bg-red-500/[0.03] p-4"
+                    >
+                        <h3 className="text-sm font-black">
+                            Set up a device or project
+                        </h3>
+                        <ol className="space-y-4 text-xs leading-5">
+                            <li>
+                                <div className="font-bold">
+                                    1. Run the KMJ agent installer on the target
+                                    Linux/VPS machine
+                                </div>
+                                <div className="mt-2 flex min-w-0 flex-wrap items-center gap-2">
+                                    <code className="bg-background min-w-0 flex-1 overflow-x-auto rounded-lg border p-3 text-[11px]">
+                                        {installerCommand}
+                                    </code>
+                                    <button
+                                        type="button"
+                                        onClick={copyInstaller}
+                                        className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border px-3 text-xs font-semibold hover:border-red-500/40"
+                                    >
+                                        <Copy className="h-4 w-4" />
+                                        {copiedInstaller ? 'Copied' : 'Copy command'}
+                                    </button>
+                                </div>
+                                <p className="text-muted-foreground mt-2">
+                                    Review the installer and ensure you trust
+                                    the target machine before running an
+                                    administrative command.
+                                </p>
+                            </li>
+                            <li>
+                                <div className="font-bold">
+                                    2. Approve the short pairing code with the
+                                    correct organization
+                                </div>
+                                <p className="text-muted-foreground mt-1">
+                                    The installer creates a project-scoped
+                                    pairing request. Approval is explicit and
+                                    uses your existing CodeBridge license.
+                                </p>
+                                <Link
+                                    href="/codebridge/pair"
+                                    className="mt-2 inline-flex items-center gap-2 text-xs font-bold text-red-500 hover:underline"
+                                >
+                                    Open secure pairing
+                                    <KeyRound className="h-3.5 w-3.5" />
+                                </Link>
+                            </li>
+                            <li>
+                                <div className="font-bold">
+                                    3. Verify authorization in ChatGPT
+                                </div>
+                                <p className="text-muted-foreground mt-1">
+                                    Ask “KMJ CodeBridge, check my connections”.
+                                    The connection doctor separates account
+                                    grants, gateway registration and offline
+                                    devices. Do not repeatedly reconnect OAuth
+                                    or overwrite an existing project.
+                                </p>
+                                <button
+                                    type="button"
+                                    onClick={() => router.reload({ only: ['service'] })}
+                                    className="mt-2 inline-flex items-center gap-2 text-xs font-bold text-red-500 hover:underline"
+                                >
+                                    <RefreshCcw className="h-3.5 w-3.5" />
+                                    Refresh enrolled device list
+                                </button>
+                            </li>
+                        </ol>
+                    </div>
                 </section>
 
                 <section className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
@@ -242,13 +429,14 @@ export default function CodeBridgeService({
                                 </li>
                                 <li className="flex gap-3">
                                     <StepNumber value="2" />
-                                    Fully quit and reopen ChatGPT Desktop. KMJ
-                                    CodeBridge is installed by default.
+                                    Fully quit and reopen ChatGPT Desktop. Enable
+                                    or install KMJ CodeBridge if prompted.
                                 </li>
                                 <li className="flex gap-3">
                                     <StepNumber value="3" />
-                                    Use CodeBridge. Its local bridge opens KMJ
-                                    browser OAuth automatically on first use.
+                                    Connect the existing KMJ CodeBridge app and
+                                    complete the browser OAuth approval when
+                                    requested.
                                 </li>
                             </ol>
                         </div>
