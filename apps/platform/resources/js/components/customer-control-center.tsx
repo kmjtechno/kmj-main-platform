@@ -439,7 +439,7 @@ export default function CustomerControlCenter({
                         <Plus className="h-4 w-4" /> Request services
                     </Link>
                     <Link href="/sandbox-licenses" className={actionClass}>
-                        <KeyRound className="h-4 w-4" /> License center
+                        <KeyRound className="h-4 w-4" /> Sandbox license tools
                     </Link>
                     <Link
                         href={
@@ -580,10 +580,10 @@ export default function CustomerControlCenter({
                         )}
                     </div>
                 </section>
-                <section className={panelClass} aria-labelledby="health-heading">
+                <section id="access-security" className={panelClass + ' scroll-mt-6'} aria-labelledby="health-heading">
                     <h2 id="health-heading" className="flex items-center gap-2 text-sm font-bold">
                         <LockKeyhole className="h-4 w-4 text-red-400" />
-                        Access & actions
+                        Access & entitlements
                     </h2>
                     <div className="mt-4 space-y-3 text-xs">
                         <div className="flex items-center justify-between gap-2 rounded-xl bg-white/[0.04] p-3">
