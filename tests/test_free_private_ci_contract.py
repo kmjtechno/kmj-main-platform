@@ -64,7 +64,7 @@ class FreePrivateCiContract(unittest.TestCase):
         preflight = (
             ROOT / "ops" / "self-hosted-runner" / "preflight-zero-cost-ci.sh"
         ).read_text()
-        self.assertNotRegex(preflight, r"\\b(?:apt-get|chown|chmod|systemctl start)\\b")
+        self.assertNotRegex(preflight, r"\b(?:apt-get|chown|chmod|systemctl start)\b")
         documentation = (
             ROOT / "docs" / "operations" / "FREE-PRIVATE-CI.md"
         ).read_text()
