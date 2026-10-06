@@ -263,9 +263,17 @@ export default function CustomerControlCenter({
             ),
         [selectedOrganizations],
     );
+    // An entitlement owned by one organization does not make a product
+    // unavailable to the customer's other organizations. In the "all" view,
+    // retain the discovery cards and require organization selection at checkout.
     const ownedSlugs = useMemo(
-        () => new Set(services.map((item) => item.product_slug)),
-        [services],
+        () =>
+            new Set(
+                organizationId === 'all'
+                    ? []
+                    : services.map((item) => item.product_slug),
+            ),
+        [organizationId, services],
     );
     const visibleServices = useMemo(
         () =>
