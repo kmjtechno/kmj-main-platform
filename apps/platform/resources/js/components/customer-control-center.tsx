@@ -230,6 +230,11 @@ export default function CustomerControlCenter({
     hasPasskey,
 }: Props) {
     const [organizationId, setOrganizationId] = useState('all');
+    const purchaseUrl =
+        organizationId === 'all'
+            ? '/purchase'
+            : '/purchase?organization=' +
+              encodeURIComponent(organizationId);
     const [query, setQuery] = useState('');
     const [statusFilter, setStatusFilter] = useState('all');
     const selectedOrganizations = useMemo(
@@ -360,7 +365,7 @@ export default function CustomerControlCenter({
                             organization separate.
                         </p>
                     </div>
-                    <Link href="/purchase" className={primaryClass}>
+                    <Link href={purchaseUrl} className={primaryClass}>
                         <ShoppingBag className="h-4 w-4" />
                         Add services
                         <ArrowRight className="h-4 w-4" />
@@ -435,7 +440,7 @@ export default function CustomerControlCenter({
                     Quick actions
                 </h2>
                 <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
-                    <Link href="/purchase" className={actionClass}>
+                    <Link href={purchaseUrl} className={actionClass}>
                         <Plus className="h-4 w-4" /> Request services
                     </Link>
                     <Link href="/sandbox-licenses" className={actionClass}>
@@ -507,7 +512,7 @@ export default function CustomerControlCenter({
                             : 'No services match your filters.'}
                         {services.length === 0 && (
                             <div className="mt-4">
-                                <Link href="/purchase" className={primaryClass}>
+                                <Link href={purchaseUrl} className={primaryClass}>
                                     Browse purchasable products
                                 </Link>
                             </div>
@@ -667,7 +672,11 @@ export default function CustomerControlCenter({
                                     <Link
                                         href={
                                             product.purchase_enabled
-                                                ? '/purchase?product=' +
+                                                ? purchaseUrl +
+                                                  (purchaseUrl.includes('?')
+                                                      ? '&'
+                                                      : '?') +
+                                                  'product=' +
                                                   encodeURIComponent(
                                                       product.slug,
                                                   )
@@ -695,7 +704,7 @@ export default function CustomerControlCenter({
                     KMJ Main Platform governs purchases, licenses and access;
                     products remain separate.
                 </span>
-                <Link href="/purchase" className="inline-flex items-center gap-1 text-red-300">
+                <Link href={purchaseUrl} className="inline-flex items-center gap-1 text-red-300">
                     Request additional services
                     <ArrowRight className="h-3 w-3" />
                 </Link>
