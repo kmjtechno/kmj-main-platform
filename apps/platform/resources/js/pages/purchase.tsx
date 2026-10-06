@@ -83,7 +83,9 @@ export default function Purchase({
     );
     const maxBundle = 10;
     const canRequest =
-        organizations.length > 0 &&
+        organizations.some((organization) =>
+            organization.id === form.data.organization_id,
+        ) &&
         selectedProducts.length > 0 &&
         selectedProducts.length <= maxBundle &&
         !form.processing;
@@ -341,6 +343,11 @@ export default function Purchase({
                                 {organizations.length === 0 && (
                                     <option value="">
                                         No authorized purchasing organization
+                                    </option>
+                                )}
+                                {organizations.length > 1 && (
+                                    <option value="">
+                                        Select the purchasing organization
                                     </option>
                                 )}
                                 {organizations.map((organization) => (
