@@ -86,13 +86,24 @@ export default function CodeBridgeService({
     const [copiedInstaller, setCopiedInstaller] = useState(false);
     const [newDeviceId, setNewDeviceId] = useState('');
     const [newProjectId, setNewProjectId] = useState('');
-    const validIdentity = /^[A-Za-z0-9_-]{1,64}$/.test(newDeviceId) &&
-        /^[A-Za-z0-9_-]{1,64}$/.test(newProjectId);
+    const [newProjectPath, setNewProjectPath] = useState('');
+    const safeProjectPath =
+        /^\/[A-Za-z0-9._/-]+$/.test(newProjectPath) &&
+        newProjectPath !== '/' &&
+        !newProjectPath.split('/').some((segment) =>
+            segment === '.' || segment === '..',
+        );
+    const validIdentity =
+        /^[A-Za-z0-9_-]{1,64}$/.test(newDeviceId) &&
+        /^[A-Za-z0-9_-]{1,64}$/.test(newProjectId) &&
+        safeProjectPath;
     const installerCommand =
         'curl -fsSL --proto \'=https\' --tlsv1.2 https://kmjtechno.com/install | sudo bash -s -- --device ' +
         newDeviceId +
         ' --project-id ' +
-        newProjectId;
+        newProjectId +
+        ' --project ' +
+        newProjectPath;
 
     const suggestIdentity = () => {
         const suffix =
@@ -345,6 +356,21 @@ export default function CodeBridgeService({
                                         />
                                     </label>
                                 </div>
+                                <label className="mt-3 block text-xs font-semibold">
+                                    Project folder on the target machine
+                                    <input
+                                        type="text"
+                                        value={newProjectPath}
+                                        onChange={(event) => {
+                                            setNewProjectPath(event.target.value);
+                                            setCopiedInstaller(false);
+                                        }}
+                                        maxLength={256}
+                                        placeholder="/srv/my-application"
+                                        autoComplete="off"
+                                        className="bg-background mt-1 block h-10 w-full rounded-lg border px-3 font-mono text-xs"
+                                    />
+                                </label>
                                 <button
                                     type="button"
                                     onClick={suggestIdentity}
@@ -355,13 +381,15 @@ export default function CodeBridgeService({
                                 <p className="text-muted-foreground mt-2">
                                     Only letters, digits, hyphens and underscores
                                     are allowed. Use a new identity for each
-                                    additional device or project.
+                                    additional device or project. The folder must
+                                    be an existing absolute Linux path with no
+                                    spaces or traversal segments.
                                 </p>
                                 <div className="mt-3 flex min-w-0 flex-wrap items-center gap-2">
                                     <code className="bg-background min-w-0 flex-1 overflow-x-auto rounded-lg border p-3 text-[11px]">
                                         {validIdentity
                                             ? installerCommand
-                                            : 'Enter device and project IDs to prepare the installer.'}
+                                            : 'Enter IDs and an existing absolute project path to prepare the installer.'}
                                     </code>
                                     <button
                                         type="button"
@@ -374,11 +402,11 @@ export default function CodeBridgeService({
                                     </button>
                                 </div>
                                 <p className="text-muted-foreground mt-2">
-                                    Open a terminal in the intended project
-                                    directory on the target machine. Review the
-                                    installer before running an administrative
-                                    command. This creates a new identity; it
-                                    does not repair or replace an old project.
+                                    Verify the exact project folder exists on the
+                                    target machine and review the installer
+                                    before running an administrative command.
+                                    This creates a new identity; it does not
+                                    repair or replace an old project.
                                 </p>
                             </li>
                             <li>
