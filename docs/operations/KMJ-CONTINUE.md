@@ -6,10 +6,10 @@ Updated 2026-10-07. Owner: Narendra Singh Kushwah / KMJ TECHNO. Reply Hindi or E
 
 Repository: https://github.com/kmjtechno/kmj-main-platform
 Branch: feat/modelfabric-autonomy-20261007 (pushed, NOT merged into main).
-Deployed code SHA: eafcb7f8a3098750eae0830c6db794598791aebe.
+Deployed code SHA: 3a323068d7a50c1bc8ab337671549262ed33961b.
 Later branch commits may be control-manifest or documentation-only; compare code before redeploying.
 Google source worktree: /home/info/.kmj-worktrees/modelfabric-autonomy-20261007.
-Live immutable runtime: /home/info/.local/lib/kmj-autonomy/releases/eafcb7f8a309.
+Live immutable runtime: /home/info/.local/lib/kmj-autonomy/releases/3a323068d7a5.
 Python: /home/info/.kmj-python313/bin/python3.
 Original /home/info/work/kmj-main-platform has pre-existing dirty apps/platform/resources/js/app.tsx; preserve it. Never reset/clean live or dirty checkouts.
 
@@ -25,7 +25,7 @@ Original /home/info/work/kmj-main-platform has pre-existing dirty apps/platform/
 
 ## Verified results and exact failures
 
-171 Python tests PASS; separate3 acceptance tests PASS for committed contracts/kmj-autonomy-task.schema.json. Independent reviews completed. Router fixtures now isolate SQLite and lock paths;29router tests repeated3times without pollution.
+175 Python tests PASS; separate3 acceptance tests PASS for committed contracts/kmj-autonomy-task.schema.json. Independent reviews completed. Router fixtures now isolate SQLite and lock paths;29router tests repeated3times without pollution.
 Real private/local and public/9router inference succeeded. Synthetic generated-checkpoint recovery succeeded after stopping/starting worker (attempt2); this was not a full VPS reboot test.
 Human-orchestrated real model loop: initial CPU JSON failed; feedback to free cloud produced corrected JSON; isolated3tests passed; accepted source commit70dc4f354632f2bff72273f999b7ba9f4ac5aae6.
 IMPORTANT: fully automatic live workflow KMJ-schema-autonomous-proof FAILED after3iterations. It ran and repaired automatically, but models kept omitting properties.payload.properties.prompt.description and incorrectly adding max_attempts/data_classification to payload.required or nesting max_attempts inside payload. Do not hide this or claim whole-project autonomy is complete.
@@ -92,3 +92,12 @@ Final sanitized-status request commit `91b78df2082a6a0f0735a9effd7cbd10b6692f1a`
 The preserved original workflow `KMJ-schema-autonomous-proof` remains failed after three trusted-test iterations. A fresh workflow `KMJ-schema-autonomous-proof-v2` was started with a more precise operator prompt but the same immutable trusted validation digest `09ebd57ed0d2e8a685aee80109bd19f0c3437071534e0ef666bd19df0a07e766`. No candidate file was manually changed.
 
 The fresh run reached `json_candidate_tested` on attempt 1. The sandbox report binds the candidate to base SHA `3f87cf9d1312ac50e7a678ab33d9ae3eb22f545f`, reports the candidate unchanged during validation and the base still current, and keeps `product_complete=false` and `deployed=false`. Final branch gates after the GitHub-control follow-up are 171 Python regression tests PASS, 3 schema acceptance tests PASS, and diff check PASS. KMJ-AUTO-002 and KMJ-AUTO-003 are now dependency-ready.
+
+
+## 2026-10-07 KMJ-AUTO-002 completion evidence
+
+KMJ-AUTO-002 is implemented in commit `3a323068d7a50c1bc8ab337671549262ed33961b` and deployed as immutable runtime `~/.local/lib/kmj-autonomy/releases/3a323068d7a5`. The router now records bounded, idempotent semantic acceptance evidence by provider/model and ranks tested semantic quality before transient HTTP-success recency. Tested failures demote a route; tested successes promote it. Privacy eligibility and free/known-cost policy are still applied before quality ranking and cannot be overridden by semantic score.
+
+Focused semantic-quality tests: 4 PASS. Full branch gates: 175 Python regression tests PASS, 3 schema acceptance tests PASS, and diff check PASS. Worker, GitHub bridge and CPU fallback were active after rollout; queue was idle and control resumed before the switch. Rollback unit backups were preserved with timestamp `20261007-142703`.
+
+Next active task is KMJ-AUTO-003: one general code executor with trusted out-of-process acceptance. Keep it narrowly scoped: pinned source/project, OS sandbox, no secrets/network/production writes, immutable external assertions, and one real isolated small-code-fix acceptance proof.

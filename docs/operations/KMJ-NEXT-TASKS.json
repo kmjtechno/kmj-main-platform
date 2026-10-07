@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "deployed_code_sha": "eafcb7f8a3098750eae0830c6db794598791aebe",
+  "deployed_code_sha": "3a323068d7a50c1bc8ab337671549262ed33961b",
   "branch": "feat/modelfabric-autonomy-20261007",
   "automatic_product_completion": false,
   "tasks": [
@@ -61,11 +61,21 @@
     {
       "id": "KMJ-AUTO-002",
       "priority": 2,
-      "state": "ready",
+      "state": "completed",
       "depends_on": [
         "KMJ-AUTO-001"
       ],
       "title": "Route using tested task quality and capability, not only HTTP success",
+      "evidence": {
+        "implementation_sha": "3a323068d7a50c1bc8ab337671549262ed33961b",
+        "tests": "175 Python regression + 3 schema acceptance PASS",
+        "live_workflow": "KMJ-schema-quality-route-proof-v1",
+        "live_phase": "json_candidate_tested",
+        "semantic_quality_evidence_count": 1,
+        "quality_state": "hashed provider/model identity only; no prompts or credentials",
+        "bounded_counts": true,
+        "privacy_filter_authoritative": true
+      },
       "acceptance": [
         "Privacy/cost filters remain authoritative",
         "Failed semantic repair affects route choice without unbounded retries"
