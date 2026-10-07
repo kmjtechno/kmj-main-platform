@@ -45,6 +45,18 @@ final class CodeBridgeOwnerTierService
             if (! $policy) {
                 throw new DomainException('CODEBRIDGE_OWNER_POLICY_UNAVAILABLE');
             }
+            $features = json_decode((string) $policy->features, true, 32, JSON_THROW_ON_ERROR);
+            $limits = json_decode((string) $policy->limits, true, 32, JSON_THROW_ON_ERROR);
+            if (
+                $policy->pricing_model !== 'internal'
+                || $features !== ['read' => true, 'write' => true, 'execute' => true]
+                || $limits !== [
+                    'devices' => PlanCatalog::CODEBRIDGE_OWNER_DEVICES,
+                    'concurrent_jobs' => PlanCatalog::CODEBRIDGE_OWNER_CONCURRENCY,
+                ]
+            ) {
+                throw new DomainException('CODEBRIDGE_OWNER_POLICY_CONFLICT');
+            }
 
             if ((string) $license->plan === 'owner') {
                 return [
