@@ -416,7 +416,7 @@ class GitHubControlBridge:
                 source_sha=snapshot.get("last_source_sha"),
                 connectivity="degraded",
                 stale=True,
-                writeback="not_attempted",
+                writeback=self._last_writeback(),
             )
             report["poll_error_code"] = code
             self._persist_report(report)
@@ -432,7 +432,7 @@ class GitHubControlBridge:
                 source_sha=snapshot.get("last_source_sha"),
                 connectivity="degraded",
                 stale=True,
-                writeback="not_attempted",
+                writeback=self._last_writeback(),
             )
             report["poll_error_code"] = exc.code
             self._persist_report(report)
@@ -448,7 +448,7 @@ class GitHubControlBridge:
                 source_sha=snapshot.get("last_source_sha"),
                 connectivity="degraded",
                 stale=True,
-                writeback="not_attempted",
+                writeback=self._last_writeback(),
             )
             report["poll_error_code"] = "CONTROL_INTERNAL_ERROR"
             self._persist_report(report)

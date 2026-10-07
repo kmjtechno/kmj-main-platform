@@ -223,6 +223,24 @@ class GitHubControlTests(unittest.TestCase):
         self.assertEqual(bridge.poll_once()["writeback"], "read_only")
         self.assertEqual(bridge.poll_once()["writeback"], "read_only")
 
+    def test_read_only_capability_survives_connectivity_loss_and_recovery(self):
+        payload = manifest([{"id": "status-once", "operation": "status"}])
+        source = FakeSource(SHA1, payload)
+        status = self.root / "status.json"
+        bridge = GitHubControlBridge(
+            self.queue, source, status,
+            repository=REPO, ref=REF, allowed_projects={"kmj-main-platform"},
+        )
+        self.assertEqual(bridge.poll_once()["writeback"], "read_only")
+        bridge.source = BrokenSource()
+        degraded = bridge.poll_once()
+        self.assertTrue(degraded["stale"])
+        self.assertEqual(degraded["writeback"], "read_only")
+        bridge.source = source
+        recovered = bridge.poll_once()
+        self.assertFalse(recovered["stale"])
+        self.assertEqual(recovered["writeback"], "read_only")
+
     def test_sanitized_status_never_exposes_result_path_or_arbitrary_error(self):
         self.queue.enqueue("t", "p", {"kind": "plan", "prompt": "secret prompt"})
         task = self.queue.claim("w", now=10)
