@@ -4,7 +4,7 @@
   "ref": "feat/modelfabric-autonomy-20261007",
   "commands": [
     {
-      "id": "KMJ-GH-001-final-status-v1",
+      "id": "KMJ-GH-001-final-status-v2",
       "operation": "status"
     }
   ]
