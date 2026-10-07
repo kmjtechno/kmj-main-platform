@@ -78,7 +78,7 @@ Route::middleware(['auth', 'verified', 'password.confirm'])
             abort_unless($user instanceof User, 401);
             $access->require($user);
             $v = $request->validate([
-                'tenant_id' => ['required', 'string', 'max:64'],
+                'tenant_id' => ['required', 'string', 'regex:/\\A[A-Za-z0-9_-]{1,64}\\z/'],
                 'reason' => ['required', 'string', 'min:10', 'max:500'],
             ]);
 
