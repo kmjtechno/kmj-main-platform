@@ -79,6 +79,9 @@ Route::middleware(['auth', 'verified', 'password.confirm'])
             $access->require($user);
             $v = $request->validate(['tenant_id' => ['required', 'string', 'max:64'], 'reason' => ['required', 'string', 'min:10', 'max:500']]);
             $result = $service->upgrade($license, $v['tenant_id'], (string) $user->id, $v['reason']);
-            return response()->json($result)->header('Cache-Control', 'no-store');
+            if ($request->expectsJson()) {
+                return response()->json($result)->header('Cache-Control', 'no-store');
+            }
+            return redirect()->route('operator.kslp');
         })->name('licenses.owner-admin');
     });
