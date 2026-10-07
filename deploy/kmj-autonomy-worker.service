@@ -1,0 +1,24 @@
+# Copy to ~/.config/systemd/user after replacing @RUNTIME@ with verified release path.
+[Unit]
+Description=KMJ durable two-lane development artifact workers
+After=network.target kmj-model-fabric-cpu.service
+Wants=kmj-model-fabric-cpu.service
+[Service]
+Type=simple
+WorkingDirectory=@RUNTIME@
+EnvironmentFile=%h/.kmj/9router-client.env
+EnvironmentFile=%h/.config/kmj-model-fabric/local.env
+Environment=PYTHONUNBUFFERED=1
+Environment=KMJ_OPENCODE_FREE_ENABLED=false
+Environment=KMJ_ROUTER_STATE_DB=%h/.local/state/kmj-autonomy/router-cooldowns.sqlite
+ExecStart=%h/.kmj-python313/bin/python3 -m controller.autonomy_worker --db %h/.local/state/kmj-autonomy/queue.sqlite --artifacts %h/.local/state/kmj-autonomy/artifacts --concurrency 2
+Restart=on-failure
+RestartSec=15
+TimeoutStopSec=25
+KillMode=control-group
+UMask=0077
+NoNewPrivileges=true
+MemoryMax=1G
+CPUQuota=100%
+[Install]
+WantedBy=default.target

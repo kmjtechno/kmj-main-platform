@@ -1,6 +1,6 @@
 policy:
-  generative_ai: cloud_only
-  local_llm: prohibited
+  generative_ai: cloud_preferred
+  local_llm: emergency_cpu_only
   paid_fallback: prohibited
   unknown_cost_is_free: false
   no_route_status: NO_FREE_ROUTE_AVAILABLE
@@ -106,3 +106,11 @@ agent:
     - destructive_database
     - signing_keys
     - legal
+
+local_fallback:
+  enabled_by: KMJ_LOCAL_FALLBACK_ENABLED
+  transport: authenticated_loopback_only
+  activation: eligible_cloud_unavailable_or_bounded_attempt_budget_exhausted
+  max_concurrent: 1
+  context_tokens: 8192
+  max_output_tokens: 1024
