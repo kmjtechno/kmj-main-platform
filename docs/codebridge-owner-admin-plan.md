@@ -22,7 +22,7 @@ creates or signs its own owner license.
 | Catalog code | `codebridge.owner` |
 | License plan | `owner` |
 | Billing | Internal, non-billable; no checkout or auto-charge |
-| Devices | 64 maximum, subject to Main Platform enrollment limits |
+| Devices | Signed ceiling 2,147,483,647; actual enrollment remains bounded by valid credentials, storage, security controls and operational capacity |
 | Concurrent jobs | 16 maximum, subject to CPU/RAM/disk and queue policy |
 | Project access | Only individually authorized project roots; no unrestricted host access |
 | Execution | Explicitly approved gates/command profiles |
@@ -32,10 +32,11 @@ creates or signs its own owner license.
 | AI model usage | External provider quotas and charges are separate |
 | Validity | Preserve existing license expiry; lease renewal remains mandatory |
 
-**Do not advertise 64 devices or 16 concurrent jobs as active until the
+**Do not advertise the signed device ceiling or 16 concurrent jobs as active until the
 production signed entitlement and gateway policy have been verified.** The
 current Community agent reports one effective concurrent job. A larger
 entitlement does not guarantee faster execution under resource pressure.
+The device ceiling is an entitlement upper bound, not a practical deployment target or permission to create unbounded registrations.
 
 ## Owner activation
 
