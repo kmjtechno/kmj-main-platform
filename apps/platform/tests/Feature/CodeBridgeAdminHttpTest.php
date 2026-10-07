@@ -174,6 +174,51 @@ final class CodeBridgeAdminHttpTest extends TestCase
             ->get('/operator/codebridge/owner-plan')->assertForbidden();
     }
 
+    public function test_owner_cannot_reclassify_other_paid_codebridge_tiers_as_internal(): void
+    {
+        $tenant = (string) Str::uuid();
+        [$license] = $this->fixture($tenant);
+        $this->ownerPlan();
+        $owner = $this->platformOwner();
+        $this->ownTenant($owner, $tenant);
+        DB::table('kslp_licenses')->where('id', $license)->update(['plan' => 'business']);
+
+        $this->actingAs($owner)->withSession(['auth.password_confirmed_at' => time()])
+            ->postJson('/operator/codebridge/licenses/owner-tier', [
+                'license_id' => $license,
+                'tenant_id' => $tenant,
+                'confirm' => 'UPGRADE_CODEBRIDGE_OWNER',
+            ])->assertStatus(409);
+
+        self::assertSame('business', DB::table('kslp_licenses')->where('id', $license)->value('plan'));
+        self::assertSame(0, DB::table('kslp_license_events')->where('license_id', $license)->count());
+    }
+
+    public function test_expired_codebridge_license_cannot_activate_owner_tier(): void
+    {
+        $tenant = (string) Str::uuid();
+        [$license] = $this->fixture($tenant);
+        $this->ownerPlan();
+        $owner = $this->platformOwner();
+        $this->ownTenant($owner, $tenant);
+        DB::table('kslp_licenses')->where('id', $license)->update(['expires_at' => now()->subDay()]);
+
+        $this->actingAs($owner)->withSession(['auth.password_confirmed_at' => time()])
+            ->postJson('/operator/codebridge/licenses/owner-tier', [
+                'license_id' => $license,
+                'tenant_id' => $tenant,
+                'confirm' => 'UPGRADE_CODEBRIDGE_OWNER',
+            ])->assertStatus(409);
+
+        self::assertSame('professional', DB::table('kslp_licenses')->where('id', $license)->value('plan'));
+    }
+
+    public function test_owner_policy_ceiling_matches_codebridge_signed_activation_contract(): void
+    {
+        self::assertSame(2147483647, \KMJ\MainPlatform\Catalog\Services\PlanCatalog::CODEBRIDGE_OWNER_DEVICES);
+        self::assertSame(16, \KMJ\MainPlatform\Catalog\Services\PlanCatalog::CODEBRIDGE_OWNER_CONCURRENCY);
+    }
+
     public function test_owner_can_enroll_rotate_and_revoke_with_no_store_responses(): void
     {
         [$license, $activation] = $this->fixture('tenant-a');
