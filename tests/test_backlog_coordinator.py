@@ -65,7 +65,14 @@ class BacklogCoordinatorTests(unittest.TestCase):
             "connection": "connected",
             "version": "0.2.3",
             "writable": True,
+            "authorized": True,
+            "effective_permissions": ["read", "write", "execute"],
             "gates": ["fast", "platform", "full"],
+            "gate_readiness": {
+                "fast": "not_configured",
+                "platform": "blocked",
+                "full": "blocked",
+            },
             "checkout_sha": SHA,
             "observed_utc_epoch": NOW - 10,
             "source": "kmj-codebridge-inspect",
@@ -123,9 +130,28 @@ class BacklogCoordinatorTests(unittest.TestCase):
             self.coordinator().sync_once(now=NOW)
         self.assertIsNone(TaskQueue(self.queue_db).get("backlog:KMJ-PLATFORM-REVIEW-001"))
         self.write_codebridge(connection="error")
-        with self.assertRaisesRegex(BacklogError, "NOT_READY"):
+        with self.assertRaisesRegex(BacklogError, "NOT_AUTHORIZED"):
             self.coordinator().sync_once(now=NOW)
         self.assertIsNone(TaskQueue(self.queue_db).get("backlog:KMJ-PLATFORM-REVIEW-001"))
+        self.write_codebridge(authorized=False)
+        with self.assertRaisesRegex(BacklogError, "NOT_AUTHORIZED"):
+            self.coordinator().sync_once(now=NOW)
+        self.assertIsNone(TaskQueue(self.queue_db).get("backlog:KMJ-PLATFORM-REVIEW-001"))
+        self.write_codebridge(effective_permissions=["read", "write"])
+        with self.assertRaisesRegex(BacklogError, "PERMISSIONS_MISMATCH"):
+            self.coordinator().sync_once(now=NOW)
+        self.assertIsNone(TaskQueue(self.queue_db).get("backlog:KMJ-PLATFORM-REVIEW-001"))
+
+
+    def test_gate_readiness_is_reported_without_faking_execution_readiness(self):
+        report = self.coordinator().sync_once(now=NOW)
+        self.assertFalse(report["codebridge"]["execution_ready"])
+        self.assertEqual(report["codebridge"]["gate_readiness"]["platform"], "blocked")
+        self.write_codebridge(gate_readiness={
+            "fast": "satisfied", "platform": "satisfied", "full": "satisfied",
+        })
+        ready = self.coordinator().sync_once(now=NOW)
+        self.assertTrue(ready["codebridge"]["execution_ready"])
 
     def test_completed_queue_item_is_only_artifact_ready(self):
         coordinator = self.coordinator()

@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "repository": "kmjtechno/kmj-main-platform",
+  "codebridge": {
+    "device": "main-platform-kmjtechnonetgmailcom",
+    "project": "kmj-main-platform",
+    "branch": "main"
+  },
+  "tasks": [
+    {
+      "id": "KMJ-P5-TRUST-AUDIT-001",
+      "project": "kmj-main-platform",
+      "kind": "review",
+      "prompt": "Produce a bounded artifact-only gap review for the current KMJ Main Platform public experience backlog, focusing on premium documentation, trust surfaces, multilingual coverage, and content completeness. Use only the supplied objective; do not modify repositories, execute commands, claim tests passed, claim deployment, or claim product completion. Return prioritized evidence gaps and safe next engineering slices.",
+      "data_classification": "public",
+      "max_attempts": 3,
+      "auto_enqueue": true
+    }
+  ]
+}

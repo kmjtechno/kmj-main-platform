@@ -112,7 +112,8 @@ def load_codebridge_status(
         raise BacklogError("CODEBRIDGE_STATUS_INVALID") from exc
     expected = {
         "schema_version", "repository", "device", "project", "branch",
-        "connection", "version", "writable", "gates", "checkout_sha",
+        "connection", "version", "writable", "authorized",
+        "effective_permissions", "gates", "gate_readiness", "checkout_sha",
         "observed_utc_epoch", "source",
     }
     if not isinstance(data, dict) or set(data) != expected:
@@ -123,17 +124,27 @@ def load_codebridge_status(
         EXPECTED_DEVICE, EXPECTED_PROJECT, EXPECTED_CODEBRIDGE_BRANCH
     ):
         raise BacklogError("CODEBRIDGE_IDENTITY_MISMATCH")
-    if data["connection"] != "connected" or data["writable"] is not True:
-        raise BacklogError("CODEBRIDGE_NOT_READY")
+    if (data["connection"] != "connected" or data["writable"] is not True
+            or data["authorized"] is not True):
+        raise BacklogError("CODEBRIDGE_NOT_AUTHORIZED")
+    if (not isinstance(data["effective_permissions"], list)
+            or sorted(data["effective_permissions"]) != ["execute", "read", "write"]):
+        raise BacklogError("CODEBRIDGE_PERMISSIONS_MISMATCH")
     if (not isinstance(data["version"], str) or not data["version"]
             or not isinstance(data["source"], str) or not data["source"]):
         raise BacklogError("CODEBRIDGE_STATUS_INVALID")
     if not isinstance(data["gates"], list) or sorted(data["gates"]) != ["fast", "full", "platform"]:
         raise BacklogError("CODEBRIDGE_GATES_MISMATCH")
+    readiness = data["gate_readiness"]
+    if (not isinstance(readiness, dict)
+            or set(readiness) != {"fast", "platform", "full"}
+            or any(value not in {"satisfied", "blocked", "not_configured"}
+                   for value in readiness.values())):
+        raise BacklogError("CODEBRIDGE_GATE_READINESS_INVALID")
     if not isinstance(data["checkout_sha"], str) or not SHA.fullmatch(data["checkout_sha"]):
         raise BacklogError("CODEBRIDGE_CHECKOUT_SHA_INVALID")
     observed = data["observed_utc_epoch"]
-    if not isinstance(observed, (int, float)) or observed > now + 60:
+    if isinstance(observed, bool) or not isinstance(observed, (int, float)) or observed > now + 60:
         raise BacklogError("CODEBRIDGE_STATUS_TIME_INVALID")
     if now - observed > max_age_seconds:
         raise BacklogError("CODEBRIDGE_STATUS_STALE")
@@ -262,6 +273,13 @@ class BacklogCoordinator:
                 "connection": codebridge["connection"],
                 "version": codebridge["version"],
                 "checkout_sha": codebridge["checkout_sha"],
+                "authorized": codebridge["authorized"],
+                "effective_permissions": codebridge["effective_permissions"],
+                "gate_readiness": codebridge["gate_readiness"],
+                "execution_ready": all(
+                    value == "satisfied"
+                    for value in codebridge["gate_readiness"].values()
+                ),
                 "observed_utc_epoch": codebridge["observed_utc_epoch"],
             },
             "backlog_sha256": hashlib.sha256(self.backlog_path.read_bytes()).hexdigest(),
