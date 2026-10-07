@@ -87,5 +87,5 @@ Route::middleware(['auth', 'verified', 'password.confirm'])
                 return response()->json($result)->header('Cache-Control', 'no-store');
             }
             return redirect()->route('operator.kslp');
-        })->name('licenses.owner-admin');
+        })->middleware('throttle:5,1')->name('licenses.owner-admin');
     });
