@@ -80,7 +80,13 @@ export default function OperatorKslp({ metrics, licenses, events }: Props) {
     };
     const upgradeCodeBridge = (license: License) => {
         const reason = actionReason.trim();
-        if (reason.length < 10 || license.product !== 'KMJ_CODEBRIDGE' || license.plan !== 'professional' || license.state !== 'ACTIVE') return;
+        if (
+            reason.length < 10 ||
+            license.product !== 'KMJ_CODEBRIDGE' ||
+            license.plan !== 'professional' ||
+            license.state !== 'ACTIVE'
+        )
+            return;
         router.post(
             `/operator/codebridge/licenses/${license.id}/owner-admin`,
             { tenant_id: license.customer_id, reason },
@@ -313,17 +319,29 @@ export default function OperatorKslp({ metrics, licenses, events }: Props) {
                                                 >
                                                     Renew 1y
                                                 </button>
-                                                {l.product === 'KMJ_CODEBRIDGE' && l.plan === 'professional' && l.state === 'ACTIVE' && (
-                                                    <button
-                                                        type="button"
-                                                        disabled={actionReason.trim().length < 10}
-                                                        onClick={() => upgradeCodeBridge(l)}
-                                                        className="rounded border border-red-500 px-2 py-1 font-semibold text-red-500 disabled:cursor-not-allowed disabled:opacity-40"
-                                                        title="Owner-only: audited upgrade, existing device credentials preserved"
-                                                    >
-                                                        Grant CodeBridge Owner Admin
-                                                    </button>
-                                                )}
+                                                {l.product ===
+                                                    'KMJ_CODEBRIDGE' &&
+                                                    l.plan ===
+                                                        'professional' &&
+                                                    l.state === 'ACTIVE' && (
+                                                        <button
+                                                            type="button"
+                                                            disabled={
+                                                                actionReason.trim()
+                                                                    .length < 10
+                                                            }
+                                                            onClick={() =>
+                                                                upgradeCodeBridge(
+                                                                    l,
+                                                                )
+                                                            }
+                                                            className="rounded border border-red-500 px-2 py-1 font-semibold text-red-500 disabled:cursor-not-allowed disabled:opacity-40"
+                                                            title="Owner-only: audited upgrade, existing device credentials preserved"
+                                                        >
+                                                            Grant CodeBridge Owner
+                                                            Admin
+                                                        </button>
+                                                    )}
                                                 <select
                                                     aria-label="Select new plan"
                                                     value={
