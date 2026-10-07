@@ -4,11 +4,11 @@
   "ref": "feat/modelfabric-autonomy-20261007",
   "commands": [
     {
-      "id": "KMJ-GH-001-live-pause-v2",
-      "operation": "pause"
+      "id": "KMJ-GH-001-live-resume-v2",
+      "operation": "resume"
     },
     {
-      "id": "KMJ-GH-001-live-status-v3",
+      "id": "KMJ-GH-001-live-status-v4",
       "operation": "status"
     }
   ]
