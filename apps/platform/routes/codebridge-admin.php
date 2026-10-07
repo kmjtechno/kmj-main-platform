@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 use KMJ\MainPlatform\Organizations\Services\OrganizationDirectory;
+use KMJ\MainPlatform\Catalog\Services\PlanCatalog;
 
 Route::middleware(['auth', 'verified', 'password.confirm'])
     ->prefix('operator/codebridge')
@@ -33,7 +34,7 @@ Route::middleware(['auth', 'verified', 'password.confirm'])
 
             return Inertia::render('operator-codebridge-owner', [
                 'licenses' => $licenses,
-                'limits' => ['devices' => 64, 'concurrent_jobs' => 16],
+                'limits' => ['devices' => PlanCatalog::CODEBRIDGE_OWNER_DEVICES, 'concurrent_jobs' => PlanCatalog::CODEBRIDGE_OWNER_CONCURRENCY],
             ]);
         })->name('owner-plan');
 
