@@ -30,6 +30,23 @@ final class PublicLocalizationTest extends TestCase
                 ->where('localization.switch_label', 'English'));
     }
 
+    public function test_localized_corporate_surfaces_receive_hindi_locale(): void
+    {
+        foreach ([
+            '/company' => 'company',
+            '/capabilities' => 'capabilities',
+            '/trust' => 'trust',
+        ] as $path => $component) {
+            $this->get($path.'?lang=hi')
+                ->assertOk()
+                ->assertCookie('kmj_locale')
+                ->assertInertia(fn (Assert $page) => $page
+                    ->component($component)
+                    ->where('localization.locale', 'hi')
+                    ->where('localization.switch_locale', 'en'));
+        }
+    }
+
     public function test_unsupported_locale_fails_closed_to_supported_default(): void
     {
         $this->get('/products?lang=ur')
