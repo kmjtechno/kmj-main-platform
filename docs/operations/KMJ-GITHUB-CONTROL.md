@@ -1,10 +1,10 @@
 # KMJ GitHub control contract
 
-Owner requirement2026-10-07: this project must be controlled from GitHub and resumed by another tool-enabled coding agent without the prior chat. GitHub is the authoritative task/configuration/review/evidence store; VPS services are the execution layer. This document is a locked requirement and implementation contract, NOT a claim that the command bridge is deployed.
+Owner requirement2026-10-07: this project must be controlled from GitHub and resumed by another tool-enabled coding agent without the prior chat. GitHub is the authoritative task/configuration/review/evidence store; VPS services are the execution layer. This document records both the locked control contract and the verified KMJ-GH-001 deployed state.
 
 ## Current truth
 
-Source, handover, ordered tasks and tested branch changes are pushed to kmjtechno/kmj-main-platform, feat/modelfabric-autonomy-20261007. Runtime0340c0b is deployed. Persistent workers and CPU fallback are active; queue/task control is currently local. GitHub issue-to-queue, pause/resume, status publication and exact-SHA release commands are NOT connected to this worker.
+Source, handover, ordered tasks and tested branch changes are pushed to kmjtechno/kmj-main-platform, feat/modelfabric-autonomy-20261007. Runtime eafcb7f8a3098750eae0830c6db794598791aebe is deployed at the immutable release eafcb7f8a309. kmj-autonomy-worker.service, kmj-github-control.service and kmj-model-fabric-cpu.service are active. GitHub control reads ops/github-control/kmj-autonomy.json from the pinned branch through an isolated bare mirror and supports only pause, resume, bounded enqueue and sanitized status. Status API writeback remains read_only until a separately scoped GitHub issues/status credential is deliberately configured.
 
 Existing autonomous-worker.yml and autonomous-cycle.yml require self-hosted runners and an older destructive checkout worker; the former enables auto-merge. Do not activate/reuse these as the new bridge. Do not change account/branch protection or enable unrestricted issue execution. Preserve unrelated product workflows. Reconcile legacy policy declarations before any eventual main merge.
 
@@ -30,11 +30,11 @@ Existing autonomous-worker.yml and autonomous-cycle.yml require self-hosted runn
 
 ## Low-credit handoff
 
-Implement KMJ-GH-001 first as one bounded reviewed slice. Then KMJ-AUTO-001 addresses the failed live JSON repair quality. Do not spend remaining credits recreating architecture or another repository. Update KMJ-CONTINUE.md with exact code/runtime/command evidence after implementation, not before.
+KMJ-GH-001 is complete; do not recreate it or enable the legacy autonomous Actions as a substitute. KMJ-AUTO-001 is also recorded complete in KMJ-NEXT-TASKS.json; continue only dependency-ready tasks from that ledger, preserving any concurrent source-worktree changes. Keep exact-SHA tests, immutable releases, state preservation and rollback for future runtime updates.
 
 
 ## Implemented state — 2026-10-07
 
 KMJ-GH-001 is now deployed. The VPS polls the pinned branch through an isolated bare Git mirror over outbound HTTPS; it does not checkout/reset/clean the developer worktree. Supported manifest operations remain limited to pause, resume, bounded enqueue, and sanitized status. Durable command hashes prevent changed-content replay under a reused command ID. Pause blocks new claims without killing an already running task.
 
-The live proof passed across repeated polls and bridge restarts. A GitHub-imported task remained exactly once, a running task survived a subsequent pause, and final GitHub resume restored new claims. The status capability is currently `read_only`: no separately scoped issues/status credential has been configured, so no GitHub API write is claimed. Legacy self-hosted and auto-merge workflows remain inactive.
+The live proof passed across repeated polls and bridge restarts. A GitHub-imported task remained exactly once, a running task survived a subsequent pause and completed, and final GitHub resume restored new claims. The final status request commit 91b78df2082a6a0f0735a9effd7cbd10b6692f1a was applied and duplicate polling retained writeback=read_only, stale=false and paused=false. No separately scoped issues/status credential is configured, so no GitHub API write is claimed. Legacy self-hosted and auto-merge workflows remain inactive.

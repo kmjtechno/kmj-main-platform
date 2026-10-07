@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "deployed_code_sha": "552059d157f22fe1f80ef79130f1ce140701b574",
+  "deployed_code_sha": "eafcb7f8a3098750eae0830c6db794598791aebe",
   "branch": "feat/modelfabric-autonomy-20261007",
   "automatic_product_completion": false,
   "tasks": [
@@ -20,14 +20,15 @@
       ],
       "evidence": {
         "implementation_sha": "552059d157f22fe1f80ef79130f1ce140701b574",
-        "followup_fix_sha": "eafcb7f",
-        "runtime_release": "552059d157f2",
+        "followup_fix_sha": "eafcb7f8a3098750eae0830c6db794598791aebe",
+        "runtime_release": "eafcb7f8a309",
         "tests": "171 Python regression + 3 schema acceptance PASS",
         "live_control_commits": [
           "20df34a",
           "e6bc76c",
           "aaea639",
-          "e2c9074"
+          "e2c9074",
+          "91b78df2082a6a0f0735a9effd7cbd10b6692f1a"
         ],
         "writeback": "read_only; no separately scoped GitHub status credential configured",
         "legacy_self_hosted_or_auto_merge_activated": false

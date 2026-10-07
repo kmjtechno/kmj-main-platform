@@ -6,16 +6,16 @@ Updated 2026-10-07. Owner: Narendra Singh Kushwah / KMJ TECHNO. Reply Hindi or E
 
 Repository: https://github.com/kmjtechno/kmj-main-platform
 Branch: feat/modelfabric-autonomy-20261007 (pushed, NOT merged into main).
-Deployed code SHA: 0340c0bfc6b708e79825f404fe13f0e0f023f9cf.
-This handover may be a later documentation-only commit; compare code before redeploying.
+Deployed code SHA: eafcb7f8a3098750eae0830c6db794598791aebe.
+Later branch commits may be control-manifest or documentation-only; compare code before redeploying.
 Google source worktree: /home/info/.kmj-worktrees/modelfabric-autonomy-20261007.
-Live immutable runtime: /home/info/.local/lib/kmj-autonomy/releases/0340c0bfc6b7.
+Live immutable runtime: /home/info/.local/lib/kmj-autonomy/releases/eafcb7f8a309.
 Python: /home/info/.kmj-python313/bin/python3.
 Original /home/info/work/kmj-main-platform has pre-existing dirty apps/platform/resources/js/app.tsx; preserve it. Never reset/clean live or dirty checkouts.
 
 ## What is actually operational
 
-- Google user services kmj-autonomy-worker.service and kmj-model-fabric-cpu.service active/running, NRestarts0 at handover. Enabled with info Linger=yes: no PuTTY/PC session needed.
+- Google user services kmj-autonomy-worker.service, kmj-github-control.service and kmj-model-fabric-cpu.service are active/running with NRestarts0 at the final KMJ-GH-001 health check. The GitHub bridge is enabled as a separate outbound-only service; no self-hosted Actions runner is used.
 - Two asynchronous inference lanes; one running task per canonical project; SQLite atomic claims, leases, fencing, checkpoints, bounded retry. Outage/timeouts defer300seconds without spending generation attempts.
 - Strict-zero cloud routing with operator-controlled confidentiality. Built-in public providers cannot grant themselves private-code access. CPU fallback is authenticated127.0.0.1:18766, one inference slot, Qwen2.5-Coder1.5B Q4. No paid fallback. Free availability and small-model quality remain finite.
 - Stateful provider/model cooldown, recent HTTP-success preference, bounded failover, token-budget validation. Recent HTTP success is NOT proven engineering quality.
@@ -25,13 +25,13 @@ Original /home/info/work/kmj-main-platform has pre-existing dirty apps/platform/
 
 ## Verified results and exact failures
 
-160 Python tests PASS; separate3 acceptance tests PASS for committed contracts/kmj-autonomy-task.schema.json. Independent reviews completed. Router fixtures now isolate SQLite and lock paths;29router tests repeated3times without pollution.
+171 Python tests PASS; separate3 acceptance tests PASS for committed contracts/kmj-autonomy-task.schema.json. Independent reviews completed. Router fixtures now isolate SQLite and lock paths;29router tests repeated3times without pollution.
 Real private/local and public/9router inference succeeded. Synthetic generated-checkpoint recovery succeeded after stopping/starting worker (attempt2); this was not a full VPS reboot test.
 Human-orchestrated real model loop: initial CPU JSON failed; feedback to free cloud produced corrected JSON; isolated3tests passed; accepted source commit70dc4f354632f2bff72273f999b7ba9f4ac5aae6.
 IMPORTANT: fully automatic live workflow KMJ-schema-autonomous-proof FAILED after3iterations. It ran and repaired automatically, but models kept omitting properties.payload.properties.prompt.description and incorrectly adding max_attempts/data_classification to payload.required or nesting max_attempts inside payload. Do not hide this or claim whole-project autonomy is complete.
 Live workflow state: /home/info/.local/state/kmj-autonomy/workflows/KMJ-schema-autonomous-proof/state.json (history, candidates, failures, report).
 Service kmj-json-contract@KMJ-schema-autonomous-proof.service is inactive/dead after bounded terminal failure; that is expected. Main worker and CPU service remain active, awaiting tasks.
-Queue at last check:8completed artifact tasks,1failed patch-generation task. Completed artifacts are not8completed products.
+Queue at final KMJ-GH-001 health check:10completed tasks,1failed task,0running; control paused=false. Completed artifacts are not completed products.
 
 ## Safe first commands (Google info account)
 
@@ -39,7 +39,7 @@ Read this file and docs/KMJ-AUTONOMY.md first; do NOT rediscover the entire arch
 
     git -C /home/info/.kmj-worktrees/modelfabric-autonomy-20261007 status --short --branch
     git -C /home/info/.kmj-worktrees/modelfabric-autonomy-20261007 log -5 --oneline
-    XDG_RUNTIME_DIR=/run/user/1001 DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/1001/bus systemctl --user status kmj-autonomy-worker.service kmj-model-fabric-cpu.service --no-pager
+    XDG_RUNTIME_DIR=/run/user/1001 DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/1001/bus systemctl --user status kmj-autonomy-worker.service kmj-github-control.service kmj-model-fabric-cpu.service --no-pager
 
 From live runtime:
 
@@ -52,21 +52,19 @@ From source worktree, when needed for a changed code snapshot:
     /usr/bin/python3 -m unittest discover -s acceptance/autonomy-schema
     git diff --check
 
-## Latest owner direction: GitHub control first
+## GitHub control status
 
-Owner2026-10-07 requires control from GitHub. Read docs/operations/KMJ-GITHUB-CONTROL.md and implement KMJ-GH-001 before expanding execution. Source/handover are already on GitHub, but direct GitHub-to-VPS task/pause/resume/status bridge is NOT deployed. Legacy autonomous Actions use self-hosted runners and auto-merge; do not activate them as a substitute.
+KMJ-GH-001 is complete and deployed. GitHub is now the versioned control source for bounded enqueue, pause, resume and sanitized status requests through the outbound-only bridge. Legacy autonomous Actions remain excluded: do not activate the self-hosted/auto-merge workflows as a substitute.
 
-## Next repair task after GitHub bridge, acceptance-defined
+## Next autonomy work, acceptance-defined
 
-Read KMJ-NEXT-TASKS.json. Fix autonomous repair quality, not the already-passing committed schema. Use a new workflow ID and a fresh isolated pinned input. Preserve old failure evidence. Diagnose exact provider/model outputs and feedback; convert failures into precise JSON-path repair instructions, measure repair outcome, and avoid repeating identical failed output. Consider routing quality based on independently passed acceptance, not HTTP200 alone. Keep free-only and confidentiality restrictions.
-Success gate: a NEW live workflow completes from generation through immutable sandbox acceptance with zero manual candidate edits; all existing tests green; restart/replay still correct; no weakening tests, copying known-answer file to fake generation, or marking artifacts product-complete. Cap attempts and report inability honestly if available models cannot meet requirements.
-Then expand only one vetted non-JSON project executor with external trusted assertions. Arbitrary imported candidate Python can fake unittest success; readonly test files alone do not solve it. General executor, complete product backlog integration, model capability/quota prediction, CodeBridge status integration and release rollout/rollback remain future work.
+Read KMJ-NEXT-TASKS.json as the ordered source of truth. KMJ-AUTO-001 is complete with the preserved failed v1 evidence and a fresh v2 workflow reaching json_candidate_tested without manual candidate edits. KMJ-AUTO-002 and KMJ-AUTO-003 are dependency-ready. Preserve free-only/confidentiality rules, trusted external assertions, bounded retries and the distinction between artifact/tested candidate/product release. Do not overwrite concurrent work already present in the source worktree.
 
 ## State, secrets and rollback
 
-State root /home/info/.local/state/kmj-autonomy, queue.sqlite, router-cooldowns.sqlite, artifacts/worker-status.json. Specs ~/.config/kmj-autonomy/workflows; proof input /home/info/.local/state/kmj-autonomy/workflow-input pinned3f87cf9d1312ac50e7a678ab33d9ae3eb22f545f; trustedtests acceptance/schema-v2 outside repository. Do not move its HEAD while validating an existing spec.
+State root /home/info/.local/state/kmj-autonomy, queue.sqlite, router-cooldowns.sqlite, artifacts/worker-status.json, github-control-status.json and isolated github-control.git. Specs ~/.config/kmj-autonomy/workflows; proof input /home/info/.local/state/kmj-autonomy/workflow-input pinned3f87cf9d1312ac50e7a678ab33d9ae3eb22f545f; trustedtests acceptance/schema-v2 outside repository. Do not move its HEAD while validating an existing spec.
 Secrets only in ~/.kmj/9router-client.env and ~/.config/kmj-model-fabric/local.env plus local-api-key (0600); read into process environment without printing. Keep KMJ_OPENCODE_FREE_ENABLED=false: legacy blocking thread subprocess is not cancellable. Do not enable paid/unknown-cost routes.
-Rollback runtime: use preserved user service backup worker-service.3f87cf9.backup or worker-service.ca7caf3.backup, daemon-reload/restart and verify; preserve all queue/state/artifacts. Prior release archives retained. No production database migrations or main-branch merges were performed.
+Rollback runtime: prior release archives and timestamped backups of kmj-autonomy-worker.service / kmj-github-control.service are retained under the user systemd directory. Restore the chosen unit backups, daemon-reload/restart and verify; preserve all queue/state/artifacts. No production database migrations or main-branch merges were performed.
 
 ## Access and other infrastructure
 
@@ -80,13 +78,13 @@ Work one dependency-ready task at a time; at most two useful implementation agen
 
 ## 2026-10-07 KMJ-GH-001 completion evidence
 
-KMJ-GH-001 is implemented and live on the VPS without activating the legacy self-hosted or auto-merge workflows. Implementation commit `552059d157f22fe1f80ef79130f1ce140701b574` added the outbound isolated Git mirror control bridge, durable SQLite pause/idempotency state, strict manifest admission, sanitized status, systemd service, and replay/confidentiality tests. Follow-up `eafcb7f` retains the verified writeback capability state across duplicate polls.
+KMJ-GH-001 is implemented and live on the VPS without activating the legacy self-hosted or auto-merge workflows. Implementation commit `552059d157f22fe1f80ef79130f1ce140701b574` added the outbound isolated Git mirror control bridge, durable SQLite pause/idempotency state, strict manifest admission, sanitized status, systemd service, and replay/confidentiality tests. Follow-up `eafcb7f8a3098750eae0830c6db794598791aebe` retains the verified writeback capability state across duplicate polls.
 
 Live control proof used GitHub commits `20df34a` (enqueue + pause), `e6bc76c` (resume), `aaea639` (pause while the proof task was already running), and `e2c9074` (final resume). The proof task was imported once, bridge restart retained idempotency, the running task survived pause and reached artifact-ready, and the worker finished resumed. Status writeback is honestly `read_only` because no separately scoped GitHub status credential is configured; no provider credential was reused.
 
-Verified gates: 170 Python regression tests PASS, 3 schema acceptance tests PASS, and `git diff --check` PASS. Runtime release is `~/.local/lib/kmj-autonomy/releases/552059d157f2`; the queue DB and artifacts remain outside the immutable release. Rollback copy of the previous worker unit was preserved during deployment.
+Verified gates: 171 Python regression tests PASS, 3 schema acceptance tests PASS, and `git diff --check` PASS. Runtime release is `~/.local/lib/kmj-autonomy/releases/eafcb7f8a309`; the queue DB and artifacts remain outside the immutable release. Rollback copy of the previous worker unit was preserved during deployment.
 
-Next active task is KMJ-AUTO-001. Fresh workflow `KMJ-schema-autonomous-proof-v2` uses the same immutable trusted validation digest as the preserved failed three-attempt run. No candidate was manually edited.
+Final sanitized-status request commit `91b78df2082a6a0f0735a9effd7cbd10b6692f1a` was applied live; duplicate polling preserved `writeback=read_only`, `stale=false` and `paused=false`. KMJ-AUTO-001 was subsequently completed by the preserved v2 workflow evidence below.
 
 
 ## 2026-10-07 KMJ-AUTO-001 completion evidence
