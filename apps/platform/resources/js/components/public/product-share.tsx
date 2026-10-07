@@ -1,4 +1,5 @@
 import { Check, Copy, MessageCircle, Share2 } from 'lucide-react';
+import { usePage } from '@inertiajs/react';
 import { useState } from 'react';
 
 type ProductShareProps = {
@@ -7,6 +8,8 @@ type ProductShareProps = {
 };
 
 export default function ProductShare({ name, slug }: ProductShareProps) {
+    const { localization } = usePage().props;
+    const hi = localization.locale === 'hi';
     const [copied, setCopied] = useState(false);
     const url = `https://kmjtechno.com/products/${slug}`;
     const text = `${name} — KMJ TECHNO`;
@@ -32,7 +35,7 @@ export default function ProductShare({ name, slug }: ProductShareProps) {
     return (
         <div className="mt-7">
             <div className="text-[9px] font-black tracking-[0.16em] text-white/28 uppercase">
-                Share this product
+                {hi ? 'इस product को share करें' : 'Share this product'}
             </div>
             <div className="mt-3 flex flex-wrap gap-2">
                 <button
@@ -41,7 +44,7 @@ export default function ProductShare({ name, slug }: ProductShareProps) {
                     className="inline-flex h-10 items-center gap-2 rounded-lg border border-white/10 bg-white/[0.035] px-3.5 text-xs font-bold text-white/68 transition hover:border-white/20 hover:bg-white/[0.07] hover:text-white"
                 >
                     <Share2 className="h-3.5 w-3.5" />
-                    Share
+                    {hi ? 'Share करें' : 'Share'}
                 </button>
                 <a
                     href={`https://wa.me/?text=${encodedText}`}
@@ -86,7 +89,13 @@ export default function ProductShare({ name, slug }: ProductShareProps) {
                     ) : (
                         <Copy className="h-3.5 w-3.5" />
                     )}
-                    {copied ? 'Copied' : 'Copy link'}
+                    {copied
+                        ? hi
+                            ? 'कॉपी हो गया'
+                            : 'Copied'
+                        : hi
+                          ? 'लिंक कॉपी करें'
+                          : 'Copy link'}
                 </button>
             </div>
         </div>
