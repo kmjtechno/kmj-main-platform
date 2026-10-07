@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "deployed_code_sha": "b1d316830aab1f635c103bff00b5e9bf572126db",
+  "deployed_code_sha": "e4dbb633ded18cd2af111f1020d83a005cc177f4",
   "branch": "feat/modelfabric-autonomy-20261007",
   "automatic_product_completion": false,
   "tasks": [
@@ -91,7 +91,8 @@
       "title": "Design one general code executor with trusted out-of-process acceptance",
       "evidence": {
         "implementation_sha": "b1d316830aab1f635c103bff00b5e9bf572126db",
-        "runtime_release": "b1d316830aab",
+        "runtime_release": "e4dbb633ded1",
+        "hardening_sha": "e4dbb633ded18cd2af111f1020d83a005cc177f4",
         "executor": "python-cli-v1",
         "tests": "187 Python regression + 3 schema acceptance PASS",
         "focused_executor_tests": 11,

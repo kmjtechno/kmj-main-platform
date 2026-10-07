@@ -6,10 +6,10 @@ Updated 2026-10-07. Owner: Narendra Singh Kushwah / KMJ TECHNO. Reply Hindi or E
 
 Repository: https://github.com/kmjtechno/kmj-main-platform
 Branch: feat/modelfabric-autonomy-20261007 (pushed, NOT merged into main).
-Deployed code SHA: b1d316830aab1f635c103bff00b5e9bf572126db.
+Deployed code SHA: e4dbb633ded18cd2af111f1020d83a005cc177f4.
 Later branch commits may be control-manifest or documentation-only; compare code before redeploying.
 Google source worktree: /home/info/.kmj-worktrees/modelfabric-autonomy-20261007.
-Live immutable runtime: /home/info/.local/lib/kmj-autonomy/releases/b1d316830aab.
+Live immutable runtime: /home/info/.local/lib/kmj-autonomy/releases/e4dbb633ded1.
 Python: /home/info/.kmj-python313/bin/python3.
 Original /home/info/work/kmj-main-platform has pre-existing dirty apps/platform/resources/js/app.tsx; preserve it. Never reset/clean live or dirty checkouts.
 
@@ -112,8 +112,8 @@ Focused semantic/workflow/router tests passed, then the full gate passed 175 Pyt
 
 ## 2026-10-07 KMJ-AUTO-003 completion evidence
 
-KMJ-AUTO-003 is implemented in exact-head commit `b1d316830aab1f635c103bff00b5e9bf572126db` and deployed as immutable runtime `~/.local/lib/kmj-autonomy/releases/b1d316830aab`. The first vetted non-JSON executor is `python-cli-v1`: exact base SHA, exact operator allowlist, Git project lock, external pinned `cases.json`, read-only candidate, no candidate access to the validation tree, no inherited secrets/home, and Bubblewrap network isolation. Assertions are compared by the trusted parent process, so candidate output cannot manufacture the acceptance result.
+KMJ-AUTO-003 base implementation is `b1d316830aab1f635c103bff00b5e9bf572126db`; validation-digest hardening is `e4dbb633ded18cd2af111f1020d83a005cc177f4`, now deployed as immutable runtime `~/.local/lib/kmj-autonomy/releases/e4dbb633ded1`. The first vetted non-JSON executor is `python-cli-v1`: exact base SHA, exact operator allowlist, Git project lock, external pinned `cases.json`, read-only candidate, no candidate access to the validation tree, no inherited secrets/home, and Bubblewrap network isolation. Assertions are compared by the trusted parent process, so candidate output cannot manufacture the acceptance result.
 
-A real temporary Git project was patched and executed in Bubblewrap; the small Python CLI fix passed two external behavior cases while the original repository remained unchanged. Adversarial and isolation tests cover forged success text, denied paths, validation digest mismatch, extra executable validation files, entrypoint scope, moved base, simultaneous project writer, host-secret absence, network denial and read-only workspace. Focused executor tests: 11 PASS. Exact-head gates: 187 Python regression tests PASS, 3 schema acceptance tests PASS and diff check PASS. Runtime services remained active after rollout; rollback backup stamp `20261007-143059`.
+A real temporary Git project was patched and executed in Bubblewrap; the small Python CLI fix passed two external behavior cases while the original repository remained unchanged. Adversarial and isolation tests cover forged success text, denied paths, validation digest mismatch, extra executable validation files, entrypoint scope, moved base, simultaneous project writer, host-secret absence, network denial and read-only workspace. Focused executor tests: 11 PASS. Exact-head gates: 187 Python regression tests PASS, 3 schema acceptance tests PASS and diff check PASS. Runtime services remained active after the hardened rollout; latest rollback backup stamp `20261007-143429`.
 
 Next active task is KMJ-AUTO-004: connect a curated backlog and CodeBridge status to persistent workflows without collapsing artifact/tested-candidate/release states or claiming product completion.
