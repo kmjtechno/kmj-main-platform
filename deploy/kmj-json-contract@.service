@@ -1,0 +1,20 @@
+# Substitute @RUNTIME@ with an exact tested release archive.
+[Unit]
+Description=KMJ bounded JSON contract workflow %i
+After=kmj-autonomy-worker.service
+Wants=kmj-autonomy-worker.service
+[Service]
+Type=simple
+WorkingDirectory=@RUNTIME@
+Environment=PYTHONUNBUFFERED=1
+ExecStart=%h/.kmj-python313/bin/python3 -m controller.json_contract_workflow --spec %h/.config/kmj-autonomy/workflows/%i.json --state-dir %h/.local/state/kmj-autonomy/workflows --queue-db %h/.local/state/kmj-autonomy/queue.sqlite
+Restart=on-failure
+RestartSec=20
+TimeoutStopSec=10
+KillMode=control-group
+UMask=0077
+NoNewPrivileges=true
+MemoryMax=1G
+CPUQuota=100%
+[Install]
+WantedBy=default.target
