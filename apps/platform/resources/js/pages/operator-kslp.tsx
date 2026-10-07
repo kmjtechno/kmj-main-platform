@@ -304,6 +304,35 @@ export default function OperatorKslp({ metrics, licenses, events }: Props) {
                                                 >
                                                     Renew 1y
                                                 </button>
+                                                {l.product === 'KMJ_CODEBRIDGE' &&
+                                                    l.plan === 'professional' &&
+                                                    l.status === 'active' && (
+                                                        <button
+                                                            type="button"
+                                                            disabled={actionReason.trim().length < 10}
+                                                            onClick={() => {
+                                                                const reason = actionReason.trim();
+                                                                if (reason.length < 10 ||
+                                                                    !window.confirm('Activate CodeBridge Owner/Admin for this existing license? The action is audited and preserves existing devices.')) {
+                                                                    return;
+                                                                }
+                                                                router.post('/operator/codebridge/owner-plan/activate',
+                                                                    {
+                                                                        license_id: l.id,
+                                                                        tenant_id: l.customer_id,
+                                                                        reason,
+                                                                    },
+                                                                    {
+                                                                        preserveScroll: true,
+                                                                        onSuccess: () => setActionReason(''),
+                                                                    },
+                                                                );
+                                                            }}
+                                                            className="rounded border border-red-600 px-2 py-1 font-semibold text-red-600 disabled:cursor-not-allowed disabled:opacity-40"
+                                                        >
+                                                            Activate Owner/Admin
+                                                        </button>
+                                                    )}
                                                 <select
                                                     aria-label="Select new plan"
                                                     value={
@@ -323,6 +352,9 @@ export default function OperatorKslp({ metrics, licenses, events }: Props) {
                                                     }
                                                     className="bg-background rounded border px-2 py-1"
                                                 >
+                                                    {l.plan === 'owner_admin' && (
+                                                        <option value="owner_admin" disabled>owner_admin (active)</option>
+                                                    )}
                                                     {[
                                                         'professional',
                                                         'business',
