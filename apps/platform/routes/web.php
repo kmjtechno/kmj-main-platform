@@ -74,6 +74,33 @@ $repo = 'kmjtechno/kmj-codebridge'
 $pluginName = 'kmj-codebridge'
 $codex = Get-Command codex -ErrorAction SilentlyContinue
 
+function Refresh-ProcessPath {
+    $machinePath = [Environment]::GetEnvironmentVariable('Path', 'Machine')
+    $userPath = [Environment]::GetEnvironmentVariable('Path', 'User')
+    $env:Path = @($machinePath, $userPath) -join ';'
+}
+
+if (-not (Get-Command node -ErrorAction SilentlyContinue)) {
+    Write-Host 'Node.js LTS is required by the local CodeBridge bridge and is not installed.' -ForegroundColor Yellow
+    $winget = Get-Command winget -ErrorAction SilentlyContinue
+    if (-not $winget) {
+        throw 'Node.js LTS is required, and Windows Package Manager (winget) is unavailable. Install Node.js LTS, then run this setup again.'
+    }
+
+    Write-Host 'Installing Node.js LTS with Windows Package Manager...'
+    & winget install --id OpenJS.NodeJS.LTS -e --accept-source-agreements --accept-package-agreements --silent --disable-interactivity
+    if ($LASTEXITCODE -ne 0) {
+        throw 'Windows Package Manager could not install Node.js LTS.'
+    }
+
+    Refresh-ProcessPath
+    if (-not (Get-Command node -ErrorAction SilentlyContinue)) {
+        throw 'Node.js LTS installation completed, but node is not yet available in PATH. Sign out and back in to Windows, then run this setup again.'
+    }
+}
+
+Write-Host ('Node.js: ' + (& node --version))
+
 if ($codex) {
     $existing = & codex plugin marketplace list 2>&1 | Out-String
     if ($LASTEXITCODE -ne 0) {
@@ -95,10 +122,6 @@ if ($codex) {
     }
 } else {
     Write-Host 'Codex CLI was not found; using the ChatGPT Desktop personal-marketplace fallback.'
-
-    if (-not (Get-Command node -ErrorAction SilentlyContinue)) {
-        throw 'Node.js is required by the KMJ CodeBridge Desktop bridge and was not found in PATH.'
-    }
 
     $tempRoot = Join-Path ([System.IO.Path]::GetTempPath()) ('kmj-codebridge-' + [guid]::NewGuid().ToString('N'))
     $zipPath = Join-Path $tempRoot 'kmj-codebridge.zip'
@@ -193,6 +216,66 @@ POWERSHELL;
         'X-Content-Type-Options' => 'nosniff',
     ]);
 })->name('codebridge.chatgpt.desktop.install');
+
+Route::get('install-chatgpt-desktop.cmd', function () {
+    $script = <<<'BATCH'
+@echo off
+setlocal
+title KMJ CodeBridge - ChatGPT Desktop Setup
+
+set "KMJ_SETUP_REF=9b27cfa3fb38c7cb08e1fda0da8cec384e625b06"
+set "KMJ_SETUP_SHA256=ab82687d5ec6463925f415ae62bbdf0527073dac414de0ba0ad29c921c9a4bca"
+set "KMJ_SETUP_URL=https://raw.githubusercontent.com/kmjtechno/kmj-codebridge/%KMJ_SETUP_REF%/scripts/install-chatgpt-desktop.ps1"
+set "KMJ_SETUP_FILE=%TEMP%\KMJ-CodeBridge-ChatGPT-Desktop.ps1"
+
+echo.
+echo KMJ CodeBridge - ChatGPT Desktop setup
+echo Downloading the pinned public setup script...
+echo.
+
+powershell.exe -NoLogo -NoProfile -ExecutionPolicy Bypass -Command "Invoke-WebRequest -UseBasicParsing -Uri '%KMJ_SETUP_URL%' -OutFile '%KMJ_SETUP_FILE%'"
+if errorlevel 1 (
+    echo.
+    echo ERROR: Unable to download the KMJ CodeBridge setup script.
+    pause
+    exit /b 1
+)
+
+powershell.exe -NoLogo -NoProfile -ExecutionPolicy Bypass -Command "$actual=(Get-FileHash -Algorithm SHA256 -LiteralPath '%KMJ_SETUP_FILE%').Hash.ToLowerInvariant(); if ($actual -ne '%KMJ_SETUP_SHA256%') { Write-Error ('KMJ setup integrity check failed. Expected %KMJ_SETUP_SHA256%, got ' + $actual); exit 10 }"
+if errorlevel 1 (
+    del /q "%KMJ_SETUP_FILE%" >nul 2>&1
+    echo.
+    echo ERROR: KMJ CodeBridge setup integrity verification failed.
+    pause
+    exit /b 10
+)
+
+powershell.exe -NoLogo -NoProfile -ExecutionPolicy Bypass -File "%KMJ_SETUP_FILE%"
+set "KMJ_SETUP_EXIT=%ERRORLEVEL%"
+
+del /q "%KMJ_SETUP_FILE%" >nul 2>&1
+
+if not "%KMJ_SETUP_EXIT%"=="0" (
+    echo.
+    echo ERROR: KMJ CodeBridge setup failed with exit code %KMJ_SETUP_EXIT%.
+    pause
+    exit /b %KMJ_SETUP_EXIT%
+)
+
+echo.
+echo KMJ CodeBridge setup completed successfully.
+echo Fully quit and reopen ChatGPT Desktop once.
+pause
+exit /b 0
+BATCH;
+
+    return response($script."\r\n", 200, [
+        'Content-Type' => 'application/octet-stream',
+        'Content-Disposition' => 'attachment; filename="KMJ-CodeBridge-ChatGPT-Desktop.cmd"',
+        'Cache-Control' => 'public, max-age=300',
+        'X-Content-Type-Options' => 'nosniff',
+    ]);
+})->name('codebridge.chatgpt.desktop.launcher');
 
 Route::get('/', function (PublicProductCatalog $products) {
     $portfolio = $products->all();
