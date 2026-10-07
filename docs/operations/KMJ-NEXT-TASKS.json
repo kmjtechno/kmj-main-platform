@@ -1,0 +1,64 @@
+{
+  "schema_version": 1,
+  "deployed_code_sha": "0340c0bfc6b708e79825f404fe13f0e0f023f9cf",
+  "branch": "feat/modelfabric-autonomy-20261007",
+  "automatic_product_completion": false,
+  "tasks": [
+    {
+      "id": "KMJ-AUTO-001",
+      "priority": 1,
+      "state": "ready",
+      "title": "Make bounded JSON repair pass a new live autonomous acceptance run",
+      "evidence": "KMJ-schema-autonomous-proof failed3iterations; see workflow state.json",
+      "acceptance": [
+        "No manual candidate changes",
+        "Immutable tests unchanged",
+        "New live workflow json_candidate_tested",
+        "160 regression tests remain green",
+        "Prior failed evidence preserved"
+      ]
+    },
+    {
+      "id": "KMJ-AUTO-002",
+      "priority": 2,
+      "state": "blocked",
+      "depends_on": [
+        "KMJ-AUTO-001"
+      ],
+      "title": "Route using tested task quality and capability, not only HTTP success",
+      "acceptance": [
+        "Privacy/cost filters remain authoritative",
+        "Failed semantic repair affects route choice without unbounded retries"
+      ]
+    },
+    {
+      "id": "KMJ-AUTO-003",
+      "priority": 3,
+      "state": "blocked",
+      "depends_on": [
+        "KMJ-AUTO-001"
+      ],
+      "title": "Design one general code executor with trusted out-of-process acceptance",
+      "acceptance": [
+        "Untrusted code cannot forge pass",
+        "No secrets/network/production writes",
+        "Pinned source and OS project lock",
+        "Real isolated small code fix passes"
+      ]
+    },
+    {
+      "id": "KMJ-AUTO-004",
+      "priority": 4,
+      "state": "blocked",
+      "depends_on": [
+        "KMJ-AUTO-003"
+      ],
+      "title": "Connect curated product backlog and CodeBridge status to persistent workflows",
+      "acceptance": [
+        "Correct repo/project identity",
+        "Status distinguishes artifact/tested candidate/release",
+        "No fake product completion"
+      ]
+    }
+  ]
+}
