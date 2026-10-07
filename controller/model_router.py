@@ -24,6 +24,20 @@ class NoFreeRouteAvailable(RuntimeError):
     pass
 
 
+def _validate_messages(messages: list[dict[str, str]]) -> None:
+    if not isinstance(messages, list) or len(messages) > 64:
+        raise NoFreeRouteAvailable("REQUEST_INVALID")
+    total = 0
+    for message in messages:
+        if (not isinstance(message, dict)
+                or message.get("role") not in {"system", "user", "assistant"}
+                or not isinstance(message.get("content"), str)):
+            raise NoFreeRouteAvailable("REQUEST_INVALID")
+        total += len(message["content"].encode("utf-8"))
+    if total > 65536:
+        raise NoFreeRouteAvailable("REQUEST_TOO_LARGE")
+
+
 @dataclass(frozen=True)
 class ProviderEndpoint:
     name: str
@@ -529,11 +543,7 @@ class FreeCloudRouter:
         temperature: float = 0.1,
         data_classification: str = "confidential",
     ) -> dict[str, Any]:
-        from controller.local_fallback import validate_messages, LocalFallbackUnavailable
-        try:
-            validate_messages(messages)
-        except LocalFallbackUnavailable as exc:
-            raise NoFreeRouteAvailable(str(exc)) from exc
+        _validate_messages(messages)
         ranked = self.rank(
             await self.discover(data_classification),
             route,
@@ -635,24 +645,19 @@ class FreeCloudRouter:
         self, messages, temperature, data_classification, attempts, *,
         reason="NO_ELIGIBLE_CLOUD_ROUTE_AVAILABLE", unattempted_cloud_candidates=0,
     ):
-        from controller.local_fallback import complete, enabled, LocalFallbackUnavailable
         try:
-            result = await self._official_free_client(messages, data_classification=data_classification)
-            if attempts:
-                result = dict(result, attempts=attempts + result.get("attempts", []))
-            return result
+            result = await self._official_free_client(
+                messages,
+                data_classification=data_classification,
+            )
         except NoFreeRouteAvailable as cloud_error:
-            if not enabled() or self.config.get("policy", {}).get("local_llm") != "emergency_cpu_only":
-                raise
-            combined = attempts + [{"provider":"opencode-client", "model":"", "result":str(cloud_error)}]
-            try:
-                result = await complete(messages, temperature=temperature)
-                result["attempts"] = combined + result.get("attempts", [])
-                result["fallback_reason"] = reason
-                result["unattempted_cloud_candidates"] = unattempted_cloud_candidates
-                return result
-            except (LocalFallbackUnavailable, OSError) as exc:
-                raise NoFreeRouteAvailable(str(exc)) from exc
+            code = str(cloud_error) or "NO_ELIGIBLE_CLOUD_ROUTE_AVAILABLE"
+            raise NoFreeRouteAvailable(code) from cloud_error
+        if attempts:
+            result = dict(result, attempts=attempts + result.get("attempts", []))
+        result["fallback_reason"] = reason
+        result["unattempted_cloud_candidates"] = unattempted_cloud_candidates
+        return result
 
     async def _official_free_client(
         self,

@@ -12,7 +12,7 @@ Payload:
 
 Kinds: `plan`, `review`, `text`, `patch`. Classification defaults to confidential; only explicit `public` tasks may use public providers. The worker never reads repository files itself. Whoever enqueues task context must classify it accurately. Unknown classifications and kinds fail closed. Prompt size is limited to 65,536 bytes, output to 100,000 bytes. Patch artifacts additionally use the existing `persistent_worker.validate_patch` allowlists and size limits. A patch artifact is not an applied or tested patch.
 
-Private source files or credentials must never be copied into a public task. Free inference availability is finite; provider quotas and outages can delay tasks. The configured strict-zero ModelFabric router decides eligible routes, including an explicitly configured emergency local CPU route when cloud routes fail. No paid fallback is enabled by this worker.
+Private source files or credentials must never be copied into a public task. Free inference availability is finite; provider quotas and outages can delay tasks. The configured strict-zero ModelFabric router is cloud-only: local LLM inference is prohibited, paid fallback is prohibited, and unknown cost is never treated as free. If no eligible cloud route exists, the task defers without executing locally.
 
 ## Run
 
@@ -59,9 +59,9 @@ Still separate from this worker: isolated patch application, meaningful project-
 
 ## Operational deployment and bounded candidate validation
 
-The persistent service template is deploy/kmj-autonomy-worker.service. Replace @RUNTIME@ with an exact commit archive; never run this service from a changing developer checkout. Set KMJ_OPENCODE_FREE_ENABLED=false until the legacy blocking client supports cancellation. Both credentials files and persistent state must be private. The CPU fallback service is separately enabled; a live daemon is not proof of successful inference.
+The persistent service template is deploy/kmj-autonomy-worker.service. Replace @RUNTIME@ with an exact commit archive; never run this service from a changing developer checkout. Set KMJ_OPENCODE_FREE_ENABLED=false until the legacy blocking client supports cancellation. Router credentials and persistent state must be private. The worker has no dependency on a local inference service.
 
-Router state uses KMJ_ROUTER_STATE_DB outside the runtime. A model returning404 is excluded for15minutes, timeout/incomplete responses for60seconds; other models on that provider remain usable. A valid successful route gets a one-hour preference only after current cost and confidentiality eligibility checks. Cloud request budget exhaustion can invoke CPU fallback while reporting that some catalog models remain untried. This is bounded latency, not proof that every model failed.
+Router state uses KMJ_ROUTER_STATE_DB outside the runtime. A model returning404 is excluded for15minutes, timeout/incomplete responses for60seconds; other models on that provider remain usable. A valid successful route gets a one-hour preference only after current cost and confidentiality eligibility checks. Cloud request budget exhaustion remains fail-closed as NO_FREE_ROUTE_AVAILABLE; it never invokes local inference and is not proof that every catalog model failed.
 
 Rejected patch artifacts are retained privately with bounded output and a static validation code. Logs and retry feedback never include rejected source or variable paths. Invalid patches still fail validation; diagnostic retention does not grant permission to apply them.
 

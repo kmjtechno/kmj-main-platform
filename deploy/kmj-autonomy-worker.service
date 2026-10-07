@@ -1,13 +1,11 @@
 # Copy to ~/.config/systemd/user after replacing @RUNTIME@ with verified release path.
 [Unit]
 Description=KMJ durable two-lane development artifact workers
-After=network.target kmj-model-fabric-cpu.service
-Wants=kmj-model-fabric-cpu.service
+After=network.target
 [Service]
 Type=simple
 WorkingDirectory=@RUNTIME@
 EnvironmentFile=%h/.kmj/9router-client.env
-EnvironmentFile=%h/.config/kmj-model-fabric/local.env
 Environment=PYTHONUNBUFFERED=1
 Environment=KMJ_OPENCODE_FREE_ENABLED=false
 Environment=KMJ_ROUTER_STATE_DB=%h/.local/state/kmj-autonomy/router-cooldowns.sqlite

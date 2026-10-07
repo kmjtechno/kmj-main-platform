@@ -1,6 +1,6 @@
 # KMJ: start here to continue without the old chat
 
-Updated 2026-10-07. Owner: Narendra Singh Kushwah / KMJ TECHNO. Reply Hindi or English. User authorizes lawful reversible development and existing VPS operations; do not repeatedly request already-given permission. No paid inference, new spending, quota evasion, secret disclosure or uncontrolled production promotion. Explicit current authorization permits CPU-only emergency fallback; older cloud-only memory does not override it.
+Updated 2026-10-07. Owner: Narendra Singh Kushwah / KMJ TECHNO. Reply Hindi or English. User authorizes lawful reversible development and existing VPS operations; do not repeatedly request already-given permission. No paid inference, new spending, quota evasion, secret disclosure or uncontrolled production promotion. Locked ModelFabric policy is cloud-only generative AI: local LLM inference is prohibited unless the owner explicitly changes that policy.
 
 ## Authoritative source and runtime
 
@@ -15,9 +15,9 @@ Original /home/info/work/kmj-main-platform has pre-existing dirty apps/platform/
 
 ## What is actually operational
 
-- Google user services kmj-autonomy-worker.service, kmj-github-control.service and kmj-model-fabric-cpu.service are active/running. kmj-backlog-coordinator.path and kmj-backlog-coordinator.timer are active; the timer avoids the prior queue.sqlite self-trigger loop fixed in `2f020c1545ee`. The GitHub bridge remains outbound-only; no self-hosted Actions runner is used.
+- Google user services kmj-github-control.service, kmj-backlog-coordinator.path and kmj-backlog-coordinator.timer are operational. The local CPU inference service is disabled/masked by the cloud-only policy correction and is not a worker dependency. The GitHub bridge remains outbound-only; no self-hosted Actions runner is used.
 - Two asynchronous inference lanes; one running task per canonical project; SQLite atomic claims, leases, fencing, checkpoints, bounded retry. Outage/timeouts defer300seconds without spending generation attempts.
-- Strict-zero cloud routing with operator-controlled confidentiality. Built-in public providers cannot grant themselves private-code access. CPU fallback is authenticated127.0.0.1:18766, one inference slot, Qwen2.5-Coder1.5B Q4. No paid fallback. Free availability and small-model quality remain finite.
+- Strict-zero cloud-only routing with operator-controlled confidentiality. Built-in public providers cannot grant themselves private-code access. No local LLM fallback and no paid fallback are permitted. Free cloud availability remains finite; unavailable routes defer rather than execute locally.
 - Stateful provider/model cooldown, recent HTTP-success preference, bounded failover, token-budget validation. Recent HTTP success is NOT proven engineering quality.
 - Artifact tasks plan/review/text/patch. Patch artifact is NOT applied/tested/deployed code.
 - Declarative JSON validation remains isolated. In addition, the separately vetted python-cli-v1 executor accepts only exact-scope .py patches with external declarative cases and Bubblewrap isolation. Arbitrary Python/JS execution is still NOT approved.
@@ -26,11 +26,10 @@ Original /home/info/work/kmj-main-platform has pre-existing dirty apps/platform/
 ## Verified results and exact failures
 
 197 Python tests PASS; separate3 acceptance tests PASS for committed contracts/kmj-autonomy-task.schema.json. Independent reviews completed. Router fixtures now isolate SQLite and lock paths;29router tests repeated3times without pollution.
-Real private/local and public/9router inference succeeded. Synthetic generated-checkpoint recovery succeeded after stopping/starting worker (attempt2); this was not a full VPS reboot test.
-Human-orchestrated real model loop: initial CPU JSON failed; feedback to free cloud produced corrected JSON; isolated3tests passed; accepted source commit70dc4f354632f2bff72273f999b7ba9f4ac5aae6.
+Historical local-CPU inference occurred before the cloud-only policy correction and is not valid current routing evidence. Public/9router cloud inference and synthetic generated-checkpoint recovery were separately observed; the latter was not a full VPS reboot test. Any prior candidate that used local generation must not be used to justify local inference or a product-complete claim.
 IMPORTANT: fully automatic live workflow KMJ-schema-autonomous-proof FAILED after3iterations. It ran and repaired automatically, but models kept omitting properties.payload.properties.prompt.description and incorrectly adding max_attempts/data_classification to payload.required or nesting max_attempts inside payload. Do not hide this or claim whole-project autonomy is complete.
 Live workflow state: /home/info/.local/state/kmj-autonomy/workflows/KMJ-schema-autonomous-proof/state.json (history, candidates, failures, report).
-Service kmj-json-contract@KMJ-schema-autonomous-proof.service is inactive/dead after bounded terminal failure; that is expected. Main worker and CPU service remain active, awaiting tasks.
+Service kmj-json-contract@KMJ-schema-autonomous-proof.service is inactive/dead after bounded terminal failure; that is expected. The durable queue remains authoritative; local CPU inference is not an allowed recovery route.
 Queue at final KMJ-GH-001 health check:10completed tasks,1failed task,0running; control paused=false. Completed artifacts are not completed products.
 
 ## Safe first commands (Google info account)
@@ -39,7 +38,7 @@ Read this file and docs/KMJ-AUTONOMY.md first; do NOT rediscover the entire arch
 
     git -C /home/info/.kmj-worktrees/modelfabric-autonomy-20261007 status --short --branch
     git -C /home/info/.kmj-worktrees/modelfabric-autonomy-20261007 log -5 --oneline
-    XDG_RUNTIME_DIR=/run/user/1001 DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/1001/bus systemctl --user status kmj-autonomy-worker.service kmj-github-control.service kmj-model-fabric-cpu.service --no-pager
+    XDG_RUNTIME_DIR=/run/user/1001 DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/1001/bus systemctl --user status kmj-autonomy-worker.service kmj-github-control.service kmj-backlog-coordinator.timer --no-pager
 
 From live runtime:
 
