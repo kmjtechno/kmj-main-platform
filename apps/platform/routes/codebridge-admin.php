@@ -8,12 +8,36 @@ use App\Services\PlatformOwnerAccess;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
+use Inertia\Inertia;
+use KMJ\MainPlatform\Organizations\Services\OrganizationDirectory;
 
 Route::middleware(['auth', 'verified', 'password.confirm'])
     ->prefix('operator/codebridge')
     ->name('operator.codebridge.')
     ->group(function (): void {
-        Route::post('licenses/owner-tier', function (Request $request, PlatformOwnerAccess $access, CodeBridgeOwnerTierService $service) {
+        Route::get('owner-plan', function (Request $request, PlatformOwnerAccess $access, OrganizationDirectory $organizations) {
+            $user = $request->user();
+            abort_unless($user instanceof User, 401);
+            $access->require($user);
+
+            $ownedTenants = collect($organizations->forUser((int) $user->id))
+                ->filter(fn (array $org): bool => $organizations->userCanManage((int) $user->id, $org['id']))
+                ->pluck('id')
+                ->all();
+
+            $licenses = $ownedTenants === [] ? collect() : DB::table('kslp_licenses')
+                ->whereIn('customer_id', $ownedTenants)
+                ->where('product', 'KMJ_CODEBRIDGE')
+                ->orderByDesc('created_at')
+                ->get(['id', 'customer_id', 'plan', 'status', 'expires_at', 'revoked_at']);
+
+            return Inertia::render('operator-codebridge-owner', [
+                'licenses' => $licenses,
+                'limits' => ['devices' => 64, 'concurrent_jobs' => 16],
+            ]);
+        })->name('owner-plan');
+
+        Route::post('licenses/owner-tier', function (Request $request, PlatformOwnerAccess $access, OrganizationDirectory $organizations, CodeBridgeOwnerTierService $service) {
             $user = $request->user();
             abort_unless($user instanceof User, 401);
             $access->require($user);
@@ -22,6 +46,9 @@ Route::middleware(['auth', 'verified', 'password.confirm'])
                 'tenant_id' => ['required', 'string', 'regex:/\\A[A-Za-z0-9_-]{1,64}\\z/'],
                 'confirm' => ['required', 'in:UPGRADE_CODEBRIDGE_OWNER'],
             ]);
+            // A platform owner may upgrade only a CodeBridge license owned by their
+            // own organization; knowing another tenant's license ID is insufficient.
+            abort_unless($organizations->userCanManage((int) $user->id, $v['tenant_id']), 403);
 
             try {
                 return response()->json(
