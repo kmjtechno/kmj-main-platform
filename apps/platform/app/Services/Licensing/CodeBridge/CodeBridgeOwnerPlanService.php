@@ -36,8 +36,8 @@ final class CodeBridgeOwnerPlanService
                 || $license->customer_id !== $tenantId
                 || $license->status !== 'active'
                 || $license->revoked_at !== null
-                || $license->starts_at > $now
-                || $license->expires_at <= $now
+                || strtotime((string) $license->starts_at) > $now->timestamp
+                || strtotime((string) $license->expires_at) <= $now->timestamp
                 || ! in_array($license->plan, ['professional', self::PLAN], true)) {
                 throw new DomainException('CODEBRIDGE_OWNER_LICENSE_NOT_ELIGIBLE');
             }
