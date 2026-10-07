@@ -3,6 +3,7 @@
 use App\Models\User;
 use App\Services\Licensing\CodeBridge\CodeBridgeDeviceCredentialService;
 use App\Services\Licensing\CodeBridge\CodeBridgeDeviceEnrollmentService;
+use App\Services\Licensing\CodeBridge\CodeBridgeOwnerPlanService;
 use App\Services\PlatformOwnerAccess;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -71,4 +72,13 @@ Route::middleware(['auth', 'verified', 'password.confirm'])
                 return response()->json(['error' => $e->getMessage()], 409)->header('Cache-Control', 'no-store');
             }
         })->name('devices.revoke');
+
+        Route::post('licenses/{license}/owner-admin', function (Request $request, string $license, PlatformOwnerAccess $access, CodeBridgeOwnerPlanService $service) {
+            $user = $request->user();
+            abort_unless($user instanceof User, 401);
+            $access->require($user);
+            $v = $request->validate(['tenant_id' => ['required', 'string', 'max:64'], 'reason' => ['required', 'string', 'min:10', 'max:500']]);
+            $result = $service->upgrade($license, $v['tenant_id'], (string) $user->id, $v['reason']);
+            return response()->json($result)->header('Cache-Control', 'no-store');
+        })->name('licenses.owner-admin');
     });
