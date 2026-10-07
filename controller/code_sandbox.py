@@ -107,7 +107,7 @@ def execute_code_candidate(
     *,
     trusted_tests: Path | str,
     allowed_paths: list[str],
-    expected_validation_sha256: str | None = None,
+    expected_validation_sha256: str,
     timeout_per_case: float = 15,
     output_limit: int = 65536,
 ) -> dict:
@@ -139,6 +139,9 @@ def execute_code_candidate(
             or tests.is_relative_to(repo) or tests.is_relative_to(root)
             or root.is_relative_to(tests)):
         raise ValueError("CANDIDATE_AND_VALIDATION_MUST_BE_EXTERNAL")
+    if (not isinstance(expected_validation_sha256, str)
+            or not re.fullmatch("[0-9a-f]{64}", expected_validation_sha256)):
+        raise ValueError("EXACT_VALIDATION_SHA256_REQUIRED")
     validation, validation_digest = _validation_cases(
         tests,
         allowed_paths=allowed,

@@ -65,6 +65,10 @@ class CodeSandboxTests(unittest.TestCase):
         return hashlib.sha256(raw).hexdigest()
 
     def execute(self, **kwargs):
+        kwargs.setdefault(
+            "expected_validation_sha256",
+            hashlib.sha256((self.tests / "cases.json").read_bytes()).hexdigest(),
+        )
         return execute_code_candidate(
             self.repo,
             self.sha,
@@ -142,6 +146,7 @@ class CodeSandboxTests(unittest.TestCase):
                 self.repo, self.sha, self.diff, self.root / "candidates",
                 trusted_tests=self.tests,
                 allowed_paths=[self.path, "apps/platform/tools/other.py"],
+                expected_validation_sha256=hashlib.sha256((self.tests / "cases.json").read_bytes()).hexdigest(),
             )
 
     def test_global_denied_path_stays_denied(self):
@@ -151,6 +156,7 @@ class CodeSandboxTests(unittest.TestCase):
                 self.repo, self.sha, bad, self.root / "candidates",
                 trusted_tests=self.tests,
                 allowed_paths=[".github/workflows/evil.py"],
+                expected_validation_sha256=hashlib.sha256((self.tests / "cases.json").read_bytes()).hexdigest(),
             )
 
     def test_validation_digest_is_pinned(self):
