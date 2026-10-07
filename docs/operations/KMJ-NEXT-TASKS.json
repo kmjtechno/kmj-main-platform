@@ -1,13 +1,13 @@
 {
   "schema_version": 1,
-  "deployed_code_sha": "0340c0bfc6b708e79825f404fe13f0e0f023f9cf",
+  "deployed_code_sha": "552059d157f22fe1f80ef79130f1ce140701b574",
   "branch": "feat/modelfabric-autonomy-20261007",
   "automatic_product_completion": false,
   "tasks": [
     {
       "id": "KMJ-GH-001",
       "priority": 0,
-      "state": "ready",
+      "state": "completed",
       "title": "Connect versioned GitHub task/pause/resume control to existing VPS queue",
       "spec": "docs/operations/KMJ-GITHUB-CONTROL.md",
       "acceptance": [
@@ -17,14 +17,38 @@
         "Sanitized status and credential scope verified",
         "No self-hosted runner or auto-merge activation",
         "160 existing tests plus3 acceptance tests remain green"
-      ]
+      ],
+      "evidence": {
+        "implementation_sha": "552059d157f22fe1f80ef79130f1ce140701b574",
+        "followup_fix_sha": "eafcb7f",
+        "runtime_release": "552059d157f2",
+        "tests": "171 Python regression + 3 schema acceptance PASS",
+        "live_control_commits": [
+          "20df34a",
+          "e6bc76c",
+          "aaea639",
+          "e2c9074"
+        ],
+        "writeback": "read_only; no separately scoped GitHub status credential configured",
+        "legacy_self_hosted_or_auto_merge_activated": false
+      }
     },
     {
       "id": "KMJ-AUTO-001",
       "priority": 1,
-      "state": "ready",
+      "state": "completed",
       "title": "Make bounded JSON repair pass a new live autonomous acceptance run",
-      "evidence": "KMJ-schema-autonomous-proof failed3iterations; see workflow state.json",
+      "evidence": {
+        "prior_failed_workflow": "KMJ-schema-autonomous-proof (3 attempts, preserved)",
+        "successful_workflow": "KMJ-schema-autonomous-proof-v2",
+        "successful_phase": "json_candidate_tested",
+        "successful_attempt": 1,
+        "validation_sha256": "09ebd57ed0d2e8a685aee80109bd19f0c3437071534e0ef666bd19df0a07e766",
+        "manual_candidate_changes": false,
+        "product_complete": false,
+        "deployed": false,
+        "tests": "171 Python regression + 3 schema acceptance PASS"
+      },
       "acceptance": [
         "No manual candidate changes",
         "Immutable tests unchanged",
@@ -36,7 +60,7 @@
     {
       "id": "KMJ-AUTO-002",
       "priority": 2,
-      "state": "blocked",
+      "state": "ready",
       "depends_on": [
         "KMJ-AUTO-001"
       ],
@@ -49,7 +73,7 @@
     {
       "id": "KMJ-AUTO-003",
       "priority": 3,
-      "state": "blocked",
+      "state": "ready",
       "depends_on": [
         "KMJ-AUTO-001"
       ],
@@ -77,5 +101,5 @@
     }
   ],
   "control_source": "github",
-  "control_bridge_status": "not_implemented"
+  "control_bridge_status": "deployed_read_only_status"
 }

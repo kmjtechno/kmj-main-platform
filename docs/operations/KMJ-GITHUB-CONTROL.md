@@ -31,3 +31,10 @@ Existing autonomous-worker.yml and autonomous-cycle.yml require self-hosted runn
 ## Low-credit handoff
 
 Implement KMJ-GH-001 first as one bounded reviewed slice. Then KMJ-AUTO-001 addresses the failed live JSON repair quality. Do not spend remaining credits recreating architecture or another repository. Update KMJ-CONTINUE.md with exact code/runtime/command evidence after implementation, not before.
+
+
+## Implemented state — 2026-10-07
+
+KMJ-GH-001 is now deployed. The VPS polls the pinned branch through an isolated bare Git mirror over outbound HTTPS; it does not checkout/reset/clean the developer worktree. Supported manifest operations remain limited to pause, resume, bounded enqueue, and sanitized status. Durable command hashes prevent changed-content replay under a reused command ID. Pause blocks new claims without killing an already running task.
+
+The live proof passed across repeated polls and bridge restarts. A GitHub-imported task remained exactly once, a running task survived a subsequent pause, and final GitHub resume restored new claims. The status capability is currently `read_only`: no separately scoped issues/status credential has been configured, so no GitHub API write is claimed. Legacy self-hosted and auto-merge workflows remain inactive.
