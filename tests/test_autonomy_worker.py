@@ -168,6 +168,36 @@ class WorkerTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(router.calls, [])
         self.assertEqual(self.queue.get('a')['state'], 'completed')
 
+    async def test_legacy_local_checkpoint_is_rejected_and_regenerated(self):
+        self.enqueue('a', 'a')
+        task = self.queue.claim('old')
+        artifact = {
+            'kind': 'plan',
+            'stage': 'artifact_ready',
+            'product_complete': False,
+            'content': 'Legacy local result',
+            'provider': 'cpu-local-emergency',
+            'model': 'kmj-emergency-coder',
+        }
+        self.queue.checkpoint(
+            'a',
+            task['token'],
+            {'stage': 'generated', 'artifact': artifact},
+        )
+        self.queue.fail('a', task['token'], 'INTERRUPTED', retry_delay=0)
+        router = Router(delay=0)
+        await AutonomyWorker(
+            self.queue,
+            self.root / 'artifacts',
+            router=router,
+        ).run(once=True)
+        self.assertEqual(len(router.calls), 1)
+        result = self.queue.get('a')
+        self.assertEqual(result['state'], 'completed')
+        saved = json.loads(Path(result['result']['artifact']).read_text())
+        self.assertEqual(saved['provider'], 'test')
+        self.assertNotEqual(saved['provider'], 'cpu-local-emergency')
+
     async def test_invalid_patch_does_not_become_completed_artifact(self):
         self.queue.enqueue('a', 'a', {'kind': 'patch', 'prompt': 'Make a patch'})
         await AutonomyWorker(self.queue, self.root / 'artifacts', router=Router()).run(once=True)

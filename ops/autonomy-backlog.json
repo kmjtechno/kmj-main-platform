@@ -17,7 +17,7 @@
       "auto_enqueue": false
     },
     {
-      "id": "KMJ-PLATFORM-P5-PUBLIC-EXPERIENCE-REVIEW-001",
+      "id": "KMJ-PLATFORM-P5-PUBLIC-EXPERIENCE-REVIEW-002",
       "project": "kmj-main-platform",
       "kind": "review",
       "prompt": "Produce a bounded artifact-only review for the KMJ Main Platform P5 Public Experience backlog. Focus on premium documentation, trust surfaces, multilingual coverage, content completeness, and evidence gaps. Prioritize small safe engineering slices. Do not modify repositories, execute commands, claim tests passed, claim deployment, or claim product completion.",

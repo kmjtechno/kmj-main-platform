@@ -122,7 +122,10 @@ class AutonomyWorker:
         kind, classification, prompt = self._validate_payload(task['payload'])
         checkpoint = task.get('checkpoint') or {}
         if checkpoint.get('stage') == 'generated' and isinstance(checkpoint.get('artifact'), dict):
-            return checkpoint['artifact']
+            artifact = checkpoint['artifact']
+            if artifact.get('provider') != 'cpu-local-emergency':
+                return artifact
+            LOG.warning('discarding legacy local-inference checkpoint under cloud-only policy')
         instruction = (
             'You are a KMJ development assistant. Produce a bounded ' + kind +
             ' artifact for human or automated review. Do not claim actions were executed, '
