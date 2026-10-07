@@ -101,3 +101,10 @@ KMJ-AUTO-002 is implemented in commit `3a323068d7a50c1bc8ab337671549262ed33961b`
 Focused semantic-quality tests: 4 PASS. Full branch gates: 175 Python regression tests PASS, 3 schema acceptance tests PASS, and diff check PASS. Worker, GitHub bridge and CPU fallback were active after rollout; queue was idle and control resumed before the switch. Rollback unit backups were preserved with timestamp `20261007-142703`.
 
 Next active task is KMJ-AUTO-003: one general code executor with trusted out-of-process acceptance. Keep it narrowly scoped: pinned source/project, OS sandbox, no secrets/network/production writes, immutable external assertions, and one real isolated small-code-fix acceptance proof.
+
+
+## 2026-10-07 KMJ-AUTO-002 completion evidence
+
+Commit `3a323068d7a50c1bc8ab337671549262ed33961b` adds bounded tested semantic-quality routing. Trusted JSON workflow outcomes now record exactly-once evidence under hashed provider/model identity only; no prompt, response, credential or base URL is persisted in the quality table. Counts saturate at 8. A tested failure ranks below an otherwise equivalent untested route, while a tested pass ranks above it. Cost/free eligibility and confidentiality filtering happen before this score and remain authoritative.
+
+Focused semantic/workflow/router tests passed, then the full gate passed 175 Python tests plus 3 schema acceptance tests and diff check. The immutable release `3a323068d7a5` is live. Fresh workflow `KMJ-schema-quality-route-proof-v1` reached `json_candidate_tested` on attempt 1 and wrote one live semantic-quality evidence record for its actual route. Product completion and deployment remain false.
