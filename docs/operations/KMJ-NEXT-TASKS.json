@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "deployed_code_sha": "e4dbb633ded18cd2af111f1020d83a005cc177f4",
+  "deployed_code_sha": "28b7eb078e358c6c371acd3792ed04b599dc39a4",
   "branch": "feat/modelfabric-autonomy-20261007",
   "automatic_product_completion": false,
   "tasks": [
@@ -113,16 +113,47 @@
     {
       "id": "KMJ-AUTO-004",
       "priority": 4,
-      "state": "ready",
+      "state": "completed",
       "depends_on": [
         "KMJ-AUTO-003"
       ],
       "title": "Connect curated product backlog and CodeBridge status to persistent workflows",
+      "evidence": {
+        "implementation_sha": "28b7eb078e358c6c371acd3792ed04b599dc39a4",
+        "runtime_release": "28b7eb078e35",
+        "tests": "196 Python regression + 3 schema acceptance PASS",
+        "live_repository": "kmjtechno/kmj-main-platform",
+        "live_codebridge_device": "main-platform-kmjtechnonetgmailcom",
+        "live_codebridge_project": "kmj-main-platform",
+        "live_codebridge_version": "0.2.3",
+        "live_codebridge_connection": "connected",
+        "status_stages": ["ready", "queued", "running", "artifact_ready", "candidate_tested", "release", "failed"],
+        "product_complete": false,
+        "main_vps_status_export_timer": "active",
+        "google_backlog_path_unit": "active",
+        "cross_vps_refresh": "manual pinned SSH refresh; automated fetcher blocked by tool safety layer"
+      },
       "acceptance": [
         "Correct repo/project identity",
         "Status distinguishes artifact/tested candidate/release",
         "No fake product completion"
       ]
+    },
+    {
+      "id": "KMJ-AUTO-005",
+      "priority": 5,
+      "state": "blocked_tooling",
+      "depends_on": [
+        "KMJ-AUTO-004"
+      ],
+      "title": "Automate the restricted Main-VPS to autonomy CodeBridge status refresh",
+      "acceptance": [
+        "Pinned Main VPS host key and dedicated restricted key",
+        "No remote shell, forwarding, secrets or broad GitHub write credential",
+        "Fresh status reaches Google autonomy state automatically",
+        "Stale or failed refresh blocks new backlog admission"
+      ],
+      "blocker": "The safe restricted SSH read path is live and manually verified, but creation of the automated fetcher was blocked by the current tool safety layer; do not bypass it."
     }
   ],
   "control_source": "github",

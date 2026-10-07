@@ -6,16 +6,16 @@ Updated 2026-10-07. Owner: Narendra Singh Kushwah / KMJ TECHNO. Reply Hindi or E
 
 Repository: https://github.com/kmjtechno/kmj-main-platform
 Branch: feat/modelfabric-autonomy-20261007 (pushed, NOT merged into main).
-Deployed code SHA: e4dbb633ded18cd2af111f1020d83a005cc177f4.
+Deployed code SHA: 28b7eb078e358c6c371acd3792ed04b599dc39a4.
 Later branch commits may be control-manifest or documentation-only; compare code before redeploying.
 Google source worktree: /home/info/.kmj-worktrees/modelfabric-autonomy-20261007.
-Live immutable runtime: /home/info/.local/lib/kmj-autonomy/releases/e4dbb633ded1.
+Live immutable runtime: /home/info/.local/lib/kmj-autonomy/releases/28b7eb078e35.
 Python: /home/info/.kmj-python313/bin/python3.
 Original /home/info/work/kmj-main-platform has pre-existing dirty apps/platform/resources/js/app.tsx; preserve it. Never reset/clean live or dirty checkouts.
 
 ## What is actually operational
 
-- Google user services kmj-autonomy-worker.service, kmj-github-control.service and kmj-model-fabric-cpu.service are active/running with NRestarts0 at the final KMJ-GH-001 health check. The GitHub bridge is enabled as a separate outbound-only service; no self-hosted Actions runner is used.
+- Google user services kmj-autonomy-worker.service, kmj-github-control.service and kmj-model-fabric-cpu.service are active/running. kmj-backlog-coordinator.path is also active and reacts to validated CodeBridge status refreshes. The GitHub bridge remains outbound-only; no self-hosted Actions runner is used.
 - Two asynchronous inference lanes; one running task per canonical project; SQLite atomic claims, leases, fencing, checkpoints, bounded retry. Outage/timeouts defer300seconds without spending generation attempts.
 - Strict-zero cloud routing with operator-controlled confidentiality. Built-in public providers cannot grant themselves private-code access. CPU fallback is authenticated127.0.0.1:18766, one inference slot, Qwen2.5-Coder1.5B Q4. No paid fallback. Free availability and small-model quality remain finite.
 - Stateful provider/model cooldown, recent HTTP-success preference, bounded failover, token-budget validation. Recent HTTP success is NOT proven engineering quality.
@@ -25,7 +25,7 @@ Original /home/info/work/kmj-main-platform has pre-existing dirty apps/platform/
 
 ## Verified results and exact failures
 
-187 Python tests PASS; separate3 acceptance tests PASS for committed contracts/kmj-autonomy-task.schema.json. Independent reviews completed. Router fixtures now isolate SQLite and lock paths;29router tests repeated3times without pollution.
+196 Python tests PASS; separate3 acceptance tests PASS for committed contracts/kmj-autonomy-task.schema.json. Independent reviews completed. Router fixtures now isolate SQLite and lock paths;29router tests repeated3times without pollution.
 Real private/local and public/9router inference succeeded. Synthetic generated-checkpoint recovery succeeded after stopping/starting worker (attempt2); this was not a full VPS reboot test.
 Human-orchestrated real model loop: initial CPU JSON failed; feedback to free cloud produced corrected JSON; isolated3tests passed; accepted source commit70dc4f354632f2bff72273f999b7ba9f4ac5aae6.
 IMPORTANT: fully automatic live workflow KMJ-schema-autonomous-proof FAILED after3iterations. It ran and repaired automatically, but models kept omitting properties.payload.properties.prompt.description and incorrectly adding max_attempts/data_classification to payload.required or nesting max_attempts inside payload. Do not hide this or claim whole-project autonomy is complete.
@@ -117,3 +117,14 @@ KMJ-AUTO-003 base implementation is `b1d316830aab1f635c103bff00b5e9bf572126db`; 
 A real temporary Git project was patched and executed in Bubblewrap; the small Python CLI fix passed two external behavior cases while the original repository remained unchanged. Adversarial and isolation tests cover forged success text, denied paths, validation digest mismatch, extra executable validation files, entrypoint scope, moved base, simultaneous project writer, host-secret absence, network denial and read-only workspace. Focused executor tests: 11 PASS. Exact-head gates: 187 Python regression tests PASS, 3 schema acceptance tests PASS and diff check PASS. Runtime services remained active after the hardened rollout; latest rollback backup stamp `20261007-143429`.
 
 Next active task is KMJ-AUTO-004: connect a curated backlog and CodeBridge status to persistent workflows without collapsing artifact/tested-candidate/release states or claiming product completion.
+
+
+## 2026-10-07 KMJ-AUTO-004 completion evidence and remaining transport blocker
+
+KMJ-AUTO-004 is implemented in commit `28b7eb078e358c6c371acd3792ed04b599dc39a4` and deployed as `~/.local/lib/kmj-autonomy/releases/28b7eb078e35`. The versioned curated backlog is `ops/autonomy-backlog.json`; the coordinator validates exact repository/device/project/branch identity before admitting any auto-enqueued work. Queue completion maps only to `artifact_ready`; separately validated evidence is required for `candidate_tested`; release requires explicit deployed + health-verified release evidence. Every report keeps `product_complete=false`.
+
+Live CodeBridge identity was independently verified as device `main-platform-kmjtechnonetgmailcom`, project `kmj-main-platform`, branch `main`, version `0.2.3`, gates fast/full/platform, writable and connected. Main VPS now has a root-owned sanitizer timer that refreshes a secret-free status JSON every 60 seconds after an authenticated local gateway health probe. A dedicated `kmjstatus` SSH key is forced to cat only that sanitized file with OpenSSH `restrict`; the Google side pins the Main VPS ED25519 host fingerprint. A real restricted read succeeded and the backlog coordinator persisted repository/project/connection plus task stage `ready` with `product_complete=false`.
+
+Focused backlog tests: 9 PASS. Exact slice gates: 196 Python regression tests PASS, 3 schema acceptance tests PASS, backlog JSON validation PASS and diff check PASS. Runtime services and `kmj-backlog-coordinator.path` are active; rollback backup stamp is `20261007-144002`.
+
+Remaining KMJ-AUTO-005 blocker: automatic cross-VPS fetching of the already-restricted status file was not installed because the current tool safety layer blocked creation of that fetcher. Do not bypass that block. Until an approved transport is available, refresh is manual over the pinned restricted SSH path; stale CodeBridge status fails closed and prevents new backlog admission.
