@@ -102,6 +102,22 @@ final class PublicSitemapTest extends TestCase
             '<loc>https://kmjtechno.example/products/kmj-calibration-pro</loc>',
             $xml,
         );
-        $this->assertSame(25, substr_count($xml, '<url>'));
+        $this->assertStringContainsString(
+            '<loc>https://kmjtechno.example/products/kmj-desktop-commander</loc>',
+            $xml,
+        );
+        $this->assertStringContainsString(
+            '<loc>https://kmjtechno.example/products/kmj-codebridge/terms</loc>',
+            $xml,
+        );
+        $this->assertStringContainsString(
+            '<loc>https://kmjtechno.example/products/kmj-codebridge/privacy</loc>',
+            $xml,
+        );
+        $this->assertStringContainsString(
+            '<loc>https://kmjtechno.example/products/kmj-codebridge/support</loc>',
+            $xml,
+        );
+        $this->assertSame(32, substr_count($xml, '<url>'));
     }
 }

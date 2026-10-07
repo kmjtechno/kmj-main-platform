@@ -10,6 +10,38 @@ export type DeliveryMilestone = {
 
 export const deliveryMilestones: DeliveryMilestone[] = [
     {
+        id: 'codebridge-hosted-client-onboarding',
+        title: 'CodeBridge hosted client onboarding',
+        state: 'active',
+        detail: 'Hosted OAuth account linking, browser/Claude client connectivity, pinned one-click Linux/VPS installer bootstrap, a credential-free ChatGPT Desktop marketplace setup download with bundled local OAuth bridge, customer-facing setup guidance, product-specific CodeBridge terms/privacy/support surfaces, a secure allowlisted GitHub bridge, a private Main Platform GitHub credential broker, authoritative pairing gateway discovery, account-authorized device/project grants, the current exact-head one-click runtime pin, guarded development-channel unattended updates, a bounded legacy /agent compatibility proxy for pre-fix enrollments, and a durable PKCE-only Claude public OAuth client that survives stale DCR registration loss are implemented; public Plugins Directory publication and live production rollout remain release gates',
+        evidence:
+            'CodeBridge exact-head commit ff8a64273ce4 passed CodeBridge CI after PR #94 and adds the guarded hourly development auto-update timer; Main Platform /install is pinned to that immutable runtime so fresh devices inherit the authoritative agent-gateway fix, current account/device diagnostics, and development auto-update path; PR #300 merged the authoritative pairing gateway contract and PR #302 merged account-authorized device/project grants; PR #304 adds a POST-only health/poll/result compatibility proxy; PR #308 adds a stable Claude public OAuth client; CodeBridge PR #104 merged the ChatGPT Desktop marketplace and bundled local OAuth bridge; CodeBridge PR #105 added a credential-free personal-marketplace fallback when Codex CLI is unavailable, and PR #106 corrected the personal marketplace path relative to ~/.agents/plugins; this branch syncs that corrected installer into the account dashboard while keeping public Plugins Directory publication as the universal customer one-click gate',
+    },
+    {
+        id: 'codebridge-license-renewal',
+        title: 'CodeBridge license renewal',
+        state: 'active',
+        detail: 'Signed device leases, proof-bound enrollment, authenticated credential rotation/revocation, and real-database concurrency gates are implemented; production exposure and signing configuration remain pending',
+        evidence:
+            'PR #247 signed renewal + PR #248 hash-only enrollment + PR #249 authenticated credential management and PostgreSQL concurrency verification merged with exact-head CI green',
+    },
+    {
+        id: 'locked-landing-product-portfolio',
+        title: 'Locked landing product portfolio',
+        state: 'verified',
+        detail: 'The locked black-and-red landing now receives the complete governed product portfolio, including OmniDesk and CodeBridge, with canonical product-detail routing; public commercial actions remain lifecycle-gated',
+        evidence:
+            'PR #258 merged as 606ecf279172; staging promotion, exact-SHA deploy, desktop/mobile browser QA and authenticated surface smoke all passed; CodeBridge remains non-commercial until hosted identity, packaging and production security gates pass',
+    },
+    {
+        id: 'admin-product-authority',
+        title: 'Admin product authority',
+        state: 'active',
+        detail: 'Platform-owner product management now binds lifecycle, public visibility, artwork, purchase/licensing controls and deterministic drag-and-drop ordering to the locked public landing while commercial state fails closed',
+        evidence:
+            'PR #263 implementation + regression coverage for public-beta lifecycle, complete-catalog ordering, landing-order propagation and non-available purchase rejection; exact-head CI pending',
+    },
+    {
         id: 'authority-foundation',
         title: 'Authority foundation',
         state: 'verified',
@@ -20,9 +52,10 @@ export const deliveryMilestones: DeliveryMilestone[] = [
     {
         id: 'staging-delivery',
         title: 'Staging delivery',
-        state: 'verified',
-        detail: 'CI + promotion + deploy + HTTP health',
-        evidence: 'Exact-SHA deployment evidence',
+        state: 'active',
+        detail: 'Promotion remains exact-SHA gated; the VPS systemd timer is now the sole deployment authority and GitHub-hosted verification waits for a staging-only exact-SHA response header before HTTP, rendered UI, and browser QA can pass',
+        evidence:
+            'PR #293 replaces the stale reusable SSH deploy-key path with timer convergence + X-KMJ-Deploy-SHA evidence and moves bounded recovery/authenticated route regression off the offline self-hosted runner; exact live rollout evidence is required before returning this milestone to verified',
     },
     {
         id: 'frontend-live-sync',
@@ -59,10 +92,10 @@ export const deliveryMilestones: DeliveryMilestone[] = [
     {
         id: 'transactional-outbox-foundation',
         title: 'Transactional outbox foundation',
-        state: 'active',
-        detail: 'Durable domain-event outbox persistence, producer idempotency enforcement, rollback-safe consumer receipts, and transactional licensing audit publication are under exact-head verification',
+        state: 'verified',
+        detail: 'Durable domain-event outbox persistence, producer idempotency enforcement, rollback-safe consumer receipts, retry scheduling/backoff, bounded attempts and transactional licensing audit publication are implemented and verified',
         evidence:
-            'PR #212 exact-head Foundation + Platform Runtime verification in progress',
+            'PR #212 merged + current OutboxDispatcherTest, OutboxBatchWorkerTest and DomainEventAtomicityTest green on main; stale PR #213 closed as superseded',
     },
     {
         id: 'registration-onboarding',
@@ -84,6 +117,14 @@ export const deliveryMilestones: DeliveryMilestone[] = [
         state: 'verified',
         detail: 'Provider-neutral reconciliation boundary',
         evidence: 'PR #74',
+    },
+    {
+        id: 'desktop-commander-commercial-control-plane',
+        title: 'Desktop Commander commercial control plane',
+        state: 'active',
+        detail: 'Main Platform-authoritative local-first licensing with a cacheable public-beta bootstrap, seven-day signed entitlement cadence, offline Ed25519 verification contract, refresh jitter and no idle licensing heartbeat; billing remains disabled',
+        evidence:
+            'Clean current-main integration of PR #241 contract; exact-head CI required before merge',
     },
     {
         id: 'license-lifecycle',
@@ -309,6 +350,14 @@ export const deliveryMilestones: DeliveryMilestone[] = [
             'Main Platform PR #190 merged + KMJ CloudOS adapter PR #4 merged after 6/6 verifier tests + KMJ Calibration Pro adapter PR #9 merged after Debug 7/7 and Release 7/7 tests',
     },
     {
+        id: 'omnidesk-licensing-contract',
+        title: 'KMJ OmniDesk licensing contract',
+        state: 'active',
+        detail: 'Dedicated omnidesk.remote_access authority, KSLP-v1 identity, signed-entitlement claims, device activation, renewable lease, offline grace, revocation and versioned API boundaries are contract-locked; Main Platform is explicitly limited to OmniDesk billing/licensing and cannot become its session, signaling, relay or media runtime; production Ed25519 signing remains KMS/HSM-gated',
+        evidence:
+            'PR #246 contract + ProductLicenseProfileRegistry dedicated capability + OmniDeskLicenseContractTest; production signer intentionally not enabled',
+    },
+    {
         id: 'production-hardening',
         title: 'Production hardening',
         state: 'verified',
@@ -329,5 +378,5 @@ export const deliveryProgress = Math.round(
 export const deliveryProgressMeta = {
     label: 'Revenue-capable working phase',
     note: 'Evidence-based delivery milestones, not total product completion.',
-    refreshed: '2026-09-26',
+    refreshed: '2026-10-04',
 } as const;

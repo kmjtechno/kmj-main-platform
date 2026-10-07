@@ -27,11 +27,24 @@ final class ProductLicenseProfileTest extends TestCase
         self::assertFalse($calibration->allowsStatus('active'));
     }
 
+    public function test_omnidesk_has_dedicated_active_only_remote_access_capability(): void
+    {
+        $profile = (new ProductLicenseProfileRegistry)->forSlug(KmjProductCatalog::OMNIDESK_SLUG);
+
+        self::assertNotNull($profile);
+        self::assertSame(KmjProductCatalog::OMNIDESK_SLUG, $profile->slug);
+        self::assertSame(ProductLicenseProfileRegistry::OMNIDESK_CAPABILITY, $profile->capability);
+        self::assertTrue($profile->allowsStatus('active'));
+        self::assertFalse($profile->allowsStatus('sandbox'));
+        self::assertNotSame(ProductLicenseProfileRegistry::GENERIC_PRODUCT_CAPABILITY, $profile->capability);
+    }
+
     public function test_all_canonical_roadmap_products_have_active_only_main_platform_license_profiles(): void
     {
         $profiles = new ProductLicenseProfileRegistry;
 
         foreach ([
+            KmjProductCatalog::DESKTOP_COMMANDER_SLUG,
             KmjProductCatalog::FORGE_SLUG,
             KmjProductCatalog::CONNECT_SLUG,
             KmjProductCatalog::CLOUD_NEXUS_SLUG,

@@ -178,7 +178,17 @@ final class CommercialOrderService
             'actor_user_id' => $actorUserId,
             'event_type' => $eventType,
             'payload' => $payload,
-            'occurred_at' => now(),
+            'occurred_at' => $occurredAt,
         ]);
+
+        $this->events->recordDomainEvent(
+            $eventType,
+            'commercial_order',
+            (string) $order->getKey(),
+            $payload,
+            $order->organization_id,
+            'commercial-order:'.$order->getKey().':'.$eventType,
+            $occurredAt,
+        );
     }
 }

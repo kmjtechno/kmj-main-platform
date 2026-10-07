@@ -1,0 +1,54 @@
+name: CodeBridge Device Pairing CI
+
+on:
+  pull_request:
+    paths:
+      - 'apps/platform/app/Services/Licensing/CodeBridge/CodeBridgeDevicePairingService.php'
+      - 'apps/platform/database/migrations/2026_10_01_120000_create_codebridge_device_pairings.php'
+      - 'apps/platform/routes/codebridge-api.php'
+      - 'apps/platform/routes/web.php'
+      - 'apps/platform/resources/views/codebridge-pair.blade.php'
+      - 'apps/platform/tests/Feature/CodeBridgeDevicePairingHttpTest.php'
+      - '.github/workflows/codebridge-device-pairing-ci.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: apps/platform
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup PHP 8.4
+        uses: shivammathur/setup-php@87d00bde2555f25eb54fedf940384e99cbdc55ef
+        with:
+          php-version: '8.4'
+          extensions: pdo_sqlite, sqlite3
+          coverage: none
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: apps/platform/package-lock.json
+      - run: composer install --no-interaction --prefer-dist --no-progress
+      - run: npm ci --ignore-scripts
+      - name: Build frontend assets
+        run: npm run build
+      - run: cp .env.example .env && php artisan key:generate --force
+      - name: Pairing syntax
+        run: |
+          php -l app/Services/Licensing/CodeBridge/CodeBridgeDevicePairingService.php
+          php -l routes/codebridge-api.php
+          php -l routes/web.php
+          php -l tests/Feature/CodeBridgeDevicePairingHttpTest.php
+      - name: Pairing feature tests
+        run: php artisan test tests/Feature/CodeBridgeDevicePairingHttpTest.php --no-ansi
+      - name: Pint changed pairing files
+        run: vendor/bin/pint --test app/Services/Licensing/CodeBridge/CodeBridgeDevicePairingService.php routes/codebridge-api.php tests/Feature/CodeBridgeDevicePairingHttpTest.php database/migrations/2026_10_01_120000_create_codebridge_device_pairings.php
+      - name: Full PHP verification
+        run: composer test

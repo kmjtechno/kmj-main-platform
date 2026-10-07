@@ -34,11 +34,11 @@ The promotion uses a non-force Git ref update. A history rewrite or non-fast-for
 
 ## VPS rule
 
-The staging VPS deploy worker must fetch and deploy `staging-approved`, never raw `main`.
+The staging VPS deploy worker must fetch and deploy `staging-approved`, never raw `main`. The server-local systemd timer is the deployment authority; GitHub Actions verifies convergence rather than opening an inbound deployment session.
 
 Expected flow:
 
-`main -> Staging Promotion Gate -> staging-approved -> VPS auto-deploy -> staging.kmjtechno.com`
+`main -> Staging Promotion Gate -> staging-approved -> VPS auto-deploy timer -> staging-only exact-SHA header -> HTTP/UI/browser verification`
 
 ## Failure behavior
 
@@ -46,7 +46,7 @@ If any verification step fails:
 
 - `staging-approved` does not move;
 - the currently working staging deployment remains live;
-- the VPS does not receive the failed `main` commit;
+- the VPS auto-deploy timer does not receive the failed `main` commit;
 - no paid AI fallback, production action, DNS action, or destructive action is implied.
 
 ## Security boundary

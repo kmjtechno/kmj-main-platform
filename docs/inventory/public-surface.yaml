@@ -49,6 +49,18 @@ public_urls:
     access: public
     purpose: Bilingual account, licensing and security support guidance
     source: apps/platform/routes/web.php
+  - path: /products/kmj-codebridge/terms
+    access: public
+    purpose: CodeBridge product terms
+    source: apps/platform/routes/web.php
+  - path: /products/kmj-codebridge/privacy
+    access: public
+    purpose: CodeBridge product privacy notice
+    source: apps/platform/routes/web.php
+  - path: /products/kmj-codebridge/support
+    access: public
+    purpose: CodeBridge product support surface
+    source: apps/platform/routes/web.php
   - path: /legal
     access: public
     purpose: Legal center
@@ -116,6 +128,7 @@ localization:
   current_switch_transport: query_parameter
   parameter: lang
   seo_path_locales_present: false
+  resource_hreflang_alternates: true
 
 public_assets:
   brand:
@@ -138,12 +151,10 @@ public_assets:
     - assets/products/kmj-creative-studio.webp
     - assets/products/kmj-cloud-nexus.webp
     - assets/products/kmj-cinema-platform.webp
+    - assets/products/kmj-360-dome.webp
+    - assets/products/kmj-cinema-player.webp
 
 observed_gaps:
-  - code: PRODUCT_VISUAL_360_DOME_MISSING
-    evidence: No dedicated assets/products/kmj-360-dome image exists in the current repository snapshot.
-  - code: PRODUCT_VISUAL_CINEMA_PLAYER_MISSING
-    evidence: No dedicated assets/products/kmj-cinema-player image exists in the current repository snapshot.
   - code: PUBLIC_FULL_COPY_LOCALIZATION_INCOMPLETE
     evidence: Documentation, insights and support now provide English/Hindi copy with hreflang query alternates; older public product, company, trust and legal surfaces still require full translated copy before site-wide hreflang can be truthful.
 

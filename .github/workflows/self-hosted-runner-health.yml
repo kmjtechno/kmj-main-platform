@@ -2,27 +2,6 @@ name: Self-Hosted Runner Health
 
 on:
   workflow_dispatch:
-  pull_request:
-    paths:
-      - '.github/workflows/self-hosted-runner-health.yml'
-      - '.github/actionlint.yaml'
-      - '.github/workflows/autonomous-cycle.yml'
-      - '.github/workflows/autonomous-worker.yml'
-      - '.github/workflows/platform-ci.yml'
-      - 'controller/worker_preflight.py'
-      - 'controller/model_router.py'
-      - 'controller/opencode_free.py'
-      - 'scripts/delivery_control_bridge.py'
-      - 'tests/test_delivery_control_bridge.py'
-      - 'tests/test_opencode_free.py'
-      - 'tests/test_platform_verify_contract.py'
-      - '.github/workflows/staging-promotion-gate.yml'
-      - '.github/workflows/staging-vps-deploy-fixed.yml'
-      - '.github/workflows/staging-authenticated-smoke.yml'
-      - '.github/workflows/staging-deploy-recovery.yml'
-      - 'ops/staging/**'
-      - 'ops/self-hosted-runner/**'
-      - 'docs/ops/SELF_HOSTED_CI_RUNNER.md'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}

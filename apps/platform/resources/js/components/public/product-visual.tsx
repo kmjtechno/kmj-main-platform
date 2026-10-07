@@ -2,7 +2,9 @@ type ProductVisualProps = {
     slug: string;
     name: string;
     kind?: string;
+    imagePath?: string | null;
     compact?: boolean;
+    className?: string;
 };
 
 const generatedVisuals: Record<string, string> = {
@@ -14,8 +16,8 @@ const generatedVisuals: Record<string, string> = {
     'kmj-agent': '/assets/products/kmj-agent.webp',
     'kmj-creative-studio': '/assets/products/kmj-creative-studio.webp',
     'kmj-cinema-platform': '/assets/products/kmj-cinema-platform.webp',
-    'kmj-360-dome': '/assets/products/kmj-cinema-platform.webp',
-    'kmj-cinema-player': '/assets/products/kmj-cinema-platform.webp',
+    'kmj-360-dome': '/assets/products/kmj-360-dome.webp',
+    'kmj-cinema-player': '/assets/products/kmj-cinema-player.webp',
     'kmj-licensing-hub': '/assets/products/kmj-licensing-hub.webp',
 };
 
@@ -44,9 +46,13 @@ export default function ProductVisual({
     slug,
     name,
     kind,
+    imagePath,
     compact = false,
+    className,
 }: ProductVisualProps) {
-    const generatedVisual = generatedVisuals[slug];
+    const managedVisual =
+        imagePath?.startsWith('/assets/products/') === true ? imagePath : null;
+    const generatedVisual = managedVisual ?? generatedVisuals[slug];
     const [accent, accent2] = palette[slug] ?? ['#e21b23', '#6d28d9'];
     const isCloud = kind === 'cloudos' || slug === 'kmj-cloudos';
 
@@ -55,14 +61,17 @@ export default function ProductVisual({
             <div
                 className={
                     'relative isolate overflow-hidden border border-white/[0.08] bg-[#090c12] ' +
-                    (compact
-                        ? 'h-52 rounded-[1.35rem]'
-                        : 'h-72 rounded-[1.75rem]')
+                    (className ??
+                        (compact
+                            ? 'h-52 rounded-[1.35rem]'
+                            : 'h-72 rounded-[1.75rem]'))
                 }
             >
                 <img
                     src={generatedVisual}
                     alt={name + ' — KMJ TECHNO'}
+                    width={1280}
+                    height={960}
                     loading={compact ? 'lazy' : 'eager'}
                     decoding="async"
                     className="h-full w-full object-cover"
@@ -71,6 +80,49 @@ export default function ProductVisual({
             </div>
         );
     }
+    const isImmersiveSuite = slug === 'kmj-immersive-cinema-suite';
+
+    if (isImmersiveSuite) {
+        const formats = ['5D', '7D', '9D', '12D', '14D', '16D', '5DX'];
+
+        return (
+            <div
+                className={
+                    'relative isolate overflow-hidden border border-white/[0.08] bg-[#090c12] ' +
+                    (className ??
+                        (compact
+                            ? 'h-52 rounded-[1.35rem]'
+                            : 'h-72 rounded-[1.75rem]'))
+                }
+            >
+                <div className="absolute inset-0 bg-[radial-gradient(circle_at_72%_18%,rgba(226,27,35,.22),transparent_36%),linear-gradient(145deg,#151820,#07090e_72%)]" />
+                <div className="absolute inset-x-5 top-5 bottom-5 flex flex-col justify-between">
+                    <div>
+                        <div className="text-[9px] font-black tracking-[.16em] text-[#ff5962] uppercase">
+                            KMJ Immersive Cinema Suite
+                        </div>
+                        <div className="mt-2 max-w-sm text-lg font-black tracking-[-0.03em] text-white sm:text-xl">
+                            One product family. Multiple immersive formats.
+                        </div>
+                    </div>
+                    <div className="grid grid-cols-4 gap-2">
+                        {formats.map((format, index) => (
+                            <div
+                                key={format}
+                                className={
+                                    'rounded-lg border border-white/[0.08] bg-black/30 px-2 py-2 text-center text-xs font-black text-white/78 ' +
+                                    (index === 6 ? 'col-span-2' : '')
+                                }
+                            >
+                                {format}
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
     const isCalibration =
         kind === 'calibration' || slug === 'kmj-calibration-pro';
 
@@ -78,7 +130,10 @@ export default function ProductVisual({
         <div
             className={
                 'relative isolate overflow-hidden border border-white/[0.08] bg-[#090c12] ' +
-                (compact ? 'h-52 rounded-[1.35rem]' : 'h-72 rounded-[1.75rem]')
+                (className ??
+                    (compact
+                        ? 'h-52 rounded-[1.35rem]'
+                        : 'h-72 rounded-[1.75rem]'))
             }
         >
             <div

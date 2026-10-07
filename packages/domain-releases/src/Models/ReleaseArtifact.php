@@ -6,6 +6,16 @@ use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
+/**
+ * @property string $release_id
+ * @property string $filename
+ * @property string $disk
+ * @property string $path
+ * @property string|null $media_type
+ * @property int $size_bytes
+ * @property string $digest
+ * @property-read ProductRelease $release
+ */
 final class ReleaseArtifact extends Model
 {
     use HasUuids;

@@ -5,7 +5,6 @@ on:
     branches:
       - main
     paths-ignore:
-      - '.github/workflows/staging-vps-deploy-fixed.yml'
       - '.github/workflows/staging-promotion-gate.yml'
       - 'KMJ_TECHNO_MAIN_PLATFORM_MASTER_ROADMAP_BLUEPRINT_V1_0.md'
       - 'docs/adr/**'
@@ -21,7 +20,7 @@ concurrency:
 jobs:
   verify:
     name: Verify candidate for staging
-    runs-on: [self-hosted, linux, x64, kmj-main-platform-ci]
+    runs-on: ubuntu-latest
     timeout-minutes: 30
 
     steps:
@@ -30,6 +29,19 @@ jobs:
         with:
           persist-credentials: false
           ref: ${{ github.sha }}
+
+      - name: Setup PHP 8.4
+        uses: shivammathur/setup-php@87d00bde2555f25eb54fedf940384e99cbdc55ef
+        with:
+          php-version: '8.4'
+          extensions: pdo_sqlite, sqlite3, sodium
+          coverage: none
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: apps/platform/package-lock.json
 
       - name: Prepare resilient Python runtime
         run: bash ops/self-hosted-runner/prepare-python-runtime.sh
@@ -80,7 +92,7 @@ jobs:
       - name: Verify platform runtime provenance
         run: python3 scripts/verify_runtime.py
 
-      - name: Verify pre-provisioned PHP and Node runtime
+      - name: Verify hosted PHP and Node runtime
         shell: bash
         run: |
           set -euo pipefail
@@ -103,7 +115,7 @@ jobs:
     if: ${{ needs.verify.result == 'success' && github.ref == 'refs/heads/main' }}
     permissions:
       contents: write
-    runs-on: [self-hosted, linux, x64, kmj-main-platform-ci]
+    runs-on: ubuntu-latest
     timeout-minutes: 5
 
     steps:

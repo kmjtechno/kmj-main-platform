@@ -95,11 +95,15 @@ final class ManualSalesFlowTest extends TestCase
             ->post('/operator/products', [
                 'name' => 'KMJ Revenue Product',
                 'slug' => 'kmj-revenue-product',
+                'lifecycle' => 'planned',
+                'is_public' => false,
+                'purchase_enabled' => false,
+                'licensing_enabled' => false,
             ])
-            ->assertRedirect('/operator');
+            ->assertRedirect('/');
 
-        $product = app(ProductCatalog::class)
-            ->ensureCommercialProduct('kmj-revenue-product', 'KMJ Revenue Product');
+        $product = app(CommercialProductPublisher::class)
+            ->publish('kmj-revenue-product', 'KMJ Revenue Product');
 
         $this->assertDatabaseHas('products', [
             'id' => $product->getKey(),

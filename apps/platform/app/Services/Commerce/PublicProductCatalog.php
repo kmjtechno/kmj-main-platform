@@ -12,13 +12,13 @@ final class PublicProductCatalog
      */
     public function all(): array
     {
-        $products = Product::query()
+        return Product::query()
             ->whereIn('slug', $this->publicSlugs())
+            ->where('is_public', true)
+            ->orderBy('sort_order')
+            ->orderBy('name')
             ->get()
-            ->keyBy('slug');
-
-        return collect($this->publicSlugs())
-            ->map(fn (string $slug): ?array => $this->present($products->get($slug)))
+            ->map(fn (Product $product): ?array => $this->present($product))
             ->filter()
             ->values()
             ->all();
@@ -41,7 +41,12 @@ final class PublicProductCatalog
             return null;
         }
 
-        return $this->present(Product::query()->where('slug', $slug)->first());
+        return $this->present(
+            Product::query()
+                ->where('slug', $slug)
+                ->where('is_public', true)
+                ->first(),
+        );
     }
 
     /**
@@ -52,14 +57,18 @@ final class PublicProductCatalog
         return [
             CloudOSProductCatalog::SLUG,
             KmjProductCatalog::CALIBRATION_SLUG,
+            KmjProductCatalog::DESKTOP_COMMANDER_SLUG,
             KmjProductCatalog::FORGE_SLUG,
             KmjProductCatalog::CONNECT_SLUG,
+            KmjProductCatalog::OMNIDESK_SLUG,
+            KmjProductCatalog::CODEBRIDGE_SLUG,
             KmjProductCatalog::CLOUD_NEXUS_SLUG,
             KmjProductCatalog::AGENT_SLUG,
             KmjProductCatalog::CREATIVE_STUDIO_SLUG,
             KmjProductCatalog::CINEMA_PLATFORM_SLUG,
-            KmjProductCatalog::DOME_360_SLUG,
+            KmjProductCatalog::DOME_SLUG,
             KmjProductCatalog::CINEMA_PLAYER_SLUG,
+            KmjProductCatalog::IMMERSIVE_CINEMA_SUITE_SLUG,
             KmjProductCatalog::LICENSING_HUB_SLUG,
         ];
     }
@@ -73,30 +82,22 @@ final class PublicProductCatalog
             return null;
         }
 
-        $slug = (string) $product->getAttribute('slug');
-
-        $presented = match ($slug) {
+        $presented = match ((string) $product->getAttribute('slug')) {
             CloudOSProductCatalog::SLUG => $this->cloudOS($product),
             KmjProductCatalog::CALIBRATION_SLUG => $this->calibration(),
+            KmjProductCatalog::DESKTOP_COMMANDER_SLUG => $this->desktopCommander(),
             KmjProductCatalog::FORGE_SLUG => $this->forge(),
+            KmjProductCatalog::OMNIDESK_SLUG => $this->omniDesk(),
+            KmjProductCatalog::CODEBRIDGE_SLUG => $this->codeBridge(),
             KmjProductCatalog::CONNECT_SLUG => $this->connect(),
             KmjProductCatalog::CLOUD_NEXUS_SLUG => $this->cloudNexus(),
             KmjProductCatalog::AGENT_SLUG => $this->agent(),
             KmjProductCatalog::CREATIVE_STUDIO_SLUG => $this->creativeStudio(),
             KmjProductCatalog::CINEMA_PLATFORM_SLUG => $this->cinemaPlatform(),
-            KmjProductCatalog::DOME_360_SLUG => $this->immersiveCinemaProduct(
-                KmjProductCatalog::DOME_360_SLUG,
-                KmjProductCatalog::DOME_360_NAME,
-                '360° immersive dome systems',
-                'A roadmap product family for panoramic dome playback, projection and synchronized immersive experiences.',
-            ),
-            KmjProductCatalog::CINEMA_PLAYER_SLUG => $this->immersiveCinemaProduct(
-                KmjProductCatalog::CINEMA_PLAYER_SLUG,
-                KmjProductCatalog::CINEMA_PLAYER_NAME,
-                'Professional cinema playback software',
-                'A roadmap playback product for reliable professional cinema and immersive-system media delivery.',
-            ),
-            KmjProductCatalog::LICENSING_HUB_SLUG => $this->licensingHub(),
+            KmjProductCatalog::DOME_SLUG => $this->developmentProduct(slug: KmjProductCatalog::DOME_SLUG, name: KmjProductCatalog::DOME_NAME, lifecycle: 'development', lifecycleLabel: 'Research', eyebrow: 'Immersive 360° experience', headline: 'A dedicated immersive experience product for 360° dome and curved-screen environments.', summary: 'KMJ 360 Dome is presented as a distinct immersive product line. Commercial availability remains disabled until dedicated release evidence and deployment requirements are verified.', status: 'Dedicated product identity is defined; a customer-ready commercial release is not yet independently verified.', proof: [['title' => 'Dedicated product boundary', 'detail' => 'The Main Platform exposes KMJ 360 Dome as its own product rather than re-labelling Cinema Platform.', 'state' => 'platform-verified'], ['title' => 'Release gate preserved', 'detail' => 'Purchase remains disabled until product-specific release and deployment evidence is accepted.', 'state' => 'fail-closed']]),
+            KmjProductCatalog::CINEMA_PLAYER_SLUG => $this->developmentProduct(slug: KmjProductCatalog::CINEMA_PLAYER_SLUG, name: KmjProductCatalog::CINEMA_PLAYER_NAME, lifecycle: 'development', lifecycleLabel: 'Research', eyebrow: 'Professional cinema playback', headline: 'A dedicated cinema playback product within the wider KMJ cinema technology direction.', summary: 'KMJ Cinema Player is the focused playback product identity. Engineering evidence supports an active cinema-player development stream, while public commercial release remains gated.', status: 'Active development; a current customer-ready public release is not independently verified.', proof: [['title' => 'Playback product identity', 'detail' => 'Cinema Player is kept distinct from the broader Cinema Platform product boundary.', 'state' => 'platform-verified'], ['title' => 'Commercial release not asserted', 'detail' => 'Download and purchase remain disabled until an accepted release is available.', 'state' => 'fail-closed']]),
+            KmjProductCatalog::IMMERSIVE_CINEMA_SUITE_SLUG => $this->developmentProduct(slug: KmjProductCatalog::IMMERSIVE_CINEMA_SUITE_SLUG, name: KmjProductCatalog::IMMERSIVE_CINEMA_SUITE_NAME, lifecycle: 'roadmap', lifecycleLabel: 'Planned', eyebrow: 'Multi-format immersive cinema', headline: 'One immersive cinema product line spanning 5D through 16D and 5DX experiences.', summary: 'KMJ Immersive Cinema Suite groups the 5D, 7D, 9D, 12D, 14D, 16D and 5DX formats under one product boundary so customers can understand the experience family without treating each format as a separate product.', status: 'Roadmap product family; commercial availability is not asserted until product-specific release evidence is accepted.', proof: [['title' => 'Single product boundary', 'detail' => '5D, 7D, 9D, 12D, 14D, 16D and 5DX are presented as formats within one KMJ Immersive Cinema Suite product.', 'state' => 'platform-verified'], ['title' => 'Availability remains gated', 'detail' => 'No format is presented as generally available until its release and deployment evidence is verified.', 'state' => 'fail-closed']], variants: ['5D', '7D', '9D', '12D', '14D', '16D', '5DX']),
+            KmjProductCatalog::LICENSING_HUB_SLUG => $this->developmentProduct(slug: KmjProductCatalog::LICENSING_HUB_SLUG, name: KmjProductCatalog::LICENSING_HUB_NAME, lifecycle: 'development', lifecycleLabel: 'Research', eyebrow: 'Entitlement + licensing authority', headline: 'The governed licensing layer designed to connect KMJ products with customer entitlements and controlled access.', summary: 'KMJ Licensing Hub represents the Main Platform licensing and entitlement capability. Sandbox issuance, validation and revocation boundaries exist; production signing and key custody remain release-gated.', status: 'Sandbox licensing capability exists; production signing authority is not yet declared customer-ready.', proof: [['title' => 'Licensing boundary', 'detail' => 'Sandbox license issuance, validation and revocation are implemented behind explicit product authority.', 'state' => 'repository-verified'], ['title' => 'Production keys fail closed', 'detail' => 'Production signing and key custody remain outside the sandbox boundary until separately approved and verified.', 'state' => 'fail-closed']]),
             default => null,
         };
 
@@ -104,13 +105,12 @@ final class PublicProductCatalog
             return null;
         }
 
+        $slug = (string) $product->getAttribute('slug');
+
         return [
-            ...$presented,
+            ...$this->applyManagement($product, $presented),
             'category' => $this->categoryForSlug($slug),
-            'family' => str_starts_with($slug, 'kmj-') && (
-                str_contains($slug, 'cinema')
-                || $slug === KmjProductCatalog::DOME_360_SLUG
-            )
+            'family' => str_contains($slug, 'cinema') || $slug === KmjProductCatalog::DOME_SLUG
                 ? 'KMJ Cinema & Immersive Systems'
                 : null,
         ];
@@ -124,14 +124,45 @@ final class PublicProductCatalog
             KmjProductCatalog::FORGE_SLUG,
             KmjProductCatalog::AGENT_SLUG => 'Engineering & Automation',
             KmjProductCatalog::CALIBRATION_SLUG => 'Calibration & Vision Systems',
-            KmjProductCatalog::CONNECT_SLUG => 'Secure Access & Connectivity',
+            KmjProductCatalog::CONNECT_SLUG,
+            KmjProductCatalog::OMNIDESK_SLUG,
+            KmjProductCatalog::CODEBRIDGE_SLUG,
+            KmjProductCatalog::DESKTOP_COMMANDER_SLUG => 'Secure Access & Connectivity',
             KmjProductCatalog::LICENSING_HUB_SLUG => 'Commerce & Licensing',
             KmjProductCatalog::CREATIVE_STUDIO_SLUG,
             KmjProductCatalog::CINEMA_PLATFORM_SLUG,
-            KmjProductCatalog::DOME_360_SLUG,
-            KmjProductCatalog::CINEMA_PLAYER_SLUG => 'Media & Immersive Experience',
+            KmjProductCatalog::DOME_SLUG,
+            KmjProductCatalog::CINEMA_PLAYER_SLUG,
+            KmjProductCatalog::IMMERSIVE_CINEMA_SUITE_SLUG => 'Media & Immersive Experience',
             default => 'KMJ TECHNO Products',
         };
+    }
+
+    /**
+     * @param  array<string, mixed>  $presented
+     * @return array<string, mixed>
+     */
+    private function applyManagement(Product $product, array $presented): array
+    {
+        $lifecycle = (string) $product->getAttribute('lifecycle');
+        $lifecycleLabel = match ($lifecycle) {
+            'available' => 'Available',
+            'preview' => 'Preview',
+            'research' => 'Research',
+            'planned' => 'Planned',
+            default => $presented['lifecycle_label'],
+        };
+        $summary = trim((string) ($product->getAttribute('summary') ?? ''));
+        $imagePath = trim((string) ($product->getAttribute('image_path') ?? ''));
+
+        $presented['lifecycle'] = $lifecycle !== '' ? $lifecycle : $presented['lifecycle'];
+        $presented['lifecycle_label'] = $lifecycleLabel;
+        $presented['summary'] = $summary !== '' ? $summary : $presented['summary'];
+        $presented['image_path'] = $imagePath !== '' ? $imagePath : null;
+        $presented['sort_order'] = (int) $product->getAttribute('sort_order');
+        $presented['licensing_enabled'] = (bool) $product->getAttribute('licensing_enabled');
+
+        return $presented;
     }
 
     /**
@@ -140,6 +171,7 @@ final class PublicProductCatalog
     private function cloudOS(Product $product): array
     {
         $purchaseEnabled = (string) $product->getAttribute('status') === 'active'
+            && (bool) $product->getAttribute('purchase_enabled')
             && EntitlementPolicy::query()
                 ->where('product_id', $product->getKey())
                 ->where('code', CloudOSProductCatalog::POLICY_CODE)
@@ -151,7 +183,7 @@ final class PublicProductCatalog
             'slug' => CloudOSProductCatalog::SLUG,
             'name' => CloudOSProductCatalog::NAME,
             'lifecycle' => $purchaseEnabled ? 'active' : 'unavailable',
-            'lifecycle_label' => $purchaseEnabled ? 'Commercial catalog' : 'Unavailable',
+            'lifecycle_label' => $purchaseEnabled ? 'Available' : 'Planned',
             'purchase_enabled' => $purchaseEnabled,
             'eyebrow' => 'Cloud operating platform',
             'headline' => 'Explore the governed CloudOS operating workflow before requesting access.',
@@ -205,7 +237,7 @@ final class PublicProductCatalog
             'slug' => KmjProductCatalog::CALIBRATION_SLUG,
             'name' => KmjProductCatalog::CALIBRATION_NAME,
             'lifecycle' => 'development-preview',
-            'lifecycle_label' => 'Development preview',
+            'lifecycle_label' => 'Preview',
             'purchase_enabled' => false,
             'eyebrow' => 'Projector + camera calibration',
             'headline' => 'See the complete calibration workflow before touching hardware.',
@@ -244,9 +276,43 @@ final class PublicProductCatalog
             ],
             'cta' => [
                 'primary' => 'Launch virtual demo',
-                'secondary' => 'Development preview',
+                'secondary' => 'Preview',
             ],
         ];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function desktopCommander(): array
+    {
+        return $this->developmentProduct(
+            slug: KmjProductCatalog::DESKTOP_COMMANDER_SLUG,
+            name: KmjProductCatalog::DESKTOP_COMMANDER_NAME,
+            lifecycle: 'public-beta',
+            lifecycleLabel: 'Free public beta',
+            eyebrow: 'Local-first engineering command center',
+            headline: 'Operate projects and servers from one secure desktop control plane.',
+            summary: 'KMJ Desktop Commander runs engineering operations on the customer device and customer-controlled servers. The KMJ Main Platform is reserved for lightweight account, entitlement, release and billing control rather than carrying project workloads.',
+            status: 'The v0.1 line is being verified for Windows distribution. Public-beta access is free while release, entitlement and safety gates mature; paid plans are not enabled until those gates pass.',
+            proof: [
+                [
+                    'title' => 'Local-first execution',
+                    'detail' => 'Project inspection, Git checks and quality gates execute through the customer-controlled OpenSSH path instead of consuming KMJ server compute.',
+                    'state' => 'repository-verified',
+                ],
+                [
+                    'title' => 'Deny-by-default policy',
+                    'detail' => 'Remote operations use fixed policy-gated presets and do not expose arbitrary shell execution through the desktop UI.',
+                    'state' => 'repository-verified',
+                ],
+                [
+                    'title' => 'Free before monetization',
+                    'detail' => 'Commercial purchase remains disabled during public beta. Paid conversion will be enabled only after signed releases, entitlement enforcement and billing are verified end to end.',
+                    'state' => 'fail-closed',
+                ],
+            ],
+        );
     }
 
     /**
@@ -258,7 +324,7 @@ final class PublicProductCatalog
             slug: KmjProductCatalog::FORGE_SLUG,
             name: KmjProductCatalog::FORGE_NAME,
             lifecycle: 'early-development',
-            lifecycleLabel: 'Early development',
+            lifecycleLabel: 'Research',
             eyebrow: 'AI software engineering framework',
             headline: 'A universal, local-capable and provider-agnostic engineering framework.',
             summary: 'KMJ Forge is an open-source engineering framework intended to understand, plan, build, test, debug, review and ship software across languages and platforms.',
@@ -320,13 +386,81 @@ final class PublicProductCatalog
     /**
      * @return array<string, mixed>
      */
+    private function omniDesk(): array
+    {
+        return $this->developmentProduct(
+            slug: KmjProductCatalog::OMNIDESK_SLUG,
+            name: KmjProductCatalog::OMNIDESK_NAME,
+            lifecycle: 'pre-alpha',
+            lifecycleLabel: 'Pre-alpha',
+            eyebrow: 'Ultra-fast secure remote access',
+            headline: 'Remote access engineered around direct connectivity, low bandwidth and minimal infrastructure overhead.',
+            summary: 'KMJ OmniDesk is the active next-generation remote-access product under development by KMJ TECHNO. Its architecture prioritizes encrypted direct peer-to-peer sessions, relay only when required, adaptive weak-network behavior, native performance and commercial licensing through the KMJ Main Platform.',
+            status: 'Private repository foundation is active. Customer download, production performance claims and paid access remain disabled until implementation, security, weak-network and release gates are verified.',
+            proof: [
+                [
+                    'title' => 'Direct-first architecture',
+                    'detail' => 'The product contract keeps screen and audio traffic peer-to-peer when connectivity permits, with KMJ relay infrastructure reserved for fallback or policy-required paths.',
+                    'state' => 'repository-verified',
+                ],
+                [
+                    'title' => 'Measured-performance discipline',
+                    'detail' => 'Latency, bandwidth, CPU/GPU overhead, connection time, reconnect behavior and relay utilization are explicit release metrics rather than unverified marketing claims.',
+                    'state' => 'repository-verified',
+                ],
+                [
+                    'title' => 'Main Platform commercial authority',
+                    'detail' => 'Trials, plans, activations and future paid entitlements are designed to remain governed by the KMJ Main Platform instead of hard-coded client unlocks.',
+                    'state' => 'architecture-locked',
+                ],
+            ],
+        );
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function codeBridge(): array
+    {
+        return $this->developmentProduct(
+            slug: KmjProductCatalog::CODEBRIDGE_SLUG,
+            name: KmjProductCatalog::CODEBRIDGE_NAME,
+            lifecycle: 'research',
+            lifecycleLabel: 'Research',
+            eyebrow: 'Secure developer bridge',
+            headline: 'A governed bridge for connecting AI-assisted engineering workflows to scoped development environments.',
+            summary: 'KMJ CodeBridge is an active developer-bridge product with a dedicated runtime and Main Platform licensing integration. Public commercial availability remains disabled while hosted OAuth, release packaging and production security gates are completed.',
+            status: 'Executable developer-preview and licensing evidence exist. Production GA, paid access and customer download remain disabled until the remaining release and security gates are verified.',
+            proof: [
+                [
+                    'title' => 'Dedicated bridge runtime',
+                    'detail' => 'The CodeBridge project provides a separate gateway and agent architecture rather than running customer development workloads inside the Main Platform.',
+                    'state' => 'repository-verified',
+                ],
+                [
+                    'title' => 'Governed licensing boundary',
+                    'detail' => 'Main Platform contains proof-bound CodeBridge enrollment, credential and renewable lease controls while product execution remains outside the commercial control plane.',
+                    'state' => 'platform-verified',
+                ],
+                [
+                    'title' => 'Fail-closed commercial state',
+                    'detail' => 'Purchase and customer download stay disabled until hosted identity, packaging and production security evidence are complete.',
+                    'state' => 'fail-closed',
+                ],
+            ],
+        );
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
     private function cloudNexus(): array
     {
         return $this->developmentProduct(
             slug: KmjProductCatalog::CLOUD_NEXUS_SLUG,
             name: KmjProductCatalog::CLOUD_NEXUS_NAME,
             lifecycle: 'development',
-            lifecycleLabel: 'Development',
+            lifecycleLabel: 'Research',
             eyebrow: 'Autonomous engineering IDE',
             headline: 'A separate Code-OSS-based engineering environment for developing and operating KMJ systems.',
             summary: 'KMJ Cloud Nexus is architecturally separate from the Main Platform. It is intended to operate through released APIs and governed contracts rather than sharing the website database.',
@@ -360,7 +494,7 @@ final class PublicProductCatalog
             slug: KmjProductCatalog::AGENT_SLUG,
             name: KmjProductCatalog::AGENT_NAME,
             lifecycle: 'development',
-            lifecycleLabel: 'Development',
+            lifecycleLabel: 'Research',
             eyebrow: 'Autonomous software engineering agent',
             headline: 'An autonomous engineering agent for inspecting, changing, testing and verifying real software projects.',
             summary: 'KMJ Agent is a separate autonomous software-engineering product under active P1 development. Its repository contains a working desktop/daemon direction, durable task state and verified-free provider routing work.',
@@ -394,7 +528,7 @@ final class PublicProductCatalog
             slug: KmjProductCatalog::CREATIVE_STUDIO_SLUG,
             name: KmjProductCatalog::CREATIVE_STUDIO_NAME,
             lifecycle: 'roadmap',
-            lifecycleLabel: 'Roadmap',
+            lifecycleLabel: 'Planned',
             eyebrow: 'Autonomous creative production studio',
             headline: 'A roadmap product for turning an idea into a finished creative production through an automated media workflow.',
             summary: 'KMJ Creative Studio is defined in the product roadmap as a separate autonomous production system for scripted image, video, voice, sound, editing, quality review and export workflows.',
@@ -458,79 +592,8 @@ final class PublicProductCatalog
     }
 
     /**
-     * @return array<string, mixed>
-     */
-    private function licensingHub(): array
-    {
-        return $this->developmentProduct(
-            slug: KmjProductCatalog::LICENSING_HUB_SLUG,
-            name: KmjProductCatalog::LICENSING_HUB_NAME,
-            lifecycle: 'roadmap',
-            lifecycleLabel: 'Roadmap',
-            eyebrow: 'Software licensing & subscription platform',
-            headline: 'A governed licensing platform for selling and controlling software access online.',
-            summary: 'KMJ Licensing Hub is the roadmap commercial licensing product for customer organizations that need software entitlements, subscription access, license issuance, validation, revocation and centralized product control from the KMJ Main Platform.',
-            status: 'Roadmap-defined SaaS product. Commercial self-service, billing and external customer release remain disabled until product-specific release and payment gates are verified.',
-            proof: [
-                [
-                    'title' => 'Main Platform licensing authority',
-                    'detail' => 'The platform already provides entitlement, issuance, validation and revocation foundations that this product can expose as a governed customer service.',
-                    'state' => 'platform-verified',
-                ],
-                [
-                    'title' => 'Recurring-revenue direction',
-                    'detail' => 'The roadmap supports subscription and licensed software access without treating payment confirmation as authorization by itself.',
-                    'state' => 'roadmap-verified',
-                ],
-                [
-                    'title' => 'Commercial release fail-closed',
-                    'detail' => 'No paid self-service or third-party licensing claim is exposed until billing, support and production release gates are verified.',
-                    'state' => 'fail-closed',
-                ],
-            ],
-        );
-    }
-
-    /**
-     * @return array<string, mixed>
-     */
-    private function immersiveCinemaProduct(
-        string $slug,
-        string $name,
-        string $eyebrow,
-        string $summary,
-    ): array {
-        return $this->developmentProduct(
-            slug: $slug,
-            name: $name,
-            lifecycle: 'roadmap',
-            lifecycleLabel: 'Roadmap',
-            eyebrow: $eyebrow,
-            headline: 'Part of the KMJ Cinema & Immersive Systems roadmap.',
-            summary: $summary,
-            status: 'Roadmap-defined product. Commercial availability, hardware compatibility and customer release are not asserted until product-specific evidence and licensing gates are complete.',
-            proof: [
-                [
-                    'title' => 'Main Platform catalog authority',
-                    'detail' => 'The product has a canonical KMJ Main Platform identity so future entitlement and licensing can bind to one authoritative slug.',
-                    'state' => 'platform-verified',
-                ],
-                [
-                    'title' => 'Cinema-family boundary',
-                    'detail' => 'The product belongs to the KMJ Cinema & Immersive Systems family while remaining independently licensable.',
-                    'state' => 'roadmap-verified',
-                ],
-                [
-                    'title' => 'Commercial access fail-closed',
-                    'detail' => 'Purchase, download and production claims remain disabled until a verified release and active entitlement policy exist.',
-                    'state' => 'fail-closed',
-                ],
-            ],
-        );
-    }
-
-    /**
      * @param  array<int, array<string, string>>  $proof
+     * @param  array<array-key, mixed>  $variants
      * @return array<string, mixed>
      */
     private function developmentProduct(
@@ -543,6 +606,7 @@ final class PublicProductCatalog
         string $summary,
         string $status,
         array $proof,
+        array $variants = [],
     ): array {
         return [
             'slug' => $slug,
@@ -557,6 +621,7 @@ final class PublicProductCatalog
                 'status' => $status,
             ],
             'proof' => $proof,
+            'variants' => $variants,
             'demo' => [
                 'kind' => 'none',
                 'simulation' => false,

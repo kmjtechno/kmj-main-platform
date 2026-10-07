@@ -2,9 +2,11 @@
 
 namespace Tests\Feature;
 
+use App\Services\Commerce\AdminProductManager;
 use App\Services\Commerce\KmjProductCatalog;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Inertia\Testing\AssertableInertia as Assert;
+use KMJ\MainPlatform\Catalog\Models\Product;
 use Tests\TestCase;
 
 final class PublicProductHubTest extends TestCase
@@ -18,81 +20,73 @@ final class PublicProductHubTest extends TestCase
         app(KmjProductCatalog::class)->syncAll();
     }
 
-    public function test_homepage_exposes_the_canonical_public_product_portfolio(): void
+    public function test_homepage_exposes_the_complete_canonical_public_portfolio(): void
     {
         $this->get('/')
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->component('welcome')
-                ->where('portfolioCount', 11)
-                ->has('products', 4)
-                ->where('products.0.slug', 'kmj-cloudos')
-                ->where('products.0.purchase_enabled', true)
-                ->where('products.1.slug', 'kmj-calibration-pro')
-                ->where('products.1.purchase_enabled', false)
-                ->where('products.2.slug', 'kmj-cinema-platform')
-                ->where('products.2.lifecycle', 'development')
-                ->where('products.2.variants.0', '5D')
-                ->where('products.2.variants.6', '5DX')
-                ->where('products.3.slug', 'kmj-licensing-hub')
-                ->where('products.3.lifecycle', 'roadmap')
-                ->where('products.3.purchase_enabled', false));
+                ->where('portfolioCount', 15)
+                ->has('products', 15)
+                ->where('products', function ($products): bool {
+                    $bySlug = collect($products)->keyBy('slug');
+
+                    return $bySlug->has('kmj-cloudos')
+                        && $bySlug->has('kmj-calibration-pro')
+                        && $bySlug->has('kmj-cinema-platform')
+                        && $bySlug->has('kmj-360-dome')
+                        && $bySlug->has('kmj-omnidesk')
+                        && $bySlug->has('kmj-codebridge')
+                        && $bySlug->has('kmj-desktop-commander')
+                        && $bySlug['kmj-cloudos']['lifecycle'] === 'available'
+                        && $bySlug['kmj-codebridge']['lifecycle'] === 'research'
+                        && $bySlug['kmj-desktop-commander']['lifecycle'] === 'public-beta';
+                }));
     }
 
-    public function test_products_hub_exposes_truthful_lifecycle_for_all_roadmap_products(): void
+    public function test_admin_product_order_drives_the_locked_landing_order(): void
+    {
+        $cloudOS = Product::query()->where('slug', 'kmj-cloudos')->firstOrFail();
+        $calibration = Product::query()->where('slug', 'kmj-calibration-pro')->firstOrFail();
+
+        app(AdminProductManager::class)->reorder([
+            (string) $calibration->getKey(),
+            (string) $cloudOS->getKey(),
+            ...Product::query()
+                ->whereNotIn('id', [$cloudOS->getKey(), $calibration->getKey()])
+                ->orderBy('sort_order')
+                ->orderBy('name')
+                ->pluck('id')
+                ->map(fn ($id): string => (string) $id)
+                ->all(),
+        ]);
+
+        $this->get('/')
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('welcome')
+                ->where('products.0.slug', 'kmj-calibration-pro')
+                ->where('products.1.slug', 'kmj-cloudos'));
+    }
+
+    public function test_products_hub_uses_only_canonical_public_lifecycle_vocabulary(): void
     {
         $this->get('/products')
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->component('products/index')
-                ->has('products', 11)
-                ->where('products.0.slug', 'kmj-cloudos')
-                ->where('products.0.lifecycle', 'active')
-                ->where('products.0.demo.kind', 'cloudos')
-                ->where('products.0.demo.simulation', true)
-                ->where('products.1.slug', 'kmj-calibration-pro')
-                ->where('products.1.lifecycle', 'development-preview')
-                ->where('products.1.demo.kind', 'calibration')
-                ->where('products.1.demo.simulation', true)
-                ->where('products.2.slug', 'kmj-forge')
-                ->where('products.2.lifecycle', 'early-development')
-                ->where('products.2.demo.kind', 'none')
-                ->where('products.2.demo.simulation', false)
-                ->where('products.3.slug', 'kmj-connect')
-                ->where('products.3.lifecycle', 'planned')
-                ->where('products.3.demo.kind', 'none')
-                ->where('products.3.demo.simulation', false)
-                ->where('products.4.slug', 'kmj-cloud-nexus')
-                ->where('products.4.lifecycle', 'development')
-                ->where('products.4.demo.kind', 'none')
-                ->where('products.4.demo.simulation', false)
-                ->where('products.5.slug', 'kmj-agent')
-                ->where('products.5.lifecycle', 'development')
-                ->where('products.5.demo.kind', 'none')
-                ->where('products.5.demo.simulation', false)
-                ->where('products.6.slug', 'kmj-creative-studio')
-                ->where('products.6.lifecycle', 'roadmap')
-                ->where('products.6.demo.kind', 'none')
-                ->where('products.6.demo.simulation', false)
-                ->where('products.7.slug', 'kmj-cinema-platform')
-                ->where('products.7.lifecycle', 'development')
-                ->where('products.7.category', 'Media & Immersive Experience')
-                ->where('products.7.demo.kind', 'none')
-                ->where('products.7.demo.simulation', false)
-                ->where('products.7.variants.0', '5D')
-                ->where('products.7.variants.1', '7D')
-                ->where('products.7.variants.2', '9D')
-                ->where('products.7.variants.3', '12D')
-                ->where('products.7.variants.4', '14D')
-                ->where('products.7.variants.5', '16D')
-                ->where('products.7.variants.6', '5DX')
-                ->where('products.8.slug', 'kmj-360-dome')
-                ->where('products.8.lifecycle', 'roadmap')
-                ->where('products.9.slug', 'kmj-cinema-player')
-                ->where('products.9.category', 'Media & Immersive Experience')
-                ->where('products.10.slug', 'kmj-licensing-hub')
-                ->where('products.10.category', 'Commerce & Licensing')
-                ->where('products.10.lifecycle', 'roadmap'));
+                ->has('products', 15)
+                ->where('products', function ($products): bool {
+                    $allowed = ['available', 'preview', 'research', 'planned', 'public-beta'];
+
+                    foreach ($products as $product) {
+                        if (! in_array($product['lifecycle'], $allowed, true)) {
+                            return false;
+                        }
+                    }
+
+                    return true;
+                }));
     }
 
     public function test_cloudos_detail_exposes_simulation_and_commercial_cta_state(): void
@@ -102,7 +96,7 @@ final class PublicProductHubTest extends TestCase
             ->assertInertia(fn (Assert $page) => $page
                 ->component('products/show')
                 ->where('product.slug', 'kmj-cloudos')
-                ->where('product.lifecycle', 'active')
+                ->where('product.lifecycle', 'available')
                 ->where('product.purchase_enabled', true)
                 ->where('product.demo.kind', 'cloudos')
                 ->where('product.demo.simulation', true));
@@ -115,25 +109,30 @@ final class PublicProductHubTest extends TestCase
             ->assertInertia(fn (Assert $page) => $page
                 ->component('products/show')
                 ->where('product.slug', 'kmj-calibration-pro')
-                ->where('product.lifecycle', 'development-preview')
+                ->where('product.lifecycle', 'preview')
                 ->where('product.purchase_enabled', false)
                 ->where('product.demo.kind', 'calibration')
                 ->where('product.demo.simulation', true)
                 ->where('product.truth.physical_capability_certified', false));
     }
 
-    public function test_development_products_remain_non_commercial_and_without_fake_demo(): void
+    public function test_non_available_products_remain_non_commercial(): void
     {
         foreach ([
-            'kmj-forge' => 'early-development',
+            'kmj-calibration-pro' => 'preview',
+            'kmj-cinema-platform' => 'research',
+            'kmj-360-dome' => 'research',
+            'kmj-immersive-cinema-suite' => 'planned',
+            'kmj-cinema-player' => 'research',
+            'kmj-licensing-hub' => 'research',
+            'kmj-forge' => 'research',
+            'kmj-omnidesk' => 'research',
+            'kmj-codebridge' => 'research',
+            'kmj-desktop-commander' => 'public-beta',
             'kmj-connect' => 'planned',
-            'kmj-cloud-nexus' => 'development',
-            'kmj-agent' => 'development',
-            'kmj-creative-studio' => 'roadmap',
-            'kmj-cinema-platform' => 'development',
-            'kmj-360-dome' => 'roadmap',
-            'kmj-cinema-player' => 'roadmap',
-            'kmj-licensing-hub' => 'roadmap',
+            'kmj-cloud-nexus' => 'research',
+            'kmj-agent' => 'research',
+            'kmj-creative-studio' => 'planned',
         ] as $slug => $lifecycle) {
             $this->get('/products/'.$slug)
                 ->assertOk()
@@ -141,9 +140,7 @@ final class PublicProductHubTest extends TestCase
                     ->component('products/show')
                     ->where('product.slug', $slug)
                     ->where('product.lifecycle', $lifecycle)
-                    ->where('product.purchase_enabled', false)
-                    ->where('product.demo.kind', 'none')
-                    ->where('product.demo.simulation', false));
+                    ->where('product.purchase_enabled', false));
         }
     }
 

@@ -15,13 +15,13 @@ permissions:
 
 concurrency:
   group: staging-vps-deploy
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   deploy:
-    name: Deploy approved commit to staging VPS
+    name: Verify approved commit on staging VPS
     if: ${{ github.event_name == 'workflow_dispatch' || github.event_name == 'schedule' || github.event.workflow_run.conclusion == 'success' }}
-    runs-on: [self-hosted, linux, x64, kmj-main-platform-ci]
+    runs-on: ubuntu-latest
     timeout-minutes: 25
     environment: staging
 
@@ -48,210 +48,84 @@ jobs:
           echo "sha=$approved_sha" >> "$GITHUB_OUTPUT"
           echo "DEPLOY_SHA=$approved_sha" >> "$GITHUB_ENV"
 
-      - name: Validate staging deployment configuration
+      - name: Validate public staging configuration
         id: config
         env:
-          STAGING_HOST: ${{ secrets.STAGING_SSH_HOST }}
-          STAGING_USER: ${{ secrets.STAGING_SSH_USER }}
-          STAGING_KEY: ${{ secrets.STAGING_SSH_PRIVATE_KEY }}
-          STAGING_PATH: ${{ vars.STAGING_APP_PATH }}
+          HEALTH_URL: ${{ vars.STAGING_HEALTHCHECK_URL }}
         shell: bash
         run: |
           set -euo pipefail
-          missing=0
-          if [ -z "$STAGING_HOST" ]; then echo '::error title=Missing staging configuration::STAGING_SSH_HOST is not configured in the staging environment'; missing=1; fi
-          if [ -z "$STAGING_USER" ]; then echo '::error title=Missing staging configuration::STAGING_SSH_USER is not configured in the staging environment'; missing=1; fi
-          if [ -z "$STAGING_KEY" ]; then echo '::error title=Missing staging configuration::STAGING_SSH_PRIVATE_KEY is not configured in the staging environment'; missing=1; fi
-          if [ -z "$STAGING_PATH" ]; then echo '::error title=Missing staging configuration::STAGING_APP_PATH is not configured in the staging environment'; missing=1; fi
-          if [ "$missing" -ne 0 ]; then exit 1; fi
-          echo 'Staging deployment configuration is present.'
+          test -n "$HEALTH_URL"
+          case "$HEALTH_URL" in
+            https://staging.kmjtechno.com|https://staging.kmjtechno.com/) ;;
+            *)
+              echo '::error title=Invalid staging URL::STAGING_HEALTHCHECK_URL must be the canonical staging origin'
+              exit 1
+              ;;
+          esac
+          echo 'Staging public verification configuration is valid.'
 
       - name: Prepare staging browser without privileged installation
         shell: bash
         run: bash ops/self-hosted-runner/prepare-staging-browser.sh
-
-      - name: Configure SSH
-        id: ssh
-        env:
-          STAGING_HOST: ${{ secrets.STAGING_SSH_HOST }}
-          STAGING_KEY: ${{ secrets.STAGING_SSH_PRIVATE_KEY }}
+      - name: Verify staging TLS identity
         shell: bash
         run: |
           set -euo pipefail
-          STAGING_SSH_DIR="$(mktemp -d "$RUNNER_TEMP/kmj-staging-deploy.XXXXXX")"
-          echo "STAGING_SSH_DIR=$STAGING_SSH_DIR" >> "$GITHUB_ENV"
-          install -m 700 -d "$STAGING_SSH_DIR"
-          printf '%s' "$STAGING_KEY" | sed 's/\\n/\n/g' | tr -d '\r' > "$STAGING_SSH_DIR/id_ed25519"
-          printf '\n' >> "$STAGING_SSH_DIR/id_ed25519"
-          chmod 600 "$STAGING_SSH_DIR/id_ed25519"
-          if ! ssh-keygen -y -f "$STAGING_SSH_DIR/id_ed25519" >/dev/null 2>&1; then
-            echo '::error title=Invalid staging SSH private key::STAGING_SSH_PRIVATE_KEY could not be parsed after newline normalization'
+          host=staging.kmjtechno.com
+          cert="$(mktemp)"
+          trap 'rm -f "$cert"' EXIT
+          if ! timeout 20 openssl s_client -connect "$host:443" -servername "$host" -showcerts </dev/null 2>/dev/null \
+              | openssl x509 -outform PEM >"$cert"; then
+            echo '::error title=Staging TLS unavailable::Unable to read the staging certificate'
             exit 1
           fi
-          for attempt in 1 2 3; do
-            if ssh-keyscan -T 10 -H "$STAGING_HOST" >> "$STAGING_SSH_DIR/known_hosts" 2>/dev/null; then
-              exit 0
-            fi
-            echo "SSH keyscan attempt $attempt failed; retrying..."
-            sleep $((attempt * 3))
-          done
-          echo '::error title=Staging SSH unavailable::Unable to read staging host key after 3 attempts'
-          exit 1
+          san="$(openssl x509 -in "$cert" -noout -ext subjectAltName 2>/dev/null || true)"
+          if ! grep -Fq "DNS:$host" <<<"$san"; then
+            subject="$(openssl x509 -in "$cert" -noout -subject 2>/dev/null || true)"
+            issuer="$(openssl x509 -in "$cert" -noout -issuer 2>/dev/null || true)"
+            echo "::error title=Staging TLS hostname mismatch::Certificate does not cover $host. $subject; $issuer"
+            echo 'Repair on the staging VPS by re-running /root/KMJ_SERVER_BOOTSTRAP.sh after confirming the CloudPanel staging site exists.'
+            exit 60
+          fi
+          echo 'Staging TLS certificate covers the canonical staging hostname.'
 
-      - name: Verify SSH connectivity
-        env:
-          STAGING_HOST: ${{ secrets.STAGING_SSH_HOST }}
-          STAGING_USER: ${{ secrets.STAGING_SSH_USER }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          for attempt in 1 2 3; do
-            if ssh -i "$STAGING_SSH_DIR/id_ed25519" -o IdentitiesOnly=yes -o UserKnownHostsFile="$STAGING_SSH_DIR/known_hosts" -o StrictHostKeyChecking=yes -o BatchMode=yes -o ConnectTimeout=15 "$STAGING_USER@$STAGING_HOST" 'echo KMJ_STAGING_SSH_OK' >/dev/null; then
-              echo 'Staging SSH connectivity verified.'
-              exit 0
-            fi
-            echo "SSH connection attempt $attempt failed; retrying..."
-            sleep $((attempt * 5))
-          done
-          echo '::error title=Staging SSH connection failed::Host is reachable by workflow but SSH authentication/connectivity did not succeed after 3 attempts'
-          exit 1
-
-      - name: Deploy approved commit
+      - name: Wait for VPS auto-deploy exact commit
         id: deploy
         env:
-          STAGING_HOST: ${{ secrets.STAGING_SSH_HOST }}
-          STAGING_USER: ${{ secrets.STAGING_SSH_USER }}
-          STAGING_PATH: ${{ vars.STAGING_APP_PATH }}
+          HEALTH_URL: ${{ vars.STAGING_HEALTHCHECK_URL }}
         shell: bash
         run: |
           set -euo pipefail
-          ssh -i "$STAGING_SSH_DIR/id_ed25519" -o IdentitiesOnly=yes -o UserKnownHostsFile="$STAGING_SSH_DIR/known_hosts" -o StrictHostKeyChecking=yes -o BatchMode=yes "$STAGING_USER@$STAGING_HOST" bash -s -- "$STAGING_PATH" "$DEPLOY_SHA" <<'REMOTE'
-          set -euo pipefail
-          STAGING_PATH="$1"
-          DEPLOY_SHA="$2"
-          timer_script="$HOME/bin/kmj-stage-deploy.sh"
-          if [ ! -r "$timer_script" ] \
-            || ! grep -Fq '.kmj-stage-deploy.lock' "$timer_script" \
-            || ! grep -Eq 'flock[[:space:]]+-n[[:space:]]+9' "$timer_script" \
-            || ! grep -Fq 'staging-approved' "$timer_script"; then
-            echo 'ERROR: Could not verify the existing staging timer and its shared writer lock.' >&2
-            exit 46
-          fi
-          echo 'Verified staging-approved timer and shared deployment lock.'
-          exec 9>"$HOME/.kmj-stage-deploy.lock"
-          echo 'Waiting for the staging deployment writer lock.'
-          flock -w 600 9
-          echo 'Acquired the staging deployment writer lock.'
-          cd "$STAGING_PATH"
-          git fetch --prune origin staging-approved
-          git checkout -B staging-approved origin/staging-approved
-          git reset --hard "$DEPLOY_SHA"
-          cd apps/platform
+          origin="${HEALTH_URL%/}"
+          headers="$(mktemp)"
+          trap 'rm -f "$headers"' EXIT
 
-          PHP_BIN=""
-          for candidate in php php8.5 php8.4 php8.3 php8.2; do
-            if command -v "$candidate" >/dev/null 2>&1 && "$candidate" -m 2>/dev/null | grep -qx 'pdo_pgsql'; then
-              PHP_BIN="$candidate"
-              break
-            fi
-          done
-          if [ -z "$PHP_BIN" ]; then
-            echo 'ERROR: No installed PHP CLI binary has pdo_pgsql enabled.' >&2
-            echo 'Checked: php php8.5 php8.4 php8.3 php8.2' >&2
-            exit 42
-          fi
-          echo "Using PHP runtime: $($PHP_BIN -r 'echo PHP_BINARY;')"
-
-          # Never boot Laravel while Composer removes dev-only packages.
-          # Uninstall hooks can otherwise regenerate a stale services manifest.
-          find bootstrap/cache -maxdepth 1 -type f -name '*.php' -delete
-          # Composer path repositories are copied (symlink=false). On a persistent
-          # staging vendor tree Composer can otherwise keep a stale local copy when
-          # package source changes without a root lock/version change.
-          rm -rf \
-            vendor/kmjtechno/domain-organizations \
-            vendor/kmjtechno/domain-catalog \
-            vendor/kmjtechno/domain-entitlements \
-            vendor/kmjtechno/domain-commerce
-          COMPOSER_PHP="$PHP_BIN" composer install --no-interaction --prefer-dist --no-progress --no-dev --optimize-autoloader --no-scripts
-          if ! "$PHP_BIN" -r "require 'vendor/autoload.php'; exit(class_exists('KMJ\\\\MainPlatform\\\\Organizations\\\\Services\\\\OrganizationCapabilityContext') ? 0 : 1);"; then
-            echo 'ERROR: required Organizations capability context is not autoloadable after Composer install.' >&2
-            exit 47
-          fi
-          find bootstrap/cache -maxdepth 1 -type f -name '*.php' -delete
-          "$PHP_BIN" artisan package:discover --ansi
-          "$PHP_BIN" artisan migrate --force
-          "$PHP_BIN" artisan kmj:catalog:sync
-          if [ -f package-lock.json ]; then
-            quarantine_node_modules() {
-              if [ -d node_modules ] || [ -L node_modules ]; then
-                stale_node_modules="node_modules.stale.$(date +%s).$$.$RANDOM"
-                mv node_modules "$stale_node_modules"
-                rm -rf "$stale_node_modules" >/dev/null 2>&1 || true
+          for attempt in $(seq 1 60); do
+            : > "$headers"
+            if curl --fail --silent --show-error --location --max-time 30               --dump-header "$headers" --output /dev/null "$origin/"; then
+              deployed_sha="$(
+                awk -F': *' 'tolower($1) == "x-kmj-deploy-sha" {gsub("\r", "", $2); value=$2} END {print value}' "$headers"
+              )"
+              if [ "$deployed_sha" = "$DEPLOY_SHA" ]; then
+                echo "actual_sha=$deployed_sha" >> "$GITHUB_OUTPUT"
+                echo "Staging auto-deploy verified exact commit: $deployed_sha"
+                exit 0
               fi
-            }
-            quarantine_node_modules
-            npm_ok=0
-            for npm_attempt in 1 2 3; do
-              if npm ci --no-audit --no-fund; then
-                npm_ok=1
-                break
+              echo "Attempt $attempt: staging reports ${deployed_sha:-no deployment header}; waiting for $DEPLOY_SHA"
+            else
+              curl_status=$?
+              if [ "$curl_status" -eq 60 ]; then
+                echo '::error title=Staging TLS hostname mismatch::TLS validation failed; fix the staging certificate/vhost before deployment verification can continue.'
+                exit 60
               fi
-              echo "npm ci attempt $npm_attempt failed; quarantining partial install and retrying..." >&2
-              quarantine_node_modules
-              sleep $((npm_attempt * 2))
-            done
-            if [ "$npm_ok" -ne 1 ]; then
-              echo 'ERROR: npm ci failed after 3 clean attempts.' >&2
-              exit 44
+              echo "Attempt $attempt: staging HTTP probe failed with curl status $curl_status; retrying."
             fi
-          else
-            npm install --no-audit --no-fund
-          fi
-          build_ok=0
-          for build_attempt in 1 2 3; do
-            if npm run build; then
-              build_ok=1
-              break
-            fi
-            echo "Frontend build attempt $build_attempt failed; retrying transient build failure..." >&2
-            sleep $((build_attempt * 3))
+            sleep 10
           done
-          if [ "$build_ok" -ne 1 ]; then
-            echo 'ERROR: frontend build failed after 3 attempts.' >&2
-            exit 45
-          fi
-          "$PHP_BIN" artisan optimize:clear
-          rm -f bootstrap/cache/packages.php bootstrap/cache/services.php
-          "$PHP_BIN" artisan package:discover --ansi
-          if grep -R -q 'Laravel\\Pail\\PailServiceProvider' bootstrap/cache 2>/dev/null; then
-            echo 'ERROR: stale Laravel Pail provider remained in bootstrap cache.' >&2
-            exit 43
-          fi
-          "$PHP_BIN" artisan optimize
-          "$PHP_BIN" artisan queue:restart || true
-          REMOTE
 
-      - name: Verify deployed commit
-        id: verify
-        env:
-          STAGING_HOST: ${{ secrets.STAGING_SSH_HOST }}
-          STAGING_USER: ${{ secrets.STAGING_SSH_USER }}
-          STAGING_PATH: ${{ vars.STAGING_APP_PATH }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          actual_raw="$(ssh -i "$STAGING_SSH_DIR/id_ed25519" -o IdentitiesOnly=yes -o UserKnownHostsFile="$STAGING_SSH_DIR/known_hosts" -o StrictHostKeyChecking=yes -o BatchMode=yes "$STAGING_USER@$STAGING_HOST" bash -s -- "$STAGING_PATH" <<'REMOTE'
-          set -euo pipefail
-          cd "$1"
-          git rev-parse HEAD
-          REMOTE
-          )"
-          actual="$(printf '%s\n' "$actual_raw" | grep -Eo '[0-9a-f]{40}' | tail -n 1)"
-          test -n "$actual"
-          test "$actual" = "$DEPLOY_SHA"
-          echo "actual_sha=$actual" >> "$GITHUB_OUTPUT"
-          echo "Staging VPS deployed commit: $actual"
+          echo "::error title=Staging deployment timeout::VPS auto-deploy did not expose approved commit $DEPLOY_SHA within the bounded verification window"
+          exit 1
 
       - name: Verify staging HTTP health
         id: health
@@ -260,11 +134,6 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          if [ -z "$HEALTH_URL" ]; then
-            echo 'No STAGING_HEALTHCHECK_URL configured; commit verification completed, HTTP visibility check skipped.'
-            echo 'result=not-configured' >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
           curl --fail --silent --show-error --location --retry 5 --retry-delay 5 --retry-all-errors --max-time 30 "$HEALTH_URL" >/dev/null
           echo 'result=pass' >> "$GITHUB_OUTPUT"
           echo "Staging health check PASS: $HEALTH_URL"
@@ -279,18 +148,27 @@ jobs:
           chrome="$KMJ_STAGING_CHROME"
           test -n "$chrome"
           root_dom="$($chrome --headless --no-sandbox --disable-gpu --virtual-time-budget=10000 --dump-dom "$HEALTH_URL" 2>/dev/null)"
-          grep -Fq 'KMJ TECHNO' <<< "$root_dom"
-          grep -Fq 'Explore all products' <<< "$root_dom"
+          assert_dom() {
+            local surface="$1"
+            local needle="$2"
+            local dom="$3"
+            if ! grep -Fq "$needle" <<< "$dom"; then
+              echo "::error title=Staging UI assertion failed::${surface} is missing expected text: ${needle}"
+              return 1
+            fi
+          }
+          assert_dom 'root' 'KMJ TECHNO' "$root_dom"
+          assert_dom 'root' 'Explore KMJ products' "$root_dom"
           products_dom="$($chrome --headless --no-sandbox --disable-gpu --virtual-time-budget=10000 --dump-dom 'https://staging.kmjtechno.com/products' 2>/dev/null)"
           calibration_dom="$($chrome --headless --no-sandbox --disable-gpu --virtual-time-budget=10000 --dump-dom 'https://staging.kmjtechno.com/products/kmj-calibration-pro' 2>/dev/null)"
-          grep -Fq 'KMJ Calibration Pro' <<< "$products_dom"
-          grep -Fq 'Products built to move' <<< "$products_dom"
-          grep -Fq 'View product' <<< "$products_dom"
-          grep -Fq 'KMJ Calibration Pro' <<< "$calibration_dom"
-          grep -Fq 'Interactive' <<< "$calibration_dom"
-          grep -Fq 'simulation' <<< "$calibration_dom"
+          assert_dom 'products' 'KMJ Calibration Pro' "$products_dom"
+          assert_dom 'products' 'Products built to move' "$products_dom"
+          assert_dom 'products' 'Explore product' "$products_dom"
+          assert_dom 'calibration product' 'KMJ Calibration Pro' "$calibration_dom"
+          assert_dom 'calibration product' 'Interactive' "$calibration_dom"
+          assert_dom 'calibration product' 'simulation' "$calibration_dom"
           echo 'result=pass' >> "$GITHUB_OUTPUT"
-          echo 'Native Main Platform root + world-class public product experience PASS.'
+          echo 'Native Main Platform root + public product experience PASS.'
 
       - name: Capture desktop and mobile staging QA
         id: browser_qa
@@ -314,28 +192,19 @@ jobs:
         env:
           HEALTH_URL: ${{ vars.STAGING_HEALTHCHECK_URL }}
           APPROVED_SHA: ${{ steps.approved.outputs.sha }}
-          DEPLOYED_SHA: ${{ steps.verify.outputs.actual_sha }}
+          DEPLOYED_SHA: ${{ steps.deploy.outputs.actual_sha }}
           HEALTH_RESULT: ${{ steps.health.outputs.result }}
           UI_RESULT: ${{ steps.ui.outputs.result }}
         run: |
           {
             echo '## KMJ staging deployment evidence'
             echo
-            echo "- approved commit: \`${APPROVED_SHA:-unresolved}\`"
-            echo "- deployed commit: \`${DEPLOYED_SHA:-not-verified}\`"
-            echo "- configuration: ${{ steps.config.conclusion }}"
-            echo "- deployment: ${{ steps.deploy.conclusion }}"
-            echo "- commit verification: ${{ steps.verify.conclusion }}"
+            printf -- '- approved commit: `%s`\n' "${APPROVED_SHA:-unresolved}"
+            printf -- '- deployed commit: `%s`\n' "${DEPLOYED_SHA:-not-verified}"
+            echo "- deployment authority: VPS systemd auto-deploy timer consuming staging-approved"
+            echo "- exact commit verification: ${{ steps.deploy.conclusion }}"
             echo "- HTTP health: ${HEALTH_RESULT:-not-run}"
             echo "- rendered UI: ${UI_RESULT:-not-run}"
             echo "- desktop/mobile QA: ${{ steps.browser_qa.conclusion }}"
             if [ -n "$HEALTH_URL" ]; then echo "- staging URL: $HEALTH_URL"; fi
           } >> "$GITHUB_STEP_SUMMARY"
-
-      - name: Remove temporary staging SSH credentials
-        if: always()
-        shell: bash
-        run: |
-          if [ -n "${STAGING_SSH_DIR:-}" ]; then
-            rm -rf -- "$STAGING_SSH_DIR"
-          fi
