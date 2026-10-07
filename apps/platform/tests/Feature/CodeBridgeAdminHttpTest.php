@@ -80,15 +80,17 @@ final class CodeBridgeAdminHttpTest extends TestCase
 
     public function test_owner_can_upgrade_codebridge_tier_idempotently_without_extending_expiry(): void
     {
-        [$license] = $this->fixture('tenant-a');
+        $tenant = (string) Str::uuid();
+        [$license] = $this->fixture($tenant);
         $this->ownerPlan();
         $owner = $this->platformOwner();
+        $this->ownTenant($owner, $tenant);
         $before = DB::table('kslp_licenses')->where('id', $license)->first();
         self::assertNotNull($before);
 
         $payload = [
             'license_id' => $license,
-            'tenant_id' => 'tenant-a',
+            'tenant_id' => $tenant,
             'confirm' => 'UPGRADE_CODEBRIDGE_OWNER',
         ];
         $session = ['auth.password_confirmed_at' => time()];
@@ -123,6 +125,53 @@ final class CodeBridgeAdminHttpTest extends TestCase
                 ->where('action', 'codebridge_owner_tier_upgraded')
                 ->count(),
         );
+    }
+
+    public function test_platform_owner_cannot_upgrade_another_organizations_license(): void
+    {
+        $tenant = (string) Str::uuid();
+        [$license] = $this->fixture($tenant);
+        $this->ownerPlan();
+        $owner = $this->platformOwner();
+
+        $this->actingAs($owner)->withSession(['auth.password_confirmed_at' => time()])
+            ->postJson('/operator/codebridge/licenses/owner-tier', [
+                'license_id' => $license,
+                'tenant_id' => $tenant,
+                'confirm' => 'UPGRADE_CODEBRIDGE_OWNER',
+            ])->assertForbidden();
+
+        self::assertSame('professional', DB::table('kslp_licenses')->where('id', $license)->value('plan'));
+        self::assertSame(0, DB::table('kslp_license_events')->where('license_id', $license)->count());
+    }
+
+    public function test_owner_plan_page_shows_only_licenses_of_owned_organizations(): void
+    {
+        $tenant = (string) Str::uuid();
+        $otherTenant = (string) Str::uuid();
+        [$license] = $this->fixture($tenant);
+        [$otherLicense] = $this->fixture($otherTenant);
+        $owner = $this->platformOwner();
+        $this->ownTenant($owner, $tenant);
+
+        $this->actingAs($owner)->withSession(['auth.password_confirmed_at' => time()])
+            ->get('/operator/codebridge/owner-plan')
+            ->assertOk()
+            ->assertInertia(fn (\\Inertia\\Testing\\AssertableInertia $page) => $page
+                ->component('operator-codebridge-owner')
+                ->has('licenses', 1)
+                ->where('licenses.0.id', $license)
+                ->missing('licenses.1')
+                ->etc());
+
+        self::assertNotSame($license, $otherLicense);
+    }
+
+    public function test_regular_user_cannot_open_owner_plan_page(): void
+    {
+        $user = User::factory()->create(['email_verified_at' => now()]);
+        $this->actingAs($user)->withSession(['auth.password_confirmed_at' => time()])
+            ->get('/operator/codebridge/owner-plan')->assertForbidden();
     }
 
     public function test_owner_can_enroll_rotate_and_revoke_with_no_store_responses(): void
@@ -189,6 +238,25 @@ final class CodeBridgeAdminHttpTest extends TestCase
             'trial_days' => 0,
             'features' => json_encode(['read' => true, 'write' => true, 'execute' => true]),
             'limits' => json_encode(['devices' => 64, 'concurrent_jobs' => 16]),
+            'created_at' => $now,
+            'updated_at' => $now,
+        ]);
+    }
+
+    private function ownTenant(User $owner, string $tenant): void
+    {
+        $now = now();
+        DB::table('organizations')->insert([
+            'id' => $tenant,
+            'name' => 'KMJ CodeBridge Internal Test',
+            'created_at' => $now,
+            'updated_at' => $now,
+        ]);
+        DB::table('organization_memberships')->insert([
+            'id' => (string) Str::uuid(),
+            'organization_id' => $tenant,
+            'user_id' => $owner->id,
+            'role' => 'owner',
             'created_at' => $now,
             'updated_at' => $now,
         ]);
