@@ -212,6 +212,17 @@ class GitHubControlTests(unittest.TestCase):
         writer = GitHubStatusWriter(REPO, None, None)
         self.assertEqual(writer.publish({"schema_version": 1}), "read_only")
 
+    def test_read_only_writeback_state_survives_duplicate_polls(self):
+        payload = manifest([{"id": "status-once", "operation": "status"}])
+        source = FakeSource(SHA1, payload)
+        status = self.root / "status.json"
+        bridge = GitHubControlBridge(
+            self.queue, source, status,
+            repository=REPO, ref=REF, allowed_projects={"kmj-main-platform"},
+        )
+        self.assertEqual(bridge.poll_once()["writeback"], "read_only")
+        self.assertEqual(bridge.poll_once()["writeback"], "read_only")
+
     def test_sanitized_status_never_exposes_result_path_or_arbitrary_error(self):
         self.queue.enqueue("t", "p", {"kind": "plan", "prompt": "secret prompt"})
         task = self.queue.claim("w", now=10)

@@ -345,6 +345,17 @@ class GitHubControlBridge:
         self.allowed_projects = set(allowed_projects)
         self.writer = writer or GitHubStatusWriter(repository, None, None)
 
+    def _last_writeback(self) -> str:
+        try:
+            value = json.loads(self.status_path.read_text(encoding="utf-8")).get("writeback")
+        except (FileNotFoundError, OSError, ValueError, AttributeError):
+            return "not_requested"
+        if value in {"not_requested", "read_only", "write_verified"} or (
+            isinstance(value, str) and value.startswith("STATUS_")
+        ):
+            return value
+        return "not_requested"
+
     def _persist_report(self, report: dict[str, Any]) -> None:
         atomic_json(self.status_path, {**report, "updated_utc_epoch": time.time()})
 
@@ -375,7 +386,7 @@ class GitHubControlBridge:
                 source_sha=source_sha,
                 connectivity="online",
                 stale=False,
-                writeback="not_requested",
+                writeback=self._last_writeback(),
             )
             if wants_status:
                 try:
