@@ -149,8 +149,14 @@ export default function OperatorCodeBridgeOwner({ licenses, limits }: Props) {
                                             </p>
                                         </div>
                                         {license.plan === 'owner' ? (
-                                            <span className="font-semibold text-sm">
-                                                Owner Plan Active
+                                            <span className="text-sm font-semibold">
+                                                {license.status === 'active' &&
+                                                license.revoked_at === null &&
+                                                new Date(
+                                                    license.expires_at,
+                                                ).getTime() > Date.now()
+                                                    ? 'Owner Plan Active'
+                                                    : 'Owner Plan Inactive'}
                                             </span>
                                         ) : (
                                             <button
