@@ -3,6 +3,7 @@
 use App\Models\User;
 use App\Services\Licensing\CodeBridge\CodeBridgeDeviceCredentialService;
 use App\Services\Licensing\CodeBridge\CodeBridgeDeviceEnrollmentService;
+use App\Services\Licensing\CodeBridge\CodeBridgeOwnerPlanService;
 use App\Services\PlatformOwnerAccess;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -71,4 +72,24 @@ Route::middleware(['auth', 'verified', 'password.confirm'])
                 return response()->json(['error' => $e->getMessage()], 409)->header('Cache-Control', 'no-store');
             }
         })->name('devices.revoke');
+
+        Route::post('owner-plan/activate', function (Request $request, PlatformOwnerAccess $access, CodeBridgeOwnerPlanService $service) {
+            $user = $request->user();
+            abort_unless($user instanceof User, 401);
+            $access->require($user);
+            $v = $request->validate([
+                'license_id' => ['required', 'uuid'],
+                'tenant_id' => ['required', 'string', 'regex:/\A[A-Za-z0-9_-]{1,64}\z/D'],
+                'reason' => ['required', 'string', 'min:10', 'max:500'],
+            ]);
+
+            try {
+                return response()->json($service->activate(
+                    $v['license_id'], $v['tenant_id'], (string) $user->id, $v['reason']
+                ))->header('Cache-Control', 'no-store');
+            } catch (DomainException $error) {
+                return response()->json(['error' => $error->getMessage()], 409)
+                    ->header('Cache-Control', 'no-store');
+            }
+        })->name('owner-plan.activate');
     });
