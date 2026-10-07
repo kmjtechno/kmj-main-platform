@@ -235,6 +235,48 @@ Route::get('docs', fn () => Inertia::render('docs'))->name('docs');
 Route::get('insights', fn () => Inertia::render('insights'))->name('insights');
 Route::get('support', fn () => Inertia::render('support'))->name('support');
 
+Route::prefix('{locale}')
+    ->where(['locale' => 'en|hi'])
+    ->group(function () {
+        Route::get('/', function (string $locale, PublicProductCatalog $products) {
+            $portfolio = $products->all();
+
+            return Inertia::render('welcome', [
+                'products' => $portfolio,
+                'portfolioCount' => count($portfolio),
+            ]);
+        })->name('localized.home');
+
+        Route::get('products', function (string $locale, PublicProductCatalog $products) {
+            return Inertia::render('products/index', [
+                'products' => $products->all(),
+            ]);
+        })->name('localized.products.index');
+
+        Route::get('products/{slug}', function (string $locale, string $slug, PublicProductCatalog $products) {
+            if (in_array($slug, KmjProductCatalog::LEGACY_CINEMA_VARIANT_SLUGS, true)) {
+                return redirect()->route('localized.products.show', [
+                    'locale' => $locale,
+                    'slug' => KmjProductCatalog::CINEMA_PLATFORM_SLUG,
+                ], 301);
+            }
+
+            $product = $products->find($slug);
+            abort_if($product === null, 404);
+
+            return Inertia::render('products/show', [
+                'product' => $product,
+            ]);
+        })->name('localized.products.show');
+
+        Route::get('company', fn () => Inertia::render('company'))->name('localized.company');
+        Route::get('capabilities', fn () => Inertia::render('capabilities'))->name('localized.capabilities');
+        Route::get('docs', fn () => Inertia::render('docs'))->name('localized.docs');
+        Route::get('insights', fn () => Inertia::render('insights'))->name('localized.insights');
+        Route::get('support', fn () => Inertia::render('support'))->name('localized.support');
+        Route::get('trust', fn () => Inertia::render('trust'))->name('localized.trust');
+    });
+
 Route::get('llms.txt', function (PublicProductCatalog $products) {
     $items = collect($products->all())
         ->map(function (array $product): string {
@@ -291,6 +333,24 @@ Route::get('sitemap.xml', function (PublicProductCatalog $products) {
     abort_unless((bool) config('app.public_indexing', false), 404);
 
     $origin = rtrim((string) config('app.url'), '/');
+    $localizedBasePaths = ['/', '/company', '/capabilities', '/products', '/trust', '/docs', '/insights', '/support'];
+    $localizedPaths = collect($localizedBasePaths)
+        ->flatMap(fn (string $path): array => [
+            '/en'.($path === '/' ? '/' : $path),
+            '/hi'.($path === '/' ? '/' : $path),
+        ])
+        ->all();
+    $productSlugs = collect($products->all())
+        ->pluck('slug')
+        ->filter(fn (mixed $slug): bool => is_string($slug) && $slug !== '')
+        ->values();
+    $localizedProductPaths = $productSlugs
+        ->flatMap(fn (string $slug): array => [
+            '/en/products/'.$slug,
+            '/hi/products/'.$slug,
+        ])
+        ->all();
+
     $paths = [
         '/',
         '/company',
@@ -309,11 +369,9 @@ Route::get('sitemap.xml', function (PublicProductCatalog $products) {
         '/products/kmj-codebridge/terms',
         '/products/kmj-codebridge/privacy',
         '/products/kmj-codebridge/support',
-        ...collect($products->all())
-            ->pluck('slug')
-            ->filter(fn (mixed $slug): bool => is_string($slug) && $slug !== '')
-            ->map(fn (string $slug): string => '/products/'.$slug)
-            ->all(),
+        ...$localizedPaths,
+        ...$productSlugs->map(fn (string $slug): string => '/products/'.$slug)->all(),
+        ...$localizedProductPaths,
     ];
 
     $urls = collect($paths)

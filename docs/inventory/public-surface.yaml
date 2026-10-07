@@ -125,9 +125,12 @@ localization:
   supported:
     - en
     - hi
-  current_switch_transport: query_parameter
-  parameter: lang
-  seo_path_locales_present: false
+  current_switch_transport: path_prefix
+  path_prefixes:
+    - /en
+    - /hi
+  legacy_query_parameter: lang
+  seo_path_locales_present: true
   resource_hreflang_alternates: true
 
 public_assets:
@@ -156,7 +159,7 @@ public_assets:
 
 observed_gaps:
   - code: PUBLIC_FULL_COPY_LOCALIZATION_INCOMPLETE
-    evidence: Shared header/footer, welcome, company, capabilities, trust, documentation, insights and support provide English/Hindi copy; product catalog/detail navigation and explanatory chrome are bilingual with localized SEO alternates. Canonical product data and legal-policy bodies still require reviewed translated copy before site-wide hreflang can be truthful.
+    evidence: Explicit /en/ and /hi/ public locale routes, path-based language switching, x-default and hreflang alternates are implemented for localized surfaces. Shared header/footer, welcome, company, capabilities, trust, documentation, insights, support and product catalog/detail chrome provide English/Hindi presentation. Canonical product data and legal-policy bodies still require reviewed translated copy before site-wide localization is complete.
 
 approved_facts:
   - Main Platform owns business, customer, product, licensing, release, and automation authority.

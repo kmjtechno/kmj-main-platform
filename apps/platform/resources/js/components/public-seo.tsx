@@ -23,10 +23,15 @@ export default function PublicSeo({
     structuredData,
     localized = false,
 }: PublicSeoProps) {
-    const { publicSite } = usePage().props;
+    const { publicSite, localization } = usePage().props;
     const origin = publicSite.base_url.replace(/\/$/, '');
     const normalizedPath = path === '/' ? '/' : '/' + path.replace(/^\/+/, '');
-    const canonical = origin + normalizedPath;
+    const defaultUrl = origin + normalizedPath;
+    const localePath = (locale: 'en' | 'hi') =>
+        origin + '/' + locale + (normalizedPath === '/' ? '/' : normalizedPath);
+    const canonical = localized
+        ? localePath(localization.locale === 'hi' ? 'hi' : 'en')
+        : defaultUrl;
     const socialImage = image.startsWith('http')
         ? image
         : origin + '/' + image.replace(/^\/+/, '');
@@ -57,17 +62,17 @@ export default function PublicSeo({
                     <link
                         rel="alternate"
                         hrefLang="en"
-                        href={canonical + '?lang=en'}
+                        href={localePath('en')}
                     />
                     <link
                         rel="alternate"
                         hrefLang="hi"
-                        href={canonical + '?lang=hi'}
+                        href={localePath('hi')}
                     />
                     <link
                         rel="alternate"
                         hrefLang="x-default"
-                        href={canonical}
+                        href={defaultUrl}
                     />
                 </>
             )}

@@ -40,9 +40,12 @@ class HandleInertiaRequests extends Middleware
         $user = $request->user();
         $locale = app()->getLocale();
         $switchLocale = $locale === 'hi' ? 'en' : 'hi';
+        $path = $request->getPathInfo();
+        $unprefixedPath = preg_replace('#^/(en|hi)(?=/|$)#', '', $path) ?: '/';
+        $switchPath = '/'.$switchLocale.($unprefixedPath === '/' ? '/' : $unprefixedPath);
         $switchQuery = $request->query();
-        $switchQuery['lang'] = $switchLocale;
-        $switchUrl = $request->getPathInfo().'?'.http_build_query($switchQuery);
+        unset($switchQuery['lang']);
+        $switchUrl = $switchPath.($switchQuery === [] ? '' : '?'.http_build_query($switchQuery));
 
         return [
             ...parent::share($request),

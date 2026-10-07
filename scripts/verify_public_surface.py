@@ -77,8 +77,17 @@ def main() -> None:
             raise AssertionError(f"public asset missing: {path.relative_to(ROOT)}")
 
     localization = inventory.get("localization") or {}
+    if localization.get("current_switch_transport") != "path_prefix":
+        raise AssertionError("public locale switch must use explicit path prefixes")
+    if localization.get("path_prefixes") != ["/en", "/hi"]:
+        raise AssertionError("public locale prefixes must be /en and /hi")
+    if localization.get("seo_path_locales_present") is not True:
+        raise AssertionError("SEO locale paths are not marked present")
     if localization.get("resource_hreflang_alternates") is not True:
         raise AssertionError("resource hreflang evidence is not enabled")
+    require(web, "Route::prefix('{locale}')", "localized public route group")
+    require(public_seo, "localePath('en')", "English locale URL")
+    require(public_seo, "localePath('hi')", "Hindi locale URL")
     require(public_seo, 'hrefLang="en"', "English hreflang")
     require(public_seo, 'hrefLang="hi"', "Hindi hreflang")
     require(public_seo, 'hrefLang="x-default"', "default hreflang")

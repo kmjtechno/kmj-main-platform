@@ -16,11 +16,15 @@ class SetPreferredLocale
 
     public function handle(Request $request, Closure $next): Response
     {
-        $requestedLocale = $request->query('lang');
+        $routeLocale = $request->route('locale');
+        $queryLocale = $request->query('lang');
         $cookieLocale = $request->cookie('kmj_locale');
+        $requestedLocale = is_string($routeLocale) && in_array($routeLocale, self::SUPPORTED_LOCALES, true)
+            ? $routeLocale
+            : (is_string($queryLocale) ? $queryLocale : null);
 
         $locale = $this->resolveLocale(
-            is_string($requestedLocale) ? $requestedLocale : null,
+            $requestedLocale,
             is_string($cookieLocale) ? $cookieLocale : null,
         );
 
