@@ -37,6 +37,9 @@ final class PublicAiDiscoveryTest extends TestCase
         );
         self::assertStringContainsString('KMJ Cinema Player | Media & Immersive Experience | Roadmap', $body);
         self::assertStringContainsString('KMJ Licensing Hub | Commerce & Licensing | Roadmap', $body);
+        self::assertStringContainsString('https://kmjtechno.com/docs', $body);
+        self::assertStringContainsString('https://kmjtechno.com/insights', $body);
+        self::assertStringContainsString('https://kmjtechno.com/support', $body);
         self::assertSame(11, substr_count($body, 'https://kmjtechno.com/products/'));
     }
 }

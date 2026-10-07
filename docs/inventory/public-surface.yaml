@@ -37,6 +37,18 @@ public_urls:
     access: public
     purpose: Public trust, governance and product-evidence policy
     source: apps/platform/routes/web.php
+  - path: /docs
+    access: public
+    purpose: Bilingual public documentation and authority map
+    source: apps/platform/routes/web.php
+  - path: /insights
+    access: public
+    purpose: Bilingual evidence-led engineering notes
+    source: apps/platform/routes/web.php
+  - path: /support
+    access: public
+    purpose: Bilingual account, licensing and security support guidance
+    source: apps/platform/routes/web.php
   - path: /legal
     access: public
     purpose: Legal center
@@ -132,14 +144,8 @@ observed_gaps:
     evidence: No dedicated assets/products/kmj-360-dome image exists in the current repository snapshot.
   - code: PRODUCT_VISUAL_CINEMA_PLAYER_MISSING
     evidence: No dedicated assets/products/kmj-cinema-player image exists in the current repository snapshot.
-  - code: PUBLIC_DOCS_ROUTE_MISSING
-    evidence: No public documentation route is declared in apps/platform/routes/web.php.
-  - code: PUBLIC_INSIGHTS_ROUTE_MISSING
-    evidence: No public insights or research route is declared in apps/platform/routes/web.php.
-  - code: PUBLIC_SUPPORT_ROUTE_MISSING
-    evidence: No public support route is declared in apps/platform/routes/web.php.
-  - code: SEO_LOCALE_PATHS_MISSING
-    evidence: Language switching uses ?lang=en|hi; locale-specific public URL paths are not present.
+  - code: PUBLIC_FULL_COPY_LOCALIZATION_INCOMPLETE
+    evidence: Documentation, insights and support now provide English/Hindi copy with hreflang query alternates; older public product, company, trust and legal surfaces still require full translated copy before site-wide hreflang can be truthful.
 
 approved_facts:
   - Main Platform owns business, customer, product, licensing, release, and automation authority.

@@ -45,6 +45,12 @@ export default function PublicSiteHeader() {
                     >
                         Trust
                     </Link>
+                    <Link
+                        href="/docs"
+                        className="rounded-lg px-4 py-2 text-sm font-semibold text-white/58 transition hover:bg-white/[0.05] hover:text-white"
+                    >
+                        Docs
+                    </Link>
                     <PublicLanguageSwitch className="rounded-lg px-4 py-2 text-sm font-semibold text-white/58 transition hover:bg-white/[0.05] hover:text-white" />
                 </nav>
 
@@ -121,6 +127,13 @@ export default function PublicSiteHeader() {
                             className="rounded-xl px-4 py-3 text-sm font-bold text-white/75 hover:bg-white/[0.05]"
                         >
                             Trust
+                        </Link>
+                        <Link
+                            href="/docs"
+                            onClick={() => setOpen(false)}
+                            className="rounded-xl px-4 py-3 text-sm font-bold text-white/75 hover:bg-white/[0.05]"
+                        >
+                            Docs
                         </Link>
                         <PublicLanguageSwitch className="rounded-xl px-4 py-3 text-sm font-bold text-white/75 hover:bg-white/[0.05]" />
                         <div className="mt-2 border-t border-white/[0.07] pt-4">

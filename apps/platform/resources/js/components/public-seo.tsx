@@ -9,6 +9,7 @@ type PublicSeoProps = {
     type?: 'website' | 'article';
     image?: string;
     structuredData?: StructuredData;
+    localized?: boolean;
 };
 
 export default function PublicSeo({
@@ -18,6 +19,7 @@ export default function PublicSeo({
     type = 'website',
     image = '/assets/brand/kmj-social-card.webp',
     structuredData,
+    localized = false,
 }: PublicSeoProps) {
     const { publicSite } = usePage().props;
     const origin = publicSite.base_url.replace(/\/$/, '');
@@ -46,6 +48,25 @@ export default function PublicSeo({
                 }
             />
             <link rel="canonical" href={canonical} />
+            {localized && (
+                <>
+                    <link
+                        rel="alternate"
+                        hrefLang="en"
+                        href={canonical + '?lang=en'}
+                    />
+                    <link
+                        rel="alternate"
+                        hrefLang="hi"
+                        href={canonical + '?lang=hi'}
+                    />
+                    <link
+                        rel="alternate"
+                        hrefLang="x-default"
+                        href={canonical}
+                    />
+                </>
+            )}
             <link
                 rel="alternate"
                 type="text/plain"

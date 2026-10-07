@@ -44,6 +44,24 @@ export default function PublicSiteFooter() {
                         >
                             Trust center
                         </Link>
+                        <Link
+                            href="/docs"
+                            className="text-sm font-semibold text-white/62 transition hover:text-white"
+                        >
+                            Documentation
+                        </Link>
+                        <Link
+                            href="/insights"
+                            className="text-sm font-semibold text-white/62 transition hover:text-white"
+                        >
+                            Insights
+                        </Link>
+                        <Link
+                            href="/support"
+                            className="text-sm font-semibold text-white/62 transition hover:text-white"
+                        >
+                            Support
+                        </Link>
                     </div>
                 </div>
 

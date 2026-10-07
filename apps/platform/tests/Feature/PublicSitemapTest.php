@@ -59,6 +59,18 @@ final class PublicSitemapTest extends TestCase
             $xml,
         );
         $this->assertStringContainsString(
+            '<loc>https://kmjtechno.example/docs</loc>',
+            $xml,
+        );
+        $this->assertStringContainsString(
+            '<loc>https://kmjtechno.example/insights</loc>',
+            $xml,
+        );
+        $this->assertStringContainsString(
+            '<loc>https://kmjtechno.example/support</loc>',
+            $xml,
+        );
+        $this->assertStringContainsString(
             '<loc>https://kmjtechno.example/legal</loc>',
             $xml,
         );
@@ -90,6 +102,6 @@ final class PublicSitemapTest extends TestCase
             '<loc>https://kmjtechno.example/products/kmj-calibration-pro</loc>',
             $xml,
         );
-        $this->assertSame(22, substr_count($xml, '<url>'));
+        $this->assertSame(25, substr_count($xml, '<url>'));
     }
 }
