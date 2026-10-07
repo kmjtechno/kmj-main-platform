@@ -156,7 +156,7 @@ public_assets:
 
 observed_gaps:
   - code: PUBLIC_FULL_COPY_LOCALIZATION_INCOMPLETE
-    evidence: Shared header/footer plus company, capabilities, trust, documentation, insights and support now provide English/Hindi copy with localized pages using truthful hreflang query alternates. Welcome, product catalog/detail and legal-policy bodies still require reviewed translated copy before site-wide hreflang can be truthful.
+    evidence: Shared header/footer plus company, capabilities, trust, documentation, insights and support provide English/Hindi copy; the product catalog chrome is also bilingual. Product catalog data, product-detail bodies, welcome content and legal-policy bodies still require reviewed translated copy before site-wide hreflang can be truthful.
 
 approved_facts:
   - Main Platform owns business, customer, product, licensing, release, and automation authority.
