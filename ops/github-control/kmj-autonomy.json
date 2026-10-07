@@ -4,23 +4,11 @@
   "ref": "feat/modelfabric-autonomy-20261007",
   "commands": [
     {
-      "id": "KMJ-GH-001-live-enqueue-v1",
-      "operation": "enqueue",
-      "task": {
-        "id": "KMJ-GH-001-live-proof-task-v1",
-        "project": "kmj-main-platform",
-        "kind": "plan",
-        "prompt": "Create a bounded verification plan for the KMJ GitHub control bridge. Do not execute commands or claim deployment. Include pause/resume, replay protection, confidentiality, connectivity-loss, and rollback checks.",
-        "data_classification": "confidential",
-        "max_attempts": 3
-      }
+      "id": "KMJ-GH-001-live-resume-v1",
+      "operation": "resume"
     },
     {
-      "id": "KMJ-GH-001-live-pause-v1",
-      "operation": "pause"
-    },
-    {
-      "id": "KMJ-GH-001-live-status-v1",
+      "id": "KMJ-GH-001-live-status-v2",
       "operation": "status"
     }
   ]
