@@ -151,8 +151,8 @@ public_assets:
     - assets/products/kmj-creative-studio.webp
     - assets/products/kmj-cloud-nexus.webp
     - assets/products/kmj-cinema-platform.webp
-    - assets/products/kmj-360-dome.webp
-    - assets/products/kmj-cinema-player.webp
+    - assets/products/kmj-360-dome.svg
+    - assets/products/kmj-cinema-player.svg
 
 observed_gaps:
   - code: PUBLIC_FULL_COPY_LOCALIZATION_INCOMPLETE
