@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "deployed_code_sha": "28b7eb078e358c6c371acd3792ed04b599dc39a4",
+  "deployed_code_sha": "a1a32db86b00add01795ec7b026aa0a436197fe5",
   "branch": "feat/modelfabric-autonomy-20261007",
   "automatic_product_completion": false,
   "tasks": [
@@ -120,18 +120,23 @@
       "title": "Connect curated product backlog and CodeBridge status to persistent workflows",
       "evidence": {
         "implementation_sha": "28b7eb078e358c6c371acd3792ed04b599dc39a4",
-        "runtime_release": "28b7eb078e35",
-        "tests": "196 Python regression + 3 schema acceptance PASS",
+        "runtime_release": "a1a32db86b00",
+        "authorization_hardening_sha": "7d85a89007e605d9ee5f75b6688d269d0a0c6e6f",
+        "tests": "197 Python regression + 3 schema acceptance PASS",
         "live_repository": "kmjtechno/kmj-main-platform",
         "live_codebridge_device": "main-platform-kmjtechnonetgmailcom",
         "live_codebridge_project": "kmj-main-platform",
         "live_codebridge_version": "0.2.3",
         "live_codebridge_connection": "connected",
+        "live_codebridge_authorized": true,
+        "live_effective_permissions": ["read", "write", "execute"],
+        "live_gate_readiness": {"fast": "not_configured", "platform": "blocked", "full": "blocked"},
+        "execution_ready": false,
         "status_stages": ["ready", "queued", "running", "artifact_ready", "candidate_tested", "release", "failed"],
         "product_complete": false,
-        "main_vps_status_export_timer": "active",
+        "status_transport_observed": "fresh sanitized main-vps-restricted-exporter snapshot",
         "google_backlog_path_unit": "active",
-        "cross_vps_refresh": "manual pinned SSH refresh; automated fetcher blocked by tool safety layer"
+        "cross_vps_refresh": "automatic fetcher remains blocked by tool safety layer; do not bypass"
       },
       "acceptance": [
         "Correct repo/project identity",
