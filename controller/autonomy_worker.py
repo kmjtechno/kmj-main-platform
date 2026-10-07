@@ -22,6 +22,22 @@ KINDS = {'plan', 'review', 'text', 'patch'}
 MAX_PROMPT_BYTES = 65536
 MAX_OUTPUT_BYTES = 100000
 
+# Only these static codes may enter logs, queue errors, or retry instructions.
+PATCH_VALIDATION_CODES = frozenset({
+    'PATCH_NOT_UNIFIED_DIFF', 'PATCH_TOO_LARGE', 'PATCH_HEADER_UNSUPPORTED',
+    'PATCH_PATH_HEADER_MISMATCH', 'PATCH_METADATA_UNSUPPORTED',
+    'PATCH_FILE_MODE_UNSUPPORTED', 'PATCH_FILE_COUNT_INVALID',
+    'UNSAFE_PATH', 'DENIED_PATH', 'PATH_NOT_ALLOWLISTED',
+    'INVALID_MODEL_OUTPUT', 'PATCH_VALIDATION_FAILED',
+})
+
+
+class RejectedPatchOutput(ValueError):
+    """A locally validated static failure code, never a provider exception."""
+    def __init__(self, code: str):
+        self.code = code if code in PATCH_VALIDATION_CODES else 'PATCH_VALIDATION_FAILED'
+        super().__init__(self.code)
+
 
 def private_json(path: Path, value: dict[str, Any]) -> None:
     """Atomic owner-only file, including temporary file before replacement."""
@@ -89,6 +105,19 @@ class AutonomyWorker:
             raise ValueError('INVALID_PROMPT')
         return kind, classification, prompt
 
+    def _reject_patch(self, task: dict, content: str, code: str) -> None:
+        rejection = RejectedPatchOutput(code)
+        raw = content.encode('utf-8')
+        name = 'rejected-' + hashlib.sha256((task['id'] + ':' + task['token']).encode()).hexdigest() + '.json'
+        private_json(self.artifacts / name, {
+            'stage': 'patch_rejected', 'validation_code': rejection.code,
+            'content': raw[:MAX_OUTPUT_BYTES].decode('utf-8', errors='ignore'),
+            'original_bytes': len(raw), 'truncated': len(raw) > MAX_OUTPUT_BYTES,
+            'created_utc_epoch': time.time(),
+            'product_complete': False, 'tests_executed': False, 'deployed': False,
+        })
+        raise rejection from None
+
     async def _generate(self, task: dict) -> dict:
         kind, classification, prompt = self._validate_payload(task['payload'])
         checkpoint = task.get('checkpoint') or {}
@@ -103,6 +132,14 @@ class AutonomyWorker:
         if kind == 'patch':
             instruction += (' Return ONLY a unified git diff. Allowed paths: docs/, apps/platform/, '
                             'crates/, contracts/. The diff will be saved for review, never executed.')
+            previous_code = task.get('error')
+            if previous_code in PATCH_VALIDATION_CODES:
+                instruction += (
+                    ' Previous patch validation failed with code ' + previous_code +
+                    '. Correct that error. Return a valid unified git diff beginning with '
+                    'diff --git, including matching file headers and valid hunk counts; '
+                    'no Markdown fences, JSON wrappers, or surrounding prose.'
+                )
         result = await asyncio.wait_for(self.router.complete(
             [{'role': 'system', 'content': instruction}, {'role': 'user', 'content': prompt}],
             route='coding', data_classification=classification,
@@ -110,11 +147,19 @@ class AutonomyWorker:
         choices = result.get('response', {}).get('choices', [])
         content = choices[0].get('message', {}).get('content') if choices else None
         if not isinstance(content, str) or not content.strip() or len(content.encode()) > MAX_OUTPUT_BYTES:
+            if kind == 'patch':
+                self._reject_patch(task, content if isinstance(content, str) else '', 'INVALID_MODEL_OUTPUT')
             raise ValueError('INVALID_MODEL_OUTPUT')
         paths = []
         if kind == 'patch':
             from controller.persistent_worker import validate_patch
-            paths = validate_patch(content)
+            try:
+                paths = validate_patch(content)
+            except ValueError as exc:
+                # Path-bearing errors are reduced to a known static prefix here,
+                # at the validator boundary, never for arbitrary exceptions.
+                code = str(exc).partition(':')[0]
+                self._reject_patch(task, content, code)
         artifact = {
             'task_id': task['id'], 'project': task['project'], 'kind': kind,
             'data_classification': classification, 'stage': 'artifact_ready',
@@ -164,7 +209,7 @@ class AutonomyWorker:
         except Exception as exc:
             self.failed_attempts += 1
             # Exception messages can contain URLs, request content or credentials.
-            error = type(exc).__name__
+            error = exc.code if isinstance(exc, RejectedPatchOutput) else type(exc).__name__
             try:
                 self.queue.fail(task['id'], task['token'], error,
                                 retry_delay=min(3600, 30 * 2 ** min(task['attempts'] - 1, 7)))

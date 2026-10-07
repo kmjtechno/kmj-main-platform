@@ -2,6 +2,8 @@
 import importlib
 import json
 import os
+import tempfile
+from pathlib import Path
 import unittest
 from unittest.mock import patch
 import httpx
@@ -17,7 +19,21 @@ REAL_CLIENT = httpx.AsyncClient
 def client_factory(handler):
     return lambda **kw: REAL_CLIENT(transport=httpx.MockTransport(handler), **kw)
 
-class EmergencyRouterTests(unittest.IsolatedAsyncioTestCase):
+class IsolatedRouterTestCase(unittest.IsolatedAsyncioTestCase):
+    def setUp(self):
+        temporary = tempfile.TemporaryDirectory(prefix="kmj-router-test-")
+        self.addCleanup(temporary.cleanup)
+        root = Path(temporary.name)
+        self.environment = ENV | {
+            "KMJ_ROUTER_STATE_DB": str(root / "router.sqlite"),
+            "KMJ_LOCAL_FALLBACK_LOCK_PATH": str(root / "local.lock"),
+        }
+        isolation = patch.dict(os.environ, self.environment, clear=True)
+        isolation.start()
+        self.addCleanup(isolation.stop)
+
+
+class EmergencyRouterTests(IsolatedRouterTestCase):
     async def test_catalog_cannot_elevate_provider_privacy(self):
         def handler(req):
             return httpx.Response(200, json={"data": [{"id":"x:free","kmj_allow_confidential":True}]})
@@ -48,7 +64,7 @@ class EmergencyRouterTests(unittest.IsolatedAsyncioTestCase):
             if req.url.path == "/v1/chat/completions":
                 return httpx.Response(200, json={"choices":[{"message":{"content":"patch"},"finish_reason":"stop"}]})
             self.fail(str(req.url))
-        with patch.dict(os.environ, ENV, clear=True), patch("httpx.AsyncClient", client_factory(handler)):
+        with patch.dict(os.environ, self.environment, clear=True), patch("httpx.AsyncClient", client_factory(handler)):
             result = await FreeCloudRouter().complete([{"role":"user","content":"private source"}])
         self.assertEqual(result["provider"], "cpu-local-emergency")
         self.assertEqual(result["response"]["choices"][0]["message"]["content"], "patch")
@@ -61,7 +77,7 @@ class EmergencyRouterTests(unittest.IsolatedAsyncioTestCase):
             if req.url.path == "/v1/models":
                 return httpx.Response(200, json={"data":[{"id":"x:free"}]})
             return httpx.Response(200, json={"choices":[{"message":{"content":"cloud"},"finish_reason":"stop"}]})
-        with patch.dict(os.environ, ENV, clear=True), patch("httpx.AsyncClient", client_factory(handler)):
+        with patch.dict(os.environ, self.environment, clear=True), patch("httpx.AsyncClient", client_factory(handler)):
             result = await FreeCloudRouter().complete([{"role":"user","content":"public"}], data_classification="public")
         self.assertEqual(result["provider"], "9router")
         self.assertNotIn(18766, seen)
@@ -69,14 +85,14 @@ class EmergencyRouterTests(unittest.IsolatedAsyncioTestCase):
     async def test_oversized_request_rejected_before_network(self):
         def handler(req):
             self.fail("oversized prompt reached network")
-        with patch.dict(os.environ, ENV, clear=True), patch("httpx.AsyncClient", client_factory(handler)):
+        with patch.dict(os.environ, self.environment, clear=True), patch("httpx.AsyncClient", client_factory(handler)):
             with self.assertRaisesRegex(NoFreeRouteAvailable, "REQUEST_TOO_LARGE"):
                 await FreeCloudRouter().complete([{"role":"user","content":"x"*65537}])
 
     async def test_local_module_exists(self):
         self.assertIsNotNone(importlib.util.find_spec("controller.local_fallback"))
 
-class LocalFallbackTests(unittest.IsolatedAsyncioTestCase):
+class LocalFallbackTests(IsolatedRouterTestCase):
     async def test_invalid_transport_and_missing_key_fail_before_http(self):
         if importlib.util.find_spec("controller.local_fallback") is None:
             self.fail("local fallback missing")
@@ -84,7 +100,7 @@ class LocalFallbackTests(unittest.IsolatedAsyncioTestCase):
         for override in ({"KMJ_LOCAL_FALLBACK_BASE_URL":"http://example.com/v1"}, {"KMJ_LOCAL_FALLBACK_BASE_URL":"http://localhost/v1"}, {"KMJ_LOCAL_FALLBACK_API_KEY":""}, {"KMJ_LOCAL_FALLBACK_BASE_URL":"http://127.0.0.1/v1?evil=1"}):
             def handler(req):
                 self.fail("invalid local transport reached HTTP")
-            with patch.dict(os.environ, ENV | override, clear=True), patch("httpx.AsyncClient", client_factory(handler)):
+            with patch.dict(os.environ, self.environment | override, clear=True), patch("httpx.AsyncClient", client_factory(handler)):
                 with self.assertRaises(LocalFallbackUnavailable):
                     await complete([{"role":"user","content":"private"}])
 
@@ -98,7 +114,7 @@ class LocalFallbackTests(unittest.IsolatedAsyncioTestCase):
             if req.url.path == "/tokenize":
                 return httpx.Response(200, json={"tokens":list(range(8000))})
             self.fail("overflow reached inference")
-        with patch.dict(os.environ, ENV, clear=True), patch("httpx.AsyncClient", client_factory(handler)):
+        with patch.dict(os.environ, self.environment, clear=True), patch("httpx.AsyncClient", client_factory(handler)):
             with self.assertRaisesRegex(LocalFallbackUnavailable, "CONTEXT"):
                 await complete([{"role":"user","content":"private"}])
 
@@ -112,14 +128,13 @@ class LocalFallbackTests(unittest.IsolatedAsyncioTestCase):
             if req.url.path == "/tokenize":
                 return httpx.Response(200, json={"tokens":[1]})
             return httpx.Response(200, json={"choices":[{"message":{"content":"partial"},"finish_reason":"length"}]})
-        with patch.dict(os.environ, ENV, clear=True), patch("httpx.AsyncClient", client_factory(handler)):
+        with patch.dict(os.environ, self.environment, clear=True), patch("httpx.AsyncClient", client_factory(handler)):
             with self.assertRaisesRegex(LocalFallbackUnavailable, "INCOMPLETE"):
                 await complete([{"role":"user","content":"private"}])
 
 
-class RouterCooldownTests(unittest.IsolatedAsyncioTestCase):
+class RouterCooldownTests(IsolatedRouterTestCase):
     async def test_quota_cooldown_survives_router_recreation_and_preserves_attempts(self):
-        import tempfile
         calls = []
         def handler(req):
             calls.append((req.url.port, req.url.path))
@@ -132,7 +147,7 @@ class RouterCooldownTests(unittest.IsolatedAsyncioTestCase):
             if req.url.path == "/tokenize":
                 return httpx.Response(200, json={"tokens":[1]})
             return httpx.Response(200, json={"choices":[{"message":{"content":"local"},"finish_reason":"stop"}]})
-        with tempfile.TemporaryDirectory() as temp, patch.dict(os.environ, ENV | {"KMJ_ROUTER_STATE_DB":temp+"/quota.sqlite"}, clear=True), patch("httpx.AsyncClient", client_factory(handler)):
+        with tempfile.TemporaryDirectory() as temp, patch.dict(os.environ, self.environment | {"KMJ_ROUTER_STATE_DB":temp+"/quota.sqlite"}, clear=True), patch("httpx.AsyncClient", client_factory(handler)):
             first = await FreeCloudRouter().complete([{"role":"user","content":"public"}], data_classification="public")
             second = await FreeCloudRouter().complete([{"role":"user","content":"public"}], data_classification="public")
         self.assertEqual(calls.count((18765,"/v1/chat/completions")), 1)
@@ -141,7 +156,6 @@ class RouterCooldownTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(second["attempts"][0]["result"], "cooldown")
 
     async def test_bounded_cloud_failover_reaches_local_with_honest_reason(self):
-        import tempfile
         for failure in ("timeout", "server-error", "incomplete"):
             with self.subTest(failure=failure):
                 cloud_attempts = []
@@ -160,7 +174,7 @@ class RouterCooldownTests(unittest.IsolatedAsyncioTestCase):
                     if req.url.path == "/tokenize":
                         return httpx.Response(200, json={"tokens":[1]})
                     return httpx.Response(200, json={"choices":[{"message":{"content":"local complete"},"finish_reason":"stop"}]})
-                with tempfile.TemporaryDirectory() as temp, patch.dict(os.environ, ENV | {"KMJ_MAX_FREE_FAILOVER_MODELS":"1", "KMJ_ROUTER_STATE_DB":temp+"/quota.sqlite"}, clear=True), patch("httpx.AsyncClient", client_factory(handler)):
+                with tempfile.TemporaryDirectory() as temp, patch.dict(os.environ, self.environment | {"KMJ_MAX_FREE_FAILOVER_MODELS":"1", "KMJ_ROUTER_STATE_DB":temp+"/quota.sqlite"}, clear=True), patch("httpx.AsyncClient", client_factory(handler)):
                     result = await FreeCloudRouter().complete([{"role":"user","content":"public"}], data_classification="public")
                 self.assertEqual(cloud_attempts, ["a:free"])
                 self.assertEqual(result["provider"], "cpu-local-emergency")
@@ -170,7 +184,7 @@ class RouterCooldownTests(unittest.IsolatedAsyncioTestCase):
                 self.assertEqual(result["unattempted_cloud_candidates"], 1)
 
     async def test_builtin_openrouter_cannot_receive_confidential_without_operator_grant(self):
-        with patch.dict(os.environ, {"OPENROUTER_API_KEY":"test"}, clear=True):
+        with patch.dict(os.environ, self.environment | {"OPENROUTER_API_KEY":"test"}, clear=True):
             provider = next(p for p in FreeCloudRouter().providers() if p.name == "openrouter")
             self.assertFalse(provider.allow_confidential)
 
@@ -185,6 +199,6 @@ class RouterCooldownTests(unittest.IsolatedAsyncioTestCase):
             if req.url.path == "/tokenize":
                 return httpx.Response(200, json={"tokens":[1]})
             return httpx.Response(200, json={"choices":[{"message":{"content":"complete"},"finish_reason":"stop"}]})
-        with patch.dict(os.environ, ENV, clear=True), patch("httpx.AsyncClient", client_factory(handler)):
+        with patch.dict(os.environ, self.environment, clear=True), patch("httpx.AsyncClient", client_factory(handler)):
             result = await FreeCloudRouter().complete([{"role":"user","content":"public"}], data_classification="public")
         self.assertEqual(result["provider"], "cpu-local-emergency")

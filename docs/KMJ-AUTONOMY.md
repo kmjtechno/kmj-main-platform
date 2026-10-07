@@ -55,3 +55,18 @@ A user systemd service with restart policy and enabled user lingering is require
 Run `python -m unittest tests.test_task_queue tests.test_autonomy_worker` for durable claims and worker behavior. Worker tests verify two-project parallelism, one-project serialization, timeouts, sanitized errors, invalid tasks/patches, lease renewal, graceful shutdown and checkpoint reuse.
 
 Still separate from this worker: isolated patch application, meaningful project-specific tests, independent review gates, pull requests, release promotion, rollout and rollback. Do not point older destructive checkout/reset/clean workflows at a dirty checkout. Do not interpret these artifact tasks as end-to-end autonomous project completion.
+
+
+## Operational deployment and bounded candidate validation
+
+The persistent service template is deploy/kmj-autonomy-worker.service. Replace @RUNTIME@ with an exact commit archive; never run this service from a changing developer checkout. Set KMJ_OPENCODE_FREE_ENABLED=false until the legacy blocking client supports cancellation. Both credentials files and persistent state must be private. The CPU fallback service is separately enabled; a live daemon is not proof of successful inference.
+
+Router state uses KMJ_ROUTER_STATE_DB outside the runtime. A model returning404 is excluded for15minutes, timeout/incomplete responses for60seconds; other models on that provider remain usable. A valid successful route gets a one-hour preference only after current cost and confidentiality eligibility checks. Cloud request budget exhaustion can invoke CPU fallback while reporting that some catalog models remain untried. This is bounded latency, not proof that every model failed.
+
+Rejected patch artifacts are retained privately with bounded output and a static validation code. Logs and retry feedback never include rejected source or variable paths. Invalid patches still fail validation; diagnostic retention does not grant permission to apply them.
+
+controller.patch_sandbox.execute_candidate accepts only direct contracts/*.json patches. It creates a detached worktree from a pinned committed HEAD, applies the diff without resetting the source checkout, rejects duplicate JSON keys/nonfinite constants, and runs an operator-owned external acceptance suite inside Bubblewrap. Candidate and tests are read-only in the sandbox; home, credentials, repository metadata and network are absent. A passing report is json_candidate_tested, with baseSHA/inputdiff/finalcontent hashes. Empty test suites fail. Original dirty edits are neither copied nor reset. No merge, push or deployment occurs.
+
+General model-written Python/JavaScript or arbitrary executable changes are deliberately outside this candidate validator. Running untrusted code inside the same interpreter as assertions permits fabricated success, even if tests are read-only. A general executor needs a trusted external assertion protocol and project-specific acceptance evidence before it can be enabled. This module is a callable validation stage, not an automatic consumer of every patch artifact.
+
+Operator queue CLI: python -m scripts.kmj_autonomy_queue --db /private/state/queue.sqlite status; enqueue accepts --id, --project, --kind, --prompt-file and optional --classification public. Confidential is default. Inspect durable task results for completed artifacts; exhausted engineering failures require diagnosis, while provider outages/timeouts wait automatically.

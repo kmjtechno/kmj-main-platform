@@ -363,9 +363,12 @@ class FreeCloudRouter:
                 )
             )
 
+        health = self._model_health() if candidates else {}
+        now = time.time()
         return sorted(
             candidates,
             key=lambda candidate: (
+                -self._recent_success(candidate, health, now),
                 -candidate.score,
                 candidate.provider,
                 candidate.model_id,
@@ -403,7 +406,48 @@ class FreeCloudRouter:
         except (OSError, sqlite3.Error) as exc:
             raise NoFreeRouteAvailable("ROUTER_STATE_UNAVAILABLE") from exc
 
+    @staticmethod
+    def _model_key(candidate: RouteCandidate) -> str:
+        # Hash the full identity so URL credentials/query data cannot enter state.
+        identity = [candidate.provider, candidate.base_url.rstrip("/"), candidate.model_id]
+        return hashlib.sha256(json.dumps(identity, separators=(",", ":")).encode()).hexdigest()
+
+    def _model_health(self, candidate=None, *, cooldown_seconds=None, succeeded=False):
+        """Persist only hashed route identity and availability timestamps."""
+        try:
+            self.state_path.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
+            with closing(sqlite3.connect(self.state_path, timeout=2)) as db, db:
+                os.chmod(self.state_path, 0o600)
+                db.execute("""CREATE TABLE IF NOT EXISTS model_health (
+                    route TEXT PRIMARY KEY, cooldown_until REAL NOT NULL,
+                    last_success REAL NOT NULL)""")
+                if candidate is not None:
+                    key = self._model_key(candidate)
+                    now = time.time()
+                    if succeeded:
+                        db.execute("""INSERT INTO model_health VALUES (?,0,?)
+                            ON CONFLICT(route) DO UPDATE SET cooldown_until=0,
+                            last_success=excluded.last_success""", (key, now))
+                    elif cooldown_seconds is not None:
+                        db.execute("""INSERT INTO model_health VALUES (?,?,0)
+                            ON CONFLICT(route) DO UPDATE SET
+                            cooldown_until=MAX(cooldown_until,excluded.cooldown_until)""",
+                            (key, now + cooldown_seconds))
+                return {row[0]: (row[1], row[2]) for row in
+                        db.execute("SELECT route,cooldown_until,last_success FROM model_health")}
+        except (OSError, sqlite3.Error) as exc:
+            raise NoFreeRouteAvailable("ROUTER_STATE_UNAVAILABLE") from exc
+
+    def _recent_success(self, candidate, health, now):
+        until, success = health.get(self._model_key(candidate), (0, 0))
+        return success if until <= now and 0 < success <= now < success + 3600 else 0
+
     def _record_cooldown(self, candidate: RouteCandidate, exc: Exception) -> None:
+        if isinstance(exc, httpx.HTTPStatusError) and exc.response.status_code == 404:
+            self._model_health(candidate, cooldown_seconds=900)
+        elif isinstance(exc, httpx.ReadTimeout) or (
+                isinstance(exc, RuntimeError) and str(exc) == "INCOMPLETE_COMPLETION"):
+            self._model_health(candidate, cooldown_seconds=60)
         if isinstance(exc, httpx.HTTPStatusError) and exc.response.status_code in {401, 403, 429, 503}:
             delay = 300.0 if exc.response.status_code in {401, 403} else 60.0
             retry = exc.response.headers.get("Retry-After", "")
@@ -454,7 +498,9 @@ class FreeCloudRouter:
         attempted = 0
         async with httpx.AsyncClient(timeout=self.timeout, trust_env=False, follow_redirects=False) as client:
             for index, candidate in enumerate(ordered):
-                if self._cooldown(candidate):
+                health = self._model_health()
+                model_until = health.get(self._model_key(candidate), (0, 0))[0]
+                if self._cooldown(candidate) or model_until > time.time():
                     attempts.append({"provider":candidate.provider, "model":candidate.model_id, "result":"cooldown"})
                     continue
                 if attempted >= self.max_failover_models:
@@ -500,6 +546,7 @@ class FreeCloudRouter:
                             or not isinstance(choices[0].get("message", {}).get("content"), str)
                             or not choices[0]["message"]["content"].strip()):
                         raise RuntimeError("INCOMPLETE_COMPLETION")
+                    self._model_health(candidate, succeeded=True)
                     return {
                         "model": candidate.model_id,
                         "provider": candidate.provider,
