@@ -6,10 +6,10 @@ Updated 2026-10-07. Owner: Narendra Singh Kushwah / KMJ TECHNO. Reply Hindi or E
 
 Repository: https://github.com/kmjtechno/kmj-main-platform
 Branch: feat/modelfabric-autonomy-20261007 (pushed, NOT merged into main).
-Deployed worker/control code SHA: 0084f95037078188a76a4f54e780d3da51b5639f.
+Deployed cloud-only worker/backlog code SHA: 3a4627f801651e2d6c78ab627b8acc1e2129e792. GitHub control runtime remains d92863adbc2a3a83ef482bd8ee839d6d94f5a64f.
 Later branch commits may be control-manifest or documentation-only; compare code before redeploying.
 Google source worktree: /home/info/.kmj-worktrees/modelfabric-autonomy-20261007.
-Live worker/control runtime: /home/info/.local/lib/kmj-autonomy/releases/0084f9503707. Backlog coordinator runtime: /home/info/.local/lib/kmj-autonomy/releases/2f020c1545ee.
+Live worker, JSON workflow template and backlog coordinator runtime: /home/info/.local/lib/kmj-autonomy/releases/3a4627f80165. GitHub control runtime: /home/info/.local/lib/kmj-autonomy/releases/d92863adbc2a.
 Python: /home/info/.kmj-python313/bin/python3.
 Original /home/info/work/kmj-main-platform has pre-existing dirty apps/platform/resources/js/app.tsx; preserve it. Never reset/clean live or dirty checkouts.
 
@@ -25,12 +25,12 @@ Original /home/info/work/kmj-main-platform has pre-existing dirty apps/platform/
 
 ## Verified results and exact failures
 
-197 Python tests PASS; separate3 acceptance tests PASS for committed contracts/kmj-autonomy-task.schema.json. Independent reviews completed. Router fixtures now isolate SQLite and lock paths;29router tests repeated3times without pollution.
+195 Python tests PASS; separate3 acceptance tests PASS for committed contracts/kmj-autonomy-task.schema.json after the cloud-only policy correction. Independent reviews completed. Router fixtures now isolate SQLite and lock paths;29router tests repeated3times without pollution.
 Historical local-CPU inference occurred before the cloud-only policy correction and is not valid current routing evidence. Public/9router cloud inference and synthetic generated-checkpoint recovery were separately observed; the latter was not a full VPS reboot test. Any prior candidate that used local generation must not be used to justify local inference or a product-complete claim.
 IMPORTANT: fully automatic live workflow KMJ-schema-autonomous-proof FAILED after3iterations. It ran and repaired automatically, but models kept omitting properties.payload.properties.prompt.description and incorrectly adding max_attempts/data_classification to payload.required or nesting max_attempts inside payload. Do not hide this or claim whole-project autonomy is complete.
 Live workflow state: /home/info/.local/state/kmj-autonomy/workflows/KMJ-schema-autonomous-proof/state.json (history, candidates, failures, report).
 Service kmj-json-contract@KMJ-schema-autonomous-proof.service is inactive/dead after bounded terminal failure; that is expected. The durable queue remains authoritative; local CPU inference is not an allowed recovery route.
-Queue at final KMJ-GH-001 health check:10completed tasks,1failed task,0running; control paused=false. Completed artifacts are not completed products.
+Current P5 public-review evidence is split deliberately: task `KMJ-PLATFORM-P5-PUBLIC-EXPERIENCE-REVIEW-001` is preserved as historical local-CPU output and is not credited; replacement `...-002` is queued cloud-only with `NO_MODEL_AVAILABLE`, attempts=0. Completed artifacts are not completed products.
 
 ## Safe first commands (Google info account)
 
@@ -139,3 +139,10 @@ The hardened immutable runtime is `~/.local/lib/kmj-autonomy/releases/a1a32db86b
 ### AUTO-005 coordinator-loop follow-up
 
 The automatic Main-VPS to Google restricted status push is live. A queue.sqlite PathChanged trigger introduced a self-trigger/start-limit loop because coordinator queue reads use the durable SQLite transaction layer. Commit `2f020c1545ee66c1755494900d81bce8d95bcba3` removes the queue-file path trigger and adds a 60-second coordinator timer instead. Only the backlog coordinator units were switched to release `2f020c1545ee`; the running autonomy worker was not restarted. Both backlog path and timer are active after reset-failed. This preserves periodic task-stage refresh without killing active work.
+
+
+## 2026-10-07 cloud-only policy correction
+
+A live P5 review exposed that the earlier router could fall back to provider `cpu-local-emergency` / model `kmj-emergency-coder`. That behavior conflicted with the owner's locked cloud-only ModelFabric requirement and is no longer credited. Commit `137a215f5b3ed20abb7d9c935789cb01a9cd903b` changes routing policy to `generative_ai=cloud_only`, `local_llm=prohibited`, removes `controller/local_fallback.py`, removes the worker's local-inference service/env dependency, and makes no-route behavior fail closed to cloud-only defer/retry. Commit `3a4627f801651e2d6c78ab627b8acc1e2129e792` additionally rejects the known legacy local-provider checkpoint so a restarted worker cannot publish it as fresh evidence.
+
+Exact-head gates after both changes: 195 Python regression tests PASS, 3 schema acceptance tests PASS and diff check PASS. Runtime release `~/.local/lib/kmj-autonomy/releases/3a4627f80165` is live for the worker, JSON workflow template and backlog coordinator. `kmj-model-fabric-cpu.service` is inactive and persistently masked. The old P5 task `...-001` remains preserved as invalid historical local-generation evidence; replacement `...-002` is cloud-only and currently deferred as `NO_MODEL_AVAILABLE` with attempts=0. No `127.0.0.1:18766` transport appeared after the cloud-only worker start. Product completion remains false.

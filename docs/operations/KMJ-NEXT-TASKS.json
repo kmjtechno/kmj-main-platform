@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "deployed_code_sha": "0084f95037078188a76a4f54e780d3da51b5639f",
+  "deployed_code_sha": "3a4627f801651e2d6c78ab627b8acc1e2129e792",
   "branch": "feat/modelfabric-autonomy-20261007",
   "automatic_product_completion": false,
   "tasks": [
@@ -129,10 +129,26 @@
         "live_codebridge_version": "0.2.3",
         "live_codebridge_connection": "connected",
         "live_codebridge_authorized": true,
-        "live_effective_permissions": ["read", "write", "execute"],
-        "live_gate_readiness": {"fast": "satisfied", "platform": "blocked", "full": "blocked"},
+        "live_effective_permissions": [
+          "read",
+          "write",
+          "execute"
+        ],
+        "live_gate_readiness": {
+          "fast": "satisfied",
+          "platform": "blocked",
+          "full": "blocked"
+        },
         "execution_ready": false,
-        "status_stages": ["ready", "queued", "running", "artifact_ready", "candidate_tested", "release", "failed"],
+        "status_stages": [
+          "ready",
+          "queued",
+          "running",
+          "artifact_ready",
+          "candidate_tested",
+          "release",
+          "failed"
+        ],
         "product_complete": false,
         "status_transport_observed": "fresh sanitized main-vps-restricted-exporter snapshot",
         "google_backlog_path_unit": "active",
@@ -162,15 +178,45 @@
         "forced_ingest_command": true,
         "broad_github_write_credential": false,
         "stale_status_fail_closed": true,
-        "worker_control_runtime": "0084f9503707",
-        "backlog_coordinator_runtime": "2f020c1545ee",
-        "queue_watch_loop_fix_sha": "2f020c1545ee66c1755494900d81bce8d95bcba3"
+        "backlog_coordinator_runtime": "3a4627f80165",
+        "queue_watch_loop_fix_sha": "2f020c1545ee66c1755494900d81bce8d95bcba3",
+        "github_control_runtime": "d92863adbc2a",
+        "worker_runtime": "3a4627f80165"
       },
       "acceptance": [
         "Pinned destination host key and dedicated restricted key",
         "No general remote shell, forwarding, secrets or broad GitHub write credential",
         "Fresh status reaches Google autonomy state automatically",
         "Stale or failed refresh blocks new backlog admission"
+      ]
+    },
+    {
+      "id": "KMJ-AUTO-006",
+      "priority": 6,
+      "state": "completed",
+      "depends_on": [
+        "KMJ-AUTO-005"
+      ],
+      "title": "Enforce locked cloud-only ModelFabric routing and reject legacy local checkpoints",
+      "evidence": {
+        "cloud_only_sha": "137a215f5b3ed20abb7d9c935789cb01a9cd903b",
+        "checkpoint_hardening_sha": "3a4627f801651e2d6c78ab627b8acc1e2129e792",
+        "runtime_release": "3a4627f80165",
+        "tests": "195 Python regression + 3 schema acceptance PASS",
+        "local_llm_policy": "prohibited",
+        "local_fallback_module_removed": true,
+        "local_cpu_service": "inactive_masked",
+        "legacy_local_artifact": "KMJ-PLATFORM-P5-PUBLIC-EXPERIENCE-REVIEW-001 preserved but not credited",
+        "cloud_only_replacement": "KMJ-PLATFORM-P5-PUBLIC-EXPERIENCE-REVIEW-002 queued with NO_MODEL_AVAILABLE and attempts=0",
+        "local_transport_after_cloud_only_start": false,
+        "product_complete": false
+      },
+      "acceptance": [
+        "No local LLM inference path remains in ModelFabric routing",
+        "Legacy local checkpoint cannot be reused as current evidence",
+        "No-route defers instead of executing locally",
+        "CPU inference service is inactive and persistently masked",
+        "Exact-head regression and schema acceptance gates remain green"
       ]
     }
   ],
