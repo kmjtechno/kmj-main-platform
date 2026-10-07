@@ -6,10 +6,10 @@ Updated 2026-10-07. Owner: Narendra Singh Kushwah / KMJ TECHNO. Reply Hindi or E
 
 Repository: https://github.com/kmjtechno/kmj-main-platform
 Branch: feat/modelfabric-autonomy-20261007 (pushed, NOT merged into main).
-Deployed code SHA: 3a323068d7a50c1bc8ab337671549262ed33961b.
+Deployed code SHA: b1d316830aab1f635c103bff00b5e9bf572126db.
 Later branch commits may be control-manifest or documentation-only; compare code before redeploying.
 Google source worktree: /home/info/.kmj-worktrees/modelfabric-autonomy-20261007.
-Live immutable runtime: /home/info/.local/lib/kmj-autonomy/releases/3a323068d7a5.
+Live immutable runtime: /home/info/.local/lib/kmj-autonomy/releases/b1d316830aab.
 Python: /home/info/.kmj-python313/bin/python3.
 Original /home/info/work/kmj-main-platform has pre-existing dirty apps/platform/resources/js/app.tsx; preserve it. Never reset/clean live or dirty checkouts.
 
@@ -20,12 +20,12 @@ Original /home/info/work/kmj-main-platform has pre-existing dirty apps/platform/
 - Strict-zero cloud routing with operator-controlled confidentiality. Built-in public providers cannot grant themselves private-code access. CPU fallback is authenticated127.0.0.1:18766, one inference slot, Qwen2.5-Coder1.5B Q4. No paid fallback. Free availability and small-model quality remain finite.
 - Stateful provider/model cooldown, recent HTTP-success preference, bounded failover, token-budget validation. Recent HTTP success is NOT proven engineering quality.
 - Artifact tasks plan/review/text/patch. Patch artifact is NOT applied/tested/deployed code.
-- Declarative JSON validator only: NEW direct contracts/*.json, immutable external tests, Bubblewrap, readonly candidate, no network/home/credentials/.git. Generic Python/JS execution is NOT approved by these checks.
+- Declarative JSON validation remains isolated. In addition, the separately vetted python-cli-v1 executor accepts only exact-scope .py patches with external declarative cases and Bubblewrap isolation. Arbitrary Python/JS execution is still NOT approved.
 - Durable JSON workflow does generate -> test -> feedback -> repair, max3iterations, spec/test/base/content binding, crash recovery. No autonomous merge/deploy.
 
 ## Verified results and exact failures
 
-175 Python tests PASS; separate3 acceptance tests PASS for committed contracts/kmj-autonomy-task.schema.json. Independent reviews completed. Router fixtures now isolate SQLite and lock paths;29router tests repeated3times without pollution.
+187 Python tests PASS; separate3 acceptance tests PASS for committed contracts/kmj-autonomy-task.schema.json. Independent reviews completed. Router fixtures now isolate SQLite and lock paths;29router tests repeated3times without pollution.
 Real private/local and public/9router inference succeeded. Synthetic generated-checkpoint recovery succeeded after stopping/starting worker (attempt2); this was not a full VPS reboot test.
 Human-orchestrated real model loop: initial CPU JSON failed; feedback to free cloud produced corrected JSON; isolated3tests passed; accepted source commit70dc4f354632f2bff72273f999b7ba9f4ac5aae6.
 IMPORTANT: fully automatic live workflow KMJ-schema-autonomous-proof FAILED after3iterations. It ran and repaired automatically, but models kept omitting properties.payload.properties.prompt.description and incorrectly adding max_attempts/data_classification to payload.required or nesting max_attempts inside payload. Do not hide this or claim whole-project autonomy is complete.
@@ -108,3 +108,12 @@ Next active task is KMJ-AUTO-003: one general code executor with trusted out-of-
 Commit `3a323068d7a50c1bc8ab337671549262ed33961b` adds bounded tested semantic-quality routing. Trusted JSON workflow outcomes now record exactly-once evidence under hashed provider/model identity only; no prompt, response, credential or base URL is persisted in the quality table. Counts saturate at 8. A tested failure ranks below an otherwise equivalent untested route, while a tested pass ranks above it. Cost/free eligibility and confidentiality filtering happen before this score and remain authoritative.
 
 Focused semantic/workflow/router tests passed, then the full gate passed 175 Python tests plus 3 schema acceptance tests and diff check. The immutable release `3a323068d7a5` is live. Fresh workflow `KMJ-schema-quality-route-proof-v1` reached `json_candidate_tested` on attempt 1 and wrote one live semantic-quality evidence record for its actual route. Product completion and deployment remain false.
+
+
+## 2026-10-07 KMJ-AUTO-003 completion evidence
+
+KMJ-AUTO-003 is implemented in exact-head commit `b1d316830aab1f635c103bff00b5e9bf572126db` and deployed as immutable runtime `~/.local/lib/kmj-autonomy/releases/b1d316830aab`. The first vetted non-JSON executor is `python-cli-v1`: exact base SHA, exact operator allowlist, Git project lock, external pinned `cases.json`, read-only candidate, no candidate access to the validation tree, no inherited secrets/home, and Bubblewrap network isolation. Assertions are compared by the trusted parent process, so candidate output cannot manufacture the acceptance result.
+
+A real temporary Git project was patched and executed in Bubblewrap; the small Python CLI fix passed two external behavior cases while the original repository remained unchanged. Adversarial and isolation tests cover forged success text, denied paths, validation digest mismatch, extra executable validation files, entrypoint scope, moved base, simultaneous project writer, host-secret absence, network denial and read-only workspace. Focused executor tests: 11 PASS. Exact-head gates: 187 Python regression tests PASS, 3 schema acceptance tests PASS and diff check PASS. Runtime services remained active after rollout; rollback backup stamp `20261007-143059`.
+
+Next active task is KMJ-AUTO-004: connect a curated backlog and CodeBridge status to persistent workflows without collapsing artifact/tested-candidate/release states or claiming product completion.

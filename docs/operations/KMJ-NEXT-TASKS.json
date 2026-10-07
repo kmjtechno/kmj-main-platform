@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "deployed_code_sha": "3a323068d7a50c1bc8ab337671549262ed33961b",
+  "deployed_code_sha": "b1d316830aab1f635c103bff00b5e9bf572126db",
   "branch": "feat/modelfabric-autonomy-20261007",
   "automatic_product_completion": false,
   "tasks": [
@@ -84,11 +84,24 @@
     {
       "id": "KMJ-AUTO-003",
       "priority": 3,
-      "state": "ready",
+      "state": "completed",
       "depends_on": [
         "KMJ-AUTO-001"
       ],
       "title": "Design one general code executor with trusted out-of-process acceptance",
+      "evidence": {
+        "implementation_sha": "b1d316830aab1f635c103bff00b5e9bf572126db",
+        "runtime_release": "b1d316830aab",
+        "executor": "python-cli-v1",
+        "tests": "187 Python regression + 3 schema acceptance PASS",
+        "focused_executor_tests": 11,
+        "trusted_assertions_outside_candidate": true,
+        "validation_tree_not_mounted_into_candidate": true,
+        "network_home_secrets_isolated": true,
+        "candidate_workspace_read_only": true,
+        "product_complete": false,
+        "deployed_candidate": false
+      },
       "acceptance": [
         "Untrusted code cannot forge pass",
         "No secrets/network/production writes",
@@ -99,7 +112,7 @@
     {
       "id": "KMJ-AUTO-004",
       "priority": 4,
-      "state": "blocked",
+      "state": "ready",
       "depends_on": [
         "KMJ-AUTO-003"
       ],
