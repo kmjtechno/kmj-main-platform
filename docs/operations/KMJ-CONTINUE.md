@@ -6,16 +6,16 @@ Updated 2026-10-07. Owner: Narendra Singh Kushwah / KMJ TECHNO. Reply Hindi or E
 
 Repository: https://github.com/kmjtechno/kmj-main-platform
 Branch: feat/modelfabric-autonomy-20261007 (pushed, NOT merged into main).
-Deployed code SHA: a1a32db86b00add01795ec7b026aa0a436197fe5.
+Deployed worker/control code SHA: 0084f95037078188a76a4f54e780d3da51b5639f.
 Later branch commits may be control-manifest or documentation-only; compare code before redeploying.
 Google source worktree: /home/info/.kmj-worktrees/modelfabric-autonomy-20261007.
-Live immutable runtime: /home/info/.local/lib/kmj-autonomy/releases/a1a32db86b00.
+Live worker/control runtime: /home/info/.local/lib/kmj-autonomy/releases/0084f9503707. Backlog coordinator runtime: /home/info/.local/lib/kmj-autonomy/releases/2f020c1545ee.
 Python: /home/info/.kmj-python313/bin/python3.
 Original /home/info/work/kmj-main-platform has pre-existing dirty apps/platform/resources/js/app.tsx; preserve it. Never reset/clean live or dirty checkouts.
 
 ## What is actually operational
 
-- Google user services kmj-autonomy-worker.service, kmj-github-control.service and kmj-model-fabric-cpu.service are active/running. kmj-backlog-coordinator.path is also active and reacts to validated CodeBridge status refreshes. The GitHub bridge remains outbound-only; no self-hosted Actions runner is used.
+- Google user services kmj-autonomy-worker.service, kmj-github-control.service and kmj-model-fabric-cpu.service are active/running. kmj-backlog-coordinator.path and kmj-backlog-coordinator.timer are active; the timer avoids the prior queue.sqlite self-trigger loop fixed in `2f020c1545ee`. The GitHub bridge remains outbound-only; no self-hosted Actions runner is used.
 - Two asynchronous inference lanes; one running task per canonical project; SQLite atomic claims, leases, fencing, checkpoints, bounded retry. Outage/timeouts defer300seconds without spending generation attempts.
 - Strict-zero cloud routing with operator-controlled confidentiality. Built-in public providers cannot grant themselves private-code access. CPU fallback is authenticated127.0.0.1:18766, one inference slot, Qwen2.5-Coder1.5B Q4. No paid fallback. Free availability and small-model quality remain finite.
 - Stateful provider/model cooldown, recent HTTP-success preference, bounded failover, token-budget validation. Recent HTTP success is NOT proven engineering quality.
@@ -135,3 +135,8 @@ KMJ-AUTO-005 is complete. The status transport now uses a least-privilege Main-V
 AUTO-004 was hardened after the base coordinator landed. Commit `7d85a89007e605d9ee5f75b6688d269d0a0c6e6f` requires the sanitized CodeBridge snapshot to prove exact repository/device/project/branch identity, explicit authorization, and the exact `read/write/execute` permission set before backlog admission. Gate readiness is persisted separately and only `satisfied` counts as execution-ready; `blocked` and `not_configured` never become PASS by implication. Duplicate backlog service/config paths were removed in `a1a32db86b00add01795ec7b026aa0a436197fe5`, leaving `ops/autonomy-backlog.json` plus `kmj-backlog-coordinator.{service,path}` canonical.
 
 The hardened immutable runtime is `~/.local/lib/kmj-autonomy/releases/a1a32db86b00`. Focused coordinator tests: 10 PASS. Exact slice gates: 197 Python regression tests PASS, 3 schema acceptance tests PASS, JSON validation and diff check PASS. A fresh sanitized status snapshot was accepted with CodeBridge `main-platform-kmjtechnonetgmailcom / kmj-main-platform / main`, version `0.2.3`, authorization true and permissions `read/write/execute`. Current gate readiness is `fast=satisfied`, `platform=blocked`, `full=blocked`, therefore `execution_ready=false`. The canonical curated task remains `ready`, tests are not claimed, and `product_complete=false`. The Google-side backlog path unit and worker/control services are active. AUTO-005 is complete through the restricted push design; no automatic fetcher is needed.
+
+
+### AUTO-005 coordinator-loop follow-up
+
+The automatic Main-VPS to Google restricted status push is live. A queue.sqlite PathChanged trigger introduced a self-trigger/start-limit loop because coordinator queue reads use the durable SQLite transaction layer. Commit `2f020c1545ee66c1755494900d81bce8d95bcba3` removes the queue-file path trigger and adds a 60-second coordinator timer instead. Only the backlog coordinator units were switched to release `2f020c1545ee`; the running autonomy worker was not restarted. Both backlog path and timer are active after reset-failed. This preserves periodic task-stage refresh without killing active work.

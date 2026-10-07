@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "deployed_code_sha": "a1a32db86b00add01795ec7b026aa0a436197fe5",
+  "deployed_code_sha": "0084f95037078188a76a4f54e780d3da51b5639f",
   "branch": "feat/modelfabric-autonomy-20261007",
   "automatic_product_completion": false,
   "tasks": [
@@ -161,7 +161,10 @@
         "host_key_pinned": true,
         "forced_ingest_command": true,
         "broad_github_write_credential": false,
-        "stale_status_fail_closed": true
+        "stale_status_fail_closed": true,
+        "worker_control_runtime": "0084f9503707",
+        "backlog_coordinator_runtime": "2f020c1545ee",
+        "queue_watch_loop_fix_sha": "2f020c1545ee66c1755494900d81bce8d95bcba3"
       },
       "acceptance": [
         "Pinned destination host key and dedicated restricted key",
