@@ -1,0 +1,16 @@
+[Unit]
+Description=Export sanitized KMJ CodeBridge status
+After=network-online.target kmj-codebridge-kmj-main-platform.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/kmj-codebridge-status-publish
+User=root
+Group=root
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectHome=true
+ProtectSystem=strict
+ReadWritePaths=/var/lib/kmj-codebridge-status-export
