@@ -8,7 +8,7 @@ final class PlanCatalog {
   "enterprise"=>["Enterprise",0], "custom_oem"=>["Custom/OEM",0],
  ];
  public const CODEBRIDGE_OWNER_CODE="codebridge.owner";
- public const CODEBRIDGE_OWNER_DEVICES=64;
+ public const CODEBRIDGE_OWNER_DEVICES=2147483647;
  public const CODEBRIDGE_OWNER_CONCURRENCY=16;
  public function ensureCloudOSPlans(string $productId): array {
   $out=[];
