@@ -77,15 +77,21 @@ Route::middleware(['auth', 'verified', 'password.confirm'])
             $user = $request->user();
             abort_unless($user instanceof User, 401);
             $access->require($user);
-            $v = $request->validate(['tenant_id' => ['required', 'string', 'max:64'], 'reason' => ['required', 'string', 'min:10', 'max:500']]);
+            $v = $request->validate([
+                'tenant_id' => ['required', 'string', 'max:64'],
+                'reason' => ['required', 'string', 'min:10', 'max:500'],
+            ]);
+
             try {
                 $result = $service->upgrade($license, $v['tenant_id'], (string) $user->id, $v['reason']);
             } catch (DomainException $e) {
                 return response()->json(['error' => $e->getMessage()], 409)->header('Cache-Control', 'no-store');
             }
+
             if ($request->expectsJson()) {
                 return response()->json($result)->header('Cache-Control', 'no-store');
             }
+
             return redirect()->route('operator.kslp');
         })->middleware('throttle:5,1')->name('licenses.owner-admin');
     });
