@@ -1,0 +1,14 @@
+[Unit]
+Description=KMJ curated backlog coordinator
+After=kmj-autonomy-worker.service
+Wants=kmj-autonomy-worker.service
+
+[Service]
+Type=oneshot
+WorkingDirectory=@RUNTIME@
+ExecStart=%h/.kmj-python313/bin/python3 -m controller.backlog_coordinator --backlog @RUNTIME@/ops/autonomy-backlog.json --codebridge-status %h/.local/state/kmj-autonomy/codebridge-status.json --db %h/.local/state/kmj-autonomy/queue.sqlite --state-root %h/.local/state/kmj-autonomy --status %h/.local/state/kmj-autonomy/backlog-status.json --max-codebridge-age 900
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+MemoryMax=256M
+CPUQuota=25%

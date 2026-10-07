@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "repository": "kmjtechno/kmj-main-platform",
+  "codebridge": {
+    "device": "main-platform-kmjtechnonetgmailcom",
+    "project": "kmj-main-platform",
+    "branch": "main"
+  },
+  "tasks": [
+    {
+      "id": "KMJ-PLATFORM-P4-OPS-REVIEW-001",
+      "project": "kmj-main-platform",
+      "kind": "review",
+      "prompt": "Produce a bounded engineering review artifact for the next KMJ Main Platform Kristi Operations slice. Do not deploy, merge, change production, or claim product completion. State assumptions and acceptance checks.",
+      "data_classification": "confidential",
+      "max_attempts": 3,
+      "auto_enqueue": false
+    }
+  ]
+}
