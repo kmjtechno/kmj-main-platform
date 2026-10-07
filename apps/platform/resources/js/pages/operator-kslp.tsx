@@ -45,6 +45,7 @@ type Props = {
 
 export default function OperatorKslp({ metrics, licenses, events }: Props) {
     const [actionReason, setActionReason] = useState('');
+    const [ownerActionStatus, setOwnerActionStatus] = useState('');
     const [pendingPlans, setPendingPlans] = useState<Record<string, string>>(
         {},
     );
@@ -208,6 +209,11 @@ export default function OperatorKslp({ metrics, licenses, events }: Props) {
                             Minimum 3 characters · recorded in audit trail
                         </div>
                     </div>
+                    {ownerActionStatus && (
+                        <p role="status" className="mt-3 rounded-lg border px-3 py-2 text-xs">
+                            {ownerActionStatus}
+                        </p>
+                    )}
                     <div className="mt-4 overflow-x-auto">
                         <table className="w-full min-w-[980px] text-left text-xs">
                             <thead className="text-muted-foreground">
@@ -324,7 +330,12 @@ export default function OperatorKslp({ metrics, licenses, events }: Props) {
                                                                     },
                                                                     {
                                                                         preserveScroll: true,
-                                                                        onSuccess: () => setActionReason(''),
+                                                                        onSuccess: () => {
+                                                                            setActionReason('');
+                                                                            setOwnerActionStatus('Owner/Admin plan provisioned. Signed agent activation must be verified separately.');
+                                                                        },
+                                                                        onError: () => setOwnerActionStatus('Owner/Admin plan activation was not accepted. Check the license, owner access and policy.'),
+
                                                                     },
                                                                 );
                                                             }}
