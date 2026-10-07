@@ -1,4 +1,4 @@
-version: 1
+version: 2
 scope: kmj_main_platform
 cloud_nexus: untouched
 sources:
@@ -6,14 +6,24 @@ sources:
     - apps/platform/routes/web.php
     - apps/platform/routes/settings.php
     - apps/platform/config/fortify.php
-  assets: apps/platform/public
+  assets: apps/platform/public/assets
+  localization: apps/platform/app/Http/Middleware/HandleInertiaRequests.php
   facts:
     - README.md
     - apps/platform/KMJ_BOUNDARY.md
+
 public_urls:
   - path: /
     access: public
     purpose: Main Platform welcome surface
+    source: apps/platform/routes/web.php
+  - path: /company
+    access: public
+    purpose: Company profile
+    source: apps/platform/routes/web.php
+  - path: /capabilities
+    access: public
+    purpose: KMJ capability overview
     source: apps/platform/routes/web.php
   - path: /products
     access: public
@@ -26,6 +36,38 @@ public_urls:
   - path: /trust
     access: public
     purpose: Public trust, governance and product-evidence policy
+    source: apps/platform/routes/web.php
+  - path: /legal
+    access: public
+    purpose: Legal center
+    source: apps/platform/routes/web.php
+  - path: /terms
+    access: public
+    purpose: Terms and conditions
+    source: apps/platform/routes/web.php
+  - path: /privacy
+    access: public
+    purpose: Privacy policy
+    source: apps/platform/routes/web.php
+  - path: /refund-policy
+    access: public
+    purpose: Refund policy
+    source: apps/platform/routes/web.php
+  - path: /acceptable-use
+    access: public
+    purpose: Acceptable use policy
+    source: apps/platform/routes/web.php
+  - path: /cookie-policy
+    access: public
+    purpose: Cookie policy
+    source: apps/platform/routes/web.php
+  - path: /llms.txt
+    access: public
+    purpose: AI-search-readable product and authority summary
+    source: apps/platform/routes/web.php
+  - path: /sitemap.xml
+    access: conditional_public
+    purpose: Search-engine URL inventory when public indexing is enabled
     source: apps/platform/routes/web.php
   - path: /login
     access: guest
@@ -47,19 +89,58 @@ public_urls:
     access: public
     purpose: Passkey enrollment/manage discovery
     source: apps/platform/routes/settings.php
+
 protected_control_surfaces:
   - /dashboard
   - /sandbox-licenses
   - /settings/profile
   - /settings/security
   - /settings/appearance
+
+localization:
+  supported:
+    - en
+    - hi
+  current_switch_transport: query_parameter
+  parameter: lang
+  seo_path_locales_present: false
+
 public_assets:
-  - .htaccess
-  - apple-touch-icon.png
-  - favicon.ico
-  - favicon.svg
-  - index.php
-  - robots.txt
+  brand:
+    - assets/brand/kmj-logo-horizontal.webp
+    - assets/brand/kmj-logo-stacked.webp
+    - assets/brand/kmj-mark.webp
+    - assets/brand/kmj-mark-64.png
+    - assets/brand/kmj-app-icon.png
+    - assets/brand/kmj-social-card.webp
+    - assets/brand/kmj-social-brand.webp
+    - assets/brand/kmj-brand-pattern.webp
+  products:
+    - assets/products/kmj-agent.webp
+    - assets/products/kmj-connect.webp
+    - assets/products/kmj-brand-system.webp
+    - assets/products/kmj-forge.webp
+    - assets/products/kmj-licensing-hub.webp
+    - assets/products/kmj-calibration.webp
+    - assets/products/kmj-cloudos.webp
+    - assets/products/kmj-creative-studio.webp
+    - assets/products/kmj-cloud-nexus.webp
+    - assets/products/kmj-cinema-platform.webp
+
+observed_gaps:
+  - code: PRODUCT_VISUAL_360_DOME_MISSING
+    evidence: No dedicated assets/products/kmj-360-dome image exists in the current repository snapshot.
+  - code: PRODUCT_VISUAL_CINEMA_PLAYER_MISSING
+    evidence: No dedicated assets/products/kmj-cinema-player image exists in the current repository snapshot.
+  - code: PUBLIC_DOCS_ROUTE_MISSING
+    evidence: No public documentation route is declared in apps/platform/routes/web.php.
+  - code: PUBLIC_INSIGHTS_ROUTE_MISSING
+    evidence: No public insights or research route is declared in apps/platform/routes/web.php.
+  - code: PUBLIC_SUPPORT_ROUTE_MISSING
+    evidence: No public support route is declared in apps/platform/routes/web.php.
+  - code: SEO_LOCALE_PATHS_MISSING
+    evidence: Language switching uses ?lang=en|hi; locale-specific public URL paths are not present.
+
 approved_facts:
   - Main Platform owns business, customer, product, licensing, release, and automation authority.
   - KMJ Cloud Nexus is separate and is not a Main Platform runtime dependency.
