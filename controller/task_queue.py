@@ -65,6 +65,24 @@ class TaskQueue:
             )""")
             db.execute("""CREATE UNIQUE INDEX IF NOT EXISTS one_project_writer
                 ON tasks(project) WHERE state='running'""")
+            db.execute("""CREATE TABLE IF NOT EXISTS control_state (
+                singleton INTEGER PRIMARY KEY CHECK(singleton=1),
+                paused INTEGER NOT NULL DEFAULT 0,
+                last_source_sha TEXT,
+                last_applied_epoch REAL,
+                last_error_code TEXT
+            )""")
+            db.execute("""INSERT OR IGNORE INTO control_state(singleton,paused)
+                VALUES (1,0)""")
+            db.execute("""CREATE TABLE IF NOT EXISTS control_commands (
+                id TEXT PRIMARY KEY,
+                repository TEXT NOT NULL,
+                ref TEXT NOT NULL,
+                source_sha TEXT NOT NULL,
+                content_hash TEXT NOT NULL,
+                operation TEXT NOT NULL,
+                applied_epoch REAL NOT NULL
+            )""")
 
     @contextmanager
     def _tx(self):
@@ -116,6 +134,8 @@ class TaskQueue:
                 state=CASE WHEN attempts>=max_attempts THEN 'failed' ELSE 'queued' END,
                 token=NULL,worker=NULL,lease_until=NULL,error='LEASE_EXPIRED'
                 WHERE state='running' AND lease_until<=?""", (now,))
+            if db.execute("SELECT paused FROM control_state WHERE singleton=1").fetchone()[0]:
+                return None
             count = db.execute("SELECT count(*) FROM tasks WHERE state='running'").fetchone()[0]
             if count >= self.max_concurrency:
                 return None
@@ -195,3 +215,119 @@ class TaskQueue:
                 token=NULL,worker=NULL,lease_until=NULL WHERE id=?""",
                 (state, error, now + retry_delay, task_id))
             return _decode(db.execute("SELECT * FROM tasks WHERE id=?", (task_id,)).fetchone())
+
+    def control_snapshot(self):
+        with self._tx() as db:
+            row = db.execute("""SELECT paused,last_source_sha,last_applied_epoch,last_error_code
+                FROM control_state WHERE singleton=1""").fetchone()
+            return dict(row)
+
+    def set_control_error(self, code):
+        _text(code, "code")
+        with self._tx() as db:
+            db.execute("UPDATE control_state SET last_error_code=? WHERE singleton=1", (code,))
+
+    def apply_control_batch(self, repository, ref, source_sha, commands, *, now=None):
+        """Atomically apply a fully validated GitHub control batch."""
+        _text(repository, "repository")
+        _text(ref, "ref")
+        _text(source_sha, "source_sha")
+        if not isinstance(commands, list) or not commands:
+            raise ValueError("CONTROL_BATCH_INVALID")
+        now = _number(time.time() if now is None else now, "now")
+        with self._tx() as db:
+            prepared = []
+            duplicate_ids = []
+            for command in commands:
+                if not isinstance(command, dict):
+                    raise ValueError("CONTROL_COMMAND_INVALID")
+                command_id = _text(command.get("id"), "command_id")
+                operation = command.get("operation")
+                content_hash = command.get("content_hash")
+                if operation not in {"pause", "resume", "enqueue", "status"}:
+                    raise ValueError("CONTROL_OPERATION_UNSUPPORTED")
+                if (not isinstance(content_hash, str) or len(content_hash) != 64
+                        or any(ch not in "0123456789abcdef" for ch in content_hash)):
+                    raise ValueError("CONTROL_HASH_INVALID")
+                previous = db.execute(
+                    "SELECT repository,ref,content_hash,operation FROM control_commands WHERE id=?",
+                    (command_id,),
+                ).fetchone()
+                if previous is not None:
+                    if tuple(previous) != (repository, ref, content_hash, operation):
+                        raise ValueError("CONTROL_REPLAY_CONFLICT")
+                    duplicate_ids.append(command_id)
+                    continue
+                task_record = None
+                if operation == "enqueue":
+                    task = command.get("task")
+                    if not isinstance(task, dict):
+                        raise ValueError("CONTROL_TASK_INVALID")
+                    task_id = _text(task.get("id"), "task_id")
+                    project = _text(task.get("project"), "project")
+                    payload = task.get("payload")
+                    encoded = _json(payload)
+                    max_attempts = task.get("max_attempts", 3)
+                    if type(max_attempts) is not int or not 1 <= max_attempts <= 10:
+                        raise ValueError("CONTROL_MAX_ATTEMPTS_INVALID")
+                    existing = db.execute("SELECT * FROM tasks WHERE id=?", (task_id,)).fetchone()
+                    if existing is not None:
+                        if (existing["project"], existing["payload"], existing["max_attempts"],
+                            existing["initial_not_before"]) != (project, encoded, max_attempts, 0):
+                            raise ValueError("CONTROL_TASK_CONFLICT")
+                    task_record = (task_id, project, encoded, max_attempts, existing is not None)
+                prepared.append((command_id, operation, content_hash, task_record))
+
+            applied_ids = []
+            for command_id, operation, content_hash, task_record in prepared:
+                if operation == "pause":
+                    db.execute("UPDATE control_state SET paused=1 WHERE singleton=1")
+                elif operation == "resume":
+                    db.execute("UPDATE control_state SET paused=0 WHERE singleton=1")
+                elif operation == "enqueue" and task_record is not None:
+                    task_id, project, encoded, max_attempts, existed = task_record
+                    if not existed:
+                        db.execute("""INSERT INTO tasks
+                            (id,project,payload,state,max_attempts,not_before,initial_not_before)
+                            VALUES (?,?,?,'queued',?,0,0)""",
+                            (task_id, project, encoded, max_attempts))
+                db.execute("""INSERT INTO control_commands
+                    (id,repository,ref,source_sha,content_hash,operation,applied_epoch)
+                    VALUES (?,?,?,?,?,?,?)""",
+                    (command_id, repository, ref, source_sha, content_hash, operation, now))
+                applied_ids.append(command_id)
+            db.execute("""UPDATE control_state SET last_source_sha=?,last_applied_epoch=?,
+                last_error_code=NULL WHERE singleton=1""", (source_sha, now))
+            paused = bool(db.execute(
+                "SELECT paused FROM control_state WHERE singleton=1"
+            ).fetchone()[0])
+            return {"applied_ids": applied_ids, "duplicate_ids": duplicate_ids, "paused": paused}
+
+    def sanitized_status(self, limit=100):
+        if type(limit) is not int or not 1 <= limit <= 100:
+            raise ValueError("limit")
+        with self._tx() as db:
+            control = dict(db.execute("""SELECT paused,last_source_sha,last_applied_epoch,
+                last_error_code FROM control_state WHERE singleton=1""").fetchone())
+            rows = db.execute("""SELECT id,project,state,attempts,max_attempts,error,result
+                FROM tasks ORDER BY rowid DESC LIMIT ?""", (limit,)).fetchall()
+        tasks = []
+        for row in rows:
+            result = json.loads(row["result"]) if row["result"] else {}
+            stage = row["state"]
+            if stage == "completed":
+                candidate = result.get("stage")
+                stage = candidate if candidate in {"artifact_ready", "candidate_tested"} else "artifact_ready"
+            error = row["error"]
+            if error and (len(error) > 64 or any(ch not in "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_" for ch in error)):
+                error = "INTERNAL_ERROR"
+            tasks.append({
+                "id": row["id"], "project": row["project"], "stage": stage,
+                "attempts": row["attempts"], "max_attempts": row["max_attempts"],
+                "failure_code": error,
+                "tests_executed": bool(result.get("tests_executed", False)),
+                "product_complete": False,
+            })
+        control["paused"] = bool(control["paused"])
+        control["tasks"] = tasks
+        return control

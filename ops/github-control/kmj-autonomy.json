@@ -1,0 +1,11 @@
+{
+  "schema_version": 1,
+  "repository": "kmjtechno/kmj-main-platform",
+  "ref": "feat/modelfabric-autonomy-20261007",
+  "commands": [
+    {
+      "id": "KMJ-GH-001-bootstrap-status-v1",
+      "operation": "status"
+    }
+  ]
+}
