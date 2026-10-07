@@ -66,13 +66,38 @@ const platformCapabilities = [
     },
 ];
 
+const platformCapabilitiesHi = [
+    {
+        icon: Layers3,
+        title: 'एक product ecosystem',
+        text: 'एक KMJ customer layer independent products को उनकी engineering boundaries बनाए रखते हुए जोड़ती है।',
+    },
+    {
+        icon: KeyRound,
+        title: 'Governed access',
+        text: 'Identity, organizations, entitlements और product access explicit platform authority के पीछे रहते हैं।',
+    },
+    {
+        icon: ShieldCheck,
+        title: 'Claims से पहले evidence',
+        text: 'Availability, release state और public product claims verified repository evidence से जुड़े रहते हैं।',
+    },
+    {
+        icon: Sparkles,
+        title: 'Automation के लिए बनाया गया',
+        text: 'Operational workflows governed automation के लिए बने हैं, जबकि production-sensitive actions protected रहते हैं।',
+    },
+];
+
 export default function Welcome({
     products,
 }: {
     products: Product[];
     portfolioCount: number;
 }) {
-    const { auth } = usePage().props;
+    const { auth, localization } = usePage().props;
+    const hi = localization.locale === 'hi';
+    const capabilities = hi ? platformCapabilitiesHi : platformCapabilities;
     const immersiveCinemaSuite = products.find(
         (product) => product.slug === 'kmj-immersive-cinema-suite',
     );
@@ -83,9 +108,18 @@ export default function Welcome({
     return (
         <>
             <PublicSeo
-                title="KMJ TECHNO — Software, Cloud & Intelligent Systems"
-                description="Explore the KMJ TECHNO product portfolio, governed software access and enterprise technology systems."
+                title={
+                    hi
+                        ? 'KMJ TECHNO — Software, Cloud और Intelligent Systems'
+                        : 'KMJ TECHNO — Software, Cloud & Intelligent Systems'
+                }
+                description={
+                    hi
+                        ? 'KMJ TECHNO product portfolio, governed software access और enterprise technology systems देखें।'
+                        : 'Explore the KMJ TECHNO product portfolio, governed software access and enterprise technology systems.'
+                }
                 path="/"
+                localized
                 structuredData={[
                     {
                         '@context': 'https://schema.org',
@@ -133,19 +167,20 @@ export default function Welcome({
                                 </div>
 
                                 <h1 className="mt-7 max-w-[780px] text-5xl leading-[0.94] font-black tracking-[-0.058em] sm:text-6xl lg:text-[5.15rem]">
-                                    Technology engineered to connect
+                                    {hi
+                                        ? 'Technology जो जोड़ती है'
+                                        : 'Technology engineered to connect'}
                                     <span className="block text-[#ff3d47]">
-                                        complex systems.
+                                        {hi
+                                            ? 'complex systems को।'
+                                            : 'complex systems.'}
                                     </span>
                                 </h1>
 
                                 <p className="mt-7 max-w-2xl text-base leading-8 text-white/68 sm:text-lg">
-                                    KMJ TECHNO brings cloud infrastructure,
-                                    professional calibration, immersive cinema,
-                                    secure connectivity and intelligent
-                                    engineering products together through one
-                                    governed customer platform for access,
-                                    licensing and controlled delivery.
+                                    {hi
+                                        ? 'KMJ TECHNO cloud infrastructure, professional calibration, immersive cinema, secure connectivity और intelligent engineering products को access, licensing और controlled delivery के लिए एक governed customer platform पर जोड़ता है।'
+                                        : 'KMJ TECHNO brings cloud infrastructure, professional calibration, immersive cinema, secure connectivity and intelligent engineering products together through one governed customer platform for access, licensing and controlled delivery.'}
                                 </p>
 
                                 <div className="mt-9 flex flex-col gap-3 sm:flex-row">
@@ -153,7 +188,9 @@ export default function Welcome({
                                         href="/products"
                                         className="inline-flex h-12 items-center justify-center gap-2 rounded-xl bg-[#e21b23] px-6 text-sm font-black shadow-[0_14px_42px_rgba(226,27,35,.2)] transition hover:-translate-y-0.5 hover:bg-[#f22b34]"
                                     >
-                                        Explore KMJ products
+                                        {hi
+                                            ? 'KMJ उत्पाद देखें'
+                                            : 'Explore KMJ products'}
                                         <ArrowRight className="h-4 w-4" />
                                     </Link>
                                     {!auth.user && (
@@ -161,7 +198,9 @@ export default function Welcome({
                                             href={register()}
                                             className="inline-flex h-12 items-center justify-center rounded-xl border border-white/10 bg-white/[0.035] px-6 text-sm font-bold text-white/78 transition hover:border-white/20 hover:bg-white/[0.065]"
                                         >
-                                            Create customer account
+                                            {hi
+                                                ? 'Customer account बनाएँ'
+                                                : 'Create customer account'}
                                         </Link>
                                     )}
                                 </div>
@@ -173,7 +212,7 @@ export default function Welcome({
                                                 {products.length}
                                             </div>
                                             <div className="mt-1 text-[9px] font-black tracking-[.13em] text-white/35 uppercase">
-                                                Products
+                                                {hi ? 'उत्पाद' : 'Products'}
                                             </div>
                                         </div>
                                         <div className="rounded-xl border border-white/[0.07] bg-white/[0.025] px-3 py-3">
@@ -187,7 +226,7 @@ export default function Welcome({
                                                 }
                                             </div>
                                             <div className="mt-1 text-[9px] font-black tracking-[.13em] text-white/35 uppercase">
-                                                Available
+                                                {hi ? 'Available' : 'Available'}
                                             </div>
                                         </div>
                                         <div className="rounded-xl border border-red-500/15 bg-red-500/[0.04] px-3 py-3">
@@ -200,20 +239,38 @@ export default function Welcome({
                                                 }
                                             </div>
                                             <div className="mt-1 text-[9px] font-black tracking-[.13em] text-white/35 uppercase">
-                                                Purchasable
+                                                {hi
+                                                    ? 'Purchasable'
+                                                    : 'Purchasable'}
                                             </div>
                                         </div>
                                     </div>
                                     <div className="flex flex-wrap gap-x-6 gap-y-3 text-[10px] font-black tracking-[0.13em] text-white/58 uppercase">
-                                        <span>Central Licensing</span>
-                                        <span>Secure Access</span>
-                                        <span>Product Entitlements</span>
-                                        <span>Clear Lifecycle Status</span>
+                                        <span>
+                                            {hi
+                                                ? 'Central Licensing'
+                                                : 'Central Licensing'}
+                                        </span>
+                                        <span>
+                                            {hi
+                                                ? 'Secure Access'
+                                                : 'Secure Access'}
+                                        </span>
+                                        <span>
+                                            {hi
+                                                ? 'Product Entitlements'
+                                                : 'Product Entitlements'}
+                                        </span>
+                                        <span>
+                                            {hi
+                                                ? 'स्पष्ट Lifecycle Status'
+                                                : 'Clear Lifecycle Status'}
+                                        </span>
                                     </div>
                                     <p className="mt-4 text-xs leading-5 text-white/38">
-                                        Product availability, access and
-                                        lifecycle status reflect the current
-                                        verified platform state.
+                                        {hi
+                                            ? 'Product availability, access और lifecycle status वर्तमान verified platform state को reflect करते हैं।'
+                                            : 'Product availability, access and lifecycle status reflect the current verified platform state.'}
                                     </p>
                                 </div>
                             </div>
@@ -235,7 +292,9 @@ export default function Welcome({
                                     <div className="absolute inset-0 bg-gradient-to-t from-black/65 via-black/5 to-transparent" />
                                     <div className="absolute right-5 bottom-5 left-5">
                                         <div className="text-[10px] font-black tracking-[.15em] text-white/50 uppercase">
-                                            Cloud platform
+                                            {hi
+                                                ? 'Cloud platform'
+                                                : 'Cloud platform'}
                                         </div>
                                         <div className="mt-1 text-lg font-black">
                                             KMJ CloudOS
@@ -287,26 +346,33 @@ export default function Welcome({
                             <div className="flex flex-col justify-between gap-7 lg:flex-row lg:items-end">
                                 <div className="max-w-3xl">
                                     <div className="text-[10px] font-black tracking-[0.2em] text-[#ee3942] uppercase">
-                                        KMJ TECHNO product ecosystem
+                                        {hi
+                                            ? 'KMJ TECHNO product ecosystem'
+                                            : 'KMJ TECHNO product ecosystem'}
                                     </div>
                                     <h2 className="mt-4 text-4xl font-black tracking-[-0.045em] sm:text-5xl">
-                                        See the products.
+                                        {hi
+                                            ? 'Products देखें।'
+                                            : 'See the products.'}
                                         <span className="block text-white/35">
-                                            Know exactly where each one stands.
+                                            {hi
+                                                ? 'हर product की सही स्थिति जानें।'
+                                                : 'Know exactly where each one stands.'}
                                         </span>
                                     </h2>
                                     <p className="mt-5 max-w-2xl text-sm leading-7 text-white/46 sm:text-base">
-                                        Explore real product visuals, current
-                                        lifecycle state and available
-                                        configurations before opening the full
-                                        product detail.
+                                        {hi
+                                            ? 'Full product detail खोलने से पहले real product visuals, current lifecycle state और available configurations देखें।'
+                                            : 'Explore real product visuals, current lifecycle state and available configurations before opening the full product detail.'}
                                     </p>
                                 </div>
                                 <Link
                                     href="/products"
                                     className="inline-flex h-11 items-center gap-2 text-sm font-black text-white/74 transition hover:text-white"
                                 >
-                                    View full portfolio
+                                    {hi
+                                        ? 'पूरा portfolio देखें'
+                                        : 'View full portfolio'}
                                     <ArrowRight className="h-4 w-4" />
                                 </Link>
                             </div>
@@ -397,12 +463,18 @@ export default function Welcome({
                                 <div className="relative grid gap-8 lg:grid-cols-[.9fr_1.1fr] lg:items-center">
                                     <div>
                                         <div className="text-[10px] font-black tracking-[0.2em] text-[#ee3942] uppercase">
-                                            KMJ immersive cinema suite
+                                            {hi
+                                                ? 'KMJ immersive cinema suite'
+                                                : 'KMJ immersive cinema suite'}
                                         </div>
                                         <h2 className="mt-4 text-4xl font-black tracking-[-0.05em] sm:text-5xl">
-                                            One product family.
+                                            {hi
+                                                ? 'एक product family.'
+                                                : 'One product family.'}
                                             <span className="block text-white/42">
-                                                Multiple immersive formats.
+                                                {hi
+                                                    ? 'कई immersive formats.'
+                                                    : 'Multiple immersive formats.'}
                                             </span>
                                         </h2>
                                         <p className="mt-5 max-w-2xl text-sm leading-7 text-white/56 sm:text-base">
@@ -428,7 +500,9 @@ export default function Welcome({
                                                 }
                                                 className="inline-flex h-12 items-center gap-2 rounded-xl bg-[#e21b23] px-6 text-sm font-black transition hover:-translate-y-0.5 hover:bg-[#f22b34]"
                                             >
-                                                Explore Cinema Suite
+                                                {hi
+                                                    ? 'Cinema Suite देखें'
+                                                    : 'Explore Cinema Suite'}
                                                 <ArrowRight className="h-4 w-4" />
                                             </Link>
                                             <span className="text-xs font-bold text-white/34">
@@ -456,7 +530,9 @@ export default function Welcome({
                                                     <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_20%,rgba(226,27,35,.18),transparent_45%)]" />
                                                     <div className="relative flex h-full min-h-28 flex-col justify-between">
                                                         <span className="text-[10px] font-bold tracking-[.14em] text-white/28 uppercase">
-                                                            Immersive format
+                                                            {hi
+                                                                ? 'Immersive format'
+                                                                : 'Immersive format'}
                                                         </span>
                                                         <span className="text-3xl font-black tracking-[-0.04em] text-white">
                                                             {variant}
@@ -475,19 +551,25 @@ export default function Welcome({
                         <div className="grid gap-10 lg:grid-cols-[.72fr_1.28fr] lg:items-end">
                             <div>
                                 <div className="text-[10px] font-black tracking-[0.2em] text-[#ee3942] uppercase">
-                                    Why KMJ Main Platform
+                                    {hi
+                                        ? 'KMJ Main Platform क्यों'
+                                        : 'Why KMJ Main Platform'}
                                 </div>
                                 <h2 className="mt-4 text-4xl font-black tracking-[-0.045em]">
-                                    One customer layer.
+                                    {hi
+                                        ? 'एक customer layer.'
+                                        : 'One customer layer.'}
                                     <span className="block text-white/32">
-                                        Product boundaries stay clear.
+                                        {hi
+                                            ? 'Product boundaries स्पष्ट रहती हैं।'
+                                            : 'Product boundaries stay clear.'}
                                     </span>
                                 </h2>
                             </div>
                             <p className="max-w-2xl text-sm leading-7 text-white/42 sm:text-base">
-                                Customer identity, commercial access and product
-                                entitlements stay unified while each KMJ product
-                                keeps its own engineering and release boundary.
+                                {hi
+                                    ? 'Customer identity, commercial access और product entitlements unified रहते हैं, जबकि हर KMJ product अपनी engineering और release boundary बनाए रखता है।'
+                                    : 'Customer identity, commercial access and product entitlements stay unified while each KMJ product keeps its own engineering and release boundary.'}
                             </p>
                         </div>
 
@@ -502,7 +584,7 @@ export default function Welcome({
                                 />
                             </div>
                             <div className="grid gap-4 sm:grid-cols-2">
-                                {platformCapabilities.map(
+                                {capabilities.map(
                                     ({ icon: Icon, title, text }) => (
                                         <article
                                             key={title}

@@ -33,9 +33,11 @@ final class PublicLocalizationTest extends TestCase
     public function test_localized_corporate_surfaces_receive_hindi_locale(): void
     {
         foreach ([
+            '/' => 'welcome',
             '/company' => 'company',
             '/capabilities' => 'capabilities',
             '/trust' => 'trust',
+            '/products/kmj-cloudos' => 'products/show',
         ] as $path => $component) {
             $this->get($path.'?lang=hi')
                 ->assertOk()

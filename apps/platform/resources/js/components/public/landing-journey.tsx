@@ -1,4 +1,4 @@
-import { Link } from '@inertiajs/react';
+import { Link, usePage } from '@inertiajs/react';
 import { ArrowRight, CheckCircle2 } from 'lucide-react';
 
 const journeySteps = [
@@ -40,33 +40,76 @@ const lifecycleStates = [
     ],
 ];
 
+const journeyStepsHi = [
+    ['01', 'खोजें', 'KMJ products देखें और उनकी वर्तमान lifecycle state समझें।'],
+    ['02', 'चुनें', 'Available plan, configuration या approved access path चुनें।'],
+    [
+        '03',
+        'खरीदें या अनुरोध करें',
+        'Commercial access enabled होने पर खरीदें, अन्यथा preview access का अनुरोध करें।',
+    ],
+    [
+        '04',
+        'Governed access पाएँ',
+        'Eligible access KMJ Main Platform और उसके entitlement rules के माध्यम से दिया जाता है।',
+    ],
+];
+
+const lifecycleStatesHi = [
+    [
+        'Available',
+        'जहाँ commercial requirements active हैं वहाँ customer access के लिए तैयार।',
+    ],
+    ['Preview', 'Validation जारी रहते हुए controlled evaluation access।'],
+    [
+        'Research',
+        'Active engineering या validation work; customer-ready availability implied नहीं है।',
+    ],
+    [
+        'Planned',
+        'Planned product direction जो अभी customer-ready release तक नहीं पहुँची है।',
+    ],
+];
+
 export default function LandingJourney({
     showCreateAccount,
 }: {
     showCreateAccount: boolean;
 }) {
+    const { localization } = usePage().props;
+    const hi = localization.locale === 'hi';
+    const steps = hi ? journeyStepsHi : journeySteps;
+    const states = hi ? lifecycleStatesHi : lifecycleStates;
+
     return (
         <>
             <section className="border-y border-white/[0.07] bg-[#07090d]">
                 <div className="mx-auto max-w-[1440px] px-5 py-20 sm:px-8 lg:px-12 lg:py-24">
                     <div className="max-w-3xl">
                         <div className="text-[10px] font-black tracking-[0.2em] text-[#ee3942] uppercase">
-                            From discovery to access
+                            {hi
+                                ? 'खोज से access तक'
+                                : 'From discovery to access'}
                         </div>
                         <h2 className="mt-4 text-4xl font-black tracking-[-0.045em] sm:text-5xl">
-                            A clear path from product discovery
+                            {hi
+                                ? 'Product discovery से'
+                                : 'A clear path from product discovery'}
                             <span className="block text-white/48">
-                                to governed access.
+                                {hi
+                                    ? 'governed access तक स्पष्ट रास्ता।'
+                                    : 'to governed access.'}
                             </span>
                         </h2>
                         <p className="mt-5 max-w-2xl text-sm leading-7 text-white/55 sm:text-base">
-                            Product availability and access follow the verified
-                            lifecycle and commercial rules of each KMJ product.
+                            {hi
+                                ? 'Product availability और access हर KMJ product की verified lifecycle और commercial rules का पालन करते हैं।'
+                                : 'Product availability and access follow the verified lifecycle and commercial rules of each KMJ product.'}
                         </p>
                     </div>
 
                     <div className="mt-10 grid gap-px overflow-hidden rounded-[1.5rem] border border-white/[0.08] bg-white/[0.08] md:grid-cols-2 xl:grid-cols-4">
-                        {journeySteps.map(([number, title, text]) => (
+                        {steps.map(([number, title, text]) => (
                             <article key={number} className="bg-[#090c11] p-6">
                                 <div className="flex items-center justify-between">
                                     <span className="text-xs font-black text-[#ff4c55]">
@@ -90,29 +133,30 @@ export default function LandingJourney({
                 <div className="grid gap-10 lg:grid-cols-[.72fr_1.28fr]">
                     <div>
                         <div className="text-[10px] font-black tracking-[0.2em] text-[#ee3942] uppercase">
-                            Product lifecycle
+                            {hi ? 'Product lifecycle' : 'Product lifecycle'}
                         </div>
                         <h2 className="mt-4 text-4xl font-black tracking-[-0.045em] sm:text-5xl">
-                            Know where every
+                            {hi ? 'हर product की' : 'Know where every'}
                             <span className="block text-white/48">
-                                product stands.
+                                {hi ? 'वर्तमान स्थिति जानें।' : 'product stands.'}
                             </span>
                         </h2>
                         <p className="mt-5 max-w-lg text-sm leading-7 text-white/52">
-                            KMJ separates released capability from previews,
-                            active development and future roadmap work.
+                            {hi
+                                ? 'KMJ released capability को previews, active development और future roadmap work से अलग रखता है।'
+                                : 'KMJ separates released capability from previews, active development and future roadmap work.'}
                         </p>
                         <Link
                             href="/products"
                             className="mt-7 inline-flex items-center gap-2 text-sm font-black text-white/74 transition hover:text-white"
                         >
-                            View product status
+                            {hi ? 'Product status देखें' : 'View product status'}
                             <ArrowRight className="h-4 w-4" />
                         </Link>
                     </div>
 
                     <div className="grid gap-4 sm:grid-cols-2">
-                        {lifecycleStates.map(([title, text]) => (
+                        {states.map(([title, text]) => (
                             <article
                                 key={title}
                                 className="rounded-[1.4rem] border border-white/[0.075] bg-[#0a0d12] p-5"
@@ -140,17 +184,17 @@ export default function LandingJourney({
                     <div className="relative grid gap-8 lg:grid-cols-[1fr_auto] lg:items-end">
                         <div className="max-w-3xl">
                             <div className="text-[10px] font-black tracking-[0.2em] text-[#ee3942] uppercase">
-                                Build with KMJ
+                                {hi ? 'KMJ के साथ बनाएं' : 'Build with KMJ'}
                             </div>
                             <h2 className="mt-4 text-4xl font-black tracking-[-0.05em] sm:text-5xl">
-                                Explore the technology behind the next
-                                generation of KMJ systems.
+                                {hi
+                                    ? 'अगली generation के KMJ systems के पीछे की technology देखें।'
+                                    : 'Explore the technology behind the next generation of KMJ systems.'}
                             </h2>
                             <p className="mt-5 max-w-2xl text-sm leading-7 text-white/55 sm:text-base">
-                                From cloud infrastructure and engineering
-                                software to calibration and immersive cinema,
-                                KMJ products are connected through one governed
-                                customer experience.
+                                {hi
+                                    ? 'Cloud infrastructure और engineering software से calibration और immersive cinema तक, KMJ products एक governed customer experience से जुड़े हैं।'
+                                    : 'From cloud infrastructure and engineering software to calibration and immersive cinema, KMJ products are connected through one governed customer experience.'}
                             </p>
                         </div>
                         <div className="flex flex-col gap-3 sm:flex-row lg:flex-col">
@@ -158,7 +202,7 @@ export default function LandingJourney({
                                 href="/products"
                                 className="inline-flex h-12 items-center justify-center gap-2 rounded-xl bg-[#e21b23] px-6 text-sm font-black transition hover:-translate-y-0.5 hover:bg-[#f22b34]"
                             >
-                                Explore KMJ Products
+                                {hi ? 'KMJ उत्पाद देखें' : 'Explore KMJ Products'}
                                 <ArrowRight className="h-4 w-4" />
                             </Link>
                             {showCreateAccount && (
@@ -166,7 +210,9 @@ export default function LandingJourney({
                                     href="/register"
                                     className="inline-flex h-12 items-center justify-center rounded-xl border border-white/12 bg-white/[0.035] px-6 text-sm font-bold text-white/78 transition hover:border-white/22 hover:bg-white/[0.07] hover:text-white"
                                 >
-                                    Create Customer Account
+                                    {hi
+                                        ? 'Customer account बनाएँ'
+                                        : 'Create Customer Account'}
                                 </Link>
                             )}
                         </div>
