@@ -84,12 +84,22 @@ Route::middleware(['auth', 'verified', 'password.confirm'])
             ]);
 
             try {
-                return response()->json($service->activate(
+                $result = $service->activate(
                     $v['license_id'], $v['tenant_id'], (string) $user->id, $v['reason']
-                ))->header('Cache-Control', 'no-store');
+                );
+                if ($request->expectsJson()) {
+                    return response()->json($result)->header('Cache-Control', 'no-store');
+                }
+
+                return redirect()->route('operator.kslp')
+                    ->with('status', 'CodeBridge Owner/Admin plan successfully provisioned.');
             } catch (DomainException $error) {
-                return response()->json(['error' => $error->getMessage()], 409)
-                    ->header('Cache-Control', 'no-store');
+                if ($request->expectsJson()) {
+                    return response()->json(['error' => $error->getMessage()], 409)
+                        ->header('Cache-Control', 'no-store');
+                }
+
+                return back()->withErrors(['codebridge_owner' => $error->getMessage()]);
             }
         })->name('owner-plan.activate');
     });
