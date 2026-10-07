@@ -156,7 +156,7 @@ public_assets:
 
 observed_gaps:
   - code: PUBLIC_FULL_COPY_LOCALIZATION_INCOMPLETE
-    evidence: Documentation, insights and support now provide English/Hindi copy with hreflang query alternates; older public product, company, trust and legal surfaces still require full translated copy before site-wide hreflang can be truthful.
+    evidence: Shared public header/footer plus documentation, insights and support now provide English/Hindi copy; resource pages expose truthful hreflang query alternates. Older product, company, trust and legal page bodies still require reviewed translated copy before site-wide hreflang can be truthful.
 
 approved_facts:
   - Main Platform owns business, customer, product, licensing, release, and automation authority.
