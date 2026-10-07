@@ -15,12 +15,15 @@ concurrency:
 
 jobs:
   verify:
-    runs-on: ubuntu-latest
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: [self-hosted, linux, x64, kmj-main-platform-ci]
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+      - name: Verify zero-cost runner selection and credential isolation
+        run: python3 tests/test_free_private_ci_contract.py
       - name: Prepare resilient Python runtime
         run: bash ops/self-hosted-runner/prepare-python-runtime.sh
       - name: Compile controller

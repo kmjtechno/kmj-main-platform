@@ -17,7 +17,8 @@ permissions:
 jobs:
   platform:
     name: Laravel + TypeScript
-    runs-on: ubuntu-latest
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: [self-hosted, linux, x64, kmj-main-platform-ci]
     timeout-minutes: 20
     steps:
       - name: Checkout code
@@ -25,6 +26,7 @@ jobs:
         with:
           persist-credentials: false
       - name: Setup PHP 8.4
+        if: runner.environment == 'github-hosted'
         uses: shivammathur/setup-php@87d00bde2555f25eb54fedf940384e99cbdc55ef
         with:
           php-version: '8.4'
@@ -52,7 +54,8 @@ jobs:
 
   license-core:
     name: Native Rust license verifier
-    runs-on: ubuntu-latest
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: [self-hosted, linux, x64, kmj-main-platform-ci]
     timeout-minutes: 10
     steps:
       - name: Checkout code

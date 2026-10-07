@@ -38,6 +38,9 @@ final class CustomerDashboardProductAccessTest extends TestCase
                     'organizations.0.entitlements.0.product_slug',
                     'kmj-main-platform-sandbox',
                 )
-                ->where('organizations.0.entitlements.0.status', 'active'));
+                ->where('organizations.0.entitlements.0.status', 'active')
+                ->has('catalog')
+                ->has('hasPasskey')
+                ->etc());
     }
 }

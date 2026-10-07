@@ -1,498 +1,63 @@
-import { Head, Link } from '@inertiajs/react';
-import {
-    ArrowRight,
-    BadgeCheck,
-    Cable,
-    CheckCircle2,
-    Download,
-    KeyRound,
-    Laptop2,
-    Server,
-    ShieldCheck,
-    TerminalSquare,
-    Wrench,
-} from 'lucide-react';
+import { Head } from '@inertiajs/react';
+import CustomerControlCenter from '@/components/customer-control-center';
 import { dashboard } from '@/routes';
 
 type CodeBridgeService = {
     kind: 'codebridge';
     plan: string | null;
-    license_status: string;
-    license_expires_at: string | null;
     managed_devices: number;
     pending_pairings: number;
-    endpoint: string;
+    license_expires_at: string | null;
     oauth_ready: boolean;
-    permissions: string[];
 };
 
 type Entitlement = {
     id: string;
-    product_id: string;
-    product_name: string;
     product_slug: string;
+    product_name: string;
     capability: string;
     status: string;
-    starts_at: string;
-    service?: CodeBridgeService | null;
     release: {
-        id: string;
         version: string;
-        digest: string;
-        filename: string;
-        size_bytes: number | null;
         download_url: string;
     } | null;
-};
-
-type Organization = {
-    id: string;
-    name: string;
-    role: string;
-    entitlements: Entitlement[];
+    service?: CodeBridgeService | null;
 };
 
 type DashboardProps = {
-    organizations: Organization[];
+    organizations: Array<{
+        id: string;
+        name: string;
+        role: string;
+        entitlements: Entitlement[];
+    }>;
+    catalog: Array<{
+        slug: string;
+        name: string;
+        summary: string;
+        category: string;
+        lifecycle_label: string;
+        purchase_enabled: boolean;
+        image_path?: string | null;
+    }>;
     hasPasskey: boolean;
-};
-
-const CHATGPT_DESKTOP_SETUP_URL = '/install-chatgpt-desktop.ps1';
-
-const productImages: Record<string, string> = {
-    'kmj-cloudos': '/assets/products/kmj-cloudos.webp',
-    'kmj-calibration-pro': '/assets/products/kmj-calibration.webp',
-    'kmj-forge': '/assets/products/kmj-forge.webp',
-    'kmj-connect': '/assets/products/kmj-connect.webp',
-    'kmj-cloud-nexus': '/assets/products/kmj-cloud-nexus.webp',
-    'kmj-agent': '/assets/products/kmj-agent.webp',
-    'kmj-creative-studio': '/assets/products/kmj-creative-studio.webp',
-    'kmj-cinema-platform': '/assets/products/kmj-cinema-platform.webp',
-    'kmj-360-dome': '/assets/products/kmj-cinema-platform.webp',
-    'kmj-cinema-player': '/assets/products/kmj-cinema-platform.webp',
-    'kmj-licensing-hub': '/assets/products/kmj-licensing-hub.webp',
 };
 
 export default function Dashboard({
     organizations,
+    catalog,
     hasPasskey,
 }: DashboardProps) {
-    const services = organizations.flatMap((organization) =>
-        organization.entitlements.map((entitlement) => ({
-            ...entitlement,
-            organization_name: organization.name,
-        })),
-    );
-    const activeServices = services.filter(
-        (entitlement) => entitlement.status === 'active',
-    );
-
     return (
         <>
-            <Head title="My KMJ Services" />
-
-            <div className="flex h-full flex-1 flex-col gap-6 overflow-x-auto p-4 sm:p-6">
-                <section className="border-sidebar-border/70 from-background via-background dark:border-sidebar-border overflow-hidden rounded-2xl border bg-gradient-to-br to-red-950/10 p-6 sm:p-8">
-                    <div className="flex flex-col justify-between gap-8 lg:flex-row lg:items-end">
-                        <div className="max-w-2xl">
-                            <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-red-500/15 bg-red-500/5 px-3 py-1 text-xs font-semibold text-red-500">
-                                <span className="h-1.5 w-1.5 rounded-full bg-red-500" />
-                                KMJ TECHNO · Secure customer access
-                            </div>
-                            <h1 className="text-3xl font-black tracking-tight sm:text-4xl">
-                                My KMJ Services
-                            </h1>
-                            <p className="text-muted-foreground mt-3 max-w-xl text-sm leading-6">
-                                Your dashboard shows only services authorized
-                                for your account, with live access, licensing
-                                and connection information in one place.
-                            </p>
-                        </div>
-
-                        <div className="grid grid-cols-2 gap-3">
-                            <Metric
-                                label="Authorized services"
-                                value={services.length}
-                            />
-                            <Metric
-                                label="Active"
-                                value={activeServices.length}
-                            />
-                        </div>
-                    </div>
-                </section>
-
-                <section className="border-sidebar-border/70 bg-card dark:border-sidebar-border rounded-2xl border p-5 sm:p-6">
-                    <div className="flex items-start justify-between gap-4">
-                        <div>
-                            <div className="flex items-center gap-2">
-                                <BadgeCheck className="h-5 w-5 text-red-500" />
-                                <h2 className="font-bold">
-                                    Your authorized services
-                                </h2>
-                            </div>
-                            <p className="text-muted-foreground mt-1 text-xs">
-                                Service data is isolated to access granted to
-                                your account.
-                            </p>
-                        </div>
-                    </div>
-
-                    {services.length === 0 ? (
-                        <div className="bg-muted/20 mt-5 rounded-xl border border-dashed p-8 text-center">
-                            <KeyRound className="text-muted-foreground/40 mx-auto h-8 w-8" />
-                            <div className="mt-3 text-sm font-bold">
-                                No authorized service yet
-                            </div>
-                            <p className="text-muted-foreground mx-auto mt-1 max-w-xl text-xs leading-5">
-                                When a KMJ service is assigned to your account
-                                it will appear here automatically.
-                            </p>
-                        </div>
-                    ) : (
-                        <div className="mt-5 grid gap-4">
-                            {services.map((service) =>
-                                service.product_slug === 'kmj-codebridge' ? (
-                                    <CodeBridgeCard
-                                        key={service.id}
-                                        service={service}
-                                    />
-                                ) : (
-                                    <GenericServiceCard
-                                        key={service.id}
-                                        service={service}
-                                    />
-                                ),
-                            )}
-                        </div>
-                    )}
-                </section>
-
-                <section className="border-sidebar-border/70 bg-card dark:border-sidebar-border rounded-2xl border p-5 sm:p-6">
-                    <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
-                        <div className="flex items-start gap-3">
-                            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-red-500/10 text-red-500">
-                                <ShieldCheck className="h-5 w-5" />
-                            </span>
-                            <div>
-                                <div className="text-xs font-bold tracking-wider text-red-500 uppercase">
-                                    Account security
-                                </div>
-                                <h2 className="mt-1 font-bold">
-                                    {hasPasskey
-                                        ? 'Security protection is active'
-                                        : 'Add a phishing-resistant passkey'}
-                                </h2>
-                                <p className="text-muted-foreground mt-1 max-w-2xl text-xs leading-5">
-                                    {hasPasskey
-                                        ? 'Your KMJ account has a passkey. Manage sign-in and security settings here.'
-                                        : 'Add a passkey for stronger sign-in to your KMJ services.'}
-                                </p>
-                            </div>
-                        </div>
-                        <Link
-                            href="/settings/security"
-                            className="inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-xl border px-4 text-xs font-bold transition hover:border-red-500/40 hover:text-red-500"
-                        >
-                            Security settings
-                            <ArrowRight className="h-3.5 w-3.5" />
-                        </Link>
-                    </div>
-                </section>
-            </div>
+            <Head title="Customer Control Center — KMJ TECHNO" />
+            <CustomerControlCenter
+                organizations={organizations}
+                catalog={catalog}
+                hasPasskey={hasPasskey}
+            />
         </>
     );
-}
-
-function CodeBridgeCard({
-    service,
-}: {
-    service: Entitlement & { organization_name: string };
-}) {
-    const detail = service.service;
-    const permissions = detail?.permissions ?? [];
-
-    return (
-        <article className="from-background to-muted/20 overflow-hidden rounded-2xl border bg-gradient-to-br">
-            <div className="p-5 sm:p-6">
-                <div className="flex flex-col justify-between gap-5 lg:flex-row lg:items-start">
-                    <div className="flex min-w-0 items-start gap-4">
-                        <span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl border border-red-500/20 bg-red-500/10 text-red-500">
-                            <Cable className="h-6 w-6" />
-                        </span>
-                        <div className="min-w-0">
-                            <div className="flex flex-wrap items-center gap-2">
-                                <h3 className="text-lg font-black">
-                                    KMJ CodeBridge
-                                </h3>
-                                <StatusBadge status={service.status} />
-                            </div>
-                            <p className="text-muted-foreground mt-1 text-xs">
-                                {service.organization_name}
-                            </p>
-                            <p className="text-muted-foreground mt-3 max-w-2xl text-sm leading-6">
-                                Secure, project-scoped AI coding for authorized
-                                computers and VPSs. Inspect code, apply guarded
-                                edits and run administrator-approved quality
-                                gates from ChatGPT.
-                            </p>
-                        </div>
-                    </div>
-
-                    <div className="flex flex-wrap gap-2">
-                        <a
-                            href={CHATGPT_DESKTOP_SETUP_URL}
-                            download
-                            className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-red-600 px-4 text-xs font-black text-white transition hover:bg-red-500"
-                        >
-                            Set up ChatGPT Desktop
-                            <ArrowRight className="h-3.5 w-3.5" />
-                        </a>
-                        <Link
-                            href="/services/kmj-codebridge"
-                            className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border px-4 text-xs font-bold transition hover:border-red-500/40 hover:text-red-500"
-                        >
-                            Manage CodeBridge
-                            <ArrowRight className="h-3.5 w-3.5" />
-                        </Link>
-                        {service.release && (
-                            <a
-                                href={service.release.download_url}
-                                className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border px-4 text-xs font-bold transition hover:border-red-500/40 hover:text-red-500"
-                            >
-                                <Download className="h-3.5 w-3.5" />
-                                Download v{service.release.version}
-                            </a>
-                        )}
-                    </div>
-                </div>
-
-                <div className="mt-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-                    <ServiceMetric
-                        label="License"
-                        value={detail?.license_status ?? service.status}
-                        hint={
-                            detail?.plan
-                                ? titleCase(detail.plan) + ' plan'
-                                : 'Account access'
-                        }
-                    />
-                    <ServiceMetric
-                        label="OAuth"
-                        value={detail?.oauth_ready ? 'Ready' : 'Setup required'}
-                        hint="Secure ChatGPT sign-in"
-                    />
-                    <ServiceMetric
-                        label="Managed devices"
-                        value={detail?.managed_devices ?? 0}
-                        hint={
-                            detail?.pending_pairings
-                                ? detail.pending_pairings + ' pairing pending'
-                                : 'Project-scoped access'
-                        }
-                    />
-                    <ServiceMetric
-                        label="License valid until"
-                        value={formatDate(detail?.license_expires_at)}
-                        hint="Main Platform authority"
-                    />
-                </div>
-
-                <div className="mt-5 grid gap-3 lg:grid-cols-[1.25fr_1fr]">
-                    <div className="rounded-xl border bg-black/5 p-4 dark:bg-white/[0.02]">
-                        <div className="flex items-center gap-2 text-xs font-black">
-                            <Server className="h-4 w-4 text-red-500" />
-                            Connection
-                        </div>
-                        <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                            <code className="bg-muted/60 overflow-x-auto rounded-lg px-3 py-2 text-[11px]">
-                                {detail?.endpoint ||
-                                    'https://kmjtechno.com/mcp'}
-                            </code>
-                            <span className="inline-flex items-center gap-1.5 text-[11px] font-bold text-emerald-600 dark:text-emerald-400">
-                                <CheckCircle2 className="h-3.5 w-3.5" />
-                                MCP endpoint ready
-                            </span>
-                        </div>
-                    </div>
-
-                    <div className="rounded-xl border bg-black/5 p-4 dark:bg-white/[0.02]">
-                        <div className="text-xs font-black">
-                            Authorized capabilities
-                        </div>
-                        <div className="mt-3 flex flex-wrap gap-2">
-                            {(permissions.length
-                                ? permissions
-                                : ['read', 'write', 'execute']
-                            ).map((permission) => (
-                                <span
-                                    key={permission}
-                                    className="rounded-lg border px-2.5 py-1 text-[10px] font-bold uppercase"
-                                >
-                                    {permission}
-                                </span>
-                            ))}
-                        </div>
-                    </div>
-                </div>
-
-                <div className="mt-5 grid gap-3 md:grid-cols-3">
-                    <Capability
-                        icon={Laptop2}
-                        title="Inspect projects"
-                        text="Read authorized project files, Git status, diffs and history."
-                    />
-                    <Capability
-                        icon={Wrench}
-                        title="Guarded edits"
-                        text="Make hash-checked file changes only inside authorized projects."
-                    />
-                    <Capability
-                        icon={TerminalSquare}
-                        title="Quality gates"
-                        text="Run approved checks without exposing unrestricted shell access."
-                    />
-                </div>
-            </div>
-        </article>
-    );
-}
-
-function GenericServiceCard({
-    service,
-}: {
-    service: Entitlement & { organization_name: string };
-}) {
-    return (
-        <article className="bg-background/60 overflow-hidden rounded-xl border">
-            <div className="grid gap-4 p-4 sm:grid-cols-[96px_1fr]">
-                <div className="bg-muted/30 grid h-24 w-24 place-items-center overflow-hidden rounded-xl border">
-                    <img
-                        src={
-                            productImages[service.product_slug] ??
-                            '/assets/brand/kmj-social-card.webp'
-                        }
-                        alt={service.product_name}
-                        loading="lazy"
-                        decoding="async"
-                        className="h-full w-full object-contain p-2"
-                    />
-                </div>
-                <div className="min-w-0">
-                    <div className="flex items-start justify-between gap-3">
-                        <div>
-                            <h3 className="font-black">
-                                {service.product_name}
-                            </h3>
-                            <p className="text-muted-foreground mt-1 text-[11px]">
-                                {service.organization_name}
-                            </p>
-                        </div>
-                        <StatusBadge status={service.status} />
-                    </div>
-                    <p className="text-muted-foreground mt-3 text-xs">
-                        {service.capability}
-                    </p>
-                    <div className="mt-4 flex flex-wrap gap-3">
-                        <Link
-                            href={'/products/' + service.product_slug}
-                            className="inline-flex items-center gap-1 text-[11px] font-bold text-red-500"
-                        >
-                            Service details
-                            <ArrowRight className="h-3 w-3" />
-                        </Link>
-                        {service.release && (
-                            <a
-                                href={service.release.download_url}
-                                className="inline-flex items-center gap-1 text-[11px] font-black text-emerald-600 dark:text-emerald-400"
-                            >
-                                <Download className="h-3 w-3" />
-                                Download v{service.release.version}
-                            </a>
-                        )}
-                    </div>
-                </div>
-            </div>
-        </article>
-    );
-}
-
-function Capability({
-    icon: Icon,
-    title,
-    text,
-}: {
-    icon: typeof Laptop2;
-    title: string;
-    text: string;
-}) {
-    return (
-        <div className="rounded-xl border p-4">
-            <Icon className="h-4 w-4 text-red-500" />
-            <div className="mt-3 text-xs font-black">{title}</div>
-            <p className="text-muted-foreground mt-1 text-[11px] leading-5">
-                {text}
-            </p>
-        </div>
-    );
-}
-
-function ServiceMetric({
-    label,
-    value,
-    hint,
-}: {
-    label: string;
-    value: string | number;
-    hint: string;
-}) {
-    return (
-        <div className="bg-background/70 rounded-xl border px-4 py-3">
-            <div className="text-muted-foreground text-[10px] font-bold tracking-wider uppercase">
-                {label}
-            </div>
-            <div className="mt-1 text-sm font-black">{value}</div>
-            <div className="text-muted-foreground mt-1 text-[10px]">{hint}</div>
-        </div>
-    );
-}
-
-function StatusBadge({ status }: { status: string }) {
-    return (
-        <span className="rounded-full border border-emerald-500/15 bg-emerald-500/5 px-2 py-1 text-[9px] font-black text-emerald-600 uppercase dark:text-emerald-400">
-            {status}
-        </span>
-    );
-}
-
-function Metric({ label, value }: { label: string; value: number | string }) {
-    return (
-        <div className="bg-background/70 min-w-28 rounded-xl border px-4 py-3">
-            <div className="text-lg font-black">{value}</div>
-            <div className="text-muted-foreground mt-0.5 text-[10px]">
-                {label}
-            </div>
-        </div>
-    );
-}
-
-function titleCase(value: string): string {
-    return value
-        .split(/[-_]/)
-        .filter(Boolean)
-        .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-        .join(' ');
-}
-
-function formatDate(value?: string | null): string {
-    if (!value) return '—';
-    const date = new Date(value);
-    if (Number.isNaN(date.getTime())) return value;
-    return new Intl.DateTimeFormat('en', {
-        year: 'numeric',
-        month: 'short',
-        day: '2-digit',
-    }).format(date);
 }
 
 Dashboard.layout = {

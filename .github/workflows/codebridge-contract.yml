@@ -33,7 +33,8 @@ permissions:
   contents: read
 jobs:
   interoperability:
-    runs-on: ubuntu-latest
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: [self-hosted, linux, x64, kmj-main-platform-ci]
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@v4
@@ -46,6 +47,7 @@ jobs:
           path: .codebridge-contract
           persist-credentials: false
       - name: Setup PHP 8.4
+        if: runner.environment == 'github-hosted'
         uses: shivammathur/setup-php@87d00bde2555f25eb54fedf940384e99cbdc55ef
         with:
           php-version: '8.4'
@@ -63,7 +65,8 @@ jobs:
 
   concurrency-postgres:
     name: CodeBridge concurrency (postgres)
-    runs-on: ubuntu-latest
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: [self-hosted, linux, x64, kmj-main-platform-ci]
     timeout-minutes: 10
     services:
       postgres:
@@ -88,6 +91,7 @@ jobs:
         with:
           persist-credentials: false
       - name: Setup PHP 8.4
+        if: runner.environment == 'github-hosted'
         uses: shivammathur/setup-php@87d00bde2555f25eb54fedf940384e99cbdc55ef
         with:
           php-version: '8.4'

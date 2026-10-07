@@ -4,6 +4,7 @@ use App\Models\User;
 use App\Services\Commerce\CommercialProductPublisher;
 use App\Services\PlatformOwnerAccess;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
@@ -81,8 +82,20 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
             })
             ->all();
 
+        $preferredOrganizationId = $request->query('organization');
+        $preferredOrganizationId = is_string($preferredOrganizationId)
+            ? $preferredOrganizationId
+            : '';
+        $selectedOrganizationId = $organizationItems
+            ->contains(fn (array $organization): bool => $organization['id'] === $preferredOrganizationId)
+            ? $preferredOrganizationId
+            : ($organizationItems->count() === 1
+                ? (string) $organizationItems->first()['id']
+                : '');
+
         return Inertia::render('purchase', [
             'organizations' => $organizationItems->all(),
+            'selectedOrganizationId' => $selectedOrganizationId,
             'products' => $products
                 ->map(fn (Product $product): array => [
                     'id' => (string) $product->getKey(),
@@ -92,6 +105,9 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
                 ->all(),
             'recentOrders' => $recentOrders,
             'requestKey' => (string) Str::uuid(),
+            'requestedProductSlug' => is_string($request->query('product'))
+                ? $request->query('product')
+                : '',
         ]);
     })->name('purchase.index');
 
@@ -138,6 +154,80 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
             ->route('purchase.index')
             ->with('success', 'Purchase request submitted for operator confirmation.');
     })->name('purchase.orders.store');
+
+    Route::post('purchase/bundles', function (
+        Request $request,
+        OrganizationCapabilityContext $capabilities,
+        CommercialOrderService $orders,
+    ) {
+        $user = $request->user();
+        abort_unless($user instanceof User, 401);
+
+        $validated = $request->validate([
+            'organization_id' => ['required', 'uuid'],
+            'product_ids' => ['required', 'array', 'min:1', 'max:10'],
+            'product_ids.*' => ['required', 'uuid', 'distinct'],
+            'idempotency_key' => ['required', 'uuid'],
+        ]);
+        abort_unless(
+            $capabilities->allows($user->id, $validated['organization_id'], 'commerce.purchase'),
+            403,
+        );
+
+        $productIds = collect($validated['product_ids'])->sort()->values()->all();
+        $availableProducts = Product::query()
+            ->whereIn('id', $productIds)
+            ->where('status', 'active')
+            ->pluck('id');
+        abort_unless($availableProducts->count() === count($productIds), 404);
+
+        $fulfillableIds = EntitlementPolicy::query()
+            ->whereIn('product_id', $productIds)
+            ->where('status', 'active')
+            ->pluck('product_id')
+            ->unique();
+        abort_unless($fulfillableIds->count() === count($productIds), 404);
+
+        DB::transaction(function () use ($validated, $productIds, $orders, $user): void {
+            // Serialize requests for this organization to keep a bundle key
+            // idempotent even when the same browser retries concurrently.
+            $organization = DB::table('organizations')
+                ->where('id', $validated['organization_id'])
+                ->lockForUpdate()
+                ->first();
+            abort_unless($organization !== null, 404);
+
+            $prefix = 'bundle:'.$validated['idempotency_key'].':';
+            $previous = DB::table('commerce_orders')
+                ->where('idempotency_key', 'like', $prefix.'%')
+                ->get(['organization_id', 'requester_user_id', 'product_id'])
+                ->all();
+            if ($previous !== []) {
+                $previousIds = collect($previous)->pluck('product_id')->sort()->values()->all();
+                abort_unless(
+                    $previousIds === $productIds &&
+                    collect($previous)->every(fn ($row): bool =>
+                        $row->organization_id === $validated['organization_id'] &&
+                        (int) $row->requester_user_id === $user->id),
+                    409,
+                    'This bundle request key was already used for a different selection.',
+                );
+            }
+
+            foreach ($productIds as $productId) {
+                $orders->request(
+                    $validated['organization_id'],
+                    $productId,
+                    $user->id,
+                    $prefix.$productId,
+                );
+            }
+        }, 3);
+
+        return redirect()
+            ->route('purchase.index', ['organization' => $validated['organization_id']])
+            ->with('success', 'Bundle request submitted. Each product awaits operator confirmation and entitlement fulfillment.');
+    })->name('purchase.bundles.store');
 });
 
 Route::middleware(['auth', 'verified', 'password.confirm'])

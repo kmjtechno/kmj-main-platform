@@ -42,8 +42,8 @@ Route::get('install', function () {
 #!/usr/bin/env bash
 set -euo pipefail
 
-CODEBRIDGE_RELEASE_REF='ff8a64273ce46e6ddcae1c62e054917be8572b4e'
-CODEBRIDGE_INSTALLER_URL='https://raw.githubusercontent.com/kmjtechno/kmj-codebridge/ff8a64273ce46e6ddcae1c62e054917be8572b4e/scripts/install-vps.sh'
+CODEBRIDGE_RELEASE_REF='6788fa89e76c0c25d72a6d23d15bbf39adcdf796'
+CODEBRIDGE_INSTALLER_URL='https://raw.githubusercontent.com/kmjtechno/kmj-codebridge/6788fa89e76c0c25d72a6d23d15bbf39adcdf796/scripts/install-vps.sh'
 
 tmp="$(mktemp)"
 cleanup() {
@@ -162,7 +162,7 @@ if ($codex) {
             name = $pluginName
             source = [pscustomobject]@{
                 source = 'local'
-                path = './../../.codex/plugins/kmj-codebridge'
+                path = './.codex/plugins/kmj-codebridge'
             }
             policy = [pscustomobject]@{
                 installation = 'INSTALLED_BY_DEFAULT'
@@ -180,10 +180,11 @@ if ($codex) {
 }
 
 Write-Host ''
-Write-Host 'KMJ CodeBridge is ready for ChatGPT Desktop.' -ForegroundColor Green
-Write-Host 'Fully quit and reopen ChatGPT Desktop once.'
-Write-Host 'The KMJ marketplace installs CodeBridge by default.'
-Write-Host 'On first CodeBridge use, your browser will open KMJ OAuth automatically.'
+Write-Host 'KMJ CodeBridge marketplace has been configured.' -ForegroundColor Green
+Write-Host 'Fully quit and reopen ChatGPT Desktop, then open Plugins > KMJ TECHNO.'
+Write-Host 'Install or enable KMJ CodeBridge if prompted and connect the existing app.'
+Write-Host 'Complete any browser authorization requested by ChatGPT or KMJ.'
+Write-Host 'This installer does not bypass plugin installation, access approval or OAuth.'
 POWERSHELL;
 
     return response($script."\r\n", 200, [
@@ -372,6 +373,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         OrganizationDirectory $organizations,
         EntitlementReader $entitlements,
         CustomerReleaseAccess $releaseAccess,
+        PublicProductCatalog $catalog,
     ) {
         $user = $request->user();
         abort_unless($user instanceof User, 401);
@@ -439,6 +441,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
                             ->where('expires_at_epoch', '>', time())
                             ->count(),
                         'pending_pairings' => DB::table('codebridge_device_pairings')
+                            ->where('tenant_id', $organization['id'])
                             ->where('status', 'pending')
                             ->where('expires_at', '>', now())
                             ->count(),
@@ -458,8 +461,91 @@ Route::middleware(['auth', 'verified'])->group(function () {
         return Inertia::render('dashboard', [
             'organizations' => $items,
             'hasPasskey' => $user->passkeys()->exists(),
+            'catalog' => collect($catalog->all())
+                ->map(fn (array $product): array => [
+                    'slug' => $product['slug'],
+                    'name' => $product['name'],
+                    'summary' => $product['summary'],
+                    'category' => $product['category'],
+                    'lifecycle_label' => $product['lifecycle_label'],
+                    'purchase_enabled' => (bool) $product['purchase_enabled'],
+                    'image_path' => $product['image_path'] ?? null,
+                ])
+                ->values()
+                ->all(),
         ]);
     })->name('dashboard');
+
+    Route::get('services/entitlements/{entitlement}', function (
+        Request $request,
+        string $entitlement,
+        OrganizationDirectory $organizations,
+        EntitlementReader $entitlements,
+        CustomerReleaseAccess $releaseAccess,
+        PublicProductCatalog $catalog,
+    ) {
+        $user = $request->user();
+        abort_unless($user instanceof User, 401);
+
+        $organization = null;
+        $authorizedEntitlement = null;
+
+        foreach ($organizations->forUser($user->id) as $ownedOrganization) {
+            foreach ($entitlements->forOrganization($ownedOrganization['id']) as $item) {
+                if ($item['id'] === $entitlement) {
+                    $organization = [
+                        'id' => $ownedOrganization['id'],
+                        'name' => $ownedOrganization['name'],
+                    ];
+                    $authorizedEntitlement = $item;
+                    break 2;
+                }
+            }
+        }
+
+        abort_unless($organization !== null && $authorizedEntitlement !== null, 404);
+
+        $release = $releaseAccess->latestForOrganizationProduct(
+            $user->id,
+            $organization['id'],
+            $authorizedEntitlement['product_id'],
+        );
+        $artifact = $release?->artifact;
+        $download = $release !== null && $artifact instanceof ReleaseArtifact
+            ? [
+                'version' => $release->version,
+                'filename' => $artifact->filename,
+                'download_url' => route(
+                    'customer.releases.download',
+                    ['release' => $release->getKey()],
+                    false,
+                ),
+            ]
+            : null;
+        $product = $catalog->find($authorizedEntitlement['product_slug']);
+
+        return Inertia::render('services/show', [
+            'organization' => $organization,
+            'entitlement' => [
+                'id' => $authorizedEntitlement['id'],
+                'product_name' => $authorizedEntitlement['product_name'],
+                'product_slug' => $authorizedEntitlement['product_slug'],
+                'capability' => $authorizedEntitlement['capability'],
+                'status' => $authorizedEntitlement['status'],
+                'starts_at' => $authorizedEntitlement['starts_at'],
+            ],
+            'product' => $product !== null
+                ? [
+                    'summary' => $product['summary'],
+                    'category' => $product['category'],
+                    'lifecycle_label' => $product['lifecycle_label'],
+                    'purchase_enabled' => (bool) $product['purchase_enabled'],
+                    'image_path' => $product['image_path'] ?? null,
+                ]
+                : null,
+            'release' => $download,
+        ]);
+    })->name('services.entitlements.show');
 
     Route::get('services/kmj-codebridge', function (
         Request $request,
@@ -470,7 +556,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
         $user = $request->user();
         abort_unless($user instanceof User, 401);
 
+        $requestedOrganization = $request->query('organization');
+        abort_unless($requestedOrganization === null || is_string($requestedOrganization), 404);
+
         $access = collect($organizations->forUser($user->id))
+            ->filter(fn (array $organization): bool => $requestedOrganization === null
+                || $organization['id'] === $requestedOrganization)
             ->map(function (array $organization) use ($entitlements): ?array {
                 $entitlement = collect($entitlements->forOrganization($organization['id']))
                     ->first(fn (array $item): bool => $item['product_slug'] === 'kmj-codebridge'
@@ -545,6 +636,40 @@ Route::middleware(['auth', 'verified'])->group(function () {
             ->values()
             ->all();
 
+        $enrolledCredentials = DB::table('codebridge_device_credentials')
+            ->where('tenant_id', $organization['id'])
+            ->whereNull('revoked_at')
+            ->where('expires_at_epoch', '>', time())
+            ->orderBy('device_id')
+            ->limit(100)
+            ->get(['device_id', 'activation_id', 'expires_at_epoch']);
+
+        // A consumed pairing describes the original approved project only.
+        // It must never be represented as proof of a currently-online agent.
+        $activationIds = $enrolledCredentials->pluck('activation_id')->filter()->all();
+        $pairedProjects = $activationIds === []
+            ? collect()
+            : DB::table('codebridge_device_pairings')
+                ->where('tenant_id', $organization['id'])
+                ->where('status', 'consumed')
+                ->whereIn('activation_id', $activationIds)
+                ->latest('consumed_at')
+                ->limit(100)
+                ->get(['activation_id', 'project_id', 'project_name'])
+                ->unique('activation_id')
+                ->keyBy('activation_id');
+
+        $enrolledDevices = $enrolledCredentials->map(function ($credential) use ($pairedProjects): array {
+            $pairing = $pairedProjects->get($credential->activation_id);
+
+            return [
+                'device_id' => (string) $credential->device_id,
+                'last_paired_project' => $pairing?->project_id,
+                'last_paired_project_name' => $pairing?->project_name,
+                'credential_expires_at_epoch' => (int) $credential->expires_at_epoch,
+            ];
+        })->values()->all();
+
         return Inertia::render('services/codebridge', [
             'organization' => $organization,
             'entitlement' => $entitlement,
@@ -562,7 +687,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
                     ->whereNull('revoked_at')
                     ->where('expires_at_epoch', '>', time())
                     ->count(),
+                'enrolled_devices' => $enrolledDevices,
                 'pending_pairings' => DB::table('codebridge_device_pairings')
+                    ->where('tenant_id', $organization['id'])
                     ->where('status', 'pending')
                     ->where('expires_at', '>', now())
                     ->count(),

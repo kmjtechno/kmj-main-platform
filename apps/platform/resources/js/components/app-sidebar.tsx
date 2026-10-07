@@ -5,6 +5,7 @@ import {
     KeyRound,
     LayoutGrid,
     PackageOpen,
+    Layers3,
     ShieldCheck,
     ShoppingCart,
 } from 'lucide-react';
@@ -32,13 +33,18 @@ const baseNavItems: NavItem[] = [
         icon: LayoutGrid,
     },
     {
-        title: 'Purchase Center',
+        title: 'My Services',
+        href: '/dashboard#my-services',
+        icon: Layers3,
+    },
+    {
+        title: 'Service Marketplace',
         href: '/purchase',
         icon: ShoppingCart,
     },
     {
-        title: 'License Center',
-        href: '/sandbox-licenses',
+        title: 'Access & Licenses',
+        href: '/dashboard#access-security',
         icon: KeyRound,
     },
     {
