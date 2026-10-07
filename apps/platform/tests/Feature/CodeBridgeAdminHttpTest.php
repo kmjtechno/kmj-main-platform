@@ -204,9 +204,12 @@ final class CodeBridgeAdminHttpTest extends TestCase
         $now = now();
         DB::table('kslp_licenses')->insert(['id' => $license, 'customer_id' => $tenant, 'product' => 'KMJ_CODEBRIDGE', 'plan' => 'professional', 'status' => 'active', 'sequence' => 1, 'starts_at' => $now->copy()->subMinute(), 'expires_at' => $now->copy()->addYear(), 'grace_until' => $now->copy()->addYear()->addDays(2), 'created_at' => $now, 'updated_at' => $now]);
         DB::table('kslp_activations')->insert(['id' => $activation, 'license_id' => $license, 'server_identity' => 'ed25519:http-test', 'machine_identity_hash' => str_repeat('a', 64), 'idempotency_key' => 'http-'.Str::uuid(), 'activated_at' => $now, 'created_at' => $now, 'updated_at' => $now]);
-        $product = (string) Str::uuid();
-        DB::table('products')->insert(['id' => $product, 'slug' => 'codebridge', 'name' => 'CodeBridge', 'status' => 'active', 'lifecycle' => 'available', 'is_public' => false, 'sort_order' => 100, 'purchase_enabled' => false, 'licensing_enabled' => true, 'created_at' => $now, 'updated_at' => $now]);
-        DB::table('plans')->insert(['id' => (string) Str::uuid(), 'product_id' => $product, 'code' => 'codebridge.professional', 'name' => 'CodeBridge Professional', 'pricing_model' => 'license', 'status' => 'active', 'trial_days' => 0, 'features' => json_encode(['read' => true]), 'limits' => json_encode(['devices' => 2]), 'created_at' => $now, 'updated_at' => $now]);
+        $product = DB::table('products')->where('slug', 'codebridge')->value('id');
+        if (! $product) {
+            $product = (string) Str::uuid();
+            DB::table('products')->insert(['id' => $product, 'slug' => 'codebridge', 'name' => 'CodeBridge', 'status' => 'active', 'lifecycle' => 'available', 'is_public' => false, 'sort_order' => 100, 'purchase_enabled' => false, 'licensing_enabled' => true, 'created_at' => $now, 'updated_at' => $now]);
+            DB::table('plans')->insert(['id' => (string) Str::uuid(), 'product_id' => $product, 'code' => 'codebridge.professional', 'name' => 'CodeBridge Professional', 'pricing_model' => 'license', 'status' => 'active', 'trial_days' => 0, 'features' => json_encode(['read' => true]), 'limits' => json_encode(['devices' => 2]), 'created_at' => $now, 'updated_at' => $now]);
+        }
 
         return [$license, $activation];
     }
