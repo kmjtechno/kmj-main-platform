@@ -545,6 +545,74 @@ Route::middleware(['auth', 'verified'])->group(function () {
             ->values()
             ->all();
 
+        $managedProjects = DB::table('codebridge_device_project_grants as g')
+            ->join('codebridge_device_credentials as c', 'c.id', '=', 'g.credential_id')
+            ->where('g.tenant_id', $organization['id'])
+            ->whereNull('g.revoked_at')
+            ->whereNull('c.revoked_at')
+            ->where('c.expires_at_epoch', '>', time())
+            ->orderBy('g.created_at')
+            ->get([
+                'g.device_id',
+                'g.project_id',
+                'g.project_name',
+                'g.repository',
+                'g.permissions',
+                'g.gate_preset',
+                'g.status',
+                'g.updated_at',
+            ])
+            ->map(function ($project): array {
+                $permissions = [];
+                if (is_string($project->permissions) && $project->permissions !== '') {
+                    try {
+                        $decoded = json_decode($project->permissions, true, 8, JSON_THROW_ON_ERROR);
+                        $permissions = array_values(array_intersect(
+                            ['read', 'write', 'execute'],
+                            array_filter(is_array($decoded) ? $decoded : [], 'is_string'),
+                        ));
+                    } catch (Throwable) {
+                        $permissions = [];
+                    }
+                }
+
+                return [
+                    'device_id' => (string) $project->device_id,
+                    'project_id' => (string) $project->project_id,
+                    'project_name' => (string) $project->project_name,
+                    'repository' => is_string($project->repository) ? $project->repository : null,
+                    'permissions' => $permissions,
+                    'gate_preset' => (string) $project->gate_preset,
+                    'status' => (string) $project->status,
+                    'updated_at' => $project->updated_at,
+                ];
+            })
+            ->all();
+
+        $managedDevices = DB::table('codebridge_device_credentials as c')
+            ->leftJoin('codebridge_device_pairings as p', 'p.activation_id', '=', 'c.activation_id')
+            ->where('c.tenant_id', $organization['id'])
+            ->whereNull('c.revoked_at')
+            ->where('c.expires_at_epoch', '>', time())
+            ->orderBy('c.device_id')
+            ->get([
+                'c.device_id',
+                'p.device_name',
+                'p.platform',
+                'p.arch',
+            ])
+            ->map(fn ($device): array => [
+                'id' => (string) $device->device_id,
+                'name' => is_string($device->device_name) && $device->device_name !== ''
+                    ? $device->device_name
+                    : (string) $device->device_id,
+                'platform' => is_string($device->platform) ? $device->platform : null,
+                'arch' => is_string($device->arch) ? $device->arch : null,
+            ])
+            ->unique('id')
+            ->values()
+            ->all();
+
         return Inertia::render('services/codebridge', [
             'organization' => $organization,
             'entitlement' => $entitlement,
@@ -566,11 +634,132 @@ Route::middleware(['auth', 'verified'])->group(function () {
                     ->where('status', 'pending')
                     ->where('expires_at', '>', now())
                     ->count(),
+                'devices' => $managedDevices,
+                'projects' => $managedProjects,
                 'connected_clients' => $connectedClients,
                 'access_token_ttl_seconds' => (int) config('codebridge_oauth.access_token_ttl', 900),
             ],
         ]);
     })->name('services.codebridge');
+
+    Route::post('services/kmj-codebridge/projects', function (
+        Request $request,
+        OrganizationDirectory $organizations,
+    ) {
+        $user = $request->user();
+        abort_unless($user instanceof User, 401);
+
+        $v = $request->validate([
+            'tenant_id' => ['required', 'string', 'max:64'],
+            'device_id' => ['required', 'string', 'regex:/\\A[A-Za-z0-9_-]{1,64}\\z/D'],
+            'project_id' => ['required', 'string', 'regex:/\\A[A-Za-z0-9_-]{1,64}\\z/D'],
+            'project_name' => ['required', 'string', 'min:1', 'max:128'],
+            'repository' => ['required', 'string', 'regex:/\\A[A-Za-z0-9_.-]+\\/[A-Za-z0-9_.-]+\\z/D', 'max:255'],
+            'access_mode' => ['required', 'in:read,write'],
+            'gate_preset' => ['required', 'in:standard,platform,full'],
+        ]);
+
+        abort_unless($organizations->userCanManage($user->id, $v['tenant_id']), 403);
+
+        $license = DB::table('kslp_licenses')
+            ->where('customer_id', $v['tenant_id'])
+            ->where('product', 'KMJ_CODEBRIDGE')
+            ->where('status', 'active')
+            ->whereNull('revoked_at')
+            ->where('starts_at', '<=', now())
+            ->where('expires_at', '>', now())
+            ->oldest('created_at')
+            ->first();
+        abort_unless($license, 403);
+
+        $plan = DB::table('plans')
+            ->where('code', 'codebridge.'.$license->plan)
+            ->where('status', 'active')
+            ->first();
+        $features = $plan && is_string($plan->features) ? json_decode($plan->features, true) : null;
+        $availablePermissions = collect(is_array($features) ? $features : [])
+            ->filter(fn (mixed $enabled, string $permission): bool => $enabled === true
+                && in_array($permission, ['read', 'write', 'execute'], true))
+            ->keys()
+            ->values()
+            ->all();
+
+        $permissions = $v['access_mode'] === 'read'
+            ? array_values(array_intersect(['read'], $availablePermissions))
+            : array_values(array_intersect(['read', 'write', 'execute'], $availablePermissions));
+        abort_if($permissions === [], 403);
+
+        $credential = DB::table('codebridge_device_credentials')
+            ->where('tenant_id', $v['tenant_id'])
+            ->where('device_id', $v['device_id'])
+            ->whereNull('revoked_at')
+            ->where('expires_at_epoch', '>', time())
+            ->first();
+        abort_unless($credential, 404);
+
+        $existing = DB::table('codebridge_device_project_grants')
+            ->where('tenant_id', $v['tenant_id'])
+            ->where('device_id', $v['device_id'])
+            ->where('project_id', $v['project_id'])
+            ->whereNull('revoked_at')
+            ->exists();
+
+        if ($existing) {
+            return back()->withErrors(['project_id' => 'This project is already registered on the selected device.']);
+        }
+
+        $grantId = (string) Str::uuid();
+        $jobId = (string) Str::uuid();
+
+        DB::transaction(function () use ($v, $credential, $permissions, $grantId, $jobId, $license, $user): void {
+            DB::table('codebridge_device_project_grants')->insert([
+                'id' => $grantId,
+                'credential_id' => $credential->id,
+                'tenant_id' => $v['tenant_id'],
+                'device_id' => $v['device_id'],
+                'project_id' => $v['project_id'],
+                'project_name' => $v['project_name'],
+                'repository' => $v['repository'],
+                'permissions' => json_encode($permissions, JSON_THROW_ON_ERROR),
+                'gate_preset' => $v['gate_preset'],
+                'status' => 'requested',
+                'revoked_at' => null,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+
+            DB::table('codebridge_project_setup_jobs')->insert([
+                'id' => $jobId,
+                'tenant_id' => $v['tenant_id'],
+                'device_id' => $v['device_id'],
+                'project_id' => $v['project_id'],
+                'operation' => 'install',
+                'state' => 'queued',
+                'error_code' => null,
+                'started_at' => null,
+                'finished_at' => null,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+
+            DB::table('kslp_license_events')->insert([
+                'license_id' => $license->id,
+                'actor_id' => 'kmj-user:'.$user->id,
+                'action' => 'codebridge_project_requested',
+                'reason' => 'Project requested from KMJ CodeBridge UI',
+                'correlation_id' => $jobId,
+                'metadata' => json_encode([
+                    'device_id' => $v['device_id'],
+                    'project_id' => $v['project_id'],
+                    'repository' => $v['repository'],
+                    'gate_preset' => $v['gate_preset'],
+                ], JSON_THROW_ON_ERROR),
+                'created_at' => now(),
+            ]);
+        }, 3);
+
+        return back()->with('status', 'Project queued for secure device sync.');
+    })->name('services.codebridge.projects.store');
 
     Route::post('services/kmj-codebridge/oauth-clients/{clientId}/revoke', function (
         Request $request,

@@ -240,21 +240,21 @@ function CodeBridgeCard({
                     </div>
 
                     <div className="flex flex-wrap gap-2">
+                        <Link
+                            href="/services/kmj-codebridge#projects"
+                            className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-red-600 px-4 text-xs font-black text-white transition hover:bg-red-500"
+                        >
+                            Manage projects
+                            <ArrowRight className="h-3.5 w-3.5" />
+                        </Link>
                         <a
                             href={CHATGPT_DESKTOP_SETUP_URL}
                             download
-                            className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-red-600 px-4 text-xs font-black text-white transition hover:bg-red-500"
-                        >
-                            Set up ChatGPT Desktop
-                            <ArrowRight className="h-3.5 w-3.5" />
-                        </a>
-                        <Link
-                            href="/services/kmj-codebridge"
                             className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border px-4 text-xs font-bold transition hover:border-red-500/40 hover:text-red-500"
                         >
-                            Manage CodeBridge
+                            Set up ChatGPT
                             <ArrowRight className="h-3.5 w-3.5" />
-                        </Link>
+                        </a>
                         {service.release && (
                             <a
                                 href={service.release.download_url}
