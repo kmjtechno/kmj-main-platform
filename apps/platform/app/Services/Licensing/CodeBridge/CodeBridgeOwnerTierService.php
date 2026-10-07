@@ -31,6 +31,7 @@ final class CodeBridgeOwnerTierService
                 ! $license
                 || $license->status !== 'active'
                 || $license->revoked_at !== null
+                || ! in_array((string) $license->plan, ['professional', 'owner'], true)
                 || strtotime((string) $license->starts_at) > time()
                 || strtotime((string) $license->expires_at) <= time()
             ) {
