@@ -51,14 +51,21 @@ Route::middleware(['auth', 'verified', 'password.confirm'])
             abort_unless($organizations->userCanManage((int) $user->id, $v['tenant_id']), 403);
 
             try {
-                return response()->json(
-                    $service->upgrade(
-                        $v['license_id'],
-                        $v['tenant_id'],
-                        'platform-owner:'.$user->getKey(),
-                    ),
-                )->header('Cache-Control', 'no-store');
+                $result = $service->upgrade(
+                    $v['license_id'],
+                    $v['tenant_id'],
+                    'platform-owner:'.$user->getKey(),
+                );
+                if ($request->header('X-Inertia')) {
+                    return redirect()->route('operator.codebridge.owner-plan');
+                }
+
+                return response()->json($result)->header('Cache-Control', 'no-store');
             } catch (DomainException $e) {
+                if ($request->header('X-Inertia')) {
+                    return back()->withErrors(['license_id' => $e->getMessage()]);
+                }
+
                 return response()->json(['error' => $e->getMessage()], 409)->header('Cache-Control', 'no-store');
             }
         })->name('licenses.owner-tier');
