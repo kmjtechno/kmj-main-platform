@@ -5,6 +5,21 @@
   "automatic_product_completion": false,
   "tasks": [
     {
+      "id": "KMJ-GH-001",
+      "priority": 0,
+      "state": "ready",
+      "title": "Connect versioned GitHub task/pause/resume control to existing VPS queue",
+      "spec": "docs/operations/KMJ-GITHUB-CONTROL.md",
+      "acceptance": [
+        "Actual GitHub pause/resume verified on VPS",
+        "Task imported exactly once across poll/restart",
+        "Complete batch validation and strict confidentiality",
+        "Sanitized status and credential scope verified",
+        "No self-hosted runner or auto-merge activation",
+        "160 existing tests plus3 acceptance tests remain green"
+      ]
+    },
+    {
       "id": "KMJ-AUTO-001",
       "priority": 1,
       "state": "ready",
@@ -60,5 +75,7 @@
         "No fake product completion"
       ]
     }
-  ]
+  ],
+  "control_source": "github",
+  "control_bridge_status": "not_implemented"
 }

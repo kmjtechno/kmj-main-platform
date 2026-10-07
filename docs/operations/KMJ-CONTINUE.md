@@ -52,7 +52,11 @@ From source worktree, when needed for a changed code snapshot:
     /usr/bin/python3 -m unittest discover -s acceptance/autonomy-schema
     git diff --check
 
-## Next task: first priority, acceptance-defined
+## Latest owner direction: GitHub control first
+
+Owner2026-10-07 requires control from GitHub. Read docs/operations/KMJ-GITHUB-CONTROL.md and implement KMJ-GH-001 before expanding execution. Source/handover are already on GitHub, but direct GitHub-to-VPS task/pause/resume/status bridge is NOT deployed. Legacy autonomous Actions use self-hosted runners and auto-merge; do not activate them as a substitute.
+
+## Next repair task after GitHub bridge, acceptance-defined
 
 Read KMJ-NEXT-TASKS.json. Fix autonomous repair quality, not the already-passing committed schema. Use a new workflow ID and a fresh isolated pinned input. Preserve old failure evidence. Diagnose exact provider/model outputs and feedback; convert failures into precise JSON-path repair instructions, measure repair outcome, and avoid repeating identical failed output. Consider routing quality based on independently passed acceptance, not HTTP200 alone. Keep free-only and confidentiality restrictions.
 Success gate: a NEW live workflow completes from generation through immutable sandbox acceptance with zero manual candidate edits; all existing tests green; restart/replay still correct; no weakening tests, copying known-answer file to fake generation, or marking artifacts product-complete. Cap attempts and report inability honestly if available models cannot meet requirements.
