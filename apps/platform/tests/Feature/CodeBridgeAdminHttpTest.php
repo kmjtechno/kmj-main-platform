@@ -240,7 +240,7 @@ final class CodeBridgeAdminHttpTest extends TestCase
             'status' => 'active',
             'trial_days' => 0,
             'features' => json_encode(['read' => true, 'write' => true, 'execute' => true]),
-            'limits' => json_encode(['devices' => 64, 'concurrent_jobs' => 16]),
+            'limits' => json_encode(['devices' => 2147483647, 'concurrent_jobs' => 16]),
             'created_at' => $now,
             'updated_at' => $now,
         ]);
