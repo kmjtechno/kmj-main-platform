@@ -1,0 +1,20 @@
+# Install as ~/.config/systemd/user/kmj-github-control.service after replacing @RUNTIME@.
+[Unit]
+Description=KMJ outbound GitHub autonomy control bridge
+After=network-online.target kmj-autonomy-worker.service
+Wants=network-online.target
+[Service]
+Type=simple
+WorkingDirectory=@RUNTIME@
+Environment=PYTHONUNBUFFERED=1
+ExecStart=%h/.kmj-python313/bin/python3 -m controller.github_control --db %h/.local/state/kmj-autonomy/queue.sqlite --state-dir %h/.local/state/kmj-autonomy --mirror %h/.local/state/kmj-autonomy/github-control.git --repo kmjtechno/kmj-main-platform --ref feat/modelfabric-autonomy-20261007 --manifest ops/github-control/kmj-autonomy.json --remote-url https://github.com/kmjtechno/kmj-main-platform.git --allowed-project kmj-main-platform --poll-seconds 15
+Restart=on-failure
+RestartSec=15
+TimeoutStopSec=10
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+MemoryMax=256M
+CPUQuota=25%
+[Install]
+WantedBy=default.target

@@ -1,0 +1,29 @@
+{
+  "schema_version": 1,
+  "repository": "kmjtechno/kmj-main-platform",
+  "codebridge": {
+    "device": "main-platform-kmjtechnonetgmailcom",
+    "project": "kmj-main-platform",
+    "branch": "main"
+  },
+  "tasks": [
+    {
+      "id": "KMJ-PLATFORM-P4-OPS-REVIEW-001",
+      "project": "kmj-main-platform",
+      "kind": "review",
+      "prompt": "Produce a bounded engineering review artifact for the next KMJ Main Platform Kristi Operations slice. Do not deploy, merge, change production, or claim product completion. State assumptions and acceptance checks.",
+      "data_classification": "confidential",
+      "max_attempts": 3,
+      "auto_enqueue": false
+    },
+    {
+      "id": "KMJ-PLATFORM-P5-PUBLIC-EXPERIENCE-REVIEW-002",
+      "project": "kmj-main-platform",
+      "kind": "review",
+      "prompt": "Produce a bounded artifact-only review for the KMJ Main Platform P5 Public Experience backlog. Focus on premium documentation, trust surfaces, multilingual coverage, content completeness, and evidence gaps. Prioritize small safe engineering slices. Do not modify repositories, execute commands, claim tests passed, claim deployment, or claim product completion.",
+      "data_classification": "public",
+      "max_attempts": 3,
+      "auto_enqueue": true
+    }
+  ]
+}

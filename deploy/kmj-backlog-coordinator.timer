@@ -1,0 +1,12 @@
+[Unit]
+Description=Periodically refresh KMJ curated backlog status
+
+[Timer]
+OnBootSec=30s
+OnUnitActiveSec=60s
+AccuracySec=10s
+Persistent=true
+Unit=kmj-backlog-coordinator.service
+
+[Install]
+WantedBy=timers.target

@@ -6,8 +6,22 @@ import PublicLanguageSwitch from '@/components/public-language-switch';
 import { dashboard, login, register } from '@/routes';
 
 export default function PublicSiteHeader() {
-    const { auth } = usePage().props;
+    const { auth, localization } = usePage().props;
     const [open, setOpen] = useState(false);
+    const hi = localization.locale === 'hi';
+    const label = {
+        company: hi ? 'कंपनी' : 'Company',
+        capabilities: hi ? 'क्षमताएँ' : 'Capabilities',
+        products: hi ? 'उत्पाद' : 'Products',
+        trust: hi ? 'विश्वास' : 'Trust',
+        docs: hi ? 'दस्तावेज़' : 'Docs',
+        search: hi ? 'खोजें' : 'Search',
+        searchProducts: hi ? 'उत्पाद खोजें' : 'Search products',
+        dashboard: hi ? 'डैशबोर्ड' : 'Dashboard',
+        signIn: hi ? 'साइन इन' : 'Sign in',
+        createAccount: hi ? 'अकाउंट बनाएँ' : 'Create account',
+        openDashboard: hi ? 'डैशबोर्ड खोलें' : 'Open dashboard',
+    };
 
     return (
         <header className="sticky top-0 z-50 border-b border-white/[0.07] bg-[#06080b]/88 backdrop-blur-2xl">
@@ -15,7 +29,7 @@ export default function PublicSiteHeader() {
                 href="#main-content"
                 className="absolute top-3 left-4 z-[70] -translate-y-20 rounded-lg bg-white px-4 py-2 text-sm font-black text-black shadow-xl transition focus:translate-y-0"
             >
-                Skip to main content
+                {hi ? 'मुख्य सामग्री पर जाएँ' : 'Skip to main content'}
             </a>
             <div className="mx-auto flex h-[76px] max-w-[1440px] items-center justify-between px-5 sm:px-8 lg:px-12">
                 <Link
@@ -31,33 +45,41 @@ export default function PublicSiteHeader() {
                         href="/company"
                         className="rounded-lg px-4 py-2 text-sm font-semibold text-white/58 transition hover:bg-white/[0.05] hover:text-white"
                     >
-                        Company
+                        {label.company}
                     </Link>
                     <Link
                         href="/capabilities"
                         className="rounded-lg px-4 py-2 text-sm font-semibold text-white/58 transition hover:bg-white/[0.05] hover:text-white"
                     >
-                        Capabilities
+                        {label.capabilities}
                     </Link>
                     <Link
                         href="/products"
                         className="rounded-lg px-4 py-2 text-sm font-semibold text-white/58 transition hover:bg-white/[0.05] hover:text-white"
                     >
-                        Products
+                        {label.products}
                     </Link>
                     <Link
                         href="/trust"
                         className="rounded-lg px-4 py-2 text-sm font-semibold text-white/58 transition hover:bg-white/[0.05] hover:text-white"
                     >
-                        Trust
+                        {label.trust}
+                    </Link>
+                    <Link
+                        href="/docs"
+                        className="rounded-lg px-4 py-2 text-sm font-semibold text-white/58 transition hover:bg-white/[0.05] hover:text-white"
+                    >
+                        {label.docs}
                     </Link>
                     <Link
                         href="/products#product-search"
-                        aria-label="Search KMJ products"
+                        aria-label={
+                            hi ? 'KMJ उत्पाद खोजें' : 'Search KMJ products'
+                        }
                         className="inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold text-white/58 transition hover:bg-white/[0.05] hover:text-white"
                     >
                         <Search className="h-3.5 w-3.5" />
-                        Search
+                        {label.search}
                     </Link>
                     <PublicLanguageSwitch className="rounded-lg px-4 py-2 text-sm font-semibold text-white/58 transition hover:bg-white/[0.05] hover:text-white" />
                 </nav>
@@ -68,7 +90,7 @@ export default function PublicSiteHeader() {
                             href={dashboard()}
                             className="inline-flex h-10 items-center gap-2 rounded-lg border border-white/10 bg-white/[0.035] px-4 text-sm font-bold text-white/84 transition hover:border-white/20 hover:bg-white/[0.07]"
                         >
-                            Dashboard
+                            {label.dashboard}
                             <ArrowUpRight className="h-3.5 w-3.5" />
                         </Link>
                     ) : (
@@ -77,13 +99,13 @@ export default function PublicSiteHeader() {
                                 href={login()}
                                 className="hidden px-3 py-2 text-sm font-semibold text-white/52 transition hover:text-white md:inline-flex"
                             >
-                                Sign in
+                                {label.signIn}
                             </Link>
                             <Link
                                 href={register()}
                                 className="inline-flex h-10 items-center gap-2 rounded-lg bg-white px-4 text-sm font-black text-[#07090c] transition hover:bg-white/90"
                             >
-                                Create account
+                                {label.createAccount}
                                 <ArrowUpRight className="h-3.5 w-3.5" />
                             </Link>
                         </>
@@ -92,7 +114,15 @@ export default function PublicSiteHeader() {
 
                 <button
                     type="button"
-                    aria-label={open ? 'Close navigation' : 'Open navigation'}
+                    aria-label={
+                        open
+                            ? hi
+                                ? 'नेविगेशन बंद करें'
+                                : 'Close navigation'
+                            : hi
+                              ? 'नेविगेशन खोलें'
+                              : 'Open navigation'
+                    }
                     aria-expanded={open}
                     onClick={() => setOpen((value) => !value)}
                     className="grid h-10 w-10 place-items-center rounded-lg border border-white/10 bg-white/[0.03] text-white sm:hidden"
@@ -113,28 +143,35 @@ export default function PublicSiteHeader() {
                             onClick={() => setOpen(false)}
                             className="rounded-xl px-4 py-3 text-sm font-bold text-white/75 hover:bg-white/[0.05]"
                         >
-                            Company
+                            {label.company}
                         </Link>
                         <Link
                             href="/capabilities"
                             onClick={() => setOpen(false)}
                             className="rounded-xl px-4 py-3 text-sm font-bold text-white/75 hover:bg-white/[0.05]"
                         >
-                            Capabilities
+                            {label.capabilities}
                         </Link>
                         <Link
                             href="/products"
                             onClick={() => setOpen(false)}
                             className="rounded-xl px-4 py-3 text-sm font-bold text-white/75 hover:bg-white/[0.05]"
                         >
-                            Products
+                            {label.products}
                         </Link>
                         <Link
                             href="/trust"
                             onClick={() => setOpen(false)}
                             className="rounded-xl px-4 py-3 text-sm font-bold text-white/75 hover:bg-white/[0.05]"
                         >
-                            Trust
+                            {label.trust}
+                        </Link>
+                        <Link
+                            href="/docs"
+                            onClick={() => setOpen(false)}
+                            className="rounded-xl px-4 py-3 text-sm font-bold text-white/75 hover:bg-white/[0.05]"
+                        >
+                            {label.docs}
                         </Link>
                         <Link
                             href="/products#product-search"
@@ -142,7 +179,7 @@ export default function PublicSiteHeader() {
                             className="flex items-center gap-2 rounded-xl px-4 py-3 text-sm font-bold text-white/75 hover:bg-white/[0.05]"
                         >
                             <Search className="h-4 w-4" />
-                            Search products
+                            {label.searchProducts}
                         </Link>
                         <PublicLanguageSwitch className="rounded-xl px-4 py-3 text-sm font-bold text-white/75 hover:bg-white/[0.05]" />
                         <div className="mt-2 border-t border-white/[0.07] pt-4">
@@ -151,7 +188,7 @@ export default function PublicSiteHeader() {
                                     href={dashboard()}
                                     className="inline-flex h-11 w-full items-center justify-center rounded-xl bg-white text-sm font-black text-black"
                                 >
-                                    Open dashboard
+                                    {label.openDashboard}
                                 </Link>
                             ) : (
                                 <div className="grid grid-cols-2 gap-2">
@@ -159,13 +196,13 @@ export default function PublicSiteHeader() {
                                         href={login()}
                                         className="inline-flex h-11 items-center justify-center rounded-xl border border-white/10 text-sm font-bold text-white/72"
                                     >
-                                        Sign in
+                                        {label.signIn}
                                     </Link>
                                     <Link
                                         href={register()}
                                         className="inline-flex h-11 items-center justify-center rounded-xl bg-white text-sm font-black text-black"
                                     >
-                                        Create account
+                                        {label.createAccount}
                                     </Link>
                                 </div>
                             )}

@@ -1,0 +1,64 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "KMJ Autonomy Task",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "id",
+    "project",
+    "payload"
+  ],
+  "properties": {
+    "id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256,
+      "pattern": "\\S"
+    },
+    "project": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256,
+      "pattern": "\\S"
+    },
+    "payload": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "prompt"
+      ],
+      "properties": {
+        "kind": {
+          "type": "string",
+          "enum": [
+            "plan",
+            "review",
+            "text",
+            "patch"
+          ]
+        },
+        "prompt": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 65536,
+          "description": "UTF-8 byte cap is enforced separately by worker."
+        },
+        "data_classification": {
+          "type": "string",
+          "enum": [
+            "public",
+            "confidential"
+          ],
+          "default": "confidential"
+        }
+      }
+    },
+    "max_attempts": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 10,
+      "default": 3
+    }
+  }
+}

@@ -1,8 +1,14 @@
 from __future__ import annotations
 
 import asyncio
+from contextlib import closing
 from dataclasses import dataclass
 import json
+import hashlib
+import math
+import sqlite3
+import time
+from email.utils import parsedate_to_datetime
 import os
 from pathlib import Path
 from typing import Any
@@ -18,13 +24,27 @@ class NoFreeRouteAvailable(RuntimeError):
     pass
 
 
+def _validate_messages(messages: list[dict[str, str]]) -> None:
+    if not isinstance(messages, list) or len(messages) > 64:
+        raise NoFreeRouteAvailable("REQUEST_INVALID")
+    total = 0
+    for message in messages:
+        if (not isinstance(message, dict)
+                or message.get("role") not in {"system", "user", "assistant"}
+                or not isinstance(message.get("content"), str)):
+            raise NoFreeRouteAvailable("REQUEST_INVALID")
+        total += len(message["content"].encode("utf-8"))
+    if total > 65536:
+        raise NoFreeRouteAvailable("REQUEST_TOO_LARGE")
+
+
 @dataclass(frozen=True)
 class ProviderEndpoint:
     name: str
     base_url: str
     api_key: str = ""
     priority: int = 0
-    allow_confidential: bool = True
+    allow_confidential: bool = False
 
 
 @dataclass(frozen=True)
@@ -36,7 +56,7 @@ class RouteCandidate:
     provider: str = "9router"
     base_url: str = ""
     api_key: str = ""
-    allow_confidential: bool = True
+    allow_confidential: bool = False
 
 
 class FreeCloudRouter:
@@ -49,7 +69,7 @@ class FreeCloudRouter:
     """
 
     BUILTIN_PROVIDERS = {
-        "openrouter": ("https://openrouter.ai/api/v1", "OPENROUTER_API_KEY", True),
+        "openrouter": ("https://openrouter.ai/api/v1", "OPENROUTER_API_KEY", False),
         "groq": ("https://api.groq.com/openai/v1", "GROQ_API_KEY", False),
         "cerebras": ("https://api.cerebras.ai/v1", "CEREBRAS_API_KEY", False),
         "mistral": ("https://api.mistral.ai/v1", "MISTRAL_API_KEY", False),
@@ -75,9 +95,10 @@ class FreeCloudRouter:
         ).rstrip("/")
         self.api_key = os.getenv("KMJ_9ROUTER_API_KEY", "")
         self.timeout = float(os.getenv("KMJ_9ROUTER_TIMEOUT_SECONDS", "12"))
-        self.max_failover_models = int(
+        self.max_failover_models = max(1, min(32, int(
             os.getenv("KMJ_MAX_FREE_FAILOVER_MODELS", "6")
-        )
+        )))
+        self.state_path = Path(os.getenv("KMJ_ROUTER_STATE_DB", str(Path.home() / ".kmj/model-router-state.sqlite3")))
         self._last_provider_errors: dict[str, str] = {}
 
     @staticmethod
@@ -199,7 +220,7 @@ class FreeCloudRouter:
                     base_url = str(item.get("base_url", "")).strip().rstrip("/")
                     key_env = str(item.get("api_key_env", "")).strip()
                     api_key = os.getenv(key_env, "").strip() if key_env else ""
-                    allow_confidential = bool(item.get("allow_confidential", False))
+                    allow_confidential = item.get("allow_confidential") is True
                     if name and base_url:
                         providers.append(
                             ProviderEndpoint(
@@ -282,11 +303,9 @@ class FreeCloudRouter:
             enriched["_kmj_base_url"] = provider.base_url
             enriched["_kmj_api_key"] = provider.api_key
             enriched["_kmj_provider_priority"] = provider.priority
-            enriched["_kmj_allow_confidential"] = bool(
-                item.get(
-                    "kmj_allow_confidential",
-                    provider.allow_confidential,
-                )
+            enriched["_kmj_allow_confidential"] = (
+                provider.allow_confidential is True
+                and item.get("kmj_allow_confidential", False) is True
             )
             models.append(enriched)
         return models
@@ -336,7 +355,7 @@ class FreeCloudRouter:
             eligible, reason = self._eligible(model_id, owner, provider)
             if not eligible:
                 continue
-            allow_confidential = bool(item.get("_kmj_allow_confidential", True))
+            allow_confidential = item.get("_kmj_allow_confidential", False) is True
             if classification == "confidential" and not allow_confidential:
                 continue
 
@@ -358,9 +377,14 @@ class FreeCloudRouter:
                 )
             )
 
+        health = self._model_health() if candidates else {}
+        quality = self.semantic_quality() if candidates else {}
+        now = time.time()
         return sorted(
             candidates,
             key=lambda candidate: (
+                -self._semantic_score(candidate, quality),
+                -self._recent_success(candidate, health, now),
                 -candidate.score,
                 candidate.provider,
                 candidate.model_id,
@@ -381,6 +405,137 @@ class FreeCloudRouter:
             raise NoFreeRouteAvailable("NO_FREE_ROUTE_AVAILABLE")
         return ranked[0]
 
+    def _cooldown(self, candidate: RouteCandidate, seconds: float | None = None) -> bool:
+        # Endpoint-level cooldown protects shared provider/account quotas across
+        # worker processes. No prompts or credentials are persisted.
+        key = hashlib.sha256(f"{candidate.provider}:{candidate.base_url}".encode()).hexdigest()
+        try:
+            self.state_path.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
+            with closing(sqlite3.connect(self.state_path, timeout=2)) as db, db:
+                os.chmod(self.state_path, 0o600)
+                db.execute("CREATE TABLE IF NOT EXISTS cooldown (endpoint TEXT PRIMARY KEY, until REAL NOT NULL)")
+                if seconds is not None:
+                    db.execute("INSERT INTO cooldown VALUES (?, ?) ON CONFLICT(endpoint) DO UPDATE SET until = MAX(until, excluded.until)",
+                               (key, time.time() + seconds))
+                row = db.execute("SELECT until FROM cooldown WHERE endpoint = ?", (key,)).fetchone()
+                return bool(row and row[0] > time.time())
+        except (OSError, sqlite3.Error) as exc:
+            raise NoFreeRouteAvailable("ROUTER_STATE_UNAVAILABLE") from exc
+
+    @staticmethod
+    def _model_key(candidate: RouteCandidate) -> str:
+        # Hash the full identity so URL credentials/query data cannot enter state.
+        identity = [candidate.provider, candidate.base_url.rstrip("/"), candidate.model_id]
+        return hashlib.sha256(json.dumps(identity, separators=(",", ":")).encode()).hexdigest()
+
+    def _model_health(self, candidate=None, *, cooldown_seconds=None, succeeded=False):
+        """Persist only hashed route identity and availability timestamps."""
+        try:
+            self.state_path.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
+            with closing(sqlite3.connect(self.state_path, timeout=2)) as db, db:
+                os.chmod(self.state_path, 0o600)
+                db.execute("""CREATE TABLE IF NOT EXISTS model_health (
+                    route TEXT PRIMARY KEY, cooldown_until REAL NOT NULL,
+                    last_success REAL NOT NULL)""")
+                if candidate is not None:
+                    key = self._model_key(candidate)
+                    now = time.time()
+                    if succeeded:
+                        db.execute("""INSERT INTO model_health VALUES (?,0,?)
+                            ON CONFLICT(route) DO UPDATE SET cooldown_until=0,
+                            last_success=excluded.last_success""", (key, now))
+                    elif cooldown_seconds is not None:
+                        db.execute("""INSERT INTO model_health VALUES (?,?,0)
+                            ON CONFLICT(route) DO UPDATE SET
+                            cooldown_until=MAX(cooldown_until,excluded.cooldown_until)""",
+                            (key, now + cooldown_seconds))
+                return {row[0]: (row[1], row[2]) for row in
+                        db.execute("SELECT route,cooldown_until,last_success FROM model_health")}
+        except (OSError, sqlite3.Error) as exc:
+            raise NoFreeRouteAvailable("ROUTER_STATE_UNAVAILABLE") from exc
+
+    @staticmethod
+    def _quality_key(provider: str, model_id: str) -> str:
+        return hashlib.sha256(
+            json.dumps([provider, model_id], separators=(",", ":")).encode()
+        ).hexdigest()
+
+    def semantic_quality(
+        self, candidate=None, *, provider=None, model_id=None, passed=None,
+        evidence_id=None,
+    ):
+        """Persist bounded tested-quality evidence without prompts or credentials."""
+        if candidate is not None:
+            provider, model_id = candidate.provider, candidate.model_id
+        try:
+            self.state_path.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
+            with closing(sqlite3.connect(self.state_path, timeout=2)) as db, db:
+                os.chmod(self.state_path, 0o600)
+                db.execute("""CREATE TABLE IF NOT EXISTS semantic_quality (
+                    route TEXT PRIMARY KEY,
+                    tested_passes INTEGER NOT NULL DEFAULT 0,
+                    tested_failures INTEGER NOT NULL DEFAULT 0,
+                    updated REAL NOT NULL)""")
+                db.execute("""CREATE TABLE IF NOT EXISTS semantic_quality_evidence (
+                    evidence TEXT PRIMARY KEY, route TEXT NOT NULL,
+                    passed INTEGER NOT NULL, created REAL NOT NULL)""")
+                if provider is not None and model_id is not None and passed is not None:
+                    key = self._quality_key(str(provider), str(model_id))
+                    apply = True
+                    if evidence_id is not None:
+                        evidence = hashlib.sha256(str(evidence_id).encode()).hexdigest()
+                        cursor = db.execute("""INSERT OR IGNORE INTO semantic_quality_evidence
+                            (evidence,route,passed,created) VALUES (?,?,?,?)""",
+                            (evidence, key, int(bool(passed)), time.time()))
+                        apply = cursor.rowcount == 1
+                    if apply:
+                        pass_delta, fail_delta = (1, 0) if passed else (0, 1)
+                        db.execute("""INSERT INTO semantic_quality
+                            (route,tested_passes,tested_failures,updated) VALUES (?,?,?,?)
+                            ON CONFLICT(route) DO UPDATE SET
+                            tested_passes=MIN(8,tested_passes+excluded.tested_passes),
+                            tested_failures=MIN(8,tested_failures+excluded.tested_failures),
+                            updated=excluded.updated""",
+                            (key, pass_delta, fail_delta, time.time()))
+                return {row[0]: (row[1], row[2], row[3]) for row in
+                        db.execute("""SELECT route,tested_passes,tested_failures,updated
+                            FROM semantic_quality""")}
+        except (OSError, sqlite3.Error) as exc:
+            raise NoFreeRouteAvailable("ROUTER_STATE_UNAVAILABLE") from exc
+
+    def _semantic_score(self, candidate, quality):
+        passes, failures, _updated = quality.get(
+            self._quality_key(candidate.provider, candidate.model_id), (0, 0, 0)
+        )
+        return max(-8, min(8, passes - failures))
+
+    def _recent_success(self, candidate, health, now):
+        until, success = health.get(self._model_key(candidate), (0, 0))
+        return success if until <= now and 0 < success <= now < success + 3600 else 0
+
+    def _record_cooldown(self, candidate: RouteCandidate, exc: Exception) -> None:
+        if isinstance(exc, httpx.HTTPStatusError) and exc.response.status_code == 404:
+            self._model_health(candidate, cooldown_seconds=900)
+        elif isinstance(exc, httpx.ReadTimeout) or (
+                isinstance(exc, RuntimeError) and str(exc) == "INCOMPLETE_COMPLETION"):
+            self._model_health(candidate, cooldown_seconds=60)
+        if isinstance(exc, httpx.HTTPStatusError) and exc.response.status_code in {401, 403, 429, 503}:
+            delay = 300.0 if exc.response.status_code in {401, 403} else 60.0
+            retry = exc.response.headers.get("Retry-After", "")
+            if retry:
+                try:
+                    parsed = float(retry)
+                except ValueError:
+                    try:
+                        parsed = parsedate_to_datetime(retry).timestamp() - time.time()
+                    except (TypeError, ValueError, OverflowError):
+                        parsed = delay
+                if math.isfinite(parsed):
+                    delay = max(delay, parsed)
+            self._cooldown(candidate, delay)
+        elif isinstance(exc, (httpx.ConnectError, httpx.ConnectTimeout)):
+            self._cooldown(candidate, 30)
+
     async def complete(
         self,
         messages: list[dict[str, str]],
@@ -388,20 +543,40 @@ class FreeCloudRouter:
         temperature: float = 0.1,
         data_classification: str = "confidential",
     ) -> dict[str, Any]:
+        _validate_messages(messages)
         ranked = self.rank(
             await self.discover(data_classification),
             route,
             data_classification,
         )
         if not ranked:
-            return await self._official_free_client(
-                messages,
-                data_classification=data_classification,
-            )
+            return await self._final_fallback(messages, temperature, data_classification, [])
 
         attempts: list[dict[str, str]] = []
-        async with httpx.AsyncClient(timeout=self.timeout) as client:
-            for candidate in ranked[: self.max_failover_models]:
+        # Interleave providers so a large catalog cannot monopolize the budget.
+        groups: dict[str, list[RouteCandidate]] = {}
+        for candidate in ranked:
+            groups.setdefault(candidate.provider, []).append(candidate)
+        ordered = []
+        while any(groups.values()):
+            for group in groups.values():
+                if group:
+                    ordered.append(group.pop(0))
+        attempted = 0
+        async with httpx.AsyncClient(timeout=self.timeout, trust_env=False, follow_redirects=False) as client:
+            for index, candidate in enumerate(ordered):
+                health = self._model_health()
+                model_until = health.get(self._model_key(candidate), (0, 0))[0]
+                if self._cooldown(candidate) or model_until > time.time():
+                    attempts.append({"provider":candidate.provider, "model":candidate.model_id, "result":"cooldown"})
+                    continue
+                if attempted >= self.max_failover_models:
+                    return await self._final_fallback(
+                        messages, temperature, data_classification, attempts,
+                        reason="cloud_attempt_budget_exhausted",
+                        unattempted_cloud_candidates=len(ordered) - index,
+                    )
+                attempted += 1
                 try:
                     response = await client.post(
                         f"{candidate.base_url}/chat/completions",
@@ -422,6 +597,7 @@ class FreeCloudRouter:
                             "model": candidate.model_id,
                             "messages": messages,
                             "temperature": temperature,
+                            "max_tokens": 2048,
                             "stream": False,
                         },
                     )
@@ -432,8 +608,12 @@ class FreeCloudRouter:
                         if isinstance(payload, dict)
                         else []
                     )
-                    if not choices:
-                        raise RuntimeError("EMPTY_COMPLETION")
+                    if (not choices or not isinstance(choices[0], dict)
+                            or choices[0].get("finish_reason") != "stop"
+                            or not isinstance(choices[0].get("message", {}).get("content"), str)
+                            or not choices[0]["message"]["content"].strip()):
+                        raise RuntimeError("INCOMPLETE_COMPLETION")
+                    self._model_health(candidate, succeeded=True)
                     return {
                         "model": candidate.model_id,
                         "provider": candidate.provider,
@@ -449,7 +629,8 @@ class FreeCloudRouter:
                         ],
                         "response": payload,
                     }
-                except Exception as exc:
+                except (httpx.HTTPError, RuntimeError, ValueError, TypeError, AttributeError) as exc:
+                    self._record_cooldown(candidate, exc)
                     attempts.append(
                         {
                             "provider": candidate.provider,
@@ -458,10 +639,25 @@ class FreeCloudRouter:
                         }
                     )
 
-        return await self._official_free_client(
-            messages,
-            data_classification=data_classification,
-        )
+        return await self._final_fallback(messages, temperature, data_classification, attempts)
+
+    async def _final_fallback(
+        self, messages, temperature, data_classification, attempts, *,
+        reason="NO_ELIGIBLE_CLOUD_ROUTE_AVAILABLE", unattempted_cloud_candidates=0,
+    ):
+        try:
+            result = await self._official_free_client(
+                messages,
+                data_classification=data_classification,
+            )
+        except NoFreeRouteAvailable as cloud_error:
+            code = str(cloud_error) or "NO_ELIGIBLE_CLOUD_ROUTE_AVAILABLE"
+            raise NoFreeRouteAvailable(code) from cloud_error
+        if attempts:
+            result = dict(result, attempts=attempts + result.get("attempts", []))
+        result["fallback_reason"] = reason
+        result["unattempted_cloud_candidates"] = unattempted_cloud_candidates
+        return result
 
     async def _official_free_client(
         self,
@@ -497,9 +693,7 @@ class FreeCloudRouter:
                         "owned_by": item.get("owned_by"),
                         "provider": provider,
                         "verification": reason,
-                        "allow_confidential": bool(
-                            item.get("_kmj_allow_confidential", True)
-                        ),
+                        "allow_confidential": item.get("_kmj_allow_confidential", False) is True,
                     }
                 )
             else:
@@ -528,7 +722,7 @@ class FreeCloudRouter:
             "rejected_unknown_or_paid": rejected,
             "paid_fallback": "PROHIBITED",
             "unknown_cost_is_free": False,
-            "local_llm": "PROHIBITED",
+            "local_llm": self.config.get("policy", {}).get("local_llm", "prohibited"),
             "max_free_failover_models": self.max_failover_models,
             "models": eligible,
         }

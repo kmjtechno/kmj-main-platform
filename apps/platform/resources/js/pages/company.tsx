@@ -1,196 +1,199 @@
-import { Link } from '@inertiajs/react';
-import {
-    ArrowRight,
-    KeyRound,
-    Layers3,
-    ServerCog,
-    ShieldCheck,
-    Sparkles,
-} from 'lucide-react';
+import { Link, usePage } from '@inertiajs/react';
+import { ArrowRight, Building2, ShieldCheck, Workflow } from 'lucide-react';
 import PublicSeo from '@/components/public-seo';
 import PublicSiteFooter from '@/components/public-site-footer';
 import PublicSiteHeader from '@/components/public-site-header';
 
-const operatingPrinciples = [
-    {
-        icon: Layers3,
-        title: 'Platform thinking',
-        text: 'KMJ TECHNO builds connected product systems rather than isolated pages, with shared customer, access and commercial authority where it belongs.',
+const copy = {
+    en: {
+        title: 'Company — KMJ TECHNO',
+        description:
+            'KMJ TECHNO company profile, operating model and product authority.',
+        eyebrow: 'Company',
+        heading:
+            'Built to turn ambitious software ideas into governed products.',
+        intro: 'KMJ TECHNO designs software, cloud systems and intelligent product infrastructure with one operating principle: product claims, customer access and release state should resolve from authoritative systems.',
+        metrics: [
+            ['Operating model', 'Product + platform'],
+            ['Authority', 'KMJ Main Platform'],
+            ['Source of truth', 'Git'],
+            ['Product policy', 'Evidence-led'],
+        ],
+        principles: [
+            [
+                'Clear boundaries',
+                'Each product has a defined lifecycle, authority boundary and customer-access state.',
+                Building2,
+            ],
+            [
+                'Governed delivery',
+                'Entitlements, licenses and release evidence remain explicit rather than inferred.',
+                ShieldCheck,
+            ],
+            [
+                'Automation with control',
+                'Automation accelerates work without silently overriding production or commercial authority.',
+                Workflow,
+            ],
+        ],
+        platformEyebrow: 'Operating model',
+        platformHeading: 'The Main Platform is the business authority.',
+        platformBody:
+            'KMJ Main Platform owns organization, customer, product, licensing, release and automation authority. Engineering systems can integrate with it, but they do not silently become the customer or commercial source of truth.',
+        products: 'Explore products',
+        trust: 'Trust center',
+        boundary: 'Boundary',
+        boundaryText:
+            'KMJ Cloud Nexus remains a separate engineering IDE and is not a Main Platform runtime dependency.',
     },
-    {
-        icon: ShieldCheck,
-        title: 'Governed by design',
-        text: 'Security, entitlement boundaries, auditability and truthful lifecycle status are treated as product requirements, not finishing touches.',
+    hi: {
+        title: 'कंपनी — KMJ TECHNO',
+        description:
+            'KMJ TECHNO का company profile, operating model और product authority.',
+        eyebrow: 'कंपनी',
+        heading:
+            'महत्वाकांक्षी software ideas को governed products में बदलने के लिए बनाया गया।',
+        intro: 'KMJ TECHNO software, cloud systems और intelligent product infrastructure बनाता है। हमारा मूल सिद्धांत है कि product claims, customer access और release state authoritative systems से तय हों।',
+        metrics: [
+            ['Operating model', 'Product + platform'],
+            ['Authority', 'KMJ Main Platform'],
+            ['Source of truth', 'Git'],
+            ['Product policy', 'Evidence-led'],
+        ],
+        principles: [
+            [
+                'स्पष्ट सीमाएँ',
+                'हर product की lifecycle, authority boundary और customer-access state स्पष्ट होती है।',
+                Building2,
+            ],
+            [
+                'Governed delivery',
+                'Entitlements, licenses और release evidence अनुमान से नहीं, स्पष्ट authority से तय होते हैं।',
+                ShieldCheck,
+            ],
+            [
+                'Control के साथ automation',
+                'Automation काम तेज करता है, लेकिन production या commercial authority को चुपचाप override नहीं करता।',
+                Workflow,
+            ],
+        ],
+        platformEyebrow: 'Operating model',
+        platformHeading: 'Main Platform business authority है।',
+        platformBody:
+            'KMJ Main Platform organization, customer, product, licensing, release और automation authority का मालिक है। Engineering systems इससे integrate कर सकते हैं, लेकिन वे customer या commercial source of truth अपने-आप नहीं बनते।',
+        products: 'उत्पाद देखें',
+        trust: 'विश्वास केंद्र',
+        boundary: 'सीमा',
+        boundaryText:
+            'KMJ Cloud Nexus एक अलग engineering IDE है और Main Platform की runtime dependency नहीं है।',
     },
-    {
-        icon: ServerCog,
-        title: 'Independent product engineering',
-        text: 'Each product keeps a clear engineering boundary while the Main Platform provides a consistent customer and business layer.',
-    },
-    {
-        icon: Sparkles,
-        title: 'Automation with verification',
-        text: 'Automation is useful only when its actions remain policy-bound, observable and independently verifiable.',
-    },
-];
-
-const companyCommitments = [
-    'Keep public product claims aligned with verified delivery state.',
-    'Separate customer authority from individual product implementation.',
-    'Prefer secure, maintainable architecture over unnecessary complexity.',
-    'Build for international product quality without hiding development status.',
-];
+} as const;
 
 export default function Company() {
+    const { localization } = usePage().props;
+    const language = localization.locale === 'hi' ? 'hi' : 'en';
+    const t = copy[language];
+
     return (
         <>
             <PublicSeo
-                title="Company — KMJ TECHNO"
-                description="Learn how KMJ TECHNO approaches software, cloud systems, intelligent automation, immersive technology and governed digital products."
+                title={t.title}
+                description={t.description}
                 path="/company"
-                structuredData={{
-                    '@context': 'https://schema.org',
-                    '@type': 'AboutPage',
-                    name: 'About KMJ TECHNO',
-                }}
+                localized
             />
-
-            <div className="min-h-screen overflow-hidden bg-[#06080b] text-white selection:bg-[#e21b23] selection:text-white">
-                <div className="pointer-events-none fixed inset-0">
-                    <div className="absolute -top-64 left-[8%] h-[38rem] w-[38rem] rounded-full bg-[#e21b23]/10 blur-[140px]" />
-                    <div className="absolute top-[54rem] -right-52 h-[32rem] w-[32rem] rounded-full bg-[#8f1016]/9 blur-[130px]" />
-                </div>
-
+            <div className="min-h-screen bg-[#06080b] text-white selection:bg-[#e21b23] selection:text-white">
                 <PublicSiteHeader />
-
-                <main className="relative z-10">
-                    <section className="mx-auto max-w-[1440px] px-5 pt-20 pb-18 sm:px-8 lg:px-12 lg:pt-28 lg:pb-24">
-                        <div className="max-w-5xl">
-                            <div className="text-[10px] font-black tracking-[0.24em] text-[#ff5962] uppercase">
-                                KMJ TECHNO · Company
-                            </div>
-                            <h1 className="mt-6 text-5xl leading-[0.96] font-black tracking-[-0.06em] sm:text-6xl lg:text-[5.6rem]">
-                                Innovate.
-                                <span className="text-white/32"> Build.</span>
-                                <span className="block bg-gradient-to-r from-[#ff4149] via-[#e21b23] to-[#921018] bg-clip-text text-transparent">
-                                    Scale with discipline.
-                                </span>
-                            </h1>
-                            <p className="mt-8 max-w-3xl text-base leading-8 text-white/52 sm:text-lg">
-                                KMJ TECHNO is building a portfolio across
-                                software, cloud systems, intelligent automation,
-                                secure digital access and immersive technology.
-                                The goal is not to look large before the work is
-                                ready; it is to build products and operating
-                                systems that can earn trust as they scale.
-                            </p>
-                            <div className="mt-9 flex flex-col gap-3 sm:flex-row">
-                                <Link
-                                    href="/products"
-                                    className="inline-flex h-12 items-center justify-center gap-2 rounded-xl bg-[#e21b23] px-6 text-sm font-black shadow-[0_12px_40px_rgba(226,27,35,0.22)] transition hover:-translate-y-0.5 hover:bg-[#f1252e]"
-                                >
-                                    Explore products
-                                    <ArrowRight className="h-4 w-4" />
-                                </Link>
-                                <Link
-                                    href="/capabilities"
-                                    className="inline-flex h-12 items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[0.035] px-6 text-sm font-bold text-white/78 transition hover:border-white/20 hover:bg-white/[0.07]"
-                                >
-                                    View capabilities
-                                    <ArrowRight className="h-4 w-4" />
-                                </Link>
-                            </div>
-                        </div>
-                    </section>
-
-                    <section className="border-y border-white/[0.07] bg-[#050608]">
-                        <div className="mx-auto grid max-w-[1440px] gap-6 px-5 py-20 sm:px-8 md:grid-cols-2 lg:px-12 lg:py-24">
-                            {operatingPrinciples.map(
-                                ({ icon: Icon, title, text }) => (
-                                    <article
-                                        key={title}
-                                        className="rounded-[1.75rem] border border-white/[0.08] bg-gradient-to-br from-white/[0.05] to-white/[0.015] p-7 sm:p-8"
-                                    >
-                                        <span className="grid h-11 w-11 place-items-center rounded-xl border border-[#e21b23]/18 bg-[#e21b23]/8 text-[#ff5962]">
-                                            <Icon className="h-5 w-5" />
-                                        </span>
-                                        <h2 className="mt-6 text-2xl font-black tracking-[-0.035em]">
-                                            {title}
-                                        </h2>
-                                        <p className="mt-3 text-sm leading-7 text-white/42">
-                                            {text}
-                                        </p>
-                                    </article>
-                                ),
-                            )}
-                        </div>
-                    </section>
-
-                    <section className="mx-auto grid max-w-[1440px] gap-10 px-5 py-20 sm:px-8 lg:grid-cols-[.9fr_1.1fr] lg:px-12 lg:py-28">
-                        <div>
+                <main id="main-content">
+                    <section className="mx-auto max-w-[1440px] px-5 pt-20 pb-16 sm:px-8 lg:px-12 lg:pt-28">
+                        <div className="max-w-4xl">
                             <div className="text-[10px] font-black tracking-[0.22em] text-[#ff5962] uppercase">
-                                How we operate
+                                {t.eyebrow}
                             </div>
-                            <h2 className="mt-4 text-3xl font-black tracking-[-0.045em] sm:text-5xl">
-                                One company identity.
-                                <span className="block text-white/30">
-                                    Clear system boundaries.
-                                </span>
-                            </h2>
-                            <p className="mt-5 max-w-xl text-sm leading-7 text-white/42 sm:text-base">
-                                The Main Platform is the central customer,
-                                product, entitlement, licensing and operational
-                                authority. Independent KMJ products remain
-                                separate engineering systems and integrate
-                                through governed contracts.
+                            <h1 className="mt-5 text-5xl leading-[0.98] font-black tracking-[-0.055em] sm:text-6xl lg:text-7xl">
+                                {t.heading}
+                            </h1>
+                            <p className="mt-7 max-w-3xl text-base leading-8 text-white/50 sm:text-lg">
+                                {t.intro}
                             </p>
                         </div>
-
-                        <div className="grid gap-3">
-                            {companyCommitments.map((commitment, index) => (
+                        <div className="mt-14 grid overflow-hidden rounded-2xl border border-white/[0.08] bg-white/[0.06] sm:grid-cols-2 lg:grid-cols-4">
+                            {t.metrics.map(([label, value]) => (
                                 <div
-                                    key={commitment}
-                                    className="flex items-start gap-4 rounded-2xl border border-white/[0.07] bg-white/[0.025] p-5"
+                                    key={label}
+                                    className="bg-[#080a0e] px-6 py-6"
                                 >
-                                    <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-[#e21b23]/10 text-xs font-black text-[#ff5962]">
-                                        {String(index + 1).padStart(2, '0')}
-                                    </span>
-                                    <p className="pt-1 text-sm leading-6 font-semibold text-white/64">
-                                        {commitment}
-                                    </p>
+                                    <div className="text-[9px] font-black tracking-[0.16em] text-white/28 uppercase">
+                                        {label}
+                                    </div>
+                                    <div className="mt-2 text-base font-black text-white/82">
+                                        {value}
+                                    </div>
                                 </div>
                             ))}
                         </div>
                     </section>
 
-                    <section className="border-y border-white/[0.07] bg-[#090b0f]">
-                        <div className="mx-auto grid max-w-[1440px] gap-8 px-5 py-16 sm:px-8 lg:grid-cols-[1fr_auto] lg:items-center lg:px-12 lg:py-20">
-                            <div className="max-w-3xl">
-                                <div className="flex items-center gap-2 text-[10px] font-black tracking-[0.18em] text-[#ff5962] uppercase">
-                                    <KeyRound className="h-4 w-4" />
-                                    Trust through explicit authority
+                    <section className="border-y border-white/[0.07] bg-[#090c10]/70">
+                        <div className="mx-auto grid max-w-[1440px] gap-4 px-5 py-20 sm:px-8 lg:grid-cols-3 lg:px-12">
+                            {t.principles.map(([title, detail, Icon]) => (
+                                <article
+                                    key={title}
+                                    className="rounded-2xl border border-white/[0.08] bg-[#07090d] p-7"
+                                >
+                                    <div className="grid h-11 w-11 place-items-center rounded-xl border border-[#e21b23]/20 bg-[#e21b23]/10">
+                                        <Icon className="h-5 w-5 text-[#ff5962]" />
+                                    </div>
+                                    <h2 className="mt-6 text-xl font-black">
+                                        {title}
+                                    </h2>
+                                    <p className="mt-3 text-sm leading-7 text-white/42">
+                                        {detail}
+                                    </p>
+                                </article>
+                            ))}
+                        </div>
+                    </section>
+
+                    <section className="mx-auto max-w-[1440px] px-5 py-20 sm:px-8 lg:px-12 lg:py-24">
+                        <div className="grid gap-10 rounded-[2rem] border border-white/[0.08] bg-gradient-to-br from-white/[0.04] to-transparent p-8 sm:p-10 lg:grid-cols-[1.2fr_.8fr]">
+                            <div>
+                                <div className="text-[10px] font-black tracking-[0.2em] text-[#ff5962] uppercase">
+                                    {t.platformEyebrow}
                                 </div>
-                                <h2 className="mt-4 text-3xl font-black tracking-[-0.04em] sm:text-4xl">
-                                    Product ambition without false certainty.
+                                <h2 className="mt-4 max-w-2xl text-3xl font-black tracking-[-0.04em] sm:text-4xl">
+                                    {t.platformHeading}
                                 </h2>
-                                <p className="mt-4 text-sm leading-7 text-white/40">
-                                    Availability, access and product status
-                                    remain explicit. Public presentation does
-                                    not override verified technical or
-                                    commercial state.
+                                <p className="mt-5 max-w-2xl text-sm leading-7 text-white/44">
+                                    {t.platformBody}
+                                </p>
+                                <div className="mt-7 flex flex-wrap gap-3">
+                                    <Link
+                                        href="/products"
+                                        className="inline-flex h-11 items-center gap-2 rounded-xl bg-white px-5 text-sm font-black text-black"
+                                    >
+                                        {t.products}
+                                        <ArrowRight className="h-4 w-4" />
+                                    </Link>
+                                    <Link
+                                        href="/trust"
+                                        className="inline-flex h-11 items-center rounded-xl border border-white/10 px-5 text-sm font-bold text-white/68"
+                                    >
+                                        {t.trust}
+                                    </Link>
+                                </div>
+                            </div>
+                            <div className="rounded-2xl border border-white/[0.08] bg-[#07090d] p-6">
+                                <div className="text-[9px] font-black tracking-[0.16em] text-white/28 uppercase">
+                                    {t.boundary}
+                                </div>
+                                <p className="mt-4 text-sm leading-7 text-white/48">
+                                    {t.boundaryText}
                                 </p>
                             </div>
-                            <Link
-                                href="/trust"
-                                className="inline-flex h-12 items-center justify-center gap-2 rounded-xl border border-white/10 px-5 text-sm font-bold text-white/72 transition hover:border-white/20 hover:text-white"
-                            >
-                                Open trust center
-                                <ArrowRight className="h-4 w-4" />
-                            </Link>
                         </div>
                     </section>
                 </main>
-
                 <PublicSiteFooter />
             </div>
         </>

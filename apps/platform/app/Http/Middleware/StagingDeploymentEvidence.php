@@ -46,6 +46,18 @@ final class StagingDeploymentEvidence
             return null;
         }
 
+        $commonDir = $gitDir;
+        $commonPointer = trim((string) @file_get_contents($gitDir.'/commondir'));
+        if ($commonPointer !== '') {
+            $commonCandidate = str_starts_with($commonPointer, '/')
+                ? $commonPointer
+                : $gitDir.'/'.$commonPointer;
+            $resolvedCommonDir = realpath($commonCandidate);
+            if (is_string($resolvedCommonDir) && is_dir($resolvedCommonDir)) {
+                $commonDir = $resolvedCommonDir;
+            }
+        }
+
         $head = trim((string) @file_get_contents($gitDir.'/HEAD'));
         if (preg_match('/^[0-9a-f]{40}$/', $head) === 1) {
             return $head;
@@ -60,12 +72,14 @@ final class StagingDeploymentEvidence
             return null;
         }
 
-        $loose = trim((string) @file_get_contents($gitDir.'/'.$ref));
-        if (preg_match('/^[0-9a-f]{40}$/', $loose) === 1) {
-            return $loose;
+        foreach (array_unique([$gitDir, $commonDir]) as $refRoot) {
+            $loose = trim((string) @file_get_contents($refRoot.'/'.$ref));
+            if (preg_match('/^[0-9a-f]{40}$/', $loose) === 1) {
+                return $loose;
+            }
         }
 
-        $packed = @file($gitDir.'/packed-refs', FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+        $packed = @file($commonDir.'/packed-refs', FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
         if (! is_array($packed)) {
             return null;
         }

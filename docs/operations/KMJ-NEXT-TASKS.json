@@ -1,0 +1,225 @@
+{
+  "schema_version": 1,
+  "deployed_code_sha": "3a4627f801651e2d6c78ab627b8acc1e2129e792",
+  "branch": "feat/modelfabric-autonomy-20261007",
+  "automatic_product_completion": false,
+  "tasks": [
+    {
+      "id": "KMJ-GH-001",
+      "priority": 0,
+      "state": "completed",
+      "title": "Connect versioned GitHub task/pause/resume control to existing VPS queue",
+      "spec": "docs/operations/KMJ-GITHUB-CONTROL.md",
+      "acceptance": [
+        "Actual GitHub pause/resume verified on VPS",
+        "Task imported exactly once across poll/restart",
+        "Complete batch validation and strict confidentiality",
+        "Sanitized status and credential scope verified",
+        "No self-hosted runner or auto-merge activation",
+        "160 existing tests plus3 acceptance tests remain green"
+      ],
+      "evidence": {
+        "implementation_sha": "552059d157f22fe1f80ef79130f1ce140701b574",
+        "followup_fix_sha": "eafcb7f8a3098750eae0830c6db794598791aebe",
+        "runtime_release": "eafcb7f8a309",
+        "tests": "171 Python regression + 3 schema acceptance PASS",
+        "live_control_commits": [
+          "20df34a",
+          "e6bc76c",
+          "aaea639",
+          "e2c9074",
+          "91b78df2082a6a0f0735a9effd7cbd10b6692f1a"
+        ],
+        "writeback": "read_only; no separately scoped GitHub status credential configured",
+        "legacy_self_hosted_or_auto_merge_activated": false
+      }
+    },
+    {
+      "id": "KMJ-AUTO-001",
+      "priority": 1,
+      "state": "completed",
+      "title": "Make bounded JSON repair pass a new live autonomous acceptance run",
+      "evidence": {
+        "prior_failed_workflow": "KMJ-schema-autonomous-proof (3 attempts, preserved)",
+        "successful_workflow": "KMJ-schema-autonomous-proof-v2",
+        "successful_phase": "json_candidate_tested",
+        "successful_attempt": 1,
+        "validation_sha256": "09ebd57ed0d2e8a685aee80109bd19f0c3437071534e0ef666bd19df0a07e766",
+        "manual_candidate_changes": false,
+        "product_complete": false,
+        "deployed": false,
+        "tests": "171 Python regression + 3 schema acceptance PASS"
+      },
+      "acceptance": [
+        "No manual candidate changes",
+        "Immutable tests unchanged",
+        "New live workflow json_candidate_tested",
+        "160 regression tests remain green",
+        "Prior failed evidence preserved"
+      ]
+    },
+    {
+      "id": "KMJ-AUTO-002",
+      "priority": 2,
+      "state": "completed",
+      "depends_on": [
+        "KMJ-AUTO-001"
+      ],
+      "title": "Route using tested task quality and capability, not only HTTP success",
+      "evidence": {
+        "implementation_sha": "3a323068d7a50c1bc8ab337671549262ed33961b",
+        "tests": "175 Python regression + 3 schema acceptance PASS",
+        "live_workflow": "KMJ-schema-quality-route-proof-v1",
+        "live_phase": "json_candidate_tested",
+        "semantic_quality_evidence_count": 1,
+        "quality_state": "hashed provider/model identity only; no prompts or credentials",
+        "bounded_counts": true,
+        "privacy_filter_authoritative": true
+      },
+      "acceptance": [
+        "Privacy/cost filters remain authoritative",
+        "Failed semantic repair affects route choice without unbounded retries"
+      ]
+    },
+    {
+      "id": "KMJ-AUTO-003",
+      "priority": 3,
+      "state": "completed",
+      "depends_on": [
+        "KMJ-AUTO-001"
+      ],
+      "title": "Design one general code executor with trusted out-of-process acceptance",
+      "evidence": {
+        "implementation_sha": "b1d316830aab1f635c103bff00b5e9bf572126db",
+        "runtime_release": "e4dbb633ded1",
+        "hardening_sha": "e4dbb633ded18cd2af111f1020d83a005cc177f4",
+        "executor": "python-cli-v1",
+        "tests": "187 Python regression + 3 schema acceptance PASS",
+        "focused_executor_tests": 11,
+        "trusted_assertions_outside_candidate": true,
+        "validation_tree_not_mounted_into_candidate": true,
+        "network_home_secrets_isolated": true,
+        "candidate_workspace_read_only": true,
+        "product_complete": false,
+        "deployed_candidate": false
+      },
+      "acceptance": [
+        "Untrusted code cannot forge pass",
+        "No secrets/network/production writes",
+        "Pinned source and OS project lock",
+        "Real isolated small code fix passes"
+      ]
+    },
+    {
+      "id": "KMJ-AUTO-004",
+      "priority": 4,
+      "state": "completed",
+      "depends_on": [
+        "KMJ-AUTO-003"
+      ],
+      "title": "Connect curated product backlog and CodeBridge status to persistent workflows",
+      "evidence": {
+        "implementation_sha": "28b7eb078e358c6c371acd3792ed04b599dc39a4",
+        "runtime_release": "a1a32db86b00",
+        "authorization_hardening_sha": "7d85a89007e605d9ee5f75b6688d269d0a0c6e6f",
+        "tests": "197 Python regression + 3 schema acceptance PASS",
+        "live_repository": "kmjtechno/kmj-main-platform",
+        "live_codebridge_device": "main-platform-kmjtechnonetgmailcom",
+        "live_codebridge_project": "kmj-main-platform",
+        "live_codebridge_version": "0.2.3",
+        "live_codebridge_connection": "connected",
+        "live_codebridge_authorized": true,
+        "live_effective_permissions": [
+          "read",
+          "write",
+          "execute"
+        ],
+        "live_gate_readiness": {
+          "fast": "satisfied",
+          "platform": "blocked",
+          "full": "blocked"
+        },
+        "execution_ready": false,
+        "status_stages": [
+          "ready",
+          "queued",
+          "running",
+          "artifact_ready",
+          "candidate_tested",
+          "release",
+          "failed"
+        ],
+        "product_complete": false,
+        "status_transport_observed": "fresh sanitized main-vps-restricted-exporter snapshot",
+        "google_backlog_path_unit": "active",
+        "cross_vps_refresh": "automatic restricted Main-VPS to Google push every 60 seconds"
+      },
+      "acceptance": [
+        "Correct repo/project identity",
+        "Status distinguishes artifact/tested candidate/release",
+        "No fake product completion"
+      ]
+    },
+    {
+      "id": "KMJ-AUTO-005",
+      "priority": 5,
+      "state": "completed",
+      "depends_on": [
+        "KMJ-AUTO-004"
+      ],
+      "title": "Automate the restricted Main-VPS to autonomy CodeBridge status refresh",
+      "evidence": {
+        "transport": "Main-VPS to Google restricted push",
+        "refresh_seconds": 60,
+        "main_status_timer": "active",
+        "google_backlog_path_unit": "active",
+        "live_push_verified": true,
+        "host_key_pinned": true,
+        "forced_ingest_command": true,
+        "broad_github_write_credential": false,
+        "stale_status_fail_closed": true,
+        "backlog_coordinator_runtime": "3a4627f80165",
+        "queue_watch_loop_fix_sha": "2f020c1545ee66c1755494900d81bce8d95bcba3",
+        "github_control_runtime": "d92863adbc2a",
+        "worker_runtime": "3a4627f80165"
+      },
+      "acceptance": [
+        "Pinned destination host key and dedicated restricted key",
+        "No general remote shell, forwarding, secrets or broad GitHub write credential",
+        "Fresh status reaches Google autonomy state automatically",
+        "Stale or failed refresh blocks new backlog admission"
+      ]
+    },
+    {
+      "id": "KMJ-AUTO-006",
+      "priority": 6,
+      "state": "completed",
+      "depends_on": [
+        "KMJ-AUTO-005"
+      ],
+      "title": "Enforce locked cloud-only ModelFabric routing and reject legacy local checkpoints",
+      "evidence": {
+        "cloud_only_sha": "137a215f5b3ed20abb7d9c935789cb01a9cd903b",
+        "checkpoint_hardening_sha": "3a4627f801651e2d6c78ab627b8acc1e2129e792",
+        "runtime_release": "3a4627f80165",
+        "tests": "195 Python regression + 3 schema acceptance PASS",
+        "local_llm_policy": "prohibited",
+        "local_fallback_module_removed": true,
+        "local_cpu_service": "inactive_masked",
+        "legacy_local_artifact": "KMJ-PLATFORM-P5-PUBLIC-EXPERIENCE-REVIEW-001 preserved but not credited",
+        "cloud_only_replacement": "KMJ-PLATFORM-P5-PUBLIC-EXPERIENCE-REVIEW-002 queued with NO_MODEL_AVAILABLE and attempts=0",
+        "local_transport_after_cloud_only_start": false,
+        "product_complete": false
+      },
+      "acceptance": [
+        "No local LLM inference path remains in ModelFabric routing",
+        "Legacy local checkpoint cannot be reused as current evidence",
+        "No-route defers instead of executing locally",
+        "CPU inference service is inactive and persistently masked",
+        "Exact-head regression and schema acceptance gates remain green"
+      ]
+    }
+  ],
+  "control_source": "github",
+  "control_bridge_status": "deployed_read_only_status"
+}

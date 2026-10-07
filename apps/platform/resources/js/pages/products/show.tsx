@@ -1,4 +1,4 @@
-import { Link } from '@inertiajs/react';
+import { Link, usePage } from '@inertiajs/react';
 import {
     Activity,
     ArrowRight,
@@ -26,8 +26,6 @@ const productSocialImages: Record<string, string> = {
     'kmj-agent': '/assets/products/kmj-agent.webp',
     'kmj-creative-studio': '/assets/products/kmj-creative-studio.webp',
     'kmj-cinema-platform': '/assets/products/kmj-cinema-platform.webp',
-    'kmj-360-dome': '/assets/products/kmj-360-dome.webp',
-    'kmj-cinema-player': '/assets/products/kmj-cinema-player.webp',
     'kmj-licensing-hub': '/assets/products/kmj-licensing-hub.webp',
 };
 
@@ -64,17 +62,25 @@ type Product = {
     };
 };
 
-function ProductVisual({ product }: { product: Product }) {
+function ProductVisual({ product, hi }: { product: Product; hi: boolean }) {
     const steps = product.demo.steps.length
         ? product.demo.steps
         : [
               {
                   key: 'discover',
-                  label: 'Discover',
-                  detail: 'Product boundary',
+                  label: hi ? 'खोजें' : 'Discover',
+                  detail: hi ? 'Product boundary' : 'Product boundary',
               },
-              { key: 'govern', label: 'Govern', detail: 'Access authority' },
-              { key: 'verify', label: 'Verify', detail: 'Release evidence' },
+              {
+                  key: 'govern',
+                  label: hi ? 'Govern करें' : 'Govern',
+                  detail: hi ? 'Access authority' : 'Access authority',
+              },
+              {
+                  key: 'verify',
+                  label: hi ? 'Verify करें' : 'Verify',
+                  detail: hi ? 'Release evidence' : 'Release evidence',
+              },
           ];
 
     return (
@@ -88,7 +94,7 @@ function ProductVisual({ product }: { product: Product }) {
                         <span className="h-2 w-2 rounded-full bg-white/10" />
                     </div>
                     <div className="text-[10px] font-black tracking-[0.18em] text-white/30 uppercase">
-                        Product experience
+                        {hi ? 'Product experience' : 'Product experience'}
                     </div>
                 </div>
 
@@ -102,13 +108,17 @@ function ProductVisual({ product }: { product: Product }) {
                     <div className="flex items-start justify-between gap-6 rounded-2xl border border-white/[0.07] bg-white/[0.025] p-5">
                         <div>
                             <div className="text-[10px] font-bold tracking-[0.16em] text-white/30 uppercase">
-                                Operational boundary
+                                {hi
+                                    ? 'Operational boundary'
+                                    : 'Operational boundary'}
                             </div>
                             <div className="mt-2 text-lg font-black tracking-[-0.025em] text-white">
                                 {product.name}
                             </div>
                             <div className="mt-1 text-xs leading-5 text-white/40">
-                                Governed by KMJ Main Platform authority
+                                {hi
+                                    ? 'KMJ Main Platform authority द्वारा governed'
+                                    : 'Governed by KMJ Main Platform authority'}
                             </div>
                         </div>
                         <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-[#ef3340]/20 bg-[#ef3340]/10">
@@ -120,7 +130,7 @@ function ProductVisual({ product }: { product: Product }) {
                         <div className="rounded-2xl border border-white/[0.07] bg-[#080a0e] p-4">
                             <Activity className="h-4 w-4 text-emerald-300/80" />
                             <div className="mt-5 text-[10px] font-bold tracking-[0.16em] text-white/28 uppercase">
-                                Lifecycle
+                                {hi ? 'Lifecycle' : 'Lifecycle'}
                             </div>
                             <div className="mt-1 text-sm font-black text-white/86">
                                 {product.lifecycle_label}
@@ -129,21 +139,25 @@ function ProductVisual({ product }: { product: Product }) {
                         <div className="rounded-2xl border border-white/[0.07] bg-[#080a0e] p-4">
                             <LockKeyhole className="h-4 w-4 text-[#ff4a54]" />
                             <div className="mt-5 text-[10px] font-bold tracking-[0.16em] text-white/28 uppercase">
-                                Access
+                                {hi ? 'Access' : 'Access'}
                             </div>
                             <div className="mt-1 text-sm font-black text-white/86">
                                 {product.purchase_enabled
-                                    ? 'Governed'
-                                    : 'Closed'}
+                                    ? hi
+                                        ? 'Governed'
+                                        : 'Governed'
+                                    : hi
+                                      ? 'बंद'
+                                      : 'Closed'}
                             </div>
                         </div>
                         <div className="rounded-2xl border border-white/[0.07] bg-[#080a0e] p-4">
                             <ShieldCheck className="h-4 w-4 text-sky-300/80" />
                             <div className="mt-5 text-[10px] font-bold tracking-[0.16em] text-white/28 uppercase">
-                                Claims
+                                {hi ? 'Claims' : 'Claims'}
                             </div>
                             <div className="mt-1 text-sm font-black text-white/86">
-                                Evidence-led
+                                {hi ? 'Evidence-led' : 'Evidence-led'}
                             </div>
                         </div>
                     </div>
@@ -152,16 +166,20 @@ function ProductVisual({ product }: { product: Product }) {
                         <div className="flex items-center justify-between">
                             <div>
                                 <div className="text-[10px] font-bold tracking-[0.16em] text-white/28 uppercase">
-                                    Workflow
+                                    {hi ? 'Workflow' : 'Workflow'}
                                 </div>
                                 <div className="mt-1 text-sm font-bold text-white/75">
                                     {product.demo.simulation
-                                        ? 'Interactive browser simulation'
-                                        : 'Verified product boundary'}
+                                        ? hi
+                                            ? 'Interactive browser simulation'
+                                            : 'Interactive browser simulation'
+                                        : hi
+                                          ? 'Verified product boundary'
+                                          : 'Verified product boundary'}
                                 </div>
                             </div>
                             <span className="rounded-full border border-white/10 px-2.5 py-1 text-[9px] font-bold tracking-[0.12em] text-white/35 uppercase">
-                                Safe preview
+                                {hi ? 'Safe preview' : 'Safe preview'}
                             </span>
                         </div>
                         <div className="mt-5 grid gap-2">
@@ -193,6 +211,8 @@ function ProductVisual({ product }: { product: Product }) {
 }
 
 export default function ProductShow({ product }: { product: Product }) {
+    const { localization } = usePage().props;
+    const hi = localization.locale === 'hi';
     const Demo =
         product.demo.kind === 'cloudos'
             ? CloudOSDemo
@@ -206,6 +226,7 @@ export default function ProductShow({ product }: { product: Product }) {
                 title={product.name + ' — KMJ TECHNO'}
                 description={product.summary}
                 path={'/products/' + product.slug}
+                localized
                 image={productSocialImages[product.slug]}
                 imageAlt={product.name + ' — KMJ TECHNO'}
                 structuredData={[
@@ -268,7 +289,7 @@ export default function ProductShow({ product }: { product: Product }) {
                                 href="/products"
                                 className="inline-flex items-center gap-2 text-xs font-bold tracking-[0.12em] text-white/38 uppercase transition hover:text-white/70"
                             >
-                                Products
+                                {hi ? 'उत्पाद' : 'Products'}
                                 <span className="text-white/18">/</span>
                                 <span className="text-white/62">
                                     {product.name}
@@ -301,7 +322,9 @@ export default function ProductShow({ product }: { product: Product }) {
                                 product.variants.length > 0 && (
                                     <div className="mt-7">
                                         <div className="text-[10px] font-black tracking-[0.14em] text-white/28 uppercase">
-                                            Platform configurations
+                                            {hi
+                                                ? 'Platform configurations'
+                                                : 'Platform configurations'}
                                         </div>
                                         <div className="mt-3 flex flex-wrap gap-2">
                                             {product.variants.map((variant) => (
@@ -322,7 +345,9 @@ export default function ProductShow({ product }: { product: Product }) {
                                         href="#demo"
                                         className="inline-flex h-12 items-center justify-center gap-2 rounded-xl bg-white px-6 text-sm font-black text-[#07090c] transition hover:-translate-y-0.5 hover:bg-white/90"
                                     >
-                                        Explore the product
+                                        {hi
+                                            ? 'Product देखें'
+                                            : 'Explore the product'}
                                         <ArrowRight className="h-4 w-4" />
                                     </a>
                                 ) : (
@@ -330,7 +355,9 @@ export default function ProductShow({ product }: { product: Product }) {
                                         href="/products"
                                         className="inline-flex h-12 items-center justify-center gap-2 rounded-xl bg-white px-6 text-sm font-black text-[#07090c] transition hover:-translate-y-0.5 hover:bg-white/90"
                                     >
-                                        Explore portfolio
+                                        {hi
+                                            ? 'Portfolio देखें'
+                                            : 'Explore portfolio'}
                                         <ArrowRight className="h-4 w-4" />
                                     </Link>
                                 )}
@@ -340,7 +367,9 @@ export default function ProductShow({ product }: { product: Product }) {
                                         href="/purchase"
                                         className="inline-flex h-12 items-center justify-center rounded-xl border border-white/12 bg-white/[0.035] px-6 text-sm font-bold text-white/78 transition hover:border-white/22 hover:bg-white/[0.07] hover:text-white"
                                     >
-                                        Request commercial access
+                                        {hi
+                                            ? 'Commercial access का अनुरोध करें'
+                                            : 'Request commercial access'}
                                     </Link>
                                 ) : (
                                     <span className="inline-flex h-12 items-center justify-center rounded-xl border border-white/[0.08] bg-white/[0.02] px-6 text-sm font-bold text-white/36">
@@ -360,28 +389,45 @@ export default function ProductShow({ product }: { product: Product }) {
                                         href="/products/kmj-codebridge/terms"
                                         className="rounded-lg border border-white/10 bg-white/[0.025] px-3 py-2 transition hover:border-white/20 hover:text-white/80"
                                     >
-                                        Terms of Service
+                                        {hi ? 'सेवा की शर्तें' : 'Terms of Service'}
                                     </Link>
                                     <Link
                                         href="/products/kmj-codebridge/privacy"
                                         className="rounded-lg border border-white/10 bg-white/[0.025] px-3 py-2 transition hover:border-white/20 hover:text-white/80"
                                     >
-                                        Privacy Policy
+                                        {hi
+                                            ? 'गोपनीयता नीति'
+                                            : 'Privacy Policy'}
                                     </Link>
                                     <Link
                                         href="/products/kmj-codebridge/support"
                                         className="rounded-lg border border-white/10 bg-white/[0.025] px-3 py-2 transition hover:border-white/20 hover:text-white/80"
                                     >
-                                        Support
+                                        {hi ? 'सहायता' : 'Support'}
                                     </Link>
                                 </div>
                             )}
 
                             <div className="mt-10 grid max-w-2xl gap-px overflow-hidden rounded-2xl border border-white/[0.07] bg-white/[0.07] sm:grid-cols-3">
                                 {[
-                                    ['Authority', 'Canonical product'],
-                                    ['Access', 'Entitlement governed'],
-                                    ['Safety', 'Production isolated'],
+                                    [
+                                        hi ? 'Authority' : 'Authority',
+                                        hi
+                                            ? 'Canonical product'
+                                            : 'Canonical product',
+                                    ],
+                                    [
+                                        hi ? 'Access' : 'Access',
+                                        hi
+                                            ? 'Entitlement governed'
+                                            : 'Entitlement governed',
+                                    ],
+                                    [
+                                        hi ? 'Safety' : 'Safety',
+                                        hi
+                                            ? 'Production isolated'
+                                            : 'Production isolated',
+                                    ],
                                 ].map(([label, value]) => (
                                     <div
                                         key={label}
@@ -398,7 +444,7 @@ export default function ProductShow({ product }: { product: Product }) {
                             </div>
                         </div>
 
-                        <ProductVisual product={product} />
+                        <ProductVisual product={product} hi={hi} />
                     </section>
 
                     <section className="border-y border-white/[0.07] bg-[#090c10]/72">
@@ -407,18 +453,19 @@ export default function ProductShow({ product }: { product: Product }) {
                                 <div className="max-w-lg">
                                     <div className="inline-flex items-center gap-2 text-[10px] font-black tracking-[0.2em] text-[#ff5962] uppercase">
                                         <Sparkles className="h-3.5 w-3.5" />
-                                        Product foundation
+                                        {hi
+                                            ? 'Product foundation'
+                                            : 'Product foundation'}
                                     </div>
                                     <h2 className="mt-4 text-3xl font-black tracking-[-0.045em] sm:text-4xl">
-                                        Built around verifiable authority, not
-                                        marketing shortcuts.
+                                        {hi
+                                            ? 'Verifiable authority पर बना, marketing shortcuts पर नहीं।'
+                                            : 'Built around verifiable authority, not marketing shortcuts.'}
                                     </h2>
                                     <p className="mt-5 text-sm leading-7 text-white/42">
-                                        The public experience stays aligned with
-                                        product lifecycle, access authority and
-                                        release evidence. Internal engineering
-                                        controls remain outside the customer
-                                        surface.
+                                        {hi
+                                            ? 'Public experience product lifecycle, access authority और release evidence के साथ aligned रहता है। Internal engineering controls customer surface से बाहर रहते हैं।'
+                                            : 'The public experience stays aligned with product lifecycle, access authority and release evidence. Internal engineering controls remain outside the customer surface.'}
                                     </p>
                                 </div>
 
@@ -465,21 +512,25 @@ export default function ProductShow({ product }: { product: Product }) {
                                 <div className="grid gap-10 lg:grid-cols-[.78fr_1.22fr]">
                                     <div className="lg:pt-4">
                                         <div className="text-[10px] font-black tracking-[0.2em] text-[#ff5962] uppercase">
-                                            Interactive product experience
+                                            {hi
+                                                ? 'Interactive product experience'
+                                                : 'Interactive product experience'}
                                         </div>
                                         <h2 className="mt-4 text-4xl font-black tracking-[-0.05em] sm:text-5xl">
-                                            Understand the workflow by using it.
+                                            {hi
+                                                ? 'Workflow को उपयोग करके समझें।'
+                                                : 'Understand the workflow by using it.'}
                                         </h2>
                                         <p className="mt-5 max-w-lg text-sm leading-7 text-white/42">
-                                            This deterministic browser
-                                            simulation explains the product flow
-                                            without controlling production
-                                            infrastructure or claiming
-                                            unverified physical capability.
+                                            {hi
+                                                ? 'यह deterministic browser simulation production infrastructure को control किए बिना या unverified physical capability claim किए बिना product flow समझाती है।'
+                                                : 'This deterministic browser simulation explains the product flow without controlling production infrastructure or claiming unverified physical capability.'}
                                         </p>
                                         <div className="mt-7 rounded-2xl border border-white/[0.08] bg-white/[0.025] p-5">
                                             <div className="text-[9px] font-black tracking-[0.15em] text-white/25 uppercase">
-                                                Current verified status
+                                                {hi
+                                                    ? 'वर्तमान verified status'
+                                                    : 'Current verified status'}
                                             </div>
                                             <p className="mt-2 text-sm leading-6 text-white/55">
                                                 {product.truth.status}
@@ -498,17 +549,19 @@ export default function ProductShow({ product }: { product: Product }) {
                             <div className="overflow-hidden rounded-[2rem] border border-white/[0.08] bg-gradient-to-br from-white/[0.045] to-transparent p-8 sm:p-10">
                                 <div className="max-w-3xl">
                                     <div className="text-[10px] font-black tracking-[0.2em] text-amber-200/65 uppercase">
-                                        Product lifecycle
+                                        {hi
+                                            ? 'Product lifecycle'
+                                            : 'Product lifecycle'}
                                     </div>
                                     <h2 className="mt-4 text-3xl font-black tracking-[-0.04em] sm:text-4xl">
-                                        Public demo stays closed until real
-                                        evidence is ready.
+                                        {hi
+                                            ? 'Real evidence तैयार होने तक public demo बंद रहता है।'
+                                            : 'Public demo stays closed until real evidence is ready.'}
                                     </h2>
                                     <p className="mt-5 text-sm leading-7 text-white/40">
-                                        KMJ TECHNO publishes customer-facing
-                                        screenshots, downloads and performance
-                                        claims only after the corresponding
-                                        product gates are verified.
+                                        {hi
+                                            ? 'KMJ TECHNO customer-facing screenshots, downloads और performance claims तभी publish करता है जब संबंधित product gates verified हों।'
+                                            : 'KMJ TECHNO publishes customer-facing screenshots, downloads and performance claims only after the corresponding product gates are verified.'}
                                     </p>
                                 </div>
                             </div>
@@ -522,8 +575,9 @@ export default function ProductShow({ product }: { product: Product }) {
                                     KMJ TECHNO
                                 </div>
                                 <h2 className="mt-3 text-3xl font-black tracking-[-0.04em] sm:text-4xl">
-                                    One product ecosystem. Clear authority at
-                                    every layer.
+                                    {hi
+                                        ? 'एक product ecosystem. हर layer पर स्पष्ट authority.'
+                                        : 'One product ecosystem. Clear authority at every layer.'}
                                 </h2>
                             </div>
                             <div className="flex flex-col gap-3 sm:flex-row">
@@ -531,14 +585,18 @@ export default function ProductShow({ product }: { product: Product }) {
                                     href="/products"
                                     className="inline-flex h-12 items-center justify-center gap-2 rounded-xl border border-white/10 px-5 text-sm font-bold text-white/72 transition hover:border-white/20 hover:text-white"
                                 >
-                                    Explore all products
+                                    {hi
+                                        ? 'सभी उत्पाद देखें'
+                                        : 'Explore all products'}
                                 </Link>
                                 {product.purchase_enabled && (
                                     <Link
                                         href="/purchase"
                                         className="inline-flex h-12 items-center justify-center gap-2 rounded-xl bg-[#ef2632] px-6 text-sm font-black text-white transition hover:bg-[#ff3742]"
                                     >
-                                        Request access
+                                        {hi
+                                            ? 'Access का अनुरोध करें'
+                                            : 'Request access'}
                                         <ArrowRight className="h-4 w-4" />
                                     </Link>
                                 )}

@@ -27,7 +27,7 @@ on:
       - 'apps/platform/database/migrations/*codebridge*'
       - 'apps/platform/bootstrap/app.php'
       - 'tests/codebridge/**'
-      - '.github/workflows/codebridge-contract.yml' 
+      - '.github/workflows/codebridge-contract.yml'
   workflow_dispatch:
 permissions:
   contents: read

@@ -1,0 +1,9 @@
+[Unit]
+Description=Run KMJ backlog sync when CodeBridge status changes
+
+[Path]
+PathChanged=%h/.local/state/kmj-autonomy/codebridge-status.json
+Unit=kmj-backlog-coordinator.service
+
+[Install]
+WantedBy=default.target

@@ -41,6 +41,9 @@ final class PublicAiDiscoveryTest extends TestCase
         self::assertStringContainsString('https://kmjtechno.com/products/kmj-codebridge/terms', $body);
         self::assertStringContainsString('https://kmjtechno.com/products/kmj-codebridge/privacy', $body);
         self::assertStringContainsString('https://kmjtechno.com/products/kmj-codebridge/support', $body);
+        self::assertStringContainsString('https://kmjtechno.com/docs', $body);
+        self::assertStringContainsString('https://kmjtechno.com/insights', $body);
+        self::assertStringContainsString('https://kmjtechno.com/support', $body);
         self::assertSame(18, substr_count($body, 'https://kmjtechno.com/products/'));
     }
 }
