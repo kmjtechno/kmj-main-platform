@@ -19,6 +19,7 @@ import time
 from controller.autonomy_worker import private_json
 from controller.patch_sandbox import execute_candidate, _git, _unique_object, _reject_constant
 from controller.task_queue import TaskQueue
+from controller.model_router import FreeCloudRouter
 
 TERMINAL = {'json_candidate_tested', 'failed'}
 
@@ -238,8 +239,15 @@ class JSONContractWorkflow:
                     candidate_json = parse_candidate(content)
                 except ValueError as exc:
                     return self._repair(state, 'INVALID_JSON', content if isinstance(content, str) else '', str(exc))
-                state.update({'phase': 'validating', 'candidate_json': candidate_json,
-                              'diff': new_file_diff(self.spec['target_path'], candidate_json)})
+                state.update({
+                    'phase': 'validating',
+                    'candidate_json': candidate_json,
+                    'diff': new_file_diff(self.spec['target_path'], candidate_json),
+                    'generation_route': {
+                        'provider': artifact.get('provider', 'unknown'),
+                        'model': artifact.get('model', 'unknown'),
+                    },
+                })
                 self._save(state)
             directory = self.directory / f'candidates-attempt{state["attempt"]}'
             report = self._existing_report(directory, state['diff'], state['candidate_json'])
@@ -258,6 +266,16 @@ class JSONContractWorkflow:
             private_json(directory / 'validated-report.json', {
                 'validation_sha256': self.test_digest, 'spec_sha256': self.fingerprint, 'report': report})
             state['report'] = report
+            route = state.get('generation_route') or {}
+            provider, model = route.get('provider'), route.get('model')
+            if (isinstance(provider, str) and provider and provider != 'unknown'
+                    and isinstance(model, str) and model and model != 'unknown'):
+                FreeCloudRouter().semantic_quality(
+                    provider=provider,
+                    model_id=model,
+                    passed=report['stage'] == 'json_candidate_tested',
+                    evidence_id=f"{self.spec['workflow_id']}:{state['attempt']}:{self.test_digest}",
+                )
             if report['stage'] == 'json_candidate_tested':
                 state['phase'] = 'json_candidate_tested'
                 return self._save(state)

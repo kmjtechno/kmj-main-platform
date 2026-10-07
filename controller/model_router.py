@@ -364,10 +364,12 @@ class FreeCloudRouter:
             )
 
         health = self._model_health() if candidates else {}
+        quality = self.semantic_quality() if candidates else {}
         now = time.time()
         return sorted(
             candidates,
             key=lambda candidate: (
+                -self._semantic_score(candidate, quality),
                 -self._recent_success(candidate, health, now),
                 -candidate.score,
                 candidate.provider,
@@ -437,6 +439,61 @@ class FreeCloudRouter:
                         db.execute("SELECT route,cooldown_until,last_success FROM model_health")}
         except (OSError, sqlite3.Error) as exc:
             raise NoFreeRouteAvailable("ROUTER_STATE_UNAVAILABLE") from exc
+
+    @staticmethod
+    def _quality_key(provider: str, model_id: str) -> str:
+        return hashlib.sha256(
+            json.dumps([provider, model_id], separators=(",", ":")).encode()
+        ).hexdigest()
+
+    def semantic_quality(
+        self, candidate=None, *, provider=None, model_id=None, passed=None,
+        evidence_id=None,
+    ):
+        """Persist bounded tested-quality evidence without prompts or credentials."""
+        if candidate is not None:
+            provider, model_id = candidate.provider, candidate.model_id
+        try:
+            self.state_path.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
+            with closing(sqlite3.connect(self.state_path, timeout=2)) as db, db:
+                os.chmod(self.state_path, 0o600)
+                db.execute("""CREATE TABLE IF NOT EXISTS semantic_quality (
+                    route TEXT PRIMARY KEY,
+                    tested_passes INTEGER NOT NULL DEFAULT 0,
+                    tested_failures INTEGER NOT NULL DEFAULT 0,
+                    updated REAL NOT NULL)""")
+                db.execute("""CREATE TABLE IF NOT EXISTS semantic_quality_evidence (
+                    evidence TEXT PRIMARY KEY, route TEXT NOT NULL,
+                    passed INTEGER NOT NULL, created REAL NOT NULL)""")
+                if provider is not None and model_id is not None and passed is not None:
+                    key = self._quality_key(str(provider), str(model_id))
+                    apply = True
+                    if evidence_id is not None:
+                        evidence = hashlib.sha256(str(evidence_id).encode()).hexdigest()
+                        cursor = db.execute("""INSERT OR IGNORE INTO semantic_quality_evidence
+                            (evidence,route,passed,created) VALUES (?,?,?,?)""",
+                            (evidence, key, int(bool(passed)), time.time()))
+                        apply = cursor.rowcount == 1
+                    if apply:
+                        pass_delta, fail_delta = (1, 0) if passed else (0, 1)
+                        db.execute("""INSERT INTO semantic_quality
+                            (route,tested_passes,tested_failures,updated) VALUES (?,?,?,?)
+                            ON CONFLICT(route) DO UPDATE SET
+                            tested_passes=MIN(8,tested_passes+excluded.tested_passes),
+                            tested_failures=MIN(8,tested_failures+excluded.tested_failures),
+                            updated=excluded.updated""",
+                            (key, pass_delta, fail_delta, time.time()))
+                return {row[0]: (row[1], row[2], row[3]) for row in
+                        db.execute("""SELECT route,tested_passes,tested_failures,updated
+                            FROM semantic_quality""")}
+        except (OSError, sqlite3.Error) as exc:
+            raise NoFreeRouteAvailable("ROUTER_STATE_UNAVAILABLE") from exc
+
+    def _semantic_score(self, candidate, quality):
+        passes, failures, _updated = quality.get(
+            self._quality_key(candidate.provider, candidate.model_id), (0, 0, 0)
+        )
+        return max(-8, min(8, passes - failures))
 
     def _recent_success(self, candidate, health, now):
         until, success = health.get(self._model_key(candidate), (0, 0))
