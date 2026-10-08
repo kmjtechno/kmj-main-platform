@@ -78,18 +78,18 @@ export default function LegalCenter() {
                                     <div className="grid h-11 w-11 place-items-center rounded-xl bg-[#e21b23]/10 text-[#ef3941]">
                                         <Icon className="h-5 w-5" />
                                     </div>
-                                    <ArrowRight className="h-4 w-4 text-white/30 transition group-hover:text-white/70" />
+                                    <ArrowRight className="h-4 w-4 text-white/65 transition group-hover:text-white/70" />
                                 </div>
                                 <h2 className="mt-5 text-xl font-black">
                                     {title}
                                 </h2>
-                                <p className="mt-2 text-sm leading-7 text-white/42">
+                                <p className="mt-2 text-sm leading-7 text-white/65">
                                     {description}
                                 </p>
                             </Link>
                         ))}
                     </div>
-                    <div className="mt-12 rounded-2xl border border-white/[0.08] bg-white/[0.025] p-6 text-sm leading-7 text-white/45">
+                    <div className="mt-12 rounded-2xl border border-white/[0.08] bg-white/[0.025] p-6 text-sm leading-7 text-white/65">
                         Legal, privacy, billing or grievance enquiries may be
                         sent to{' '}
                         <span className="font-bold text-white/70">
