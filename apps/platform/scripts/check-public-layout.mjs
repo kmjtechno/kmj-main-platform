@@ -124,7 +124,7 @@ const productPage = readFileSync(join(root, "resources/js/pages/products/index.t
 assert.match(productPage, /<PublicSiteHeader \/>/);
 assert.match(productPage, /<PublicSiteFooter \/>/);
 assert.match(productPage, /business and engineering\./);
-assert.match(productPage, /text-white\\/72/);
+assert.ok(productPage.includes("text-white/72"));
 assert.equal(
   productPage.split('Product {String(index + 1).padStart(2, "0")}').length,
   2,
