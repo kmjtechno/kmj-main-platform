@@ -2,7 +2,7 @@
 
 ## Identity and authority
 
-The sole privileged subject must be an **already-provisioned Platform Owner**, with a verified account email, enrolled passkey and a fresh password-confirmed operator session. An email string is not a credential: a requested spelling is **pending user confirmation**, and is **never** hardcoded into code or used to silently grant `is_platform_owner`.
+The intended Super Admin account email was confirmed as **`kmjtechno.net@gmail.com`** on 8 Oct 2026; the owner states this is currently the sole Main Platform account. The server-controlled `KMJ_SUPER_ADMIN_EMAIL` configuration defaults to this email solely as an **identity allowlist**, not an authentication method or privilege grant. Live account ownership and database state have **not** been independently verified. The subject must still be an **already-provisioned Platform Owner**, with a verified email, enrolled passkey and fresh password-confirmed operator session. Never silently grant `is_platform_owner` based only on an email string.
 
 `GET /operator/super-admin/development-profile` is authenticated readback of this management policy, **not** an entitlement issuer. It cannot make a Professional license Owner, enable paid model APIs, grant roles, or override signatures.
 
