@@ -75,7 +75,7 @@ export default function Capabilities() {
 
                 <PublicSiteHeader />
 
-                <main className="relative z-10">
+                <main id="main-content" tabIndex={-1} className="relative z-10">
                     <section className="mx-auto max-w-[1440px] px-5 pt-20 pb-16 sm:px-8 lg:px-12 lg:pt-28 lg:pb-22">
                         <div className="max-w-5xl">
                             <div className="text-[10px] font-black tracking-[0.24em] text-[#ff5962] uppercase">
