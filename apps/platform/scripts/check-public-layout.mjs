@@ -115,6 +115,16 @@ assert.equal(
     2,
     'tablet header must render both the menu toggle and expanded navigation',
 );
+assert.match(
+    header,
+    /<nav className="hidden items-center gap-1 lg:flex">/,
+    'desktop navigation must appear at lg while the mobile menu hides at lg',
+);
+assert.doesNotMatch(
+    header,
+    /sm:hidden|md:hidden/,
+    'a smaller breakpoint must not remove mobile navigation before desktop navigation appears',
+);
 
 const footer = readFileSync(
     join(root, 'resources/js/components/public-site-footer.tsx'),
