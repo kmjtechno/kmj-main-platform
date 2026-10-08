@@ -206,7 +206,7 @@ export default function ProductsIndex({ products }: { products: Product[] }) {
                                 <span className="sr-only">
                                     Search KMJ products
                                 </span>
-                                <Search className="pointer-events-none absolute top-1/2 left-4 h-4 w-4 -translate-y-1/2 text-white/28" />
+                                <Search className="pointer-events-none absolute top-1/2 left-4 h-4 w-4 -translate-y-1/2 text-white/65" />
                                 <input
                                     value={query}
                                     onChange={(event) =>
@@ -227,7 +227,7 @@ export default function ProductsIndex({ products }: { products: Product[] }) {
                                             'rounded-full border px-3 py-2 text-[10px] font-black tracking-[0.08em] uppercase transition ' +
                                             (lifecycle === option
                                                 ? 'border-[#e21b23]/35 bg-[#e21b23]/10 text-white'
-                                                : 'border-white/[0.08] bg-white/[0.025] text-white/38 hover:border-white/15 hover:text-white/68')
+                                                : 'border-white/[0.08] bg-white/[0.025] text-white/65 hover:border-white/15 hover:text-white/68')
                                         }
                                     >
                                         {option === 'all'
@@ -263,7 +263,7 @@ export default function ProductsIndex({ products }: { products: Product[] }) {
                                                     <h2 className="text-3xl font-black tracking-[-0.04em] sm:text-4xl">
                                                         {product.category}
                                                     </h2>
-                                                    <p className="max-w-2xl text-sm leading-7 text-white/38 lg:justify-self-end">
+                                                    <p className="max-w-2xl text-sm leading-7 text-white/65 lg:justify-self-end">
                                                         {categoryDescriptions[
                                                             product.category
                                                         ] ??
@@ -297,7 +297,7 @@ export default function ProductsIndex({ products }: { products: Product[] }) {
                                                             <ProductIcon className="h-5 w-5 text-[#ff5962]" />
                                                         </div>
                                                         <div>
-                                                            <div className="text-[9px] font-black tracking-[0.16em] text-white/25 uppercase">
+                                                            <div className="text-[9px] font-black tracking-[0.16em] text-white/65 uppercase">
                                                                 Product{' '}
                                                                 {String(
                                                                     index + 1,
@@ -307,7 +307,7 @@ export default function ProductsIndex({ products }: { products: Product[] }) {
                                                                 )}
                                                             </div>
                                                             <div>
-                                                                <div className="text-[9px] font-black tracking-[0.16em] text-white/25 uppercase">
+                                                                <div className="text-[9px] font-black tracking-[0.16em] text-white/65 uppercase">
                                                                     Product{' '}
                                                                     {String(
                                                                         index +
@@ -317,12 +317,12 @@ export default function ProductsIndex({ products }: { products: Product[] }) {
                                                                         '0',
                                                                     )}
                                                                 </div>
-                                                                <div className="mt-1 text-xs font-bold text-white/45">
+                                                                <div className="mt-1 text-xs font-bold text-white/65">
                                                                     {
                                                                         product.category
                                                                     }
                                                                 </div>
-                                                                <div className="mt-1 text-[10px] font-semibold text-white/28">
+                                                                <div className="mt-1 text-[10px] font-semibold text-white/65">
                                                                     {
                                                                         product.eyebrow
                                                                     }
@@ -335,7 +335,7 @@ export default function ProductsIndex({ products }: { products: Product[] }) {
                                                                 'rounded-full border px-3 py-1.5 text-[9px] font-black tracking-[0.1em] uppercase ' +
                                                                 (product.purchase_enabled
                                                                     ? 'border-emerald-300/20 bg-emerald-300/[0.06] text-emerald-200/75'
-                                                                    : 'border-white/10 bg-white/[0.03] text-white/38')
+                                                                    : 'border-white/10 bg-white/[0.03] text-white/65')
                                                             }
                                                         >
                                                             {
@@ -357,7 +357,7 @@ export default function ProductsIndex({ products }: { products: Product[] }) {
                                                     <p className="mt-5 max-w-2xl text-base leading-7 font-medium text-white/62">
                                                         {product.headline}
                                                     </p>
-                                                    <p className="mt-3 max-w-2xl text-sm leading-7 text-white/37">
+                                                    <p className="mt-3 max-w-2xl text-sm leading-7 text-white/65">
                                                         {product.summary}
                                                     </p>
 
@@ -365,7 +365,7 @@ export default function ProductsIndex({ products }: { products: Product[] }) {
                                                         product.variants
                                                             .length > 0 && (
                                                             <div className="mt-5">
-                                                                <div className="text-[9px] font-black tracking-[0.14em] text-white/25 uppercase">
+                                                                <div className="text-[9px] font-black tracking-[0.14em] text-white/65 uppercase">
                                                                     Available
                                                                     configurations
                                                                 </div>
@@ -412,7 +412,7 @@ export default function ProductsIndex({ products }: { products: Product[] }) {
                                                             : '')
                                                     }
                                                 >
-                                                    <div className="text-[9px] font-black tracking-[0.16em] text-white/24 uppercase">
+                                                    <div className="text-[9px] font-black tracking-[0.16em] text-white/65 uppercase">
                                                         Evidence-led foundation
                                                     </div>
                                                     {product.proof
@@ -430,7 +430,7 @@ export default function ProductsIndex({ products }: { products: Product[] }) {
                                                                                 item.title
                                                                             }
                                                                         </div>
-                                                                        <p className="mt-1.5 text-xs leading-5 text-white/32">
+                                                                        <p className="mt-1.5 text-xs leading-5 text-white/65">
                                                                             {
                                                                                 item.detail
                                                                             }
@@ -439,7 +439,7 @@ export default function ProductsIndex({ products }: { products: Product[] }) {
                                                                 </div>
                                                             </div>
                                                         ))}
-                                                    <div className="mt-1 flex items-center justify-between rounded-xl border border-white/[0.055] bg-black/20 px-4 py-3 text-[10px] font-bold text-white/32">
+                                                    <div className="mt-1 flex items-center justify-between rounded-xl border border-white/[0.055] bg-black/20 px-4 py-3 text-[10px] font-bold text-white/65">
                                                         <span>
                                                             {product.demo
                                                                 .simulation
@@ -451,7 +451,7 @@ export default function ProductsIndex({ products }: { products: Product[] }) {
                                                             className={
                                                                 product.purchase_enabled
                                                                     ? 'text-emerald-300/60'
-                                                                    : 'text-white/25'
+                                                                    : 'text-white/65'
                                                             }
                                                         >
                                                             {product.purchase_enabled
@@ -472,7 +472,7 @@ export default function ProductsIndex({ products }: { products: Product[] }) {
                                 <div className="text-lg font-black">
                                     No matching KMJ product found.
                                 </div>
-                                <p className="mt-2 text-sm text-white/38">
+                                <p className="mt-2 text-sm text-white/65">
                                     Clear the search or select another lifecycle
                                     state.
                                 </p>
@@ -490,7 +490,7 @@ export default function ProductsIndex({ products }: { products: Product[] }) {
                                     Products stay independent. Customer access
                                     stays governed.
                                 </h2>
-                                <p className="mt-4 max-w-2xl text-sm leading-7 text-white/38">
+                                <p className="mt-4 max-w-2xl text-sm leading-7 text-white/65">
                                     KMJ Main Platform provides the shared
                                     customer, organization, entitlement and
                                     licensing authority while each product keeps
