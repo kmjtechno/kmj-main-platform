@@ -330,21 +330,22 @@ final class CodeBridgeAdminHttpTest extends TestCase
 
     private function ownerPlan(): void
     {
-        $product = DB::table('products')->where('slug', 'codebridge')->value('id');
-        self::assertNotNull($product);
-        $now = now();
-        DB::table('plans')->insert([
-            'id' => (string) Str::uuid(),
-            'product_id' => $product,
-            'code' => 'codebridge.owner',
-            'name' => 'CodeBridge Owner',
-            'pricing_model' => 'internal',
+        // Seed the real canonical product and owner policy, rather than a
+        // synthetic legacy "codebridge" product that hides identity drift.
+        $catalog = app(KmjProductCatalog::class)->syncAll();
+        $product = $catalog[KmjProductCatalog::CODEBRIDGE_SLUG];
+        $this->assertDatabaseHas('products', [
+            'id' => $product->getKey(),
+            'slug' => KmjProductCatalog::CODEBRIDGE_SLUG,
+            'name' => KmjProductCatalog::CODEBRIDGE_NAME,
+            'status' => 'sandbox',
+            'licensing_enabled' => true,
+        ]);
+        $this->assertDatabaseHas('plans', [
+            'code' => PlanCatalog::CODEBRIDGE_OWNER_CODE,
+            'product_id' => $product->getKey(),
             'status' => 'active',
-            'trial_days' => 0,
-            'features' => json_encode(['read' => true, 'write' => true, 'execute' => true]),
-            'limits' => json_encode(['devices' => 2147483647, 'concurrent_jobs' => 16]),
-            'created_at' => $now,
-            'updated_at' => $now,
+            'pricing_model' => 'internal',
         ]);
     }
 
