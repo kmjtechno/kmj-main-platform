@@ -9,8 +9,8 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
-use KMJ\MainPlatform\Organizations\Services\OrganizationDirectory;
 use KMJ\MainPlatform\Catalog\Services\PlanCatalog;
+use KMJ\MainPlatform\Organizations\Services\OrganizationDirectory;
 
 Route::middleware(['auth', 'verified', 'password.confirm'])
     ->prefix('operator/codebridge')
