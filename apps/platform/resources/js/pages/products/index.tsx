@@ -155,16 +155,17 @@ export default function ProductsIndex({ products }: { products: Product[] }) {
                                     KMJ TECHNO product portfolio
                                 </div>
                                 <h1 className="mt-5 text-5xl leading-[0.96] font-black tracking-[-0.06em] sm:text-6xl lg:text-[5.4rem]">
-                                    Products built to move
+                                    Technology for modern
                                     <span className="block text-white/72">
-                                        from idea to governed operation.
+                                        business and engineering.
                                     </span>
                                 </h1>
                                 <p className="mt-7 max-w-3xl text-base leading-8 text-white/70 sm:text-lg">
-                                    Explore the complete KMJ product ecosystem
-                                    with lifecycle, access and public evidence
-                                    kept explicit. Engineering progress never
-                                    masquerades as commercial availability.
+                                    Discover KMJ TECHNO cloud, AI engineering,
+                                    calibration, secure connectivity and
+                                    immersive technology. Explore product
+                                    capabilities, demos and current availability
+                                    before choosing your next step.
                                 </p>
                             </div>
 
