@@ -80,6 +80,11 @@ for (const page of publicPages) {
             source.includes('LegalDocument'),
         page + ' is missing its public footer',
     );
+    assert.ok(
+        source.includes('id="main-content"') ||
+            source.includes('LegalDocument'),
+        page + ' has no skip-navigation destination',
+    );
 }
 const legalDocument = readFileSync(
     join(root, 'resources/js/components/legal/legal-document.tsx'),
@@ -87,6 +92,7 @@ const legalDocument = readFileSync(
 );
 assert.match(legalDocument, /<PublicSiteHeader \/>/);
 assert.match(legalDocument, /<PublicSiteFooter \/>/);
+assert.match(legalDocument, /id="main-content"/);
 
 for (const page of protectedPages) {
     assert.equal(
