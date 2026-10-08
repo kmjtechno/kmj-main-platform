@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Services\Licensing\CodeBridge;
 
+use App\Services\Commerce\KmjProductCatalog;
 use DomainException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -47,8 +48,9 @@ final class CodeBridgeOwnerTierService
                 throw new DomainException('CODEBRIDGE_OWNER_POLICY_UNAVAILABLE');
             }
             $codebridgeProduct = DB::table('products')
-                ->where('slug', 'codebridge')
-                ->where('status', 'active')
+                ->where('slug', KmjProductCatalog::CODEBRIDGE_SLUG)
+                ->where('name', KmjProductCatalog::CODEBRIDGE_NAME)
+                ->where('status', 'sandbox')
                 ->where('licensing_enabled', true)
                 ->first(['id']);
             if (
