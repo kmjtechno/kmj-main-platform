@@ -63,6 +63,31 @@ for (const page of publicPages) {
         page + ' missing component',
     );
 }
+// Every standalone page must own a visible public shell, directly or through
+// the shared LegalDocument component. A half-wrapped page looks unfinished.
+for (const page of publicPages) {
+    const source = readFileSync(
+        join(root, 'resources/js/pages', page + '.tsx'),
+        'utf8',
+    );
+    assert.ok(
+        source.includes('PublicSiteHeader') ||
+            source.includes('LegalDocument'),
+        page + ' is missing its public header',
+    );
+    assert.ok(
+        source.includes('PublicSiteFooter') ||
+            source.includes('LegalDocument'),
+        page + ' is missing its public footer',
+    );
+}
+const legalDocument = readFileSync(
+    join(root, 'resources/js/components/legal/legal-document.tsx'),
+    'utf8',
+);
+assert.match(legalDocument, /<PublicSiteHeader \/>/);
+assert.match(legalDocument, /<PublicSiteFooter \/>/);
+
 for (const page of protectedPages) {
     assert.equal(
         isPublicMarketingPage(page),
@@ -85,7 +110,11 @@ const header = readFileSync(
     'utf8',
 );
 assert.match(header, /aria-label=\{open \? 'Close navigation' : 'Open navigation'\}/);
-assert.match(header, /lg:hidden/, 'menu toggle must exist on tablet sizes');
+assert.equal(
+    (header.match(/lg:hidden/g) ?? []).length,
+    2,
+    'tablet header must render both the menu toggle and expanded navigation',
+);
 
 const footer = readFileSync(
     join(root, 'resources/js/components/public-site-footer.tsx'),
