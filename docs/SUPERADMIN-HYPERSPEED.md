@@ -8,6 +8,28 @@ The intended Super Admin account email was confirmed as **`kmjtechno.net@gmail.c
 
 All KMJ-owned canonical products can be managed through existing operator authorization; individually licensed executables still require their proper product entitlement and signed renewal. Access to third-party providers, ChatGPT plugins or GitHub Actions is controlled separately by those services.
 
+## First-account owner bootstrap (operator-controlled)
+
+Use the confirmed identity `kmjtechno.net@gmail.com`. A fresh login alone cannot grant authority: the single account must already have a verified email address and an enrolled passkey.
+
+After this PR has passed independent CI, been approved/merged and deployed by a trusted release operator, run the **read-only** initial preflight:
+
+```bash
+php artisan kmj:super-admin:bootstrap
+```
+
+The command checks the live database and refuses to proceed unless exactly one user exists and the verified account matches the allowlisted email with an enrolled passkey. It does **not** create a new account, reset a password, fake passkey credentials, or activate a signed product license.
+
+For a separately approved, **interactive on-server** first grant, a trusted production operator temporarily sets `KMJ_SUPER_ADMIN_BOOTSTRAP_ENABLED=true` in the protected server environment, reloads Laravel configuration appropriately, and runs:
+
+```bash
+php artisan kmj:super-admin:bootstrap --apply --confirm=BOOTSTRAP_VERIFIED_SINGLE_OWNER
+```
+
+The command prompts for human confirmation, grants only the first account's `is_platform_owner` flag, records a bounded bootstrap audit event (without secrets), and is idempotent for an already-granted owner. **Disable the flag immediately afterwards.** Do not route this privileged command through a general-purpose AI shell or a different CodeBridge project grant. Signed CodeBridge Owner product activation and all other KMJ product entitlements remain separately required.
+
+The authenticated readback at `/operator/super-admin/development-profile` requires the correct email, an existing owner grant, verified email, enrolled passkey and password-confirmed session. `KMJ_SUPER_ADMIN_EMAIL` is a server-only identity allowlist; email matching is never a substitute for authentication.
+
 ## Unlimited goal vs. actual physical limits
 
 - **No commercial cap on planning/logical tasks** for the verified internal development owner.
