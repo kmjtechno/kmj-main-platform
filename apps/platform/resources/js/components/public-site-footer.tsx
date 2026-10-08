@@ -14,7 +14,7 @@ export default function PublicSiteFooter() {
                 <div className="mx-auto grid max-w-[1440px] gap-12 px-5 py-14 sm:px-8 md:grid-cols-2 lg:grid-cols-[1.4fr_.7fr_.7fr_.8fr] lg:px-12">
                     <div>
                         <LockedBrand />
-                        <p className="mt-5 max-w-md text-sm leading-7 text-white/38">
+                        <p className="mt-5 max-w-md text-sm leading-7 text-white/65">
                             Software, cloud systems and intelligent products
                             designed around clear product boundaries, governed
                             access and verifiable delivery.
@@ -22,31 +22,31 @@ export default function PublicSiteFooter() {
                     </div>
 
                     <div>
-                        <div className="text-[11px] font-black tracking-[0.18em] text-white/32 uppercase">
+                        <div className="text-[11px] font-black tracking-[0.18em] text-white/65 uppercase">
                             Explore
                         </div>
                         <div className="mt-4 grid gap-3">
                             <Link
                                 href="/company"
-                                className="text-sm font-semibold text-white/62 transition hover:text-white"
+                                className="text-sm font-semibold text-white/78 transition hover:text-white"
                             >
                                 Company
                             </Link>
                             <Link
                                 href="/capabilities"
-                                className="text-sm font-semibold text-white/62 transition hover:text-white"
+                                className="text-sm font-semibold text-white/78 transition hover:text-white"
                             >
                                 Capabilities
                             </Link>
                             <Link
                                 href="/products"
-                                className="text-sm font-semibold text-white/62 transition hover:text-white"
+                                className="text-sm font-semibold text-white/78 transition hover:text-white"
                             >
                                 Products
                             </Link>
                             <Link
                                 href="/trust"
-                                className="text-sm font-semibold text-white/62 transition hover:text-white"
+                                className="text-sm font-semibold text-white/78 transition hover:text-white"
                             >
                                 Trust center
                             </Link>
@@ -54,7 +54,7 @@ export default function PublicSiteFooter() {
                     </div>
 
                     <div>
-                        <div className="text-[11px] font-black tracking-[0.18em] text-white/32 uppercase">
+                        <div className="text-[11px] font-black tracking-[0.18em] text-white/65 uppercase">
                             Legal
                         </div>
                         <div className="mt-4 grid gap-3">
@@ -69,7 +69,7 @@ export default function PublicSiteFooter() {
                                 <Link
                                     key={href}
                                     href={href}
-                                    className="text-sm font-semibold text-white/62 transition hover:text-white"
+                                    className="text-sm font-semibold text-white/78 transition hover:text-white"
                                 >
                                     {label}
                                 </Link>
@@ -78,7 +78,7 @@ export default function PublicSiteFooter() {
                     </div>
 
                     <div>
-                        <div className="text-[11px] font-black tracking-[0.18em] text-white/32 uppercase">
+                        <div className="text-[11px] font-black tracking-[0.18em] text-white/65 uppercase">
                             Customer access
                         </div>
                         <div className="mt-4 grid gap-3">
@@ -112,7 +112,7 @@ export default function PublicSiteFooter() {
                     </div>
                 </div>
                 <div className="border-t border-white/[0.06]">
-                    <div className="mx-auto flex max-w-[1440px] flex-col gap-2 px-5 py-5 text-[11px] text-white/27 sm:px-8 md:flex-row md:items-center md:justify-between lg:px-12">
+                    <div className="mx-auto flex max-w-[1440px] flex-col gap-2 px-5 py-5 text-[11px] text-white/58 sm:px-8 md:flex-row md:items-center md:justify-between lg:px-12">
                         <span>
                             © {new Date().getFullYear()} KMJ TECHNO. All rights
                             reserved.
@@ -122,7 +122,7 @@ export default function PublicSiteFooter() {
                                 Public product claims remain bound to verified
                                 platform authority.
                             </span>
-                            <span className="font-semibold text-white/45">
+                            <span className="font-semibold text-white/70">
                                 Build &amp; Design by KMJ TECHNO
                             </span>
                         </span>
