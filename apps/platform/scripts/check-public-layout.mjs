@@ -136,7 +136,7 @@ assert.match(productPage, /text-white\/72/);
 // The public and logged-in areas must share one official KMJ mark asset;
 // a starter-template SVG or old third-party mark looks like another brand.
 const officialMark = '/assets/brand/kmj-mark.webp';
-assert.ok(existsSync(join(root, 'public', officialMark)));
+assert.ok(existsSync(join(root, 'public', officialMark.slice(1))));
 const appLogo = readFileSync(
     join(root, 'resources/js/components/app-logo.tsx'),
     'utf8',
