@@ -241,16 +241,21 @@ export default function ProductsIndex({ products }: { products: Product[] }) {
                         (featured ? "lg:col-span-2 lg:min-h-[28rem]" : "")
                       }
                     >
-                      <div className={"grid flex-1 gap-8 p-6 sm:p-8 " + (featured ? "lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]" : "")}>
+                      <div
+                        className={
+                          "grid flex-1 gap-8 p-6 sm:p-8 " +
+                          (featured ? "lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]" : "")
+                        }
+                      >
                         <div className="flex min-w-0 flex-col">
                           <div className="mb-7 overflow-hidden rounded-2xl border border-white/[0.08] bg-black/30">
-                          <ProductVisual
-                            slug={product.slug}
-                            name={product.name}
-                            imagePath={product.image_path}
-                            className="aspect-[4/3] w-full object-cover"
-                          />
-                        </div>
+                            <ProductVisual
+                              slug={product.slug}
+                              name={product.name}
+                              imagePath={product.image_path}
+                              className="aspect-[4/3] w-full object-cover"
+                            />
+                          </div>
                           <div className="flex flex-wrap items-start justify-between gap-3">
                             <div className="flex min-w-0 items-center gap-4">
                               <div className="grid h-11 w-11 shrink-0 place-items-center rounded-xl border border-[#ef3340]/18 bg-[#ef3340]/8">
