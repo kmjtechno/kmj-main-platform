@@ -65,6 +65,31 @@ final class SuperAdminBootstrapCommandTest extends TestCase
         self::assertSame(0, DB::table('users')->where('is_platform_owner', true)->count());
     }
 
+    public function test_explicit_interactive_bootstrap_grants_only_the_verified_first_account(): void
+    {
+        $user = $this->createSingleAccount(withPasskey: true);
+        config()->set('kmj-super-admin.bootstrap_enabled', true);
+
+        $this->artisan('kmj:super-admin:bootstrap', [
+            '--apply' => true,
+            '--confirm' => 'BOOTSTRAP_VERIFIED_SINGLE_OWNER',
+        ])
+            ->expectsConfirmation('Grant platform-owner authority to the sole verified passkey account?', 'yes')
+            ->assertExitCode(0);
+
+        $activated = $user->fresh();
+        self::assertTrue((bool) $activated?->getAttribute('is_platform_owner'));
+        self::assertNotNull($activated?->getAttribute('platform_owner_granted_at'));
+
+        // A second call is an idempotent status check, not a new grant.
+        $grantedAt = (string) $activated->getAttribute('platform_owner_granted_at');
+        $this->artisan('kmj:super-admin:bootstrap')->assertExitCode(0);
+        self::assertSame(
+            $grantedAt,
+            (string) $user->fresh()?->getAttribute('platform_owner_granted_at'),
+        );
+    }
+
     public function test_confirmation_cancellation_never_mutates_the_account(): void
     {
         $user = $this->createSingleAccount(withPasskey: true);
