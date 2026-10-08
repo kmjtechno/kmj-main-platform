@@ -18,6 +18,38 @@ final class PlatformOwnerConsoleTest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_super_admin_development_profile_requires_verified_owner_passkey(): void
+    {
+        $url = '/operator/super-admin/development-profile';
+
+        $this->getJson($url)->assertUnauthorized();
+
+        $regular = User::factory()->create(['email_verified_at' => now()]);
+        $this->actingAs($regular)->withSession(['auth.password_confirmed_at' => time()])
+            ->getJson($url)->assertForbidden();
+
+        $owner = $this->createPasskeyOwner();
+        $owner->forceFill(['email_verified_at' => null])->save();
+        $this->actingAs($owner)->withSession(['auth.password_confirmed_at' => time()])
+            ->getJson($url)->assertForbidden();
+
+        $owner->forceFill(['email_verified_at' => now()])->save();
+        app(KmjProductCatalog::class)->syncAll();
+
+        $this->actingAs($owner)->withSession(['auth.password_confirmed_at' => time()])
+            ->getJson($url)
+            ->assertOk()
+            ->assertJsonPath('profile', 'kmj.super-admin.hyperspeed')
+            ->assertJsonPath('subject.email', $owner->email)
+            ->assertJsonPath('scope.logical_task_backlog', 'unmetered')
+            ->assertJsonPath('execution.max_parallel_jobs', 'signed-entitlement-and-current-resources')
+            ->assertJsonPath('cost.unapproved_spend_inr_minor', 0)
+            ->assertJsonPath('cost.automatic_paid_fallback_enabled', false)
+            ->assertJsonPath('grants_product_license', false)
+            ->assertJsonPath('changes_entitlements', false)
+            ->assertJsonCount(15, 'scope.registered_product_slugs');
+    }
+
     public function test_regular_user_cannot_open_operator_console(): void
     {
         $user = User::factory()->create(['email_verified_at' => now()]);
