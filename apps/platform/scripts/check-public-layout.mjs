@@ -108,8 +108,8 @@ assert.match(
   /case isPublicMarketingPage\(name\):\s*return null;/,
   "public pages must not inherit AppLayout sidebar",
 );
-assert.match(appSource, /case name\.startsWith\('auth\/'\):/);
-assert.match(appSource, /case name\.startsWith\('settings\/'\):/);
+assert.match(appSource, /case name\.startsWith\(["']auth\/["']\):/);
+assert.match(appSource, /case name\.startsWith\(["']settings\/["']\):/);
 assert.match(appSource, /default:\s*return AppLayout;/);
 
 const header = readFileSync(join(root, "resources/js/components/public-site-header.tsx"), "utf8");
