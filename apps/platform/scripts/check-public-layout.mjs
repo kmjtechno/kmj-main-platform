@@ -152,7 +152,7 @@ for (const page of ['index', 'show']) {
     );
     assert.doesNotMatch(
         source,
-        /text-white\\/(?:[0-4][0-9])(?![0-9])/,
+        new RegExp('text-white/(?:[0-4][0-9])(?![0-9])'),
         page + ' contains low-contrast marketing text',
     );
 }
