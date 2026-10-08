@@ -466,6 +466,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         OrganizationDirectory $organizations,
         EntitlementReader $entitlements,
         OAuthServer $oauth,
+        PlatformOwnerAccess $platformOwnerAccess,
     ) {
         $user = $request->user();
         abort_unless($user instanceof User, 401);
@@ -486,6 +487,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
         abort_unless(is_array($access), 404);
         $organization = $access['organization'];
         $entitlement = $access['entitlement'];
+        // Show the owner console only to the authenticated Platform Owner who
+        // can manage the organization. This link never changes the license.
+        $canManageOwnerPlan = $platformOwnerAccess->allows($user)
+            && $organizations->userCanManage((int) $user->id, $organization['id']);
 
         $license = DB::table('kslp_licenses')
             ->where('customer_id', $organization['id'])
@@ -548,6 +553,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         return Inertia::render('services/codebridge', [
             'organization' => $organization,
             'entitlement' => $entitlement,
+            'canManageOwnerPlan' => $canManageOwnerPlan,
             'service' => [
                 'endpoint' => $oauth->resource(),
                 'oauth_ready' => $oauth->enabled(),
