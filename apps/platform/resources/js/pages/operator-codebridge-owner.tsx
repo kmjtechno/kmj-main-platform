@@ -84,11 +84,13 @@ export default function OperatorCodeBridgeOwner({ licenses, limits }: Props) {
                 <section className="bg-card rounded-2xl border p-6">
                     <div className="flex items-center gap-2">
                         <LockKeyhole className="h-5 w-5 text-red-500" />
-                        <h2 className="font-bold">Explicit owner confirmation</h2>
+                        <h2 className="font-bold">
+                            Explicit owner confirmation
+                        </h2>
                     </div>
                     <p className="text-muted-foreground mt-2 text-sm">
-                        Your account must have verified platform-owner access,
-                        a registered passkey and recent password confirmation.
+                        Your account must have verified platform-owner access, a
+                        registered passkey and recent password confirmation.
                         Enter the phrase below to upgrade one of your own
                         organization&apos;s active CodeBridge licenses.
                     </p>
@@ -114,12 +116,14 @@ export default function OperatorCodeBridgeOwner({ licenses, limits }: Props) {
                 </section>
 
                 <section className="bg-card rounded-2xl border p-6">
-                    <h2 className="font-bold">Your authorized CodeBridge licenses</h2>
+                    <h2 className="font-bold">
+                        Your authorized CodeBridge licenses
+                    </h2>
                     {licenses.length === 0 ? (
                         <p className="text-muted-foreground mt-3 text-sm">
                             No CodeBridge license is associated with an
-                            organization owned by this account. Nothing has
-                            been changed.
+                            organization owned by this account. Nothing has been
+                            changed.
                         </p>
                     ) : (
                         <div className="mt-4 space-y-3">
@@ -140,7 +144,8 @@ export default function OperatorCodeBridgeOwner({ licenses, limits }: Props) {
                                                 {license.id}
                                             </div>
                                             <p className="text-muted-foreground mt-1 text-xs break-all">
-                                                Organization: {license.customer_id}
+                                                Organization:{' '}
+                                                {license.customer_id}
                                             </p>
                                             <p className="mt-1 text-sm">
                                                 Plan: <b>{license.plan}</b> ·
