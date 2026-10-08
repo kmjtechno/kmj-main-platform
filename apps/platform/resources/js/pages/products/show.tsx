@@ -87,7 +87,7 @@ function ProductVisual({ product }: { product: Product }) {
                         <span className="h-2 w-2 rounded-full bg-white/16" />
                         <span className="h-2 w-2 rounded-full bg-white/10" />
                     </div>
-                    <div className="text-[10px] font-black tracking-[0.18em] text-white/30 uppercase">
+                    <div className="text-[10px] font-black tracking-[0.18em] text-white/65 uppercase">
                         Product experience
                     </div>
                 </div>
@@ -101,13 +101,13 @@ function ProductVisual({ product }: { product: Product }) {
 
                     <div className="flex items-start justify-between gap-6 rounded-2xl border border-white/[0.07] bg-white/[0.025] p-5">
                         <div>
-                            <div className="text-[10px] font-bold tracking-[0.16em] text-white/30 uppercase">
+                            <div className="text-[10px] font-bold tracking-[0.16em] text-white/65 uppercase">
                                 Operational boundary
                             </div>
                             <div className="mt-2 text-lg font-black tracking-[-0.025em] text-white">
                                 {product.name}
                             </div>
-                            <div className="mt-1 text-xs leading-5 text-white/40">
+                            <div className="mt-1 text-xs leading-5 text-white/65">
                                 Governed by KMJ Main Platform authority
                             </div>
                         </div>
@@ -119,7 +119,7 @@ function ProductVisual({ product }: { product: Product }) {
                     <div className="grid gap-3 sm:grid-cols-3">
                         <div className="rounded-2xl border border-white/[0.07] bg-[#080a0e] p-4">
                             <Activity className="h-4 w-4 text-emerald-300/80" />
-                            <div className="mt-5 text-[10px] font-bold tracking-[0.16em] text-white/28 uppercase">
+                            <div className="mt-5 text-[10px] font-bold tracking-[0.16em] text-white/65 uppercase">
                                 Lifecycle
                             </div>
                             <div className="mt-1 text-sm font-black text-white/86">
@@ -128,7 +128,7 @@ function ProductVisual({ product }: { product: Product }) {
                         </div>
                         <div className="rounded-2xl border border-white/[0.07] bg-[#080a0e] p-4">
                             <LockKeyhole className="h-4 w-4 text-[#ff4a54]" />
-                            <div className="mt-5 text-[10px] font-bold tracking-[0.16em] text-white/28 uppercase">
+                            <div className="mt-5 text-[10px] font-bold tracking-[0.16em] text-white/65 uppercase">
                                 Access
                             </div>
                             <div className="mt-1 text-sm font-black text-white/86">
@@ -139,7 +139,7 @@ function ProductVisual({ product }: { product: Product }) {
                         </div>
                         <div className="rounded-2xl border border-white/[0.07] bg-[#080a0e] p-4">
                             <ShieldCheck className="h-4 w-4 text-sky-300/80" />
-                            <div className="mt-5 text-[10px] font-bold tracking-[0.16em] text-white/28 uppercase">
+                            <div className="mt-5 text-[10px] font-bold tracking-[0.16em] text-white/65 uppercase">
                                 Claims
                             </div>
                             <div className="mt-1 text-sm font-black text-white/86">
@@ -151,7 +151,7 @@ function ProductVisual({ product }: { product: Product }) {
                     <div className="rounded-2xl border border-white/[0.07] bg-[#080a0e] p-5">
                         <div className="flex items-center justify-between">
                             <div>
-                                <div className="text-[10px] font-bold tracking-[0.16em] text-white/28 uppercase">
+                                <div className="text-[10px] font-bold tracking-[0.16em] text-white/65 uppercase">
                                     Workflow
                                 </div>
                                 <div className="mt-1 text-sm font-bold text-white/75">
@@ -160,7 +160,7 @@ function ProductVisual({ product }: { product: Product }) {
                                         : 'Verified product boundary'}
                                 </div>
                             </div>
-                            <span className="rounded-full border border-white/10 px-2.5 py-1 text-[9px] font-bold tracking-[0.12em] text-white/35 uppercase">
+                            <span className="rounded-full border border-white/10 px-2.5 py-1 text-[9px] font-bold tracking-[0.12em] text-white/65 uppercase">
                                 Safe preview
                             </span>
                         </div>
@@ -170,14 +170,14 @@ function ProductVisual({ product }: { product: Product }) {
                                     key={step.key}
                                     className="flex items-center gap-3 rounded-xl border border-white/[0.055] bg-white/[0.02] px-3 py-3"
                                 >
-                                    <span className="grid h-7 w-7 shrink-0 place-items-center rounded-lg bg-white/[0.05] text-[10px] font-black text-white/45">
+                                    <span className="grid h-7 w-7 shrink-0 place-items-center rounded-lg bg-white/[0.05] text-[10px] font-black text-white/65">
                                         {String(index + 1).padStart(2, '0')}
                                     </span>
                                     <div className="min-w-0 flex-1">
                                         <div className="text-xs font-bold text-white/75">
                                             {step.label}
                                         </div>
-                                        <div className="mt-0.5 truncate text-[10px] text-white/30">
+                                        <div className="mt-0.5 truncate text-[10px] text-white/65">
                                             {step.detail}
                                         </div>
                                     </div>
@@ -269,20 +269,20 @@ export default function ProductShow({ product }: { product: Product }) {
                                 className="inline-flex items-center gap-2 text-xs font-bold tracking-[0.12em] text-white/65 uppercase transition hover:text-white/90"
                             >
                                 Products
-                                <span className="text-white/18">/</span>
+                                <span className="text-white/65">/</span>
                                 <span className="text-white/62">
                                     {product.name}
                                 </span>
                             </Link>
 
                             <div className="mt-8 flex flex-wrap items-center gap-3">
-                                <span className="rounded-full border border-white/10 bg-white/[0.035] px-3.5 py-1.5 text-[10px] font-black tracking-[0.12em] text-white/45 uppercase">
+                                <span className="rounded-full border border-white/10 bg-white/[0.035] px-3.5 py-1.5 text-[10px] font-black tracking-[0.12em] text-white/65 uppercase">
                                     {product.category}
                                 </span>
                                 <span className="rounded-full border border-[#ef3340]/30 bg-[#ef3340]/10 px-3.5 py-1.5 text-[10px] font-black tracking-[0.16em] text-[#ff6a72] uppercase">
                                     {product.eyebrow}
                                 </span>
-                                <span className="rounded-full border border-white/10 bg-white/[0.035] px-3.5 py-1.5 text-[10px] font-bold tracking-[0.1em] text-white/48 uppercase">
+                                <span className="rounded-full border border-white/10 bg-white/[0.035] px-3.5 py-1.5 text-[10px] font-bold tracking-[0.1em] text-white/65 uppercase">
                                     {product.lifecycle_label}
                                 </span>
                             </div>
@@ -300,7 +300,7 @@ export default function ProductShow({ product }: { product: Product }) {
                             {product.variants &&
                                 product.variants.length > 0 && (
                                     <div className="mt-7">
-                                        <div className="text-[10px] font-black tracking-[0.14em] text-white/28 uppercase">
+                                        <div className="text-[10px] font-black tracking-[0.14em] text-white/65 uppercase">
                                             Platform configurations
                                         </div>
                                         <div className="mt-3 flex flex-wrap gap-2">
@@ -343,7 +343,7 @@ export default function ProductShow({ product }: { product: Product }) {
                                         Request commercial access
                                     </Link>
                                 ) : (
-                                    <span className="inline-flex h-12 items-center justify-center rounded-xl border border-white/[0.08] bg-white/[0.02] px-6 text-sm font-bold text-white/36">
+                                    <span className="inline-flex h-12 items-center justify-center rounded-xl border border-white/[0.08] bg-white/[0.02] px-6 text-sm font-bold text-white/65">
                                         {product.lifecycle_label}
                                     </span>
                                 )}
@@ -355,7 +355,7 @@ export default function ProductShow({ product }: { product: Product }) {
                             />
 
                             {product.slug === 'kmj-codebridge' && (
-                                <div className="mt-6 flex flex-wrap gap-2 text-xs font-bold text-white/48">
+                                <div className="mt-6 flex flex-wrap gap-2 text-xs font-bold text-white/65">
                                     <Link
                                         href="/products/kmj-codebridge/terms"
                                         className="rounded-lg border border-white/10 bg-white/[0.025] px-3 py-2 transition hover:border-white/20 hover:text-white/80"
@@ -387,7 +387,7 @@ export default function ProductShow({ product }: { product: Product }) {
                                         key={label}
                                         className="bg-[#080b0f] px-5 py-4"
                                     >
-                                        <div className="text-[9px] font-black tracking-[0.16em] text-white/25 uppercase">
+                                        <div className="text-[9px] font-black tracking-[0.16em] text-white/65 uppercase">
                                             {label}
                                         </div>
                                         <div className="mt-1.5 text-xs font-bold text-white/62">
@@ -413,7 +413,7 @@ export default function ProductShow({ product }: { product: Product }) {
                                         Built around verifiable authority, not
                                         marketing shortcuts.
                                     </h2>
-                                    <p className="mt-5 text-sm leading-7 text-white/42">
+                                    <p className="mt-5 text-sm leading-7 text-white/65">
                                         The public experience stays aligned with
                                         product lifecycle, access authority and
                                         release evidence. Internal engineering
@@ -442,10 +442,10 @@ export default function ProductShow({ product }: { product: Product }) {
                                                 <div className="mt-6 text-base font-black tracking-[-0.02em] text-white/90">
                                                     {item.title}
                                                 </div>
-                                                <p className="mt-3 text-sm leading-6 text-white/38">
+                                                <p className="mt-3 text-sm leading-6 text-white/65">
                                                     {item.detail}
                                                 </p>
-                                                <div className="mt-6 text-[9px] font-black tracking-[0.15em] text-white/24 uppercase">
+                                                <div className="mt-6 text-[9px] font-black tracking-[0.15em] text-white/65 uppercase">
                                                     {item.state.replaceAll(
                                                         '-',
                                                         ' ',
@@ -470,7 +470,7 @@ export default function ProductShow({ product }: { product: Product }) {
                                         <h2 className="mt-4 text-4xl font-black tracking-[-0.05em] sm:text-5xl">
                                             Understand the workflow by using it.
                                         </h2>
-                                        <p className="mt-5 max-w-lg text-sm leading-7 text-white/42">
+                                        <p className="mt-5 max-w-lg text-sm leading-7 text-white/65">
                                             This deterministic browser
                                             simulation explains the product flow
                                             without controlling production
@@ -478,7 +478,7 @@ export default function ProductShow({ product }: { product: Product }) {
                                             unverified physical capability.
                                         </p>
                                         <div className="mt-7 rounded-2xl border border-white/[0.08] bg-white/[0.025] p-5">
-                                            <div className="text-[9px] font-black tracking-[0.15em] text-white/25 uppercase">
+                                            <div className="text-[9px] font-black tracking-[0.15em] text-white/65 uppercase">
                                                 Current verified status
                                             </div>
                                             <p className="mt-2 text-sm leading-6 text-white/55">
@@ -504,7 +504,7 @@ export default function ProductShow({ product }: { product: Product }) {
                                         Public demo stays closed until real
                                         evidence is ready.
                                     </h2>
-                                    <p className="mt-5 text-sm leading-7 text-white/40">
+                                    <p className="mt-5 text-sm leading-7 text-white/65">
                                         KMJ TECHNO publishes customer-facing
                                         screenshots, downloads and performance
                                         claims only after the corresponding
@@ -518,7 +518,7 @@ export default function ProductShow({ product }: { product: Product }) {
                     <section className="border-t border-white/[0.07] bg-[#090b0f]">
                         <div className="mx-auto flex max-w-[1440px] flex-col gap-8 px-5 py-16 sm:px-8 lg:flex-row lg:items-center lg:justify-between lg:px-12 lg:py-20">
                             <div className="max-w-2xl">
-                                <div className="text-[10px] font-black tracking-[0.2em] text-white/30 uppercase">
+                                <div className="text-[10px] font-black tracking-[0.2em] text-white/65 uppercase">
                                     KMJ TECHNO
                                 </div>
                                 <h2 className="mt-3 text-3xl font-black tracking-[-0.04em] sm:text-4xl">
