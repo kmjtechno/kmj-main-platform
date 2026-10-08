@@ -26,7 +26,7 @@ export default function PublicSiteHeader() {
                     <LockedBrand compact />
                 </Link>
 
-                <nav className="hidden items-center gap-1 lg:flex">
+                <nav className="hidden items-center gap-1 lg:flex" aria-label="Primary navigation">
                     <Link
                         href="/company"
                         className="rounded-lg px-4 py-2 text-sm font-semibold text-white/78 transition hover:bg-white/[0.05] hover:text-white"
@@ -94,6 +94,7 @@ export default function PublicSiteHeader() {
                     type="button"
                     aria-label={open ? 'Close navigation' : 'Open navigation'}
                     aria-expanded={open}
+                    aria-controls="public-mobile-nav"
                     onClick={() => setOpen((value) => !value)}
                     className="grid h-10 w-10 place-items-center rounded-lg border border-white/10 bg-white/[0.03] text-white lg:hidden"
                 >
@@ -106,7 +107,7 @@ export default function PublicSiteHeader() {
             </div>
 
             {open && (
-                <div className="border-t border-white/[0.06] bg-[#07090c] px-5 py-5 lg:hidden">
+                <div id="public-mobile-nav" role="navigation" aria-label="Mobile primary navigation" className="border-t border-white/[0.06] bg-[#07090c] px-5 py-5 lg:hidden">
                     <div className="mx-auto grid max-w-[1440px] gap-2">
                         <Link
                             href="/company"
