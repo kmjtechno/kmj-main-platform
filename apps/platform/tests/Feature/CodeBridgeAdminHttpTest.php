@@ -157,7 +157,7 @@ final class CodeBridgeAdminHttpTest extends TestCase
         $this->actingAs($owner)->withSession(['auth.password_confirmed_at' => time()])
             ->get('/operator/codebridge/owner-plan')
             ->assertOk()
-            ->assertInertia(fn (\\Inertia\\Testing\\AssertableInertia $page) => $page
+            ->assertInertia(fn (\Inertia\Testing\AssertableInertia $page) => $page
                 ->component('operator-codebridge-owner')
                 ->has('licenses', 1)
                 ->where('licenses.0.id', $license)
