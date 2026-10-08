@@ -26,6 +26,14 @@ final class SuperAdminDevelopmentPolicy
     {
         $this->ownerAccess->require($user);
 
+        $expectedEmail = config('kmj-super-admin.owner_email');
+        abort_unless(
+            is_string($expectedEmail)
+                && $expectedEmail !== ''
+                && hash_equals(strtolower(trim($expectedEmail)), strtolower(trim((string) $user->email))),
+            403,
+        );
+
         $products = DB::table('products')
             ->where('slug', 'like', 'kmj-%')
             ->orderBy('slug')
