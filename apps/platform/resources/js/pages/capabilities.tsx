@@ -111,7 +111,7 @@ export default function Capabilities() {
                                     <h2 className="mt-7 text-2xl font-black tracking-[-0.035em]">
                                         {title}
                                     </h2>
-                                    <p className="mt-4 text-sm leading-7 text-white/42">
+                                    <p className="mt-4 text-sm leading-7 text-white/65">
                                         {text}
                                     </p>
                                 </article>
@@ -129,7 +129,7 @@ export default function Capabilities() {
                                     A platform layer that connects the
                                     experience.
                                 </h2>
-                                <p className="mt-5 max-w-xl text-sm leading-7 text-white/42 sm:text-base">
+                                <p className="mt-5 max-w-xl text-sm leading-7 text-white/65 sm:text-base">
                                     Shared authority belongs in the Main
                                     Platform. Product-specific engineering
                                     remains inside each independent product.
@@ -165,7 +165,7 @@ export default function Capabilities() {
                                 See which capabilities are active, in preview or
                                 on the roadmap.
                             </h2>
-                            <p className="mt-4 text-sm leading-7 text-white/40">
+                            <p className="mt-4 text-sm leading-7 text-white/65">
                                 Product pages expose lifecycle and access state
                                 so presentation never substitutes for verified
                                 availability.
