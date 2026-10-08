@@ -130,7 +130,7 @@ const productPage = readFileSync(
 );
 assert.match(productPage, /<PublicSiteHeader \/>/);
 assert.match(productPage, /<PublicSiteFooter \/>/);
-assert.match(productPage, /from idea to governed operation\./);
+assert.match(productPage, /business and engineering\./);
 assert.match(productPage, /text-white\/72/);
 
 console.log(
