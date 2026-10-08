@@ -71,7 +71,7 @@ Route::middleware(['auth', 'verified', 'password.confirm'])
             }
         })->name('licenses.owner-tier');
 
-        Route::post('devices/enroll', function (Request $request, PlatformOwnerAccess $access, CodeBridgeDeviceEnrollmentService $service) {
+        Route::post('devices/enroll', function (Request $request, PlatformOwnerAccess $access, OrganizationDirectory $organizations, CodeBridgeDeviceEnrollmentService $service) {
             $user = $request->user();
             abort_unless($user instanceof User, 401);
             $access->require($user);
@@ -81,6 +81,7 @@ Route::middleware(['auth', 'verified', 'password.confirm'])
                 'tenant_id' => ['required', 'string', 'regex:/\\A[A-Za-z0-9_-]{1,64}\\z/'],
                 'device_id' => ['required', 'string', 'regex:/\\A[A-Za-z0-9_-]{1,64}\\z/'],
             ]);
+            abort_unless($organizations->userCanManage((int) $user->id, $v['tenant_id']), 403);
             abort_unless(DB::table('kslp_licenses')->where('id', $v['license_id'])->where('customer_id', $v['tenant_id'])->where('product', 'KMJ_CODEBRIDGE')->exists(), 404);
 
             try {
@@ -92,7 +93,7 @@ Route::middleware(['auth', 'verified', 'password.confirm'])
             }
         })->name('devices.enroll');
 
-        Route::post('devices/rotate', function (Request $request, PlatformOwnerAccess $access, CodeBridgeDeviceCredentialService $service) {
+        Route::post('devices/rotate', function (Request $request, PlatformOwnerAccess $access, OrganizationDirectory $organizations, CodeBridgeDeviceCredentialService $service) {
             $user = $request->user();
             abort_unless($user instanceof User, 401);
             $access->require($user);
@@ -101,6 +102,7 @@ Route::middleware(['auth', 'verified', 'password.confirm'])
                 'tenant_id' => ['required', 'string', 'regex:/\\A[A-Za-z0-9_-]{1,64}\\z/'],
                 'device_id' => ['required', 'string', 'regex:/\\A[A-Za-z0-9_-]{1,64}\\z/'],
             ]);
+            abort_unless($organizations->userCanManage((int) $user->id, $v['tenant_id']), 403);
             abort_unless(DB::table('kslp_licenses')->where('id', $v['license_id'])->where('customer_id', $v['tenant_id'])->where('product', 'KMJ_CODEBRIDGE')->exists(), 404);
 
             try {
@@ -111,7 +113,7 @@ Route::middleware(['auth', 'verified', 'password.confirm'])
             }
         })->name('devices.rotate');
 
-        Route::post('devices/revoke', function (Request $request, PlatformOwnerAccess $access, CodeBridgeDeviceCredentialService $service) {
+        Route::post('devices/revoke', function (Request $request, PlatformOwnerAccess $access, OrganizationDirectory $organizations, CodeBridgeDeviceCredentialService $service) {
             $user = $request->user();
             abort_unless($user instanceof User, 401);
             $access->require($user);
@@ -120,6 +122,7 @@ Route::middleware(['auth', 'verified', 'password.confirm'])
                 'tenant_id' => ['required', 'string', 'regex:/\\A[A-Za-z0-9_-]{1,64}\\z/'],
                 'device_id' => ['required', 'string', 'regex:/\\A[A-Za-z0-9_-]{1,64}\\z/'],
             ]);
+            abort_unless($organizations->userCanManage((int) $user->id, $v['tenant_id']), 403);
             abort_unless(DB::table('kslp_licenses')->where('id', $v['license_id'])->where('customer_id', $v['tenant_id'])->where('product', 'KMJ_CODEBRIDGE')->exists(), 404);
 
             try {
