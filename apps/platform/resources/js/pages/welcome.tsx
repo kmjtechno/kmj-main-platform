@@ -9,6 +9,7 @@ import {
 import LandingJourney from '@/components/public/landing-journey';
 import ProductVisual from '@/components/public/product-visual';
 import PublicSeo from '@/components/public-seo';
+import SignatureEcosystemHero from '@/components/public/signature-ecosystem-hero';
 import PublicSiteFooter from '@/components/public-site-footer';
 import PublicSiteHeader from '@/components/public-site-header';
 import { register } from '@/routes';
@@ -106,12 +107,6 @@ export default function Welcome({
             />
             <Head>
                 <meta name="kmj-main-platform" content="native-home" />
-                <link
-                    rel="preload"
-                    as="image"
-                    href="/assets/products/kmj-cloudos.webp"
-                    fetchPriority="high"
-                />
             </Head>
 
             <div className="min-h-screen overflow-hidden bg-[#05070a] text-white selection:bg-[#e21b23] selection:text-white">
@@ -218,67 +213,7 @@ export default function Welcome({
                                 </div>
                             </div>
 
-                            <div className="relative grid min-h-[430px] grid-cols-[1.18fr_.82fr] grid-rows-2 gap-3 overflow-hidden rounded-[2rem] border border-white/[0.08] bg-[#090c12] p-3 shadow-[0_35px_100px_rgba(0,0,0,.35)] sm:min-h-[500px]">
-                                <Link
-                                    href="/products/kmj-cloudos"
-                                    className="group relative row-span-2 overflow-hidden rounded-[1.45rem] border border-white/[0.07]"
-                                >
-                                    <img
-                                        src="/assets/products/kmj-cloudos.webp"
-                                        alt="KMJ CloudOS platform"
-                                        width={1280}
-                                        height={960}
-                                        fetchPriority="high"
-                                        decoding="async"
-                                        className="absolute inset-0 h-full w-full object-cover transition duration-700 group-hover:scale-[1.025]"
-                                    />
-                                    <div className="absolute inset-0 bg-gradient-to-t from-black/65 via-black/5 to-transparent" />
-                                    <div className="absolute right-5 bottom-5 left-5">
-                                        <div className="text-[10px] font-black tracking-[.15em] text-white/50 uppercase">
-                                            Cloud platform
-                                        </div>
-                                        <div className="mt-1 text-lg font-black">
-                                            KMJ CloudOS
-                                        </div>
-                                    </div>
-                                </Link>
-                                <Link
-                                    href="/products/kmj-calibration-pro"
-                                    className="group relative overflow-hidden rounded-[1.45rem] border border-white/[0.07]"
-                                >
-                                    <img
-                                        src="/assets/products/kmj-calibration.webp"
-                                        alt="KMJ Calibration Pro"
-                                        width={1280}
-                                        height={960}
-                                        loading="eager"
-                                        decoding="async"
-                                        className="absolute inset-0 h-full w-full object-cover transition duration-700 group-hover:scale-[1.03]"
-                                    />
-                                    <div className="absolute inset-0 bg-gradient-to-t from-black/65 via-transparent to-transparent" />
-                                    <div className="absolute right-4 bottom-4 left-4 text-sm font-black">
-                                        Calibration Pro
-                                    </div>
-                                </Link>
-                                <Link
-                                    href="/products/kmj-cinema-platform"
-                                    className="group relative overflow-hidden rounded-[1.45rem] border border-white/[0.07]"
-                                >
-                                    <img
-                                        src="/assets/products/kmj-cinema-platform.webp"
-                                        alt="KMJ Cinema Platform"
-                                        width={1280}
-                                        height={960}
-                                        loading="eager"
-                                        decoding="async"
-                                        className="absolute inset-0 h-full w-full object-cover transition duration-700 group-hover:scale-[1.03]"
-                                    />
-                                    <div className="absolute inset-0 bg-gradient-to-t from-black/65 via-transparent to-transparent" />
-                                    <div className="absolute right-4 bottom-4 left-4 text-sm font-black">
-                                        Cinema Platform
-                                    </div>
-                                </Link>
-                            </div>
+                            <SignatureEcosystemHero products={products} />
                         </div>
                     </section>
 
