@@ -127,7 +127,7 @@ assert.equal(
 );
 assert.match(
     header,
-    /<nav className="hidden items-center gap-1 lg:flex">/,
+    /<nav className="hidden items-center gap-1 lg:flex" aria-label="Primary navigation">/,
     'desktop navigation must appear at lg while the mobile menu hides at lg',
 );
 assert.doesNotMatch(
