@@ -145,9 +145,17 @@ assert.match(productPage, /text-white\/72/);
 
 // Readability regression: body copy, status labels, and microcopy must not
 // disappear into the dark marketing background at sub-50% text opacity.
-for (const page of ['index', 'show']) {
+for (const page of [
+    'welcome',
+    'company',
+    'capabilities',
+    'trust',
+    'legal/index',
+    'products/index',
+    'products/show',
+]) {
     const source = readFileSync(
-        join(root, 'resources/js/pages/products', page + '.tsx'),
+        join(root, 'resources/js/pages', page + '.tsx'),
         'utf8',
     );
     assert.doesNotMatch(
