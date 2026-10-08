@@ -1,9 +1,12 @@
-import { Link } from '@inertiajs/react';
+import { Link, usePage } from '@inertiajs/react';
+import { dashboard } from '@/routes';
 import { ArrowUpRight } from 'lucide-react';
 import LockedBrand from '@/components/locked-brand';
 import KristiSupport from '@/components/public/kristi-support';
 
 export default function PublicSiteFooter() {
+    const { auth } = usePage().props;
+
     return (
         <>
             <KristiSupport />
@@ -79,19 +82,32 @@ export default function PublicSiteFooter() {
                             Customer access
                         </div>
                         <div className="mt-4 grid gap-3">
-                            <Link
-                                href="/login"
-                                className="inline-flex items-center gap-2 text-sm font-semibold text-white/62 transition hover:text-white"
-                            >
-                                Sign in <ArrowUpRight className="h-3.5 w-3.5" />
-                            </Link>
-                            <Link
-                                href="/register"
-                                className="inline-flex items-center gap-2 text-sm font-semibold text-white/62 transition hover:text-white"
-                            >
-                                Create account{' '}
-                                <ArrowUpRight className="h-3.5 w-3.5" />
-                            </Link>
+                            {auth.user ? (
+                                <Link
+                                    href={dashboard()}
+                                    className="inline-flex items-center gap-2 text-sm font-semibold text-white/80 transition hover:text-white"
+                                >
+                                    Open dashboard
+                                    <ArrowUpRight className="h-3.5 w-3.5" />
+                                </Link>
+                            ) : (
+                                <>
+                                    <Link
+                                        href="/login"
+                                        className="inline-flex items-center gap-2 text-sm font-semibold text-white/72 transition hover:text-white"
+                                    >
+                                        Sign in
+                                        <ArrowUpRight className="h-3.5 w-3.5" />
+                                    </Link>
+                                    <Link
+                                        href="/register"
+                                        className="inline-flex items-center gap-2 text-sm font-semibold text-white/72 transition hover:text-white"
+                                    >
+                                        Create account
+                                        <ArrowUpRight className="h-3.5 w-3.5" />
+                                    </Link>
+                                </>
+                            )}
                         </div>
                     </div>
                 </div>
