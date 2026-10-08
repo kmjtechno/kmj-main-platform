@@ -14,4 +14,6 @@ return [
      * configuration/deployment (not a client request).
      */
     'owner_email' => env('KMJ_SUPER_ADMIN_EMAIL', 'kmjtechno.net@gmail.com'),
+    // Explicit, temporary deployment-time approval; never enabled by default.
+    'bootstrap_enabled' => (bool) env('KMJ_SUPER_ADMIN_BOOTSTRAP_ENABLED', false),
 ];
