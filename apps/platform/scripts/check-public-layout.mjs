@@ -3,7 +3,6 @@
 import assert from 'node:assert/strict';
 import { existsSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
-import { pathToFileURL } from 'node:url';
 import ts from 'typescript';
 
 const root = resolve(import.meta.dirname, '..');
@@ -87,6 +86,23 @@ const header = readFileSync(
 );
 assert.match(header, /aria-label=\{open \? 'Close navigation' : 'Open navigation'\}/);
 assert.match(header, /lg:hidden/, 'menu toggle must exist on tablet sizes');
+
+const footer = readFileSync(
+    join(root, 'resources/js/components/public-site-footer.tsx'),
+    'utf8',
+);
+assert.match(footer, /const \{ auth \} = usePage\(\)\.props;/);
+assert.match(footer, /\{auth\.user \? \(/);
+assert.match(footer, /href=\{dashboard\(\)\}/);
+
+const productPage = readFileSync(
+    join(root, 'resources/js/pages/products/index.tsx'),
+    'utf8',
+);
+assert.match(productPage, /<PublicSiteHeader \/>/);
+assert.match(productPage, /<PublicSiteFooter \/>/);
+assert.match(productPage, /from idea to governed operation\./);
+assert.match(productPage, /text-white\/72/);
 
 console.log(
     'PUBLIC_SITE_LAYOUT_PASS: ' +
