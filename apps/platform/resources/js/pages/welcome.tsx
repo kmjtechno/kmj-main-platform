@@ -172,7 +172,7 @@ export default function Welcome({
                                             <div className="text-xl font-black">
                                                 {products.length}
                                             </div>
-                                            <div className="mt-1 text-[9px] font-black tracking-[.13em] text-white/35 uppercase">
+                                            <div className="mt-1 text-[9px] font-black tracking-[.13em] text-white/65 uppercase">
                                                 Products
                                             </div>
                                         </div>
@@ -186,7 +186,7 @@ export default function Welcome({
                                                     ).length
                                                 }
                                             </div>
-                                            <div className="mt-1 text-[9px] font-black tracking-[.13em] text-white/35 uppercase">
+                                            <div className="mt-1 text-[9px] font-black tracking-[.13em] text-white/65 uppercase">
                                                 Available
                                             </div>
                                         </div>
@@ -199,7 +199,7 @@ export default function Welcome({
                                                     ).length
                                                 }
                                             </div>
-                                            <div className="mt-1 text-[9px] font-black tracking-[.13em] text-white/35 uppercase">
+                                            <div className="mt-1 text-[9px] font-black tracking-[.13em] text-white/65 uppercase">
                                                 Purchasable
                                             </div>
                                         </div>
@@ -210,7 +210,7 @@ export default function Welcome({
                                         <span>Product Entitlements</span>
                                         <span>Clear Lifecycle Status</span>
                                     </div>
-                                    <p className="mt-4 text-xs leading-5 text-white/38">
+                                    <p className="mt-4 text-xs leading-5 text-white/65">
                                         Product availability, access and
                                         lifecycle status reflect the current
                                         verified platform state.
@@ -291,11 +291,11 @@ export default function Welcome({
                                     </div>
                                     <h2 className="mt-4 text-4xl font-black tracking-[-0.045em] sm:text-5xl">
                                         See the products.
-                                        <span className="block text-white/35">
+                                        <span className="block text-white/65">
                                             Know exactly where each one stands.
                                         </span>
                                     </h2>
-                                    <p className="mt-5 max-w-2xl text-sm leading-7 text-white/46 sm:text-base">
+                                    <p className="mt-5 max-w-2xl text-sm leading-7 text-white/65 sm:text-base">
                                         Explore real product visuals, current
                                         lifecycle state and available
                                         configurations before opening the full
@@ -354,12 +354,12 @@ export default function Welcome({
                                                         {product.name}
                                                     </h3>
                                                 </div>
-                                                <ArrowRight className="h-4 w-4 shrink-0 text-white/35 transition group-hover:translate-x-0.5 group-hover:text-white" />
+                                                <ArrowRight className="h-4 w-4 shrink-0 text-white/65 transition group-hover:translate-x-0.5 group-hover:text-white" />
                                             </div>
                                             {flagshipSlugs.includes(
                                                 product.slug,
                                             ) && (
-                                                <p className="mt-3 max-w-xl text-sm leading-6 text-white/48">
+                                                <p className="mt-3 max-w-xl text-sm leading-6 text-white/65">
                                                     {product.summary}
                                                 </p>
                                             )}
@@ -372,7 +372,7 @@ export default function Welcome({
                                                                     key={
                                                                         variant
                                                                     }
-                                                                    className="rounded-full border border-white/[0.08] bg-white/[0.025] px-2 py-1 text-[9px] font-bold text-white/42"
+                                                                    className="rounded-full border border-white/[0.08] bg-white/[0.025] px-2 py-1 text-[9px] font-bold text-white/65"
                                                                 >
                                                                     {variant}
                                                                 </span>
@@ -380,7 +380,7 @@ export default function Welcome({
                                                         )}
                                                     </div>
                                                 )}
-                                            <div className="mt-4 text-[10px] font-bold text-white/32">
+                                            <div className="mt-4 text-[10px] font-bold text-white/65">
                                                 {product.lifecycle_label}
                                             </div>
                                         </div>
@@ -401,7 +401,7 @@ export default function Welcome({
                                         </div>
                                         <h2 className="mt-4 text-4xl font-black tracking-[-0.05em] sm:text-5xl">
                                             One product family.
-                                            <span className="block text-white/42">
+                                            <span className="block text-white/65">
                                                 Multiple immersive formats.
                                             </span>
                                         </h2>
@@ -431,7 +431,7 @@ export default function Welcome({
                                                 Explore Cinema Suite
                                                 <ArrowRight className="h-4 w-4" />
                                             </Link>
-                                            <span className="text-xs font-bold text-white/34">
+                                            <span className="text-xs font-bold text-white/65">
                                                 {
                                                     immersiveCinemaSuite.lifecycle_label
                                                 }
@@ -455,7 +455,7 @@ export default function Welcome({
                                                 >
                                                     <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_20%,rgba(226,27,35,.18),transparent_45%)]" />
                                                     <div className="relative flex h-full min-h-28 flex-col justify-between">
-                                                        <span className="text-[10px] font-bold tracking-[.14em] text-white/28 uppercase">
+                                                        <span className="text-[10px] font-bold tracking-[.14em] text-white/65 uppercase">
                                                             Immersive format
                                                         </span>
                                                         <span className="text-3xl font-black tracking-[-0.04em] text-white">
@@ -479,12 +479,12 @@ export default function Welcome({
                                 </div>
                                 <h2 className="mt-4 text-4xl font-black tracking-[-0.045em]">
                                     One customer layer.
-                                    <span className="block text-white/32">
+                                    <span className="block text-white/65">
                                         Product boundaries stay clear.
                                     </span>
                                 </h2>
                             </div>
-                            <p className="max-w-2xl text-sm leading-7 text-white/42 sm:text-base">
+                            <p className="max-w-2xl text-sm leading-7 text-white/65 sm:text-base">
                                 Customer identity, commercial access and product
                                 entitlements stay unified while each KMJ product
                                 keeps its own engineering and release boundary.
@@ -514,7 +514,7 @@ export default function Welcome({
                                             <h3 className="mt-5 text-base font-black">
                                                 {title}
                                             </h3>
-                                            <p className="mt-2 text-[13px] leading-6 text-white/38">
+                                            <p className="mt-2 text-[13px] leading-6 text-white/65">
                                                 {text}
                                             </p>
                                         </article>
