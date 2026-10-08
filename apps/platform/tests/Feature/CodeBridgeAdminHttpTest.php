@@ -6,6 +6,8 @@ use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use Inertia\Testing\AssertableInertia;
+use KMJ\MainPlatform\Catalog\Services\PlanCatalog;
 use Tests\TestCase;
 
 final class CodeBridgeAdminHttpTest extends TestCase
@@ -157,7 +159,7 @@ final class CodeBridgeAdminHttpTest extends TestCase
         $this->actingAs($owner)->withSession(['auth.password_confirmed_at' => time()])
             ->get('/operator/codebridge/owner-plan')
             ->assertOk()
-            ->assertInertia(fn (\Inertia\Testing\AssertableInertia $page) => $page
+            ->assertInertia(fn (AssertableInertia $page) => $page
                 ->component('operator-codebridge-owner')
                 ->has('licenses', 1)
                 ->where('licenses.0.id', $license)
@@ -215,8 +217,8 @@ final class CodeBridgeAdminHttpTest extends TestCase
 
     public function test_owner_policy_ceiling_matches_codebridge_signed_activation_contract(): void
     {
-        self::assertSame(2147483647, \KMJ\MainPlatform\Catalog\Services\PlanCatalog::CODEBRIDGE_OWNER_DEVICES);
-        self::assertSame(16, \KMJ\MainPlatform\Catalog\Services\PlanCatalog::CODEBRIDGE_OWNER_CONCURRENCY);
+        self::assertSame(2147483647, PlanCatalog::CODEBRIDGE_OWNER_DEVICES);
+        self::assertSame(16, PlanCatalog::CODEBRIDGE_OWNER_CONCURRENCY);
     }
 
     public function test_owner_can_enroll_rotate_and_revoke_with_no_store_responses(): void
