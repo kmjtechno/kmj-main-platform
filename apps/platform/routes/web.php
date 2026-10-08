@@ -14,6 +14,7 @@ use App\Services\Licensing\SandboxLicenseLifecycle;
 use App\Services\PlatformOwnerAccess;
 use App\Services\Releases\CustomerReleaseAccess;
 use App\Services\Releases\ReleaseArtifactDelivery;
+use App\Services\SuperAdminDevelopmentPolicy;
 use DateTimeImmutable as ImmutableDateTime;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -635,7 +636,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     Route::get('operator/super-admin/development-profile', function (
         Request $request,
-        \App\Services\SuperAdminDevelopmentPolicy $policy,
+        SuperAdminDevelopmentPolicy $policy,
     ) {
         $user = $request->user();
         abort_unless($user instanceof User, 401);
