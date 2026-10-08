@@ -54,7 +54,7 @@ export default function Trust() {
                             </div>
                             <h1 className="mt-5 text-5xl leading-[0.96] font-black tracking-[-0.06em] sm:text-6xl lg:text-[5.1rem]">
                                 Trust is a product contract.
-                                <span className="block text-white/38">
+                                <span className="block text-white/65">
                                     Claims stay behind evidence.
                                 </span>
                             </h1>
@@ -88,7 +88,7 @@ export default function Trust() {
                                     <h2 className="mt-5 text-lg font-bold">
                                         {item.title}
                                     </h2>
-                                    <p className="mt-3 text-sm leading-7 text-white/45">
+                                    <p className="mt-3 text-sm leading-7 text-white/65">
                                         {item.detail}
                                     </p>
                                 </article>
@@ -105,7 +105,7 @@ export default function Trust() {
                                 <h2 className="mt-4 text-3xl font-black tracking-[-0.035em]">
                                     Request does not equal access.
                                 </h2>
-                                <p className="mt-4 text-sm leading-7 text-white/45">
+                                <p className="mt-4 text-sm leading-7 text-white/65">
                                     The current platform keeps order state,
                                     entitlement state and license state
                                     separate. External payment-gateway
@@ -143,7 +143,7 @@ export default function Trust() {
                                             className="flex items-start gap-3 rounded-xl border border-white/[0.08] bg-white/[0.02] p-4"
                                         >
                                             <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-emerald-300/80" />
-                                            <p className="text-sm leading-6 text-white/48">
+                                            <p className="text-sm leading-6 text-white/65">
                                                 {control}
                                             </p>
                                         </div>
@@ -161,7 +161,7 @@ export default function Trust() {
                             <h2 className="mt-4 text-2xl font-black tracking-[-0.03em] sm:text-3xl">
                                 Real evidence only.
                             </h2>
-                            <p className="mt-4 max-w-3xl text-sm leading-7 text-white/45">
+                            <p className="mt-4 max-w-3xl text-sm leading-7 text-white/65">
                                 Product screenshots, downloads, benchmarks and
                                 production-readiness claims are published only
                                 when the relevant product gate has evidence.
