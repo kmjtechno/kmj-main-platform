@@ -133,6 +133,22 @@ assert.match(productPage, /<PublicSiteFooter \/>/);
 assert.match(productPage, /business and engineering\./);
 assert.match(productPage, /text-white\/72/);
 
+// The public and logged-in areas must share one official KMJ mark asset;
+// a starter-template SVG or old third-party mark looks like another brand.
+const officialMark = '/assets/brand/kmj-mark.webp';
+assert.ok(existsSync(join(root, 'public', officialMark)));
+const appLogo = readFileSync(
+    join(root, 'resources/js/components/app-logo.tsx'),
+    'utf8',
+);
+const appIcon = readFileSync(
+    join(root, 'resources/js/components/app-logo-icon.tsx'),
+    'utf8',
+);
+assert.ok(appLogo.includes(officialMark));
+assert.ok(appIcon.includes(officialMark));
+assert.doesNotMatch(appIcon, /fillRule="evenodd"/);
+
 console.log(
     'PUBLIC_SITE_LAYOUT_PASS: ' +
         publicPages.length +
