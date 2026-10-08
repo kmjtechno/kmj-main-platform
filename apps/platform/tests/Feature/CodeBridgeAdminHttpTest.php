@@ -263,21 +263,9 @@ final class CodeBridgeAdminHttpTest extends TestCase
 
     private function ownerPlan(): void
     {
-        $product = (string) Str::uuid();
+        $product = DB::table('products')->where('slug', 'codebridge')->value('id');
+        self::assertNotNull($product);
         $now = now();
-        DB::table('products')->insert([
-            'id' => $product,
-            'slug' => 'kmj-codebridge-owner-policy',
-            'name' => 'CodeBridge Owner Policy',
-            'status' => 'active',
-            'lifecycle' => 'research',
-            'is_public' => false,
-            'sort_order' => 999,
-            'purchase_enabled' => false,
-            'licensing_enabled' => true,
-            'created_at' => $now,
-            'updated_at' => $now,
-        ]);
         DB::table('plans')->insert([
             'id' => (string) Str::uuid(),
             'product_id' => $product,
