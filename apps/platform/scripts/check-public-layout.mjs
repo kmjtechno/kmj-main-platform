@@ -116,6 +116,10 @@ const header = readFileSync(
     'utf8',
 );
 assert.match(header, /aria-label=\{open \? 'Close navigation' : 'Open navigation'\}/);
+assert.match(header, /aria-controls="public-mobile-nav"/);
+assert.match(header, /id="public-mobile-nav"/);
+assert.match(header, /role="navigation" aria-label="Mobile primary navigation"/);
+assert.match(header, /aria-label="Primary navigation"/);
 assert.equal(
     (header.match(/lg:hidden/g) ?? []).length,
     2,
