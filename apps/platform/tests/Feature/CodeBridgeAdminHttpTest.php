@@ -152,6 +152,7 @@ final class CodeBridgeAdminHttpTest extends TestCase
 
     public function test_owner_plan_page_shows_only_licenses_of_owned_organizations(): void
     {
+        $this->withoutVite();
         $tenant = (string) Str::uuid();
         $otherTenant = (string) Str::uuid();
         [$license] = $this->fixture($tenant);
@@ -174,6 +175,7 @@ final class CodeBridgeAdminHttpTest extends TestCase
 
     public function test_verified_owner_sees_owner_plan_navigation_on_codebridge_service(): void
     {
+        $this->withoutVite();
         $tenant = (string) Str::uuid();
         $owner = $this->platformOwner();
         $this->ownTenant($owner, $tenant);
