@@ -143,6 +143,20 @@ assert.match(productPage, /<PublicSiteFooter \/>/);
 assert.match(productPage, /business and engineering\./);
 assert.match(productPage, /text-white\/72/);
 
+// Readability regression: body copy, status labels, and microcopy must not
+// disappear into the dark marketing background at sub-50% text opacity.
+for (const page of ['index', 'show']) {
+    const source = readFileSync(
+        join(root, 'resources/js/pages/products', page + '.tsx'),
+        'utf8',
+    );
+    assert.doesNotMatch(
+        source,
+        /text-white\\/(?:[0-4][0-9])(?![0-9])/,
+        page + ' contains low-contrast marketing text',
+    );
+}
+
 // The public and logged-in areas must share one official KMJ mark asset;
 // a starter-template SVG or old third-party mark looks like another brand.
 const officialMark = '/assets/brand/kmj-mark.webp';
