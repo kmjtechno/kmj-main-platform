@@ -29,37 +29,37 @@ export default function PublicSiteHeader() {
                 <nav className="hidden items-center gap-1 lg:flex">
                     <Link
                         href="/company"
-                        className="rounded-lg px-4 py-2 text-sm font-semibold text-white/58 transition hover:bg-white/[0.05] hover:text-white"
+                        className="rounded-lg px-4 py-2 text-sm font-semibold text-white/78 transition hover:bg-white/[0.05] hover:text-white"
                     >
                         Company
                     </Link>
                     <Link
                         href="/capabilities"
-                        className="rounded-lg px-4 py-2 text-sm font-semibold text-white/58 transition hover:bg-white/[0.05] hover:text-white"
+                        className="rounded-lg px-4 py-2 text-sm font-semibold text-white/78 transition hover:bg-white/[0.05] hover:text-white"
                     >
                         Capabilities
                     </Link>
                     <Link
                         href="/products"
-                        className="rounded-lg px-4 py-2 text-sm font-semibold text-white/58 transition hover:bg-white/[0.05] hover:text-white"
+                        className="rounded-lg px-4 py-2 text-sm font-semibold text-white/78 transition hover:bg-white/[0.05] hover:text-white"
                     >
                         Products
                     </Link>
                     <Link
                         href="/trust"
-                        className="rounded-lg px-4 py-2 text-sm font-semibold text-white/58 transition hover:bg-white/[0.05] hover:text-white"
+                        className="rounded-lg px-4 py-2 text-sm font-semibold text-white/78 transition hover:bg-white/[0.05] hover:text-white"
                     >
                         Trust
                     </Link>
                     <Link
                         href="/products#product-search"
                         aria-label="Search KMJ products"
-                        className="inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold text-white/58 transition hover:bg-white/[0.05] hover:text-white"
+                        className="inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold text-white/78 transition hover:bg-white/[0.05] hover:text-white"
                     >
                         <Search className="h-3.5 w-3.5" />
                         Search
                     </Link>
-                    <PublicLanguageSwitch className="rounded-lg px-4 py-2 text-sm font-semibold text-white/58 transition hover:bg-white/[0.05] hover:text-white" />
+                    <PublicLanguageSwitch className="rounded-lg px-4 py-2 text-sm font-semibold text-white/78 transition hover:bg-white/[0.05] hover:text-white" />
                 </nav>
 
                 <div className="hidden items-center gap-2 sm:flex">
@@ -75,7 +75,7 @@ export default function PublicSiteHeader() {
                         <>
                             <Link
                                 href={login()}
-                                className="hidden px-3 py-2 text-sm font-semibold text-white/52 transition hover:text-white md:inline-flex"
+                                className="hidden px-3 py-2 text-sm font-semibold text-white/74 transition hover:text-white md:inline-flex"
                             >
                                 Sign in
                             </Link>
