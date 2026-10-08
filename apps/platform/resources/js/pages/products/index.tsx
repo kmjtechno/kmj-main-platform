@@ -156,11 +156,11 @@ export default function ProductsIndex({ products }: { products: Product[] }) {
                                 </div>
                                 <h1 className="mt-5 text-5xl leading-[0.96] font-black tracking-[-0.06em] sm:text-6xl lg:text-[5.4rem]">
                                     Products built to move
-                                    <span className="block text-white/32">
+                                    <span className="block text-white/72">
                                         from idea to governed operation.
                                     </span>
                                 </h1>
-                                <p className="mt-7 max-w-3xl text-base leading-8 text-white/48 sm:text-lg">
+                                <p className="mt-7 max-w-3xl text-base leading-8 text-white/70 sm:text-lg">
                                     Explore the complete KMJ product ecosystem
                                     with lifecycle, access and public evidence
                                     kept explicit. Engineering progress never
@@ -186,7 +186,7 @@ export default function ProductsIndex({ products }: { products: Product[] }) {
                                         <div className="text-2xl font-black tracking-[-0.04em]">
                                             {value}
                                         </div>
-                                        <div className="mt-1 text-[9px] font-black tracking-[0.12em] text-white/28 uppercase">
+                                        <div className="mt-1 text-[9px] font-black tracking-[0.12em] text-white/60 uppercase">
                                             {label}
                                         </div>
                                     </div>
@@ -212,7 +212,7 @@ export default function ProductsIndex({ products }: { products: Product[] }) {
                                         setQuery(event.target.value)
                                     }
                                     placeholder="Search products, capabilities or use cases"
-                                    className="h-12 w-full rounded-xl border border-white/[0.08] bg-[#07090c] pr-4 pl-11 text-sm text-white outline-none placeholder:text-white/24 focus:border-[#e21b23]/45"
+                                    className="h-12 w-full rounded-xl border border-white/[0.08] bg-[#07090c] pr-4 pl-11 text-sm text-white outline-none placeholder:text-white/55 focus:border-[#e21b23]/45"
                                 />
                             </label>
                             <div className="flex flex-wrap gap-2">
