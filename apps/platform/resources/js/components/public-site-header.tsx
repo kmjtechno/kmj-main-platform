@@ -95,7 +95,7 @@ export default function PublicSiteHeader() {
                     aria-label={open ? 'Close navigation' : 'Open navigation'}
                     aria-expanded={open}
                     onClick={() => setOpen((value) => !value)}
-                    className="grid h-10 w-10 place-items-center rounded-lg border border-white/10 bg-white/[0.03] text-white sm:hidden"
+                    className="grid h-10 w-10 place-items-center rounded-lg border border-white/10 bg-white/[0.03] text-white lg:hidden"
                 >
                     {open ? (
                         <X className="h-4 w-4" />
@@ -106,7 +106,7 @@ export default function PublicSiteHeader() {
             </div>
 
             {open && (
-                <div className="border-t border-white/[0.06] bg-[#07090c] px-5 py-5 sm:hidden">
+                <div className="border-t border-white/[0.06] bg-[#07090c] px-5 py-5 lg:hidden">
                     <div className="mx-auto grid max-w-[1440px] gap-2">
                         <Link
                             href="/company"
