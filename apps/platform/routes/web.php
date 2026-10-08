@@ -633,6 +633,16 @@ Route::middleware(['auth', 'verified'])->group(function () {
         }
     })->name('customer.releases.download');
 
+    Route::get('operator/super-admin/development-profile', function (
+        Request $request,
+        \App\Services\SuperAdminDevelopmentPolicy $policy,
+    ) {
+        $user = $request->user();
+        abort_unless($user instanceof User, 401);
+
+        return response()->json($policy->describe($user));
+    })->name('operator.super-admin.profile')->middleware('password.confirm');
+
     Route::get('operator', function (
         Request $request,
         PlatformOwnerAccess $access,
