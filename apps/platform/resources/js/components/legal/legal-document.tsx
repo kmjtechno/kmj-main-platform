@@ -43,7 +43,11 @@ export default function LegalDocument({
             />
             <div className="min-h-screen bg-[#05070a] text-white">
                 <PublicSiteHeader />
-                <main id="main-content" tabIndex={-1} className="mx-auto max-w-[1180px] px-5 py-14 sm:px-8 lg:px-10 lg:py-20">
+                <main
+                    id="main-content"
+                    tabIndex={-1}
+                    className="mx-auto max-w-[1180px] px-5 py-14 sm:px-8 lg:px-10 lg:py-20"
+                >
                     <div className="grid gap-10 lg:grid-cols-[260px_1fr]">
                         <aside className="lg:sticky lg:top-24 lg:self-start">
                             <div className="text-[10px] font-black tracking-[0.2em] text-[#ef3941] uppercase">

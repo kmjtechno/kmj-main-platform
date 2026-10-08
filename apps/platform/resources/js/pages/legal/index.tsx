@@ -52,7 +52,11 @@ export default function LegalCenter() {
             />
             <div className="min-h-screen bg-[#05070a] text-white">
                 <PublicSiteHeader />
-                <main id="main-content" tabIndex={-1} className="mx-auto max-w-[1180px] px-5 py-16 sm:px-8 lg:px-10 lg:py-24">
+                <main
+                    id="main-content"
+                    tabIndex={-1}
+                    className="mx-auto max-w-[1180px] px-5 py-16 sm:px-8 lg:px-10 lg:py-24"
+                >
                     <div className="max-w-4xl">
                         <div className="text-[10px] font-black tracking-[0.2em] text-[#ef3941] uppercase">
                             KMJ TECHNO · Legal Center

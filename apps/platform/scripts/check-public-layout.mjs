@@ -1,3 +1,4 @@
+import { assertPublicNavigation } from './assert-public-navigation.mjs';
 // Executable regression check for public Inertia layouts.
 // Run from apps/platform after npm ci: node scripts/check-public-layout.mjs
 import assert from 'node:assert/strict';
@@ -17,7 +18,8 @@ const compiled = ts.transpileModule(publicSource, {
         target: ts.ScriptTarget.ES2022,
     },
 }).outputText;
-const url = 'data:text/javascript;charset=utf-8,' + encodeURIComponent(compiled);
+const url =
+    'data:text/javascript;charset=utf-8,' + encodeURIComponent(compiled);
 const { isPublicMarketingPage } = await import(url);
 
 const publicPages = [
@@ -56,7 +58,11 @@ const protectedPages = [
 ];
 
 for (const page of publicPages) {
-    assert.equal(isPublicMarketingPage(page), true, page + ' must be standalone');
+    assert.equal(
+        isPublicMarketingPage(page),
+        true,
+        page + ' must be standalone',
+    );
     assert.equal(
         existsSync(join(root, 'resources/js/pages', page + '.tsx')),
         true,
@@ -71,18 +77,15 @@ for (const page of publicPages) {
         'utf8',
     );
     assert.ok(
-        source.includes('PublicSiteHeader') ||
-            source.includes('LegalDocument'),
+        source.includes('PublicSiteHeader') || source.includes('LegalDocument'),
         page + ' is missing its public header',
     );
     assert.ok(
-        source.includes('PublicSeo') ||
-            source.includes('LegalDocument'),
+        source.includes('PublicSeo') || source.includes('LegalDocument'),
         page + ' is missing public SEO metadata',
     );
     assert.ok(
-        source.includes('PublicSiteFooter') ||
-            source.includes('LegalDocument'),
+        source.includes('PublicSiteFooter') || source.includes('LegalDocument'),
         page + ' is missing its public footer',
     );
     assert.ok(
@@ -127,26 +130,7 @@ const header = readFileSync(
     join(root, 'resources/js/components/public-site-header.tsx'),
     'utf8',
 );
-assert.match(header, /aria-label=\{open \? 'Close navigation' : 'Open navigation'\}/);
-assert.match(header, /aria-controls="public-mobile-nav"/);
-assert.match(header, /id="public-mobile-nav"/);
-assert.match(header, /role="navigation" aria-label="Mobile primary navigation"/);
-assert.match(header, /aria-label="Primary navigation"/);
-assert.equal(
-    (header.match(/lg:hidden/g) ?? []).length,
-    2,
-    'tablet header must render both the menu toggle and expanded navigation',
-);
-assert.match(
-    header,
-    /<nav className="hidden items-center gap-1 lg:flex" aria-label="Primary navigation">/,
-    'desktop navigation must appear at lg while the mobile menu hides at lg',
-);
-assert.doesNotMatch(
-    header,
-    /sm:hidden|md:hidden/,
-    'a smaller breakpoint must not remove mobile navigation before desktop navigation appears',
-);
+assertPublicNavigation(header);
 
 const footer = readFileSync(
     join(root, 'resources/js/components/public-site-footer.tsx'),
@@ -216,7 +200,10 @@ for (const page of ['welcome', 'products/show']) {
         imageReferences.add(image[0]);
     }
 }
-assert.ok(imageReferences.size > 0, 'public product images were not discovered');
+assert.ok(
+    imageReferences.size > 0,
+    'public product images were not discovered',
+);
 for (const imagePath of imageReferences) {
     assert.ok(
         existsSync(join(root, 'public', imagePath.slice(1))),
