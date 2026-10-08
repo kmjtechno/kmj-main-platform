@@ -215,6 +215,46 @@ final class CodeBridgeAdminHttpTest extends TestCase
         self::assertSame('professional', DB::table('kslp_licenses')->where('id', $license)->value('plan'));
     }
 
+    public function test_owner_plan_rejects_policy_bound_to_unrelated_product(): void
+    {
+        $tenant = (string) Str::uuid();
+        [$license] = $this->fixture($tenant);
+        $this->ownerPlan();
+        $now = now();
+        $unrelated = (string) Str::uuid();
+        DB::table('products')->insert([
+            'id' => $unrelated,
+            'slug' => 'unrelated-owner-test',
+            'name' => 'Unrelated Product',
+            'status' => 'active',
+            'lifecycle' => 'research',
+            'is_public' => false,
+            'sort_order' => 999,
+            'purchase_enabled' => false,
+            'licensing_enabled' => true,
+            'created_at' => $now,
+            'updated_at' => $now,
+        ]);
+        DB::table('plans')->where('code', 'codebridge.owner')
+            ->update(['product_id' => $unrelated]);
+
+        $owner = $this->platformOwner();
+        $this->ownTenant($owner, $tenant);
+        $this->actingAs($owner)->withSession(['auth.password_confirmed_at' => time()])
+            ->postJson('/operator/codebridge/licenses/owner-tier', [
+                'license_id' => $license,
+                'tenant_id' => $tenant,
+                'confirm' => 'UPGRADE_CODEBRIDGE_OWNER',
+            ])
+            ->assertStatus(409)
+            ->assertJsonPath('error', 'CODEBRIDGE_OWNER_POLICY_CONFLICT');
+
+        self::assertSame('professional', DB::table('kslp_licenses')
+            ->where('id', $license)->value('plan'));
+        self::assertSame(0, DB::table('kslp_license_events')
+            ->where('license_id', $license)->count());
+    }
+
     public function test_owner_policy_ceiling_matches_codebridge_signed_activation_contract(): void
     {
         self::assertSame(2147483647, PlanCatalog::CODEBRIDGE_OWNER_DEVICES);
