@@ -2,6 +2,7 @@ import { assertPublicNavigation } from './assert-public-navigation.mjs';
 // Executable regression check for public Inertia layouts.
 // Run from apps/platform after npm ci: node scripts/check-public-layout.mjs
 import assert from 'node:assert/strict';
+import { createHash } from 'node:crypto';
 import { existsSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import ts from 'typescript';
@@ -204,11 +205,26 @@ assert.ok(
     imageReferences.size > 0,
     'public product images were not discovered',
 );
+const productImageHashes = new Map();
 for (const imagePath of imageReferences) {
+    const absolutePath = join(root, 'public', imagePath.slice(1));
     assert.ok(
-        existsSync(join(root, 'public', imagePath.slice(1))),
+        existsSync(absolutePath),
         imagePath + ' is missing from public assets',
     );
+
+    const digest = createHash('sha256')
+        .update(readFileSync(absolutePath))
+        .digest('hex');
+    assert.equal(
+        productImageHashes.has(digest),
+        false,
+        imagePath +
+            ' duplicates ' +
+            productImageHashes.get(digest) +
+            '; each product needs a distinct visual',
+    );
+    productImageHashes.set(digest, imagePath);
 }
 
 console.log(
