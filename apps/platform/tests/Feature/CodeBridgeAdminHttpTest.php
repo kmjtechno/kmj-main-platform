@@ -3,11 +3,14 @@
 namespace Tests\Feature;
 
 use App\Models\User;
+use App\Services\Commerce\KmjProductCatalog;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Inertia\Testing\AssertableInertia;
 use KMJ\MainPlatform\Catalog\Services\PlanCatalog;
+use KMJ\MainPlatform\Entitlements\Services\EntitlementIssuer;
+use KMJ\MainPlatform\Entitlements\Services\EntitlementPolicyRegistry;
 use Tests\TestCase;
 
 final class CodeBridgeAdminHttpTest extends TestCase
@@ -167,6 +170,30 @@ final class CodeBridgeAdminHttpTest extends TestCase
                 ->etc());
 
         self::assertNotSame($license, $otherLicense);
+    }
+
+    public function test_verified_owner_sees_owner_plan_navigation_on_codebridge_service(): void
+    {
+        $tenant = (string) Str::uuid();
+        $owner = $this->platformOwner();
+        $this->ownTenant($owner, $tenant);
+        $this->fixture($tenant);
+        $products = app(KmjProductCatalog::class)->syncAll();
+        $product = $products[KmjProductCatalog::CODEBRIDGE_SLUG];
+        $policy = app(EntitlementPolicyRegistry::class)->ensure(
+            $product->getKey(),
+            'codebridge.owner-navigation',
+            'codebridge.service.access',
+        );
+        app(EntitlementIssuer::class)->issue($tenant, $policy, 'codebridge-navigation-test');
+
+        $this->actingAs($owner)->get('/services/kmj-codebridge')
+            ->assertOk()
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->component('services/codebridge')
+                ->where('canManageOwnerPlan', true)
+                ->where('service.plan', 'professional')
+                ->etc());
     }
 
     public function test_regular_user_cannot_open_owner_plan_page(): void
