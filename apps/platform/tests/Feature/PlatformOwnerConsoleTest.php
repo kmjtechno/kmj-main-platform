@@ -29,7 +29,13 @@ final class PlatformOwnerConsoleTest extends TestCase
             ->getJson($url)->assertForbidden();
 
         $owner = $this->createPasskeyOwner();
-        $owner->forceFill(['email_verified_at' => null])->save();
+        $this->actingAs($owner)->withSession(['auth.password_confirmed_at' => time()])
+            ->getJson($url)->assertForbidden();
+
+        $owner->forceFill([
+            'email' => 'kmjtechno.net@gmail.com',
+            'email_verified_at' => null,
+        ])->save();
         $this->actingAs($owner)->withSession(['auth.password_confirmed_at' => time()])
             ->getJson($url)->assertForbidden();
 
@@ -48,6 +54,37 @@ final class PlatformOwnerConsoleTest extends TestCase
             ->assertJsonPath('grants_product_license', false)
             ->assertJsonPath('changes_entitlements', false)
             ->assertJsonCount(15, 'scope.registered_product_slugs');
+    }
+
+    public function test_confirmed_super_admin_email_does_not_grant_owner_access(): void
+    {
+        $user = User::factory()->create([
+            'email' => 'kmjtechno.net@gmail.com',
+            'email_verified_at' => now(),
+            'is_platform_owner' => false,
+        ]);
+
+        $this->actingAs($user)->withSession(['auth.password_confirmed_at' => time()])
+            ->getJson('/operator/super-admin/development-profile')
+            ->assertForbidden();
+
+        $user->forceFill([
+            'is_platform_owner' => true,
+            'platform_owner_granted_at' => now(),
+        ])->save();
+
+        // Even an owner with the exact confirmed email needs a registered passkey.
+        $this->actingAs($user)->withSession(['auth.password_confirmed_at' => time()])
+            ->getJson('/operator/super-admin/development-profile')
+            ->assertForbidden();
+    }
+
+    public function test_other_verified_platform_owner_cannot_open_single_account_super_admin_profile(): void
+    {
+        $other = $this->createPasskeyOwner();
+        $this->actingAs($other)->withSession(['auth.password_confirmed_at' => time()])
+            ->getJson('/operator/super-admin/development-profile')
+            ->assertForbidden();
     }
 
     public function test_regular_user_cannot_open_operator_console(): void
