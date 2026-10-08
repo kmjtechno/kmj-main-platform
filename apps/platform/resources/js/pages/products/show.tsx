@@ -266,7 +266,7 @@ export default function ProductShow({ product }: { product: Product }) {
                         <div>
                             <Link
                                 href="/products"
-                                className="inline-flex items-center gap-2 text-xs font-bold tracking-[0.12em] text-white/38 uppercase transition hover:text-white/70"
+                                className="inline-flex items-center gap-2 text-xs font-bold tracking-[0.12em] text-white/65 uppercase transition hover:text-white/90"
                             >
                                 Products
                                 <span className="text-white/18">/</span>
@@ -293,7 +293,7 @@ export default function ProductShow({ product }: { product: Product }) {
                             <p className="mt-7 max-w-2xl text-xl leading-9 font-medium tracking-[-0.015em] text-white/68 sm:text-2xl sm:leading-10">
                                 {product.headline}
                             </p>
-                            <p className="mt-5 max-w-2xl text-sm leading-7 text-white/42 sm:text-[15px]">
+                            <p className="mt-5 max-w-2xl text-sm leading-7 text-white/66 sm:text-[15px]">
                                 {product.summary}
                             </p>
 
