@@ -124,7 +124,20 @@ const productPage = readFileSync(join(root, "resources/js/pages/products/index.t
 assert.match(productPage, /<PublicSiteHeader \/>/);
 assert.match(productPage, /<PublicSiteFooter \/>/);
 assert.match(productPage, /business and engineering\./);
-assert.match(productPage, /text-white\/72/);
+assert.match(productPage, /text-white\\/72/);
+assert.equal(
+  productPage.split('Product {String(index + 1).padStart(2, "0")}').length,
+  2,
+  "each product card must render its product number exactly once",
+);
+assert.ok(
+  productPage.includes("grid flex-1 gap-8 p-6 sm:p-8"),
+  "product cards must keep content padded away from the edges",
+);
+assert.ok(
+  productPage.includes("lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]"),
+  "featured product must use a balanced desktop layout",
+);
 
 // Readability regression: body copy, status labels, and microcopy must not
 // disappear into the dark marketing background at sub-50% text opacity.
