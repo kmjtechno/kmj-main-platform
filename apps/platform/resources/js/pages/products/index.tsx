@@ -241,8 +241,9 @@ export default function ProductsIndex({ products }: { products: Product[] }) {
                         (featured ? "lg:col-span-2 lg:min-h-[28rem]" : "")
                       }
                     >
-                      <div className="flex flex-col">
-                        <div className="mb-7 overflow-hidden rounded-2xl border border-white/[0.08] bg-black/30">
+                      <div className={"grid flex-1 gap-8 p-6 sm:p-8 " + (featured ? "lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]" : "")}>
+                        <div className="flex min-w-0 flex-col">
+                          <div className="mb-7 overflow-hidden rounded-2xl border border-white/[0.08] bg-black/30">
                           <ProductVisual
                             slug={product.slug}
                             name={product.name}
@@ -250,16 +251,12 @@ export default function ProductsIndex({ products }: { products: Product[] }) {
                             className="aspect-[4/3] w-full object-cover"
                           />
                         </div>
-                        <div className="flex items-start justify-between gap-4">
-                          <div className="flex items-center gap-4">
-                            <div className="grid h-11 w-11 place-items-center rounded-xl border border-[#ef3340]/18 bg-[#ef3340]/8">
-                              <ProductIcon className="h-5 w-5 text-[#ff5962]" />
-                            </div>
-                            <div>
-                              <div className="text-[9px] font-black tracking-[0.16em] text-white/65 uppercase">
-                                Product {String(index + 1).padStart(2, "0")}
+                          <div className="flex flex-wrap items-start justify-between gap-3">
+                            <div className="flex min-w-0 items-center gap-4">
+                              <div className="grid h-11 w-11 shrink-0 place-items-center rounded-xl border border-[#ef3340]/18 bg-[#ef3340]/8">
+                                <ProductIcon className="h-5 w-5 text-[#ff5962]" />
                               </div>
-                              <div>
+                              <div className="min-w-0">
                                 <div className="text-[9px] font-black tracking-[0.16em] text-white/65 uppercase">
                                   Product {String(index + 1).padStart(2, "0")}
                                 </div>
@@ -271,10 +268,9 @@ export default function ProductsIndex({ products }: { products: Product[] }) {
                                 </div>
                               </div>
                             </div>
-
                             <span
                               className={
-                                "rounded-full border px-3 py-1.5 text-[9px] font-black tracking-[0.1em] uppercase " +
+                                "shrink-0 rounded-full border px-3 py-1.5 text-[9px] font-black tracking-[0.1em] uppercase " +
                                 (product.purchase_enabled
                                   ? "border-emerald-300/20 bg-emerald-300/[0.06] text-emerald-200/75"
                                   : "border-white/10 bg-white/[0.03] text-white/65")
