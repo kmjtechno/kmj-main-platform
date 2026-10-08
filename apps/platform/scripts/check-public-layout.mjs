@@ -76,6 +76,11 @@ for (const page of publicPages) {
         page + ' is missing its public header',
     );
     assert.ok(
+        source.includes('PublicSeo') ||
+            source.includes('LegalDocument'),
+        page + ' is missing public SEO metadata',
+    );
+    assert.ok(
         source.includes('PublicSiteFooter') ||
             source.includes('LegalDocument'),
         page + ' is missing its public footer',
@@ -93,6 +98,13 @@ const legalDocument = readFileSync(
 assert.match(legalDocument, /<PublicSiteHeader \/>/);
 assert.match(legalDocument, /<PublicSiteFooter \/>/);
 assert.match(legalDocument, /id="main-content"/);
+assert.match(legalDocument, /<PublicSeo/);
+const seoSource = readFileSync(
+    join(root, 'resources/js/components/public-seo.tsx'),
+    'utf8',
+);
+assert.match(seoSource, /rel="canonical"/);
+assert.match(seoSource, /property="og:url"/);
 
 for (const page of protectedPages) {
     assert.equal(
