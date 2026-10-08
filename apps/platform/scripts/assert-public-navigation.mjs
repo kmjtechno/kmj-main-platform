@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 
 export function assertPublicNavigation(header) {
-  assert.match(header, /aria-label=\{open \? 'Close navigation' : 'Open navigation'\}/);
+  assert.match(header, /aria-label=\{open \? ["']Close navigation["'] : ["']Open navigation["']\}/);
   assert.match(header, /aria-controls="public-mobile-nav"/);
   assert.match(header, /id="public-mobile-nav"/);
   assert.match(header, /role="navigation"\s+aria-label="Mobile primary navigation"/);
