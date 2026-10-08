@@ -187,6 +187,27 @@ assert.ok(appLogo.includes(officialMark));
 assert.ok(appIcon.includes(officialMark));
 assert.doesNotMatch(appIcon, /fillRule="evenodd"/);
 
+// Every statically referenced product visual must ship with the public build.
+// Dynamic catalog image_path values still require database + browser acceptance.
+const imagePattern = new RegExp('/assets/products/[A-Za-z0-9_-]+[.]webp', 'g');
+const imageReferences = new Set();
+for (const page of ['welcome', 'products/show']) {
+    const source = readFileSync(
+        join(root, 'resources/js/pages', page + '.tsx'),
+        'utf8',
+    );
+    for (const image of source.matchAll(imagePattern)) {
+        imageReferences.add(image[0]);
+    }
+}
+assert.ok(imageReferences.size > 0, 'public product images were not discovered');
+for (const imagePath of imageReferences) {
+    assert.ok(
+        existsSync(join(root, 'public', imagePath.slice(1))),
+        imagePath + ' is missing from public assets',
+    );
+}
+
 console.log(
     'PUBLIC_SITE_LAYOUT_PASS: ' +
         publicPages.length +
