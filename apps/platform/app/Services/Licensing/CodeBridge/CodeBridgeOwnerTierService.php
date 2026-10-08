@@ -46,6 +46,17 @@ final class CodeBridgeOwnerTierService
             if (! $policy) {
                 throw new DomainException('CODEBRIDGE_OWNER_POLICY_UNAVAILABLE');
             }
+            $codebridgeProduct = DB::table('products')
+                ->where('slug', 'codebridge')
+                ->where('status', 'active')
+                ->where('licensing_enabled', true)
+                ->first(['id']);
+            if (
+                ! $codebridgeProduct
+                || (string) $policy->product_id !== (string) $codebridgeProduct->id
+            ) {
+                throw new DomainException('CODEBRIDGE_OWNER_POLICY_CONFLICT');
+            }
             $features = json_decode((string) $policy->features, true, 32, JSON_THROW_ON_ERROR);
             $limits = json_decode((string) $policy->limits, true, 32, JSON_THROW_ON_ERROR);
             if (
