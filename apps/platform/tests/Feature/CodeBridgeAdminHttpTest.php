@@ -45,7 +45,7 @@ final class CodeBridgeAdminHttpTest extends TestCase
 
         $this->actingAs($owner)->withSession(['auth.password_confirmed_at' => time()])
             ->postJson('/operator/codebridge/devices/enroll', ['license_id' => $license, 'activation_id' => $activation, 'tenant_id' => 'tenant-b', 'device_id' => 'device-a'])
-            ->assertNotFound();
+            ->assertForbidden();
 
         self::assertSame(0, DB::table('codebridge_device_credentials')->count());
     }
@@ -290,10 +290,65 @@ final class CodeBridgeAdminHttpTest extends TestCase
         self::assertSame(16, PlanCatalog::CODEBRIDGE_OWNER_CONCURRENCY);
     }
 
+    public function test_platform_owner_cannot_enroll_a_device_for_another_organization(): void
+    {
+        $tenant = (string) Str::uuid();
+        [$license, $activation] = $this->fixture($tenant);
+        $owner = $this->platformOwner();
+
+        $this->actingAs($owner)->withSession(['auth.password_confirmed_at' => time()])
+            ->postJson('/operator/codebridge/devices/enroll', [
+                'license_id' => $license,
+                'activation_id' => $activation,
+                'tenant_id' => $tenant,
+                'device_id' => 'device-a',
+            ])->assertForbidden();
+
+        self::assertSame(0, DB::table('codebridge_device_credentials')->count());
+    }
+
+    public function test_platform_owner_cannot_rotate_or_revoke_another_organizations_device(): void
+    {
+        $tenant = (string) Str::uuid();
+        [$license, $activation] = $this->fixture($tenant);
+        $tenantOwner = $this->platformOwner();
+        $this->ownTenant($tenantOwner, $tenant);
+        $session = ['auth.password_confirmed_at' => time()];
+
+        $this->actingAs($tenantOwner)->withSession($session)
+            ->postJson('/operator/codebridge/devices/enroll', [
+                'license_id' => $license,
+                'activation_id' => $activation,
+                'tenant_id' => $tenant,
+                'device_id' => 'device-a',
+            ])->assertCreated();
+
+        $otherOwner = $this->platformOwner();
+        $manage = [
+            'license_id' => $license,
+            'tenant_id' => $tenant,
+            'device_id' => 'device-a',
+        ];
+
+        $this->actingAs($otherOwner)->withSession($session)
+            ->postJson('/operator/codebridge/devices/rotate', $manage)
+            ->assertForbidden();
+        $this->actingAs($otherOwner)->withSession($session)
+            ->postJson('/operator/codebridge/devices/revoke', $manage)
+            ->assertForbidden();
+
+        self::assertNull(
+            DB::table('codebridge_device_credentials')
+                ->where('license_id', $license)
+                ->value('revoked_at'),
+        );
+    }
+
     public function test_owner_can_enroll_rotate_and_revoke_with_no_store_responses(): void
     {
         [$license, $activation] = $this->fixture('tenant-a');
         $owner = $this->platformOwner();
+        $this->ownTenant($owner, 'tenant-a');
         $session = ['auth.password_confirmed_at' => time()];
         $payload = ['license_id' => $license, 'activation_id' => $activation, 'tenant_id' => 'tenant-a', 'device_id' => 'device-a'];
 
