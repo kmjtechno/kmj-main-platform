@@ -13,9 +13,9 @@ export const deliveryMilestones: DeliveryMilestone[] = [
         id: 'codebridge-hosted-client-onboarding',
         title: 'CodeBridge hosted client onboarding',
         state: 'active',
-        detail: 'Hosted OAuth account linking, browser/Claude client connectivity, pinned one-click Linux/VPS installer bootstrap, a credential-free ChatGPT Desktop marketplace setup download with bundled local OAuth bridge, customer-facing setup guidance, product-specific CodeBridge terms/privacy/support surfaces, a secure allowlisted GitHub bridge, a private Main Platform GitHub credential broker, authoritative pairing gateway discovery, account-authorized device/project grants, the current exact-head one-click runtime pin, guarded development-channel unattended updates, a bounded legacy /agent compatibility proxy for pre-fix enrollments, and a durable PKCE-only Claude public OAuth client that survives stale DCR registration loss are implemented; public Plugins Directory publication and live production rollout remain release gates',
+        detail: 'A tenant-scoped customer device/project directory and one-click Copilot setup links are implemented behind review gates; gateway-sourced live heartbeat and multi-project local onboarding remain pending. Hosted OAuth account linking, browser/Claude client connectivity, pinned one-click Linux/VPS installer bootstrap, a credential-free ChatGPT Desktop marketplace setup download with bundled local OAuth bridge, customer-facing setup guidance, product-specific CodeBridge terms/privacy/support surfaces, a secure allowlisted GitHub bridge, a private Main Platform GitHub credential broker, authoritative pairing gateway discovery, account-authorized device/project grants, the current exact-head one-click runtime pin, guarded development-channel unattended updates, a bounded legacy /agent compatibility proxy for pre-fix enrollments, and a durable PKCE-only Claude public OAuth client that survives stale DCR registration loss are implemented; public Plugins Directory publication and live production rollout remain release gates',
         evidence:
-            'CodeBridge exact-head commit ff8a64273ce4 passed CodeBridge CI after PR #94 and adds the guarded hourly development auto-update timer; Main Platform /install is pinned to that immutable runtime so fresh devices inherit the authoritative agent-gateway fix, current account/device diagnostics, and development auto-update path; PR #300 merged the authoritative pairing gateway contract and PR #302 merged account-authorized device/project grants; PR #304 adds a POST-only health/poll/result compatibility proxy; PR #308 adds a stable Claude public OAuth client; CodeBridge PR #104 merged the ChatGPT Desktop marketplace and bundled local OAuth bridge; CodeBridge PR #105 added a credential-free personal-marketplace fallback when Codex CLI is unavailable, and PR #106 corrected the personal marketplace path relative to ~/.agents/plugins; this branch syncs that corrected installer into the account dashboard while keeping public Plugins Directory publication as the universal customer one-click gate',
+            'Customer device listing, tenant-isolated approved pairing counts, and no-GitHub-sign-in UI workflow are included in PR #344 clean successor; live heartbeat and additional local project grants require further implementation and production tests. CodeBridge exact-head commit ff8a64273ce4 passed CodeBridge CI after PR #94 and adds the guarded hourly development auto-update timer; Main Platform /install is pinned to that immutable runtime so fresh devices inherit the authoritative agent-gateway fix, current account/device diagnostics, and development auto-update path; PR #300 merged the authoritative pairing gateway contract and PR #302 merged account-authorized device/project grants; PR #304 adds a POST-only health/poll/result compatibility proxy; PR #308 adds a stable Claude public OAuth client; CodeBridge PR #104 merged the ChatGPT Desktop marketplace and bundled local OAuth bridge; CodeBridge PR #105 added a credential-free personal-marketplace fallback when Codex CLI is unavailable, and PR #106 corrected the personal marketplace path relative to ~/.agents/plugins; this branch syncs that corrected installer into the account dashboard while keeping public Plugins Directory publication as the universal customer one-click gate',
     },
     {
         id: 'codebridge-license-renewal',
@@ -112,6 +112,14 @@ export const deliveryMilestones: DeliveryMilestone[] = [
         evidence: 'PR #67',
     },
     {
+        id: 'dependency-security-hardening',
+        title: 'Production dependency security hardening',
+        state: 'active',
+        detail: 'Six reported GitHub Dependabot advisories are addressed in candidate npm/Composer lockfiles, including bounded tinypool 2.1.2 override without a Vite Plus major upgrade; hosted CI and production promotion remain gated',
+        evidence:
+            '2026-10-09 security patch candidate: shell-quote 1.12.0, source-map-js 1.2.2, tinypool 2.1.2, league/commonmark 2.10.3; npm audit reports 0 in isolated worktree and Composer reports no advisories; do not claim deployed until production verified',
+    },
+    {
         id: 'payment-reconciliation',
         title: 'Payment reconciliation',
         state: 'verified',
@@ -122,9 +130,9 @@ export const deliveryMilestones: DeliveryMilestone[] = [
         id: 'razorpay-provider-authenticity',
         title: 'Razorpay payment gateway integration',
         state: 'active',
-        detail: 'Server-side Razorpay checkout and raw webhook HMAC verification are implemented without charging customers; sandbox checkout, captured-payment reconciliation, authenticated webhooks, owner controls and merchant activation remain gated',
+        detail: 'Server-side Razorpay raw webhook HMAC and fail-closed test-key-only Orders API client implemented without charging customers; Razorpay real sandbox checkout, captured-payment reconciliation, authenticated webhooks, customer billing and merchant cross-border activation remain gated',
         evidence:
-            'PR #340: RazorpaySignatureVerifier, 5 PHPUnit tests / 19 assertions and Pint PASS locally; no live keys or charge endpoints, no entitlement grants from raw payment callbacks',
+            'PR #340: HMAC trust boundary. Follow-up RazorpaySandboxOrderClient branch: 4 mocked tests / 17 assertions and Pint PASS; test-key-only Orders API, no live keys or charge endpoints, no entitlement grants from raw payment callbacks',
     },
     {
         id: 'international-payment-gateways',
