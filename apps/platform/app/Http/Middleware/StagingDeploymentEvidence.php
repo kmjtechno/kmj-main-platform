@@ -60,29 +60,44 @@ final class StagingDeploymentEvidence
             return null;
         }
 
-        $loose = trim((string) @file_get_contents($gitDir.'/'.$ref));
-        if (preg_match('/^[0-9a-f]{40}$/', $loose) === 1) {
-            return $loose;
+        // Worktrees store HEAD under a private gitdir and branch refs in a
+        // shared Git common directory. Read both, without executing git.
+        $refDirs = [$gitDir];
+        $common = trim((string) @file_get_contents($gitDir.'/commondir'));
+        if ($common !== '') {
+            $commonDir = str_starts_with($common, '/')
+                ? $common
+                : $gitDir.'/'.$common;
+            if (is_dir($commonDir)) {
+                $refDirs[] = $commonDir;
+            }
         }
 
-        $packed = @file($gitDir.'/packed-refs', FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
-        if (! is_array($packed)) {
-            return null;
-        }
+        foreach ($refDirs as $refDir) {
+            $loose = trim((string) @file_get_contents($refDir.'/'.$ref));
+            if (preg_match('/^[0-9a-f]{40}$/', $loose) === 1) {
+                return $loose;
+            }
 
-        foreach ($packed as $line) {
-            if ($line === '' || str_starts_with($line, '#') || str_starts_with($line, '^')) {
+            $packed = @file($refDir.'/packed-refs', FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+            if (! is_array($packed)) {
                 continue;
             }
 
-            $parts = preg_split('/\s+/', trim($line), 2);
-            if (! is_array($parts)) {
-                continue;
-            }
+            foreach ($packed as $line) {
+                if ($line === '' || str_starts_with($line, '#') || str_starts_with($line, '^')) {
+                    continue;
+                }
 
-            [$sha, $name] = array_pad($parts, 2, null);
-            if ($name === $ref && is_string($sha) && preg_match('/^[0-9a-f]{40}$/', $sha) === 1) {
-                return $sha;
+                $parts = preg_split('/\\s+/', trim($line), 2);
+                if (! is_array($parts)) {
+                    continue;
+                }
+
+                [$sha, $name] = array_pad($parts, 2, null);
+                if ($name === $ref && is_string($sha) && preg_match('/^[0-9a-f]{40}$/', $sha) === 1) {
+                    return $sha;
+                }
             }
         }
 
