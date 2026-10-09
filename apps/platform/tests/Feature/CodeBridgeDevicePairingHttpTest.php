@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\User;
+use App\Services\Licensing\CodeBridge\CodeBridgeCustomerDeviceDirectory;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -67,6 +68,21 @@ final class CodeBridgeDevicePairingHttpTest extends TestCase
         self::assertNull(DB::table('codebridge_device_pairings')->value('credential_ciphertext'));
         self::assertDatabaseHas('codebridge_device_pairings', ['status' => 'consumed']);
         self::assertDatabaseHas('codebridge_device_credentials', ['tenant_id' => $tenant, 'device_id' => 'vps1']);
+
+        // The customer dashboard may show only this tenant's registered
+        // devices, and must never imply a live heartbeat from enrollment.
+        $directory = app(CodeBridgeCustomerDeviceDirectory::class);
+        $devices = $directory->forTenant($tenant, time());
+        self::assertCount(1, $devices);
+        self::assertSame('vps1', $devices[0]['id']);
+        self::assertSame('VPS 1', $devices[0]['name']);
+        self::assertSame([['id' => 'project1', 'name' => 'App']], $devices[0]['projects']);
+        self::assertSame('registered', $devices[0]['registration']);
+        self::assertSame('not_verified', $devices[0]['connection_status']);
+        self::assertArrayNotHasKey('token', $devices[0]);
+        self::assertArrayNotHasKey('token_hash', $devices[0]);
+        self::assertSame([], $directory->forTenant((string) Str::uuid(), time()));
+
 
         $this->withToken($redeemed['agent']['token'])
             ->postJson('/api/codebridge/v1/device-credentials/introspect')
