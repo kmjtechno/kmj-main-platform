@@ -119,6 +119,13 @@ export const deliveryMilestones: DeliveryMilestone[] = [
         evidence: 'PR #74',
     },
     {
+        id: 'razorpay-provider-authenticity',
+        title: 'Razorpay payment gateway integration',
+        state: 'active',
+        detail: 'Server-side Razorpay checkout and raw webhook HMAC verification are implemented without charging customers; sandbox checkout, captured-payment reconciliation, authenticated webhooks, owner controls and merchant activation remain gated',
+        evidence: 'PR #340: RazorpaySignatureVerifier, 5 PHPUnit tests / 19 assertions and Pint PASS locally; no live keys or charge endpoints, no entitlement grants from raw payment callbacks',
+    },
+    {
         id: 'desktop-commander-commercial-control-plane',
         title: 'Desktop Commander commercial control plane',
         state: 'active',
