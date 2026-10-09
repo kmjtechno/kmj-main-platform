@@ -66,6 +66,69 @@ final class CodeBridgeAdminHttpTest extends TestCase
         self::assertSame('professional', DB::table('kslp_licenses')->where('id', $license)->value('plan'));
     }
 
+    public function test_owner_tier_mutation_requires_recent_password_confirmation(): void
+    {
+        $tenant = (string) Str::uuid();
+        [$license] = $this->fixture($tenant);
+        $this->ownerPlan();
+        $owner = $this->platformOwner();
+        $this->ownTenant($owner, $tenant);
+
+        $this->actingAs($owner)
+            ->withSession(['auth.password_confirmed_at' => time() - 14400])
+            ->postJson('/operator/codebridge/licenses/owner-tier', [
+                'license_id' => $license,
+                'tenant_id' => $tenant,
+                'confirm' => 'UPGRADE_CODEBRIDGE_OWNER',
+            ])->assertStatus(423);
+
+        self::assertSame('professional', DB::table('kslp_licenses')->where('id', $license)->value('plan'));
+        self::assertSame(0, DB::table('kslp_license_events')->where('license_id', $license)->count());
+    }
+
+    public function test_platform_owner_without_passkey_cannot_upgrade_owner_tier(): void
+    {
+        $tenant = (string) Str::uuid();
+        [$license] = $this->fixture($tenant);
+        $this->ownerPlan();
+        $owner = User::factory()->create([
+            'email_verified_at' => now(),
+            'is_platform_owner' => true,
+            'platform_owner_granted_at' => now(),
+        ]);
+        $this->ownTenant($owner, $tenant);
+
+        $this->actingAs($owner)->withSession(['auth.password_confirmed_at' => time()])
+            ->postJson('/operator/codebridge/licenses/owner-tier', [
+                'license_id' => $license,
+                'tenant_id' => $tenant,
+                'confirm' => 'UPGRADE_CODEBRIDGE_OWNER',
+            ])->assertForbidden();
+
+        self::assertSame('professional', DB::table('kslp_licenses')->where('id', $license)->value('plan'));
+        self::assertSame(0, DB::table('kslp_license_events')->where('license_id', $license)->count());
+    }
+
+    public function test_unverified_platform_owner_cannot_upgrade_owner_tier(): void
+    {
+        $tenant = (string) Str::uuid();
+        [$license] = $this->fixture($tenant);
+        $this->ownerPlan();
+        $owner = $this->platformOwner();
+        $this->ownTenant($owner, $tenant);
+        $owner->forceFill(['email_verified_at' => null])->save();
+
+        $this->actingAs($owner)->withSession(['auth.password_confirmed_at' => time()])
+            ->postJson('/operator/codebridge/licenses/owner-tier', [
+                'license_id' => $license,
+                'tenant_id' => $tenant,
+                'confirm' => 'UPGRADE_CODEBRIDGE_OWNER',
+            ])->assertForbidden();
+
+        self::assertSame('professional', DB::table('kslp_licenses')->where('id', $license)->value('plan'));
+        self::assertSame(0, DB::table('kslp_license_events')->where('license_id', $license)->count());
+    }
+
     public function test_owner_upgrade_requires_explicit_confirmation(): void
     {
         [$license] = $this->fixture('tenant-a');
