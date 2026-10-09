@@ -112,6 +112,14 @@ export const deliveryMilestones: DeliveryMilestone[] = [
         evidence: 'PR #67',
     },
     {
+        id: 'dependency-security-hardening',
+        title: 'Production dependency security hardening',
+        state: 'active',
+        detail: 'Six reported GitHub Dependabot advisories are addressed in candidate npm/Composer lockfiles, including bounded tinypool 2.1.2 override without a Vite Plus major upgrade; hosted CI and production promotion remain gated',
+        evidence:
+            '2026-10-09 security patch candidate: shell-quote 1.12.0, source-map-js 1.2.2, tinypool 2.1.2, league/commonmark 2.10.3; npm audit reports 0 in isolated worktree and Composer reports no advisories; do not claim deployed until production verified',
+    },
+    {
         id: 'payment-reconciliation',
         title: 'Payment reconciliation',
         state: 'verified',
