@@ -63,7 +63,7 @@ export default function Company() {
 
                 <PublicSiteHeader />
 
-                <main className="relative z-10">
+                <main id="main-content" tabIndex={-1} className="relative z-10">
                     <section className="mx-auto max-w-[1440px] px-5 pt-20 pb-18 sm:px-8 lg:px-12 lg:pt-28 lg:pb-24">
                         <div className="max-w-5xl">
                             <div className="text-[10px] font-black tracking-[0.24em] text-[#ff5962] uppercase">
@@ -71,7 +71,7 @@ export default function Company() {
                             </div>
                             <h1 className="mt-6 text-5xl leading-[0.96] font-black tracking-[-0.06em] sm:text-6xl lg:text-[5.6rem]">
                                 Innovate.
-                                <span className="text-white/32"> Build.</span>
+                                <span className="text-white/65"> Build.</span>
                                 <span className="block bg-gradient-to-r from-[#ff4149] via-[#e21b23] to-[#921018] bg-clip-text text-transparent">
                                     Scale with discipline.
                                 </span>
@@ -117,7 +117,7 @@ export default function Company() {
                                         <h2 className="mt-6 text-2xl font-black tracking-[-0.035em]">
                                             {title}
                                         </h2>
-                                        <p className="mt-3 text-sm leading-7 text-white/42">
+                                        <p className="mt-3 text-sm leading-7 text-white/65">
                                             {text}
                                         </p>
                                     </article>
@@ -133,11 +133,11 @@ export default function Company() {
                             </div>
                             <h2 className="mt-4 text-3xl font-black tracking-[-0.045em] sm:text-5xl">
                                 One company identity.
-                                <span className="block text-white/30">
+                                <span className="block text-white/65">
                                     Clear system boundaries.
                                 </span>
                             </h2>
-                            <p className="mt-5 max-w-xl text-sm leading-7 text-white/42 sm:text-base">
+                            <p className="mt-5 max-w-xl text-sm leading-7 text-white/65 sm:text-base">
                                 The Main Platform is the central customer,
                                 product, entitlement, licensing and operational
                                 authority. Independent KMJ products remain
@@ -173,7 +173,7 @@ export default function Company() {
                                 <h2 className="mt-4 text-3xl font-black tracking-[-0.04em] sm:text-4xl">
                                     Product ambition without false certainty.
                                 </h2>
-                                <p className="mt-4 text-sm leading-7 text-white/40">
+                                <p className="mt-4 text-sm leading-7 text-white/65">
                                     Availability, access and product status
                                     remain explicit. Public presentation does
                                     not override verified technical or

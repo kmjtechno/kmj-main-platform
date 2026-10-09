@@ -14,6 +14,7 @@ use App\Services\Licensing\SandboxLicenseLifecycle;
 use App\Services\PlatformOwnerAccess;
 use App\Services\Releases\CustomerReleaseAccess;
 use App\Services\Releases\ReleaseArtifactDelivery;
+use App\Services\SuperAdminDevelopmentPolicy;
 use DateTimeImmutable as ImmutableDateTime;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -458,6 +459,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         return Inertia::render('dashboard', [
             'organizations' => $items,
             'hasPasskey' => $user->passkeys()->exists(),
+            'canManageCodeBridgeOwnerPlan' => app(PlatformOwnerAccess::class)->allows($user),
         ]);
     })->name('dashboard');
 
@@ -466,6 +468,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         OrganizationDirectory $organizations,
         EntitlementReader $entitlements,
         OAuthServer $oauth,
+        PlatformOwnerAccess $platformOwnerAccess,
     ) {
         $user = $request->user();
         abort_unless($user instanceof User, 401);
@@ -486,6 +489,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
         abort_unless(is_array($access), 404);
         $organization = $access['organization'];
         $entitlement = $access['entitlement'];
+        // Show the owner console only to the authenticated Platform Owner who
+        // can manage the organization. This link never changes the license.
+        $canManageOwnerPlan = $platformOwnerAccess->allows($user)
+            && $organizations->userCanManage((int) $user->id, $organization['id']);
 
         $license = DB::table('kslp_licenses')
             ->where('customer_id', $organization['id'])
@@ -548,6 +555,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         return Inertia::render('services/codebridge', [
             'organization' => $organization,
             'entitlement' => $entitlement,
+            'canManageOwnerPlan' => $canManageOwnerPlan,
             'service' => [
                 'endpoint' => $oauth->resource(),
                 'oauth_ready' => $oauth->enabled(),
@@ -626,6 +634,16 @@ Route::middleware(['auth', 'verified'])->group(function () {
             abort(503, 'The verified release artifact is temporarily unavailable.');
         }
     })->name('customer.releases.download');
+
+    Route::get('operator/super-admin/development-profile', function (
+        Request $request,
+        SuperAdminDevelopmentPolicy $policy,
+    ) {
+        $user = $request->user();
+        abort_unless($user instanceof User, 401);
+
+        return response()->json($policy->describe($user));
+    })->name('operator.super-admin.profile')->middleware('password.confirm');
 
     Route::get('operator', function (
         Request $request,

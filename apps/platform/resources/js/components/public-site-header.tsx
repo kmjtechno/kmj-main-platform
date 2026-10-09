@@ -26,40 +26,43 @@ export default function PublicSiteHeader() {
                     <LockedBrand compact />
                 </Link>
 
-                <nav className="hidden items-center gap-1 lg:flex">
+                <nav
+                    className="hidden items-center gap-1 lg:flex"
+                    aria-label="Primary navigation"
+                >
                     <Link
                         href="/company"
-                        className="rounded-lg px-4 py-2 text-sm font-semibold text-white/58 transition hover:bg-white/[0.05] hover:text-white"
+                        className="rounded-lg px-4 py-2 text-sm font-semibold text-white/78 transition hover:bg-white/[0.05] hover:text-white"
                     >
                         Company
                     </Link>
                     <Link
                         href="/capabilities"
-                        className="rounded-lg px-4 py-2 text-sm font-semibold text-white/58 transition hover:bg-white/[0.05] hover:text-white"
+                        className="rounded-lg px-4 py-2 text-sm font-semibold text-white/78 transition hover:bg-white/[0.05] hover:text-white"
                     >
                         Capabilities
                     </Link>
                     <Link
                         href="/products"
-                        className="rounded-lg px-4 py-2 text-sm font-semibold text-white/58 transition hover:bg-white/[0.05] hover:text-white"
+                        className="rounded-lg px-4 py-2 text-sm font-semibold text-white/78 transition hover:bg-white/[0.05] hover:text-white"
                     >
                         Products
                     </Link>
                     <Link
                         href="/trust"
-                        className="rounded-lg px-4 py-2 text-sm font-semibold text-white/58 transition hover:bg-white/[0.05] hover:text-white"
+                        className="rounded-lg px-4 py-2 text-sm font-semibold text-white/78 transition hover:bg-white/[0.05] hover:text-white"
                     >
                         Trust
                     </Link>
                     <Link
                         href="/products#product-search"
                         aria-label="Search KMJ products"
-                        className="inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold text-white/58 transition hover:bg-white/[0.05] hover:text-white"
+                        className="inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold text-white/78 transition hover:bg-white/[0.05] hover:text-white"
                     >
                         <Search className="h-3.5 w-3.5" />
                         Search
                     </Link>
-                    <PublicLanguageSwitch className="rounded-lg px-4 py-2 text-sm font-semibold text-white/58 transition hover:bg-white/[0.05] hover:text-white" />
+                    <PublicLanguageSwitch className="rounded-lg px-4 py-2 text-sm font-semibold text-white/78 transition hover:bg-white/[0.05] hover:text-white" />
                 </nav>
 
                 <div className="hidden items-center gap-2 sm:flex">
@@ -75,7 +78,7 @@ export default function PublicSiteHeader() {
                         <>
                             <Link
                                 href={login()}
-                                className="hidden px-3 py-2 text-sm font-semibold text-white/52 transition hover:text-white md:inline-flex"
+                                className="hidden px-3 py-2 text-sm font-semibold text-white/74 transition hover:text-white md:inline-flex"
                             >
                                 Sign in
                             </Link>
@@ -94,8 +97,9 @@ export default function PublicSiteHeader() {
                     type="button"
                     aria-label={open ? 'Close navigation' : 'Open navigation'}
                     aria-expanded={open}
+                    aria-controls={open ? 'public-mobile-nav' : undefined}
                     onClick={() => setOpen((value) => !value)}
-                    className="grid h-10 w-10 place-items-center rounded-lg border border-white/10 bg-white/[0.03] text-white sm:hidden"
+                    className="grid h-10 w-10 place-items-center rounded-lg border border-white/10 bg-white/[0.03] text-white lg:hidden"
                 >
                     {open ? (
                         <X className="h-4 w-4" />
@@ -106,7 +110,12 @@ export default function PublicSiteHeader() {
             </div>
 
             {open && (
-                <div className="border-t border-white/[0.06] bg-[#07090c] px-5 py-5 sm:hidden">
+                <div
+                    id="public-mobile-nav"
+                    role="navigation"
+                    aria-label="Mobile primary navigation"
+                    className="border-t border-white/[0.06] bg-[#07090c] px-5 py-5 lg:hidden"
+                >
                     <div className="mx-auto grid max-w-[1440px] gap-2">
                         <Link
                             href="/company"

@@ -9,6 +9,7 @@ final class PlatformOwnerAccess
     public function allows(User $user): bool
     {
         return (bool) $user->getAttribute('is_platform_owner')
+            && $user->hasVerifiedEmail()
             && $user->passkeys()->exists();
     }
 

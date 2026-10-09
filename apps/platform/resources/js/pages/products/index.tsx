@@ -155,16 +155,17 @@ export default function ProductsIndex({ products }: { products: Product[] }) {
                                     KMJ TECHNO product portfolio
                                 </div>
                                 <h1 className="mt-5 text-5xl leading-[0.96] font-black tracking-[-0.06em] sm:text-6xl lg:text-[5.4rem]">
-                                    Products built to move
-                                    <span className="block text-white/32">
-                                        from idea to governed operation.
+                                    Technology for modern
+                                    <span className="block text-white/72">
+                                        business and engineering.
                                     </span>
                                 </h1>
-                                <p className="mt-7 max-w-3xl text-base leading-8 text-white/48 sm:text-lg">
-                                    Explore the complete KMJ product ecosystem
-                                    with lifecycle, access and public evidence
-                                    kept explicit. Engineering progress never
-                                    masquerades as commercial availability.
+                                <p className="mt-7 max-w-3xl text-base leading-8 text-white/70 sm:text-lg">
+                                    Discover KMJ TECHNO cloud, AI engineering,
+                                    calibration, secure connectivity and
+                                    immersive technology. Explore product
+                                    capabilities, demos and current availability
+                                    before choosing your next step.
                                 </p>
                             </div>
 
@@ -186,7 +187,7 @@ export default function ProductsIndex({ products }: { products: Product[] }) {
                                         <div className="text-2xl font-black tracking-[-0.04em]">
                                             {value}
                                         </div>
-                                        <div className="mt-1 text-[9px] font-black tracking-[0.12em] text-white/28 uppercase">
+                                        <div className="mt-1 text-[9px] font-black tracking-[0.12em] text-white/60 uppercase">
                                             {label}
                                         </div>
                                     </div>
@@ -205,14 +206,14 @@ export default function ProductsIndex({ products }: { products: Product[] }) {
                                 <span className="sr-only">
                                     Search KMJ products
                                 </span>
-                                <Search className="pointer-events-none absolute top-1/2 left-4 h-4 w-4 -translate-y-1/2 text-white/28" />
+                                <Search className="pointer-events-none absolute top-1/2 left-4 h-4 w-4 -translate-y-1/2 text-white/65" />
                                 <input
                                     value={query}
                                     onChange={(event) =>
                                         setQuery(event.target.value)
                                     }
                                     placeholder="Search products, capabilities or use cases"
-                                    className="h-12 w-full rounded-xl border border-white/[0.08] bg-[#07090c] pr-4 pl-11 text-sm text-white outline-none placeholder:text-white/24 focus:border-[#e21b23]/45"
+                                    className="h-12 w-full rounded-xl border border-white/[0.08] bg-[#07090c] pr-4 pl-11 text-sm text-white outline-none placeholder:text-white/55 focus:border-[#e21b23]/45"
                                 />
                             </label>
                             <div className="flex flex-wrap gap-2">
@@ -226,7 +227,7 @@ export default function ProductsIndex({ products }: { products: Product[] }) {
                                             'rounded-full border px-3 py-2 text-[10px] font-black tracking-[0.08em] uppercase transition ' +
                                             (lifecycle === option
                                                 ? 'border-[#e21b23]/35 bg-[#e21b23]/10 text-white'
-                                                : 'border-white/[0.08] bg-white/[0.025] text-white/38 hover:border-white/15 hover:text-white/68')
+                                                : 'border-white/[0.08] bg-white/[0.025] text-white/65 hover:border-white/15 hover:text-white/68')
                                         }
                                     >
                                         {option === 'all'
@@ -262,7 +263,7 @@ export default function ProductsIndex({ products }: { products: Product[] }) {
                                                     <h2 className="text-3xl font-black tracking-[-0.04em] sm:text-4xl">
                                                         {product.category}
                                                     </h2>
-                                                    <p className="max-w-2xl text-sm leading-7 text-white/38 lg:justify-self-end">
+                                                    <p className="max-w-2xl text-sm leading-7 text-white/65 lg:justify-self-end">
                                                         {categoryDescriptions[
                                                             product.category
                                                         ] ??
@@ -279,34 +280,32 @@ export default function ProductsIndex({ products }: { products: Product[] }) {
                                                     : '')
                                             }
                                         >
-                                            <div className="flex flex-col">
-                                                <div className="mb-7 overflow-hidden rounded-2xl border border-white/[0.08] bg-black/30">
-                                                    <ProductVisual
-                                                        slug={product.slug}
-                                                        name={product.name}
-                                                        imagePath={
-                                                            product.image_path
-                                                        }
-                                                        className="aspect-[4/3] w-full object-cover"
-                                                    />
-                                                </div>
-                                                <div className="flex items-start justify-between gap-4">
-                                                    <div className="flex items-center gap-4">
-                                                        <div className="grid h-11 w-11 place-items-center rounded-xl border border-[#ef3340]/18 bg-[#ef3340]/8">
-                                                            <ProductIcon className="h-5 w-5 text-[#ff5962]" />
-                                                        </div>
-                                                        <div>
-                                                            <div className="text-[9px] font-black tracking-[0.16em] text-white/25 uppercase">
-                                                                Product{' '}
-                                                                {String(
-                                                                    index + 1,
-                                                                ).padStart(
-                                                                    2,
-                                                                    '0',
-                                                                )}
+                                            <div
+                                                className={
+                                                    'grid flex-1 gap-8 p-6 sm:p-8 ' +
+                                                    (featured
+                                                        ? 'lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]'
+                                                        : '')
+                                                }
+                                            >
+                                                <div className="flex min-w-0 flex-col">
+                                                    <div className="mb-7 overflow-hidden rounded-2xl border border-white/[0.08] bg-black/30">
+                                                        <ProductVisual
+                                                            slug={product.slug}
+                                                            name={product.name}
+                                                            imagePath={
+                                                                product.image_path
+                                                            }
+                                                            className="aspect-[4/3] w-full object-cover"
+                                                        />
+                                                    </div>
+                                                    <div className="flex flex-wrap items-start justify-between gap-3">
+                                                        <div className="flex min-w-0 items-center gap-4">
+                                                            <div className="grid h-11 w-11 shrink-0 place-items-center rounded-xl border border-[#ef3340]/18 bg-[#ef3340]/8">
+                                                                <ProductIcon className="h-5 w-5 text-[#ff5962]" />
                                                             </div>
-                                                            <div>
-                                                                <div className="text-[9px] font-black tracking-[0.16em] text-white/25 uppercase">
+                                                            <div className="min-w-0">
+                                                                <div className="text-[9px] font-black tracking-[0.16em] text-white/65 uppercase">
                                                                     Product{' '}
                                                                     {String(
                                                                         index +
@@ -316,25 +315,24 @@ export default function ProductsIndex({ products }: { products: Product[] }) {
                                                                         '0',
                                                                     )}
                                                                 </div>
-                                                                <div className="mt-1 text-xs font-bold text-white/45">
+                                                                <div className="mt-1 text-xs font-bold text-white/65">
                                                                     {
                                                                         product.category
                                                                     }
                                                                 </div>
-                                                                <div className="mt-1 text-[10px] font-semibold text-white/28">
+                                                                <div className="mt-1 text-[10px] font-semibold text-white/65">
                                                                     {
                                                                         product.eyebrow
                                                                     }
                                                                 </div>
                                                             </div>
                                                         </div>
-
                                                         <span
                                                             className={
-                                                                'rounded-full border px-3 py-1.5 text-[9px] font-black tracking-[0.1em] uppercase ' +
+                                                                'shrink-0 rounded-full border px-3 py-1.5 text-[9px] font-black tracking-[0.1em] uppercase ' +
                                                                 (product.purchase_enabled
                                                                     ? 'border-emerald-300/20 bg-emerald-300/[0.06] text-emerald-200/75'
-                                                                    : 'border-white/10 bg-white/[0.03] text-white/38')
+                                                                    : 'border-white/10 bg-white/[0.03] text-white/65')
                                                             }
                                                         >
                                                             {
@@ -356,7 +354,7 @@ export default function ProductsIndex({ products }: { products: Product[] }) {
                                                     <p className="mt-5 max-w-2xl text-base leading-7 font-medium text-white/62">
                                                         {product.headline}
                                                     </p>
-                                                    <p className="mt-3 max-w-2xl text-sm leading-7 text-white/37">
+                                                    <p className="mt-3 max-w-2xl text-sm leading-7 text-white/65">
                                                         {product.summary}
                                                     </p>
 
@@ -364,7 +362,7 @@ export default function ProductsIndex({ products }: { products: Product[] }) {
                                                         product.variants
                                                             .length > 0 && (
                                                             <div className="mt-5">
-                                                                <div className="text-[9px] font-black tracking-[0.14em] text-white/25 uppercase">
+                                                                <div className="text-[9px] font-black tracking-[0.14em] text-white/65 uppercase">
                                                                     Available
                                                                     configurations
                                                                 </div>
@@ -411,7 +409,7 @@ export default function ProductsIndex({ products }: { products: Product[] }) {
                                                             : '')
                                                     }
                                                 >
-                                                    <div className="text-[9px] font-black tracking-[0.16em] text-white/24 uppercase">
+                                                    <div className="text-[9px] font-black tracking-[0.16em] text-white/65 uppercase">
                                                         Evidence-led foundation
                                                     </div>
                                                     {product.proof
@@ -429,7 +427,7 @@ export default function ProductsIndex({ products }: { products: Product[] }) {
                                                                                 item.title
                                                                             }
                                                                         </div>
-                                                                        <p className="mt-1.5 text-xs leading-5 text-white/32">
+                                                                        <p className="mt-1.5 text-xs leading-5 text-white/65">
                                                                             {
                                                                                 item.detail
                                                                             }
@@ -438,7 +436,7 @@ export default function ProductsIndex({ products }: { products: Product[] }) {
                                                                 </div>
                                                             </div>
                                                         ))}
-                                                    <div className="mt-1 flex items-center justify-between rounded-xl border border-white/[0.055] bg-black/20 px-4 py-3 text-[10px] font-bold text-white/32">
+                                                    <div className="mt-1 flex items-center justify-between rounded-xl border border-white/[0.055] bg-black/20 px-4 py-3 text-[10px] font-bold text-white/65">
                                                         <span>
                                                             {product.demo
                                                                 .simulation
@@ -450,7 +448,7 @@ export default function ProductsIndex({ products }: { products: Product[] }) {
                                                             className={
                                                                 product.purchase_enabled
                                                                     ? 'text-emerald-300/60'
-                                                                    : 'text-white/25'
+                                                                    : 'text-white/65'
                                                             }
                                                         >
                                                             {product.purchase_enabled
@@ -471,7 +469,7 @@ export default function ProductsIndex({ products }: { products: Product[] }) {
                                 <div className="text-lg font-black">
                                     No matching KMJ product found.
                                 </div>
-                                <p className="mt-2 text-sm text-white/38">
+                                <p className="mt-2 text-sm text-white/65">
                                     Clear the search or select another lifecycle
                                     state.
                                 </p>
@@ -489,7 +487,7 @@ export default function ProductsIndex({ products }: { products: Product[] }) {
                                     Products stay independent. Customer access
                                     stays governed.
                                 </h2>
-                                <p className="mt-4 max-w-2xl text-sm leading-7 text-white/38">
+                                <p className="mt-4 max-w-2xl text-sm leading-7 text-white/65">
                                     KMJ Main Platform provides the shared
                                     customer, organization, entitlement and
                                     licensing authority while each product keeps

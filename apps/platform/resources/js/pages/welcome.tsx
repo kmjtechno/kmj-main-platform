@@ -1,9 +1,17 @@
 import { Head, Link, usePage } from '@inertiajs/react';
 import {
     ArrowRight,
+    BrainCircuit,
+    Building2,
+    Clapperboard,
+    Code2,
+    Factory,
+    Globe2,
     KeyRound,
     Layers3,
+    Monitor,
     ShieldCheck,
+    Smartphone,
     Sparkles,
 } from 'lucide-react';
 import LandingJourney from '@/components/public/landing-journey';
@@ -41,6 +49,49 @@ const flagshipSlugs = [
     'kmj-calibration-pro',
     'kmj-cinema-platform',
     'kmj-360-dome',
+];
+
+const whatWeBuild = [
+    {
+        icon: Code2,
+        title: 'Software applications',
+        text: 'Purpose-built business software, integrations and developer tools.',
+    },
+    {
+        icon: Smartphone,
+        title: 'Mobile applications',
+        text: 'Native and cross-platform experiences for Android and iOS.',
+    },
+    {
+        icon: Globe2,
+        title: 'Web platforms',
+        text: 'Accessible websites, customer portals and scalable web applications.',
+    },
+    {
+        icon: Monitor,
+        title: 'Desktop applications',
+        text: 'Focused, high-performance tools for modern workstations.',
+    },
+    {
+        icon: BrainCircuit,
+        title: 'AI & automation',
+        text: 'Assisted workflows, intelligent agents and governed AI systems.',
+    },
+    {
+        icon: Building2,
+        title: 'Enterprise systems',
+        text: 'Secure operations, licensing, identity and business platforms.',
+    },
+    {
+        icon: Factory,
+        title: 'Industrial technology',
+        text: 'Calibration, monitoring, visualization and control tooling.',
+    },
+    {
+        icon: Clapperboard,
+        title: 'Immersive experiences',
+        text: 'Cinema, simulation, projection and spatial experiences.',
+    },
 ];
 
 const platformCapabilities = [
@@ -83,8 +134,8 @@ export default function Welcome({
     return (
         <>
             <PublicSeo
-                title="KMJ TECHNO — Software, Cloud & Intelligent Systems"
-                description="Explore the KMJ TECHNO product portfolio, governed software access and enterprise technology systems."
+                title="KMJ TECHNO — Software, Mobile Apps, Cloud & AI Engineering"
+                description="KMJ TECHNO engineers custom software, Android and iOS apps, desktop and web platforms, AI automation, secure cloud systems and immersive experiences."
                 path="/"
                 structuredData={[
                     {
@@ -128,24 +179,24 @@ export default function Welcome({
                             <div>
                                 <div className="inline-flex items-center gap-2 rounded-full border border-[#e21b23]/20 bg-[#e21b23]/[0.06] px-3 py-1.5 text-[10px] font-black tracking-[0.16em] text-[#ff6d75] uppercase">
                                     <span className="h-1.5 w-1.5 rounded-full bg-[#e21b23]" />
-                                    KMJ TECHNO · CLOUD · ENGINEERING · IMMERSIVE
-                                    SYSTEMS
+                                    KMJ TECHNO · SOFTWARE · MOBILE · CLOUD · AI
                                 </div>
 
                                 <h1 className="mt-7 max-w-[780px] text-5xl leading-[0.94] font-black tracking-[-0.058em] sm:text-6xl lg:text-[5.15rem]">
-                                    Technology engineered to connect
+                                    Build any software.
                                     <span className="block text-[#ff3d47]">
-                                        complex systems.
+                                        Power every experience.
                                     </span>
                                 </h1>
 
                                 <p className="mt-7 max-w-2xl text-base leading-8 text-white/68 sm:text-lg">
-                                    KMJ TECHNO brings cloud infrastructure,
-                                    professional calibration, immersive cinema,
-                                    secure connectivity and intelligent
-                                    engineering products together through one
-                                    governed customer platform for access,
-                                    licensing and controlled delivery.
+                                    From web, desktop and mobile applications to
+                                    AI systems, secure cloud infrastructure,
+                                    professional calibration and immersive
+                                    experiences, KMJ TECHNO engineers practical
+                                    solutions for real-world challenges. Product
+                                    availability and access remain governed by
+                                    verified lifecycle and release states.
                                 </p>
 
                                 <div className="mt-9 flex flex-col gap-3 sm:flex-row">
@@ -172,7 +223,7 @@ export default function Welcome({
                                             <div className="text-xl font-black">
                                                 {products.length}
                                             </div>
-                                            <div className="mt-1 text-[9px] font-black tracking-[.13em] text-white/35 uppercase">
+                                            <div className="mt-1 text-[9px] font-black tracking-[.13em] text-white/65 uppercase">
                                                 Products
                                             </div>
                                         </div>
@@ -186,7 +237,7 @@ export default function Welcome({
                                                     ).length
                                                 }
                                             </div>
-                                            <div className="mt-1 text-[9px] font-black tracking-[.13em] text-white/35 uppercase">
+                                            <div className="mt-1 text-[9px] font-black tracking-[.13em] text-white/65 uppercase">
                                                 Available
                                             </div>
                                         </div>
@@ -199,7 +250,7 @@ export default function Welcome({
                                                     ).length
                                                 }
                                             </div>
-                                            <div className="mt-1 text-[9px] font-black tracking-[.13em] text-white/35 uppercase">
+                                            <div className="mt-1 text-[9px] font-black tracking-[.13em] text-white/65 uppercase">
                                                 Purchasable
                                             </div>
                                         </div>
@@ -210,7 +261,7 @@ export default function Welcome({
                                         <span>Product Entitlements</span>
                                         <span>Clear Lifecycle Status</span>
                                     </div>
-                                    <p className="mt-4 text-xs leading-5 text-white/38">
+                                    <p className="mt-4 text-xs leading-5 text-white/65">
                                         Product availability, access and
                                         lifecycle status reflect the current
                                         verified platform state.
@@ -282,6 +333,61 @@ export default function Welcome({
                         </div>
                     </section>
 
+                    <section
+                        aria-labelledby="what-we-build-heading"
+                        className="mx-auto max-w-[1440px] px-5 py-16 sm:px-8 lg:px-12 lg:py-20"
+                    >
+                        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+                            <div className="max-w-3xl">
+                                <div className="text-[10px] font-black tracking-[0.2em] text-[#ee3942] uppercase">
+                                    Engineering capabilities
+                                </div>
+                                <h2
+                                    id="what-we-build-heading"
+                                    className="mt-4 text-4xl font-black tracking-[-0.045em] sm:text-5xl"
+                                >
+                                    What we build.
+                                    <span className="block text-white/65">
+                                        Software for real-world possibilities.
+                                    </span>
+                                </h2>
+                                <p className="mt-5 max-w-2xl text-sm leading-7 text-white/65 sm:text-base">
+                                    From your first idea to a secure, scalable
+                                    product, KMJ designs and engineers custom
+                                    applications and connected technology.
+                                </p>
+                            </div>
+                            <Link
+                                href="/capabilities"
+                                className="inline-flex h-11 items-center gap-2 text-sm font-black text-white/75 transition hover:text-white"
+                            >
+                                Explore capabilities
+                                <ArrowRight className="h-4 w-4" />
+                            </Link>
+                        </div>
+                        <div className="mt-9 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                            {whatWeBuild.map(({ icon: Icon, title, text }) => (
+                                <article
+                                    key={title}
+                                    className="group rounded-[1.3rem] border border-white/[0.08] bg-gradient-to-br from-white/[0.04] to-transparent p-5 transition duration-300 hover:-translate-y-1 hover:border-[#e21b23]/30"
+                                >
+                                    <span className="grid h-11 w-11 place-items-center rounded-xl border border-[#e21b23]/25 bg-[#e21b23]/[0.08] text-[#ff5962]">
+                                        <Icon
+                                            aria-hidden="true"
+                                            className="h-5 w-5"
+                                        />
+                                    </span>
+                                    <h3 className="mt-5 text-base font-black tracking-[-0.02em]">
+                                        {title}
+                                    </h3>
+                                    <p className="mt-2 text-[13px] leading-6 text-white/60">
+                                        {text}
+                                    </p>
+                                </article>
+                            ))}
+                        </div>
+                    </section>
+
                     <section className="border-y border-white/[0.065] bg-[#07090d]">
                         <div className="mx-auto max-w-[1440px] px-5 py-20 sm:px-8 lg:px-12 lg:py-24">
                             <div className="flex flex-col justify-between gap-7 lg:flex-row lg:items-end">
@@ -291,11 +397,11 @@ export default function Welcome({
                                     </div>
                                     <h2 className="mt-4 text-4xl font-black tracking-[-0.045em] sm:text-5xl">
                                         See the products.
-                                        <span className="block text-white/35">
+                                        <span className="block text-white/65">
                                             Know exactly where each one stands.
                                         </span>
                                     </h2>
-                                    <p className="mt-5 max-w-2xl text-sm leading-7 text-white/46 sm:text-base">
+                                    <p className="mt-5 max-w-2xl text-sm leading-7 text-white/65 sm:text-base">
                                         Explore real product visuals, current
                                         lifecycle state and available
                                         configurations before opening the full
@@ -354,12 +460,12 @@ export default function Welcome({
                                                         {product.name}
                                                     </h3>
                                                 </div>
-                                                <ArrowRight className="h-4 w-4 shrink-0 text-white/35 transition group-hover:translate-x-0.5 group-hover:text-white" />
+                                                <ArrowRight className="h-4 w-4 shrink-0 text-white/65 transition group-hover:translate-x-0.5 group-hover:text-white" />
                                             </div>
                                             {flagshipSlugs.includes(
                                                 product.slug,
                                             ) && (
-                                                <p className="mt-3 max-w-xl text-sm leading-6 text-white/48">
+                                                <p className="mt-3 max-w-xl text-sm leading-6 text-white/65">
                                                     {product.summary}
                                                 </p>
                                             )}
@@ -372,7 +478,7 @@ export default function Welcome({
                                                                     key={
                                                                         variant
                                                                     }
-                                                                    className="rounded-full border border-white/[0.08] bg-white/[0.025] px-2 py-1 text-[9px] font-bold text-white/42"
+                                                                    className="rounded-full border border-white/[0.08] bg-white/[0.025] px-2 py-1 text-[9px] font-bold text-white/65"
                                                                 >
                                                                     {variant}
                                                                 </span>
@@ -380,7 +486,7 @@ export default function Welcome({
                                                         )}
                                                     </div>
                                                 )}
-                                            <div className="mt-4 text-[10px] font-bold text-white/32">
+                                            <div className="mt-4 text-[10px] font-bold text-white/65">
                                                 {product.lifecycle_label}
                                             </div>
                                         </div>
@@ -401,7 +507,7 @@ export default function Welcome({
                                         </div>
                                         <h2 className="mt-4 text-4xl font-black tracking-[-0.05em] sm:text-5xl">
                                             One product family.
-                                            <span className="block text-white/42">
+                                            <span className="block text-white/65">
                                                 Multiple immersive formats.
                                             </span>
                                         </h2>
@@ -431,7 +537,7 @@ export default function Welcome({
                                                 Explore Cinema Suite
                                                 <ArrowRight className="h-4 w-4" />
                                             </Link>
-                                            <span className="text-xs font-bold text-white/34">
+                                            <span className="text-xs font-bold text-white/65">
                                                 {
                                                     immersiveCinemaSuite.lifecycle_label
                                                 }
@@ -455,7 +561,7 @@ export default function Welcome({
                                                 >
                                                     <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_20%,rgba(226,27,35,.18),transparent_45%)]" />
                                                     <div className="relative flex h-full min-h-28 flex-col justify-between">
-                                                        <span className="text-[10px] font-bold tracking-[.14em] text-white/28 uppercase">
+                                                        <span className="text-[10px] font-bold tracking-[.14em] text-white/65 uppercase">
                                                             Immersive format
                                                         </span>
                                                         <span className="text-3xl font-black tracking-[-0.04em] text-white">
@@ -479,12 +585,12 @@ export default function Welcome({
                                 </div>
                                 <h2 className="mt-4 text-4xl font-black tracking-[-0.045em]">
                                     One customer layer.
-                                    <span className="block text-white/32">
+                                    <span className="block text-white/65">
                                         Product boundaries stay clear.
                                     </span>
                                 </h2>
                             </div>
-                            <p className="max-w-2xl text-sm leading-7 text-white/42 sm:text-base">
+                            <p className="max-w-2xl text-sm leading-7 text-white/65 sm:text-base">
                                 Customer identity, commercial access and product
                                 entitlements stay unified while each KMJ product
                                 keeps its own engineering and release boundary.
@@ -514,7 +620,7 @@ export default function Welcome({
                                             <h3 className="mt-5 text-base font-black">
                                                 {title}
                                             </h3>
-                                            <p className="mt-2 text-[13px] leading-6 text-white/38">
+                                            <p className="mt-2 text-[13px] leading-6 text-white/65">
                                                 {text}
                                             </p>
                                         </article>

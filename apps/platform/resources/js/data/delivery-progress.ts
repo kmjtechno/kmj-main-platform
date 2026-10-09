@@ -39,7 +39,7 @@ export const deliveryMilestones: DeliveryMilestone[] = [
         state: 'active',
         detail: 'Platform-owner product management now binds lifecycle, public visibility, artwork, purchase/licensing controls and deterministic drag-and-drop ordering to the locked public landing while commercial state fails closed',
         evidence:
-            'PR #263 implementation + regression coverage for public-beta lifecycle, complete-catalog ordering, landing-order propagation and non-available purchase rejection; exact-head CI pending',
+            'PR #263 lifecycle/catalog ordering and non-available purchase regression; combined website + Super Admin source integration PR #338 at cdd47de with 12 frontend contract tests, isolated PHP Unit/Feature, PHPStan/Pint, fresh SQLite owner-policy seed and Chromium public guest QA 42/42 PASS; hosted CI and authenticated production Owner release still required; no live owner grant claimed',
     },
     {
         id: 'authority-foundation',

@@ -53,6 +53,7 @@ type Props = {
     organization: Organization;
     entitlement: Entitlement;
     service: Service;
+    canManageOwnerPlan: boolean;
 };
 
 const CHATGPT_DESKTOP_SETUP_URL = '/install-chatgpt-desktop.ps1';
@@ -67,6 +68,7 @@ export default function CodeBridgeService({
     organization,
     entitlement,
     service,
+    canManageOwnerPlan,
 }: Props) {
     const revokeClient = (clientId: string) => {
         router.post(
@@ -303,6 +305,16 @@ export default function CodeBridgeService({
                                 ))}
                             </div>
                         </div>
+
+                        {canManageOwnerPlan && service.plan !== 'owner' && (
+                            <Link
+                                href="/operator/codebridge/owner-plan"
+                                className="mt-5 inline-flex h-10 w-full items-center justify-center gap-2 rounded-xl border border-red-500/30 px-4 text-xs font-bold text-red-500 transition hover:border-red-500"
+                            >
+                                <ShieldCheck className="h-3.5 w-3.5" />
+                                Manage internal Owner Plan
+                            </Link>
+                        )}
 
                         <Link
                             href="/settings/security"

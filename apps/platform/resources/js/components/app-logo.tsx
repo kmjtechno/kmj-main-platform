@@ -3,7 +3,7 @@ export default function AppLogo() {
         <>
             <div className="border-sidebar-border flex size-9 shrink-0 items-center justify-center overflow-hidden rounded-lg border bg-[#080a0e]">
                 <img
-                    src="/assets/brand/kmj-app-icon.png"
+                    src="/assets/brand/kmj-mark.webp"
                     alt=""
                     aria-hidden="true"
                     className="h-full w-full object-cover"
