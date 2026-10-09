@@ -8,6 +8,7 @@ use App\Services\CodeBridge\OAuth\OAuthServer;
 use App\Services\Commerce\DesktopCommanderCommercialPolicy;
 use App\Services\Commerce\KmjProductCatalog;
 use App\Services\Commerce\PublicProductCatalog;
+use App\Services\Licensing\CodeBridge\CodeBridgeCustomerDeviceDirectory;
 use App\Services\Licensing\CodeBridge\CodeBridgeDevicePairingService;
 use App\Services\Licensing\LicenseAuditRecorder;
 use App\Services\Licensing\SandboxLicenseLifecycle;
@@ -469,6 +470,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         EntitlementReader $entitlements,
         OAuthServer $oauth,
         PlatformOwnerAccess $platformOwnerAccess,
+        CodeBridgeCustomerDeviceDirectory $deviceDirectory,
     ) {
         $user = $request->user();
         abort_unless($user instanceof User, 401);
@@ -570,8 +572,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
                     ->whereNull('revoked_at')
                     ->where('expires_at_epoch', '>', time())
                     ->count(),
+                'devices' => $deviceDirectory->forTenant((string) $organization['id'], time()),
+                // Before approval a pairing has no tenant; show only this
+                // organization's approved pairings awaiting device redemption.
                 'pending_pairings' => DB::table('codebridge_device_pairings')
-                    ->where('status', 'pending')
+                    ->where('tenant_id', $organization['id'])
+                    ->where('status', 'approved')
                     ->where('expires_at', '>', now())
                     ->count(),
                 'connected_clients' => $connectedClients,
