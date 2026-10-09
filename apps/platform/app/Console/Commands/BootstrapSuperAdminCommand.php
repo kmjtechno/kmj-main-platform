@@ -41,9 +41,23 @@ final class BootstrapSuperAdminCommand extends Command
 
         try {
             return DB::transaction(function () use ($email): int {
-                $users = User::query()->lockForUpdate()->get();
-                if ($users->count() !== 1) {
-                    $this->error('Bootstrap requires exactly one registered Main Platform account.');
+                // Later unverified registrations must not lock the legitimate
+                // first account out. Preserve the first-account identity and
+                // fail closed if any competing verified passkey/owner exists.
+                $users = User::query()->orderBy('id')->lockForUpdate()->get();
+                $verifiedPasskeyAccounts = $users->filter(
+                    fn (User $candidate): bool => $candidate->hasVerifiedEmail()
+                        && $candidate->passkeys()->exists(),
+                );
+                if (
+                    $users->isEmpty()
+                    || $verifiedPasskeyAccounts->count() !== 1
+                    || ! $verifiedPasskeyAccounts->first()?->is($users->first())
+                    || $users->skip(1)->contains(
+                        fn (User $candidate): bool => (bool) $candidate->getAttribute('is_platform_owner'),
+                    )
+                ) {
+                    $this->error('Bootstrap requires the first account to be the sole verified passkey account with no competing platform owner.');
 
                     return self::FAILURE;
                 }
@@ -58,7 +72,7 @@ final class BootstrapSuperAdminCommand extends Command
                     || ! $user->hasVerifiedEmail()
                     || ! $user->passkeys()->exists()
                 ) {
-                    $this->error('The single account must match the verified configured email and have a passkey.');
+                    $this->error('The first account must match the verified configured email and have a passkey.');
 
                     return self::FAILURE;
                 }

@@ -18,7 +18,7 @@ After this PR has passed independent CI, been approved/merged and deployed by a 
 php artisan kmj:super-admin:bootstrap
 ```
 
-The command checks the live database and refuses to proceed unless exactly one user exists and the verified account matches the allowlisted email with an enrolled passkey. It does **not** create a new account, reset a password, fake passkey credentials, or activate a signed product license.
+The command checks the live database and requires the first registered user to match the allowlisted email and remain the sole email-verified account with an enrolled passkey. Later registrations without a verified email/passkey do not block the legitimate first owner; any competing verified-passkey account or other platform-owner grant blocks bootstrap. It does **not** create a new account, reset a password, fake passkey credentials, or activate a signed product license.
 
 For a separately approved, **interactive on-server** first grant, a trusted production operator temporarily sets `KMJ_SUPER_ADMIN_BOOTSTRAP_ENABLED=true` in the protected server environment, reloads Laravel configuration appropriately, and runs:
 

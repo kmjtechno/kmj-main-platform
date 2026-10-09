@@ -59,7 +59,8 @@ final class SuperAdminBootstrapCommandTest extends TestCase
         $this->artisan('kmj:super-admin:bootstrap')->assertExitCode(1);
 
         $user->forceFill(['email' => 'kmjtechno.net@gmail.com'])->save();
-        User::factory()->create();
+        $competing = User::factory()->create(['email_verified_at' => now()]);
+        $this->installPasskey($competing);
         $this->artisan('kmj:super-admin:bootstrap')->assertExitCode(1);
 
         self::assertSame(0, DB::table('users')->where('is_platform_owner', true)->count());
@@ -88,6 +89,52 @@ final class SuperAdminBootstrapCommandTest extends TestCase
             $grantedAt,
             (string) $user->fresh()?->getAttribute('platform_owner_granted_at'),
         );
+    }
+
+    public function test_unverified_second_account_does_not_block_verified_first_owner(): void
+    {
+        $user = $this->createSingleAccount(withPasskey: true);
+        $unverified = User::factory()->create(['email_verified_at' => null]);
+
+        $this->artisan('kmj:super-admin:bootstrap')
+            ->expectsOutput('Eligible first account verified; no privileges were changed (dry run).')
+            ->assertExitCode(0);
+        self::assertFalse((bool) $user->fresh()?->getAttribute('is_platform_owner'));
+
+        config()->set('kmj-super-admin.bootstrap_enabled', true);
+
+        $this->artisan('kmj:super-admin:bootstrap', [
+            '--apply' => true,
+            '--confirm' => 'BOOTSTRAP_VERIFIED_SINGLE_OWNER',
+        ])
+            ->expectsConfirmation('Grant platform-owner authority to the sole verified passkey account?', 'yes')
+            ->assertExitCode(0);
+
+        self::assertTrue((bool) $user->fresh()?->getAttribute('is_platform_owner'));
+        self::assertFalse((bool) $unverified->fresh()?->getAttribute('is_platform_owner'));
+        self::assertSame(1, DB::table('users')->where('is_platform_owner', true)->count());
+    }
+
+    public function test_later_verified_passkey_account_cannot_take_over_first_account_owner(): void
+    {
+        User::factory()->create(['email_verified_at' => null]);
+        $user = $this->createSingleAccount(withPasskey: true);
+
+        $this->artisan('kmj:super-admin:bootstrap')->assertExitCode(1);
+        self::assertFalse((bool) $user->fresh()?->getAttribute('is_platform_owner'));
+    }
+
+    public function test_competing_platform_owner_blocks_first_account_bootstrap(): void
+    {
+        $user = $this->createSingleAccount(withPasskey: true);
+        User::factory()->create([
+            'email_verified_at' => null,
+            'is_platform_owner' => true,
+            'platform_owner_granted_at' => now(),
+        ]);
+
+        $this->artisan('kmj:super-admin:bootstrap')->assertExitCode(1);
+        self::assertFalse((bool) $user->fresh()?->getAttribute('is_platform_owner'));
     }
 
     public function test_confirmation_cancellation_never_mutates_the_account(): void
