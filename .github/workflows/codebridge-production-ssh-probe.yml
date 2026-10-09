@@ -120,6 +120,30 @@ jobs:
           else
             echo "production_path_visible=no"
           fi
+          # Inspect only a fixed, non-secret classification from the existing
+          # Laravel config cache. Never print the upstream URL or environment.
+          CACHE=/home/kmjprod/current/apps/platform/bootstrap/cache/config.php
+          if [ -r "$CACHE" ] && command -v php >/dev/null 2>&1; then
+            if ! php -r '
+              $config = require $argv[1];
+              $url = $config["services"]["codebridge_gateway"]["url"] ?? null;
+              $host = is_string($url) ? parse_url($url, PHP_URL_HOST) : null;
+              if ($host === "kmj-codebridge-gateway.onrender.com") {
+                  $kind = "render";
+              } elseif (in_array($host, ["localhost", "127.0.0.1"], true)) {
+                  $kind = "loopback";
+              } elseif ($host === null || $host === false || $host === "") {
+                  $kind = "missing";
+              } else {
+                  $kind = "other";
+              }
+              echo "production_codebridge_upstream_kind=" . $kind . PHP_EOL;
+            ' "$CACHE"; then
+              echo "production_codebridge_upstream_kind=probe_unavailable"
+            fi
+          else
+            echo "production_codebridge_upstream_kind=config_cache_unavailable"
+          fi
           REMOTE
           rc=$?
           set -e
