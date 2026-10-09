@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\User;
+use App\Services\CodeBridge\LegacyMcpOAuthChallenge;
 use App\Services\CodeBridge\OAuth\OAuthError;
 use App\Services\CodeBridge\OAuth\OAuthServer;
 use Illuminate\Http\JsonResponse;
@@ -92,6 +93,20 @@ Route::post('mcp', function (Request $request, OAuthServer $server) {
     } catch (Throwable) {
         return response()->json(['error' => 'CODEBRIDGE_GATEWAY_UNAVAILABLE'], 503)
             ->header('Cache-Control', 'no-store');
+    }
+
+    // Older gateway versions embed OAuth denials in HTTP 200 MCP tool
+    // results. Normalize only a verified authorization challenge so IDE
+    // clients can start the standard browser OAuth flow. Successful calls
+    // and arbitrary tool errors always pass through unchanged.
+    if ($upstreamResponse->status() === 200 && $request->json('method') === 'tools/call') {
+        $scope = LegacyMcpOAuthChallenge::scope($upstreamResponse->body(), $server->resource());
+        if ($scope !== null) {
+            return response()->json(['error' => 'UNAUTHORIZED'], 401, [
+                'Cache-Control' => 'no-store',
+                'WWW-Authenticate' => LegacyMcpOAuthChallenge::header($server->resource(), $scope),
+            ]);
+        }
     }
 
     $responseHeaders = ['Cache-Control' => 'no-store'];
