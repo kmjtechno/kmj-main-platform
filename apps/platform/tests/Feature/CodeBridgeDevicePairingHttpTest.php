@@ -83,7 +83,6 @@ final class CodeBridgeDevicePairingHttpTest extends TestCase
         self::assertArrayNotHasKey('token_hash', $devices[0]);
         self::assertSame([], $directory->forTenant((string) Str::uuid(), time()));
 
-
         $this->withToken($redeemed['agent']['token'])
             ->postJson('/api/codebridge/v1/device-credentials/introspect')
             ->assertOk()
