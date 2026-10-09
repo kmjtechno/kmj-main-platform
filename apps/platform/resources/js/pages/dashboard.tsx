@@ -55,6 +55,7 @@ type Organization = {
 type DashboardProps = {
     organizations: Organization[];
     hasPasskey: boolean;
+    canManageCodeBridgeOwnerPlan: boolean;
 };
 
 const CHATGPT_DESKTOP_SETUP_URL = '/install-chatgpt-desktop.ps1';
@@ -76,6 +77,7 @@ const productImages: Record<string, string> = {
 export default function Dashboard({
     organizations,
     hasPasskey,
+    canManageCodeBridgeOwnerPlan,
 }: DashboardProps) {
     const services = organizations.flatMap((organization) =>
         organization.entitlements.map((entitlement) => ({
@@ -156,6 +158,9 @@ export default function Dashboard({
                                     <CodeBridgeCard
                                         key={service.id}
                                         service={service}
+                                        canManageOwnerPlan={
+                                            canManageCodeBridgeOwnerPlan
+                                        }
                                     />
                                 ) : (
                                     <GenericServiceCard
@@ -206,8 +211,10 @@ export default function Dashboard({
 
 function CodeBridgeCard({
     service,
+    canManageOwnerPlan,
 }: {
     service: Entitlement & { organization_name: string };
+    canManageOwnerPlan: boolean;
 }) {
     const detail = service.service;
     const permissions = detail?.permissions ?? [];
@@ -255,6 +262,15 @@ function CodeBridgeCard({
                             Manage CodeBridge
                             <ArrowRight className="h-3.5 w-3.5" />
                         </Link>
+                        {canManageOwnerPlan && (
+                            <Link
+                                href="/operator/codebridge/owner-plan"
+                                className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-red-500/25 bg-red-500/5 px-4 text-xs font-bold text-red-500 transition hover:bg-red-500/10"
+                            >
+                                Owner plan controls
+                                <ShieldCheck className="h-4 w-4" />
+                            </Link>
+                        )}
                         {service.release && (
                             <a
                                 href={service.release.download_url}
