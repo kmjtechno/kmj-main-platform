@@ -72,6 +72,10 @@ final class LegacyMcpOAuthChallenge
     public static function header(string $resource, string $scope): string
     {
         $parts = parse_url($resource);
+        if (! is_array($parts) || ($parts['scheme'] ?? null) !== 'https'
+            || ! is_string($parts['host'] ?? null)) {
+            throw new \InvalidArgumentException('Invalid CodeBridge OAuth resource');
+        }
         $origin = 'https://'.$parts['host'];
         if (isset($parts['port'])) {
             $origin .= ':'.$parts['port'];
