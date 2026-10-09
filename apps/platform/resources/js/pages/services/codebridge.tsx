@@ -34,6 +34,16 @@ type ConnectedClient = {
     last_active_at: string | null;
 };
 
+type RegisteredDevice = {
+    id: string;
+    name: string;
+    platform: string | null;
+    arch: string | null;
+    projects: Array<{ id: string; name: string }>;
+    registration: 'registered';
+    connection_status: 'not_verified';
+};
+
 type Service = {
     endpoint: string;
     oauth_ready: boolean;
@@ -44,6 +54,7 @@ type Service = {
     permissions: string[];
     device_limit: number | null;
     managed_devices: number;
+    devices: RegisteredDevice[];
     pending_pairings: number;
     connected_clients: ConnectedClient[];
     access_token_ttl_seconds: number;
@@ -57,6 +68,8 @@ type Props = {
 };
 
 const CHATGPT_DESKTOP_SETUP_URL = '/install-chatgpt-desktop.ps1';
+const VSCODE_COPILOT_SETUP_URL =
+    'https://raw.githubusercontent.com/kmjtechno/kmj-codebridge/dbac6b574500804fea9ff493f27b84f2a5d73efa/scripts/install-vscode-copilot.cmd';
 const DESKTOP_INSTALL_DESCRIPTION =
     'Download the KMJ Desktop setup once. It adds the official KMJ marketplace; CodeBridge is installed by default and opens browser OAuth on first use.';
 const CONNECTED_CLIENTS_DESCRIPTION =
@@ -121,6 +134,13 @@ export default function CodeBridgeService({
 
                         <div className="flex flex-wrap gap-2">
                             <a
+                                href={VSCODE_COPILOT_SETUP_URL}
+                                className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-red-600 px-4 text-xs font-black text-white transition hover:bg-red-500"
+                            >
+                                <Laptop2 className="h-3.5 w-3.5" />
+                                One-click VS Code / Copilot
+                            </a>
+                            <a
                                 href={CHATGPT_DESKTOP_SETUP_URL}
                                 download
                                 className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-red-600 px-4 text-xs font-black text-white transition hover:bg-red-500"
@@ -133,7 +153,7 @@ export default function CodeBridgeService({
                                 className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border px-4 text-xs font-bold transition hover:border-red-500/40 hover:text-red-500"
                             >
                                 <Laptop2 className="h-3.5 w-3.5" />
-                                Pair a device
+                                Approve pairing
                             </Link>
                         </div>
                     </div>
@@ -324,6 +344,136 @@ export default function CodeBridgeService({
                             Account security
                         </Link>
                     </div>
+                </section>
+
+
+                <section className="border-sidebar-border/70 bg-card dark:border-sidebar-border rounded-2xl border p-5 sm:p-6">
+                    <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
+                        <div>
+                            <h2 className="font-black">Your devices & projects</h2>
+                            <p className="text-muted-foreground mt-1 text-xs leading-5">
+                                Main Platform is your sign-in and device
+                                authorization authority. GitHub sign-in is not
+                                needed to pair a local project or use CodeBridge.
+                            </p>
+                        </div>
+                        <button
+                            type="button"
+                            onClick={() => router.reload({ only: ['service'] })}
+                            className="inline-flex h-9 items-center justify-center rounded-xl border px-3 text-[11px] font-bold transition hover:border-red-500/40"
+                        >
+                            Refresh registration
+                        </button>
+                    </div>
+
+                    {service.devices.length === 0 ? (
+                        <div className="mt-5 rounded-xl border border-dashed p-5">
+                            <div className="text-sm font-bold">No devices paired yet</div>
+                            <p className="text-muted-foreground mt-2 text-xs leading-5">
+                                Install the CodeBridge device agent, then approve
+                                the short-lived pairing code using your KMJ account.
+                                No GitHub OAuth or manual device token is needed.
+                            </p>
+                            <Link
+                                href="/codebridge/pair"
+                                className="mt-4 inline-flex h-9 items-center rounded-xl border border-red-500/30 px-3 text-xs font-bold text-red-500"
+                            >
+                                Approve a pairing code
+                            </Link>
+                        </div>
+                    ) : (
+                        <div className="mt-5 grid gap-3 md:grid-cols-2">
+                            {service.devices.map((device) => (
+                                <div
+                                    key={device.id}
+                                    className="min-w-0 rounded-xl border p-4"
+                                >
+                                    <div className="flex flex-wrap items-center justify-between gap-2">
+                                        <div className="min-w-0">
+                                            <div className="truncate text-sm font-bold">
+                                                {device.name}
+                                            </div>
+                                            <div className="text-muted-foreground mt-1 truncate text-[11px]">
+                                                {device.id}
+                                            </div>
+                                        </div>
+                                        <span className="rounded-lg border px-2 py-1 text-[10px] font-semibold">
+                                            Registered
+                                        </span>
+                                    </div>
+                                    <div className="text-muted-foreground mt-3 text-xs">
+                                        {[device.platform, device.arch]
+                                            .filter(Boolean)
+                                            .join(' / ') || 'Device type not reported'}
+                                    </div>
+                                    <div className="mt-3 text-xs font-semibold">
+                                        {device.projects.length
+                                            ? 'Authorized projects'
+                                            : 'No project grant reported'}
+                                    </div>
+                                    {device.projects.map((project) => (
+                                        <div
+                                            key={project.id}
+                                            className="mt-2 rounded-lg border bg-black/5 px-3 py-2 text-xs dark:bg-white/[0.03]"
+                                        >
+                                            {project.name}
+                                            <span className="text-muted-foreground ml-2">
+                                                {project.id}
+                                            </span>
+                                        </div>
+                                    ))}
+                                    <p className="text-muted-foreground mt-3 text-[11px] leading-5">
+                                        Live connection: Not verified. Registration
+                                        alone does not prove the agent is online.
+                                        Check connection_overview in your
+                                        authenticated CodeBridge client.
+                                    </p>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                    {service.managed_devices > service.devices.length && (
+                        <p className="text-muted-foreground mt-3 text-xs">
+                            Showing the first {service.devices.length} registered
+                            devices. The list is intentionally bounded.
+                        </p>
+                    )}
+                </section>
+
+                <section className="border-sidebar-border/70 bg-card dark:border-sidebar-border rounded-2xl border p-5 sm:p-6">
+                    <h2 className="font-black">Connect your AI workspace</h2>
+                    <p className="text-muted-foreground mt-1 text-xs leading-5">
+                        Connect the same authorized projects to ChatGPT,
+                        VS Code / GitHub Copilot, Claude, Cursor or another
+                        OAuth-capable MCP client. You do not need a GitHub account
+                        for CodeBridge authorization.
+                    </p>
+                    <div className="mt-4 flex flex-wrap gap-3">
+                        <a
+                            href={VSCODE_COPILOT_SETUP_URL}
+                            className="inline-flex h-10 items-center rounded-xl bg-red-600 px-4 text-xs font-bold text-white hover:bg-red-500"
+                        >
+                            Install VS Code / Copilot
+                        </a>
+                        <a
+                            href={CHATGPT_DESKTOP_SETUP_URL}
+                            download
+                            className="inline-flex h-10 items-center rounded-xl border px-4 text-xs font-bold"
+                        >
+                            Install ChatGPT Desktop
+                        </a>
+                        <button
+                            type="button"
+                            onClick={() => navigator.clipboard.writeText(service.endpoint)}
+                            className="inline-flex h-10 items-center rounded-xl border px-4 text-xs font-bold"
+                        >
+                            Copy MCP endpoint for other IDEs
+                        </button>
+                    </div>
+                    <p className="text-muted-foreground mt-3 text-[11px]">
+                        Browser OAuth approval remains required. The installer
+                        never stores KMJ passwords or bypasses consent.
+                    </p>
                 </section>
 
                 <section className="border-sidebar-border/70 bg-card dark:border-sidebar-border rounded-2xl border p-5 sm:p-6">
