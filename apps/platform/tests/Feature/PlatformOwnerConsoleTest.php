@@ -18,6 +18,75 @@ final class PlatformOwnerConsoleTest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_super_admin_development_profile_requires_verified_owner_passkey(): void
+    {
+        $url = '/operator/super-admin/development-profile';
+
+        $this->getJson($url)->assertUnauthorized();
+
+        $regular = User::factory()->create(['email_verified_at' => now()]);
+        $this->actingAs($regular)->withSession(['auth.password_confirmed_at' => time()])
+            ->getJson($url)->assertForbidden();
+
+        $owner = $this->createPasskeyOwner();
+        $this->actingAs($owner)->withSession(['auth.password_confirmed_at' => time()])
+            ->getJson($url)->assertForbidden();
+
+        $owner->forceFill([
+            'email' => 'kmjtechno.net@gmail.com',
+            'email_verified_at' => null,
+        ])->save();
+        $this->actingAs($owner)->withSession(['auth.password_confirmed_at' => time()])
+            ->getJson($url)->assertForbidden();
+
+        $owner->forceFill(['email_verified_at' => now()])->save();
+        app(KmjProductCatalog::class)->syncAll();
+
+        $this->actingAs($owner)->withSession(['auth.password_confirmed_at' => time()])
+            ->getJson($url)
+            ->assertOk()
+            ->assertJsonPath('profile', 'kmj.super-admin.hyperspeed')
+            ->assertJsonPath('subject.email', $owner->email)
+            ->assertJsonPath('scope.logical_task_backlog', 'unmetered')
+            ->assertJsonPath('execution.max_parallel_jobs', 'signed-entitlement-and-current-resources')
+            ->assertJsonPath('cost.unapproved_spend_inr_minor', 0)
+            ->assertJsonPath('cost.automatic_paid_fallback_enabled', false)
+            ->assertJsonPath('grants_product_license', false)
+            ->assertJsonPath('changes_entitlements', false)
+            ->assertJsonCount(15, 'scope.registered_product_slugs');
+    }
+
+    public function test_confirmed_super_admin_email_does_not_grant_owner_access(): void
+    {
+        $user = User::factory()->create([
+            'email' => 'kmjtechno.net@gmail.com',
+            'email_verified_at' => now(),
+            'is_platform_owner' => false,
+        ]);
+
+        $this->actingAs($user)->withSession(['auth.password_confirmed_at' => time()])
+            ->getJson('/operator/super-admin/development-profile')
+            ->assertForbidden();
+
+        $user->forceFill([
+            'is_platform_owner' => true,
+            'platform_owner_granted_at' => now(),
+        ])->save();
+
+        // Even an owner with the exact confirmed email needs a registered passkey.
+        $this->actingAs($user)->withSession(['auth.password_confirmed_at' => time()])
+            ->getJson('/operator/super-admin/development-profile')
+            ->assertForbidden();
+    }
+
+    public function test_other_verified_platform_owner_cannot_open_single_account_super_admin_profile(): void
+    {
+        $other = $this->createPasskeyOwner();
+        $this->actingAs($other)->withSession(['auth.password_confirmed_at' => time()])
+            ->getJson('/operator/super-admin/development-profile')
+            ->assertForbidden();
+    }
+
     public function test_regular_user_cannot_open_operator_console(): void
     {
         $user = User::factory()->create(['email_verified_at' => now()]);

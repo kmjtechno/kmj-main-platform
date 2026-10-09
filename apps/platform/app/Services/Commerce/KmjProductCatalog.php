@@ -5,6 +5,7 @@ namespace App\Services\Commerce;
 use DomainException;
 use Illuminate\Support\Facades\DB;
 use KMJ\MainPlatform\Catalog\Models\Product;
+use KMJ\MainPlatform\Catalog\Services\PlanCatalog;
 use KMJ\MainPlatform\Catalog\Services\ProductCatalog;
 
 final class KmjProductCatalog
@@ -99,6 +100,7 @@ final class KmjProductCatalog
     public function __construct(
         private readonly CloudOSProductCatalog $cloudOS,
         private readonly ProductCatalog $products,
+        private readonly PlanCatalog $plans,
     ) {}
 
     /**
@@ -143,6 +145,10 @@ final class KmjProductCatalog
                 $product->refresh();
                 $this->seedManagementDefaults($product, $slug);
             }
+
+            $this->plans->ensureCodeBridgeOwnerPlan(
+                (string) $catalog[self::CODEBRIDGE_SLUG]->getKey(),
+            );
 
             return $catalog;
         });
