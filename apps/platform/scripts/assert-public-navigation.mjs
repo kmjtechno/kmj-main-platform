@@ -5,7 +5,11 @@ export function assertPublicNavigation(header) {
         header,
         /aria-label=\{open \? ["']Close navigation["'] : ["']Open navigation["']\}/,
     );
-    assert.match(header, /aria-controls="public-mobile-nav"/);
+    assert.match(
+        header,
+        /aria-controls=\{open \? ["']public-mobile-nav["'] : undefined\}/,
+        'the mobile button must not reference the unmounted panel while collapsed',
+    );
     assert.match(header, /id="public-mobile-nav"/);
     assert.match(
         header,

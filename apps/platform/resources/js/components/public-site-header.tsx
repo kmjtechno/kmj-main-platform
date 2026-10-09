@@ -97,7 +97,7 @@ export default function PublicSiteHeader() {
                     type="button"
                     aria-label={open ? 'Close navigation' : 'Open navigation'}
                     aria-expanded={open}
-                    aria-controls="public-mobile-nav"
+                    aria-controls={open ? 'public-mobile-nav' : undefined}
                     onClick={() => setOpen((value) => !value)}
                     className="grid h-10 w-10 place-items-center rounded-lg border border-white/10 bg-white/[0.03] text-white lg:hidden"
                 >

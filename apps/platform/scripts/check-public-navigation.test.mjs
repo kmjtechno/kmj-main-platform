@@ -34,8 +34,8 @@ for (const [name, before, after] of [
     ['mobile navigation landmark', 'role="navigation"', 'role="group"'],
     [
         'menu controls',
+        "aria-controls={open ? 'public-mobile-nav' : undefined}",
         'aria-controls="public-mobile-nav"',
-        'data-controls="public-mobile-nav"',
     ],
 ]) {
     void test('navigation guards reject a missing ' + name, () => {
