@@ -707,8 +707,17 @@ export default function Operator({
                                 license issuance remain explicit governed steps.
                             </p>
                         </div>
-                        <div className="rounded-xl border border-emerald-500/15 bg-emerald-500/5 px-4 py-3 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
-                            Owner authority verified
+                        <div className="flex flex-wrap items-center gap-3">
+                            <div className="rounded-xl border border-emerald-500/15 bg-emerald-500/5 px-4 py-3 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
+                                Owner authority verified
+                            </div>
+                            <Link
+                                href="/operator/payments"
+                                className="inline-flex items-center gap-2 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-xs font-bold text-red-500 transition hover:bg-red-500/20"
+                            >
+                                Manage payment gateways
+                                <ExternalLink className="h-4 w-4" />
+                            </Link>
                         </div>
                     </div>
                 </section>

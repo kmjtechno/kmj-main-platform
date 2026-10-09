@@ -127,6 +127,14 @@ export const deliveryMilestones: DeliveryMilestone[] = [
             'PR #340: RazorpaySignatureVerifier, 5 PHPUnit tests / 19 assertions and Pint PASS locally; no live keys or charge endpoints, no entitlement grants from raw payment callbacks',
     },
     {
+        id: 'international-payment-gateways',
+        title: 'Cashfree and Razorpay international gateway integration',
+        state: 'active',
+        detail: 'Cashfree signed webhooks, sandbox-only server-created orders, provider-bound verification and read-only passkey-gated Super Admin payment readiness have source and regression coverage; merchant-approved accounts still need independently verified credentials, cross-border activation, payment settlement/reconciliation, subscriptions and refunds before live collection',
+        evidence:
+            '2026-10-09 multi-gateway security branch: CashfreeSignatureVerifier, PaymentWebhookSignatureRouter, CashfreeSandboxOrderClient, PaymentGatewayReadiness and owner-only /operator/payments; sandbox test keys are not configured, no real charges or unverified entitlement writes',
+    },
+    {
         id: 'desktop-commander-commercial-control-plane',
         title: 'Desktop Commander commercial control plane',
         state: 'active',
