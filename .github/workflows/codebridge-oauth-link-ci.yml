@@ -19,6 +19,11 @@ on:
       - '.github/workflows/codebridge-oauth-link-ci.yml'
   workflow_dispatch:
 
+concurrency:
+  # Replace obsolete runs for the same PR/ref without changing required checks.
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
 
