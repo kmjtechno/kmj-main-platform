@@ -346,15 +346,17 @@ export default function CodeBridgeService({
                     </div>
                 </section>
 
-
                 <section className="border-sidebar-border/70 bg-card dark:border-sidebar-border rounded-2xl border p-5 sm:p-6">
                     <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
                         <div>
-                            <h2 className="font-black">Your devices & projects</h2>
+                            <h2 className="font-black">
+                                Your devices & projects
+                            </h2>
                             <p className="text-muted-foreground mt-1 text-xs leading-5">
                                 Main Platform is your sign-in and device
                                 authorization authority. GitHub sign-in is not
-                                needed to pair a local project or use CodeBridge.
+                                needed to pair a local project or use
+                                CodeBridge.
                             </p>
                         </div>
                         <button
@@ -368,11 +370,14 @@ export default function CodeBridgeService({
 
                     {service.devices.length === 0 ? (
                         <div className="mt-5 rounded-xl border border-dashed p-5">
-                            <div className="text-sm font-bold">No devices paired yet</div>
+                            <div className="text-sm font-bold">
+                                No devices paired yet
+                            </div>
                             <p className="text-muted-foreground mt-2 text-xs leading-5">
-                                Install the CodeBridge device agent, then approve
-                                the short-lived pairing code using your KMJ account.
-                                No GitHub OAuth or manual device token is needed.
+                                Install the CodeBridge device agent, then
+                                approve the short-lived pairing code using your
+                                KMJ account. No GitHub OAuth or manual device
+                                token is needed.
                             </p>
                             <Link
                                 href="/codebridge/pair"
@@ -404,7 +409,8 @@ export default function CodeBridgeService({
                                     <div className="text-muted-foreground mt-3 text-xs">
                                         {[device.platform, device.arch]
                                             .filter(Boolean)
-                                            .join(' / ') || 'Device type not reported'}
+                                            .join(' / ') ||
+                                            'Device type not reported'}
                                     </div>
                                     <div className="mt-3 text-xs font-semibold">
                                         {device.projects.length
@@ -423,9 +429,10 @@ export default function CodeBridgeService({
                                         </div>
                                     ))}
                                     <p className="text-muted-foreground mt-3 text-[11px] leading-5">
-                                        Live connection: Not verified. Registration
-                                        alone does not prove the agent is online.
-                                        Check connection_overview in your
+                                        Live connection: Not verified.
+                                        Registration alone does not prove the
+                                        agent is online. Check
+                                        connection_overview in your
                                         authenticated CodeBridge client.
                                     </p>
                                 </div>
@@ -434,8 +441,9 @@ export default function CodeBridgeService({
                     )}
                     {service.managed_devices > service.devices.length && (
                         <p className="text-muted-foreground mt-3 text-xs">
-                            Showing the first {service.devices.length} registered
-                            devices. The list is intentionally bounded.
+                            Showing the first {service.devices.length}{' '}
+                            registered devices. The list is intentionally
+                            bounded.
                         </p>
                     )}
                 </section>
@@ -443,10 +451,10 @@ export default function CodeBridgeService({
                 <section className="border-sidebar-border/70 bg-card dark:border-sidebar-border rounded-2xl border p-5 sm:p-6">
                     <h2 className="font-black">Connect your AI workspace</h2>
                     <p className="text-muted-foreground mt-1 text-xs leading-5">
-                        Connect the same authorized projects to ChatGPT,
-                        VS Code / GitHub Copilot, Claude, Cursor or another
-                        OAuth-capable MCP client. You do not need a GitHub account
-                        for CodeBridge authorization.
+                        Connect the same authorized projects to ChatGPT, VS Code
+                        / GitHub Copilot, Claude, Cursor or another
+                        OAuth-capable MCP client. You do not need a GitHub
+                        account for CodeBridge authorization.
                     </p>
                     <div className="mt-4 flex flex-wrap gap-3">
                         <a
@@ -464,7 +472,9 @@ export default function CodeBridgeService({
                         </a>
                         <button
                             type="button"
-                            onClick={() => navigator.clipboard.writeText(service.endpoint)}
+                            onClick={() =>
+                                navigator.clipboard.writeText(service.endpoint)
+                            }
                             className="inline-flex h-10 items-center rounded-xl border px-4 text-xs font-bold"
                         >
                             Copy MCP endpoint for other IDEs
