@@ -1,0 +1,25 @@
+name: CodeBridge Temporary Format Preview
+on:
+  push:
+    branches:
+      - feat/codebridge-customer-devices-local-first
+permissions:
+  contents: read
+jobs:
+  format:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: apps/platform/package-lock.json
+      - name: Print canonical format diff for review
+        run: |
+          cd apps/platform
+          npm ci --ignore-scripts --no-audit --no-fund
+          npx vp fmt resources/js/pages/services/codebridge.tsx
+          git diff -- resources/js/pages/services/codebridge.tsx
