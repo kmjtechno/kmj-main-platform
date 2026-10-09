@@ -130,9 +130,9 @@ export const deliveryMilestones: DeliveryMilestone[] = [
         id: 'razorpay-provider-authenticity',
         title: 'Razorpay payment gateway integration',
         state: 'active',
-        detail: 'Server-side Razorpay checkout and raw webhook HMAC verification are implemented without charging customers; sandbox checkout, captured-payment reconciliation, authenticated webhooks, owner controls and merchant activation remain gated',
+        detail: 'Server-side Razorpay raw webhook HMAC and fail-closed test-key-only Orders API client implemented without charging customers; Razorpay real sandbox checkout, captured-payment reconciliation, authenticated webhooks, customer billing and merchant cross-border activation remain gated',
         evidence:
-            'PR #340: RazorpaySignatureVerifier, 5 PHPUnit tests / 19 assertions and Pint PASS locally; no live keys or charge endpoints, no entitlement grants from raw payment callbacks',
+            'PR #340: HMAC trust boundary. Follow-up RazorpaySandboxOrderClient branch: 4 mocked tests / 17 assertions and Pint PASS; test-key-only Orders API, no live keys or charge endpoints, no entitlement grants from raw payment callbacks',
     },
     {
         id: 'international-payment-gateways',

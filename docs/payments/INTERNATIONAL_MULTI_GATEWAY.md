@@ -25,6 +25,12 @@ Razorpay and Cashfree should be available as **independent, explicitly approved 
 
 **Environment controls (store securely on VPS, do not commit):** `KMJ_CASHFREE_CLIENT_ID`, `KMJ_CASHFREE_CLIENT_SECRET`, `KMJ_RAZORPAY_KEY_ID`, `KMJ_RAZORPAY_KEY_SECRET`, `KMJ_RAZORPAY_WEBHOOK_SECRET`. International capabilities are recorded only by audited manual verification; no public switches are activated by merely setting booleans. `KMJ_PAYMENT_LIVE_CHARGING_ENABLED` does not create any charge endpoint and must not be treated as production authorization.
 
+## Razorpay sandbox order slice (2026-10-09)
+
+`RazorpaySandboxOrderClient` creates Orders API requests with **only** `rzp_test_` credentials; `rzp_live_` keys are rejected before any HTTP request. It accepts only trusted server-side INR/paise/receipt values, sends `partial_payment=false`, and validates provider response ID, amount, currency, receipt, `created` status and amount paid/due. PHPUnit uses mocked HTTP and does **not** prove a real sandbox key works. There is no public checkout route and no automatic entitlement issuance. Local commercial-order-to-provider-receipt idempotency and actual sandbox payment/webhook reconciliation remain mandatory before activation.
+
+API reference: https://razorpay.com/docs/server-integration/python/test-app/ and https://razorpay.com/docs/api/orders/fetch-with-id/
+
 ## Required before launch
 
 - Complete Cashfree and Razorpay **sandbox** create-order/checkout, client return, raw-body signed webhook, server-side GET payment verification, capture/reconciliation and duplicate/retry tests with actual merchant test keys.
