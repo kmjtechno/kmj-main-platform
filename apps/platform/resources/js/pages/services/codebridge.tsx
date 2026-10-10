@@ -77,6 +77,14 @@ const CONNECTED_CLIENTS_DESCRIPTION =
 const NO_CONNECTED_CLIENTS =
     'No active CodeBridge OAuth client is connected to this account.';
 
+// VS Code expects exactly one percent-encoded MCP server configuration in
+// its registered URI handler; do not include tokens or the whole mcp.json.
+function vscodeInstallUrl(endpoint: string, insiders = false): string {
+    const scheme = insiders ? 'vscode-insiders' : 'vscode';
+    const server = { name: 'kmj-codebridge', type: 'http', url: endpoint };
+    return `${scheme}:mcp/install?${encodeURIComponent(JSON.stringify(server))}`;
+}
+
 export default function CodeBridgeService({
     organization,
     entitlement,
@@ -458,10 +466,22 @@ export default function CodeBridgeService({
                     </p>
                     <div className="mt-4 flex flex-wrap gap-3">
                         <a
-                            href={VSCODE_COPILOT_SETUP_URL}
+                            href={vscodeInstallUrl(service.endpoint)}
                             className="inline-flex h-10 items-center rounded-xl bg-red-600 px-4 text-xs font-bold text-white hover:bg-red-500"
                         >
-                            Install VS Code / Copilot
+                            One-click VS Code / Copilot
+                        </a>
+                        <a
+                            href={vscodeInstallUrl(service.endpoint, true)}
+                            className="inline-flex h-10 items-center rounded-xl border px-4 text-xs font-bold"
+                        >
+                            VS Code Insiders
+                        </a>
+                        <a
+                            href={VSCODE_COPILOT_SETUP_URL}
+                            className="inline-flex h-10 items-center rounded-xl border px-4 text-xs font-bold"
+                        >
+                            Windows setup fallback
                         </a>
                         <a
                             href={CHATGPT_DESKTOP_SETUP_URL}
@@ -481,8 +501,11 @@ export default function CodeBridgeService({
                         </button>
                     </div>
                     <p className="text-muted-foreground mt-3 text-[11px]">
-                        Browser OAuth approval remains required. The installer
-                        never stores KMJ passwords or bypasses consent.
+                        VS Code opens a confirmation dialog before adding the
+                        MCP server. Complete KMJ browser OAuth when prompted.
+                        If your system does not handle VS Code install links,
+                        use the Windows fallback or copy the MCP endpoint.
+                        No GitHub login is required for device authorization.
                     </p>
                 </section>
 
