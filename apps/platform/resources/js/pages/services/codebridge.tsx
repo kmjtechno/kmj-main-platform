@@ -502,10 +502,10 @@ export default function CodeBridgeService({
                     </div>
                     <p className="text-muted-foreground mt-3 text-[11px]">
                         VS Code opens a confirmation dialog before adding the
-                        MCP server. Complete KMJ browser OAuth when prompted.
-                        If your system does not handle VS Code install links,
-                        use the Windows fallback or copy the MCP endpoint.
-                        No GitHub login is required for device authorization.
+                        MCP server. Complete KMJ browser OAuth when prompted. If
+                        your system does not handle VS Code install links, use
+                        the Windows fallback or copy the MCP endpoint. No GitHub
+                        login is required for device authorization.
                     </p>
                 </section>
 
