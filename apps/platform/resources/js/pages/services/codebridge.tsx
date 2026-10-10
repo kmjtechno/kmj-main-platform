@@ -258,7 +258,7 @@ export default function CodeBridgeService({
                             <a
                                 href="/install"
                                 download="KMJ-CodeBridge-VPS.sh"
-                                className="mt-3 inline-flex h-9 items-center rounded-xl border border-red-500/30 px-3 text-[11px] font-bold text-red-500 transition hover:border-red-500"
+                                className="mt-4 inline-flex h-9 items-center rounded-xl border border-red-500/30 px-3 text-xs font-bold text-red-500"
                             >
                                 Download Linux / VPS bootstrap
                             </a>
