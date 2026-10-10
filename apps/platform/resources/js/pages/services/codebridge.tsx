@@ -251,9 +251,9 @@ export default function CodeBridgeService({
                             </div>
                             <p className="text-muted-foreground mt-2 text-[11px] leading-5">
                                 Download and inspect the pinned bootstrap first,
-                                then run the saved script in its folder.
-                                Pairing still requires browser approval; no
-                                agent token is entered manually.
+                                then run the saved script in its folder. Pairing
+                                still requires browser approval; no agent token
+                                is entered manually.
                             </p>
                             <a
                                 href="/install"
