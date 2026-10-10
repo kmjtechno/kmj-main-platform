@@ -142,11 +142,11 @@ export default function CodeBridgeService({
 
                         <div className="flex flex-wrap gap-2">
                             <a
-                                href={VSCODE_COPILOT_SETUP_URL}
+                                href={vscodeInstallUrl(service.endpoint)}
                                 className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-red-600 px-4 text-xs font-black text-white transition hover:bg-red-500"
                             >
                                 <Laptop2 className="h-3.5 w-3.5" />
-                                One-click VS Code / Copilot
+                                Open in VS Code / Copilot
                             </a>
                             <a
                                 href={CHATGPT_DESKTOP_SETUP_URL}
@@ -250,13 +250,20 @@ export default function CodeBridgeService({
                                 Install on Linux / VPS
                             </div>
                             <p className="text-muted-foreground mt-2 text-[11px] leading-5">
-                                Run this from the project directory. The
-                                installer opens a short-lived browser pairing
-                                flow; no manual agent token is required.
+                                Download and inspect the pinned bootstrap first,
+                                then run the saved script in its folder.
+                                Pairing still requires browser approval; no
+                                agent token is entered manually.
                             </p>
+                            <a
+                                href="/install"
+                                download="KMJ-CodeBridge-VPS.sh"
+                                className="mt-3 inline-flex h-9 items-center rounded-xl border border-red-500/30 px-3 text-[11px] font-bold text-red-500 transition hover:border-red-500"
+                            >
+                                Download Linux / VPS bootstrap
+                            </a>
                             <code className="mt-3 block overflow-x-auto rounded-lg bg-black/5 px-3 py-2 text-[11px] dark:bg-white/[0.03]">
-                                curl -fsSL https://kmjtechno.com/install | sudo
-                                bash
+                                sudo bash KMJ-CodeBridge-VPS.sh
                             </code>
                         </div>
 
