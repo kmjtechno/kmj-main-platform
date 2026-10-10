@@ -8,9 +8,7 @@ const servicePage = readFileSync(
 );
 
 void test('primary VS Code action uses credential-free native install link', () => {
-    const start = servicePage.indexOf(
-        '<div className="flex flex-wrap gap-2">',
-    );
+    const start = servicePage.indexOf('<div className="flex flex-wrap gap-2">');
     const end = servicePage.indexOf('</div>', start);
     assert.ok(start >= 0 && end > start);
     const primaryActions = servicePage.slice(start, end);
@@ -29,5 +27,8 @@ void test('Linux bootstrap is downloaded for inspection, not piped to root', () 
     );
     assert.match(servicePage, /sudo bash KMJ-CodeBridge-VPS\.sh/);
     assert.doesNotMatch(servicePage, /curl[^\n]*\|\s*sudo\s*bash/);
-    assert.match(servicePage, /Download and inspect the pinned bootstrap first/);
+    assert.match(
+        servicePage,
+        /Download and inspect the pinned bootstrap first/,
+    );
 });
