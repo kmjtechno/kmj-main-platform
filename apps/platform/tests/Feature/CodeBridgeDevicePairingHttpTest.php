@@ -147,6 +147,11 @@ final class CodeBridgeDevicePairingHttpTest extends TestCase
         ])->assertStatus(400);
 
         DB::table('codebridge_device_pairings')->update(['expires_at' => now()->subSecond()]);
+        $this->actingAs($user)
+            ->get('/codebridge/pair?checked=1&code='.urlencode($created['user_code']))
+            ->assertOk()
+            ->assertSee('Pairing code invalid, expired, or already used.');
+
         $this->postJson('/api/codebridge/v1/device-enrollments/token', [
             'product' => 'KMJ_CODEBRIDGE',
             'device_code' => $created['device_code'],
