@@ -21,8 +21,7 @@ final class VerifiedPaymentWebhookEnvelope
     ) {}
 
     /**
-     * @param array<string, string> $headers Lowercase HTTP header names.
-     *
+     * @param  array<string, string>  $headers  Lowercase HTTP header names.
      * @return array{provider: string, event_id: string, event_type: string, order_id: string, payment_id: string, requires_reconciliation: true}|null
      */
     public function inspect(string $provider, string $rawBody, array $headers, string $secret): ?array
@@ -50,9 +49,8 @@ final class VerifiedPaymentWebhookEnvelope
     }
 
     /**
-     * @param array<string, mixed> $event
-     * @param array<string, string> $headers
-     *
+     * @param  array<string, mixed>  $event
+     * @param  array<string, string>  $headers
      * @return array{provider: string, event_id: string, event_type: string, order_id: string, payment_id: string, requires_reconciliation: true}|null
      */
     private function razorpay(array $event, array $headers): ?array
@@ -84,8 +82,7 @@ final class VerifiedPaymentWebhookEnvelope
     }
 
     /**
-     * @param array<string, mixed> $event
-     *
+     * @param  array<string, mixed>  $event
      * @return array{provider: string, event_id: string, event_type: string, order_id: string, payment_id: string, requires_reconciliation: true}|null
      */
     private function cashfree(array $event): ?array
