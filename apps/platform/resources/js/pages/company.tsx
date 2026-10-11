@@ -100,6 +100,15 @@ export default function Company() {
                                     <ArrowRight className="h-4 w-4" />
                                 </Link>
                             </div>
+                            <a
+                                href="https://www.linkedin.com/company/kmj-techno/"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="mt-5 inline-flex items-center gap-2 text-sm font-bold text-white/75 underline decoration-[#e21b23]/60 underline-offset-4 transition hover:text-white"
+                            >
+                                Discuss your international B2B project
+                                <ArrowRight className="h-4 w-4" />
+                            </a>
                         </div>
                     </section>
 
