@@ -43,9 +43,10 @@
             }
         </style>
 
-        <link rel="icon" href="/favicon.ico" sizes="any">
-        <link rel="icon" href="/favicon.svg" type="image/svg+xml">
-        <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+        {{-- Approved transparent high-visibility KMJ TECHNO favicon. --}}
+        <link rel="icon" type="image/png" sizes="64x64" href="/kmj-favicon-v2-20261002.png">
+        <link rel="shortcut icon" type="image/png" href="/kmj-favicon-v2-20261002.png">
+        <link rel="apple-touch-icon" href="/assets/brand/kmj-app-icon.png">
 
         @fonts
 
