@@ -101,6 +101,23 @@ final class CodeBridgeDevicePairingHttpTest extends TestCase
         ])->assertStatus(410);
     }
 
+    public function test_check_device_shows_clear_feedback_for_unknown_or_expired_code(): void
+    {
+        $user = User::factory()->create();
+
+        $this->actingAs($user)
+            ->get('/codebridge/pair?code=ABCD-EFGH')
+            ->assertOk()
+            ->assertSee('name="checked" value="1"', false)
+            ->assertDontSee('Pairing code invalid, expired, or already used.');
+
+        $this->actingAs($user)
+            ->get('/codebridge/pair?checked=1&code=ABCD-EFGH')
+            ->assertOk()
+            ->assertSee('Pairing code invalid, expired, or already used.')
+            ->assertSee('role="alert"', false);
+    }
+
     public function test_pairing_rejects_wrong_verifier_and_expired_code(): void
     {
         config()->set('codebridge.enabled', true);
@@ -130,6 +147,11 @@ final class CodeBridgeDevicePairingHttpTest extends TestCase
         ])->assertStatus(400);
 
         DB::table('codebridge_device_pairings')->update(['expires_at' => now()->subSecond()]);
+        $this->actingAs($user)
+            ->get('/codebridge/pair?checked=1&code='.urlencode($created['user_code']))
+            ->assertOk()
+            ->assertSee('Pairing code invalid, expired, or already used.');
+
         $this->postJson('/api/codebridge/v1/device-enrollments/token', [
             'product' => 'KMJ_CODEBRIDGE',
             'device_code' => $created['device_code'],
