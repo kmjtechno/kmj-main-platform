@@ -27,7 +27,11 @@
     @endif
 
     @if (!$pairing)
+        @if (request()->query('checked') === '1' && trim($code) !== '')
+            <div class="err" role="alert">Pairing code invalid, expired, or already used. Generate a new code from the CodeBridge installer and try again.</div>
+        @endif
         <form method="GET" action="{{ route('codebridge.pair') }}">
+            <input type="hidden" name="checked" value="1">
             <label for="code">Pairing code</label>
             <input id="code" name="code" value="{{ $code }}" placeholder="ABCD-EFGH" autocomplete="off" required>
             <button type="submit">Check device</button>
