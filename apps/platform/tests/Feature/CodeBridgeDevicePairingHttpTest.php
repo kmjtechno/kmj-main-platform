@@ -101,6 +101,23 @@ final class CodeBridgeDevicePairingHttpTest extends TestCase
         ])->assertStatus(410);
     }
 
+    public function test_check_device_shows_clear_feedback_for_unknown_or_expired_code(): void
+    {
+        $user = User::factory()->create();
+
+        $this->actingAs($user)
+            ->get('/codebridge/pair?code=ABCD-EFGH')
+            ->assertOk()
+            ->assertSee('name="checked" value="1"', false)
+            ->assertDontSee('Pairing code invalid, expired, or already used.');
+
+        $this->actingAs($user)
+            ->get('/codebridge/pair?checked=1&code=ABCD-EFGH')
+            ->assertOk()
+            ->assertSee('Pairing code invalid, expired, or already used.')
+            ->assertSee('role="alert"', false);
+    }
+
     public function test_pairing_rejects_wrong_verifier_and_expired_code(): void
     {
         config()->set('codebridge.enabled', true);
