@@ -31,9 +31,15 @@ Route::middleware(['auth', 'verified'])->prefix('developer')->name('developer.')
             ->map(function (array $org): array {
                 $subscription = DB::table('kslp_issuer_subscriptions')
                     ->where('organization_id', $org['id'])->first();
-                $org['issuer_status'] = $subscription?->status ?? 'not_subscribed';
-                $org['product_limit'] = (int) ($subscription?->product_limit ?? 0);
-                $org['current_period_end'] = $subscription?->current_period_end ?? null;
+                if ($subscription === null) {
+                    $org['issuer_status'] = 'not_subscribed';
+                    $org['product_limit'] = 0;
+                    $org['current_period_end'] = null;
+                } else {
+                    $org['issuer_status'] = (string) $subscription->status;
+                    $org['product_limit'] = (int) $subscription->product_limit;
+                    $org['current_period_end'] = $subscription->current_period_end;
+                }
 
                 return $org;
             })->values()->all();
