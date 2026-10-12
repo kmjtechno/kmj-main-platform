@@ -17,6 +17,7 @@ return Application::configure(basePath: dirname(__DIR__))
             __DIR__.'/../routes/commerce-sales.php',
             __DIR__.'/../routes/product-manager.php',
             __DIR__.'/../routes/operator-ops.php',
+            __DIR__.'/../routes/operator-directory.php',
             __DIR__.'/../routes/kslp-public.php',
             __DIR__.'/../routes/codebridge-oauth.php',
         ],
