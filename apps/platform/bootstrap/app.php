@@ -17,6 +17,7 @@ return Application::configure(basePath: dirname(__DIR__))
             __DIR__.'/../routes/commerce-sales.php',
             __DIR__.'/../routes/product-manager.php',
             __DIR__.'/../routes/operator-ops.php',
+            __DIR__.'/../routes/operator-directory.php',
             __DIR__.'/../routes/kslp-public.php',
             __DIR__.'/../routes/codebridge-oauth.php',
         ],
@@ -38,6 +39,8 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
+        // Never flash payment credentials back into sessions on validation failures.
+        $exceptions->dontFlash(['client_id', 'client_secret', 'webhook_secret']);
         $exceptions->shouldRenderJsonWhen(
             fn (Request $request) => $request->is('api/*') || $request->expectsJson(),
         );
