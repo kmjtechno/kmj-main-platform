@@ -8,6 +8,7 @@ import {
     Package,
     ShieldCheck,
     ShoppingCart,
+    Users,
 } from 'lucide-react';
 
 const modules = [
