@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Services\Licensing\Kslp\KslpActivationProof;
 use App\Services\Licensing\Kslp\KslpDeveloperKeys;
 use App\Services\Licensing\Kslp\KslpLicenseControlPlane;
+use DomainException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
@@ -31,7 +32,7 @@ Route::prefix('v1/kslp/developer')->middleware('throttle:5,1')->group(function (
         try {
             $license = $keys->resolve($data['license_key']);
             $challenge = $proof->challenge($license['license_id'], $data['server_identity']);
-        } catch (\DomainException) {
+        } catch (DomainException) {
             return response()->json(['error' => 'KSLP_ACTIVATION_DENIED'], 422)
                 ->header('Cache-Control', 'no-store');
         }
@@ -99,7 +100,7 @@ Route::prefix('v1/kslp/developer')->middleware('throttle:5,1')->group(function (
 
                 return [$license, $activation];
             }, 3);
-        } catch (\DomainException) {
+        } catch (DomainException) {
             return response()->json(['error' => 'KSLP_ACTIVATION_DENIED'], 422)
                 ->header('Cache-Control', 'no-store');
         }
