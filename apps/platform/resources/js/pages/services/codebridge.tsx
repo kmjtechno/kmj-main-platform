@@ -1,5 +1,6 @@
 import { Head, Link, router } from '@inertiajs/react';
 import { useState } from 'react';
+import CodeBridgeControlCenterHub from '@/components/codebridge/control-center-hub';
 import DeviceControlCenter, {
     type CodeBridgeDevice,
 } from '@/components/codebridge/device-control-center';
@@ -202,6 +203,19 @@ export default function CodeBridgeService({
                         </div>
                     </div>
                 </section>
+
+                <CodeBridgeControlCenterHub
+                    organizationName={organization.name}
+                    plan={service.plan}
+                    licenseStatus={service.license_status}
+                    licenseExpiresAt={service.license_expires_at}
+                    managedDevices={service.managed_devices}
+                    deviceLimit={service.device_limit}
+                    pendingPairings={service.pending_pairings}
+                    authorizedClientGrants={service.connected_clients.length}
+                    oauthReady={service.oauth_ready}
+                    canManageOwnerPlan={canManageOwnerPlan}
+                />
 
                 <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
                     <Metric
@@ -523,7 +537,7 @@ export default function CodeBridgeService({
                     </p>
                 </section>
 
-                <section className="border-sidebar-border/70 bg-card dark:border-sidebar-border rounded-2xl border p-5 sm:p-6">
+                <section id="codebridge-clients" className="border-sidebar-border/70 bg-card dark:border-sidebar-border rounded-2xl border p-5 sm:p-6">
                     <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-start">
                         <div>
                             <h2 className="font-black">

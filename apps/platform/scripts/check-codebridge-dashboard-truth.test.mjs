@@ -76,3 +76,36 @@ void test('offline remediation links to exact documented Connection Doctor', () 
     assert.match(deviceUi, /connection_overview/);
     assert.match(deviceCenter, /Live connection has not been verified/);
 });
+
+const hub = readFileSync(
+    'resources/js/components/codebridge/control-center-hub.tsx',
+    'utf8',
+);
+
+void test('control center provides working sections and scoped device onboarding', () => {
+    for (const target of [
+        'codebridge-overview',
+        'codebridge-device-control',
+        'codebridge-usage',
+        'codebridge-plan-billing',
+        'codebridge-clients',
+        'codebridge-settings',
+    ]) {
+        assert.match(hub, new RegExp(target));
+    }
+    assert.match(ui, /<CodeBridgeControlCenterHub/);
+    assert.match(ui, /id="codebridge-clients"/);
+    assert.match(hub, /href="\/codebridge\/pair"/);
+    assert.match(hub, /href="\/settings\/security"/);
+    assert.match(hub, /href="\/purchase"/);
+});
+
+void test('usage billing and device state never invent measurements or connectivity', () => {
+    assert.match(hub, /No authoritative metering feed connected/);
+    assert.match(hub, /Registration does not establish live presence/);
+    assert.match(hub, /Refresh grants, not live app sessions/);
+    assert.match(hub, /Invoices and paid consumption must be obtained/);
+    assert.match(hub, /deviceLimit === null \? 'Not reported'/);
+    assert.doesNotMatch(hub, /connection_status === 'online'/);
+    assert.doesNotMatch(hub, /100%|unlimited calls|live sessions/);
+});

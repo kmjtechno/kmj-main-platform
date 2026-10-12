@@ -21,6 +21,7 @@ jobs:
             test "$(git rev-parse HEAD)" = "$CIRCLE_SHA1"
             test -f apps/platform/routes/codebridge-device-control.php
             test -f apps/platform/resources/js/components/codebridge/device-control-center.tsx
+            test -f apps/platform/resources/js/components/codebridge/control-center-hub.tsx
       - run:
           name: PHP syntax for device authorization controls
           command: |
@@ -59,3 +60,4 @@ workflows:
               only:
                 - feat/codebridge-device-control-center-20261012
                 - integrate/codebridge-control-center-377-378
+                - feat/codebridge-control-center-hub-20261012
