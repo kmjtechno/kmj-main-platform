@@ -53,7 +53,10 @@ final class KslpDeveloperActivationApiTest extends TestCase
             'license_key' => $licenseKey,
             'server_identity' => $device,
         ])->assertOk()->assertHeader('Cache-Control', 'no-store')
-            ->assertJsonStructure(['challenge_id', 'nonce', 'expires_in'])->json();
+            ->assertJsonStructure(['challenge_id', 'nonce', 'expires_in', 'license_id', 'product'])
+            ->assertJsonPath('license_id', $licenseId)
+            ->assertJsonPath('product', 'DEVELOPER.APP')
+            ->json();
 
         $signature = rtrim(strtr(base64_encode(sodium_crypto_sign_detached(
             'KSLP-ACTIVATE-v1|'.$licenseId.'|'.$challenge['nonce'],
