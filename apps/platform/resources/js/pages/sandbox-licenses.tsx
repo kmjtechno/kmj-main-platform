@@ -1,4 +1,4 @@
-import { Head, Link, useForm, usePage } from '@inertiajs/react';
+import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
 import {
     ArrowUpRight,
     Building2,
@@ -205,7 +205,10 @@ export default function SandboxLicenses({
                                         onSubmit={(event) => {
                                             event.preventDefault();
                                             organizationSetup.post('/organizations', {
-                                                onSuccess: () => organizationSetup.reset(),
+                                                onSuccess: () => {
+                                                    organizationSetup.reset();
+                                                    router.visit('/sandbox-licenses');
+                                                },
                                             });
                                         }}
                                     >
