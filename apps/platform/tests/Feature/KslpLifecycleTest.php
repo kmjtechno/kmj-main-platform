@@ -243,4 +243,61 @@ final class KslpLifecycleTest extends TestCase
         self::assertNotNull($pendingChallenge);
         self::assertNull($pendingChallenge->used_at, 'Rejected seat change must roll back proof consumption.');
     }
+
+    public function test_retried_successful_transfer_keeps_new_activation_and_single_audit_event(): void
+    {
+        $control = app(KslpLicenseControlPlane::class);
+        $license = $control->issue('transfer-idempotent-customer', 'professional', 'owner');
+        $this->activate($control, $license['id'], 'transfer-old-device');
+
+        [$server, $challenge, $nonce, $proof] = $this->proof($license['id']);
+        $first = $control->transfer(
+            $license['id'], $server, str_repeat('b', 64),
+            'same-transfer-key', 'owner', 'approved replacement',
+            $challenge, $nonce, $proof,
+        );
+        $retry = $control->transfer(
+            $license['id'], $server, str_repeat('b', 64),
+            'same-transfer-key', 'owner', 'same approved replacement',
+            'unused', 'unused', 'unused',
+        );
+
+        self::assertSame($first['id'], $retry['id']);
+        self::assertSame(
+            1,
+            DB::table('kslp_activations')->where('license_id', $license['id'])->whereNull('deactivated_at')->count(),
+        );
+        self::assertSame(
+            1,
+            DB::table('kslp_license_events')
+                ->where('license_id', $license['id'])
+                ->where('action', 'transferred')
+                ->count(),
+        );
+    }
+
+    public function test_foreign_transfer_retry_key_does_not_disable_current_device(): void
+    {
+        $control = app(KslpLicenseControlPlane::class);
+        $first = $control->issue('foreign-transfer-customer-a', 'professional', 'owner');
+        $second = $control->issue('foreign-transfer-customer-b', 'professional', 'owner');
+        $this->activate($control, $first['id'], 'foreign-used-idempotency-key');
+        [$active] = $this->activate($control, $second['id'], 'legitimate-second-device');
+
+        try {
+            $control->transfer(
+                $second['id'], $active['server_identity'], str_repeat('a', 64),
+                'foreign-used-idempotency-key', 'owner', 'unauthorized retry',
+                'unused', 'unused', 'unused',
+            );
+            self::fail('Foreign license retry should be rejected.');
+        } catch (\DomainException $exception) {
+            self::assertSame('KSLP_ACTIVATION_CONFLICT', $exception->getMessage());
+        }
+
+        self::assertNull(
+            DB::table('kslp_activations')->where('id', $active['id'])->value('deactivated_at'),
+            'Foreign transfer retry must not deactivate the existing seat.',
+        );
+    }
 }
