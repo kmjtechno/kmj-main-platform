@@ -58,7 +58,7 @@ final class CodeBridgeDeviceEnrollmentService
                     ->where('license_id', $existing->license_id)
                     ->whereNull('deactivated_at')
                     ->update(['deactivated_at' => now()]);
-                DB::table('codebridge_device_credentials')
+                $updated = DB::table('codebridge_device_credentials')
                     ->where('id', $existing->id)
                     ->whereNotNull('revoked_at')
                     ->update([
@@ -70,6 +70,9 @@ final class CodeBridgeDeviceEnrollmentService
                         'expires_at_epoch' => $expires,
                         'revoked_at' => null,
                     ]);
+                if ($updated !== 1) {
+                    throw new DomainException('CODEBRIDGE_ENROLLMENT_RACE');
+                }
             } else {
                 DB::table('codebridge_device_credentials')->insert([
                     'id' => (string) Str::uuid(), 'license_id' => $licenseId, 'activation_id' => $activationId,
