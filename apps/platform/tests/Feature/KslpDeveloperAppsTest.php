@@ -251,7 +251,7 @@ final class KslpDeveloperAppsTest extends TestCase
     public function test_unsigned_or_guessed_key_is_rejected(): void
     {
         $this->expectExceptionMessage('KSLP_LICENSE_KEY_INVALID');
-        app(KslpDeveloperKeys::class)->resolve('KMJ1-' . str_repeat('A', 43));
+        app(KslpDeveloperKeys::class)->resolve('KMJ1-'.str_repeat('A', 43));
     }
 
     public function test_authorized_developer_can_revoke_key_and_audit_license(): void
