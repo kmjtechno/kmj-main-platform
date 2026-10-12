@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Models\User;
+use App\Services\AuthorityBootstrapper;
 use App\Services\Licensing\Kslp\KslpDeveloperKeys;
 use App\Services\Licensing\Kslp\KslpIssuerSubscriptionAuthority;
 use App\Services\Licensing\Kslp\KslpLicenseControlPlane;
@@ -66,6 +67,18 @@ Route::middleware(['auth', 'verified'])->prefix('developer')->name('developer.')
             'newKey' => $request->session()->get('developer_license_key'),
         ]);
     })->name('apps.index');
+
+    Route::post('organizations', function (
+        Request $request,
+        AuthorityBootstrapper $bootstrapper,
+    ) {
+        $actor = $request->user();
+        abort_unless($actor instanceof User, 401);
+        $data = $request->validate(['name' => ['required', 'string', 'min:2', 'max:160']]);
+        $bootstrapper->createOrganizationWithSandboxAccess($data['name'], $actor->id);
+
+        return redirect()->route('developer.apps.index');
+    })->middleware('throttle:3,1')->name('organizations.store');
 
     Route::post('apps', function (
         Request $request,
