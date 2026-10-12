@@ -25,6 +25,28 @@ final class KslpOfflineLeaseGuard
 
     private const CLOCK_SKEW_SECONDS = 5;
 
+    /** @var list<string> */
+    private const V1_CLAIMS = [
+        'protocol_version',
+        'license_id',
+        'customer_id',
+        'product',
+        'plan',
+        'server_identity',
+        'activation_id',
+        'features',
+        'limits',
+        'iat',
+        'nbf',
+        'exp',
+        'sequence',
+        'nonce',
+        'kid',
+        'jti',
+        'aud',
+        'grace_until',
+    ];
+
     /**
      * @param  callable(string): (?string)  $publicKeyForKid  Trusted license-purpose key lookup, never a token-provided key.
      * @return array<array-key, mixed>
@@ -62,6 +84,12 @@ final class KslpOfflineLeaseGuard
             $now,
             'KMJ_CLOUDOS',
         );
+
+        // KSLP-v1 must not silently reinterpret extensions: future wire
+        // claims require an explicitly versioned profile and interop vectors.
+        if (array_diff(array_keys($claims), self::V1_CLAIMS) !== []) {
+            throw new DomainException('KSLP_MALFORMED');
+        }
 
         foreach (['iat', 'nbf', 'exp', 'sequence'] as $name) {
             if (! isset($claims[$name]) || ! is_int($claims[$name])) {
