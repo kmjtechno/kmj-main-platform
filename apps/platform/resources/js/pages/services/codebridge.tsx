@@ -632,7 +632,7 @@ export default function CodeBridgeService({
                 <section className="border-sidebar-border/70 bg-card dark:border-sidebar-border rounded-2xl border p-5 sm:p-6">
                     <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-start">
                         <div>
-                            <h2 className="font-black">Connected AI clients</h2>
+                            <h2 className="font-black">Authorized AI clients</h2>
                             <p className="text-muted-foreground mt-1 text-xs leading-5">
                                 {CONNECTED_CLIENTS_DESCRIPTION}
                             </p>
@@ -676,6 +676,9 @@ export default function CodeBridgeService({
                                         <div className="text-muted-foreground mt-1 text-[11px]">
                                             {clientSummary(client)}
                                         </div>
+                                        <div className="text-muted-foreground mt-1 font-mono text-[10px]">
+                                            Client ID · …{client.client_id.slice(-10)}
+                                        </div>
                                         <div className="mt-2 flex flex-wrap gap-2">
                                             {client.scopes.map((scope) => (
                                                 <span
@@ -689,6 +692,7 @@ export default function CodeBridgeService({
                                     </div>
                                     <button
                                         type="button"
+                                        aria-label={`Revoke ${client.client_name}, client ending ${client.client_id.slice(-10)}`}
                                         onClick={() =>
                                             revokeClient(client.client_id, client.client_name)
                                         }
@@ -725,8 +729,8 @@ export default function CodeBridgeService({
                             </button>
                         )}
                     <p className="text-muted-foreground mt-4 text-[10px] leading-4">
-                        Refresh grants are revoked on request. Existing access tokens
-                        expire within{' '}
+                        Revoking stops future OAuth refresh grants. Existing access tokens
+                        may remain valid for up to{' '}
                         {Math.max(
                             1,
                             Math.ceil(service.access_token_ttl_seconds / 60),
