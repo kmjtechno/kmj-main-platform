@@ -7,7 +7,6 @@ use App\Services\AuthorityBootstrapper;
 use App\Services\Licensing\Kslp\KslpDeveloperKeys;
 use App\Services\Licensing\Kslp\KslpIssuerSubscriptionAuthority;
 use App\Services\Licensing\Kslp\KslpLicenseControlPlane;
-use DomainException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
