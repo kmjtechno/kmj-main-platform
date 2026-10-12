@@ -27,8 +27,8 @@ final class OwnerPaymentGatewaySettings
                 'provider' => $provider,
                 'name' => $provider === 'cashfree' ? 'Cashfree Payments' : 'Razorpay',
                 'environment' => 'sandbox',
-                'merchant_status' => $row?->merchant_status ?? 'not_verified',
-                'international_requested' => (bool) ($row?->international_requested ?? false),
+                'merchant_status' => $row === null ? 'not_verified' : (string) $row->merchant_status,
+                'international_requested' => $row !== null && (bool) $row->international_requested,
                 'client_id_stored' => $row?->encrypted_client_id !== null,
                 'client_secret_stored' => $row?->encrypted_client_secret !== null,
                 'webhook_secret_stored' => $row?->encrypted_webhook_secret !== null,
@@ -44,7 +44,7 @@ final class OwnerPaymentGatewaySettings
      * Save encrypted test credentials and non-authoritative merchant setup notes.
      * Secrets never return to the browser, audit, log, or session.
      *
-     * @param array<string, mixed> $input
+     * @param  array<string, mixed>  $input
      */
     public function save(User $actor, string $provider, array $input): void
     {
