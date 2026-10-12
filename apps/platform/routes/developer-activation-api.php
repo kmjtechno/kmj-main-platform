@@ -5,7 +5,6 @@ declare(strict_types=1);
 use App\Services\Licensing\Kslp\KslpActivationProof;
 use App\Services\Licensing\Kslp\KslpDeveloperKeys;
 use App\Services\Licensing\Kslp\KslpLicenseControlPlane;
-use DomainException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
