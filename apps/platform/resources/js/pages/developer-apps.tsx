@@ -56,25 +56,90 @@ const languages = [
 ] as const;
 
 function sdkConfiguration(language: string, productCode: string): string {
-    const details = [
-        'KMJ KSLP developer SDK configuration (starter, not a shipped SDK library)',
-        'Application: ' + productCode,
-        'Protocol: KSLP-v1 (CloudOS-only compatibility today)',
-        'Public keys: GET /api/v1/kslp/keys/license',
-        'Contract: GET /api/v1/kslp/contract',
-        'Language: ' + language,
-        '',
-        'Implementation checklist:',
-        '1. Keep the license key in an OS-protected credential store; never embed it in the app.',
-        '2. Generate a device Ed25519 keypair at first activation.',
-        '3. Activate online using server-provided challenge and a signed device proof.',
-        '4. Validate signed lease with trusted KSLP public keys; bind app, device and expiry.',
-        '5. Persist rollback protection and refresh revocation/entitlement state on reconnect.',
-        '',
-        'IMPORTANT: Issued developer keys are not usable for activation until',
-        'the production activation API and this language SDK pass release testing.',
-    ];
-    return details.join('\n');
+    // Generate source-only integration starters from a canonical public
+    // configuration. Never embed an issuer private key or customer's key.
+    const product = JSON.stringify(productCode);
+    const contract = JSON.stringify('/api/v1/kslp/contract');
+    const keys = JSON.stringify('/api/v1/kslp/keys/license');
+    const warning = 'STAGING STARTER ONLY: obtain and verify signed KSLP leases,';
+    const warning2 = 'never trust an activation ID as a commercial entitlement.';
+
+    switch (language) {
+        case 'TypeScript':
+            return [
+                '// ' + warning, '// ' + warning2,
+                'export const kmjLicense = {',
+                '    product: ' + product + ',',
+                '    contractUrl: ' + contract + ',',
+                '    publicKeyUrl: ' + keys + ',',
+                '    requireEd25519: true,',
+                '} as const;',
+            ].join('\n');
+        case 'Python':
+            return [
+                '# ' + warning, '# ' + warning2,
+                'KMJ_LICENSE = {',
+                '    "product": ' + product + ',',
+                '    "contract_url": ' + contract + ',',
+                '    "public_key_url": ' + keys + ',',
+                '    "require_ed25519": True,',
+                '}',
+            ].join('\n');
+        case 'C# / .NET':
+            return [
+                '// ' + warning, '// ' + warning2,
+                'internal static class KmjLicenseConfig {',
+                '    public const string Product = ' + product + ';',
+                '    public const string ContractUrl = ' + contract + ';',
+                '    public const string PublicKeysUrl = ' + keys + ';',
+                '}',
+            ].join('\n');
+        case 'C++ / Qt':
+            return [
+                '// ' + warning, '// ' + warning2,
+                '#include <string_view>',
+                'namespace kmj {',
+                'constexpr std::string_view product = ' + product + ';',
+                'constexpr std::string_view contract_url = ' + contract + ';',
+                'constexpr std::string_view public_keys_url = ' + keys + ';',
+                '}',
+            ].join('\n');
+        case 'Rust':
+            return [
+                '// ' + warning, '// ' + warning2,
+                'pub const KMJ_PRODUCT: &str = ' + product + ';',
+                'pub const KMJ_CONTRACT: &str = ' + contract + ';',
+                'pub const KMJ_PUBLIC_KEYS: &str = ' + keys + ';',
+            ].join('\n');
+        case 'Go':
+            return [
+                '// ' + warning, '// ' + warning2,
+                'package licensing',
+                'const Product = ' + product,
+                'const ContractURL = ' + contract,
+                'const PublicKeysURL = ' + keys,
+            ].join('\n');
+        case 'Java':
+            return [
+                '// ' + warning, '// ' + warning2,
+                'public final class KmjLicenseConfig {',
+                '    public static final String PRODUCT = ' + product + ';',
+                '    public static final String CONTRACT_URL = ' + contract + ';',
+                '    public static final String PUBLIC_KEYS_URL = ' + keys + ';',
+                '    private KmjLicenseConfig() {}',
+                '}',
+            ].join('\n');
+        default:
+            return [
+                '<?php',
+                '// ' + warning, '// ' + warning2,
+                '$kmjLicense = [',
+                '    "product" => ' + product + ',',
+                '    "contract_url" => ' + contract + ',',
+                '    "public_key_url" => ' + keys + ',',
+                '];',
+            ].join('\n');
+    }
 }
 
 export default function DeveloperApps({
@@ -112,6 +177,22 @@ export default function DeveloperApps({
         [language, displayedApp?.product_code],
     );
     const canRegister = canIssueKeys && selectedIssuer?.issuer_status === 'active';
+
+    const downloadSetup = () => {
+        const extension: Record<string, string> = {
+            TypeScript: 'ts', Python: 'py', 'C# / .NET': 'cs',
+            'C++ / Qt': 'cpp', Rust: 'rs', Go: 'go', Java: 'java', PHP: 'php',
+        };
+        const file = new Blob([sdkText + '\n'], { type: 'text/plain;charset=utf-8' });
+        const objectUrl = URL.createObjectURL(file);
+        const link = document.createElement('a');
+        link.href = objectUrl;
+        link.download = 'kmj-licensing-setup.' + (extension[language] ?? 'txt');
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        URL.revokeObjectURL(objectUrl);
+    };
 
     const copyText = async (value: string) => {
         try {
@@ -348,9 +429,14 @@ export default function DeveloperApps({
                         </label>
                     </div>
                     <pre className="mt-4 overflow-x-auto rounded-xl bg-[#111827] p-4 text-xs leading-6 text-slate-100"><code>{sdkText}</code></pre>
-                    <button type="button" className="mt-3 inline-flex min-h-11 items-center gap-2 rounded-xl border px-4 text-sm font-bold" onClick={() => void copyText(sdkText)}>
-                        <Copy className="size-4" /> Copy configuration
-                    </button>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                        <button type="button" className="inline-flex min-h-11 items-center gap-2 rounded-xl border px-4 text-sm font-bold" onClick={() => void copyText(sdkText)}>
+                            <Copy className="size-4" /> Copy starter code
+                        </button>
+                        <button type="button" className="inline-flex min-h-11 items-center gap-2 rounded-xl border px-4 text-sm font-bold" onClick={downloadSetup}>
+                            Download {language} setup
+                        </button>
+                    </div>
                     <div className="mt-5 grid gap-3 sm:grid-cols-2">
                         <Link href="/sandbox-licenses" className="flex items-center justify-between rounded-xl border p-4 text-sm font-semibold">
                             <span className="flex items-center gap-2"><BookOpen className="size-4" /> Test sandbox licenses</span><ArrowRight className="size-4" />
