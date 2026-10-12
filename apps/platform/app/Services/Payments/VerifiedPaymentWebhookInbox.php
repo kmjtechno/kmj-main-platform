@@ -22,7 +22,7 @@ final class VerifiedPaymentWebhookInbox
     ) {}
 
     /**
-     * @param  array<string, string>  $headers Lowercase HTTP header names.
+     * @param  array<string, string>  $headers  Lowercase HTTP header names.
      * @return array{is_new: bool, state: string, event_key: string}|null
      */
     public function record(
@@ -40,7 +40,7 @@ final class VerifiedPaymentWebhookInbox
 
         // Inspect signature BEFORE any DB access or JSON field extraction.
         $verified = $this->envelope->inspect($provider, $rawBody, $headers, $webhookSecret);
-        if ($verified === null || $verified['requires_reconciliation'] !== true) {
+        if ($verified === null) {
             return null;
         }
 
