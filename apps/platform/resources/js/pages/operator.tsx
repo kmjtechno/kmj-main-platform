@@ -819,7 +819,10 @@ export default function Operator({
 
                 <ProductManager products={products} />
 
-                <section id="commercial-orders" className="bg-card rounded-2xl border p-5 sm:p-6">
+                <section
+                    id="commercial-orders"
+                    className="bg-card rounded-2xl border p-5 sm:p-6"
+                >
                     <div className="flex items-center justify-between gap-4">
                         <div>
                             <h2 className="font-bold">
