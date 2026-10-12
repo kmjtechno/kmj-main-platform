@@ -46,7 +46,7 @@ test -f resources/js/routes/index.ts
 test -d resources/js/actions
 test -d resources/js/wayfinder
 npm run types:check
-node --test scripts/check-codebridge-safe-onboarding.test.mjs
+node --test scripts/check-codebridge-safe-onboarding.test.mjs scripts/check-codebridge-dashboard-truth.test.mjs
 php artisan test --filter=CodeBridgeAdminHttpTest
 php artisan test --filter=CodeBridgeDeviceEnrollmentTest
 echo "PASS: local device-control contracts and isolated tenant-safe tests"

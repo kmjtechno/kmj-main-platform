@@ -58,3 +58,4 @@ workflows:
             branches:
               only:
                 - feat/codebridge-device-control-center-20261012
+                - integrate/codebridge-control-center-377-378

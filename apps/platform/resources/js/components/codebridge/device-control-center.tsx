@@ -24,6 +24,7 @@ export type CodeBridgeDevice = {
     projects: Array<{ id: string; name: string }>;
     registration: 'registered';
     connection_status: 'not_verified';
+    registered_at?: string | null;
 };
 
 type Props = {
@@ -130,6 +131,14 @@ export default function DeviceControlCenter({
                         credentials. Registered devices are not necessarily online:
                         Main Platform does not receive live gateway heartbeats.
                     </p>
+                    <a
+                        href="https://github.com/kmjtechno/kmj-codebridge/blob/main/docs/CONNECTION-DOCTOR.md"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="mt-2 inline-flex min-h-9 items-center text-xs font-bold text-red-500 underline underline-offset-4"
+                    >
+                        Open Connection Doctor guide
+                    </a>
                 </div>
                 <div className="flex flex-wrap gap-2">
                     <button type="button"
@@ -148,6 +157,17 @@ export default function DeviceControlCenter({
                 <Stat label="Authorized devices" value={managedCount} hint={deviceLimit !== null ? `Plan limit: ${deviceLimit}` : 'Plan limit not reported'} />
                 <Stat label="Known project grants" value={devices.reduce((count, device) => count + device.projects.length, 0)} hint="From saved pairing records" />
                 <Stat label="Live status" value="Not verified" hint="Use gateway connection overview" />
+            </div>
+
+            <div className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-xl border bg-black/[0.02] px-4 py-3 dark:bg-white/[0.02]">
+                <p className="text-muted-foreground text-xs leading-5">
+                    Registration is verified by Main Platform. Live connectivity
+                    requires an authenticated gateway heartbeat and is not
+                    available in this view.
+                </p>
+                <span className="inline-flex w-fit rounded-lg border border-amber-500/30 bg-amber-500/5 px-3 py-1.5 text-xs font-semibold text-amber-600 dark:text-amber-400">
+                    Online status: Not verified
+                </span>
             </div>
 
             <div className="mt-5 flex flex-col gap-3 sm:flex-row">
@@ -210,14 +230,19 @@ export default function DeviceControlCenter({
                                     </div>
                                 </div>
                                 <span className="shrink-0 rounded-lg border px-2 py-1 text-[10px] font-bold">
-                                    Registered
+                                    Registered · Live status unknown
                                 </span>
                             </div>
 
                             <div className="text-muted-foreground mt-4 flex items-center gap-2 text-xs">
                                 <ShieldAlert className="h-4 w-4 text-amber-500" />
-                                Live connection not verified
+                                Live connection has not been verified
                             </div>
+                            {device.registered_at && (
+                                <p className="text-muted-foreground mt-1 text-[11px]">
+                                    Registered {formatRegisteredAt(device.registered_at)}
+                                </p>
+                            )}
                             <p className="mt-3 text-xs font-semibold">
                                 {device.projects.length} authorized project{device.projects.length === 1 ? '' : 's'}
                             </p>
@@ -367,4 +392,14 @@ function QuickAction({ icon: Icon, title, description, href, label }: {
             </Link>
         </div>
     );
+}
+
+function formatRegisteredAt(value: string): string {
+    const date = new Date(value);
+    return Number.isNaN(date.getTime())
+        ? 'at an unknown time'
+        : date.toLocaleString(undefined, {
+              dateStyle: 'medium',
+              timeStyle: 'short',
+          });
 }
