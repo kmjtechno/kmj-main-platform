@@ -286,22 +286,31 @@ export default function Operator({
                             </p>
                         </div>
                         <span className="text-muted-foreground rounded-full border px-3 py-1 text-[10px] font-bold">
-                            {catalogProducts.length} registered / {canonicalProductCount} canonical
+                            {catalogProducts.length} registered /{' '}
+                            {canonicalProductCount} canonical
                         </span>
                     </div>
                     {missingCanonicalSlugs.length > 0 && (
-                        <div role="status" className="mt-4 rounded-xl border border-amber-500/30 bg-amber-500/5 p-4">
+                        <div
+                            role="status"
+                            className="mt-4 rounded-xl border border-amber-500/30 bg-amber-500/5 p-4"
+                        >
                             <p className="text-sm font-bold">
-                                {missingCanonicalSlugs.length} canonical products are not registered in this database
+                                {missingCanonicalSlugs.length} canonical
+                                products are not registered in this database
                             </p>
                             <p className="text-muted-foreground mt-1 text-xs leading-5">
-                                Missing records are not customer licenses. Reconcile the
-                                canonical catalog in staging, verify existing product
-                                settings, then perform an audited production sync.
+                                Missing records are not customer licenses.
+                                Reconcile the canonical catalog in staging,
+                                verify existing product settings, then perform
+                                an audited production sync.
                             </p>
                             <div className="mt-3 flex flex-wrap gap-2">
                                 {missingCanonicalSlugs.map((slug) => (
-                                    <span key={slug} className="rounded-lg border px-2 py-1 font-mono text-[11px]">
+                                    <span
+                                        key={slug}
+                                        className="rounded-lg border px-2 py-1 font-mono text-[11px]"
+                                    >
                                         {slug}
                                     </span>
                                 ))}
@@ -309,7 +318,7 @@ export default function Operator({
                         </div>
                     )}
                     <div className="mt-5 grid gap-3 sm:grid-cols-3">
-                        <div className="rounded-xl border bg-background/50 p-3">
+                        <div className="bg-background/50 rounded-xl border p-3">
                             <p className="text-muted-foreground text-xs">
                                 Registered products
                             </p>
@@ -317,7 +326,7 @@ export default function Operator({
                                 {catalogProducts.length}
                             </p>
                         </div>
-                        <div className="rounded-xl border bg-background/50 p-3">
+                        <div className="bg-background/50 rounded-xl border p-3">
                             <p className="text-muted-foreground text-xs">
                                 Public product pages
                             </p>
@@ -325,7 +334,7 @@ export default function Operator({
                                 {publishedCount}
                             </p>
                         </div>
-                        <div className="rounded-xl border bg-background/50 p-3">
+                        <div className="bg-background/50 rounded-xl border p-3">
                             <p className="text-muted-foreground text-xs">
                                 Missing active entitlement policy
                             </p>
@@ -336,38 +345,55 @@ export default function Operator({
                     </div>
                     <div className="mt-5 grid gap-3 md:grid-cols-[1fr_auto]">
                         <label className="relative block">
-                            <Search className="text-muted-foreground absolute left-3 top-3 size-4" />
-                            <span className="sr-only">Search product inventory</span>
+                            <Search className="text-muted-foreground absolute top-3 left-3 size-4" />
+                            <span className="sr-only">
+                                Search product inventory
+                            </span>
                             <input
                                 value={catalogSearch}
                                 onChange={(event) =>
                                     setCatalogSearch(event.target.value)
                                 }
-                                className="bg-background h-11 w-full rounded-xl border pl-10 pr-3 text-sm"
+                                className="bg-background h-11 w-full rounded-xl border pr-3 pl-10 text-sm"
                                 placeholder="Find a product by name or slug"
                             />
                         </label>
                         <label className="flex items-center gap-2 text-xs">
-                            <span className="sr-only">Product inventory filter</span>
+                            <span className="sr-only">
+                                Product inventory filter
+                            </span>
                             <select
                                 value={catalogFilter}
                                 onChange={(event) =>
                                     setCatalogFilter(
-                                        event.target.value as typeof catalogFilter,
+                                        event.target
+                                            .value as typeof catalogFilter,
                                     )
                                 }
                                 className="bg-background h-11 rounded-xl border px-3 text-sm"
                             >
-                                <option value="all">All registered products</option>
-                                <option value="public">Published catalog</option>
-                                <option value="missing_policy">Missing policy</option>
-                                <option value="licensed">With active entitlements</option>
+                                <option value="all">
+                                    All registered products
+                                </option>
+                                <option value="public">
+                                    Published catalog
+                                </option>
+                                <option value="missing_policy">
+                                    Missing policy
+                                </option>
+                                <option value="licensed">
+                                    With active entitlements
+                                </option>
                             </select>
                         </label>
                     </div>
-                    <p className="text-muted-foreground mt-2 text-xs" role="status">
-                        {visibleProducts.length} of {catalogProducts.length} products shown.
-                        Public listing does not grant customer access.
+                    <p
+                        className="text-muted-foreground mt-2 text-xs"
+                        role="status"
+                    >
+                        {visibleProducts.length} of {catalogProducts.length}{' '}
+                        products shown. Public listing does not grant customer
+                        access.
                     </p>
                     <div className="mt-3 overflow-hidden rounded-xl border">
                         <div className="divide-y">
@@ -405,12 +431,14 @@ export default function Operator({
                                             </strong>
                                         </p>
                                         <p className="text-muted-foreground mt-1">
-                                            Purchase: {product.purchase_enabled
+                                            Purchase:{' '}
+                                            {product.purchase_enabled
                                                 ? 'Configured'
                                                 : 'Disabled'}
                                         </p>
                                         <p className="text-muted-foreground mt-1">
-                                            Licensing: {product.licensing_enabled
+                                            Licensing:{' '}
+                                            {product.licensing_enabled
                                                 ? 'Enabled'
                                                 : 'Disabled'}
                                         </p>
