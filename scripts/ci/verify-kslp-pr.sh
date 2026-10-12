@@ -80,7 +80,24 @@ export CACHE_STORE=array
 export SESSION_DRIVER=array
 export APP_KEY="base64:$(php -r 'echo base64_encode(random_bytes(32));')"
 
+# Build frontend assets before any HTTP/Inertia test; otherwise Laravel
+# looks for public/build/manifest.json and returns view errors unrelated to
+# the KSLP controller logic. This is all inside the detached worktree.
+src_node="$repo/apps/platform/node_modules"
+if [[ ! -d "$src_node" || ! -x "$src_node/.bin/vp" ]]; then
+  echo "BLOCKED: development Node/Vite+ dependencies unavailable" >&2
+  exit 3
+fi
+cp -a "$src_node" ./node_modules
+echo "== Frontend build for Laravel HTTP testing =="
+npm run build
+test -s public/build/manifest.json || {
+  echo "FAIL: no Vite manifest produced by the isolated build" >&2
+  exit 1
+}
+
 # No migration against production and no credential import.
+echo "== KSLP Laravel tests =="
 php artisan test --filter=Kslp --no-ansi
 ./vendor/bin/pint --test \
   app/Services/Licensing/Kslp/KslpActivationReplayGuard.php \
@@ -98,16 +115,8 @@ php artisan test --filter=Kslp --no-ansi
   tests/Unit/Kslp/KslpActivationReplayGuardTest.php
 ./vendor/bin/phpstan analyse --no-progress
 
-# The original checkout's dependency tree is copied into the detached
-# worktree: never link to mutable build caches on the production checkout.
-if [[ ! -d "$src/node_modules" || ! -x "$src/node_modules/.bin/vp" ]]; then
-  echo "BLOCKED: preinstalled local Node/Vite+ dependencies required" >&2
-  exit 3
-fi
-cp -a "$src/node_modules" ./node_modules
 npm run types:check
 npm run check
-npm run build
 
 echo "PASS: KSLP PHPUnit, Pint, PHPStan, TypeScript, frontend checks and build on exact SHA $actual_sha (isolated worktree)"
 echo "NOT CHECKED: isolated PostgreSQL migration/rollback, real device SDK interoperability and production signing"
