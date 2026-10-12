@@ -101,4 +101,97 @@ final class KslpLifecycleTest extends TestCase
         $this->expectExceptionMessage('KSLP_REASON_REQUIRED');
         $c->revoke($l['id'], 'owner', ' ');
     }
+
+    public function test_idempotency_key_cannot_replay_another_customers_activation(): void
+    {
+        $control = app(KslpLicenseControlPlane::class);
+        $first = $control->issue('idempotency-customer-a', 'professional', 'owner');
+        $second = $control->issue('idempotency-customer-b', 'professional', 'owner');
+        [$activation, $server] = $this->activate($control, $first['id'], 'shared-retry-key');
+
+        self::assertSame($first['id'], $activation['license_id']);
+        $this->expectExceptionMessage('KSLP_ACTIVATION_CONFLICT');
+        $control->activate(
+            $second['id'],
+            $server,
+            str_repeat('a', 64),
+            'shared-retry-key',
+            'owner',
+            'unused',
+            'unused',
+            'unused',
+        );
+    }
+
+    public function test_idempotency_retry_rejects_different_device_or_hardware(): void
+    {
+        $control = app(KslpLicenseControlPlane::class);
+        $license = $control->issue('idempotency-customer-device', 'professional', 'owner');
+        [, $server] = $this->activate($control, $license['id'], 'device-retry');
+
+        try {
+            $control->activate(
+                $license['id'], 'ed25519:other', str_repeat('a', 64),
+                'device-retry', 'owner', 'unused', 'unused', 'unused',
+            );
+            self::fail('A mismatched device reused the idempotency key.');
+        } catch (\DomainException $e) {
+            self::assertSame('KSLP_ACTIVATION_CONFLICT', $e->getMessage());
+        }
+
+        $this->expectExceptionMessage('KSLP_ACTIVATION_CONFLICT');
+        $control->activate(
+            $license['id'], $server, str_repeat('b', 64),
+            'device-retry', 'owner', 'unused', 'unused', 'unused',
+        );
+    }
+
+    public function test_an_active_device_cannot_silently_change_hardware_identity(): void
+    {
+        $control = app(KslpLicenseControlPlane::class);
+        $license = $control->issue('idempotency-customer-hardware', 'professional', 'owner');
+        [, $server] = $this->activate($control, $license['id'], 'initial-device');
+        $challenge = app(KslpActivationProof::class)->challenge($license['id'], $server);
+        // The request must not accept an existing activation with changed
+        // hardware even if a fresh proof was successfully obtained.
+        $this->expectExceptionMessage('KSLP_ACTIVATION_CONFLICT');
+        $control->activate(
+            $license['id'], $server, str_repeat('b', 64),
+            'new-hardware-attempt', 'owner',
+            $challenge['challenge_id'], $challenge['nonce'], 'invalid-proof',
+        );
+    }
+
+    public function test_deactivated_activation_cannot_be_resurrected_by_retry_key(): void
+    {
+        $control = app(KslpLicenseControlPlane::class);
+        $license = $control->issue('idempotency-customer-transfer', 'professional', 'owner');
+        [, $previousServer] = $this->activate($control, $license['id'], 'initial-transfer-key');
+        [$newServer, $challenge, $nonce, $signature] = $this->proof($license['id']);
+        $control->transfer(
+            $license['id'], $newServer, str_repeat('b', 64),
+            'replacement-transfer-key', 'owner', 'approved transfer',
+            $challenge, $nonce, $signature,
+        );
+
+        $this->expectExceptionMessage('KSLP_ACTIVATION_CONFLICT');
+        $control->activate(
+            $license['id'], $previousServer, str_repeat('a', 64),
+            'initial-transfer-key', 'owner', 'unused', 'unused', 'unused',
+        );
+    }
+
+    public function test_revoked_license_does_not_return_cached_activation_on_retry(): void
+    {
+        $control = app(KslpLicenseControlPlane::class);
+        $license = $control->issue('idempotency-customer-revoked', 'professional', 'owner');
+        [, $server] = $this->activate($control, $license['id'], 'revoked-retry-key');
+        $control->revoke($license['id'], 'owner', 'fraud investigation');
+
+        $this->expectExceptionMessage('KSLP_REVOKED');
+        $control->activate(
+            $license['id'], $server, str_repeat('a', 64),
+            'revoked-retry-key', 'owner', 'unused', 'unused', 'unused',
+        );
+    }
 }
