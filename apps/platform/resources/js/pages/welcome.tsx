@@ -225,6 +225,13 @@ export default function Welcome({
                                     Discuss an international B2B project
                                     <ArrowRight className="h-4 w-4" />
                                 </a>
+                                <Link
+                                    href="/contact"
+                                    className="ml-4 inline-flex items-center gap-2 text-sm font-bold text-white/75 underline decoration-[#e21b23]/60 underline-offset-4 transition hover:text-white"
+                                >
+                                    Email a project brief
+                                    <ArrowRight className="h-4 w-4" />
+                                </Link>
 
                                 <div className="mt-10 max-w-2xl border-t border-white/[0.08] pt-6">
                                     <div className="mb-5 grid max-w-lg grid-cols-3 gap-2">
