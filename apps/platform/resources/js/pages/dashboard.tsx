@@ -256,10 +256,10 @@ function CodeBridgeCard({
                             <ArrowRight className="h-3.5 w-3.5" />
                         </a>
                         <Link
-                            href="/services/kmj-codebridge"
+                            href="/services/kmj-codebridge#codebridge-device-control"
                             className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border px-4 text-xs font-bold transition hover:border-red-500/40 hover:text-red-500"
                         >
-                            Manage CodeBridge
+                            Manage devices & CodeBridge
                             <ArrowRight className="h-3.5 w-3.5" />
                         </Link>
                         {canManageOwnerPlan && (

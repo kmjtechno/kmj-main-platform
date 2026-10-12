@@ -1,0 +1,60 @@
+version: 2.1
+
+jobs:
+  codebridge_device_control:
+    docker:
+      - image: cimg/php:8.4-node
+    resource_class: small
+    environment:
+      APP_ENV: testing
+      DB_CONNECTION: sqlite
+      DB_DATABASE: ":memory:"
+      QUEUE_CONNECTION: sync
+      MAIL_MAILER: array
+      SESSION_DRIVER: array
+    steps:
+      - checkout
+      - run:
+          name: Verify exact PR source
+          command: |
+            set -euo pipefail
+            test "$(git rev-parse HEAD)" = "$CIRCLE_SHA1"
+            test -f apps/platform/routes/codebridge-device-control.php
+            test -f apps/platform/resources/js/components/codebridge/device-control-center.tsx
+      - run:
+          name: PHP syntax for device authorization controls
+          command: |
+            set -euo pipefail
+            php -l apps/platform/routes/codebridge-device-control.php
+            php -l apps/platform/routes/web.php
+            php -l apps/platform/tests/Feature/CodeBridgeAdminHttpTest.php
+      - run:
+          name: Install isolated frontend dependencies
+          no_output_timeout: 5m
+          command: |
+            set -euo pipefail
+            cd apps/platform
+            npm ci --ignore-scripts --no-audit --no-fund
+      - run:
+          name: Install isolated Laravel test dependencies
+          no_output_timeout: 8m
+          command: |
+            set -euo pipefail
+            cd apps/platform
+            composer install --no-interaction --prefer-dist --no-progress
+      - run:
+          name: No-network local CodeBridge device-control verification
+          no_output_timeout: 8m
+          command: |
+            set -euo pipefail
+            cd apps/platform
+            bash scripts/verify-codebridge-device-control-offline.sh
+
+workflows:
+  review_codebridge_device_control:
+    jobs:
+      - codebridge_device_control:
+          filters:
+            branches:
+              only:
+                - feat/codebridge-device-control-center-20261012

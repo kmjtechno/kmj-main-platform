@@ -1,4 +1,5 @@
 import { Head, Link, router } from '@inertiajs/react';
+import DeviceControlCenter, { type CodeBridgeDevice } from '@/components/codebridge/device-control-center';
 import {
     ArrowLeft,
     Cable,
@@ -34,15 +35,7 @@ type ConnectedClient = {
     last_active_at: string | null;
 };
 
-type RegisteredDevice = {
-    id: string;
-    name: string;
-    platform: string | null;
-    arch: string | null;
-    projects: Array<{ id: string; name: string }>;
-    registration: 'registered';
-    connection_status: 'not_verified';
-};
+type RegisteredDevice = CodeBridgeDevice;
 
 type Service = {
     endpoint: string;
@@ -65,6 +58,7 @@ type Props = {
     entitlement: Entitlement;
     service: Service;
     canManageOwnerPlan: boolean;
+    canManageDevices: boolean;
 };
 
 const CHATGPT_DESKTOP_SETUP_URL = '/install-chatgpt-desktop.ps1';
@@ -90,6 +84,7 @@ export default function CodeBridgeService({
     entitlement,
     service,
     canManageOwnerPlan,
+    canManageDevices,
 }: Props) {
     const revokeClient = (clientId: string) => {
         router.post(
@@ -361,107 +356,14 @@ export default function CodeBridgeService({
                     </div>
                 </section>
 
-                <section className="border-sidebar-border/70 bg-card dark:border-sidebar-border rounded-2xl border p-5 sm:p-6">
-                    <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
-                        <div>
-                            <h2 className="font-black">
-                                Your devices & projects
-                            </h2>
-                            <p className="text-muted-foreground mt-1 text-xs leading-5">
-                                Main Platform is your sign-in and device
-                                authorization authority. GitHub sign-in is not
-                                needed to pair a local project or use
-                                CodeBridge.
-                            </p>
-                        </div>
-                        <button
-                            type="button"
-                            onClick={() => router.reload({ only: ['service'] })}
-                            className="inline-flex h-9 items-center justify-center rounded-xl border px-3 text-[11px] font-bold transition hover:border-red-500/40"
-                        >
-                            Refresh registration
-                        </button>
-                    </div>
-
-                    {service.devices.length === 0 ? (
-                        <div className="mt-5 rounded-xl border border-dashed p-5">
-                            <div className="text-sm font-bold">
-                                No devices paired yet
-                            </div>
-                            <p className="text-muted-foreground mt-2 text-xs leading-5">
-                                Install the CodeBridge device agent, then
-                                approve the short-lived pairing code using your
-                                KMJ account. No GitHub OAuth or manual device
-                                token is needed.
-                            </p>
-                            <Link
-                                href="/codebridge/pair"
-                                className="mt-4 inline-flex h-9 items-center rounded-xl border border-red-500/30 px-3 text-xs font-bold text-red-500"
-                            >
-                                Approve a pairing code
-                            </Link>
-                        </div>
-                    ) : (
-                        <div className="mt-5 grid gap-3 md:grid-cols-2">
-                            {service.devices.map((device) => (
-                                <div
-                                    key={device.id}
-                                    className="min-w-0 rounded-xl border p-4"
-                                >
-                                    <div className="flex flex-wrap items-center justify-between gap-2">
-                                        <div className="min-w-0">
-                                            <div className="truncate text-sm font-bold">
-                                                {device.name}
-                                            </div>
-                                            <div className="text-muted-foreground mt-1 truncate text-[11px]">
-                                                {device.id}
-                                            </div>
-                                        </div>
-                                        <span className="rounded-lg border px-2 py-1 text-[10px] font-semibold">
-                                            Registered
-                                        </span>
-                                    </div>
-                                    <div className="text-muted-foreground mt-3 text-xs">
-                                        {[device.platform, device.arch]
-                                            .filter(Boolean)
-                                            .join(' / ') ||
-                                            'Device type not reported'}
-                                    </div>
-                                    <div className="mt-3 text-xs font-semibold">
-                                        {device.projects.length
-                                            ? 'Authorized projects'
-                                            : 'No project grant reported'}
-                                    </div>
-                                    {device.projects.map((project) => (
-                                        <div
-                                            key={project.id}
-                                            className="mt-2 rounded-lg border bg-black/5 px-3 py-2 text-xs dark:bg-white/[0.03]"
-                                        >
-                                            {project.name}
-                                            <span className="text-muted-foreground ml-2">
-                                                {project.id}
-                                            </span>
-                                        </div>
-                                    ))}
-                                    <p className="text-muted-foreground mt-3 text-[11px] leading-5">
-                                        Live connection: Not verified.
-                                        Registration alone does not prove the
-                                        agent is online. Check
-                                        connection_overview in your
-                                        authenticated CodeBridge client.
-                                    </p>
-                                </div>
-                            ))}
-                        </div>
-                    )}
-                    {service.managed_devices > service.devices.length && (
-                        <p className="text-muted-foreground mt-3 text-xs">
-                            Showing the first {service.devices.length}{' '}
-                            registered devices. The list is intentionally
-                            bounded.
-                        </p>
-                    )}
-                </section>
+                <DeviceControlCenter
+                    tenantId={organization.id}
+                    devices={service.devices}
+                    managedCount={service.managed_devices}
+                    deviceLimit={service.device_limit}
+                    canManage={canManageDevices}
+                    endpoint={service.endpoint}
+                />
 
                 <section className="border-sidebar-border/70 bg-card dark:border-sidebar-border rounded-2xl border p-5 sm:p-6">
                     <h2 className="font-black">Connect your AI workspace</h2>
@@ -506,6 +408,55 @@ export default function CodeBridgeService({
                         >
                             Copy MCP endpoint for other IDEs
                         </button>
+                    </div>
+                    <div className="mt-5 grid gap-3 lg:grid-cols-2">
+                        <div className="rounded-xl border p-4">
+                            <h3 className="text-xs font-black">
+                                Claude Desktop / Claude web
+                            </h3>
+                            <p className="text-muted-foreground mt-2 text-xs leading-5">
+                                Open Claude Settings, then Connectors and Add custom connector.
+                                Use this hosted Streamable HTTP MCP URL and complete
+                                KMJ browser OAuth. Do not paste device tokens.
+                            </p>
+                            <code className="mt-3 block break-all rounded-lg border px-3 py-2 text-[11px]">
+                                {service.endpoint}
+                            </code>
+                            <button
+                                type="button"
+                                onClick={() =>
+                                    navigator.clipboard.writeText(service.endpoint)
+                                }
+                                className="mt-3 rounded-lg border px-3 py-2 text-[11px] font-bold"
+                            >
+                                Copy Claude MCP URL
+                            </button>
+                            <p className="text-muted-foreground mt-2 text-[11px] leading-5">
+                                For third-party inference Gateway mode in Claude Desktop,
+                                use Inference configuration, Connectors, Managed MCP
+                                servers, Add server, Streamable HTTP and OAuth
+                                auto-registration instead.
+                            </p>
+                        </div>
+                        <div className="rounded-xl border p-4">
+                            <h3 className="text-xs font-black">
+                                Multiple AI chats / automatic updates
+                            </h3>
+                            <p className="text-muted-foreground mt-2 text-xs leading-5">
+                                Multiple ChatGPT, Claude and IDE sessions can use the same
+                                authorized gateway. New CodeBridge work lanes protect
+                                reserved files from overlapping CodeBridge edits after
+                                the compatible gateway and device agent are deployed.
+                                Actual execution concurrency remains plan and
+                                hardware limited.
+                            </p>
+                            <p className="text-muted-foreground mt-3 text-[11px] leading-5">
+                                Verified hosted MCP updates are served centrally. Your
+                                AI desktop app may need to reconnect to refresh tools;
+                                third-party app binaries and marketplace icons cannot
+                                be silently updated by CodeBridge.
+                            </p>
+                        </div>
                     </div>
                     <p className="text-muted-foreground mt-3 text-[11px]">
                         VS Code opens a confirmation dialog before adding the

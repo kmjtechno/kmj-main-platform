@@ -558,6 +558,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
             'organization' => $organization,
             'entitlement' => $entitlement,
             'canManageOwnerPlan' => $canManageOwnerPlan,
+            'canManageDevices' => $organizations->userCanManage((int) $user->id, $organization['id']),
             'service' => [
                 'endpoint' => $oauth->resource(),
                 'oauth_ready' => $oauth->enabled(),
@@ -1061,6 +1062,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     })->name('sandbox-licenses.revoke')->middleware('password.confirm');
     require __DIR__.'/kslp-admin.php';
     require __DIR__.'/codebridge-admin.php';
+    require __DIR__.'/codebridge-device-control.php';
 });
 
 require __DIR__.'/payments-console.php';

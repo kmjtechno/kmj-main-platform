@@ -32,3 +32,13 @@ void test('Linux bootstrap is downloaded for inspection, not piped to root', () 
         /Download and inspect the pinned bootstrap first/,
     );
 });
+
+void test('Claude Desktop and multi-chat guidance stays hosted OAuth only', () => {
+    assert.match(servicePage, /Claude Desktop \/ Claude web/);
+    assert.match(servicePage, /Managed MCP/);
+    assert.match(servicePage, /Copy Claude MCP URL/);
+    assert.match(servicePage, /navigator\.clipboard\.writeText\(service\.endpoint\)/);
+    assert.match(servicePage, /Multiple AI chats \/ automatic updates/);
+    assert.match(servicePage, /cannot\s+be silently updated by CodeBridge/);
+    assert.doesNotMatch(servicePage, /claude_desktop_config\.json/);
+});
