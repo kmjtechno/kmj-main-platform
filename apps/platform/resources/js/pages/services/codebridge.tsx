@@ -104,10 +104,7 @@ export default function CodeBridgeService({
             device.name,
             device.id,
             device.platform ?? '',
-            ...device.projects.flatMap((project) => [
-                project.name,
-                project.id,
-            ]),
+            ...device.projects.flatMap((project) => [project.name, project.id]),
         ]
             .join(' ')
             .toLocaleLowerCase();
@@ -384,7 +381,8 @@ export default function CodeBridgeService({
                             <div className="mt-3 flex flex-wrap gap-2">
                                 {service.permissions.length === 0 && (
                                     <span className="text-muted-foreground text-[11px]">
-                                        No permissions reported. Ask an administrator to verify your grant.
+                                        No permissions reported. Ask an
+                                        administrator to verify your grant.
                                     </span>
                                 )}
                                 {service.permissions.map((permission) => (
@@ -428,8 +426,8 @@ export default function CodeBridgeService({
                                 Main Platform handles registration and access.
                                 For actual online/offline health, run
                                 connection_overview from an authorized
-                                CodeBridge client. No repeated GitHub or
-                                ChatGPT OAuth login is required.
+                                CodeBridge client. No repeated GitHub or ChatGPT
+                                OAuth login is required.
                             </p>
                             <a
                                 href="https://github.com/kmjtechno/kmj-codebridge/blob/main/docs/CONNECTION-DOCTOR.md"
@@ -452,12 +450,13 @@ export default function CodeBridgeService({
                     <div className="mt-4 grid gap-3 rounded-xl border bg-black/[0.02] p-4 sm:grid-cols-[1fr_auto] sm:items-center dark:bg-white/[0.02]">
                         <div>
                             <p className="text-sm font-bold">
-                                {service.managed_devices} registered device{service.managed_devices === 1 ? '' : 's'}
+                                {service.managed_devices} registered device
+                                {service.managed_devices === 1 ? '' : 's'}
                             </p>
                             <p className="text-muted-foreground mt-1 text-xs leading-5">
                                 Registration is verified by Main Platform. Live
-                                connectivity requires a gateway heartbeat and
-                                is not available in this view.
+                                connectivity requires a gateway heartbeat and is
+                                not available in this view.
                             </p>
                         </div>
                         <span className="inline-flex w-fit rounded-lg border border-amber-500/30 bg-amber-500/5 px-3 py-1.5 text-xs font-semibold text-amber-600 dark:text-amber-400">
@@ -559,7 +558,8 @@ export default function CodeBridgeService({
                     {service.devices.length > 0 &&
                         filteredDevices.length === 0 && (
                             <p className="text-muted-foreground mt-3 text-xs">
-                                No registered device or project matches your search.
+                                No registered device or project matches your
+                                search.
                             </p>
                         )}
                     {service.managed_devices > service.devices.length && (
@@ -616,7 +616,10 @@ export default function CodeBridgeService({
                         </button>
                     </div>
                     {copyStatus && (
-                        <p role="status" className="text-muted-foreground mt-2 text-xs">
+                        <p
+                            role="status"
+                            className="text-muted-foreground mt-2 text-xs"
+                        >
                             {copyStatus}
                         </p>
                     )}
@@ -632,7 +635,9 @@ export default function CodeBridgeService({
                 <section className="border-sidebar-border/70 bg-card dark:border-sidebar-border rounded-2xl border p-5 sm:p-6">
                     <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-start">
                         <div>
-                            <h2 className="font-black">Authorized AI clients</h2>
+                            <h2 className="font-black">
+                                Authorized AI clients
+                            </h2>
                             <p className="text-muted-foreground mt-1 text-xs leading-5">
                                 {CONNECTED_CLIENTS_DESCRIPTION}
                             </p>
@@ -644,7 +649,9 @@ export default function CodeBridgeService({
 
                     {service.connected_clients.length > 0 && (
                         <label className="relative mt-4 block">
-                            <span className="sr-only">Search authorized AI clients</span>
+                            <span className="sr-only">
+                                Search authorized AI clients
+                            </span>
                             <Search className="text-muted-foreground pointer-events-none absolute top-3 left-3 h-4 w-4" />
                             <input
                                 type="search"
@@ -677,7 +684,8 @@ export default function CodeBridgeService({
                                             {clientSummary(client)}
                                         </div>
                                         <div className="text-muted-foreground mt-1 font-mono text-[10px]">
-                                            Client ID · …{client.client_id.slice(-10)}
+                                            Client ID · …
+                                            {client.client_id.slice(-10)}
                                         </div>
                                         <div className="mt-2 flex flex-wrap gap-2">
                                             {client.scopes.map((scope) => (
@@ -694,7 +702,10 @@ export default function CodeBridgeService({
                                         type="button"
                                         aria-label={`Revoke ${client.client_name}, client ending ${client.client_id.slice(-10)}`}
                                         onClick={() =>
-                                            revokeClient(client.client_id, client.client_name)
+                                            revokeClient(
+                                                client.client_id,
+                                                client.client_name,
+                                            )
                                         }
                                         disabled={revokingClient !== null}
                                         className="inline-flex min-h-10 shrink-0 items-center justify-center rounded-xl border border-red-500/30 px-3 text-[11px] font-black text-red-500 transition hover:bg-red-500/10 disabled:cursor-not-allowed disabled:opacity-50"
@@ -714,23 +725,22 @@ export default function CodeBridgeService({
                                 No authorized AI client matches your search.
                             </p>
                         )}
-                    {!clientSearch.trim() &&
-                        matchingClients.length > 5 && (
-                            <button
-                                type="button"
-                                onClick={() =>
-                                    setShowAllClients((current) => !current)
-                                }
-                                className="mt-3 min-h-10 rounded-xl border px-4 text-xs font-bold hover:border-red-500/40"
-                            >
-                                {showAllClients
-                                    ? 'Show fewer clients'
-                                    : `Show all ${matchingClients.length} clients`}
-                            </button>
-                        )}
+                    {!clientSearch.trim() && matchingClients.length > 5 && (
+                        <button
+                            type="button"
+                            onClick={() =>
+                                setShowAllClients((current) => !current)
+                            }
+                            className="mt-3 min-h-10 rounded-xl border px-4 text-xs font-bold hover:border-red-500/40"
+                        >
+                            {showAllClients
+                                ? 'Show fewer clients'
+                                : `Show all ${matchingClients.length} clients`}
+                        </button>
+                    )}
                     <p className="text-muted-foreground mt-4 text-[10px] leading-4">
-                        Revoking stops future OAuth refresh grants. Existing access tokens
-                        may remain valid for up to{' '}
+                        Revoking stops future OAuth refresh grants. Existing
+                        access tokens may remain valid for up to{' '}
                         {Math.max(
                             1,
                             Math.ceil(service.access_token_ttl_seconds / 60),
