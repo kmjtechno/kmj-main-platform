@@ -12,6 +12,7 @@ const admin = read('resources/js/pages/operator.tsx');
 const config = read('config/services.php');
 const keys = read('app/Services/Licensing/Kslp/KslpDeveloperKeys.php');
 const activation = read('routes/developer-activation-api.php');
+const developerRoutes = read('routes/developer-licenses.php');
 
 test('Admin and developer routes both stay registered', () => {
     assert.ok(web.includes("require __DIR__.'/developer-licenses.php'"));
@@ -62,4 +63,11 @@ test('Device registration does not pretend to issue a signed license', () => {
 test('Consent withdrawal clears optional first-login telemetry', () => {
     assert.ok(activation.includes("'client_platform' => $data['metadata_consent'] ?"));
     assert.ok(activation.includes("'metadata_consented_at' => $data['metadata_consent'] ?"));
+});
+
+test('Global PHP route imports cannot produce DomainException Wayfinder warnings', () => {
+    for (const source of [activation, developerRoutes]) {
+        assert.doesNotMatch(source, /^use DomainException;$/m);
+        assert.match(source, /catch \(DomainException\)/);
+    }
 });
