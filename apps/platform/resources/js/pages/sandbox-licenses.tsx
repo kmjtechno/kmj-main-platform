@@ -1,4 +1,4 @@
-import { Head, Link, useForm } from '@inertiajs/react';
+import { Head, Link, useForm, usePage } from '@inertiajs/react';
 import {
     CheckCircle2,
     History,
@@ -57,6 +57,9 @@ export default function SandboxLicenses({
     auditEvents,
     validationEngine,
 }: Props) {
+    const operator = usePage().props.operator as
+        | { enabled?: boolean }
+        | undefined;
     const claimedOrganizationId =
         licenseResult?.validation.claims?.['organization_id'];
     const issuedOrganizationId =
@@ -109,7 +112,7 @@ export default function SandboxLicenses({
 
     return (
         <>
-            <Head title="Sandbox Token Testing" />
+            <Head title="Sandbox Token Lab" />
             <div className="flex h-full flex-1 flex-col gap-6 overflow-x-auto p-4 sm:p-6">
                 <section className="border-sidebar-border/70 bg-card rounded-2xl border p-6">
                     <div className="flex items-start gap-4">
@@ -118,19 +121,30 @@ export default function SandboxLicenses({
                         </span>
                         <div>
                             <div className="text-xs font-bold tracking-wider text-red-500 uppercase">
-                                Testing only · not a commercial license
+                                Sandbox testing · not commercial licensing
                             </div>
                             <h1 className="mt-1 text-2xl font-black tracking-tight">
                                 Sandbox Token Lab
                             </h1>
                             <p className="text-muted-foreground mt-2 max-w-2xl text-sm leading-6">
-                                Test a 30-minute entitlement-backed token: issue,
-                                verify and revoke it. These test tokens are not
-                                customer license keys or production activation grants.
+                                Issue, validate and revoke short-lived test
+                                tokens. These are not customer license keys or
+                                production software activation credentials.
                             </p>
-                            <Link href="/developer/apps" className="mt-4 inline-flex min-h-10 items-center rounded-xl border border-red-500/30 bg-red-500/5 px-4 text-xs font-bold text-red-500 hover:bg-red-500/10">
-                                Open Developer Apps &amp; Keys
+                            <Link
+                                href="/developer/apps"
+                                className="mt-4 mr-2 inline-flex min-h-10 items-center rounded-xl border border-red-500/30 px-4 text-xs font-bold text-red-500"
+                            >
+                                Developer Apps &amp; Keys
                             </Link>
+                            {operator?.enabled && (
+                                <Link
+                                    href="/operator/kslp"
+                                    className="mt-4 inline-flex min-h-10 items-center rounded-xl border border-red-500/30 bg-red-500/10 px-4 text-xs font-bold text-red-500"
+                                >
+                                    Open Super Admin licensing
+                                </Link>
+                            )}
                             <div className="mt-3 inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-semibold">
                                 Validation engine
                                 <span className="font-mono text-red-500">
