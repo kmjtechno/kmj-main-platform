@@ -37,7 +37,10 @@ type Props = {
 function Pager({ data }: { data: Paginated<unknown> }) {
     if (data.last_page <= 1) return null;
     return (
-        <nav aria-label="Results pagination" className="mt-5 flex flex-wrap items-center gap-2">
+        <nav
+            aria-label="Results pagination"
+            className="mt-5 flex flex-wrap items-center gap-2"
+        >
             {data.links.map((link, index) =>
                 link.url ? (
                     <Link
@@ -53,11 +56,19 @@ function Pager({ data }: { data: Paginated<unknown> }) {
                                 : 'border-white/15 text-slate-300 hover:bg-white/10',
                         ].join(' ')}
                     >
-                        {index === 0 ? 'Previous' : index === data.links.length - 1 ? 'Next' : link.label}
+                        {index === 0
+                            ? 'Previous'
+                            : index === data.links.length - 1
+                              ? 'Next'
+                              : link.label}
                     </Link>
                 ) : (
                     <span key={index} className="rounded-lg border border-white/5 px-3 py-2 text-xs text-slate-500">
-                        {index === 0 ? 'Previous' : index === data.links.length - 1 ? 'Next' : link.label}
+                        {index === 0
+                            ? 'Previous'
+                            : index === data.links.length - 1
+                              ? 'Next'
+                              : link.label}
                     </span>
                 ),
             )}
