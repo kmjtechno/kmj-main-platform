@@ -1,4 +1,5 @@
 import { Head, router } from '@inertiajs/react';
+import OperatorModuleNavigation from '@/components/operator-module-navigation';
 import {
     Activity,
     ArchiveRestore,
