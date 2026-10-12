@@ -98,7 +98,7 @@ test -s public/build/manifest.json || {
 
 # No migration against production and no credential import.
 echo "== KSLP Laravel tests =="
-php artisan test --filter=Kslp --no-ansi
+php artisan test --filter=Kslp --display-warnings --fail-on-warning --no-ansi
 ./vendor/bin/pint --test \
   app/Services/Licensing/Kslp/KslpActivationReplayGuard.php \
   app/Services/Licensing/Kslp/KslpOfflineLeaseGuard.php \
