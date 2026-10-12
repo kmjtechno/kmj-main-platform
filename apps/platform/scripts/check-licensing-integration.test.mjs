@@ -68,6 +68,6 @@ test('Consent withdrawal clears optional first-login telemetry', () => {
 test('Global PHP route imports cannot produce DomainException Wayfinder warnings', () => {
     for (const source of [activation, developerRoutes]) {
         assert.doesNotMatch(source, /^use DomainException;$/m);
-        assert.match(source, /catch \(DomainException\)/);
+        assert.ok(source.includes('catch (DomainException'));
     }
 });
