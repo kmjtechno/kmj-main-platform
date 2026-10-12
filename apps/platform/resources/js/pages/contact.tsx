@@ -39,11 +39,7 @@ export default function Contact() {
                 </div>
                 <PublicSiteHeader />
 
-                <main
-                    id="main-content"
-                    tabIndex={-1}
-                    className="relative z-10"
-                >
+                <main id="main-content" tabIndex={-1} className="relative z-10">
                     <section className="mx-auto max-w-[1440px] px-5 pt-20 pb-20 sm:px-8 lg:px-12 lg:pt-28 lg:pb-28">
                         <div className="max-w-4xl">
                             <div className="text-[10px] font-black tracking-[0.24em] text-[#ff5962] uppercase">
@@ -96,7 +92,7 @@ export default function Contact() {
                                         aria-hidden="true"
                                     />
                                 </a>
-                                <p className="mt-4 break-all text-sm text-white/60">
+                                <p className="mt-4 text-sm break-all text-white/60">
                                     kmjtechnonet@gmail.com
                                 </p>
                             </article>
@@ -140,9 +136,10 @@ export default function Contact() {
                                 </h2>
                                 <p className="mt-5 max-w-lg text-sm leading-7 text-white/65">
                                     A concise outline helps assess fit and
-                                    define a realistic next step. No confidential
-                                    passwords, API keys or customer records
-                                    should be included in an initial message.
+                                    define a realistic next step. No
+                                    confidential passwords, API keys or customer
+                                    records should be included in an initial
+                                    message.
                                 </p>
                                 <div className="mt-7 flex items-center gap-2 text-sm text-white/65">
                                     <ShieldCheck
@@ -162,7 +159,7 @@ export default function Contact() {
                                         <span className="text-xs font-black text-[#ff5962]">
                                             {String(index + 1).padStart(2, '0')}
                                         </span>
-                                        <span className="text-sm font-semibold leading-6 text-white/75">
+                                        <span className="text-sm leading-6 font-semibold text-white/75">
                                             {item}
                                         </span>
                                     </li>
