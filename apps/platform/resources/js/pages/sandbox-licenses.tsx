@@ -1,5 +1,7 @@
-import { Head, useForm } from '@inertiajs/react';
+import { Head, Link, useForm, usePage } from '@inertiajs/react';
 import {
+    ArrowUpRight,
+    Building2,
     CheckCircle2,
     History,
     KeyRound,
@@ -68,6 +70,14 @@ export default function SandboxLicenses({
             : '';
 
     const issue = useForm({ organization_id: '', entitlement_id: '' });
+    const organizationSetup = useForm({ name: '' });
+    const canManagePlatform = Boolean(
+        (usePage().props.operator as { enabled?: boolean } | undefined)?.enabled,
+    );
+    const hasOrganization = organizations.length > 0;
+    const hasActiveEntitlement = organizations.some((organization) =>
+        organization.entitlements.some((entitlement) => entitlement.status === 'active'),
+    );
     const validate = useForm({
         organization_id: issuedOrganizationId,
         license: licenseResult?.token ?? '',
@@ -128,6 +138,14 @@ export default function SandboxLicenses({
                                 entitlement, validate it, then revoke it and
                                 confirm the same token fails closed.
                             </p>
+                            {canManagePlatform && (
+                                <Link
+                                    href="/operator"
+                                    className="mt-4 inline-flex min-h-11 items-center gap-2 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-2 text-sm font-bold text-red-500 hover:bg-red-500/15"
+                                >
+                                    Open Super Admin <ArrowUpRight className="h-4 w-4" aria-hidden="true" />
+                                </Link>
+                            )}
                             <div className="mt-3 inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-semibold">
                                 Validation engine
                                 <span className="font-mono text-red-500">
@@ -169,6 +187,57 @@ export default function SandboxLicenses({
                         </div>
                     </div>
                 </section>
+
+                {!hasActiveEntitlement && (
+                    <section className="border-amber-500/30 bg-amber-500/5 rounded-2xl border p-5 sm:p-6" aria-label="License setup required">
+                        <div className="flex items-start gap-3">
+                            <Building2 className="mt-1 h-5 w-5 shrink-0 text-amber-500" aria-hidden="true" />
+                            <div className="min-w-0 flex-1">
+                                <h2 className="font-bold">{hasOrganization ? 'No active entitlement available' : 'Set up your first organization'}</h2>
+                                <p className="text-muted-foreground mt-2 text-sm leading-6">
+                                    {hasOrganization
+                                        ? 'Your organization exists, but no active sandbox entitlement is assigned. A license cannot be issued until an authorized entitlement is available.'
+                                        : 'A sandbox license requires your organization and an active entitlement. Creating a sandbox organization also provisions the existing Main Platform sandbox access policy; it does not create a paid subscription.'}
+                                </p>
+                                {!hasOrganization ? (
+                                    <form
+                                        className="mt-4 flex flex-col gap-3 sm:flex-row"
+                                        onSubmit={(event) => {
+                                            event.preventDefault();
+                                            organizationSetup.post('/organizations', {
+                                                onSuccess: () => organizationSetup.reset(),
+                                            });
+                                        }}
+                                    >
+                                        <label className="min-w-0 flex-1 text-xs font-semibold">
+                                            <span className="sr-only">Organization name</span>
+                                            <input
+                                                name="name"
+                                                type="text"
+                                                required
+                                                minLength={2}
+                                                maxLength={160}
+                                                value={organizationSetup.data.name}
+                                                onChange={(event) => organizationSetup.setData('name', event.target.value)}
+                                                placeholder="Organization name (e.g. KMJ TECHNO)"
+                                                className="border-input bg-background min-h-11 w-full rounded-xl border px-3 text-sm"
+                                            />
+                                            {organizationSetup.errors.name && <span className="mt-1 block text-red-500" role="alert">{organizationSetup.errors.name}</span>}
+                                        </label>
+                                        <button type="submit" disabled={organizationSetup.processing}
+                                            className="min-h-11 rounded-xl bg-red-600 px-5 text-sm font-semibold text-white disabled:opacity-50">
+                                            {organizationSetup.processing ? 'Creating…' : 'Create sandbox organization'}
+                                        </button>
+                                    </form>
+                                ) : (
+                                    <Link className="mt-4 inline-flex min-h-11 items-center gap-2 rounded-xl border px-4 py-2 text-sm font-semibold hover:bg-amber-500/10" href="/purchase">
+                                        View available products and access <ArrowUpRight className="h-4 w-4" aria-hidden="true" />
+                                    </Link>
+                                )}
+                            </div>
+                        </div>
+                    </section>
+                )}
 
                 <div className="grid gap-6 xl:grid-cols-3">
                     <section className="border-sidebar-border/70 bg-card rounded-2xl border p-5">
@@ -238,7 +307,7 @@ export default function SandboxLicenses({
 
                             <button
                                 type="submit"
-                                disabled={issue.processing}
+                                disabled={issue.processing || !hasActiveEntitlement || !issue.data.entitlement_id}
                                 className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-red-600 px-4 text-sm font-bold text-white disabled:opacity-60"
                             >
                                 <KeyRound className="h-4 w-4" />
