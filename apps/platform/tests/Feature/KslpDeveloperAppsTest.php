@@ -20,6 +20,9 @@ final class KslpDeveloperAppsTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        // Inertia response tests do not require compiled browser assets.
+        // The standalone frontend release gate separately verifies Vite.
+        $this->withoutVite();
         config()->set('services.kmj_developer_licensing.enabled', true);
     }
 
