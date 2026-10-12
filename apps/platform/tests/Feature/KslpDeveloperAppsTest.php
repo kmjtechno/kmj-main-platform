@@ -70,7 +70,7 @@ final class KslpDeveloperAppsTest extends TestCase
                 'organization_id' => $org,
                 'product_code' => 'VENDOR.CINEMA',
                 'customer_id' => 'customer-123',
-                'plan' => 'professional',
+                'plan' => 'trial',
             ]);
         $issued->assertRedirect(route('developer.apps.index'));
         $issued->assertSessionHas('developer_license_key.key');
@@ -138,7 +138,7 @@ final class KslpDeveloperAppsTest extends TestCase
                 'organization_id' => $victimOrg,
                 'product_code' => 'VENDOR.CINEMA',
                 'customer_id' => 'attacker',
-                'plan' => 'professional',
+                'plan' => 'trial',
             ])->assertForbidden();
     }
 
@@ -170,7 +170,7 @@ final class KslpDeveloperAppsTest extends TestCase
         $authority->registerProduct($org, 'VENDOR.APP', 'Vendor App');
 
         $issued = app(KslpDeveloperKeys::class)->issue(
-            $org, 'VENDOR.APP', 'customer-123', 'professional', (string) $owner->id,
+            $org, 'VENDOR.APP', 'customer-123', 'trial', (string) $owner->id,
         );
         DB::table('kslp_license_keys')->where('license_id', $issued['license_id'])
             ->update(['revoked_at' => now()]);
@@ -193,7 +193,7 @@ final class KslpDeveloperAppsTest extends TestCase
         app(KslpIssuerSubscriptionAuthority::class)
             ->registerProduct($org, 'VENDOR.REVOKE', 'Revoke Test');
         $issued = app(KslpDeveloperKeys::class)->issue(
-            $org, 'VENDOR.REVOKE', 'customer-revoke', 'professional', (string) $owner->id,
+            $org, 'VENDOR.REVOKE', 'customer-revoke', 'trial', (string) $owner->id,
         );
         $keyId = DB::table('kslp_license_keys')->where('license_id', $issued['license_id'])->value('id');
 
@@ -225,7 +225,7 @@ final class KslpDeveloperAppsTest extends TestCase
         app(KslpIssuerSubscriptionAuthority::class)
             ->registerProduct($org, 'VENDOR.SECURE', 'Secure App');
         $issued = app(KslpDeveloperKeys::class)->issue(
-            $org, 'VENDOR.SECURE', 'customer-one', 'professional', (string) $owner->id,
+            $org, 'VENDOR.SECURE', 'customer-one', 'trial', (string) $owner->id,
         );
         $keyId = DB::table('kslp_license_keys')->where('license_id', $issued['license_id'])->value('id');
         $attacker = User::factory()->create();
