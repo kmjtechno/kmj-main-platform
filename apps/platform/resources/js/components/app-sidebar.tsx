@@ -2,6 +2,7 @@ import { Link, usePage } from '@inertiajs/react';
 import {
     Activity,
     Crown,
+    CreditCard,
     KeyRound,
     LayoutGrid,
     PackageOpen,
@@ -70,6 +71,7 @@ export function AppSidebar() {
         ...(operator?.enabled
             ? [
                   { title: 'Operator', href: '/operator', icon: Crown },
+                  { title: 'Gateway Settings', href: '/operator/payments', icon: CreditCard },
                   {
                       title: 'Product Manager',
                       href: '/operator#product-manager',
