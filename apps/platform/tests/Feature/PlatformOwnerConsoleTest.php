@@ -145,6 +145,8 @@ final class PlatformOwnerConsoleTest extends TestCase
         $response->assertInertia(fn (Assert $page) => $page
             ->component('operator')
             ->has('catalogProducts', 15)
+            ->where('canonicalProductCount', 15)
+            ->has('missingCanonicalSlugs', 0)
             ->where('catalogProducts.0.active_policy_count', 1)
             ->where('catalogProducts.0.active_entitlement_count', 0)
             ->has('catalogProducts.0.lifecycle')
@@ -166,6 +168,23 @@ final class PlatformOwnerConsoleTest extends TestCase
             ->has('organizations', 0)
             ->has('discoverableProducts')
             ->where('canManageCodeBridgeOwnerPlan', false));
+    }
+
+    public function test_operator_reports_missing_canonical_product_registrations_without_issuing_any_entitlements(): void
+    {
+        $owner = $this->createPasskeyOwner();
+
+        $response = $this->actingAs($owner)
+            ->withSession(['auth.password_confirmed_at' => time()])
+            ->get('/operator');
+
+        $response->assertOk();
+        $response->assertInertia(fn (Assert $page) => $page
+            ->component('operator')
+            ->where('canonicalProductCount', 15)
+            ->has('missingCanonicalSlugs', 15)
+            ->has('catalogProducts', 0)
+            ->where('metrics.entitlements', 0));
     }
 
     public function test_operator_console_exposes_ready_fulfillment_state_for_confirmed_order(): void
