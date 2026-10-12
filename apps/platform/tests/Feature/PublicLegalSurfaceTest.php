@@ -20,6 +20,7 @@ final class PublicLegalSurfaceTest extends TestCase
             '/terms' => 'legal/terms',
             '/privacy' => 'legal/privacy',
             '/refund-policy' => 'legal/refund-policy',
+            '/contact' => 'contact',
             '/acceptable-use' => 'legal/acceptable-use',
             '/cookie-policy' => 'legal/cookie-policy',
         ];
