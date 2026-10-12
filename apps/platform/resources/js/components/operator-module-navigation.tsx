@@ -71,7 +71,7 @@ const modules = [
 export default function OperatorModuleNavigation({
     active,
 }: {
-    active: 'overview' | 'payments' | 'operations' | 'licensing' | 'codebridge';
+    active: 'overview' | 'payments' | 'operations' | 'licensing' | 'codebridge' | 'customers';
 }) {
     return (
         <nav
