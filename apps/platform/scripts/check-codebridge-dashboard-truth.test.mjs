@@ -47,3 +47,16 @@ void test('clipboard failures have visible feedback', () => {
     assert.match(ui, /Copy unavailable/);
     assert.match(ui, /role="status"/);
 });
+
+void test('many OAuth grants have compact, searchable cards and unique client clues', () => {
+    assert.match(ui, /visibleClients\.map\(\(client\)/);
+    assert.match(ui, /matchingClients\.slice\(0, 5\)/);
+    assert.match(ui, /client\.client_id\.slice\(-10\)/);
+    assert.match(ui, /Search client name or scope/);
+});
+
+void test('offline remediation links to exact documented Connection Doctor', () => {
+    assert.match(ui, /docs\/CONNECTION-DOCTOR\.md/);
+    assert.match(ui, /connection_overview/);
+    assert.match(ui, /Live connection has not been verified/);
+});
