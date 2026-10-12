@@ -758,7 +758,15 @@ Route::middleware(['auth', 'verified'])->group(function () {
             })
             ->all();
 
+        // Canonical product identities may exist in KMJ's code registry but
+        // not yet be migrated/registered in the production database.
+        // Show gaps truthfully: these are NOT active or licensed services.
+        $registeredSlugs = $managedProducts->pluck('slug')->map(static fn ($slug): string => (string) $slug)->all();
+        $missingCanonicalSlugs = array_values(array_diff($publicProducts->slugs(), $registeredSlugs));
+
         return Inertia::render('operator', [
+            'missingCanonicalSlugs' => $missingCanonicalSlugs,
+            'canonicalProductCount' => count($publicProducts->slugs()),
             'metrics' => [
                 'users' => User::query()->count(),
                 'organizations' => Organization::query()->count(),
