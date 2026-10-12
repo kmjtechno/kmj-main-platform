@@ -1,6 +1,8 @@
 import { Head, Link } from '@inertiajs/react';
 import OperatorModuleNavigation from '@/components/operator-module-navigation';
-import OperatorPaymentSettings, { type OwnerGatewaySetting } from '@/components/operator-payment-settings';
+import OperatorPaymentSettings, {
+    type OwnerGatewaySetting,
+} from '@/components/operator-payment-settings';
 import {
     ArrowLeft,
     BadgeCheck,
@@ -38,7 +40,9 @@ export default function OperatorPayments({
         <>
             <Head title="KMJ TECHNO — Payment Gateway Control" />
             <main className="flex min-h-screen flex-col gap-6 bg-[#080b10] p-4 text-white sm:p-8">
-                <div className="mx-auto w-full max-w-6xl"><OperatorModuleNavigation active="payments" /></div>
+                <div className="mx-auto w-full max-w-6xl">
+                    <OperatorModuleNavigation active="payments" />
+                </div>
                 <header className="mx-auto flex w-full max-w-6xl flex-col gap-4">
                     <Link
                         href="/operator"
