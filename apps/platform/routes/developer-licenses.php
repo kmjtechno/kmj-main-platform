@@ -148,7 +148,7 @@ Route::middleware(['auth', 'verified'])->prefix('developer')->name('developer.')
             'organization_id' => ['required', 'uuid'],
             'product_code' => ['required', 'string', 'max:96'],
             'customer_id' => ['required', 'string', 'min:3', 'max:128'],
-            'plan' => ['required', 'in:trial,professional,business,enterprise,custom_oem'],
+            'plan' => ['required', 'in:trial'],
         ]);
         abort_unless($capabilities->allows($actor->id, $data['organization_id'], 'license.manage'), 403);
 
