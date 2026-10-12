@@ -18,6 +18,11 @@ return new class extends Migration
             $table->char('key_digest', 64)->unique();
             $table->string('display_prefix', 16);
             $table->timestamp('first_activated_at')->nullable();
+            // Optional telemetry collected only with explicit client consent.
+            // Never store raw serial numbers, MAC addresses or unredacted HWIDs.
+            $table->string('client_platform', 32)->nullable();
+            $table->string('client_app_version', 64)->nullable();
+            $table->timestamp('metadata_consented_at')->nullable();
             $table->timestamp('revoked_at')->nullable();
             $table->timestamps();
 
