@@ -58,6 +58,8 @@ type OperatorProps = {
         confirmed_orders: number;
     };
     catalogProducts: CatalogProduct[];
+    canonicalProductCount: number;
+    missingCanonicalSlugs: string[];
     recentOrders: RecentOrder[];
     products: ManagedProduct[];
 };
@@ -178,6 +180,8 @@ function ManualPaymentConfirmation({ order }: { order: RecentOrder }) {
 export default function Operator({
     metrics,
     catalogProducts,
+    canonicalProductCount,
+    missingCanonicalSlugs,
     recentOrders,
     products,
 }: OperatorProps) {
@@ -275,16 +279,35 @@ export default function Operator({
                                 Product & licensing matrix
                             </h2>
                             <p className="text-muted-foreground mt-1 text-xs">
-                                Canonical products stay visible even before
-                                commercial activation. Licensing remains
-                                fail-closed until an active entitlement policy
-                                exists.
+                                Registered products are listed below. Missing
+                                canonical registrations are reported separately.
+                                No product gains a licence or payment access
+                                merely by appearing here.
                             </p>
                         </div>
                         <span className="text-muted-foreground rounded-full border px-3 py-1 text-[10px] font-bold">
-                            {catalogProducts.length} canonical products
+                            {catalogProducts.length} registered / {canonicalProductCount} canonical
                         </span>
                     </div>
+                    {missingCanonicalSlugs.length > 0 && (
+                        <div role="status" className="mt-4 rounded-xl border border-amber-500/30 bg-amber-500/5 p-4">
+                            <p className="text-sm font-bold">
+                                {missingCanonicalSlugs.length} canonical products are not registered in this database
+                            </p>
+                            <p className="text-muted-foreground mt-1 text-xs leading-5">
+                                Missing records are not customer licenses. Reconcile the
+                                canonical catalog in staging, verify existing product
+                                settings, then perform an audited production sync.
+                            </p>
+                            <div className="mt-3 flex flex-wrap gap-2">
+                                {missingCanonicalSlugs.map((slug) => (
+                                    <span key={slug} className="rounded-lg border px-2 py-1 font-mono text-[11px]">
+                                        {slug}
+                                    </span>
+                                ))}
+                            </div>
+                        </div>
+                    )}
                     <div className="mt-5 grid gap-3 sm:grid-cols-3">
                         <div className="rounded-xl border bg-background/50 p-3">
                             <p className="text-muted-foreground text-xs">
