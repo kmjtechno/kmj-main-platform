@@ -61,6 +61,11 @@ final class CodeBridgeDeviceEnrollmentTest extends TestCase
         self::assertDatabaseHas('kslp_license_events', [
             'license_id' => $license, 'action' => 'codebridge_device_reenrolled',
         ]);
+
+        // The old activation cannot be re-used for any new device once its
+        // credential row is replaced by a fresh proof-bound activation.
+        $this->expectExceptionMessage('CODEBRIDGE_ENROLLMENT_DENIED');
+        $enroll->enroll($license, $activation, 'tenant-a', 'device-b', time());
     }
 
     public function test_active_device_still_rejects_fresh_activation_without_disconnect(): void
