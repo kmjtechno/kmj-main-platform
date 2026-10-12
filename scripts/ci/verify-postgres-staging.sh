@@ -68,6 +68,7 @@ export APP_KEY="base64:$(php -r 'echo base64_encode(random_bytes(32));')"
 export CACHE_STORE=array SESSION_DRIVER=array QUEUE_CONNECTION=sync
 export MAIL_MAILER=log BROADCAST_CONNECTION=log FILESYSTEM_DISK=local
 export TELESCOPE_ENABLED=false PULSE_ENABLED=false NIGHTWATCH_ENABLED=false
+export KMJ_PG_STAGING_VERIFY=1 KMJ_PG_VERIFY_SOCKET="$tmp/socket"
 
 [[ "$DB_HOST" == "$tmp/socket" && -S "$DB_HOST/.s.PGSQL.$port" ]] || {
   echo 'BLOCKED: private PostgreSQL socket missing' >&2; exit 3;
@@ -83,7 +84,9 @@ check_sql="select (to_regclass('public.payment_gateway_settings') is not null an
 [[ "$(query "$check_sql")" == 1 ]] || { echo 'FAIL: required product/payment schema absent' >&2; exit 1; }
 echo 'PASS: fresh PostgreSQL migration apply and both new schema tables'
 failures=0
-if php artisan test --filter='PlatformOwnerConsoleTest|OwnerPaymentGatewaySettingsTest|KslpDeveloperAppsTest|KslpDeveloperActivationApiTest|KslpLifecycleTest' --display-warnings --fail-on-warning --no-ansi; then
+# An explicit regression test must prove PHPUnit did not fall back to SQLite
+# from its default phpunit.xml configuration.
+if php artisan test --filter='PostgresReleaseGateTest|PlatformOwnerConsoleTest|OwnerPaymentGatewaySettingsTest|KslpDeveloperAppsTest|KslpDeveloperActivationApiTest|KslpLifecycleTest' --display-warnings --fail-on-warning --no-ansi; then
   echo 'PASS: selected PostgreSQL feature tests'
 else
   echo 'FAIL: selected PostgreSQL feature tests'
