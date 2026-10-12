@@ -38,6 +38,8 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
+        // Never flash payment credentials back into sessions on validation failures.
+        $exceptions->dontFlash(['client_id', 'client_secret', 'webhook_secret']);
         $exceptions->shouldRenderJsonWhen(
             fn (Request $request) => $request->is('api/*') || $request->expectsJson(),
         );
