@@ -14,6 +14,8 @@ The authorized gateway currently reports three online projects: KMJ-elite/Main P
 
 Connection Doctor: https://github.com/kmjtechno/kmj-codebridge/blob/main/docs/CONNECTION-DOCTOR.md
 
+For the **legacy Windows P720 CodeBridge identity**, the existing safe, read-only launcher is documented at https://github.com/kmjtechno/kmj-codebridge/blob/main/docs/P720-CODEBRIDGE-DOCTOR.md. On the trusted P720 CodeBridge checkout, the owner can double-click `scripts/START-P720-CODEBRIDGE-DOCTOR.cmd` and share only its secret-free diagnostic fields. This does not change the independent CineCore agent or its uncommitted files.
+
 ## Other non-UI blockers discovered
 
 - Quality gates **are configured** in CodeBridge even though `list_project_commands` returns `[]`. Main Platform: `fast`, `platform`, `full`. CineCore: `cinecore_configure`, `cinecore_build`, `cinecore_ctest`. CloudOS: `fast`, `full`. Custom command profiles are a separate feature; do not represent empty profiles as inability to run these configured gates.
