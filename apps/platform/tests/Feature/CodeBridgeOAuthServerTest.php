@@ -301,6 +301,63 @@ final class CodeBridgeOAuthServerTest extends TestCase
         $this->actingAs($user)->get('/oauth/authorize?'.$this->authorizeQuery($clientId, ['redirect_uri' => 'https://evil.example/cb']))->assertStatus(400);
     }
 
+    public function test_gemini_spark_opaque_state_round_trips_without_truncation(): void
+    {
+        $redirect = 'https://oauth-redirect.googleusercontent.com/r/user_bound_custom-mcp-123-kmjtechno_com';
+        $clientId = $this->postJson('/oauth/register', [
+            'client_name' => 'Gemini Spark',
+            'redirect_uris' => [$redirect],
+        ])->assertCreated()->json('client_id');
+        $state = str_repeat('opaque+/=%._-AZ09', 90).'tail-%&+';
+        $this->assertGreaterThan(512, strlen($state));
+
+        $user = User::factory()->create();
+        foreach (['approve', 'deny'] as $decision) {
+            $page = $this->actingAs($user)->get('/oauth/authorize?'.$this->authorizeQuery($clientId, [
+                'redirect_uri' => $redirect,
+                'state' => $state,
+            ]))->assertOk();
+
+            $location = $this->actingAs($user)->post('/oauth/authorize', [
+                'request_id' => $page->viewData('page')['props']['requestId'],
+                'decision' => $decision,
+            ])->assertRedirect()->headers->get('Location');
+
+            $this->assertStringStartsWith($redirect.'?', $location);
+            parse_str((string) parse_url($location, PHP_URL_QUERY), $params);
+            $this->assertSame($state, $params['state']);
+            $this->assertSame('https://kmj.example', $params['iss']);
+            if ($decision === 'approve') {
+                $this->assertArrayHasKey('code', $params);
+            } else {
+                $this->assertSame('access_denied', $params['error']);
+            }
+        }
+
+        // Error callbacks must preserve the same opaque state value.
+        $errorLocation = $this->actingAs($user)->get('/oauth/authorize?'.$this->authorizeQuery($clientId, [
+            'redirect_uri' => $redirect,
+            'state' => $state,
+            'resource' => 'https://wrong.example/mcp',
+        ]))->assertRedirect()->headers->get('Location');
+        parse_str((string) parse_url($errorLocation, PHP_URL_QUERY), $errorParams);
+        $this->assertSame($state, $errorParams['state']);
+        $this->assertSame('invalid_target', $errorParams['error']);
+    }
+
+    public function test_oversized_oauth_state_is_rejected_without_redirect_or_truncation(): void
+    {
+        $user = User::factory()->create();
+        $clientId = $this->registerClient();
+        $this->actingAs($user)->get('/oauth/authorize?'.$this->authorizeQuery($clientId, [
+            'state' => str_repeat('s', 4096),
+        ]))->assertOk();
+
+        $this->actingAs($user)->get('/oauth/authorize?'.$this->authorizeQuery($clientId, [
+            'state' => str_repeat('s', 4097),
+        ]))->assertStatus(400)->assertSee('invalid_request');
+    }
+
     public function test_protocol_errors_redirect_back_with_state(): void
     {
         $user = User::factory()->create();
