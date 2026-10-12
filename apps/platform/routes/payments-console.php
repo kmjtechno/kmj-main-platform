@@ -5,8 +5,8 @@ use App\Services\Payments\OwnerPaymentGatewaySettings;
 use App\Services\Payments\PaymentGatewayReadiness;
 use App\Services\PlatformOwnerAccess;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Schema;
 use Inertia\Inertia;
 
 Route::middleware(['auth', 'verified', 'password.confirm'])
@@ -49,8 +49,9 @@ Route::middleware(['auth', 'verified', 'password.confirm'])
                 'webhook_secret' => ['nullable', 'string', 'max:1024'],
             ]);
             if ($provider === 'razorpay'
-                && ! empty($input['client_id'])
-                && ! str_starts_with($input['client_id'], 'rzp_test_')) {
+                && isset($input['client_id'])
+                && $input['client_id'] !== ''
+                && str_starts_with($input['client_id'], 'rzp_test_') === false) {
                 return back()->withErrors(['client_id' => 'Only Razorpay test keys may be saved here.']);
             }
 
