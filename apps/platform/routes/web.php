@@ -374,6 +374,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         OrganizationDirectory $organizations,
         EntitlementReader $entitlements,
         CustomerReleaseAccess $releaseAccess,
+        PublicProductCatalog $publicProducts,
     ) {
         $user = $request->user();
         abort_unless($user instanceof User, 401);
@@ -457,7 +458,21 @@ Route::middleware(['auth', 'verified'])->group(function () {
             $items[] = $organization;
         }
 
+        // Public catalog is separate from issued customer entitlements.
+        // Never imply a listed product is licensed or commercially available.
+        $discoverableProducts = collect($publicProducts->all())
+            ->map(static fn (array $product): array => [
+                'slug' => (string) $product['slug'],
+                'name' => (string) $product['name'],
+                'lifecycle_label' => (string) ($product['lifecycle_label'] ?? 'Information'),
+                'purchase_enabled' => (bool) ($product['purchase_enabled'] ?? false),
+                'summary' => (string) ($product['summary'] ?? ''),
+            ])
+            ->values()
+            ->all();
+
         return Inertia::render('dashboard', [
+            'discoverableProducts' => $discoverableProducts,
             'organizations' => $items,
             'hasPasskey' => $user->passkeys()->exists(),
             'canManageCodeBridgeOwnerPlan' => app(PlatformOwnerAccess::class)->allows($user),
