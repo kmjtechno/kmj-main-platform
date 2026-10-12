@@ -109,10 +109,11 @@ final class KslpLicenseControlPlane
      */
     private function matchingActivation(object $activation, string $licenseId, string $serverIdentity, string $machineHash): array
     {
-        if ((string) $activation->license_id !== $licenseId
-            || (string) $activation->server_identity !== $serverIdentity
-            || ! hash_equals((string) $activation->machine_identity_hash, $machineHash)
-            || $activation->deactivated_at !== null) {
+        $record = (array) $activation;
+        if ((string) ($record['license_id'] ?? '') !== $licenseId
+            || (string) ($record['server_identity'] ?? '') !== $serverIdentity
+            || ! hash_equals((string) ($record['machine_identity_hash'] ?? ''), $machineHash)
+            || ($record['deactivated_at'] ?? null) !== null) {
             throw new DomainException('KSLP_ACTIVATION_CONFLICT');
         }
 
