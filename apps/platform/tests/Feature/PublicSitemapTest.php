@@ -72,6 +72,7 @@ final class PublicSitemapTest extends TestCase
         );
         $this->assertStringContainsString(
             '<loc>https://kmjtechno.example/refund-policy</loc>',
+            '<loc>https://kmjtechno.example/contact</loc>',
             $xml,
         );
         $this->assertStringContainsString(
