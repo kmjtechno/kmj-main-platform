@@ -73,9 +73,11 @@ final class KslpLicenseControlPlane
         $existing = DB::table('kslp_activations')->where('idempotency_key', $idempotencyKey)->first();
         if ($existing) {
             return $this->matchingActivation($existing, $licenseId, $serverIdentity, $machineHash);
-        }app(KslpActivationProof::class)->consume($challengeId, $licenseId, $serverIdentity, $nonce, $proof);
+        }
 
-        return DB::transaction(function () use ($licenseId, $serverIdentity, $machineHash, $idempotencyKey, $actor) {
+        // Proof consumption and activation must commit atomically: failed
+        // ownership/seat checks should not burn a valid pairing challenge.
+        return DB::transaction(function () use ($licenseId, $serverIdentity, $machineHash, $idempotencyKey, $actor, $challengeId, $nonce, $proof) {
             $existing = DB::table('kslp_activations')->where('idempotency_key', $idempotencyKey)->first();
             if ($existing) {
                 return $this->matchingActivation($existing, $licenseId, $serverIdentity, $machineHash);
@@ -83,9 +85,13 @@ final class KslpLicenseControlPlane
             $lic = DB::table('kslp_licenses')->where('id', $licenseId)->lockForUpdate()->first();
             if (! $lic) {
                 throw new DomainException('KSLP_LICENSE_NOT_FOUND');
-            }if ($lic->revoked_at) {
+            }
+            if ($lic->revoked_at) {
                 throw new DomainException('KSLP_REVOKED');
             }
+
+            app(KslpActivationProof::class)->consume($challengeId, $licenseId, $serverIdentity, $nonce, $proof);
+
             $active = DB::table('kslp_activations')->where('license_id', $licenseId)->whereNull('deactivated_at')->first();
             if ($active) {
                 KslpActivationReplayGuard::requireMatch((array) $active, $licenseId, $serverIdentity, $machineHash);
