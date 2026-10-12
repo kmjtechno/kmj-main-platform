@@ -63,6 +63,12 @@ do
 done
 echo "PASS: PHP syntax"
 
+echo "== Wayfinder route generation (direct error reporting) =="
+# Wayfinder's Vite plugin suppresses Laravel's full CLI output on errors;
+# run the exact Artisan generator first so warnings/route errors are visible.
+php artisan wayfinder:generate --with-form --no-ansi
+echo "PASS: Wayfinder Laravel route generation"
+
 echo "== Vite build required for Laravel HTTP tests =="
 npm run build
 test -s public/build/manifest.json || {
