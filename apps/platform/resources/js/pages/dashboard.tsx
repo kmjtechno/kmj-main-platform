@@ -116,8 +116,9 @@ export default function Dashboard({
                             </h1>
                             <p className="text-muted-foreground mt-3 max-w-xl text-sm leading-6">
                                 Your licensed services appear separately from
-                                the KMJ product catalog. Products you can explore
-                                are not automatically activated on your account.
+                                the KMJ product catalog. Products you can
+                                explore are not automatically activated on your
+                                account.
                             </p>
                         </div>
 
@@ -183,18 +184,21 @@ export default function Dashboard({
                     )}
                 </section>
 
-                <section className="rounded-2xl border bg-card p-5 sm:p-6">
+                <section className="bg-card rounded-2xl border p-5 sm:p-6">
                     <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
                         <div className="flex items-start gap-3">
                             <span className="grid size-11 shrink-0 place-items-center rounded-xl bg-red-500/10 text-red-500">
                                 <KeyRound className="size-5" />
                             </span>
                             <div>
-                                <h2 className="font-bold">Developer Apps &amp; Licensing</h2>
+                                <h2 className="font-bold">
+                                    Developer Apps &amp; Licensing
+                                </h2>
                                 <p className="text-muted-foreground mt-1 max-w-2xl text-xs leading-5">
-                                    Register apps, review tenant-scoped customer keys
-                                    and access secure developer setup instructions.
-                                    Key issuance remains restricted until release gates pass.
+                                    Register apps, review tenant-scoped customer
+                                    keys and access secure developer setup
+                                    instructions. Key issuance remains
+                                    restricted until release gates pass.
                                 </p>
                             </div>
                         </div>
@@ -202,7 +206,8 @@ export default function Dashboard({
                             href="/developer/apps"
                             className="inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-xl bg-red-600 px-4 text-xs font-bold text-white"
                         >
-                            Open Developer Apps <ArrowRight className="size-4" />
+                            Open Developer Apps{' '}
+                            <ArrowRight className="size-4" />
                         </Link>
                     </div>
                 </section>
@@ -214,9 +219,9 @@ export default function Dashboard({
                                 Explore KMJ products
                             </h2>
                             <p className="text-muted-foreground mt-1 max-w-2xl text-xs leading-5">
-                                These are public catalog entries, not subscriptions or
-                                licenses assigned to your account. Availability is
-                                shown for each product.
+                                These are public catalog entries, not
+                                subscriptions or licenses assigned to your
+                                account. Availability is shown for each product.
                             </p>
                         </div>
                         <Link
@@ -239,7 +244,9 @@ export default function Dashboard({
                                     className="flex min-w-0 flex-col justify-between rounded-xl border p-4"
                                 >
                                     <div>
-                                        <h3 className="font-bold">{product.name}</h3>
+                                        <h3 className="font-bold">
+                                            {product.name}
+                                        </h3>
                                         <p className="text-muted-foreground mt-1 text-xs">
                                             {product.lifecycle_label}
                                             {product.purchase_enabled
@@ -254,7 +261,8 @@ export default function Dashboard({
                                         href={`/products/${encodeURIComponent(product.slug)}`}
                                         className="mt-4 inline-flex min-h-10 items-center gap-2 text-xs font-bold text-red-500"
                                     >
-                                        Product details <ArrowRight className="size-4" />
+                                        Product details{' '}
+                                        <ArrowRight className="size-4" />
                                     </Link>
                                 </article>
                             ))}
