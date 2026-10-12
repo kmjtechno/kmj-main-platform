@@ -72,7 +72,7 @@ test -s public/build/manifest.json || {
 echo "PASS: isolated frontend build and Vite manifest"
 
 echo "== Laravel owner security tests =="
-php artisan test --filter='PlatformOwnerConsoleTest|OwnerDirectoryHttpTest|OwnerPaymentGatewaySettingsTest' --no-ansi
+php artisan test --filter='PlatformOwnerConsoleTest|OwnerDirectoryHttpTest|OwnerPaymentGatewaySettingsTest' --display-warnings --fail-on-warning --no-ansi
 
 echo "== PHP formatting and static analysis =="
 ./vendor/bin/pint --test
