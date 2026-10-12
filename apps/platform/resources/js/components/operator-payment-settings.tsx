@@ -124,7 +124,8 @@ function GatewaySettingsCard({ setting }: { setting: OwnerGatewaySetting }) {
                             onChange={(e) =>
                                 form.setData(
                                     'merchant_status',
-                                    e.target.value as OwnerGatewaySetting['merchant_status'],
+                                    e.target
+                                        .value as OwnerGatewaySetting['merchant_status'],
                                 )
                             }
                         >
