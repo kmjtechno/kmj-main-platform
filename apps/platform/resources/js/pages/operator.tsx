@@ -1,6 +1,7 @@
 import type { DragEvent, FormEvent } from 'react';
 import { useEffect, useState } from 'react';
 import { Head, Link, router, useForm } from '@inertiajs/react';
+import OperatorModuleNavigation from '@/components/operator-module-navigation';
 import {
     BadgeIndianRupee,
     Building2,
@@ -690,6 +691,7 @@ export default function Operator({
         <>
             <Head title="Platform Operator" />
             <div className="flex h-full flex-1 flex-col gap-6 overflow-x-auto p-4 sm:p-6">
+                <OperatorModuleNavigation active="overview" />
                 <section className="from-background via-background overflow-hidden rounded-2xl border bg-gradient-to-br to-red-950/10 p-6 sm:p-8">
                     <div className="flex flex-col justify-between gap-5 lg:flex-row lg:items-end">
                         <div className="max-w-2xl">
@@ -817,7 +819,7 @@ export default function Operator({
 
                 <ProductManager products={products} />
 
-                <section className="bg-card rounded-2xl border p-5 sm:p-6">
+                <section id="commercial-orders" className="bg-card rounded-2xl border p-5 sm:p-6">
                     <div className="flex items-center justify-between gap-4">
                         <div>
                             <h2 className="font-bold">
