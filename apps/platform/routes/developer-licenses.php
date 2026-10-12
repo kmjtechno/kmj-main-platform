@@ -104,6 +104,36 @@ Route::middleware(['auth', 'verified'])->prefix('developer')->name('developer.')
         return redirect()->route('developer.apps.index')->with('success', 'Application registered.');
     })->middleware(['password.confirm', 'throttle:10,1'])->name('apps.store');
 
+    Route::post('keys/{key}/revoke', function (
+        Request $request,
+        string $key,
+        OrganizationCapabilityContext $capabilities,
+        KslpLicenseControlPlane $control,
+    ) {
+        $actor = $request->user();
+        abort_unless($actor instanceof User, 401);
+        abort_unless((bool) config('services.kmj_developer_licensing.enabled', false), 503);
+        abort_unless(Schema::hasTable('kslp_license_keys'), 503);
+        $data = $request->validate(['reason' => ['required', 'string', 'min:3', 'max:500']]);
+
+        DB::transaction(function () use ($key, $capabilities, $control, $actor, $data): void {
+            $record = DB::table('kslp_license_keys')->where('id', $key)->lockForUpdate()->first();
+            abort_unless($record !== null, 404);
+            abort_unless($capabilities->allows($actor->id, $record->organization_id, 'license.manage'), 403);
+            if ($record->revoked_at !== null) {
+                return;
+            }
+
+            $control->revoke($record->license_id, (string) $actor->id, $data['reason']);
+            DB::table('kslp_license_keys')->where('id', $key)->update([
+                'revoked_at' => now(),
+                'updated_at' => now(),
+            ]);
+        }, 3);
+
+        return redirect()->route('developer.apps.index');
+    })->middleware(['password.confirm', 'throttle:5,1'])->name('keys.revoke');
+
     Route::post('keys', function (
         Request $request,
         OrganizationCapabilityContext $capabilities,
