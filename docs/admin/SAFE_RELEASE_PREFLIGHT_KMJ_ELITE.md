@@ -2,7 +2,17 @@
 
 **Draft release candidate: not production deployment.** Resolve Git safe-ownership failures by executing the checks as the repository owner, never by chown -R or wildcard safe.directory.
 
-From a root shell on the authorized KMJ-elite server, run this single block:
+## Short command for the known CodeBridge service user
+
+If `stat -c %U /srv/kmj-codebridge-projects/kmj-main-platform/.git` prints `kmjcode`, run **exactly this single command from root** (without heredoc or multiline paste):
+
+```bash
+runuser -u kmjcode -- bash -o pipefail -ec 'cd /srv/kmj-codebridge-projects/kmj-main-platform; git fetch --no-tags origin pull/375/head; SHA=$(git rev-parse --verify FETCH_HEAD^{commit}); echo "VERIFY_SHA=$SHA"; git show "$SHA:scripts/ci/verify-integrated-admin-licensing.sh" | bash -s -- "$SHA"'
+```
+
+The service user must genuinely own the checkout and have the repository deploy-key authorization. If this fails with ownership, permission or GitHub authentication errors, stop and report the actual error. Do not try the root caller's Git ownership exception or force-chown the project.
+
+From a root shell on the authorized KMJ-elite server, the generic owner-detection alternative is this block:
 
 ```bash
 bash <<'KMJ_VERIFY'
