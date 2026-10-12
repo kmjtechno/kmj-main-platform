@@ -27,7 +27,7 @@ final class KslpDeveloperActivationApiTest extends TestCase
         $authority->subscribe($org, 'professional', 2, 20);
         $authority->registerProduct($org, 'DEVELOPER.APP', 'Developer App');
         $key = app(KslpDeveloperKeys::class)->issue(
-            $org, 'DEVELOPER.APP', 'customer-1', 'professional', (string) $owner->id,
+            $org, 'DEVELOPER.APP', 'customer-1', 'trial', (string) $owner->id,
         );
 
         return [$key['key'], $key['license_id']];
