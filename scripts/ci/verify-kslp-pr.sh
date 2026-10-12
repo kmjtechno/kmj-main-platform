@@ -97,9 +97,18 @@ test -s public/build/manifest.json || {
 }
 
 # No migration against production and no credential import.
-echo "== KSLP Laravel tests =="
-php artisan test --filter=Kslp --display-warnings --fail-on-warning --no-ansi
-./vendor/bin/pint --test \
+# Preserve all independent gate results for one efficient remote run.
+failures=0
+echo "== KSLP Laravel tests and warning details =="
+if php artisan test --filter=Kslp --display-warnings --fail-on-warning --no-ansi; then
+  echo "PASS: KSLP Laravel tests and warnings"
+else
+  echo "FAIL: KSLP Laravel tests/warnings"
+  failures=$((failures + 1))
+fi
+
+echo "== KSLP Pint =="
+if ./vendor/bin/pint --test \
   app/Services/Licensing/Kslp/KslpActivationReplayGuard.php \
   app/Services/Licensing/Kslp/KslpOfflineLeaseGuard.php \
   app/Services/Licensing/Kslp/KslpLicenseControlPlane.php \
@@ -112,12 +121,40 @@ php artisan test --filter=Kslp --display-warnings --fail-on-warning --no-ansi
   tests/Feature/KslpDeveloperActivationApiTest.php \
   tests/Feature/KslpLifecycleTest.php \
   tests/Unit/Kslp/KslpOfflineLeaseGuardTest.php \
-  tests/Unit/Kslp/KslpActivationReplayGuardTest.php
-./vendor/bin/phpstan analyse --no-progress
+  tests/Unit/Kslp/KslpActivationReplayGuardTest.php; then
+  echo "PASS: KSLP Pint"
+else
+  echo "FAIL: KSLP Pint"
+  failures=$((failures + 1))
+fi
 
-npm run types:check
-npm run check
+echo "== PHPStan =="
+if ./vendor/bin/phpstan analyse --no-progress; then
+  echo "PASS: PHPStan"
+else
+  echo "FAIL: PHPStan"
+  failures=$((failures + 1))
+fi
 
-echo "PASS: KSLP PHPUnit, Pint, PHPStan, TypeScript, frontend checks and build on exact SHA $actual_sha (isolated worktree)"
+echo "== TypeScript =="
+if npm run types:check; then
+  echo "PASS: TypeScript"
+else
+  echo "FAIL: TypeScript"
+  failures=$((failures + 1))
+fi
+
+echo "== Frontend checks =="
+if npm run check; then
+  echo "PASS: Frontend checks"
+else
+  echo "FAIL: Frontend checks"
+  failures=$((failures + 1))
+fi
+
+echo "KSLP_GATE_FAILURES=$failures SHA=$actual_sha"
+if (( failures != 0 )); then
+  exit 1
+fi
+echo "PASS: KSLP PHPUnit, Pint, PHPStan, TypeScript, frontend checks and build on exact SHA $actual_sha"
 echo "NOT CHECKED: isolated PostgreSQL migration/rollback, real device SDK interoperability and production signing"
-
