@@ -152,6 +152,8 @@ export default function DeveloperApps({
     const [language, setLanguage] = useState<string>('TypeScript');
     const [selectedApp, setSelectedApp] = useState<string>('');
     const [copied, setCopied] = useState(false);
+    const [revokeKeyId, setRevokeKeyId] = useState<string | null>(null);
+    const revokeForm = useForm({ reason: '' });
     const createOrganization = useForm({ name: '' });
     const createApp = useForm({
         organization_id: organizations[0]?.id ?? '',
@@ -402,6 +404,28 @@ export default function DeveloperApps({
                                     <p className="mt-1 text-xs text-muted-foreground">
                                         {key.revoked_at ? 'Revoked' : key.first_activated_at ? 'First activation recorded' : 'Not yet activated'}
                                     </p>
+                                    {!key.revoked_at && canIssueKeys && (
+                                        <button type="button" onClick={() => { setRevokeKeyId(key.id); revokeForm.reset(); }} className="mt-2 min-h-10 rounded-lg border border-red-500/25 px-3 text-xs font-bold text-red-500">
+                                            Revoke key
+                                        </button>
+                                    )}
+                                    {revokeKeyId === key.id && (
+                                        <form className="mt-3 space-y-2 border-t pt-3" onSubmit={(event) => {
+                                            event.preventDefault();
+                                            revokeForm.post('/developer/keys/' + key.id + '/revoke', {
+                                                preserveScroll: true,
+                                                onSuccess: () => { setRevokeKeyId(null); revokeForm.reset(); },
+                                            });
+                                        }}>
+                                            <label className="block text-xs font-semibold" htmlFor={'revoke-' + key.id}>Reason for revocation</label>
+                                            <input id={'revoke-' + key.id} className="bg-background h-10 w-full rounded-lg border px-3 text-xs" placeholder="Compromised key / customer request" value={revokeForm.data.reason} onChange={(event) => revokeForm.setData('reason', event.target.value)} minLength={3} maxLength={500} required />
+                                            {revokeForm.errors.reason && <p className="text-xs text-red-500">{revokeForm.errors.reason}</p>}
+                                            <div className="flex gap-2">
+                                                <button type="submit" disabled={revokeForm.processing} className="min-h-10 rounded-lg bg-red-600 px-3 text-xs font-bold text-white disabled:opacity-50">Confirm revoke</button>
+                                                <button type="button" className="min-h-10 rounded-lg border px-3 text-xs" onClick={() => setRevokeKeyId(null)}>Cancel</button>
+                                            </div>
+                                        </form>
+                                    )}
                                 </article>
                             ))}
                         </div>
