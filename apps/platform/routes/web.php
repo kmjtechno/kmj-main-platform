@@ -290,6 +290,7 @@ Route::get('sitemap.xml', function (PublicProductCatalog $products) {
     $paths = [
         '/',
         '/company',
+        '/contact',
         '/capabilities',
         '/products',
         '/trust',
@@ -329,6 +330,9 @@ Route::get('sitemap.xml', function (PublicProductCatalog $products) {
 })->name('sitemap');
 
 Route::get('trust', fn () => Inertia::render('trust'))->name('trust');
+Route::get('contact', fn () => Inertia::render('contact'))->name('contact');
+// The existing page is already titled Refund & Cancellation Policy.
+Route::redirect('cancellation-policy', '/refund-policy', 301)->name('legal.cancellation');
 
 Route::get('legal', fn () => Inertia::render('legal/index'))->name('legal.index');
 Route::get('terms', fn () => Inertia::render('legal/terms'))->name('legal.terms');
