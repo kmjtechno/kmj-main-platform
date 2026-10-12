@@ -1,7 +1,13 @@
 import type { DragEvent, FormEvent } from 'react';
 import { useEffect, useState } from 'react';
 import { Link, router, useForm } from '@inertiajs/react';
-import { ExternalLink, Eye, EyeOff, GripVertical, PackagePlus } from 'lucide-react';
+import {
+    ExternalLink,
+    Eye,
+    EyeOff,
+    GripVertical,
+    PackagePlus,
+} from 'lucide-react';
 
 export type ManagedProduct = {
     id: string;
@@ -513,4 +519,3 @@ export function ProductManager({ products }: { products: ManagedProduct[] }) {
         </section>
     );
 }
-
