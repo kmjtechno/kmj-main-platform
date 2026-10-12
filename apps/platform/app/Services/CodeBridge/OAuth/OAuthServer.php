@@ -137,7 +137,13 @@ final class OAuthServer
         if ($redirect === '' || ! OAuthCore::redirectMatches($registered, $redirect)) {
             throw new OAuthError('invalid_redirect_uri', 400);
         }
-        $state = isset($query['state']) && is_string($query['state']) ? mb_substr($query['state'], 0, 512) : null;
+        // The OAuth state is opaque to us. Truncation breaks clients with
+        // authenticated/encrypted state values (including Gemini Spark).
+        // Bound input size without reflecting an invalid state back to the client.
+        $state = isset($query['state']) && is_string($query['state']) ? $query['state'] : null;
+        if ($state !== null && strlen($state) > 4096) {
+            throw new OAuthError('invalid_request', 400);
+        }
 
         $redirectError = fn (string $error) => new OAuthError($error, 302, $redirect, $state);
         if (($query['response_type'] ?? null) !== 'code') {
