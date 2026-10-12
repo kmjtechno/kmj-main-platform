@@ -23,7 +23,7 @@ final class ReadOnlySandboxPaymentLookup
         string $merchantId,
     ): ?array {
         if (! preg_match('/\Apay_[A-Za-z0-9]{1,100}\z/D', $paymentId)
-            || $keyId === '' || $keySecret === '' || $merchantId === '') {
+            || ! str_starts_with($keyId, 'rzp_test_') || $keySecret === '' || $merchantId === '') {
             return null;
         }
 
