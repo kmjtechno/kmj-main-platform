@@ -229,4 +229,10 @@ final class KslpOfflineLeaseGuardTest extends TestCase
         $this->expectExceptionMessage('KSLP_MALFORMED');
         $this->check(['features' => 'not-a-feature-map']);
     }
+
+    public function test_rejects_unknown_signed_v1_extension(): void
+    {
+        $this->expectExceptionMessage('KSLP_MALFORMED');
+        $this->check(['future_unapproved_entitlement' => true]);
+    }
 }
