@@ -31,6 +31,14 @@ Status: **implementation slice 1; staging only** (2026-10-12). This change does 
 - **Reconnect:** verify current server activation, revocation, merchant-linked entitlements and signing key status; rotate/reissue leases. Use bounded exponential backoff; no repeated origin calls while offline.
 - **Client interop:** initial C++/Qt and C# SDKs, then Rust/Go/Python; cross-language golden positive and negative vectors for wrong device, revoked key, stale seq, rollback, future issue and expiry.
 
+## Activation replay hardening (same draft PR)
+
+The existing KSLP control plane previously returned the first activation matching an idempotency key without checking the original license, Ed25519 device identity or hardware identity. That could disclose a different license's activation record or revive a deactivated activation.
+
+This development slice now performs an exact license + server identity + machine hash comparison on **both** idempotency paths, rejects deactivated records and known license revocation, and rejects a changed machine hash on the existing active-device path. The original same-device retry remains supported without repeating owner pairing. Hardware changes require a separately approved transfer, not a silent refresh.
+
+Regression coverage added to `KslpLifecycleTest`: cross-customer idempotency collision, device and HWID mismatch, valid possession proof with changed HWID, old retry after transfer, retry after revocation. These are **authored tests, not yet executed via Laravel's real PostgreSQL/PHPUnit environment**. An isolated crypto harness covers the offline-only class but does **not** prove DB transaction behavior. Release stays blocked until exact-head feature tests and transaction/race checks pass.
+
 ## Super Admin module roadmap
 
 One consistent Licensing experience: searchable product/customer/license directory, actual active/trial/renewal due/grace/restricted/revoked states, device seats, expiring-soon queue, signed issuance and renewal, safeguarded device reset/transfer, delegated reseller quotas, immutable audit and support-level read-only workflows. High-risk actions require owner step-up, explicit reason, tenant-scoped authorization and confirmation. Merchant payments must settle and reconcile **before** entitlement issuance; no live checkout is enabled by this slice.
