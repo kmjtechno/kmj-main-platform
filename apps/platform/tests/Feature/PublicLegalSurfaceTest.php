@@ -31,4 +31,11 @@ final class PublicLegalSurfaceTest extends TestCase
                 ->assertInertia(fn (Assert $page) => $page->component($component));
         }
     }
+
+    public function test_cancellation_url_permanently_redirects_to_existing_policy(): void
+    {
+        $this->get('/cancellation-policy')
+            ->assertStatus(301)
+            ->assertRedirect('/refund-policy');
+    }
 }
