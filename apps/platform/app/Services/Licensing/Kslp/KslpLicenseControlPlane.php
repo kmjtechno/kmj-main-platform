@@ -48,11 +48,36 @@ final class KslpLicenseControlPlane
         $authority->authorizeIssue($issuerOrganizationId, $product);
 
         return DB::transaction(function () use ($issuerOrganizationId, $customer, $product, $plan, $actor, $reason) {
-            $sub = DB::table('kslp_issuer_subscriptions')->where('organization_id', $issuerOrganizationId)->lockForUpdate()->first();
-            $used = DB::table('kslp_licenses')->where('issuer_organization_id', $issuerOrganizationId)->where('created_at', '>=', now()->startOfMonth())->count();
+            $sub = DB::table('kslp_issuer_subscriptions')
+                ->where('organization_id', $issuerOrganizationId)
+                ->lockForUpdate()
+                ->first();
+            if ($sub === null || $sub->status !== 'active') {
+                throw new DomainException('KSLP_ISSUER_SUBSCRIPTION_REQUIRED');
+            }
+            if ($sub->current_period_end !== null && now()->gte($sub->current_period_end)) {
+                throw new DomainException('KSLP_ISSUER_SUBSCRIPTION_EXPIRED');
+            }
+            // Recheck product authority *after* locking issuer subscription.
+            // A previous authorizeIssue() lookup is not a transaction lock.
+            $approvedProduct = DB::table('kslp_licensed_products')
+                ->where('organization_id', $issuerOrganizationId)
+                ->where('product_code', $product)
+                ->where('status', 'active')
+                ->exists();
+            if (! $approvedProduct) {
+                throw new DomainException('KSLP_ISSUER_PRODUCT_NOT_AUTHORIZED');
+            }
+
+            $used = DB::table('kslp_licenses')
+                ->where('issuer_organization_id', $issuerOrganizationId)
+                ->where('created_at', '>=', now()->startOfMonth())
+                ->count();
             if ($used >= (int) $sub->monthly_issue_limit) {
                 throw new DomainException('KSLP_ISSUER_MONTHLY_LIMIT');
-            }$now = now();
+            }
+
+            $now = now();
             $trial = $plan === 'trial' ? hash('sha256', $issuerOrganizationId.'|'.$customer.'|'.$product) : null;
             if ($trial && DB::table('kslp_licenses')->where('trial_subject_hash', $trial)->exists()) {
                 throw new DomainException('KSLP_TRIAL_ALREADY_USED');
@@ -86,8 +111,14 @@ final class KslpLicenseControlPlane
             if (! $lic) {
                 throw new DomainException('KSLP_LICENSE_NOT_FOUND');
             }
-            if ($lic->revoked_at) {
+            if ($lic->revoked_at !== null) {
                 throw new DomainException('KSLP_REVOKED');
+            }
+            if ($lic->status !== 'active') {
+                throw new DomainException('KSLP_ACTIVATION_CONFLICT');
+            }
+            if (now()->lt($lic->starts_at) || now()->gte($lic->expires_at)) {
+                throw new DomainException('KSLP_EXPIRED');
             }
 
             app(KslpActivationProof::class)->consume($challengeId, $licenseId, $serverIdentity, $nonce, $proof);
