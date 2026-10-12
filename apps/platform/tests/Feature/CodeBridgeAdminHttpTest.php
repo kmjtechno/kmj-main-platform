@@ -430,6 +430,67 @@ final class CodeBridgeAdminHttpTest extends TestCase
         self::assertNotNull(DB::table('codebridge_device_credentials')->where('license_id', $license)->value('revoked_at'));
     }
 
+    public function test_device_control_disconnect_requires_organization_manager_and_recent_confirmation(): void
+    {
+        [$license, $activation] = $this->fixture('tenant-a');
+        $owner = $this->platformOwner();
+        $this->ownTenant($owner, 'tenant-a');
+        $session = ['auth.password_confirmed_at' => time()];
+        $this->actingAs($owner)->withSession($session)
+            ->postJson('/operator/codebridge/devices/enroll', [
+                'license_id' => $license,
+                'activation_id' => $activation,
+                'tenant_id' => 'tenant-a',
+                'device_id' => 'device-a',
+            ])->assertCreated();
+
+        $path = '/services/kmj-codebridge/organizations/tenant-a/devices/device-a/disconnect';
+        $outsider = User::factory()->create(['email_verified_at' => now()]);
+        $this->actingAs($outsider)->withSession($session)
+            ->postJson($path, ['confirm_device_id' => 'device-a'])->assertForbidden();
+
+        $this->actingAs($owner)->withSession(['auth.password_confirmed_at' => time() - 14400])
+            ->postJson($path, ['confirm_device_id' => 'device-a'])->assertStatus(423);
+        $this->actingAs($owner)->withSession($session)
+            ->postJson($path, ['confirm_device_id' => 'another-device'])->assertUnprocessable();
+
+        $this->actingAs($owner)->withSession($session)
+            ->postJson('/services/kmj-codebridge/organizations/tenant-b/devices/device-a/disconnect',
+                ['confirm_device_id' => 'device-a'])->assertForbidden();
+
+        self::assertNull(DB::table('codebridge_device_credentials')
+            ->where('license_id', $license)->value('revoked_at'));
+    }
+
+    public function test_device_control_disconnect_is_audited_idempotent_and_never_returns_a_token(): void
+    {
+        [$license, $activation] = $this->fixture('tenant-a');
+        $owner = $this->platformOwner();
+        $this->ownTenant($owner, 'tenant-a');
+        $session = ['auth.password_confirmed_at' => time()];
+        $this->actingAs($owner)->withSession($session)
+            ->postJson('/operator/codebridge/devices/enroll', [
+                'license_id' => $license,
+                'activation_id' => $activation,
+                'tenant_id' => 'tenant-a',
+                'device_id' => 'device-a',
+            ])->assertCreated();
+
+        $path = '/services/kmj-codebridge/organizations/tenant-a/devices/device-a/disconnect';
+        $response = $this->actingAs($owner)->withSession($session)
+            ->post($path, ['confirm_device_id' => 'device-a']);
+        $response->assertRedirect()->assertHeader('Cache-Control', 'no-store, private');
+        self::assertStringNotContainsString('credential', strtolower($response->getContent()));
+        self::assertNotNull(DB::table('codebridge_device_credentials')
+            ->where('license_id', $license)->value('revoked_at'));
+
+        $this->actingAs($owner)->withSession($session)
+            ->post($path, ['confirm_device_id' => 'device-a'])->assertRedirect();
+        self::assertSame(1, DB::table('kslp_license_events')
+            ->where('license_id', $license)
+            ->where('action', 'codebridge_device_credential_revoked')->count());
+    }
+
     /** @return array{string, string} */
     private function fixture(string $tenant): array
     {
