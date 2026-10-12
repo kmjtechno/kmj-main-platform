@@ -71,16 +71,53 @@ test -s public/build/manifest.json || {
 }
 echo "PASS: isolated frontend build and Vite manifest"
 
-echo "== Laravel owner security tests =="
-php artisan test --filter='PlatformOwnerConsoleTest|OwnerDirectoryHttpTest|OwnerPaymentGatewaySettingsTest' --display-warnings --fail-on-warning --no-ansi
+# These gates are independent. Report EVERY failure in one run, and
+# exit non-zero if any gate fails. Do not promote partial green results.
+failures=0
 
-echo "== PHP formatting and static analysis =="
-./vendor/bin/pint --test
-./vendor/bin/phpstan analyse --no-progress
+echo "== Laravel owner security tests and full warning origins =="
+if php artisan test --filter='PlatformOwnerConsoleTest|OwnerDirectoryHttpTest|OwnerPaymentGatewaySettingsTest' --display-warnings --fail-on-warning --no-ansi; then
+    echo "PASS: Owner HTTP/Laravel tests (no warnings)"
+else
+    echo "FAIL: Owner HTTP/Laravel tests or warnings"
+    failures=$((failures + 1))
+fi
 
-echo "== TypeScript and frontend checks =="
-npm run types:check
-npm run check
+echo "== PHP formatting =="
+if ./vendor/bin/pint --test; then
+    echo "PASS: Laravel Pint"
+else
+    echo "FAIL: Laravel Pint"
+    failures=$((failures + 1))
+fi
 
+echo "== PHPStan =="
+if ./vendor/bin/phpstan analyse --no-progress; then
+    echo "PASS: PHPStan"
+else
+    echo "FAIL: PHPStan"
+    failures=$((failures + 1))
+fi
+
+echo "== TypeScript =="
+if npm run types:check; then
+    echo "PASS: TypeScript"
+else
+    echo "FAIL: TypeScript"
+    failures=$((failures + 1))
+fi
+
+echo "== Frontend checks =="
+if npm run check; then
+    echo "PASS: Frontend checks"
+else
+    echo "FAIL: Frontend checks"
+    failures=$((failures + 1))
+fi
+
+echo "SUPER_ADMIN_GATE_FAILURES=$failures SHA=$sha"
+if (( failures != 0 )); then
+    exit 1
+fi
 echo "PASS: isolated Super Admin exact SHA $sha"
 echo "NOT CHECKED: real PostgreSQL staging, paid gateway E2E, required GitHub Actions and release smoke"
