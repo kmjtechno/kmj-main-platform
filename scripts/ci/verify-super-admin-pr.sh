@@ -63,9 +63,7 @@ do
 done
 echo "PASS: PHP syntax"
 
-echo "== TypeScript, frontend checks and Vite build =="
-npm run types:check
-npm run check
+echo "== Vite build required for Laravel HTTP tests =="
 npm run build
 test -s public/build/manifest.json || {
     echo "FAIL: frontend build completed without a Vite manifest" >&2
@@ -79,6 +77,10 @@ php artisan test --filter='PlatformOwnerConsoleTest|OwnerDirectoryHttpTest|Owner
 echo "== PHP formatting and static analysis =="
 ./vendor/bin/pint --test
 ./vendor/bin/phpstan analyse --no-progress
+
+echo "== TypeScript and frontend checks =="
+npm run types:check
+npm run check
 
 echo "PASS: isolated Super Admin exact SHA $sha"
 echo "NOT CHECKED: real PostgreSQL staging, paid gateway E2E, required GitHub Actions and release smoke"
