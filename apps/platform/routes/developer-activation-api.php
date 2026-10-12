@@ -36,7 +36,13 @@ Route::prefix('v1/kslp/developer')->middleware('throttle:5,1')->group(function (
                 ->header('Cache-Control', 'no-store');
         }
 
-        return response()->json($challenge)->header('Cache-Control', 'no-store');
+        // The customer SDK needs the authoritative license ID to sign the
+        // exact KSLP-ACTIVATE-v1|license|nonce challenge string.
+        return response()->json([
+            ...$challenge,
+            'license_id' => $license['license_id'],
+            'product' => $license['product_code'],
+        ])->header('Cache-Control', 'no-store');
     });
 
     Route::post('activation/complete', function (
