@@ -95,6 +95,8 @@ export default function CodeBridgeService({
     canManageOwnerPlan,
 }: Props) {
     const [deviceSearch, setDeviceSearch] = useState('');
+    const [clientSearch, setClientSearch] = useState('');
+    const [showAllClients, setShowAllClients] = useState(false);
     const [copyStatus, setCopyStatus] = useState('');
     const [revokingClient, setRevokingClient] = useState<string | null>(null);
     const filteredDevices = service.devices.filter((device) => {
@@ -111,6 +113,17 @@ export default function CodeBridgeService({
             .toLocaleLowerCase();
         return text.includes(deviceSearch.trim().toLocaleLowerCase());
     });
+
+    const matchingClients = service.connected_clients.filter((client) =>
+        [client.client_name, client.client_id, ...client.scopes]
+            .join(' ')
+            .toLocaleLowerCase()
+            .includes(clientSearch.trim().toLocaleLowerCase()),
+    );
+    const visibleClients =
+        clientSearch.trim() || showAllClients
+            ? matchingClients
+            : matchingClients.slice(0, 5);
 
     const copyEndpoint = async () => {
         try {
@@ -412,11 +425,20 @@ export default function CodeBridgeService({
                                 Your devices & projects
                             </h2>
                             <p className="text-muted-foreground mt-1 text-xs leading-5">
-                                Main Platform is your sign-in and device
-                                authorization authority. GitHub sign-in is not
-                                needed to pair a local project or use
-                                CodeBridge.
+                                Main Platform handles registration and access.
+                                For actual online/offline health, run
+                                connection_overview from an authorized
+                                CodeBridge client. No repeated GitHub or
+                                ChatGPT OAuth login is required.
                             </p>
+                            <a
+                                href="https://github.com/kmjtechno/kmj-codebridge/blob/main/docs/CONNECTION-DOCTOR.md"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="mt-2 inline-flex min-h-9 items-center text-xs font-bold text-red-500 underline underline-offset-4"
+                            >
+                                Open Connection Doctor guide
+                            </a>
                         </div>
                         <button
                             type="button"
@@ -620,13 +642,29 @@ export default function CodeBridgeService({
                         </span>
                     </div>
 
+                    {service.connected_clients.length > 0 && (
+                        <label className="relative mt-4 block">
+                            <span className="sr-only">Search authorized AI clients</span>
+                            <Search className="text-muted-foreground pointer-events-none absolute top-3 left-3 h-4 w-4" />
+                            <input
+                                type="search"
+                                value={clientSearch}
+                                onChange={(event) =>
+                                    setClientSearch(event.target.value)
+                                }
+                                placeholder="Search client name or scope"
+                                className="bg-background min-h-10 w-full rounded-xl border pr-4 pl-10 text-sm outline-none focus-visible:ring-2 focus-visible:ring-red-500"
+                            />
+                        </label>
+                    )}
+
                     {service.connected_clients.length === 0 ? (
                         <div className="text-muted-foreground mt-5 rounded-xl border border-dashed p-5 text-xs">
                             {NO_CONNECTED_CLIENTS}
                         </div>
                     ) : (
                         <div className="mt-5 grid gap-3">
-                            {service.connected_clients.map((client) => (
+                            {visibleClients.map((client) => (
                                 <div
                                     key={client.client_id}
                                     className="flex flex-col justify-between gap-4 rounded-xl border p-4 lg:flex-row lg:items-center"
@@ -666,6 +704,26 @@ export default function CodeBridgeService({
                         </div>
                     )}
 
+                    {service.connected_clients.length > 0 &&
+                        matchingClients.length === 0 && (
+                            <p className="text-muted-foreground mt-3 text-xs">
+                                No authorized AI client matches your search.
+                            </p>
+                        )}
+                    {!clientSearch.trim() &&
+                        matchingClients.length > 5 && (
+                            <button
+                                type="button"
+                                onClick={() =>
+                                    setShowAllClients((current) => !current)
+                                }
+                                className="mt-3 min-h-10 rounded-xl border px-4 text-xs font-bold hover:border-red-500/40"
+                            >
+                                {showAllClients
+                                    ? 'Show fewer clients'
+                                    : `Show all ${matchingClients.length} clients`}
+                            </button>
+                        )}
                     <p className="text-muted-foreground mt-4 text-[10px] leading-4">
                         Refresh grants are revoked on request. Existing access tokens
                         expire within{' '}
