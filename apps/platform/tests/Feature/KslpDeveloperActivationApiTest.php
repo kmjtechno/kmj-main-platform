@@ -92,6 +92,17 @@ final class KslpDeveloperActivationApiTest extends TestCase
             ->assertOk()->json();
         self::assertSame($activation['activation_id'], $retry['activation_id']);
         self::assertSame(1, DB::table('kslp_activations')->where('license_id', $licenseId)->count());
+
+        // Retrying with withdrawn consent must erase optional diagnostics,
+        // while preserving the same verified activation and license.
+        $request['metadata_consent'] = false;
+        $this->postJson('/api/v1/kslp/developer/activation/complete', $request)
+            ->assertOk()
+            ->assertJsonPath('activation_id', $activation['activation_id']);
+        $afterWithdrawal = DB::table('kslp_license_keys')->where('license_id', $licenseId)->first();
+        self::assertNull($afterWithdrawal->client_platform);
+        self::assertNull($afterWithdrawal->client_app_version);
+        self::assertNull($afterWithdrawal->metadata_consented_at);
     }
 
     public function test_first_login_without_consent_does_not_store_optional_device_metadata(): void
