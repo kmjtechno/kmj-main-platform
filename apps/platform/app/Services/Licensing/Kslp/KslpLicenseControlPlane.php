@@ -148,12 +148,20 @@ final class KslpLicenseControlPlane
         $record = (array) $activation;
         KslpActivationReplayGuard::requireMatch($record, $licenseId, $serverIdentity, $machineHash);
 
-        $license = DB::table('kslp_licenses')->where('id', $licenseId)->first(['revoked_at']);
+        $license = DB::table('kslp_licenses')
+            ->where('id', $licenseId)
+            ->first(['revoked_at', 'status', 'starts_at', 'expires_at']);
         if ($license === null) {
             throw new DomainException('KSLP_LICENSE_NOT_FOUND');
         }
         if ($license->revoked_at !== null) {
             throw new DomainException('KSLP_REVOKED');
+        }
+        if ($license->status !== 'active') {
+            throw new DomainException('KSLP_ACTIVATION_CONFLICT');
+        }
+        if (now()->lt($license->starts_at) || now()->gte($license->expires_at)) {
+            throw new DomainException('KSLP_EXPIRED');
         }
 
         return (array) $activation;
