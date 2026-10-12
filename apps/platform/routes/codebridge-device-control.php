@@ -40,7 +40,7 @@ Route::post('services/kmj-codebridge/organizations/{tenantId}/devices/{deviceId}
 
     try {
         // Transactional, audited and idempotent; never reveal or rotate tokens.
-        $credentials->revoke((string) $device->license_id, $tenantId, $deviceId, time());
+        $credentials->revoke((string) $device->license_id, $tenantId, $deviceId, time(), 'platform-user:'.$user->getKey());
     } catch (DomainException) {
         abort(409, 'CodeBridge device credential could not be disconnected.');
     }
