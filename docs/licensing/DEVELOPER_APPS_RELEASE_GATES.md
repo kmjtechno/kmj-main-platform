@@ -7,12 +7,15 @@ Status: **Stacked development PR, not a production release** (2026-10-12).
 1. Sign in and open **Developer Apps & Keys** in the platform sidebar or dashboard.
 2. Create an organization if none exists. This does **not** create a paid issuer subscription.
 3. Once owner-approved KSLP issuer subscription is active, register an application with a unique uppercase product ID. Stored in existing `kslp_licensed_products`, with tenant limit enforcement.
-4. Select app, customer reference and approved plan. Generate an opaque 256-bit license bootstrap key from the existing delegated KSLP license authority, enforcing subscription and monthly issuance quotas. Persist only SHA-256 key digest, never plaintext. Show the key once in an authenticated step-up session.
+4. Select app and customer reference. **Only a 30-day trial key is currently permitted by the new self-service service and HTTP route.** A developer issuer subscription is not proof of a customer's paid purchase. Professional, business, enterprise and OEM keys remain blocked until verified payment/entitlement reconciliation and approval. Generate an opaque 256-bit trial bootstrap key via existing delegated KSLP quotas. Persist only SHA-256 key digest, never plaintext; display full key in the authorized step-up flow.
 5. On first launch (staging only), client generates Ed25519 keypair and random per-installation ID. It sends the bootstrap key and **public** device identity to `POST /api/v1/kslp/developer/activation/challenge`. The server returns challenge ID and nonce.
 6. Client signs `KSLP-ACTIVATE-v1|<license_id>|<nonce>` with its private device key and submits signature and SHA-256 installation hash to `POST /api/v1/kslp/developer/activation/complete`. Server verifies key, existing license/issuer/product, challenge lifetime and proof, and records activation once. Optional platform/app version stored **only** if `metadata_consent=true`; raw MAC, serial, CPU IDs and hardware fingerprints are never requested.
 7. Staging API returns `signed_lease_issued=false`. **This is device registration, NOT a usable signed commercial product license.** Production client SDKs and per-product signed entitlement leases are not enabled until explicit release gates.
 8. Language selector supports starter **configuration instructions** for TypeScript, Python, C#/.NET, C++/Qt, Rust, Go, Java and PHP. These are not yet downloadable, audited, working production SDK libraries.
 9. The old `/sandbox-licenses` route remains the separate **Sandbox Token Lab**, which issues short-lived testing tokens and is not advertised as customer licensing.
+
+- **Paid-plan safety:** `KslpDeveloperKeys::issue()` rejects non-trial plans with `KSLP_PAID_ENTITLEMENT_REQUIRED`; HTTP issuance accepts only `trial`. Future paid issuance must require recorded provider settlement and a transactionally verified entitlement before any key is created. No self-service subscription is sufficient.
+- **Consent withdrawal:** activation and consented metadata commit together; retry with `metadata_consent=false` removes previously stored optional platform/app version and consent timestamp.
 
 ## Trust and security boundaries
 
