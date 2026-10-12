@@ -4,6 +4,7 @@
 const standalonePublicPages = new Set([
     'welcome',
     'company',
+    'contact',
     'capabilities',
     'trust',
     'public-page',
