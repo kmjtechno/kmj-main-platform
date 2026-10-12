@@ -110,6 +110,23 @@ const seoSource = readFileSync(
 assert.match(seoSource, /rel="canonical"/);
 assert.match(seoSource, /property="og:url"/);
 
+// Every standalone public page gets a real enquiry path through its shared
+// footer, while the home and company hero sections expose it immediately.
+const b2bEnquiryHref = 'https://www.linkedin.com/company/kmj-techno/';
+for (const relativePath of [
+    'resources/js/pages/welcome.tsx',
+    'resources/js/pages/company.tsx',
+    'resources/js/components/public-site-footer.tsx',
+]) {
+    const source = readFileSync(join(root, relativePath), 'utf8');
+    assert.ok(
+        source.includes(`href="${b2bEnquiryHref}"`),
+        relativePath + ' must expose the verified KMJ LinkedIn enquiry path',
+    );
+    assert.match(source, /target="_blank"/);
+    assert.match(source, /rel="noopener noreferrer"/);
+}
+
 for (const page of protectedPages) {
     assert.equal(
         isPublicMarketingPage(page),
