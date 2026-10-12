@@ -128,6 +128,20 @@ for (const relativePath of [
     assert.match(source, /rel="noopener noreferrer"/);
 }
 
+const contactSource = readFileSync(
+    join(root, 'resources/js/pages/contact.tsx'),
+    'utf8',
+);
+const routeSource = readFileSync(join(root, 'routes/web.php'), 'utf8');
+assert.ok(contactSource.includes('mailto:kmjtechnonet@gmail.com'));
+assert.ok(contactSource.includes(b2bEnquiryHref));
+assert.ok(
+    routeSource.includes(
+        "Route::get('contact', fn () => Inertia::render('contact'))",
+    ),
+    'public contact page must have an actual Laravel route',
+);
+
 for (const page of protectedPages) {
     assert.equal(
         isPublicMarketingPage(page),
