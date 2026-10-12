@@ -80,6 +80,13 @@ export CACHE_STORE=array
 export SESSION_DRIVER=array
 export APP_KEY="base64:$(php -r 'echo base64_encode(random_bytes(32));')"
 
+# Laravel's dotenv loader attempts to read .env for every new application
+# during PHPUnit. Create a *blank* per-run env file in the disposable
+# worktree; exported testing variables above remain authoritative.
+# Never copy or source the live .env / production credentials.
+printf '# disposable isolated KMJ QA (no secrets)\\n' > .env
+chmod 600 .env
+
 # Build frontend assets before any HTTP/Inertia test; otherwise Laravel
 # looks for public/build/manifest.json and returns view errors unrelated to
 # the KSLP controller logic. This is all inside the detached worktree.
