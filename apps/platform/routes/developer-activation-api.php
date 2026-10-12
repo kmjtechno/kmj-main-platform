@@ -66,19 +66,45 @@ Route::prefix('v1/kslp/developer')->middleware('throttle:5,1')->group(function (
             'app_version' => ['nullable', 'string', 'max:64'],
         ]);
         try {
-            $license = $keys->resolve($data['license_key']);
-            $activation = $licenses->activate(
-                $license['license_id'],
-                $data['server_identity'],
-                $data['machine_hash'],
-                $data['request_id'],
-                'developer-key-activation',
-                $data['challenge_id'],
-                $data['nonce'],
-                $data['signature'],
-            );
+            // The application/device activation and consented first-login
+            // metadata must either both commit or both roll back.
+            [$license, $activation] = DB::transaction(function () use ($keys, $licenses, $data): array {
+                $license = $keys->resolve($data['license_key']);
+                $activation = $licenses->activate(
+                    $license['license_id'],
+                    $data['server_identity'],
+                    $data['machine_hash'],
+                    $data['request_id'],
+                    'developer-key-activation',
+                    $data['challenge_id'],
+                    $data['nonce'],
+                    $data['signature'],
+                );
+
+                DB::table('kslp_license_keys')
+                    ->where('license_id', $license['license_id'])
+                    ->whereNull('first_activated_at')
+                    ->update(['first_activated_at' => now(), 'updated_at' => now()]);
+
+                // Explicit consent can be withdrawn on any future retry.
+                // The bootstrap endpoint does not gather hardware serials.
+                DB::table('kslp_license_keys')
+                    ->where('license_id', $license['license_id'])
+                    ->update([
+                        'client_platform' => $data['metadata_consent'] ? ($data['platform'] ?? null) : null,
+                        'client_app_version' => $data['metadata_consent'] ? ($data['app_version'] ?? null) : null,
+                        'metadata_consented_at' => $data['metadata_consent'] ? now() : null,
+                        'updated_at' => now(),
+                    ]);
+
+                return [$license, $activation];
+            }, 3);
         } catch (\DomainException) {
             return response()->json(['error' => 'KSLP_ACTIVATION_DENIED'], 422)
+                ->header('Cache-Control', 'no-store');
+        }
+
+        return response()->json(['error' => 'KSLP_ACTIVATION_DENIED'], 422)
                 ->header('Cache-Control', 'no-store');
         }
 
