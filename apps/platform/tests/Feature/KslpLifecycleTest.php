@@ -300,4 +300,38 @@ final class KslpLifecycleTest extends TestCase
             'Foreign transfer retry must not deactivate the existing seat.',
         );
     }
+
+    public function test_expired_license_rejects_idempotent_activation_retry(): void
+    {
+        $control = app(KslpLicenseControlPlane::class);
+        $license = $control->issue('customer-expired-retry', 'trial', 'owner');
+        [$activation, $server] = $this->activate($control, $license['id'], 'expired-retry-key');
+
+        DB::table('kslp_licenses')
+            ->where('id', $license['id'])
+            ->update(['expires_at' => now()->subMinute()]);
+
+        $this->expectExceptionMessage('KSLP_EXPIRED');
+        $control->activate(
+            $license['id'], $server, str_repeat('a', 64), 'expired-retry-key',
+            'owner', 'unused', 'unused', 'unused',
+        );
+    }
+
+    public function test_inactive_license_rejects_idempotent_activation_retry(): void
+    {
+        $control = app(KslpLicenseControlPlane::class);
+        $license = $control->issue('customer-paused-retry', 'trial', 'owner');
+        [, $server] = $this->activate($control, $license['id'], 'paused-retry-key');
+
+        DB::table('kslp_licenses')
+            ->where('id', $license['id'])
+            ->update(['status' => 'suspended']);
+
+        $this->expectExceptionMessage('KSLP_ACTIVATION_CONFLICT');
+        $control->activate(
+            $license['id'], $server, str_repeat('a', 64), 'paused-retry-key',
+            'owner', 'unused', 'unused', 'unused',
+        );
+    }
 }
