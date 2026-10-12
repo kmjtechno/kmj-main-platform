@@ -42,12 +42,19 @@ for file in \
   app/Services/Licensing/Kslp/KslpActivationProof.php \
   app/Services/Licensing/Kslp/KslpActivationReplayGuard.php \
   app/Services/Licensing/Kslp/KslpOfflineLeaseGuard.php \
+  app/Services/Licensing/Kslp/KslpDeveloperKeys.php \
+  app/Services/Licensing/Kslp/KslpIssuerSubscriptionAuthority.php \
+  routes/developer-activation-api.php \
+  routes/developer-licenses.php \
+  database/migrations/2026_10_12_120000_create_kslp_license_keys_table.php \
+  tests/Feature/KslpDeveloperAppsTest.php \
+  tests/Feature/KslpDeveloperActivationApiTest.php \
   tests/Feature/KslpLifecycleTest.php \
   tests/Unit/Kslp/KslpActivationReplayGuardTest.php \
   tests/Unit/Kslp/KslpOfflineLeaseGuardTest.php; do
   php -l "$file" >/dev/null
 done
-echo "PASS: 9 PHP files syntax"
+echo "PASS: KSLP PHP syntax"
 
 # Copy existing local *development* dependencies only, rather than silently
 # running a paid service, pulling unknown code or using production credentials.
@@ -79,8 +86,29 @@ php artisan test --filter=Kslp --no-ansi
   app/Services/Licensing/Kslp/KslpActivationReplayGuard.php \
   app/Services/Licensing/Kslp/KslpOfflineLeaseGuard.php \
   app/Services/Licensing/Kslp/KslpLicenseControlPlane.php \
+  app/Services/Licensing/Kslp/KslpDeveloperKeys.php \
+  app/Services/Licensing/Kslp/KslpIssuerSubscriptionAuthority.php \
+  routes/developer-activation-api.php \
+  routes/developer-licenses.php \
+  database/migrations/2026_10_12_120000_create_kslp_license_keys_table.php \
+  tests/Feature/KslpDeveloperAppsTest.php \
+  tests/Feature/KslpDeveloperActivationApiTest.php \
   tests/Feature/KslpLifecycleTest.php \
   tests/Unit/Kslp/KslpOfflineLeaseGuardTest.php \
   tests/Unit/Kslp/KslpActivationReplayGuardTest.php
 ./vendor/bin/phpstan analyse --no-progress
-echo "PASS: KSLP PHPUnit, Pint and PHPStan on SHA $actual_sha (isolated worktree)"
+
+# The original checkout's dependency tree is copied into the detached
+# worktree: never link to mutable build caches on the production checkout.
+if [[ ! -d "$src/node_modules" || ! -x "$src/node_modules/.bin/vp" ]]; then
+  echo "BLOCKED: preinstalled local Node/Vite+ dependencies required" >&2
+  exit 3
+fi
+cp -a "$src/node_modules" ./node_modules
+npm run types:check
+npm run check
+npm run build
+
+echo "PASS: KSLP PHPUnit, Pint, PHPStan, TypeScript, frontend checks and build on exact SHA $actual_sha (isolated worktree)"
+echo "NOT CHECKED: isolated PostgreSQL migration/rollback, real device SDK interoperability and production signing"
+
