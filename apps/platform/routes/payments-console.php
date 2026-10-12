@@ -5,6 +5,7 @@ use App\Services\Payments\OwnerPaymentGatewaySettings;
 use App\Services\Payments\PaymentGatewayReadiness;
 use App\Services\PlatformOwnerAccess;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
@@ -37,6 +38,7 @@ Route::middleware(['auth', 'verified', 'password.confirm'])
             abort_unless($user instanceof User, 401);
             $access->require($user);
             abort_unless(in_array($provider, ['cashfree', 'razorpay'], true), 404);
+            abort_unless(Schema::hasTable('payment_gateway_settings'), 503, 'Gateway settings storage is not ready.');
 
             $input = $request->validate([
                 'environment' => ['required', 'in:sandbox'],
@@ -68,6 +70,7 @@ Route::middleware(['auth', 'verified', 'password.confirm'])
             abort_unless($user instanceof User, 401);
             $access->require($user);
             abort_unless(in_array($provider, ['cashfree', 'razorpay'], true), 404);
+            abort_unless(Schema::hasTable('payment_gateway_settings'), 503, 'Gateway settings storage is not ready.');
 
             $settings->revoke($user, $provider);
 
