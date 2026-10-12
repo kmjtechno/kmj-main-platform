@@ -8,6 +8,7 @@ use App\Models\OperatorActionAudit;
 use App\Models\User;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use InvalidArgumentException;
 
 final class OwnerPaymentGatewaySettings
@@ -18,13 +19,19 @@ final class OwnerPaymentGatewaySettings
     /** @return list<array<string, bool|string|null>> */
     public function snapshot(): array
     {
-        $rows = DB::table('payment_gateway_settings')->get()->keyBy('provider');
+        // A code-first staging rollout must not make the owner console error
+        // before the migration has been applied.
+        $storageReady = Schema::hasTable('payment_gateway_settings');
+        $rows = $storageReady
+            ? DB::table('payment_gateway_settings')->get()->keyBy('provider')
+            : collect();
 
-        return array_map(static function (string $provider) use ($rows): array {
+        return array_map(static function (string $provider) use ($rows, $storageReady): array {
             $row = $rows->get($provider);
 
             return [
                 'provider' => $provider,
+                'storage_ready' => $storageReady,
                 'name' => $provider === 'cashfree' ? 'Cashfree Payments' : 'Razorpay',
                 'environment' => 'sandbox',
                 'merchant_status' => $row === null ? 'not_verified' : (string) $row->merchant_status,
