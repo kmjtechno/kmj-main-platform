@@ -365,7 +365,7 @@ export default function DeveloperApps({
                             <input id="key-customer" className="bg-background h-11 w-full rounded-xl border px-3 text-sm" maxLength={128} placeholder="customer-001" value={issueKey.data.customer_id} onChange={(event) => issueKey.setData('customer_id', event.target.value)} required />
                             <label className="block text-xs font-semibold" htmlFor="key-plan">License plan</label>
                             <select id="key-plan" className="bg-background h-11 w-full rounded-xl border px-3 text-sm" value={issueKey.data.plan} onChange={(event) => issueKey.setData('plan', event.target.value)}>
-                                {['trial', 'professional', 'business', 'enterprise', 'custom_oem'].map((plan) => <option value={plan} key={plan}>{plan}</option>)}
+                                {['trial'].map((plan) => <option value={plan} key={plan}>{plan} — pending commercial payment verification</option>)}
                             </select>
                             {Object.values(issueKey.errors).map((error, index) => <p className="text-xs text-red-500" key={index}>{error}</p>)}
                             <button type="submit" disabled={!canIssueKeys || !issueKey.data.product_code || issueKey.processing} className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-red-600 px-4 text-sm font-bold text-white disabled:opacity-40">
