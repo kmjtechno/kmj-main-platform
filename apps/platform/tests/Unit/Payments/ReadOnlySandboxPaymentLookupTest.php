@@ -79,6 +79,7 @@ final class ReadOnlySandboxPaymentLookupTest extends TestCase
         $lookup = app(ReadOnlySandboxPaymentLookup::class);
         self::assertNull($lookup->razorpay('../other', 'id', 'secret', 'merchant'));
         self::assertNull($lookup->razorpay('pay_ABCD', '', 'secret', 'merchant'));
+        self::assertNull($lookup->razorpay('pay_ABCD', 'rzp_live_not_allowed', 'secret', 'merchant'));
         self::assertNull($lookup->cashfree('../other', '1453002795', 'id', 'secret', 'merchant'));
         self::assertNull($lookup->cashfree('order_ABC', '1453002795', 'id', '', 'merchant'));
         Http::assertNothingSent();
