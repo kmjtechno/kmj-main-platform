@@ -2,8 +2,10 @@ import { Link, usePage } from '@inertiajs/react';
 import {
     Activity,
     Crown,
+    CreditCard,
     Code2,
     FlaskConical,
+    KeyRound,
     LayoutGrid,
     PackageOpen,
     ShieldCheck,
@@ -43,7 +45,7 @@ const baseNavItems: NavItem[] = [
         icon: Code2,
     },
     {
-        title: 'Sandbox Testing',
+        title: 'Sandbox Token Lab',
         href: '/sandbox-licenses',
         icon: FlaskConical,
     },
@@ -75,7 +77,22 @@ export function AppSidebar() {
         ...baseNavItems,
         ...(operator?.enabled
             ? [
-                  { title: 'Operator', href: '/operator', icon: Crown },
+                  { title: 'Super Admin', href: '/operator', icon: Crown },
+                  {
+                      title: 'Customers & Organizations',
+                      href: '/operator/directory',
+                      icon: Crown,
+                  },
+                  {
+                      title: 'Licensing Governance',
+                      href: '/operator/kslp',
+                      icon: KeyRound,
+                  },
+                  {
+                      title: 'Gateway Settings',
+                      href: '/operator/payments',
+                      icon: CreditCard,
+                  },
                   {
                       title: 'Product Manager',
                       href: '/operator#product-manager',
