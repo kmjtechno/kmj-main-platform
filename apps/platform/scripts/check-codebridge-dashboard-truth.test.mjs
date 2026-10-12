@@ -25,7 +25,10 @@ void test('permissions must be backed by actual server-authorized scope', () => 
 void test('device cards are searchable without changing tenant authorization', () => {
     assert.match(ui, /filteredDevices\.map\(\(device\)/);
     assert.match(ui, /Search device, platform or project/);
-    assert.match(routes, /\$deviceDirectory->forTenant\(\(string\) \$organization\['id'\], time\(\)\)/);
+    assert.match(
+        routes,
+        /\$deviceDirectory->forTenant\(\(string\) \$organization\['id'\], time\(\)\)/,
+    );
     assert.match(directory, /->where\('c\.tenant_id', \$tenantId\)/);
 });
 
@@ -43,7 +46,10 @@ void test('revocation requires confirmation and prevents duplicate clicks', () =
 });
 
 void test('clipboard failures have visible feedback', () => {
-    assert.match(ui, /await navigator\.clipboard\.writeText\(service\.endpoint\)/);
+    assert.match(
+        ui,
+        /await navigator\.clipboard\.writeText\(service\.endpoint\)/,
+    );
     assert.match(ui, /Copy unavailable/);
     assert.match(ui, /role="status"/);
 });
