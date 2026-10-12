@@ -145,4 +145,27 @@ final class KslpOfflineLeaseGuardTest extends TestCase
         $this->expectExceptionMessage('KSLP_MALFORMED');
         $this->check(lastTrustedTime: 0);
     }
+    public function test_existing_cloudos_golden_vector_remains_offline_compatible(): void
+    {
+        $fixture = json_decode(
+            (string) file_get_contents(__DIR__.'/../../../../../contracts/kslp-v1/golden-vector-001.json'),
+            true,
+            512,
+            JSON_THROW_ON_ERROR,
+        );
+        $publicKey = base64_decode($fixture['public_key_b64'], true);
+
+        $claims = (new KslpOfflineLeaseGuard)->verify(
+            $fixture['token'],
+            fn (string $kid): ?string => $kid === 'golden-v1' ? $publicKey : null,
+            $fixture['server_identity'],
+            $fixture['expected_claims']['activation_id'],
+            $fixture['expected_claims']['license_id'],
+            $fixture['now'],
+            $fixture['now'],
+            $fixture['expected_claims']['sequence'],
+        );
+
+        self::assertSame($fixture['expected_claims'], $claims);
+    }
 }
