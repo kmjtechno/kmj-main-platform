@@ -21,11 +21,26 @@ git cat-file -e "${sha}^{commit}" || {
 }
 
 echo "KMJ INTEGRATION_VERIFICATION_SHA=$sha"
+
+# The current checkout can remain on main: the review scripts are extracted
+# from the exact candidate commit, not from whichever branch is checked out.
+tmp="$(mktemp -d "${TMPDIR:-/tmp}/kmj-release-driver.XXXXXXXX")"
+trap 'rm -rf -- "$tmp"' EXIT HUP INT TERM
+for path in \
+    scripts/ci/verify-super-admin-pr.sh \
+    scripts/ci/verify-kslp-pr.sh; do
+    name="$(basename "$path")"
+    git show "$sha:$path" > "$tmp/$name" || {
+        echo "BLOCKED: verifier missing from pinned release commit: $path" >&2
+        exit 3
+    }
+done
+
 echo "== Admin routes/UI/permissions =="
-bash scripts/ci/verify-super-admin-pr.sh "$sha"
+bash "$tmp/verify-super-admin-pr.sh" "$sha"
 
 echo "== KSLP security, developer activation and SDK setup UI =="
-bash scripts/ci/verify-kslp-pr.sh "$sha"
+bash "$tmp/verify-kslp-pr.sh" "$sha"
 
 echo "PASS: exact-SHA isolated code suites for $sha"
 echo "NOT VERIFIED: protected GitHub Actions, disposable PostgreSQL migration/rollback,"
