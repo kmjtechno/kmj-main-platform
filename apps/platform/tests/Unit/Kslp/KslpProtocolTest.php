@@ -36,4 +36,26 @@ final class KslpProtocolTest extends TestCase
         $this->expectException(DomainException::class);
         $v->verify(implode('.', $parts), fn ($kid) => $pk, 'ed25519:server_identity_0000000001', $now);
     }
+
+    public function test_scalar_json_headers_and_claims_fail_as_malformed(): void
+    {
+        $b64 = static fn (string $data): string => rtrim(strtr(base64_encode($data), '+/', '-_'), '=');
+        $header = $b64('{"alg":"EdDSA","kid":"test","typ":"KSLP-v1"}');
+        $claims = $b64('{"protocol_version":"KSLP-v1"}');
+        $signature = $b64(str_repeat('a', 64));
+
+        foreach ([
+            [$b64('null'), $claims],
+            [$header, $b64('null')],
+            [$header, $b64('42')],
+            [$b64('true'), $claims],
+        ] as [$h, $c]) {
+            try {
+                KslpCodec::decode($h.'.'.$c.'.'.$signature);
+                self::fail('Non-object JSON segment must not be accepted.');
+            } catch (DomainException $exception) {
+                self::assertSame('KSLP_MALFORMED', $exception->getMessage());
+            }
+        }
+    }
 }

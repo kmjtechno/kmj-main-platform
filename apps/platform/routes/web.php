@@ -374,6 +374,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         OrganizationDirectory $organizations,
         EntitlementReader $entitlements,
         CustomerReleaseAccess $releaseAccess,
+        PublicProductCatalog $publicProducts,
     ) {
         $user = $request->user();
         abort_unless($user instanceof User, 401);
@@ -457,7 +458,21 @@ Route::middleware(['auth', 'verified'])->group(function () {
             $items[] = $organization;
         }
 
+        // Public catalog is separate from issued customer entitlements.
+        // Never imply a listed product is licensed or commercially available.
+        $discoverableProducts = collect($publicProducts->all())
+            ->map(static fn (array $product): array => [
+                'slug' => (string) $product['slug'],
+                'name' => (string) $product['name'],
+                'lifecycle_label' => (string) ($product['lifecycle_label'] ?? 'Information'),
+                'purchase_enabled' => (bool) ($product['purchase_enabled'] ?? false),
+                'summary' => (string) ($product['summary'] ?? ''),
+            ])
+            ->values()
+            ->all();
+
         return Inertia::render('dashboard', [
+            'discoverableProducts' => $discoverableProducts,
             'organizations' => $items,
             'hasPasskey' => $user->passkeys()->exists(),
             'canManageCodeBridgeOwnerPlan' => app(PlatformOwnerAccess::class)->allows($user),
@@ -727,6 +742,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
                     'slug' => (string) $product->getAttribute('slug'),
                     'name' => (string) $product->getAttribute('name'),
                     'status' => (string) $product->getAttribute('status'),
+                    'lifecycle' => (string) $product->getAttribute('lifecycle'),
+                    'is_public' => (bool) $product->getAttribute('is_public'),
+                    'purchase_enabled' => (bool) $product->getAttribute('purchase_enabled'),
+                    'licensing_enabled' => (bool) $product->getAttribute('licensing_enabled'),
                     'active_policy_count' => EntitlementPolicy::query()
                         ->where('product_id', $productId)
                         ->where('status', 'active')
@@ -739,7 +758,15 @@ Route::middleware(['auth', 'verified'])->group(function () {
             })
             ->all();
 
+        // Canonical product identities may exist in KMJ's code registry but
+        // not yet be migrated/registered in the production database.
+        // Show gaps truthfully: these are NOT active or licensed services.
+        $registeredSlugs = $managedProducts->pluck('slug')->map(static fn ($slug): string => (string) $slug)->all();
+        $missingCanonicalSlugs = array_values(array_diff($publicProducts->slugs(), $registeredSlugs));
+
         return Inertia::render('operator', [
+            'missingCanonicalSlugs' => $missingCanonicalSlugs,
+            'canonicalProductCount' => count($publicProducts->slugs()),
             'metrics' => [
                 'users' => User::query()->count(),
                 'organizations' => Organization::query()->count(),
@@ -1063,5 +1090,6 @@ Route::middleware(['auth', 'verified'])->group(function () {
     require __DIR__.'/codebridge-admin.php';
 });
 
+require __DIR__.'/developer-licenses.php';
 require __DIR__.'/payments-console.php';
 require __DIR__.'/settings.php';

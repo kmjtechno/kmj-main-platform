@@ -84,6 +84,13 @@ final class KslpIssuerSubscriptionAuthority
 
             $this->assertActive($sub);
 
+            // Product codes are globally unique in the current schema.
+            // Explain duplicates as a user-correctable validation error
+            // instead of relying on an opaque database constraint failure.
+            if (DB::table('kslp_licensed_products')->where('product_code', $code)->exists()) {
+                throw new DomainException('KSLP_PRODUCT_CODE_TAKEN');
+            }
+
             $count = DB::table('kslp_licensed_products')
                 ->where('organization_id', $organizationId)
                 ->count();

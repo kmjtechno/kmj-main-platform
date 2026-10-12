@@ -18,6 +18,15 @@ final class PlatformOwnerConsoleTest extends TestCase
 {
     use RefreshDatabase;
 
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        // Inertia HTTP assertions do not require bundled browser assets.
+        // Real frontend compilation remains a separate mandatory release gate.
+        $this->withoutVite();
+    }
+
     public function test_super_admin_development_profile_requires_verified_owner_passkey(): void
     {
         $url = '/operator/super-admin/development-profile';
@@ -145,8 +154,46 @@ final class PlatformOwnerConsoleTest extends TestCase
         $response->assertInertia(fn (Assert $page) => $page
             ->component('operator')
             ->has('catalogProducts', 15)
+            ->where('canonicalProductCount', 15)
+            ->has('missingCanonicalSlugs', 0)
             ->where('catalogProducts.0.active_policy_count', 1)
-            ->where('catalogProducts.0.active_entitlement_count', 0));
+            ->where('catalogProducts.0.active_entitlement_count', 0)
+            ->has('catalogProducts.0.lifecycle')
+            ->has('catalogProducts.0.is_public')
+            ->has('catalogProducts.0.purchase_enabled')
+            ->has('catalogProducts.0.licensing_enabled'));
+    }
+
+    public function test_customer_dashboard_separates_public_catalog_from_owned_entitlements(): void
+    {
+        $customer = User::factory()->create(['email_verified_at' => now()]);
+        app(KmjProductCatalog::class)->syncAll();
+
+        $response = $this->actingAs($customer)->get('/dashboard');
+
+        $response->assertOk();
+        $response->assertInertia(fn (Assert $page) => $page
+            ->component('dashboard')
+            ->has('organizations', 0)
+            ->has('discoverableProducts')
+            ->where('canManageCodeBridgeOwnerPlan', false));
+    }
+
+    public function test_operator_reports_missing_canonical_product_registrations_without_issuing_any_entitlements(): void
+    {
+        $owner = $this->createPasskeyOwner();
+
+        $response = $this->actingAs($owner)
+            ->withSession(['auth.password_confirmed_at' => time()])
+            ->get('/operator');
+
+        $response->assertOk();
+        $response->assertInertia(fn (Assert $page) => $page
+            ->component('operator')
+            ->where('canonicalProductCount', 15)
+            ->has('missingCanonicalSlugs', 15)
+            ->has('catalogProducts', 0)
+            ->where('metrics.entitlements', 0));
     }
 
     public function test_operator_console_exposes_ready_fulfillment_state_for_confirmed_order(): void
