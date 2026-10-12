@@ -1,4 +1,4 @@
-import type { FormEvent } from 'react';
+import { useState, type FormEvent } from 'react';
 import { Head, Link, router, useForm } from '@inertiajs/react';
 import OperatorModuleNavigation from '@/components/operator-module-navigation';
 import {
@@ -8,6 +8,7 @@ import {
 } from '@/components/operator-product-manager';
 import {
     BadgeIndianRupee,
+    Search,
     Building2,
     ExternalLink,
     KeyRound,
@@ -40,6 +41,10 @@ type CatalogProduct = {
     slug: string;
     name: string;
     status: string;
+    lifecycle: string;
+    is_public: boolean;
+    purchase_enabled: boolean;
+    licensing_enabled: boolean;
     active_policy_count: number;
     active_entitlement_count: number;
 };
@@ -176,6 +181,32 @@ export default function Operator({
     recentOrders,
     products,
 }: OperatorProps) {
+    const [catalogSearch, setCatalogSearch] = useState('');
+    const [catalogFilter, setCatalogFilter] = useState<
+        'all' | 'public' | 'missing_policy' | 'licensed'
+    >('all');
+    const visibleProducts = catalogProducts.filter((product) => {
+        const search = catalogSearch.trim().toLowerCase();
+        const matchesSearch =
+            search === '' ||
+            `${product.name} ${product.slug}`.toLowerCase().includes(search);
+        const matchesState =
+            catalogFilter === 'all' ||
+            (catalogFilter === 'public' && product.is_public) ||
+            (catalogFilter === 'missing_policy' &&
+                product.active_policy_count === 0) ||
+            (catalogFilter === 'licensed' &&
+                product.active_entitlement_count > 0);
+
+        return matchesSearch && matchesState;
+    });
+    const missingPolicyCount = catalogProducts.filter(
+        (product) => product.active_policy_count === 0,
+    ).length;
+    const publishedCount = catalogProducts.filter(
+        (product) => product.is_public,
+    ).length;
+
     return (
         <>
             <Head title="Platform Operator" />
@@ -254,9 +285,70 @@ export default function Operator({
                             {catalogProducts.length} canonical products
                         </span>
                     </div>
-                    <div className="mt-5 overflow-hidden rounded-xl border">
+                    <div className="mt-5 grid gap-3 sm:grid-cols-3">
+                        <div className="rounded-xl border bg-background/50 p-3">
+                            <p className="text-muted-foreground text-xs">
+                                Registered products
+                            </p>
+                            <p className="mt-1 text-2xl font-black">
+                                {catalogProducts.length}
+                            </p>
+                        </div>
+                        <div className="rounded-xl border bg-background/50 p-3">
+                            <p className="text-muted-foreground text-xs">
+                                Public product pages
+                            </p>
+                            <p className="mt-1 text-2xl font-black">
+                                {publishedCount}
+                            </p>
+                        </div>
+                        <div className="rounded-xl border bg-background/50 p-3">
+                            <p className="text-muted-foreground text-xs">
+                                Missing active entitlement policy
+                            </p>
+                            <p className="mt-1 text-2xl font-black">
+                                {missingPolicyCount}
+                            </p>
+                        </div>
+                    </div>
+                    <div className="mt-5 grid gap-3 md:grid-cols-[1fr_auto]">
+                        <label className="relative block">
+                            <Search className="text-muted-foreground absolute left-3 top-3 size-4" />
+                            <span className="sr-only">Search product inventory</span>
+                            <input
+                                value={catalogSearch}
+                                onChange={(event) =>
+                                    setCatalogSearch(event.target.value)
+                                }
+                                className="bg-background h-11 w-full rounded-xl border pl-10 pr-3 text-sm"
+                                placeholder="Find a product by name or slug"
+                            />
+                        </label>
+                        <label className="flex items-center gap-2 text-xs">
+                            <span className="sr-only">Product inventory filter</span>
+                            <select
+                                value={catalogFilter}
+                                onChange={(event) =>
+                                    setCatalogFilter(
+                                        event.target.value as typeof catalogFilter,
+                                    )
+                                }
+                                className="bg-background h-11 rounded-xl border px-3 text-sm"
+                            >
+                                <option value="all">All registered products</option>
+                                <option value="public">Published catalog</option>
+                                <option value="missing_policy">Missing policy</option>
+                                <option value="licensed">With active entitlements</option>
+                            </select>
+                        </label>
+                    </div>
+                    <p className="text-muted-foreground mt-2 text-xs" role="status">
+                        {visibleProducts.length} of {catalogProducts.length} products shown.
+                        Public listing does not grant customer access.
+                    </p>
+                    <div className="mt-3 overflow-hidden rounded-xl border">
                         <div className="divide-y">
-                            {catalogProducts.map((product) => (
+                            {visibleProducts.map((product) => (
                                 <div
                                     key={product.id}
                                     className="grid gap-3 px-4 py-3 text-xs md:grid-cols-[1.2fr_.9fr_.7fr_.7fr] md:items-center"
@@ -269,27 +361,58 @@ export default function Operator({
                                             {product.slug}
                                         </div>
                                     </div>
-                                    <div className="font-bold tracking-wide uppercase">
-                                        {product.status}
+                                    <div className="space-y-1 text-xs">
+                                        <div className="font-bold tracking-wide uppercase">
+                                            {product.status}
+                                        </div>
+                                        <div className="text-muted-foreground">
+                                            {product.lifecycle}
+                                        </div>
+                                        <div className="text-muted-foreground">
+                                            {product.is_public
+                                                ? 'Public catalog'
+                                                : 'Internal / hidden'}
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <p className="text-muted-foreground">
+                                            Policies:{' '}
+                                            <strong className="text-foreground">
+                                                {product.active_policy_count}
+                                            </strong>
+                                        </p>
+                                        <p className="text-muted-foreground mt-1">
+                                            Purchase: {product.purchase_enabled
+                                                ? 'Configured'
+                                                : 'Disabled'}
+                                        </p>
+                                        <p className="text-muted-foreground mt-1">
+                                            Licensing: {product.licensing_enabled
+                                                ? 'Enabled'
+                                                : 'Disabled'}
+                                        </p>
                                     </div>
                                     <div>
                                         <span className="text-muted-foreground">
-                                            Policies{' '}
+                                            Actual active entitlements:{' '}
                                         </span>
-                                        <span className="font-black">
-                                            {product.active_policy_count}
-                                        </span>
-                                    </div>
-                                    <div>
-                                        <span className="text-muted-foreground">
-                                            Entitlements{' '}
-                                        </span>
-                                        <span className="font-black">
+                                        <strong className="text-foreground">
                                             {product.active_entitlement_count}
-                                        </span>
+                                        </strong>
+                                        <Link
+                                            href={`/products/${encodeURIComponent(product.slug)}`}
+                                            className="mt-2 block font-semibold text-red-500"
+                                        >
+                                            Public product view
+                                        </Link>
                                     </div>
                                 </div>
                             ))}
+                            {visibleProducts.length === 0 && (
+                                <p className="text-muted-foreground p-6 text-center text-sm">
+                                    No products match this search or filter.
+                                </p>
+                            )}
                         </div>
                     </div>
                 </section>
