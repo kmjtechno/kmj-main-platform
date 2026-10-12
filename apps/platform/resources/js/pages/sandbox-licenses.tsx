@@ -1,4 +1,4 @@
-import { Head, useForm } from '@inertiajs/react';
+import { Head, Link, useForm } from '@inertiajs/react';
 import {
     CheckCircle2,
     History,
@@ -109,7 +109,7 @@ export default function SandboxLicenses({
 
     return (
         <>
-            <Head title="Sandbox Licensing" />
+            <Head title="Sandbox Token Testing" />
             <div className="flex h-full flex-1 flex-col gap-6 overflow-x-auto p-4 sm:p-6">
                 <section className="border-sidebar-border/70 bg-card rounded-2xl border p-6">
                     <div className="flex items-start gap-4">
@@ -118,16 +118,19 @@ export default function SandboxLicenses({
                         </span>
                         <div>
                             <div className="text-xs font-bold tracking-wider text-red-500 uppercase">
-                                Sandbox authority
+                                Testing only · not a commercial license
                             </div>
                             <h1 className="mt-1 text-2xl font-black tracking-tight">
-                                License Control Center
+                                Sandbox Token Lab
                             </h1>
                             <p className="text-muted-foreground mt-2 max-w-2xl text-sm leading-6">
-                                Issue a short-lived license only from an active
-                                entitlement, validate it, then revoke it and
-                                confirm the same token fails closed.
+                                Test a 30-minute entitlement-backed token: issue,
+                                verify and revoke it. These test tokens are not
+                                customer license keys or production activation grants.
                             </p>
+                            <Link href="/developer/apps" className="mt-4 inline-flex min-h-10 items-center rounded-xl border border-red-500/30 bg-red-500/5 px-4 text-xs font-bold text-red-500 hover:bg-red-500/10">
+                                Open Developer Apps &amp; Keys
+                            </Link>
                             <div className="mt-3 inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-semibold">
                                 Validation engine
                                 <span className="font-mono text-red-500">
