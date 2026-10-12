@@ -31,6 +31,12 @@ const modules = [
         help: 'Sales and fulfillment',
     },
     {
+        label: 'Customers',
+        href: '/operator/directory',
+        icon: Users,
+        help: 'Users and organizations',
+    },
+    {
         label: 'Payments',
         href: '/operator/payments',
         icon: CreditCard,
