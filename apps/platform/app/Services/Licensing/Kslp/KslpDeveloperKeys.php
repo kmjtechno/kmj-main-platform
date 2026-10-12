@@ -79,7 +79,9 @@ final class KslpDeveloperKeys
             ->whereNull('k.revoked_at')
             ->whereNull('l.revoked_at')
             ->where('l.status', 'active')
+            ->where('l.starts_at', '<=', now())
             ->where('l.expires_at', '>', now())
+            ->whereColumn('p.organization_id', 'k.organization_id')
             ->where('p.status', 'active')
             ->where('s.status', 'active')
             ->where(function ($q): void {
