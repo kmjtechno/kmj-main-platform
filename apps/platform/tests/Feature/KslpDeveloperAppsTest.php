@@ -185,4 +185,57 @@ final class KslpDeveloperAppsTest extends TestCase
         $this->expectExceptionMessage('KSLP_LICENSE_KEY_INVALID');
         app(KslpDeveloperKeys::class)->resolve('KMJ1-' . str_repeat('A', 43));
     }
+
+    public function test_authorized_developer_can_revoke_key_and_audit_license(): void
+    {
+        [$owner, $org] = $this->owner();
+        $this->enroll($org);
+        app(KslpIssuerSubscriptionAuthority::class)
+            ->registerProduct($org, 'VENDOR.REVOKE', 'Revoke Test');
+        $issued = app(KslpDeveloperKeys::class)->issue(
+            $org, 'VENDOR.REVOKE', 'customer-revoke', 'professional', (string) $owner->id,
+        );
+        $keyId = DB::table('kslp_license_keys')->where('license_id', $issued['license_id'])->value('id');
+
+        $this->actingAs($owner)
+            ->withSession(['auth.password_confirmed_at' => time()])
+            ->post('/developer/keys/'.$keyId.'/revoke', [
+                'reason' => 'Customer requested cancellation',
+            ])->assertRedirect(route('developer.apps.index'));
+
+        self::assertNotNull(DB::table('kslp_license_keys')->where('id', $keyId)->value('revoked_at'));
+        $this->assertDatabaseHas('kslp_licenses', [
+            'id' => $issued['license_id'],
+            'status' => 'revoked',
+        ]);
+        $this->assertDatabaseHas('kslp_license_events', [
+            'license_id' => $issued['license_id'],
+            'action' => 'revoked',
+        ]);
+
+        $this->expectException(DomainException::class);
+        $this->expectExceptionMessage('KSLP_LICENSE_KEY_INVALID');
+        app(KslpDeveloperKeys::class)->resolve($issued['key']);
+    }
+
+    public function test_unrelated_user_cannot_revoke_another_tenants_key(): void
+    {
+        [$owner, $org] = $this->owner();
+        $this->enroll($org);
+        app(KslpIssuerSubscriptionAuthority::class)
+            ->registerProduct($org, 'VENDOR.SECURE', 'Secure App');
+        $issued = app(KslpDeveloperKeys::class)->issue(
+            $org, 'VENDOR.SECURE', 'customer-one', 'professional', (string) $owner->id,
+        );
+        $keyId = DB::table('kslp_license_keys')->where('license_id', $issued['license_id'])->value('id');
+        $attacker = User::factory()->create();
+
+        $this->actingAs($attacker)
+            ->withSession(['auth.password_confirmed_at' => time()])
+            ->post('/developer/keys/'.$keyId.'/revoke', [
+                'reason' => 'Unapproved deletion attempt',
+            ])->assertForbidden();
+
+        self::assertNull(DB::table('kslp_license_keys')->where('id', $keyId)->value('revoked_at'));
+    }
 }
