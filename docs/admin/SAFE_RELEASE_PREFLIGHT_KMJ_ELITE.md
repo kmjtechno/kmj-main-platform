@@ -5,10 +5,13 @@
 From a root shell on the authorized KMJ-elite server, run this single block:
 
 ```bash
+bash <<'KMJ_VERIFY'
 set -Eeuo pipefail
 REPO=/srv/kmj-codebridge-projects/kmj-main-platform
 test -d "$REPO/.git" || { echo 'BLOCKED: expected Git directory missing'; exit 2; }
 OWNER="$(stat -c %U "$REPO/.git")"
+TREE_OWNER="$(stat -c %U "$REPO")"
+test "$OWNER" = "$TREE_OWNER" || { echo "BLOCKED: repo owner=$TREE_OWNER and Git owner=$OWNER differ"; exit 2; }
 test "$OWNER" != root && test "$OWNER" != UNKNOWN || { echo 'BLOCKED: unexpected Git owner'; exit 2; }
 OWNER_HOME="$(getent passwd "$OWNER" | cut -d: -f6)"
 test -d "$OWNER_HOME" || { echo 'BLOCKED: owner home missing'; exit 2; }
@@ -22,6 +25,7 @@ runuser -u "$OWNER" -- env HOME="$OWNER_HOME" REPO="$REPO" bash -c '
   git show "$SHA:scripts/ci/verify-integrated-admin-licensing.sh" |
     bash -s -- "$SHA"
 '
+KMJ_VERIFY
 ```
 
 This script fetches the PR (but never checks it out on main) and runs an exact-SHA disposable worktree preflight. A wrong filesystem owner, missing dependency, failed test, or missing PHP extension results in BLOCKED/FAIL. Do not run tests as root or change the production DB.
