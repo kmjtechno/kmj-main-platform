@@ -742,6 +742,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
                     'slug' => (string) $product->getAttribute('slug'),
                     'name' => (string) $product->getAttribute('name'),
                     'status' => (string) $product->getAttribute('status'),
+                    'lifecycle' => (string) $product->getAttribute('lifecycle'),
+                    'is_public' => (bool) $product->getAttribute('is_public'),
+                    'purchase_enabled' => (bool) $product->getAttribute('purchase_enabled'),
+                    'licensing_enabled' => (bool) $product->getAttribute('licensing_enabled'),
                     'active_policy_count' => EntitlementPolicy::query()
                         ->where('product_id', $productId)
                         ->where('status', 'active')
