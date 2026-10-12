@@ -43,34 +43,12 @@ jobs:
             cd apps/platform
             composer install --no-interaction --prefer-dist --no-progress
       - run:
-          name: Generate Wayfinder TypeScript routes from checked-out Laravel routes
-          no_output_timeout: 3m
-          command: |
-            set -euo pipefail
-            cd apps/platform
-            export APP_KEY="$(php -r 'echo "base64:".base64_encode(random_bytes(32));')"
-            php artisan route:clear
-            php artisan wayfinder:generate --with-form
-            test -f resources/js/routes/index.ts
-            test -d resources/js/actions
-            test -d resources/js/wayfinder
-      - run:
-          name: TypeScript check and existing onboarding contract
-          no_output_timeout: 6m
-          command: |
-            set -euo pipefail
-            cd apps/platform
-            npm run types:check
-            node --test scripts/check-codebridge-safe-onboarding.test.mjs
-      - run:
-          name: Tenant safe CodeBridge credential lifecycle HTTP tests
+          name: No-network local CodeBridge device-control verification
           no_output_timeout: 8m
           command: |
             set -euo pipefail
             cd apps/platform
-            export APP_KEY="$(php -r 'echo "base64:".base64_encode(random_bytes(32));')"
-            php artisan test --filter=CodeBridgeAdminHttpTest
-            php artisan test --filter=CodeBridgeDeviceEnrollmentTest
+            bash scripts/verify-codebridge-device-control-offline.sh
 
 workflows:
   review_codebridge_device_control:
