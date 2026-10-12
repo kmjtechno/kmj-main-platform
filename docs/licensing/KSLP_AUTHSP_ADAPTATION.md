@@ -49,7 +49,7 @@ One PostgreSQL authority, existing queue/scheduler, optional bounded Redis for r
 
 ## Free isolated exact-SHA verification option
 
-`scripts/ci/verify-kslp-pr.sh <40-char-commit-sha>` creates a detached Git worktree in a temporary directory, confirms the exact revision, copies only preinstalled development Composer dependencies, and runs KSLP PHP syntax, Laravel tests (SQLite in-memory), Pint, and PHPStan without altering the original checkout or production database. The script is committed but **has not yet been executed** in the authorized remote environment; it exits BLOCKED if local test dependencies or PHP extensions are unavailable. It is an independent fallback diagnostic, not a GitHub-hosted check or an authorization to bypass protected CI.
+`bash scripts/ci/verify-kslp-pr.sh <40-char-commit-sha>` creates a detached Git worktree in a temporary directory, confirms the exact revision, copies only preinstalled development Composer dependencies, and runs KSLP PHP syntax, Laravel tests (SQLite in-memory), Pint, and PHPStan without altering the original checkout or production database. The script is committed but **has not yet been executed** in the authorized remote environment; it exits BLOCKED if local test dependencies or PHP extensions are unavailable. It is an independent fallback diagnostic, not a GitHub-hosted check or an authorization to bypass protected CI.
 
 GitHub Actions #361 currently reports startup failures with no execution steps, correlated with the confirmed overdue $4 GitHub account notice. GitHub billing/account restoration must be handled through the official owner billing flow or GitHub Support; **do not** make private source public, increase budgets, or provision paid services to work around this.
 
