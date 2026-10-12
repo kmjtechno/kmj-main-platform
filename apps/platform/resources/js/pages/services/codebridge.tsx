@@ -1,4 +1,5 @@
 import { Head, Link, router } from '@inertiajs/react';
+import { useState } from 'react';
 import {
     ArrowLeft,
     Cable,
@@ -6,6 +7,7 @@ import {
     KeyRound,
     Laptop2,
     Link2,
+    Search,
     Server,
     ShieldCheck,
     TerminalSquare,
@@ -42,6 +44,7 @@ type RegisteredDevice = {
     projects: Array<{ id: string; name: string }>;
     registration: 'registered';
     connection_status: 'not_verified';
+    registered_at?: string | null;
 };
 
 type Service = {
@@ -73,9 +76,9 @@ const VSCODE_COPILOT_SETUP_URL =
 const DESKTOP_INSTALL_DESCRIPTION =
     'Download the KMJ Desktop setup once. It adds the official KMJ marketplace; CodeBridge is installed by default and opens browser OAuth on first use.';
 const CONNECTED_CLIENTS_DESCRIPTION =
-    'Review OAuth clients connected to this KMJ account and revoke refresh access at any time.';
+    'Review authorized OAuth refresh grants. An authorization does not confirm a live IDE session; revoke unused clients at any time.';
 const NO_CONNECTED_CLIENTS =
-    'No active CodeBridge OAuth client is connected to this account.';
+    'No unexpired CodeBridge OAuth refresh grants are registered for this account.';
 
 // VS Code expects exactly one percent-encoded MCP server configuration in
 // its registered URI handler; do not include tokens or the whole mcp.json.
@@ -91,11 +94,50 @@ export default function CodeBridgeService({
     service,
     canManageOwnerPlan,
 }: Props) {
-    const revokeClient = (clientId: string) => {
+    const [deviceSearch, setDeviceSearch] = useState('');
+    const [copyStatus, setCopyStatus] = useState('');
+    const [revokingClient, setRevokingClient] = useState<string | null>(null);
+    const filteredDevices = service.devices.filter((device) => {
+        const text = [
+            device.name,
+            device.id,
+            device.platform ?? '',
+            ...device.projects.flatMap((project) => [
+                project.name,
+                project.id,
+            ]),
+        ]
+            .join(' ')
+            .toLocaleLowerCase();
+        return text.includes(deviceSearch.trim().toLocaleLowerCase());
+    });
+
+    const copyEndpoint = async () => {
+        try {
+            await navigator.clipboard.writeText(service.endpoint);
+            setCopyStatus('MCP endpoint copied.');
+        } catch {
+            setCopyStatus('Copy unavailable. Select the endpoint above.');
+        }
+    };
+
+    const revokeClient = (clientId: string, clientName: string) => {
+        if (
+            revokingClient !== null ||
+            !window.confirm(
+                `Revoke future CodeBridge refresh access for "${clientName}"? Existing access tokens can work until expiry.`,
+            )
+        ) {
+            return;
+        }
+        setRevokingClient(clientId);
         router.post(
             `/services/kmj-codebridge/oauth-clients/${encodeURIComponent(clientId)}/revoke`,
             {},
-            { preserveScroll: true },
+            {
+                preserveScroll: true,
+                onFinish: () => setRevokingClient(null),
+            },
         );
     };
 
@@ -103,7 +145,7 @@ export default function CodeBridgeService({
         <>
             <Head title="KMJ CodeBridge" />
 
-            <div className="flex h-full flex-1 flex-col gap-6 overflow-x-auto p-4 sm:p-6">
+            <div className="flex h-full min-w-0 flex-1 flex-col gap-6 overflow-x-hidden p-4 sm:p-6">
                 <section className="border-sidebar-border/70 from-background via-background dark:border-sidebar-border overflow-hidden rounded-2xl border bg-gradient-to-br to-red-950/10 p-6 sm:p-8">
                     <Link
                         href="/dashboard"
@@ -180,10 +222,10 @@ export default function CodeBridgeService({
                     <Metric
                         label="OAuth"
                         value={service.oauth_ready ? 'Ready' : 'Unavailable'}
-                        hint="Browser OAuth + Desktop bridge"
+                        hint="OAuth authorization configuration"
                     />
                     <Metric
-                        label="Managed devices"
+                        label="Registered devices"
                         value={service.managed_devices}
                         hint={
                             service.device_limit
@@ -327,10 +369,12 @@ export default function CodeBridgeService({
                                 Authorized permissions
                             </div>
                             <div className="mt-3 flex flex-wrap gap-2">
-                                {(service.permissions.length
-                                    ? service.permissions
-                                    : ['read', 'write', 'execute']
-                                ).map((permission) => (
+                                {service.permissions.length === 0 && (
+                                    <span className="text-muted-foreground text-[11px]">
+                                        No permissions reported. Ask an administrator to verify your grant.
+                                    </span>
+                                )}
+                                {service.permissions.map((permission) => (
                                     <span
                                         key={permission}
                                         className="rounded-lg border px-2.5 py-1 text-[10px] font-bold uppercase"
