@@ -150,15 +150,35 @@ final class KslpLifecycleTest extends TestCase
     {
         $control = app(KslpLicenseControlPlane::class);
         $license = $control->issue('idempotency-customer-hardware', 'professional', 'owner');
-        [, $server] = $this->activate($control, $license['id'], 'initial-device');
-        $challenge = app(KslpActivationProof::class)->challenge($license['id'], $server);
-        // The request must not accept an existing activation with changed
-        // hardware even if a fresh proof was successfully obtained.
+        $pair = sodium_crypto_sign_keypair();
+        $secret = sodium_crypto_sign_secretkey($pair);
+        $public = sodium_crypto_sign_publickey($pair);
+        $server = 'ed25519:'.rtrim(strtr(base64_encode($public), '+/', '-_'), '=');
+        $proofs = app(KslpActivationProof::class);
+
+        $first = $proofs->challenge($license['id'], $server);
+        $firstSignature = rtrim(strtr(base64_encode(sodium_crypto_sign_detached(
+            'KSLP-ACTIVATE-v1|'.$license['id'].'|'.$first['nonce'],
+            $secret,
+        )), '+/', '-_'), '=');
+        $control->activate(
+            $license['id'], $server, str_repeat('a', 64), 'initial-device',
+            'owner', $first['challenge_id'], $first['nonce'], $firstSignature,
+        );
+
+        $next = $proofs->challenge($license['id'], $server);
+        $nextSignature = rtrim(strtr(base64_encode(sodium_crypto_sign_detached(
+            'KSLP-ACTIVATE-v1|'.$license['id'].'|'.$next['nonce'],
+            $secret,
+        )), '+/', '-_'), '=');
+
+        // Despite VALID proof of the original private key, a changed
+        // machine hash must use the audited transfer path.
         $this->expectExceptionMessage('KSLP_ACTIVATION_CONFLICT');
         $control->activate(
             $license['id'], $server, str_repeat('b', 64),
             'new-hardware-attempt', 'owner',
-            $challenge['challenge_id'], $challenge['nonce'], 'invalid-proof',
+            $next['challenge_id'], $next['nonce'], $nextSignature,
         );
     }
 
