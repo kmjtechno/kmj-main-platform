@@ -104,6 +104,30 @@ final class KslpDeveloperAppsTest extends TestCase
                 ->where('newKey', null));
     }
 
+    public function test_duplicate_application_code_returns_validation_error_without_duplicate_record(): void
+    {
+        [$owner, $org] = $this->owner('Developer Duplicate Code');
+        $this->enroll($org);
+
+        $request = [
+            'organization_id' => $org,
+            'name' => 'First App',
+            'product_code' => 'VENDOR.DUPLICATE',
+        ];
+
+        $this->actingAs($owner)
+            ->withSession(['auth.password_confirmed_at' => time()])
+            ->post('/developer/apps', $request)
+            ->assertRedirect(route('developer.apps.index'));
+
+        $this->actingAs($owner)
+            ->withSession(['auth.password_confirmed_at' => time()])
+            ->post('/developer/apps', array_replace($request, ['name' => 'Second App']))
+            ->assertSessionHasErrors('product_code');
+
+        $this->assertDatabaseCount('kslp_licensed_products', 1);
+    }
+
     public function test_app_registration_requires_active_issuer_subscription(): void
     {
         [$owner, $org] = $this->owner('Unsubscribed Developer');
