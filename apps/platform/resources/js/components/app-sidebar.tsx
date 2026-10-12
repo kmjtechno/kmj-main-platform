@@ -2,7 +2,8 @@ import { Link, usePage } from '@inertiajs/react';
 import {
     Activity,
     Crown,
-    KeyRound,
+    Code2,
+    FlaskConical,
     LayoutGrid,
     PackageOpen,
     ShieldCheck,
@@ -37,9 +38,14 @@ const baseNavItems: NavItem[] = [
         icon: ShoppingCart,
     },
     {
-        title: 'License Center',
+        title: 'Developer Apps & Keys',
+        href: '/developer/apps',
+        icon: Code2,
+    },
+    {
+        title: 'Sandbox Testing',
         href: '/sandbox-licenses',
-        icon: KeyRound,
+        icon: FlaskConical,
     },
     {
         title: 'Security',
