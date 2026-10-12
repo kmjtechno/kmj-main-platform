@@ -168,4 +168,65 @@ final class KslpOfflineLeaseGuardTest extends TestCase
 
         self::assertSame($fixture['expected_claims'], $claims);
     }
+
+    public function test_rejects_wrong_product_claim(): void
+    {
+        $this->expectExceptionMessage('KSLP_WRONG_PRODUCT');
+        $this->check(['product' => 'KMJ_OMNIDESK']);
+    }
+
+    public function test_rejects_wrong_signed_audience(): void
+    {
+        $this->expectExceptionMessage('KSLP_WRONG_AUDIENCE');
+        $this->check(['aud' => 'kmj-omnidesk']);
+    }
+
+    public function test_rejects_cross_license_activation_binding(): void
+    {
+        $this->expectExceptionMessage('KSLP_ACTIVATION_CONFLICT');
+        $this->check(['license_id' => 'different-license']);
+    }
+
+    public function test_rejects_expired_signed_lease(): void
+    {
+        $this->expectExceptionMessage('KSLP_EXPIRED');
+        $this->check(['exp' => self::NOW - 1]);
+    }
+
+    public function test_rejects_unknown_license_signing_key(): void
+    {
+        [$token] = $this->signed();
+        $this->expectExceptionMessage('KSLP_UNKNOWN_KID');
+        (new KslpOfflineLeaseGuard)->verify(
+            $token,
+            fn (string $kid): ?string => null,
+            'ed25519:example-device-public-key',
+            'activation-1',
+            'license-1',
+            self::NOW,
+            self::NOW,
+            3,
+        );
+    }
+
+    public function test_rejects_oversized_unsigned_token_without_parsing(): void
+    {
+        $this->expectExceptionMessage('KSLP_MALFORMED');
+        (new KslpOfflineLeaseGuard)->verify(
+            str_repeat('X', 16385),
+            fn (string $kid): ?string => null,
+            'ed25519:example-device-public-key',
+            'activation-1',
+            'license-1',
+            self::NOW,
+            self::NOW,
+            3,
+        );
+    }
+
+    public function test_rejects_signed_invalid_entitlement_shape(): void
+    {
+        $this->expectExceptionMessage('KSLP_MALFORMED');
+        $this->check(['features' => 'not-a-feature-map']);
+    }
 }
