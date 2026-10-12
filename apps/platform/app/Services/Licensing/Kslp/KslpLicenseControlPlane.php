@@ -72,13 +72,13 @@ final class KslpLicenseControlPlane
     {
         $existing = DB::table('kslp_activations')->where('idempotency_key', $idempotencyKey)->first();
         if ($existing) {
-            return (array) $existing;
+            return $this->matchingActivation($existing, $licenseId, $serverIdentity, $machineHash);
         }app(KslpActivationProof::class)->consume($challengeId, $licenseId, $serverIdentity, $nonce, $proof);
 
         return DB::transaction(function () use ($licenseId, $serverIdentity, $machineHash, $idempotencyKey, $actor) {
             $existing = DB::table('kslp_activations')->where('idempotency_key', $idempotencyKey)->first();
             if ($existing) {
-                return (array) $existing;
+                return $this->matchingActivation($existing, $licenseId, $serverIdentity, $machineHash);
             }
             $lic = DB::table('kslp_licenses')->where('id', $licenseId)->lockForUpdate()->first();
             if (! $lic) {
@@ -87,7 +87,7 @@ final class KslpLicenseControlPlane
                 throw new DomainException('KSLP_REVOKED');
             }
             $active = DB::table('kslp_activations')->where('license_id', $licenseId)->whereNull('deactivated_at')->first();
-            if ($active && $active->server_identity !== $serverIdentity) {
+            if ($active && ($active->server_identity !== $serverIdentity || ! hash_equals((string) $active->machine_identity_hash, $machineHash))) {
                 throw new DomainException('KSLP_ACTIVATION_CONFLICT');
             }
             if ($active) {
@@ -99,6 +99,32 @@ final class KslpLicenseControlPlane
 
             return (array) DB::table('kslp_activations')->where('id', $id)->first();
         }, 3);
+    }
+
+    /**
+     * Match idempotency retries to the original license and device, and deny
+     * replay after transfer or revocation.
+     *
+     * @return array<array-key, mixed>
+     */
+    private function matchingActivation(object $activation, string $licenseId, string $serverIdentity, string $machineHash): array
+    {
+        if ((string) $activation->license_id !== $licenseId
+            || (string) $activation->server_identity !== $serverIdentity
+            || ! hash_equals((string) $activation->machine_identity_hash, $machineHash)
+            || $activation->deactivated_at !== null) {
+            throw new DomainException('KSLP_ACTIVATION_CONFLICT');
+        }
+
+        $license = DB::table('kslp_licenses')->where('id', $licenseId)->first(['revoked_at']);
+        if ($license === null) {
+            throw new DomainException('KSLP_LICENSE_NOT_FOUND');
+        }
+        if ($license->revoked_at !== null) {
+            throw new DomainException('KSLP_REVOKED');
+        }
+
+        return (array) $activation;
     }
 
     /**
