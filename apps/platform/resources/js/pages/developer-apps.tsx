@@ -87,6 +87,7 @@ export default function DeveloperApps({
     const [language, setLanguage] = useState<string>('TypeScript');
     const [selectedApp, setSelectedApp] = useState<string>('');
     const [copied, setCopied] = useState(false);
+    const createOrganization = useForm({ name: '' });
     const createApp = useForm({
         organization_id: organizations[0]?.id ?? '',
         name: '',
@@ -197,6 +198,33 @@ export default function DeveloperApps({
                     </section>
                 )}
 
+                {organizations.length === 0 && (
+                    <section className="rounded-2xl border bg-card p-5 sm:p-6">
+                        <h2 className="text-lg font-bold">Start by creating your organization</h2>
+                        <p className="text-muted-foreground mt-1 text-sm">
+                            A workspace separates your apps and customer licences from other accounts.
+                            An approved developer subscription will still be required before issuance.
+                        </p>
+                        <form className="mt-4 flex flex-col gap-3 sm:flex-row" onSubmit={(event) => {
+                            event.preventDefault();
+                            createOrganization.post('/developer/organizations');
+                        }}>
+                            <input
+                                aria-label="Organization name"
+                                placeholder="Your company or developer team"
+                                className="bg-background min-h-11 flex-1 rounded-xl border px-3 text-sm"
+                                maxLength={160}
+                                value={createOrganization.data.name}
+                                onChange={(event) => createOrganization.setData('name', event.target.value)}
+                                required
+                            />
+                            <button type="submit" disabled={createOrganization.processing} className="min-h-11 rounded-xl bg-red-600 px-5 text-sm font-bold text-white disabled:opacity-50">
+                                Create organization
+                            </button>
+                        </form>
+                        {Object.values(createOrganization.errors).map((error, index) => <p className="mt-2 text-xs text-red-500" key={index}>{error}</p>)}
+                    </section>
+                )}
                 <div className="grid gap-5 xl:grid-cols-2">
                     <section id="developer-app-create" className="rounded-2xl border bg-card p-5 sm:p-6">
                         <h2 className="flex items-center gap-2 text-lg font-bold">
