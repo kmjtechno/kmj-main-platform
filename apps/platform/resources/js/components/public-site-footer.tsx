@@ -50,6 +50,12 @@ export default function PublicSiteFooter() {
                             >
                                 Trust center
                             </Link>
+                            <Link
+                                href="/contact"
+                                className="text-sm font-semibold text-white/78 transition hover:text-white"
+                            >
+                                Contact
+                            </Link>
                             <a
                                 href="https://www.linkedin.com/company/kmj-techno/"
                                 target="_blank"
