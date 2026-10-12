@@ -232,6 +232,22 @@ final class KslpDeveloperAppsTest extends TestCase
         app(KslpDeveloperKeys::class)->resolve($issued['key']);
     }
 
+    public function test_license_key_cannot_activate_before_its_validity_start(): void
+    {
+        [$owner, $org] = $this->owner('Future License Guard');
+        $this->enroll($org);
+        app(KslpIssuerSubscriptionAuthority::class)->registerProduct($org, 'VENDOR.FUTURE', 'Future License');
+
+        $issued = app(KslpDeveloperKeys::class)->issue(
+            $org, 'VENDOR.FUTURE', 'customer-future', 'trial', (string) $owner->id,
+        );
+        DB::table('kslp_licenses')->where('id', $issued['license_id'])
+            ->update(['starts_at' => now()->addDay()]);
+
+        $this->expectExceptionMessage('KSLP_LICENSE_KEY_INVALID');
+        app(KslpDeveloperKeys::class)->resolve($issued['key']);
+    }
+
     public function test_unsigned_or_guessed_key_is_rejected(): void
     {
         $this->expectExceptionMessage('KSLP_LICENSE_KEY_INVALID');
