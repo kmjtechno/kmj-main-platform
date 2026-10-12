@@ -162,6 +162,34 @@ final class KslpDeveloperAppsTest extends TestCase
             ])->assertStatus(503);
     }
 
+    public function test_self_service_paid_issuance_is_denied_without_verified_payment(): void
+    {
+        [$owner, $org] = $this->owner('Paid Entitlement Gate');
+        $this->enroll($org);
+        app(KslpIssuerSubscriptionAuthority::class)->registerProduct($org, 'VENDOR.PAID', 'Paid App');
+
+        try {
+            app(KslpDeveloperKeys::class)->issue(
+                $org, 'VENDOR.PAID', 'unpaid-customer', 'enterprise', (string) $owner->id,
+            );
+            self::fail('Developer issuer subscription must not authorize an unpaid commercial plan.');
+        } catch (DomainException $exception) {
+            self::assertSame('KSLP_PAID_ENTITLEMENT_REQUIRED', $exception->getMessage());
+        }
+
+        $this->actingAs($owner)
+            ->withSession(['auth.password_confirmed_at' => time()])
+            ->post('/developer/keys', [
+                'organization_id' => $org,
+                'product_code' => 'VENDOR.PAID',
+                'customer_id' => 'unpaid-customer',
+                'plan' => 'professional',
+            ])->assertSessionHasErrors('plan');
+
+        $this->assertDatabaseCount('kslp_license_keys', 0);
+        $this->assertDatabaseCount('kslp_licenses', 0);
+    }
+
     public function test_revoked_developer_key_cannot_be_resolved(): void
     {
         [$owner, $org] = $this->owner();
