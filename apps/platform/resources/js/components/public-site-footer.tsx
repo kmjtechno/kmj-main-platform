@@ -72,6 +72,7 @@ export default function PublicSiteFooter() {
                                 ['/terms', 'Terms & Conditions'],
                                 ['/privacy', 'Privacy Policy'],
                                 ['/refund-policy', 'Refund Policy'],
+                                ['/contact', 'Contact & Support'],
                                 ['/acceptable-use', 'Acceptable Use'],
                                 ['/cookie-policy', 'Cookie Policy'],
                             ].map(([href, label]) => (
