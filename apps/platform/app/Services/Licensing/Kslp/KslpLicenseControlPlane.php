@@ -176,6 +176,22 @@ final class KslpLicenseControlPlane
         $this->requireReason($reason);
 
         return DB::transaction(function () use ($id, $server, $machine, $key, $actor, $reason, $challengeId, $nonce, $proof) {
+            // Serialize transfers against ordinary activations of this license.
+            $license = DB::table('kslp_licenses')->where('id', $id)->lockForUpdate()->first();
+            if ($license === null) {
+                throw new DomainException('KSLP_LICENSE_NOT_FOUND');
+            }
+            if ($license->revoked_at !== null) {
+                throw new DomainException('KSLP_REVOKED');
+            }
+
+            // An exact retry is successful without disabling the newly
+            // activated device or recording a second transfer event.
+            $existing = DB::table('kslp_activations')->where('idempotency_key', $key)->first();
+            if ($existing !== null) {
+                return $this->matchingActivation($existing, $id, $server, $machine);
+            }
+
             DB::table('kslp_activations')->where('license_id', $id)->whereNull('deactivated_at')->update(['deactivated_at' => now(), 'updated_at' => now()]);
             $this->event($id, $actor, 'transferred', $reason);
 
