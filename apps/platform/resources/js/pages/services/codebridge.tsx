@@ -1,4 +1,8 @@
 import { Head, Link, router } from '@inertiajs/react';
+import { useState } from 'react';
+import DeviceControlCenter, {
+    type CodeBridgeDevice,
+} from '@/components/codebridge/device-control-center';
 import {
     ArrowLeft,
     Cable,
@@ -6,6 +10,7 @@ import {
     KeyRound,
     Laptop2,
     Link2,
+    Search,
     Server,
     ShieldCheck,
     TerminalSquare,
@@ -34,15 +39,7 @@ type ConnectedClient = {
     last_active_at: string | null;
 };
 
-type RegisteredDevice = {
-    id: string;
-    name: string;
-    platform: string | null;
-    arch: string | null;
-    projects: Array<{ id: string; name: string }>;
-    registration: 'registered';
-    connection_status: 'not_verified';
-};
+type RegisteredDevice = CodeBridgeDevice;
 
 type Service = {
     endpoint: string;
@@ -65,6 +62,7 @@ type Props = {
     entitlement: Entitlement;
     service: Service;
     canManageOwnerPlan: boolean;
+    canManageDevices: boolean;
 };
 
 const CHATGPT_DESKTOP_SETUP_URL = '/install-chatgpt-desktop.ps1';
@@ -73,9 +71,9 @@ const VSCODE_COPILOT_SETUP_URL =
 const DESKTOP_INSTALL_DESCRIPTION =
     'Download the KMJ Desktop setup once. It adds the official KMJ marketplace; CodeBridge is installed by default and opens browser OAuth on first use.';
 const CONNECTED_CLIENTS_DESCRIPTION =
-    'Review OAuth clients connected to this KMJ account and revoke refresh access at any time.';
+    'Review authorized OAuth refresh grants. An authorization does not confirm a live IDE session; revoke unused clients at any time.';
 const NO_CONNECTED_CLIENTS =
-    'No active CodeBridge OAuth client is connected to this account.';
+    'No unexpired CodeBridge OAuth refresh grants are registered for this account.';
 
 // VS Code expects exactly one percent-encoded MCP server configuration in
 // its registered URI handler; do not include tokens or the whole mcp.json.
@@ -90,12 +88,50 @@ export default function CodeBridgeService({
     entitlement,
     service,
     canManageOwnerPlan,
+    canManageDevices,
 }: Props) {
-    const revokeClient = (clientId: string) => {
+    const [clientSearch, setClientSearch] = useState('');
+    const [showAllClients, setShowAllClients] = useState(false);
+    const [copyStatus, setCopyStatus] = useState('');
+    const [revokingClient, setRevokingClient] = useState<string | null>(null);
+
+    const matchingClients = service.connected_clients.filter((client) =>
+        [client.client_name, client.client_id, ...client.scopes]
+            .join(' ')
+            .toLocaleLowerCase()
+            .includes(clientSearch.trim().toLocaleLowerCase()),
+    );
+    const visibleClients =
+        clientSearch.trim() || showAllClients
+            ? matchingClients
+            : matchingClients.slice(0, 5);
+
+    const copyEndpoint = async () => {
+        try {
+            await navigator.clipboard.writeText(service.endpoint);
+            setCopyStatus('MCP endpoint copied.');
+        } catch {
+            setCopyStatus('Copy unavailable. Select the endpoint above.');
+        }
+    };
+
+    const revokeClient = (clientId: string, clientName: string) => {
+        if (
+            revokingClient !== null ||
+            !window.confirm(
+                `Revoke future CodeBridge refresh access for "${clientName}"? Existing access tokens can work until expiry.`,
+            )
+        ) {
+            return;
+        }
+        setRevokingClient(clientId);
         router.post(
             `/services/kmj-codebridge/oauth-clients/${encodeURIComponent(clientId)}/revoke`,
             {},
-            { preserveScroll: true },
+            {
+                preserveScroll: true,
+                onFinish: () => setRevokingClient(null),
+            },
         );
     };
 
@@ -103,7 +139,7 @@ export default function CodeBridgeService({
         <>
             <Head title="KMJ CodeBridge" />
 
-            <div className="flex h-full flex-1 flex-col gap-6 overflow-x-auto p-4 sm:p-6">
+            <div className="flex h-full min-w-0 flex-1 flex-col gap-6 overflow-x-hidden p-4 sm:p-6">
                 <section className="border-sidebar-border/70 from-background via-background dark:border-sidebar-border overflow-hidden rounded-2xl border bg-gradient-to-br to-red-950/10 p-6 sm:p-8">
                     <Link
                         href="/dashboard"
@@ -180,10 +216,10 @@ export default function CodeBridgeService({
                     <Metric
                         label="OAuth"
                         value={service.oauth_ready ? 'Ready' : 'Unavailable'}
-                        hint="Browser OAuth + Desktop bridge"
+                        hint="OAuth authorization configuration"
                     />
                     <Metric
-                        label="Managed devices"
+                        label="Registered devices"
                         value={service.managed_devices}
                         hint={
                             service.device_limit
@@ -327,10 +363,13 @@ export default function CodeBridgeService({
                                 Authorized permissions
                             </div>
                             <div className="mt-3 flex flex-wrap gap-2">
-                                {(service.permissions.length
-                                    ? service.permissions
-                                    : ['read', 'write', 'execute']
-                                ).map((permission) => (
+                                {service.permissions.length === 0 && (
+                                    <span className="text-muted-foreground text-[11px]">
+                                        No permissions reported. Ask an
+                                        administrator to verify your grant.
+                                    </span>
+                                )}
+                                {service.permissions.map((permission) => (
                                     <span
                                         key={permission}
                                         className="rounded-lg border px-2.5 py-1 text-[10px] font-bold uppercase"
@@ -361,107 +400,14 @@ export default function CodeBridgeService({
                     </div>
                 </section>
 
-                <section className="border-sidebar-border/70 bg-card dark:border-sidebar-border rounded-2xl border p-5 sm:p-6">
-                    <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
-                        <div>
-                            <h2 className="font-black">
-                                Your devices & projects
-                            </h2>
-                            <p className="text-muted-foreground mt-1 text-xs leading-5">
-                                Main Platform is your sign-in and device
-                                authorization authority. GitHub sign-in is not
-                                needed to pair a local project or use
-                                CodeBridge.
-                            </p>
-                        </div>
-                        <button
-                            type="button"
-                            onClick={() => router.reload({ only: ['service'] })}
-                            className="inline-flex h-9 items-center justify-center rounded-xl border px-3 text-[11px] font-bold transition hover:border-red-500/40"
-                        >
-                            Refresh registration
-                        </button>
-                    </div>
-
-                    {service.devices.length === 0 ? (
-                        <div className="mt-5 rounded-xl border border-dashed p-5">
-                            <div className="text-sm font-bold">
-                                No devices paired yet
-                            </div>
-                            <p className="text-muted-foreground mt-2 text-xs leading-5">
-                                Install the CodeBridge device agent, then
-                                approve the short-lived pairing code using your
-                                KMJ account. No GitHub OAuth or manual device
-                                token is needed.
-                            </p>
-                            <Link
-                                href="/codebridge/pair"
-                                className="mt-4 inline-flex h-9 items-center rounded-xl border border-red-500/30 px-3 text-xs font-bold text-red-500"
-                            >
-                                Approve a pairing code
-                            </Link>
-                        </div>
-                    ) : (
-                        <div className="mt-5 grid gap-3 md:grid-cols-2">
-                            {service.devices.map((device) => (
-                                <div
-                                    key={device.id}
-                                    className="min-w-0 rounded-xl border p-4"
-                                >
-                                    <div className="flex flex-wrap items-center justify-between gap-2">
-                                        <div className="min-w-0">
-                                            <div className="truncate text-sm font-bold">
-                                                {device.name}
-                                            </div>
-                                            <div className="text-muted-foreground mt-1 truncate text-[11px]">
-                                                {device.id}
-                                            </div>
-                                        </div>
-                                        <span className="rounded-lg border px-2 py-1 text-[10px] font-semibold">
-                                            Registered
-                                        </span>
-                                    </div>
-                                    <div className="text-muted-foreground mt-3 text-xs">
-                                        {[device.platform, device.arch]
-                                            .filter(Boolean)
-                                            .join(' / ') ||
-                                            'Device type not reported'}
-                                    </div>
-                                    <div className="mt-3 text-xs font-semibold">
-                                        {device.projects.length
-                                            ? 'Authorized projects'
-                                            : 'No project grant reported'}
-                                    </div>
-                                    {device.projects.map((project) => (
-                                        <div
-                                            key={project.id}
-                                            className="mt-2 rounded-lg border bg-black/5 px-3 py-2 text-xs dark:bg-white/[0.03]"
-                                        >
-                                            {project.name}
-                                            <span className="text-muted-foreground ml-2">
-                                                {project.id}
-                                            </span>
-                                        </div>
-                                    ))}
-                                    <p className="text-muted-foreground mt-3 text-[11px] leading-5">
-                                        Live connection: Not verified.
-                                        Registration alone does not prove the
-                                        agent is online. Check
-                                        connection_overview in your
-                                        authenticated CodeBridge client.
-                                    </p>
-                                </div>
-                            ))}
-                        </div>
-                    )}
-                    {service.managed_devices > service.devices.length && (
-                        <p className="text-muted-foreground mt-3 text-xs">
-                            Showing the first {service.devices.length}{' '}
-                            registered devices. The list is intentionally
-                            bounded.
-                        </p>
-                    )}
-                </section>
+                <DeviceControlCenter
+                    tenantId={organization.id}
+                    devices={service.devices}
+                    managedCount={service.managed_devices}
+                    deviceLimit={service.device_limit}
+                    canManage={canManageDevices}
+                    endpoint={service.endpoint}
+                />
 
                 <section className="border-sidebar-border/70 bg-card dark:border-sidebar-border rounded-2xl border p-5 sm:p-6">
                     <h2 className="font-black">Connect your AI workspace</h2>
@@ -499,13 +445,74 @@ export default function CodeBridgeService({
                         </a>
                         <button
                             type="button"
-                            onClick={() =>
-                                navigator.clipboard.writeText(service.endpoint)
-                            }
+                            onClick={() => {
+                                void copyEndpoint();
+                            }}
                             className="inline-flex h-10 items-center rounded-xl border px-4 text-xs font-bold"
                         >
                             Copy MCP endpoint for other IDEs
                         </button>
+                    </div>
+                    {copyStatus && (
+                        <p
+                            role="status"
+                            className="text-muted-foreground mt-2 text-xs"
+                        >
+                            {copyStatus}
+                        </p>
+                    )}
+                    <div className="mt-5 grid gap-3 lg:grid-cols-2">
+                        <div className="rounded-xl border p-4">
+                            <h3 className="text-xs font-black">
+                                Claude Desktop / Claude web
+                            </h3>
+                            <p className="text-muted-foreground mt-2 text-xs leading-5">
+                                Open Claude Settings, then Connectors and Add
+                                custom connector. Use this hosted Streamable
+                                HTTP MCP URL and complete KMJ browser OAuth. Do
+                                not paste device tokens.
+                            </p>
+                            <code className="mt-3 block rounded-lg border px-3 py-2 text-[11px] break-all">
+                                {service.endpoint}
+                            </code>
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    void copyEndpoint();
+                                }}
+                                className="mt-3 min-h-10 rounded-lg border px-3 py-2 text-[11px] font-bold"
+                            >
+                                Copy Claude MCP URL
+                            </button>
+                            <p className="text-muted-foreground mt-2 text-[11px] leading-5">
+                                For third-party inference Gateway mode in
+                                Claude Desktop, use Inference configuration,
+                                Connectors, Managed MCP servers, Add server,
+                                Streamable HTTP and OAuth auto-registration
+                                instead.
+                            </p>
+                        </div>
+                        <div className="rounded-xl border p-4">
+                            <h3 className="text-xs font-black">
+                                Multiple AI chats / automatic updates
+                            </h3>
+                            <p className="text-muted-foreground mt-2 text-xs leading-5">
+                                Multiple ChatGPT, Claude and IDE sessions can
+                                use the same authorized gateway. New CodeBridge
+                                work lanes protect reserved files from
+                                overlapping CodeBridge edits after the
+                                compatible gateway and device agent are
+                                deployed. Actual execution concurrency remains
+                                plan and hardware limited.
+                            </p>
+                            <p className="text-muted-foreground mt-3 text-[11px] leading-5">
+                                Verified hosted MCP updates are served
+                                centrally. Your AI desktop app may need to
+                                reconnect to refresh tools; third-party app
+                                binaries and marketplace icons cannot
+                                be silently updated by CodeBridge.
+                            </p>
+                        </div>
                     </div>
                     <p className="text-muted-foreground mt-3 text-[11px]">
                         VS Code opens a confirmation dialog before adding the
@@ -519,15 +526,35 @@ export default function CodeBridgeService({
                 <section className="border-sidebar-border/70 bg-card dark:border-sidebar-border rounded-2xl border p-5 sm:p-6">
                     <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-start">
                         <div>
-                            <h2 className="font-black">Connected AI clients</h2>
+                            <h2 className="font-black">
+                                Authorized AI clients
+                            </h2>
                             <p className="text-muted-foreground mt-1 text-xs leading-5">
                                 {CONNECTED_CLIENTS_DESCRIPTION}
                             </p>
                         </div>
                         <span className="rounded-full border px-3 py-1 text-[10px] font-bold">
-                            {service.connected_clients.length} active
+                            {service.connected_clients.length} authorized
                         </span>
                     </div>
+
+                    {service.connected_clients.length > 0 && (
+                        <label className="relative mt-4 block">
+                            <span className="sr-only">
+                                Search authorized AI clients
+                            </span>
+                            <Search className="text-muted-foreground pointer-events-none absolute top-3 left-3 h-4 w-4" />
+                            <input
+                                type="search"
+                                value={clientSearch}
+                                onChange={(event) =>
+                                    setClientSearch(event.target.value)
+                                }
+                                placeholder="Search client name or scope"
+                                className="bg-background min-h-10 w-full rounded-xl border pr-4 pl-10 text-sm outline-none focus-visible:ring-2 focus-visible:ring-red-500"
+                            />
+                        </label>
+                    )}
 
                     {service.connected_clients.length === 0 ? (
                         <div className="text-muted-foreground mt-5 rounded-xl border border-dashed p-5 text-xs">
@@ -535,7 +562,7 @@ export default function CodeBridgeService({
                         </div>
                     ) : (
                         <div className="mt-5 grid gap-3">
-                            {service.connected_clients.map((client) => (
+                            {visibleClients.map((client) => (
                                 <div
                                     key={client.client_id}
                                     className="flex flex-col justify-between gap-4 rounded-xl border p-4 lg:flex-row lg:items-center"
@@ -546,6 +573,10 @@ export default function CodeBridgeService({
                                         </div>
                                         <div className="text-muted-foreground mt-1 text-[11px]">
                                             {clientSummary(client)}
+                                        </div>
+                                        <div className="text-muted-foreground mt-1 font-mono text-[10px]">
+                                            Client ID · …
+                                            {client.client_id.slice(-10)}
                                         </div>
                                         <div className="mt-2 flex flex-wrap gap-2">
                                             {client.scopes.map((scope) => (
@@ -560,21 +591,47 @@ export default function CodeBridgeService({
                                     </div>
                                     <button
                                         type="button"
+                                        aria-label={`Revoke ${client.client_name}, client ending ${client.client_id.slice(-10)}`}
                                         onClick={() =>
-                                            revokeClient(client.client_id)
+                                            revokeClient(
+                                                client.client_id,
+                                                client.client_name,
+                                            )
                                         }
-                                        className="inline-flex h-9 shrink-0 items-center justify-center rounded-xl border border-red-500/30 px-3 text-[11px] font-black text-red-500 transition hover:bg-red-500/10"
+                                        disabled={revokingClient !== null}
+                                        className="inline-flex min-h-10 shrink-0 items-center justify-center rounded-xl border border-red-500/30 px-3 text-[11px] font-black text-red-500 transition hover:bg-red-500/10 disabled:cursor-not-allowed disabled:opacity-50"
                                     >
-                                        Revoke access
+                                        {revokingClient === client.client_id
+                                            ? 'Revoking...'
+                                            : 'Revoke access'}
                                     </button>
                                 </div>
                             ))}
                         </div>
                     )}
 
+                    {service.connected_clients.length > 0 &&
+                        matchingClients.length === 0 && (
+                            <p className="text-muted-foreground mt-3 text-xs">
+                                No authorized AI client matches your search.
+                            </p>
+                        )}
+                    {!clientSearch.trim() && matchingClients.length > 5 && (
+                        <button
+                            type="button"
+                            onClick={() =>
+                                setShowAllClients((current) => !current)
+                            }
+                            className="mt-3 min-h-10 rounded-xl border px-4 text-xs font-bold hover:border-red-500/40"
+                        >
+                            {showAllClients
+                                ? 'Show fewer clients'
+                                : `Show all ${matchingClients.length} clients`}
+                        </button>
+                    )}
                     <p className="text-muted-foreground mt-4 text-[10px] leading-4">
-                        Refresh access stops immediately. Existing access tokens
-                        expire within{' '}
+                        Revoking stops future OAuth refresh grants. Existing
+                        access tokens may remain valid for up to{' '}
                         {Math.max(
                             1,
                             Math.ceil(service.access_token_ttl_seconds / 60),
@@ -685,10 +742,10 @@ function titleCase(value: string): string {
 function clientSummary(client: ConnectedClient): string {
     const sessions =
         client.sessions === 1
-            ? '1 active session'
-            : `${client.sessions} active sessions`;
+            ? '1 authorized refresh session'
+            : `${client.sessions} authorized refresh sessions`;
 
-    return `${sessions} · Last active ${formatDateTime(client.last_active_at)}`;
+    return `${sessions} · Last token activity ${formatDateTime(client.last_active_at)}`;
 }
 
 function formatDateTime(value?: string | null): string {
