@@ -1,7 +1,11 @@
 import type { FormEvent } from 'react';
 import { Head, Link, router, useForm } from '@inertiajs/react';
 import OperatorModuleNavigation from '@/components/operator-module-navigation';
-import { CommercialProductForm, ProductManager, type ManagedProduct } from '@/components/operator-product-manager';
+import {
+    CommercialProductForm,
+    ProductManager,
+    type ManagedProduct,
+} from '@/components/operator-product-manager';
 import {
     BadgeIndianRupee,
     Building2,
