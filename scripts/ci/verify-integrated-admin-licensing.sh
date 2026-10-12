@@ -81,12 +81,27 @@ for path in \
     }
 done
 
+failures=0
 echo "== Admin routes/UI/permissions =="
-bash "$tmp/verify-super-admin-pr.sh" "$sha"
+if bash "$tmp/verify-super-admin-pr.sh" "$sha"; then
+    echo "PASS: Admin integration suite"
+else
+    echo "FAIL: Admin integration suite"
+    failures=$((failures + 1))
+fi
 
 echo "== KSLP security, developer activation and SDK setup UI =="
-bash "$tmp/verify-kslp-pr.sh" "$sha"
+if bash "$tmp/verify-kslp-pr.sh" "$sha"; then
+    echo "PASS: KSLP integration suite"
+else
+    echo "FAIL: KSLP integration suite"
+    failures=$((failures + 1))
+fi
 
+echo "INTEGRATION_SUITE_FAILURES=$failures SHA=$sha"
+if (( failures != 0 )); then
+    exit 1
+fi
 echo "PASS: exact-SHA isolated code suites for $sha"
 echo "NOT VERIFIED: protected GitHub Actions, disposable PostgreSQL migration/rollback,"
 echo "production signed KSLP SDKs, settlement/reconciliation, canary or production deployment"
