@@ -52,9 +52,20 @@ for path in \
     tests/Feature/KslpDeveloperAppsTest.php \
     tests/Feature/KslpDeveloperActivationApiTest.php \
     tests/Feature/PlatformOwnerConsoleTest.php; do
-    php -l "$path" >/dev/null
+    lint_result="$(php -l "$path" 2>&1)" || {
+        echo "FAIL: PHP syntax: $path" >&2
+        printf '%s\n' "$lint_result" >&2
+        exit 1
+    }
+    # php -l exits zero for some warnings (e.g. useless global imports)
+    # even though they contaminate artisan output and Vite Wayfinder.
+    if [[ "$lint_result" == *Warning:* ]]; then
+        echo "FAIL: PHP syntax warning: $path" >&2
+        printf '%s\n' "$lint_result" >&2
+        exit 1
+    fi
 done
-echo "PASS: 15 PHP files syntax"
+echo "PASS: 15 PHP files syntax, zero PHP import warnings"
 
 if ! command -v node >/dev/null; then
     echo "BLOCKED: Node.js CLI missing for built-in integration tests" >&2
