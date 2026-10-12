@@ -89,6 +89,12 @@ if [[ ! -d "$src_node" || ! -x "$src_node/.bin/vp" ]]; then
   exit 3
 fi
 cp -a "$src_node" ./node_modules
+echo "== Wayfinder route generation (direct error reporting) =="
+# Wayfinder's Vite plugin suppresses Laravel's full CLI output on errors;
+# run the exact Artisan generator first so warnings/route errors are visible.
+php artisan wayfinder:generate --with-form --no-ansi
+echo "PASS: Wayfinder Laravel route generation"
+
 echo "== Frontend build for Laravel HTTP testing =="
 npm run build
 test -s public/build/manifest.json || {
