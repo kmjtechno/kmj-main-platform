@@ -7,6 +7,7 @@ use App\Services\Licensing\Kslp\KslpLicenseControlPlane;
 use App\Services\Licensing\Kslp\KslpSigner;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 use KMJ\MainPlatform\Catalog\Models\Plan;
 use KMJ\MainPlatform\Catalog\Models\Product;
 use Tests\TestCase;
@@ -213,5 +214,33 @@ final class KslpLifecycleTest extends TestCase
             $license['id'], $server, str_repeat('a', 64),
             'revoked-retry-key', 'owner', 'unused', 'unused', 'unused',
         );
+    }
+
+    public function test_failed_seat_change_does_not_consume_valid_activation_challenge(): void
+    {
+        $control = app(KslpLicenseControlPlane::class);
+        $license = $control->issue('idempotency-challenge-retry', 'professional', 'owner');
+        $this->activate($control, $license['id'], 'original-active-seat');
+
+        [$otherServer, $challenge, $nonce, $signature] = $this->proof($license['id']);
+        try {
+            $control->activate(
+                $license['id'],
+                $otherServer,
+                str_repeat('b', 64),
+                'unapproved-seat-change',
+                'owner',
+                $challenge,
+                $nonce,
+                $signature,
+            );
+            self::fail('Unapproved device reuse must not succeed.');
+        } catch (\DomainException $exception) {
+            self::assertSame('KSLP_ACTIVATION_CONFLICT', $exception->getMessage());
+        }
+
+        $pendingChallenge = DB::table('kslp_activation_challenges')->where('id', $challenge)->first();
+        self::assertNotNull($pendingChallenge);
+        self::assertNull($pendingChallenge->used_at, 'Rejected seat change must roll back proof consumption.');
     }
 }
