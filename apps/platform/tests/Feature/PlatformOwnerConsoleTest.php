@@ -146,7 +146,26 @@ final class PlatformOwnerConsoleTest extends TestCase
             ->component('operator')
             ->has('catalogProducts', 15)
             ->where('catalogProducts.0.active_policy_count', 1)
-            ->where('catalogProducts.0.active_entitlement_count', 0));
+            ->where('catalogProducts.0.active_entitlement_count', 0)
+            ->has('catalogProducts.0.lifecycle')
+            ->has('catalogProducts.0.is_public')
+            ->has('catalogProducts.0.purchase_enabled')
+            ->has('catalogProducts.0.licensing_enabled'));
+    }
+
+    public function test_customer_dashboard_separates_public_catalog_from_owned_entitlements(): void
+    {
+        $customer = User::factory()->create(['email_verified_at' => now()]);
+        app(KmjProductCatalog::class)->syncAll();
+
+        $response = $this->actingAs($customer)->get('/dashboard');
+
+        $response->assertOk();
+        $response->assertInertia(fn (Assert $page) => $page
+            ->component('dashboard')
+            ->has('organizations', 0)
+            ->has('discoverableProducts')
+            ->where('canManageCodeBridgeOwnerPlan', false));
     }
 
     public function test_operator_console_exposes_ready_fulfillment_state_for_confirmed_order(): void
