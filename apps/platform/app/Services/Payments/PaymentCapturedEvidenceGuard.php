@@ -25,8 +25,7 @@ final class PaymentCapturedEvidenceGuard
         $provider = $quote['provider'];
         if (! in_array($provider, ['razorpay', 'cashfree'], true)
             || $event['provider'] !== $provider
-            || $fetched['provider'] !== $provider
-            || $event['requires_reconciliation'] !== true) {
+            || $fetched['provider'] !== $provider) {
             return false;
         }
 
