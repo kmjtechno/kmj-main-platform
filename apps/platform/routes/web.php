@@ -232,6 +232,8 @@ Route::get('products/kmj-codebridge/support', fn () => Inertia::render('products
 
 Route::get('company', fn () => Inertia::render('company'))->name('company');
 
+Route::get('contact', fn () => Inertia::render('contact'))->name('contact');
+
 Route::get('capabilities', fn () => Inertia::render('capabilities'))->name('capabilities');
 
 Route::get('llms.txt', function (PublicProductCatalog $products) {
