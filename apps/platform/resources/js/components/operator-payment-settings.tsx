@@ -12,6 +12,7 @@ import { useState, type FormEvent } from 'react';
 
 export type OwnerGatewaySetting = {
     provider: 'cashfree' | 'razorpay';
+    storage_ready: boolean;
     name: string;
     environment: 'sandbox';
     merchant_status:
@@ -42,6 +43,7 @@ function GatewaySettingsCard({ setting }: { setting: OwnerGatewaySetting }) {
 
     const save = (event: FormEvent<HTMLFormElement>) => {
         event.preventDefault();
+        if (!setting.storage_ready) return;
         form.put(`/operator/payments/gateways/${setting.provider}`, {
             preserveScroll: true,
             onSuccess: () => {
@@ -57,6 +59,7 @@ function GatewaySettingsCard({ setting }: { setting: OwnerGatewaySetting }) {
     };
 
     const revoke = () => {
+        if (!setting.storage_ready) return;
         if (
             !window.confirm(
                 `Remove saved sandbox credentials for ${setting.name}? This cannot be undone.`,
@@ -215,10 +218,15 @@ function GatewaySettingsCard({ setting }: { setting: OwnerGatewaySetting }) {
                         ))}
                     </div>
                 )}
+                {!setting.storage_ready && (
+                    <p role="status" className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-amber-200">
+                        Payment settings storage is pending a verified database migration. Saving is disabled until ready.
+                    </p>
+                )}
                 <div className="flex flex-wrap items-center gap-3">
                     <button
                         type="submit"
-                        disabled={form.processing}
+                        disabled={form.processing || !setting.storage_ready}
                         className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-red-600 px-5 py-2 text-sm font-bold text-white transition hover:bg-red-500 disabled:opacity-50"
                     >
                         <Save className="h-4 w-4" />
