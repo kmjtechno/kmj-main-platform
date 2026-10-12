@@ -7,6 +7,7 @@ use App\Services\AuthorityBootstrapper;
 use App\Services\Licensing\Kslp\KslpDeveloperKeys;
 use App\Services\Licensing\Kslp\KslpIssuerSubscriptionAuthority;
 use App\Services\Licensing\Kslp\KslpLicenseControlPlane;
+use DomainException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
@@ -97,7 +98,7 @@ Route::middleware(['auth', 'verified'])->prefix('developer')->name('developer.')
 
         try {
             $authority->registerProduct($data['organization_id'], $data['product_code'], $data['name']);
-        } catch (\DomainException $exception) {
+        } catch (DomainException $exception) {
             return back()->withErrors(['product_code' => $exception->getMessage()]);
         }
 
@@ -157,7 +158,7 @@ Route::middleware(['auth', 'verified'])->prefix('developer')->name('developer.')
                 $data['organization_id'], $data['product_code'],
                 $data['customer_id'], $data['plan'], (string) $actor->id,
             );
-        } catch (\DomainException $exception) {
+        } catch (DomainException $exception) {
             return back()->withErrors(['customer_id' => $exception->getMessage()]);
         }
 
