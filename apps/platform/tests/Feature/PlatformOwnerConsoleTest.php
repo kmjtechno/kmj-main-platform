@@ -18,6 +18,15 @@ final class PlatformOwnerConsoleTest extends TestCase
 {
     use RefreshDatabase;
 
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        // Inertia HTTP assertions do not require bundled browser assets.
+        // Real frontend compilation remains a separate mandatory release gate.
+        $this->withoutVite();
+    }
+
     public function test_super_admin_development_profile_requires_verified_owner_passkey(): void
     {
         $url = '/operator/super-admin/development-profile';
