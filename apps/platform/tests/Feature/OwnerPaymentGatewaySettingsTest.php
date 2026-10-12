@@ -9,6 +9,7 @@ use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
@@ -168,6 +169,32 @@ final class OwnerPaymentGatewaySettingsTest extends TestCase
         self::assertArrayNotHasKey('client_id', $flashed);
         self::assertArrayNotHasKey('webhook_secret', $flashed);
         self::assertStringNotContainsString($secret, json_encode($flashed, JSON_THROW_ON_ERROR));
+    }
+
+    public function test_staged_deployment_without_settings_table_is_readable_but_rejects_writes(): void
+    {
+        $owner = $this->owner();
+        Schema::dropIfExists('payment_gateway_settings');
+
+        $this->actingAs($owner)
+            ->withSession(['auth.password_confirmed_at' => time()])
+            ->get('/operator/payments')
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('operator-payments')
+                ->where('gatewaySettings.0.storage_ready', false)
+                ->where('gatewaySettings.1.storage_ready', false)
+                ->where('paymentReadiness.live_charging_enabled', false));
+
+        $this->actingAs($owner)
+            ->withSession(['auth.password_confirmed_at' => time()])
+            ->put('/operator/payments/gateways/razorpay', $this->payload())
+            ->assertStatus(503);
+
+        $this->actingAs($owner)
+            ->withSession(['auth.password_confirmed_at' => time()])
+            ->delete('/operator/payments/gateways/razorpay/credentials')
+            ->assertStatus(503);
     }
 
     /** @return array<string, bool|string> */
