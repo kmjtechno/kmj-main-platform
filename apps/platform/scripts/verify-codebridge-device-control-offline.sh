@@ -5,7 +5,7 @@ set -Eeuo pipefail
 ROOT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd -P)"
 cd "$ROOT"
 
-if [[ ! -f artisan || ! -f package.json || ! -d .git/../../ ]]; then
+if [[ ! -f artisan || ! -f package.json ]] || ! git rev-parse --show-toplevel >/dev/null 2>&1; then
   echo "BLOCKED: run from a Git source checkout of apps/platform" >&2
   exit 2
 fi
