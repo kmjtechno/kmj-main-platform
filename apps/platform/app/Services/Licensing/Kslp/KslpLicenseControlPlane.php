@@ -87,10 +87,9 @@ final class KslpLicenseControlPlane
                 throw new DomainException('KSLP_REVOKED');
             }
             $active = DB::table('kslp_activations')->where('license_id', $licenseId)->whereNull('deactivated_at')->first();
-            if ($active && ($active->server_identity !== $serverIdentity || ! hash_equals((string) $active->machine_identity_hash, $machineHash))) {
-                throw new DomainException('KSLP_ACTIVATION_CONFLICT');
-            }
             if ($active) {
+                KslpActivationReplayGuard::requireMatch((array) $active, $licenseId, $serverIdentity, $machineHash);
+
                 return (array) $active;
             }$id = (string) Str::uuid();
             $now = now();
@@ -110,12 +109,7 @@ final class KslpLicenseControlPlane
     private function matchingActivation(object $activation, string $licenseId, string $serverIdentity, string $machineHash): array
     {
         $record = (array) $activation;
-        if ((string) ($record['license_id'] ?? '') !== $licenseId
-            || (string) ($record['server_identity'] ?? '') !== $serverIdentity
-            || ! hash_equals((string) ($record['machine_identity_hash'] ?? ''), $machineHash)
-            || ($record['deactivated_at'] ?? null) !== null) {
-            throw new DomainException('KSLP_ACTIVATION_CONFLICT');
-        }
+        KslpActivationReplayGuard::requireMatch($record, $licenseId, $serverIdentity, $machineHash);
 
         $license = DB::table('kslp_licenses')->where('id', $licenseId)->first(['revoked_at']);
         if ($license === null) {
