@@ -321,6 +321,7 @@ export default function OperatorOps({
         <>
             <Head title="Ops Command Center" />
             <div className="flex h-full flex-1 flex-col gap-6 overflow-x-auto p-4 sm:p-6">
+                <OperatorModuleNavigation active="operations" />
                 <section className="from-background via-background overflow-hidden rounded-2xl border bg-gradient-to-br to-red-950/10 p-6 sm:p-8">
                     <div className="flex flex-col justify-between gap-5 lg:flex-row lg:items-end">
                         <div className="max-w-3xl">
