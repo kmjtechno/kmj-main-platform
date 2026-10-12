@@ -124,6 +124,27 @@ export default function Dashboard({
                     </div>
                 </section>
 
+                <section className="rounded-2xl border bg-card p-5 sm:p-6">
+                    <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
+                        <div className="flex items-start gap-3">
+                            <span className="grid size-11 shrink-0 place-items-center rounded-xl bg-red-500/10 text-red-500">
+                                <KeyRound className="size-5" />
+                            </span>
+                            <div>
+                                <h2 className="font-bold">Apps &amp; Licensing</h2>
+                                <p className="text-muted-foreground mt-1 max-w-2xl text-xs leading-5">
+                                    Manage your applications and customer license keys separately
+                                    from the short-lived sandbox testing workflow. New developer
+                                    issuance remains restricted until release verification is complete.
+                                </p>
+                            </div>
+                        </div>
+                        <Link href="/developer/apps" className="inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-xl bg-red-600 px-4 text-xs font-bold text-white hover:bg-red-500">
+                            Developer Apps <ArrowRight className="size-4" />
+                        </Link>
+                    </div>
+                </section>
+
                 <section className="border-sidebar-border/70 bg-card dark:border-sidebar-border rounded-2xl border p-5 sm:p-6">
                     <div className="flex items-start justify-between gap-4">
                         <div>
