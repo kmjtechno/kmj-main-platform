@@ -24,6 +24,13 @@ final class KslpDeveloperKeys
         string $plan,
         string $actor,
     ): array {
+        // A developer issuer subscription is NOT proof of an end-customer
+        // payment. Until verified order/entitlement fulfillment is integrated,
+        // this self-service surface must never mint a paid commercial plan.
+        if ($plan !== 'trial') {
+            throw new DomainException('KSLP_PAID_ENTITLEMENT_REQUIRED');
+        }
+
         return DB::transaction(function () use ($organizationId, $productCode, $customerId, $plan, $actor): array {
             $product = app(KslpIssuerSubscriptionAuthority::class)
                 ->authorizeIssue($organizationId, $productCode);
