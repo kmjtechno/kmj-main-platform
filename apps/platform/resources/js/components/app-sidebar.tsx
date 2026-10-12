@@ -38,7 +38,7 @@ const baseNavItems: NavItem[] = [
         icon: ShoppingCart,
     },
     {
-        title: 'License Center',
+        title: 'Sandbox License Lab',
         href: '/sandbox-licenses',
         icon: KeyRound,
     },
