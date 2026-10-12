@@ -61,3 +61,4 @@ workflows:
                 - feat/codebridge-device-control-center-20261012
                 - integrate/codebridge-control-center-377-378
                 - feat/codebridge-control-center-hub-20261012
+                - fix/gemini-spark-oauth-on-control-center-hub
