@@ -104,27 +104,6 @@ Route::prefix('v1/kslp/developer')->middleware('throttle:5,1')->group(function (
                 ->header('Cache-Control', 'no-store');
         }
 
-        return response()->json(['error' => 'KSLP_ACTIVATION_DENIED'], 422)
-                ->header('Cache-Control', 'no-store');
-        }
-
-        // Record first activation and only explicitly consented diagnostics.
-        DB::table('kslp_license_keys')
-            ->where('license_id', $license['license_id'])
-            ->whereNull('first_activated_at')
-            ->update(['first_activated_at' => now(), 'updated_at' => now()]);
-
-        if ($data['metadata_consent']) {
-            DB::table('kslp_license_keys')
-                ->where('license_id', $license['license_id'])
-                ->update([
-                    'client_platform' => $data['platform'] ?? null,
-                    'client_app_version' => $data['app_version'] ?? null,
-                    'metadata_consented_at' => now(),
-                    'updated_at' => now(),
-                ]);
-        }
-
         return response()->json([
             'activation_id' => $activation['id'],
             'product' => $license['product_code'],
