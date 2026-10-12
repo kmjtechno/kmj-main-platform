@@ -409,6 +409,55 @@ export default function CodeBridgeService({
                             Copy MCP endpoint for other IDEs
                         </button>
                     </div>
+                    <div className="mt-5 grid gap-3 lg:grid-cols-2">
+                        <div className="rounded-xl border p-4">
+                            <h3 className="text-xs font-black">
+                                Claude Desktop / Claude web
+                            </h3>
+                            <p className="text-muted-foreground mt-2 text-xs leading-5">
+                                Open Claude Settings, then Connectors and Add custom connector.
+                                Use this hosted Streamable HTTP MCP URL and complete
+                                KMJ browser OAuth. Do not paste device tokens.
+                            </p>
+                            <code className="mt-3 block break-all rounded-lg border px-3 py-2 text-[11px]">
+                                {service.endpoint}
+                            </code>
+                            <button
+                                type="button"
+                                onClick={() =>
+                                    navigator.clipboard.writeText(service.endpoint)
+                                }
+                                className="mt-3 rounded-lg border px-3 py-2 text-[11px] font-bold"
+                            >
+                                Copy Claude MCP URL
+                            </button>
+                            <p className="text-muted-foreground mt-2 text-[11px] leading-5">
+                                For third-party inference Gateway mode in Claude Desktop,
+                                use Inference configuration, Connectors, Managed MCP
+                                servers, Add server, Streamable HTTP and OAuth
+                                auto-registration instead.
+                            </p>
+                        </div>
+                        <div className="rounded-xl border p-4">
+                            <h3 className="text-xs font-black">
+                                Multiple AI chats / automatic updates
+                            </h3>
+                            <p className="text-muted-foreground mt-2 text-xs leading-5">
+                                Multiple ChatGPT, Claude and IDE sessions can use the same
+                                authorized gateway. New CodeBridge work lanes protect
+                                reserved files from overlapping CodeBridge edits after
+                                the compatible gateway and device agent are deployed.
+                                Actual execution concurrency remains plan and
+                                hardware limited.
+                            </p>
+                            <p className="text-muted-foreground mt-3 text-[11px] leading-5">
+                                Verified hosted MCP updates are served centrally. Your
+                                AI desktop app may need to reconnect to refresh tools;
+                                third-party app binaries and marketplace icons cannot
+                                be silently updated by CodeBridge.
+                            </p>
+                        </div>
+                    </div>
                     <p className="text-muted-foreground mt-3 text-[11px]">
                         VS Code opens a confirmation dialog before adding the
                         MCP server. Complete KMJ browser OAuth when prompted. If
