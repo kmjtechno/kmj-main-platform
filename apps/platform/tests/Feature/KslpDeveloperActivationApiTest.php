@@ -49,10 +49,14 @@ final class KslpDeveloperActivationApiTest extends TestCase
         [$licenseKey, $licenseId] = $this->developerKey();
         [$device, $secret] = $this->device();
 
-        $challenge = $this->postJson('/api/v1/kslp/developer/activation/challenge', [
+        $challengeResponse = $this->postJson('/api/v1/kslp/developer/activation/challenge', [
             'license_key' => $licenseKey,
             'server_identity' => $device,
-        ])->assertOk()->assertHeader('Cache-Control', 'no-store')
+        ])->assertOk();
+        $cacheControls = array_map('trim', explode(',', (string) $challengeResponse->headers->get('Cache-Control')));
+        self::assertContains('no-store', $cacheControls);
+
+        $challenge = $challengeResponse
             ->assertJsonStructure(['challenge_id', 'nonce', 'expires_in', 'license_id', 'product'])
             ->assertJsonPath('license_id', $licenseId)
             ->assertJsonPath('product', 'DEVELOPER.APP')
