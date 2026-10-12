@@ -14,26 +14,32 @@ const keys = read('app/Services/Licensing/Kslp/KslpDeveloperKeys.php');
 const activation = read('routes/developer-activation-api.php');
 const developerRoutes = read('routes/developer-licenses.php');
 
-test('Admin and developer routes both stay registered', () => {
+void test('Admin and developer routes both stay registered', () => {
     assert.ok(web.includes("require __DIR__.'/developer-licenses.php'"));
     assert.ok(web.includes("require __DIR__.'/payments-console.php'"));
-    assert.ok(bootstrap.includes("routes/operator-directory.php"));
+    assert.ok(bootstrap.includes('routes/operator-directory.php'));
 });
 
-test('Customer entitlements and public catalog stay separate', () => {
+void test('Customer entitlements and public catalog stay separate', () => {
     assert.ok(web.includes("'discoverableProducts' => $discoverableProducts"));
     assert.ok(dashboard.includes('organizations.flatMap'));
     assert.ok(dashboard.includes('Explore KMJ products'));
 });
 
-test('Admin inventory reports missing registrations, not fake entitlements', () => {
-    assert.ok(web.includes("'missingCanonicalSlugs' => $missingCanonicalSlugs"));
+void test('Admin inventory reports missing registrations, not fake entitlements', () => {
+    assert.ok(
+        web.includes("'missingCanonicalSlugs' => $missingCanonicalSlugs"),
+    );
     assert.ok(admin.includes('missingCanonicalSlugs.map'));
     assert.ok(admin.includes('Product & licensing matrix'));
 });
 
-test('Owner, developer and sandbox navigation all remain visible', () => {
-    for (const path of ['/operator/kslp', '/operator/payments', '/developer/apps']) {
+void test('Owner, developer and sandbox navigation all remain visible', () => {
+    for (const path of [
+        '/operator/kslp',
+        '/operator/payments',
+        '/developer/apps',
+    ]) {
         assert.ok(sidebar.includes(path));
     }
     assert.ok(sandbox.includes('Sandbox Token Lab'));
@@ -41,31 +47,41 @@ test('Owner, developer and sandbox navigation all remain visible', () => {
     assert.ok(sandbox.includes('href="/operator/kslp"'));
 });
 
-test('Developer activation stays feature-flagged off by default', () => {
+void test('Developer activation stays feature-flagged off by default', () => {
     assert.ok(config.includes("KMJ_DEVELOPER_LICENSING_ENABLED', false"));
-    assert.ok(activation.includes("config('services.kmj_developer_licensing.enabled', false)"));
+    assert.ok(
+        activation.includes(
+            "config('services.kmj_developer_licensing.enabled', false)",
+        ),
+    );
 });
 
-test('Self-service can never mint an unverified paid license', () => {
+void test('Self-service can never mint an unverified paid license', () => {
     assert.ok(keys.includes("if ($plan !== 'trial')"));
     assert.ok(keys.includes('KSLP_PAID_ENTITLEMENT_REQUIRED'));
 });
 
-test('Random bootstrap keys are stored as digests only', () => {
+void test('Random bootstrap keys are stored as digests only', () => {
     assert.ok(keys.includes('random_bytes(32)'));
     assert.ok(keys.includes("hash('sha256', $plain)"));
 });
 
-test('Device registration does not pretend to issue a signed license', () => {
+void test('Device registration does not pretend to issue a signed license', () => {
     assert.ok(activation.includes("'signed_lease_issued' => false"));
 });
 
-test('Consent withdrawal clears optional first-login telemetry', () => {
-    assert.ok(activation.includes("'client_platform' => $data['metadata_consent'] ?"));
-    assert.ok(activation.includes("'metadata_consented_at' => $data['metadata_consent'] ?"));
+void test('Consent withdrawal clears optional first-login telemetry', () => {
+    assert.ok(
+        activation.includes("'client_platform' => $data['metadata_consent'] ?"),
+    );
+    assert.ok(
+        activation.includes(
+            "'metadata_consented_at' => $data['metadata_consent'] ?",
+        ),
+    );
 });
 
-test('Global PHP route imports cannot produce DomainException Wayfinder warnings', () => {
+void test('Global PHP route imports cannot produce DomainException Wayfinder warnings', () => {
     for (const source of [activation, developerRoutes]) {
         assert.doesNotMatch(source, /^use DomainException;$/m);
         assert.ok(source.includes('catch (DomainException'));
