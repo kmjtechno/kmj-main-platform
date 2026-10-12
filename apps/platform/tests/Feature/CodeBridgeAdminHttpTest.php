@@ -488,6 +488,7 @@ final class CodeBridgeAdminHttpTest extends TestCase
             ->post($path, ['confirm_device_id' => 'device-a'])->assertRedirect();
         self::assertSame(1, DB::table('kslp_license_events')
             ->where('license_id', $license)
+            ->where('actor_id', 'platform-user:'.$owner->getKey())
             ->where('action', 'codebridge_device_credential_revoked')->count());
     }
 
