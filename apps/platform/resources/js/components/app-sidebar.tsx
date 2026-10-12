@@ -72,6 +72,16 @@ export function AppSidebar() {
             ? [
                   { title: 'Super Admin', href: '/operator', icon: Crown },
                   {
+                      title: 'Customers & Organizations',
+                      href: '/operator/directory',
+                      icon: Crown,
+                  },
+                  {
+                      title: 'Licensing Governance',
+                      href: '/operator/kslp',
+                      icon: KeyRound,
+                  },
+                  {
                       title: 'Gateway Settings',
                       href: '/operator/payments',
                       icon: CreditCard,
