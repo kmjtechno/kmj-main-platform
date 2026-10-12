@@ -71,7 +71,11 @@ export function AppSidebar() {
         ...(operator?.enabled
             ? [
                   { title: 'Operator', href: '/operator', icon: Crown },
-                  { title: 'Gateway Settings', href: '/operator/payments', icon: CreditCard },
+                  {
+                      title: 'Gateway Settings',
+                      href: '/operator/payments',
+                      icon: CreditCard,
+                  },
                   {
                       title: 'Product Manager',
                       href: '/operator#product-manager',
