@@ -145,6 +145,7 @@ final class KslpOfflineLeaseGuardTest extends TestCase
         $this->expectExceptionMessage('KSLP_MALFORMED');
         $this->check(lastTrustedTime: 0);
     }
+
     public function test_existing_cloudos_golden_vector_remains_offline_compatible(): void
     {
         $fixture = json_decode(
