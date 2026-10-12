@@ -124,8 +124,7 @@ function GatewaySettingsCard({ setting }: { setting: OwnerGatewaySetting }) {
                             onChange={(e) =>
                                 form.setData(
                                     'merchant_status',
-                                    e.target
-                                        .value as OwnerGatewaySetting['merchant_status'],
+                                    e.target.value as OwnerGatewaySetting['merchant_status'],
                                 )
                             }
                         >
@@ -219,8 +218,12 @@ function GatewaySettingsCard({ setting }: { setting: OwnerGatewaySetting }) {
                     </div>
                 )}
                 {!setting.storage_ready && (
-                    <p role="status" className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-amber-200">
-                        Payment settings storage is pending a verified database migration. Saving is disabled until ready.
+                    <p
+                        role="status"
+                        className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-amber-200"
+                    >
+                        Payment settings storage is pending a verified database
+                        migration. Saving is disabled until ready.
                     </p>
                 )}
                 <div className="flex flex-wrap items-center gap-3">
