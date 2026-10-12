@@ -421,11 +421,45 @@ export default function CodeBridgeService({
                         <button
                             type="button"
                             onClick={() => router.reload({ only: ['service'] })}
-                            className="inline-flex h-9 items-center justify-center rounded-xl border px-3 text-[11px] font-bold transition hover:border-red-500/40"
+                            className="inline-flex min-h-10 items-center justify-center rounded-xl border px-3 text-[11px] font-bold transition hover:border-red-500/40"
                         >
-                            Refresh registration
+                            Refresh registered devices
                         </button>
                     </div>
+
+                    <div className="mt-4 grid gap-3 rounded-xl border bg-black/[0.02] p-4 sm:grid-cols-[1fr_auto] sm:items-center dark:bg-white/[0.02]">
+                        <div>
+                            <p className="text-sm font-bold">
+                                {service.managed_devices} registered device{service.managed_devices === 1 ? '' : 's'}
+                            </p>
+                            <p className="text-muted-foreground mt-1 text-xs leading-5">
+                                Registration is verified by Main Platform. Live
+                                connectivity requires a gateway heartbeat and
+                                is not available in this view.
+                            </p>
+                        </div>
+                        <span className="inline-flex w-fit rounded-lg border border-amber-500/30 bg-amber-500/5 px-3 py-1.5 text-xs font-semibold text-amber-600 dark:text-amber-400">
+                            Online status: Not verified
+                        </span>
+                    </div>
+
+                    {service.devices.length > 0 && (
+                        <label className="relative mt-4 block">
+                            <span className="sr-only">
+                                Search registered devices and projects
+                            </span>
+                            <Search className="text-muted-foreground pointer-events-none absolute top-3 left-3 h-4 w-4" />
+                            <input
+                                type="search"
+                                value={deviceSearch}
+                                onChange={(event) =>
+                                    setDeviceSearch(event.target.value)
+                                }
+                                placeholder="Search device, platform or project"
+                                className="bg-background min-h-10 w-full rounded-xl border pr-4 pl-10 text-sm outline-none focus-visible:ring-2 focus-visible:ring-red-500"
+                            />
+                        </label>
+                    )}
 
                     {service.devices.length === 0 ? (
                         <div className="mt-5 rounded-xl border border-dashed p-5">
@@ -446,8 +480,8 @@ export default function CodeBridgeService({
                             </Link>
                         </div>
                     ) : (
-                        <div className="mt-5 grid gap-3 md:grid-cols-2">
-                            {service.devices.map((device) => (
+                        <div className="mt-4 grid gap-3 md:grid-cols-2">
+                            {filteredDevices.map((device) => (
                                 <div
                                     key={device.id}
                                     className="min-w-0 rounded-xl border p-4"
@@ -462,7 +496,7 @@ export default function CodeBridgeService({
                                             </div>
                                         </div>
                                         <span className="rounded-lg border px-2 py-1 text-[10px] font-semibold">
-                                            Registered
+                                            Registered · Live status unknown
                                         </span>
                                     </div>
                                     <div className="text-muted-foreground mt-3 text-xs">
@@ -488,16 +522,24 @@ export default function CodeBridgeService({
                                         </div>
                                     ))}
                                     <p className="text-muted-foreground mt-3 text-[11px] leading-5">
-                                        Live connection: Not verified.
-                                        Registration alone does not prove the
-                                        agent is online. Check
-                                        connection_overview in your
-                                        authenticated CodeBridge client.
+                                        {device.registered_at
+                                            ? `Registered ${formatDateTime(device.registered_at)}. `
+                                            : ''}
+                                        Live connection has not been verified.
+                                        Use connection_overview in the
+                                        authorized CodeBridge client to check
+                                        agent health.
                                     </p>
                                 </div>
                             ))}
                         </div>
                     )}
+                    {service.devices.length > 0 &&
+                        filteredDevices.length === 0 && (
+                            <p className="text-muted-foreground mt-3 text-xs">
+                                No registered device or project matches your search.
+                            </p>
+                        )}
                     {service.managed_devices > service.devices.length && (
                         <p className="text-muted-foreground mt-3 text-xs">
                             Showing the first {service.devices.length}{' '}
@@ -543,14 +585,19 @@ export default function CodeBridgeService({
                         </a>
                         <button
                             type="button"
-                            onClick={() =>
-                                navigator.clipboard.writeText(service.endpoint)
-                            }
+                            onClick={() => {
+                                void copyEndpoint();
+                            }}
                             className="inline-flex h-10 items-center rounded-xl border px-4 text-xs font-bold"
                         >
                             Copy MCP endpoint for other IDEs
                         </button>
                     </div>
+                    {copyStatus && (
+                        <p role="status" className="text-muted-foreground mt-2 text-xs">
+                            {copyStatus}
+                        </p>
+                    )}
                     <p className="text-muted-foreground mt-3 text-[11px]">
                         VS Code opens a confirmation dialog before adding the
                         MCP server. Complete KMJ browser OAuth when prompted. If
@@ -569,7 +616,7 @@ export default function CodeBridgeService({
                             </p>
                         </div>
                         <span className="rounded-full border px-3 py-1 text-[10px] font-bold">
-                            {service.connected_clients.length} active
+                            {service.connected_clients.length} authorized
                         </span>
                     </div>
 
@@ -605,11 +652,14 @@ export default function CodeBridgeService({
                                     <button
                                         type="button"
                                         onClick={() =>
-                                            revokeClient(client.client_id)
+                                            revokeClient(client.client_id, client.client_name)
                                         }
-                                        className="inline-flex h-9 shrink-0 items-center justify-center rounded-xl border border-red-500/30 px-3 text-[11px] font-black text-red-500 transition hover:bg-red-500/10"
+                                        disabled={revokingClient !== null}
+                                        className="inline-flex min-h-10 shrink-0 items-center justify-center rounded-xl border border-red-500/30 px-3 text-[11px] font-black text-red-500 transition hover:bg-red-500/10 disabled:cursor-not-allowed disabled:opacity-50"
                                     >
-                                        Revoke access
+                                        {revokingClient === client.client_id
+                                            ? 'Revoking...'
+                                            : 'Revoke access'}
                                     </button>
                                 </div>
                             ))}
@@ -617,7 +667,7 @@ export default function CodeBridgeService({
                     )}
 
                     <p className="text-muted-foreground mt-4 text-[10px] leading-4">
-                        Refresh access stops immediately. Existing access tokens
+                        Refresh grants are revoked on request. Existing access tokens
                         expire within{' '}
                         {Math.max(
                             1,
@@ -729,10 +779,10 @@ function titleCase(value: string): string {
 function clientSummary(client: ConnectedClient): string {
     const sessions =
         client.sessions === 1
-            ? '1 active session'
-            : `${client.sessions} active sessions`;
+            ? '1 authorized refresh session'
+            : `${client.sessions} authorized refresh sessions`;
 
-    return `${sessions} · Last active ${formatDateTime(client.last_active_at)}`;
+    return `${sessions} · Last token activity ${formatDateTime(client.last_active_at)}`;
 }
 
 function formatDateTime(value?: string | null): string {
