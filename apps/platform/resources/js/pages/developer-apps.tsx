@@ -59,8 +59,8 @@ function sdkConfiguration(language: string, productCode: string): string {
     // Generate source-only integration starters from a canonical public
     // configuration. Never embed an issuer private key or customer's key.
     const product = JSON.stringify(productCode);
-    const contract = JSON.stringify('/api/v1/kslp/contract');
-    const keys = JSON.stringify('/api/v1/kslp/keys/license');
+    const contract = JSON.stringify('https://kmjtechno.com/api/v1/kslp/contract');
+    const keys = JSON.stringify('https://kmjtechno.com/api/v1/kslp/keys/license');
     const warning = 'STAGING STARTER ONLY: obtain and verify signed KSLP leases,';
     const warning2 = 'never trust an activation ID as a commercial entitlement.';
 
@@ -187,7 +187,9 @@ export default function DeveloperApps({
         const objectUrl = URL.createObjectURL(file);
         const link = document.createElement('a');
         link.href = objectUrl;
-        link.download = 'kmj-licensing-setup.' + (extension[language] ?? 'txt');
+        link.download = language === 'Java'
+            ? 'KmjLicenseConfig.java'
+            : 'kmj-licensing-setup.' + (extension[language] ?? 'txt');
         document.body.appendChild(link);
         link.click();
         link.remove();
