@@ -69,7 +69,7 @@ export function AppSidebar() {
         ...baseNavItems,
         ...(operator?.enabled
             ? [
-                  { title: 'Operator', href: '/operator', icon: Crown },
+                  { title: 'Super Admin', href: '/operator', icon: Crown },
                   {
                       title: 'Product Manager',
                       href: '/operator#product-manager',
