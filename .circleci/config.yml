@@ -2,6 +2,7 @@ version: 2.1
 
 orbs:
   browser-tools: circleci/browser-tools@2.4.2
+  node: circleci/node@7.2.1
 
 commands:
   prepare_ui_app:
@@ -97,6 +98,8 @@ jobs:
     resource_class: medium
     steps:
       - checkout
+      - node/install:
+          node-version: "24.21.0"
       - run:
           name: Verify browser-image Node and production frontend build
           no_output_timeout: 12m
