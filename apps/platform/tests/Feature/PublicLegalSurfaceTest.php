@@ -20,6 +20,7 @@ final class PublicLegalSurfaceTest extends TestCase
             '/terms' => 'legal/terms',
             '/privacy' => 'legal/privacy',
             '/refund-policy' => 'legal/refund-policy',
+            '/contact' => 'contact',
             '/acceptable-use' => 'legal/acceptable-use',
             '/cookie-policy' => 'legal/cookie-policy',
         ];
@@ -29,5 +30,12 @@ final class PublicLegalSurfaceTest extends TestCase
                 ->assertOk()
                 ->assertInertia(fn (Assert $page) => $page->component($component));
         }
+    }
+
+    public function test_cancellation_url_permanently_redirects_to_existing_policy(): void
+    {
+        $this->get('/cancellation-policy')
+            ->assertStatus(301)
+            ->assertRedirect('/refund-policy');
     }
 }

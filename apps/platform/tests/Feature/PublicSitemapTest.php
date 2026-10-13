@@ -75,6 +75,10 @@ final class PublicSitemapTest extends TestCase
             $xml,
         );
         $this->assertStringContainsString(
+            '<loc>https://kmjtechno.example/contact</loc>',
+            $xml,
+        );
+        $this->assertStringContainsString(
             '<loc>https://kmjtechno.example/acceptable-use</loc>',
             $xml,
         );
@@ -106,6 +110,6 @@ final class PublicSitemapTest extends TestCase
             '<loc>https://kmjtechno.example/products/kmj-codebridge/support</loc>',
             $xml,
         );
-        $this->assertSame(29, substr_count($xml, '<url>'));
+        $this->assertSame(30, substr_count($xml, '<url>'));
     }
 }
