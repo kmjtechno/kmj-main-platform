@@ -20,13 +20,29 @@ Route::get('operator/kslp', function (Request $request, PlatformOwnerAccess $acc
     ]);
     $search = trim((string) ($filters['customer_q'] ?? ''));
     $plan = (string) ($filters['plan'] ?? '');
+
+    // Owner-only name/email lookup. Bound the intermediate account set and
+    // never expose account credentials or unrestricted directory results.
+    $matchingUserIds = $search !== ''
+        ? User::query()
+            ->where(function ($query) use ($search) {
+                $escaped = addcslashes($search, '%_\\');
+                $query->where('name', 'like', '%'.$escaped.'%')
+                    ->orWhere('email', 'like', '%'.$escaped.'%');
+            })
+            ->limit(40)
+            ->pluck('id')
+            ->all()
+        : [];
+
     $query = DB::table('kslp_licenses')
         ->when($plan !== '', fn ($query) => $query->where('plan', $plan))
-        ->when($search !== '', function ($query) use ($search) {
+        ->when($search !== '', function ($query) use ($search, $matchingUserIds) {
             $escaped = addcslashes($search, '%_\\');
-            $query->where(function ($query) use ($search, $escaped) {
+            $query->where(function ($query) use ($search, $escaped, $matchingUserIds) {
                 $query->where('customer_id', 'like', '%'.$escaped.'%')
-                    ->orWhere('product', 'like', '%'.$escaped.'%');
+                    ->orWhere('product', 'like', '%'.$escaped.'%')
+                    ->orWhereIn('customer_id', $matchingUserIds);
                 if (Str::isUuid($search)) {
                     $query->orWhere('id', $search);
                 }
