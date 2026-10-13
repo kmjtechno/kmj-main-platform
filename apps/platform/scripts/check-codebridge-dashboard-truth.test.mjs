@@ -122,8 +122,11 @@ void test(
             assert.match(ui, new RegExp(`activeSection === '${section}'`));
         }
         for (const section of ['overview', 'usage', 'billing', 'settings']) {
-            assert.match(hub, new RegExp(`hidden=\\{activeSection !== '${section}'\\}`));
+            assert.match(
+                hub,
+                new RegExp(`hidden=\\{activeSection !== '${section}'\\}`),
+            );
         }
-            assert.doesNotMatch(hub, /href=\{href\}/);
+        assert.doesNotMatch(hub, /href=\{href\}/);
     },
 );
