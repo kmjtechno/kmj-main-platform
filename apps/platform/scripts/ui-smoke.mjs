@@ -30,6 +30,16 @@ const VIEWPORTS = [
     { name: 'desktop-1280', width: 1280, height: 800 },
 ];
 
+// UI_CHECKS selects check groups (comma separated, default "all"):
+//   layout, images, network, a11y, keyboard (public + dashboard), manage (dashboard).
+// CI runs each group as its own job so a failing group is identifiable from the
+// commit status alone. Page loads and the HTTP 200 check always run.
+const ENABLED = new Set(
+    (process.env.UI_CHECKS ?? 'all').split(',').map((g) => g.trim()),
+);
+const on = (group) => ENABLED.has('all') || ENABLED.has(group);
+const INSPECT = ['layout', 'images', 'network', 'a11y'].some(on);
+
 const PUBLIC_PATHS = ['/', '/products', '/products/kmj-codebridge', '/login'];
 
 const failures = [];
@@ -104,66 +114,73 @@ async function inspectPage(page, path, viewport, { requireIcon = false } = {}) {
         ),
     }));
 
-    check(
-        metrics.title.trim() !== '' && !/laravel/i.test(metrics.title),
-        `${tag}: page title is branded`,
-        metrics.title,
-    );
-    check(
-        metrics.scrollWidth <= metrics.clientWidth + 1,
-        `${tag}: no horizontal overflow`,
-        `scrollWidth ${metrics.scrollWidth} > clientWidth ${metrics.clientWidth}`,
-    );
-    check(
-        metrics.brokenImages.length === 0,
-        `${tag}: every image loaded`,
-        metrics.brokenImages.join(', '),
-    );
-    check(
-        metrics.imagesWithoutAlt.length === 0,
-        `${tag}: every image has an alt attribute`,
-        metrics.imagesWithoutAlt.join(', '),
-    );
-    check(
-        metrics.icons.length >= 2,
-        `${tag}: favicon and touch icon declared`,
-        metrics.icons.join(', '),
-    );
-    if (requireIcon)
+    if (on('layout')) {
         check(
-            metrics.officialIcon,
-            `${tag}: official CodeBridge product icon is shown`,
+            metrics.title.trim() !== '' && !/laravel/i.test(metrics.title),
+            `${tag}: page title is branded`,
+            metrics.title,
         );
-    check(
-        problems.failed.length === 0,
-        `${tag}: no same-origin request failed`,
-        problems.failed.slice(0, 5).join(' | '),
-    );
-    check(
-        problems.console.length === 0,
-        `${tag}: no console errors`,
-        problems.console.slice(0, 3).join(' | '),
-    );
-
-    await page.evaluate(axeSource);
-    const axe = await page.evaluate(async () => {
-        const result = await window.axe.run(document, {
-            resultTypes: ['violations'],
+        check(
+            metrics.scrollWidth <= metrics.clientWidth + 1,
+            `${tag}: no horizontal overflow`,
+            `scrollWidth ${metrics.scrollWidth} > clientWidth ${metrics.clientWidth}`,
+        );
+        check(
+            metrics.icons.length >= 2,
+            `${tag}: favicon and touch icon declared`,
+            metrics.icons.join(', '),
+        );
+    }
+    if (on('images')) {
+        check(
+            metrics.brokenImages.length === 0,
+            `${tag}: every image loaded`,
+            metrics.brokenImages.join(', '),
+        );
+        check(
+            metrics.imagesWithoutAlt.length === 0,
+            `${tag}: every image has an alt attribute`,
+            metrics.imagesWithoutAlt.join(', '),
+        );
+        if (requireIcon)
+            check(
+                metrics.officialIcon,
+                `${tag}: official CodeBridge product icon is shown`,
+            );
+    }
+    if (on('network')) {
+        check(
+            problems.failed.length === 0,
+            `${tag}: no same-origin request failed`,
+            problems.failed.slice(0, 5).join(' | '),
+        );
+        check(
+            problems.console.length === 0,
+            `${tag}: no console errors`,
+            problems.console.slice(0, 3).join(' | '),
+        );
+    }
+    if (on('a11y')) {
+        await page.evaluate(axeSource);
+        const axe = await page.evaluate(async () => {
+            const result = await window.axe.run(document, {
+                resultTypes: ['violations'],
+            });
+            return result.violations.map((v) => ({
+                id: v.id,
+                impact: v.impact,
+                nodes: v.nodes.length,
+            }));
         });
-        return result.violations.map((v) => ({
-            id: v.id,
-            impact: v.impact,
-            nodes: v.nodes.length,
-        }));
-    });
-    const critical = axe.filter((v) => v.impact === 'critical');
-    check(
-        critical.length === 0,
-        `${tag}: no critical accessibility violations (axe)`,
-        critical.map((v) => `${v.id}×${v.nodes}`).join(', '),
-    );
-    for (const v of axe.filter((x) => x.impact === 'serious'))
-        warn(`${tag}: serious a11y — ${v.id}×${v.nodes}`);
+        const critical = axe.filter((v) => v.impact === 'critical');
+        check(
+            critical.length === 0,
+            `${tag}: no critical accessibility violations (axe)`,
+            critical.map((v) => `${v.id}×${v.nodes}`).join(', '),
+        );
+        for (const v of axe.filter((x) => x.impact === 'serious'))
+            warn(`${tag}: serious a11y — ${v.id}×${v.nodes}`);
+    }
 
     page.off('console', onConsole);
     page.off('response', onResponse);
@@ -189,14 +206,17 @@ async function runPublic(browser) {
         const context = await browser.newContext({ viewport });
         const page = await context.newPage();
         console.log(`\n== public @ ${viewport.name}`);
-        for (const path of PUBLIC_PATHS)
-            await inspectPage(page, path, viewport);
+        if (INSPECT)
+            for (const path of PUBLIC_PATHS)
+                await inspectPage(page, path, viewport);
         await context.close();
     }
-    const context = await browser.newContext({ viewport: VIEWPORTS[2] });
-    const page = await context.newPage();
-    for (const path of PUBLIC_PATHS) await keyboardReachable(page, path);
-    await context.close();
+    if (on('keyboard')) {
+        const context = await browser.newContext({ viewport: VIEWPORTS[2] });
+        const page = await context.newPage();
+        for (const path of PUBLIC_PATHS) await keyboardReachable(page, path);
+        await context.close();
+    }
 }
 
 async function runDashboard(browser) {
@@ -224,8 +244,16 @@ async function runDashboard(browser) {
             `login succeeds @ ${viewport.name}`,
             page.url(),
         );
-        await inspectPage(page, '/services/kmj-codebridge', viewport, {
-            requireIcon: true,
+        if (INSPECT)
+            await inspectPage(page, '/services/kmj-codebridge', viewport, {
+                requireIcon: true,
+            });
+        if (!on('manage')) {
+            await context.close();
+            continue;
+        }
+        await page.goto(`${BASE}/services/kmj-codebridge`, {
+            waitUntil: 'networkidle',
         });
 
         const manage = page

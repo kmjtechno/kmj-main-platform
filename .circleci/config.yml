@@ -205,7 +205,7 @@ jobs:
             echo "tests passed: ${passed:-none}"
             test "${passed:-0}" -ge 97
 
-  ui_public:
+  ui_boot:
     docker:
       - image: cimg/php:8.4-browsers
     resource_class: medium
@@ -223,14 +223,50 @@ jobs:
     steps:
       - prepare_ui_app
       - run:
-          name: Public pages in a real browser (mobile, tablet, desktop; layout, images, a11y, keyboard)
+          name: Public pages answer HTTP 200 and Chrome is present
+          command: |
+            set -euo pipefail
+            google-chrome --version
+            for path in / /products /products/kmj-codebridge /login; do
+              code=$(curl -s -o /dev/null -w "%{http_code}" "http://127.0.0.1:8000$path")
+              echo "$path -> $code"
+              test "$code" = "200"
+            done
+
+  ui_public:
+    parameters:
+      checks:
+        type: string
+        default: all
+    docker:
+      - image: cimg/php:8.4-browsers
+    resource_class: medium
+    environment:
+      APP_ENV: local
+      APP_DEBUG: "false"
+      APP_URL: http://127.0.0.1:8000
+      DB_CONNECTION: sqlite
+      DB_DATABASE: /home/circleci/project/apps/platform/database/ui.sqlite
+      SESSION_DRIVER: file
+      CACHE_STORE: array
+      QUEUE_CONNECTION: sync
+      MAIL_MAILER: array
+      PHP_CLI_SERVER_WORKERS: "4"
+    steps:
+      - prepare_ui_app
+      - run:
+          name: Public pages in a real browser (<< parameters.checks >>)
           no_output_timeout: 10m
           command: |
             set -euo pipefail
             cd /tmp/uitools
-            UI_MODE=public UI_BASE=http://127.0.0.1:8000 CHROME_PATH=/usr/bin/google-chrome node ui-smoke.mjs
+            UI_MODE=public UI_CHECKS=<< parameters.checks >> UI_BASE=http://127.0.0.1:8000 CHROME_PATH=/usr/bin/google-chrome node ui-smoke.mjs
 
   ui_dashboard:
+    parameters:
+      checks:
+        type: string
+        default: all
     docker:
       - image: cimg/php:8.4-browsers
     resource_class: medium
@@ -254,12 +290,12 @@ jobs:
             cd apps/platform
             php artisan tinker --execute="require base_path('scripts/ci-seed-ui-smoke.php');"
       - run:
-          name: Customer CodeBridge dashboard in a real browser (login, icon, Manage devices, layout, a11y)
+          name: Customer CodeBridge dashboard in a real browser (<< parameters.checks >>)
           no_output_timeout: 10m
           command: |
             set -euo pipefail
             cd /tmp/uitools
-            UI_MODE=dashboard UI_BASE=http://127.0.0.1:8000 CHROME_PATH=/usr/bin/google-chrome \
+            UI_MODE=dashboard UI_CHECKS=<< parameters.checks >> UI_BASE=http://127.0.0.1:8000 CHROME_PATH=/usr/bin/google-chrome \
               UI_EMAIL=ui-smoke@example.test UI_PASSWORD=password node ui-smoke.mjs
 
 workflows:
@@ -308,7 +344,67 @@ workflows:
                 - fix/gemini-spark-oauth-on-control-center-hub
                 - fix/codebridge-compact-workspace-tabs-20261013
                 - claude/codebridge-production-completion-n6lu61
+      - ui_boot:
+          filters:
+            branches:
+              only:
+                - feat/codebridge-device-control-center-20261012
+                - integrate/codebridge-control-center-377-378
+                - feat/codebridge-control-center-hub-20261012
+                - fix/gemini-spark-oauth-on-control-center-hub
+                - fix/codebridge-compact-workspace-tabs-20261013
+                - claude/codebridge-production-completion-n6lu61
       - ui_public:
+          name: ui_public_layout
+          checks: layout
+          filters:
+            branches:
+              only:
+                - feat/codebridge-device-control-center-20261012
+                - integrate/codebridge-control-center-377-378
+                - feat/codebridge-control-center-hub-20261012
+                - fix/gemini-spark-oauth-on-control-center-hub
+                - fix/codebridge-compact-workspace-tabs-20261013
+                - claude/codebridge-production-completion-n6lu61
+      - ui_public:
+          name: ui_public_images
+          checks: images
+          filters:
+            branches:
+              only:
+                - feat/codebridge-device-control-center-20261012
+                - integrate/codebridge-control-center-377-378
+                - feat/codebridge-control-center-hub-20261012
+                - fix/gemini-spark-oauth-on-control-center-hub
+                - fix/codebridge-compact-workspace-tabs-20261013
+                - claude/codebridge-production-completion-n6lu61
+      - ui_public:
+          name: ui_public_network
+          checks: network
+          filters:
+            branches:
+              only:
+                - feat/codebridge-device-control-center-20261012
+                - integrate/codebridge-control-center-377-378
+                - feat/codebridge-control-center-hub-20261012
+                - fix/gemini-spark-oauth-on-control-center-hub
+                - fix/codebridge-compact-workspace-tabs-20261013
+                - claude/codebridge-production-completion-n6lu61
+      - ui_public:
+          name: ui_public_a11y
+          checks: a11y
+          filters:
+            branches:
+              only:
+                - feat/codebridge-device-control-center-20261012
+                - integrate/codebridge-control-center-377-378
+                - feat/codebridge-control-center-hub-20261012
+                - fix/gemini-spark-oauth-on-control-center-hub
+                - fix/codebridge-compact-workspace-tabs-20261013
+                - claude/codebridge-production-completion-n6lu61
+      - ui_public:
+          name: ui_public_keyboard
+          checks: keyboard
           filters:
             branches:
               only:
@@ -319,6 +415,68 @@ workflows:
                 - fix/codebridge-compact-workspace-tabs-20261013
                 - claude/codebridge-production-completion-n6lu61
       - ui_dashboard:
+          name: ui_dash_login
+          checks: login
+          filters:
+            branches:
+              only:
+                - feat/codebridge-device-control-center-20261012
+                - integrate/codebridge-control-center-377-378
+                - feat/codebridge-control-center-hub-20261012
+                - fix/gemini-spark-oauth-on-control-center-hub
+                - fix/codebridge-compact-workspace-tabs-20261013
+                - claude/codebridge-production-completion-n6lu61
+      - ui_dashboard:
+          name: ui_dash_layout
+          checks: layout
+          filters:
+            branches:
+              only:
+                - feat/codebridge-device-control-center-20261012
+                - integrate/codebridge-control-center-377-378
+                - feat/codebridge-control-center-hub-20261012
+                - fix/gemini-spark-oauth-on-control-center-hub
+                - fix/codebridge-compact-workspace-tabs-20261013
+                - claude/codebridge-production-completion-n6lu61
+      - ui_dashboard:
+          name: ui_dash_images
+          checks: images
+          filters:
+            branches:
+              only:
+                - feat/codebridge-device-control-center-20261012
+                - integrate/codebridge-control-center-377-378
+                - feat/codebridge-control-center-hub-20261012
+                - fix/gemini-spark-oauth-on-control-center-hub
+                - fix/codebridge-compact-workspace-tabs-20261013
+                - claude/codebridge-production-completion-n6lu61
+      - ui_dashboard:
+          name: ui_dash_network
+          checks: network
+          filters:
+            branches:
+              only:
+                - feat/codebridge-device-control-center-20261012
+                - integrate/codebridge-control-center-377-378
+                - feat/codebridge-control-center-hub-20261012
+                - fix/gemini-spark-oauth-on-control-center-hub
+                - fix/codebridge-compact-workspace-tabs-20261013
+                - claude/codebridge-production-completion-n6lu61
+      - ui_dashboard:
+          name: ui_dash_a11y
+          checks: a11y
+          filters:
+            branches:
+              only:
+                - feat/codebridge-device-control-center-20261012
+                - integrate/codebridge-control-center-377-378
+                - feat/codebridge-control-center-hub-20261012
+                - fix/gemini-spark-oauth-on-control-center-hub
+                - fix/codebridge-compact-workspace-tabs-20261013
+                - claude/codebridge-production-completion-n6lu61
+      - ui_dashboard:
+          name: ui_dash_manage
+          checks: manage
           filters:
             branches:
               only:
