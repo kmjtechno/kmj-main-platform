@@ -102,14 +102,15 @@ jobs:
           npm install --no-audit --no-fund playwright-core@1.49.1 axe-core@4.10.2
           google-chrome --version
 
+      - name: Seed the product catalog and a verified customer with an active CodeBridge entitlement
+        # The public product pages only exist once KmjProductCatalog::syncAll() has run
+        # (it marks the catalog products public), so seed before any browser check.
+        run: php artisan tinker --execute="require base_path('scripts/ci-seed-ui-smoke.php');"
+
       - name: Public pages in a real browser
         run: |
           cd "$RUNNER_TEMP/uitools"
           UI_MODE=public node ui-smoke.mjs
-
-      - name: Seed a verified customer with an active CodeBridge entitlement
-        if: always()
-        run: php artisan tinker --execute="require base_path('scripts/ci-seed-ui-smoke.php');"
 
       - name: Customer CodeBridge dashboard in a real browser
         if: always()
