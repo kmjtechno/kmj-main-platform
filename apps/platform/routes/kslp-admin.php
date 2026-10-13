@@ -41,6 +41,34 @@ Route::get('operator/kslp', function (Request $request, PlatformOwnerAccess $acc
         return $license;
     })->all();
 
+    // Catalog entitlements and KSLP signed licenses remain distinct records
+    // behind the same owner-only administrative view. Never infer a paid plan
+    // or grant a signed product license from an entitlement lookup.
+    $entitlements = DB::table('entitlements as entitlement')
+        ->join('organizations as organization', 'organization.id', '=', 'entitlement.organization_id')
+        ->join('products as product', 'product.id', '=', 'entitlement.product_id')
+        ->when($search !== '', function ($query) use ($search) {
+            $escaped = addcslashes($search, '%_\\');
+            $query->where(function ($query) use ($escaped) {
+                $query->where('organization.name', 'like', '%'.$escaped.'%')
+                    ->orWhere('product.name', 'like', '%'.$escaped.'%')
+                    ->orWhere('product.slug', 'like', '%'.$escaped.'%');
+            });
+        })
+        ->orderByDesc('entitlement.created_at')
+        ->limit(60)
+        ->get([
+            'entitlement.id',
+            'organization.id as organization_id',
+            'organization.name as organization_name',
+            'product.slug as product_slug',
+            'product.name as product_name',
+            'entitlement.capability',
+            'entitlement.status',
+            'entitlement.starts_at',
+            'entitlement.ends_at',
+        ]);
+
     return Inertia::render('operator-kslp', [
         'metrics' => [
             'licenses' => DB::table('kslp_licenses')->count(),
@@ -51,6 +79,7 @@ Route::get('operator/kslp', function (Request $request, PlatformOwnerAccess $acc
             'issuerSubscriptions' => DB::table('kslp_issuer_subscriptions')->where('status', 'active')->count(),
         ],
         'licenses' => $licenses,
+        'productEntitlements' => $entitlements,
         'filters' => ['customer_q' => $search, 'plan' => $plan],
         'matchingCount' => $matchingCount,
         'customerOptions' => User::query()
