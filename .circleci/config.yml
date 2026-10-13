@@ -73,9 +73,28 @@ jobs:
             test -x /usr/bin/google-chrome
             /usr/bin/google-chrome --version
 
+  ui_browser_runtime_probe:
+    docker:
+      - image: cimg/php:8.4-node
+    resource_class: small
+    steps:
+      - browser-tools/install_chrome:
+          timeout: 5m
+      - run:
+          name: Verify Playwright and Chrome independently of Laravel
+          no_output_timeout: 5m
+          command: |
+            set -euo pipefail
+            mkdir -p /tmp/uitools
+            cd /tmp/uitools
+            npm init -y >/dev/null
+            npm install --no-audit --no-fund playwright-core@1.49.1 axe-core@4.10.2
+            test -x /usr/bin/google-chrome
+            node --input-type=module -e "import {chromium} from 'playwright-core'; const browser=await chromium.launch({executablePath:'/usr/bin/google-chrome',args:['--no-sandbox']}); console.log('PLAYWRIGHT_LAUNCH_PASS'); await browser.close();"
+
   ui_http_bootstrap_probe:
     docker:
-      - image: cimg/php:8.4-browsers
+      - image: cimg/php:8.4-node
     resource_class: medium
     environment:
       APP_ENV: local
@@ -364,6 +383,19 @@ jobs:
               UI_EMAIL=ui-smoke@example.test UI_PASSWORD=password node ui-smoke.mjs
 
 workflows:
+  ui_final_setup_probes:
+    jobs:
+      - ui_http_bootstrap_probe:
+          filters:
+            branches:
+              only:
+                - ci/final-ui-setup-phases-20261013
+      - ui_browser_runtime_probe:
+          filters:
+            branches:
+              only:
+                - ci/final-ui-setup-phases-20261013
+
   ui_phase_probes:
     jobs:
       - chrome_install_probe:
