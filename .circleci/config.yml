@@ -44,15 +44,6 @@ jobs:
             cd apps/platform
             composer install --no-interaction --prefer-dist --no-progress
       - run:
-          name: Static PHP checks (Pint style, PHPStan level 7)
-          no_output_timeout: 8m
-          command: |
-            set -euo pipefail
-            cd apps/platform
-            vendor/bin/pint --parallel --test
-            php artisan config:clear --ansi || true
-            vendor/bin/phpstan analyse --no-progress --memory-limit=1G
-      - run:
           name: Full frontend check (Vite+ format and lint, source contracts, layout)
           no_output_timeout: 8m
           command: |
@@ -74,10 +65,75 @@ jobs:
             cd apps/platform
             npm run build
 
+  php_pint:
+    docker:
+      - image: cimg/php:8.4-node
+    resource_class: small
+    steps:
+      - checkout
+      - run:
+          name: Install Laravel dependencies
+          no_output_timeout: 8m
+          command: |
+            set -euo pipefail
+            cd apps/platform
+            composer install --no-interaction --prefer-dist --no-progress
+      - run:
+          name: Pint style check (composer lint:check)
+          command: |
+            set -euo pipefail
+            cd apps/platform
+            vendor/bin/pint --parallel --test
+
+  php_phpstan:
+    docker:
+      - image: cimg/php:8.4-node
+    resource_class: small
+    environment:
+      APP_ENV: testing
+      DB_CONNECTION: sqlite
+      DB_DATABASE: ":memory:"
+    steps:
+      - checkout
+      - run:
+          name: Install Laravel dependencies
+          no_output_timeout: 8m
+          command: |
+            set -euo pipefail
+            cd apps/platform
+            composer install --no-interaction --prefer-dist --no-progress
+      - run:
+          name: PHPStan level 7 (composer types:check)
+          no_output_timeout: 8m
+          command: |
+            set -euo pipefail
+            cd apps/platform
+            vendor/bin/phpstan analyse --no-progress --memory-limit=1G
+
 workflows:
   review_codebridge_device_control:
     jobs:
       - codebridge_device_control:
+          filters:
+            branches:
+              only:
+                - feat/codebridge-device-control-center-20261012
+                - integrate/codebridge-control-center-377-378
+                - feat/codebridge-control-center-hub-20261012
+                - fix/gemini-spark-oauth-on-control-center-hub
+                - fix/codebridge-compact-workspace-tabs-20261013
+                - claude/codebridge-production-completion-n6lu61
+      - php_pint:
+          filters:
+            branches:
+              only:
+                - feat/codebridge-device-control-center-20261012
+                - integrate/codebridge-control-center-377-378
+                - feat/codebridge-control-center-hub-20261012
+                - fix/gemini-spark-oauth-on-control-center-hub
+                - fix/codebridge-compact-workspace-tabs-20261013
+                - claude/codebridge-production-completion-n6lu61
+      - php_phpstan:
           filters:
             branches:
               only:
