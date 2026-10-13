@@ -84,19 +84,6 @@ type DashboardProps = {
 
 const CHATGPT_DESKTOP_SETUP_URL = '/install-chatgpt-desktop.ps1';
 
-const productImages: Record<string, string> = {
-    'kmj-cloudos': '/assets/products/kmj-cloudos.webp',
-    'kmj-calibration-pro': '/assets/products/kmj-calibration.webp',
-    'kmj-forge': '/assets/products/kmj-forge.webp',
-    'kmj-connect': '/assets/products/kmj-connect.webp',
-    'kmj-cloud-nexus': '/assets/products/kmj-cloud-nexus.webp',
-    'kmj-agent': '/assets/products/kmj-agent.webp',
-    'kmj-creative-studio': '/assets/products/kmj-creative-studio.webp',
-    'kmj-cinema-platform': '/assets/products/kmj-cinema-platform.webp',
-    'kmj-360-dome': '/assets/products/kmj-cinema-platform.webp',
-    'kmj-cinema-player': '/assets/products/kmj-cinema-platform.webp',
-    'kmj-licensing-hub': '/assets/products/kmj-licensing-hub.webp',
-};
 
 export default function Dashboard({
     organizations,
@@ -591,149 +578,42 @@ function ServiceMetric({
 }
 
 function OwnerProductsPanel({ products }: { products: OwnerProduct[] }) {
+    const publicCount = products.filter((p) => p.is_public).length;
+    const activeLicensing = products.filter((p) => p.licensing_enabled).length;
     return (
         <section
             id="owner-products"
             aria-labelledby="owner-products-heading"
-            className="border-sidebar-border/70 bg-card dark:border-sidebar-border rounded-2xl border p-5 sm:p-6"
+            className="rounded-2xl border bg-card p-5 sm:p-6"
         >
-            <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-start">
-                <div>
-                    <div className="flex items-center gap-2">
-                        <Package className="h-5 w-5 text-red-500" />
-                        <h2 id="owner-products-heading" className="font-bold">
-                            All KMJ products — owner control
+            <div className="flex flex-col items-start justify-between gap-4 lg:flex-row lg:items-center">
+                <div className="flex items-start gap-3">
+                    <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-red-500/10 text-red-500">
+                        <Package className="size-5" />
+                    </span>
+                    <div>
+                        <h2 id="owner-products-heading" className="text-base font-bold">
+                            Platform owner workspace
                         </h2>
+                        <p className="mt-1 max-w-xl text-sm text-muted-foreground">
+                            Manage all products, categories and licensing from Super Admin.
+                            Your personal licensed services remain separate above.
+                        </p>
+                        <p className="mt-2 text-xs text-muted-foreground" role="status">
+                            {products.length} products · {publicCount} public · {activeLicensing} licensing-enabled
+                        </p>
                     </div>
-                    <p className="text-muted-foreground mt-1 text-xs leading-5">
-                        Visible to verified platform owners only. Every catalog
-                        product is listed here, including products you do not
-                        hold an entitlement for.
-                    </p>
                 </div>
-                <Link
-                    href="/operator#product-manager"
-                    className="inline-flex shrink-0 items-center gap-2 rounded-lg border px-3 py-2 text-xs font-bold hover:bg-red-500/5"
-                >
-                    Open Product Manager
-                    <ArrowRight className="h-3.5 w-3.5" />
-                </Link>
+                <div className="flex flex-wrap gap-2">
+                    <Link href="/operator/products" className="inline-flex min-h-10 items-center gap-2 rounded-xl bg-red-600 px-4 text-sm font-semibold text-white hover:bg-red-500">
+                        Product Management <ArrowRight className="size-4" />
+                    </Link>
+                    <Link href="/operator/kslp" className="inline-flex min-h-10 items-center gap-2 rounded-xl border px-4 text-sm font-semibold hover:bg-accent">
+                        Licensing Center <KeyRound className="size-4" />
+                    </Link>
+                </div>
             </div>
-
-            {products.length === 0 ? (
-                <p className="text-muted-foreground mt-5 rounded-xl border border-dashed p-4 text-sm">
-                    The product catalog is empty. Open the Product Manager to
-                    add products.
-                </p>
-            ) : (
-                <ul className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-                    {products.map((product) => {
-                        const image =
-                            product.image_path ?? productImages[product.slug];
-
-                        return (
-                            <li
-                                key={product.id}
-                                className="bg-background/70 flex flex-col gap-3 rounded-xl border p-4"
-                            >
-                                <div className="flex items-start gap-3">
-                                    {image ? (
-                                        <img
-                                            src={image}
-                                            alt=""
-                                            loading="lazy"
-                                            className="h-10 w-10 shrink-0 rounded-lg border object-cover"
-                                        />
-                                    ) : (
-                                        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border bg-red-500/5">
-                                            <Package className="h-5 w-5 text-red-500" />
-                                        </span>
-                                    )}
-                                    <div className="min-w-0">
-                                        <div className="truncate text-sm font-black">
-                                            {product.name}
-                                        </div>
-                                        <div className="text-muted-foreground truncate text-xs">
-                                            {product.slug}
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div className="flex flex-wrap gap-1.5 text-xs font-semibold">
-                                    <FlagChip
-                                        label={titleCase(product.lifecycle)}
-                                        on
-                                    />
-                                    <FlagChip
-                                        label={
-                                            product.is_public
-                                                ? 'Public'
-                                                : 'Hidden'
-                                        }
-                                        on={product.is_public}
-                                    />
-                                    <FlagChip
-                                        label={
-                                            product.purchase_enabled
-                                                ? 'Purchase on'
-                                                : 'Purchase off'
-                                        }
-                                        on={product.purchase_enabled}
-                                    />
-                                    <FlagChip
-                                        label={
-                                            product.licensing_enabled
-                                                ? 'Licensing on'
-                                                : 'Licensing off'
-                                        }
-                                        on={product.licensing_enabled}
-                                    />
-                                </div>
-
-                                <div className="text-muted-foreground text-xs">
-                                    {product.active_entitlements} active
-                                    entitlement
-                                    {product.active_entitlements === 1
-                                        ? ''
-                                        : 's'}
-                                </div>
-
-                                <div className="mt-auto flex flex-wrap gap-2">
-                                    <Link
-                                        href="/operator#product-manager"
-                                        className="rounded-lg border px-3 py-1.5 text-xs font-bold hover:bg-red-500/5"
-                                    >
-                                        Manage
-                                    </Link>
-                                    {product.is_public && (
-                                        <Link
-                                            href={`/products/${product.slug}`}
-                                            className="rounded-lg border px-3 py-1.5 text-xs font-bold hover:bg-red-500/5"
-                                        >
-                                            Public page
-                                        </Link>
-                                    )}
-                                </div>
-                            </li>
-                        );
-                    })}
-                </ul>
-            )}
         </section>
-    );
-}
-
-function FlagChip({ label, on }: { label: string; on?: boolean }) {
-    return (
-        <span
-            className={
-                on
-                    ? 'rounded-full border border-emerald-500/20 bg-emerald-500/5 px-2 py-0.5 text-emerald-600 dark:text-emerald-400'
-                    : 'text-muted-foreground rounded-full border px-2 py-0.5'
-            }
-        >
-            {label}
-        </span>
     );
 }
 
