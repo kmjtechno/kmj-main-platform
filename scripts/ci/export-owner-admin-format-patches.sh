@@ -85,7 +85,11 @@ for check in frontend types phpstan; do
   else
     printf '%s=FAIL\n' "$check" >> "$manifest"
   fi
-  truncate -s 100000 "$PATCHES/$check.log"
+  # Do not pad short logs with NUL bytes.
+  if [[ "$(stat -c %s "$PATCHES/$check.log")" -gt 100000 ]]; then
+    tail -c 100000 "$PATCHES/$check.log" > "$PATCHES/$check.log.cut"
+    mv -- "$PATCHES/$check.log.cut" "$PATCHES/$check.log"
+  fi
 done
 
 # Keep raw formatter/compiler output local. Generate a bounded, printable,
