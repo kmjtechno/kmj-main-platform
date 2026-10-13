@@ -6,6 +6,7 @@ use App\Services\PlatformOwnerAccess;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Validation\ValidationException;
+use Inertia\Inertia;
 use KMJ\MainPlatform\Catalog\Models\Product;
 
 Route::middleware(['auth', 'verified', 'password.confirm'])
@@ -17,7 +18,7 @@ Route::middleware(['auth', 'verified', 'password.confirm'])
             abort_unless($user instanceof User, 401);
             $access->require($user);
 
-            return \Inertia\Inertia::render('operator-products', [
+            return Inertia::render('operator-products', [
                 'products' => Product::query()
                     ->orderBy('sort_order')
                     ->orderBy('name')
@@ -35,7 +36,7 @@ Route::middleware(['auth', 'verified', 'password.confirm'])
             $access->require($user);
             try {
                 $manager->create($request->validate(AdminProductManager::rules()));
-            } catch (\DomainException $exception) {
+            } catch (DomainException $exception) {
                 throw ValidationException::withMessages(['purchase_enabled' => $exception->getMessage()]);
             }
 
@@ -48,7 +49,7 @@ Route::middleware(['auth', 'verified', 'password.confirm'])
             $access->require($user);
             try {
                 $manager->update($product, $request->validate(AdminProductManager::rules($product, true)));
-            } catch (\DomainException $exception) {
+            } catch (DomainException $exception) {
                 throw ValidationException::withMessages(['purchase_enabled' => $exception->getMessage()]);
             }
 
@@ -62,7 +63,7 @@ Route::middleware(['auth', 'verified', 'password.confirm'])
             $data = $request->validate(['ids' => ['required', 'array', 'min:1'], 'ids.*' => ['required', 'uuid', 'distinct']]);
             try {
                 $manager->reorder($data['ids']);
-            } catch (\DomainException $exception) {
+            } catch (DomainException $exception) {
                 throw ValidationException::withMessages(['ids' => $exception->getMessage()]);
             }
 
