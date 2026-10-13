@@ -254,6 +254,16 @@ final class AiProviderManagerTest extends TestCase
         $this->assertSame('unreachable', AiProvider::query()->findOrFail($id)->health);
     }
 
+    public function test_name_is_optional_and_accepts_an_email_style_label(): void
+    {
+        $this->confirmed($this->owner)->post('/services/kmj-codebridge/ai-providers', ['preset' => 'groq', 'api_key' => self::KEY])->assertSessionHasNoErrors();
+        $this->confirmed($this->owner)->post('/services/kmj-codebridge/ai-providers', ['preset' => 'groq', 'api_key' => self::KEY])->assertSessionHasNoErrors();
+        $this->confirmed($this->owner)->post('/services/kmj-codebridge/ai-providers', $this->payload('owner@example.com'))->assertSessionHasNoErrors();
+        $this->confirmed($this->owner)->post('/services/kmj-codebridge/ai-providers', $this->payload('<script>alert(1)</script>'))->assertSessionHasErrors('name');
+
+        $this->assertSame(['Groq', 'Groq 2', 'owner@example.com'], AiProvider::query()->pluck('name')->sort()->values()->all());
+    }
+
     public function test_duplicate_names_are_rejected_without_a_server_error(): void
     {
         $this->add('Groq main')->assertSessionHasNoErrors();

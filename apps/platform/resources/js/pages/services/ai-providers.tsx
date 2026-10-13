@@ -311,8 +311,8 @@ function AddProvider({ presets }: { presets: Preset[] }) {
             <label className="text-xs font-bold">
                 Name
                 <input
-                    required
                     value={name}
+                    placeholder="Optional (defaults to the provider name)"
                     onChange={(event) => setName(event.target.value)}
                     className="bg-background mt-1 block h-9 w-full rounded-xl border px-3 font-normal"
                 />

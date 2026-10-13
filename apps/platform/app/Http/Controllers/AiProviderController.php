@@ -51,7 +51,8 @@ final class AiProviderController extends Controller
     {
         $scope = $this->managing($request);
         $data = $request->validate([
-            'name' => ['required', 'string', 'min:2', 'max:80', 'regex:/\A[\pL\pN ._-]+\z/u',
+            // Optional: when empty the provider's own label is used (made unique automatically).
+            'name' => ['nullable', 'string', 'min:2', 'max:80', 'regex:/\A[\pL\pN ._@+()\/&\'-]+\z/u',
                 Rule::unique('ai_providers', 'name')->where('organization_id', $scope['organization_id'])],
             'preset' => ['required', Rule::in(array_keys($this->manager->presets()))],
             'base_url' => ['nullable', 'string', 'max:255'],
@@ -61,6 +62,8 @@ final class AiProviderController extends Controller
         ]);
 
         try {
+            $label = (string) ($this->manager->presets()[$data['preset']]['label'] ?? 'Provider');
+            $data['name'] = filled($data['name'] ?? null) ? $data['name'] : $this->freeName($scope['organization_id'], $label);
             $this->manager->create($scope['organization_id'], (int) $this->user($request)->id, $data);
         } catch (InvalidArgumentException $exception) {
             return back()->withErrors(['base_url' => 'Endpoint rejected: '.$exception->getMessage()]);
@@ -76,7 +79,7 @@ final class AiProviderController extends Controller
     {
         $model = $this->find($request, $provider, true);
         $data = $request->validate([
-            'name' => ['sometimes', 'string', 'min:2', 'max:80', 'regex:/\A[\pL\pN ._-]+\z/u',
+            'name' => ['sometimes', 'string', 'min:2', 'max:80', 'regex:/\A[\pL\pN ._@+()\/&\'-]+\z/u',
                 Rule::unique('ai_providers', 'name')->where('organization_id', $model->organization_id)->ignore($model->id)],
             'api_key' => ['sometimes', 'nullable', 'string', 'min:8', 'max:512', 'regex:/\A\S+\z/'],
             'enabled' => ['sometimes', 'boolean'],
