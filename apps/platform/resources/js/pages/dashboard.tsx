@@ -7,6 +7,7 @@ import {
     Download,
     KeyRound,
     Laptop2,
+    Package,
     Server,
     ShieldCheck,
     TerminalSquare,
@@ -52,10 +53,24 @@ type Organization = {
     entitlements: Entitlement[];
 };
 
+type OwnerProduct = {
+    id: string;
+    slug: string;
+    name: string;
+    status: string;
+    lifecycle: string;
+    is_public: boolean;
+    image_path: string | null;
+    purchase_enabled: boolean;
+    licensing_enabled: boolean;
+    active_entitlements: number;
+};
+
 type DashboardProps = {
     organizations: Organization[];
     hasPasskey: boolean;
     canManageCodeBridgeOwnerPlan: boolean;
+    ownerProducts: OwnerProduct[] | null;
 };
 
 const CHATGPT_DESKTOP_SETUP_URL = '/install-chatgpt-desktop.ps1';
@@ -78,6 +93,7 @@ export default function Dashboard({
     organizations,
     hasPasskey,
     canManageCodeBridgeOwnerPlan,
+    ownerProducts,
 }: DashboardProps) {
     const services = organizations.flatMap((organization) =>
         organization.entitlements.map((entitlement) => ({
@@ -172,6 +188,10 @@ export default function Dashboard({
                         </div>
                     )}
                 </section>
+
+                {ownerProducts !== null && (
+                    <OwnerProductsPanel products={ownerProducts} />
+                )}
 
                 <section className="border-sidebar-border/70 bg-card dark:border-sidebar-border rounded-2xl border p-5 sm:p-6">
                     <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
@@ -470,6 +490,153 @@ function ServiceMetric({
             <div className="mt-1 text-sm font-black">{value}</div>
             <div className="text-muted-foreground mt-1 text-[10px]">{hint}</div>
         </div>
+    );
+}
+
+function OwnerProductsPanel({ products }: { products: OwnerProduct[] }) {
+    return (
+        <section
+            id="owner-products"
+            aria-labelledby="owner-products-heading"
+            className="border-sidebar-border/70 bg-card dark:border-sidebar-border rounded-2xl border p-5 sm:p-6"
+        >
+            <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-start">
+                <div>
+                    <div className="flex items-center gap-2">
+                        <Package className="h-5 w-5 text-red-500" />
+                        <h2 id="owner-products-heading" className="font-bold">
+                            All KMJ products — owner control
+                        </h2>
+                    </div>
+                    <p className="text-muted-foreground mt-1 text-xs leading-5">
+                        Visible to verified platform owners only. Every catalog
+                        product is listed here, including products you do not
+                        hold an entitlement for.
+                    </p>
+                </div>
+                <Link
+                    href="/operator#product-manager"
+                    className="inline-flex shrink-0 items-center gap-2 rounded-lg border px-3 py-2 text-xs font-bold hover:bg-red-500/5"
+                >
+                    Open Product Manager
+                    <ArrowRight className="h-3.5 w-3.5" />
+                </Link>
+            </div>
+
+            {products.length === 0 ? (
+                <p className="text-muted-foreground mt-5 rounded-xl border border-dashed p-4 text-sm">
+                    The product catalog is empty. Open the Product Manager to
+                    add products.
+                </p>
+            ) : (
+                <ul className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                    {products.map((product) => {
+                        const image =
+                            product.image_path ?? productImages[product.slug];
+
+                        return (
+                            <li
+                                key={product.id}
+                                className="bg-background/70 flex flex-col gap-3 rounded-xl border p-4"
+                            >
+                                <div className="flex items-start gap-3">
+                                    {image ? (
+                                        <img
+                                            src={image}
+                                            alt=""
+                                            loading="lazy"
+                                            className="h-10 w-10 shrink-0 rounded-lg border object-cover"
+                                        />
+                                    ) : (
+                                        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border bg-red-500/5">
+                                            <Package className="h-5 w-5 text-red-500" />
+                                        </span>
+                                    )}
+                                    <div className="min-w-0">
+                                        <div className="truncate text-sm font-black">
+                                            {product.name}
+                                        </div>
+                                        <div className="text-muted-foreground truncate text-xs">
+                                            {product.slug}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="flex flex-wrap gap-1.5 text-xs font-semibold">
+                                    <FlagChip
+                                        label={titleCase(product.lifecycle)}
+                                        on
+                                    />
+                                    <FlagChip
+                                        label={
+                                            product.is_public
+                                                ? 'Public'
+                                                : 'Hidden'
+                                        }
+                                        on={product.is_public}
+                                    />
+                                    <FlagChip
+                                        label={
+                                            product.purchase_enabled
+                                                ? 'Purchase on'
+                                                : 'Purchase off'
+                                        }
+                                        on={product.purchase_enabled}
+                                    />
+                                    <FlagChip
+                                        label={
+                                            product.licensing_enabled
+                                                ? 'Licensing on'
+                                                : 'Licensing off'
+                                        }
+                                        on={product.licensing_enabled}
+                                    />
+                                </div>
+
+                                <div className="text-muted-foreground text-xs">
+                                    {product.active_entitlements} active
+                                    entitlement
+                                    {product.active_entitlements === 1
+                                        ? ''
+                                        : 's'}
+                                </div>
+
+                                <div className="mt-auto flex flex-wrap gap-2">
+                                    <Link
+                                        href="/operator#product-manager"
+                                        className="rounded-lg border px-3 py-1.5 text-xs font-bold hover:bg-red-500/5"
+                                    >
+                                        Manage
+                                    </Link>
+                                    {product.is_public && (
+                                        <Link
+                                            href={`/products/${product.slug}`}
+                                            className="rounded-lg border px-3 py-1.5 text-xs font-bold hover:bg-red-500/5"
+                                        >
+                                            Public page
+                                        </Link>
+                                    )}
+                                </div>
+                            </li>
+                        );
+                    })}
+                </ul>
+            )}
+        </section>
+    );
+}
+
+function FlagChip({ label, on }: { label: string; on?: boolean }) {
+    return (
+        <span
+            className={
+                on
+                    ? 'rounded-full border border-emerald-500/20 bg-emerald-500/5 px-2 py-0.5 text-emerald-600 dark:text-emerald-400'
+                    : 'text-muted-foreground rounded-full border px-2 py-0.5'
+            }
+        >
+            {label}
+        </span>
     );
 }
 
