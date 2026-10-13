@@ -70,3 +70,4 @@ workflows:
                 - feat/codebridge-control-center-hub-20261012
                 - fix/gemini-spark-oauth-on-control-center-hub
                 - fix/codebridge-compact-workspace-tabs-20261013
+                - fix/codebridge-official-logo-hero-20261013
