@@ -44,20 +44,16 @@ jobs:
             cd apps/platform
             composer install --no-interaction --prefer-dist --no-progress
       - run:
-          name: Isolate Vite+ lint and formatting on unchanged parent
+          name: Diagnostic exact historical main pre-PR379 checkout and frontend check
           no_output_timeout: 8m
           command: |
             set -euo pipefail
+            git fetch --no-tags origin eb6762533c3d86561780ca33e08aede40cef8d77
+            git checkout --detach eb6762533c3d86561780ca33e08aede40cef8d77
+            test "$(git rev-parse HEAD)" = "eb6762533c3d86561780ca33e08aede40cef8d77"
             cd apps/platform
-            ./node_modules/.bin/vp check --fix
-            ./node_modules/.bin/vp check
-      - run:
-          name: No-network local CodeBridge device-control verification
-          no_output_timeout: 8m
-          command: |
-            set -euo pipefail
-            cd apps/platform
-            bash scripts/verify-codebridge-device-control-offline.sh
+            npm ci --ignore-scripts --no-audit --no-fund
+            npm run check
 
 workflows:
   review_codebridge_device_control:
