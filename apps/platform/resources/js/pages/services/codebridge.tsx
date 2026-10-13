@@ -195,6 +195,13 @@ export default function CodeBridgeService({
                                 <Laptop2 className="h-3.5 w-3.5" />
                                 Manage devices
                             </button>
+                            <Link
+                                href="/services/kmj-codebridge/ai-providers"
+                                className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border px-4 text-xs font-bold transition hover:border-red-500/40 hover:text-red-500"
+                            >
+                                <KeyRound className="h-3.5 w-3.5" />
+                                AI Providers
+                            </Link>
                             <a
                                 href={vscodeInstallUrl(service.endpoint)}
                                 className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-red-600 px-4 text-xs font-black text-white transition hover:bg-red-500"
