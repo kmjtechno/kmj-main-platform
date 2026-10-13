@@ -8,7 +8,6 @@ import DeviceControlCenter, {
 } from '@/components/codebridge/device-control-center';
 import {
     ArrowLeft,
-    Cable,
     CheckCircle2,
     KeyRound,
     Laptop2,
@@ -156,8 +155,16 @@ export default function CodeBridgeService({
 
                     <div className="mt-6 flex flex-col justify-between gap-6 lg:flex-row lg:items-start">
                         <div className="flex items-start gap-4">
-                            <span className="grid h-14 w-14 shrink-0 place-items-center rounded-2xl border border-red-500/20 bg-red-500/10 text-red-500">
-                                <Cable className="h-7 w-7" />
+                            <span className="grid h-16 w-16 shrink-0 place-items-center overflow-hidden rounded-2xl border border-red-500/20 bg-background p-1">
+                                <img
+                                    src="/assets/kmj-codebridge-icon.png"
+                                    alt="Official KMJ CodeBridge icon"
+                                    width={56}
+                                    height={56}
+                                    loading="eager"
+                                    decoding="async"
+                                    className="h-full w-full object-contain"
+                                />
                             </span>
                             <div>
                                 <div className="flex flex-wrap items-center gap-2">
@@ -182,6 +189,14 @@ export default function CodeBridgeService({
                         </div>
 
                         <div className="flex flex-wrap gap-2">
+                            <button
+                                type="button"
+                                onClick={() => setActiveSection('devices')}
+                                className="focus-visible:ring-ring inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-red-500/30 bg-red-500/10 px-4 text-xs font-bold text-foreground transition hover:bg-red-500/15 focus-visible:ring-2 focus-visible:outline-none"
+                            >
+                                <Laptop2 className="h-3.5 w-3.5" />
+                                Manage devices
+                            </button>
                             <a
                                 href={vscodeInstallUrl(service.endpoint)}
                                 className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-red-600 px-4 text-xs font-black text-white transition hover:bg-red-500"
