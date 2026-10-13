@@ -205,6 +205,37 @@ jobs:
             echo "tests passed: ${passed:-none}"
             test "${passed:-0}" -ge 97
 
+  ui_bootstrap_preflight:
+    docker:
+      - image: cimg/php:8.4-browsers
+    resource_class: medium
+    environment:
+      APP_ENV: local
+      APP_DEBUG: "false"
+      APP_URL: http://127.0.0.1:8000
+      DB_CONNECTION: sqlite
+      DB_DATABASE: /home/circleci/project/apps/platform/database/ui.sqlite
+      SESSION_DRIVER: file
+      CACHE_STORE: array
+      QUEUE_CONNECTION: sync
+      MAIL_MAILER: array
+      PHP_CLI_SERVER_WORKERS: "4"
+    steps:
+      - prepare_ui_app
+      - run:
+          name: Isolate real-browser bootstrap from UI assertions
+          command: |
+            set -euo pipefail
+            printf 'PHP='; php -r 'echo PHP_VERSION, PHP_EOL;'
+            printf 'CHROME='; /usr/bin/google-chrome --version
+            printf 'LOGIN='; curl --fail --silent --output /dev/null --write-out '%{http_code}\n' http://127.0.0.1:8000/login
+            printf 'PRODUCTS='; curl --silent --location --output /dev/null --write-out '%{http_code}\n' http://127.0.0.1:8000/products/kmj-codebridge
+            test -s apps/platform/public/assets/kmj-codebridge-icon.png
+            test -f /tmp/uitools/ui-smoke.mjs
+            test -d /tmp/uitools/node_modules/playwright-core
+            test -d /tmp/uitools/node_modules/axe-core
+            echo 'BOOTSTRAP_PASS (UI assertions not executed)'
+
   ui_public:
     docker:
       - image: cimg/php:8.4-browsers
@@ -275,6 +306,7 @@ workflows:
                 - fix/gemini-spark-oauth-on-control-center-hub
                 - fix/codebridge-compact-workspace-tabs-20261013
                 - claude/codebridge-production-completion-n6lu61
+                - ci/diagnose-real-browser-bootstrap-20261013
                 - release/codebridge-claude-ui-verified-20261013
       - php_pint:
           filters:
@@ -286,6 +318,7 @@ workflows:
                 - fix/gemini-spark-oauth-on-control-center-hub
                 - fix/codebridge-compact-workspace-tabs-20261013
                 - claude/codebridge-production-completion-n6lu61
+                - ci/diagnose-real-browser-bootstrap-20261013
                 - release/codebridge-claude-ui-verified-20261013
       - php_phpstan:
           filters:
@@ -297,6 +330,7 @@ workflows:
                 - fix/gemini-spark-oauth-on-control-center-hub
                 - fix/codebridge-compact-workspace-tabs-20261013
                 - claude/codebridge-production-completion-n6lu61
+                - ci/diagnose-real-browser-bootstrap-20261013
                 - release/codebridge-claude-ui-verified-20261013
       - php_tests:
           filters:
@@ -308,6 +342,12 @@ workflows:
                 - fix/gemini-spark-oauth-on-control-center-hub
                 - fix/codebridge-compact-workspace-tabs-20261013
                 - claude/codebridge-production-completion-n6lu61
+                - ci/diagnose-real-browser-bootstrap-20261013
+      - ui_bootstrap_preflight:
+          filters:
+            branches:
+              only:
+                - ci/diagnose-real-browser-bootstrap-20261013
       - ui_public:
           filters:
             branches:
@@ -318,6 +358,7 @@ workflows:
                 - fix/gemini-spark-oauth-on-control-center-hub
                 - fix/codebridge-compact-workspace-tabs-20261013
                 - claude/codebridge-production-completion-n6lu61
+                - ci/diagnose-real-browser-bootstrap-20261013
       - ui_dashboard:
           filters:
             branches:
@@ -328,3 +369,4 @@ workflows:
                 - fix/gemini-spark-oauth-on-control-center-hub
                 - fix/codebridge-compact-workspace-tabs-20261013
                 - claude/codebridge-production-completion-n6lu61
+                - ci/diagnose-real-browser-bootstrap-20261013
