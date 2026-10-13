@@ -25,7 +25,13 @@ export function DirectoryGrantAccess({
 
     const submit = (event: FormEvent<HTMLFormElement>) => {
         event.preventDefault();
-        if (saving || !policyId || reason.trim().length < 10 || confirmation !== 'GRANT_PRODUCT_ACCESS') return;
+        if (
+            saving ||
+            !policyId ||
+            reason.trim().length < 10 ||
+            confirmation !== 'GRANT_PRODUCT_ACCESS'
+        )
+            return;
 
         router.post(
             '/operator/directory/organizations/' +
@@ -41,12 +47,15 @@ export function DirectoryGrantAccess({
                 onStart: () => setSaving(true),
                 onSuccess: () => {
                     setOpen(false);
-                    setNotice('Entitlement issued; review native license requirements separately.');
+                    setNotice(
+                        'Entitlement issued; review native license requirements separately.',
+                    );
                     setReason('');
                     setConfirmation('');
                     setPolicyId('');
                 },
-                onError: (errors) => setNotice(Object.values(errors)[0] ?? 'Grant blocked.'),
+                onError: (errors) =>
+                    setNotice(Object.values(errors)[0] ?? 'Grant blocked.'),
                 onFinish: () => setSaving(false),
             },
         );
@@ -63,7 +72,8 @@ export function DirectoryGrantAccess({
                 }}
                 className="inline-flex min-h-9 items-center gap-1 rounded-lg border border-red-500/30 px-2.5 py-1 text-xs font-semibold text-red-200 hover:bg-red-500/10 disabled:opacity-50"
             >
-                <KeyRound className="size-3.5" aria-hidden="true" /> Grant product access
+                <KeyRound className="size-3.5" aria-hidden="true" /> Grant
+                product access
             </button>
             {policies.length === 0 && (
                 <span className="ml-2 text-xs text-slate-400">
@@ -80,7 +90,10 @@ export function DirectoryGrantAccess({
                         a signed desktop/device license. Do not use as payment
                         confirmation or bypass product-specific activation.
                     </p>
-                    <label className="text-xs font-semibold text-slate-300" htmlFor={'policy-' + organizationId}>
+                    <label
+                        className="text-xs font-semibold text-slate-300"
+                        htmlFor={'policy-' + organizationId}
+                    >
                         Eligible product and access policy
                     </label>
                     <select
@@ -97,7 +110,10 @@ export function DirectoryGrantAccess({
                             </option>
                         ))}
                     </select>
-                    <label className="text-xs font-semibold text-slate-300" htmlFor={'grant-reason-' + organizationId}>
+                    <label
+                        className="text-xs font-semibold text-slate-300"
+                        htmlFor={'grant-reason-' + organizationId}
+                    >
                         Reason (audit required)
                     </label>
                     <input
@@ -110,7 +126,10 @@ export function DirectoryGrantAccess({
                         className="min-h-10 w-full rounded-lg border border-white/20 bg-[#090d14] px-3 text-sm"
                         placeholder="Approved complimentary access reason"
                     />
-                    <label className="text-xs font-semibold text-slate-300" htmlFor={'grant-confirm-' + organizationId}>
+                    <label
+                        className="text-xs font-semibold text-slate-300"
+                        htmlFor={'grant-confirm-' + organizationId}
+                    >
                         Type GRANT_PRODUCT_ACCESS to confirm
                     </label>
                     <input
@@ -124,7 +143,12 @@ export function DirectoryGrantAccess({
                     <div className="flex flex-wrap gap-2">
                         <button
                             type="submit"
-                            disabled={saving || !policyId || reason.trim().length < 10 || confirmation !== 'GRANT_PRODUCT_ACCESS'}
+                            disabled={
+                                saving ||
+                                !policyId ||
+                                reason.trim().length < 10 ||
+                                confirmation !== 'GRANT_PRODUCT_ACCESS'
+                            }
                             className="min-h-10 rounded-lg bg-red-600 px-3 text-xs font-bold disabled:opacity-50"
                         >
                             {saving ? 'Applying…' : 'Confirm access grant'}
