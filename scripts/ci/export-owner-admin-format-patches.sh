@@ -109,11 +109,11 @@ redactions = [
 for name in ("frontend", "types", "phpstan"):
     src = root / (name + ".log")
     raw = src.read_bytes()
-    value = ansi.sub("", raw.decode("utf-8", "replace"))
+    value = ansi.sub("", raw.rstrip(bytes([0])).decode("utf-8", "replace"))
     value = "".join(c if c in "\n\t" or ord(c) >= 32 else " " for c in value)
     for i, pattern in enumerate(redactions):
         value = pattern.sub(r"\1[REDACTED]" if i < 2 else "[REDACTED]", value)
-    (root / (name + ".txt")).write_text(value[-32000:], encoding="utf-8")
+    (root / (name + ".txt")).write_text("\n".join(line.strip() for line in value.splitlines() if line.strip())[-24000:] + "\n", encoding="utf-8")
 PY
 cd "$ROOT"
 
