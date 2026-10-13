@@ -110,6 +110,40 @@ jobs:
             cd apps/platform
             vendor/bin/phpstan analyse --no-progress --memory-limit=1G
 
+  php_tests:
+    docker:
+      - image: cimg/php:8.4-node
+    resource_class: medium
+    environment:
+      APP_ENV: testing
+    steps:
+      - checkout
+      - run:
+          name: Install Laravel dependencies
+          no_output_timeout: 10m
+          command: |
+            set -euo pipefail
+            cd apps/platform
+            composer install --no-interaction --prefer-dist --no-progress
+      - run:
+          name: Install frontend dependencies and build assets (Inertia/Wayfinder need them)
+          no_output_timeout: 12m
+          command: |
+            set -euo pipefail
+            cd apps/platform
+            npm ci --ignore-scripts --no-audit --no-fund
+            npm run build
+      - run:
+          name: Full Laravel test suite (php artisan test)
+          no_output_timeout: 20m
+          command: |
+            set -euo pipefail
+            cd apps/platform
+            cp .env.example .env
+            php artisan key:generate --force
+            php artisan config:clear --ansi
+            php artisan test --no-ansi
+
 workflows:
   review_codebridge_device_control:
     jobs:
@@ -146,3 +180,13 @@ workflows:
                 - fix/codebridge-compact-workspace-tabs-20261013
                 - claude/codebridge-production-completion-n6lu61
                 - release/codebridge-claude-ui-verified-20261013
+      - php_tests:
+          filters:
+            branches:
+              only:
+                - feat/codebridge-device-control-center-20261012
+                - integrate/codebridge-control-center-377-378
+                - feat/codebridge-control-center-hub-20261012
+                - fix/gemini-spark-oauth-on-control-center-hub
+                - fix/codebridge-compact-workspace-tabs-20261013
+                - claude/codebridge-production-completion-n6lu61
