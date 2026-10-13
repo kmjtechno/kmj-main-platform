@@ -37,7 +37,7 @@ const baseNavItems: NavItem[] = [
         icon: ShoppingCart,
     },
     {
-        title: 'License Center',
+        title: 'Sandbox License Lab',
         href: '/sandbox-licenses',
         icon: KeyRound,
     },
@@ -69,7 +69,7 @@ export function AppSidebar() {
         ...baseNavItems,
         ...(operator?.enabled
             ? [
-                  { title: 'Operator', href: '/operator', icon: Crown },
+                  { title: 'Super Admin', href: '/operator', icon: Crown },
                   {
                       title: 'Product Manager',
                       href: '/operator#product-manager',

@@ -14,6 +14,43 @@ final class SandboxLicenseControlCenterTest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_empty_license_center_has_a_safe_first_organization_bootstrap_flow(): void
+    {
+        $user = User::factory()->create();
+
+        $this->actingAs($user)
+            ->get('/sandbox-licenses')
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('sandbox-licenses')
+                ->has('organizations', 0)
+                ->has('auditEvents', 0));
+
+        $this->actingAs($user)
+            ->post('/organizations', ['name' => 'KMJ Sandbox Onboarding'])
+            ->assertRedirect(route('dashboard'));
+
+        $this->assertDatabaseHas('organizations', ['name' => 'KMJ Sandbox Onboarding']);
+        $this->assertDatabaseHas('organization_memberships', [
+            'user_id' => $user->id,
+            'role' => 'owner',
+        ]);
+        $this->assertDatabaseHas('entitlements', [
+            'capability' => 'sandbox.product.access',
+            'status' => 'active',
+        ]);
+
+        $this->actingAs($user)
+            ->get('/sandbox-licenses')
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('sandbox-licenses')
+                ->has('organizations', 1)
+                ->where('organizations.0.name', 'KMJ Sandbox Onboarding')
+                ->has('organizations.0.entitlements', 1)
+                ->where('organizations.0.entitlements.0.status', 'active'));
+    }
+
     public function test_owner_can_issue_validate_and_revoke_sandbox_license_from_control_surface(): void
     {
         $user = User::factory()->create();
