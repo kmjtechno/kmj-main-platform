@@ -95,7 +95,7 @@ export function AppSidebar() {
                   },
                   {
                       title: 'Product Manager',
-                      href: '/operator#product-manager',
+                      href: '/operator/products',
                       icon: PackageOpen,
                   },
                   {
