@@ -59,6 +59,71 @@ commands:
             test -x /usr/bin/google-chrome
 
 jobs:
+  chrome_install_probe:
+    docker:
+      - image: cimg/php:8.4-browsers
+    resource_class: small
+    steps:
+      - browser-tools/install_chrome:
+          timeout: 5m
+      - run:
+          name: Verify actual installed Chrome executable
+          command: |
+            set -euo pipefail
+            test -x /usr/bin/google-chrome
+            /usr/bin/google-chrome --version
+
+  ui_http_bootstrap_probe:
+    docker:
+      - image: cimg/php:8.4-browsers
+    resource_class: medium
+    environment:
+      APP_ENV: local
+      APP_DEBUG: "false"
+      APP_URL: http://127.0.0.1:8000
+      DB_CONNECTION: sqlite
+      DB_DATABASE: /home/circleci/project/apps/platform/database/ui.sqlite
+      SESSION_DRIVER: file
+      CACHE_STORE: array
+      QUEUE_CONNECTION: sync
+      MAIL_MAILER: array
+    steps:
+      - checkout
+      - run:
+          name: Install PHP and frontend dependencies
+          no_output_timeout: 12m
+          command: |
+            set -euo pipefail
+            cd apps/platform
+            composer install --no-interaction --prefer-dist --no-progress
+            npm ci --ignore-scripts --no-audit --no-fund
+            npm run build
+      - run:
+          name: Probe DB migration separately from Chrome
+          command: |
+            set -euo pipefail
+            cd apps/platform
+            cp .env.example .env
+            php artisan key:generate --force
+            touch database/ui.sqlite
+            php artisan migrate --force --no-ansi
+            echo 'SQLITE_MIGRATION_PASS'
+      - run:
+          name: Probe login page without a browser
+          command: |
+            set -euo pipefail
+            cd apps/platform
+            nohup php artisan serve --host=127.0.0.1 --port=8000 > /tmp/serve.log 2>&1 &
+            for i in $(seq 1 40); do
+              if curl -fsS -o /dev/null http://127.0.0.1:8000/login; then
+                echo 'UI_HTTP_LOGIN_PASS'
+                exit 0
+              fi
+              sleep 1
+            done
+            tail -n 80 /tmp/serve.log
+            exit 1
+
   codebridge_device_control:
     docker:
       - image: cimg/php:8.4-node
@@ -299,6 +364,19 @@ jobs:
               UI_EMAIL=ui-smoke@example.test UI_PASSWORD=password node ui-smoke.mjs
 
 workflows:
+  ui_phase_probes:
+    jobs:
+      - chrome_install_probe:
+          filters:
+            branches:
+              only:
+                - ci/phase-probes-20261013
+      - ui_http_bootstrap_probe:
+          filters:
+            branches:
+              only:
+                - ci/phase-probes-20261013
+
   review_codebridge_device_control:
     jobs:
       - codebridge_device_control:
