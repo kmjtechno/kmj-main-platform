@@ -7,7 +7,7 @@ import { isPublicMarketingPage } from '@/lib/public-page-layout';
 import AuthLayout from '@/layouts/auth-layout';
 import SettingsLayout from '@/layouts/settings/layout';
 
-const appName = import.meta.env.VITE_APP_NAME || 'Laravel';
+const appName = import.meta.env.VITE_APP_NAME || 'KMJ TECHNO';
 
 const buildFingerprint = (doc: Document): string =>
     Array.from(
