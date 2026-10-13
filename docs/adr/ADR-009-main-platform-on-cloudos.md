@@ -22,7 +22,7 @@ The existing Phase-1 central-outage hosting-survival and Phase-2 data-plane/cont
 
 ## 3. Target deployment composition
 
-1. CloudOS-managed isolated Linux application tenant/workload for immutable Main Platform revision: PHP-FPM/Laravel web service behind protected ingress, built frontend assets and dedicated least-privilege processes for queue workers and scheduler.
+1. CloudOS-managed isolated Linux application tenant/workload for immutable Main Platform revision: **FrankenPHP (classic Laravel request lifecycle) as the CloudOS-managed web service**, built frontend assets and dedicated least-privilege queue/scheduler processes. **No Nginx and no separate PHP-FPM in the Main Platform runtime path.** CloudOS's Caddy ingress owns public TLS, domain mapping and protected private upstream routing; candidate runtime config: `deploy/cloudos/frankenphp/Caddyfile.example`. This is a proposed open-source runtime within CloudOS, **not a claim that CloudOS has built a proprietary web server**.
 2. Dedicated PostgreSQL database/roles (Main Platform is the authority), Redis/Valkey-compatible cache/queue, durable encrypted volumes; CloudOS may provision and back up but not directly mutate commercial data.
 3. Secrets injected only at runtime from an appropriately secured vault/host secret source. No public keys confused with license private signing keys; no production secrets in Git, CloudOS JSON state or telemetry.
 4. First-party transactional mail isolated as a service; do not gate live email recovery on completion of the full Gmail-class mailbox product. Real sending, SPF/DKIM/DMARC, outbound port/PTR, queues/bounces and controlled inbox+signed-link proof are required.
