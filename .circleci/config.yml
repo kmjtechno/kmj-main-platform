@@ -166,6 +166,7 @@ workflows:
                 - fix/codebridge-compact-workspace-tabs-20261013
                 - claude/codebridge-production-completion-n6lu61
                 - claude/ai-provider-oauth
+                - claude/remove-auto-refresh
                 - claude/ai-provider-manager
                 - release/codebridge-claude-ui-verified-20261013
       - php_pint:
@@ -179,6 +180,7 @@ workflows:
                 - fix/codebridge-compact-workspace-tabs-20261013
                 - claude/codebridge-production-completion-n6lu61
                 - claude/ai-provider-oauth
+                - claude/remove-auto-refresh
                 - claude/ai-provider-manager
                 - release/codebridge-claude-ui-verified-20261013
       - php_phpstan:
@@ -192,6 +194,7 @@ workflows:
                 - fix/codebridge-compact-workspace-tabs-20261013
                 - claude/codebridge-production-completion-n6lu61
                 - claude/ai-provider-oauth
+                - claude/remove-auto-refresh
                 - claude/ai-provider-manager
                 - release/codebridge-claude-ui-verified-20261013
       - php_tests:
@@ -205,4 +208,5 @@ workflows:
                 - fix/codebridge-compact-workspace-tabs-20261013
                 - claude/codebridge-production-completion-n6lu61
                 - claude/ai-provider-oauth
+                - claude/remove-auto-refresh
                 - claude/ai-provider-manager
