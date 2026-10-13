@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace Tests\Feature;
 
 use App\Models\User;
+use App\Services\Commerce\CommercialProductPublisher;
+use KMJ\MainPlatform\Entitlements\Models\EntitlementPolicy;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -196,6 +198,89 @@ final class OwnerDirectoryHttpTest extends TestCase
                 'name' => 'x',
             ])->assertSessionHasErrors('name');
         $this->assertSame('Protected Customer', $customer->fresh()->name);
+    }
+
+    public function test_owner_can_issue_audited_release_ready_product_entitlement_only_once(): void
+    {
+        $owner = $this->owner();
+        $org = app(OrganizationCreator::class)->create('Entitlement Customer', $owner->id);
+        $product = app(CommercialProductPublisher::class)->publish('directory-eligible-product', 'Directory Eligible Product');
+        $product->forceFill(['licensing_enabled' => true, 'lifecycle' => 'available'])->save();
+        $policy = EntitlementPolicy::query()->where('product_id', $product->getKey())->firstOrFail();
+
+        $payload = [
+            'policy_id' => $policy->getKey(),
+            'reason' => 'Owner approved complimentary customer access',
+            'confirmation' => 'GRANT_PRODUCT_ACCESS',
+        ];
+        $url = '/operator/directory/organizations/'.$org->getKey().'/access';
+
+        $this->actingAs($owner)
+            ->withSession(['auth.password_confirmed_at' => time()])
+            ->post($url, $payload)->assertRedirect();
+
+        $this->assertDatabaseHas('entitlements', [
+            'organization_id' => (string) $org->getKey(),
+            'policy_id' => (string) $policy->getKey(),
+            'product_id' => (string) $product->getKey(),
+            'status' => 'active',
+        ]);
+        $this->assertDatabaseHas('operator_action_audits', [
+            'actor_user_id' => $owner->id,
+            'action' => 'customer.product_entitlement_granted',
+            'outcome' => 'success',
+        ]);
+        $this->actingAs($owner)
+            ->withSession(['auth.password_confirmed_at' => time()])
+            ->post($url, $payload)->assertSessionHasErrors('policy_id');
+        $this->assertDatabaseCount('entitlements', 1);
+    }
+
+    public function test_manual_grant_fails_closed_for_unavailable_products_and_no_confirmation(): void
+    {
+        $owner = $this->owner();
+        $org = app(OrganizationCreator::class)->create('Not Eligible Customer', $owner->id);
+        $product = app(CommercialProductPublisher::class)->publish('directory-unready-product', 'Not Ready Product');
+        $policy = EntitlementPolicy::query()->where('product_id', $product->getKey())->firstOrFail();
+        $url = '/operator/directory/organizations/'.$org->getKey().'/access';
+
+        $this->actingAs($owner)
+            ->withSession(['auth.password_confirmed_at' => time()])
+            ->post($url, [
+                'policy_id' => $policy->getKey(),
+                'reason' => 'An approved manual licensing decision',
+                'confirmation' => 'YES',
+            ])->assertSessionHasErrors('confirmation');
+
+        $this->actingAs($owner)
+            ->withSession(['auth.password_confirmed_at' => time()])
+            ->post($url, [
+                'policy_id' => $policy->getKey(),
+                'reason' => 'An approved manual licensing decision',
+                'confirmation' => 'GRANT_PRODUCT_ACCESS',
+            ])->assertNotFound();
+
+        $this->assertDatabaseCount('entitlements', 0);
+    }
+
+    public function test_untrusted_user_cannot_grant_an_entitlement(): void
+    {
+        $owner = $this->owner();
+        $regular = User::factory()->create(['email_verified_at' => now()]);
+        $org = app(OrganizationCreator::class)->create('Protected Licensing Org', $owner->id);
+        $product = app(CommercialProductPublisher::class)->publish('directory-protected-product', 'Protected Product');
+        $product->forceFill(['licensing_enabled' => true, 'lifecycle' => 'available'])->save();
+        $policy = EntitlementPolicy::query()->where('product_id', $product->getKey())->firstOrFail();
+
+        $this->actingAs($regular)
+            ->withSession(['auth.password_confirmed_at' => time()])
+            ->post('/operator/directory/organizations/'.$org->getKey().'/access', [
+                'policy_id' => $policy->getKey(),
+                'reason' => 'Attempted unauthorized license grant',
+                'confirmation' => 'GRANT_PRODUCT_ACCESS',
+            ])->assertForbidden();
+
+        $this->assertDatabaseCount('entitlements', 0);
     }
 
     private function owner(): User
