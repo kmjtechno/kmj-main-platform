@@ -31,7 +31,7 @@ export default function ProductShare({ name, slug }: ProductShareProps) {
     }
     return (
         <div className="mt-7">
-            <div className="text-[9px] font-black tracking-[0.16em] text-white/28 uppercase">
+            <div className="text-xs font-black tracking-[0.16em] text-white/70 uppercase">
                 Share this product
             </div>
             <div className="mt-3 flex flex-wrap gap-2">
