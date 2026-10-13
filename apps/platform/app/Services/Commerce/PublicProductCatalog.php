@@ -96,10 +96,6 @@ final class PublicProductCatalog
             default => $this->ownerManagedProduct($product),
         };
 
-        if ($presented === null) {
-            return null;
-        }
-
         $slug = (string) $product->getAttribute('slug');
 
         return [
