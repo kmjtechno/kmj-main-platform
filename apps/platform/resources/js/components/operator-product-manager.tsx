@@ -213,11 +213,13 @@ function ManagedProductEditor({
     products,
     onDragStart,
     onDrop,
+    allowReorder,
 }: {
     product: ManagedProduct;
     products: ManagedProduct[];
     onDragStart: (productId: string) => void;
     onDrop: (productId: string) => void;
+    allowReorder: boolean;
 }) {
     const form = useForm({
         name: product.name,
@@ -238,6 +240,7 @@ function ManagedProductEditor({
     };
 
     const move = (offset: -1 | 1) => {
+        if (!allowReorder) return;
         const index = products.findIndex((item) => item.id === product.id);
         const target = index + offset;
         if (index < 0 || target < 0 || target >= products.length) return;
@@ -256,15 +259,16 @@ function ManagedProductEditor({
             onDragOver={(event) => event.preventDefault()}
             onDrop={(event: DragEvent<HTMLFormElement>) => {
                 event.preventDefault();
-                onDrop(product.id);
+                if (allowReorder) onDrop(product.id);
             }}
             className="group grid gap-4 rounded-2xl border border-white/[0.08] bg-white/[0.025] p-4 transition hover:border-red-500/30 hover:bg-white/[0.04] xl:grid-cols-[1.1fr_.75fr_.85fr_auto]"
         >
             <div className="flex items-center gap-2 xl:col-span-4">
                 <button
                     type="button"
-                    draggable
-                    onDragStart={() => onDragStart(product.id)}
+                    draggable={allowReorder}
+                    disabled={!allowReorder}
+                    onDragStart={() => { if (allowReorder) onDragStart(product.id); }}
                     aria-label={`Drag ${product.name} to reorder`}
                     className="text-muted-foreground hover:text-foreground cursor-grab rounded-lg border p-2 active:cursor-grabbing"
                 >
@@ -409,7 +413,7 @@ function ManagedProductEditor({
                     <button
                         type="button"
                         aria-label={`Move ${product.name} up`}
-                        disabled={products[0]?.id === product.id}
+                        disabled={!allowReorder || products[0]?.id === product.id}
                         onClick={() => move(-1)}
                         className="rounded-lg border px-3 py-2 text-xs font-bold disabled:opacity-30"
                     >
@@ -419,7 +423,7 @@ function ManagedProductEditor({
                         type="button"
                         aria-label={`Move ${product.name} down`}
                         disabled={
-                            products[products.length - 1]?.id === product.id
+                            !allowReorder || products[products.length - 1]?.id === product.id
                         }
                         onClick={() => move(1)}
                         className="rounded-lg border px-3 py-2 text-xs font-bold disabled:opacity-30"
@@ -453,7 +457,7 @@ export function ProductManager({ products, search = '', category = 'all', lifecy
     }, [products]);
 
     const drop = (targetId: string) => {
-        if (draggedId === null || draggedId === targetId || reordering) {
+        if (!allowReorder || draggedId === null || draggedId === targetId || reordering) {
             setDraggedId(null);
             return;
         }
@@ -498,6 +502,7 @@ export function ProductManager({ products, search = '', category = 'all', lifecy
         (product) => product.licensing_enabled,
     ).length;
     const hiddenCount = orderedProducts.length - publicCount;
+    const allowReorder = search.trim() === '' && category === 'all' && lifecycle === 'all';
     const shown = orderedProducts.filter((product) =>
         (category === 'all' || product.category === category) &&
         (lifecycle === 'all' || product.lifecycle === lifecycle) &&
@@ -546,6 +551,7 @@ export function ProductManager({ products, search = '', category = 'all', lifecy
                 </div>
             </div>
             <div className="relative mb-4 rounded-xl border border-white/[0.07] bg-white/[0.025] px-4 py-3 text-[11px] leading-5 text-white/50">
+                {allowReorder ? 'Drag or use arrows to reorder the entire catalog. ' : 'Clear all filters before changing the product order. '}
                 Changes here are the governed source for public visibility,
                 lifecycle, artwork and landing-page order. Purchase remains
                 fail-closed unless the product is Available.
@@ -558,6 +564,7 @@ export function ProductManager({ products, search = '', category = 'all', lifecy
                         products={orderedProducts}
                         onDragStart={setDraggedId}
                         onDrop={drop}
+                        allowReorder={allowReorder}
                     />
                 ))}
                 {shown.length === 0 && (
