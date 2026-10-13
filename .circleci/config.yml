@@ -44,6 +44,13 @@ jobs:
             cd apps/platform
             composer install --no-interaction --prefer-dist --no-progress
       - run:
+          name: Full frontend check (Vite+ format and lint, source contracts, layout)
+          no_output_timeout: 8m
+          command: |
+            set -euo pipefail
+            cd apps/platform
+            npm run check
+      - run:
           name: No-network local CodeBridge device-control verification
           no_output_timeout: 8m
           command: |
@@ -70,3 +77,4 @@ workflows:
                 - feat/codebridge-control-center-hub-20261012
                 - fix/gemini-spark-oauth-on-control-center-hub
                 - fix/codebridge-compact-workspace-tabs-20261013
+                - claude/codebridge-production-completion-n6lu61
