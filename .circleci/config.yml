@@ -123,6 +123,7 @@ workflows:
                 - fix/gemini-spark-oauth-on-control-center-hub
                 - fix/codebridge-compact-workspace-tabs-20261013
                 - claude/codebridge-production-completion-n6lu61
+                - release/codebridge-claude-ui-verified-20261013
       - php_pint:
           filters:
             branches:
@@ -133,6 +134,7 @@ workflows:
                 - fix/gemini-spark-oauth-on-control-center-hub
                 - fix/codebridge-compact-workspace-tabs-20261013
                 - claude/codebridge-production-completion-n6lu61
+                - release/codebridge-claude-ui-verified-20261013
       - php_phpstan:
           filters:
             branches:
@@ -143,3 +145,4 @@ workflows:
                 - fix/gemini-spark-oauth-on-control-center-hub
                 - fix/codebridge-compact-workspace-tabs-20261013
                 - claude/codebridge-production-completion-n6lu61
+                - release/codebridge-claude-ui-verified-20261013
