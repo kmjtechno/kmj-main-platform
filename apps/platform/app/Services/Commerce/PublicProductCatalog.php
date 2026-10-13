@@ -13,7 +13,6 @@ final class PublicProductCatalog
     public function all(): array
     {
         return Product::query()
-            ->whereIn('slug', $this->publicSlugs())
             ->where('is_public', true)
             ->orderBy('sort_order')
             ->orderBy('name')
@@ -37,10 +36,6 @@ final class PublicProductCatalog
      */
     public function find(string $slug): ?array
     {
-        if (! in_array($slug, $this->publicSlugs(), true)) {
-            return null;
-        }
-
         return $this->present(
             Product::query()
                 ->where('slug', $slug)
@@ -98,22 +93,68 @@ final class PublicProductCatalog
             KmjProductCatalog::CINEMA_PLAYER_SLUG => $this->developmentProduct(slug: KmjProductCatalog::CINEMA_PLAYER_SLUG, name: KmjProductCatalog::CINEMA_PLAYER_NAME, lifecycle: 'development', lifecycleLabel: 'Research', eyebrow: 'Professional cinema playback', headline: 'A dedicated cinema playback product within the wider KMJ cinema technology direction.', summary: 'KMJ Cinema Player is the focused playback product identity. Engineering evidence supports an active cinema-player development stream, while public commercial release remains gated.', status: 'Active development; a current customer-ready public release is not independently verified.', proof: [['title' => 'Playback product identity', 'detail' => 'Cinema Player is kept distinct from the broader Cinema Platform product boundary.', 'state' => 'platform-verified'], ['title' => 'Commercial release not asserted', 'detail' => 'Download and purchase remain disabled until an accepted release is available.', 'state' => 'fail-closed']]),
             KmjProductCatalog::IMMERSIVE_CINEMA_SUITE_SLUG => $this->developmentProduct(slug: KmjProductCatalog::IMMERSIVE_CINEMA_SUITE_SLUG, name: KmjProductCatalog::IMMERSIVE_CINEMA_SUITE_NAME, lifecycle: 'roadmap', lifecycleLabel: 'Planned', eyebrow: 'Multi-format immersive cinema', headline: 'One immersive cinema product line spanning 5D through 16D and 5DX experiences.', summary: 'KMJ Immersive Cinema Suite groups the 5D, 7D, 9D, 12D, 14D, 16D and 5DX formats under one product boundary so customers can understand the experience family without treating each format as a separate product.', status: 'Roadmap product family; commercial availability is not asserted until product-specific release evidence is accepted.', proof: [['title' => 'Single product boundary', 'detail' => '5D, 7D, 9D, 12D, 14D, 16D and 5DX are presented as formats within one KMJ Immersive Cinema Suite product.', 'state' => 'platform-verified'], ['title' => 'Availability remains gated', 'detail' => 'No format is presented as generally available until its release and deployment evidence is verified.', 'state' => 'fail-closed']], variants: ['5D', '7D', '9D', '12D', '14D', '16D', '5DX']),
             KmjProductCatalog::LICENSING_HUB_SLUG => $this->developmentProduct(slug: KmjProductCatalog::LICENSING_HUB_SLUG, name: KmjProductCatalog::LICENSING_HUB_NAME, lifecycle: 'development', lifecycleLabel: 'Research', eyebrow: 'Entitlement + licensing authority', headline: 'The governed licensing layer designed to connect KMJ products with customer entitlements and controlled access.', summary: 'KMJ Licensing Hub represents the Main Platform licensing and entitlement capability. Sandbox issuance, validation and revocation boundaries exist; production signing and key custody remain release-gated.', status: 'Sandbox licensing capability exists; production signing authority is not yet declared customer-ready.', proof: [['title' => 'Licensing boundary', 'detail' => 'Sandbox license issuance, validation and revocation are implemented behind explicit product authority.', 'state' => 'repository-verified'], ['title' => 'Production keys fail closed', 'detail' => 'Production signing and key custody remain outside the sandbox boundary until separately approved and verified.', 'state' => 'fail-closed']]),
-            default => null,
+            default => $this->ownerManagedProduct($product),
         };
-
-        if ($presented === null) {
-            return null;
-        }
 
         $slug = (string) $product->getAttribute('slug');
 
         return [
             ...$this->applyManagement($product, $presented),
-            'category' => $this->categoryForSlug($slug),
+            'category' => $this->categoryForProduct($product),
             'family' => str_contains($slug, 'cinema') || $slug === KmjProductCatalog::DOME_SLUG
                 ? 'KMJ Cinema & Immersive Systems'
                 : null,
         ];
+    }
+
+    private function categoryForProduct(Product $product): string
+    {
+        $category = (string) $product->getAttribute('category');
+
+        return match ($category) {
+            'cloud' => 'Cloud & Infrastructure',
+            'cinema' => 'Cinema & Immersive',
+            'industrial' => 'Industrial & Calibration',
+            'developer' => 'Developer & AI',
+            'business' => 'Business & Platform',
+            default => $this->categoryForSlug((string) $product->getAttribute('slug')),
+        };
+    }
+
+    /**
+     * A governed owner-created public listing is a status page, never an
+     * implicit signed license, download, public proof, or checkout.
+     *
+     * @return array<string, mixed>
+     */
+    private function ownerManagedProduct(Product $product): array
+    {
+        $name = (string) $product->getAttribute('name');
+        $slug = (string) $product->getAttribute('slug');
+        $summary = trim((string) ($product->getAttribute('summary') ?? ''));
+
+        return $this->developmentProduct(
+            slug: $slug,
+            name: $name,
+            lifecycle: 'roadmap',
+            lifecycleLabel: 'Status',
+            eyebrow: 'KMJ TECHNO product catalog',
+            headline: $name,
+            summary: $summary !== '' ? $summary : 'Product information is being prepared by KMJ TECHNO.',
+            status: 'Owner-managed catalog entry. No independently accepted commercial release or licensing activation is implied.',
+            proof: [
+                [
+                    'title' => 'Governed catalog identity',
+                    'detail' => 'This product is listed through the owner-managed Main Platform catalog.',
+                    'state' => 'platform-verified',
+                ],
+                [
+                    'title' => 'Commercial access remains separately governed',
+                    'detail' => 'Publication alone does not grant purchase, signed licensing, entitlements or downloads.',
+                    'state' => 'fail-closed',
+                ],
+            ],
+        );
     }
 
     private function categoryForSlug(string $slug): string

@@ -73,39 +73,36 @@ export function AppSidebar() {
     const operator = usePage().props.operator as
         | { enabled?: boolean }
         | undefined;
-    const mainNavItems: NavItem[] = [
-        ...baseNavItems,
-        ...(operator?.enabled
-            ? [
-                  { title: 'Super Admin', href: '/operator', icon: Crown },
-                  {
-                      title: 'Customers & Organizations',
-                      href: '/operator/directory',
-                      icon: Crown,
-                  },
-                  {
-                      title: 'Licensing Governance',
-                      href: '/operator/kslp',
-                      icon: KeyRound,
-                  },
-                  {
-                      title: 'Gateway Settings',
-                      href: '/operator/payments',
-                      icon: CreditCard,
-                  },
-                  {
-                      title: 'Product Manager',
-                      href: '/operator#product-manager',
-                      icon: PackageOpen,
-                  },
-                  {
-                      title: 'Ops Command Center',
-                      href: '/operator/ops',
-                      icon: Activity,
-                  },
-              ]
-            : []),
-    ];
+    const ownerNavItems: NavItem[] = operator?.enabled
+        ? [
+              { title: 'Overview', href: '/operator', icon: Crown },
+              {
+                  title: 'Product Management',
+                  href: '/operator/products',
+                  icon: PackageOpen,
+              },
+              {
+                  title: 'Licensing Center',
+                  href: '/operator/kslp',
+                  icon: KeyRound,
+              },
+              {
+                  title: 'Customers & Organizations',
+                  href: '/operator/directory',
+                  icon: Crown,
+              },
+              {
+                  title: 'Payment Gateways',
+                  href: '/operator/payments',
+                  icon: CreditCard,
+              },
+              {
+                  title: 'Operations',
+                  href: '/operator/ops',
+                  icon: Activity,
+              },
+          ]
+        : [];
 
     return (
         <Sidebar collapsible="icon" variant="inset">
@@ -122,7 +119,10 @@ export function AppSidebar() {
             </SidebarHeader>
 
             <SidebarContent>
-                <NavMain items={mainNavItems} />
+                <NavMain items={baseNavItems} label="My workspace" />
+                {ownerNavItems.length > 0 && (
+                    <NavMain items={ownerNavItems} label="Super Admin" />
+                )}
             </SidebarContent>
 
             <SidebarFooter>

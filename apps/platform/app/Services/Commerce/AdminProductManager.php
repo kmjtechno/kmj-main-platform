@@ -11,6 +11,8 @@ final class AdminProductManager
 {
     public const LIFECYCLES = ['available', 'preview', 'public-beta', 'research', 'planned', 'retired'];
 
+    public const CATEGORIES = ['cloud', 'cinema', 'industrial', 'developer', 'business', 'other'];
+
     /**
      * @return array<string, mixed>
      */
@@ -22,6 +24,7 @@ final class AdminProductManager
             'slug' => [$presence, 'string', 'max:96', 'regex:/^[a-z0-9]+(?:-[a-z0-9]+)*$/', Rule::unique('products', 'slug')->ignore($product?->getKey())],
             'name' => [$presence, 'string', 'min:2', 'max:160'],
             'lifecycle' => [$presence, Rule::in(self::LIFECYCLES)],
+            'category' => ['sometimes', Rule::in(self::CATEGORIES)],
             'is_public' => [$presence, 'boolean'],
             'image_path' => ['sometimes', 'nullable', 'string', 'max:255'],
             'summary' => ['sometimes', 'nullable', 'string', 'max:2000'],
@@ -38,6 +41,7 @@ final class AdminProductManager
         return DB::transaction(function () use ($attributes): Product {
             $attributes['status'] ??= 'sandbox';
             $attributes['lifecycle'] ??= 'planned';
+            $attributes['category'] ??= 'other';
             $attributes['sort_order'] ??= ((int) Product::query()->max('sort_order')) + 10;
 
             $attributes = $this->normalized($attributes);
@@ -111,6 +115,9 @@ final class AdminProductManager
     {
         if (isset($attributes['lifecycle']) && ! in_array($attributes['lifecycle'], self::LIFECYCLES, true)) {
             throw new DomainException('Unsupported product lifecycle.');
+        }
+        if (isset($attributes['category']) && ! in_array($attributes['category'], self::CATEGORIES, true)) {
+            throw new DomainException('Unsupported product category.');
         }
         foreach (['is_public', 'purchase_enabled', 'licensing_enabled'] as $key) {
             if (array_key_exists($key, $attributes)) {

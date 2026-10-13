@@ -162,7 +162,8 @@ final class KmjProductCatalog
             return;
         }
 
-        $untouched = (bool) $product->getAttribute('is_public') === false
+        $untouched = (string) $product->getAttribute('category') === 'other'
+            && (bool) $product->getAttribute('is_public') === false
             && (int) $product->getAttribute('sort_order') === 100
             && (string) $product->getAttribute('lifecycle') === 'planned'
             && $product->getAttribute('image_path') === null
@@ -199,7 +200,22 @@ final class KmjProductCatalog
 
         [$lifecycle, $sortOrder, $imagePath, $purchaseEnabled, $licensingEnabled] = $defaults;
 
+        // Categorize only untouched canonical registrations; later owner
+        // edits must never be overwritten by a catalog synchronization.
+        $category = match ($slug) {
+            self::CLOUDOS_SLUG, self::CLOUD_NEXUS_SLUG => 'cloud',
+            self::CINEMA_PLATFORM_SLUG, self::DOME_SLUG,
+            self::CINEMA_PLAYER_SLUG, self::IMMERSIVE_CINEMA_SUITE_SLUG => 'cinema',
+            self::CALIBRATION_SLUG => 'industrial',
+            self::CODEBRIDGE_SLUG, self::FORGE_SLUG,
+            self::AGENT_SLUG, self::DESKTOP_COMMANDER_SLUG => 'developer',
+            self::OMNIDESK_SLUG, self::CONNECT_SLUG,
+            self::LICENSING_HUB_SLUG, self::CREATIVE_STUDIO_SLUG => 'business',
+            default => 'other',
+        };
+
         $product->forceFill([
+            'category' => $category,
             'lifecycle' => $lifecycle,
             'is_public' => true,
             'sort_order' => $sortOrder,

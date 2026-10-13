@@ -16,6 +16,7 @@ final class Product extends Model
         'name',
         'status',
         'lifecycle',
+        'category',
         'is_public',
         'sort_order',
         'image_path',

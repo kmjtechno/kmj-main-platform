@@ -152,7 +152,389 @@ jobs:
             echo "tests passed: ${passed:-none}"
             test "${passed:-0}" -ge 97
 
+  owner_admin_preflight:
+    docker:
+      - image: cimg/php:8.4-node
+    resource_class: small
+    steps:
+      - checkout
+      - run:
+          name: Immutable source identity and PHP syntax
+          command: |
+            set -euo pipefail
+            test "$(git rev-parse HEAD)" = "$CIRCLE_SHA1"
+            php -l apps/platform/routes/product-manager.php
+            php -l apps/platform/routes/kslp-admin.php
+            php -l apps/platform/tests/Feature/OwnerProductManagementWorkspaceTest.php
+            php -l apps/platform/tests/Feature/OwnerLicensingCenterHttpTest.php
+            php -l packages/domain-catalog/database/migrations/2026_10_14_000230_add_category_to_products_table.php
+      - run:
+          name: No-dependency admin source regression tests
+          command: |
+            set -euo pipefail
+            cd apps/platform
+            node --test scripts/check-owner-dashboard.test.mjs scripts/check-licensing-integration.test.mjs scripts/check-codebridge-safe-onboarding.test.mjs
+            echo "KMJ_ADMIN_ZERO_INSTALL_PREFLIGHT_PASS=1"
+
+  owner_admin_dependencies:
+    docker:
+      - image: cimg/php:8.4-node
+    resource_class: small
+    environment:
+      APP_ENV: testing
+      DB_CONNECTION: sqlite
+      DB_DATABASE: ":memory:"
+      QUEUE_CONNECTION: sync
+      CACHE_STORE: array
+      SESSION_DRIVER: array
+      MAIL_MAILER: array
+    steps:
+      - checkout
+      - run:
+          name: Verify exact head before dependency resolution
+          command: |
+            set -euo pipefail
+            test "$(git rev-parse HEAD)" = "$CIRCLE_SHA1"
+            echo "KMJ_ADMIN_SHA=$CIRCLE_SHA1"
+      - run:
+          name: Exact composer.lock install on fresh test container
+          no_output_timeout: 10m
+          command: |
+            set -euo pipefail
+            cd apps/platform
+            composer install --no-interaction --prefer-dist --no-progress
+            test -f vendor/autoload.php
+      - run:
+          name: Exact npm lockfile install on fresh test container
+          no_output_timeout: 10m
+          command: |
+            set -euo pipefail
+            cd apps/platform
+            npm ci --ignore-scripts --no-audit --no-fund
+            test -d node_modules
+            echo "KMJ_ADMIN_DEPENDENCIES_PASS=1"
+
+  owner_admin_frontend_lint:
+    docker:
+      - image: cimg/php:8.4-node
+    resource_class: small
+    steps:
+      - checkout
+      - run:
+          name: Exact npm lockfile
+          command: |
+            set -euo pipefail
+            test "$(git rev-parse HEAD)" = "$CIRCLE_SHA1"
+            cd apps/platform
+            npm ci --ignore-scripts --no-audit --no-fund
+      - run:
+          name: Frontend format, lint and source contract suite
+          command: |
+            set -euo pipefail
+            cd apps/platform
+            npm run check
+            echo "KMJ_ADMIN_FRONTEND_CHECK_PASS=1"
+
+  owner_admin_frontend_types:
+    docker:
+      - image: cimg/php:8.4-node
+    resource_class: small
+    steps:
+      - checkout
+      - run:
+          name: Generate Laravel Wayfinder types and validate exact-head TypeScript
+          no_output_timeout: 10m
+          command: |
+            set -euo pipefail
+            test "$(git rev-parse HEAD)" = "$CIRCLE_SHA1"
+            cd apps/platform
+            composer install --no-interaction --prefer-dist --no-progress
+            npm ci --ignore-scripts --no-audit --no-fund
+            export APP_ENV=testing APP_KEY="base64:$(php -r 'echo base64_encode(random_bytes(32));')"
+            export DB_CONNECTION=sqlite DB_DATABASE=:memory:
+            php artisan wayfinder:generate --with-form --no-ansi
+            test -f resources/js/routes/index.ts
+            npm run types:check
+            echo "KMJ_ADMIN_TYPES_PASS=1"
+
+  owner_admin_php_quality:
+    docker:
+      - image: cimg/php:8.4-node
+    resource_class: small
+    environment:
+      APP_ENV: testing
+      DB_CONNECTION: sqlite
+      DB_DATABASE: ":memory:"
+    steps:
+      - checkout
+      - run:
+          name: Laravel Pint and PHPStan exact-head check
+          no_output_timeout: 10m
+          command: |
+            set -euo pipefail
+            test "$(git rev-parse HEAD)" = "$CIRCLE_SHA1"
+            cd apps/platform
+            composer install --no-interaction --prefer-dist --no-progress
+            vendor/bin/pint --test
+            vendor/bin/phpstan analyse --no-progress --memory-limit=1G
+            echo "KMJ_ADMIN_PHP_QUALITY_PASS=1"
+
+  owner_admin_build_probe:
+    docker:
+      - image: cimg/php:8.4-node
+    resource_class: small
+    environment:
+      APP_ENV: testing
+      DB_CONNECTION: sqlite
+      DB_DATABASE: ":memory:"
+    steps:
+      - checkout
+      - run:
+          name: Exact-SHA production frontend build diagnostic
+          no_output_timeout: 12m
+          command: |
+            set -euo pipefail
+            test "$(git rev-parse HEAD)" = "$CIRCLE_SHA1"
+            cd apps/platform
+            composer install --no-interaction --prefer-dist --no-progress
+            npm ci --ignore-scripts --no-audit --no-fund
+            export APP_KEY="base64:$(php -r 'echo base64_encode(random_bytes(32));')"
+            php artisan wayfinder:generate --with-form --no-ansi
+            npm run build
+            test -s public/build/manifest.json
+            echo "KMJ_ADMIN_BUILD_PROBE_PASS=1"
+
+  owner_admin_product_tests:
+    docker:
+      - image: cimg/php:8.4-node
+    resource_class: small
+    environment:
+      APP_ENV: testing
+      DB_CONNECTION: sqlite
+      DB_DATABASE: ":memory:"
+      CACHE_STORE: array
+      SESSION_DRIVER: array
+      QUEUE_CONNECTION: sync
+      MAIL_MAILER: array
+    steps:
+      - checkout
+      - run:
+          name: Exact-SHA product and public catalog Laravel tests
+          no_output_timeout: 10m
+          command: |
+            set -euo pipefail
+            test "$(git rev-parse HEAD)" = "$CIRCLE_SHA1"
+            cd apps/platform
+            composer install --no-interaction --prefer-dist --no-progress
+            printf '# isolated CI only\n' > .env
+            export APP_KEY="base64:$(php -r 'echo base64_encode(random_bytes(32));')"
+            php artisan test --filter='OwnerProductManagementWorkspaceTest|PublicProductHubTest|KmjProductCatalogTest' --no-ansi
+            echo "KMJ_ADMIN_PRODUCT_TESTS_PASS=1"
+
+  owner_admin_licensing_tests:
+    docker:
+      - image: cimg/php:8.4-node
+    resource_class: small
+    environment:
+      APP_ENV: testing
+      DB_CONNECTION: sqlite
+      DB_DATABASE: ":memory:"
+      CACHE_STORE: array
+      SESSION_DRIVER: array
+      QUEUE_CONNECTION: sync
+      MAIL_MAILER: array
+    steps:
+      - checkout
+      - run:
+          name: Exact-SHA owner licensing and audit Laravel tests
+          no_output_timeout: 10m
+          command: |
+            set -euo pipefail
+            test "$(git rev-parse HEAD)" = "$CIRCLE_SHA1"
+            cd apps/platform
+            composer install --no-interaction --prefer-dist --no-progress
+            printf '# isolated CI only\n' > .env
+            export APP_KEY="base64:$(php -r 'echo base64_encode(random_bytes(32));')"
+            php artisan test --filter='OwnerLicensingCenterHttpTest|PlatformOwnerConsoleTest|KslpLifecycleTest' --no-ansi
+            echo "KMJ_ADMIN_LICENSING_TESTS_PASS=1"
+
+  owner_admin_schema_tests:
+    docker:
+      - image: cimg/php:8.4-node
+    resource_class: small
+    environment:
+      APP_ENV: testing
+      DB_CONNECTION: sqlite
+      CACHE_STORE: array
+      SESSION_DRIVER: array
+      QUEUE_CONNECTION: sync
+    steps:
+      - checkout
+      - run:
+          name: Exact-SHA isolated SQLite schema migrate and rollback
+          no_output_timeout: 8m
+          command: |
+            set -euo pipefail
+            test "$(git rev-parse HEAD)" = "$CIRCLE_SHA1"
+            cd apps/platform
+            composer install --no-interaction --prefer-dist --no-progress
+            printf '# disposable SQLite migration test only\n' > .env
+            export APP_KEY="base64:$(php -r 'echo base64_encode(random_bytes(32));')"
+            export DB_DATABASE="$PWD/database/owner-qa-rollback.sqlite"
+            test ! -e "$DB_DATABASE"
+            touch "$DB_DATABASE"
+            trap 'rm -f -- "$DB_DATABASE"' EXIT
+            php artisan migrate --force --no-ansi
+            php artisan migrate:rollback --step=1 --force --no-ansi
+            echo "KMJ_ADMIN_SCHEMA_ROLLBACK_PASS=1"
+
+  owner_admin_release:
+    docker:
+      - image: cimg/php:8.4-node
+    resource_class: small
+    environment:
+      APP_ENV: testing
+      DB_CONNECTION: sqlite
+      DB_DATABASE: ":memory:"
+      QUEUE_CONNECTION: sync
+      CACHE_STORE: array
+      SESSION_DRIVER: array
+      MAIL_MAILER: array
+      BROADCAST_CONNECTION: log
+      FILESYSTEM_DISK: local
+    steps:
+      - checkout
+      - run:
+          name: Verify exact pinned candidate, no production environment
+          command: |
+            set -euo pipefail
+            test "$(git rev-parse HEAD)" = "$CIRCLE_SHA1"
+            test -f apps/platform/resources/js/pages/operator-products.tsx
+            test -f apps/platform/tests/Feature/OwnerLicensingCenterHttpTest.php
+            test -f packages/domain-catalog/database/migrations/2026_10_14_000230_add_category_to_products_table.php
+            test ! -e apps/platform/.env
+            echo "KMJ_ADMIN_RC_SHA=$CIRCLE_SHA1"
+      - run:
+          name: Install isolated PHP and frontend dependencies
+          no_output_timeout: 12m
+          command: |
+            set -euo pipefail
+            cd apps/platform
+            composer install --no-interaction --prefer-dist --no-progress
+            npm ci --ignore-scripts --no-audit --no-fund
+      - run:
+          name: PHP syntax, strict formatter and static analysis
+          no_output_timeout: 10m
+          command: |
+            set -euo pipefail
+            php -l apps/platform/routes/product-manager.php
+            php -l apps/platform/routes/kslp-admin.php
+            php -l apps/platform/tests/Feature/OwnerProductManagementWorkspaceTest.php
+            php -l apps/platform/tests/Feature/OwnerLicensingCenterHttpTest.php
+            php -l packages/domain-catalog/database/migrations/2026_10_14_000230_add_category_to_products_table.php
+            cd apps/platform
+            vendor/bin/pint --test
+            vendor/bin/phpstan analyse --no-progress --memory-limit=1G
+      - run:
+          name: Owner admin TypeScript, source contracts and production assets
+          no_output_timeout: 10m
+          command: |
+            set -euo pipefail
+            cd apps/platform
+            npm run check
+            export APP_KEY="base64:$(php -r 'echo base64_encode(random_bytes(32));')"
+            php artisan wayfinder:generate --with-form --no-ansi
+            test -f resources/js/routes/index.ts
+            npm run types:check
+            npm run build
+            test -s public/build/manifest.json
+      - run:
+          name: Owner product, license, audit and public catalog feature tests
+          no_output_timeout: 12m
+          command: |
+            set -euo pipefail
+            cd apps/platform
+            cp .env.example .env
+            php artisan key:generate --force --no-ansi
+            export APP_KEY="$(grep '^APP_KEY=' .env | cut -d= -f2-)"
+            set +e
+            php artisan test --filter='OwnerProductManagementWorkspaceTest|OwnerLicensingCenterHttpTest|PublicProductHubTest|KmjProductCatalogTest|PlatformOwnerConsoleTest|KslpLifecycleTest' --no-ansi > /tmp/kmj-owner-qa.log 2>&1
+            rc=$?
+            set -e
+            tail -n 100 /tmp/kmj-owner-qa.log
+            test "$rc" -eq 0
+            grep -Eq '[1-9][0-9]* passed' /tmp/kmj-owner-qa.log
+            echo "KMJ_ADMIN_RC_FEATURE_TESTS_PASS=1"
+      - run:
+          name: SQLite-only additive migration and rollback smoke
+          no_output_timeout: 5m
+          command: |
+            set -euo pipefail
+            cd apps/platform
+            database="$PWD/database/admin-ci.sqlite"
+            test ! -e "$database"
+            touch "$database"
+            trap 'rm -f -- "$database"' EXIT
+            export DB_CONNECTION=sqlite DB_DATABASE="$database"
+            php artisan migrate --force --no-ansi
+            php artisan migrate:rollback --step=1 --force --no-ansi
+            echo "KMJ_ADMIN_RC_SQLITE_MIGRATION_SMOKE_PASS=1"
+
 workflows:
+  review_owner_admin_release:
+    jobs:
+      - owner_admin_preflight:
+          filters:
+            branches:
+              only:
+                - release/super-admin-v1-integration-20261014
+      - owner_admin_frontend_lint:
+          filters:
+            branches:
+              only:
+                - release/super-admin-v1-integration-20261014
+      - owner_admin_frontend_types:
+          filters:
+            branches:
+              only:
+                - release/super-admin-v1-integration-20261014
+      - owner_admin_php_quality:
+          filters:
+            branches:
+              only:
+                - release/super-admin-v1-integration-20261014
+      - owner_admin_build_probe:
+          requires:
+            - owner_admin_preflight
+            - owner_admin_frontend_lint
+            - owner_admin_frontend_types
+            - owner_admin_php_quality
+          filters:
+            branches:
+              only:
+                - release/super-admin-v1-integration-20261014
+      - owner_admin_product_tests:
+          requires:
+            - owner_admin_build_probe
+          filters:
+            branches:
+              only:
+                - release/super-admin-v1-integration-20261014
+      - owner_admin_licensing_tests:
+          requires:
+            - owner_admin_build_probe
+          filters:
+            branches:
+              only:
+                - release/super-admin-v1-integration-20261014
+      - owner_admin_schema_tests:
+          requires:
+            - owner_admin_build_probe
+          filters:
+            branches:
+              only:
+                - release/super-admin-v1-integration-20261014
+
   review_codebridge_device_control:
     jobs:
       - codebridge_device_control:
