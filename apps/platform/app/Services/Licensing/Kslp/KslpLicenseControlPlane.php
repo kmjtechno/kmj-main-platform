@@ -72,25 +72,30 @@ final class KslpLicenseControlPlane
     {
         $existing = DB::table('kslp_activations')->where('idempotency_key', $idempotencyKey)->first();
         if ($existing) {
-            return (array) $existing;
-        }app(KslpActivationProof::class)->consume($challengeId, $licenseId, $serverIdentity, $nonce, $proof);
+            return $this->matchingActivation($existing, $licenseId, $serverIdentity, $machineHash);
+        }
 
-        return DB::transaction(function () use ($licenseId, $serverIdentity, $machineHash, $idempotencyKey, $actor) {
+        // Proof consumption and activation must commit atomically: failed
+        // ownership/seat checks should not burn a valid pairing challenge.
+        return DB::transaction(function () use ($licenseId, $serverIdentity, $machineHash, $idempotencyKey, $actor, $challengeId, $nonce, $proof) {
             $existing = DB::table('kslp_activations')->where('idempotency_key', $idempotencyKey)->first();
             if ($existing) {
-                return (array) $existing;
+                return $this->matchingActivation($existing, $licenseId, $serverIdentity, $machineHash);
             }
             $lic = DB::table('kslp_licenses')->where('id', $licenseId)->lockForUpdate()->first();
             if (! $lic) {
                 throw new DomainException('KSLP_LICENSE_NOT_FOUND');
-            }if ($lic->revoked_at) {
+            }
+            if ($lic->revoked_at) {
                 throw new DomainException('KSLP_REVOKED');
             }
+
+            app(KslpActivationProof::class)->consume($challengeId, $licenseId, $serverIdentity, $nonce, $proof);
+
             $active = DB::table('kslp_activations')->where('license_id', $licenseId)->whereNull('deactivated_at')->first();
-            if ($active && $active->server_identity !== $serverIdentity) {
-                throw new DomainException('KSLP_ACTIVATION_CONFLICT');
-            }
             if ($active) {
+                KslpActivationReplayGuard::requireMatch((array) $active, $licenseId, $serverIdentity, $machineHash);
+
                 return (array) $active;
             }$id = (string) Str::uuid();
             $now = now();
@@ -99,6 +104,28 @@ final class KslpLicenseControlPlane
 
             return (array) DB::table('kslp_activations')->where('id', $id)->first();
         }, 3);
+    }
+
+    /**
+     * Match idempotency retries to the original license and device, and deny
+     * replay after transfer or revocation.
+     *
+     * @return array<array-key, mixed>
+     */
+    private function matchingActivation(object $activation, string $licenseId, string $serverIdentity, string $machineHash): array
+    {
+        $record = (array) $activation;
+        KslpActivationReplayGuard::requireMatch($record, $licenseId, $serverIdentity, $machineHash);
+
+        $license = DB::table('kslp_licenses')->where('id', $licenseId)->first(['revoked_at']);
+        if ($license === null) {
+            throw new DomainException('KSLP_LICENSE_NOT_FOUND');
+        }
+        if ($license->revoked_at !== null) {
+            throw new DomainException('KSLP_REVOKED');
+        }
+
+        return (array) $activation;
     }
 
     /**
@@ -149,6 +176,22 @@ final class KslpLicenseControlPlane
         $this->requireReason($reason);
 
         return DB::transaction(function () use ($id, $server, $machine, $key, $actor, $reason, $challengeId, $nonce, $proof) {
+            // Serialize transfers against ordinary activations of this license.
+            $license = DB::table('kslp_licenses')->where('id', $id)->lockForUpdate()->first();
+            if ($license === null) {
+                throw new DomainException('KSLP_LICENSE_NOT_FOUND');
+            }
+            if ($license->revoked_at !== null) {
+                throw new DomainException('KSLP_REVOKED');
+            }
+
+            // An exact retry is successful without disabling the newly
+            // activated device or recording a second transfer event.
+            $existing = DB::table('kslp_activations')->where('idempotency_key', $key)->first();
+            if ($existing !== null) {
+                return $this->matchingActivation($existing, $id, $server, $machine);
+            }
+
             DB::table('kslp_activations')->where('license_id', $id)->whereNull('deactivated_at')->update(['deactivated_at' => now(), 'updated_at' => now()]);
             $this->event($id, $actor, 'transferred', $reason);
 
