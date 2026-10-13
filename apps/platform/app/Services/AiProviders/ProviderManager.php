@@ -34,25 +34,27 @@ final class ProviderManager
         return array_values(array_unique(array_map('strtolower', $hosts)));
     }
 
-    /** @param array{name: string, preset: string, base_url?: ?string, api_key: string, free_only?: bool} $data */
+    /** @param array<string, mixed> $data name, preset, api_key, optional base_url and free_only */
     public function create(string $organizationId, int $userId, array $data): AiProvider
     {
-        $preset = $this->presets()[$data['preset']] ?? throw new InvalidArgumentException('preset_unknown');
+        $presetKey = (string) ($data['preset'] ?? '');
+        $preset = $this->presets()[$presetKey] ?? throw new InvalidArgumentException('preset_unknown');
         $baseUrl = $preset['base_url'] ?? ($data['base_url'] ?? null);
         if (! is_string($baseUrl) || $baseUrl === '') {
             throw new InvalidArgumentException('endpoint_scheme');
         }
         $this->guard->validate($baseUrl, $this->approvedHosts());
+        $apiKey = (string) ($data['api_key'] ?? '');
 
         return AiProvider::query()->create([
             'organization_id' => $organizationId,
-            'name' => $data['name'],
-            'preset' => $data['preset'],
+            'name' => (string) ($data['name'] ?? ''),
+            'preset' => $presetKey,
             'kind' => 'openai-compatible',
             'base_url' => $baseUrl,
-            'api_key' => $data['api_key'],
-            'key_last4' => substr($data['api_key'], -4),
-            'free_only' => $data['free_only'] ?? true,
+            'api_key' => $apiKey,
+            'key_last4' => substr($apiKey, -4),
+            'free_only' => (bool) ($data['free_only'] ?? true),
             'created_by' => $userId,
         ]);
     }

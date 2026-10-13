@@ -7,6 +7,7 @@ namespace Tests\Unit\AiProviders;
 use App\Services\AiProviders\EndpointGuard;
 use App\Services\AiProviders\FreePolicy;
 use InvalidArgumentException;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use RuntimeException;
 
@@ -41,7 +42,7 @@ final class EndpointGuardTest extends TestCase
         ];
     }
 
-    /** @dataProvider rejectedUrls */
+    #[DataProvider('rejectedUrls')]
     public function test_unsafe_endpoints_are_rejected(string $url, string $code): void
     {
         $guard = new EndpointGuard(fn (): array => ['93.184.216.34']);
@@ -67,9 +68,10 @@ final class EndpointGuardTest extends TestCase
         ];
     }
 
-    /** @dataProvider privateAnswers
+    /**
      * @param  list<string>  $answers
      */
+    #[DataProvider('privateAnswers')]
     public function test_dns_answers_that_are_not_all_public_are_rejected(array $answers): void
     {
         $guard = new EndpointGuard(fn (): array => $answers);

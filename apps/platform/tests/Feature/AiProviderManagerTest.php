@@ -17,6 +17,7 @@ use Illuminate\Testing\TestResponse;
 use Inertia\Testing\AssertableInertia;
 use InvalidArgumentException;
 use RuntimeException;
+use Tests\Support\FakeAiProviderScope;
 use Tests\TestCase;
 
 final class AiProviderManagerTest extends TestCase
@@ -49,16 +50,7 @@ final class AiProviderManagerTest extends TestCase
             $this->member->id => ['organization_id' => $this->orgA, 'can_manage' => false],
             $this->outsider->id => ['organization_id' => $this->orgB, 'can_manage' => true],
         ];
-        $this->app->instance(ResolvesAiProviderScope::class, new class($scopes) implements ResolvesAiProviderScope
-        {
-            /** @param array<int, array{organization_id: string, can_manage: bool}> $scopes */
-            public function __construct(private readonly array $scopes) {}
-
-            public function for(User $user): array
-            {
-                return $this->scopes[$user->id] ?? abort(404);
-            }
-        });
+        $this->app->instance(ResolvesAiProviderScope::class, new FakeAiProviderScope($scopes));
         $this->app->instance(EndpointGuard::class, new EndpointGuard(fn (): array => ['93.184.216.34']));
     }
 
@@ -131,8 +123,13 @@ final class AiProviderManagerTest extends TestCase
         $this->add('Groq main');
         $id = AiProvider::query()->value('id');
 
-        foreach ([[401, 'auth_failed'], [429, 'rate_limited'], [503, 'unreachable']] as [$status, $health]) {
-            Http::fake(['api.groq.com/*' => Http::response(['error' => self::KEY], $status, ['Retry-After' => '30'])]);
+        // A single fake with a response sequence: later Http::fake() calls would not override the first.
+        Http::fake(['api.groq.com/*' => Http::sequence()
+            ->push(['error' => self::KEY], 401)
+            ->push(['error' => self::KEY], 429, ['Retry-After' => '30'])
+            ->push(['error' => self::KEY], 503)]);
+
+        foreach (['auth_failed', 'rate_limited', 'unreachable'] as $health) {
             $this->actingAs($this->owner)->post("/services/kmj-codebridge/ai-providers/{$id}/test")->assertRedirect();
             $provider = AiProvider::query()->findOrFail($id);
             $this->assertSame($health, $provider->health);

@@ -80,7 +80,7 @@ final class OpenAiCompatibleAdapter
     /**
      * Only counts the provider actually reports are "verified"; everything else stays unknown.
      *
-     * @param  array<string, list<string>>  $headers
+     * @param  array<string, array<int, string>>  $headers
      * @return array<string, mixed>
      */
     private function rateLimit(array $headers): array
