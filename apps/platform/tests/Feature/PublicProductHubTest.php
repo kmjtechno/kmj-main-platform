@@ -153,6 +153,54 @@ final class PublicProductHubTest extends TestCase
         }
     }
 
+    public function test_new_owner_published_product_gets_a_safe_public_page_without_commercial_access(): void
+    {
+        app(AdminProductManager::class)->create([
+            'slug' => 'kmj-custom-preview',
+            'name' => 'KMJ Custom Preview',
+            'category' => 'developer',
+            'lifecycle' => 'preview',
+            'is_public' => true,
+            'summary' => 'Verified owner-authored product summary.',
+            'purchase_enabled' => false,
+            'licensing_enabled' => false,
+        ]);
+
+        $this->get('/products')
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('products/index')
+                ->where('products', fn ($products): bool => collect($products)
+                    ->pluck('slug')->contains('kmj-custom-preview')));
+
+        $this->get('/products/kmj-custom-preview')
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('products/show')
+                ->where('product.slug', 'kmj-custom-preview')
+                ->where('product.purchase_enabled', false)
+                ->where('product.licensing_enabled', false)
+                ->where('product.demo.kind', 'none'));
+    }
+
+    public function test_new_hidden_product_is_never_publicly_discoverable(): void
+    {
+        app(AdminProductManager::class)->create([
+            'slug' => 'kmj-owner-private',
+            'name' => 'KMJ Owner Private',
+            'category' => 'developer',
+            'lifecycle' => 'research',
+            'is_public' => false,
+            'purchase_enabled' => false,
+            'licensing_enabled' => false,
+        ]);
+
+        $this->get('/products/kmj-owner-private')->assertNotFound();
+        $this->get('/products')->assertInertia(fn (Assert $page) => $page
+            ->where('products', fn ($products): bool => ! collect($products)
+                ->pluck('slug')->contains('kmj-owner-private')));
+    }
+
     public function test_unknown_product_is_not_found(): void
     {
         $this->get('/products/not-a-kmj-product')->assertNotFound();
