@@ -176,6 +176,44 @@ jobs:
             node --test scripts/check-owner-dashboard.test.mjs scripts/check-licensing-integration.test.mjs scripts/check-codebridge-safe-onboarding.test.mjs
             echo "KMJ_ADMIN_ZERO_INSTALL_PREFLIGHT_PASS=1"
 
+  owner_admin_dependencies:
+    docker:
+      - image: cimg/php:8.4-node
+    resource_class: small
+    environment:
+      APP_ENV: testing
+      DB_CONNECTION: sqlite
+      DB_DATABASE: ":memory:"
+      QUEUE_CONNECTION: sync
+      CACHE_STORE: array
+      SESSION_DRIVER: array
+      MAIL_MAILER: array
+    steps:
+      - checkout
+      - run:
+          name: Verify exact head before dependency resolution
+          command: |
+            set -euo pipefail
+            test "$(git rev-parse HEAD)" = "$CIRCLE_SHA1"
+            echo "KMJ_ADMIN_SHA=$CIRCLE_SHA1"
+      - run:
+          name: Exact composer.lock install on fresh test container
+          no_output_timeout: 10m
+          command: |
+            set -euo pipefail
+            cd apps/platform
+            composer install --no-interaction --prefer-dist --no-progress
+            test -f vendor/autoload.php
+      - run:
+          name: Exact npm lockfile install on fresh test container
+          no_output_timeout: 10m
+          command: |
+            set -euo pipefail
+            cd apps/platform
+            npm ci --ignore-scripts --no-audit --no-fund
+            test -d node_modules
+            echo "KMJ_ADMIN_DEPENDENCIES_PASS=1"
+
   owner_admin_release:
     docker:
       - image: cimg/php:8.4-node
@@ -273,7 +311,7 @@ workflows:
             branches:
               only:
                 - feat/owner-product-workspace-categories-20261014
-      - owner_admin_release:
+      - owner_admin_dependencies:
           filters:
             branches:
               only:
