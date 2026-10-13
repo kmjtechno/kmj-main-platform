@@ -75,9 +75,9 @@ const VSCODE_COPILOT_SETUP_URL =
 const DESKTOP_INSTALL_DESCRIPTION =
     'Download the KMJ Desktop setup once. It adds the official KMJ marketplace; CodeBridge is installed by default and opens browser OAuth on first use.';
 const CONNECTED_CLIENTS_DESCRIPTION =
-    'Review OAuth clients connected to this KMJ account and revoke refresh access at any time.';
+    'Manage this account's OAuth refresh grants. A grant does not confirm that an AI app is online.';
 const NO_CONNECTED_CLIENTS =
-    'No active CodeBridge OAuth client is connected to this account.';
+    'No authorized CodeBridge OAuth refresh grants are recorded for this account.';
 
 // VS Code expects exactly one percent-encoded MCP server configuration in
 // its registered URI handler; do not include tokens or the whole mcp.json.
@@ -856,8 +856,8 @@ function titleCase(value: string): string {
 function clientSummary(client: ConnectedClient): string {
     const sessions =
         client.sessions === 1
-            ? '1 active session'
-            : `${client.sessions} active sessions`;
+            ? '1 OAuth refresh grant'
+            : `${client.sessions} OAuth refresh grants`;
 
     return `${sessions} · Last active ${formatDateTime(client.last_active_at)}`;
 }
