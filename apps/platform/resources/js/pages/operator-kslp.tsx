@@ -95,7 +95,7 @@ export default function OperatorKslp({ metrics, licenses, events, filters, match
     };
     return (
         <>
-            <Head title="KSLP License Control Plane" />
+            <Head title="Licensing Center · Super Admin" />
             <div className="flex h-full flex-1 flex-col gap-6 overflow-x-auto p-4 sm:p-6">
                 <OperatorModuleNavigation active="licensing" />
                 <section className="bg-card rounded-2xl border p-6">
@@ -108,13 +108,14 @@ export default function OperatorKslp({ metrics, licenses, events, filters, match
                                 KMJ Main Platform authority
                             </div>
                             <h1 className="mt-1 text-2xl font-black">
-                                KSLP Commercial License Control Plane
+                                KMJ Licensing Center
                             </h1>
                             <p className="text-muted-foreground mt-2 max-w-3xl text-sm">
-                                CloudOS is a licensed product. Main Platform
-                                remains the commercial authority for issue,
-                                lifecycle, server activations and audit
-                                evidence.
+                                Main Platform is the common commercial authority.
+                                Search customers and manage existing KSLP
+                                license plans, renewals, activations and audit.
+                                Other product license protocols remain gated
+                                until their signed interoperability tests pass.
                             </p>
                         </div>
                     </div>
