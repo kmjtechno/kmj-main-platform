@@ -1,0 +1,125 @@
+name: UI smoke (real browser)
+
+# Real-Chrome checks of the public pages and the customer CodeBridge dashboard
+# (layout at 390/768/1280 px, images, console/network errors, axe accessibility,
+# keyboard access, official CodeBridge icon, "Manage devices"). See
+# apps/platform/scripts/ui-smoke.mjs. The app runs against a throwaway SQLite database.
+
+on:
+  pull_request:
+    paths:
+      - 'apps/platform/**'
+      - '.github/workflows/ui-smoke.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ui-smoke-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ui-smoke:
+    name: ui-smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    defaults:
+      run:
+        working-directory: apps/platform
+    env:
+      UI_BASE: http://127.0.0.1:8000
+      CHROME_PATH: /usr/bin/google-chrome
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Setup PHP 8.4
+        uses: shivammathur/setup-php@87d00bde2555f25eb54fedf940384e99cbdc55ef
+        with:
+          php-version: '8.4'
+          extensions: pdo_sqlite, sqlite3, sodium
+          coverage: none
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: apps/platform/package-lock.json
+
+      - name: Install dependencies and build assets
+        run: |
+          set -euo pipefail
+          composer install --no-interaction --prefer-dist --no-progress
+          npm ci --ignore-scripts --no-audit --no-fund
+          npm run build
+
+      - name: Prepare .env and a throwaway SQLite database
+        run: |
+          set -euo pipefail
+          cp .env.example .env
+          # artisan serve drops environment variables that are not on its short allow-list
+          # when a .env file exists, so the settings must live in .env itself.
+          set_env() {
+            if grep -q "^$1=" .env; then sed -i "s#^$1=.*#$1=$2#" .env; else echo "$1=$2" >> .env; fi
+          }
+          set_env APP_ENV local
+          set_env APP_DEBUG false
+          set_env APP_URL "$UI_BASE"
+          set_env DB_CONNECTION sqlite
+          set_env DB_DATABASE "$GITHUB_WORKSPACE/apps/platform/database/ui.sqlite"
+          set_env SESSION_DRIVER file
+          set_env CACHE_STORE array
+          set_env QUEUE_CONNECTION sync
+          set_env MAIL_MAILER array
+          php artisan key:generate --force
+          touch database/ui.sqlite
+          php artisan migrate --force --no-ansi
+
+      - name: Serve the app and wait for /login
+        run: |
+          set -euo pipefail
+          setsid nohup php artisan serve --host=127.0.0.1 --port=8000 > "$RUNNER_TEMP/serve.log" 2>&1 &
+          code=000
+          for i in $(seq 1 60); do
+            code=$(curl -s -o /dev/null -w "%{http_code}" "$UI_BASE/login" || true)
+            if [ "$code" = "200" ]; then echo "app is up after ${i}s"; exit 0; fi
+            sleep 1
+          done
+          echo "app did not return 200 on /login (last status: $code)"
+          tail -n 60 "$RUNNER_TEMP/serve.log" || true
+          exit 1
+
+      - name: Install browser tooling (outside the app's dependencies)
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/uitools"
+          cp scripts/ui-smoke.mjs "$RUNNER_TEMP/uitools/ui-smoke.mjs"
+          cd "$RUNNER_TEMP/uitools"
+          npm init -y >/dev/null
+          npm install --no-audit --no-fund playwright-core@1.49.1 axe-core@4.10.2
+          google-chrome --version
+
+      - name: Public pages in a real browser
+        run: |
+          cd "$RUNNER_TEMP/uitools"
+          UI_MODE=public node ui-smoke.mjs
+
+      - name: Seed a verified customer with an active CodeBridge entitlement
+        if: always()
+        run: php artisan tinker --execute="require base_path('scripts/ci-seed-ui-smoke.php');"
+
+      - name: Customer CodeBridge dashboard in a real browser
+        if: always()
+        env:
+          UI_EMAIL: ui-smoke@example.test
+          UI_PASSWORD: password
+        run: |
+          cd "$RUNNER_TEMP/uitools"
+          UI_MODE=dashboard node ui-smoke.mjs
+
+      - name: Server log (tail)
+        if: always()
+        run: tail -n 80 "$RUNNER_TEMP/serve.log" || true
