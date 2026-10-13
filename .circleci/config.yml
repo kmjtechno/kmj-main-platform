@@ -214,6 +214,65 @@ jobs:
             test -d node_modules
             echo "KMJ_ADMIN_DEPENDENCIES_PASS=1"
 
+  owner_admin_frontend_lint:
+    docker:
+      - image: cimg/php:8.4-node
+    resource_class: small
+    steps:
+      - checkout
+      - run:
+          name: Exact npm lockfile
+          command: |
+            set -euo pipefail
+            test "$(git rev-parse HEAD)" = "$CIRCLE_SHA1"
+            cd apps/platform
+            npm ci --ignore-scripts --no-audit --no-fund
+      - run:
+          name: Frontend format, lint and source contract suite
+          command: |
+            set -euo pipefail
+            cd apps/platform
+            npm run check
+            echo "KMJ_ADMIN_FRONTEND_CHECK_PASS=1"
+
+  owner_admin_frontend_types:
+    docker:
+      - image: cimg/php:8.4-node
+    resource_class: small
+    steps:
+      - checkout
+      - run:
+          name: TypeScript exact-head check
+          command: |
+            set -euo pipefail
+            test "$(git rev-parse HEAD)" = "$CIRCLE_SHA1"
+            cd apps/platform
+            npm ci --ignore-scripts --no-audit --no-fund
+            npm run types:check
+            echo "KMJ_ADMIN_TYPES_PASS=1"
+
+  owner_admin_php_quality:
+    docker:
+      - image: cimg/php:8.4-node
+    resource_class: small
+    environment:
+      APP_ENV: testing
+      DB_CONNECTION: sqlite
+      DB_DATABASE: ":memory:"
+    steps:
+      - checkout
+      - run:
+          name: Laravel Pint and PHPStan exact-head check
+          no_output_timeout: 10m
+          command: |
+            set -euo pipefail
+            test "$(git rev-parse HEAD)" = "$CIRCLE_SHA1"
+            cd apps/platform
+            composer install --no-interaction --prefer-dist --no-progress
+            vendor/bin/pint --test
+            vendor/bin/phpstan analyse --no-progress --memory-limit=1G
+            echo "KMJ_ADMIN_PHP_QUALITY_PASS=1"
+
   owner_admin_release:
     docker:
       - image: cimg/php:8.4-node
@@ -311,7 +370,17 @@ workflows:
             branches:
               only:
                 - feat/owner-product-workspace-categories-20261014
-      - owner_admin_dependencies:
+      - owner_admin_frontend_lint:
+          filters:
+            branches:
+              only:
+                - feat/owner-product-workspace-categories-20261014
+      - owner_admin_frontend_types:
+          filters:
+            branches:
+              only:
+                - feat/owner-product-workspace-categories-20261014
+      - owner_admin_php_quality:
           filters:
             branches:
               only:
