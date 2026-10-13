@@ -1,0 +1,200 @@
+version: 2.1
+
+jobs:
+  codebridge_device_control:
+    docker:
+      - image: cimg/php:8.4-node
+    resource_class: small
+    environment:
+      APP_ENV: testing
+      DB_CONNECTION: sqlite
+      DB_DATABASE: ":memory:"
+      QUEUE_CONNECTION: sync
+      MAIL_MAILER: array
+      SESSION_DRIVER: array
+    steps:
+      - checkout
+      - run:
+          name: Verify exact PR source
+          command: |
+            set -euo pipefail
+            test "$(git rev-parse HEAD)" = "$CIRCLE_SHA1"
+            test -f apps/platform/routes/codebridge-device-control.php
+            test -f apps/platform/resources/js/components/codebridge/device-control-center.tsx
+            test -f apps/platform/resources/js/components/codebridge/control-center-hub.tsx
+      - run:
+          name: PHP syntax for device authorization controls
+          command: |
+            set -euo pipefail
+            php -l apps/platform/routes/codebridge-device-control.php
+            php -l apps/platform/routes/web.php
+            php -l apps/platform/tests/Feature/CodeBridgeAdminHttpTest.php
+      - run:
+          name: Install isolated frontend dependencies
+          no_output_timeout: 5m
+          command: |
+            set -euo pipefail
+            cd apps/platform
+            npm ci --ignore-scripts --no-audit --no-fund
+      - run:
+          name: Install isolated Laravel test dependencies
+          no_output_timeout: 8m
+          command: |
+            set -euo pipefail
+            cd apps/platform
+            composer install --no-interaction --prefer-dist --no-progress
+      - run:
+          name: Full frontend check (Vite+ format and lint, source contracts, layout)
+          no_output_timeout: 8m
+          command: |
+            set -euo pipefail
+            cd apps/platform
+            npm run check
+      - run:
+          name: No-network local CodeBridge device-control verification
+          no_output_timeout: 8m
+          command: |
+            set -euo pipefail
+            cd apps/platform
+            bash scripts/verify-codebridge-device-control-offline.sh
+      - run:
+          name: Build CodeBridge dashboard production frontend
+          no_output_timeout: 8m
+          command: |
+            set -euo pipefail
+            cd apps/platform
+            npm run build
+
+  php_pint:
+    docker:
+      - image: cimg/php:8.4-node
+    resource_class: small
+    steps:
+      - checkout
+      - run:
+          name: Install Laravel dependencies
+          no_output_timeout: 8m
+          command: |
+            set -euo pipefail
+            cd apps/platform
+            composer install --no-interaction --prefer-dist --no-progress
+      - run:
+          name: Pint style check (composer lint:check)
+          command: |
+            set -euo pipefail
+            cd apps/platform
+            vendor/bin/pint --parallel --test
+
+  php_phpstan:
+    docker:
+      - image: cimg/php:8.4-node
+    resource_class: small
+    environment:
+      APP_ENV: testing
+      DB_CONNECTION: sqlite
+      DB_DATABASE: ":memory:"
+    steps:
+      - checkout
+      - run:
+          name: Install Laravel dependencies
+          no_output_timeout: 8m
+          command: |
+            set -euo pipefail
+            cd apps/platform
+            composer install --no-interaction --prefer-dist --no-progress
+      - run:
+          name: PHPStan level 7 (composer types:check)
+          no_output_timeout: 8m
+          command: |
+            set -euo pipefail
+            cd apps/platform
+            vendor/bin/phpstan analyse --no-progress --memory-limit=1G
+
+  php_tests:
+    docker:
+      - image: cimg/php:8.4-node
+    resource_class: medium
+    environment:
+      APP_ENV: testing
+    steps:
+      - checkout
+      - run:
+          name: Install Laravel dependencies
+          no_output_timeout: 10m
+          command: |
+            set -euo pipefail
+            cd apps/platform
+            composer install --no-interaction --prefer-dist --no-progress
+      - run:
+          name: Install frontend dependencies and build assets (Inertia/Wayfinder need them)
+          no_output_timeout: 12m
+          command: |
+            set -euo pipefail
+            cd apps/platform
+            npm ci --ignore-scripts --no-audit --no-fund
+            npm run build
+      - run:
+          name: Full Laravel test suite (php artisan test)
+          no_output_timeout: 20m
+          command: |
+            set -euo pipefail
+            cd apps/platform
+            cp .env.example .env
+            php artisan key:generate --force
+            php artisan config:clear --ansi
+            # Prove tests really ran: require a zero exit AND a reported pass count at or
+            # above the number of test files, so an empty or skipped run cannot pass.
+            rc=0
+            php artisan test --no-ansi > /tmp/phpunit.out 2>&1 || rc=$?
+            tail -n 40 /tmp/phpunit.out
+            test "$rc" -eq 0
+            passed=$(grep -E '^ *Tests:' /tmp/phpunit.out | tail -1 | grep -Eo '[0-9]+ passed' | grep -Eo '^[0-9]+' || true)
+            echo "tests passed: ${passed:-none}"
+            test "${passed:-0}" -ge 97
+
+workflows:
+  review_codebridge_device_control:
+    jobs:
+      - codebridge_device_control:
+          filters:
+            branches:
+              only:
+                - feat/codebridge-device-control-center-20261012
+                - integrate/codebridge-control-center-377-378
+                - feat/codebridge-control-center-hub-20261012
+                - fix/gemini-spark-oauth-on-control-center-hub
+                - fix/codebridge-compact-workspace-tabs-20261013
+                - claude/codebridge-production-completion-n6lu61
+                - release/codebridge-claude-ui-verified-20261013
+      - php_pint:
+          filters:
+            branches:
+              only:
+                - feat/codebridge-device-control-center-20261012
+                - integrate/codebridge-control-center-377-378
+                - feat/codebridge-control-center-hub-20261012
+                - fix/gemini-spark-oauth-on-control-center-hub
+                - fix/codebridge-compact-workspace-tabs-20261013
+                - claude/codebridge-production-completion-n6lu61
+                - release/codebridge-claude-ui-verified-20261013
+      - php_phpstan:
+          filters:
+            branches:
+              only:
+                - feat/codebridge-device-control-center-20261012
+                - integrate/codebridge-control-center-377-378
+                - feat/codebridge-control-center-hub-20261012
+                - fix/gemini-spark-oauth-on-control-center-hub
+                - fix/codebridge-compact-workspace-tabs-20261013
+                - claude/codebridge-production-completion-n6lu61
+                - release/codebridge-claude-ui-verified-20261013
+      - php_tests:
+          filters:
+            branches:
+              only:
+                - feat/codebridge-device-control-center-20261012
+                - integrate/codebridge-control-center-377-378
+                - feat/codebridge-control-center-hub-20261012
+                - fix/gemini-spark-oauth-on-control-center-hub
+                - fix/codebridge-compact-workspace-tabs-20261013
+                - claude/codebridge-production-completion-n6lu61

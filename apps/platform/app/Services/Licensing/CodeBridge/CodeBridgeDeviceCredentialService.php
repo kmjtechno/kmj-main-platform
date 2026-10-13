@@ -42,9 +42,9 @@ final class CodeBridgeDeviceCredentialService
         }, 3);
     }
 
-    public function revoke(string $licenseId, string $tenantId, string $deviceId, int $now): void
+    public function revoke(string $licenseId, string $tenantId, string $deviceId, int $now, ?string $initiator = null): void
     {
-        DB::transaction(function () use ($licenseId, $tenantId, $deviceId, $now): void {
+        DB::transaction(function () use ($licenseId, $tenantId, $deviceId, $now, $initiator): void {
             $row = DB::table('codebridge_device_credentials')
                 ->where('license_id', $licenseId)->where('tenant_id', $tenantId)->where('device_id', $deviceId)
                 ->lockForUpdate()->first();
@@ -62,16 +62,16 @@ final class CodeBridgeDeviceCredentialService
             $this->audit($licenseId, $deviceId, 'codebridge_device_credential_revoked', 'Device credential revoked', [
                 'activation_id' => $row->activation_id,
                 'lease_sequence' => (int) $row->lease_sequence,
-            ]);
+            ], $initiator);
         }, 3);
     }
 
     /** @param array<string,mixed> $metadata */
-    private function audit(string $licenseId, string $deviceId, string $action, string $reason, array $metadata): void
+    private function audit(string $licenseId, string $deviceId, string $action, string $reason, array $metadata, ?string $initiator = null): void
     {
         DB::table('kslp_license_events')->insert([
             'license_id' => $licenseId,
-            'actor_id' => 'codebridge-device:'.$deviceId,
+            'actor_id' => $initiator ?? 'codebridge-device:'.$deviceId,
             'action' => $action,
             'reason' => $reason,
             'correlation_id' => (string) Str::uuid(),

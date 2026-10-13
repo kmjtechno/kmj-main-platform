@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Services\Licensing\CodeBridge\CodeBridgeDeviceCredentialService;
 use App\Services\Licensing\CodeBridge\CodeBridgeDeviceEnrollmentService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
@@ -26,6 +27,64 @@ final class CodeBridgeDeviceEnrollmentTest extends TestCase
 
         $this->expectExceptionMessage('CODEBRIDGE_DEVICE_ALREADY_ENROLLED');
         app(CodeBridgeDeviceEnrollmentService::class)->enroll($license, $activation, 'tenant-a', 'device-a', time());
+    }
+
+    public function test_revoked_device_reconnects_only_with_fresh_activation_and_new_token(): void
+    {
+        [$license, $activation] = $this->fixture(1);
+        $enroll = app(CodeBridgeDeviceEnrollmentService::class);
+        $old = $enroll->enroll($license, $activation, 'tenant-a', 'device-a', time());
+        $oldRow = DB::table('codebridge_device_credentials')->where('device_id', 'device-a')->first();
+        self::assertNotNull($oldRow);
+
+        app(CodeBridgeDeviceCredentialService::class)
+            ->revoke($license, 'tenant-a', 'device-a', time());
+
+        $freshActivation = (string) Str::uuid();
+        DB::table('kslp_activations')->insert([
+            'id' => $freshActivation, 'license_id' => $license,
+            'server_identity' => 'ed25519:repaired-agent',
+            'machine_identity_hash' => str_repeat('c', 64),
+            'idempotency_key' => 'repaired-'.Str::uuid(),
+            'activated_at' => now(), 'created_at' => now(), 'updated_at' => now(),
+        ]);
+        $new = $enroll->enroll($license, $freshActivation, 'tenant-a', 'device-a', time());
+        self::assertNotSame($old['credential'], $new['credential']);
+        self::assertSame(1, DB::table('codebridge_device_credentials')->count());
+        $row = DB::table('codebridge_device_credentials')->where('device_id', 'device-a')->first();
+        self::assertSame($oldRow->id, $row->id);
+        self::assertSame($freshActivation, $row->activation_id);
+        self::assertNull($row->revoked_at);
+        self::assertSame(hash('sha256', $new['credential']), $row->token_hash);
+        self::assertNotSame(hash('sha256', $old['credential']), $row->token_hash);
+        self::assertNotNull(DB::table('kslp_activations')
+            ->where('id', $activation)->value('deactivated_at'));
+        self::assertDatabaseHas('kslp_license_events', [
+            'license_id' => $license, 'action' => 'codebridge_device_reenrolled',
+        ]);
+
+        // The old activation cannot be re-used for any new device once its
+        // credential row is replaced by a fresh proof-bound activation.
+        $this->expectExceptionMessage('CODEBRIDGE_ENROLLMENT_DENIED');
+        $enroll->enroll($license, $activation, 'tenant-a', 'device-b', time());
+    }
+
+    public function test_active_device_still_rejects_fresh_activation_without_disconnect(): void
+    {
+        [$license, $activation] = $this->fixture(2);
+        $enroll = app(CodeBridgeDeviceEnrollmentService::class);
+        $enroll->enroll($license, $activation, 'tenant-a', 'device-a', time());
+        $next = (string) Str::uuid();
+        DB::table('kslp_activations')->insert([
+            'id' => $next, 'license_id' => $license,
+            'server_identity' => 'ed25519:another-attempt',
+            'machine_identity_hash' => str_repeat('d', 64),
+            'idempotency_key' => 'attempt-'.Str::uuid(),
+            'activated_at' => now(), 'created_at' => now(), 'updated_at' => now(),
+        ]);
+
+        $this->expectExceptionMessage('CODEBRIDGE_DEVICE_ALREADY_ENROLLED');
+        $enroll->enroll($license, $next, 'tenant-a', 'device-a', time());
     }
 
     public function test_device_limit_is_enforced_before_credential_creation(): void

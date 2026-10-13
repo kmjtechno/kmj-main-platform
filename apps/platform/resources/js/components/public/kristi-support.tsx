@@ -107,7 +107,7 @@ export default function KristiSupport() {
                             </Link>
                         </div>
 
-                        <p className="mt-3 text-[10px] leading-5 text-white/28">
+                        <p className="mt-3 text-xs leading-5 text-white/70">
                             Kristi does not invent pricing, availability or
                             release claims. Live generative assistance can be
                             enabled only after its production backend is
