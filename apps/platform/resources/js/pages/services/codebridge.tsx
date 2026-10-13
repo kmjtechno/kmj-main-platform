@@ -1,4 +1,5 @@
 import { Head, Link, router } from '@inertiajs/react';
+import { useState } from 'react';
 import {
     ArrowLeft,
     Cable,
@@ -6,6 +7,7 @@ import {
     KeyRound,
     Laptop2,
     Link2,
+    Search,
     Server,
     ShieldCheck,
     TerminalSquare,
@@ -91,7 +93,61 @@ export default function CodeBridgeService({
     service,
     canManageOwnerPlan,
 }: Props) {
+    const [deviceSearch, setDeviceSearch] = useState('');
+    const [clientSearch, setClientSearch] = useState('');
+    const [showAllDevices, setShowAllDevices] = useState(false);
+    const [showAllClients, setShowAllClients] = useState(false);
+    const [revokeCandidate, setRevokeCandidate] = useState<string | null>(
+        null,
+    );
+    const [copyMessage, setCopyMessage] = useState('');
+
+    const matchingDevices = service.devices.filter((device) =>
+        [
+            device.name,
+            device.id,
+            device.platform ?? '',
+            ...device.projects.flatMap((project) => [
+                project.name,
+                project.id,
+            ]),
+        ]
+            .join(' ')
+            .toLocaleLowerCase()
+            .includes(deviceSearch.trim().toLocaleLowerCase()),
+    );
+    const visibleDevices = showAllDevices || deviceSearch.trim()
+        ? matchingDevices
+        : matchingDevices.slice(0, 4);
+
+    const matchingClients = service.connected_clients
+        .filter((client) =>
+            [client.client_name, ...client.scopes]
+                .join(' ')
+                .toLocaleLowerCase()
+                .includes(clientSearch.trim().toLocaleLowerCase()),
+        )
+        .sort(
+            (left, right) =>
+                (Date.parse(right.last_active_at ?? '') || 0) -
+                    (Date.parse(left.last_active_at ?? '') || 0) ||
+                left.client_name.localeCompare(right.client_name),
+        );
+    const visibleClients = showAllClients || clientSearch.trim()
+        ? matchingClients
+        : matchingClients.slice(0, 4);
+
+    const copyEndpoint = async () => {
+        try {
+            await navigator.clipboard.writeText(service.endpoint);
+            setCopyMessage('MCP endpoint copied');
+        } catch {
+            setCopyMessage('Clipboard unavailable. Select the endpoint above.');
+        }
+    };
+
     const revokeClient = (clientId: string) => {
+        setRevokeCandidate(null);
         router.post(
             `/services/kmj-codebridge/oauth-clients/${encodeURIComponent(clientId)}/revoke`,
             {},
@@ -103,8 +159,8 @@ export default function CodeBridgeService({
         <>
             <Head title="KMJ CodeBridge" />
 
-            <div className="flex h-full flex-1 flex-col gap-6 overflow-x-auto p-4 sm:p-6">
-                <section className="border-sidebar-border/70 from-background via-background dark:border-sidebar-border overflow-hidden rounded-2xl border bg-gradient-to-br to-red-950/10 p-6 sm:p-8">
+            <div className="flex h-full min-w-0 flex-1 flex-col gap-5 p-4 sm:gap-6 sm:p-6">
+                <section id="codebridge-overview" className="border-sidebar-border/70 from-background via-background dark:border-sidebar-border scroll-mt-6 overflow-hidden rounded-2xl border bg-gradient-to-br to-red-950/10 p-5 sm:p-8">
                     <Link
                         href="/dashboard"
                         className="text-muted-foreground hover:text-foreground inline-flex items-center gap-2 text-xs font-bold"
@@ -167,7 +223,28 @@ export default function CodeBridgeService({
                     </div>
                 </section>
 
-                <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                <nav
+                    aria-label="CodeBridge dashboard sections"
+                    className="bg-card flex flex-wrap gap-2 rounded-2xl border p-2 sm:gap-3"
+                >
+                    {[
+                        ['#codebridge-overview', 'Overview'],
+                        ['#codebridge-devices', 'Devices & projects'],
+                        ['#codebridge-clients', 'AI clients'],
+                        ['#codebridge-connection', 'Setup'],
+                        ['#codebridge-security', 'Security'],
+                    ].map(([href, label]) => (
+                        <a
+                            key={href}
+                            href={href}
+                            className="text-muted-foreground hover:text-foreground hover:bg-muted focus-visible:ring-ring inline-flex min-h-10 items-center rounded-xl px-3 text-xs font-bold transition focus-visible:ring-2 focus-visible:outline-none"
+                        >
+                            {label}
+                        </a>
+                    ))}
+                </nav>
+
+                <section aria-label="CodeBridge account overview" className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
                     <Metric
                         label="License"
                         value={service.license_status}
@@ -180,7 +257,7 @@ export default function CodeBridgeService({
                     <Metric
                         label="OAuth"
                         value={service.oauth_ready ? 'Ready' : 'Unavailable'}
-                        hint="Browser OAuth + Desktop bridge"
+                        hint="OAuth configuration, not live agent status"
                     />
                     <Metric
                         label="Managed devices"
@@ -198,7 +275,7 @@ export default function CodeBridgeService({
                     />
                 </section>
 
-                <section className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
+                <section id="codebridge-connection" className="grid scroll-mt-6 gap-6 xl:grid-cols-[1.1fr_0.9fr]">
                     <div className="border-sidebar-border/70 bg-card dark:border-sidebar-border rounded-2xl border p-5 sm:p-6">
                         <div className="flex items-center gap-2">
                             <Server className="h-5 w-5 text-red-500" />
@@ -291,7 +368,7 @@ export default function CodeBridgeService({
                         </div>
                     </div>
 
-                    <div className="border-sidebar-border/70 bg-card dark:border-sidebar-border rounded-2xl border p-5 sm:p-6">
+                    <div id="codebridge-security" className="border-sidebar-border/70 bg-card dark:border-sidebar-border scroll-mt-6 rounded-2xl border p-5 sm:p-6">
                         <div className="flex items-center gap-2">
                             <ShieldCheck className="h-5 w-5 text-red-500" />
                             <h2 className="font-black">Access & security</h2>
@@ -327,10 +404,7 @@ export default function CodeBridgeService({
                                 Authorized permissions
                             </div>
                             <div className="mt-3 flex flex-wrap gap-2">
-                                {(service.permissions.length
-                                    ? service.permissions
-                                    : ['read', 'write', 'execute']
-                                ).map((permission) => (
+                                {service.permissions.map((permission) => (
                                     <span
                                         key={permission}
                                         className="rounded-lg border px-2.5 py-1 text-[10px] font-bold uppercase"
@@ -338,6 +412,11 @@ export default function CodeBridgeService({
                                         {permission}
                                     </span>
                                 ))}
+                                {service.permissions.length === 0 && (
+                                    <span className="text-muted-foreground text-xs">
+                                        No permissions reported
+                                    </span>
+                                )}
                             </div>
                         </div>
 
@@ -499,14 +578,15 @@ export default function CodeBridgeService({
                         </a>
                         <button
                             type="button"
-                            onClick={() =>
-                                navigator.clipboard.writeText(service.endpoint)
-                            }
+                            onClick={copyEndpoint}
                             className="inline-flex h-10 items-center rounded-xl border px-4 text-xs font-bold"
                         >
                             Copy MCP endpoint for other IDEs
                         </button>
                     </div>
+                    <p role="status" aria-live="polite" className="text-muted-foreground mt-2 text-xs">
+                        {copyMessage}
+                    </p>
                     <p className="text-muted-foreground mt-3 text-[11px]">
                         VS Code opens a confirmation dialog before adding the
                         MCP server. Complete KMJ browser OAuth when prompted. If
