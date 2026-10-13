@@ -44,12 +44,12 @@ jobs:
             cd apps/platform
             composer install --no-interaction --prefer-dist --no-progress
       - run:
-          name: Full frontend check baseline (pre-Wayfinder)
+          name: Isolate Vite+ lint and formatting on unchanged parent
           no_output_timeout: 8m
           command: |
             set -euo pipefail
             cd apps/platform
-            npm run check
+            ./node_modules/.bin/vp check
       - run:
           name: No-network local CodeBridge device-control verification
           no_output_timeout: 8m
