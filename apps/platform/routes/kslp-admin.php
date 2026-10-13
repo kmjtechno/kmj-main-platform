@@ -5,6 +5,7 @@ use App\Services\Licensing\Kslp\KslpLicenseControlPlane;
 use App\Services\PlatformOwnerAccess;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Str;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 
@@ -26,7 +27,7 @@ Route::get('operator/kslp', function (Request $request, PlatformOwnerAccess $acc
             $query->where(function ($query) use ($search, $escaped) {
                 $query->where('customer_id', 'like', '%'.$escaped.'%')
                     ->orWhere('product', 'like', '%'.$escaped.'%');
-                if (\\Illuminate\\Support\\Str::isUuid($search)) {
+                if (Str::isUuid($search)) {
                     $query->orWhere('id', $search);
                 }
             });
