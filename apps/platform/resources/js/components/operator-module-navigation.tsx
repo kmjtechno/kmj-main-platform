@@ -46,7 +46,7 @@ const modules = [
         label: 'Licensing',
         href: '/operator/kslp',
         icon: KeyRound,
-        help: 'License governance',
+        help: 'Customers, plans and license lifecycle',
     },
     {
         label: 'CodeBridge',
