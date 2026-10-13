@@ -35,13 +35,16 @@ void test('Admin inventory reports missing registrations, not fake entitlements'
 });
 
 void test('Owner, developer and sandbox navigation all remain visible', () => {
-    for (const path of [
-        '/operator/kslp',
-        '/operator/payments',
-        '/developer/apps',
-    ]) {
-        assert.ok(sidebar.includes(path));
+    // Owner navigation now comes from the module registry shared as operator.modules.
+    const registry = read('app/Services/Operator/OperatorModules.php');
+    for (const path of ['/operator/kslp', '/operator/payments']) {
+        assert.ok(registry.includes(path));
     }
+    assert.ok(
+        sidebar.includes('operator?.modules') ||
+            sidebar.includes('operator.modules'),
+    );
+    assert.ok(sidebar.includes('/developer/apps'));
     assert.ok(sandbox.includes('Sandbox Token Lab'));
     assert.ok(sandbox.includes('href="/developer/apps"'));
     assert.ok(sandbox.includes('href="/operator/kslp"'));

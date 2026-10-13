@@ -3,6 +3,7 @@
 namespace App\Http\Middleware;
 
 use App\Models\User;
+use App\Services\Operator\OperatorModules;
 use App\Services\PlatformOwnerAccess;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
@@ -61,9 +62,15 @@ class HandleInertiaRequests extends Middleware
             'auth' => [
                 'user' => $user,
             ],
-            'operator' => [
-                'enabled' => $user instanceof User && app(PlatformOwnerAccess::class)->allows($user),
-            ],
+            'operator' => (function () use ($user): array {
+                $enabled = $user instanceof User && app(PlatformOwnerAccess::class)->allows($user);
+
+                return [
+                    'enabled' => $enabled,
+                    // Module list is only ever sent to verified platform owners.
+                    'modules' => $enabled ? OperatorModules::all() : [],
+                ];
+            })(),
             'flash' => [
                 'sandbox_license' => fn () => $request->session()->get('sandbox_license'),
                 'sandbox_license_validation' => fn () => $request->session()->get('sandbox_license_validation'),
