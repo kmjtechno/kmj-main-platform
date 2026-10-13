@@ -170,6 +170,7 @@ async function inspectPage(page, path, viewport, { requireIcon = false } = {}) {
                 id: v.id,
                 impact: v.impact,
                 nodes: v.nodes.length,
+                targets: v.nodes.slice(0, 3).map((n) => n.target.join(' ')),
             }));
         });
         if (path === '/login') {
@@ -185,7 +186,7 @@ async function inspectPage(page, path, viewport, { requireIcon = false } = {}) {
             critical.map((v) => `${v.id}×${v.nodes}`).join(', '),
         );
         for (const v of axe.filter((x) => x.impact === 'serious'))
-            warn(`${tag}: serious a11y — ${v.id}×${v.nodes}`);
+            warn(`${tag}: serious a11y — ${v.id}×${v.nodes} at ${v.targets.join(', ')}`);
     }
 
     page.off('console', onConsole);
