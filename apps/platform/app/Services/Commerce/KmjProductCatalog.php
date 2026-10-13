@@ -162,7 +162,8 @@ final class KmjProductCatalog
             return;
         }
 
-        $untouched = (bool) $product->getAttribute('is_public') === false
+        $untouched = (string) $product->getAttribute('category') === 'other'
+            && (bool) $product->getAttribute('is_public') === false
             && (int) $product->getAttribute('sort_order') === 100
             && (string) $product->getAttribute('lifecycle') === 'planned'
             && $product->getAttribute('image_path') === null
