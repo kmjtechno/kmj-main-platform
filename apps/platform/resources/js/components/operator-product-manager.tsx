@@ -128,11 +128,15 @@ export function CommercialProductForm() {
                 <span>Category</span>
                 <select
                     value={form.data.category}
-                    onChange={(event) => form.setData('category', event.target.value)}
+                    onChange={(event) =>
+                        form.setData('category', event.target.value)
+                    }
                     className="bg-background h-10 w-full rounded-lg border px-3 text-sm"
                 >
                     {productCategoryOptions.map(([value, label]) => (
-                        <option key={value} value={value}>{label}</option>
+                        <option key={value} value={value}>
+                            {label}
+                        </option>
                     ))}
                 </select>
             </label>
@@ -270,7 +274,9 @@ function ManagedProductEditor({
                     type="button"
                     draggable={allowReorder}
                     disabled={!allowReorder}
-                    onDragStart={() => { if (allowReorder) onDragStart(product.id); }}
+                    onDragStart={() => {
+                        if (allowReorder) onDragStart(product.id);
+                    }}
                     aria-label={`Drag ${product.name} to reorder`}
                     className="text-muted-foreground hover:text-foreground cursor-grab rounded-lg border p-2 active:cursor-grabbing"
                 >
@@ -283,7 +289,9 @@ function ManagedProductEditor({
                     Order {product.sort_order}
                 </span>
                 <div className="min-w-0">
-                    <div className="truncate text-sm font-bold">{product.name}</div>
+                    <div className="truncate text-sm font-bold">
+                        {product.name}
+                    </div>
                     <div className="text-muted-foreground truncate text-[11px]">
                         {product.category} · {product.lifecycle}
                     </div>
@@ -313,157 +321,177 @@ function ManagedProductEditor({
                 </button>
             </div>
             {editing && (
-              <div id={`editor-${product.id}`} className="grid gap-4 xl:col-span-4 xl:grid-cols-[1.1fr_.75fr_.85fr_auto]">
-                <div className="grid gap-2">
-                <input
-                    value={form.data.name}
-                    onChange={(event) =>
-                        form.setData('name', event.target.value)
-                    }
-                    aria-label={`Name for ${product.name}`}
-                    className="h-9 rounded-lg border border-white/10 bg-black/20 px-3 text-sm font-bold text-white"
-                    required
-                />
-                <div className="text-muted-foreground text-[11px]">
-                    {product.slug}
-                </div>
-                <textarea
-                    value={form.data.summary}
-                    onChange={(event) =>
-                        form.setData('summary', event.target.value)
-                    }
-                    aria-label={`Summary for ${product.name}`}
-                    rows={2}
-                    maxLength={2000}
-                    placeholder="Customer-facing summary"
-                    className="rounded-lg border border-white/10 bg-black/20 px-3 py-2 text-xs text-white"
-                />
-            </div>
-
-            <div className="grid content-start gap-2">
-                <select
-                    value={form.data.lifecycle}
-                    onChange={(event) => {
-                        const lifecycle = event.target.value;
-                        form.setData('lifecycle', lifecycle);
-                        if (lifecycle !== 'available') {
-                            form.setData('purchase_enabled', false);
-                        }
-                    }}
-                    aria-label={`Lifecycle for ${product.name}`}
-                    className="h-9 rounded-lg border border-white/10 bg-black/20 px-2 text-xs text-white"
+                <div
+                    id={`editor-${product.id}`}
+                    className="grid gap-4 xl:col-span-4 xl:grid-cols-[1.1fr_.75fr_.85fr_auto]"
                 >
-                    {productLifecycleOptions.map(([value, label]) => (
-                        <option key={value} value={value}>
-                            {label}
-                        </option>
-                    ))}
-                </select>
-                <select
-                    value={form.data.category}
-                    onChange={(event) => form.setData('category', event.target.value)}
-                    aria-label={`Category for ${product.name}`}
-                    className="h-9 rounded-lg border border-white/10 bg-black/20 px-2 text-xs text-white"
-                >
-                    {productCategoryOptions.map(([value, label]) => (
-                        <option key={value} value={value}>{label}</option>
-                    ))}
-                </select>
-                <input
-                    value={form.data.image_path}
-                    onChange={(event) =>
-                        form.setData('image_path', event.target.value)
-                    }
-                    aria-label={`Image path for ${product.name}`}
-                    placeholder="/assets/products/..."
-                    className="h-9 rounded-lg border border-white/10 bg-black/20 px-2 text-xs text-white"
-                />
-            </div>
+                    <div className="grid gap-2">
+                        <input
+                            value={form.data.name}
+                            onChange={(event) =>
+                                form.setData('name', event.target.value)
+                            }
+                            aria-label={`Name for ${product.name}`}
+                            className="h-9 rounded-lg border border-white/10 bg-black/20 px-3 text-sm font-bold text-white"
+                            required
+                        />
+                        <div className="text-muted-foreground text-[11px]">
+                            {product.slug}
+                        </div>
+                        <textarea
+                            value={form.data.summary}
+                            onChange={(event) =>
+                                form.setData('summary', event.target.value)
+                            }
+                            aria-label={`Summary for ${product.name}`}
+                            rows={2}
+                            maxLength={2000}
+                            placeholder="Customer-facing summary"
+                            className="rounded-lg border border-white/10 bg-black/20 px-3 py-2 text-xs text-white"
+                        />
+                    </div>
 
-            <div className="grid content-start gap-2 text-xs">
-                <label className="flex items-center justify-between gap-3 rounded-lg border px-3 py-2">
-                    Public
-                    <input
-                        type="checkbox"
-                        checked={form.data.is_public}
-                        onChange={(event) =>
-                            form.setData('is_public', event.target.checked)
-                        }
-                    />
-                </label>
-                <label className="flex items-center justify-between gap-3 rounded-lg border px-3 py-2">
-                    Purchase
-                    <input
-                        type="checkbox"
-                        checked={form.data.purchase_enabled}
-                        disabled={form.data.lifecycle !== 'available'}
-                        onChange={(event) =>
-                            form.setData(
-                                'purchase_enabled',
-                                event.target.checked,
-                            )
-                        }
-                    />
-                </label>
-                <label className="flex items-center justify-between gap-3 rounded-lg border px-3 py-2">
-                    Licensing
-                    <input
-                        type="checkbox"
-                        checked={form.data.licensing_enabled}
-                        onChange={(event) =>
-                            form.setData(
-                                'licensing_enabled',
-                                event.target.checked,
-                            )
-                        }
-                    />
-                </label>
-            </div>
+                    <div className="grid content-start gap-2">
+                        <select
+                            value={form.data.lifecycle}
+                            onChange={(event) => {
+                                const lifecycle = event.target.value;
+                                form.setData('lifecycle', lifecycle);
+                                if (lifecycle !== 'available') {
+                                    form.setData('purchase_enabled', false);
+                                }
+                            }}
+                            aria-label={`Lifecycle for ${product.name}`}
+                            className="h-9 rounded-lg border border-white/10 bg-black/20 px-2 text-xs text-white"
+                        >
+                            {productLifecycleOptions.map(([value, label]) => (
+                                <option key={value} value={value}>
+                                    {label}
+                                </option>
+                            ))}
+                        </select>
+                        <select
+                            value={form.data.category}
+                            onChange={(event) =>
+                                form.setData('category', event.target.value)
+                            }
+                            aria-label={`Category for ${product.name}`}
+                            className="h-9 rounded-lg border border-white/10 bg-black/20 px-2 text-xs text-white"
+                        >
+                            {productCategoryOptions.map(([value, label]) => (
+                                <option key={value} value={value}>
+                                    {label}
+                                </option>
+                            ))}
+                        </select>
+                        <input
+                            value={form.data.image_path}
+                            onChange={(event) =>
+                                form.setData('image_path', event.target.value)
+                            }
+                            aria-label={`Image path for ${product.name}`}
+                            placeholder="/assets/products/..."
+                            className="h-9 rounded-lg border border-white/10 bg-black/20 px-2 text-xs text-white"
+                        />
+                    </div>
 
-            <div className="flex flex-col gap-2">
-                <button
-                    type="submit"
-                    disabled={form.processing}
-                    className="rounded-lg bg-red-600 px-3 py-2 text-xs font-bold text-white disabled:opacity-50"
-                >
-                    Save
-                </button>
-                <div className="flex gap-1">
-                    <button
-                        type="button"
-                        aria-label={`Move ${product.name} up`}
-                        disabled={!allowReorder || products[0]?.id === product.id}
-                        onClick={() => move(-1)}
-                        className="rounded-lg border px-3 py-2 text-xs font-bold disabled:opacity-30"
-                    >
-                        ↑
-                    </button>
-                    <button
-                        type="button"
-                        aria-label={`Move ${product.name} down`}
-                        disabled={
-                            !allowReorder || products[products.length - 1]?.id === product.id
-                        }
-                        onClick={() => move(1)}
-                        className="rounded-lg border px-3 py-2 text-xs font-bold disabled:opacity-30"
-                    >
-                        ↓
-                    </button>
+                    <div className="grid content-start gap-2 text-xs">
+                        <label className="flex items-center justify-between gap-3 rounded-lg border px-3 py-2">
+                            Public
+                            <input
+                                type="checkbox"
+                                checked={form.data.is_public}
+                                onChange={(event) =>
+                                    form.setData(
+                                        'is_public',
+                                        event.target.checked,
+                                    )
+                                }
+                            />
+                        </label>
+                        <label className="flex items-center justify-between gap-3 rounded-lg border px-3 py-2">
+                            Purchase
+                            <input
+                                type="checkbox"
+                                checked={form.data.purchase_enabled}
+                                disabled={form.data.lifecycle !== 'available'}
+                                onChange={(event) =>
+                                    form.setData(
+                                        'purchase_enabled',
+                                        event.target.checked,
+                                    )
+                                }
+                            />
+                        </label>
+                        <label className="flex items-center justify-between gap-3 rounded-lg border px-3 py-2">
+                            Licensing
+                            <input
+                                type="checkbox"
+                                checked={form.data.licensing_enabled}
+                                onChange={(event) =>
+                                    form.setData(
+                                        'licensing_enabled',
+                                        event.target.checked,
+                                    )
+                                }
+                            />
+                        </label>
+                    </div>
+
+                    <div className="flex flex-col gap-2">
+                        <button
+                            type="submit"
+                            disabled={form.processing}
+                            className="rounded-lg bg-red-600 px-3 py-2 text-xs font-bold text-white disabled:opacity-50"
+                        >
+                            Save
+                        </button>
+                        <div className="flex gap-1">
+                            <button
+                                type="button"
+                                aria-label={`Move ${product.name} up`}
+                                disabled={
+                                    !allowReorder ||
+                                    products[0]?.id === product.id
+                                }
+                                onClick={() => move(-1)}
+                                className="rounded-lg border px-3 py-2 text-xs font-bold disabled:opacity-30"
+                            >
+                                ↑
+                            </button>
+                            <button
+                                type="button"
+                                aria-label={`Move ${product.name} down`}
+                                disabled={
+                                    !allowReorder ||
+                                    products[products.length - 1]?.id ===
+                                        product.id
+                                }
+                                onClick={() => move(1)}
+                                className="rounded-lg border px-3 py-2 text-xs font-bold disabled:opacity-30"
+                            >
+                                ↓
+                            </button>
+                        </div>
+                    </div>
+
+                    {Object.keys(form.errors).length > 0 && (
+                        <div className="text-xs text-red-500 xl:col-span-4">
+                            {Object.values(form.errors)[0]}
+                        </div>
+                    )}
                 </div>
-            </div>
-
-            {Object.keys(form.errors).length > 0 && (
-                <div className="text-xs text-red-500 xl:col-span-4">
-                    {Object.values(form.errors)[0]}
-                </div>
-            )}
-              </div>
             )}
         </form>
     );
 }
 
-export function ProductManager({ products, search = '', category = 'all', lifecycle = 'all' }: {
+export function ProductManager({
+    products,
+    search = '',
+    category = 'all',
+    lifecycle = 'all',
+}: {
     products: ManagedProduct[];
     search?: string;
     category?: string;
@@ -478,7 +506,12 @@ export function ProductManager({ products, search = '', category = 'all', lifecy
     }, [products]);
 
     const drop = (targetId: string) => {
-        if (!allowReorder || draggedId === null || draggedId === targetId || reordering) {
+        if (
+            !allowReorder ||
+            draggedId === null ||
+            draggedId === targetId ||
+            reordering
+        ) {
             setDraggedId(null);
             return;
         }
@@ -523,11 +556,15 @@ export function ProductManager({ products, search = '', category = 'all', lifecy
         (product) => product.licensing_enabled,
     ).length;
     const hiddenCount = orderedProducts.length - publicCount;
-    const allowReorder = search.trim() === '' && category === 'all' && lifecycle === 'all';
-    const shown = orderedProducts.filter((product) =>
-        (category === 'all' || product.category === category) &&
-        (lifecycle === 'all' || product.lifecycle === lifecycle) &&
-        `${product.name} ${product.slug} ${product.summary ?? ''}`.toLowerCase().includes(search.trim().toLowerCase()),
+    const allowReorder =
+        search.trim() === '' && category === 'all' && lifecycle === 'all';
+    const shown = orderedProducts.filter(
+        (product) =>
+            (category === 'all' || product.category === category) &&
+            (lifecycle === 'all' || product.lifecycle === lifecycle) &&
+            `${product.name} ${product.slug} ${product.summary ?? ''}`
+                .toLowerCase()
+                .includes(search.trim().toLowerCase()),
     );
 
     return (
@@ -572,7 +609,9 @@ export function ProductManager({ products, search = '', category = 'all', lifecy
                 </div>
             </div>
             <div className="relative mb-4 rounded-xl border border-white/[0.07] bg-white/[0.025] px-4 py-3 text-[11px] leading-5 text-white/50">
-                {allowReorder ? 'Drag or use arrows to reorder the entire catalog. ' : 'Clear all filters before changing the product order. '}
+                {allowReorder
+                    ? 'Drag or use arrows to reorder the entire catalog. '
+                    : 'Clear all filters before changing the product order. '}
                 Changes here are the governed source for public visibility,
                 lifecycle, artwork and landing-page order. Purchase remains
                 fail-closed unless the product is Available.
@@ -589,8 +628,12 @@ export function ProductManager({ products, search = '', category = 'all', lifecy
                     />
                 ))}
                 {shown.length === 0 && (
-                    <p role="status" className="rounded-xl border border-dashed border-white/20 p-8 text-center text-sm text-white/70">
-                        No products match these filters. Try another category or lifecycle.
+                    <p
+                        role="status"
+                        className="rounded-xl border border-dashed border-white/20 p-8 text-center text-sm text-white/70"
+                    >
+                        No products match these filters. Try another category or
+                        lifecycle.
                     </p>
                 )}
             </div>
