@@ -212,7 +212,7 @@ jobs:
 
   ui_bootstrap_preflight:
     docker:
-      - image: cimg/php:8.4-browsers
+      - image: cimg/php:8.4-node
     resource_class: medium
     environment:
       APP_ENV: local
@@ -353,6 +353,7 @@ workflows:
             branches:
               only:
                 - ci/diagnose-real-browser-bootstrap-20261013
+                - ci/ui-node-image-bootstrap-20261013
       - ui_public:
           filters:
             branches:
