@@ -59,7 +59,7 @@ final class OwnerDirectoryHttpTest extends TestCase
         $response->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->component('operator-directory')
-                ->where('read_only', true)
+                ->where('read_only', false)
                 ->where('users.total', 1)
                 ->where('users.data.0.id', $matching->id)
                 ->where('users.data.0.name', 'UniqueDirectoryAlice')
@@ -97,6 +97,105 @@ final class OwnerDirectoryHttpTest extends TestCase
             ->withSession(['auth.password_confirmed_at' => time()])
             ->get('/operator/directory?users_q='.str_repeat('x', 81))
             ->assertSessionHasErrors('users_q');
+    }
+
+    public function test_passkey_owner_can_edit_customer_name_without_changing_email_or_roles(): void
+    {
+        $owner = $this->owner();
+        $customer = User::factory()->create([
+            'name' => 'Original Customer',
+            'email' => 'customer-before@example.org',
+            'is_platform_owner' => false,
+        ]);
+
+        $this->actingAs($owner)
+            ->withSession(['auth.password_confirmed_at' => time()])
+            ->patch('/operator/directory/users/'.$customer->id, [
+                'name' => 'Updated Customer',
+                'email' => 'attempted-takeover@example.org',
+                'is_platform_owner' => true,
+            ])->assertRedirect();
+
+        $customer->refresh();
+        $this->assertSame('Updated Customer', $customer->name);
+        $this->assertSame('customer-before@example.org', $customer->email);
+        $this->assertFalse((bool) $customer->getAttribute('is_platform_owner'));
+        $this->assertDatabaseHas('operator_action_audits', [
+            'actor_user_id' => $owner->id,
+            'action' => 'customer.profile_name_updated',
+            'outcome' => 'success',
+        ]);
+    }
+
+    public function test_passkey_owner_can_edit_organization_name_without_changing_memberships(): void
+    {
+        $owner = $this->owner();
+        $organization = app(OrganizationCreator::class)->create('Before Name', $owner->id);
+        $organizationId = $organization['id'];
+
+        $this->actingAs($owner)
+            ->withSession(['auth.password_confirmed_at' => time()])
+            ->patch('/operator/directory/organizations/'.$organizationId, [
+                'name' => 'After Name',
+                'memberships_count' => 1000,
+            ])->assertRedirect();
+
+        $this->assertDatabaseHas('organizations', [
+            'id' => $organizationId,
+            'name' => 'After Name',
+        ]);
+        $this->assertDatabaseHas('operator_action_audits', [
+            'actor_user_id' => $owner->id,
+            'action' => 'customer.organization_name_updated',
+            'outcome' => 'success',
+        ]);
+    }
+
+    public function test_non_owner_and_guest_cannot_edit_any_customer(): void
+    {
+        $owner = $this->owner();
+        $customer = User::factory()->create(['name' => 'Protected Customer']);
+        $organization = app(OrganizationCreator::class)->create('Protected Organization', $owner->id);
+
+        $this->patch('/operator/directory/users/'.$customer->id, [
+            'name' => 'Unauthorized Rename',
+        ])->assertRedirect('/login');
+
+        $other = User::factory()->create(['email_verified_at' => now()]);
+        $this->actingAs($other)
+            ->withSession(['auth.password_confirmed_at' => time()])
+            ->patch('/operator/directory/users/'.$customer->id, [
+                'name' => 'Unauthorized Rename',
+            ])->assertForbidden();
+        $this->actingAs($other)
+            ->withSession(['auth.password_confirmed_at' => time()])
+            ->patch('/operator/directory/organizations/'.$organization['id'], [
+                'name' => 'Unauthorized Organization',
+            ])->assertForbidden();
+
+        $this->assertSame('Protected Customer', $customer->fresh()->name);
+        $this->assertDatabaseHas('organizations', [
+            'id' => $organization['id'],
+            'name' => 'Protected Organization',
+        ]);
+    }
+
+    public function test_invalid_edits_reject_unknown_users_and_bad_names(): void
+    {
+        $owner = $this->owner();
+        $this->actingAs($owner)
+            ->withSession(['auth.password_confirmed_at' => time()])
+            ->patch('/operator/directory/users/99999999', [
+                'name' => 'Never Found',
+            ])->assertNotFound();
+
+        $customer = User::factory()->create(['name' => 'Protected Customer']);
+        $this->actingAs($owner)
+            ->withSession(['auth.password_confirmed_at' => time()])
+            ->patch('/operator/directory/users/'.$customer->id, [
+                'name' => 'x',
+            ])->assertSessionHasErrors('name');
+        $this->assertSame('Protected Customer', $customer->fresh()->name);
     }
 
     private function owner(): User
