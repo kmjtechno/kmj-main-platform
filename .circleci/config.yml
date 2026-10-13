@@ -49,16 +49,22 @@ commands:
             php artisan migrate --force --no-ansi
             grep -E "^(APP_ENV|DB_CONNECTION|SESSION_DRIVER|CACHE_STORE|QUEUE_CONNECTION)=" .env
       - run:
-          name: Serve the app
+          name: Serve the app (background step, stays alive for the following steps)
+          background: true
+          command: |
+            cd apps/platform
+            php artisan serve --host=127.0.0.1 --port=8000
+      - run:
+          name: Wait until the app answers on /login
           command: |
             set -euo pipefail
-            cd apps/platform
-            nohup php artisan serve --host=127.0.0.1 --port=8000 > /tmp/serve.log 2>&1 &
-            for i in $(seq 1 40); do
-              if curl -fsS -o /dev/null http://127.0.0.1:8000/login; then echo "app is up"; exit 0; fi
+            for i in $(seq 1 60); do
+              code=$(curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:8000/login || true)
+              if [ "$code" = "200" ]; then echo "app is up after ${i}s"; exit 0; fi
               sleep 1
             done
-            echo "app did not start"; tail -n 40 /tmp/serve.log; exit 1
+            echo "app did not return 200 on /login (last status: $code)"
+            exit 1
       - run:
           name: Install browser tooling (outside the app's dependencies)
           command: |
