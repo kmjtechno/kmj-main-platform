@@ -8,7 +8,6 @@ import DeviceControlCenter, {
 } from '@/components/codebridge/device-control-center';
 import {
     ArrowLeft,
-    Cable,
     CheckCircle2,
     KeyRound,
     Laptop2,
@@ -157,7 +156,13 @@ export default function CodeBridgeService({
                     <div className="mt-6 flex flex-col justify-between gap-6 lg:flex-row lg:items-start">
                         <div className="flex items-start gap-4">
                             <span className="grid h-14 w-14 shrink-0 place-items-center rounded-2xl border border-red-500/20 bg-red-500/10 text-red-500">
-                                <Cable className="h-7 w-7" />
+                                <img
+                                    src="/assets/kmj-codebridge-icon.png"
+                                    alt="Official KMJ CodeBridge icon"
+                                    width={40}
+                                    height={40}
+                                    className="h-10 w-10 object-contain"
+                                />
                             </span>
                             <div>
                                 <div className="flex flex-wrap items-center gap-2">
@@ -182,6 +187,14 @@ export default function CodeBridgeService({
                         </div>
 
                         <div className="flex flex-wrap gap-2">
+                            <button
+                                type="button"
+                                onClick={() => setActiveSection('devices')}
+                                className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border px-4 text-xs font-bold transition hover:border-red-500/40 hover:text-red-500"
+                            >
+                                <Laptop2 className="h-3.5 w-3.5" />
+                                Manage devices
+                            </button>
                             <a
                                 href={vscodeInstallUrl(service.endpoint)}
                                 className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-red-600 px-4 text-xs font-black text-white transition hover:bg-red-500"
