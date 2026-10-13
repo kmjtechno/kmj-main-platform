@@ -84,7 +84,6 @@ type DashboardProps = {
 
 const CHATGPT_DESKTOP_SETUP_URL = '/install-chatgpt-desktop.ps1';
 
-
 const productImages: Record<string, string> = {
     'kmj-cloudos': '/assets/products/kmj-cloudos.webp',
     'kmj-calibration-pro': '/assets/products/kmj-calibration.webp',
@@ -234,64 +233,64 @@ export default function Dashboard({
                 </section>
 
                 {ownerProducts === null && (
-                <section className="border-sidebar-border/70 bg-card rounded-2xl border p-5 sm:p-6">
-                    <div className="flex flex-wrap items-start justify-between gap-3">
-                        <div>
-                            <h2 className="text-lg font-bold">
-                                Explore KMJ products
-                            </h2>
-                            <p className="text-muted-foreground mt-1 max-w-2xl text-xs leading-5">
-                                These are public catalog entries, not
-                                subscriptions or licenses assigned to your
-                                account. Availability is shown for each product.
+                    <section className="border-sidebar-border/70 bg-card rounded-2xl border p-5 sm:p-6">
+                        <div className="flex flex-wrap items-start justify-between gap-3">
+                            <div>
+                                <h2 className="text-lg font-bold">
+                                    Explore KMJ products
+                                </h2>
+                                <p className="text-muted-foreground mt-1 max-w-2xl text-xs leading-5">
+                                    These are public catalog entries, not
+                                    subscriptions or licenses assigned to your
+                                    account. Availability is shown for each
+                                    product.
+                                </p>
+                            </div>
+                            <Link
+                                href="/products"
+                                className="inline-flex min-h-10 items-center gap-2 rounded-xl border px-4 text-xs font-bold hover:border-red-500/40"
+                            >
+                                Entire catalog <ArrowRight className="size-4" />
+                            </Link>
+                        </div>
+
+                        {discoverableProducts.length === 0 ? (
+                            <p className="text-muted-foreground mt-5 rounded-xl border border-dashed p-5 text-sm">
+                                No publicly listed products at present.
                             </p>
-                        </div>
-                        <Link
-                            href="/products"
-                            className="inline-flex min-h-10 items-center gap-2 rounded-xl border px-4 text-xs font-bold hover:border-red-500/40"
-                        >
-                            Entire catalog <ArrowRight className="size-4" />
-                        </Link>
-                    </div>
-
-                    {discoverableProducts.length === 0 ? (
-                        <p className="text-muted-foreground mt-5 rounded-xl border border-dashed p-5 text-sm">
-                            No publicly listed products at present.
-                        </p>
-                    ) : (
-                        <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-                            {discoverableProducts.map((product) => (
-                                <article
-                                    key={product.slug}
-                                    className="flex min-w-0 flex-col justify-between rounded-xl border p-4"
-                                >
-                                    <div>
-                                        <h3 className="font-bold">
-                                            {product.name}
-                                        </h3>
-                                        <p className="text-muted-foreground mt-1 text-xs">
-                                            {product.lifecycle_label}
-                                            {product.purchase_enabled
-                                                ? ' · Access requests available'
-                                                : ' · Not available for purchase'}
-                                        </p>
-                                        <p className="text-muted-foreground mt-3 line-clamp-3 text-xs leading-5">
-                                            {product.summary}
-                                        </p>
-                                    </div>
-                                    <Link
-                                        href={`/products/${encodeURIComponent(product.slug)}`}
-                                        className="mt-4 inline-flex min-h-10 items-center gap-2 text-xs font-bold text-red-500"
+                        ) : (
+                            <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                                {discoverableProducts.map((product) => (
+                                    <article
+                                        key={product.slug}
+                                        className="flex min-w-0 flex-col justify-between rounded-xl border p-4"
                                     >
-                                        Product details{' '}
-                                        <ArrowRight className="size-4" />
-                                    </Link>
-                                </article>
-                            ))}
-                        </div>
-                    )}
-                </section>
-
+                                        <div>
+                                            <h3 className="font-bold">
+                                                {product.name}
+                                            </h3>
+                                            <p className="text-muted-foreground mt-1 text-xs">
+                                                {product.lifecycle_label}
+                                                {product.purchase_enabled
+                                                    ? ' · Access requests available'
+                                                    : ' · Not available for purchase'}
+                                            </p>
+                                            <p className="text-muted-foreground mt-3 line-clamp-3 text-xs leading-5">
+                                                {product.summary}
+                                            </p>
+                                        </div>
+                                        <Link
+                                            href={`/products/${encodeURIComponent(product.slug)}`}
+                                            className="mt-4 inline-flex min-h-10 items-center gap-2 text-xs font-bold text-red-500"
+                                        >
+                                            Product details{' '}
+                                            <ArrowRight className="size-4" />
+                                        </Link>
+                                    </article>
+                                ))}
+                            </div>
+                        )}
+                    </section>
                 )}
 
                 <section className="border-sidebar-border/70 bg-card dark:border-sidebar-border rounded-2xl border p-5 sm:p-6">
@@ -601,7 +600,7 @@ function OwnerProductsPanel({ products }: { products: OwnerProduct[] }) {
         <section
             id="owner-products"
             aria-labelledby="owner-products-heading"
-            className="rounded-2xl border bg-card p-5 sm:p-6"
+            className="bg-card rounded-2xl border p-5 sm:p-6"
         >
             <div className="flex flex-col items-start justify-between gap-4 lg:flex-row lg:items-center">
                 <div className="flex items-start gap-3">
@@ -609,23 +608,37 @@ function OwnerProductsPanel({ products }: { products: OwnerProduct[] }) {
                         <Package className="size-5" />
                     </span>
                     <div>
-                        <h2 id="owner-products-heading" className="text-base font-bold">
+                        <h2
+                            id="owner-products-heading"
+                            className="text-base font-bold"
+                        >
                             Platform owner workspace
                         </h2>
-                        <p className="mt-1 max-w-xl text-sm text-muted-foreground">
-                            Manage all products, categories and licensing from Super Admin.
-                            Your personal licensed services remain separate above.
+                        <p className="text-muted-foreground mt-1 max-w-xl text-sm">
+                            Manage all products, categories and licensing from
+                            Super Admin. Your personal licensed services remain
+                            separate above.
                         </p>
-                        <p className="mt-2 text-xs text-muted-foreground" role="status">
-                            {products.length} products · {publicCount} public · {activeLicensing} licensing-enabled
+                        <p
+                            className="text-muted-foreground mt-2 text-xs"
+                            role="status"
+                        >
+                            {products.length} products · {publicCount} public ·{' '}
+                            {activeLicensing} licensing-enabled
                         </p>
                     </div>
                 </div>
                 <div className="flex flex-wrap gap-2">
-                    <Link href="/operator/products" className="inline-flex min-h-10 items-center gap-2 rounded-xl bg-red-600 px-4 text-sm font-semibold text-white hover:bg-red-500">
+                    <Link
+                        href="/operator/products"
+                        className="inline-flex min-h-10 items-center gap-2 rounded-xl bg-red-600 px-4 text-sm font-semibold text-white hover:bg-red-500"
+                    >
                         Product Management <ArrowRight className="size-4" />
                     </Link>
-                    <Link href="/operator/kslp" className="inline-flex min-h-10 items-center gap-2 rounded-xl border px-4 text-sm font-semibold hover:bg-accent">
+                    <Link
+                        href="/operator/kslp"
+                        className="hover:bg-accent inline-flex min-h-10 items-center gap-2 rounded-xl border px-4 text-sm font-semibold"
+                    >
                         Licensing Center <KeyRound className="size-4" />
                     </Link>
                 </div>
