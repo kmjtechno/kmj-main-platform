@@ -44,6 +44,15 @@ jobs:
             cd apps/platform
             composer install --no-interaction --prefer-dist --no-progress
       - run:
+          name: Static PHP checks (Pint style, PHPStan level 7)
+          no_output_timeout: 8m
+          command: |
+            set -euo pipefail
+            cd apps/platform
+            vendor/bin/pint --parallel --test
+            php artisan config:clear --ansi || true
+            vendor/bin/phpstan analyse --no-progress --memory-limit=1G
+      - run:
           name: Full frontend check (Vite+ format and lint, source contracts, layout)
           no_output_timeout: 8m
           command: |
