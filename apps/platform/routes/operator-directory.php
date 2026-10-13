@@ -9,11 +9,11 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
-use KMJ\MainPlatform\Organizations\Models\Organization;
 use KMJ\MainPlatform\Catalog\Models\Product;
 use KMJ\MainPlatform\Entitlements\Models\Entitlement;
 use KMJ\MainPlatform\Entitlements\Models\EntitlementPolicy;
 use KMJ\MainPlatform\Entitlements\Services\EntitlementIssuer;
+use KMJ\MainPlatform\Organizations\Models\Organization;
 
 Route::middleware(['auth', 'verified', 'password.confirm'])
     ->prefix('operator')
