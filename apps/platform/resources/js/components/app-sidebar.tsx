@@ -10,6 +10,7 @@ import {
     PackageOpen,
     ShieldCheck,
     ShoppingCart,
+    Users,
 } from 'lucide-react';
 import AppLogo from '@/components/app-logo';
 import { NavFooter } from '@/components/nav-footer';
@@ -69,43 +70,34 @@ const footerNavItems: NavItem[] = [
     },
 ];
 
+type OperatorModule = {
+    id: string;
+    title: string;
+    href: string;
+    icon: string;
+};
+
+const operatorIcons: Record<string, NavItem['icon']> = {
+    Activity,
+    CreditCard,
+    Crown,
+    KeyRound,
+    PackageOpen,
+    Users,
+};
+
 export function AppSidebar() {
     const operator = usePage().props.operator as
-        | { enabled?: boolean }
+        | { enabled?: boolean; modules?: OperatorModule[] }
         | undefined;
-    const mainNavItems: NavItem[] = [
-        ...baseNavItems,
-        ...(operator?.enabled
-            ? [
-                  { title: 'Super Admin', href: '/operator', icon: Crown },
-                  {
-                      title: 'Customers & Organizations',
-                      href: '/operator/directory',
-                      icon: Crown,
-                  },
-                  {
-                      title: 'Licensing Governance',
-                      href: '/operator/kslp',
-                      icon: KeyRound,
-                  },
-                  {
-                      title: 'Gateway Settings',
-                      href: '/operator/payments',
-                      icon: CreditCard,
-                  },
-                  {
-                      title: 'Product Manager',
-                      href: '/operator#product-manager',
-                      icon: PackageOpen,
-                  },
-                  {
-                      title: 'Ops Command Center',
-                      href: '/operator/ops',
-                      icon: Activity,
-                  },
-              ]
-            : []),
-    ];
+    const operatorItems: NavItem[] = operator?.enabled
+        ? (operator.modules ?? []).map((module) => ({
+              title: module.title,
+              href: module.href,
+              icon: operatorIcons[module.icon] ?? Crown,
+          }))
+        : [];
+    const mainNavItems: NavItem[] = [...baseNavItems, ...operatorItems];
 
     return (
         <Sidebar collapsible="icon" variant="inset">
