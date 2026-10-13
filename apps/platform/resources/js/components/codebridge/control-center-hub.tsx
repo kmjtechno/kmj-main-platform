@@ -106,7 +106,10 @@ export default function CodeBridgeControlCenterHub({
                 <p className="text-muted-foreground mt-2 text-xs leading-5">
                     Manage your authorized CodeBridge workspace.
                 </p>
-                <nav aria-label="CodeBridge sections" className="mt-4 grid grid-cols-2 gap-1 sm:grid-cols-3 lg:grid-cols-1">
+                <nav
+                    aria-label="CodeBridge sections"
+                    className="mt-4 grid grid-cols-2 gap-1 sm:grid-cols-3 lg:grid-cols-1"
+                >
                     {navigation.map(({ id, label, icon: Icon }) => (
                         <button
                             key={id}
@@ -120,7 +123,10 @@ export default function CodeBridgeControlCenterHub({
                                     : 'text-muted-foreground hover:bg-muted hover:text-foreground',
                             ].join(' ')}
                         >
-                            <Icon aria-hidden="true" className="h-4 w-4 shrink-0 text-red-500" />
+                            <Icon
+                                aria-hidden="true"
+                                className="h-4 w-4 shrink-0 text-red-500"
+                            />
                             {label}
                         </button>
                     ))}
