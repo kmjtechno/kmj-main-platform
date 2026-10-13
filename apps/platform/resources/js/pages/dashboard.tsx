@@ -52,8 +52,17 @@ type Organization = {
     entitlements: Entitlement[];
 };
 
+type DiscoverableProduct = {
+    slug: string;
+    name: string;
+    lifecycle_label: string;
+    purchase_enabled: boolean;
+    summary: string;
+};
+
 type DashboardProps = {
     organizations: Organization[];
+    discoverableProducts: DiscoverableProduct[];
     hasPasskey: boolean;
     canManageCodeBridgeOwnerPlan: boolean;
 };
@@ -76,6 +85,7 @@ const productImages: Record<string, string> = {
 
 export default function Dashboard({
     organizations,
+    discoverableProducts,
     hasPasskey,
     canManageCodeBridgeOwnerPlan,
 }: DashboardProps) {
@@ -105,9 +115,9 @@ export default function Dashboard({
                                 My KMJ Services
                             </h1>
                             <p className="text-muted-foreground mt-3 max-w-xl text-sm leading-6">
-                                Your dashboard shows only services authorized
-                                for your account, with live access, licensing
-                                and connection information in one place.
+                                Your licensed services appear separately from
+                                the KMJ product catalog. Products you can explore
+                                are not automatically activated on your account.
                             </p>
                         </div>
 
@@ -169,6 +179,61 @@ export default function Dashboard({
                                     />
                                 ),
                             )}
+                        </div>
+                    )}
+                </section>
+
+                <section className="border-sidebar-border/70 bg-card rounded-2xl border p-5 sm:p-6">
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                        <div>
+                            <h2 className="text-lg font-bold">
+                                Explore KMJ products
+                            </h2>
+                            <p className="text-muted-foreground mt-1 max-w-2xl text-xs leading-5">
+                                These are public catalog entries, not subscriptions or
+                                licenses assigned to your account. Availability is
+                                shown for each product.
+                            </p>
+                        </div>
+                        <Link
+                            href="/products"
+                            className="inline-flex min-h-10 items-center gap-2 rounded-xl border px-4 text-xs font-bold hover:border-red-500/40"
+                        >
+                            Entire catalog <ArrowRight className="size-4" />
+                        </Link>
+                    </div>
+
+                    {discoverableProducts.length === 0 ? (
+                        <p className="text-muted-foreground mt-5 rounded-xl border border-dashed p-5 text-sm">
+                            No publicly listed products at present.
+                        </p>
+                    ) : (
+                        <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                            {discoverableProducts.map((product) => (
+                                <article
+                                    key={product.slug}
+                                    className="flex min-w-0 flex-col justify-between rounded-xl border p-4"
+                                >
+                                    <div>
+                                        <h3 className="font-bold">{product.name}</h3>
+                                        <p className="text-muted-foreground mt-1 text-xs">
+                                            {product.lifecycle_label}
+                                            {product.purchase_enabled
+                                                ? ' · Access requests available'
+                                                : ' · Not available for purchase'}
+                                        </p>
+                                        <p className="text-muted-foreground mt-3 line-clamp-3 text-xs leading-5">
+                                            {product.summary}
+                                        </p>
+                                    </div>
+                                    <Link
+                                        href={`/products/${encodeURIComponent(product.slug)}`}
+                                        className="mt-4 inline-flex min-h-10 items-center gap-2 text-xs font-bold text-red-500"
+                                    >
+                                        Product details <ArrowRight className="size-4" />
+                                    </Link>
+                                </article>
+                            ))}
                         </div>
                     )}
                 </section>
