@@ -224,12 +224,12 @@ export default function DeviceControlCenter({
                                     </span>
                                     <div className="min-w-0">
                                         <h3 className="truncate text-sm font-black">{device.name}</h3>
-                                        <p className="text-muted-foreground mt-1 text-[11px]">
+                                        <p className="text-muted-foreground mt-1 text-xs">
                                             {[device.platform, device.arch].filter(Boolean).join(' / ') || 'Platform not reported'}
                                         </p>
                                     </div>
                                 </div>
-                                <span className="shrink-0 rounded-lg border px-2 py-1 text-[10px] font-bold">
+                                <span className="shrink-0 rounded-lg border px-2 py-1 text-xs font-bold">
                                     Registered · Live status unknown
                                 </span>
                             </div>
@@ -239,7 +239,7 @@ export default function DeviceControlCenter({
                                 Live connection has not been verified
                             </div>
                             {device.registered_at && (
-                                <p className="text-muted-foreground mt-1 text-[11px]">
+                                <p className="text-muted-foreground mt-1 text-xs">
                                     Registered {formatRegisteredAt(device.registered_at)}
                                 </p>
                             )}
@@ -249,12 +249,12 @@ export default function DeviceControlCenter({
                             <div className="mt-2 flex flex-wrap gap-1.5">
                                 {device.projects.map((project) => (
                                     <span key={project.id} title={project.id}
-                                        className="max-w-full truncate rounded-lg border px-2.5 py-1 text-[11px]">
+                                        className="max-w-full truncate rounded-lg border px-2.5 py-1 text-xs">
                                         {project.name}
                                     </span>
                                 ))}
                                 {device.projects.length === 0 && (
-                                    <span className="text-muted-foreground text-[11px]">No saved project grant</span>
+                                    <span className="text-muted-foreground text-xs">No saved project grant</span>
                                 )}
                             </div>
 
@@ -262,16 +262,16 @@ export default function DeviceControlCenter({
                                 <button type="button"
                                     onClick={() => setDetails(details === device.id ? null : device.id)}
                                     aria-expanded={details === device.id}
-                                    className="rounded-lg border px-3 py-2 text-[11px] font-bold">
+                                    className="rounded-lg border px-3 py-2 text-xs font-bold">
                                     {details === device.id ? 'Hide details' : 'Details & diagnose'}
                                 </button>
                                 <Link href="/codebridge/pair"
-                                    className="rounded-lg border px-3 py-2 text-[11px] font-bold">
+                                    className="rounded-lg border px-3 py-2 text-xs font-bold">
                                     Reconnect guide
                                 </Link>
                                 {canManage && (
                                     <button type="button" onClick={() => startDisconnect(device)}
-                                        disabled={submitting} className="inline-flex items-center gap-1.5 rounded-lg border border-red-500/30 px-3 py-2 text-[11px] font-bold text-red-500 disabled:opacity-50">
+                                        disabled={submitting} className="inline-flex items-center gap-1.5 rounded-lg border border-red-500/30 px-3 py-2 text-xs font-bold text-red-500 disabled:opacity-50">
                                         <Unplug className="h-3.5 w-3.5" /> Disconnect
                                     </button>
                                 )}
@@ -281,11 +281,11 @@ export default function DeviceControlCenter({
                                 <div className="mt-3 rounded-xl border bg-black/[0.02] p-3 text-xs dark:bg-white/[0.02]">
                                     <div className="flex flex-wrap items-center justify-between gap-2">
                                         <div>
-                                            <p className="text-muted-foreground text-[10px]">Device ID</p>
+                                            <p className="text-muted-foreground text-xs">Device ID</p>
                                             <code className="break-all">{device.id}</code>
                                         </div>
                                         <button type="button" onClick={() => void copy(device.id, 'Device ID')}
-                                            className="inline-flex items-center gap-1 rounded-lg border px-2.5 py-1.5 text-[11px]">
+                                            className="inline-flex items-center gap-1 rounded-lg border px-2.5 py-1.5 text-xs">
                                             <Clipboard className="h-3.5 w-3.5" /> Copy
                                         </button>
                                     </div>
@@ -303,12 +303,12 @@ export default function DeviceControlCenter({
                                         <LockKeyhole className="h-4 w-4 text-red-500" />
                                         Confirm device disconnect
                                     </p>
-                                    <p className="text-muted-foreground mt-2 text-[11px] leading-5">
+                                    <p className="text-muted-foreground mt-2 text-xs leading-5">
                                         This revokes the stored device credential; it does not erase
                                         local files or shut down the machine. New pairing is required
                                         to reconnect. Gateway status may lag until revalidation.
                                     </p>
-                                    <label className="mt-3 block text-[11px] font-semibold">
+                                    <label className="mt-3 block text-xs font-semibold">
                                         Type exact device ID to confirm:
                                         <code className="ml-1 break-all">{device.id}</code>
                                         <input value={confirmation} onChange={(event) => setConfirmation(event.target.value)}
@@ -318,11 +318,11 @@ export default function DeviceControlCenter({
                                     <div className="mt-3 flex flex-wrap gap-2">
                                         <button type="button" onClick={() => disconnect(device)}
                                             disabled={submitting || confirmation !== device.id}
-                                            className="rounded-lg bg-red-600 px-3 py-2 text-[11px] font-bold text-white disabled:cursor-not-allowed disabled:opacity-40">
+                                            className="rounded-lg bg-red-600 px-3 py-2 text-xs font-bold text-white disabled:cursor-not-allowed disabled:opacity-40">
                                             {submitting ? 'Disconnecting…' : 'Revoke device access'}
                                         </button>
                                         <button type="button" onClick={cancelDisconnect}
-                                            disabled={submitting} className="rounded-lg border px-3 py-2 text-[11px] font-bold">
+                                            disabled={submitting} className="rounded-lg border px-3 py-2 text-xs font-bold">
                                             Cancel
                                         </button>
                                     </div>
@@ -350,9 +350,9 @@ export default function DeviceControlCenter({
                     <div className="flex items-center gap-2 text-xs font-black">
                         <CheckCircle2 className="h-4 w-4 text-red-500" /> MCP endpoint
                     </div>
-                    <code className="mt-3 block break-all text-[11px]">{endpoint}</code>
+                    <code className="mt-3 block break-all text-xs">{endpoint}</code>
                     <button type="button" onClick={() => void copy(endpoint, 'MCP endpoint')}
-                        className="mt-3 inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-[11px] font-bold">
+                        className="mt-3 inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-xs font-bold">
                         <Clipboard className="h-3.5 w-3.5" /> Copy endpoint
                     </button>
                 </div>
@@ -372,9 +372,9 @@ function Stat({ label, value, hint }: {
 }) {
     return (
         <div className="bg-background rounded-xl border p-4">
-            <p className="text-muted-foreground text-[10px] font-bold uppercase">{label}</p>
+            <p className="text-muted-foreground text-xs font-bold uppercase">{label}</p>
             <p className="mt-1 text-lg font-black">{value}</p>
-            <p className="text-muted-foreground mt-1 text-[10px]">{hint}</p>
+            <p className="text-muted-foreground mt-1 text-xs">{hint}</p>
         </div>
     );
 }
@@ -386,7 +386,7 @@ function QuickAction({ icon: Icon, title, description, href, label }: {
         <div className="rounded-xl border p-4">
             <Icon className="h-4 w-4 text-red-500" />
             <p className="mt-2 text-xs font-black">{title}</p>
-            <p className="text-muted-foreground mt-1 text-[11px] leading-5">{description}</p>
+            <p className="text-muted-foreground mt-1 text-xs leading-5">{description}</p>
             <Link href={href} className="mt-3 inline-flex items-center gap-1.5 text-xs font-bold text-red-500">
                 {label} <ArrowRight className="h-3.5 w-3.5" />
             </Link>
