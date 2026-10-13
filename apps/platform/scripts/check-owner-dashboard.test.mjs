@@ -33,7 +33,7 @@ void test('plan display remains bound to the actual license value', () => {
     assert.ok(!dashboard.includes("plan: 'owner'"));
 });
 
-void test('all-product owner list is computed and rendered for platform owners only', () => {
+void test('verified owner product authority is exposed only through the compact admin entry', () => {
     // The catalog is only queried inside the owner guard and is null for everyone else.
     const start = routes.indexOf('$ownerProducts = null;');
     const guard = routes.indexOf('if ($isPlatformOwner) {', start);
@@ -46,6 +46,9 @@ void test('all-product owner list is computed and rendered for platform owners o
         ),
     );
     assert.ok(dashboard.includes('{ownerProducts !== null && ('));
-    assert.ok(dashboard.includes('All KMJ products'));
-    assert.ok(dashboard.includes('href="/operator#product-manager"'));
+    assert.ok(dashboard.includes('Platform owner workspace'));
+    assert.ok(dashboard.includes('href="/operator/products"'));
+    assert.ok(dashboard.includes('href="/operator/kslp"'));
+    assert.ok(dashboard.includes('{ownerProducts === null && ('));
+    assert.ok(!dashboard.includes('href="/operator#product-manager"'));
 });
