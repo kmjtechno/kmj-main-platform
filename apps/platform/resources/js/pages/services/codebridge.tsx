@@ -190,7 +190,7 @@ export default function CodeBridgeService({
                             <button
                                 type="button"
                                 onClick={() => setActiveSection('devices')}
-                                className="focus-visible:ring-ring inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-red-500/30 bg-red-500/10 px-4 text-xs font-bold text-foreground transition hover:bg-red-500/15 focus-visible:ring-2 focus-visible:outline-none"
+                                className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border px-4 text-xs font-bold transition hover:border-red-500/40 hover:text-red-500"
                             >
                                 <Laptop2 className="h-3.5 w-3.5" />
                                 Manage devices
