@@ -78,10 +78,7 @@ export default function Login({ status, canResetPassword }: Props) {
                             </div>
 
                             <div className="flex items-center space-x-3">
-                                <Checkbox
-                                    id="remember"
-                                    name="remember"
-                                />
+                                <Checkbox id="remember" name="remember" />
                                 <Label htmlFor="remember">Remember me</Label>
                             </div>
 
@@ -99,9 +96,7 @@ export default function Login({ status, canResetPassword }: Props) {
                         {/* @chisel-registration */}
                         <div className="text-muted-foreground text-center text-sm">
                             Don't have an account?{' '}
-                            <TextLink href={register()}>
-                                Sign up
-                            </TextLink>
+                            <TextLink href={register()}>Sign up</TextLink>
                         </div>
                         {/* @end-chisel-registration */}
                     </>
