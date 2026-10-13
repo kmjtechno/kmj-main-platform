@@ -6,11 +6,11 @@ namespace Tests\Feature;
 
 use App\Models\User;
 use App\Services\Commerce\CommercialProductPublisher;
-use KMJ\MainPlatform\Entitlements\Models\EntitlementPolicy;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Inertia\Testing\AssertableInertia as Assert;
+use KMJ\MainPlatform\Entitlements\Models\EntitlementPolicy;
 use KMJ\MainPlatform\Organizations\Services\OrganizationCreator;
 use Tests\TestCase;
 
