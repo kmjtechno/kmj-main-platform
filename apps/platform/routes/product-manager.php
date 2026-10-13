@@ -11,6 +11,23 @@ Route::middleware(['auth', 'verified', 'password.confirm'])
     ->prefix('operator/products')
     ->name('operator.products.')
     ->group(function (): void {
+        Route::get('/', function (Request $request, PlatformOwnerAccess $access) {
+            $user = $request->user();
+            abort_unless($user instanceof User, 401);
+            $access->require($user);
+
+            return \Inertia\Inertia::render('operator-products', [
+                'products' => Product::query()
+                    ->orderBy('sort_order')
+                    ->orderBy('name')
+                    ->get([
+                        'id', 'slug', 'name', 'status', 'lifecycle', 'category',
+                        'is_public', 'sort_order', 'image_path', 'summary',
+                        'purchase_enabled', 'licensing_enabled',
+                    ]),
+            ]);
+        })->name('index');
+
         Route::post('/', function (Request $request, PlatformOwnerAccess $access, AdminProductManager $manager) {
             $user = $request->user();
             abort_unless($user instanceof User, 401);
