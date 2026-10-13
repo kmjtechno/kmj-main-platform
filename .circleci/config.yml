@@ -152,6 +152,30 @@ jobs:
             echo "tests passed: ${passed:-none}"
             test "${passed:-0}" -ge 97
 
+  owner_admin_preflight:
+    docker:
+      - image: cimg/php:8.4-node
+    resource_class: small
+    steps:
+      - checkout
+      - run:
+          name: Immutable source identity and PHP syntax
+          command: |
+            set -euo pipefail
+            test "$(git rev-parse HEAD)" = "$CIRCLE_SHA1"
+            php -l apps/platform/routes/product-manager.php
+            php -l apps/platform/routes/kslp-admin.php
+            php -l apps/platform/tests/Feature/OwnerProductManagementWorkspaceTest.php
+            php -l apps/platform/tests/Feature/OwnerLicensingCenterHttpTest.php
+            php -l packages/domain-catalog/database/migrations/2026_10_14_000230_add_category_to_products_table.php
+      - run:
+          name: No-dependency admin source regression tests
+          command: |
+            set -euo pipefail
+            cd apps/platform
+            node --test scripts/check-owner-dashboard.test.mjs scripts/check-licensing-integration.test.mjs scripts/check-codebridge-safe-onboarding.test.mjs
+            echo "KMJ_ADMIN_ZERO_INSTALL_PREFLIGHT_PASS=1"
+
   owner_admin_release:
     docker:
       - image: cimg/php:8.4-node
@@ -244,6 +268,11 @@ jobs:
 workflows:
   review_owner_admin_release:
     jobs:
+      - owner_admin_preflight:
+          filters:
+            branches:
+              only:
+                - feat/owner-product-workspace-categories-20261014
       - owner_admin_release:
           filters:
             branches:
