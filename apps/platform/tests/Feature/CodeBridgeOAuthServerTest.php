@@ -314,6 +314,28 @@ final class CodeBridgeOAuthServerTest extends TestCase
         $this->assertSame(1, DB::table('codebridge_oauth_codes')->count());
     }
 
+    public function test_consent_cannot_be_approved_after_account_changes_in_another_tab(): void
+    {
+        $first = User::factory()->create(['email' => 'first@example.test']);
+        $second = User::factory()->create(['email' => 'second@example.test']);
+        $clientId = $this->registerClient();
+        $page = $this->actingAs($first)->get('/oauth/authorize?'.$this->authorizeQuery($clientId))
+            ->assertOk()->assertInertia(fn (Assert $result) => $result
+                ->where('account.email', 'first@example.test'));
+        $requestId = $page->viewData('page')['props']['requestId'];
+
+        $this->actingAs($second)->post('/oauth/authorize', [
+            'request_id' => $requestId,
+            'decision' => 'approve',
+        ])->assertForbidden();
+        $this->assertDatabaseCount('codebridge_oauth_codes', 0);
+        $this->actingAs($second)->post('/oauth/authorize', [
+            'request_id' => $requestId,
+            'decision' => 'switch',
+        ])->assertBadRequest();
+        $this->assertDatabaseCount('codebridge_oauth_codes', 0);
+    }
+
     public function test_switch_rejects_unvalidated_or_replayed_request_ids(): void
     {
         $user = User::factory()->create();
