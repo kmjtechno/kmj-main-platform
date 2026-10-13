@@ -14,6 +14,8 @@
 **Document version:** V1.0  
 **Change rule:** Architecture or scope changes must be recorded through an ADR / issue / reviewed change before this document is superseded.
 
+> **LOCKED OWNER DECISION — 13 OCT 2026 — DEPLOYMENT TARGET:** The final Main Platform production hosting and deployment substrate is **KMJ CloudOS**. Main Platform remains the separate business/customer/commerce/entitlement/licensing authority, while CloudOS supplies isolated Linux execution, networking, storage, backups and runtime operations. The repositories remain separate and integrate through versioned contracts; CloudOS must continue already-authorized hosting during Main Platform/control-plane outages. Canonical implementation ADR: [ADR-009](docs/adr/ADR-009-main-platform-on-cloudos.md); synchronized machine-readable contract: [main-platform-cloudos-v1.json](contracts/deployment/main-platform-cloudos-v1.json). This target is **not** a claim that production migration has happened. Keep current production routing/data untouched until staged gates, rollback and owner-approved cutover pass. The superseded legacy staging-homepage mirror must not be revived.
+
 ---
 
 # 0. OWNER SUMMARY — HINDI
