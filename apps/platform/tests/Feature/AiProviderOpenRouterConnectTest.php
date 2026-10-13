@@ -36,6 +36,7 @@ final class AiProviderOpenRouterConnectTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        config(['app.url' => 'https://kmjtechno.com']);
         $orgA = $this->organization();
         $orgB = $this->organization();
         $this->owner = User::factory()->create(['email_verified_at' => now()]);
@@ -63,6 +64,43 @@ final class AiProviderOpenRouterConnectTest extends TestCase
         $this->assertStringStartsWith('https://', $query['callback_url']);
         $this->assertSame(rtrim(strtr(base64_encode(hash('sha256', $verifier, true)), '+/', '-_'), '='), $query['code_challenge']);
         $this->assertStringNotContainsString($verifier, $location);
+    }
+
+    public function test_callback_is_tied_to_canonical_configured_origin_not_request_host(): void
+    {
+        $response = $this->confirmed($this->owner)
+            ->withServerVariables(['HTTP_HOST' => 'attacker.example'])
+            ->post(self::START);
+
+        $response->assertRedirect();
+        parse_str((string) parse_url((string) $response->headers->get('Location'), PHP_URL_QUERY), $query);
+        $this->assertSame('kmjtechno.com', parse_url($query['callback_url'], PHP_URL_HOST));
+        $this->assertStringNotContainsString('attacker.example', $query['callback_url']);
+    }
+
+    public function test_insecure_or_malformed_app_origin_blocks_oauth_start(): void
+    {
+        foreach (['http://kmjtechno.com', 'https://kmjtechno.com/surprise',
+            'https://attacker@kmjtechno.com', 'https://kmjtechno.com?redirect=evil'] as $origin) {
+            config(['app.url' => $origin]);
+            $this->confirmed($this->owner)->post(self::START)->assertSessionHasErrors('provider');
+            $this->assertNull(session('ai_provider_oauth'));
+        }
+    }
+
+    public function test_authorization_saved_but_failed_model_probe_never_claims_verified(): void
+    {
+        Http::fake([
+            'openrouter.ai/api/v1/auth/keys' => Http::response(['key' => self::KEY], 200),
+            'openrouter.ai/api/v1/models' => Http::response(['error' => 'denied'], 401),
+        ]);
+        $this->confirmed($this->owner)->post(self::START);
+        $this->actingAs($this->owner)->get(self::CALLBACK.'?code=abcdefgh12345')
+            ->assertRedirect(route('ai-providers.index'));
+
+        $this->assertSame('auth_failed', AiProvider::query()->firstOrFail()->health);
+        $this->assertStringContainsString('verification failed', (string) session('status'));
+        $this->assertStringNotContainsString('connected and verified', (string) session('status'));
     }
 
     public function test_only_confirmed_owners_can_start(): void
