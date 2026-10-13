@@ -461,15 +461,21 @@ export default function Operator({
                     </div>
                 </section>
 
-                <section className="flex flex-col justify-between gap-4 rounded-2xl border bg-card p-5 sm:flex-row sm:items-center">
+                <section className="bg-card flex flex-col justify-between gap-4 rounded-2xl border p-5 sm:flex-row sm:items-center">
                     <div>
-                        <h2 className="text-lg font-bold">Product Management</h2>
-                        <p className="mt-1 max-w-xl text-sm text-muted-foreground">
-                            Create, categorize and edit your full catalog in its own workspace.
-                            Purchase and licensing decisions remain governed separately.
+                        <h2 className="text-lg font-bold">
+                            Product Management
+                        </h2>
+                        <p className="text-muted-foreground mt-1 max-w-xl text-sm">
+                            Create, categorize and edit your full catalog in its
+                            own workspace. Purchase and licensing decisions
+                            remain governed separately.
                         </p>
                     </div>
-                    <Link href="/operator/products" className="inline-flex min-h-11 shrink-0 items-center justify-center rounded-xl bg-red-600 px-5 text-sm font-bold text-white hover:bg-red-500">
+                    <Link
+                        href="/operator/products"
+                        className="inline-flex min-h-11 shrink-0 items-center justify-center rounded-xl bg-red-600 px-5 text-sm font-bold text-white hover:bg-red-500"
+                    >
                         Manage products
                     </Link>
                 </section>
