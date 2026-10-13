@@ -58,6 +58,14 @@ final class OwnerLicensingCenterHttpTest extends TestCase
                     ->pluck('id')->contains((string) $customer->id)));
 
         $this->actingAs($owner)->withSession(['auth.password_confirmed_at' => time()])
+            ->get('/operator/kslp?customer_q=licensing-alice%40example.test')
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('operator-kslp')
+                ->where('matchingCount', 1)
+                ->where('licenses.0.id', $target['id']));
+
+        $this->actingAs($owner)->withSession(['auth.password_confirmed_at' => time()])
             ->post('/operator/kslp/licenses/'.$target['id'].'/action', [
                 'action' => 'change_plan',
                 'plan' => 'professional',
