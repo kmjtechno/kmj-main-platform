@@ -131,7 +131,7 @@ final class OwnerDirectoryHttpTest extends TestCase
     {
         $owner = $this->owner();
         $organization = app(OrganizationCreator::class)->create('Before Name', $owner->id);
-        $organizationId = $organization['id'];
+        $organizationId = (string) $organization->getKey();
 
         $this->actingAs($owner)
             ->withSession(['auth.password_confirmed_at' => time()])
@@ -169,13 +169,13 @@ final class OwnerDirectoryHttpTest extends TestCase
             ])->assertForbidden();
         $this->actingAs($other)
             ->withSession(['auth.password_confirmed_at' => time()])
-            ->patch('/operator/directory/organizations/'.$organization['id'], [
+            ->patch('/operator/directory/organizations/'.$organization->getKey(), [
                 'name' => 'Unauthorized Organization',
             ])->assertForbidden();
 
         $this->assertSame('Protected Customer', $customer->fresh()->name);
         $this->assertDatabaseHas('organizations', [
-            'id' => $organization['id'],
+            'id' => (string) $organization->getKey(),
             'name' => 'Protected Organization',
         ]);
     }
