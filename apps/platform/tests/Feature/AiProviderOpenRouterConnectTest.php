@@ -36,6 +36,7 @@ final class AiProviderOpenRouterConnectTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        config(['app.url' => 'https://kmjtechno.com']);
         $orgA = $this->organization();
         $orgB = $this->organization();
         $this->owner = User::factory()->create(['email_verified_at' => now()]);
@@ -65,6 +66,43 @@ final class AiProviderOpenRouterConnectTest extends TestCase
         $this->assertStringNotContainsString($verifier, $location);
     }
 
+    public function test_callback_is_tied_to_canonical_configured_origin_not_request_host(): void
+    {
+        $response = $this->confirmed($this->owner)
+            ->withServerVariables(['HTTP_HOST' => 'attacker.example'])
+            ->post(self::START);
+
+        $response->assertRedirect();
+        parse_str((string) parse_url((string) $response->headers->get('Location'), PHP_URL_QUERY), $query);
+        $this->assertSame('kmjtechno.com', parse_url($query['callback_url'], PHP_URL_HOST));
+        $this->assertStringNotContainsString('attacker.example', $query['callback_url']);
+    }
+
+    public function test_insecure_or_malformed_app_origin_blocks_oauth_start(): void
+    {
+        foreach (['http://kmjtechno.com', 'https://kmjtechno.com/surprise',
+            'https://attacker@kmjtechno.com', 'https://kmjtechno.com?redirect=evil'] as $origin) {
+            config(['app.url' => $origin]);
+            $this->confirmed($this->owner)->post(self::START)->assertSessionHasErrors('provider');
+            $this->assertNull(session('ai_provider_oauth'));
+        }
+    }
+
+    public function test_authorization_saved_but_failed_model_probe_never_claims_verified(): void
+    {
+        Http::fake([
+            'openrouter.ai/api/v1/auth/keys' => Http::response(['key' => self::KEY], 200),
+            'openrouter.ai/api/v1/models' => Http::response(['error' => 'denied'], 401),
+        ]);
+        $this->confirmed($this->owner)->post(self::START);
+        $this->actingAs($this->owner)->get(self::CALLBACK.'?code=abcdefgh12345')
+            ->assertRedirect(route('ai-providers.index'));
+
+        $this->assertSame('auth_failed', AiProvider::query()->firstOrFail()->health);
+        $this->assertStringContainsString('verification failed', (string) session('status'));
+        $this->assertStringNotContainsString('connected and verified', (string) session('status'));
+    }
+
     public function test_only_confirmed_owners_can_start(): void
     {
         $this->confirmed($this->member)->post(self::START)->assertForbidden();
@@ -89,6 +127,9 @@ final class AiProviderOpenRouterConnectTest extends TestCase
         $this->assertSame('openrouter', $provider->preset);
         $this->assertSame('ok', $provider->health);
         $this->assertSame(['meta/llama-3:free', 'x/paid-model'], $provider->models_cache);
+        $this->assertSame('meta/llama-3:free', $provider->default_model);
+        $this->assertSame([], $provider->fallback_models);
+
         $this->assertNull(session('ai_provider_oauth'));
         $this->assertStringNotContainsString(self::KEY, (string) session('status'));
 
@@ -96,6 +137,39 @@ final class AiProviderOpenRouterConnectTest extends TestCase
         $manager->assertInferenceAllowed($provider, 'meta/llama-3:free');
         $this->expectException(RuntimeException::class);
         $manager->assertInferenceAllowed($provider, 'x/paid-model');
+    }
+
+    public function test_only_free_models_can_be_autoconfigured_as_fallbacks(): void
+    {
+        Http::fake([
+            'openrouter.ai/api/v1/auth/keys' => Http::response(['key' => self::KEY], 200),
+            'openrouter.ai/api/v1/models' => Http::response(['data' => [
+                ['id' => 'zz/paid'], ['id' => 'a/first:free'],
+                ['id' => 'b/second:free'], ['id' => 'c/third:free'],
+            ]], 200),
+        ]);
+        $this->confirmed($this->owner)->post(self::START);
+        $this->actingAs($this->owner)->get(self::CALLBACK.'?code=abcdefgh12345')
+            ->assertRedirect(route('ai-providers.index'));
+
+        $provider = AiProvider::query()->firstOrFail();
+        $this->assertSame('a/first:free', $provider->default_model);
+        $this->assertSame(['b/second:free', 'c/third:free'], $provider->fallback_models);
+        $this->assertStringNotContainsString('zz/paid', implode(',', $provider->fallback_models));
+    }
+
+    public function test_successful_auth_with_only_paid_models_has_no_default(): void
+    {
+        Http::fake([
+            'openrouter.ai/api/v1/auth/keys' => Http::response(['key' => self::KEY], 200),
+            'openrouter.ai/api/v1/models' => Http::response(['data' => [['id' => 'p/paid']]], 200),
+        ]);
+        $this->confirmed($this->owner)->post(self::START);
+        $this->actingAs($this->owner)->get(self::CALLBACK.'?code=abcdefgh12345')
+            ->assertRedirect(route('ai-providers.index'));
+
+        $this->assertNull(AiProvider::query()->firstOrFail()->default_model);
+        $this->assertStringContainsString('Inference remains blocked', (string) session('status'));
     }
 
     public function test_a_replayed_or_unstarted_callback_redeems_nothing(): void
