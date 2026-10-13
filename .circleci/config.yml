@@ -142,7 +142,15 @@ jobs:
             cp .env.example .env
             php artisan key:generate --force
             php artisan config:clear --ansi
-            php artisan test --no-ansi
+            # Prove tests really ran: require a zero exit AND a reported pass count at or
+            # above the number of test files, so an empty or skipped run cannot pass.
+            rc=0
+            php artisan test --no-ansi > /tmp/phpunit.out 2>&1 || rc=$?
+            tail -n 40 /tmp/phpunit.out
+            test "$rc" -eq 0
+            passed=$(grep -E '^ *Tests:' /tmp/phpunit.out | tail -1 | grep -Eo '[0-9]+ passed' | grep -Eo '^[0-9]+' || true)
+            echo "tests passed: ${passed:-none}"
+            test "${passed:-0}" -ge 97
 
 workflows:
   review_codebridge_device_control:
