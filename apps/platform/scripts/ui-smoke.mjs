@@ -173,12 +173,12 @@ async function inspectPage(page, path, viewport, { requireIcon = false } = {}) {
             }));
         });
         if (path === '/login') {
-        check(
-            !axe.some((v) => v.id === 'tabindex'),
-            `${tag}: login does not override the natural tab order (axe)`,
-        );
-    }
-    const critical = axe.filter((v) => v.impact === 'critical');
+            check(
+                !axe.some((v) => v.id === 'tabindex'),
+                `${tag}: login does not override the natural tab order (axe)`,
+            );
+        }
+        const critical = axe.filter((v) => v.impact === 'critical');
         check(
             critical.length === 0,
             `${tag}: no critical accessibility violations (axe)`,
