@@ -8,10 +8,10 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Inertia\Testing\AssertableInertia as Assert;
-use KMJ\MainPlatform\Organizations\Models\Organization;
 use KMJ\MainPlatform\Catalog\Models\Product;
-use KMJ\MainPlatform\Entitlements\Models\EntitlementPolicy;
 use KMJ\MainPlatform\Entitlements\Models\Entitlement;
+use KMJ\MainPlatform\Entitlements\Models\EntitlementPolicy;
+use KMJ\MainPlatform\Organizations\Models\Organization;
 use Tests\TestCase;
 
 final class OwnerLicensingCenterHttpTest extends TestCase
