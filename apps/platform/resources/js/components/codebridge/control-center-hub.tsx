@@ -149,7 +149,10 @@ export default function CodeBridgeControlCenterHub({
                 >
                     <div className="flex flex-wrap items-center justify-between gap-3">
                         <div>
-                            <h2 id="codebridge-overview-heading" className="font-black">
+                            <h2
+                                id="codebridge-overview-heading"
+                                className="font-black"
+                            >
                                 Workspace overview
                             </h2>
                             <p className="text-muted-foreground mt-1 text-xs">
@@ -191,18 +194,26 @@ export default function CodeBridgeControlCenterHub({
                 >
                     <div className="flex items-center gap-2">
                         <Activity className="h-5 w-5 text-red-500" />
-                        <h2 id="codebridge-usage-heading" className="font-black">
+                        <h2
+                            id="codebridge-usage-heading"
+                            className="font-black"
+                        >
                             Usage & limits
                         </h2>
                     </div>
                     <p className="text-muted-foreground mt-2 text-xs leading-5">
-                        Accurate counters only. This page does not yet receive verified
-                        job, token, model or monthly call metering from CodeBridge.
+                        Accurate counters only. This page does not yet receive
+                        verified job, token, model or monthly call metering from
+                        CodeBridge.
                     </p>
                     <div className="mt-4 grid gap-3 sm:grid-cols-2">
                         <Metric
                             label="Device allocation"
-                            value={deviceLimit === null ? 'Not reported' : `${managedDevices} / ${deviceLimit}`}
+                            value={
+                                deviceLimit === null
+                                    ? 'Not reported'
+                                    : `${managedDevices} / ${deviceLimit}`
+                            }
                             detail="Known registrations against the licensed limit"
                         />
                         <Metric
@@ -212,9 +223,9 @@ export default function CodeBridgeControlCenterHub({
                         />
                     </div>
                     <p className="text-muted-foreground mt-3 text-xs">
-                        Model quotas and concurrency depend on the actual provider,
-                        device capacity and signed KMJ entitlement. No free or
-                        unlimited allowance is assumed.
+                        Model quotas and concurrency depend on the actual
+                        provider, device capacity and signed KMJ entitlement. No
+                        free or unlimited allowance is assumed.
                     </p>
                 </section>
 
@@ -226,7 +237,10 @@ export default function CodeBridgeControlCenterHub({
                 >
                     <div className="flex items-center gap-2">
                         <CreditCard className="h-5 w-5 text-red-500" />
-                        <h2 id="codebridge-billing-heading" className="font-black">
+                        <h2
+                            id="codebridge-billing-heading"
+                            className="font-black"
+                        >
                             Plan & billing
                         </h2>
                     </div>
@@ -274,13 +288,17 @@ export default function CodeBridgeControlCenterHub({
                 >
                     <div className="flex items-center gap-2">
                         <Settings2 className="h-5 w-5 text-red-500" />
-                        <h2 id="codebridge-settings-heading" className="font-black">
+                        <h2
+                            id="codebridge-settings-heading"
+                            className="font-black"
+                        >
                             Settings & security
                         </h2>
                     </div>
                     <p className="text-muted-foreground mt-2 text-xs leading-5">
-                        OAuth discovery: {oauthReady ? 'Available' : 'Not verified'}.
-                        Device credential revocation is available in the Devices
+                        OAuth discovery:{' '}
+                        {oauthReady ? 'Available' : 'Not verified'}. Device
+                        credential revocation is available in the Devices
                         section. Connected app grants are managed below.
                     </p>
                     <div className="mt-4 flex flex-wrap gap-2">

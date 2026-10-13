@@ -235,7 +235,11 @@ export default function CodeBridgeService({
                             />
                             <Metric
                                 label="OAuth"
-                                value={service.oauth_ready ? 'Ready' : 'Unavailable'}
+                                value={
+                                    service.oauth_ready
+                                        ? 'Ready'
+                                        : 'Unavailable'
+                                }
                                 hint="OAuth authorization configuration"
                             />
                             <Metric
@@ -263,8 +267,8 @@ export default function CodeBridgeService({
                                     <h2 className="font-black">Connection</h2>
                                 </div>
                                 <p className="text-muted-foreground mt-1 text-xs">
-                                    Use this endpoint when connecting KMJ CodeBridge as
-                                    an MCP service.
+                                    Use this endpoint when connecting KMJ
+                                    CodeBridge as an MCP service.
                                 </p>
 
                                 <div className="mt-5 rounded-xl border bg-black/5 p-4 dark:bg-white/[0.02]">
@@ -308,10 +312,11 @@ export default function CodeBridgeService({
                                         Install on Linux / VPS
                                     </div>
                                     <p className="text-muted-foreground mt-2 text-xs leading-5">
-                                        Download and inspect the pinned bootstrap first,
-                                        then run the saved script in its folder. Pairing
-                                        still requires browser approval; no agent token
-                                        is entered manually.
+                                        Download and inspect the pinned
+                                        bootstrap first, then run the saved
+                                        script in its folder. Pairing still
+                                        requires browser approval; no agent
+                                        token is entered manually.
                                     </p>
                                     <a
                                         href="/install"
@@ -332,18 +337,20 @@ export default function CodeBridgeService({
                                     <ol className="text-muted-foreground mt-3 space-y-3 text-xs leading-5">
                                         <li className="flex gap-3">
                                             <StepNumber value="1" />
-                                            Download and run the KMJ ChatGPT Desktop
-                                            setup once.
+                                            Download and run the KMJ ChatGPT
+                                            Desktop setup once.
                                         </li>
                                         <li className="flex gap-3">
                                             <StepNumber value="2" />
-                                            Fully quit and reopen ChatGPT Desktop. KMJ
-                                            CodeBridge is installed by default.
+                                            Fully quit and reopen ChatGPT
+                                            Desktop. KMJ CodeBridge is installed
+                                            by default.
                                         </li>
                                         <li className="flex gap-3">
                                             <StepNumber value="3" />
-                                            Use CodeBridge. Its local bridge opens KMJ
-                                            browser OAuth automatically on first use.
+                                            Use CodeBridge. Its local bridge
+                                            opens KMJ browser OAuth
+                                            automatically on first use.
                                         </li>
                                     </ol>
                                 </div>
@@ -352,7 +359,9 @@ export default function CodeBridgeService({
                             <div className="border-sidebar-border/70 bg-card dark:border-sidebar-border rounded-2xl border p-5 sm:p-6">
                                 <div className="flex items-center gap-2">
                                     <ShieldCheck className="h-5 w-5 text-red-500" />
-                                    <h2 className="font-black">Access & security</h2>
+                                    <h2 className="font-black">
+                                        Access & security
+                                    </h2>
                                 </div>
 
                                 <div className="mt-5 space-y-3">
@@ -367,12 +376,16 @@ export default function CodeBridgeService({
                                     <InfoRow
                                         label="Plan"
                                         value={
-                                            service.plan ? titleCase(service.plan) : '—'
+                                            service.plan
+                                                ? titleCase(service.plan)
+                                                : '—'
                                         }
                                     />
                                     <InfoRow
                                         label="Started"
-                                        value={formatDate(service.license_starts_at)}
+                                        value={formatDate(
+                                            service.license_starts_at,
+                                        )}
                                     />
                                     <InfoRow
                                         label="Pending pairings"
@@ -388,29 +401,33 @@ export default function CodeBridgeService({
                                         {service.permissions.length === 0 && (
                                             <span className="text-muted-foreground text-xs">
                                                 No permissions reported. Ask an
-                                                administrator to verify your grant.
+                                                administrator to verify your
+                                                grant.
                                             </span>
                                         )}
-                                        {service.permissions.map((permission) => (
-                                            <span
-                                                key={permission}
-                                                className="rounded-lg border px-2.5 py-1 text-xs font-bold uppercase"
-                                            >
-                                                {permission}
-                                            </span>
-                                        ))}
+                                        {service.permissions.map(
+                                            (permission) => (
+                                                <span
+                                                    key={permission}
+                                                    className="rounded-lg border px-2.5 py-1 text-xs font-bold uppercase"
+                                                >
+                                                    {permission}
+                                                </span>
+                                            ),
+                                        )}
                                     </div>
                                 </div>
 
-                                {canManageOwnerPlan && service.plan !== 'owner' && (
-                                    <Link
-                                        href="/operator/codebridge/owner-plan"
-                                        className="mt-5 inline-flex h-10 w-full items-center justify-center gap-2 rounded-xl border border-red-500/30 px-4 text-xs font-bold text-red-500 transition hover:border-red-500"
-                                    >
-                                        <ShieldCheck className="h-3.5 w-3.5" />
-                                        Manage internal Owner Plan
-                                    </Link>
-                                )}
+                                {canManageOwnerPlan &&
+                                    service.plan !== 'owner' && (
+                                        <Link
+                                            href="/operator/codebridge/owner-plan"
+                                            className="mt-5 inline-flex h-10 w-full items-center justify-center gap-2 rounded-xl border border-red-500/30 px-4 text-xs font-bold text-red-500 transition hover:border-red-500"
+                                        >
+                                            <ShieldCheck className="h-3.5 w-3.5" />
+                                            Manage internal Owner Plan
+                                        </Link>
+                                    )}
 
                                 <Link
                                     href="/settings/security"
@@ -436,12 +453,15 @@ export default function CodeBridgeService({
 
                     {activeSection === 'setup' && (
                         <section className="border-sidebar-border/70 bg-card dark:border-sidebar-border rounded-2xl border p-5 sm:p-6">
-                            <h2 className="font-black">Connect your AI workspace</h2>
+                            <h2 className="font-black">
+                                Connect your AI workspace
+                            </h2>
                             <p className="text-muted-foreground mt-1 text-xs leading-5">
-                                Connect the same authorized projects to ChatGPT, VS Code
-                                / GitHub Copilot, Claude, Cursor or another
-                                OAuth-capable MCP client. You do not need a GitHub
-                                account for CodeBridge authorization.
+                                Connect the same authorized projects to ChatGPT,
+                                VS Code / GitHub Copilot, Claude, Cursor or
+                                another OAuth-capable MCP client. You do not
+                                need a GitHub account for CodeBridge
+                                authorization.
                             </p>
                             <div className="mt-4 flex flex-wrap gap-3">
                                 <a
@@ -451,7 +471,10 @@ export default function CodeBridgeService({
                                     One-click VS Code / Copilot
                                 </a>
                                 <a
-                                    href={vscodeInstallUrl(service.endpoint, true)}
+                                    href={vscodeInstallUrl(
+                                        service.endpoint,
+                                        true,
+                                    )}
                                     className="inline-flex h-10 items-center rounded-xl border px-4 text-xs font-bold"
                                 >
                                     VS Code Insiders
@@ -493,10 +516,11 @@ export default function CodeBridgeService({
                                         Claude Desktop / Claude web
                                     </h3>
                                     <p className="text-muted-foreground mt-2 text-xs leading-5">
-                                        Open Claude Settings, then Connectors and Add
-                                        custom connector. Use this hosted Streamable
-                                        HTTP MCP URL and complete KMJ browser OAuth. Do
-                                        not paste device tokens.
+                                        Open Claude Settings, then Connectors
+                                        and Add custom connector. Use this
+                                        hosted Streamable HTTP MCP URL and
+                                        complete KMJ browser OAuth. Do not paste
+                                        device tokens.
                                     </p>
                                     <code className="mt-3 block rounded-lg border px-3 py-2 text-xs break-all">
                                         {service.endpoint}
@@ -511,11 +535,11 @@ export default function CodeBridgeService({
                                         Copy Claude MCP URL
                                     </button>
                                     <p className="text-muted-foreground mt-2 text-xs leading-5">
-                                        For third-party inference Gateway mode in
-                                        Claude Desktop, use Inference configuration,
-                                        Connectors, Managed MCP servers, Add server,
-                                        Streamable HTTP and OAuth auto-registration
-                                        instead.
+                                        For third-party inference Gateway mode
+                                        in Claude Desktop, use Inference
+                                        configuration, Connectors, Managed MCP
+                                        servers, Add server, Streamable HTTP and
+                                        OAuth auto-registration instead.
                                     </p>
                                 </div>
                                 <div className="rounded-xl border p-4">
@@ -523,35 +547,41 @@ export default function CodeBridgeService({
                                         Multiple AI chats / automatic updates
                                     </h3>
                                     <p className="text-muted-foreground mt-2 text-xs leading-5">
-                                        Multiple ChatGPT, Claude and IDE sessions can
-                                        use the same authorized gateway. New CodeBridge
-                                        work lanes protect reserved files from
-                                        overlapping CodeBridge edits after the
-                                        compatible gateway and device agent are
-                                        deployed. Actual execution concurrency remains
+                                        Multiple ChatGPT, Claude and IDE
+                                        sessions can use the same authorized
+                                        gateway. New CodeBridge work lanes
+                                        protect reserved files from overlapping
+                                        CodeBridge edits after the compatible
+                                        gateway and device agent are deployed.
+                                        Actual execution concurrency remains
                                         plan and hardware limited.
                                     </p>
                                     <p className="text-muted-foreground mt-3 text-xs leading-5">
                                         Verified hosted MCP updates are served
-                                        centrally. Your AI desktop app may need to
-                                        reconnect to refresh tools; third-party app
-                                        binaries and marketplace icons cannot
-                                        be silently updated by CodeBridge.
+                                        centrally. Your AI desktop app may need
+                                        to reconnect to refresh tools;
+                                        third-party app binaries and marketplace
+                                        icons cannot be silently updated by
+                                        CodeBridge.
                                     </p>
                                 </div>
                             </div>
                             <p className="text-muted-foreground mt-3 text-xs">
-                                VS Code opens a confirmation dialog before adding the
-                                MCP server. Complete KMJ browser OAuth when prompted. If
-                                your system does not handle VS Code install links, use
-                                the Windows fallback or copy the MCP endpoint. No GitHub
+                                VS Code opens a confirmation dialog before
+                                adding the MCP server. Complete KMJ browser
+                                OAuth when prompted. If your system does not
+                                handle VS Code install links, use the Windows
+                                fallback or copy the MCP endpoint. No GitHub
                                 login is required for device authorization.
                             </p>
                         </section>
                     )}
 
                     {activeSection === 'clients' && (
-                        <section id="codebridge-clients" className="border-sidebar-border/70 bg-card dark:border-sidebar-border rounded-2xl border p-5 sm:p-6">
+                        <section
+                            id="codebridge-clients"
+                            className="border-sidebar-border/70 bg-card dark:border-sidebar-border rounded-2xl border p-5 sm:p-6"
+                        >
                             <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-start">
                                 <div>
                                     <h2 className="font-black">
@@ -562,7 +592,8 @@ export default function CodeBridgeService({
                                     </p>
                                 </div>
                                 <span className="rounded-full border px-3 py-1 text-xs font-bold">
-                                    {service.connected_clients.length} authorized
+                                    {service.connected_clients.length}{' '}
+                                    authorized
                                 </span>
                             </div>
 
@@ -604,17 +635,21 @@ export default function CodeBridgeService({
                                                 </div>
                                                 <div className="text-muted-foreground mt-1 font-mono text-xs">
                                                     Client ID · …
-                                                    {client.client_id.slice(-10)}
+                                                    {client.client_id.slice(
+                                                        -10,
+                                                    )}
                                                 </div>
                                                 <div className="mt-2 flex flex-wrap gap-2">
-                                                    {client.scopes.map((scope) => (
-                                                        <span
-                                                            key={scope}
-                                                            className="rounded-lg border px-2 py-1 text-xs font-bold"
-                                                        >
-                                                            {scope}
-                                                        </span>
-                                                    ))}
+                                                    {client.scopes.map(
+                                                        (scope) => (
+                                                            <span
+                                                                key={scope}
+                                                                className="rounded-lg border px-2 py-1 text-xs font-bold"
+                                                            >
+                                                                {scope}
+                                                            </span>
+                                                        ),
+                                                    )}
                                                 </div>
                                             </div>
                                             <button
@@ -626,10 +661,13 @@ export default function CodeBridgeService({
                                                         client.client_name,
                                                     )
                                                 }
-                                                disabled={revokingClient !== null}
+                                                disabled={
+                                                    revokingClient !== null
+                                                }
                                                 className="inline-flex min-h-10 shrink-0 items-center justify-center rounded-xl border border-red-500/30 px-3 text-xs font-black text-red-500 transition hover:bg-red-500/10 disabled:cursor-not-allowed disabled:opacity-50"
                                             >
-                                                {revokingClient === client.client_id
+                                                {revokingClient ===
+                                                client.client_id
                                                     ? 'Revoking...'
                                                     : 'Revoke access'}
                                             </button>
@@ -641,28 +679,35 @@ export default function CodeBridgeService({
                             {service.connected_clients.length > 0 &&
                                 matchingClients.length === 0 && (
                                     <p className="text-muted-foreground mt-3 text-xs">
-                                        No authorized AI client matches your search.
+                                        No authorized AI client matches your
+                                        search.
                                     </p>
                                 )}
-                            {!clientSearch.trim() && matchingClients.length > 5 && (
-                                <button
-                                    type="button"
-                                    onClick={() =>
-                                        setShowAllClients((current) => !current)
-                                    }
-                                    className="mt-3 min-h-10 rounded-xl border px-4 text-xs font-bold hover:border-red-500/40"
-                                >
-                                    {showAllClients
-                                        ? 'Show fewer clients'
-                                        : `Show all ${matchingClients.length} clients`}
-                                </button>
-                            )}
+                            {!clientSearch.trim() &&
+                                matchingClients.length > 5 && (
+                                    <button
+                                        type="button"
+                                        onClick={() =>
+                                            setShowAllClients(
+                                                (current) => !current,
+                                            )
+                                        }
+                                        className="mt-3 min-h-10 rounded-xl border px-4 text-xs font-bold hover:border-red-500/40"
+                                    >
+                                        {showAllClients
+                                            ? 'Show fewer clients'
+                                            : `Show all ${matchingClients.length} clients`}
+                                    </button>
+                                )}
                             <p className="text-muted-foreground mt-4 text-xs leading-4">
-                                Revoking stops future OAuth refresh grants. Existing
-                                access tokens may remain valid for up to{' '}
+                                Revoking stops future OAuth refresh grants.
+                                Existing access tokens may remain valid for up
+                                to{' '}
                                 {Math.max(
                                     1,
-                                    Math.ceil(service.access_token_ttl_seconds / 60),
+                                    Math.ceil(
+                                        service.access_token_ttl_seconds / 60,
+                                    ),
                                 )}{' '}
                                 minutes.
                             </p>
@@ -672,10 +717,13 @@ export default function CodeBridgeService({
                     {activeSection === 'overview' && (
                         <section className="border-sidebar-border/70 bg-card dark:border-sidebar-border rounded-2xl border p-5 sm:p-6">
                             <div>
-                                <h2 className="font-black">What CodeBridge can do</h2>
+                                <h2 className="font-black">
+                                    What CodeBridge can do
+                                </h2>
                                 <p className="text-muted-foreground mt-1 text-xs">
-                                    Capabilities remain scoped to authorized projects
-                                    and administrator-approved operations.
+                                    Capabilities remain scoped to authorized
+                                    projects and administrator-approved
+                                    operations.
                                 </p>
                             </div>
 

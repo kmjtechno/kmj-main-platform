@@ -1,13 +1,13 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
+import { readSourceText } from './source-text.mjs';
 
-const ui = readFileSync('resources/js/pages/services/codebridge.tsx', 'utf8');
+const ui = readSourceText('resources/js/pages/services/codebridge.tsx');
 // Device cards are rendered by the Device Control Center component (PR #377);
 // device-health truth rules apply to the page and the component together.
-const deviceCenter = readFileSync(
+const deviceCenter = readSourceText(
     'resources/js/components/codebridge/device-control-center.tsx',
-    'utf8',
 );
 const deviceUi = `${ui}\n${deviceCenter}`;
 const directory = readFileSync(
@@ -32,7 +32,10 @@ void test('permissions must be backed by actual server-authorized scope', () => 
 });
 
 void test('device cards are searchable without changing tenant authorization', () => {
-    assert.match(ui, /<DeviceControlCenter[\s\S]*tenantId=\{organization\.id\}/);
+    assert.match(
+        ui,
+        /<DeviceControlCenter[\s\S]*tenantId=\{organization\.id\}/,
+    );
     assert.match(deviceCenter, /visibleDevices\.map\(\(device\)/);
     assert.match(deviceCenter, /Search device, OS, project or ID/);
     assert.match(
@@ -77,9 +80,8 @@ void test('offline remediation links to exact documented Connection Doctor', () 
     assert.match(deviceCenter, /Live connection has not been verified/);
 });
 
-const hub = readFileSync(
+const hub = readSourceText(
     'resources/js/components/codebridge/control-center-hub.tsx',
-    'utf8',
 );
 
 void test('control center provides working sections and scoped device onboarding', () => {
@@ -110,26 +112,23 @@ void test('usage billing and device state never invent measurements or connectiv
     assert.doesNotMatch(hub, /100%|unlimited calls|live sessions/);
 });
 
-void test(
-    'control center uses accessible section switching instead of one long dashboard',
-    () => {
-        assert.match(hub, /aria-pressed=\{activeSection === id\}/);
-        assert.match(hub, /onSectionChange\(id\)/);
-        assert.match(hub, /\{children\}/);
-        assert.match(ui, /activeSection=\{activeSection\}/);
-        assert.match(ui, /onSectionChange=\{setActiveSection\}/);
-        for (const section of ['overview', 'devices', 'setup', 'clients']) {
-            assert.match(ui, new RegExp(`activeSection === '${section}'`));
-        }
-        for (const section of ['overview', 'usage', 'billing', 'settings']) {
-            assert.match(
-                hub,
-                new RegExp(`hidden=\\{activeSection !== '${section}'\\}`),
-            );
-        }
-        assert.doesNotMatch(hub, /href=\{href\}/);
-    },
-);
+void test('control center uses accessible section switching instead of one long dashboard', () => {
+    assert.match(hub, /aria-pressed=\{activeSection === id\}/);
+    assert.match(hub, /onSectionChange\(id\)/);
+    assert.match(hub, /\{children\}/);
+    assert.match(ui, /activeSection=\{activeSection\}/);
+    assert.match(ui, /onSectionChange=\{setActiveSection\}/);
+    for (const section of ['overview', 'devices', 'setup', 'clients']) {
+        assert.match(ui, new RegExp(`activeSection === '${section}'`));
+    }
+    for (const section of ['overview', 'usage', 'billing', 'settings']) {
+        assert.match(
+            hub,
+            new RegExp(`hidden=\\{activeSection !== '${section}'\\}`),
+        );
+    }
+    assert.doesNotMatch(hub, /href=\{href\}/);
+});
 
 void test('CodeBridge customer controls avoid sub-12px utility labels', () => {
     for (const source of [ui, deviceCenter, hub]) {

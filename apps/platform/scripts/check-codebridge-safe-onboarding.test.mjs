@@ -1,10 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { readSourceText } from './source-text.mjs';
 
-const servicePage = readFileSync(
+const servicePage = readSourceText(
     'resources/js/pages/services/codebridge.tsx',
-    'utf8',
 );
 
 void test('primary VS Code action uses credential-free native install link', () => {
@@ -37,7 +36,10 @@ void test('Claude Desktop and multi-chat guidance stays hosted OAuth only', () =
     assert.match(servicePage, /Claude Desktop \/ Claude web/);
     assert.match(servicePage, /Managed MCP/);
     assert.match(servicePage, /Copy Claude MCP URL/);
-    assert.match(servicePage, /navigator\.clipboard\.writeText\(service\.endpoint\)/);
+    assert.match(
+        servicePage,
+        /navigator\.clipboard\.writeText\(service\.endpoint\)/,
+    );
     assert.match(servicePage, /Multiple AI chats \/ automatic updates/);
     assert.match(servicePage, /cannot\s+be silently updated by CodeBridge/);
     assert.doesNotMatch(servicePage, /claude_desktop_config\.json/);
