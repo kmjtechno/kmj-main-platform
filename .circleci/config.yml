@@ -304,6 +304,89 @@ jobs:
             test -s public/build/manifest.json
             echo "KMJ_ADMIN_BUILD_PROBE_PASS=1"
 
+  owner_admin_product_tests:
+    docker:
+      - image: cimg/php:8.4-node
+    resource_class: small
+    environment:
+      APP_ENV: testing
+      DB_CONNECTION: sqlite
+      DB_DATABASE: ":memory:"
+      CACHE_STORE: array
+      SESSION_DRIVER: array
+      QUEUE_CONNECTION: sync
+      MAIL_MAILER: array
+    steps:
+      - checkout
+      - run:
+          name: Exact-SHA product and public catalog Laravel tests
+          no_output_timeout: 10m
+          command: |
+            set -euo pipefail
+            test "$(git rev-parse HEAD)" = "$CIRCLE_SHA1"
+            cd apps/platform
+            composer install --no-interaction --prefer-dist --no-progress
+            printf '# isolated CI only\n' > .env
+            export APP_KEY="base64:$(php -r 'echo base64_encode(random_bytes(32));')"
+            php artisan test --filter='OwnerProductManagementWorkspaceTest|PublicProductHubTest|KmjProductCatalogTest' --no-ansi
+            echo "KMJ_ADMIN_PRODUCT_TESTS_PASS=1"
+
+  owner_admin_licensing_tests:
+    docker:
+      - image: cimg/php:8.4-node
+    resource_class: small
+    environment:
+      APP_ENV: testing
+      DB_CONNECTION: sqlite
+      DB_DATABASE: ":memory:"
+      CACHE_STORE: array
+      SESSION_DRIVER: array
+      QUEUE_CONNECTION: sync
+      MAIL_MAILER: array
+    steps:
+      - checkout
+      - run:
+          name: Exact-SHA owner licensing and audit Laravel tests
+          no_output_timeout: 10m
+          command: |
+            set -euo pipefail
+            test "$(git rev-parse HEAD)" = "$CIRCLE_SHA1"
+            cd apps/platform
+            composer install --no-interaction --prefer-dist --no-progress
+            printf '# isolated CI only\n' > .env
+            export APP_KEY="base64:$(php -r 'echo base64_encode(random_bytes(32));')"
+            php artisan test --filter='OwnerLicensingCenterHttpTest|PlatformOwnerConsoleTest|KslpLifecycleTest' --no-ansi
+            echo "KMJ_ADMIN_LICENSING_TESTS_PASS=1"
+
+  owner_admin_schema_tests:
+    docker:
+      - image: cimg/php:8.4-node
+    resource_class: small
+    environment:
+      APP_ENV: testing
+      DB_CONNECTION: sqlite
+      CACHE_STORE: array
+      SESSION_DRIVER: array
+      QUEUE_CONNECTION: sync
+    steps:
+      - checkout
+      - run:
+          name: Exact-SHA isolated SQLite schema migrate and rollback
+          no_output_timeout: 8m
+          command: |
+            set -euo pipefail
+            test "$(git rev-parse HEAD)" = "$CIRCLE_SHA1"
+            cd apps/platform
+            composer install --no-interaction --prefer-dist --no-progress
+            export APP_KEY="base64:$(php -r 'echo base64_encode(random_bytes(32));')"
+            export DB_DATABASE="$PWD/database/owner-qa-rollback.sqlite"
+            test ! -e "$DB_DATABASE"
+            touch "$DB_DATABASE"
+            trap 'rm -f -- "$DB_DATABASE"' EXIT
+            php artisan migrate --force --no-ansi
+            php artisan migrate:rollback --step=1 --force --no-ansi
+            echo "KMJ_ADMIN_SCHEMA_ROLLBACK_PASS=1"
+
   owner_admin_release:
     docker:
       - image: cimg/php:8.4-node
@@ -425,6 +508,27 @@ workflows:
             - owner_admin_frontend_lint
             - owner_admin_frontend_types
             - owner_admin_php_quality
+          filters:
+            branches:
+              only:
+                - feat/owner-product-workspace-categories-20261014
+      - owner_admin_product_tests:
+          requires:
+            - owner_admin_build_probe
+          filters:
+            branches:
+              only:
+                - feat/owner-product-workspace-categories-20261014
+      - owner_admin_licensing_tests:
+          requires:
+            - owner_admin_build_probe
+          filters:
+            branches:
+              only:
+                - feat/owner-product-workspace-categories-20261014
+      - owner_admin_schema_tests:
+          requires:
+            - owner_admin_build_probe
           filters:
             branches:
               only:
