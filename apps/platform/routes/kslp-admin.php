@@ -49,10 +49,15 @@ Route::get('operator/kslp', function (Request $request, PlatformOwnerAccess $acc
             });
         });
     $matchingCount = (clone $query)->count();
-    $licenses = $query->latest('created_at')->limit(100)->get()->map(function ($row) use ($control) {
+    $activationCounts = DB::table('kslp_activations')
+        ->whereNull('deactivated_at')
+        ->selectRaw('license_id, count(*) as aggregate')
+        ->groupBy('license_id')
+        ->pluck('aggregate', 'license_id');
+    $licenses = $query->latest('created_at')->limit(100)->get()->map(function ($row) use ($control, $activationCounts) {
         $license = (array) $row;
         $license['state'] = $control->state((string) $row->id);
-        $license['active_activations'] = DB::table('kslp_activations')->where('license_id', $row->id)->whereNull('deactivated_at')->count();
+        $license['active_activations'] = (int) $activationCounts->get((string) $row->id, 0);
 
         return $license;
     })->all();
