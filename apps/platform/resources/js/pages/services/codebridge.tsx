@@ -155,15 +155,13 @@ export default function CodeBridgeService({
 
                     <div className="mt-6 flex flex-col justify-between gap-6 lg:flex-row lg:items-start">
                         <div className="flex items-start gap-4">
-                            <span className="grid h-16 w-16 shrink-0 place-items-center overflow-hidden rounded-2xl border border-red-500/20 bg-background p-1">
+                            <span className="grid h-14 w-14 shrink-0 place-items-center rounded-2xl border border-red-500/20 bg-red-500/10 text-red-500">
                                 <img
                                     src="/assets/kmj-codebridge-icon.png"
                                     alt="Official KMJ CodeBridge icon"
-                                    width={56}
-                                    height={56}
-                                    loading="eager"
-                                    decoding="async"
-                                    className="h-full w-full object-contain"
+                                    width={40}
+                                    height={40}
+                                    className="h-10 w-10 object-contain"
                                 />
                             </span>
                             <div>
