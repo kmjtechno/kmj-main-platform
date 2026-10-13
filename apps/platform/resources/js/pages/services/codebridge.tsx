@@ -440,10 +440,10 @@ export default function CodeBridgeService({
                     </div>
                 </section>
 
-                <section className="border-sidebar-border/70 bg-card dark:border-sidebar-border rounded-2xl border p-5 sm:p-6">
+                <section id="codebridge-devices" className="border-sidebar-border/70 bg-card dark:border-sidebar-border scroll-mt-6 rounded-2xl border p-5 sm:p-6">
                     <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
                         <div>
-                            <h2 className="font-black">
+                            <h2 className="text-lg font-black">
                                 Your devices & projects
                             </h2>
                             <p className="text-muted-foreground mt-1 text-xs leading-5">
@@ -461,6 +461,27 @@ export default function CodeBridgeService({
                             Refresh registration
                         </button>
                     </div>
+
+                    <div className="mt-4 flex flex-wrap items-center gap-3">
+                        <label htmlFor="codebridge-device-search" className="relative min-w-0 flex-1 sm:max-w-sm">
+                            <span className="sr-only">Search registered devices and authorized projects</span>
+                            <Search aria-hidden="true" className="text-muted-foreground pointer-events-none absolute top-3 left-3 h-4 w-4" />
+                            <input
+                                id="codebridge-device-search"
+                                type="search"
+                                value={deviceSearch}
+                                onChange={(event) => setDeviceSearch(event.target.value)}
+                                placeholder="Search devices or projects"
+                                className="bg-background focus-visible:ring-ring h-10 w-full rounded-xl border pr-3 pl-10 text-sm outline-none focus-visible:ring-2"
+                            />
+                        </label>
+                        <span className="text-muted-foreground text-xs">
+                            {matchingDevices.length} registered in this view
+                        </span>
+                    </div>
+                    <p className="text-muted-foreground mt-2 text-xs">
+                        Registration does not confirm live connectivity. Verify agent health in your authenticated CodeBridge client.
+                    </p>
 
                     {service.devices.length === 0 ? (
                         <div className="mt-5 rounded-xl border border-dashed p-5">
@@ -480,9 +501,13 @@ export default function CodeBridgeService({
                                 Approve a pairing code
                             </Link>
                         </div>
+                    ) : visibleDevices.length === 0 ? (
+                        <div className="text-muted-foreground mt-5 rounded-xl border border-dashed p-5 text-sm" role="status">
+                            No registered devices match this search.
+                        </div>
                     ) : (
                         <div className="mt-5 grid gap-3 md:grid-cols-2">
-                            {service.devices.map((device) => (
+                            {visibleDevices.map((device) => (
                                 <div
                                     key={device.id}
                                     className="min-w-0 rounded-xl border p-4"
@@ -532,6 +557,16 @@ export default function CodeBridgeService({
                                 </div>
                             ))}
                         </div>
+                    )}
+                    {!deviceSearch.trim() && matchingDevices.length > 4 && (
+                        <button
+                            type="button"
+                            aria-expanded={showAllDevices}
+                            onClick={() => setShowAllDevices((expanded) => !expanded)}
+                            className="hover:border-red-500/40 mt-4 inline-flex min-h-10 items-center rounded-xl border px-4 text-xs font-bold transition"
+                        >
+                            {showAllDevices ? 'Show fewer devices' : `Show all ${matchingDevices.length} registered devices`}
+                        </button>
                     )}
                     {service.managed_devices > service.devices.length && (
                         <p className="text-muted-foreground mt-3 text-xs">
@@ -596,26 +631,51 @@ export default function CodeBridgeService({
                     </p>
                 </section>
 
-                <section className="border-sidebar-border/70 bg-card dark:border-sidebar-border rounded-2xl border p-5 sm:p-6">
+                <section id="codebridge-clients" className="border-sidebar-border/70 bg-card dark:border-sidebar-border scroll-mt-6 rounded-2xl border p-5 sm:p-6">
                     <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-start">
                         <div>
-                            <h2 className="font-black">Connected AI clients</h2>
+                            <h2 className="text-lg font-black">Authorized AI clients</h2>
                             <p className="text-muted-foreground mt-1 text-xs leading-5">
                                 {CONNECTED_CLIENTS_DESCRIPTION}
                             </p>
                         </div>
                         <span className="rounded-full border px-3 py-1 text-[10px] font-bold">
-                            {service.connected_clients.length} active
+                            {service.connected_clients.length} client grants
                         </span>
                     </div>
+
+                    <div className="mt-4 flex flex-wrap items-center gap-3">
+                        <label htmlFor="codebridge-client-search" className="relative min-w-0 flex-1 sm:max-w-sm">
+                            <span className="sr-only">Search authorized AI clients or OAuth scopes</span>
+                            <Search aria-hidden="true" className="text-muted-foreground pointer-events-none absolute top-3 left-3 h-4 w-4" />
+                            <input
+                                id="codebridge-client-search"
+                                type="search"
+                                value={clientSearch}
+                                onChange={(event) => setClientSearch(event.target.value)}
+                                placeholder="Search clients or permissions"
+                                className="bg-background focus-visible:ring-ring h-10 w-full rounded-xl border pr-3 pl-10 text-sm outline-none focus-visible:ring-2"
+                            />
+                        </label>
+                        <span className="text-muted-foreground text-xs">
+                            {matchingClients.length} matching grants
+                        </span>
+                    </div>
+                    <p className="text-muted-foreground mt-2 text-xs">
+                        A client grant is not proof that the application is currently online.
+                    </p>
 
                     {service.connected_clients.length === 0 ? (
                         <div className="text-muted-foreground mt-5 rounded-xl border border-dashed p-5 text-xs">
                             {NO_CONNECTED_CLIENTS}
                         </div>
+                    ) : visibleClients.length === 0 ? (
+                        <div role="status" className="text-muted-foreground mt-5 rounded-xl border border-dashed p-5 text-sm">
+                            No authorized clients match this search.
+                        </div>
                     ) : (
                         <div className="mt-5 grid gap-3">
-                            {service.connected_clients.map((client) => (
+                            {visibleClients.map((client) => (
                                 <div
                                     key={client.client_id}
                                     className="flex flex-col justify-between gap-4 rounded-xl border p-4 lg:flex-row lg:items-center"
@@ -638,21 +698,52 @@ export default function CodeBridgeService({
                                             ))}
                                         </div>
                                     </div>
-                                    <button
-                                        type="button"
-                                        onClick={() =>
-                                            revokeClient(client.client_id)
-                                        }
-                                        className="inline-flex h-9 shrink-0 items-center justify-center rounded-xl border border-red-500/30 px-3 text-[11px] font-black text-red-500 transition hover:bg-red-500/10"
-                                    >
-                                        Revoke access
-                                    </button>
+                                    <div className="flex shrink-0 flex-wrap items-center gap-2">
+                                        {revokeCandidate === client.client_id ? (
+                                            <div role="group" aria-label={`Confirm revocation for ${client.client_name}`} className="flex flex-wrap items-center gap-2">
+                                                <span className="text-muted-foreground text-xs">Stop this client's future refresh access?</span>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setRevokeCandidate(null)}
+                                                    className="inline-flex min-h-10 items-center rounded-xl border px-3 text-xs font-bold"
+                                                >
+                                                    Cancel
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => revokeClient(client.client_id)}
+                                                    className="inline-flex min-h-10 items-center rounded-xl border border-red-500/40 bg-red-500/10 px-3 text-xs font-black text-red-500"
+                                                >
+                                                    Confirm revoke
+                                                </button>
+                                            </div>
+                                        ) : (
+                                            <button
+                                                type="button"
+                                                onClick={() => setRevokeCandidate(client.client_id)}
+                                                className="inline-flex min-h-10 items-center justify-center rounded-xl border border-red-500/30 px-3 text-xs font-bold text-red-500 transition hover:bg-red-500/10"
+                                            >
+                                                Revoke access
+                                            </button>
+                                        )}
+                                    </div>
                                 </div>
                             ))}
                         </div>
                     )}
 
-                    <p className="text-muted-foreground mt-4 text-[10px] leading-4">
+                    {!clientSearch.trim() && matchingClients.length > 4 && (
+                        <button
+                            type="button"
+                            aria-expanded={showAllClients}
+                            onClick={() => setShowAllClients((expanded) => !expanded)}
+                            className="hover:border-red-500/40 mt-4 inline-flex min-h-10 items-center rounded-xl border px-4 text-xs font-bold transition"
+                        >
+                            {showAllClients ? 'Show fewer clients' : `Show all ${matchingClients.length} authorized clients`}
+                        </button>
+                    )}
+
+                    <p className="text-muted-foreground mt-4 text-xs leading-5">
                         Refresh access stops immediately. Existing access tokens
                         expire within{' '}
                         {Math.max(
