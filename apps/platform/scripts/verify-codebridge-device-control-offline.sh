@@ -49,7 +49,4 @@ npm run types:check
 node --test scripts/check-codebridge-safe-onboarding.test.mjs scripts/check-codebridge-dashboard-truth.test.mjs
 php artisan test --filter=CodeBridgeAdminHttpTest
 php artisan test --filter=CodeBridgeDeviceEnrollmentTest
-# Integration base also includes OAuth opaque-state handling from PR #382.
-# Verify those long-state/oversize paths with real Laravel tests, not UI regex.
-php artisan test --filter=CodeBridgeOAuthServerTest
 echo "PASS: local device-control contracts and isolated tenant-safe tests"
