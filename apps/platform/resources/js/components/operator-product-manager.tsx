@@ -15,6 +15,7 @@ export type ManagedProduct = {
     slug: string;
     name: string;
     lifecycle: string;
+    category: string;
     is_public: boolean;
     sort_order: number;
     image_path: string | null;
@@ -32,11 +33,21 @@ const productLifecycleOptions = [
     ['retired', 'Retired'],
 ] as const;
 
+export const productCategoryOptions = [
+    ['cloud', 'Cloud & Infrastructure'],
+    ['cinema', 'Cinema & Immersive'],
+    ['industrial', 'Industrial & Calibration'],
+    ['developer', 'Developer & AI'],
+    ['business', 'Business & Platform'],
+    ['other', 'Other'],
+] as const;
+
 export function CommercialProductForm() {
     const form = useForm({
         name: '',
         slug: '',
         lifecycle: 'planned',
+        category: 'other',
         is_public: false,
         image_path: '',
         summary: '',
@@ -112,6 +123,19 @@ export function CommercialProductForm() {
                     />
                 </label>
             </div>
+
+            <label className="space-y-1.5 text-xs font-semibold">
+                <span>Category</span>
+                <select
+                    value={form.data.category}
+                    onChange={(event) => form.setData('category', event.target.value)}
+                    className="bg-background h-10 w-full rounded-lg border px-3 text-sm"
+                >
+                    {productCategoryOptions.map(([value, label]) => (
+                        <option key={value} value={value}>{label}</option>
+                    ))}
+                </select>
+            </label>
 
             <label className="space-y-1.5 text-xs font-semibold">
                 <span>Customer-facing summary</span>
@@ -198,6 +222,7 @@ function ManagedProductEditor({
     const form = useForm({
         name: product.name,
         lifecycle: product.lifecycle,
+        category: product.category,
         is_public: product.is_public,
         image_path: product.image_path ?? '',
         summary: product.summary ?? '',
@@ -311,6 +336,16 @@ function ManagedProductEditor({
                         </option>
                     ))}
                 </select>
+                <select
+                    value={form.data.category}
+                    onChange={(event) => form.setData('category', event.target.value)}
+                    aria-label={`Category for ${product.name}`}
+                    className="h-9 rounded-lg border border-white/10 bg-black/20 px-2 text-xs text-white"
+                >
+                    {productCategoryOptions.map(([value, label]) => (
+                        <option key={value} value={value}>{label}</option>
+                    ))}
+                </select>
                 <input
                     value={form.data.image_path}
                     onChange={(event) =>
@@ -403,7 +438,12 @@ function ManagedProductEditor({
     );
 }
 
-export function ProductManager({ products }: { products: ManagedProduct[] }) {
+export function ProductManager({ products, search = '', category = 'all', lifecycle = 'all' }: {
+    products: ManagedProduct[];
+    search?: string;
+    category?: string;
+    lifecycle?: string;
+}) {
     const [orderedProducts, setOrderedProducts] = useState(products);
     const [draggedId, setDraggedId] = useState<string | null>(null);
     const [reordering, setReordering] = useState(false);
@@ -458,6 +498,11 @@ export function ProductManager({ products }: { products: ManagedProduct[] }) {
         (product) => product.licensing_enabled,
     ).length;
     const hiddenCount = orderedProducts.length - publicCount;
+    const shown = orderedProducts.filter((product) =>
+        (category === 'all' || product.category === category) &&
+        (lifecycle === 'all' || product.lifecycle === lifecycle) &&
+        `${product.name} ${product.slug} ${product.summary ?? ''}`.toLowerCase().includes(search.trim().toLowerCase()),
+    );
 
     return (
         <section
@@ -506,7 +551,7 @@ export function ProductManager({ products }: { products: ManagedProduct[] }) {
                 fail-closed unless the product is Available.
             </div>
             <div className="relative grid gap-3">
-                {orderedProducts.map((product) => (
+                {shown.map((product) => (
                     <ManagedProductEditor
                         key={product.id}
                         product={product}
@@ -515,6 +560,11 @@ export function ProductManager({ products }: { products: ManagedProduct[] }) {
                         onDrop={drop}
                     />
                 ))}
+                {shown.length === 0 && (
+                    <p role="status" className="rounded-xl border border-dashed border-white/20 p-8 text-center text-sm text-white/70">
+                        No products match these filters. Try another category or lifecycle.
+                    </p>
+                )}
             </div>
         </section>
     );
