@@ -20,7 +20,7 @@ const modules = [
     },
     {
         label: 'Products',
-        href: '/operator#product-manager',
+        href: '/operator/products',
         icon: Package,
         help: 'Catalog and pricing controls',
     },
@@ -46,7 +46,7 @@ const modules = [
         label: 'Licensing',
         href: '/operator/kslp',
         icon: KeyRound,
-        help: 'License governance',
+        help: 'Customers, plans and license lifecycle',
     },
     {
         label: 'CodeBridge',
@@ -73,6 +73,7 @@ export default function OperatorModuleNavigation({
 }: {
     active:
         | 'overview'
+        | 'products'
         | 'payments'
         | 'operations'
         | 'licensing'

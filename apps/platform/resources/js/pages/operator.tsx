@@ -2,11 +2,6 @@ import { useState, type FormEvent } from 'react';
 import { Head, Link, router, useForm } from '@inertiajs/react';
 import OperatorModuleNavigation from '@/components/operator-module-navigation';
 import {
-    CommercialProductForm,
-    ProductManager,
-    type ManagedProduct,
-} from '@/components/operator-product-manager';
-import {
     BadgeIndianRupee,
     Search,
     Building2,
@@ -61,7 +56,6 @@ type OperatorProps = {
     canonicalProductCount: number;
     missingCanonicalSlugs: string[];
     recentOrders: RecentOrder[];
-    products: ManagedProduct[];
 };
 
 const fulfillmentLabels: Record<FulfillmentState, string> = {
@@ -183,7 +177,6 @@ export default function Operator({
     canonicalProductCount,
     missingCanonicalSlugs,
     recentOrders,
-    products,
 }: OperatorProps) {
     const [catalogSearch, setCatalogSearch] = useState('');
     const [catalogFilter, setCatalogFilter] = useState<
@@ -468,19 +461,24 @@ export default function Operator({
                     </div>
                 </section>
 
-                <section className="bg-card rounded-2xl border p-5 sm:p-6">
-                    <div className="mb-5">
-                        <h2 className="font-bold">Commercial catalog</h2>
-                        <p className="text-muted-foreground mt-1 text-xs">
-                            Activate a product so customers can submit governed
-                            purchase requests. Price is recorded only when
-                            payment evidence is confirmed.
+                <section className="bg-card flex flex-col justify-between gap-4 rounded-2xl border p-5 sm:flex-row sm:items-center">
+                    <div>
+                        <h2 className="text-lg font-bold">
+                            Product Management
+                        </h2>
+                        <p className="text-muted-foreground mt-1 max-w-xl text-sm">
+                            Create, categorize and edit your full catalog in its
+                            own workspace. Purchase and licensing decisions
+                            remain governed separately.
                         </p>
                     </div>
-                    <CommercialProductForm />
+                    <Link
+                        href="/operator/products"
+                        className="inline-flex min-h-11 shrink-0 items-center justify-center rounded-xl bg-red-600 px-5 text-sm font-bold text-white hover:bg-red-500"
+                    >
+                        Manage products
+                    </Link>
                 </section>
-
-                <ProductManager products={products} />
 
                 <section
                     id="commercial-orders"
