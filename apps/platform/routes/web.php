@@ -338,6 +338,8 @@ Route::get('acceptable-use', fn () => Inertia::render('legal/acceptable-use'))->
 Route::get('cookie-policy', fn () => Inertia::render('legal/cookie-policy'))->name('legal.cookies');
 
 Route::middleware(['auth', 'verified'])->group(function () {
+    require __DIR__.'/ai-providers.php';
+
     Route::get('codebridge-oauth-link/{uid}', [CodeBridgeOAuthLinkController::class, 'show'])
         ->name('codebridge.oauth.show');
     Route::post('codebridge-oauth-link/{uid}', [CodeBridgeOAuthLinkController::class, 'approve'])
