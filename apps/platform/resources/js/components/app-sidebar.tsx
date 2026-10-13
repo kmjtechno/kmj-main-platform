@@ -84,7 +84,7 @@ export function AppSidebar() {
                       icon: Crown,
                   },
                   {
-                      title: 'Licensing Governance',
+                      title: 'Licensing Center',
                       href: '/operator/kslp',
                       icon: KeyRound,
                   },
