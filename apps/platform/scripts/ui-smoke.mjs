@@ -170,12 +170,19 @@ async function inspectPage(page, path, viewport, { requireIcon = false } = {}) {
                 id: v.id,
                 impact: v.impact,
                 nodes: v.nodes.length,
+                targets: v.nodes.slice(0, 3).map((n) => n.target.join(' ')),
             }));
         });
         if (path === '/login') {
             check(
                 !axe.some((v) => v.id === 'tabindex'),
                 `${tag}: login does not override the natural tab order (axe)`,
+            );
+        }
+        if (path === '/products/kmj-codebridge') {
+            check(
+                !axe.some((v) => v.id === 'color-contrast'),
+                `${tag}: CodeBridge product contrast meets axe (no violations)`,
             );
         }
         const critical = axe.filter((v) => v.impact === 'critical');
@@ -185,7 +192,9 @@ async function inspectPage(page, path, viewport, { requireIcon = false } = {}) {
             critical.map((v) => `${v.id}×${v.nodes}`).join(', '),
         );
         for (const v of axe.filter((x) => x.impact === 'serious'))
-            warn(`${tag}: serious a11y — ${v.id}×${v.nodes}`);
+            warn(
+                `${tag}: serious a11y — ${v.id}×${v.nodes} at ${v.targets.join(', ')}`,
+            );
     }
 
     page.off('console', onConsole);
