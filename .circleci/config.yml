@@ -50,6 +50,13 @@ jobs:
             set -euo pipefail
             cd apps/platform
             bash scripts/verify-codebridge-device-control-offline.sh
+      - run:
+          name: Full frontend check baseline
+          no_output_timeout: 8m
+          command: |
+            set -euo pipefail
+            cd apps/platform
+            npm run check
 
 workflows:
   review_codebridge_device_control:
@@ -62,3 +69,4 @@ workflows:
                 - integrate/codebridge-control-center-377-378
                 - feat/codebridge-control-center-hub-20261012
                 - fix/gemini-spark-oauth-on-control-center-hub
+                - ci/codebridge-full-check-baseline-20261013
