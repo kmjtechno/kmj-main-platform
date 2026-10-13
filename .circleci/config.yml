@@ -1,6 +1,58 @@
 version: 2.1
 
 jobs:
+  codebridge_cross_account_oauth:
+    docker:
+      - image: cimg/php:8.4-node
+    resource_class: small
+    environment:
+      APP_ENV: testing
+      DB_CONNECTION: sqlite
+      DB_DATABASE: ":memory:"
+      SESSION_DRIVER: array
+      CACHE_STORE: array
+      QUEUE_CONNECTION: sync
+      MAIL_MAILER: array
+    steps:
+      - checkout
+      - run:
+          name: Verify immutable OAuth cross-account candidate
+          command: |
+            set -euo pipefail
+            test "$(git rev-parse HEAD)" = "$CIRCLE_SHA1"
+            php -l apps/platform/routes/codebridge-oauth.php
+            php -l apps/platform/tests/Feature/CodeBridgeOAuthServerTest.php
+      - run:
+          name: Install locked PHP and frontend dependencies
+          no_output_timeout: 10m
+          command: |
+            set -euo pipefail
+            cd apps/platform
+            composer install --no-interaction --prefer-dist --no-progress
+            npm ci --ignore-scripts --no-audit --no-fund
+      - run:
+          name: OAuth authentication and account-switch security regression
+          no_output_timeout: 10m
+          command: |
+            set -euo pipefail
+            cd apps/platform
+            printf '# disposable CI only\n' > .env
+            export APP_KEY="base64:$(php -r 'echo base64_encode(random_bytes(32));')"
+            vendor/bin/pint --test routes/codebridge-oauth.php tests/Feature/CodeBridgeOAuthServerTest.php
+            php artisan test --filter='CodeBridgeOAuthServerTest|CodeBridgeOAuthLinkTest' --no-ansi
+            echo "KMJ_CROSS_ACCOUNT_OAUTH_PHP_PASS=1"
+      - run:
+          name: OAuth consent UX frontend check and types
+          no_output_timeout: 10m
+          command: |
+            set -euo pipefail
+            cd apps/platform
+            npm run check
+            export APP_KEY="base64:$(php -r 'echo base64_encode(random_bytes(32));')"
+            php artisan wayfinder:generate --with-form --no-ansi
+            npm run types:check
+            echo "KMJ_CROSS_ACCOUNT_OAUTH_UI_PASS=1"
+
   codebridge_device_control:
     docker:
       - image: cimg/php:8.4-node
@@ -481,6 +533,14 @@ jobs:
             echo "KMJ_ADMIN_RC_SQLITE_MIGRATION_SMOKE_PASS=1"
 
 workflows:
+  review_cross_account_codebridge_oauth:
+    jobs:
+      - codebridge_cross_account_oauth:
+          filters:
+            branches:
+              only:
+                - fix/codebridge-cross-client-oauth-account-switch-20261014
+
   review_owner_admin_release:
     jobs:
       - owner_admin_preflight:
