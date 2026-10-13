@@ -192,7 +192,9 @@ async function inspectPage(page, path, viewport, { requireIcon = false } = {}) {
             critical.map((v) => `${v.id}×${v.nodes}`).join(', '),
         );
         for (const v of axe.filter((x) => x.impact === 'serious'))
-            warn(`${tag}: serious a11y — ${v.id}×${v.nodes} at ${v.targets.join(', ')}`);
+            warn(
+                `${tag}: serious a11y — ${v.id}×${v.nodes} at ${v.targets.join(', ')}`,
+            );
     }
 
     page.off('console', onConsole);
