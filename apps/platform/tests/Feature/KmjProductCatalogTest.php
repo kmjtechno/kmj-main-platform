@@ -40,6 +40,13 @@ final class KmjProductCatalogTest extends TestCase
             self::assertSame($first[$slug]->getKey(), $second[$slug]->getKey());
         }
 
+        // A clean install receives useful categories before any manual edits.
+        $this->assertDatabaseHas('products', ['slug' => KmjProductCatalog::CLOUDOS_SLUG, 'category' => 'cloud']);
+        $this->assertDatabaseHas('products', ['slug' => KmjProductCatalog::CINEMA_PLATFORM_SLUG, 'category' => 'cinema']);
+        $this->assertDatabaseHas('products', ['slug' => KmjProductCatalog::CALIBRATION_SLUG, 'category' => 'industrial']);
+        $this->assertDatabaseHas('products', ['slug' => KmjProductCatalog::CODEBRIDGE_SLUG, 'category' => 'developer']);
+        $this->assertDatabaseHas('products', ['slug' => KmjProductCatalog::OMNIDESK_SLUG, 'category' => 'business']);
+
         $this->assertDatabaseCount('products', 15);
         $this->assertDatabaseHas('products', [
             'slug' => CloudOSProductCatalog::SLUG,
