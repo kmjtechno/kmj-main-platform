@@ -7,6 +7,7 @@ namespace App\Providers;
 use App\Actions\Fortify\CreateNewUser;
 /* @end-chisel-registration */
 use App\Actions\Fortify\ResetUserPassword;
+use App\Services\Mail\RegistrationMailReadiness;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\RateLimiter;
@@ -71,6 +72,7 @@ class FortifyServiceProvider extends ServiceProvider
         /* @chisel-email-verification */
         Fortify::verifyEmailView(fn (Request $request) => Inertia::render('auth/verify-email', [
             'status' => $request->session()->get('status'),
+            'mailDeliveryAvailable' => app(RegistrationMailReadiness::class)->canAttemptDelivery(),
         ]));
         /* @end-chisel-email-verification */
 
