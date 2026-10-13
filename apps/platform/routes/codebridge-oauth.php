@@ -240,6 +240,10 @@ Route::middleware(['auth', 'verified'])->group(function () use ($noStore): void 
             return response('The authorization request is invalid ('.$e->error.').', 400, $noStore + ['Content-Type' => 'text/plain']);
         }
         $id = Str::random(40);
+        // Bind the consent shown in the browser to the KMJ user who saw it.
+        // A second-tab login/account change cannot silently approve as a
+        // different user. Switching explicitly discards the old request.
+        $validated['consenting_user_id'] = (int) $request->user()->getAuthIdentifier();
         $request->session()->put('codebridge_oauth.'.$id, $validated);
 
         return Inertia::render('auth/oauth-authorize', [
@@ -262,7 +266,12 @@ Route::middleware(['auth', 'verified'])->group(function () use ($noStore): void 
         ]);
         $pending = $request->session()->pull('codebridge_oauth.'.$data['request_id']);
         abort_unless(is_array($pending), 400, 'This authorization request expired. Start again from your AI app.');
-        /** @var array{client_id:string,client_name:string,redirect_uri:string,redirect_host:string,scopes:list<string>,state:?string,code_challenge:string,resource:string} $pending */
+        /** @var array{client_id:string,client_name:string,redirect_uri:string,redirect_host:string,scopes:list<string>,state:?string,code_challenge:string,resource:string,consenting_user_id:int} $pending */
+        abort_unless(
+            ($pending['consenting_user_id'] ?? null) === (int) $request->user()->getAuthIdentifier(),
+            403,
+            'The KMJ account changed. Start authorization again from your AI app.',
+        );
 
         if ($data['decision'] === 'switch') {
             // Rebuild only the OAuth request that the server ALREADY
