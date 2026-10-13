@@ -14,19 +14,25 @@ final class PaymentGatewayReadiness
     public function snapshot(): array
     {
         $providers = [];
+        $ownerSettings = collect(app(OwnerPaymentGatewaySettings::class)->snapshot())->keyBy('provider');
 
         foreach (['razorpay', 'cashfree'] as $provider) {
             $settings = (array) config('payment-providers.providers.'.$provider, []);
-            $keysPresent = $this->present($settings['client_id'] ?? null)
-                && $this->present($settings['client_secret'] ?? null);
-            $webhookReady = $provider === 'cashfree'
-                ? $this->present($settings['client_secret'] ?? null)
-                : $this->present($settings['webhook_secret'] ?? null);
+            $record = $ownerSettings->get($provider);
+            $keysPresent = ($this->present($settings['client_id'] ?? null)
+                && $this->present($settings['client_secret'] ?? null))
+                || ((bool) ($record['client_id_stored'] ?? false)
+                    && (bool) ($record['client_secret_stored'] ?? false));
+            $webhookReady = (bool) ($record['webhook_secret_stored'] ?? false)
+                || ($provider === 'cashfree'
+                    ? $this->present($settings['client_secret'] ?? null)
+                    : $this->present($settings['webhook_secret'] ?? null));
 
             $providers[] = [
                 'id' => $provider,
                 'label' => $provider === 'cashfree' ? 'Cashfree Payments' : 'Razorpay',
-                'merchant_approval' => 'reported_by_owner_not_api_verified',
+                'merchant_approval' => ($record['merchant_status'] ?? 'not_verified') === 'owner_reports_approved'
+                    ? 'reported_by_owner_not_api_verified' : 'not_verified',
                 'sandbox_credentials_present' => $keysPresent,
                 'webhook_verification_configured' => $webhookReady,
                 'international_approval_recorded' => ($settings['international_approved'] ?? false) === true,

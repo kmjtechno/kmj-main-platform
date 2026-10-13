@@ -35,6 +35,11 @@ return [
         ],
     ],
 
+    // Off until exact-head tests, secure activation and production signing gates pass.
+    'kmj_developer_licensing' => [
+        'enabled' => (bool) env('KMJ_DEVELOPER_LICENSING_ENABLED', false),
+    ],
+
     'kmj_sandbox_licensing' => [
         'secret' => env('KMJ_SANDBOX_LICENSE_SECRET'),
         'validation_engine' => env('KMJ_SANDBOX_LICENSE_VALIDATION_ENGINE', 'php'),

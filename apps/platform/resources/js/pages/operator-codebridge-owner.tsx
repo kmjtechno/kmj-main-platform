@@ -1,3 +1,4 @@
+import OperatorModuleNavigation from '@/components/operator-module-navigation';
 import { Head, router, usePage } from '@inertiajs/react';
 import { useState } from 'react';
 import { ShieldCheck, Server, LockKeyhole } from 'lucide-react';
@@ -46,6 +47,7 @@ export default function OperatorCodeBridgeOwner({ licenses, limits }: Props) {
         <>
             <Head title="KMJ CodeBridge — Internal Owner Plan" />
             <main className="flex flex-1 flex-col gap-6 p-4 sm:p-6">
+                <OperatorModuleNavigation active="codebridge" />
                 <section className="bg-card rounded-2xl border p-6">
                     <div className="flex items-center gap-3">
                         <ShieldCheck className="h-8 w-8 text-red-500" />
