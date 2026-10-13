@@ -43,6 +43,12 @@ cd "$WORKTREE"
 [[ "$(git rev-parse HEAD)" == "$SHA" ]] || die HEAD_CHANGED
 
 PATCHES="$ROOT/work/qa/admin-402/$SHA"
+for ancestor in "$ROOT/work" "$ROOT/work/qa" "$ROOT/work/qa/admin-402"; do
+  if [[ -e "$ancestor" || -L "$ancestor" ]]; then
+    [[ -d "$ancestor" && ! -L "$ancestor" &&
+      "$(stat -c %u "$ancestor")" == "$(id -u)" ]] || die UNSAFE_PATCH_DIRECTORY
+  fi
+done
 [[ ! -e "$PATCHES" && ! -L "$PATCHES" ]] || die PATCH_OUTPUT_ALREADY_EXISTS
 mkdir -p -m 0700 "$PATCHES"
 count=0
@@ -62,6 +68,26 @@ while IFS= read -r -d '' changed; do
   [[ $bytes -gt 0 && $bytes -le 100000 ]] || die PATCH_SIZE_INVALID
   printf '%s %s %s\n' "$artifact" "$bytes" "$changed" >> "$manifest"
 done < <(git diff --name-only -z --)
+
+# These are static checks of the detached source, never production operations.
+export APP_ENV=testing DB_CONNECTION=sqlite DB_DATABASE=:memory:
+export QUEUE_CONNECTION=sync CACHE_STORE=array SESSION_DRIVER=array
+export MAIL_MAILER=array
+cd "$WORKTREE/apps/platform"
+for check in frontend types phpstan; do
+  case "$check" in
+    frontend) args=(npm run check) ;;
+    types) args=(npm run types:check) ;;
+    phpstan) args=(./vendor/bin/phpstan analyse --no-progress --memory-limit=1G) ;;
+  esac
+  if "${args[@]}" > "$PATCHES/$check.log" 2>&1; then
+    printf '%s=PASS\n' "$check" >> "$manifest"
+  else
+    printf '%s=FAIL\n' "$check" >> "$manifest"
+  fi
+  truncate -s 100000 "$PATCHES/$check.log"
+done
+cd "$ROOT"
 
 echo "KMJ_ADMIN_FORMAT_SHA=$SHA"
 echo "KMJ_ADMIN_FORMAT_PATCH_DIR=work/qa/admin-402/$SHA"
