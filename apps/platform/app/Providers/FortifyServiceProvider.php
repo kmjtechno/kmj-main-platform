@@ -79,7 +79,8 @@ class FortifyServiceProvider extends ServiceProvider
         /* @chisel-registration */
         Fortify::registerView(fn () => Inertia::render('auth/register', [
             'passwordRules' => Password::defaults()->toPasswordRulesString(),
-            'mailDeliveryAvailable' => app(RegistrationMailReadiness::class)->canAttemptDelivery(),
+            'registrationAvailable' => ! app()->isProduction()
+                || app(RegistrationMailReadiness::class)->canAttemptDelivery(),
         ]));
         /* @end-chisel-registration */
 
