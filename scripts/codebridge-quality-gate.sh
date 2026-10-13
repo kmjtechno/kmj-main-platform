@@ -29,6 +29,7 @@ run_fast() {
   python3 -B "$ROOT/scripts/verify_public_surface.py"
   python3 -B "$ROOT/scripts/verify_cloudos_main_platform_contract.py"
   python3 -B "$ROOT/scripts/verify_cloudos_frankenphp_template.py"
+  python3 -B "$ROOT/scripts/verify_cloudos_hyperspeed_contract.py"
 }
 
 run_platform() {
