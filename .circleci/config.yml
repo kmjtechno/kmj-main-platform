@@ -1,5 +1,58 @@
 version: 2.1
 
+commands:
+  prepare_ui_app:
+    description: Build the app, migrate a throwaway SQLite database, serve it on 127.0.0.1:8000 and install the browser tooling.
+    steps:
+      - checkout
+      - run:
+          name: Install Laravel dependencies
+          no_output_timeout: 10m
+          command: |
+            set -euo pipefail
+            cd apps/platform
+            composer install --no-interaction --prefer-dist --no-progress
+      - run:
+          name: Install frontend dependencies and build assets
+          no_output_timeout: 12m
+          command: |
+            set -euo pipefail
+            cd apps/platform
+            npm ci --ignore-scripts --no-audit --no-fund
+            npm run build
+      - run:
+          name: Prepare environment and throwaway database
+          command: |
+            set -euo pipefail
+            cd apps/platform
+            cp .env.example .env
+            php artisan key:generate --force
+            touch database/ui.sqlite
+            php artisan migrate --force --no-ansi
+      - run:
+          name: Serve the app
+          command: |
+            set -euo pipefail
+            cd apps/platform
+            nohup php artisan serve --host=127.0.0.1 --port=8000 > /tmp/serve.log 2>&1 &
+            for i in $(seq 1 40); do
+              if curl -fsS -o /dev/null http://127.0.0.1:8000/login; then echo "app is up"; exit 0; fi
+              sleep 1
+            done
+            echo "app did not start"; tail -n 40 /tmp/serve.log; exit 1
+      - run:
+          name: Install browser tooling (outside the app's dependencies)
+          command: |
+            set -euo pipefail
+            src="$(pwd)/apps/platform/scripts/ui-smoke.mjs"
+            test -f "$src"
+            mkdir -p /tmp/uitools
+            cd /tmp/uitools
+            npm init -y >/dev/null
+            npm install --no-audit --no-fund playwright-core@1.49.1 axe-core@4.10.2
+            cp "$src" /tmp/uitools/ui-smoke.mjs
+            test -x /usr/bin/google-chrome
+
 jobs:
   codebridge_device_control:
     docker:
@@ -152,6 +205,63 @@ jobs:
             echo "tests passed: ${passed:-none}"
             test "${passed:-0}" -ge 97
 
+  ui_public:
+    docker:
+      - image: cimg/php:8.4-browsers
+    resource_class: medium
+    environment:
+      APP_ENV: local
+      APP_DEBUG: "false"
+      APP_URL: http://127.0.0.1:8000
+      DB_CONNECTION: sqlite
+      DB_DATABASE: /home/circleci/project/apps/platform/database/ui.sqlite
+      SESSION_DRIVER: file
+      CACHE_STORE: array
+      QUEUE_CONNECTION: sync
+      MAIL_MAILER: array
+      PHP_CLI_SERVER_WORKERS: "4"
+    steps:
+      - prepare_ui_app
+      - run:
+          name: Public pages in a real browser (mobile, tablet, desktop; layout, images, a11y, keyboard)
+          no_output_timeout: 10m
+          command: |
+            set -euo pipefail
+            cd /tmp/uitools
+            UI_MODE=public UI_BASE=http://127.0.0.1:8000 CHROME_PATH=/usr/bin/google-chrome node ui-smoke.mjs
+
+  ui_dashboard:
+    docker:
+      - image: cimg/php:8.4-browsers
+    resource_class: medium
+    environment:
+      APP_ENV: local
+      APP_DEBUG: "false"
+      APP_URL: http://127.0.0.1:8000
+      DB_CONNECTION: sqlite
+      DB_DATABASE: /home/circleci/project/apps/platform/database/ui.sqlite
+      SESSION_DRIVER: file
+      CACHE_STORE: array
+      QUEUE_CONNECTION: sync
+      MAIL_MAILER: array
+      PHP_CLI_SERVER_WORKERS: "4"
+    steps:
+      - prepare_ui_app
+      - run:
+          name: Seed a verified customer with an active CodeBridge entitlement
+          command: |
+            set -euo pipefail
+            cd apps/platform
+            php artisan tinker --execute="require base_path('scripts/ci-seed-ui-smoke.php');"
+      - run:
+          name: Customer CodeBridge dashboard in a real browser (login, icon, Manage devices, layout, a11y)
+          no_output_timeout: 10m
+          command: |
+            set -euo pipefail
+            cd /tmp/uitools
+            UI_MODE=dashboard UI_BASE=http://127.0.0.1:8000 CHROME_PATH=/usr/bin/google-chrome \
+              UI_EMAIL=ui-smoke@example.test UI_PASSWORD=password node ui-smoke.mjs
+
 workflows:
   review_codebridge_device_control:
     jobs:
@@ -189,6 +299,26 @@ workflows:
                 - claude/codebridge-production-completion-n6lu61
                 - release/codebridge-claude-ui-verified-20261013
       - php_tests:
+          filters:
+            branches:
+              only:
+                - feat/codebridge-device-control-center-20261012
+                - integrate/codebridge-control-center-377-378
+                - feat/codebridge-control-center-hub-20261012
+                - fix/gemini-spark-oauth-on-control-center-hub
+                - fix/codebridge-compact-workspace-tabs-20261013
+                - claude/codebridge-production-completion-n6lu61
+      - ui_public:
+          filters:
+            branches:
+              only:
+                - feat/codebridge-device-control-center-20261012
+                - integrate/codebridge-control-center-377-378
+                - feat/codebridge-control-center-hub-20261012
+                - fix/gemini-spark-oauth-on-control-center-hub
+                - fix/codebridge-compact-workspace-tabs-20261013
+                - claude/codebridge-production-completion-n6lu61
+      - ui_dashboard:
           filters:
             branches:
               only:
