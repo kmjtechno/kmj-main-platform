@@ -1,10 +1,14 @@
 version: 2.1
 
+orbs:
+  browser-tools: circleci/browser-tools@2.4.2
+
 commands:
   prepare_ui_app:
     description: Build the app, migrate a throwaway SQLite database, serve it on 127.0.0.1:8000 and install the browser tooling.
     steps:
       - checkout
+      - browser-tools/install_chrome
       - run:
           name: Install Laravel dependencies
           no_output_timeout: 10m
@@ -26,9 +30,24 @@ commands:
             set -euo pipefail
             cd apps/platform
             cp .env.example .env
+            # artisan serve strips non-allow-listed environment variables from the server
+            # process, so the settings must live in .env itself.
+            set_env() {
+              if grep -q "^$1=" .env; then sed -i "s#^$1=.*#$1=$2#" .env; else echo "$1=$2" >> .env; fi
+            }
+            set_env APP_ENV local
+            set_env APP_DEBUG false
+            set_env APP_URL http://127.0.0.1:8000
+            set_env DB_CONNECTION sqlite
+            set_env DB_DATABASE "$(pwd)/database/ui.sqlite"
+            set_env SESSION_DRIVER file
+            set_env CACHE_STORE array
+            set_env QUEUE_CONNECTION sync
+            set_env MAIL_MAILER array
             php artisan key:generate --force
             touch database/ui.sqlite
             php artisan migrate --force --no-ansi
+            grep -E "^(APP_ENV|DB_CONNECTION|SESSION_DRIVER|CACHE_STORE|QUEUE_CONNECTION)=" .env
       - run:
           name: Serve the app
           command: |
@@ -207,7 +226,7 @@ jobs:
 
   ui_boot:
     docker:
-      - image: cimg/php:8.4-browsers
+      - image: cimg/php:8.4-node
     resource_class: medium
     environment:
       APP_ENV: local
@@ -239,7 +258,7 @@ jobs:
         type: string
         default: all
     docker:
-      - image: cimg/php:8.4-browsers
+      - image: cimg/php:8.4-node
     resource_class: medium
     environment:
       APP_ENV: local
@@ -268,7 +287,7 @@ jobs:
         type: string
         default: all
     docker:
-      - image: cimg/php:8.4-browsers
+      - image: cimg/php:8.4-node
     resource_class: medium
     environment:
       APP_ENV: local
@@ -355,56 +374,6 @@ workflows:
                 - fix/codebridge-compact-workspace-tabs-20261013
                 - claude/codebridge-production-completion-n6lu61
       - ui_public:
-          name: ui_public_layout
-          checks: layout
-          filters:
-            branches:
-              only:
-                - feat/codebridge-device-control-center-20261012
-                - integrate/codebridge-control-center-377-378
-                - feat/codebridge-control-center-hub-20261012
-                - fix/gemini-spark-oauth-on-control-center-hub
-                - fix/codebridge-compact-workspace-tabs-20261013
-                - claude/codebridge-production-completion-n6lu61
-      - ui_public:
-          name: ui_public_images
-          checks: images
-          filters:
-            branches:
-              only:
-                - feat/codebridge-device-control-center-20261012
-                - integrate/codebridge-control-center-377-378
-                - feat/codebridge-control-center-hub-20261012
-                - fix/gemini-spark-oauth-on-control-center-hub
-                - fix/codebridge-compact-workspace-tabs-20261013
-                - claude/codebridge-production-completion-n6lu61
-      - ui_public:
-          name: ui_public_network
-          checks: network
-          filters:
-            branches:
-              only:
-                - feat/codebridge-device-control-center-20261012
-                - integrate/codebridge-control-center-377-378
-                - feat/codebridge-control-center-hub-20261012
-                - fix/gemini-spark-oauth-on-control-center-hub
-                - fix/codebridge-compact-workspace-tabs-20261013
-                - claude/codebridge-production-completion-n6lu61
-      - ui_public:
-          name: ui_public_a11y
-          checks: a11y
-          filters:
-            branches:
-              only:
-                - feat/codebridge-device-control-center-20261012
-                - integrate/codebridge-control-center-377-378
-                - feat/codebridge-control-center-hub-20261012
-                - fix/gemini-spark-oauth-on-control-center-hub
-                - fix/codebridge-compact-workspace-tabs-20261013
-                - claude/codebridge-production-completion-n6lu61
-      - ui_public:
-          name: ui_public_keyboard
-          checks: keyboard
           filters:
             branches:
               only:
@@ -415,68 +384,6 @@ workflows:
                 - fix/codebridge-compact-workspace-tabs-20261013
                 - claude/codebridge-production-completion-n6lu61
       - ui_dashboard:
-          name: ui_dash_login
-          checks: login
-          filters:
-            branches:
-              only:
-                - feat/codebridge-device-control-center-20261012
-                - integrate/codebridge-control-center-377-378
-                - feat/codebridge-control-center-hub-20261012
-                - fix/gemini-spark-oauth-on-control-center-hub
-                - fix/codebridge-compact-workspace-tabs-20261013
-                - claude/codebridge-production-completion-n6lu61
-      - ui_dashboard:
-          name: ui_dash_layout
-          checks: layout
-          filters:
-            branches:
-              only:
-                - feat/codebridge-device-control-center-20261012
-                - integrate/codebridge-control-center-377-378
-                - feat/codebridge-control-center-hub-20261012
-                - fix/gemini-spark-oauth-on-control-center-hub
-                - fix/codebridge-compact-workspace-tabs-20261013
-                - claude/codebridge-production-completion-n6lu61
-      - ui_dashboard:
-          name: ui_dash_images
-          checks: images
-          filters:
-            branches:
-              only:
-                - feat/codebridge-device-control-center-20261012
-                - integrate/codebridge-control-center-377-378
-                - feat/codebridge-control-center-hub-20261012
-                - fix/gemini-spark-oauth-on-control-center-hub
-                - fix/codebridge-compact-workspace-tabs-20261013
-                - claude/codebridge-production-completion-n6lu61
-      - ui_dashboard:
-          name: ui_dash_network
-          checks: network
-          filters:
-            branches:
-              only:
-                - feat/codebridge-device-control-center-20261012
-                - integrate/codebridge-control-center-377-378
-                - feat/codebridge-control-center-hub-20261012
-                - fix/gemini-spark-oauth-on-control-center-hub
-                - fix/codebridge-compact-workspace-tabs-20261013
-                - claude/codebridge-production-completion-n6lu61
-      - ui_dashboard:
-          name: ui_dash_a11y
-          checks: a11y
-          filters:
-            branches:
-              only:
-                - feat/codebridge-device-control-center-20261012
-                - integrate/codebridge-control-center-377-378
-                - feat/codebridge-control-center-hub-20261012
-                - fix/gemini-spark-oauth-on-control-center-hub
-                - fix/codebridge-compact-workspace-tabs-20261013
-                - claude/codebridge-production-completion-n6lu61
-      - ui_dashboard:
-          name: ui_dash_manage
-          checks: manage
           filters:
             branches:
               only:
