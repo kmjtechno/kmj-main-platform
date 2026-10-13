@@ -242,12 +242,18 @@ jobs:
     steps:
       - checkout
       - run:
-          name: TypeScript exact-head check
+          name: Generate Laravel Wayfinder types and validate exact-head TypeScript
+          no_output_timeout: 10m
           command: |
             set -euo pipefail
             test "$(git rev-parse HEAD)" = "$CIRCLE_SHA1"
             cd apps/platform
+            composer install --no-interaction --prefer-dist --no-progress
             npm ci --ignore-scripts --no-audit --no-fund
+            export APP_ENV=testing APP_KEY="base64:$(php -r 'echo base64_encode(random_bytes(32));')"
+            export DB_CONNECTION=sqlite DB_DATABASE=:memory:
+            php artisan wayfinder:generate --with-form --no-ansi
+            test -f resources/js/routes/index.ts
             npm run types:check
             echo "KMJ_ADMIN_TYPES_PASS=1"
 
@@ -327,6 +333,9 @@ jobs:
             set -euo pipefail
             cd apps/platform
             npm run check
+            export APP_KEY="base64:$(php -r 'echo base64_encode(random_bytes(32));')"
+            php artisan wayfinder:generate --with-form --no-ansi
+            test -f resources/js/routes/index.ts
             npm run types:check
             npm run build
             test -s public/build/manifest.json
