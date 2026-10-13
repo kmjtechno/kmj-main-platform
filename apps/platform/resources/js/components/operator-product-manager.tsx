@@ -562,7 +562,7 @@ export function ProductManager({ products, search = '', category = 'all', lifecy
                         {purchasableCount} purchasable
                     </span>
                     <span className="rounded-xl border border-white/10 bg-white/[0.035] px-3 py-2.5 text-white/70">
-                        {licensingCount} licensed
+                        {licensingCount} licensing-enabled
                     </span>
                     {reordering ? (
                         <span className="rounded-full border border-amber-500/30 bg-amber-500/10 px-3 py-1.5 text-amber-600 dark:text-amber-400">
