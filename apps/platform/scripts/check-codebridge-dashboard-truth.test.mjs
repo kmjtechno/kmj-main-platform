@@ -138,9 +138,9 @@ void test('CodeBridge customer controls avoid sub-12px utility labels', () => {
 });
 
 void test('CodeBridge dashboard uses the existing official product icon', () => {
-    assert.match(ui, /src="\\/assets\\/kmj-codebridge-icon\\.png"/);
+    assert.match(ui, /src="\/assets\/kmj-codebridge-icon\.png"/);
     assert.match(ui, /alt="Official KMJ CodeBridge icon"/);
     assert.ok(existsSync('public/assets/kmj-codebridge-icon.png'));
-    assert.doesNotMatch(ui, /laravel\\.(?:svg|png)|<Cable className="h-7 w-7"/i);
-    assert.match(ui, /setActiveSection\\('devices'\\)/);
+    assert.doesNotMatch(ui, /laravel\.(?:svg|png)|<Cable className="h-7 w-7"/i);
+    assert.match(ui, /setActiveSection\('devices'\)/);
 });
