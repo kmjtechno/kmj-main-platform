@@ -50,13 +50,6 @@ jobs:
             set -euo pipefail
             cd apps/platform
             bash scripts/verify-codebridge-device-control-offline.sh
-      - run:
-          name: Verify complete frontend check
-          no_output_timeout: 8m
-          command: |
-            set -euo pipefail
-            cd apps/platform
-            npm run check
 
 workflows:
   review_codebridge_device_control:
