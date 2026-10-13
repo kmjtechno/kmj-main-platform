@@ -265,6 +265,8 @@ final class AiProviderManagerTest extends TestCase
     {
         $this->add('Groq main');
         $id = AiProvider::query()->value('id');
+        // The session keeps the confirmation given by add() above; clear it to model a stale one.
+        $this->flushSession();
 
         $this->actingAs($this->owner)->post('/services/kmj-codebridge/ai-providers', $this->payload('Second'))->assertRedirect();
         $this->actingAs($this->owner)->patch("/services/kmj-codebridge/ai-providers/{$id}", ['enabled' => false])->assertRedirect();
