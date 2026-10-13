@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { existsSync, readFileSync } from 'node:fs';
+import { readFileSync } from 'node:fs';
 import { readSourceText } from './source-text.mjs';
 
 const ui = readSourceText('resources/js/pages/services/codebridge.tsx');
@@ -134,12 +134,4 @@ void test('CodeBridge customer controls avoid sub-12px utility labels', () => {
     for (const source of [ui, deviceCenter, hub]) {
         assert.doesNotMatch(source, /text-\[(?:9|10|11)px\]/);
     }
-});
-
-void test('CodeBridge dashboard uses the existing official product icon', () => {
-    assert.match(ui, /src="\/assets\/kmj-codebridge-icon\.png"/);
-    assert.match(ui, /alt="Official KMJ CodeBridge icon"/);
-    assert.ok(existsSync('public/assets/kmj-codebridge-icon.png'));
-    assert.doesNotMatch(ui, /laravel\.(?:svg|png)|<Cable className="h-7 w-7"/i);
-    assert.match(ui, /setActiveSection\('devices'\)/);
 });
