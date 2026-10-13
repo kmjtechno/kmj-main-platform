@@ -2,8 +2,8 @@
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
@@ -44,6 +44,11 @@ return new class extends Migration
 
     public function down(): void
     {
+        // SQLite does not permit dropping a column while an index still
+        // references it. Reverse the indexed add in dependency order.
+        Schema::table('products', function (Blueprint $table): void {
+            $table->dropIndex('products_category_index');
+        });
         Schema::table('products', function (Blueprint $table): void {
             $table->dropColumn('category');
         });
