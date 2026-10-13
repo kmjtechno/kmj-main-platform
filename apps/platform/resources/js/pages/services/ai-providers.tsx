@@ -409,7 +409,30 @@ export default function AiProviders({
                     </p>
                 )}
                 {canManage ? (
-                    <AddProvider presets={presets} />
+                    <>
+                        <div className="border-sidebar-border/70 dark:border-sidebar-border flex flex-wrap items-center justify-between gap-3 rounded-2xl border p-5">
+                            <div>
+                                <h2 className="text-base font-black">
+                                    One-click: sign in with Google or GitHub via
+                                    OpenRouter
+                                </h2>
+                                <p className="text-muted-foreground text-xs">
+                                    OpenRouter creates the API key for you. Only
+                                    models ending in “:free” are ever admitted.
+                                </p>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() =>
+                                    router.post(`${BASE}/connect/openrouter`)
+                                }
+                                className="h-10 rounded-xl border border-red-500/40 px-4 text-xs font-bold text-red-500"
+                            >
+                                Connect OpenRouter
+                            </button>
+                        </div>
+                        <AddProvider presets={presets} />
+                    </>
                 ) : (
                     <p className="text-muted-foreground text-sm">
                         Only organization owners can change providers.

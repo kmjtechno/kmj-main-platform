@@ -6,6 +6,7 @@ namespace App\Http\Controllers;
 
 use App\Models\AiProvider;
 use App\Models\User;
+use App\Services\AiProviders\OpenRouterConnect;
 use App\Services\AiProviders\ProviderManager;
 use App\Services\AiProviders\ResolvesAiProviderScope;
 use Illuminate\Database\UniqueConstraintViolationException;
@@ -15,12 +16,14 @@ use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
 use InvalidArgumentException;
+use Symfony\Component\HttpFoundation\Response as SymfonyResponse;
 
 final class AiProviderController extends Controller
 {
     public function __construct(
         private readonly ResolvesAiProviderScope $scope,
         private readonly ProviderManager $manager,
+        private readonly OpenRouterConnect $openRouter,
     ) {}
 
     public function index(Request $request): Response
@@ -90,6 +93,65 @@ final class AiProviderController extends Controller
         }
 
         return back()->with('status', 'Provider updated.');
+    }
+
+    /** Start the OpenRouter sign-in (Google/GitHub there); the key comes back to the callback. */
+    public function connectOpenRouter(Request $request): SymfonyResponse
+    {
+        $scope = $this->managing($request);
+        try {
+            // OpenRouter only redirects back to https; behind the proxy the request scheme may be http.
+            $flow = $this->openRouter->begin((string) preg_replace('#\Ahttp://#', 'https://', route('ai-providers.openrouter.callback')));
+        } catch (InvalidArgumentException $exception) {
+            return back()->withErrors(['provider' => 'Cannot start sign-in: '.$exception->getMessage()]);
+        }
+        $request->session()->put('ai_provider_oauth', [
+            'verifier' => $flow['verifier'],
+            'user' => (int) $this->user($request)->id,
+            'organization' => $scope['organization_id'],
+            'expires' => time() + 600,
+        ]);
+
+        return Inertia::location($flow['url']);
+    }
+
+    public function openRouterCallback(Request $request): RedirectResponse
+    {
+        $scope = $this->managing($request);
+        // Single use: a replayed or forged callback finds nothing to redeem.
+        $pending = $request->session()->pull('ai_provider_oauth');
+        $index = redirect()->route('ai-providers.index');
+        if (! is_array($pending) || ($pending['expires'] ?? 0) < time()
+            || ($pending['user'] ?? null) !== (int) $this->user($request)->id
+            || ($pending['organization'] ?? null) !== $scope['organization_id']) {
+            return $index->withErrors(['provider' => 'Sign-in expired or was not started here. Start again.']);
+        }
+
+        try {
+            $key = $this->openRouter->exchange((string) $request->query('code', ''), (string) $pending['verifier']);
+            $provider = $this->manager->create($scope['organization_id'], (int) $this->user($request)->id, [
+                'preset' => 'openrouter',
+                'name' => $this->freeName($scope['organization_id'], 'OpenRouter'),
+                'api_key' => $key,
+            ]);
+        } catch (InvalidArgumentException $exception) {
+            return $index->withErrors(['provider' => 'OpenRouter sign-in failed: '.$exception->getMessage()]);
+        }
+        $tested = $this->manager->test($provider);
+
+        return $index->with('status', 'OpenRouter connected ('.count($tested->models_cache ?? []).' models found). Only ":free" models are admitted.');
+    }
+
+    private function freeName(string $organizationId, string $base): string
+    {
+        for ($i = 1; $i <= 20; $i++) {
+            $name = $i === 1 ? $base : $base.' '.$i;
+            if (! AiProvider::query()->where('organization_id', $organizationId)->where('name', $name)->exists()) {
+                return $name;
+            }
+        }
+
+        return $base.' '.bin2hex(random_bytes(3));
     }
 
     public function test(Request $request, string $provider): RedirectResponse
