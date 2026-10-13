@@ -196,6 +196,140 @@ final class CodeBridgeOAuthServerTest extends TestCase
         ])->assertStatus(400)->assertJson(['error' => 'invalid_grant']);
     }
 
+    public function test_a_different_ai_app_email_does_not_bind_the_kmj_oauth_identity(): void
+    {
+        $kmjAccount = User::factory()->create([
+            'email' => 'authorized-kmj-user@example.test',
+            'email_verified_at' => now(),
+        ]);
+
+        foreach ([
+            ['Claude', self::REDIRECT],
+            ['ChatGPT', 'https://chatgpt.com/connector_platform_oauth_redirect'],
+            ['Gemini', 'https://oauth-redirect.googleusercontent.com/r/user_bound_custom-mcp-test'],
+        ] as [$clientName, $redirectUri]) {
+            $clientId = $this->postJson('/oauth/register', [
+                'client_name' => $clientName,
+                'redirect_uris' => [$redirectUri],
+            ])->assertCreated()->json('client_id');
+
+            // There is intentionally no AI-provider email in the OAuth
+            // request. The account chosen here belongs to KMJ Platform.
+            $query = $this->authorizeQuery($clientId, [
+                'redirect_uri' => $redirectUri,
+            ]);
+            $page = $this->actingAs($kmjAccount)->get('/oauth/authorize?'.$query)
+                ->assertOk()
+                ->assertInertia(fn (Assert $p) => $p
+                    ->component('auth/oauth-authorize')
+                    ->where('clientName', $clientName)
+                    ->where('account.email', 'authorized-kmj-user@example.test'));
+
+            $requestId = $page->viewData('page')['props']['requestId'];
+            $callback = $this->actingAs($kmjAccount)->post('/oauth/authorize', [
+                'request_id' => $requestId,
+                'decision' => 'approve',
+            ])->assertRedirect()->headers->get('Location');
+
+            parse_str((string) parse_url((string) $callback, PHP_URL_QUERY), $parameters);
+            $tokens = $this->post('/oauth/token', [
+                'grant_type' => 'authorization_code',
+                'code' => $parameters['code'],
+                'client_id' => $clientId,
+                'redirect_uri' => $redirectUri,
+                'code_verifier' => $this->verifier,
+                'resource' => self::RESOURCE,
+            ])->assertOk()->json();
+
+            $claims = app(OAuthServer::class)->verifyAccessToken($tokens['access_token']);
+            $this->assertSame('kmj-user:'.$kmjAccount->id, $claims['sub']);
+            $this->assertSame(self::RESOURCE, $claims['aud']);
+            $this->assertSame($clientId, $claims['client_id']);
+            $this->assertArrayNotHasKey('email', $claims);
+        }
+    }
+
+    public function test_account_switch_preserves_validated_pkce_and_consumes_old_consent(): void
+    {
+        $wrong = User::factory()->create(['email' => 'wrong-kmj@example.test']);
+        $authorized = User::factory()->create(['email' => 'owner-kmj@example.test']);
+        $clientId = $this->registerClient();
+        $state = 'client-generated-opaque-state-123';
+        $query = $this->authorizeQuery($clientId, ['state' => $state]);
+
+        $old = $this->actingAs($wrong)->get('/oauth/authorize?'.$query)
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('auth/oauth-authorize')
+                ->where('account.email', 'wrong-kmj@example.test'));
+        $oldRequestId = $old->viewData('page')['props']['requestId'];
+
+        $switched = $this->actingAs($wrong)->post('/oauth/authorize', [
+            'request_id' => $oldRequestId,
+            'decision' => 'switch',
+        ])->assertRedirect();
+        $this->assertGuest();
+        $this->assertDatabaseCount('codebridge_oauth_codes', 0);
+        $location = (string) $switched->headers->get('Location');
+        $this->assertStringStartsWith('/oauth/authorize?', $location);
+        parse_str((string) parse_url($location, PHP_URL_QUERY), $restored);
+        $this->assertSame($clientId, $restored['client_id']);
+        $this->assertSame(self::REDIRECT, $restored['redirect_uri']);
+        $this->assertSame($state, $restored['state']);
+        $this->assertSame(OAuthCore::base64Url(hash('sha256', $this->verifier, true)), $restored['code_challenge']);
+        $this->assertSame(self::RESOURCE, $restored['resource']);
+
+        $this->get($location)->assertRedirect('/login');
+
+        // A consumed consent cannot be replayed after switching accounts.
+        $this->actingAs($authorized)->post('/oauth/authorize', [
+            'request_id' => $oldRequestId,
+            'decision' => 'approve',
+        ])->assertBadRequest();
+        $this->assertDatabaseCount('codebridge_oauth_codes', 0);
+
+        $new = $this->actingAs($authorized)->get($location)
+            ->assertOk()->assertInertia(fn (Assert $page) => $page
+                ->component('auth/oauth-authorize')
+                ->where('account.email', 'owner-kmj@example.test'));
+        $callback = $this->actingAs($authorized)->post('/oauth/authorize', [
+            'request_id' => $new->viewData('page')['props']['requestId'],
+            'decision' => 'approve',
+        ])->assertRedirect()->headers->get('Location');
+        parse_str((string) parse_url((string) $callback, PHP_URL_QUERY), $params);
+
+        $access = $this->post('/oauth/token', [
+            'grant_type' => 'authorization_code',
+            'code' => $params['code'],
+            'client_id' => $clientId,
+            'redirect_uri' => self::REDIRECT,
+            'code_verifier' => $this->verifier,
+            'resource' => self::RESOURCE,
+        ])->assertOk()->json('access_token');
+
+        $this->assertSame(
+            'kmj-user:'.$authorized->id,
+            app(OAuthServer::class)->verifyAccessToken($access)['sub'],
+        );
+        $this->assertSame(1, DB::table('codebridge_oauth_codes')->count());
+    }
+
+    public function test_switch_rejects_unvalidated_or_replayed_request_ids(): void
+    {
+        $user = User::factory()->create();
+        $clientId = $this->registerClient();
+        $this->actingAs($user)->post('/oauth/authorize', [
+            'request_id' => str_repeat('a', 40),
+            'decision' => 'switch',
+        ])->assertBadRequest();
+        $this->assertAuthenticatedAs($user);
+
+        $this->actingAs($user)->get('/oauth/authorize?'.$this->authorizeQuery($clientId, [
+            'redirect_uri' => 'https://evil.example/callback',
+        ]))->assertBadRequest();
+        $this->assertDatabaseCount('codebridge_oauth_codes', 0);
+    }
+
     public function test_userinfo_returns_verified_identity_for_openid_access_token(): void
     {
         $user = User::factory()->create(['email_verified_at' => now()]);
