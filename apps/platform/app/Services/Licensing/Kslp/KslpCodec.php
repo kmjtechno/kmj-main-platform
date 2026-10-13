@@ -44,6 +44,9 @@ final class KslpCodec
         } catch (\JsonException) {
             throw new DomainException('KSLP_MALFORMED');
         }
+        if (! is_array($header) || ! is_array($claims)) {
+            throw new DomainException('KSLP_MALFORMED');
+        }
         if (($header['alg'] ?? null) !== 'EdDSA' || ($header['typ'] ?? null) !== 'KSLP-v1') {
             throw new DomainException('KSLP_UNSUPPORTED_ALGORITHM');
         }

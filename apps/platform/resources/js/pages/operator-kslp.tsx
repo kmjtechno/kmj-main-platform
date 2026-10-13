@@ -1,3 +1,4 @@
+import OperatorModuleNavigation from '@/components/operator-module-navigation';
 import { Head, router, useForm } from '@inertiajs/react';
 import { useState } from 'react';
 import {
@@ -82,6 +83,7 @@ export default function OperatorKslp({ metrics, licenses, events }: Props) {
         <>
             <Head title="KSLP License Control Plane" />
             <div className="flex h-full flex-1 flex-col gap-6 overflow-x-auto p-4 sm:p-6">
+                <OperatorModuleNavigation active="licensing" />
                 <section className="bg-card rounded-2xl border p-6">
                     <div className="flex gap-4">
                         <span className="grid h-11 w-11 place-items-center rounded-xl bg-red-500/10 text-red-500">

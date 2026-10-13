@@ -2,6 +2,9 @@ import { Link, usePage } from '@inertiajs/react';
 import {
     Activity,
     Crown,
+    CreditCard,
+    Code2,
+    FlaskConical,
     KeyRound,
     LayoutGrid,
     PackageOpen,
@@ -37,9 +40,14 @@ const baseNavItems: NavItem[] = [
         icon: ShoppingCart,
     },
     {
-        title: 'License Center',
+        title: 'Developer Apps & Keys',
+        href: '/developer/apps',
+        icon: Code2,
+    },
+    {
+        title: 'Sandbox Token Lab',
         href: '/sandbox-licenses',
-        icon: KeyRound,
+        icon: FlaskConical,
     },
     {
         title: 'Security',
@@ -69,7 +77,22 @@ export function AppSidebar() {
         ...baseNavItems,
         ...(operator?.enabled
             ? [
-                  { title: 'Operator', href: '/operator', icon: Crown },
+                  { title: 'Super Admin', href: '/operator', icon: Crown },
+                  {
+                      title: 'Customers & Organizations',
+                      href: '/operator/directory',
+                      icon: Crown,
+                  },
+                  {
+                      title: 'Licensing Governance',
+                      href: '/operator/kslp',
+                      icon: KeyRound,
+                  },
+                  {
+                      title: 'Gateway Settings',
+                      href: '/operator/payments',
+                      icon: CreditCard,
+                  },
                   {
                       title: 'Product Manager',
                       href: '/operator#product-manager',

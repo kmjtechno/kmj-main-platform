@@ -226,3 +226,5 @@ Route::post('codebridge/v1/user-access/introspect', function (
         'memberships' => $memberships,
     ])->header('Cache-Control', 'no-store');
 })->middleware('throttle:120,1');
+
+require __DIR__.'/developer-activation-api.php';
