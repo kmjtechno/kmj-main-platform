@@ -1,6 +1,8 @@
 import { Head, Link, router } from '@inertiajs/react';
 import { useState } from 'react';
-import CodeBridgeControlCenterHub from '@/components/codebridge/control-center-hub';
+import CodeBridgeControlCenterHub, {
+    type CodeBridgeSection,
+} from '@/components/codebridge/control-center-hub';
 import DeviceControlCenter, {
     type CodeBridgeDevice,
 } from '@/components/codebridge/device-control-center';
@@ -91,6 +93,7 @@ export default function CodeBridgeService({
     canManageOwnerPlan,
     canManageDevices,
 }: Props) {
+    const [activeSection, setActiveSection] = useState<CodeBridgeSection>('overview');
     const [clientSearch, setClientSearch] = useState('');
     const [showAllClients, setShowAllClients] = useState(false);
     const [copyStatus, setCopyStatus] = useState('');
@@ -215,9 +218,12 @@ export default function CodeBridgeService({
                     authorizedClientGrants={service.connected_clients.length}
                     oauthReady={service.oauth_ready}
                     canManageOwnerPlan={canManageOwnerPlan}
-                />
+                    activeSection={activeSection}
+                    onSectionChange={setActiveSection}
+                >
 
-                <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                {activeSection === 'overview' && (
+                    <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
                     <Metric
                         label="License"
                         value={service.license_status}
@@ -247,8 +253,10 @@ export default function CodeBridgeService({
                         hint="Main Platform license authority"
                     />
                 </section>
-
-                <section className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
+                )}
+                
+                {activeSection === 'setup' && (
+                    <section className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
                     <div className="border-sidebar-border/70 bg-card dark:border-sidebar-border rounded-2xl border p-5 sm:p-6">
                         <div className="flex items-center gap-2">
                             <Server className="h-5 w-5 text-red-500" />
@@ -413,8 +421,10 @@ export default function CodeBridgeService({
                         </Link>
                     </div>
                 </section>
-
-                <DeviceControlCenter
+                )}
+                
+                {activeSection === 'devices' && (
+                    <DeviceControlCenter
                     tenantId={organization.id}
                     devices={service.devices}
                     managedCount={service.managed_devices}
@@ -422,8 +432,10 @@ export default function CodeBridgeService({
                     canManage={canManageDevices}
                     endpoint={service.endpoint}
                 />
-
-                <section className="border-sidebar-border/70 bg-card dark:border-sidebar-border rounded-2xl border p-5 sm:p-6">
+                )}
+                
+                {activeSection === 'setup' && (
+                    <section className="border-sidebar-border/70 bg-card dark:border-sidebar-border rounded-2xl border p-5 sm:p-6">
                     <h2 className="font-black">Connect your AI workspace</h2>
                     <p className="text-muted-foreground mt-1 text-xs leading-5">
                         Connect the same authorized projects to ChatGPT, VS Code
@@ -536,8 +548,10 @@ export default function CodeBridgeService({
                         login is required for device authorization.
                     </p>
                 </section>
-
-                <section id="codebridge-clients" className="border-sidebar-border/70 bg-card dark:border-sidebar-border rounded-2xl border p-5 sm:p-6">
+                )}
+                
+                {activeSection === 'clients' && (
+                    <section id="codebridge-clients" className="border-sidebar-border/70 bg-card dark:border-sidebar-border rounded-2xl border p-5 sm:p-6">
                     <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-start">
                         <div>
                             <h2 className="font-black">
@@ -653,8 +667,10 @@ export default function CodeBridgeService({
                         minutes.
                     </p>
                 </section>
-
-                <section className="border-sidebar-border/70 bg-card dark:border-sidebar-border rounded-2xl border p-5 sm:p-6">
+                )}
+                
+                {activeSection === 'overview' && (
+                    <section className="border-sidebar-border/70 bg-card dark:border-sidebar-border rounded-2xl border p-5 sm:p-6">
                     <div>
                         <h2 className="font-black">What CodeBridge can do</h2>
                         <p className="text-muted-foreground mt-1 text-xs">
@@ -681,6 +697,9 @@ export default function CodeBridgeService({
                         />
                     </div>
                 </section>
+                )}
+                
+                                </CodeBridgeControlCenterHub>
             </div>
         </>
     );
