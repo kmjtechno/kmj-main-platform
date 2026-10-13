@@ -21,7 +21,7 @@ void test('CodeBridge dashboard exposes keyboard-reachable anchored sections', (
     assert.match(dashboard, /aria-label="CodeBridge dashboard sections"/);
     assert.match(dashboard, /focus-visible:ring-2/);
     assert.doesNotMatch(dashboard, /overflow-x-auto p-4 sm:p-6/);
-    assert.doesNotMatch(dashboard, /text-\\[(?:9|10|11)px\\]/);
+    assert.doesNotMatch(dashboard, /text-\[(?:9|10|11)px\]/);
 });
 
 void test('device search respects authorized projects and never invents live status', () => {
