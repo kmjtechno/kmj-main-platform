@@ -67,7 +67,7 @@ function ProviderCard({
         run();
     };
     const options = { preserveScroll: true, onFinish: () => setBusy(false) };
-    const patch = (data: Record<string, unknown>) =>
+    const patch = (data: Record<string, string | boolean | string[] | null>) =>
         act(() => router.patch(`${BASE}/${provider.id}`, data, options));
     const toggleFallback = (model: string) => {
         const next = provider.fallback_models.includes(model)
