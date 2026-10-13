@@ -110,17 +110,20 @@ void test('usage billing and device state never invent measurements or connectiv
     assert.doesNotMatch(hub, /100%|unlimited calls|live sessions/);
 });
 
-void test('control center uses accessible section switching instead of one long dashboard', () => {
-    assert.match(hub, /aria-pressed=\{activeSection === id\}/);
-    assert.match(hub, /onSectionChange\(id\)/);
-    assert.match(hub, /\{children\}/);
-    assert.match(ui, /activeSection=\{activeSection\}/);
-    assert.match(ui, /onSectionChange=\{setActiveSection\}/);
-    for (const section of ['overview', 'devices', 'setup', 'clients']) {
-        assert.match(ui, new RegExp(`activeSection === '${section}'`));
-    }
-    for (const section of ['overview', 'usage', 'billing', 'settings']) {
-        assert.match(hub, new RegExp(`hidden=\\{activeSection !== '${section}'\\}`));
-    }
-    assert.doesNotMatch(hub, /href=\{href\}/);
-});
+void test(
+    'control center uses accessible section switching instead of one long dashboard',
+    () => {
+        assert.match(hub, /aria-pressed=\{activeSection === id\}/);
+        assert.match(hub, /onSectionChange\(id\)/);
+        assert.match(hub, /\{children\}/);
+        assert.match(ui, /activeSection=\{activeSection\}/);
+        assert.match(ui, /onSectionChange=\{setActiveSection\}/);
+        for (const section of ['overview', 'devices', 'setup', 'clients']) {
+            assert.match(ui, new RegExp(`activeSection === '${section}'`));
+        }
+        for (const section of ['overview', 'usage', 'billing', 'settings']) {
+            assert.match(hub, new RegExp(`hidden=\\{activeSection !== '${section}'\\}`));
+        }
+            assert.doesNotMatch(hub, /href=\{href\}/);
+    },
+);
