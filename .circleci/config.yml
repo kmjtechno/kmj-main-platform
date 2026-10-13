@@ -65,6 +65,44 @@ jobs:
             cd apps/platform
             npm run build
 
+  codebridge_ui_formatter:
+    docker:
+      - image: cimg/php:8.4-node
+    resource_class: small
+    steps:
+      - checkout
+      - run:
+          name: Install frontend dependencies (isolated)
+          command: |
+            set -euo pipefail
+            cd apps/platform
+            npm ci --ignore-scripts --no-audit --no-fund
+      - run:
+          name: Format and lint frontend only
+          command: |
+            set -euo pipefail
+            cd apps/platform
+            ./node_modules/.bin/vp check
+
+  codebridge_ui_brand_contract:
+    docker:
+      - image: cimg/php:8.4-node
+    resource_class: small
+    steps:
+      - checkout
+      - run:
+          name: Install frontend dependencies (isolated)
+          command: |
+            set -euo pipefail
+            cd apps/platform
+            npm ci --ignore-scripts --no-audit --no-fund
+      - run:
+          name: CodeBridge branding and dashboard assertions
+          command: |
+            set -euo pipefail
+            cd apps/platform
+            node --test scripts/check-codebridge-dashboard-truth.test.mjs scripts/check-brand-assets.test.mjs
+
 workflows:
   review_codebridge_device_control:
     jobs:
@@ -79,3 +117,17 @@ workflows:
                 - fix/codebridge-compact-workspace-tabs-20261013
                 - claude/codebridge-production-completion-n6lu61
                 - release/codebridge-dashboard-ux-branding-integrated-20261013
+                - ci/codebridge-ui-phase-isolation-20261013
+
+  isolate_ui_failure:
+    jobs:
+      - codebridge_ui_formatter:
+          filters:
+            branches:
+              only:
+                - ci/codebridge-ui-phase-isolation-20261013
+      - codebridge_ui_brand_contract:
+          filters:
+            branches:
+              only:
+                - ci/codebridge-ui-phase-isolation-20261013
