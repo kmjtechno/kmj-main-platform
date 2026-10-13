@@ -164,7 +164,7 @@ export default function CodeBridgeService({
                                     <h1 className="text-3xl font-black tracking-tight">
                                         KMJ CodeBridge
                                     </h1>
-                                    <span className="rounded-full border border-emerald-500/15 bg-emerald-500/5 px-2 py-1 text-[9px] font-black text-emerald-600 uppercase dark:text-emerald-400">
+                                    <span className="rounded-full border border-emerald-500/15 bg-emerald-500/5 px-2 py-1 text-xs font-black text-emerald-600 uppercase dark:text-emerald-400">
                                         {entitlement.status}
                                     </span>
                                 </div>
@@ -268,13 +268,13 @@ export default function CodeBridgeService({
                                 </p>
 
                                 <div className="mt-5 rounded-xl border bg-black/5 p-4 dark:bg-white/[0.02]">
-                                    <div className="text-muted-foreground text-[10px] font-bold tracking-wider uppercase">
+                                    <div className="text-muted-foreground text-xs font-bold tracking-wider uppercase">
                                         MCP endpoint
                                     </div>
                                     <code className="mt-2 block overflow-x-auto rounded-lg bg-black/5 px-3 py-2 text-xs dark:bg-white/[0.03]">
                                         {service.endpoint}
                                     </code>
-                                    <div className="mt-3 inline-flex items-center gap-1.5 text-[11px] font-bold text-emerald-600 dark:text-emerald-400">
+                                    <div className="mt-3 inline-flex items-center gap-1.5 text-xs font-bold text-emerald-600 dark:text-emerald-400">
                                         <CheckCircle2 className="h-3.5 w-3.5" />
                                         Protected by OAuth 2.1 + PKCE
                                     </div>
@@ -287,7 +287,7 @@ export default function CodeBridgeService({
                                                 <Laptop2 className="h-3.5 w-3.5 text-red-500" />
                                                 ChatGPT Desktop
                                             </div>
-                                            <p className="text-muted-foreground mt-2 text-[11px] leading-5">
+                                            <p className="text-muted-foreground mt-2 text-xs leading-5">
                                                 {DESKTOP_INSTALL_DESCRIPTION}
                                             </p>
                                         </div>
@@ -307,7 +307,7 @@ export default function CodeBridgeService({
                                         <TerminalSquare className="h-3.5 w-3.5 text-red-500" />
                                         Install on Linux / VPS
                                     </div>
-                                    <p className="text-muted-foreground mt-2 text-[11px] leading-5">
+                                    <p className="text-muted-foreground mt-2 text-xs leading-5">
                                         Download and inspect the pinned bootstrap first,
                                         then run the saved script in its folder. Pairing
                                         still requires browser approval; no agent token
@@ -320,7 +320,7 @@ export default function CodeBridgeService({
                                     >
                                         Download Linux / VPS bootstrap
                                     </a>
-                                    <code className="mt-3 block overflow-x-auto rounded-lg bg-black/5 px-3 py-2 text-[11px] dark:bg-white/[0.03]">
+                                    <code className="mt-3 block overflow-x-auto rounded-lg bg-black/5 px-3 py-2 text-xs dark:bg-white/[0.03]">
                                         sudo bash KMJ-CodeBridge-VPS.sh
                                     </code>
                                 </div>
@@ -386,7 +386,7 @@ export default function CodeBridgeService({
                                     </div>
                                     <div className="mt-3 flex flex-wrap gap-2">
                                         {service.permissions.length === 0 && (
-                                            <span className="text-muted-foreground text-[11px]">
+                                            <span className="text-muted-foreground text-xs">
                                                 No permissions reported. Ask an
                                                 administrator to verify your grant.
                                             </span>
@@ -394,7 +394,7 @@ export default function CodeBridgeService({
                                         {service.permissions.map((permission) => (
                                             <span
                                                 key={permission}
-                                                className="rounded-lg border px-2.5 py-1 text-[10px] font-bold uppercase"
+                                                className="rounded-lg border px-2.5 py-1 text-xs font-bold uppercase"
                                             >
                                                 {permission}
                                             </span>
@@ -498,7 +498,7 @@ export default function CodeBridgeService({
                                         HTTP MCP URL and complete KMJ browser OAuth. Do
                                         not paste device tokens.
                                     </p>
-                                    <code className="mt-3 block rounded-lg border px-3 py-2 text-[11px] break-all">
+                                    <code className="mt-3 block rounded-lg border px-3 py-2 text-xs break-all">
                                         {service.endpoint}
                                     </code>
                                     <button
@@ -506,11 +506,11 @@ export default function CodeBridgeService({
                                         onClick={() => {
                                             void copyEndpoint();
                                         }}
-                                        className="mt-3 min-h-10 rounded-lg border px-3 py-2 text-[11px] font-bold"
+                                        className="mt-3 min-h-10 rounded-lg border px-3 py-2 text-xs font-bold"
                                     >
                                         Copy Claude MCP URL
                                     </button>
-                                    <p className="text-muted-foreground mt-2 text-[11px] leading-5">
+                                    <p className="text-muted-foreground mt-2 text-xs leading-5">
                                         For third-party inference Gateway mode in
                                         Claude Desktop, use Inference configuration,
                                         Connectors, Managed MCP servers, Add server,
@@ -531,7 +531,7 @@ export default function CodeBridgeService({
                                         deployed. Actual execution concurrency remains
                                         plan and hardware limited.
                                     </p>
-                                    <p className="text-muted-foreground mt-3 text-[11px] leading-5">
+                                    <p className="text-muted-foreground mt-3 text-xs leading-5">
                                         Verified hosted MCP updates are served
                                         centrally. Your AI desktop app may need to
                                         reconnect to refresh tools; third-party app
@@ -540,7 +540,7 @@ export default function CodeBridgeService({
                                     </p>
                                 </div>
                             </div>
-                            <p className="text-muted-foreground mt-3 text-[11px]">
+                            <p className="text-muted-foreground mt-3 text-xs">
                                 VS Code opens a confirmation dialog before adding the
                                 MCP server. Complete KMJ browser OAuth when prompted. If
                                 your system does not handle VS Code install links, use
@@ -561,7 +561,7 @@ export default function CodeBridgeService({
                                         {CONNECTED_CLIENTS_DESCRIPTION}
                                     </p>
                                 </div>
-                                <span className="rounded-full border px-3 py-1 text-[10px] font-bold">
+                                <span className="rounded-full border px-3 py-1 text-xs font-bold">
                                     {service.connected_clients.length} authorized
                                 </span>
                             </div>
@@ -599,10 +599,10 @@ export default function CodeBridgeService({
                                                 <div className="text-sm font-black">
                                                     {client.client_name}
                                                 </div>
-                                                <div className="text-muted-foreground mt-1 text-[11px]">
+                                                <div className="text-muted-foreground mt-1 text-xs">
                                                     {clientSummary(client)}
                                                 </div>
-                                                <div className="text-muted-foreground mt-1 font-mono text-[10px]">
+                                                <div className="text-muted-foreground mt-1 font-mono text-xs">
                                                     Client ID · …
                                                     {client.client_id.slice(-10)}
                                                 </div>
@@ -610,7 +610,7 @@ export default function CodeBridgeService({
                                                     {client.scopes.map((scope) => (
                                                         <span
                                                             key={scope}
-                                                            className="rounded-lg border px-2 py-1 text-[9px] font-bold"
+                                                            className="rounded-lg border px-2 py-1 text-xs font-bold"
                                                         >
                                                             {scope}
                                                         </span>
@@ -627,7 +627,7 @@ export default function CodeBridgeService({
                                                     )
                                                 }
                                                 disabled={revokingClient !== null}
-                                                className="inline-flex min-h-10 shrink-0 items-center justify-center rounded-xl border border-red-500/30 px-3 text-[11px] font-black text-red-500 transition hover:bg-red-500/10 disabled:cursor-not-allowed disabled:opacity-50"
+                                                className="inline-flex min-h-10 shrink-0 items-center justify-center rounded-xl border border-red-500/30 px-3 text-xs font-black text-red-500 transition hover:bg-red-500/10 disabled:cursor-not-allowed disabled:opacity-50"
                                             >
                                                 {revokingClient === client.client_id
                                                     ? 'Revoking...'
@@ -657,7 +657,7 @@ export default function CodeBridgeService({
                                         : `Show all ${matchingClients.length} clients`}
                                 </button>
                             )}
-                            <p className="text-muted-foreground mt-4 text-[10px] leading-4">
+                            <p className="text-muted-foreground mt-4 text-xs leading-4">
                                 Revoking stops future OAuth refresh grants. Existing
                                 access tokens may remain valid for up to{' '}
                                 {Math.max(
@@ -715,11 +715,11 @@ function Metric({
 }) {
     return (
         <div className="bg-card rounded-2xl border p-4">
-            <div className="text-muted-foreground text-[10px] font-bold tracking-wider uppercase">
+            <div className="text-muted-foreground text-xs font-bold tracking-wider uppercase">
                 {label}
             </div>
             <div className="mt-1 text-lg font-black">{value}</div>
-            <div className="text-muted-foreground mt-1 text-[10px]">{hint}</div>
+            <div className="text-muted-foreground mt-1 text-xs">{hint}</div>
         </div>
     );
 }
@@ -727,8 +727,8 @@ function Metric({
 function InfoRow({ label, value }: { label: string; value: string }) {
     return (
         <div className="flex items-start justify-between gap-4 rounded-xl border px-3 py-2.5">
-            <span className="text-muted-foreground text-[11px]">{label}</span>
-            <span className="max-w-[65%] text-right text-[11px] font-bold">
+            <span className="text-muted-foreground text-xs">{label}</span>
+            <span className="max-w-[65%] text-right text-xs font-bold">
                 {value}
             </span>
         </div>
@@ -748,7 +748,7 @@ function Capability({
         <div className="rounded-xl border p-4">
             <Icon className="h-4 w-4 text-red-500" />
             <div className="mt-3 text-xs font-black">{title}</div>
-            <p className="text-muted-foreground mt-1 text-[11px] leading-5">
+            <p className="text-muted-foreground mt-1 text-xs leading-5">
                 {text}
             </p>
         </div>
@@ -757,7 +757,7 @@ function Capability({
 
 function StepNumber({ value }: { value: string }) {
     return (
-        <span className="bg-muted text-foreground grid h-6 w-6 shrink-0 place-items-center rounded-lg text-[10px] font-black">
+        <span className="bg-muted text-foreground grid h-6 w-6 shrink-0 place-items-center rounded-lg text-xs font-black">
             {value}
         </span>
     );
