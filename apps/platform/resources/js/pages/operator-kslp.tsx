@@ -22,6 +22,18 @@ type License = {
     grace_until: string | null;
     active_activations: number;
 };
+type ProductEntitlement = {
+    id: string;
+    organization_id: string;
+    organization_name: string;
+    product_slug: string;
+    product_name: string;
+    capability: string;
+    status: string;
+    starts_at: string | null;
+    ends_at: string | null;
+};
+
 type Event = {
     id: number;
     license_id: string;
@@ -45,9 +57,10 @@ type Props = {
     filters: { customer_q: string; plan: string };
     matchingCount: number;
     customerOptions: { id: string; name: string; email: string }[];
+    productEntitlements: ProductEntitlement[];
 };
 
-export default function OperatorKslp({ metrics, licenses, events, filters, matchingCount, customerOptions }: Props) {
+export default function OperatorKslp({ metrics, licenses, events, filters, matchingCount, customerOptions, productEntitlements }: Props) {
     const [actionReason, setActionReason] = useState('');
     const [customerQuery, setCustomerQuery] = useState(filters.customer_q);
     const [planQuery, setPlanQuery] = useState(filters.plan);
@@ -104,6 +117,7 @@ export default function OperatorKslp({ metrics, licenses, events, filters, match
                         ['#license-issue', 'Issue license'],
                         ['#license-search', 'Find customer'],
                         ['#license-register', 'Manage plans'],
+                        ['#license-entitlements', 'All products'],
                         ['#license-audit', 'Audit trail'],
                     ].map(([href, label]) => (
                         <a key={href} href={href} className="rounded-lg border px-3 py-2 hover:border-red-500/40 hover:bg-accent focus-visible:outline-2 focus-visible:outline-red-500">{label}</a>
@@ -465,6 +479,55 @@ export default function OperatorKslp({ metrics, licenses, events, filters, match
                             </tbody>
                         </table>
                     </div>
+                </section>
+                <section id="license-entitlements" className="bg-card scroll-mt-6 rounded-2xl border p-5">
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                        <div>
+                            <h2 className="font-bold">All-product entitlement register</h2>
+                            <p className="mt-1 max-w-3xl text-xs leading-5 text-muted-foreground">
+                                Read-only overview of organizational access across the KMJ catalog.
+                                An entitlement is not automatically an activated signed device license
+                                or a paid plan. Product-specific license management remains gated.
+                            </p>
+                        </div>
+                        <span className="rounded-lg border px-3 py-2 text-xs font-semibold">
+                            Up to 60 recent matches
+                        </span>
+                    </div>
+                    {productEntitlements.length === 0 ? (
+                        <p className="mt-4 rounded-lg border border-dashed p-5 text-sm text-muted-foreground">
+                            No matching product entitlements in this view.
+                        </p>
+                    ) : (
+                        <div className="mt-4 overflow-x-auto">
+                            <table className="w-full min-w-[720px] text-left text-xs">
+                                <thead>
+                                    <tr className="text-muted-foreground">
+                                        {['Organization', 'Product', 'Capability', 'State', 'Access end'].map((label) => (
+                                            <th key={label} className="border-b px-3 py-2">{label}</th>
+                                        ))}
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {productEntitlements.map((entitlement) => (
+                                        <tr key={entitlement.id} className="border-b last:border-0">
+                                            <td className="px-3 py-3">
+                                                <span className="font-semibold">{entitlement.organization_name}</span>
+                                                <div className="text-muted-foreground">{entitlement.organization_id}</div>
+                                            </td>
+                                            <td className="px-3 py-3">
+                                                <span className="font-semibold">{entitlement.product_name}</span>
+                                                <div className="text-muted-foreground">{entitlement.product_slug}</div>
+                                            </td>
+                                            <td className="px-3 py-3">{entitlement.capability}</td>
+                                            <td className="px-3 py-3 font-semibold">{entitlement.status}</td>
+                                            <td className="px-3 py-3">{entitlement.ends_at ?? 'No recorded end'}</td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    )}
                 </section>
                 <section id="license-audit" className="bg-card scroll-mt-6 rounded-2xl border p-5">
                     <div className="flex items-center gap-2">
