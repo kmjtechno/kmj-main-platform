@@ -127,6 +127,9 @@ final class AiProviderOpenRouterConnectTest extends TestCase
         $this->assertSame('openrouter', $provider->preset);
         $this->assertSame('ok', $provider->health);
         $this->assertSame(['meta/llama-3:free', 'x/paid-model'], $provider->models_cache);
+        $this->assertSame('meta/llama-3:free', $provider->default_model);
+        $this->assertSame([], $provider->fallback_models);
+
         $this->assertNull(session('ai_provider_oauth'));
         $this->assertStringNotContainsString(self::KEY, (string) session('status'));
 
@@ -134,6 +137,39 @@ final class AiProviderOpenRouterConnectTest extends TestCase
         $manager->assertInferenceAllowed($provider, 'meta/llama-3:free');
         $this->expectException(RuntimeException::class);
         $manager->assertInferenceAllowed($provider, 'x/paid-model');
+    }
+
+    public function test_only_free_models_can_be_autoconfigured_as_fallbacks(): void
+    {
+        Http::fake([
+            'openrouter.ai/api/v1/auth/keys' => Http::response(['key' => self::KEY], 200),
+            'openrouter.ai/api/v1/models' => Http::response(['data' => [
+                ['id' => 'zz/paid'], ['id' => 'a/first:free'],
+                ['id' => 'b/second:free'], ['id' => 'c/third:free'],
+            ]], 200),
+        ]);
+        $this->confirmed($this->owner)->post(self::START);
+        $this->actingAs($this->owner)->get(self::CALLBACK.'?code=abcdefgh12345')
+            ->assertRedirect(route('ai-providers.index'));
+
+        $provider = AiProvider::query()->firstOrFail();
+        $this->assertSame('a/first:free', $provider->default_model);
+        $this->assertSame(['b/second:free', 'c/third:free'], $provider->fallback_models);
+        $this->assertStringNotContainsString('zz/paid', implode(',', $provider->fallback_models));
+    }
+
+    public function test_successful_auth_with_only_paid_models_has_no_default(): void
+    {
+        Http::fake([
+            'openrouter.ai/api/v1/auth/keys' => Http::response(['key' => self::KEY], 200),
+            'openrouter.ai/api/v1/models' => Http::response(['data' => [['id' => 'p/paid']]], 200),
+        ]);
+        $this->confirmed($this->owner)->post(self::START);
+        $this->actingAs($this->owner)->get(self::CALLBACK.'?code=abcdefgh12345')
+            ->assertRedirect(route('ai-providers.index'));
+
+        $this->assertNull(AiProvider::query()->firstOrFail()->default_model);
+        $this->assertStringContainsString('Inference remains blocked', (string) session('status'));
     }
 
     public function test_a_replayed_or_unstarted_callback_redeems_nothing(): void
