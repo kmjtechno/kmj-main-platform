@@ -8,6 +8,10 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Inertia\Testing\AssertableInertia as Assert;
+use KMJ\MainPlatform\Organizations\Models\Organization;
+use KMJ\MainPlatform\Catalog\Models\Product;
+use KMJ\MainPlatform\Entitlements\Models\EntitlementPolicy;
+use KMJ\MainPlatform\Entitlements\Models\Entitlement;
 use Tests\TestCase;
 
 final class OwnerLicensingCenterHttpTest extends TestCase
@@ -89,6 +93,49 @@ final class OwnerLicensingCenterHttpTest extends TestCase
             'id' => $license['id'],
             'plan' => 'trial',
         ]);
+    }
+
+    public function test_owner_can_view_other_product_entitlements_without_issuing_a_license(): void
+    {
+        $organization = Organization::query()->create(['name' => 'Cinema Customer Group']);
+        $product = Product::query()->create([
+            'slug' => 'kmj-cinema-test',
+            'name' => 'KMJ Cinema Test',
+            'status' => 'sandbox',
+        ]);
+        $policy = EntitlementPolicy::query()->create([
+            'product_id' => $product->getKey(),
+            'code' => 'cinema.test.access',
+            'capability' => 'cinema.read',
+            'status' => 'active',
+        ]);
+        $entitlement = Entitlement::query()->create([
+            'organization_id' => $organization->getKey(),
+            'product_id' => $product->getKey(),
+            'policy_id' => $policy->getKey(),
+            'capability' => 'cinema.read',
+            'status' => 'active',
+            'idempotency_key' => 'cinema-owner-read-test',
+            'starts_at' => now(),
+            'ends_at' => null,
+        ]);
+
+        $this->actingAs($this->owner())
+            ->withSession(['auth.password_confirmed_at' => time()])
+            ->get('/operator/kslp?customer_q=Cinema%20Customer%20Group')
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('operator-kslp')
+                ->has('productEntitlements', 1)
+                ->where('productEntitlements.0.product_slug', 'kmj-cinema-test')
+                ->where('productEntitlements.0.organization_name', 'Cinema Customer Group')
+                ->where('productEntitlements.0.status', 'active'));
+
+        $this->assertDatabaseHas('entitlements', [
+            'id' => $entitlement->getKey(),
+            'status' => 'active',
+        ]);
+        $this->assertDatabaseCount('kslp_licenses', 0);
     }
 
     private function owner(): User
