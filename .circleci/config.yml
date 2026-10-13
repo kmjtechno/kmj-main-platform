@@ -4,11 +4,10 @@ orbs:
   browser-tools: circleci/browser-tools@2.4.2
 
 commands:
-  prepare_ui_app:
-    description: Build the app, migrate a throwaway SQLite database, serve it on 127.0.0.1:8000 and install the browser tooling.
+  ui_stage_build:
+    description: Stage 1 - checkout, install PHP and Node dependencies, build the Vite assets.
     steps:
       - checkout
-      - browser-tools/install_chrome
       - run:
           name: Install Laravel dependencies
           no_output_timeout: 10m
@@ -24,6 +23,9 @@ commands:
             cd apps/platform
             npm ci --ignore-scripts --no-audit --no-fund
             npm run build
+  ui_stage_env:
+    description: Stage 2 - write .env for a throwaway SQLite database and migrate it.
+    steps:
       - run:
           name: Prepare environment and throwaway database
           command: |
@@ -48,6 +50,9 @@ commands:
             touch database/ui.sqlite
             php artisan migrate --force --no-ansi
             grep -E "^(APP_ENV|DB_CONNECTION|SESSION_DRIVER|CACHE_STORE|QUEUE_CONNECTION)=" .env
+  ui_stage_serve:
+    description: Stage 3 - serve the app in a background step and wait for HTTP 200 on /login.
+    steps:
       - run:
           name: Serve the app (background step, stays alive for the following steps)
           background: true
@@ -58,6 +63,7 @@ commands:
           name: Wait until the app answers on /login
           command: |
             set -euo pipefail
+            code=000
             for i in $(seq 1 60); do
               code=$(curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:8000/login || true)
               if [ "$code" = "200" ]; then echo "app is up after ${i}s"; exit 0; fi
@@ -65,6 +71,9 @@ commands:
             done
             echo "app did not return 200 on /login (last status: $code)"
             exit 1
+  ui_stage_tools:
+    description: Stage 4 - browser tooling outside the app's dependencies, then a real Chrome page load.
+    steps:
       - run:
           name: Install browser tooling (outside the app's dependencies)
           command: |
@@ -77,6 +86,29 @@ commands:
             npm install --no-audit --no-fund playwright-core@1.49.1 axe-core@4.10.2
             cp "$src" /tmp/uitools/ui-smoke.mjs
             test -x /usr/bin/google-chrome
+      - run:
+          name: Chrome loads /login through Playwright
+          command: |
+            set -euo pipefail
+            cd /tmp/uitools
+            cat > probe.mjs <<'EOF'
+            import { chromium } from 'playwright-core';
+            const browser = await chromium.launch({ executablePath: '/usr/bin/google-chrome', args: ['--no-sandbox'] });
+            const page = await browser.newPage();
+            const response = await page.goto('http://127.0.0.1:8000/login', { waitUntil: 'networkidle' });
+            console.log('status', response.status(), 'title', await page.title());
+            await browser.close();
+            if (response.status() !== 200) process.exit(1);
+            EOF
+            node probe.mjs
+  prepare_ui_app:
+    description: All stages - everything the browser suites need.
+    steps:
+      - ui_stage_build
+      - browser-tools/install_chrome
+      - ui_stage_env
+      - ui_stage_serve
+      - ui_stage_tools
 
 jobs:
   codebridge_device_control:
@@ -323,6 +355,81 @@ jobs:
             UI_MODE=dashboard UI_CHECKS=<< parameters.checks >> UI_BASE=http://127.0.0.1:8000 CHROME_PATH=/usr/bin/google-chrome \
               UI_EMAIL=ui-smoke@example.test UI_PASSWORD=password node ui-smoke.mjs
 
+  ui_probe_1_chrome:
+    docker:
+      - image: cimg/php:8.4-node
+    resource_class: small
+    steps:
+      - checkout
+      - browser-tools/install_chrome
+      - run:
+          name: Chrome is installed and runs
+          command: |
+            set -euo pipefail
+            test -x /usr/bin/google-chrome
+            google-chrome --version
+
+  ui_probe_2_migrate:
+    docker:
+      - image: cimg/php:8.4-node
+    resource_class: medium
+    environment:
+      APP_ENV: local
+      APP_DEBUG: "false"
+      APP_URL: http://127.0.0.1:8000
+      DB_CONNECTION: sqlite
+      DB_DATABASE: /home/circleci/project/apps/platform/database/ui.sqlite
+      SESSION_DRIVER: file
+      CACHE_STORE: array
+      QUEUE_CONNECTION: sync
+      MAIL_MAILER: array
+      PHP_CLI_SERVER_WORKERS: "4"
+    steps:
+      - ui_stage_build
+      - ui_stage_env
+
+  ui_probe_3_serve:
+    docker:
+      - image: cimg/php:8.4-node
+    resource_class: medium
+    environment:
+      APP_ENV: local
+      APP_DEBUG: "false"
+      APP_URL: http://127.0.0.1:8000
+      DB_CONNECTION: sqlite
+      DB_DATABASE: /home/circleci/project/apps/platform/database/ui.sqlite
+      SESSION_DRIVER: file
+      CACHE_STORE: array
+      QUEUE_CONNECTION: sync
+      MAIL_MAILER: array
+      PHP_CLI_SERVER_WORKERS: "4"
+    steps:
+      - ui_stage_build
+      - ui_stage_env
+      - ui_stage_serve
+
+  ui_probe_4_browser:
+    docker:
+      - image: cimg/php:8.4-node
+    resource_class: medium
+    environment:
+      APP_ENV: local
+      APP_DEBUG: "false"
+      APP_URL: http://127.0.0.1:8000
+      DB_CONNECTION: sqlite
+      DB_DATABASE: /home/circleci/project/apps/platform/database/ui.sqlite
+      SESSION_DRIVER: file
+      CACHE_STORE: array
+      QUEUE_CONNECTION: sync
+      MAIL_MAILER: array
+      PHP_CLI_SERVER_WORKERS: "4"
+    steps:
+      - ui_stage_build
+      - browser-tools/install_chrome
+      - ui_stage_env
+      - ui_stage_serve
+      - ui_stage_tools
+
 workflows:
   review_codebridge_device_control:
     jobs:
@@ -369,7 +476,7 @@ workflows:
                 - fix/gemini-spark-oauth-on-control-center-hub
                 - fix/codebridge-compact-workspace-tabs-20261013
                 - claude/codebridge-production-completion-n6lu61
-      - ui_boot:
+      - ui_probe_1_chrome:
           filters:
             branches:
               only:
@@ -379,7 +486,7 @@ workflows:
                 - fix/gemini-spark-oauth-on-control-center-hub
                 - fix/codebridge-compact-workspace-tabs-20261013
                 - claude/codebridge-production-completion-n6lu61
-      - ui_public:
+      - ui_probe_2_migrate:
           filters:
             branches:
               only:
@@ -389,7 +496,17 @@ workflows:
                 - fix/gemini-spark-oauth-on-control-center-hub
                 - fix/codebridge-compact-workspace-tabs-20261013
                 - claude/codebridge-production-completion-n6lu61
-      - ui_dashboard:
+      - ui_probe_3_serve:
+          filters:
+            branches:
+              only:
+                - feat/codebridge-device-control-center-20261012
+                - integrate/codebridge-control-center-377-378
+                - feat/codebridge-control-center-hub-20261012
+                - fix/gemini-spark-oauth-on-control-center-hub
+                - fix/codebridge-compact-workspace-tabs-20261013
+                - claude/codebridge-production-completion-n6lu61
+      - ui_probe_4_browser:
           filters:
             branches:
               only:
