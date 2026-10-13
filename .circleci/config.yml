@@ -378,6 +378,7 @@ jobs:
             test "$(git rev-parse HEAD)" = "$CIRCLE_SHA1"
             cd apps/platform
             composer install --no-interaction --prefer-dist --no-progress
+            printf '# disposable SQLite migration test only\n' > .env
             export APP_KEY="base64:$(php -r 'echo base64_encode(random_bytes(32));')"
             export DB_DATABASE="$PWD/database/owner-qa-rollback.sqlite"
             test ! -e "$DB_DATABASE"
