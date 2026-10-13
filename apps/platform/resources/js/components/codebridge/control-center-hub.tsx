@@ -113,7 +113,12 @@ export default function CodeBridgeControlCenterHub({
                             type="button"
                             aria-pressed={activeSection === id}
                             onClick={() => onSectionChange(id)}
-                            className={`focus-visible:ring-ring flex min-h-11 w-full items-center gap-3 rounded-lg px-3 text-left text-sm font-semibold transition focus-visible:ring-2 focus-visible:outline-none ${activeSection === id ? 'bg-red-500/10 text-foreground' : 'text-muted-foreground hover:bg-muted hover:text-foreground'}`}
+                            className={[
+                                'focus-visible:ring-ring flex min-h-11 w-full items-center gap-3 rounded-lg px-3 text-left text-sm font-semibold transition focus-visible:ring-2 focus-visible:outline-none',
+                                activeSection === id
+                                    ? 'bg-red-500/10 text-foreground'
+                                    : 'text-muted-foreground hover:bg-muted hover:text-foreground',
+                            ].join(' ')}
                         >
                             <Icon aria-hidden="true" className="h-4 w-4 shrink-0 text-red-500" />
                             {label}
@@ -280,7 +285,7 @@ export default function CodeBridgeControlCenterHub({
                             <KeyRound className="h-4 w-4 text-red-500" />
                             Account security
                         </Link>
-                        <a
+                        <button
                             type="button"
                             onClick={() => onSectionChange('clients')}
                             className="inline-flex min-h-10 items-center gap-2 rounded-xl border px-4 text-xs font-bold"
