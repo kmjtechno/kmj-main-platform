@@ -49,6 +49,7 @@ jobs:
           command: |
             set -euo pipefail
             cd apps/platform
+            ./node_modules/.bin/vp check --fix
             ./node_modules/.bin/vp check
       - run:
           name: No-network local CodeBridge device-control verification
