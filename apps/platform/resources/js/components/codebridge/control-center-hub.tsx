@@ -1,4 +1,5 @@
 import { Link } from '@inertiajs/react';
+import type { ReactNode } from 'react';
 import {
     Activity,
     ArrowRight,
@@ -12,6 +13,15 @@ import {
     Users,
 } from 'lucide-react';
 
+export type CodeBridgeSection =
+    | 'overview'
+    | 'devices'
+    | 'setup'
+    | 'usage'
+    | 'billing'
+    | 'clients'
+    | 'settings';
+
 type Props = {
     organizationName: string;
     plan: string | null;
@@ -23,16 +33,20 @@ type Props = {
     authorizedClientGrants: number;
     oauthReady: boolean;
     canManageOwnerPlan: boolean;
+    activeSection: CodeBridgeSection;
+    onSectionChange: (section: CodeBridgeSection) => void;
+    children: ReactNode;
 };
 
 const navigation = [
-    { href: '#codebridge-overview', label: 'Overview', icon: Activity },
-    { href: '#codebridge-device-control', label: 'Devices', icon: MonitorSmartphone },
-    { href: '#codebridge-usage', label: 'Usage', icon: RefreshCw },
-    { href: '#codebridge-plan-billing', label: 'Plans & billing', icon: CreditCard },
-    { href: '#codebridge-clients', label: 'Connected apps', icon: Users },
-    { href: '#codebridge-settings', label: 'Settings', icon: Settings2 },
-];
+    { id: 'overview', label: 'Overview', icon: Activity },
+    { id: 'devices', label: 'Devices & projects', icon: MonitorSmartphone },
+    { id: 'setup', label: 'Setup & integrations', icon: Cable },
+    { id: 'usage', label: 'Usage & limits', icon: RefreshCw },
+    { id: 'billing', label: 'Plan & billing', icon: CreditCard },
+    { id: 'clients', label: 'Connected apps', icon: Users },
+    { id: 'settings', label: 'Security & settings', icon: Settings2 },
+] as const;
 
 function validDate(value: string | null): string {
     if (!value) return 'Not reported';
@@ -53,7 +67,7 @@ function Metric({
 }) {
     return (
         <div className="bg-background rounded-xl border p-4">
-            <p className="text-muted-foreground text-[10px] font-semibold uppercase">
+            <p className="text-muted-foreground text-xs font-semibold uppercase">
                 {label}
             </p>
             <p className="mt-1 text-xl font-black">{value}</p>
@@ -75,6 +89,9 @@ export default function CodeBridgeControlCenterHub({
     authorizedClientGrants,
     oauthReady,
     canManageOwnerPlan,
+    activeSection,
+    onSectionChange,
+    children,
 }: Props) {
     return (
         <section
@@ -89,16 +106,29 @@ export default function CodeBridgeControlCenterHub({
                 <p className="text-muted-foreground mt-2 text-xs leading-5">
                     Manage your authorized CodeBridge workspace.
                 </p>
-                <nav aria-label="CodeBridge sections" className="mt-4 space-y-1">
-                    {navigation.map(({ href, label, icon: Icon }) => (
-                        <a
-                            key={href}
-                            href={href}
-                            className="hover:bg-muted focus-visible:ring-ring flex min-h-10 items-center gap-3 rounded-lg px-3 text-xs font-semibold transition focus-visible:ring-2 focus-visible:outline-none"
+                <nav
+                    aria-label="CodeBridge sections"
+                    className="mt-4 grid grid-cols-2 gap-1 sm:grid-cols-3 lg:grid-cols-1"
+                >
+                    {navigation.map(({ id, label, icon: Icon }) => (
+                        <button
+                            key={id}
+                            type="button"
+                            aria-pressed={activeSection === id}
+                            onClick={() => onSectionChange(id)}
+                            className={[
+                                'focus-visible:ring-ring flex min-h-11 w-full items-center gap-3 rounded-lg px-3 text-left text-sm font-semibold transition focus-visible:ring-2 focus-visible:outline-none',
+                                activeSection === id
+                                    ? 'bg-red-500/10 text-foreground'
+                                    : 'text-muted-foreground hover:bg-muted hover:text-foreground',
+                            ].join(' ')}
                         >
-                            <Icon aria-hidden="true" className="h-4 w-4 text-red-500" />
+                            <Icon
+                                aria-hidden="true"
+                                className="h-4 w-4 shrink-0 text-red-500"
+                            />
                             {label}
-                        </a>
+                        </button>
                     ))}
                 </nav>
                 <Link
@@ -113,6 +143,7 @@ export default function CodeBridgeControlCenterHub({
             <div className="min-w-0 space-y-5">
                 <section
                     id="codebridge-overview"
+                    hidden={activeSection !== 'overview'}
                     aria-labelledby="codebridge-overview-heading"
                     className="bg-card scroll-mt-6 rounded-2xl border p-5 sm:p-6"
                 >
@@ -154,6 +185,7 @@ export default function CodeBridgeControlCenterHub({
 
                 <section
                     id="codebridge-usage"
+                    hidden={activeSection !== 'usage'}
                     aria-labelledby="codebridge-usage-heading"
                     className="bg-card scroll-mt-6 rounded-2xl border p-5 sm:p-6"
                 >
@@ -188,6 +220,7 @@ export default function CodeBridgeControlCenterHub({
 
                 <section
                     id="codebridge-plan-billing"
+                    hidden={activeSection !== 'billing'}
                     aria-labelledby="codebridge-billing-heading"
                     className="bg-card scroll-mt-6 rounded-2xl border p-5 sm:p-6"
                 >
@@ -235,6 +268,7 @@ export default function CodeBridgeControlCenterHub({
 
                 <section
                     id="codebridge-settings"
+                    hidden={activeSection !== 'settings'}
                     aria-labelledby="codebridge-settings-heading"
                     className="bg-card scroll-mt-6 rounded-2xl border p-5 sm:p-6"
                 >
@@ -257,15 +291,17 @@ export default function CodeBridgeControlCenterHub({
                             <KeyRound className="h-4 w-4 text-red-500" />
                             Account security
                         </Link>
-                        <a
-                            href="#codebridge-clients"
+                        <button
+                            type="button"
+                            onClick={() => onSectionChange('clients')}
                             className="inline-flex min-h-10 items-center gap-2 rounded-xl border px-4 text-xs font-bold"
                         >
                             <ShieldCheck className="h-4 w-4 text-red-500" />
                             Review app grants
-                        </a>
+                        </button>
                     </div>
                 </section>
+                {children}
             </div>
         </section>
     );

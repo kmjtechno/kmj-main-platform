@@ -50,6 +50,13 @@ jobs:
             set -euo pipefail
             cd apps/platform
             bash scripts/verify-codebridge-device-control-offline.sh
+      - run:
+          name: Build CodeBridge dashboard production frontend
+          no_output_timeout: 8m
+          command: |
+            set -euo pipefail
+            cd apps/platform
+            npm run build
 
 workflows:
   review_codebridge_device_control:
@@ -62,3 +69,4 @@ workflows:
                 - integrate/codebridge-control-center-377-378
                 - feat/codebridge-control-center-hub-20261012
                 - fix/gemini-spark-oauth-on-control-center-hub
+                - fix/codebridge-compact-workspace-tabs-20261013
