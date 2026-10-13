@@ -17,6 +17,11 @@ return [
         'groq' => ['label' => 'Groq', 'base_url' => 'https://api.groq.com/openai/v1', 'free_tier' => 'allowlist'],
         'openrouter' => ['label' => 'OpenRouter', 'base_url' => 'https://openrouter.ai/api/v1', 'free_tier' => 'model-suffix'],
         'gemini' => ['label' => 'Google Gemini (OpenAI-compatible)', 'base_url' => 'https://generativelanguage.googleapis.com/v1beta/openai', 'free_tier' => 'allowlist'],
+        'cerebras' => ['label' => 'Cerebras', 'base_url' => 'https://api.cerebras.ai/v1', 'free_tier' => 'allowlist'],
+        'mistral' => ['label' => 'Mistral', 'base_url' => 'https://api.mistral.ai/v1', 'free_tier' => 'allowlist'],
+        'sambanova' => ['label' => 'SambaNova', 'base_url' => 'https://api.sambanova.ai/v1', 'free_tier' => 'allowlist'],
+        'huggingface' => ['label' => 'Hugging Face router', 'base_url' => 'https://router.huggingface.co/v1', 'free_tier' => 'allowlist'],
+        'together' => ['label' => 'Together AI', 'base_url' => 'https://api.together.xyz/v1', 'free_tier' => 'none'],
         'openai' => ['label' => 'OpenAI', 'base_url' => 'https://api.openai.com/v1', 'free_tier' => 'none'],
         'custom' => ['label' => 'Custom HTTPS endpoint', 'base_url' => null, 'free_tier' => 'none'],
     ],
@@ -25,5 +30,9 @@ return [
     'free_models' => [
         'groq' => $csv('AI_PROVIDER_FREE_MODELS_GROQ'),
         'gemini' => $csv('AI_PROVIDER_FREE_MODELS_GEMINI'),
+        'cerebras' => $csv('AI_PROVIDER_FREE_MODELS_CEREBRAS'),
+        'mistral' => $csv('AI_PROVIDER_FREE_MODELS_MISTRAL'),
+        'sambanova' => $csv('AI_PROVIDER_FREE_MODELS_SAMBANOVA'),
+        'huggingface' => $csv('AI_PROVIDER_FREE_MODELS_HUGGINGFACE'),
     ],
 ];
