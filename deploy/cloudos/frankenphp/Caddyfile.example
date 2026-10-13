@@ -11,6 +11,11 @@ http://:8080 {
     root * /app/public
     encode zstd gzip
 
+    # Only content-hashed build files may receive immutable public caching.
+    # Never cache login, session, payments, licensing, admin or Inertia HTML here.
+    @versioned_assets path /build/assets/*
+    header @versioned_assets Cache-Control "public, max-age=31536000, immutable"
+
     # Laravel front controller; no PHP-FPM and no Nginx.
     php_server
 }
