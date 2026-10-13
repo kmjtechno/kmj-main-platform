@@ -60,18 +60,31 @@ type Props = {
     productEntitlements: ProductEntitlement[];
 };
 
-export default function OperatorKslp({ metrics, licenses, events, filters, matchingCount, customerOptions, productEntitlements }: Props) {
+export default function OperatorKslp({
+    metrics,
+    licenses,
+    events,
+    filters,
+    matchingCount,
+    customerOptions,
+    productEntitlements,
+}: Props) {
     const [actionReason, setActionReason] = useState('');
     const [customerQuery, setCustomerQuery] = useState(filters.customer_q);
     const [planQuery, setPlanQuery] = useState(filters.plan);
     const [stateQuery, setStateQuery] = useState('all');
-    const visibleLicenses = licenses.filter((license) =>
-        stateQuery === 'all' || license.state === stateQuery,
+    const visibleLicenses = licenses.filter(
+        (license) => stateQuery === 'all' || license.state === stateQuery,
     );
-    const applyFilters = () => router.get('/operator/kslp', {
-        customer_q: customerQuery,
-        plan: planQuery,
-    }, { preserveState: true, preserveScroll: true });
+    const applyFilters = () =>
+        router.get(
+            '/operator/kslp',
+            {
+                customer_q: customerQuery,
+                plan: planQuery,
+            },
+            { preserveState: true, preserveScroll: true },
+        );
     const [pendingPlans, setPendingPlans] = useState<Record<string, string>>(
         {},
     );
@@ -95,7 +108,12 @@ export default function OperatorKslp({ metrics, licenses, events, filters, match
     ) => {
         const reason = actionReason.trim();
         if (reason.length < 3) return;
-        if (!window.confirm(`Confirm ${a.replace('_', ' ')} for license ${id}? This action is audited.`)) return;
+        if (
+            !window.confirm(
+                `Confirm ${a.replace('_', ' ')} for license ${id}? This action is audited.`,
+            )
+        )
+            return;
 
         router.post(
             `/operator/kslp/licenses/${id}/action`,
@@ -111,7 +129,10 @@ export default function OperatorKslp({ metrics, licenses, events, filters, match
             <Head title="Licensing Center · Super Admin" />
             <div className="flex h-full flex-1 flex-col gap-6 overflow-x-auto p-4 sm:p-6">
                 <OperatorModuleNavigation active="licensing" />
-                <nav aria-label="Licensing Center sections" className="flex flex-wrap gap-2 rounded-xl border bg-card p-3 text-xs font-semibold">
+                <nav
+                    aria-label="Licensing Center sections"
+                    className="bg-card flex flex-wrap gap-2 rounded-xl border p-3 text-xs font-semibold"
+                >
                     {[
                         ['#license-overview', 'Overview'],
                         ['#license-issue', 'Issue license'],
@@ -120,10 +141,19 @@ export default function OperatorKslp({ metrics, licenses, events, filters, match
                         ['#license-entitlements', 'All products'],
                         ['#license-audit', 'Audit trail'],
                     ].map(([href, label]) => (
-                        <a key={href} href={href} className="rounded-lg border px-3 py-2 hover:border-red-500/40 hover:bg-accent focus-visible:outline-2 focus-visible:outline-red-500">{label}</a>
+                        <a
+                            key={href}
+                            href={href}
+                            className="hover:bg-accent rounded-lg border px-3 py-2 hover:border-red-500/40 focus-visible:outline-2 focus-visible:outline-red-500"
+                        >
+                            {label}
+                        </a>
                     ))}
                 </nav>
-                <section id="license-overview" className="bg-card scroll-mt-6 rounded-2xl border p-6">
+                <section
+                    id="license-overview"
+                    className="bg-card scroll-mt-6 rounded-2xl border p-6"
+                >
                     <div className="flex gap-4">
                         <span className="grid h-11 w-11 place-items-center rounded-xl bg-red-500/10 text-red-500">
                             <ShieldCheck className="h-5 w-5" />
@@ -136,11 +166,12 @@ export default function OperatorKslp({ metrics, licenses, events, filters, match
                                 KMJ Licensing Center
                             </h1>
                             <p className="text-muted-foreground mt-2 max-w-3xl text-sm">
-                                Main Platform is the common commercial authority.
-                                Search customers and manage existing KSLP
-                                license plans, renewals, activations and audit.
-                                Other product license protocols remain gated
-                                until their signed interoperability tests pass.
+                                Main Platform is the common commercial
+                                authority. Search customers and manage existing
+                                KSLP license plans, renewals, activations and
+                                audit. Other product license protocols remain
+                                gated until their signed interoperability tests
+                                pass.
                             </p>
                         </div>
                     </div>
@@ -155,20 +186,38 @@ export default function OperatorKslp({ metrics, licenses, events, filters, match
                         </div>
                     ))}
                 </section>
-                <section id="license-issue" className="bg-card scroll-mt-6 rounded-2xl border p-5">
-                    <h2 className="font-bold">Issue a governed KMJ CloudOS license</h2>
-                    <p className="mt-1 text-xs text-muted-foreground">
-                        Select a customer account below or enter an authorized customer / organization ID.
-                        Other KMJ products retain their own release-gated license profiles until signed interoperability is verified.
+                <section
+                    id="license-issue"
+                    className="bg-card scroll-mt-6 rounded-2xl border p-5"
+                >
+                    <h2 className="font-bold">
+                        Issue a governed KMJ CloudOS license
+                    </h2>
+                    <p className="text-muted-foreground mt-1 text-xs">
+                        Select a customer account below or enter an authorized
+                        customer / organization ID. Other KMJ products retain
+                        their own release-gated license profiles until signed
+                        interoperability is verified.
                     </p>
                     <label className="mt-4 block text-xs font-semibold">
                         Find a registered customer
                         <select
                             className="bg-background mt-2 h-10 w-full rounded-lg border px-3 text-sm"
-                            value={customerOptions.some((customer) => customer.id === issue.data.customer_id) ? issue.data.customer_id : ''}
-                            onChange={(event) => issue.setData('customer_id', event.target.value)}
+                            value={
+                                customerOptions.some(
+                                    (customer) =>
+                                        customer.id === issue.data.customer_id,
+                                )
+                                    ? issue.data.customer_id
+                                    : ''
+                            }
+                            onChange={(event) =>
+                                issue.setData('customer_id', event.target.value)
+                            }
                         >
-                            <option value="">Select an account (or enter ID manually)</option>
+                            <option value="">
+                                Select an account (or enter ID manually)
+                            </option>
                             {customerOptions.map((customer) => (
                                 <option key={customer.id} value={customer.id}>
                                     {customer.name} · {customer.email}
@@ -236,45 +285,89 @@ export default function OperatorKslp({ metrics, licenses, events, filters, match
                         </p>
                     )}
                 </section>
-                <section id="license-search" className="bg-card scroll-mt-6 rounded-2xl border p-5" aria-label="License search">
+                <section
+                    id="license-search"
+                    className="bg-card scroll-mt-6 rounded-2xl border p-5"
+                    aria-label="License search"
+                >
                     <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
                         <div>
-                            <h2 className="font-bold">Find customer licenses</h2>
-                            <p className="mt-1 text-xs text-muted-foreground">
-                                Search across the license register by customer ID, product code or exact license UUID.
+                            <h2 className="font-bold">
+                                Find customer licenses
+                            </h2>
+                            <p className="text-muted-foreground mt-1 text-xs">
+                                Search across the license register by customer
+                                ID, product code or exact license UUID.
                             </p>
                         </div>
-                        <a href="/operator/directory" className="text-sm font-semibold text-red-500 underline-offset-4 hover:underline">
+                        <a
+                            href="/operator/directory"
+                            className="text-sm font-semibold text-red-500 underline-offset-4 hover:underline"
+                        >
                             Customers &amp; organizations
                         </a>
                     </div>
-                    <form className="mt-4 grid gap-3 md:grid-cols-[minmax(160px,1fr)_minmax(150px,.45fr)_auto]"
-                        onSubmit={(event) => { event.preventDefault(); applyFilters(); }}>
+                    <form
+                        className="mt-4 grid gap-3 md:grid-cols-[minmax(160px,1fr)_minmax(150px,.45fr)_auto]"
+                        onSubmit={(event) => {
+                            event.preventDefault();
+                            applyFilters();
+                        }}
+                    >
                         <label className="text-xs font-semibold">
                             Customer or license search
-                            <input value={customerQuery} onChange={(event) => setCustomerQuery(event.target.value)}
-                                maxLength={96} className="bg-background mt-1 h-11 w-full rounded-lg border px-3 text-sm"
-                                placeholder="Customer ID, product, license UUID" />
+                            <input
+                                value={customerQuery}
+                                onChange={(event) =>
+                                    setCustomerQuery(event.target.value)
+                                }
+                                maxLength={96}
+                                className="bg-background mt-1 h-11 w-full rounded-lg border px-3 text-sm"
+                                placeholder="Customer ID, product, license UUID"
+                            />
                         </label>
                         <label className="text-xs font-semibold">
                             Plan
-                            <select value={planQuery} onChange={(event) => setPlanQuery(event.target.value)}
-                                className="bg-background mt-1 h-11 w-full rounded-lg border px-3 text-sm">
+                            <select
+                                value={planQuery}
+                                onChange={(event) =>
+                                    setPlanQuery(event.target.value)
+                                }
+                                className="bg-background mt-1 h-11 w-full rounded-lg border px-3 text-sm"
+                            >
                                 <option value="">All plans</option>
-                                {['trial', 'professional', 'business', 'enterprise', 'custom_oem'].map((plan) => (
-                                    <option key={plan} value={plan}>{plan}</option>
+                                {[
+                                    'trial',
+                                    'professional',
+                                    'business',
+                                    'enterprise',
+                                    'custom_oem',
+                                ].map((plan) => (
+                                    <option key={plan} value={plan}>
+                                        {plan}
+                                    </option>
                                 ))}
                             </select>
                         </label>
-                        <button type="submit" className="h-11 self-end rounded-lg bg-red-600 px-5 text-sm font-bold text-white">
+                        <button
+                            type="submit"
+                            className="h-11 self-end rounded-lg bg-red-600 px-5 text-sm font-bold text-white"
+                        >
                             Search
                         </button>
                     </form>
-                    <p role="status" className="mt-3 text-xs text-muted-foreground">
-                        {matchingCount} matching license(s). Showing up to 100; refine your search to find an older record.
+                    <p
+                        role="status"
+                        className="text-muted-foreground mt-3 text-xs"
+                    >
+                        {matchingCount} matching license(s). Showing up to 100;
+                        refine your search to find an older record.
                     </p>
                 </section>
-                <section id="license-register" className="bg-card scroll-mt-6 rounded-2xl border p-5">
+                <section
+                    id="license-register"
+                    className="bg-card scroll-mt-6 rounded-2xl border p-5"
+                >
                     <div className="flex items-center justify-between">
                         <div>
                             <h2 className="font-bold">Commercial licenses</h2>
@@ -308,15 +401,39 @@ export default function OperatorKslp({ metrics, licenses, events, filters, match
                         </div>
                     </div>
                     <div className="mt-4 flex items-center gap-3">
-                        <label htmlFor="license-state" className="text-xs font-semibold">State</label>
-                        <select id="license-state" value={stateQuery} onChange={(event) => setStateQuery(event.target.value)}
-                            className="bg-background h-9 rounded-lg border px-2 text-xs">
+                        <label
+                            htmlFor="license-state"
+                            className="text-xs font-semibold"
+                        >
+                            State
+                        </label>
+                        <select
+                            id="license-state"
+                            value={stateQuery}
+                            onChange={(event) =>
+                                setStateQuery(event.target.value)
+                            }
+                            className="bg-background h-9 rounded-lg border px-2 text-xs"
+                        >
                             <option value="all">All states</option>
-                            {['ACTIVE', 'RENEWAL_DUE', 'GRACE', 'RESTRICTED', 'REVOKED'].map((state) => (
-                                <option key={state} value={state}>{state}</option>
+                            {[
+                                'ACTIVE',
+                                'RENEWAL_DUE',
+                                'GRACE',
+                                'RESTRICTED',
+                                'REVOKED',
+                            ].map((state) => (
+                                <option key={state} value={state}>
+                                    {state}
+                                </option>
                             ))}
                         </select>
-                        <span role="status" className="text-xs text-muted-foreground">{visibleLicenses.length} visible</span>
+                        <span
+                            role="status"
+                            className="text-muted-foreground text-xs"
+                        >
+                            {visibleLicenses.length} visible
+                        </span>
                     </div>
                     <div className="mt-4 overflow-x-auto">
                         <table className="w-full min-w-[980px] text-left text-xs">
@@ -480,14 +597,21 @@ export default function OperatorKslp({ metrics, licenses, events, filters, match
                         </table>
                     </div>
                 </section>
-                <section id="license-entitlements" className="bg-card scroll-mt-6 rounded-2xl border p-5">
+                <section
+                    id="license-entitlements"
+                    className="bg-card scroll-mt-6 rounded-2xl border p-5"
+                >
                     <div className="flex flex-wrap items-start justify-between gap-3">
                         <div>
-                            <h2 className="font-bold">All-product entitlement register</h2>
-                            <p className="mt-1 max-w-3xl text-xs leading-5 text-muted-foreground">
-                                Read-only overview of organizational access across the KMJ catalog.
-                                An entitlement is not automatically an activated signed device license
-                                or a paid plan. Product-specific license management remains gated.
+                            <h2 className="font-bold">
+                                All-product entitlement register
+                            </h2>
+                            <p className="text-muted-foreground mt-1 max-w-3xl text-xs leading-5">
+                                Read-only overview of organizational access
+                                across the KMJ catalog. An entitlement is not
+                                automatically an activated signed device license
+                                or a paid plan. Product-specific license
+                                management remains gated.
                             </p>
                         </div>
                         <span className="rounded-lg border px-3 py-2 text-xs font-semibold">
@@ -495,7 +619,7 @@ export default function OperatorKslp({ metrics, licenses, events, filters, match
                         </span>
                     </div>
                     {productEntitlements.length === 0 ? (
-                        <p className="mt-4 rounded-lg border border-dashed p-5 text-sm text-muted-foreground">
+                        <p className="text-muted-foreground mt-4 rounded-lg border border-dashed p-5 text-sm">
                             No matching product entitlements in this view.
                         </p>
                     ) : (
@@ -503,25 +627,58 @@ export default function OperatorKslp({ metrics, licenses, events, filters, match
                             <table className="w-full min-w-[720px] text-left text-xs">
                                 <thead>
                                     <tr className="text-muted-foreground">
-                                        {['Organization', 'Product', 'Capability', 'State', 'Access end'].map((label) => (
-                                            <th key={label} className="border-b px-3 py-2">{label}</th>
+                                        {[
+                                            'Organization',
+                                            'Product',
+                                            'Capability',
+                                            'State',
+                                            'Access end',
+                                        ].map((label) => (
+                                            <th
+                                                key={label}
+                                                className="border-b px-3 py-2"
+                                            >
+                                                {label}
+                                            </th>
                                         ))}
                                     </tr>
                                 </thead>
                                 <tbody>
                                     {productEntitlements.map((entitlement) => (
-                                        <tr key={entitlement.id} className="border-b last:border-0">
+                                        <tr
+                                            key={entitlement.id}
+                                            className="border-b last:border-0"
+                                        >
                                             <td className="px-3 py-3">
-                                                <span className="font-semibold">{entitlement.organization_name}</span>
-                                                <div className="text-muted-foreground">{entitlement.organization_id}</div>
+                                                <span className="font-semibold">
+                                                    {
+                                                        entitlement.organization_name
+                                                    }
+                                                </span>
+                                                <div className="text-muted-foreground">
+                                                    {
+                                                        entitlement.organization_id
+                                                    }
+                                                </div>
                                             </td>
                                             <td className="px-3 py-3">
-                                                <span className="font-semibold">{entitlement.product_name}</span>
-                                                <div className="text-muted-foreground">{entitlement.product_slug}</div>
+                                                <span className="font-semibold">
+                                                    {entitlement.product_name}
+                                                </span>
+                                                <div className="text-muted-foreground">
+                                                    {entitlement.product_slug}
+                                                </div>
                                             </td>
-                                            <td className="px-3 py-3">{entitlement.capability}</td>
-                                            <td className="px-3 py-3 font-semibold">{entitlement.status}</td>
-                                            <td className="px-3 py-3">{entitlement.ends_at ?? 'No recorded end'}</td>
+                                            <td className="px-3 py-3">
+                                                {entitlement.capability}
+                                            </td>
+                                            <td className="px-3 py-3 font-semibold">
+                                                {entitlement.status}
+                                            </td>
+                                            <td className="px-3 py-3">
+                                                {entitlement.ends_at ??
+                                                    'No recorded end'}
+                                            </td>
                                         </tr>
                                     ))}
                                 </tbody>
@@ -529,7 +686,10 @@ export default function OperatorKslp({ metrics, licenses, events, filters, match
                         </div>
                     )}
                 </section>
-                <section id="license-audit" className="bg-card scroll-mt-6 rounded-2xl border p-5">
+                <section
+                    id="license-audit"
+                    className="bg-card scroll-mt-6 rounded-2xl border p-5"
+                >
                     <div className="flex items-center gap-2">
                         <Activity className="h-4 w-4 text-red-500" />
                         <h2 className="font-bold">
