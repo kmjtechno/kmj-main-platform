@@ -10,6 +10,8 @@ use InvalidArgumentException;
 
 final class ProviderManager
 {
+    private const DISCOVERY_MAX_AGE_HOURS = 24;
+
     public function __construct(
         private readonly OpenAiCompatibleAdapter $adapter,
         private readonly EndpointGuard $guard,
@@ -54,7 +56,7 @@ final class ProviderManager
             'base_url' => $baseUrl,
             'api_key' => $apiKey,
             'key_last4' => substr($apiKey, -4),
-            'free_only' => (bool) ($data['free_only'] ?? true),
+            'free_only' => true,
             'created_by' => $userId,
         ]);
     }
@@ -71,7 +73,7 @@ final class ProviderManager
             $provider->default_model = null;
             $provider->fallback_models = [];
         }
-        foreach (['name', 'enabled', 'free_only'] as $field) {
+        foreach (['name', 'enabled'] as $field) {
             if (array_key_exists($field, $data)) {
                 $provider->{$field} = $data[$field];
             }
@@ -118,14 +120,22 @@ final class ProviderManager
 
     /**
      * Admission guard: routing must call this before ANY request that could be billed. It never
-     * contacts the provider and does not treat a successful GET /models as authorization: that
-     * is only a health probe. The model must be one this provider actually listed, and in
-     * free-only mode it must also pass the provider's free rule.
+     * contacts the provider. A successful GET /models is only a health probe, not pricing
+     * authorization. The provider must be enabled and healthy, the model must come from a recent
+     * discovery (stale or spoofed ids are refused), and the model must pass the free rule.
+     * There is no paid override here.
      */
     public function assertInferenceAllowed(AiProvider $provider, string $model): void
     {
         if (! $provider->enabled) {
             throw new InvalidArgumentException('provider_disabled');
+        }
+        if ($provider->health !== 'ok') {
+            throw new InvalidArgumentException('provider_unhealthy');
+        }
+        $checked = $provider->models_checked_at;
+        if ($checked === null || $checked->lt(now()->subHours(self::DISCOVERY_MAX_AGE_HOURS))) {
+            throw new InvalidArgumentException('model_discovery_stale');
         }
         if (! in_array($model, $provider->models_cache ?? [], true)) {
             throw new InvalidArgumentException('model_not_discovered');
@@ -135,7 +145,7 @@ final class ProviderManager
             (array) Config::get('ai_providers.free_models.'.$provider->preset, []),
             'is_string',
         ));
-        FreePolicy::assertInferenceAllowed($tier, $provider->free_only, $model, $allowlist);
+        FreePolicy::assertInferenceAllowed($tier, $model, $allowlist);
     }
 
     /** @return array<string, mixed> */
@@ -150,7 +160,8 @@ final class ProviderManager
             'host' => (string) parse_url($provider->base_url, PHP_URL_HOST),
             'key_mask' => '••••'.$provider->key_last4,
             'enabled' => $provider->enabled,
-            'free_only' => $provider->free_only,
+            'zero_spend' => true,
+            'credit_balance' => 'unknown',
             'free_tier' => $tier,
             'default_model' => $provider->default_model,
             'fallback_models' => $provider->fallback_models ?? [],

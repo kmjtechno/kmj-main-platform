@@ -8,6 +8,7 @@ use App\Models\AiProvider;
 use App\Models\User;
 use App\Services\AiProviders\ProviderManager;
 use App\Services\AiProviders\ResolvesAiProviderScope;
+use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -52,13 +53,17 @@ final class AiProviderController extends Controller
             'preset' => ['required', Rule::in(array_keys($this->manager->presets()))],
             'base_url' => ['nullable', 'string', 'max:255'],
             'api_key' => ['required', 'string', 'min:8', 'max:512', 'regex:/\A\S+\z/'],
-            'free_only' => ['sometimes', 'boolean'],
+            // Zero-spend is global: billed inference cannot be enabled from this page.
+            'free_only' => ['prohibited'],
         ]);
 
         try {
             $this->manager->create($scope['organization_id'], (int) $this->user($request)->id, $data);
         } catch (InvalidArgumentException $exception) {
             return back()->withErrors(['base_url' => 'Endpoint rejected: '.$exception->getMessage()]);
+        } catch (UniqueConstraintViolationException) {
+            // A duplicate submission that raced past the validator.
+            return back()->withErrors(['name' => 'A provider with this name already exists.']);
         }
 
         return back()->with('status', 'Provider added. Run Test connection to verify it.');
@@ -72,7 +77,7 @@ final class AiProviderController extends Controller
                 Rule::unique('ai_providers', 'name')->where('organization_id', $model->organization_id)->ignore($model->id)],
             'api_key' => ['sometimes', 'nullable', 'string', 'min:8', 'max:512', 'regex:/\A\S+\z/'],
             'enabled' => ['sometimes', 'boolean'],
-            'free_only' => ['sometimes', 'boolean'],
+            'free_only' => ['prohibited'],
             'default_model' => ['sometimes', 'nullable', 'string', 'max:128'],
             'fallback_models' => ['sometimes', 'array', 'max:5'],
             'fallback_models.*' => ['string', 'max:128'],

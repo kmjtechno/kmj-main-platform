@@ -64,7 +64,7 @@ final class AiProviderManagerTest extends TestCase
         $this->assertStringNotContainsString(self::KEY, (string) DB::table('ai_providers')->value('api_key'));
         $this->assertTrue($provider->free_only);
 
-        $page = $this->actingAs($this->owner)->get('/services/kmj-codebridge/ai-providers');
+        $page = $this->confirmed($this->owner)->get('/services/kmj-codebridge/ai-providers');
         $page->assertOk();
         $this->assertStringNotContainsString(self::KEY, $page->getContent());
         $page->assertInertia(fn (AssertableInertia $inertia) => $inertia
@@ -79,16 +79,16 @@ final class AiProviderManagerTest extends TestCase
         $this->add('Groq main');
         $id = AiProvider::query()->value('id');
 
-        $this->actingAs($this->member)->get('/services/kmj-codebridge/ai-providers')->assertOk();
-        $this->actingAs($this->member)->post('/services/kmj-codebridge/ai-providers', $this->payload('Other'))->assertForbidden();
-        $this->actingAs($this->member)->post("/services/kmj-codebridge/ai-providers/{$id}/test")->assertForbidden();
+        $this->confirmed($this->member)->get('/services/kmj-codebridge/ai-providers')->assertOk();
+        $this->confirmed($this->member)->post('/services/kmj-codebridge/ai-providers', $this->payload('Other'))->assertForbidden();
+        $this->confirmed($this->member)->post("/services/kmj-codebridge/ai-providers/{$id}/test")->assertForbidden();
 
         foreach ([
             ['patch', "/services/kmj-codebridge/ai-providers/{$id}", ['enabled' => false]],
             ['post', "/services/kmj-codebridge/ai-providers/{$id}/test", []],
             ['delete', "/services/kmj-codebridge/ai-providers/{$id}", ['confirm' => 'DELETE']],
         ] as [$method, $url, $data]) {
-            $this->actingAs($this->outsider)->{$method}($url, $data)->assertNotFound();
+            $this->confirmed($this->outsider)->{$method}($url, $data)->assertNotFound();
         }
         $this->assertDatabaseCount('ai_providers', 1);
         $this->assertTrue(AiProvider::query()->findOrFail($id)->enabled);
@@ -104,7 +104,7 @@ final class AiProviderManagerTest extends TestCase
         $this->add('Groq main');
         $id = AiProvider::query()->value('id');
 
-        $this->actingAs($this->owner)->post("/services/kmj-codebridge/ai-providers/{$id}/test")->assertRedirect();
+        $this->confirmed($this->owner)->post("/services/kmj-codebridge/ai-providers/{$id}/test")->assertRedirect();
 
         Http::assertSent(fn ($request): bool => $request->url() === 'https://api.groq.com/openai/v1/models'
             && $request->method() === 'GET'
@@ -130,7 +130,7 @@ final class AiProviderManagerTest extends TestCase
             ->push(['error' => self::KEY], 503)]);
 
         foreach (['auth_failed', 'rate_limited', 'unreachable'] as $health) {
-            $this->actingAs($this->owner)->post("/services/kmj-codebridge/ai-providers/{$id}/test")->assertRedirect();
+            $this->confirmed($this->owner)->post("/services/kmj-codebridge/ai-providers/{$id}/test")->assertRedirect();
             $provider = AiProvider::query()->findOrFail($id);
             $this->assertSame($health, $provider->health);
             $this->assertStringNotContainsString(self::KEY, json_encode($provider->only(['last_error_code', 'rate_limit']), JSON_THROW_ON_ERROR));
@@ -141,12 +141,12 @@ final class AiProviderManagerTest extends TestCase
     public function test_unapproved_or_private_endpoints_are_rejected_before_any_request(): void
     {
         Http::fake();
-        $this->actingAs($this->owner)->post('/services/kmj-codebridge/ai-providers', [
+        $this->confirmed($this->owner)->post('/services/kmj-codebridge/ai-providers', [
             'preset' => 'custom', 'name' => 'Evil', 'api_key' => self::KEY, 'base_url' => 'https://metadata.example.com/v1',
         ])->assertSessionHasErrors('base_url');
 
         $this->app->instance(EndpointGuard::class, new EndpointGuard(fn (): array => ['10.0.0.5']));
-        $this->actingAs($this->owner)->post('/services/kmj-codebridge/ai-providers', [
+        $this->confirmed($this->owner)->post('/services/kmj-codebridge/ai-providers', [
             'preset' => 'custom', 'name' => 'Evil', 'api_key' => self::KEY, 'base_url' => 'http://127.0.0.1:11434/v1',
         ])->assertSessionHasErrors('base_url');
 
@@ -161,16 +161,16 @@ final class AiProviderManagerTest extends TestCase
         $id = AiProvider::query()->value('id');
         $url = "/services/kmj-codebridge/ai-providers/{$id}";
 
-        $this->actingAs($this->owner)->patch($url, ['default_model' => 'a-model'])->assertSessionHasErrors('provider');
-        $this->actingAs($this->owner)->post("{$url}/test");
-        $this->actingAs($this->owner)->patch($url, ['default_model' => 'ghost'])->assertSessionHasErrors('provider');
-        $this->actingAs($this->owner)->patch($url, ['default_model' => 'a-model', 'fallback_models' => ['b-model', 'a-model', 'b-model']])->assertSessionHasNoErrors();
+        $this->confirmed($this->owner)->patch($url, ['default_model' => 'a-model'])->assertSessionHasErrors('provider');
+        $this->confirmed($this->owner)->post("{$url}/test");
+        $this->confirmed($this->owner)->patch($url, ['default_model' => 'ghost'])->assertSessionHasErrors('provider');
+        $this->confirmed($this->owner)->patch($url, ['default_model' => 'a-model', 'fallback_models' => ['b-model', 'a-model', 'b-model']])->assertSessionHasNoErrors();
 
         $provider = AiProvider::query()->findOrFail($id);
         $this->assertSame('a-model', $provider->default_model);
         $this->assertSame(['b-model'], $provider->fallback_models);
 
-        $this->actingAs($this->owner)->patch($url, ['api_key' => 'new-key-0123456789'])->assertSessionHasNoErrors();
+        $this->confirmed($this->owner)->patch($url, ['api_key' => 'new-key-0123456789'])->assertSessionHasNoErrors();
         $provider = AiProvider::query()->findOrFail($id);
         $this->assertSame('new-key-0123456789', $provider->api_key);
         $this->assertSame('6789', $provider->key_last4);
@@ -184,30 +184,33 @@ final class AiProviderManagerTest extends TestCase
         $id = AiProvider::query()->value('id');
         $url = "/services/kmj-codebridge/ai-providers/{$id}";
 
-        $this->actingAs($this->owner)->delete($url)->assertSessionHasErrors('confirm');
+        $this->confirmed($this->owner)->delete($url)->assertSessionHasErrors('confirm');
         $this->assertDatabaseCount('ai_providers', 1);
-        $this->actingAs($this->owner)->delete($url, ['confirm' => 'DELETE'])->assertRedirect();
+        $this->confirmed($this->owner)->delete($url, ['confirm' => 'DELETE'])->assertRedirect();
         $this->assertDatabaseCount('ai_providers', 0);
     }
 
-    public function test_zero_spend_guard_blocks_paid_inference_unless_explicitly_opted_in(): void
+    public function test_zero_spend_guard_has_no_paid_override_and_requires_fresh_healthy_discovery(): void
     {
         config(['ai_providers.free_models.groq' => ['verified-model']]);
         $manager = app(ProviderManager::class);
-        $openai = $this->provider('openai', true, true, ['gpt-4o']);
-        $router = $this->provider('openrouter', true, true, ['meta/llama-3', 'meta/llama-3:free']);
-        $groq = $this->provider('groq', true, true, ['verified-model', 'other-model']);
+        $openai = $this->provider('openai', ['gpt-4o']);
+        $router = $this->provider('openrouter', ['meta/llama-3', 'meta/llama-3:free']);
+        $groq = $this->provider('groq', ['verified-model', 'other-model']);
 
         foreach ([
             [$openai, 'gpt-4o'],
             [$router, 'meta/llama-3'],
             [$groq, 'other-model'],
             [$groq, 'undiscovered-model'],
-            [$this->provider('groq', true, false, ['verified-model']), 'verified-model'],
+            [$this->provider('groq', ['verified-model'], ['enabled' => false]), 'verified-model'],
+            [$this->provider('groq', ['verified-model'], ['health' => 'auth_failed']), 'verified-model'],
+            [$this->provider('groq', ['verified-model'], ['models_checked_at' => now()->subHours(25)]), 'verified-model'],
+            [$this->provider('groq', ['verified-model'], ['models_checked_at' => null]), 'verified-model'],
         ] as [$provider, $model]) {
             try {
                 $manager->assertInferenceAllowed($provider, $model);
-                $this->fail('paid inference was allowed');
+                $this->fail('inference was admitted');
             } catch (RuntimeException|InvalidArgumentException) {
                 $this->addToAssertionCount(1);
             }
@@ -215,7 +218,60 @@ final class AiProviderManagerTest extends TestCase
 
         $manager->assertInferenceAllowed($router, 'meta/llama-3:free');
         $manager->assertInferenceAllowed($groq, 'verified-model');
-        $manager->assertInferenceAllowed($this->provider('openai', false, true, ['gpt-4o']), 'gpt-4o');
+    }
+
+    public function test_billed_inference_cannot_be_enabled_from_the_dashboard(): void
+    {
+        $this->add('Groq main')->assertSessionHasNoErrors();
+        $id = AiProvider::query()->value('id');
+
+        $this->confirmed($this->owner)->post('/services/kmj-codebridge/ai-providers', $this->payload('Paid') + ['free_only' => false])
+            ->assertSessionHasErrors('free_only');
+        $this->confirmed($this->owner)->patch("/services/kmj-codebridge/ai-providers/{$id}", ['free_only' => false])
+            ->assertSessionHasErrors('free_only');
+        $this->assertDatabaseCount('ai_providers', 1);
+        $this->assertTrue(AiProvider::query()->findOrFail($id)->free_only);
+    }
+
+    public function test_credit_balance_is_always_unknown_and_secrets_are_not_presented(): void
+    {
+        $presented = app(ProviderManager::class)->present($this->provider('groq', ['m']));
+
+        $this->assertSame('unknown', $presented['credit_balance']);
+        $this->assertTrue($presented['zero_spend']);
+        $this->assertStringNotContainsString(self::KEY, json_encode($presented, JSON_THROW_ON_ERROR));
+    }
+
+    public function test_redirects_are_never_followed(): void
+    {
+        Http::fake(['api.groq.com/*' => Http::response('', 302, ['Location' => 'http://169.254.169.254/latest'])]);
+        $this->add('Groq main');
+        $id = AiProvider::query()->value('id');
+
+        $this->confirmed($this->owner)->post("/services/kmj-codebridge/ai-providers/{$id}/test")->assertRedirect();
+
+        Http::assertSentCount(1);
+        $this->assertSame('unreachable', AiProvider::query()->findOrFail($id)->health);
+    }
+
+    public function test_duplicate_names_are_rejected_without_a_server_error(): void
+    {
+        $this->add('Groq main')->assertSessionHasNoErrors();
+        $this->add('Groq main')->assertSessionHasErrors('name');
+        $this->assertDatabaseCount('ai_providers', 1);
+    }
+
+    public function test_changes_require_a_recent_password_confirmation(): void
+    {
+        $this->add('Groq main');
+        $id = AiProvider::query()->value('id');
+
+        $this->actingAs($this->owner)->post('/services/kmj-codebridge/ai-providers', $this->payload('Second'))->assertRedirect();
+        $this->actingAs($this->owner)->patch("/services/kmj-codebridge/ai-providers/{$id}", ['enabled' => false])->assertRedirect();
+        $this->actingAs($this->owner)->delete("/services/kmj-codebridge/ai-providers/{$id}", ['confirm' => 'DELETE'])->assertRedirect();
+
+        $this->assertDatabaseCount('ai_providers', 1);
+        $this->assertTrue(AiProvider::query()->findOrFail($id)->enabled);
     }
 
     public function test_a_successful_models_probe_does_not_authorize_inference(): void
@@ -231,9 +287,14 @@ final class AiProviderManagerTest extends TestCase
         app(ProviderManager::class)->assertInferenceAllowed($provider, 'some-model');
     }
 
+    private function confirmed(User $user): static
+    {
+        return $this->actingAs($user)->withSession(['auth.password_confirmed_at' => time()]);
+    }
+
     private function add(string $name): TestResponse
     {
-        return $this->actingAs($this->owner)->post('/services/kmj-codebridge/ai-providers', $this->payload($name));
+        return $this->confirmed($this->owner)->post('/services/kmj-codebridge/ai-providers', $this->payload($name));
     }
 
     /** @return array<string, mixed> */
@@ -242,13 +303,17 @@ final class AiProviderManagerTest extends TestCase
         return ['preset' => 'groq', 'name' => $name, 'api_key' => self::KEY];
     }
 
-    /** @param list<string> $models */
-    private function provider(string $preset, bool $freeOnly, bool $enabled = true, array $models = []): AiProvider
+    /**
+     * @param  list<string>  $models
+     * @param  array<string, mixed>  $overrides
+     */
+    private function provider(string $preset, array $models = [], array $overrides = []): AiProvider
     {
-        return AiProvider::query()->create([
+        return AiProvider::query()->create($overrides + [
             'organization_id' => $this->orgA, 'name' => $preset.Str::random(4), 'preset' => $preset,
             'base_url' => config("ai_providers.presets.{$preset}.base_url"), 'api_key' => self::KEY,
-            'key_last4' => 'cdef', 'free_only' => $freeOnly, 'enabled' => $enabled, 'models_cache' => $models,
+            'key_last4' => 'cdef', 'free_only' => true, 'enabled' => true, 'models_cache' => $models,
+            'health' => 'ok', 'models_checked_at' => now(),
         ]);
     }
 

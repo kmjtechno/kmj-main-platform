@@ -80,17 +80,17 @@ final class EndpointGuardTest extends TestCase
         $guard->validate('https://api.groq.com/v1', self::APPROVED);
     }
 
-    public function test_zero_spend_policy(): void
+    public function test_zero_spend_policy_has_no_paid_override(): void
     {
-        $this->assertFalse(FreePolicy::inferenceAllowed('allowlist', true, 'any'), 'a free account is not a free model');
-        $this->assertTrue(FreePolicy::inferenceAllowed('allowlist', true, 'verified-model', ['verified-model']));
-        $this->assertFalse(FreePolicy::inferenceAllowed('allowlist', true, 'other-model', ['verified-model']));
-        $this->assertTrue(FreePolicy::inferenceAllowed('model-suffix', true, 'meta/llama:free'));
-        $this->assertFalse(FreePolicy::inferenceAllowed('model-suffix', true, 'meta/llama'));
-        $this->assertFalse(FreePolicy::inferenceAllowed('none', true, 'gpt'));
-        $this->assertTrue(FreePolicy::inferenceAllowed('none', false, 'gpt'), 'explicit paid opt-in');
+        $this->assertFalse(FreePolicy::inferenceAllowed('allowlist', 'any'), 'a free account is not a free model');
+        $this->assertTrue(FreePolicy::inferenceAllowed('allowlist', 'verified-model', ['verified-model']));
+        $this->assertFalse(FreePolicy::inferenceAllowed('allowlist', 'other-model', ['verified-model']));
+        $this->assertTrue(FreePolicy::inferenceAllowed('model-suffix', 'meta/llama:free'));
+        $this->assertFalse(FreePolicy::inferenceAllowed('model-suffix', 'meta/llama'));
+        $this->assertFalse(FreePolicy::inferenceAllowed('none', 'gpt'));
+        $this->assertFalse(FreePolicy::inferenceAllowed('unknown-tier', 'gpt'), 'unknown pricing is denied');
 
         $this->expectException(RuntimeException::class);
-        FreePolicy::assertInferenceAllowed('none', true, 'gpt');
+        FreePolicy::assertInferenceAllowed('none', 'gpt');
     }
 }

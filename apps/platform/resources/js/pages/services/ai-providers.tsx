@@ -16,7 +16,6 @@ type Provider = {
     host: string;
     key_mask: string;
     enabled: boolean;
-    free_only: boolean;
     free_tier: string;
     default_model: string | null;
     fallback_models: string[];
@@ -42,7 +41,7 @@ const BASE = '/services/kmj-codebridge/ai-providers';
 const FREE_TIER_TEXT: Record<string, string> = {
     allowlist: 'Only models you list as verified-free are admitted',
     'model-suffix': 'Only ":free" models are free',
-    none: 'No free tier: blocked while Free-only is on',
+    none: 'No free tier: inference is blocked',
 };
 
 function creditText(limit: Provider['rate_limit']): string {
@@ -96,6 +95,7 @@ function ProviderCard({
             </header>
 
             <p className="text-muted-foreground text-xs">
+                Credit balance: UNKNOWN (no authoritative API) ·{' '}
                 {creditText(provider.rate_limit)} ·{' '}
                 {FREE_TIER_TEXT[provider.free_tier]}
                 {provider.error_code
@@ -130,17 +130,9 @@ function ProviderCard({
                     >
                         {provider.enabled ? 'Disable' : 'Enable'}
                     </button>
-                    <label className="flex h-9 items-center gap-2 rounded-xl border px-3 text-xs font-bold">
-                        <input
-                            type="checkbox"
-                            checked={provider.free_only}
-                            disabled={busy}
-                            onChange={(event) =>
-                                patch({ free_only: event.target.checked })
-                            }
-                        />
-                        Free-only (zero spend)
-                    </label>
+                    <span className="flex h-9 items-center rounded-xl border px-3 text-xs font-bold">
+                        Zero-spend enforced
+                    </span>
                     <button
                         type="button"
                         disabled={busy}
@@ -287,7 +279,6 @@ function AddProvider({ presets }: { presets: Preset[] }) {
                         name,
                         api_key: apiKey,
                         base_url: selected?.custom ? baseUrl : null,
-                        free_only: true,
                     },
                     {
                         preserveScroll: true,
@@ -359,7 +350,8 @@ function AddProvider({ presets }: { presets: Preset[] }) {
             </label>
             <p className="text-muted-foreground text-xs md:col-span-2">
                 {selected ? FREE_TIER_TEXT[selected.free_tier] : ''}. New
-                providers start in Free-only mode.
+                providers are always zero-spend; billed inference cannot be
+                enabled here. Changes need a recent password confirmation.
             </p>
             <button
                 type="submit"
