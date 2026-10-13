@@ -394,6 +394,16 @@ workflows:
             branches:
               only:
                 - feat/owner-product-workspace-categories-20261014
+      - owner_admin_release:
+          requires:
+            - owner_admin_preflight
+            - owner_admin_frontend_lint
+            - owner_admin_frontend_types
+            - owner_admin_php_quality
+          filters:
+            branches:
+              only:
+                - feat/owner-product-workspace-categories-20261014
 
   review_codebridge_device_control:
     jobs:
