@@ -31,6 +31,10 @@ The existing Phase-1 central-outage hosting-survival and Phase-2 data-plane/cont
 
 CloudOS may host the application without running it as a child of the CloudOS *control plane*. Its runtime and data plane must remain independently restartable.
 
+**Nginx-free network contract (2026-10-13):** the CloudOS-managed Caddy ingress and candidate FrankenPHP process are deployed into an approved private, same-network-namespace workload (or a separately validated equivalent secure private transport). The sample FrankenPHP listener is `http://:8080` *inside* this isolated namespace; the Caddy ingress sample proxies to `127.0.0.1:8080` only when both processes share that namespace. No direct public mapping of port 8080; no untrusted forwarded headers or TLS termination outside CloudOS ingress. TLS issuance/renewal, host matching, route reload and independent HTTPS probes are required before route ACTIVE. If topology differs, the sample must not be reused blindly.
+
+**Runtime policy:** start with normal per-request Laravel lifecycle (FrankenPHP classic), not persistent Octane worker mode. Adopt worker mode only after full state-leak, long-running process, memory, request isolation and performance testing; no forced runtime upgrade for the production recovery task.
+
 ## 4. Implementation order (engineering direction)
 
 **P0-A — Contract freeze:** version both sides of this JSON deployment contract and validate matching IDs/semantics. Maintain exact API compatibility and no direct database access; document tenant bootstrap and process isolation.
