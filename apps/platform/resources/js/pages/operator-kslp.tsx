@@ -98,7 +98,18 @@ export default function OperatorKslp({ metrics, licenses, events, filters, match
             <Head title="Licensing Center · Super Admin" />
             <div className="flex h-full flex-1 flex-col gap-6 overflow-x-auto p-4 sm:p-6">
                 <OperatorModuleNavigation active="licensing" />
-                <section className="bg-card rounded-2xl border p-6">
+                <nav aria-label="Licensing Center sections" className="flex flex-wrap gap-2 rounded-xl border bg-card p-3 text-xs font-semibold">
+                    {[
+                        ['#license-overview', 'Overview'],
+                        ['#license-issue', 'Issue license'],
+                        ['#license-search', 'Find customer'],
+                        ['#license-register', 'Manage plans'],
+                        ['#license-audit', 'Audit trail'],
+                    ].map(([href, label]) => (
+                        <a key={href} href={href} className="rounded-lg border px-3 py-2 hover:border-red-500/40 hover:bg-accent focus-visible:outline-2 focus-visible:outline-red-500">{label}</a>
+                    ))}
+                </nav>
+                <section id="license-overview" className="bg-card scroll-mt-6 rounded-2xl border p-6">
                     <div className="flex gap-4">
                         <span className="grid h-11 w-11 place-items-center rounded-xl bg-red-500/10 text-red-500">
                             <ShieldCheck className="h-5 w-5" />
@@ -130,7 +141,7 @@ export default function OperatorKslp({ metrics, licenses, events, filters, match
                         </div>
                     ))}
                 </section>
-                <section className="bg-card rounded-2xl border p-5">
+                <section id="license-issue" className="bg-card scroll-mt-6 rounded-2xl border p-5">
                     <h2 className="font-bold">Issue a governed KMJ CloudOS license</h2>
                     <p className="mt-1 text-xs text-muted-foreground">
                         Select a customer account below or enter an authorized customer / organization ID.
@@ -211,7 +222,7 @@ export default function OperatorKslp({ metrics, licenses, events, filters, match
                         </p>
                     )}
                 </section>
-                <section className="bg-card rounded-2xl border p-5" aria-label="License search">
+                <section id="license-search" className="bg-card scroll-mt-6 rounded-2xl border p-5" aria-label="License search">
                     <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
                         <div>
                             <h2 className="font-bold">Find customer licenses</h2>
@@ -249,7 +260,7 @@ export default function OperatorKslp({ metrics, licenses, events, filters, match
                         {matchingCount} matching license(s). Showing up to 100; refine your search to find an older record.
                     </p>
                 </section>
-                <section className="bg-card rounded-2xl border p-5">
+                <section id="license-register" className="bg-card scroll-mt-6 rounded-2xl border p-5">
                     <div className="flex items-center justify-between">
                         <div>
                             <h2 className="font-bold">Commercial licenses</h2>
@@ -455,7 +466,7 @@ export default function OperatorKslp({ metrics, licenses, events, filters, match
                         </table>
                     </div>
                 </section>
-                <section className="bg-card rounded-2xl border p-5">
+                <section id="license-audit" className="bg-card scroll-mt-6 rounded-2xl border p-5">
                     <div className="flex items-center gap-2">
                         <Activity className="h-4 w-4 text-red-500" />
                         <h2 className="font-bold">
