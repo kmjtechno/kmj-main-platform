@@ -279,6 +279,31 @@ jobs:
             vendor/bin/phpstan analyse --no-progress --memory-limit=1G
             echo "KMJ_ADMIN_PHP_QUALITY_PASS=1"
 
+  owner_admin_build_probe:
+    docker:
+      - image: cimg/php:8.4-node
+    resource_class: small
+    environment:
+      APP_ENV: testing
+      DB_CONNECTION: sqlite
+      DB_DATABASE: ":memory:"
+    steps:
+      - checkout
+      - run:
+          name: Exact-SHA production frontend build diagnostic
+          no_output_timeout: 12m
+          command: |
+            set -euo pipefail
+            test "$(git rev-parse HEAD)" = "$CIRCLE_SHA1"
+            cd apps/platform
+            composer install --no-interaction --prefer-dist --no-progress
+            npm ci --ignore-scripts --no-audit --no-fund
+            export APP_KEY="base64:$(php -r 'echo base64_encode(random_bytes(32));')"
+            php artisan wayfinder:generate --with-form --no-ansi
+            npm run build
+            test -s public/build/manifest.json
+            echo "KMJ_ADMIN_BUILD_PROBE_PASS=1"
+
   owner_admin_release:
     docker:
       - image: cimg/php:8.4-node
@@ -394,7 +419,7 @@ workflows:
             branches:
               only:
                 - feat/owner-product-workspace-categories-20261014
-      - owner_admin_release:
+      - owner_admin_build_probe:
           requires:
             - owner_admin_preflight
             - owner_admin_frontend_lint
