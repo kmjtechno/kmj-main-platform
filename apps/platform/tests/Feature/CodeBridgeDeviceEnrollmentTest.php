@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Services\Licensing\CodeBridge\CodeBridgeDeviceCredentialService;
 use App\Services\Licensing\CodeBridge\CodeBridgeDeviceEnrollmentService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
@@ -36,7 +37,7 @@ final class CodeBridgeDeviceEnrollmentTest extends TestCase
         $oldRow = DB::table('codebridge_device_credentials')->where('device_id', 'device-a')->first();
         self::assertNotNull($oldRow);
 
-        app(\App\Services\Licensing\CodeBridge\CodeBridgeDeviceCredentialService::class)
+        app(CodeBridgeDeviceCredentialService::class)
             ->revoke($license, 'tenant-a', 'device-a', time());
 
         $freshActivation = (string) Str::uuid();
