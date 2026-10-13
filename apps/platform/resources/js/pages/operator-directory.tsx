@@ -3,7 +3,10 @@ import { Building2, Search, ShieldCheck, Users } from 'lucide-react';
 import { useState, type FormEvent } from 'react';
 import OperatorModuleNavigation from '@/components/operator-module-navigation';
 import { DirectoryEditActions } from '@/components/operator-directory-actions';
-import { DirectoryGrantAccess, type GrantablePolicy } from '@/components/operator-directory-grants';
+import {
+    DirectoryGrantAccess,
+    type GrantablePolicy,
+} from '@/components/operator-directory-grants';
 
 type PageLink = { url: string | null; label: string; active: boolean };
 type Paginated<T> = {
@@ -196,7 +199,11 @@ export default function OperatorDirectory({
                                             <p className="mt-1 text-xs break-all text-slate-400">
                                                 {user.email}
                                             </p>
-                                            <DirectoryEditActions kind="user" id={user.id} name={user.name} />
+                                            <DirectoryEditActions
+                                                kind="user"
+                                                id={user.id}
+                                                name={user.name}
+                                            />
                                         </div>
                                         <span className="rounded-full border border-white/15 px-2.5 py-1 text-[11px] text-slate-300">
                                             {user.is_platform_owner
@@ -243,8 +250,15 @@ export default function OperatorDirectory({
                                             <p className="mt-1 font-mono text-[11px] break-all text-slate-500">
                                                 {org.id}
                                             </p>
-                                            <DirectoryEditActions kind="organization" id={org.id} name={org.name} />
-                                            <DirectoryGrantAccess organizationId={org.id} policies={grantable_policies} />
+                                            <DirectoryEditActions
+                                                kind="organization"
+                                                id={org.id}
+                                                name={org.name}
+                                            />
+                                            <DirectoryGrantAccess
+                                                organizationId={org.id}
+                                                policies={grantable_policies}
+                                            />
                                         </div>
                                         <span className="rounded-full border border-white/15 px-2.5 py-1 text-[11px] text-slate-300">
                                             {org.memberships_count} members
