@@ -187,6 +187,14 @@ export default function CodeBridgeService({
                         </div>
 
                         <div className="flex flex-wrap gap-2">
+                            <button
+                                type="button"
+                                onClick={() => setActiveSection('devices')}
+                                className="focus-visible:ring-ring inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-red-500/30 bg-red-500/10 px-4 text-xs font-bold text-foreground transition hover:bg-red-500/15 focus-visible:ring-2 focus-visible:outline-none"
+                            >
+                                <Laptop2 className="h-3.5 w-3.5" />
+                                Manage devices
+                            </button>
                             <a
                                 href={vscodeInstallUrl(service.endpoint)}
                                 className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-red-600 px-4 text-xs font-black text-white transition hover:bg-red-500"
