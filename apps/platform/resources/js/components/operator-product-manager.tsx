@@ -221,6 +221,7 @@ function ManagedProductEditor({
     onDrop: (productId: string) => void;
     allowReorder: boolean;
 }) {
+    const [editing, setEditing] = useState(false);
     const form = useForm({
         name: product.name,
         lifecycle: product.lifecycle,
@@ -236,6 +237,7 @@ function ManagedProductEditor({
         event.preventDefault();
         form.put(`/operator/products/${product.id}`, {
             preserveScroll: true,
+            onSuccess: () => setEditing(false),
         });
     };
 
@@ -280,6 +282,12 @@ function ManagedProductEditor({
                 <span className="text-muted-foreground text-[10px] font-bold">
                     Order {product.sort_order}
                 </span>
+                <div className="min-w-0">
+                    <div className="truncate text-sm font-bold">{product.name}</div>
+                    <div className="text-muted-foreground truncate text-[11px]">
+                        {product.category} · {product.lifecycle}
+                    </div>
+                </div>
                 {product.is_public ? (
                     <Link
                         href={`/products/${product.slug}`}
@@ -294,8 +302,19 @@ function ManagedProductEditor({
                         Hidden from public catalog
                     </span>
                 )}
+                <button
+                    type="button"
+                    aria-expanded={editing}
+                    aria-controls={`editor-${product.id}`}
+                    onClick={() => setEditing((value) => !value)}
+                    className="rounded-lg border border-red-500/30 px-3 py-2 text-xs font-bold text-red-400 hover:bg-red-500/10"
+                >
+                    {editing ? 'Close' : 'Edit'}
+                </button>
             </div>
-            <div className="grid gap-2">
+            {editing && (
+              <div id={`editor-${product.id}`} className="grid gap-4 xl:col-span-4 xl:grid-cols-[1.1fr_.75fr_.85fr_auto]">
+                <div className="grid gap-2">
                 <input
                     value={form.data.name}
                     onChange={(event) =>
@@ -437,6 +456,8 @@ function ManagedProductEditor({
                 <div className="text-xs text-red-500 xl:col-span-4">
                     {Object.values(form.errors)[0]}
                 </div>
+            )}
+              </div>
             )}
         </form>
     );
