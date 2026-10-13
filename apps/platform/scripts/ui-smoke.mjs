@@ -179,6 +179,12 @@ async function inspectPage(page, path, viewport, { requireIcon = false } = {}) {
                 `${tag}: login does not override the natural tab order (axe)`,
             );
         }
+        if (path === '/products/kmj-codebridge') {
+            check(
+                !axe.some((v) => v.id === 'color-contrast'),
+                `${tag}: CodeBridge product contrast meets axe (no violations)`,
+            );
+        }
         const critical = axe.filter((v) => v.impact === 'critical');
         check(
             critical.length === 0,
