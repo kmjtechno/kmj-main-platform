@@ -2,6 +2,7 @@ import { Head, Link, router } from '@inertiajs/react';
 import { Building2, Search, ShieldCheck, Users } from 'lucide-react';
 import { useState, type FormEvent } from 'react';
 import OperatorModuleNavigation from '@/components/operator-module-navigation';
+import { DirectoryEditActions } from '@/components/operator-directory-actions';
 
 type PageLink = { url: string | null; label: string; active: boolean };
 type Paginated<T> = {
@@ -31,7 +32,7 @@ type Props = {
     users: Paginated<DirectoryUser>;
     organizations: Paginated<DirectoryOrganization>;
     filters: { users_q: string; orgs_q: string };
-    read_only: true;
+    read_only: boolean;
 };
 
 function Pager({ data }: { data: Paginated<unknown> }) {
@@ -114,14 +115,14 @@ export default function OperatorDirectory({
                         </h1>
                     </div>
                     <p className="mt-3 max-w-3xl text-sm leading-7 text-slate-300">
-                        Search and review your platform's users and customer
-                        organizations. No permission changes, deletion or
-                        account invitations are offered here until separately
-                        audited workflows are available.
+                        Search customers, edit display names and open the
+                        existing controlled licensing center. Email, account
+                        permissions and license issuance remain separate,
+                        approval-protected actions.
                     </p>
                     <div className="mt-4 inline-flex items-center gap-2 rounded-full border border-blue-500/20 px-3 py-1.5 text-xs font-bold text-blue-200">
                         <ShieldCheck className="size-4" aria-hidden="true" />
-                        Owner only · Read-only
+                        Passkey owner · Audited name edits
                     </div>
                 </header>
 
@@ -192,6 +193,7 @@ export default function OperatorDirectory({
                                             <p className="mt-1 text-xs break-all text-slate-400">
                                                 {user.email}
                                             </p>
+                                            <DirectoryEditActions kind="user" id={user.id} name={user.name} />
                                         </div>
                                         <span className="rounded-full border border-white/15 px-2.5 py-1 text-[11px] text-slate-300">
                                             {user.is_platform_owner
@@ -238,6 +240,7 @@ export default function OperatorDirectory({
                                             <p className="mt-1 font-mono text-[11px] break-all text-slate-500">
                                                 {org.id}
                                             </p>
+                                            <DirectoryEditActions kind="organization" id={org.id} name={org.name} />
                                         </div>
                                         <span className="rounded-full border border-white/15 px-2.5 py-1 text-[11px] text-slate-300">
                                             {org.memberships_count} members
