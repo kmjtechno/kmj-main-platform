@@ -116,14 +116,26 @@ final class ProviderManager
         $provider->delete();
     }
 
-    /** Routing must call this before any billable request; it never contacts the provider. */
+    /**
+     * Admission guard: routing must call this before ANY request that could be billed. It never
+     * contacts the provider and does not treat a successful GET /models as authorization: that
+     * is only a health probe. The model must be one this provider actually listed, and in
+     * free-only mode it must also pass the provider's free rule.
+     */
     public function assertInferenceAllowed(AiProvider $provider, string $model): void
     {
         if (! $provider->enabled) {
             throw new InvalidArgumentException('provider_disabled');
         }
+        if (! in_array($model, $provider->models_cache ?? [], true)) {
+            throw new InvalidArgumentException('model_not_discovered');
+        }
         $tier = $this->presets()[$provider->preset]['free_tier'] ?? 'none';
-        FreePolicy::assertInferenceAllowed($tier, $provider->free_only, $model);
+        $allowlist = array_values(array_filter(
+            (array) Config::get('ai_providers.free_models.'.$provider->preset, []),
+            'is_string',
+        ));
+        FreePolicy::assertInferenceAllowed($tier, $provider->free_only, $model, $allowlist);
     }
 
     /** @return array<string, mixed> */

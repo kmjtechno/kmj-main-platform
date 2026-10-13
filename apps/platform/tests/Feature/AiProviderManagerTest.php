@@ -192,11 +192,19 @@ final class AiProviderManagerTest extends TestCase
 
     public function test_zero_spend_guard_blocks_paid_inference_unless_explicitly_opted_in(): void
     {
+        config(['ai_providers.free_models.groq' => ['verified-model']]);
         $manager = app(ProviderManager::class);
-        $openai = $this->provider('openai', true);
-        $router = $this->provider('openrouter', true);
+        $openai = $this->provider('openai', true, true, ['gpt-4o']);
+        $router = $this->provider('openrouter', true, true, ['meta/llama-3', 'meta/llama-3:free']);
+        $groq = $this->provider('groq', true, true, ['verified-model', 'other-model']);
 
-        foreach ([[$openai, 'gpt-4o'], [$router, 'meta/llama-3'], [$this->provider('groq', true, false), 'x']] as [$provider, $model]) {
+        foreach ([
+            [$openai, 'gpt-4o'],
+            [$router, 'meta/llama-3'],
+            [$groq, 'other-model'],
+            [$groq, 'undiscovered-model'],
+            [$this->provider('groq', true, false, ['verified-model']), 'verified-model'],
+        ] as [$provider, $model]) {
             try {
                 $manager->assertInferenceAllowed($provider, $model);
                 $this->fail('paid inference was allowed');
@@ -206,8 +214,21 @@ final class AiProviderManagerTest extends TestCase
         }
 
         $manager->assertInferenceAllowed($router, 'meta/llama-3:free');
-        $manager->assertInferenceAllowed($this->provider('groq', true), 'llama');
-        $manager->assertInferenceAllowed($this->provider('openai', false), 'gpt-4o');
+        $manager->assertInferenceAllowed($groq, 'verified-model');
+        $manager->assertInferenceAllowed($this->provider('openai', false, true, ['gpt-4o']), 'gpt-4o');
+    }
+
+    public function test_a_successful_models_probe_does_not_authorize_inference(): void
+    {
+        Http::fake(['api.groq.com/*' => Http::response(['data' => [['id' => 'some-model']]], 200)]);
+        $this->add('Groq main');
+        $id = AiProvider::query()->value('id');
+        $this->actingAs($this->owner)->post("/services/kmj-codebridge/ai-providers/{$id}/test");
+
+        $provider = AiProvider::query()->findOrFail($id);
+        $this->assertSame('ok', $provider->health);
+        $this->expectException(RuntimeException::class);
+        app(ProviderManager::class)->assertInferenceAllowed($provider, 'some-model');
     }
 
     private function add(string $name): TestResponse
@@ -221,12 +242,13 @@ final class AiProviderManagerTest extends TestCase
         return ['preset' => 'groq', 'name' => $name, 'api_key' => self::KEY];
     }
 
-    private function provider(string $preset, bool $freeOnly, bool $enabled = true): AiProvider
+    /** @param list<string> $models */
+    private function provider(string $preset, bool $freeOnly, bool $enabled = true, array $models = []): AiProvider
     {
         return AiProvider::query()->create([
             'organization_id' => $this->orgA, 'name' => $preset.Str::random(4), 'preset' => $preset,
             'base_url' => config("ai_providers.presets.{$preset}.base_url"), 'api_key' => self::KEY,
-            'key_last4' => 'cdef', 'free_only' => $freeOnly, 'enabled' => $enabled,
+            'key_last4' => 'cdef', 'free_only' => $freeOnly, 'enabled' => $enabled, 'models_cache' => $models,
         ]);
     }
 

@@ -5,7 +5,7 @@ import { useState } from 'react';
 type Preset = {
     key: string;
     label: string;
-    free_tier: 'plan' | 'model-suffix' | 'none';
+    free_tier: 'allowlist' | 'model-suffix' | 'none';
     custom: boolean;
 };
 
@@ -40,17 +40,17 @@ type Props = {
 
 const BASE = '/services/kmj-codebridge/ai-providers';
 const FREE_TIER_TEXT: Record<string, string> = {
-    plan: 'Free plan with limits (billing not verified)',
+    allowlist: 'Only models you list as verified-free are admitted',
     'model-suffix': 'Only ":free" models are free',
     none: 'No free tier: blocked while Free-only is on',
 };
 
 function creditText(limit: Provider['rate_limit']): string {
     if (limit?.status !== 'verified') {
-        return 'Credits / limits: Unknown';
+        return 'Rate limits: Unknown (not billing credits)';
     }
 
-    return `Verified remaining: ${limit.requests_remaining ?? '–'} requests, ${limit.tokens_remaining ?? '–'} tokens`;
+    return `Rate limit reported by provider: ${limit.requests_remaining ?? '–'} requests, ${limit.tokens_remaining ?? '–'} tokens left (not billing credits)`;
 }
 
 function ProviderCard({

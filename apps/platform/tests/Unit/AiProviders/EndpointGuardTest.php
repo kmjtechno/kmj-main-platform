@@ -82,7 +82,9 @@ final class EndpointGuardTest extends TestCase
 
     public function test_zero_spend_policy(): void
     {
-        $this->assertTrue(FreePolicy::inferenceAllowed('plan', true, 'any'));
+        $this->assertFalse(FreePolicy::inferenceAllowed('allowlist', true, 'any'), 'a free account is not a free model');
+        $this->assertTrue(FreePolicy::inferenceAllowed('allowlist', true, 'verified-model', ['verified-model']));
+        $this->assertFalse(FreePolicy::inferenceAllowed('allowlist', true, 'other-model', ['verified-model']));
         $this->assertTrue(FreePolicy::inferenceAllowed('model-suffix', true, 'meta/llama:free'));
         $this->assertFalse(FreePolicy::inferenceAllowed('model-suffix', true, 'meta/llama'));
         $this->assertFalse(FreePolicy::inferenceAllowed('none', true, 'gpt'));

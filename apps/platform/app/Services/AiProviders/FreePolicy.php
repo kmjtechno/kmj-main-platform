@@ -8,27 +8,30 @@ use RuntimeException;
 
 /**
  * Zero-spend guard. A provider that is "free only" may run inference only where the
- * provider documents a free tier for that model. Turning free-only off is an explicit,
+ * provider documents as free AND the owner has verified (allowlist) or the id carries the documented
+ * free marker. A free account does not make every model free. Turning free-only off is an explicit,
  * recorded opt-in to paid use; nothing here ever verifies or invents a balance.
  */
 final class FreePolicy
 {
-    public static function inferenceAllowed(string $freeTier, bool $freeOnly, string $model): bool
+    /** @param list<string> $freeModels owner-verified free model ids for the allowlist tier */
+    public static function inferenceAllowed(string $freeTier, bool $freeOnly, string $model, array $freeModels = []): bool
     {
         if (! $freeOnly) {
             return true;
         }
 
         return match ($freeTier) {
-            'plan' => true,
+            'allowlist' => in_array($model, $freeModels, true),
             'model-suffix' => str_ends_with($model, ':free'),
             default => false,
         };
     }
 
-    public static function assertInferenceAllowed(string $freeTier, bool $freeOnly, string $model): void
+    /** @param list<string> $freeModels */
+    public static function assertInferenceAllowed(string $freeTier, bool $freeOnly, string $model, array $freeModels = []): void
     {
-        if (! self::inferenceAllowed($freeTier, $freeOnly, $model)) {
+        if (! self::inferenceAllowed($freeTier, $freeOnly, $model, $freeModels)) {
             throw new RuntimeException('zero_spend_blocked');
         }
     }
