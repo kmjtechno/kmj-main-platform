@@ -1,5 +1,8 @@
 version: 2.1
 
+orbs:
+  browser-tools: circleci/browser-tools@2.4.2
+
 commands:
   prepare_ui_app:
     description: Build the app, migrate a throwaway SQLite database, serve it on 127.0.0.1:8000 and install the browser tooling.
@@ -40,6 +43,8 @@ commands:
               sleep 1
             done
             echo "app did not start"; tail -n 40 /tmp/serve.log; exit 1
+      - browser-tools/install_chrome:
+          timeout: 5m
       - run:
           name: Install browser tooling (outside the app's dependencies)
           command: |
