@@ -83,15 +83,15 @@ const hub = readFileSync(
 );
 
 void test('control center provides working sections and scoped device onboarding', () => {
-    for (const target of [
-        'codebridge-overview',
-        'codebridge-device-control',
-        'codebridge-usage',
-        'codebridge-plan-billing',
-        'codebridge-clients',
-        'codebridge-settings',
+    for (const [target, source] of [
+        ['codebridge-overview', hub],
+        ['codebridge-device-control', deviceCenter],
+        ['codebridge-usage', hub],
+        ['codebridge-plan-billing', hub],
+        ['codebridge-clients', ui],
+        ['codebridge-settings', hub],
     ]) {
-        assert.match(hub, new RegExp(target));
+        assert.match(source, new RegExp(target));
     }
     assert.match(ui, /<CodeBridgeControlCenterHub/);
     assert.match(ui, /id="codebridge-clients"/);
@@ -109,7 +109,6 @@ void test('usage billing and device state never invent measurements or connectiv
     assert.doesNotMatch(hub, /connection_status === 'online'/);
     assert.doesNotMatch(hub, /100%|unlimited calls|live sessions/);
 });
-
 
 void test('control center uses accessible section switching instead of one long dashboard', () => {
     assert.match(hub, /aria-pressed=\{activeSection === id\}/);
