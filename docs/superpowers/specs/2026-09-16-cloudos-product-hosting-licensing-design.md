@@ -1,5 +1,7 @@
 > **SUPERSEDED (2026-09-16):** Do not mirror the legacy `kmjtechno.com` website into staging. `staging.kmjtechno.com` must serve the native KMJ TECHNO Main Platform. The legacy site is reference material only for approved products, services and factual content.
 
+> **OWNER REAFFIRMATION (2026-10-13):** Final production hosting on CloudOS is mandatory, not optional. The **hosting/licensing boundaries** below remain applicable; the historical staging-mirror sections and their staging root/legacy-IP implementation details remain **superseded and must not be implemented**. Use [ADR-009](../../adr/ADR-009-main-platform-on-cloudos.md) and [deployment contract v1](../../../contracts/deployment/main-platform-cloudos-v1.json) for active deployment, QA, resilience and cutover direction. Production cutover remains unexecuted.
+
 # KMJ CloudOS Product, Licensing, Hosting and Staging Mirror Design
 
 **Status:** Approved by owner on 2026-09-16.
