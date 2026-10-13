@@ -7,6 +7,7 @@ type Props = {
     clientName: string;
     redirectHost: string;
     scopes: string[];
+    account: { name: string; email: string };
 };
 
 const scopeText: Record<string, string> = {
@@ -24,10 +25,11 @@ export default function OAuthAuthorize({
     clientName,
     redirectHost,
     scopes,
+    account,
 }: Props) {
     const [processing, setProcessing] = useState(false);
 
-    const decide = (decision: 'approve' | 'deny') => {
+    const decide = (decision: 'approve' | 'deny' | 'switch') => {
         setProcessing(true);
         router.post(
             '/oauth/authorize',
@@ -52,6 +54,27 @@ export default function OAuthAuthorize({
                         . Only approve if you started this from that app.
                     </p>
                 </div>
+
+                <section aria-label="KMJ account authorization" className="bg-muted/50 rounded-xl border p-4">
+                    <p className="text-sm font-semibold">Authorize this KMJ account</p>
+                    <p className="mt-1 text-sm">{account.name}</p>
+                    <p className="text-muted-foreground break-all text-xs">{account.email}</p>
+                    <p className="text-muted-foreground mt-3 text-xs leading-5">
+                        Your ChatGPT, Claude or Gemini login may use a different email.
+                        Only this KMJ account's authorized organizations, devices and
+                        projects will be accessible. The AI app email never grants access.
+                    </p>
+                    <Button
+                        type="button"
+                        variant="outline"
+                        className="mt-3 w-full"
+                        disabled={processing}
+                        onClick={() => decide('switch')}
+                        data-test="oauth-switch-account"
+                    >
+                        Use a different KMJ account
+                    </Button>
+                </section>
 
                 <div className="space-y-2">
                     <p className="text-sm font-medium">It will be able to:</p>
