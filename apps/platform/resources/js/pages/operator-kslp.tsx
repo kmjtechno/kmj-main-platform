@@ -42,10 +42,23 @@ type Props = {
     };
     licenses: License[];
     events: Event[];
+    filters: { customer_q: string; plan: string };
+    matchingCount: number;
+    customerOptions: { id: string; name: string; email: string }[];
 };
 
-export default function OperatorKslp({ metrics, licenses, events }: Props) {
+export default function OperatorKslp({ metrics, licenses, events, filters, matchingCount, customerOptions }: Props) {
     const [actionReason, setActionReason] = useState('');
+    const [customerQuery, setCustomerQuery] = useState(filters.customer_q);
+    const [planQuery, setPlanQuery] = useState(filters.plan);
+    const [stateQuery, setStateQuery] = useState('all');
+    const visibleLicenses = licenses.filter((license) =>
+        stateQuery === 'all' || license.state === stateQuery,
+    );
+    const applyFilters = () => router.get('/operator/kslp', {
+        customer_q: customerQuery,
+        plan: planQuery,
+    }, { preserveState: true, preserveScroll: true });
     const [pendingPlans, setPendingPlans] = useState<Record<string, string>>(
         {},
     );
@@ -69,6 +82,7 @@ export default function OperatorKslp({ metrics, licenses, events }: Props) {
     ) => {
         const reason = actionReason.trim();
         if (reason.length < 3) return;
+        if (!window.confirm(`Confirm ${a.replace('_', ' ')} for license ${id}? This action is audited.`)) return;
 
         router.post(
             `/operator/kslp/licenses/${id}/action`,
@@ -116,7 +130,26 @@ export default function OperatorKslp({ metrics, licenses, events }: Props) {
                     ))}
                 </section>
                 <section className="bg-card rounded-2xl border p-5">
-                    <h2 className="font-bold">Issue KMJ CloudOS license</h2>
+                    <h2 className="font-bold">Issue a governed KMJ CloudOS license</h2>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                        Select a customer account below or enter an authorized customer / organization ID.
+                        Other KMJ products retain their own release-gated license profiles until signed interoperability is verified.
+                    </p>
+                    <label className="mt-4 block text-xs font-semibold">
+                        Find a registered customer
+                        <select
+                            className="bg-background mt-2 h-10 w-full rounded-lg border px-3 text-sm"
+                            value={customerOptions.some((customer) => customer.id === issue.data.customer_id) ? issue.data.customer_id : ''}
+                            onChange={(event) => issue.setData('customer_id', event.target.value)}
+                        >
+                            <option value="">Select an account (or enter ID manually)</option>
+                            {customerOptions.map((customer) => (
+                                <option key={customer.id} value={customer.id}>
+                                    {customer.name} · {customer.email}
+                                </option>
+                            ))}
+                        </select>
+                    </label>
                     <form
                         className="mt-4 grid gap-3 lg:grid-cols-[1.2fr_.7fr_1.5fr_auto]"
                         onSubmit={(e) => {
@@ -177,6 +210,44 @@ export default function OperatorKslp({ metrics, licenses, events }: Props) {
                         </p>
                     )}
                 </section>
+                <section className="bg-card rounded-2xl border p-5" aria-label="License search">
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+                        <div>
+                            <h2 className="font-bold">Find customer licenses</h2>
+                            <p className="mt-1 text-xs text-muted-foreground">
+                                Search across the license register by customer ID, product code or exact license UUID.
+                            </p>
+                        </div>
+                        <a href="/operator/directory" className="text-sm font-semibold text-red-500 underline-offset-4 hover:underline">
+                            Customers &amp; organizations
+                        </a>
+                    </div>
+                    <form className="mt-4 grid gap-3 md:grid-cols-[minmax(160px,1fr)_minmax(150px,.45fr)_auto]"
+                        onSubmit={(event) => { event.preventDefault(); applyFilters(); }}>
+                        <label className="text-xs font-semibold">
+                            Customer or license search
+                            <input value={customerQuery} onChange={(event) => setCustomerQuery(event.target.value)}
+                                maxLength={96} className="bg-background mt-1 h-11 w-full rounded-lg border px-3 text-sm"
+                                placeholder="Customer ID, product, license UUID" />
+                        </label>
+                        <label className="text-xs font-semibold">
+                            Plan
+                            <select value={planQuery} onChange={(event) => setPlanQuery(event.target.value)}
+                                className="bg-background mt-1 h-11 w-full rounded-lg border px-3 text-sm">
+                                <option value="">All plans</option>
+                                {['trial', 'professional', 'business', 'enterprise', 'custom_oem'].map((plan) => (
+                                    <option key={plan} value={plan}>{plan}</option>
+                                ))}
+                            </select>
+                        </label>
+                        <button type="submit" className="h-11 self-end rounded-lg bg-red-600 px-5 text-sm font-bold text-white">
+                            Search
+                        </button>
+                    </form>
+                    <p role="status" className="mt-3 text-xs text-muted-foreground">
+                        {matchingCount} matching license(s). Showing up to 100; refine your search to find an older record.
+                    </p>
+                </section>
                 <section className="bg-card rounded-2xl border p-5">
                     <div className="flex items-center justify-between">
                         <div>
@@ -210,6 +281,17 @@ export default function OperatorKslp({ metrics, licenses, events }: Props) {
                             Minimum 3 characters · recorded in audit trail
                         </div>
                     </div>
+                    <div className="mt-4 flex items-center gap-3">
+                        <label htmlFor="license-state" className="text-xs font-semibold">State</label>
+                        <select id="license-state" value={stateQuery} onChange={(event) => setStateQuery(event.target.value)}
+                            className="bg-background h-9 rounded-lg border px-2 text-xs">
+                            <option value="all">All states</option>
+                            {['ACTIVE', 'RENEWAL_DUE', 'GRACE', 'RESTRICTED', 'REVOKED'].map((state) => (
+                                <option key={state} value={state}>{state}</option>
+                            ))}
+                        </select>
+                        <span role="status" className="text-xs text-muted-foreground">{visibleLicenses.length} visible</span>
+                    </div>
                     <div className="mt-4 overflow-x-auto">
                         <table className="w-full min-w-[980px] text-left text-xs">
                             <thead className="text-muted-foreground">
@@ -230,7 +312,7 @@ export default function OperatorKslp({ metrics, licenses, events }: Props) {
                                 </tr>
                             </thead>
                             <tbody>
-                                {licenses.map((l) => (
+                                {visibleLicenses.map((l) => (
                                     <tr
                                         key={l.id}
                                         className="border-b last:border-0"
