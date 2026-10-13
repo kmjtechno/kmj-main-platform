@@ -45,7 +45,7 @@ void test('client management defaults to four grants, has scope search and two-s
     assert.match(dashboard, /Confirm revoke/);
     assert.match(dashboard, /Cancel/);
     assert.match(dashboard, /router\.post\(/);
-    assert.doesNotMatch(dashboard, /onClick=\{\(\) =>\s*revokeClient\(client\.client_id\)\}/);
+    assert.match(dashboard, /onClick=\{\(\) => setRevokeCandidate\(client\.client_id\)\}/);
 });
 
 void test('privacy and capability claims reflect real server data, not fictional permissions', () => {
