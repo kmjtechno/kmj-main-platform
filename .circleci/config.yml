@@ -152,7 +152,104 @@ jobs:
             echo "tests passed: ${passed:-none}"
             test "${passed:-0}" -ge 97
 
+  owner_admin_release:
+    docker:
+      - image: cimg/php:8.4-node
+    resource_class: small
+    environment:
+      APP_ENV: testing
+      DB_CONNECTION: sqlite
+      DB_DATABASE: ":memory:"
+      QUEUE_CONNECTION: sync
+      CACHE_STORE: array
+      SESSION_DRIVER: array
+      MAIL_MAILER: array
+      BROADCAST_CONNECTION: log
+      FILESYSTEM_DISK: local
+    steps:
+      - checkout
+      - run:
+          name: Verify exact pinned candidate, no production environment
+          command: |
+            set -euo pipefail
+            test "$(git rev-parse HEAD)" = "$CIRCLE_SHA1"
+            test -f apps/platform/resources/js/pages/operator-products.tsx
+            test -f apps/platform/tests/Feature/OwnerLicensingCenterHttpTest.php
+            test -f packages/domain-catalog/database/migrations/2026_10_14_000230_add_category_to_products_table.php
+            test ! -e apps/platform/.env
+            echo "KMJ_ADMIN_RC_SHA=$CIRCLE_SHA1"
+      - run:
+          name: Install isolated PHP and frontend dependencies
+          no_output_timeout: 12m
+          command: |
+            set -euo pipefail
+            cd apps/platform
+            composer install --no-interaction --prefer-dist --no-progress
+            npm ci --ignore-scripts --no-audit --no-fund
+      - run:
+          name: PHP syntax, strict formatter and static analysis
+          no_output_timeout: 10m
+          command: |
+            set -euo pipefail
+            php -l apps/platform/routes/product-manager.php
+            php -l apps/platform/routes/kslp-admin.php
+            php -l apps/platform/tests/Feature/OwnerProductManagementWorkspaceTest.php
+            php -l apps/platform/tests/Feature/OwnerLicensingCenterHttpTest.php
+            php -l packages/domain-catalog/database/migrations/2026_10_14_000230_add_category_to_products_table.php
+            cd apps/platform
+            vendor/bin/pint --test
+            vendor/bin/phpstan analyse --no-progress --memory-limit=1G
+      - run:
+          name: Owner admin TypeScript, source contracts and production assets
+          no_output_timeout: 10m
+          command: |
+            set -euo pipefail
+            cd apps/platform
+            npm run check
+            npm run types:check
+            npm run build
+            test -s public/build/manifest.json
+      - run:
+          name: Owner product, license, audit and public catalog feature tests
+          no_output_timeout: 12m
+          command: |
+            set -euo pipefail
+            cd apps/platform
+            cp .env.example .env
+            php artisan key:generate --force --no-ansi
+            export APP_KEY="$(grep '^APP_KEY=' .env | cut -d= -f2-)"
+            set +e
+            php artisan test --filter='OwnerProductManagementWorkspaceTest|OwnerLicensingCenterHttpTest|PublicProductHubTest|KmjProductCatalogTest|PlatformOwnerConsoleTest|KslpLifecycleTest' --no-ansi > /tmp/kmj-owner-qa.log 2>&1
+            rc=$?
+            set -e
+            tail -n 100 /tmp/kmj-owner-qa.log
+            test "$rc" -eq 0
+            grep -Eq '[1-9][0-9]* passed' /tmp/kmj-owner-qa.log
+            echo "KMJ_ADMIN_RC_FEATURE_TESTS_PASS=1"
+      - run:
+          name: SQLite-only additive migration and rollback smoke
+          no_output_timeout: 5m
+          command: |
+            set -euo pipefail
+            cd apps/platform
+            database="$PWD/database/admin-ci.sqlite"
+            test ! -e "$database"
+            touch "$database"
+            trap 'rm -f -- "$database"' EXIT
+            export DB_CONNECTION=sqlite DB_DATABASE="$database"
+            php artisan migrate --force --no-ansi
+            php artisan migrate:rollback --step=1 --force --no-ansi
+            echo "KMJ_ADMIN_RC_SQLITE_MIGRATION_SMOKE_PASS=1"
+
 workflows:
+  review_owner_admin_release:
+    jobs:
+      - owner_admin_release:
+          filters:
+            branches:
+              only:
+                - feat/owner-product-workspace-categories-20261014
+
   review_codebridge_device_control:
     jobs:
       - codebridge_device_control:
