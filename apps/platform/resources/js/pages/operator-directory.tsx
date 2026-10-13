@@ -3,6 +3,7 @@ import { Building2, Search, ShieldCheck, Users } from 'lucide-react';
 import { useState, type FormEvent } from 'react';
 import OperatorModuleNavigation from '@/components/operator-module-navigation';
 import { DirectoryEditActions } from '@/components/operator-directory-actions';
+import { DirectoryGrantAccess, type GrantablePolicy } from '@/components/operator-directory-grants';
 
 type PageLink = { url: string | null; label: string; active: boolean };
 type Paginated<T> = {
@@ -33,6 +34,7 @@ type Props = {
     organizations: Paginated<DirectoryOrganization>;
     filters: { users_q: string; orgs_q: string };
     read_only: boolean;
+    grantable_policies: GrantablePolicy[];
 };
 
 function Pager({ data }: { data: Paginated<unknown> }) {
@@ -84,6 +86,7 @@ export default function OperatorDirectory({
     users,
     organizations,
     filters,
+    grantable_policies,
 }: Props) {
     const [usersQuery, setUsersQuery] = useState(filters.users_q);
     const [orgsQuery, setOrgsQuery] = useState(filters.orgs_q);
@@ -241,6 +244,7 @@ export default function OperatorDirectory({
                                                 {org.id}
                                             </p>
                                             <DirectoryEditActions kind="organization" id={org.id} name={org.name} />
+                                            <DirectoryGrantAccess organizationId={org.id} policies={grantable_policies} />
                                         </div>
                                         <span className="rounded-full border border-white/15 px-2.5 py-1 text-[11px] text-slate-300">
                                             {org.memberships_count} members
