@@ -78,3 +78,4 @@ workflows:
                 - fix/gemini-spark-oauth-on-control-center-hub
                 - fix/codebridge-compact-workspace-tabs-20261013
                 - claude/codebridge-production-completion-n6lu61
+                - release/codebridge-dashboard-ux-branding-integrated-20261013
