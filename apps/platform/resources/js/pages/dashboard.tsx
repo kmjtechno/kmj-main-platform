@@ -85,6 +85,20 @@ type DashboardProps = {
 const CHATGPT_DESKTOP_SETUP_URL = '/install-chatgpt-desktop.ps1';
 
 
+const productImages: Record<string, string> = {
+    'kmj-cloudos': '/assets/products/kmj-cloudos.webp',
+    'kmj-calibration-pro': '/assets/products/kmj-calibration.webp',
+    'kmj-forge': '/assets/products/kmj-forge.webp',
+    'kmj-connect': '/assets/products/kmj-connect.webp',
+    'kmj-cloud-nexus': '/assets/products/kmj-cloud-nexus.webp',
+    'kmj-agent': '/assets/products/kmj-agent.webp',
+    'kmj-creative-studio': '/assets/products/kmj-creative-studio.webp',
+    'kmj-cinema-platform': '/assets/products/kmj-cinema-platform.webp',
+    'kmj-360-dome': '/assets/products/kmj-cinema-platform.webp',
+    'kmj-cinema-player': '/assets/products/kmj-cinema-platform.webp',
+    'kmj-licensing-hub': '/assets/products/kmj-licensing-hub.webp',
+};
+
 export default function Dashboard({
     organizations,
     discoverableProducts,
