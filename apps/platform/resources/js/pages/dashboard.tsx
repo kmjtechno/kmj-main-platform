@@ -233,6 +233,7 @@ export default function Dashboard({
                     </div>
                 </section>
 
+                {ownerProducts === null && (
                 <section className="border-sidebar-border/70 bg-card rounded-2xl border p-5 sm:p-6">
                     <div className="flex flex-wrap items-start justify-between gap-3">
                         <div>
@@ -290,6 +291,8 @@ export default function Dashboard({
                         </div>
                     )}
                 </section>
+
+                )}
 
                 <section className="border-sidebar-border/70 bg-card dark:border-sidebar-border rounded-2xl border p-5 sm:p-6">
                     <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
