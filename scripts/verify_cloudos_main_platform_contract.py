@@ -20,7 +20,8 @@ def verify_contract(data: dict) -> None:
         "hosting_repository": "kmjtechno/kmj-cloudos",
     }
     for key, required in required_values.items():
-        if data.get(key) != required:
+        value = data.get(key)
+        if type(value) is not type(required) or value != required:
             raise ValueError("CLOUDOS_HOSTING_CONTRACT_INVALID_" + key.upper())
     values = [
         ("roles", "commercial_authority", "kmj-main-platform"),
@@ -49,7 +50,8 @@ def verify_contract(data: dict) -> None:
     ]
     for section, key, required in values:
         payload = data.get(section)
-        if not isinstance(payload, dict) or payload.get(key) is not required and payload.get(key) != required:
+        value = payload.get(key) if isinstance(payload, dict) else None
+        if type(value) is not type(required) or value != required:
             raise ValueError(f"CLOUDOS_HOSTING_CONTRACT_INVALID_{section.upper()}_{key.upper()}")
     processes = data.get("target", {}).get("application_processes")
     if not isinstance(processes, list) or not {"php_fpm_web", "queue_worker", "scheduler"} <= set(processes):
