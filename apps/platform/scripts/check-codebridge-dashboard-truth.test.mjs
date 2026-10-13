@@ -133,6 +133,6 @@ void test(
 
 void test('CodeBridge customer controls avoid sub-12px utility labels', () => {
     for (const source of [ui, deviceCenter, hub]) {
-        assert.doesNotMatch(source, /text-\\[(?:9|10|11)px\\]/);
+        assert.doesNotMatch(source, /text-\[(?:9|10|11)px\]/);
     }
 });
