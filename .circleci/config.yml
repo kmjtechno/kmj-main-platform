@@ -44,19 +44,19 @@ jobs:
             cd apps/platform
             composer install --no-interaction --prefer-dist --no-progress
       - run:
+          name: Full frontend check baseline (pre-Wayfinder)
+          no_output_timeout: 8m
+          command: |
+            set -euo pipefail
+            cd apps/platform
+            npm run check
+      - run:
           name: No-network local CodeBridge device-control verification
           no_output_timeout: 8m
           command: |
             set -euo pipefail
             cd apps/platform
             bash scripts/verify-codebridge-device-control-offline.sh
-      - run:
-          name: Full frontend check baseline
-          no_output_timeout: 8m
-          command: |
-            set -euo pipefail
-            cd apps/platform
-            npm run check
 
 workflows:
   review_codebridge_device_control:
