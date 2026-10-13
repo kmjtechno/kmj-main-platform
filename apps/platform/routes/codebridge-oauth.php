@@ -6,6 +6,7 @@ use App\Services\CodeBridge\OAuth\OAuthError;
 use App\Services\CodeBridge\OAuth\OAuthServer;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Str;
@@ -246,6 +247,10 @@ Route::middleware(['auth', 'verified'])->group(function () use ($noStore): void 
             'clientName' => $validated['client_name'],
             'redirectHost' => $validated['redirect_host'],
             'scopes' => $validated['scopes'],
+            'account' => [
+                'name' => (string) $request->user()->name,
+                'email' => (string) $request->user()->email,
+            ],
         ]);
     })->name('codebridge.oauth.authorize');
 
@@ -253,11 +258,37 @@ Route::middleware(['auth', 'verified'])->group(function () use ($noStore): void 
         abort_unless($server->enabled(), 404);
         $data = $request->validate([
             'request_id' => ['required', 'string', 'size:40'],
-            'decision' => ['required', 'in:approve,deny'],
+            'decision' => ['required', 'in:approve,deny,switch'],
         ]);
         $pending = $request->session()->pull('codebridge_oauth.'.$data['request_id']);
         abort_unless(is_array($pending), 400, 'This authorization request expired. Start again from your AI app.');
         /** @var array{client_id:string,client_name:string,redirect_uri:string,redirect_host:string,scopes:list<string>,state:?string,code_challenge:string,resource:string} $pending */
+
+        if ($data['decision'] === 'switch') {
+            // Rebuild only the OAuth request that the server ALREADY
+            // validated. Never accept a browser-supplied return URL or a
+            // third-party account identifier for an account switch.
+            $query = http_build_query([
+                'response_type' => 'code',
+                'client_id' => $pending['client_id'],
+                'redirect_uri' => $pending['redirect_uri'],
+                'code_challenge' => $pending['code_challenge'],
+                'code_challenge_method' => 'S256',
+                'scope' => implode(' ', $pending['scopes']),
+                'state' => $pending['state'],
+                'resource' => $pending['resource'],
+            ], '', '&', PHP_QUERY_RFC3986);
+
+            Auth::guard('web')->logout();
+            $request->session()->invalidate();
+            $request->session()->regenerateToken();
+
+            // The normal auth middleware now asks for the desired KMJ
+            // account, then returns to this validated PKCE request.
+            // The AI app's email is not an input and grants no access.
+            return redirect()->to('/oauth/authorize?'.$query);
+        }
+
         $target = $data['decision'] === 'approve'
             ? $server->approve($pending, (int) $request->user()->getAuthIdentifier())
             : $server->deny($pending);
