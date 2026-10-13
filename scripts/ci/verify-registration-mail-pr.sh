@@ -36,6 +36,12 @@ export CACHE_STORE=array SESSION_DRIVER=array QUEUE_CONNECTION=sync
 
 failed=0
 echo "MAIL_QA_SHA=$sha"
+echo '== Production Vite/Wayfinder build before Inertia HTTP tests =='
+if npm run build && test -s public/build/manifest.json; then
+  echo 'PASS: Vite build, generated manifest'
+else
+  echo 'FAIL: Vite build'; failed=$((failed+1))
+fi
 echo '== PHP syntax and Laravel mail readiness/registration tests =='
 if php -l app/Services/Mail/RegistrationMailReadiness.php \
   && php -l app/Console/Commands/RegistrationMailDoctorCommand.php \
@@ -58,8 +64,6 @@ if npm run types:check; then echo 'PASS: TypeScript'
 else echo 'FAIL: TypeScript'; failed=$((failed+1)); fi
 if npm run check; then echo 'PASS: frontend lint and Node contracts'
 else echo 'FAIL: frontend lint or Node contracts'; failed=$((failed+1)); fi
-if npm run build; then echo 'PASS: Vite build'
-else echo 'FAIL: Vite build'; failed=$((failed+1)); fi
 echo "MAIL_QA_FAILURES=$failed SHA=$sha"
 (( failed == 0 )) || exit 1
 echo 'PASS: isolated source gate; real SMTP/inbox delivery NOT verified'
