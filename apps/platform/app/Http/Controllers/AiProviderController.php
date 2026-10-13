@@ -103,8 +103,20 @@ final class AiProviderController extends Controller
     {
         $scope = $this->managing($request);
         try {
-            // OpenRouter only redirects back to https; behind the proxy the request scheme may be http.
-            $flow = $this->openRouter->begin((string) preg_replace('#\Ahttp://#', 'https://', route('ai-providers.openrouter.callback')));
+            // Never derive an OAuth callback from a caller-supplied Host header.
+            // Require CloudOS/APP_URL to declare its canonical public HTTPS origin.
+            $origin = (string) config('app.url', '');
+            $url = parse_url($origin);
+            if (! is_array($url)
+                || ($url['scheme'] ?? null) !== 'https'
+                || empty($url['host'])
+                || isset($url['user']) || isset($url['pass'])
+                || isset($url['query']) || isset($url['fragment'])
+                || (isset($url['path']) && ! in_array($url['path'], ['', '/'], true))) {
+                throw new InvalidArgumentException('canonical_https_app_url_required');
+            }
+            $callback = rtrim($origin, '/').route('ai-providers.openrouter.callback', [], false);
+            $flow = $this->openRouter->begin($callback);
         } catch (InvalidArgumentException $exception) {
             return back()->withErrors(['provider' => 'Cannot start sign-in: '.$exception->getMessage()]);
         }
@@ -142,7 +154,11 @@ final class AiProviderController extends Controller
         }
         $tested = $this->manager->test($provider);
 
-        return $index->with('status', 'OpenRouter connected ('.count($tested->models_cache ?? []).' models found). Only ":free" models are admitted.');
+        if ($tested->health !== 'ok') {
+            return $index->with('status', 'OpenRouter authorization saved, but connection verification failed ('.$tested->health.'). Inference remains blocked until a successful connection test.');
+        }
+
+        return $index->with('status', 'OpenRouter connected and verified ('.count($tested->models_cache ?? []).' models discovered). Only ":free" models are admitted.');
     }
 
     private function freeName(string $organizationId, string $base): string
