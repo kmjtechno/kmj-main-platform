@@ -20,7 +20,7 @@ const modules = [
     },
     {
         label: 'Products',
-        href: '/operator#product-manager',
+        href: '/operator/products',
         icon: Package,
         help: 'Catalog and pricing controls',
     },
@@ -73,6 +73,7 @@ export default function OperatorModuleNavigation({
 }: {
     active:
         | 'overview'
+        | 'products'
         | 'payments'
         | 'operations'
         | 'licensing'
