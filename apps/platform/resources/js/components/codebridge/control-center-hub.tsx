@@ -67,7 +67,7 @@ function Metric({
 }) {
     return (
         <div className="bg-background rounded-xl border p-4">
-            <p className="text-muted-foreground text-[10px] font-semibold uppercase">
+            <p className="text-muted-foreground text-xs font-semibold uppercase">
                 {label}
             </p>
             <p className="mt-1 text-xl font-black">{value}</p>
