@@ -9,7 +9,7 @@ die() { printf 'KMJ_FORMAT_BLOCKED=%s\n' "$1" >&2; exit 1; }
 [[ "$(id -u)" != 0 ]] || die RUN_AS_UNPRIVILEGED_PROJECT_OWNER
 [[ "$1" =~ ^[a-f0-9]{40}$ ]] || die EXACT_SHA_REQUIRED
 SHA="$1"
-for cmd in git php node npm mktemp cp stat sha256sum; do
+for cmd in git php node npm python3 mktemp cp stat sha256sum; do
   command -v "$cmd" >/dev/null || die "MISSING_$cmd"
 done
 ROOT="$(git rev-parse --show-toplevel)"
@@ -87,6 +87,30 @@ for check in frontend types phpstan; do
   fi
   truncate -s 100000 "$PATCHES/$check.log"
 done
+
+# Keep raw formatter/compiler output local. Generate a bounded, printable,
+# secret-scrubbed text summary for CodeBridge's strict UTF-8 reader.
+python3 - "$PATCHES" <<'PY'
+import pathlib
+import re
+import sys
+
+root = pathlib.Path(sys.argv[1])
+ansi = re.compile(r"\x1b(?:\[[0-?]*[ -/]*[@-~]|\][^\x07]*(?:\x07|\x1b\\))")
+redactions = [
+    re.compile(r"(?i)(authorization\s*[:=]\s*bearer\s+)\S+"),
+    re.compile(r"(?i)(api[_-]?key|token|password|secret)\s*[:=]\s*[^\s,;]+"),
+    re.compile(r"(?i)(?:gh[pousr]_|github_pat_|sk-proj-|sk-)[A-Za-z0-9_-]{12,}"),
+]
+for name in ("frontend", "types", "phpstan"):
+    src = root / (name + ".log")
+    raw = src.read_bytes()
+    value = ansi.sub("", raw.decode("utf-8", "replace"))
+    value = "".join(c if c in "\n\t" or ord(c) >= 32 else " " for c in value)
+    for i, pattern in enumerate(redactions):
+        value = pattern.sub(r"\1[REDACTED]" if i < 2 else "[REDACTED]", value)
+    (root / (name + ".txt")).write_text(value[-32000:], encoding="utf-8")
+PY
 cd "$ROOT"
 
 echo "KMJ_ADMIN_FORMAT_SHA=$SHA"
