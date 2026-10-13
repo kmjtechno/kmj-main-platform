@@ -59,6 +59,55 @@ commands:
             test -x /usr/bin/google-chrome
 
 jobs:
+  ui_db_migration_probe:
+    docker:
+      - image: cimg/php:8.4-browsers
+    resource_class: medium
+    environment:
+      APP_ENV: local
+      DB_CONNECTION: sqlite
+      DB_DATABASE: /home/circleci/project/apps/platform/database/ui.sqlite
+      SESSION_DRIVER: file
+      CACHE_STORE: array
+      MAIL_MAILER: array
+      QUEUE_CONNECTION: sync
+    steps:
+      - checkout
+      - run:
+          name: Install Laravel dependencies without frontend
+          no_output_timeout: 10m
+          command: |
+            set -euo pipefail
+            cd apps/platform
+            composer install --no-interaction --prefer-dist --no-progress
+      - run:
+          name: Verify fresh SQLite migrations
+          command: |
+            set -euo pipefail
+            cd apps/platform
+            cp .env.example .env
+            php artisan key:generate --force
+            touch database/ui.sqlite
+            php artisan migrate --force --no-ansi
+            echo 'UI_DB_MIGRATION_PASS'
+
+  ui_frontend_build_probe:
+    docker:
+      - image: cimg/php:8.4-browsers
+    resource_class: medium
+    steps:
+      - checkout
+      - run:
+          name: Verify browser-image Node and production frontend build
+          no_output_timeout: 12m
+          command: |
+            set -euo pipefail
+            cd apps/platform
+            node --version
+            npm ci --ignore-scripts --no-audit --no-fund
+            npm run build
+            echo 'UI_BROWSER_IMAGE_FRONTEND_BUILD_PASS'
+
   chrome_install_probe:
     docker:
       - image: cimg/php:8.4-browsers
@@ -364,6 +413,19 @@ jobs:
               UI_EMAIL=ui-smoke@example.test UI_PASSWORD=password node ui-smoke.mjs
 
 workflows:
+  ui_dependency_probes:
+    jobs:
+      - ui_db_migration_probe:
+          filters:
+            branches:
+              only:
+                - ci/ui-db-js-probes-20261013
+      - ui_frontend_build_probe:
+          filters:
+            branches:
+              only:
+                - ci/ui-db-js-probes-20261013
+
   ui_phase_probes:
     jobs:
       - chrome_install_probe:
