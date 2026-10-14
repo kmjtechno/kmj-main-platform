@@ -25,7 +25,7 @@ const providers: Record<
     cashfree: {
         name: 'Cashfree Payments',
         dashboard: 'https://merchant.cashfree.com/merchant/pg#api-key',
-        docs: 'https://www.cashfree.com/docs/payments/online/web/getting-started',
+        docs: 'https://www.cashfree.com/docs/payments/overview',
         dashboardLabel: 'Open Cashfree Merchant API Keys',
     },
 };
@@ -68,10 +68,11 @@ export default function PaymentGatewayOnboarding({
     const [provider, setProvider] = useState<Provider>('razorpay');
     const selected = gatewaySettings.find((item) => item.provider === provider);
     const config = providers[provider];
-    const keysSaved =
-        selected?.storage_ready === true &&
-        selected.client_id_stored &&
-        selected.client_secret_stored;
+    const keysSaved = Boolean(
+        selected?.storage_ready &&
+            selected?.client_id_stored &&
+            selected?.client_secret_stored,
+    );
     const webhookSecretSaved = selected?.webhook_secret_stored === true;
     const savedCount = Number(keysSaved) + Number(webhookSecretSaved);
 
