@@ -35,6 +35,7 @@ void test('responsive accessible navigation and keyboard search', () => {
 void test('preview route only exists in development and enforces verified login', () => {
     assert.match(routes, /app\(\)->environment\('local', 'testing'\)/);
     assert.match(routes, /Route::middleware\(\['auth', 'verified'\]\)/);
+    assert.match(routes, /abort_unless\(app\(\)->environment\('local', 'testing'\), 404\)/);
     assert.match(routes, /'transportStatus' => 'not_configured'/);
     assert.match(routes, /'messages' => \[\]/);
     assert.doesNotMatch(routes, /Route::post\('internal\/kmj-mail-preview'/);
