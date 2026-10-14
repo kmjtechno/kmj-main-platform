@@ -14,6 +14,10 @@
 **Document version:** V1.0  
 **Change rule:** Architecture or scope changes must be recorded through an ADR / issue / reviewed change before this document is superseded.
 
+> **LOCKED OWNER DECISION — 13 OCT 2026 — DEPLOYMENT TARGET:** The final Main Platform production hosting and deployment substrate is **KMJ CloudOS**; the Main Platform web service uses **FrankenPHP classic mode behind CloudOS-managed Caddy ingress (Nginx-free)**, rather than Nginx or a PHP-FPM web-serving chain. Main Platform remains the separate business/customer/commerce/entitlement/licensing authority, while CloudOS supplies isolated Linux execution, networking, storage, backups and runtime operations. The repositories remain separate and integrate through versioned contracts; CloudOS must continue already-authorized hosting during Main Platform/control-plane outages. Canonical implementation ADR: [ADR-009](docs/adr/ADR-009-main-platform-on-cloudos.md); synchronized machine-readable contract: [main-platform-cloudos-v1.json](contracts/deployment/main-platform-cloudos-v1.json). This target is **not** a claim that production migration has happened. Keep current production routing/data untouched until staged gates, rollback and owner-approved cutover pass. The superseded legacy staging-homepage mirror must not be revived.
+
+> **LOCKED HYPERSPEED SCOPE — 13 OCT 2026:** CloudOS owns performance, load-balancing and scale-out for Main Platform. Ten-million concurrent users is an aspirational capacity target, **not a verified fact**. Nginx-free Caddy/FrankenPHP; shared Redis/Valkey state; edge-safe public assets, absolutely no shared caching for auth/payment/licensing; real measured RPS, DB/queue caps, failover and finite approved infrastructure budget required. [Performance contract](contracts/performance/main-platform-hyperspeed-v1.json) and [implementation plan](docs/performance/CLOUDOS_HYPERSPEED_PLAN.md). Never claim infinite traffic or zero latency without evidence.
+
 ---
 
 # 0. OWNER SUMMARY — HINDI
