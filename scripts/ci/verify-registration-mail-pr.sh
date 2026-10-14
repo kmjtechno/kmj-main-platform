@@ -35,6 +35,13 @@ export MAIL_MAILER=array DB_CONNECTION=sqlite DB_DATABASE=':memory:'
 export CACHE_STORE=array SESSION_DRIVER=array QUEUE_CONNECTION=sync
 
 failed=0
+echo '== MAIL-00/01 shell syntax =='
+if bash -n "$tmp/tree/scripts/operations/kmj-mail-00-readiness.sh" \
+  && bash -n "$tmp/tree/scripts/operations/kmj-mail-01-bootstrap.sh"; then
+  echo 'PASS: mail install/preflight Bash parser'
+else
+  echo 'FAIL: mail script shell syntax'; failed=$((failed+1))
+fi
 echo "MAIL_QA_SHA=$sha"
 echo '== Production Vite/Wayfinder build before Inertia HTTP tests =='
 if npm run build && test -s public/build/manifest.json; then
