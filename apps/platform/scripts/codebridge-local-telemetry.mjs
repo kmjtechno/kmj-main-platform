@@ -59,10 +59,16 @@ export async function readOllama(fetcher = fetch) {
             });
             if (!response.ok || Number(response.headers.get('content-length') ?? 0) > 65536)
                 continue;
-            // Cap the parsed size even if the daemon omits Content-Length.
-            const text = await response.text();
-            if (text.length > 65536) continue;
-            const payload = JSON.parse(text);
+            // Stream-limit before allocating/parsing; Content-Length may be absent.
+            if (!response.body) continue;
+            const chunks = [];
+            let total = 0;
+            for await (const part of response.body) {
+                total += part.byteLength;
+                if (total > 65536) throw new Error('LOCAL_OLLAMA_RESPONSE_TOO_LARGE');
+                chunks.push(Buffer.from(part));
+            }
+            const payload = JSON.parse(Buffer.concat(chunks).toString('utf8'));
             if (!Array.isArray(payload.models)) continue;
             reachable = true;
             for (const item of payload.models) {
@@ -79,6 +85,9 @@ export async function readOllama(fetcher = fetch) {
 
 function privateAgent(file) {
     const config = readPrivateJson(resolve(file), 131072);
+    if (!['https://kmjtechno.com/', 'https://kmjtechno.com',
+        'https://kmj-codebridge-gateway.onrender.com'].includes(config?.gateway))
+        throw new Error('UNTRUSTED_CODEBRIDGE_GATEWAY');
     if (!config || typeof config !== 'object' || !Array.isArray(config.projects)
         || config.projects.length !== 1 || !PROJECT.test(config.projects[0]?.id)
         || !PROJECT.test(config.id) || !PROJECT.test(config.tenant)
