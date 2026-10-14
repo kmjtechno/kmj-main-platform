@@ -55,14 +55,22 @@ export default function OAuthAuthorize({
                     </p>
                 </div>
 
-                <section aria-label="KMJ account authorization" className="bg-muted/50 rounded-xl border p-4">
-                    <p className="text-sm font-semibold">Authorize this KMJ account</p>
+                <section
+                    aria-label="KMJ account authorization"
+                    className="bg-muted/50 rounded-xl border p-4"
+                >
+                    <p className="text-sm font-semibold">
+                        Authorize this KMJ account
+                    </p>
                     <p className="mt-1 text-sm">{account.name}</p>
-                    <p className="text-muted-foreground break-all text-xs">{account.email}</p>
+                    <p className="text-muted-foreground break-all text-xs">
+                        {account.email}
+                    </p>
                     <p className="text-muted-foreground mt-3 text-xs leading-5">
-                        Your ChatGPT, Claude or Gemini login may use a different email.
-                        Only this KMJ account's authorized organizations, devices and
-                        projects will be accessible. The AI app email never grants access.
+                        Your ChatGPT, Claude or Gemini login may use a different
+                        email. Only this KMJ account's authorized organizations,
+                        devices and projects will be accessible. The AI app email
+                        never grants access.
                     </p>
                     <Button
                         type="button"
