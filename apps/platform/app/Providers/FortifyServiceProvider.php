@@ -67,6 +67,8 @@ class FortifyServiceProvider extends ServiceProvider
 
         Fortify::requestPasswordResetLinkView(fn (Request $request) => Inertia::render('auth/forgot-password', [
             'status' => $request->session()->get('status'),
+            'mailDeliveryAvailable' => ! app()->isProduction()
+                || app(RegistrationMailReadiness::class)->canAttemptDelivery(),
         ]));
 
         /* @chisel-email-verification */
