@@ -309,7 +309,10 @@ export default function OperatorPaymentSettings({
             </div>
             {selected ? (
                 <div className="max-w-4xl">
-                    <GatewaySettingsCard key={selected.provider} setting={selected} />
+                    <GatewaySettingsCard
+                        key={selected.provider}
+                        setting={selected}
+                    />
                 </div>
             ) : (
                 <p role="alert" className="text-sm text-amber-300">
