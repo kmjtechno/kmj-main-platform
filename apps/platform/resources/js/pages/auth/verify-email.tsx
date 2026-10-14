@@ -30,7 +30,10 @@ export default function VerifyEmail({
                     email will not help until this is fixed.
                 </div>
             ) : status === 'verification-link-sent' ? (
-                <div role="status" className="mb-4 text-center text-sm font-medium text-green-600">
+                <div
+                    role="status"
+                    className="mb-4 text-center text-sm font-medium text-green-600"
+                >
                     Your verification email request was accepted. Delivery is
                     not yet confirmed. Check your inbox and spam folder.
                 </div>
