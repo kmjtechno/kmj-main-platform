@@ -53,13 +53,14 @@ echo '== PHP syntax and Laravel mail readiness/registration tests =='
 if php -l app/Services/Mail/RegistrationMailReadiness.php \
   && php -l app/Console/Commands/RegistrationMailDoctorCommand.php \
   && php -l app/Actions/Fortify/CreateNewUser.php \
+  && php -l tests/Feature/Auth/RegistrationTest.php \
   && php artisan test --filter='RegistrationMailReadinessTest|EmailVerificationTest|VerificationNotificationTest|RegistrationTest' --display-warnings --fail-on-warning --no-ansi; then
   echo 'PASS: PHP syntax and onboarding regression tests'
 else
   echo 'FAIL: PHP syntax or onboarding regression tests'; failed=$((failed+1))
 fi
 echo '== PHP formatting and static analysis =='
-if ./vendor/bin/pint --test app/Services/Mail/RegistrationMailReadiness.php app/Console/Commands/RegistrationMailDoctorCommand.php app/Actions/Fortify/CreateNewUser.php app/Providers/FortifyServiceProvider.php tests/Unit/RegistrationMailReadinessTest.php tests/Feature/Auth/EmailVerificationTest.php; then
+if ./vendor/bin/pint --test app/Services/Mail/RegistrationMailReadiness.php app/Console/Commands/RegistrationMailDoctorCommand.php app/Actions/Fortify/CreateNewUser.php app/Providers/FortifyServiceProvider.php tests/Unit/RegistrationMailReadinessTest.php tests/Feature/Auth/EmailVerificationTest.php tests/Feature/Auth/RegistrationTest.php; then
   echo 'PASS: Pint'
 else
   echo 'FAIL: Pint'; failed=$((failed+1))
