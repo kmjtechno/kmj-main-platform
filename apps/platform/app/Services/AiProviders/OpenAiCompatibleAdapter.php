@@ -62,16 +62,22 @@ final class OpenAiCompatibleAdapter
             return $this->result('unreachable', [], $rate, 'response_too_large');
         }
 
-        $models = [];
+        // OpenRouter may list hundreds of paid IDs before any :free model.
+        // Scan the already size-bounded response before applying the 200-ID
+        // storage cap, so late free candidates are not silently omitted.
+        $free = [];
+        $other = [];
         foreach ((array) ($response->json('data') ?? []) as $entry) {
             $id = is_array($entry) ? ($entry['id'] ?? null) : null;
             if (is_string($id) && preg_match('/\A[A-Za-z0-9._:\/-]{1,128}\z/', $id) === 1) {
-                $models[] = $id;
-            }
-            if (count($models) >= self::MAX_MODELS) {
-                break;
+                if (str_ends_with($id, ':free')) {
+                    $free[] = $id;
+                } else {
+                    $other[] = $id;
+                }
             }
         }
+        $models = array_slice(array_values(array_unique([...$free, ...$other])), 0, self::MAX_MODELS);
         sort($models);
 
         return $this->result('ok', $models, $rate, null);

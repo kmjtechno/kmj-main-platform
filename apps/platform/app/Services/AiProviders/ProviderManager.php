@@ -88,6 +88,11 @@ final class ProviderManager
                 || count($fallbacks) > 5) {
                 throw new InvalidArgumentException('model_not_discovered');
             }
+            $approved = $this->selectableModels($provider);
+            if (($default !== null && ! in_array($default, $approved, true))
+                || array_diff($fallbacks, $approved) !== []) {
+                throw new InvalidArgumentException('zero_spend_model_required');
+            }
             $provider->default_model = $default;
             $provider->fallback_models = $fallbacks;
         }
@@ -106,6 +111,26 @@ final class ProviderManager
         if ($result['health'] === 'ok') {
             $provider->models_cache = $result['models'];
             $provider->models_checked_at = now();
+
+            // Setup is read-only: model discovery makes no inference calls.
+            // Preserve an owner's eligible default, but reject stale/paid picks
+            // and seed only policy-eligible zero-spend fallback candidates.
+            $eligible = $this->selectableModels($provider);
+            $current = $provider->default_model;
+            $provider->default_model = in_array($current, $eligible, true)
+                ? $current : ($eligible[0] ?? null);
+            $kept = array_values(array_filter(
+                (array) ($provider->fallback_models ?? []),
+                fn ($model): bool => in_array($model, $eligible, true)
+                    && $model !== $provider->default_model,
+            ));
+            $provider->fallback_models = array_slice(array_values(array_unique([
+                ...$kept,
+                ...array_values(array_filter(
+                    $eligible,
+                    fn (string $model): bool => $model !== $provider->default_model,
+                )),
+            ])), 0, 5);
         }
         $provider->save();
 
@@ -148,10 +173,31 @@ final class ProviderManager
         FreePolicy::assertInferenceAllowed($tier, $model, $allowlist);
     }
 
+    /** Only configured provider-verified free IDs are suitable for UI model selection. */
+    /** @return list<string> */
+    private function selectableModels(AiProvider $provider): array
+    {
+        $tier = $this->presets()[$provider->preset]['free_tier'] ?? 'none';
+        $allowlist = array_values(array_filter(
+            (array) Config::get('ai_providers.free_models.'.$provider->preset, []),
+            'is_string',
+        ));
+
+        return array_values(array_filter(
+            (array) ($provider->models_cache ?? []),
+            static fn ($model): bool => is_string($model)
+                && FreePolicy::inferenceAllowed($tier, $model, $allowlist),
+        ));
+    }
+
     /** @return array<string, mixed> */
     public function present(AiProvider $provider): array
     {
         $tier = $this->presets()[$provider->preset]['free_tier'] ?? 'none';
+        $freeModels = $this->selectableModels($provider);
+        $healthyRecent = $provider->enabled && $provider->health === 'ok'
+            && $provider->models_checked_at !== null
+            && $provider->models_checked_at->gte(now()->subHours(self::DISCOVERY_MAX_AGE_HOURS));
 
         return [
             'id' => $provider->id,
@@ -163,9 +209,15 @@ final class ProviderManager
             'zero_spend' => true,
             'credit_balance' => 'unknown',
             'free_tier' => $tier,
-            'default_model' => $provider->default_model,
-            'fallback_models' => $provider->fallback_models ?? [],
-            'models' => $provider->models_cache ?? [],
+            'default_model' => in_array($provider->default_model, $freeModels, true) ? $provider->default_model : null,
+            'fallback_models' => array_values(array_intersect($provider->fallback_models ?? [], $freeModels)),
+            'models' => $freeModels,
+            'eligible_free_models_count' => count($freeModels),
+            'discovered_models_count' => count($provider->models_cache ?? []),
+            // Model list/health means provider discovery succeeded; no lease-bound CodeBridge
+            // runtime cloud inference integration has been verified by this manager.
+            'inference_readiness' => $healthyRecent && $freeModels !== [] ? 'eligible_for_routing' : 'blocked',
+            'codebridge_execution' => 'not_verified',
             'health' => $provider->health,
             'health_checked_at' => $provider->health_checked_at?->toIso8601String(),
             'error_code' => $provider->last_error_code,
