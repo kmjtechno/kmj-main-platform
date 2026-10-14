@@ -31,6 +31,7 @@ export type CodeBridgeDevice = {
 type Props = {
     tenantId: string;
     devices: CodeBridgeDevice[];
+    pendingProjectIds: string[];
     managedCount: number;
     deviceLimit: number | null;
     canManage: boolean;
@@ -42,6 +43,7 @@ type View = 'all' | 'with-projects' | 'needs-projects';
 export default function DeviceControlCenter({
     tenantId,
     devices,
+    pendingProjectIds,
     managedCount,
     deviceLimit,
     canManage,
@@ -49,12 +51,33 @@ export default function DeviceControlCenter({
 }: Props) {
     const [search, setSearch] = useState('');
     const [showProjectSetup, setShowProjectSetup] = useState(false);
+    const [projectSubmitting, setProjectSubmitting] = useState(false);
     const [view, setView] = useState<View>('all');
     const [details, setDetails] = useState<string | null>(null);
     const [confirmId, setConfirmId] = useState<string | null>(null);
     const [confirmation, setConfirmation] = useState('');
     const [submitting, setSubmitting] = useState(false);
     const [feedback, setFeedback] = useState('');
+
+    const omniRegistered = devices.some((device) =>
+        device.projects.some((project) => project.id === 'kmj-omnidesk'),
+    );
+    const omniRequested = pendingProjectIds.includes('kmj-omnidesk');
+
+    const requestOmniDesk = () => {
+        if (!canManage || projectSubmitting || omniRequested || omniRegistered)
+            return;
+        setProjectSubmitting(true);
+        router.post(
+            '/services/kmj-codebridge/projects',
+            { tenant_id: tenantId, project_id: 'kmj-omnidesk' },
+            {
+                preserveScroll: true,
+                onError: () => setFeedback('OmniDesk setup request was not saved. Check account authorization and retry.'),
+                onFinish: () => setProjectSubmitting(false),
+            },
+        );
+    };
 
     const visibleDevices = useMemo(() => {
         const query = search.trim().toLowerCase();
@@ -210,23 +233,38 @@ export default function DeviceControlCenter({
                             identity. It never replaces CodeBridge or CineCore.
                         </p>
                     </div>
-                    {devices.some((device) =>
-                        device.projects.some(
-                            (project) => project.id === 'kmj-omnidesk',
-                        ),
-                    ) ? (
+                    {omniRegistered ? (
                         <p role="status" className="text-xs font-bold text-emerald-600">
                             OmniDesk grant is registered. Live agent status
                             still requires a verified CodeBridge gateway check.
                         </p>
+                    ) : omniRequested ? (
+                        <p role="status" className="text-xs font-semibold text-amber-600">
+                            Setup requested · Awaiting separate P720 agent
+                            pairing. No live project grant exists yet.
+                        </p>
                     ) : (
                         <p role="status" className="text-xs font-semibold text-amber-600">
-                            OmniDesk is not registered in this account yet.
-                            Download the scoped installer, run it once on the
-                            P720, and approve the short-lived KMJ pairing.
+                            OmniDesk is not registered yet. Request onboarding,
+                            install the separate agent on P720 and approve
+                            pairing to complete the project grant.
                         </p>
                     )}
                     <div className="flex flex-wrap gap-2">
+                        <button
+                            type="button"
+                            onClick={requestOmniDesk}
+                            disabled={projectSubmitting || omniRequested || omniRegistered}
+                            className="inline-flex min-h-10 items-center gap-2 rounded-xl border px-4 text-xs font-black disabled:opacity-50"
+                        >
+                            {projectSubmitting
+                                ? 'Saving request…'
+                                : omniRequested
+                                  ? 'Setup request saved'
+                                  : omniRegistered
+                                    ? 'Project registered'
+                                    : 'Request OmniDesk project'}
+                        </button>
                         <a
                             href="/downloads/codebridge/enroll-p720-omnidesk.ps1"
                             download="KMJ-CodeBridge-Add-OmniDesk.ps1"
