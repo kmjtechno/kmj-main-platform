@@ -282,7 +282,9 @@ export default function OperatorPaymentSettings({
     gatewaySettings: OwnerGatewaySetting[];
     selectedProvider: OwnerGatewaySetting['provider'];
 }) {
-    const selected = gatewaySettings.find((setting) => setting.provider === selectedProvider);
+    const selected = gatewaySettings.find(
+        (setting) => setting.provider === selectedProvider,
+    );
 
     return (
         <section
@@ -295,7 +297,8 @@ export default function OperatorPaymentSettings({
                     Settings · Payments
                 </p>
                 <h2 className="text-2xl font-black">
-                    {selected?.name ?? 'Payment provider'} — secure test credentials
+                    {selected?.name ?? 'Payment provider'} — secure test
+                    credentials
                 </h2>
                 <p className="max-w-3xl text-sm leading-6 text-slate-300">
                     Configure test keys and onboarding notes for each provider.
@@ -306,14 +309,12 @@ export default function OperatorPaymentSettings({
             </div>
             {selected ? (
                 <div className="max-w-4xl">
-                    <GatewaySettingsCard
-                        key={selected.provider}
-                        setting={selected}
-                    />
+                    <GatewaySettingsCard key={selected.provider} setting={selected} />
                 </div>
             ) : (
                 <p role="alert" className="text-sm text-amber-300">
-                    The selected provider is not available. Please refresh the page.
+                    The selected provider is not available. Please refresh the
+                    page.
                 </p>
             )}
         </section>
