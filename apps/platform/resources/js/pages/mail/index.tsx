@@ -190,7 +190,7 @@ export default function KmjMailWorkspace({
                                     <Search className="text-muted-foreground absolute top-1/2 left-3 size-4 -translate-y-1/2" aria-hidden="true" />
                                     <span className="sr-only">Search mail</span>
                                     <input ref={searchRef} value={query} onChange={(e) => setQuery(e.target.value)}
-                                        placeholder="Search messages  /" type="search"
+                                        placeholder="Search messages  /" type="search" aria-label="Search mail"
                                         className="h-11 w-full rounded-xl border border-border bg-card pr-3 pl-10 text-sm outline-none focus-visible:ring-2 focus-visible:ring-red-500" />
                                 </label>
                                 <div role="group" aria-label="Message filter" className="flex rounded-xl border border-border bg-card p-1 text-xs">
