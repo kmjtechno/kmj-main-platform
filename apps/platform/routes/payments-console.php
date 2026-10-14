@@ -2,11 +2,14 @@
 
 use App\Models\User;
 use App\Services\Payments\OwnerPaymentGatewaySettings;
+use App\Services\Payments\PaymentGatewaySandboxProbe;
 use App\Services\Payments\PaymentGatewayReadiness;
 use App\Services\PlatformOwnerAccess;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Schema;
+use DomainException;
+use InvalidArgumentException;
 use Inertia\Inertia;
 
 Route::middleware(['auth', 'verified', 'password.confirm'])
@@ -60,6 +63,37 @@ Route::middleware(['auth', 'verified', 'password.confirm'])
             return redirect()->route('operator.payments.index')
                 ->with('success', 'Sandbox settings stored. Provider connection and checkout remain unverified.');
         })->name('payments.settings.update')->middleware('throttle:10,1');
+
+        Route::post('payments/gateways/{provider}/test-connection', function (
+            Request $request,
+            string $provider,
+            PlatformOwnerAccess $access,
+            PaymentGatewaySandboxProbe $probe,
+        ) {
+            $user = $request->user();
+            abort_unless($user instanceof User, 401);
+            $access->require($user);
+            abort_unless(in_array($provider, ['cashfree', 'razorpay'], true), 404);
+            abort_unless(Schema::hasTable('payment_gateway_settings'), 503, 'Gateway settings storage is not ready.');
+
+            $input = $request->validate([
+                'test_phone' => $provider === 'cashfree'
+                    ? ['required', 'regex:/^[6-9][0-9]{9}$/']
+                    : ['nullable', 'regex:/^[6-9][0-9]{9}$/'],
+            ]);
+
+            try {
+                // This is a provider SANDBOX INR 1 order, with NO payment or license.
+                $probe->run($user, $provider, $input['test_phone'] ?? null);
+            } catch (DomainException|InvalidArgumentException) {
+                return back()->withErrors([
+                    'sandbox_probe' => 'Sandbox connection could not be verified. Check test keys and provider access.',
+                ]);
+            }
+
+            return redirect()->route('operator.payments.index')
+                ->with('success', 'Sandbox test order created. No payment captured and no license issued.');
+        })->name('payments.sandbox.test')->middleware('throttle:3,10');
 
         Route::delete('payments/gateways/{provider}/credentials', function (
             Request $request,
