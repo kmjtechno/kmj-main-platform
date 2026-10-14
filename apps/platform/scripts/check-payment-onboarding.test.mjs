@@ -6,7 +6,10 @@ const read = (path) => readFileSync(new URL(path, import.meta.url), 'utf8');
 
 test('both payment providers have explicit, opt-in dashboard onboarding', () => {
     const guide = read('../resources/js/components/payment-gateway-onboarding.tsx');
-    assert.match(guide, /https:\/\/dashboard\.razorpay\.com\/app\/account-settings/);
+    assert.match(
+        guide,
+        /https:\/\/dashboard\.razorpay\.com\/app\/account-settings/,
+    );
     assert.match(guide, /https:\/\/merchant\.cashfree\.com\/merchant\/pg#api-key/);
     assert.match(guide, /selected\?\.storage_ready/);
     assert.match(guide, /gateway-settings-\$\{provider\}/);
@@ -68,8 +71,14 @@ test('one active merchant drives both guided steps and encrypted credential entr
     assert.match(vault, /gatewaySettings\.find\(/);
     assert.doesNotMatch(vault, /gatewaySettings\.map\(/);
     assert.match(page, /Other payment options \(planned, not integrated\)/);
-    assert.match(page, /gateway\.id === 'razorpay' \|\| gateway\.id === 'cashfree'/);
-    assert.match(page, /gateway\.id !== 'razorpay' && gateway\.id !== 'cashfree'/);
+    assert.match(
+        page,
+        /gateway\.id === 'razorpay' \|\| gateway\.id === 'cashfree'/,
+    );
+    assert.match(
+        page,
+        /gateway\.id !== 'razorpay' && gateway\.id !== 'cashfree'/,
+    );
 });
 
 test('Laravel route bootstrap avoids no-op global exception imports', () => {
