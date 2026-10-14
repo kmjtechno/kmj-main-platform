@@ -72,7 +72,9 @@ export default function PaymentGatewayOnboarding({
     provider: Provider;
     onProviderChange: (provider: Provider) => void;
 }) {
-    const probe = useForm({ test_phone: '' });
+    const probe = useForm<{ test_phone: string; sandbox_probe?: string }>({
+        test_phone: '',
+    });
     const testConnection = (event: FormEvent<HTMLFormElement>) => {
         event.preventDefault();
         if (!keysSaved || probe.processing) return;
