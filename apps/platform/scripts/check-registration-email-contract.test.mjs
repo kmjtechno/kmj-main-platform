@@ -10,6 +10,7 @@ const views = read('app/Providers/FortifyServiceProvider.php');
 const verifyUi = read('resources/js/pages/auth/verify-email.tsx');
 const registerUi = read('resources/js/pages/auth/register.tsx');
 const doctor = read('app/Console/Commands/RegistrationMailDoctorCommand.php');
+const user = read('app/Models/User.php');
 
 void test('production registration is blocked before creating an unverifiable account', () => {
     assert.match(registration, /app\(\)->isProduction\(\)/);
@@ -39,4 +40,12 @@ void test('mail doctor never prints credentials or verification URLs', () => {
     assert.match(doctor, /kmj:mail:doctor/);
     assert.match(doctor, /can_attempt_external_delivery/);
     assert.doesNotMatch(doctor, /MAIL_PASSWORD|MAIL_USERNAME|verification\.verify/);
+});
+
+void test('Fortify resend endpoint does not claim success for production log transport', () => {
+    assert.match(user, /sendEmailVerificationNotification\(\)/);
+    assert.match(user, /app\(\)->isProduction\(\)/);
+    assert.match(user, /canAttemptDelivery\(\)/);
+    assert.match(user, /ValidationException::withMessages/);
+    assert.match(verifyUi, /errors\.email/);
 });
