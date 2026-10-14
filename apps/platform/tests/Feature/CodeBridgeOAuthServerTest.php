@@ -265,7 +265,7 @@ final class CodeBridgeOAuthServerTest extends TestCase
         $this->assertGuest();
         $this->assertDatabaseCount('codebridge_oauth_codes', 0);
         $location = (string) $switched->headers->get('Location');
-        $this->assertStringStartsWith('/oauth/authorize?', $location);
+        $this->assertSame('/oauth/authorize', parse_url($location, PHP_URL_PATH));
         parse_str((string) parse_url($location, PHP_URL_QUERY), $restored);
         $this->assertSame($clientId, $restored['client_id']);
         $this->assertSame(self::REDIRECT, $restored['redirect_uri']);
