@@ -111,6 +111,26 @@ final class ProviderManager
         if ($result['health'] === 'ok') {
             $provider->models_cache = $result['models'];
             $provider->models_checked_at = now();
+
+            // Setup is read-only: model discovery makes no inference calls.
+            // Preserve an owner's eligible default, but reject stale/paid picks
+            // and seed only policy-eligible zero-spend fallback candidates.
+            $eligible = $this->selectableModels($provider);
+            $current = $provider->default_model;
+            $provider->default_model = in_array($current, $eligible, true)
+                ? $current : ($eligible[0] ?? null);
+            $kept = array_values(array_filter(
+                (array) ($provider->fallback_models ?? []),
+                fn ($model): bool => in_array($model, $eligible, true)
+                    && $model !== $provider->default_model,
+            ));
+            $provider->fallback_models = array_slice(array_values(array_unique([
+                ...$kept,
+                ...array_values(array_filter(
+                    $eligible,
+                    fn (string $model): bool => $model !== $provider->default_model,
+                )),
+            ])), 0, 5);
         }
         $provider->save();
 
