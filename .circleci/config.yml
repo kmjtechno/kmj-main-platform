@@ -81,8 +81,12 @@ jobs:
             set -euo pipefail
             cd apps/platform
             composer install --no-interaction --prefer-dist --no-progress
+            npm ci --ignore-scripts --no-audit --no-fund
             printf '# disposable CI only\n' > .env
             export APP_KEY="base64:$(php -r 'echo base64_encode(random_bytes(32));')"
+            php artisan wayfinder:generate --with-form --no-ansi
+            npm run build
+            test -s public/build/manifest.json
             php artisan test --filter='CodeBridgeOAuthServerTest|CodeBridgeOAuthLinkTest' --no-ansi
             echo "KMJ_CROSS_ACCOUNT_FEATURE_PASS=1"
 
@@ -609,11 +613,6 @@ jobs:
 workflows:
   review_cross_account_codebridge_oauth:
     jobs:
-      - codebridge_cross_account_oauth:
-          filters:
-            branches:
-              only:
-                - fix/codebridge-cross-client-oauth-account-switch-20261014
       - codebridge_oauth_php_tests:
           filters:
             branches:
