@@ -14,9 +14,9 @@ export default function ForgotPassword({ status, mailDeliveryAvailable }: { stat
         <>
             <Head title="Forgot password" />
 
-            {status && (
+            {status && mailDeliveryAvailable && (
                 <div className="mb-4 text-center text-sm font-medium text-green-600">
-                    {status}
+                    Request accepted for processing. Inbox delivery is not confirmed.
                 </div>
             )}
 
