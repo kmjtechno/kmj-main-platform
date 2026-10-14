@@ -77,7 +77,10 @@ function GatewaySettingsCard({ setting }: { setting: OwnerGatewaySetting }) {
     };
 
     return (
-        <article className="rounded-2xl border border-white/10 bg-[#10141b] p-5 sm:p-6">
+        <article
+            id={`gateway-settings-${setting.provider}`}
+            className="scroll-mt-6 rounded-2xl border border-white/10 bg-[#10141b] p-5 sm:p-6"
+        >
             <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
                     <p className="text-xs font-bold tracking-widest text-slate-400 uppercase">
