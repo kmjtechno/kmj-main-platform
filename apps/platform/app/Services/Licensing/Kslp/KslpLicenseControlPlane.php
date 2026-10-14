@@ -257,6 +257,12 @@ final class KslpLicenseControlPlane
     {
         $now ??= now();
         $l = $this->license($id);
+        // This issuer deliberately signs CloudOS-audience leases only.
+        // Other products (including OmniDesk) require their own versioned
+        // signer and audience; never sign them with this CloudOS envelope.
+        if (($l['product'] ?? null) !== 'KMJ_CLOUDOS') {
+            throw new DomainException('KSLP_WRONG_PRODUCT');
+        }
         $state = $this->state($id, $now);
         if (in_array($state, ['REVOKED', 'RESTRICTED'], true)) {
             throw new DomainException('KSLP_LICENSE_NOT_LEASABLE');
