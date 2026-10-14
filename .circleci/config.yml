@@ -610,7 +610,77 @@ jobs:
             php artisan migrate:rollback --step=1 --force --no-ansi
             echo "KMJ_ADMIN_RC_SQLITE_MIGRATION_SMOKE_PASS=1"
 
+  super_admin_command_center_ui:
+    docker:
+      - image: cimg/php:8.4-node
+    resource_class: small
+    environment:
+      APP_ENV: testing
+      DB_CONNECTION: sqlite
+      DB_DATABASE: ":memory:"
+    steps:
+      - checkout
+      - run:
+          name: Pinned Super Admin frontend source and guarded navigation
+          no_output_timeout: 12m
+          command: |
+            set -euo pipefail
+            test "$(git rev-parse HEAD)" = "$CIRCLE_SHA1"
+            cd apps/platform
+            composer install --no-interaction --prefer-dist --no-progress
+            npm ci --ignore-scripts --no-audit --no-fund
+            npm run check
+            export APP_KEY="base64:$(php -r 'echo base64_encode(random_bytes(32));')"
+            php artisan wayfinder:generate --with-form --no-ansi
+            npm run types:check
+            npm run build
+            test -s public/build/manifest.json
+            echo "SUPER_ADMIN_COMMAND_CENTER_UI_PASS=1"
+
+  super_admin_command_center_http:
+    docker:
+      - image: cimg/php:8.4-node
+    resource_class: small
+    environment:
+      APP_ENV: testing
+      DB_CONNECTION: sqlite
+      DB_DATABASE: ":memory:"
+      SESSION_DRIVER: array
+      CACHE_STORE: array
+      QUEUE_CONNECTION: sync
+      MAIL_MAILER: array
+    steps:
+      - checkout
+      - run:
+          name: Owner authorization and dashboard feature tests
+          no_output_timeout: 12m
+          command: |
+            set -euo pipefail
+            test "$(git rev-parse HEAD)" = "$CIRCLE_SHA1"
+            cd apps/platform
+            composer install --no-interaction --prefer-dist --no-progress
+            printf '# isolated CI only\n' > .env
+            export APP_KEY="base64:$(php -r 'echo base64_encode(random_bytes(32));')"
+            npm ci --ignore-scripts --no-audit --no-fund
+            php artisan wayfinder:generate --with-form --no-ansi
+            npm run build
+            php artisan test --filter='OwnerDashboardCatalogTest|PlatformOwnerConsoleTest|OwnerProductManagementWorkspaceTest|OwnerLicensingCenterHttpTest' --no-ansi
+            echo "SUPER_ADMIN_COMMAND_CENTER_HTTP_PASS=1"
+
 workflows:
+  review_super_admin_command_center:
+    jobs:
+      - super_admin_command_center_ui:
+          filters:
+            branches:
+              only:
+                - feat/super-admin-command-center-20261014
+      - super_admin_command_center_http:
+          filters:
+            branches:
+              only:
+                - feat/super-admin-command-center-20261014
+
   review_cross_account_codebridge_oauth:
     jobs:
       - codebridge_oauth_php_tests:

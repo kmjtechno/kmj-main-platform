@@ -46,8 +46,8 @@ void test('verified owner product authority is exposed only through the compact 
         ),
     );
     assert.ok(dashboard.includes('{ownerProducts !== null && ('));
-    assert.ok(dashboard.includes('Platform owner workspace'));
-    assert.ok(dashboard.includes('href="/operator/products"'));
+    assert.ok(dashboard.includes('Super Admin Control Center'));
+    assert.ok(dashboard.includes('href="/operator"'));
     assert.ok(dashboard.includes('href="/operator/kslp"'));
     assert.ok(dashboard.includes('{ownerProducts === null && ('));
     assert.ok(!dashboard.includes('href="/operator#product-manager"'));
