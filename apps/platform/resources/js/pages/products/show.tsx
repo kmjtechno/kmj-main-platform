@@ -317,7 +317,17 @@ export default function ProductShow({ product }: { product: Product }) {
                                 )}
 
                             <div className="mt-9 flex flex-col gap-3 sm:flex-row">
-                                {Demo ? (
+                                {product.slug === 'kmj-codebridge' ? (
+                                    <a
+                                        href="https://github.com/kmjtechno/kmj-codebridge/blob/main/docs/AI-CLIENT-QUICKSTART.md"
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="inline-flex h-12 items-center justify-center gap-2 rounded-xl bg-white px-6 text-sm font-black text-[#07090c] transition hover:-translate-y-0.5 hover:bg-white/90"
+                                    >
+                                        Connect your AI — free developer preview
+                                        <ArrowRight className="h-4 w-4" />
+                                    </a>
+                                ) : Demo ? (
                                     <a
                                         href="#demo"
                                         className="inline-flex h-12 items-center justify-center gap-2 rounded-xl bg-white px-6 text-sm font-black text-[#07090c] transition hover:-translate-y-0.5 hover:bg-white/90"
