@@ -1782,6 +1782,18 @@ Explicit owner approval is still required.
 
 ---
 
+## 23.8 — OWNER ROADMAP EXTENSION: KMJ MAIL (13 OCTOBER 2026)
+
+The owner separately reaffirmed KMJ's **own self-hosted, premium, AI-powered email and communications product**, intended to exceed Gmail in explicitly measured KMJ enterprise workflows. This is **not** an assertion of Gmail-like global deliverability, nor a mandate to use external SMTP-as-a-service. Preserve the Main Platform business authority and keep actual mailbox/mail transport infrastructure in an independent KMJ Mail data plane hosted via authorized KMJ CloudOS resources. The existing `architecture/modules.yaml` boundary `provider_boundaries.email: adapters_only` remains in force.
+
+**P0 urgent incident:** Main Platform production registration verification currently uses Laravel `MAIL_MAILER=log`; external messages are not delivered. Require evidence-based network/hosting SMTP feasibility, then self-managed transactional SMTP delivery and actual recipient/inbox/link acceptance **before** claiming that incident closed (track #391, reviewed hotfix candidate #390). This priority does not require immediate full mailbox implementation.
+
+**Later feature milestones:** self-owned mailboxes/aliases, staff/shared inboxes, premium web/mobile inbox, advanced search/calendar/contact integrations, enterprise administration, consent-governed AI priority/summary/draft/translation and comprehensive spam/abuse, DNS authentication, audit, backup and recovery. Mobile/AI/product rollout comes **after** reliable transactional sending and security qualification.
+
+**Canonical extension:** [KMJ Mail Self-Hosted Master Roadmap (2026-10-13)](docs/product/KMJ_MAIL_SELF_HOSTED_MASTER_ROADMAP_2026-10-13.md). Track scope and acceptance in issue #393. This is a reviewed, incremental amendment to the dated V1.0 blueprint; it does not silently mark any existing Phase 0–7 milestone complete or authorize DNS, mail infrastructure, production credentials, payment or data migration.
+
+---
+
 # 24. IMMEDIATE MASTER BACKLOG — ORDER OF EXECUTION
 
 The next work should follow this order unless a verified blocker requires a change.
