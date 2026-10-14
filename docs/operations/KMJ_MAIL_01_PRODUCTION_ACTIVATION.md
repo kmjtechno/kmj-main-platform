@@ -37,3 +37,16 @@ dig +short TXT _dmarc.kmjtechno.com
 - The MAIL-01 installer is a **minimal secure sender foundation**, not a production-grade bounce/complaint registry or a complete Gmail-class mailbox implementation. These remain required before incident #391 may be closed at scale.
 
 **Exit criterion:** provider policy accepted, precise egress IPv4 and matching DNS/PTR, correct DKIM SPF DMARC, controlled MTA, safe queue/error handling, real authorized inbox delivery and signed verification, exact-head CI green, release backup/restore and rollback verified. Until then: P0 NOT DONE.
+
+
+## One-click operator procedure (no manual SSH sequence)
+
+**Preferred:** use `scripts/operations/kmj-mail-p0-oneclick.sh` at its exact reviewed GitHub SHA. It fetches the branch **as the CodeBridge repo owner**, verifies an immutable expected SHA, reads production runtime as the non-root app owner, prints secret-free DNS/SMTP/queue diagnostics, and runs isolated source QA from the same immutable SHA when local vendor/node dependencies are already available. It never edits live Laravel configuration, verifies an inbox, or falsely treats main-branch QA as PR-head CI.
+
+If the server already contains a root-owned, mode-0600 Cloudflare token at `/etc/kmj-mail/cloudflare-dns.token` with **only** Zone:Read and DNS:Edit for the single `kmjtechno.com` zone, invoking the launcher with `KMJ_MAIL_DNS_WRITE_APPROVED=yes` can publish **only** the prepared *public* DKIM selector: no MX, SPF, A, PTR, Cloudflare AI token, private key, or unrelated zone is touched. A conflicting selector blocks instead of overwriting. Publisher source: `scripts/operations/kmj-mail-cloudflare-dkim.py`; offline tests: `scripts/operations/test-kmj-mail-cloudflare-dkim.py`.
+
+Without that token/permission the workflow gives `NO_SCOPED_TOKEN_OR_WRITE_APPROVAL` and the user must connect the single-domain DNS authorization once in the Cloudflare dashboard. The publisher does not create API tokens or request broader account access. Hosting SMTP consent and PTR control cannot be obtained by GitHub or CodeBridge project-scoped commands and require the actual provider.
+
+**Never** put a Cloudflare API token in GitHub, Laravel .env, a ChatGPT message, or terminal command arguments. Do not reuse the platform's Cloudflare AI model token as DNS permission. Do not pass operator attestations before written provider authorization and A/PTR/SPF/DKIM verification.
+
+Local QA result is not public mail delivery. Only run the installer after written hosting permission plus independent external DNS/PTR verification. PR #423 must have green exact-head CI and authorized end-to-end customer acceptance before deployment.
