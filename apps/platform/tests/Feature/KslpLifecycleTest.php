@@ -108,16 +108,16 @@ final class KslpLifecycleTest extends TestCase
         {
             public function kid(): string
             {
-                throw new \\RuntimeException('KSLP signer must not be consulted for another product');
+                throw new \RuntimeException('KSLP signer must not be consulted for another product');
             }
 
             public function sign(string $message): string
             {
-                throw new \\RuntimeException('KSLP signer must not sign another product');
+                throw new \RuntimeException('KSLP signer must not sign another product');
             }
         };
 
-        $this->expectException(\\DomainException::class);
+        $this->expectException(\DomainException::class);
         $this->expectExceptionMessage('KSLP_WRONG_PRODUCT');
         $control->lease($license['id'], $activation['id'], $signer);
     }
