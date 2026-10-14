@@ -9,6 +9,7 @@ const dashboard = read('resources/js/pages/dashboard.tsx');
 const sidebar = read('resources/js/components/app-sidebar.tsx');
 const sandbox = read('resources/js/pages/sandbox-licenses.tsx');
 const admin = read('resources/js/pages/operator.tsx');
+const adminOverview = read('resources/js/components/operator-control-overview.tsx');
 const config = read('config/services.php');
 const keys = read('app/Services/Licensing/Kslp/KslpDeveloperKeys.php');
 const activation = read('routes/developer-activation-api.php');
@@ -30,8 +31,10 @@ void test('Admin inventory reports missing registrations, not fake entitlements'
     assert.ok(
         web.includes("'missingCanonicalSlugs' => $missingCanonicalSlugs"),
     );
-    assert.ok(admin.includes('missingCanonicalSlugs.map'));
-    assert.ok(admin.includes('Product & licensing matrix'));
+    assert.ok(admin.includes('<OperatorControlOverview'));
+    assert.ok(adminOverview.includes('missingCanonicalSlugs.map'));
+    assert.ok(adminOverview.includes('Entries missing from the database do not grant'));
+    assert.ok(adminOverview.includes('customer access'));
 });
 
 void test('Owner, developer and sandbox navigation all remain visible', () => {
