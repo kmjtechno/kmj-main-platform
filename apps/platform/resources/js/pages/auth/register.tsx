@@ -14,7 +14,10 @@ type Props = {
     registrationAvailable: boolean;
 };
 
-export default function Register({ passwordRules, registrationAvailable }: Props) {
+export default function Register({
+    passwordRules,
+    registrationAvailable,
+}: Props) {
     return (
         <>
             <Head title="Register" />
@@ -28,7 +31,8 @@ export default function Register({ passwordRules, registrationAvailable }: Props
                     <>
                         {!registrationAvailable && (
                             <p role="alert" className="rounded-lg border p-3 text-sm">
-                                Registration is temporarily unavailable while verification email delivery is being restored.
+                                Registration is temporarily unavailable while
+                                verification email delivery is being restored.
                             </p>
                         )}
                         <div className="grid gap-6">
