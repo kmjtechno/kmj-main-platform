@@ -65,6 +65,8 @@ final class PaymentGatewayAdminHttpTest extends TestCase
                 ->has('paymentReadiness.providers', 5)
                 ->where('paymentReadiness.providers.1.id', 'cashfree')
                 ->where('paymentReadiness.providers.1.sandbox_credentials_present', true)
+                ->where('paymentReadiness.providers.1.webhook_secret_stored', true)
+                ->where('paymentReadiness.providers.1.webhook_verification_configured', false)
                 ->where('paymentReadiness.providers.1.live_transaction_verified', false))
             ->assertDontSee('TOP-SECRET-CASHFREE-123')
             ->assertDontSee('TEST-CASHFREE-CLIENT-ID');
