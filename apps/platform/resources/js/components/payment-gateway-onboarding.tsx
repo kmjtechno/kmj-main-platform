@@ -1,5 +1,5 @@
 import { useForm } from '@inertiajs/react';
-import { useState, type FormEvent } from 'react';
+import type { FormEvent } from 'react';
 import {
     ArrowRight,
     CheckCircle2,
@@ -63,10 +63,13 @@ function SetupStage({
 
 export default function PaymentGatewayOnboarding({
     gatewaySettings,
+    provider,
+    onProviderChange,
 }: {
     gatewaySettings: OwnerGatewaySetting[];
+    provider: Provider;
+    onProviderChange: (provider: Provider) => void;
 }) {
-    const [provider, setProvider] = useState<Provider>('razorpay');
     const probe = useForm({ test_phone: '' });
     const testConnection = (event: FormEvent<HTMLFormElement>) => {
         event.preventDefault();
@@ -95,10 +98,10 @@ export default function PaymentGatewayOnboarding({
             <div className="flex flex-wrap items-start justify-between gap-4">
                 <div>
                     <p className="text-xs font-black tracking-widest text-red-400 uppercase">
-                        One place to configure
+                        Razorpay + Cashfree · Secure owner setup
                     </p>
                     <h2 className="mt-2 text-2xl font-black text-white">
-                        Payment gateway setup assistant
+                        Connect payments in one place
                     </h2>
                     <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-300">
                         Start in the merchant dashboard, save TEST credentials
@@ -123,7 +126,7 @@ export default function PaymentGatewayOnboarding({
                         type="button"
                         aria-pressed={provider === id}
                         onClick={() => {
-                            setProvider(id);
+                            onProviderChange(id);
                             probe.clearErrors();
                             probe.reset();
                         }}
@@ -143,7 +146,7 @@ export default function PaymentGatewayOnboarding({
                     {config.name} readiness
                 </span>
                 <span className="rounded-full border border-white/10 px-3 py-1 text-xs text-slate-300">
-                    {savedCount}/2 configuration checks saved
+                    {savedCount}/2 credential items stored (not payment verification)
                 </span>
                 <span className="text-xs text-slate-400">
                     Storage is {selected?.storage_ready ? 'ready' : 'not yet migrated'}
