@@ -25,7 +25,7 @@ void test('no client-side send or unsafe HTML rendering', () => {
 void test('responsive accessible navigation and keyboard search', () => {
     assert.match(shell, /aria-label="Mail folders"/);
     assert.match(shell, /aria-label="Search mail"/);
-    assert.match(shell, /aria-modal="true"/);
+    assert.match(shell, /<Dialog open=\{compose\}/);
     assert.match(shell, /aria-current=/);
     assert.match(shell, /event\.key === '\/'/);
     assert.match(shell, /event\.key === 'Escape'/);
