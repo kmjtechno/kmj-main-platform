@@ -45,15 +45,25 @@ void test('owner-only entry is above customer services, never public listing', (
     assert.ok(dashboard.includes('{ownerProducts !== null && ('));
     assert.ok(dashboard.includes('href="/operator"'));
     assert.ok(dashboard.includes('{ownerProducts === null && ('));
-    const guarded = ownerRules.indexOf("$isPlatformOwner = app(PlatformOwnerAccess::class)->allows($user);");
-    const ownerProducts = ownerRules.indexOf('if ($isPlatformOwner) {', guarded);
-    const exposed = ownerRules.indexOf("'ownerProducts' => $ownerProducts", ownerProducts);
-    assert.ok(guarded > 0 && ownerProducts > guarded && exposed > ownerProducts);
+    const guarded = ownerRules.indexOf(
+        '$isPlatformOwner = app(PlatformOwnerAccess::class)->allows($user);',
+    );
+    const ownerProducts = ownerRules.indexOf(
+        'if ($isPlatformOwner) {',
+        guarded,
+    );
+    const exposed = ownerRules.indexOf(
+        "'ownerProducts' => $ownerProducts",
+        ownerProducts,
+    );
+    assert.ok(
+        guarded > 0 && ownerProducts > guarded && exposed > ownerProducts,
+    );
 });
 
 void test('overview retains governed order confirmation and explicit fulfillment', () => {
     assert.ok(operator.includes('ManualPaymentConfirmation'));
-    assert.ok(operator.includes("order.fulfillment_state ==="));
+    assert.ok(operator.includes('order.fulfillment_state ==='));
     assert.ok(operator.includes('href="/operator/products"'));
     assert.ok(operator.includes('id="commercial-orders"'));
     assert.ok(modules.includes('Requires owner review'));
