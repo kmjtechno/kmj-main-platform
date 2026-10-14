@@ -1,6 +1,6 @@
 # KMJ TECHNO — Razorpay + Cashfree Owner Setup
 
-**Status:** source implementation in PR; production not activated until an independently verified release. The setup panel does not process live payments.
+**Status:** source implementation in PR; production not activated until an independently verified release. The setup panel can create explicit sandbox-only test orders once owner test credentials are configured. It does not process live payments.
 
 ## Merchant onboarding — two independent providers
 
@@ -10,9 +10,10 @@ The protected `/operator/payments` page offers a short guided flow for Razorpay 
 
 1. Open https://dashboard.razorpay.com/app/account-settings
 2. Turn on **Test Mode** (Razorpay separates live and test keys); under **Website and app settings** open **API keys** and generate Test Mode API Key ID and Secret.
-3. In KMJ `/operator/payments`, select Razorpay → **Save keys in KMJ**, fill the write-only Test Key ID and Test Secret, and save. Current server enforces `rzp_test_` IDs; it rejects live keys.
-4. Razorpay's **Webhooks** dashboard provides secret setup for signed callbacks. Do not register an invented KMJ webhook URL: the production receiver has not been released/verified yet. Once a dedicated HTTPS endpoint exists and has passed safe sandbox tests, configure its URL and an independently generated webhook secret in the provider dashboard and save the matching secret in KMJ.
-5. Account activation / website verification / international card acceptance are *separate* provider approvals. Merchant owner reports approval; no independent API confirmation has been obtained.
+3. In KMJ `/operator/payments`, select Razorpay → **Save keys in KMJ**, fill the write-only Test Key ID and Test Secret, and save. The server enforces `rzp_test_` IDs; it rejects live keys.
+4. Click **Test Connection** to create a ₹1 Razorpay **sandbox order**, without capturing any money. A success verifies only that the provider accepted the sandbox request; it does not authorize checkout or licensing.
+5. Razorpay's **Webhooks** dashboard provides secret setup for signed callbacks. Do not register an invented KMJ webhook URL: the production receiver has not been released/verified yet. Once a dedicated HTTPS endpoint exists and has passed safe sandbox tests, configure its URL and an independently generated webhook secret in the provider dashboard and save the matching secret in KMJ.
+6. Account activation / website verification / international card acceptance are *separate* provider approvals. Merchant owner reports approval; no independent API confirmation has been obtained.
 
 Razorpay official references:
 - https://razorpay.com/docs/payments/dashboard/account-settings/api-keys/
@@ -23,8 +24,9 @@ Razorpay official references:
 
 1. Open https://merchant.cashfree.com/merchant/pg#api-key and select **Test / Sandbox** API credentials in the authenticated merchant portal.
 2. In KMJ `/operator/payments`, select Cashfree → **Save keys in KMJ**. The credentials are encrypted at rest and never echoed back to the browser.
-3. A saved Cashfree secret is not a validated webhook event receiver. Keep live charging disabled until signed callbacks and payment capture are independently verified.
-4. Treat cross-border payments, card methods, recurring subscriptions, settlement proofs, and currency support as separate merchant-enabled capabilities.
+3. Enter **your authorized sandbox test phone** and click **Test Connection**. The server creates a ₹1 sandbox-only order (no payment capture); use only a test phone you control. It may receive test-provider notifications.
+4. A saved Cashfree secret is not a validated webhook event receiver. Keep live charging disabled until signed callbacks and payment capture are independently verified.
+5. Treat cross-border payments, card methods, recurring subscriptions, settlement proofs, and currency support as separate merchant-enabled capabilities.
 
 Cashfree references:
 - https://www.cashfree.com/docs/payments/overview
