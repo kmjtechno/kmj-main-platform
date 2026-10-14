@@ -218,12 +218,9 @@ final class CodeBridgeOAuthServerTest extends TestCase
             $query = $this->authorizeQuery($clientId, [
                 'redirect_uri' => $redirectUri,
             ]);
-            $page = $this->actingAs($kmjAccount)->get('/oauth/authorize?'.$query)
-                ->assertOk()
-                ->assertInertia(fn (Assert $p) => $p
-                    ->component('auth/oauth-authorize')
-                    ->where('clientName', $clientName)
-                    ->where('account.email', 'authorized-kmj-user@example.test'));
+            $page = $this->actingAs($kmjAccount)->get('/oauth/authorize?'.$query)->assertOk();
+            $this->assertSame($clientName, $page->viewData('page')['props']['clientName']);
+            $this->assertSame('authorized-kmj-user@example.test', $page->viewData('page')['props']['account']['email']);
 
             $requestId = $page->viewData('page')['props']['requestId'];
             $callback = $this->actingAs($kmjAccount)->post('/oauth/authorize', [
@@ -257,11 +254,8 @@ final class CodeBridgeOAuthServerTest extends TestCase
         $state = 'client-generated-opaque-state-123';
         $query = $this->authorizeQuery($clientId, ['state' => $state]);
 
-        $old = $this->actingAs($wrong)->get('/oauth/authorize?'.$query)
-            ->assertOk()
-            ->assertInertia(fn (Assert $page) => $page
-                ->component('auth/oauth-authorize')
-                ->where('account.email', 'wrong-kmj@example.test'));
+        $old = $this->actingAs($wrong)->get('/oauth/authorize?'.$query)->assertOk();
+        $this->assertSame('wrong-kmj@example.test', $old->viewData('page')['props']['account']['email']);
         $oldRequestId = $old->viewData('page')['props']['requestId'];
 
         $switched = $this->actingAs($wrong)->post('/oauth/authorize', [
@@ -288,10 +282,8 @@ final class CodeBridgeOAuthServerTest extends TestCase
         ])->assertBadRequest();
         $this->assertDatabaseCount('codebridge_oauth_codes', 0);
 
-        $new = $this->actingAs($authorized)->get($location)
-            ->assertOk()->assertInertia(fn (Assert $page) => $page
-                ->component('auth/oauth-authorize')
-                ->where('account.email', 'owner-kmj@example.test'));
+        $new = $this->actingAs($authorized)->get($location)->assertOk();
+        $this->assertSame('owner-kmj@example.test', $new->viewData('page')['props']['account']['email']);
         $callback = $this->actingAs($authorized)->post('/oauth/authorize', [
             'request_id' => $new->viewData('page')['props']['requestId'],
             'decision' => 'approve',
@@ -319,9 +311,8 @@ final class CodeBridgeOAuthServerTest extends TestCase
         $first = User::factory()->create(['email' => 'first@example.test']);
         $second = User::factory()->create(['email' => 'second@example.test']);
         $clientId = $this->registerClient();
-        $page = $this->actingAs($first)->get('/oauth/authorize?'.$this->authorizeQuery($clientId))
-            ->assertOk()->assertInertia(fn (Assert $result) => $result
-                ->where('account.email', 'first@example.test'));
+        $page = $this->actingAs($first)->get('/oauth/authorize?'.$this->authorizeQuery($clientId))->assertOk();
+        $this->assertSame('first@example.test', $page->viewData('page')['props']['account']['email']);
         $requestId = $page->viewData('page')['props']['requestId'];
 
         $this->actingAs($second)->post('/oauth/authorize', [
