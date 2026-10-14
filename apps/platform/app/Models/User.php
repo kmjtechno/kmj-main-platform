@@ -4,15 +4,15 @@ namespace App\Models;
 
 use App\Services\Mail\RegistrationMailReadiness;
 use Database\Factories\UserFactory;
+use Illuminate\Auth\Notifications\ResetPassword;
+use Illuminate\Auth\Notifications\VerifyEmail;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Auth\Notifications\VerifyEmail;
 use Illuminate\Foundation\Auth\User as Authenticatable;
-use Illuminate\Validation\ValidationException;
-
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Validation\ValidationException;
 use Illuminate\Support\Carbon;
 use Laravel\Fortify\Contracts\PasskeyUser;
 use Laravel\Fortify\PasskeyAuthenticatable;
@@ -39,11 +39,6 @@ class User extends Authenticatable implements MustVerifyEmail, PasskeyUser
     use HasFactory, Notifiable, PasskeyAuthenticatable, TwoFactorAuthenticatable;
 
     /**
-     * Get the attributes that should be cast.
-     *
-     * @return array<string, string>
-     */
-    /**
      * A queued/logged Laravel notification is NOT evidence of mail delivery.
      * Prevent the Fortify resend endpoint from returning false success while
      * production transport is log-only, array-only or has an unsafe fallback.
@@ -59,6 +54,25 @@ class User extends Authenticatable implements MustVerifyEmail, PasskeyUser
         $this->notify(new VerifyEmail);
     }
 
+    /**
+     * Password resets must not be acknowledged by a log-only mailer.
+     */
+    public function sendPasswordResetNotification($token): void
+    {
+        if (app()->isProduction() && ! app(RegistrationMailReadiness::class)->canAttemptDelivery()) {
+            throw ValidationException::withMessages([
+                'email' => 'Password reset email delivery is temporarily unavailable. Please try again later.',
+            ]);
+        }
+
+        $this->notify(new ResetPassword($token));
+    }
+
+    /**
+     * Get the attributes that should be cast.
+     *
+     * @return array<string, string>
+     */
     protected function casts(): array
     {
         return [
