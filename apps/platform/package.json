@@ -7,7 +7,7 @@
         "build": "vp build",
         "build:ssr": "vp build && vp build --ssr",
         "dev": "vp dev",
-        "check": "vp check && node --test scripts/check-public-navigation.test.mjs scripts/check-homepage-portfolio.test.mjs scripts/check-owner-dashboard.test.mjs scripts/check-codebridge-safe-onboarding.test.mjs scripts/check-codebridge-dashboard-truth.test.mjs scripts/check-brand-assets.test.mjs scripts/check-auth-focus-order.test.mjs scripts/check-licensing-integration.test.mjs scripts/check-no-auto-reload.test.mjs && node scripts/check-public-layout.mjs",
+        "check": "vp check && node --test scripts/check-public-navigation.test.mjs scripts/check-homepage-portfolio.test.mjs scripts/check-owner-dashboard.test.mjs scripts/check-codebridge-safe-onboarding.test.mjs scripts/check-codebridge-dashboard-truth.test.mjs scripts/check-payment-onboarding.test.mjs scripts/check-brand-assets.test.mjs scripts/check-auth-focus-order.test.mjs scripts/check-licensing-integration.test.mjs scripts/check-no-auto-reload.test.mjs && node scripts/check-public-layout.mjs",
         "check:fix": "vp check --fix",
         "types:check": "tsc --noEmit"
     },
