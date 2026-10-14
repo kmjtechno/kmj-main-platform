@@ -151,6 +151,10 @@ export default function Dashboard({
                     </div>
                 </section>
 
+                {ownerProducts !== null && (
+                    <OwnerProductsPanel products={ownerProducts} />
+                )}
+
                 <section className="border-sidebar-border/70 bg-card dark:border-sidebar-border rounded-2xl border p-5 sm:p-6">
                     <div className="flex items-start justify-between gap-4">
                         <div>
@@ -199,10 +203,6 @@ export default function Dashboard({
                         </div>
                     )}
                 </section>
-
-                {ownerProducts !== null && (
-                    <OwnerProductsPanel products={ownerProducts} />
-                )}
 
                 <section className="bg-card rounded-2xl border p-5 sm:p-6">
                     <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
@@ -615,9 +615,10 @@ function OwnerProductsPanel({ products }: { products: OwnerProduct[] }) {
                             Platform owner workspace
                         </h2>
                         <p className="text-muted-foreground mt-1 max-w-xl text-sm">
-                            Manage all products, categories and licensing from
-                            Super Admin. Your personal licensed services remain
-                            separate above.
+                            Run your full business from one owner-only
+                            workspace: products, customers, licensing, payments
+                            and operations. Personal services remain separate
+                            below.
                         </p>
                         <p
                             className="text-muted-foreground mt-2 text-xs"
@@ -630,10 +631,10 @@ function OwnerProductsPanel({ products }: { products: OwnerProduct[] }) {
                 </div>
                 <div className="flex flex-wrap gap-2">
                     <Link
-                        href="/operator/products"
+                        href="/operator"
                         className="inline-flex min-h-10 items-center gap-2 rounded-xl bg-red-600 px-4 text-sm font-semibold text-white hover:bg-red-500"
                     >
-                        Product Management <ArrowRight className="size-4" />
+                        Open Super Admin <ArrowRight className="size-4" />
                     </Link>
                     <Link
                         href="/operator/kslp"
