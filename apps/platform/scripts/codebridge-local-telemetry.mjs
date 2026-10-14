@@ -12,6 +12,7 @@
  */
 import { readFileSync, lstatSync } from 'node:fs';
 import { resolve, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { setTimeout as sleep } from 'node:timers/promises';
 
 const DESTINATION = 'https://kmjtechno.com/api/codebridge/v1/telemetry';
@@ -112,7 +113,7 @@ export async function reportOnce(agentConfigFile, fetcher = fetch) {
     return { accepted: true, project: observation.project_id, queueSampled: queue !== null };
 }
 
-if (process.argv[1] && resolve(process.argv[1]) === resolve(new URL(import.meta.url).pathname)) {
+if (process.argv[1] && resolve(process.argv[1]) === resolve(fileURLToPath(import.meta.url))) {
     const [file, mode] = process.argv.slice(2);
     if (!file || (mode !== undefined && mode !== '--watch')) {
         console.error('Usage: node codebridge-local-telemetry.mjs <private-agent-config> [--watch]');
