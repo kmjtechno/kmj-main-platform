@@ -57,14 +57,21 @@ fi
 
 echo "=== 2. EFFECTIVE LARAVEL RUNTIME ==="
 if [[ -f "$APP/artisan" && -f "$APP/vendor/autoload.php" ]]; then
-  (
-    cd "$APP"
-    php artisan tinker --execute='
-    echo "MAILER=".config("mail.default").PHP_EOL;
-    echo "QUEUE=".config("queue.default").PHP_EOL;
-    echo "MAIL_FROM_CONFIGURED=".(filter_var(config("mail.from.address"), FILTER_VALIDATE_EMAIL) ? "yes" : "no").PHP_EOL;
-    '
-  ) 2>&1 | grep -E '^(MAILER|QUEUE|MAIL_FROM_CONFIGURED)=' || true
+  APP_OWNER="$(stat -c %U "$APP/artisan")"
+  if [[ "$APP_OWNER" == "root" ]]; then APP_OWNER=kmjprod; fi
+  if ! getent passwd "$APP_OWNER" >/dev/null; then
+    echo "LARAVEL_RUNTIME=BLOCKED_UNEXPECTED_APP_OWNER"
+  else
+    (
+      cd "$APP"
+      runuser -u "$APP_OWNER" -- php artisan tinker --execute='
+      echo "MAILER=".config("mail.default").PHP_EOL;
+      echo "QUEUE=".config("queue.default").PHP_EOL;
+      echo "MAIL_FROM_CONFIGURED=".(filter_var(config("mail.from.address"), FILTER_VALIDATE_EMAIL) ? "yes" : "no").PHP_EOL;
+      '
+    ) 2>&1 | grep -E '^(MAILER|QUEUE|MAIL_FROM_CONFIGURED)=' || \
+      echo "LARAVEL_RUNTIME=BLOCKED_NO_SAFE_OUTPUT"
+  fi
 else
   echo "PRODUCTION_APP=BLOCKED_NOT_FOUND"
 fi
@@ -107,10 +114,33 @@ if command -v dig >/dev/null; then
 else
   echo "DNS_TOOLS=BLOCKED_MISSING_DIG"
 fi
-echo "=== 4. HOST POLICY + ACTIVATION GATES ==="
+echo "=== 4. EXACT-HEAD ISOLATED QA (NON-ROOT) ==="
+if [[ "${KMJ_MAIL_RUN_EXACT_HEAD_QA:-yes}" == "yes" ]]; then
+  if [[ -f "$REPO/apps/platform/vendor/autoload.php" && -x "$REPO/apps/platform/node_modules/.bin/vp" ]]; then
+    QA_DIR="$(mktemp -d -t kmj-mail-oneclick-qa.XXXXXXXX)"
+    chown "$OWNER" "$QA_DIR"
+    runuser -u "$OWNER" -- git -C "$REPO" show \
+      "$EXPECTED_SHA:scripts/ci/verify-registration-mail-pr.sh" > "$QA_DIR/verify.sh"
+    chmod 0644 "$QA_DIR/verify.sh"
+    if runuser -u "$OWNER" -- bash -c 'cd "$1" && bash "$2" "$3"' \
+      _ "$REPO" "$QA_DIR/verify.sh" "$EXPECTED_SHA" > "$QA_DIR/qa.log" 2>&1; then
+      echo "MAIL_PR_EXACT_SHA_QA=PASS"
+    else
+      echo "MAIL_PR_EXACT_SHA_QA=FAIL_OR_BLOCKED"
+    fi
+    grep -E '^(PASS:|FAIL:|MAIL_QA_|BLOCKED:)' "$QA_DIR/qa.log" | tail -35 || true
+    rm -rf -- "$QA_DIR"
+  else
+    echo "MAIL_PR_EXACT_SHA_QA=BLOCKED_DEPENDENCIES_ABSENT"
+  fi
+else
+  echo "MAIL_PR_EXACT_SHA_QA=SKIPPED_BY_OPERATOR"
+fi
+
+echo "=== 5. HOST POLICY + ACTIVATION GATES ==="
 echo "PROVIDER_SMTP_PERMISSION=NOT_VERIFIED_BY_SCRIPT"
 echo "PTR_CHANGE_PERMISSION=NOT_VERIFIED_BY_SCRIPT"
-echo "PR423_EXACT_HEAD_TESTS=NOT_VERIFIED_BY_THIS_SCRIPT"
+echo "PR423_GITHUB_HOSTED_CI=MUST_VERIFY_SEPARATELY_FROM_LOCAL_QA"
 echo "AUTHENTICATED_INBOX_DELIVERY=NOT_VERIFIED"
 echo "CUSTOMER_SIGNED_VERIFICATION=NOT_VERIFIED"
 echo "NO_DNS_OR_MAIL_CONFIGURATION_WAS_MODIFIED=PASS"
