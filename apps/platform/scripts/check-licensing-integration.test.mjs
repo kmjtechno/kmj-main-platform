@@ -33,7 +33,8 @@ void test('Admin inventory reports missing registrations, not fake entitlements'
     );
     assert.ok(admin.includes('<OperatorControlOverview'));
     assert.ok(adminOverview.includes('missingCanonicalSlugs.map'));
-    assert.ok(adminOverview.includes('Entries missing from the database do not grant'));
+    assert.ok(adminOverview.includes('Entries missing from the database'));
+    assert.ok(adminOverview.includes('do not grant'));
     assert.ok(adminOverview.includes('customer access'));
 });
 
