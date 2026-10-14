@@ -20,6 +20,28 @@ class VerificationNotificationTest extends TestCase
         $this->skipUnlessFortifyHas(Features::emailVerification());
     }
 
+    public function test_production_log_mailer_rejects_resend_instead_of_claiming_delivery(): void
+    {
+        $originalEnvironment = app()->environment();
+
+        try {
+            app()->instance('env', 'production');
+            config()->set('mail.default', 'log');
+            Notification::fake();
+
+            $user = User::factory()->unverified()->create();
+
+            $this->actingAs($user)
+                ->post(route('verification.send'))
+                ->assertSessionHasErrors(['email']);
+
+            Notification::assertNothingSent();
+            $this->assertFalse($user->fresh()->hasVerifiedEmail());
+        } finally {
+            app()->instance('env', $originalEnvironment);
+        }
+    }
+
     public function test_sends_verification_notification(): void
     {
         Notification::fake();
