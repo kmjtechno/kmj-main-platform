@@ -3,7 +3,6 @@
 namespace App\Services\Licensing\Kslp;
 
 use DomainException;
-use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 
 final class KslpKeyRegistry
@@ -15,9 +14,9 @@ final class KslpKeyRegistry
     /**
      * Register canonical base64url-encoded Ed25519 public key material.
      *
-     * Binary Ed25519 keys are not stored directly in PostgreSQL TEXT. Persisted
-     * and discovered public keys use canonical unpadded base64url; publicKey()
-     * decodes to exactly 32 raw bytes for sodium verification.
+     * Binary Ed25519 keys cannot be stored in PostgreSQL TEXT (which rejects
+     * NUL bytes). Both discovery and persisted key material are base64url;
+     * publicKey() decodes to exactly 32 raw bytes for sodium verification.
      */
     public function publish(
         string $kid,
@@ -113,33 +112,6 @@ final class KslpKeyRegistry
             ->get(['kid', 'purpose', 'public_key', 'status', 'not_before', 'not_after'])
             ->map(fn ($key): array => (array) $key)
             ->all();
-    }
-
-    /**
-     * @return list<array{kid:string,algorithm:string,public_key:string,not_before:int,not_after:int|null,status:string}>
-     */
-    public function omniDeskDiscovery(): array
-    {
-        $keys = collect($this->discovery('license'))
-            ->map(static function (array $key): array {
-                return [
-                    'kid' => (string) $key['kid'],
-                    'algorithm' => 'Ed25519',
-                    'public_key' => (string) $key['public_key'],
-                    'not_before' => Carbon::parse($key['not_before'])->getTimestamp(),
-                    'not_after' => $key['not_after'] === null
-                        ? null
-                        : Carbon::parse($key['not_after'])->getTimestamp(),
-                    'status' => match ((string) $key['status']) {
-                        'active' => 'ACTIVE',
-                        'retiring' => 'ROLLOVER',
-                        default => throw new DomainException('KSLP_INVALID_KEY_STATUS'),
-                    },
-                ];
-            })
-            ->all();
-
-        return array_values($keys);
     }
 
     /** Get the raw 32-byte key expected by sodium_crypto_sign_verify_detached. */
