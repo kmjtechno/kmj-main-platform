@@ -1,5 +1,6 @@
 import { Head, Link } from '@inertiajs/react';
 import OperatorModuleNavigation from '@/components/operator-module-navigation';
+import PaymentGatewayOnboarding from '@/components/payment-gateway-onboarding';
 import OperatorPaymentSettings, {
     type OwnerGatewaySetting,
 } from '@/components/operator-payment-settings';
@@ -73,6 +74,7 @@ export default function OperatorPayments({
                     </div>
                 </header>
 
+                <PaymentGatewayOnboarding gatewaySettings={gatewaySettings} />
                 <OperatorPaymentSettings gatewaySettings={gatewaySettings} />
                 <section className="mx-auto grid w-full max-w-6xl gap-4 md:grid-cols-2">
                     {paymentReadiness.providers.map((gateway) => (
