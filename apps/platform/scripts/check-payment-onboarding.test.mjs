@@ -5,12 +5,17 @@ import test from 'node:test';
 const read = (path) => readFileSync(new URL(path, import.meta.url), 'utf8');
 
 test('both payment providers have explicit, opt-in dashboard onboarding', () => {
-    const guide = read('../resources/js/components/payment-gateway-onboarding.tsx');
+    const guide = read(
+        '../resources/js/components/payment-gateway-onboarding.tsx',
+    );
     assert.match(
         guide,
         /https:\/\/dashboard\.razorpay\.com\/app\/account-settings/,
     );
-    assert.match(guide, /https:\/\/merchant\.cashfree\.com\/merchant\/pg#api-key/);
+    assert.match(
+        guide,
+        /https:\/\/merchant\.cashfree\.com\/merchant\/pg#api-key/,
+    );
     assert.match(guide, /selected\?\.storage_ready/);
     assert.match(guide, /gateway-settings-\$\{provider\}/);
     assert.match(guide, /target="_blank"/);
@@ -18,7 +23,9 @@ test('both payment providers have explicit, opt-in dashboard onboarding', () => 
 });
 
 test('gateway setup is explicitly sandbox-only and does not publish an invented webhook', () => {
-    const guide = read('../resources/js/components/payment-gateway-onboarding.tsx');
+    const guide = read(
+        '../resources/js/components/payment-gateway-onboarding.tsx',
+    );
     const server = read('../app/Services/Payments/PaymentGatewayReadiness.php');
     const routes = read('../routes/payments-console.php');
     assert.match(guide, /live checkout locked/i);
@@ -30,9 +37,13 @@ test('gateway setup is explicitly sandbox-only and does not publish an invented 
 });
 
 test('keys remain encrypted and owner access and validation stay mandatory', () => {
-    const view = read('../resources/js/components/operator-payment-settings.tsx');
+    const view = read(
+        '../resources/js/components/operator-payment-settings.tsx',
+    );
     const routes = read('../routes/payments-console.php');
-    const vault = read('../app/Services/Payments/OwnerPaymentGatewaySettings.php');
+    const vault = read(
+        '../app/Services/Payments/OwnerPaymentGatewaySettings.php',
+    );
     assert.match(view, /useForm\(/);
     assert.match(view, /type=\{/);
     assert.match(routes, /PlatformOwnerAccess/);
@@ -43,8 +54,12 @@ test('keys remain encrypted and owner access and validation stay mandatory', () 
 });
 
 test('owner sandbox connection is explicit, rate limited and never charges money', () => {
-    const probe = read('../app/Services/Payments/PaymentGatewaySandboxProbe.php');
-    const page = read('../resources/js/components/payment-gateway-onboarding.tsx');
+    const probe = read(
+        '../app/Services/Payments/PaymentGatewaySandboxProbe.php',
+    );
+    const page = read(
+        '../resources/js/components/payment-gateway-onboarding.tsx',
+    );
     const routes = read('../routes/payments-console.php');
     assert.match(routes, /test-connection/);
     assert.match(routes, /middleware\('throttle:3,10'\)/);
@@ -63,8 +78,12 @@ test('owner sandbox connection is explicit, rate limited and never charges money
 
 test('one active merchant drives both guided steps and encrypted credential entry', () => {
     const page = read('../resources/js/pages/operator-payments.tsx');
-    const wizard = read('../resources/js/components/payment-gateway-onboarding.tsx');
-    const vault = read('../resources/js/components/operator-payment-settings.tsx');
+    const wizard = read(
+        '../resources/js/components/payment-gateway-onboarding.tsx',
+    );
+    const vault = read(
+        '../resources/js/components/operator-payment-settings.tsx',
+    );
     assert.match(page, /onProviderChange=\{setSelectedProvider\}/);
     assert.match(page, /selectedProvider=\{selectedProvider\}/);
     assert.match(wizard, /onProviderChange\(id\)/);
@@ -83,6 +102,12 @@ test('one active merchant drives both guided steps and encrypted credential entr
 
 test('Laravel route bootstrap avoids no-op global exception imports', () => {
     const routes = read('../routes/payments-console.php');
-    assert.doesNotMatch(routes, /^use (DomainException|InvalidArgumentException);$/m);
-    assert.match(routes, /catch \(\\DomainException\|\\InvalidArgumentException\)/);
+    assert.doesNotMatch(
+        routes,
+        /^use (DomainException|InvalidArgumentException);$/m,
+    );
+    assert.match(
+        routes,
+        /catch \(\\DomainException\|\\InvalidArgumentException\)/,
+    );
 });
