@@ -9,7 +9,7 @@ import { Label } from '@/components/ui/label';
 import { login } from '@/routes';
 import { email } from '@/routes/password';
 
-export default function ForgotPassword({ status }: { status?: string }) {
+export default function ForgotPassword({ status, mailDeliveryAvailable }: { status?: string; mailDeliveryAvailable: boolean }) {
     return (
         <>
             <Head title="Forgot password" />
