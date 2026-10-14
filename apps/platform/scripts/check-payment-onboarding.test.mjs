@@ -111,3 +111,14 @@ void test('Laravel route bootstrap avoids no-op global exception imports', () =>
         /catch \(\\DomainException\|\\InvalidArgumentException\)/,
     );
 });
+
+void test('server-only sandbox errors are safely narrowed without modifying test order payload', () => {
+    const wizard = read(
+        '../resources/js/components/payment-gateway-onboarding.tsx',
+    );
+    assert.match(wizard, /'sandbox_probe' in probe\\.errors/);
+    assert.match(wizard, /typeof probe\\.errors\\.sandbox_probe === 'string'/);
+    assert.match(wizard, /sandboxProbeError/);
+    assert.doesNotMatch(wizard, /\\{probe\\.errors\\.sandbox_probe\\}/);
+    assert.match(wizard, /useForm\\(\\{ test_phone: '' \\}\\)/);
+});
