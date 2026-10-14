@@ -73,11 +73,11 @@ test('one active merchant drives both guided steps and encrypted credential entr
     assert.match(page, /Other payment options \(planned, not integrated\)/);
     assert.match(
         page,
-        /gateway\.id === 'razorpay' \|\| gateway\.id === 'cashfree'/,
+        /gateway\.id === 'razorpay'\s*\|\|\s*gateway\.id === 'cashfree'/,
     );
     assert.match(
         page,
-        /gateway\.id !== 'razorpay' && gateway\.id !== 'cashfree'/,
+        /gateway\.id !== 'razorpay'\s*&&\s*gateway\.id !== 'cashfree'/,
     );
 });
 
