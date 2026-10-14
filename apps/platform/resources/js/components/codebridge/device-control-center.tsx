@@ -228,7 +228,7 @@ export default function DeviceControlCenter({
                     )}
                     <div className="flex flex-wrap gap-2">
                         <a
-                            href="https://raw.githubusercontent.com/kmjtechno/kmj-codebridge/main/scripts/enroll-p720-omnidesk.ps1"
+                            href="/downloads/codebridge/enroll-p720-omnidesk.ps1"
                             download="KMJ-CodeBridge-Add-OmniDesk.ps1"
                             rel="noopener noreferrer"
                             className="inline-flex min-h-10 items-center gap-2 rounded-xl bg-red-600 px-4 text-xs font-black text-white hover:bg-red-500"
