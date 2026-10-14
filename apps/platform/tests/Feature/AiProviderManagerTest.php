@@ -156,6 +156,7 @@ final class AiProviderManagerTest extends TestCase
 
     public function test_default_and_fallback_models_must_be_discovered_and_replacing_the_key_resets_evidence(): void
     {
+        config(['ai_providers.free_models.groq' => ['a-model', 'b-model']]);
         Http::fake(['api.groq.com/*' => Http::response(['data' => [['id' => 'a-model'], ['id' => 'b-model'], ['id' => 'c-model']]], 200)]);
         $this->add('Groq main');
         $id = AiProvider::query()->value('id');
@@ -176,6 +177,76 @@ final class AiProviderManagerTest extends TestCase
         $this->assertSame('6789', $provider->key_last4);
         $this->assertNull($provider->default_model);
         $this->assertSame('unknown', $provider->health);
+    }
+
+    public function test_openrouter_paid_models_are_hidden_and_cannot_be_saved(): void
+    {
+        $manager = app(ProviderManager::class);
+        $provider = $this->provider('openrouter', ['openai/gpt-4.1', 'x/quick:free', 'anthropic/claude-sonnet', 'z/backup:free']);
+        $provider->default_model = 'anthropic/claude-sonnet';
+        $provider->fallback_models = ['openai/gpt-4.1', 'z/backup:free'];
+        $provider->save();
+
+        $data = $manager->present($provider->fresh());
+        $this->assertSame(['x/quick:free', 'z/backup:free'], $data['models']);
+        $this->assertSame(2, $data['eligible_free_models_count']);
+        $this->assertSame(4, $data['discovered_models_count']);
+        $this->assertNull($data['default_model']);
+        $this->assertSame(['z/backup:free'], $data['fallback_models']);
+        $this->assertSame('eligible_for_routing', $data['inference_readiness']);
+        $this->assertSame('not_verified', $data['codebridge_execution']);
+        $this->assertArrayNotHasKey('api_key', $data);
+
+        $url = '/services/kmj-codebridge/ai-providers/'.$provider->id;
+        $this->confirmed($this->owner)->patch($url, ['default_model' => 'openai/gpt-4.1'])
+            ->assertSessionHasErrors('provider');
+        $this->confirmed($this->owner)->patch($url, ['fallback_models' => ['anthropic/claude-sonnet']])
+            ->assertSessionHasErrors('provider');
+
+        $this->confirmed($this->owner)->patch($url, [
+            'default_model' => 'x/quick:free',
+            'fallback_models' => ['z/backup:free'],
+        ])->assertSessionHasNoErrors();
+        $updated = $provider->fresh();
+        $this->assertSame('x/quick:free', $updated->default_model);
+        $this->assertSame(['z/backup:free'], $updated->fallback_models);
+    }
+
+    public function test_unhealthy_or_expired_discovery_does_not_claim_routing_readiness(): void
+    {
+        $manager = app(ProviderManager::class);
+        $provider = $this->provider('openrouter', ['x/coder:free', 'a/paid']);
+        $this->assertSame('eligible_for_routing', $manager->present($provider)['inference_readiness']);
+
+        $provider->models_checked_at = now()->subHours(25);
+        $provider->save();
+        $this->assertSame('blocked', $manager->present($provider->fresh())['inference_readiness']);
+
+        $provider->models_checked_at = now();
+        $provider->health = 'auth_failed';
+        $provider->save();
+        $this->assertSame('blocked', $manager->present($provider->fresh())['inference_readiness']);
+        $provider->health = 'ok';
+        $provider->enabled = false;
+        $provider->save();
+        $this->assertSame('blocked', $manager->present($provider->fresh())['inference_readiness']);
+    }
+
+    public function test_groq_models_require_owner_verified_allowlist_even_for_dashboard_selection(): void
+    {
+        $manager = app(ProviderManager::class);
+        $provider = $this->provider('groq', ['one-model', 'another-model']);
+        $this->assertSame([], $manager->present($provider)['models']);
+
+        config(['ai_providers.free_models.groq' => ['one-model']]);
+        $this->assertSame(['one-model'], $manager->present($provider)['models']);
+
+        $this->confirmed($this->owner)->patch('/services/kmj-codebridge/ai-providers/'.$provider->id, [
+            'default_model' => 'another-model',
+        ])->assertSessionHasErrors('provider');
+        $this->confirmed($this->owner)->patch('/services/kmj-codebridge/ai-providers/'.$provider->id, [
+            'default_model' => 'one-model',
+        ])->assertSessionHasNoErrors();
     }
 
     public function test_delete_requires_confirmation_and_removes_the_stored_key(): void
