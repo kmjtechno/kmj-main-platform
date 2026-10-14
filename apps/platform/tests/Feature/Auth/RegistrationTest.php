@@ -25,6 +25,31 @@ class RegistrationTest extends TestCase
         $response->assertOk();
     }
 
+    public function test_production_log_mailer_cannot_create_unverifiable_user_or_organization(): void
+    {
+        $originalEnvironment = app()->environment();
+
+        try {
+            app()->detectEnvironment(static fn (): string => 'production');
+            config()->set('mail.default', 'log');
+
+            $this->post(route('register.store'), [
+                'name' => 'Undeliverable User',
+                'email' => 'undeliverable@example.test',
+                'password' => 'password',
+                'password_confirmation' => 'password',
+            ])->assertSessionHasErrors(['email']);
+
+            $this->assertDatabaseMissing('users', ['email' => 'undeliverable@example.test']);
+            $this->assertDatabaseMissing('organizations', [
+                'name' => "Undeliverable User's Organization",
+            ]);
+            $this->assertGuest();
+        } finally {
+            app()->detectEnvironment(static fn (): string => $originalEnvironment);
+        }
+    }
+
     public function test_new_users_can_register()
     {
         $response = $this->post(route('register.store'), [
