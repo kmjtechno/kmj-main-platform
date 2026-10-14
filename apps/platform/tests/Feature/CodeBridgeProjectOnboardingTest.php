@@ -52,6 +52,32 @@ final class CodeBridgeProjectOnboardingTest extends TestCase
         $this->assertDatabaseCount('codebridge_device_pairings', 0);
     }
 
+    public function test_stale_registered_request_without_an_active_grant_can_be_retried(): void
+    {
+        [$owner, $tenant] = $this->fixture();
+        $payload = ['tenant_id' => $tenant, 'project_id' => 'kmj-omnidesk'];
+        $this->actingAs($owner)->withSession(['auth.password_confirmed_at' => time()])
+            ->post(self::URL, $payload)->assertRedirect('/services/kmj-codebridge');
+
+        DB::table('codebridge_project_onboarding_requests')
+            ->where('tenant_id', $tenant)
+            ->where('project_id', 'kmj-omnidesk')
+            ->update(['status' => 'registered_not_live_verified']);
+
+        // The previous agent is no longer granted; do not strand the project
+        // behind a unique request row that a repeated owner request cannot revive.
+        $this->actingAs($owner)->withSession(['auth.password_confirmed_at' => time()])
+            ->post(self::URL, $payload)->assertRedirect('/services/kmj-codebridge');
+
+        $this->assertDatabaseCount('codebridge_project_onboarding_requests', 1);
+        $this->assertDatabaseHas('codebridge_project_onboarding_requests', [
+            'tenant_id' => $tenant,
+            'project_id' => 'kmj-omnidesk',
+            'status' => 'awaiting_agent_pairing',
+        ]);
+        $this->assertDatabaseCount('codebridge_device_credentials', 0);
+    }
+
     public function test_unknown_repo_and_unconfirmed_password_are_rejected(): void
     {
         [$owner, $tenant] = $this->fixture();
