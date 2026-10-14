@@ -78,6 +78,16 @@ export default function KmjMailWorkspace({
     const searchRef = useRef<HTMLInputElement>(null);
     const ready = transportStatus === 'ready' && account !== null;
 
+    const setComposeOpen = (open: boolean) => {
+        setCompose(open);
+        if (!open) {
+            // Do not retain sensitive draft text when preview is dismissed.
+            setRecipient('');
+            setSubject('');
+            setBody('');
+        }
+    };
+
     // Keyboard shortcuts never intercept typing in editable fields.
     useEffect(() => {
         const onKeyDown = (event: KeyboardEvent) => {
@@ -85,7 +95,7 @@ export default function KmjMailWorkspace({
             const editing = target instanceof HTMLElement
                 && (target.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName));
             if (event.key === 'Escape') {
-                if (compose) setCompose(false);
+                if (compose) setComposeOpen(false);
                 else if (selectedId) setSelectedId(null);
                 else setMobileNav(false);
                 return;
@@ -263,7 +273,7 @@ export default function KmjMailWorkspace({
                     </section>
                 </div>
 
-                <Dialog open={compose} onOpenChange={setCompose}>
+                <Dialog open={compose} onOpenChange={setComposeOpen}>
                     <DialogContent className="w-full gap-0 overflow-hidden rounded-2xl p-0 sm:max-w-xl">
                         <DialogHeader className="border-b border-border px-5 py-5 text-left">
                             <DialogTitle>New message</DialogTitle>
