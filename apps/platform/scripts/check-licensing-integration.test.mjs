@@ -9,7 +9,9 @@ const dashboard = read('resources/js/pages/dashboard.tsx');
 const sidebar = read('resources/js/components/app-sidebar.tsx');
 const sandbox = read('resources/js/pages/sandbox-licenses.tsx');
 const admin = read('resources/js/pages/operator.tsx');
-const adminOverview = read('resources/js/components/operator-control-overview.tsx');
+const adminOverview = read(
+    'resources/js/components/operator-control-overview.tsx',
+);
 const config = read('config/services.php');
 const keys = read('app/Services/Licensing/Kslp/KslpDeveloperKeys.php');
 const activation = read('routes/developer-activation-api.php');
