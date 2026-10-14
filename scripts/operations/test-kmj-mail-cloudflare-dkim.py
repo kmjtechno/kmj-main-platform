@@ -16,7 +16,7 @@ RECORD = "kmj2026._domainkey.kmjtechno.com"
 
 class CloudflareDkimTests(TestCase):
     def execute(self, existing, new_result=None):
-        responses = [{"id": "zone123", "name": "kmjtechno.com"}, existing]
+        responses = [[{"id": "zone123", "name": "kmjtechno.com"}], existing]
         if new_result is not None:
             responses.append(new_result)
         with mock.patch.object(module.os, "geteuid", return_value=0), \
