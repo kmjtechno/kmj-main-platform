@@ -15,8 +15,8 @@ import {
     Star,
     Trash2,
     WifiOff,
-    X,
 } from 'lucide-react';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useEffect, useMemo, useRef, useState } from 'react';
 
 type Folder = 'inbox' | 'starred' | 'sent' | 'drafts' | 'archive' | 'spam' | 'trash';
@@ -263,30 +263,28 @@ export default function KmjMailWorkspace({
                     </section>
                 </div>
 
-                {compose && (
-                    <div role="presentation" className="fixed inset-0 z-50 flex items-end justify-end bg-black/50 p-3 sm:p-6">
-                        <section role="dialog" aria-modal="true" aria-labelledby="compose-title" className="flex w-full max-w-xl flex-col overflow-hidden rounded-2xl border border-border bg-background shadow-2xl">
-                            <div className="flex items-center justify-between border-b px-5 py-4">
-                                <div><h2 id="compose-title" className="font-bold">New message</h2><p className="text-muted-foreground text-xs">Local preview only · Not saved or sent</p></div>
-                                <button type="button" aria-label="Close compose" onClick={() => setCompose(false)} className="rounded-lg p-2 hover:bg-muted"><X className="size-5" /></button>
-                            </div>
-                            <div className="space-y-4 p-5">
-                                <label className="block text-xs font-bold">To
-                                    <input type="email" autoFocus value={recipient} onChange={(e) => setRecipient(e.target.value)} placeholder="name@example.com" className="mt-2 w-full rounded-lg border border-border bg-background p-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-red-500" />
-                                </label>
-                                <label className="block text-xs font-bold">Subject
-                                    <input value={subject} onChange={(e) => setSubject(e.target.value)} placeholder="Subject" className="mt-2 w-full rounded-lg border border-border bg-background p-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-red-500" />
-                                </label>
-                                <label className="block text-xs font-bold">Message
-                                    <textarea rows={8} value={body} onChange={(e) => setBody(e.target.value)} placeholder="Write your message..." className="mt-2 w-full resize-y rounded-lg border border-border bg-background p-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-red-500" />
-                                </label>
-                                <p className="text-muted-foreground text-xs">For safety, messages are never transmitted or persisted by this preview. Draft contents are discarded on close.</p>
-                                <button type="button" disabled aria-disabled="true" title="Mail backend not connected"
-                                    className="flex min-h-11 items-center gap-2 rounded-xl bg-red-600 px-5 text-sm font-bold text-white opacity-50"><Send className="size-4" /> Send unavailable</button>
-                            </div>
-                        </section>
-                    </div>
-                )}
+                <Dialog open={compose} onOpenChange={setCompose}>
+                    <DialogContent className="w-full gap-0 overflow-hidden rounded-2xl p-0 sm:max-w-xl">
+                        <DialogHeader className="border-b border-border px-5 py-5 text-left">
+                            <DialogTitle>New message</DialogTitle>
+                            <DialogDescription>Local preview only · Not saved or sent</DialogDescription>
+                        </DialogHeader>
+                        <div className="space-y-4 p-5">
+                            <label className="block text-xs font-bold">To
+                                <input type="email" value={recipient} onChange={(e) => setRecipient(e.target.value)} placeholder="name@example.com" className="mt-2 w-full rounded-lg border border-border bg-background p-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-red-500" />
+                            </label>
+                            <label className="block text-xs font-bold">Subject
+                                <input value={subject} onChange={(e) => setSubject(e.target.value)} placeholder="Subject" className="mt-2 w-full rounded-lg border border-border bg-background p-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-red-500" />
+                            </label>
+                            <label className="block text-xs font-bold">Message
+                                <textarea rows={8} value={body} onChange={(e) => setBody(e.target.value)} placeholder="Write your message..." className="mt-2 w-full resize-y rounded-lg border border-border bg-background p-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-red-500" />
+                            </label>
+                            <p className="text-muted-foreground text-xs">Draft contents are discarded on close. No remote storage or transmission is performed.</p>
+                            <button type="button" disabled aria-disabled="true" title="Mail backend not connected"
+                                className="flex min-h-11 items-center gap-2 rounded-xl bg-red-600 px-5 text-sm font-bold text-white opacity-50"><Send className="size-4" /> Send unavailable</button>
+                        </div>
+                    </DialogContent>
+                </Dialog>
             </main>
         </>
     );
