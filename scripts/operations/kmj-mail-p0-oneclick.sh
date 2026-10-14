@@ -32,6 +32,28 @@ for filename in kmj-mail-00-readiness.sh kmj-mail-00-verify-dkim-dns.sh; do
   bash -n "$TMP/$filename"
 done
 echo "MAIL_SCRIPTS_BASH_SYNTAX=PASS"
+runuser -u "$OWNER" -- git -C "$REPO" show \
+  "$EXPECTED_SHA:scripts/operations/kmj-mail-cloudflare-dkim.py" > "$TMP/kmj-mail-cloudflare-dkim.py"
+if python3 - "$TMP/kmj-mail-cloudflare-dkim.py" <<'PY'
+import sys
+from pathlib import Path
+compile(Path(sys.argv[1]).read_text(), sys.argv[1], 'exec')
+PY
+then
+  echo "CLOUDFLARE_DKIM_PUBLISHER_SYNTAX=PASS"
+else
+  echo "CLOUDFLARE_DKIM_PUBLISHER_SYNTAX=FAIL"
+  exit 2
+fi
+
+# Optional one-click, idempotent public-key-only DNS creation.
+# Authorized secrets stay inside a root-owned file, not environment, logs or chat.
+if [[ -f /etc/kmj-mail/cloudflare-dns.token && "${KMJ_MAIL_DNS_WRITE_APPROVED:-no}" == "yes" ]]; then
+  python3 "$TMP/kmj-mail-cloudflare-dkim.py" --apply || \
+    echo "CLOUDFLARE_PUBLIC_DKIM=BLOCKED_NEEDS_REVIEW"
+else
+  echo "CLOUDFLARE_PUBLIC_DKIM=NO_SCOPED_TOKEN_OR_WRITE_APPROVAL"
+fi
 
 echo "=== 2. EFFECTIVE LARAVEL RUNTIME ==="
 if [[ -f "$APP/artisan" && -f "$APP/vendor/autoload.php" ]]; then
