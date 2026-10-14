@@ -44,6 +44,12 @@ if bash -n "$tmp/tree/scripts/operations/kmj-mail-00-readiness.sh" \
 else
   echo 'FAIL: mail script shell syntax'; failed=$((failed+1))
 fi
+echo '== Offline Cloudflare DKIM DNS publishing regression tests =='
+if python3 "$tmp/tree/scripts/operations/test-kmj-mail-cloudflare-dkim.py"; then
+  echo 'PASS: DKIM publish idempotency and no-write guards'
+else
+  echo 'FAIL: Cloudflare DKIM publisher offline regression tests'; failed=$((failed+1))
+fi
 echo "MAIL_QA_SHA=$sha"
 echo '== Production Vite/Wayfinder build before Inertia HTTP tests =='
 if npm run build && test -s public/build/manifest.json; then
