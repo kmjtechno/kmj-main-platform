@@ -612,7 +612,7 @@ function OwnerProductsPanel({ products }: { products: OwnerProduct[] }) {
                             id="owner-products-heading"
                             className="text-base font-bold"
                         >
-                            Platform owner workspace
+                            Super Admin Control Center
                         </h2>
                         <p className="text-muted-foreground mt-1 max-w-xl text-sm">
                             Run your full business from one owner-only
