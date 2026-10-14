@@ -69,7 +69,7 @@ final class OpenAiCompatibleAdapter
         $other = [];
         foreach ((array) ($response->json('data') ?? []) as $entry) {
             $id = is_array($entry) ? ($entry['id'] ?? null) : null;
-            if (is_string($id) && preg_match('/\\A[A-Za-z0-9._:\\/-]{1,128}\\z/', $id) === 1) {
+            if (is_string($id) && preg_match('/\A[A-Za-z0-9._:\/-]{1,128}\z/', $id) === 1) {
                 if (str_ends_with($id, ':free')) {
                     $free[] = $id;
                 } else {
