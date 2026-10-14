@@ -40,3 +40,11 @@ void test('preview route only exists in development and enforces verified login'
     assert.match(routes, /'messages' => \[\]/);
     assert.doesNotMatch(routes, /Route::post\('internal\/kmj-mail-preview'/);
 });
+
+void test('compose preview clears sensitive draft fields on dismissal', () => {
+    assert.match(shell, /const setComposeOpen =/);
+    assert.match(shell, /setRecipient\(''\)/);
+    assert.match(shell, /setSubject\(''\)/);
+    assert.match(shell, /setBody\(''\)/);
+    assert.match(shell, /onOpenChange=\{setComposeOpen\}/);
+});
