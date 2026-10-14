@@ -62,15 +62,21 @@ Route::post('services/kmj-codebridge/projects', function (
 
     // Only reviewed fixed repository and fixed host preset are accepted.
     // This records a request but never clones, executes, pairs, or grants access.
-    DB::table('codebridge_project_onboarding_requests')->insertOrIgnore([
-        'tenant_id' => $tenantId,
-        'project_id' => 'kmj-omnidesk',
-        'repository' => 'kmjtechno/kmj-omnidesk',
-        'host' => 'lenovo-p720',
-        'status' => 'awaiting_agent_pairing',
-        'requested_by' => $user->getKey(),
-        'created_at' => now(),
-        'updated_at' => now(),
+    // Atomic retry is necessary when a previously redeemed device is later
+    // revoked. The fixed provider+host preset cannot be changed by the browser.
+    DB::table('codebridge_project_onboarding_requests')->upsert([
+        [
+            'tenant_id' => $tenantId,
+            'project_id' => 'kmj-omnidesk',
+            'repository' => 'kmjtechno/kmj-omnidesk',
+            'host' => 'lenovo-p720',
+            'status' => 'awaiting_agent_pairing',
+            'requested_by' => $user->getKey(),
+            'created_at' => now(),
+            'updated_at' => now(),
+        ],
+    ], ['tenant_id', 'project_id'], [
+        'repository', 'host', 'status', 'requested_by', 'updated_at',
     ]);
 
     return redirect()->route('services.codebridge')
