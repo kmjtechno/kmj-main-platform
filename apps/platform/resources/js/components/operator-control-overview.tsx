@@ -148,7 +148,10 @@ export default function OperatorControlOverview({
                         >
                             <div className="flex items-start justify-between gap-3">
                                 <span className="grid size-10 place-items-center rounded-lg border bg-red-500/5 text-red-500">
-                                    <Icon className="size-5" aria-hidden="true" />
+                                    <Icon
+                                        className="size-5"
+                                        aria-hidden="true"
+                                    />
                                 </span>
                                 <ArrowRight
                                     className="text-muted-foreground group-hover:text-foreground size-4"
