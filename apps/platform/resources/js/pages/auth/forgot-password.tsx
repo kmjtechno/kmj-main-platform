@@ -41,7 +41,7 @@ export default function ForgotPassword({ status, mailDeliveryAvailable }: { stat
                             <div className="my-6 flex items-center justify-start">
                                 <Button
                                     className="w-full"
-                                    disabled={processing}
+                                    disabled={processing || !mailDeliveryAvailable}
                                     data-test="email-password-reset-link-button"
                                 >
                                     {processing && (
