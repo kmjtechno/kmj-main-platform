@@ -57,3 +57,17 @@ test('owner sandbox connection is explicit, rate limited and never charges money
     assert.match(probe, /'entitlement_issued' => false/);
     assert.doesNotMatch(probe, /rzp_live_/);
 });
+
+test('one active merchant drives both guided steps and encrypted credential entry', () => {
+    const page = read('../resources/js/pages/operator-payments.tsx');
+    const wizard = read('../resources/js/components/payment-gateway-onboarding.tsx');
+    const vault = read('../resources/js/components/operator-payment-settings.tsx');
+    assert.match(page, /onProviderChange=\{setSelectedProvider\}/);
+    assert.match(page, /selectedProvider=\{selectedProvider\}/);
+    assert.match(wizard, /onProviderChange\(id\)/);
+    assert.match(vault, /gatewaySettings\.find\(/);
+    assert.doesNotMatch(vault, /gatewaySettings\.map\(/);
+    assert.match(page, /Other payment options \(planned, not integrated\)/);
+    assert.match(page, /gateway\.id === 'razorpay' \|\| gateway\.id === 'cashfree'/);
+    assert.match(page, /gateway\.id !== 'razorpay' && gateway\.id !== 'cashfree'/);
+});
