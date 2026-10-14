@@ -20,6 +20,7 @@ use DateTimeImmutable as ImmutableDateTime;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Schema;
 use Inertia\Inertia;
 use KMJ\MainPlatform\Catalog\Models\Product;
 use KMJ\MainPlatform\Commerce\Models\CommercialOrder;
@@ -339,6 +340,7 @@ Route::get('cookie-policy', fn () => Inertia::render('legal/cookie-policy'))->na
 
 Route::middleware(['auth', 'verified'])->group(function () {
     require __DIR__.'/ai-providers.php';
+    require __DIR__.'/codebridge-projects.php';
 
     Route::get('codebridge-oauth-link/{uid}', [CodeBridgeOAuthLinkController::class, 'show'])
         ->name('codebridge.oauth.show');
@@ -624,6 +626,15 @@ Route::middleware(['auth', 'verified'])->group(function () {
                     ->where('expires_at_epoch', '>', time())
                     ->count(),
                 'devices' => $deviceDirectory->forTenant((string) $organization['id'], time()),
+                'pending_project_ids' => Schema::hasTable('codebridge_project_onboarding_requests')
+                    ? DB::table('codebridge_project_onboarding_requests')
+                        ->where('tenant_id', $organization['id'])
+                        ->where('status', 'awaiting_agent_pairing')
+                        ->orderBy('project_id')
+                        ->limit(20)
+                        ->pluck('project_id')
+                        ->all()
+                    : [],
                 // Before approval a pairing has no tenant; show only this
                 // organization's approved pairings awaiting device redemption.
                 'pending_pairings' => DB::table('codebridge_device_pairings')
