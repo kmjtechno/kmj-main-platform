@@ -4,7 +4,7 @@ import test from 'node:test';
 
 const read = (path) => readFileSync(new URL(path, import.meta.url), 'utf8');
 
-test('both payment providers have explicit, opt-in dashboard onboarding', () => {
+void test('both payment providers have explicit, opt-in dashboard onboarding', () => {
     const guide = read(
         '../resources/js/components/payment-gateway-onboarding.tsx',
     );
@@ -22,7 +22,7 @@ test('both payment providers have explicit, opt-in dashboard onboarding', () => 
     assert.match(guide, /rel="noopener noreferrer"/);
 });
 
-test('gateway setup is explicitly sandbox-only and does not publish an invented webhook', () => {
+void test('gateway setup is explicitly sandbox-only and does not publish an invented webhook', () => {
     const guide = read(
         '../resources/js/components/payment-gateway-onboarding.tsx',
     );
@@ -36,7 +36,7 @@ test('gateway setup is explicitly sandbox-only and does not publish an invented 
     assert.doesNotMatch(routes, /Route::post\('payments\/webhooks\//);
 });
 
-test('keys remain encrypted and owner access and validation stay mandatory', () => {
+void test('keys remain encrypted and owner access and validation stay mandatory', () => {
     const view = read(
         '../resources/js/components/operator-payment-settings.tsx',
     );
@@ -53,7 +53,7 @@ test('keys remain encrypted and owner access and validation stay mandatory', () 
     assert.match(vault, /Razorpay test keys only/);
 });
 
-test('owner sandbox connection is explicit, rate limited and never charges money', () => {
+void test('owner sandbox connection is explicit, rate limited and never charges money', () => {
     const probe = read(
         '../app/Services/Payments/PaymentGatewaySandboxProbe.php',
     );
@@ -76,7 +76,7 @@ test('owner sandbox connection is explicit, rate limited and never charges money
     assert.doesNotMatch(probe, /rzp_live_/);
 });
 
-test('one active merchant drives both guided steps and encrypted credential entry', () => {
+void test('one active merchant drives both guided steps and encrypted credential entry', () => {
     const page = read('../resources/js/pages/operator-payments.tsx');
     const wizard = read(
         '../resources/js/components/payment-gateway-onboarding.tsx',
@@ -100,7 +100,7 @@ test('one active merchant drives both guided steps and encrypted credential entr
     );
 });
 
-test('Laravel route bootstrap avoids no-op global exception imports', () => {
+void test('Laravel route bootstrap avoids no-op global exception imports', () => {
     const routes = read('../routes/payments-console.php');
     assert.doesNotMatch(
         routes,
