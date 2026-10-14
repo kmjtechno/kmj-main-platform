@@ -227,4 +227,5 @@ Route::post('codebridge/v1/user-access/introspect', function (
     ])->header('Cache-Control', 'no-store');
 })->middleware('throttle:120,1');
 
+require __DIR__.'/codebridge-telemetry-api.php';
 require __DIR__.'/developer-activation-api.php';

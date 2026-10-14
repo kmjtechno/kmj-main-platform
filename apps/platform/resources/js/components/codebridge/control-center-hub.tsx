@@ -1,4 +1,5 @@
 import { Link } from '@inertiajs/react';
+import CodeBridgeLiveTelemetryCard from '@/components/codebridge/live-telemetry-card';
 import type { ReactNode } from 'react';
 import {
     Activity,
@@ -24,6 +25,7 @@ export type CodeBridgeSection =
 
 type Props = {
     organizationName: string;
+    tenantId: string;
     plan: string | null;
     licenseStatus: string;
     licenseExpiresAt: string | null;
@@ -80,6 +82,7 @@ function Metric({
 
 export default function CodeBridgeControlCenterHub({
     organizationName,
+    tenantId,
     plan,
     licenseStatus,
     licenseExpiresAt,
@@ -184,6 +187,10 @@ export default function CodeBridgeControlCenterHub({
                             detail="Refresh grants, not live app sessions"
                         />
                     </div>
+                    <CodeBridgeLiveTelemetryCard
+                        tenantId={tenantId}
+                        active={activeSection === 'overview'}
+                    />
                 </section>
 
                 <section
