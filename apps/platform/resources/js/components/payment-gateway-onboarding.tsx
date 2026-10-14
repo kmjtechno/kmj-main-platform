@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useForm } from '@inertiajs/react';
+import { useState, type FormEvent } from 'react';
 import {
     ArrowRight,
     CheckCircle2,
@@ -66,6 +67,15 @@ export default function PaymentGatewayOnboarding({
     gatewaySettings: OwnerGatewaySetting[];
 }) {
     const [provider, setProvider] = useState<Provider>('razorpay');
+    const probe = useForm({ test_phone: '' });
+    const testConnection = (event: FormEvent<HTMLFormElement>) => {
+        event.preventDefault();
+        if (!keysSaved || probe.processing) return;
+        probe.post(`/operator/payments/gateways/${provider}/test-connection`, {
+            preserveScroll: true,
+            onSuccess: () => probe.reset(),
+        });
+    };
     const selected = gatewaySettings.find((item) => item.provider === provider);
     const config = providers[provider];
     const keysSaved = Boolean(
@@ -187,6 +197,82 @@ export default function PaymentGatewayOnboarding({
                     <ExternalLink className="size-4" />
                 </a>
             </div>
+
+            <form
+                onSubmit={testConnection}
+                className="mt-6 rounded-xl border border-white/10 bg-black/20 p-4"
+                aria-label={`Test ${config.name} sandbox API connection`}
+            >
+                <p className="text-sm font-bold text-white">
+                    Test stored sandbox credentials
+                </p>
+                <p className="mt-2 max-w-3xl text-xs leading-6 text-slate-300">
+                    After saving test keys, this action creates a ₹1 TEST
+                    order on the provider sandbox only. It does not charge a
+                    card, capture money, confirm a subscription or grant a
+                    license. An accepted test order does not mean checkout
+                    and webhooks are production-ready.
+                </p>
+                {provider === 'cashfree' && (
+                    <label className="mt-4 block max-w-sm space-y-2 text-xs font-semibold text-slate-200">
+                        <span>
+                            Your authorized Cashfree sandbox test phone
+                        </span>
+                        <input
+                            type="tel"
+                            inputMode="numeric"
+                            autoComplete="off"
+                            value={probe.data.test_phone}
+                            maxLength={10}
+                            onChange={(event) =>
+                                probe.setData('test_phone', event.target.value)
+                            }
+                            placeholder="10-digit test phone"
+                            className="w-full rounded-xl border border-white/20 bg-[#171c24] px-4 py-3 text-sm text-white"
+                        />
+                        <span className="block text-xs font-normal text-slate-400">
+                            Used only to create your explicit sandbox test
+                            order; may receive test-provider notifications.
+                        </span>
+                        {probe.errors.test_phone && (
+                            <span className="block text-xs text-red-300" role="alert">
+                                {probe.errors.test_phone}
+                            </span>
+                        )}
+                    </label>
+                )}
+                <div className="mt-4 flex flex-wrap items-center gap-3">
+                    <button
+                        type="submit"
+                        disabled={
+                            !keysSaved ||
+                            probe.processing ||
+                            (provider === 'cashfree' &&
+                                !/^[6-9][0-9]{9}$/.test(probe.data.test_phone))
+                        }
+                        className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-red-600 px-5 py-2 text-sm font-bold text-white hover:bg-red-500 disabled:cursor-not-allowed disabled:opacity-40"
+                    >
+                        <ShieldCheck className="size-4" />
+                        {probe.processing ? 'Testing sandbox…' : 'Test Connection'}
+                    </button>
+                    {!keysSaved && (
+                        <span className="text-xs text-amber-200">
+                            Save sandbox API keys above before testing.
+                        </span>
+                    )}
+                </div>
+                {probe.errors.sandbox_probe && (
+                    <p role="alert" className="mt-3 text-xs text-amber-200">
+                        {probe.errors.sandbox_probe}
+                    </p>
+                )}
+                {probe.recentlySuccessful && (
+                    <p role="status" className="mt-3 text-xs text-emerald-300">
+                        Provider accepted sandbox test order only. No payment
+                        collected; full transaction verification still pending.
+                    </p>
+                )}
+            </form>
 
             <div className="mt-6 grid gap-4 rounded-xl border border-amber-500/20 bg-amber-500/[0.06] p-4 text-xs leading-6 text-amber-100 sm:grid-cols-2">
                 <p className="flex gap-2">
