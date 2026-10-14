@@ -5,12 +5,10 @@ use App\Services\Payments\OwnerPaymentGatewaySettings;
 use App\Services\Payments\PaymentGatewaySandboxProbe;
 use App\Services\Payments\PaymentGatewayReadiness;
 use App\Services\PlatformOwnerAccess;
-use DomainException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Schema;
 use Inertia\Inertia;
-use InvalidArgumentException;
 
 Route::middleware(['auth', 'verified', 'password.confirm'])
     ->prefix('operator')
@@ -85,7 +83,7 @@ Route::middleware(['auth', 'verified', 'password.confirm'])
             try {
                 // This is a provider SANDBOX INR 1 order, with NO payment or license.
                 $probe->run($user, $provider, $input['test_phone'] ?? null);
-            } catch (DomainException|InvalidArgumentException) {
+            } catch (\DomainException|\InvalidArgumentException) {
                 return back()->withErrors([
                     'sandbox_probe' => 'Sandbox connection could not be verified. Check test keys and provider access.',
                 ]);
