@@ -78,7 +78,7 @@ export default function KmjMailWorkspace({
     const searchRef = useRef<HTMLInputElement>(null);
     const ready = transportStatus === 'ready' && account !== null;
 
-    const setComposeOpen = (open: boolean) => {
+    const setComposeOpen = useCallback((open: boolean) => {
         setCompose(open);
         if (!open) {
             // Do not retain sensitive draft text when preview is dismissed.
@@ -86,7 +86,7 @@ export default function KmjMailWorkspace({
             setSubject('');
             setBody('');
         }
-    };
+    }, []);
 
     // Keyboard shortcuts never intercept typing in editable fields.
     useEffect(() => {
@@ -112,7 +112,7 @@ export default function KmjMailWorkspace({
         };
         window.addEventListener('keydown', onKeyDown);
         return () => window.removeEventListener('keydown', onKeyDown);
-    }, [compose, selectedId]);
+    }, [compose, selectedId, setComposeOpen]);
 
     const scoped = ready ? messages : [];
     const visible = useMemo(() => {
