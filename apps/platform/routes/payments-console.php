@@ -5,12 +5,12 @@ use App\Services\Payments\OwnerPaymentGatewaySettings;
 use App\Services\Payments\PaymentGatewaySandboxProbe;
 use App\Services\Payments\PaymentGatewayReadiness;
 use App\Services\PlatformOwnerAccess;
+use DomainException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Schema;
-use DomainException;
-use InvalidArgumentException;
 use Inertia\Inertia;
+use InvalidArgumentException;
 
 Route::middleware(['auth', 'verified', 'password.confirm'])
     ->prefix('operator')
