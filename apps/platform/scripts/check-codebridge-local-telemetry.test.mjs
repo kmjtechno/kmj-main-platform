@@ -36,13 +36,9 @@ test('Ollama probes fixed loopback ports only; unknown model strings are dropped
     const seen = [];
     const result = await readOllama(async (url) => {
         seen.push(url);
-        return {
-            ok: true,
-            headers: { get: () => null },
-            text: async () => JSON.stringify({
-                models: [{ name: 'qwen3:4b' }, { name: 'unsafe token=secret' }],
-            }),
-        };
+        return new Response(JSON.stringify({
+            models: [{ name: 'qwen3:4b' }, { name: 'unsafe token=secret' }],
+        }), { status: 200 });
     });
     assert.deepEqual(seen, [11434, 11435, 11436].map((port) =>
         'http://127.0.0.1:' + port + '/api/tags'));
@@ -56,6 +52,7 @@ test('device credential never enters posted payload and no unknown hosts are con
         const token = 'Q'.repeat(48);
         writeFileSync(config, JSON.stringify({
             id: 'p720-agent', tenant: 'tenant-a', token, stateDir: root,
+            gateway: 'https://kmjtechno.com/',
             projects: [{ id: 'kmj-main-platform' }],
         }));
         const calls = [];
