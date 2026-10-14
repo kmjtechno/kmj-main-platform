@@ -30,7 +30,11 @@ class RegistrationTest extends TestCase
         $originalEnvironment = app()->environment();
 
         try {
-            app()->detectEnvironment(static fn (): string => 'production');
+            // Tests run under PHPUnit CLI, which may force --env=testing
+            // and override EnvironmentDetector callback resolution.
+            // Override the actual app env binding used by isProduction().
+            app()->instance('env', 'production');
+            self::assertTrue(app()->isProduction());
             config()->set('mail.default', 'log');
 
             $this->post(route('register.store'), [
@@ -46,7 +50,7 @@ class RegistrationTest extends TestCase
             ]);
             $this->assertGuest();
         } finally {
-            app()->detectEnvironment(static fn (): string => $originalEnvironment);
+            app()->instance('env', $originalEnvironment);
         }
     }
 
