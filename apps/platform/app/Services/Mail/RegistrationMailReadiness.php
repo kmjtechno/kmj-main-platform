@@ -83,12 +83,25 @@ final class RegistrationMailReadiness
 
             $port = (int) ($mailer['port'] ?? 0);
 
-            // These are Laravel's sample localhost settings, not a working
-            // external delivery service by default. Real local SMTP relays
-            // should use explicit non-example configuration.
-            if (in_array(strtolower($host), ['127.0.0.1', 'localhost'], true)
-                && $port === 2525) {
+            if ($port < 1 || $port > 65535) {
                 return false;
+            }
+
+            // A configured local relay is not usable if the loopback listener
+            // is absent. Probe only localhost, never arbitrary remote hosts.
+            // This remains an attempt-readiness check, NOT inbox delivery proof.
+            if (in_array(strtolower($host), ['127.0.0.1', 'localhost'], true)) {
+                if ($port === 2525) {
+                    return false; // Laravel's example/development default.
+                }
+
+                $connection = @fsockopen('127.0.0.1', $port, $errorCode, $errorMessage, 0.2);
+
+                if (! is_resource($connection)) {
+                    return false;
+                }
+
+                fclose($connection);
             }
 
             return true;
