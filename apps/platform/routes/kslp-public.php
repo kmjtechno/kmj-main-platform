@@ -30,19 +30,6 @@ Route::prefix('api/v1/kslp')->group(function (): void {
 });
 
 Route::get(OmniDeskLicenseContract::KEYS_ENDPOINT, function (KslpKeyRegistry $keys) {
-    return response()->json([
-        'protocol_version' => OmniDeskLicenseContract::PROTOCOL_VERSION,
-        'contract_version' => OmniDeskLicenseContract::CONTRACT_VERSION,
-        'product_id' => OmniDeskLicenseContract::PRODUCT_ID,
-        'product_slug' => OmniDeskLicenseContract::PRODUCT_SLUG,
-        'keys' => $keys->omniDeskDiscovery(),
-    ])->header('Cache-Control', 'public, max-age=300')
-        ->header('Access-Control-Allow-Origin', '*')
-        ->header('X-Content-Type-Options', 'nosniff');
-})->name('omnidesk.licensing.keys');
-
-
-Route::get(OmniDeskLicenseContract::KEYS_ENDPOINT, function (KslpKeyRegistry $keys) {
     $published = collect($keys->discovery('license'))
         ->filter(fn (array $key): bool => $key['not_after'] !== null)
         ->map(function (array $key): array {
