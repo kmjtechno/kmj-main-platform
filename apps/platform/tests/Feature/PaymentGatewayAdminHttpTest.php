@@ -72,6 +72,30 @@ final class PaymentGatewayAdminHttpTest extends TestCase
             ->assertDontSee('TEST-CASHFREE-CLIENT-ID');
     }
 
+    public function test_saved_razorpay_webhook_secret_is_not_reported_as_verified_delivery(): void
+    {
+        $owner = $this->platformOwner();
+        DB::table('payment_gateway_settings')->insert([
+            'provider' => 'razorpay',
+            'environment' => 'sandbox',
+            'merchant_status' => 'not_verified',
+            'international_requested' => false,
+            'encrypted_webhook_secret' => 'encrypted_dummy_ciphertext',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $this->actingAs($owner)
+            ->withSession(['auth.password_confirmed_at' => time()])
+            ->get('/operator/payments')
+            ->assertOk()
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->component('operator-payments')
+                ->where('paymentReadiness.providers.0.id', 'razorpay')
+                ->where('paymentReadiness.providers.0.webhook_secret_stored', true)
+                ->where('paymentReadiness.providers.0.webhook_verification_configured', false));
+    }
+
     private function platformOwner(): User
     {
         $user = User::factory()->create([
