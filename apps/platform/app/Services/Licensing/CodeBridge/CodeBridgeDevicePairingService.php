@@ -7,8 +7,8 @@ namespace App\Services\Licensing\CodeBridge;
 use DomainException;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Str;
 use KMJ\MainPlatform\Organizations\Services\OrganizationDirectory;
 
 final class CodeBridgeDevicePairingService
