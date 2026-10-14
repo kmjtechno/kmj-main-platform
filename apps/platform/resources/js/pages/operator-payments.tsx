@@ -87,7 +87,9 @@ export default function OperatorPayments({
                     selectedProvider={selectedProvider}
                 />
                 <section className="mx-auto grid w-full max-w-6xl gap-4 md:grid-cols-2">
-                    {paymentReadiness.providers.map((gateway) => (
+                    {paymentReadiness.providers
+                        .filter((gateway) => gateway.id === 'razorpay' || gateway.id === 'cashfree')
+                        .map((gateway) => (
                         <article
                             key={gateway.id}
                             className="rounded-2xl border border-white/10 bg-[#10141b] p-5"
@@ -165,6 +167,23 @@ export default function OperatorPayments({
                     ))}
                 </section>
 
+                <details className="mx-auto w-full max-w-6xl rounded-2xl border border-white/10 bg-[#10141b] p-5">
+                    <summary className="cursor-pointer text-sm font-semibold text-slate-200">
+                        Other payment options (planned, not integrated)
+                    </summary>
+                    <div className="mt-4 flex flex-wrap gap-2">
+                        {paymentReadiness.providers
+                            .filter((gateway) => gateway.id !== 'razorpay' && gateway.id !== 'cashfree')
+                            .map((gateway) => (
+                                <span
+                                    key={gateway.id}
+                                    className="rounded-lg border border-white/10 px-3 py-2 text-xs text-slate-400"
+                                >
+                                    {gateway.label} · Not integrated
+                                </span>
+                            ))}
+                    </div>
+                </details>
                 <section className="mx-auto w-full max-w-6xl rounded-2xl border border-white/10 bg-[#10141b] p-6">
                     <h2 className="text-lg font-bold">
                         Required before accepting money
