@@ -277,9 +277,13 @@ function GatewaySettingsCard({ setting }: { setting: OwnerGatewaySetting }) {
 
 export default function OperatorPaymentSettings({
     gatewaySettings,
+    selectedProvider,
 }: {
     gatewaySettings: OwnerGatewaySetting[];
+    selectedProvider: OwnerGatewaySetting['provider'];
 }) {
+    const selected = gatewaySettings.find((setting) => setting.provider === selectedProvider);
+
     return (
         <section
             aria-label="Payment gateway settings"
@@ -291,7 +295,7 @@ export default function OperatorPaymentSettings({
                     Settings · Payments
                 </p>
                 <h2 className="text-2xl font-black">
-                    Manage providers without leaving Super Admin
+                    {selected?.name ?? 'Payment provider'} — secure test credentials
                 </h2>
                 <p className="max-w-3xl text-sm leading-6 text-slate-300">
                     Configure test keys and onboarding notes for each provider.
@@ -300,14 +304,18 @@ export default function OperatorPaymentSettings({
                     transactions still require verification.
                 </p>
             </div>
-            <div className="grid gap-5 xl:grid-cols-2">
-                {gatewaySettings.map((setting) => (
+            {selected ? (
+                <div className="max-w-4xl">
                     <GatewaySettingsCard
-                        key={setting.provider}
-                        setting={setting}
+                        key={selected.provider}
+                        setting={selected}
                     />
-                ))}
-            </div>
+                </div>
+            ) : (
+                <p role="alert" className="text-sm text-amber-300">
+                    The selected provider is not available. Please refresh the page.
+                </p>
+            )}
         </section>
     );
 }
