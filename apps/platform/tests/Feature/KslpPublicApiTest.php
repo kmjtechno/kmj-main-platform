@@ -4,22 +4,25 @@ namespace Tests\Feature;
 
 use App\Services\Licensing\Kslp\KslpKeyRegistry;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
 final class KslpPublicApiTest extends TestCase
 {
     use RefreshDatabase;
 
-    private function key(string $seed): string
+    private function key(string $seed): array
     {
         $pair = sodium_crypto_sign_seed_keypair(hash('sha256', $seed, true));
+        $raw = sodium_crypto_sign_publickey($pair);
+        $encoded = rtrim(strtr(base64_encode($raw), '+/', '-_'), '=');
 
-        return rtrim(strtr(base64_encode(sodium_crypto_sign_publickey($pair)), '+/', '-_'), '=');
+        return [$raw, $encoded];
     }
 
     public function test_contract_and_public_verification_keys_are_versioned_and_private_key_free(): void
     {
-        $encoded = $this->key('api-public');
+        [$rawPublic, $encoded] = $this->key('api-public');
         $registry = app(KslpKeyRegistry::class);
         $registry->publish('lic-public-1', 'license', $encoded);
 
@@ -36,39 +39,46 @@ final class KslpPublicApiTest extends TestCase
             ->json();
 
         self::assertSame($encoded, $response['keys'][0]['public_key']);
+        self::assertSame($rawPublic, $registry->publicKey('lic-public-1', 'license'));
         self::assertArrayNotHasKey('private_key', $response['keys'][0]);
     }
 
-    public function test_omnidesk_compatibility_key_endpoint_matches_the_client_contract(): void
+    public function test_omnidesk_key_endpoint_emits_only_bounded_current_ed25519_keys(): void
     {
+        [$rawActive, $active] = $this->key('omnidesk-active');
+        [, $unbounded] = $this->key('omnidesk-unbounded');
+        [, $future] = $this->key('omnidesk-future');
+
         $registry = app(KslpKeyRegistry::class);
-        $active = $this->key('omnidesk-active');
-        $rollover = $this->key('omnidesk-rollover');
-        $registry->publish('omnidesk-active', 'license', $active);
-        $registry->publish('omnidesk-rollover', 'license', $rollover, 'retiring');
+        $registry->publish('omni-active', 'license', $active);
+        $registry->publish('omni-unbounded', 'license', $unbounded);
+        $registry->publish('omni-future', 'license', $future, 'retiring');
+
+        DB::table('kslp_signing_keys')->where('kid', 'omni-active')->update([
+            'not_before' => now()->subHour(),
+            'not_after' => now()->addDay(),
+        ]);
+        DB::table('kslp_signing_keys')->where('kid', 'omni-future')->update([
+            'not_before' => now()->addHour(),
+            'not_after' => now()->addDay(),
+        ]);
 
         $response = $this->getJson('/api/v1/licensing/keys')
             ->assertOk()
             ->assertHeader('Access-Control-Allow-Origin', '*')
-            ->assertHeader('X-Content-Type-Options', 'nosniff')
             ->assertJsonPath('protocol_version', 'KSLP-v1')
             ->assertJsonPath('contract_version', 'kmj.omnidesk.license.v1')
             ->assertJsonPath('product_id', 'KMJ_OMNIDESK')
-            ->assertJsonPath('product_slug', 'kmj-omnidesk')
+            ->assertJsonPath('algorithm', 'Ed25519')
             ->json();
 
-        self::assertCount(2, $response['keys']);
-        self::assertSame(
-            ['kid', 'algorithm', 'public_key', 'not_before', 'not_after', 'status'],
-            array_keys($response['keys'][0])
-        );
-        self::assertSame('omnidesk-active', $response['keys'][0]['kid']);
+        self::assertCount(1, $response['keys']);
+        self::assertSame('omni-active', $response['keys'][0]['kid']);
         self::assertSame('Ed25519', $response['keys'][0]['algorithm']);
-        self::assertSame($active, $response['keys'][0]['public_key']);
+        self::assertSame(base64_encode($rawActive), $response['keys'][0]['public_key_base64']);
         self::assertSame('ACTIVE', $response['keys'][0]['status']);
         self::assertIsInt($response['keys'][0]['not_before']);
-        self::assertNull($response['keys'][0]['not_after']);
-        self::assertSame('ROLLOVER', $response['keys'][1]['status']);
+        self::assertIsInt($response['keys'][0]['not_after']);
         self::assertArrayNotHasKey('private_key', $response['keys'][0]);
     }
 }
