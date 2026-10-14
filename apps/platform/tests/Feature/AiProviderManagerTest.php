@@ -220,6 +220,26 @@ final class AiProviderManagerTest extends TestCase
         $this->assertSame(['a/fast:free'], $provider->fallback_models);
     }
 
+    public function test_free_model_after_two_hundred_paid_catalog_entries_is_still_detected(): void
+    {
+        $catalog = array_map(
+            static fn (int $index): array => ['id' => 'paid/model-'.$index],
+            range(1, 250),
+        );
+        $catalog[] = ['id' => 'late/free-coder:free'];
+        Http::fake(['openrouter.ai/*' => Http::response(['data' => $catalog], 200)]);
+        $provider = $this->provider('openrouter', []);
+        $this->confirmed($this->owner)->post('/services/kmj-codebridge/ai-providers/'.$provider->id.'/test')
+            ->assertSessionHasNoErrors();
+
+        $provider->refresh();
+        $this->assertCount(200, $provider->models_cache);
+        $this->assertContains('late/free-coder:free', $provider->models_cache);
+        $this->assertSame('late/free-coder:free', $provider->default_model);
+        $this->assertSame(['late/free-coder:free'], app(ProviderManager::class)->present($provider)['models']);
+        Http::assertSentCount(1);
+    }
+
     public function test_openrouter_paid_models_are_hidden_and_cannot_be_saved(): void
     {
         $manager = app(ProviderManager::class);
