@@ -148,7 +148,7 @@ void test('project setup entry is visible only to managers and never invents an 
     assert.match(deviceCenter, /canManage && showProjectSetup/);
     assert.match(deviceCenter, /Add project/);
     assert.match(deviceCenter, /kmj-omnidesk/);
-    assert.match(deviceCenter, /scripts\/enroll-p720-omnidesk/);
+    assert.match(deviceCenter, /\/downloads\/codebridge\/enroll-p720-omnidesk\.ps1/);
     assert.match(deviceCenter, /\/downloads\/codebridge\/enroll-p720-omnidesk\.ps1/);
     assert.match(deviceCenter, /id="codebridge-add-project"/);
     assert.match(deviceCenter, /requires a verified CodeBridge gateway check/);
