@@ -90,6 +90,13 @@ export default function PaymentGatewayOnboarding({
     );
     const webhookSecretSaved = selected?.webhook_secret_stored === true;
     const savedCount = Number(keysSaved) + Number(webhookSecretSaved);
+    // Server-level form errors may include fields not submitted by useForm.
+    // Narrow the dynamic key safely without adding an unwanted request field.
+    const sandboxProbeError =
+        'sandbox_probe' in probe.errors &&
+        typeof probe.errors.sandbox_probe === 'string'
+            ? probe.errors.sandbox_probe
+            : null;
 
     return (
         <section
@@ -277,9 +284,9 @@ export default function PaymentGatewayOnboarding({
                         </span>
                     )}
                 </div>
-                {probe.errors.sandbox_probe && (
+                {sandboxProbeError && (
                     <p role="alert" className="mt-3 text-xs text-amber-200">
-                        {probe.errors.sandbox_probe}
+                        {sandboxProbeError}
                     </p>
                 )}
                 {probe.recentlySuccessful && (
