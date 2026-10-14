@@ -79,7 +79,9 @@ export default function PaymentGatewayOnboarding({
             onSuccess: () => probe.reset(),
         });
     };
-    const selected = gatewaySettings.find((item) => item.provider === provider);
+    const selected = gatewaySettings.find(
+        (item) => item.provider === provider,
+    );
     const config = providers[provider];
     const keysSaved = Boolean(
         selected?.storage_ready &&
@@ -146,10 +148,12 @@ export default function PaymentGatewayOnboarding({
                     {config.name} readiness
                 </span>
                 <span className="rounded-full border border-white/10 px-3 py-1 text-xs text-slate-300">
-                    {savedCount}/2 credential items stored (not payment verification)
+                    {savedCount}/2 credential items stored (not payment
+                    verification)
                 </span>
                 <span className="text-xs text-slate-400">
-                    Storage is {selected?.storage_ready ? 'ready' : 'not yet migrated'}
+                    Storage is{' '}
+                    {selected?.storage_ready ? 'ready' : 'not yet migrated'}
                 </span>
             </div>
 
@@ -222,9 +226,7 @@ export default function PaymentGatewayOnboarding({
                 </p>
                 {provider === 'cashfree' && (
                     <label className="mt-4 block max-w-sm space-y-2 text-xs font-semibold text-slate-200">
-                        <span>
-                            Your authorized Cashfree sandbox test phone
-                        </span>
+                        <span>Your authorized Cashfree sandbox test phone</span>
                         <input
                             type="tel"
                             inputMode="numeric"
@@ -242,7 +244,10 @@ export default function PaymentGatewayOnboarding({
                             order; may receive test-provider notifications.
                         </span>
                         {probe.errors.test_phone && (
-                            <span className="block text-xs text-red-300" role="alert">
+                            <span
+                                className="block text-xs text-red-300"
+                                role="alert"
+                            >
                                 {probe.errors.test_phone}
                             </span>
                         )}
@@ -260,7 +265,9 @@ export default function PaymentGatewayOnboarding({
                         className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-red-600 px-5 py-2 text-sm font-bold text-white hover:bg-red-500 disabled:cursor-not-allowed disabled:opacity-40"
                     >
                         <ShieldCheck className="size-4" />
-                        {probe.processing ? 'Testing sandbox…' : 'Test Connection'}
+                        {probe.processing
+                            ? 'Testing sandbox…'
+                            : 'Test Connection'}
                     </button>
                     {!keysSaved && (
                         <span className="text-xs text-amber-200">
@@ -274,7 +281,10 @@ export default function PaymentGatewayOnboarding({
                     </p>
                 )}
                 {probe.recentlySuccessful && (
-                    <p role="status" className="mt-3 text-xs text-emerald-300">
+                    <p
+                        role="status"
+                        className="mt-3 text-xs text-emerald-300"
+                    >
                         Provider accepted sandbox test order only. No payment
                         collected; full transaction verification still pending.
                     </p>
