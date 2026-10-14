@@ -47,6 +47,44 @@ final class RegistrationMailReadinessTest extends TestCase
         self::assertFalse(app(RegistrationMailReadiness::class)->canAttemptDelivery());
     }
 
+    public function test_invalid_smtp_port_fails_closed(): void
+    {
+        config()->set('mail.default', 'smtp');
+
+        foreach ([0, -1, 65536] as $port) {
+            config()->set('mail.mailers.smtp', [
+                'transport' => 'smtp', 'host' => '127.0.0.1', 'port' => $port,
+            ]);
+            self::assertFalse(app(RegistrationMailReadiness::class)->canAttemptDelivery());
+        }
+    }
+
+    public function test_local_relay_must_accept_a_loopback_connection(): void
+    {
+        $listener = stream_socket_server('tcp://127.0.0.1:0', $errorCode, $errorMessage);
+
+        self::assertIsResource($listener);
+
+        $address = stream_socket_get_name($listener, false);
+        self::assertIsString($address);
+
+        $port = (int) preg_replace('/^.*:/', '', $address);
+        self::assertGreaterThan(0, $port);
+
+        config()->set('mail.default', 'smtp');
+        config()->set('mail.mailers.smtp', [
+            'transport' => 'smtp', 'host' => '127.0.0.1', 'port' => $port,
+        ]);
+
+        try {
+            self::assertTrue(app(RegistrationMailReadiness::class)->canAttemptDelivery());
+        } finally {
+            fclose($listener);
+        }
+
+        self::assertFalse(app(RegistrationMailReadiness::class)->canAttemptDelivery());
+    }
+
     public function test_example_sender_and_missing_mailers_are_rejected(): void
     {
         config()->set('mail.default', 'smtp');
