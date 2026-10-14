@@ -39,10 +39,18 @@ echo '== MAIL-00/01 shell syntax =='
 if bash -n "$tmp/tree/scripts/operations/kmj-mail-00-readiness.sh" \
   && bash -n "$tmp/tree/scripts/operations/kmj-mail-00-prepare-dkim.sh" \
   && bash -n "$tmp/tree/scripts/operations/kmj-mail-00-verify-dkim-dns.sh" \
+  && bash -n "$tmp/tree/scripts/operations/kmj-mail-p0-oneclick.sh" \
   && bash -n "$tmp/tree/scripts/operations/kmj-mail-01-bootstrap.sh"; then
   echo 'PASS: mail install/preflight Bash parser'
 else
   echo 'FAIL: mail script shell syntax'; failed=$((failed+1))
+fi
+echo '== Python mail-DNS code compilation =='
+if python3 -m py_compile "$tmp/tree/scripts/operations/kmj-mail-cloudflare-dkim.py" \
+    "$tmp/tree/scripts/operations/test-kmj-mail-cloudflare-dkim.py"; then
+  echo 'PASS: Cloudflare DNS publisher/test Python syntax'
+else
+  echo 'FAIL: Cloudflare DNS publisher Python syntax'; failed=$((failed+1))
 fi
 echo '== Offline Cloudflare DKIM DNS publishing regression tests =='
 if python3 "$tmp/tree/scripts/operations/test-kmj-mail-cloudflare-dkim.py"; then
