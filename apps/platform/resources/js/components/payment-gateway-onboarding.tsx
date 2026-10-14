@@ -122,7 +122,11 @@ export default function PaymentGatewayOnboarding({
                         key={id}
                         type="button"
                         aria-pressed={provider === id}
-                        onClick={() => setProvider(id)}
+                        onClick={() => {
+                            setProvider(id);
+                            probe.clearErrors();
+                            probe.reset();
+                        }}
                         className={
                             provider === id
                                 ? 'rounded-xl bg-red-600 px-5 py-3 text-sm font-bold text-white'
