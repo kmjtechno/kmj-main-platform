@@ -29,12 +29,11 @@ final class PaymentGatewaySandboxProbe
         }
 
         // Credential decryption is performed only after route owner/passkey checks.
-        $credentials = $this->settings->sandboxCredentials($provider);
-        $id = 'kmjcb_probe_'.strtolower(Str::random(12));
-
         // These requests create ONLY a sandbox provider order for INR 1.
         // No payment session is returned to the browser and no customer is charged.
         try {
+            $credentials = $this->settings->sandboxCredentials($provider);
+            $id = 'kmjcb_probe_'.strtolower(Str::random(12));
             if ($provider === 'razorpay') {
                 $this->razorpay->create(
                     $id,
