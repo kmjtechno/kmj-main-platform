@@ -179,6 +179,47 @@ final class AiProviderManagerTest extends TestCase
         $this->assertSame('unknown', $provider->health);
     }
 
+    public function test_healthy_openrouter_discovery_auto_configures_only_free_models_without_generating(): void
+    {
+        Http::fake(['openrouter.ai/*' => Http::response(['data' => [
+            ['id' => 'a/paid-model'],
+            ['id' => 'b/coder:free'],
+            ['id' => 'c/backup:free'],
+            ['id' => 'd/expensive-model'],
+        ]], 200)]);
+        $provider = $this->provider('openrouter', []);
+        $this->confirmed($this->owner)->post('/services/kmj-codebridge/ai-providers/'.$provider->id.'/test')
+            ->assertSessionHasNoErrors();
+
+        $provider->refresh();
+        $this->assertSame('b/coder:free', $provider->default_model);
+        $this->assertSame(['c/backup:free'], $provider->fallback_models);
+        $this->assertSame('ok', $provider->health);
+        Http::assertSentCount(1);
+        Http::assertSent(static fn ($request): bool => $request->method() === 'GET'
+            && str_ends_with($request->url(), '/models'));
+    }
+
+    public function test_discovery_preserves_selected_free_default_and_purges_delisted_choices(): void
+    {
+        Http::fake(['openrouter.ai/*' => Http::response(['data' => [
+            ['id' => 'a/fast:free'],
+            ['id' => 'c/still-free:free'],
+            ['id' => 'z/paid'],
+        ]], 200)]);
+        $provider = $this->provider('openrouter', ['a/fast:free', 'b/delisted:free', 'c/still-free:free']);
+        $provider->default_model = 'c/still-free:free';
+        $provider->fallback_models = ['b/delisted:free', 'z/paid'];
+        $provider->save();
+
+        $this->confirmed($this->owner)->post('/services/kmj-codebridge/ai-providers/'.$provider->id.'/test')
+            ->assertSessionHasNoErrors();
+
+        $provider->refresh();
+        $this->assertSame('c/still-free:free', $provider->default_model);
+        $this->assertSame(['a/fast:free'], $provider->fallback_models);
+    }
+
     public function test_openrouter_paid_models_are_hidden_and_cannot_be_saved(): void
     {
         $manager = app(ProviderManager::class);
