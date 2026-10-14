@@ -163,16 +163,16 @@ function ProviderCard({
             )}
 
             <p className="text-muted-foreground text-xs" role="status">
-                {provider.eligible_free_models_count} verified-free candidate models shown out of{' '}
-                {provider.discovered_models_count} discovered. Paid or unapproved models are
-                hidden and cannot be selected. Cloud models must have current healthy discovery
-                before inference is eligible. CodeBridge runtime execution:{' '}
-                {provider.codebridge_execution === 'not_verified' ? 'not yet verified' : provider.codebridge_execution}.
+                {provider.eligible_free_models_count} policy-eligible free
+                models out of {provider.discovered_models_count} discovered.
+                Paid or unapproved models are hidden. CodeBridge cloud
+                inference: not yet verified.
             </p>
 
             {provider.models.length === 0 ? (
                 <p className="text-muted-foreground text-xs">
-                    No eligible free models. Check the provider connection and approved free-model policy.
+                    No eligible free models. Check the provider connection
+                    and approved free-model policy.
                 </p>
             ) : (
                 <div className="grid gap-3 md:grid-cols-2">
@@ -181,7 +181,11 @@ function ProviderCard({
                         <select
                             className="bg-background mt-1 block h-9 w-full rounded-xl border px-2"
                             value={provider.default_model ?? ''}
-                            disabled={busy || !canManage || provider.inference_readiness === 'blocked'}
+                            disabled={
+                                busy ||
+                                !canManage ||
+                                provider.inference_readiness === 'blocked'
+                            }
                             onChange={(event) =>
                                 patch({
                                     default_model: event.target.value || null,
@@ -213,7 +217,17 @@ function ProviderCard({
                                             checked={provider.fallback_models.includes(
                                                 model,
                                             )}
-                                            disabled={busy || !canManage || provider.inference_readiness === 'blocked' || (provider.fallback_models.length >= 5 && !provider.fallback_models.includes(model))}
+                                            disabled={
+                                                busy ||
+                                                !canManage ||
+                                                provider.inference_readiness ===
+                                                    'blocked' ||
+                                                (provider.fallback_models.length >=
+                                                    5 &&
+                                                    !provider.fallback_models.includes(
+                                                        model,
+                                                    ))
+                                            }
                                             onChange={() =>
                                                 toggleFallback(model)
                                             }
