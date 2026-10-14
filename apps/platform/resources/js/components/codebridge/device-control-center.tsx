@@ -73,7 +73,10 @@ export default function DeviceControlCenter({
             { tenant_id: tenantId, project_id: 'kmj-omnidesk' },
             {
                 preserveScroll: true,
-                onError: () => setFeedback('OmniDesk setup request was not saved. Check account authorization and retry.'),
+                onError: () =>
+                    setFeedback(
+                        'OmniDesk setup request was not saved. Check account authorization and retry.',
+                    ),
                 onFinish: () => setProjectSubmitting(false),
             },
         );
@@ -201,7 +204,9 @@ export default function DeviceControlCenter({
                             type="button"
                             aria-expanded={showProjectSetup}
                             aria-controls="codebridge-add-project"
-                            onClick={() => setShowProjectSetup((current) => !current)}
+                            onClick={() =>
+                                setShowProjectSetup((current) => !current)
+                            }
                             className="inline-flex h-10 items-center gap-2 rounded-xl bg-red-600 px-4 text-xs font-black text-white hover:bg-red-500"
                         >
                             <FolderPlus className="h-4 w-4" /> Add project
@@ -234,17 +239,26 @@ export default function DeviceControlCenter({
                         </p>
                     </div>
                     {omniRegistered ? (
-                        <p role="status" className="text-xs font-bold text-emerald-600">
+                        <p
+                            role="status"
+                            className="text-xs font-bold text-emerald-600"
+                        >
                             OmniDesk grant is registered. Live agent status
                             still requires a verified CodeBridge gateway check.
                         </p>
                     ) : omniRequested ? (
-                        <p role="status" className="text-xs font-semibold text-amber-600">
+                        <p
+                            role="status"
+                            className="text-xs font-semibold text-amber-600"
+                        >
                             Setup requested · Awaiting separate P720 agent
                             pairing. No live project grant exists yet.
                         </p>
                     ) : (
-                        <p role="status" className="text-xs font-semibold text-amber-600">
+                        <p
+                            role="status"
+                            className="text-xs font-semibold text-amber-600"
+                        >
                             OmniDesk is not registered yet. Request onboarding,
                             install the separate agent on P720 and approve
                             pairing to complete the project grant.
@@ -254,7 +268,9 @@ export default function DeviceControlCenter({
                         <button
                             type="button"
                             onClick={requestOmniDesk}
-                            disabled={projectSubmitting || omniRequested || omniRegistered}
+                            disabled={
+                                projectSubmitting || omniRequested || omniRegistered
+                            }
                             className="inline-flex min-h-10 items-center gap-2 rounded-xl border px-4 text-xs font-black disabled:opacity-50"
                         >
                             {projectSubmitting
@@ -271,7 +287,8 @@ export default function DeviceControlCenter({
                             rel="noopener noreferrer"
                             className="inline-flex min-h-10 items-center gap-2 rounded-xl bg-red-600 px-4 text-xs font-black text-white hover:bg-red-500"
                         >
-                            <FolderPlus className="h-4 w-4" /> Download OmniDesk setup
+                            <FolderPlus className="h-4 w-4" /> Download OmniDesk
+                            setup
                         </a>
                         <Link
                             href="/codebridge/pair"
