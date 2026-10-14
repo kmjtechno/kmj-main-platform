@@ -23,7 +23,7 @@ final class PaymentGatewayReadiness
                 && $this->present($settings['client_secret'] ?? null))
                 || ((bool) ($record['client_id_stored'] ?? false)
                     && (bool) ($record['client_secret_stored'] ?? false));
-            $webhookReady = (bool) ($record['webhook_secret_stored'] ?? false)
+            $webhookSecretStored = (bool) ($record['webhook_secret_stored'] ?? false)
                 || ($provider === 'cashfree'
                     ? $this->present($settings['client_secret'] ?? null)
                     : $this->present($settings['webhook_secret'] ?? null));
@@ -34,7 +34,9 @@ final class PaymentGatewayReadiness
                 'merchant_approval' => ($record['merchant_status'] ?? 'not_verified') === 'owner_reports_approved'
                     ? 'reported_by_owner_not_api_verified' : 'not_verified',
                 'sandbox_credentials_present' => $keysPresent,
-                'webhook_verification_configured' => $webhookReady,
+                'webhook_secret_stored' => $webhookSecretStored,
+                // Saving a secret proves neither a deployed receiver nor a signed delivery.
+                'webhook_verification_configured' => false,
                 'international_approval_recorded' => ($settings['international_approved'] ?? false) === true,
                 'live_transaction_verified' => false,
                 'status' => $keysPresent ? 'sandbox_validation_required' : 'credentials_required',
