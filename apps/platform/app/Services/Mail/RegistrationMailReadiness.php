@@ -95,9 +95,19 @@ final class RegistrationMailReadiness
                     return false; // Laravel's example/development default.
                 }
 
-                $connection = @fsockopen('127.0.0.1', $port, $errorCode, $errorMessage, 0.2);
+                // Initialize socket error parameters explicitly so the
+                // readiness probe is compatible with strict static analysis.
+                $errorCode = 0;
+                $errorMessage = '';
+                $connection = @stream_socket_client(
+                    sprintf('tcp://127.0.0.1:%d', $port),
+                    $errorCode,
+                    $errorMessage,
+                    0.2,
+                    STREAM_CLIENT_CONNECT,
+                );
 
-                if (! is_resource($connection)) {
+                if ($connection === false) {
                     return false;
                 }
 
