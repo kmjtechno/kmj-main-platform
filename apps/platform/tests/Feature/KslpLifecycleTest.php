@@ -94,6 +94,34 @@ final class KslpLifecycleTest extends TestCase
         self::assertSame(3, count(explode('.', $token)));
     }
 
+    public function test_cloudos_lease_signer_rejects_omnidesk_before_signing(): void
+    {
+        $control = app(KslpLicenseControlPlane::class);
+        $license = $control->issue('cross-product-tenant', 'business', 'owner');
+        [$activation] = $this->activate($control, $license['id'], 'cross-product-activation');
+
+        DB::table('kslp_licenses')
+            ->where('id', $license['id'])
+            ->update(['product' => 'KMJ_OMNIDESK']);
+
+        $signer = new class implements KslpSigner
+        {
+            public function kid(): string
+            {
+                throw new \\RuntimeException('KSLP signer must not be consulted for another product');
+            }
+
+            public function sign(string $message): string
+            {
+                throw new \\RuntimeException('KSLP signer must not sign another product');
+            }
+        };
+
+        $this->expectException(\\DomainException::class);
+        $this->expectExceptionMessage('KSLP_WRONG_PRODUCT');
+        $control->lease($license['id'], $activation['id'], $signer);
+    }
+
     public function test_sensitive_mutation_requires_a_specific_audit_reason(): void
     {
         $c = app(KslpLicenseControlPlane::class);
