@@ -1130,3 +1130,17 @@ Route::middleware(['auth', 'verified'])->group(function () {
 require __DIR__.'/developer-licenses.php';
 require __DIR__.'/payments-console.php';
 require __DIR__.'/settings.php';
+
+/*
+ * MAIL-02 interactive shell is a local/test-only preview.
+ * No public deployment route, mailbox queries, send actions or fake customer data.
+ */
+if (app()->environment('local', 'testing')) {
+    Route::middleware(['auth', 'verified'])
+        ->get('internal/kmj-mail-preview', fn () => Inertia::render('mail/index', [
+            'account' => null,
+            'transportStatus' => 'not_configured',
+            'messages' => [],
+        ]))
+        ->name('mail.preview');
+}
