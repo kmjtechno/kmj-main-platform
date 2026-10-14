@@ -25,7 +25,19 @@ if [[ -e "$TXTFILE" && ! -f "$TXTFILE" ]]; then
   echo "BLOCKED: existing DNS key path is not a regular file"
   exit 2
 fi
-install -d -o root -g root -m 0700 "$KEYDIR"
+if [[ -d "$KEYDIR" ]]; then
+  # Do not change permissions/ownership of an existing live OpenDKIM key directory.
+  # Existing unrelated keys require explicit manual review.
+  for existing in "$KEYDIR"/*; do
+    [[ -e "$existing" ]] || continue
+    [[ "$existing" == "$KEYFILE" || "$existing" == "$TXTFILE" ]] || {
+      echo "BLOCKED: existing unrelated DKIM key material"
+      exit 2
+    }
+  done
+else
+  install -d -o root -g root -m 0700 "$KEYDIR"
+fi
 if [[ ! -f "$KEYFILE" ]]; then
   temp="$(mktemp "$KEYDIR/.dkim-private.XXXXXXXX")"
   trap 'rm -f -- "${temp:-}"' EXIT
