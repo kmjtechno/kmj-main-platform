@@ -12,6 +12,10 @@ repo="$(git rev-parse --show-toplevel)"
 git -C "$repo" cat-file -e "${sha}^{commit}" || { echo 'BLOCKED: fetch PR head first' >&2; exit 3; }
 
 src="$repo/apps/platform"
+if [[ -L "$src/vendor" || -L "$src/node_modules" ]]; then
+  echo 'BLOCKED: linked top-level QA dependencies could mutate production paths' >&2
+  exit 3
+fi
 [[ -f "$src/vendor/autoload.php" ]] || { echo 'BLOCKED: PHP vendor dependencies absent' >&2; exit 3; }
 [[ -d "$src/node_modules" && -x "$src/node_modules/.bin/vp" ]] || {
   echo 'BLOCKED: Node and Vite+ dependencies absent' >&2; exit 3;
