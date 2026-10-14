@@ -7,6 +7,16 @@ set -euo pipefail
   echo "BLOCKED: set MAIL_BOOTSTRAP_APPROVED=yes to install and configure system packages"
   exit 2
 }
+# Installation may start the local MTA: require independent policy and DNS gates.
+# These are explicit operator attestations after verified MAIL-00 evidence.
+[[ "${MAIL_HOST_POLICY_APPROVED:-no}" == "yes" ]] || {
+  echo "BLOCKED: written hosting-provider mail permission not confirmed"
+  exit 2
+}
+[[ "${MAIL_DNS_AND_PTR_VERIFIED:-no}" == "yes" ]] || {
+  echo "BLOCKED: forward/reverse DNS, SPF and matching public DKIM not confirmed"
+  exit 2
+}
 [[ -f /etc/os-release ]] || exit 2
 . /etc/os-release
 [[ "$ID" == "ubuntu" && "$VERSION_ID" == "24.04" ]] || {
