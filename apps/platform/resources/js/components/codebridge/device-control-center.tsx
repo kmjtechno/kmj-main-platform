@@ -4,6 +4,7 @@ import {
     Cable,
     CheckCircle2,
     Clipboard,
+    FolderPlus,
     HardDrive,
     Laptop2,
     LockKeyhole,
@@ -47,6 +48,7 @@ export default function DeviceControlCenter({
     endpoint,
 }: Props) {
     const [search, setSearch] = useState('');
+    const [showProjectSetup, setShowProjectSetup] = useState(false);
     const [view, setView] = useState<View>('all');
     const [details, setDetails] = useState<string | null>(null);
     const [confirmId, setConfirmId] = useState<string | null>(null);
@@ -171,14 +173,91 @@ export default function DeviceControlCenter({
                     >
                         <RefreshCw className="h-4 w-4" /> Refresh
                     </button>
+                    {canManage && (
+                        <button
+                            type="button"
+                            aria-expanded={showProjectSetup}
+                            aria-controls="codebridge-add-project"
+                            onClick={() => setShowProjectSetup((current) => !current)}
+                            className="inline-flex h-10 items-center gap-2 rounded-xl bg-red-600 px-4 text-xs font-black text-white hover:bg-red-500"
+                        >
+                            <FolderPlus className="h-4 w-4" /> Add project
+                        </button>
+                    )}
                     <Link
                         href="/codebridge/pair"
-                        className="inline-flex h-10 items-center gap-2 rounded-xl bg-red-600 px-4 text-xs font-black text-white hover:bg-red-500"
+                        className="inline-flex h-10 items-center gap-2 rounded-xl border px-4 text-xs font-black hover:border-red-500/40"
                     >
                         <Cable className="h-4 w-4" /> Connect device
                     </Link>
                 </div>
             </div>
+
+            {canManage && showProjectSetup && (
+                <section
+                    id="codebridge-add-project"
+                    aria-label="Add a CodeBridge project"
+                    className="mt-5 space-y-4 rounded-xl border border-red-500/25 p-4"
+                >
+                    <div>
+                        <h3 className="text-sm font-black">
+                            Add project — KMJ OmniDesk first
+                        </h3>
+                        <p className="text-muted-foreground mt-2 text-xs leading-5">
+                            Target repository: kmjtechno/kmj-omnidesk · Host:
+                            Lenovo P720 Windows. The current free agent is
+                            single-project, so setup uses a separate device
+                            identity. It never replaces CodeBridge or CineCore.
+                        </p>
+                    </div>
+                    {devices.some((device) =>
+                        device.projects.some(
+                            (project) => project.id === 'kmj-omnidesk',
+                        ),
+                    ) ? (
+                        <p role="status" className="text-xs font-bold text-emerald-600">
+                            OmniDesk grant is registered. Live agent status
+                            still requires a verified CodeBridge gateway check.
+                        </p>
+                    ) : (
+                        <p role="status" className="text-xs font-semibold text-amber-600">
+                            OmniDesk is not registered in this account yet.
+                            Download the scoped installer, run it once on the
+                            P720, and approve the short-lived KMJ pairing.
+                        </p>
+                    )}
+                    <div className="flex flex-wrap gap-2">
+                        <a
+                            href="https://raw.githubusercontent.com/kmjtechno/kmj-codebridge/main/scripts/enroll-p720-omnidesk.ps1"
+                            download="KMJ-CodeBridge-Add-OmniDesk.ps1"
+                            rel="noopener noreferrer"
+                            className="inline-flex min-h-10 items-center gap-2 rounded-xl bg-red-600 px-4 text-xs font-black text-white hover:bg-red-500"
+                        >
+                            <FolderPlus className="h-4 w-4" /> Download OmniDesk setup
+                        </a>
+                        <Link
+                            href="/codebridge/pair"
+                            className="inline-flex min-h-10 items-center gap-2 rounded-xl border px-4 text-xs font-bold"
+                        >
+                            Approve project pairing
+                        </Link>
+                        <button
+                            type="button"
+                            onClick={() => router.reload({ only: ['service'] })}
+                            className="inline-flex min-h-10 items-center gap-2 rounded-xl border px-4 text-xs font-bold"
+                        >
+                            <RefreshCw className="h-4 w-4" /> Check registration
+                        </button>
+                    </div>
+                    <p className="text-muted-foreground text-xs leading-5">
+                        A browser cannot install software silently. Pairing
+                        requires the device owner's consent. Project status
+                        changes only after a real enrollment, never when the
+                        installer is merely downloaded. More repository presets
+                        need separate scoped installers or signed host grants.
+                    </p>
+                </section>
+            )}
 
             <div className="mt-5 grid gap-3 sm:grid-cols-3">
                 <Stat
