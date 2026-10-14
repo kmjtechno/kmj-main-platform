@@ -768,6 +768,7 @@ workflows:
                 - claude/ai-provider-oauth
                 - claude/remove-auto-refresh
                 - claude/ai-provider-manager
+                - fix/customer-directory-actions-on-current-main-20261014
                 - release/codebridge-claude-ui-verified-20261013
       - php_pint:
           filters:
@@ -782,6 +783,7 @@ workflows:
                 - claude/ai-provider-oauth
                 - claude/remove-auto-refresh
                 - claude/ai-provider-manager
+                - fix/customer-directory-actions-on-current-main-20261014
                 - release/codebridge-claude-ui-verified-20261013
       - php_phpstan:
           filters:
@@ -796,6 +798,7 @@ workflows:
                 - claude/ai-provider-oauth
                 - claude/remove-auto-refresh
                 - claude/ai-provider-manager
+                - fix/customer-directory-actions-on-current-main-20261014
                 - release/codebridge-claude-ui-verified-20261013
       - php_tests:
           filters:
@@ -810,3 +813,4 @@ workflows:
                 - claude/ai-provider-oauth
                 - claude/remove-auto-refresh
                 - claude/ai-provider-manager
+                - fix/customer-directory-actions-on-current-main-20261014
