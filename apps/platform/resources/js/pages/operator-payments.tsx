@@ -169,7 +169,7 @@ export default function OperatorPayments({
                                     </div>
                                 </dl>
                             </article>
-                    ))}
+                        ))}
                 </section>
 
                 <details className="mx-auto w-full max-w-6xl rounded-2xl border border-white/10 bg-[#10141b] p-5">
