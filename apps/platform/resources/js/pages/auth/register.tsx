@@ -14,10 +14,7 @@ type Props = {
     registrationAvailable: boolean;
 };
 
-export default function Register({
-    passwordRules,
-    registrationAvailable,
-}: Props) {
+export default function Register({ passwordRules, registrationAvailable }: Props) {
     return (
         <>
             <Head title="Register" />
