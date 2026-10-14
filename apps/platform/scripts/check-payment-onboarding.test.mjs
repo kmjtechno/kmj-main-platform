@@ -38,3 +38,22 @@ test('keys remain encrypted and owner access and validation stay mandatory', () 
     assert.match(vault, /Crypt::encryptString/);
     assert.match(vault, /Razorpay test keys only/);
 });
+
+test('owner sandbox connection is explicit, rate limited and never charges money', () => {
+    const probe = read('../app/Services/Payments/PaymentGatewaySandboxProbe.php');
+    const page = read('../resources/js/components/payment-gateway-onboarding.tsx');
+    const routes = read('../routes/payments-console.php');
+    assert.match(routes, /test-connection/);
+    assert.match(routes, /middleware\('throttle:3,10'\)/);
+    assert.match(routes, /PlatformOwnerAccess/);
+    assert.match(page, /Test Connection/);
+    assert.match(page, /!keysSaved/);
+    assert.match(page, /test_phone/);
+    assert.match(probe, /sandboxCredentials\(/);
+    assert.match(probe, /RazorpaySandboxOrderClient/);
+    assert.match(probe, /CashfreeSandboxOrderClient/);
+    assert.match(probe, /'INR'/);
+    assert.match(probe, /'charged' => false/);
+    assert.match(probe, /'entitlement_issued' => false/);
+    assert.doesNotMatch(probe, /rzp_live_/);
+});
