@@ -63,14 +63,14 @@ export default function OAuthAuthorize({
                         Authorize this KMJ account
                     </p>
                     <p className="mt-1 text-sm">{account.name}</p>
-                    <p className="text-muted-foreground break-all text-xs">
+                    <p className="text-muted-foreground text-xs break-all">
                         {account.email}
                     </p>
                     <p className="text-muted-foreground mt-3 text-xs leading-5">
                         Your ChatGPT, Claude or Gemini login may use a different
                         email. Only this KMJ account's authorized organizations,
-                        devices and projects will be accessible. The AI app email
-                        never grants access.
+                        devices and projects will be accessible. The AI app
+                        email never grants access.
                     </p>
                     <Button
                         type="button"
