@@ -228,3 +228,6 @@ Route::post('codebridge/v1/user-access/introspect', function (
 })->middleware('throttle:120,1');
 
 require __DIR__.'/developer-activation-api.php';
+
+// Signed sandbox payment webhook ingress is an API route (no session CSRF cookie).
+require __DIR__.'/payment-webhooks.php';
