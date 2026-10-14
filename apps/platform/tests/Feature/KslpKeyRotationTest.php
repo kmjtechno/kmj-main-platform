@@ -74,18 +74,13 @@ final class KslpKeyRotationTest extends TestCase
     public function test_rejects_malformed_noncanonical_public_keys_and_invalid_key_ids(): void
     {
         $registry = app(KslpKeyRegistry::class);
-        foreach ([
-            'PUBLIC-KEY-MATERIAL',
-            '',
-            str_repeat('A', 42),
-            str_repeat('A', 44),
-            str_repeat('!', 43),
-        ] as $malformed) {
+        foreach (['PUBLIC-KEY-MATERIAL', '', str_repeat('A', 42), str_repeat('A', 44),
+            str_repeat('!', 43), str_repeat('A', 42).'B'] as $malformed) {
             try {
                 $registry->publish('bad', 'license', $malformed);
                 self::fail('Malformed key was accepted.');
-            } catch (DomainException $exception) {
-                self::assertSame('KSLP_INVALID_PUBLIC_KEY', $exception->getMessage());
+            } catch (DomainException $e) {
+                self::assertSame('KSLP_INVALID_PUBLIC_KEY', $e->getMessage());
             }
         }
 
@@ -98,7 +93,6 @@ final class KslpKeyRotationTest extends TestCase
         $registry = app(KslpKeyRegistry::class);
         $public = $this->key('future');
         $registry->publish('future-key', 'license', $public);
-
         DB::table('kslp_signing_keys')
             ->where('kid', 'future-key')
             ->update(['not_before' => now()->addDay()]);
@@ -107,17 +101,13 @@ final class KslpKeyRotationTest extends TestCase
         try {
             $registry->publicKey('future-key', 'license');
             self::fail('Future key should not verify.');
-        } catch (DomainException $exception) {
-            self::assertSame('KSLP_UNKNOWN_KID', $exception->getMessage());
+        } catch (DomainException $e) {
+            self::assertSame('KSLP_UNKNOWN_KID', $e->getMessage());
         }
 
         DB::table('kslp_signing_keys')
             ->where('kid', 'future-key')
-            ->update([
-                'not_before' => now()->subDays(2),
-                'not_after' => now()->subDay(),
-            ]);
-
+            ->update(['not_before' => now()->subDays(2), 'not_after' => now()->subDay()]);
         self::assertSame([], $registry->discovery('license'));
         $this->expectExceptionMessage('KSLP_UNKNOWN_KID');
         $registry->publicKey('future-key', 'license');
