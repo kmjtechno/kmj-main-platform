@@ -1,6 +1,136 @@
 version: 2.1
 
 jobs:
+  codebridge_cross_account_oauth:
+    docker:
+      - image: cimg/php:8.4-node
+    resource_class: small
+    environment:
+      APP_ENV: testing
+      DB_CONNECTION: sqlite
+      DB_DATABASE: ":memory:"
+      SESSION_DRIVER: array
+      CACHE_STORE: array
+      QUEUE_CONNECTION: sync
+      MAIL_MAILER: array
+    steps:
+      - checkout
+      - run:
+          name: Verify immutable OAuth cross-account candidate
+          command: |
+            set -euo pipefail
+            test "$(git rev-parse HEAD)" = "$CIRCLE_SHA1"
+            php -l apps/platform/routes/codebridge-oauth.php
+            php -l apps/platform/tests/Feature/CodeBridgeOAuthServerTest.php
+      - run:
+          name: Install locked PHP and frontend dependencies
+          no_output_timeout: 10m
+          command: |
+            set -euo pipefail
+            cd apps/platform
+            composer install --no-interaction --prefer-dist --no-progress
+            npm ci --ignore-scripts --no-audit --no-fund
+      - run:
+          name: OAuth authentication and account-switch security regression
+          no_output_timeout: 10m
+          command: |
+            set -euo pipefail
+            cd apps/platform
+            printf '# disposable CI only\n' > .env
+            export APP_KEY="base64:$(php -r 'echo base64_encode(random_bytes(32));')"
+            vendor/bin/pint --test routes/codebridge-oauth.php tests/Feature/CodeBridgeOAuthServerTest.php
+            php artisan test --filter='CodeBridgeOAuthServerTest|CodeBridgeOAuthLinkTest' --no-ansi
+            echo "KMJ_CROSS_ACCOUNT_OAUTH_PHP_PASS=1"
+      - run:
+          name: OAuth consent UX frontend check and types
+          no_output_timeout: 10m
+          command: |
+            set -euo pipefail
+            cd apps/platform
+            npm run check
+            export APP_KEY="base64:$(php -r 'echo base64_encode(random_bytes(32));')"
+            php artisan wayfinder:generate --with-form --no-ansi
+            npm run types:check
+            echo "KMJ_CROSS_ACCOUNT_OAUTH_UI_PASS=1"
+
+  codebridge_oauth_php_tests:
+    docker:
+      - image: cimg/php:8.4-node
+    resource_class: small
+    environment:
+      APP_ENV: testing
+      DB_CONNECTION: sqlite
+      DB_DATABASE: ":memory:"
+      CACHE_STORE: array
+      SESSION_DRIVER: array
+      QUEUE_CONNECTION: sync
+      MAIL_MAILER: array
+    steps:
+      - checkout
+      - run:
+          name: Exact source OAuth PHP syntax
+          command: |
+            set -euo pipefail
+            test "$(git rev-parse HEAD)" = "$CIRCLE_SHA1"
+            php -l apps/platform/routes/codebridge-oauth.php
+            php -l apps/platform/tests/Feature/CodeBridgeOAuthServerTest.php
+      - run:
+          name: Isolated Laravel OAuth feature regressions
+          no_output_timeout: 10m
+          command: |
+            set -euo pipefail
+            cd apps/platform
+            composer install --no-interaction --prefer-dist --no-progress
+            npm ci --ignore-scripts --no-audit --no-fund
+            printf '# disposable CI only\n' > .env
+            export APP_KEY="base64:$(php -r 'echo base64_encode(random_bytes(32));')"
+            php artisan wayfinder:generate --with-form --no-ansi
+            npm run build
+            test -s public/build/manifest.json
+            php artisan test --filter='CodeBridgeOAuthServerTest|CodeBridgeOAuthLinkTest' --no-ansi
+            echo "KMJ_CROSS_ACCOUNT_FEATURE_PASS=1"
+
+  codebridge_oauth_frontend:
+    docker:
+      - image: cimg/php:8.4-node
+    resource_class: small
+    environment:
+      APP_ENV: testing
+      DB_CONNECTION: sqlite
+      DB_DATABASE: ":memory:"
+    steps:
+      - checkout
+      - run:
+          name: OAuth consent frontend lint and types
+          no_output_timeout: 10m
+          command: |
+            set -euo pipefail
+            test "$(git rev-parse HEAD)" = "$CIRCLE_SHA1"
+            cd apps/platform
+            composer install --no-interaction --prefer-dist --no-progress
+            npm ci --ignore-scripts --no-audit --no-fund
+            npm run check
+            export APP_KEY="base64:$(php -r 'echo base64_encode(random_bytes(32));')"
+            php artisan wayfinder:generate --with-form --no-ansi
+            npm run types:check
+            echo "KMJ_CROSS_ACCOUNT_FRONTEND_PASS=1"
+
+  codebridge_oauth_style:
+    docker:
+      - image: cimg/php:8.4-node
+    resource_class: small
+    steps:
+      - checkout
+      - run:
+          name: OAuth PHP exact-head Pint formatting
+          no_output_timeout: 8m
+          command: |
+            set -euo pipefail
+            cd apps/platform
+            composer install --no-interaction --prefer-dist --no-progress
+            vendor/bin/pint --test routes/codebridge-oauth.php tests/Feature/CodeBridgeOAuthServerTest.php
+            echo "KMJ_CROSS_ACCOUNT_PINT_PASS=1"
+
   codebridge_device_control:
     docker:
       - image: cimg/php:8.4-node
@@ -480,7 +610,95 @@ jobs:
             php artisan migrate:rollback --step=1 --force --no-ansi
             echo "KMJ_ADMIN_RC_SQLITE_MIGRATION_SMOKE_PASS=1"
 
+  super_admin_command_center_ui:
+    docker:
+      - image: cimg/php:8.4-node
+    resource_class: small
+    environment:
+      APP_ENV: testing
+      DB_CONNECTION: sqlite
+      DB_DATABASE: ":memory:"
+    steps:
+      - checkout
+      - run:
+          name: Pinned Super Admin frontend source and guarded navigation
+          no_output_timeout: 12m
+          command: |
+            set -euo pipefail
+            test "$(git rev-parse HEAD)" = "$CIRCLE_SHA1"
+            cd apps/platform
+            composer install --no-interaction --prefer-dist --no-progress
+            npm ci --ignore-scripts --no-audit --no-fund
+            npm run check
+            export APP_KEY="base64:$(php -r 'echo base64_encode(random_bytes(32));')"
+            php artisan wayfinder:generate --with-form --no-ansi
+            npm run types:check
+            npm run build
+            test -s public/build/manifest.json
+            echo "SUPER_ADMIN_COMMAND_CENTER_UI_PASS=1"
+
+  super_admin_command_center_http:
+    docker:
+      - image: cimg/php:8.4-node
+    resource_class: small
+    environment:
+      APP_ENV: testing
+      DB_CONNECTION: sqlite
+      DB_DATABASE: ":memory:"
+      SESSION_DRIVER: array
+      CACHE_STORE: array
+      QUEUE_CONNECTION: sync
+      MAIL_MAILER: array
+    steps:
+      - checkout
+      - run:
+          name: Owner authorization and dashboard feature tests
+          no_output_timeout: 12m
+          command: |
+            set -euo pipefail
+            test "$(git rev-parse HEAD)" = "$CIRCLE_SHA1"
+            cd apps/platform
+            composer install --no-interaction --prefer-dist --no-progress
+            printf '# isolated CI only\n' > .env
+            export APP_KEY="base64:$(php -r 'echo base64_encode(random_bytes(32));')"
+            npm ci --ignore-scripts --no-audit --no-fund
+            php artisan wayfinder:generate --with-form --no-ansi
+            npm run build
+            php artisan test --filter='OwnerDashboardCatalogTest|PlatformOwnerConsoleTest|OwnerProductManagementWorkspaceTest|OwnerLicensingCenterHttpTest' --no-ansi
+            echo "SUPER_ADMIN_COMMAND_CENTER_HTTP_PASS=1"
+
 workflows:
+  review_super_admin_command_center:
+    jobs:
+      - super_admin_command_center_ui:
+          filters:
+            branches:
+              only:
+                - feat/super-admin-command-center-20261014
+      - super_admin_command_center_http:
+          filters:
+            branches:
+              only:
+                - feat/super-admin-command-center-20261014
+
+  review_cross_account_codebridge_oauth:
+    jobs:
+      - codebridge_oauth_php_tests:
+          filters:
+            branches:
+              only:
+                - fix/codebridge-cross-client-oauth-account-switch-20261014
+      - codebridge_oauth_frontend:
+          filters:
+            branches:
+              only:
+                - fix/codebridge-cross-client-oauth-account-switch-20261014
+      - codebridge_oauth_style:
+          filters:
+            branches:
+              only:
+                - fix/codebridge-cross-client-oauth-account-switch-20261014
+
   review_owner_admin_release:
     jobs:
       - owner_admin_preflight:
