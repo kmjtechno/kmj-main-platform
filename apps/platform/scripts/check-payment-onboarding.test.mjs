@@ -71,3 +71,9 @@ test('one active merchant drives both guided steps and encrypted credential entr
     assert.match(page, /gateway\.id === 'razorpay' \|\| gateway\.id === 'cashfree'/);
     assert.match(page, /gateway\.id !== 'razorpay' && gateway\.id !== 'cashfree'/);
 });
+
+test('Laravel route bootstrap avoids no-op global exception imports', () => {
+    const routes = read('../routes/payments-console.php');
+    assert.doesNotMatch(routes, /^use (DomainException|InvalidArgumentException);$/m);
+    assert.match(routes, /catch \(\\DomainException\|\\InvalidArgumentException\)/);
+});
