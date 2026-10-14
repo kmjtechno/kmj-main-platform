@@ -7,7 +7,10 @@ use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Auth\Notifications\VerifyEmail;
 use Illuminate\Foundation\Auth\User as Authenticatable;
+use Illuminate\Validation\ValidationException;
+use App\Services\Mail\RegistrationMailReadiness;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Carbon;
 use Laravel\Fortify\Contracts\PasskeyUser;
@@ -39,6 +42,22 @@ class User extends Authenticatable implements MustVerifyEmail, PasskeyUser
      *
      * @return array<string, string>
      */
+    /**
+     * A queued/logged Laravel notification is NOT evidence of mail delivery.
+     * Prevent the Fortify resend endpoint from returning false success while
+     * production transport is log-only, array-only or has an unsafe fallback.
+     */
+    public function sendEmailVerificationNotification(): void
+    {
+        if (app()->isProduction() && ! app(RegistrationMailReadiness::class)->canAttemptDelivery()) {
+            throw ValidationException::withMessages([
+                'email' => 'Verification email delivery is temporarily unavailable. Please try again later.',
+            ]);
+        }
+
+        $this->notify(new VerifyEmail);
+    }
+
     protected function casts(): array
     {
         return [
