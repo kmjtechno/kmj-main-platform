@@ -7,6 +7,8 @@ namespace Tests\Feature;
 use App\Models\OperatorActionAudit;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\Client\Request as ProviderRequest;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
@@ -198,6 +200,135 @@ final class OwnerPaymentGatewaySettingsTest extends TestCase
             ->withSession(['auth.password_confirmed_at' => time()])
             ->delete('/operator/payments/gateways/razorpay/credentials')
             ->assertStatus(503);
+    }
+
+    public function test_guest_regular_user_and_owner_without_keys_cannot_probe_provider(): void
+    {
+        Http::preventStrayRequests();
+        Http::fake();
+
+        $this->post('/operator/payments/gateways/razorpay/test-connection')
+            ->assertRedirect('/login');
+
+        $regular = User::factory()->create(['email_verified_at' => now()]);
+        $this->actingAs($regular)->withSession(['auth.password_confirmed_at' => time()])
+            ->post('/operator/payments/gateways/razorpay/test-connection')
+            ->assertForbidden();
+
+        $owner = $this->owner();
+        $this->actingAs($owner)->withSession(['auth.password_confirmed_at' => time()])
+            ->post('/operator/payments/gateways/razorpay/test-connection')
+            ->assertSessionHasErrors('sandbox_probe');
+
+        Http::assertNothingSent();
+    }
+
+    public function test_owner_razorpay_test_connection_creates_only_a_nonpayable_sandbox_probe(): void
+    {
+        $owner = $this->owner();
+        $this->actingAs($owner)->withSession(['auth.password_confirmed_at' => time()])
+            ->put('/operator/payments/gateways/razorpay', [
+                ...$this->payload(),
+                'client_id' => 'rzp_test_ABC123',
+                'client_secret' => 'sandbox_secret_12345678',
+            ])->assertRedirect('/operator/payments');
+
+        Http::preventStrayRequests();
+        Http::fake(['api.razorpay.com/v1/orders' => function (ProviderRequest $request) {
+            return Http::response([
+                'id' => 'order_TEST123',
+                'receipt' => $request['receipt'],
+                'currency' => 'INR',
+                'amount' => 100,
+                'status' => 'created',
+                'amount_paid' => 0,
+                'amount_due' => 100,
+            ], 200);
+        }]);
+
+        $this->actingAs($owner)->withSession(['auth.password_confirmed_at' => time()])
+            ->post('/operator/payments/gateways/razorpay/test-connection')
+            ->assertRedirect('/operator/payments');
+
+        Http::assertSent(fn (ProviderRequest $request): bool => $request->method() === 'POST'
+            && $request->url() === 'https://api.razorpay.com/v1/orders'
+            && $request['amount'] === 100
+            && $request['currency'] === 'INR'
+            && $request['partial_payment'] === false
+            && str_starts_with((string) $request['receipt'], 'kmjcb_probe_'));
+        self::assertSame('sandbox_order_created_only', OperatorActionAudit::query()
+            ->where('action', 'payment_gateway.sandbox_order_probe')
+            ->firstOrFail()->outcome);
+        self::assertFalse((bool) app(\App\Services\Payments\PaymentGatewayReadiness::class)->snapshot()['live_charging_enabled']);
+    }
+
+    public function test_owner_cashfree_probe_requires_authorized_phone_and_never_creates_a_live_payment(): void
+    {
+        $owner = $this->owner();
+        $this->actingAs($owner)->withSession(['auth.password_confirmed_at' => time()])
+            ->put('/operator/payments/gateways/cashfree', [
+                ...$this->payload(),
+                'client_id' => 'test_cashfree_id',
+                'client_secret' => 'test_cashfree_secret',
+            ])->assertRedirect('/operator/payments');
+
+        Http::preventStrayRequests();
+        Http::fake(['sandbox.cashfree.com/pg/orders' => function (ProviderRequest $request) {
+            return Http::response([
+                'order_id' => $request['order_id'],
+                'order_currency' => 'INR',
+                'order_amount' => 1,
+                'payment_session_id' => 'test_session_01234567890',
+            ], 200);
+        }]);
+
+        $this->actingAs($owner)->withSession(['auth.password_confirmed_at' => time()])
+            ->post('/operator/payments/gateways/cashfree/test-connection', [])
+            ->assertSessionHasErrors('test_phone');
+        Http::assertNothingSent();
+
+        $this->actingAs($owner)->withSession(['auth.password_confirmed_at' => time()])
+            ->post('/operator/payments/gateways/cashfree/test-connection', [
+                'test_phone' => '9876543210',
+            ])->assertRedirect('/operator/payments');
+
+        Http::assertSent(fn (ProviderRequest $request): bool => $request->method() === 'POST'
+            && $request->url() === 'https://sandbox.cashfree.com/pg/orders'
+            && $request['order_amount'] === 1
+            && $request['order_currency'] === 'INR'
+            && $request['customer_details']['customer_phone'] === '9876543210');
+
+        $audit = OperatorActionAudit::query()
+            ->where('action', 'payment_gateway.sandbox_order_probe')
+            ->firstOrFail();
+        self::assertFalse((bool) $audit->metadata['charged']);
+        self::assertFalse((bool) $audit->metadata['entitlement_issued']);
+        self::assertStringNotContainsString('9876543210', json_encode($audit->metadata, JSON_THROW_ON_ERROR));
+    }
+
+    public function test_sandbox_probe_failure_never_flashes_gateway_secrets_or_claims_verified(): void
+    {
+        $owner = $this->owner();
+        $secret = 'failure_should_be_redacted';
+        $this->actingAs($owner)->withSession(['auth.password_confirmed_at' => time()])
+            ->put('/operator/payments/gateways/razorpay', [
+                ...$this->payload(),
+                'client_id' => 'rzp_test_ABC123',
+                'client_secret' => $secret,
+            ])->assertRedirect('/operator/payments');
+
+        Http::preventStrayRequests();
+        Http::fake(['api.razorpay.com/v1/orders' => Http::response([
+            'error' => $secret,
+        ], 403)]);
+
+        $this->actingAs($owner)->withSession(['auth.password_confirmed_at' => time()])
+            ->post('/operator/payments/gateways/razorpay/test-connection')
+            ->assertSessionHasErrors('sandbox_probe');
+
+        self::assertSame(0, OperatorActionAudit::query()
+            ->where('action', 'payment_gateway.sandbox_order_probe')->count());
+        self::assertStringNotContainsString($secret, json_encode(session()->get('errors'), JSON_THROW_ON_ERROR));
     }
 
     /** @return array<string, bool|string> */
