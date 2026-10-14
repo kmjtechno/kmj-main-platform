@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # KMJ MAIL-P0 one-command read-only recovery dashboard.
-# Runs against a SHA-pinned GitHub revision. No arbitrary shell, SMTP send, DNS writes or Laravel env writes.
+# Runs against a SHA-pinned GitHub revision. No arbitrary shell, SMTP send or Laravel env writes.
+# Optional DNS mutation: only public DKIM, with an existing scoped token and explicit approval.
 set -Eeuo pipefail
 umask 077
 
@@ -26,7 +27,7 @@ ACTUAL="$(runuser -u "$OWNER" -- git -C "$REPO" rev-parse FETCH_HEAD)"
 }
 echo "CODEBRIDGE_SOURCE=PASS_PINNED_SHA"
 TMP="$(mktemp -d -t kmj-mail-p0.XXXXXXXX)"
-trap 'rm -rf -- "$TMP"' EXIT
+trap 'rm -rf -- "$TMP"; if [[ -n "${QA_DIR:-}" ]]; then rm -rf -- "$QA_DIR"; fi' EXIT
 for filename in kmj-mail-00-readiness.sh kmj-mail-00-verify-dkim-dns.sh; do
   runuser -u "$OWNER" -- git -C "$REPO" show "$EXPECTED_SHA:scripts/operations/$filename" > "$TMP/$filename"
   bash -n "$TMP/$filename"
@@ -143,5 +144,5 @@ echo "PTR_CHANGE_PERMISSION=NOT_VERIFIED_BY_SCRIPT"
 echo "PR423_GITHUB_HOSTED_CI=MUST_VERIFY_SEPARATELY_FROM_LOCAL_QA"
 echo "AUTHENTICATED_INBOX_DELIVERY=NOT_VERIFIED"
 echo "CUSTOMER_SIGNED_VERIFICATION=NOT_VERIFIED"
-echo "NO_DNS_OR_MAIL_CONFIGURATION_WAS_MODIFIED=PASS"
+echo "LARAVEL_AND_SMTP_CONFIG_UNCHANGED=PASS"
 echo "NEXT=Publish DKIM DNS via authorized Cloudflare account; request SMTP policy and PTR from hosting provider; only then stage and test MAIL-01."
