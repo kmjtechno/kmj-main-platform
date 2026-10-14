@@ -54,7 +54,7 @@ void test('owner-only entry is above customer services, never public listing', (
 void test('overview retains governed order confirmation and explicit fulfillment', () => {
     assert.ok(operator.includes('ManualPaymentConfirmation'));
     assert.ok(operator.includes("order.fulfillment_state ==="));
-    assert.ok(operator.includes("href="/operator/products""));
+    assert.ok(operator.includes('href="/operator/products"'));
     assert.ok(operator.includes('id="commercial-orders"'));
     assert.ok(modules.includes('Requires owner review'));
 });
