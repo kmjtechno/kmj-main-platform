@@ -51,14 +51,25 @@ Route::post('codebridge/v1/telemetry', function (
     ]);
     abort_unless(hash_equals((string) $device->project_id, $v['project_id']), 403);
 
+    // Laravel's array validator may retain unspecified nested keys; only
+    // allowlisted facts reach the cache and the browser.
+    $ollama = isset($v['ollama'])
+        ? [
+            'reachable' => (bool) $v['ollama']['reachable'],
+            'models' => array_values(array_unique($v['ollama']['models'] ?? [])),
+        ] : null;
+    $queue = isset($v['queue'])
+        ? [
+            'queued' => (int) $v['queue']['queued'],
+            'running' => (int) $v['queue']['running'],
+            'waiting' => (int) $v['queue']['waiting'],
+        ] : null;
+
     $telemetry->record(
         (string) $device->tenant_id,
         (string) $device->device_id,
         (string) $device->project_id,
-        [
-            'ollama' => $v['ollama'] ?? null,
-            'queue' => $v['queue'] ?? null,
-        ]
+        ['ollama' => $ollama, 'queue' => $queue]
     );
     return response()->json(['accepted' => true], 202)
         ->header('Cache-Control', 'no-store')
