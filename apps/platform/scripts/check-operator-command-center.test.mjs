@@ -1,0 +1,60 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+
+const operator = readFileSync('resources/js/pages/operator.tsx', 'utf8');
+const dashboard = readFileSync('resources/js/pages/dashboard.tsx', 'utf8');
+const modules = readFileSync(
+    'resources/js/components/operator-control-overview.tsx',
+    'utf8',
+);
+const ownerRules = readFileSync('routes/web.php', 'utf8');
+
+void test('owner command center uses separated, real admin module routes', () => {
+    assert.ok(operator.includes('<OperatorControlOverview'));
+    for (const target of [
+        '/operator/products',
+        '/operator/directory',
+        '/operator/kslp',
+        '/operator/payments',
+        '/operator/codebridge/owner-plan',
+        '/operator/ops',
+    ]) {
+        assert.ok(modules.includes(`href: '${target}'`), target);
+    }
+    assert.ok(!operator.includes('visibleProducts.map('));
+    assert.ok(!operator.includes('Product & licensing matrix'));
+});
+
+void test('catalog readiness is informative, never a payment or license grant', () => {
+    assert.ok(modules.includes('product.active_policy_count === 0'));
+    assert.ok(modules.includes('product.is_public'));
+    assert.ok(modules.includes('product.licensing_enabled'));
+    assert.ok(modules.includes('Visibility does not imply a sale or license'));
+    assert.ok(modules.includes('Customer entitlements are granted separately'));
+    assert.ok(modules.includes('orders.filter('));
+    assert.ok(modules.includes("order.status === 'requested'"));
+    assert.ok(modules.includes("order.fulfillment_state === 'ready'"));
+    assert.ok(!modules.includes('router.post('));
+});
+
+void test('owner-only entry is above customer services, never public listing', () => {
+    const panel = dashboard.indexOf('<OwnerProductsPanel');
+    const services = dashboard.indexOf('Your authorized services');
+    assert.ok(panel > 0 && services > panel);
+    assert.ok(dashboard.includes('{ownerProducts !== null && ('));
+    assert.ok(dashboard.includes('href="/operator"'));
+    assert.ok(dashboard.includes('{ownerProducts === null && ('));
+    const guarded = ownerRules.indexOf("$isPlatformOwner = app(PlatformOwnerAccess::class)->allows($user);");
+    const ownerProducts = ownerRules.indexOf('if ($isPlatformOwner) {', guarded);
+    const exposed = ownerRules.indexOf("'ownerProducts' => $ownerProducts", ownerProducts);
+    assert.ok(guarded > 0 && ownerProducts > guarded && exposed > ownerProducts);
+});
+
+void test('overview retains governed order confirmation and explicit fulfillment', () => {
+    assert.ok(operator.includes('ManualPaymentConfirmation'));
+    assert.ok(operator.includes("order.fulfillment_state ==="));
+    assert.ok(operator.includes("href="/operator/products""));
+    assert.ok(operator.includes('id="commercial-orders"'));
+    assert.ok(modules.includes('Requires owner review'));
+});
