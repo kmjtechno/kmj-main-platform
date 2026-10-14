@@ -1137,10 +1137,15 @@ require __DIR__.'/settings.php';
  */
 if (app()->environment('local', 'testing')) {
     Route::middleware(['auth', 'verified'])
-        ->get('internal/kmj-mail-preview', fn () => Inertia::render('mail/index', [
-            'account' => null,
-            'transportStatus' => 'not_configured',
-            'messages' => [],
-        ]))
+        ->get('internal/kmj-mail-preview', function () {
+            // Protect even if a local route-cache artifact is copied to production.
+            abort_unless(app()->environment('local', 'testing'), 404);
+
+            return Inertia::render('mail/index', [
+                'account' => null,
+                'transportStatus' => 'not_configured',
+                'messages' => [],
+            ]);
+        })
         ->name('mail.preview');
 }
