@@ -11,6 +11,7 @@ const verifyUi = read('resources/js/pages/auth/verify-email.tsx');
 const registerUi = read('resources/js/pages/auth/register.tsx');
 const doctor = read('app/Console/Commands/RegistrationMailDoctorCommand.php');
 const user = read('app/Models/User.php');
+const forgotUi = read('resources/js/pages/auth/forgot-password.tsx');
 
 void test('production registration is blocked before creating an unverifiable account', () => {
     assert.match(registration, /app\(\)->isProduction\(\)/);
@@ -48,4 +49,12 @@ void test('Fortify resend endpoint does not claim success for production log tra
     assert.match(user, /canAttemptDelivery\(\)/);
     assert.match(user, /ValidationException::withMessages/);
     assert.match(verifyUi, /errors\.email/);
+});
+
+void test('reset emails cannot claim sent with log-only production mail', () => {
+    assert.match(user, /sendPasswordResetNotification/);
+    assert.match(user, /canAttemptDelivery\(\)/);
+    assert.match(views, /'mailDeliveryAvailable'/);
+    assert.match(forgotUi, /disabled=\{processing \|\| !mailDeliveryAvailable\}/);
+    assert.match(forgotUi, /Inbox delivery is not confirmed/);
 });
