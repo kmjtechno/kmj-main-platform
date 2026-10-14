@@ -55,7 +55,9 @@ function SetupStage({
             )}
             <div>
                 <p className="text-sm font-semibold text-white">{label}</p>
-                <p className="mt-1 text-xs leading-5 text-slate-400">{detail}</p>
+                <p className="mt-1 text-xs leading-5 text-slate-400">
+                    {detail}
+                </p>
             </div>
         </li>
     );
@@ -79,14 +81,12 @@ export default function PaymentGatewayOnboarding({
             onSuccess: () => probe.reset(),
         });
     };
-    const selected = gatewaySettings.find(
-        (item) => item.provider === provider,
-    );
+    const selected = gatewaySettings.find((item) => item.provider === provider);
     const config = providers[provider];
     const keysSaved = Boolean(
         selected?.storage_ready &&
-            selected?.client_id_stored &&
-            selected?.client_secret_stored,
+        selected?.client_id_stored &&
+        selected?.client_secret_stored,
     );
     const webhookSecretSaved = selected?.webhook_secret_stored === true;
     const savedCount = Number(keysSaved) + Number(webhookSecretSaved);
@@ -159,7 +159,9 @@ export default function PaymentGatewayOnboarding({
 
             <ol className="mt-4 grid gap-3 lg:grid-cols-2">
                 <SetupStage
-                    done={selected?.merchant_status === 'owner_reports_approved'}
+                    done={
+                        selected?.merchant_status === 'owner_reports_approved'
+                    }
                     label="1. Review merchant account"
                     detail="Owner-reported approval is not a verified provider API check. Confirm Test Mode in the provider dashboard."
                 />
@@ -218,11 +220,11 @@ export default function PaymentGatewayOnboarding({
                     Test stored sandbox credentials
                 </p>
                 <p className="mt-2 max-w-3xl text-xs leading-6 text-slate-300">
-                    After saving test keys, this action creates a ₹1 TEST
-                    order on the provider sandbox only. It does not charge a
-                    card, capture money, confirm a subscription or grant a
-                    license. An accepted test order does not mean checkout
-                    and webhooks are production-ready.
+                    After saving test keys, this action creates a ₹1 TEST order
+                    on the provider sandbox only. It does not charge a card,
+                    capture money, confirm a subscription or grant a license. An
+                    accepted test order does not mean checkout and webhooks are
+                    production-ready.
                 </p>
                 {provider === 'cashfree' && (
                     <label className="mt-4 block max-w-sm space-y-2 text-xs font-semibold text-slate-200">
@@ -281,10 +283,7 @@ export default function PaymentGatewayOnboarding({
                     </p>
                 )}
                 {probe.recentlySuccessful && (
-                    <p
-                        role="status"
-                        className="mt-3 text-xs text-emerald-300"
-                    >
+                    <p role="status" className="mt-3 text-xs text-emerald-300">
                         Provider accepted sandbox test order only. No payment
                         collected; full transaction verification still pending.
                     </p>
