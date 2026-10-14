@@ -178,7 +178,6 @@ export default function Operator({
     missingCanonicalSlugs,
     recentOrders,
 }: OperatorProps) {
-
     return (
         <>
             <Head title="Platform Operator" />
