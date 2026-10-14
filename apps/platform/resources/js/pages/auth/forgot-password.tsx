@@ -20,6 +20,12 @@ export default function ForgotPassword({ status, mailDeliveryAvailable }: { stat
                 </div>
             )}
 
+            {!mailDeliveryAvailable && (
+                <p role="alert" className="mb-4 rounded-lg border p-3 text-sm">
+                    Password reset emails are currently unavailable. Please try again later.
+                </p>
+            )}
+
             <div className="space-y-6">
                 <Form {...email.form()}>
                     {({ processing, errors }) => (
