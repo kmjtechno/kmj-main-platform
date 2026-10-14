@@ -229,6 +229,7 @@ export default function CodeBridgeService({
                 </section>
 
                 <CodeBridgeControlCenterHub
+                    tenantId={organization.id}
                     organizationName={organization.name}
                     plan={service.plan}
                     licenseStatus={service.license_status}
