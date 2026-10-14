@@ -8,6 +8,7 @@ use DomainException;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Schema;
 use KMJ\MainPlatform\Organizations\Services\OrganizationDirectory;
 
 final class CodeBridgeDevicePairingService
@@ -205,6 +206,22 @@ final class CodeBridgeDevicePairingService
             $gateway = rtrim((string) config('services.codebridge_gateway.url'), '/');
             if (! preg_match('/\Ahttps:\/\/[^\/?#]+(?::[0-9]{1,5})?\z/D', $gateway)) {
                 throw new DomainException('CODEBRIDGE_GATEWAY_UNAVAILABLE');
+            }
+
+            // The owner-side onboarding request is informational, NOT an agent grant.
+            // Record that the approved agent redeemed its credential; live presence
+            // must still be verified separately by an authenticated gateway heartbeat.
+            if ($row->project_id === 'kmj-omnidesk'
+                && is_string($row->tenant_id)
+                && Schema::hasTable('codebridge_project_onboarding_requests')) {
+                DB::table('codebridge_project_onboarding_requests')
+                    ->where('tenant_id', $row->tenant_id)
+                    ->where('project_id', 'kmj-omnidesk')
+                    ->where('status', 'awaiting_agent_pairing')
+                    ->update([
+                        'status' => 'registered_not_live_verified',
+                        'updated_at' => now(),
+                    ]);
             }
 
             return [
