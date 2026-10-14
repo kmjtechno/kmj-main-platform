@@ -130,6 +130,20 @@ if [[ "${KMJ_MAIL_RUN_EXACT_HEAD_QA:-yes}" == "yes" ]]; then
       echo "MAIL_PR_EXACT_SHA_QA=FAIL_OR_BLOCKED"
     fi
     grep -E '^(PASS:|FAIL:|MAIL_QA_|BLOCKED:)' "$QA_DIR/qa.log" | tail -35 || true
+    # Print only structured issue headings and failing file:line diagnostics.
+    # Deliberately exclude test payloads, mail addresses, URLs, signed links and secrets.
+    python3 - "$QA_DIR/qa.log" <<'PY'
+import re, sys
+issues = []
+for raw in open(sys.argv[1], encoding="utf-8", errors="replace"):
+    line = re.sub(r"\x1b\[[0-9;]*m", "", raw).strip()
+    if re.search(r"(?i)(https?://|@|password|secret|token|key=|authorization|signature|\?|[A-Za-z0-9+/]{90,})", line):
+        continue
+    if re.match(r"^(?:FAIL|ERROR|Error:|Fatal error:|  FAIL |Tests:|\[ERROR\]|\[FAIL\])", line) or re.match(r"^(?:app/|tests/|resources/|scripts/)[A-Za-z0-9_./-]+:[0-9]+(?::[0-9]+)?", line):
+        issues.append(line[:180])
+for line in issues[-36:]:
+    print("MAIL_QA_DIAGNOSTIC="+line)
+PY
     rm -rf -- "$QA_DIR"
   else
     echo "MAIL_PR_EXACT_SHA_QA=BLOCKED_DEPENDENCIES_ABSENT"
