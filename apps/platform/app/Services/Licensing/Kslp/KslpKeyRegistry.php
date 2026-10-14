@@ -120,7 +120,7 @@ final class KslpKeyRegistry
      */
     public function omniDeskDiscovery(): array
     {
-        return collect($this->discovery('license'))
+        $keys = collect($this->discovery('license'))
             ->map(static function (array $key): array {
                 return [
                     'kid' => (string) $key['kid'],
@@ -137,8 +137,9 @@ final class KslpKeyRegistry
                     },
                 ];
             })
-            ->values()
             ->all();
+
+        return array_values($keys);
     }
 
     /** Get the raw 32-byte key expected by sodium_crypto_sign_verify_detached. */
