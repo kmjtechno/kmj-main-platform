@@ -59,8 +59,8 @@ final class KslpPublicApiTest extends TestCase
 
         self::assertCount(2, $response['keys']);
         self::assertSame(
-            ['algorithm', 'kid', 'not_after', 'not_before', 'public_key', 'status'],
-            array_keys(array_diff_key($response['keys'][0], []))
+            ['kid', 'algorithm', 'public_key', 'not_before', 'not_after', 'status'],
+            array_keys($response['keys'][0])
         );
         self::assertSame('omnidesk-active', $response['keys'][0]['kid']);
         self::assertSame('Ed25519', $response['keys'][0]['algorithm']);
