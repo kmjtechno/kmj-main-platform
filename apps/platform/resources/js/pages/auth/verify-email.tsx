@@ -1,5 +1,6 @@
 // Components
 import { Form, Head } from '@inertiajs/react';
+import InputError from '@/components/input-error';
 import TextLink from '@/components/text-link';
 import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/spinner';
@@ -45,8 +46,9 @@ export default function VerifyEmail({
             )}
 
             <Form {...send.form()} className="space-y-6 text-center">
-                {({ processing }) => (
+                {({ processing, errors }) => (
                     <>
+                        <InputError message={errors.email} className="mb-3" />
                         <Button
                             disabled={processing || !mailDeliveryAvailable}
                             variant="secondary"
