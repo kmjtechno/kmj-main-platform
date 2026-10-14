@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Head, Link } from '@inertiajs/react';
 import OperatorModuleNavigation from '@/components/operator-module-navigation';
 import PaymentGatewayOnboarding from '@/components/payment-gateway-onboarding';
@@ -37,6 +38,8 @@ export default function OperatorPayments({
     paymentReadiness: PaymentReadiness;
     gatewaySettings: OwnerGatewaySetting[];
 }) {
+    const [selectedProvider, setSelectedProvider] = useState<OwnerGatewaySetting['provider']>('razorpay');
+
     return (
         <>
             <Head title="KMJ TECHNO — Payment Gateway Control" />
@@ -74,8 +77,15 @@ export default function OperatorPayments({
                     </div>
                 </header>
 
-                <PaymentGatewayOnboarding gatewaySettings={gatewaySettings} />
-                <OperatorPaymentSettings gatewaySettings={gatewaySettings} />
+                <PaymentGatewayOnboarding
+                    gatewaySettings={gatewaySettings}
+                    provider={selectedProvider}
+                    onProviderChange={setSelectedProvider}
+                />
+                <OperatorPaymentSettings
+                    gatewaySettings={gatewaySettings}
+                    selectedProvider={selectedProvider}
+                />
                 <section className="mx-auto grid w-full max-w-6xl gap-4 md:grid-cols-2">
                     {paymentReadiness.providers.map((gateway) => (
                         <article
