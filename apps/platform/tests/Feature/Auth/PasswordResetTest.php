@@ -27,6 +27,26 @@ class PasswordResetTest extends TestCase
         $response->assertOk();
     }
 
+    public function test_production_log_mailer_rejects_reset_link_instead_of_claiming_delivery(): void
+    {
+        $originalEnvironment = app()->environment();
+
+        try {
+            app()->instance('env', 'production');
+            config()->set('mail.default', 'log');
+            Notification::fake();
+
+            $user = User::factory()->create();
+
+            $this->post(route('password.email'), ['email' => $user->email])
+                ->assertSessionHasErrors(['email']);
+
+            Notification::assertNothingSent();
+        } finally {
+            app()->instance('env', $originalEnvironment);
+        }
+    }
+
     public function test_reset_password_link_can_be_requested()
     {
         Notification::fake();
