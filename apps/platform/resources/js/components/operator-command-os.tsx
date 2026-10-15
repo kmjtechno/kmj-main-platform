@@ -1,6 +1,7 @@
 import { Link } from '@inertiajs/react';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Activity, ArrowRight, Boxes, CheckCircle2, ChevronLeft, ChevronRight, Command, CreditCard, KeyRound, Package, Search, ShieldCheck, ShoppingCart, Users, X } from 'lucide-react';
+import { Activity, ArrowRight, Boxes, CheckCircle2, ChevronLeft, ChevronRight, Command, KeyRound, Package, Search, ShieldCheck, ShoppingCart, Users } from 'lucide-react';
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
 import KristiOwnerAssistant from '@/components/kristi-owner-assistant';
 import OperatorWorkspaceMap from '@/components/operator-workspace-map';
 
@@ -142,12 +143,40 @@ export default function OperatorCommandOs({ metrics, catalogProducts, recentOrde
             </main>
             <KristiOwnerAssistant counts={{ orders: metrics.orders, customers: metrics.users, products: catalogProducts.length }} />
         </div>
-        {searchOpen && <div className="kmj-os-modal-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) setSearchOpen(false); }}>
-            <div role="dialog" aria-modal="true" aria-labelledby="kmj-search-dialog-title" className="kmj-os-modal">
-                <div className="flex items-center justify-between border-b border-white/10 p-4"><h2 id="kmj-search-dialog-title" className="font-bold">Find an admin workspace</h2><button type="button" aria-label="Close search" onClick={() => setSearchOpen(false)} className="kmj-os-icon"><X className="size-4" /></button></div>
-                <label className="flex items-center gap-3 p-4"><Search className="size-4 text-slate-400" /><input ref={input} value={query} onChange={(event) => setQuery(event.target.value)} aria-label="Search owner workspaces" placeholder="Products, payments, licenses…" className="w-full bg-transparent text-sm text-white outline-none" /></label>
-                <nav className="max-h-72 overflow-y-auto border-t border-white/10 p-2" aria-label="Search results">{results.map((result) => <Link key={result.href} href={result.href} onClick={() => setSearchOpen(false)} className="flex min-h-11 items-center justify-between rounded-lg px-3 text-sm hover:bg-white/10">{result.label}<ArrowRight className="size-4" /></Link>)}{!results.length && <p role="status" className="p-4 text-sm text-slate-400">No matching workspace</p>}</nav>
-            </div>
-        </div>}
+        <Dialog open={searchOpen} onOpenChange={setSearchOpen}>
+            <DialogContent className="kmj-os-modal max-w-[min(550px,calc(100vw-32px))] gap-0 overflow-hidden border-[#466078] bg-[#101725] p-0 text-white">
+                <div className="border-b border-white/10 px-5 py-4">
+                    <DialogTitle className="text-base font-bold">Find an admin workspace</DialogTitle>
+                    <DialogDescription className="mt-1 text-xs text-slate-400">
+                        Search the approved owner navigation. Press Escape to close.
+                    </DialogDescription>
+                </div>
+                <label className="flex items-center gap-3 px-4 py-3">
+                    <Search className="size-4 shrink-0 text-slate-400" aria-hidden="true" />
+                    <input
+                        ref={input}
+                        value={query}
+                        onChange={(event) => setQuery(event.target.value)}
+                        aria-label="Search owner workspaces"
+                        placeholder="Products, payments, licenses…"
+                        className="w-full bg-transparent py-2 text-sm text-white outline-none"
+                    />
+                </label>
+                <nav className="max-h-72 overflow-y-auto border-t border-white/10 p-2" aria-label="Search results">
+                    {results.map((result) => (
+                        <Link
+                            key={result.href}
+                            href={result.href}
+                            onClick={() => setSearchOpen(false)}
+                            className="flex min-h-11 items-center justify-between rounded-lg px-3 text-sm hover:bg-white/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-500"
+                        >
+                            {result.label}
+                            <ArrowRight className="size-4" aria-hidden="true" />
+                        </Link>
+                    ))}
+                    {!results.length && <p role="status" className="p-4 text-sm text-slate-400">No matching workspace</p>}
+                </nav>
+            </DialogContent>
+        </Dialog>
     </div>;
 }
