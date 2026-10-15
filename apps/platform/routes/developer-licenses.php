@@ -11,6 +11,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Str;
 use Inertia\Inertia;
 use KMJ\MainPlatform\Organizations\Services\OrganizationCapabilityContext;
 use KMJ\MainPlatform\Organizations\Services\OrganizationDirectory;
@@ -65,10 +66,26 @@ Route::middleware(['auth', 'verified'])->prefix('developer')->name('developer.')
                     'k.revoked_at', 'l.plan', 'l.customer_id', 'l.expires_at',
                 ])->all() : [];
 
+        // Scoped to the visible 100 license keys: never load devices across
+        // tenants, expose raw fingerprints/public identities, or query an
+        // unbounded global activation directory.
+        $licenseIds = array_values(array_map(
+            static fn ($key): string => (string) $key->license_id,
+            $keys,
+        ));
+        $activeDevices = $licenseIds === [] ? [] : DB::table('kslp_activations')
+            ->whereIn('license_id', $licenseIds)
+            ->whereNull('deactivated_at')
+            ->orderByDesc('activated_at')
+            ->limit(100)
+            ->get(['id', 'license_id', 'activated_at'])
+            ->all();
+
         return Inertia::render('developer-apps', [
             'organizations' => $organizations,
             'applications' => $products,
             'keys' => $keys,
+            'activeDevices' => $activeDevices,
             'canIssueKeys' => $storageReady && (bool) config('services.kmj_developer_licensing.enabled', false),
             'newKey' => $request->session()->get('developer_license_key'),
         ]);
@@ -109,6 +126,71 @@ Route::middleware(['auth', 'verified'])->prefix('developer')->name('developer.')
 
         return redirect()->route('developer.apps.index')->with('success', 'Application registered.');
     })->middleware(['password.confirm', 'throttle:10,1'])->name('apps.store');
+
+    // Device seat recovery is deliberately distinct from license revocation.
+    // It never issues/reissues a license, alters payment state or treats a
+    // registered device as a signed commercial entitlement.
+    Route::post('keys/{key}/devices/{activation}/release', function (
+        Request $request,
+        string $key,
+        string $activation,
+        OrganizationCapabilityContext $capabilities,
+    ) {
+        $actor = $request->user();
+        abort_unless($actor instanceof User, 401);
+        abort_unless((bool) config('services.kmj_developer_licensing.enabled', false), 503);
+        abort_unless(Schema::hasTable('kslp_license_keys'), 503);
+        $data = $request->validate([
+            'reason' => ['required', 'string', 'min:3', 'max:500'],
+        ]);
+
+        DB::transaction(function () use ($key, $activation, $capabilities, $actor, $data): void {
+            // Lock order is key -> license -> activation, matching issuer
+            // actions and preventing seat release racing with activation.
+            $record = DB::table('kslp_license_keys')
+                ->where('id', $key)->lockForUpdate()->first();
+            abort_unless($record !== null, 404);
+            abort_unless($capabilities->allows($actor->id, $record->organization_id, 'license.manage'), 403);
+            abort_if($record->revoked_at !== null, 409);
+
+            $license = DB::table('kslp_licenses')
+                ->where('id', $record->license_id)
+                ->lockForUpdate()->first(['id', 'revoked_at', 'status']);
+            abort_unless($license !== null, 404);
+            abort_if($license->revoked_at !== null || $license->status !== 'active', 409);
+
+            $device = DB::table('kslp_activations')
+                ->where('id', $activation)
+                ->where('license_id', $record->license_id)
+                ->lockForUpdate()
+                ->first(['id', 'deactivated_at']);
+            abort_unless($device !== null, 404);
+            if ($device->deactivated_at !== null) {
+                return; // Repeat request: no new sequence or audit event.
+            }
+
+            $now = now();
+            DB::table('kslp_activations')
+                ->where('id', $activation)
+                ->whereNull('deactivated_at')
+                ->update(['deactivated_at' => $now, 'updated_at' => $now]);
+            // Advance the license sequence to invalidate older signed leases.
+            DB::table('kslp_licenses')->where('id', $record->license_id)
+                ->update(['sequence' => DB::raw('sequence + 1'), 'updated_at' => $now]);
+            DB::table('kslp_license_events')->insert([
+                'license_id' => $record->license_id,
+                'actor_id' => (string) $actor->id,
+                'action' => 'developer_device_released',
+                'reason' => $data['reason'],
+                'correlation_id' => (string) Str::uuid(),
+                'metadata' => json_encode(['activation_id' => $activation], JSON_THROW_ON_ERROR),
+                'created_at' => $now,
+            ]);
+        }, 3);
+
+        return redirect()->route('developer.apps.index')
+            ->with('success', 'Device seat released. Re-activation requires new device proof.');
+    })->middleware(['password.confirm', 'throttle:5,1'])->name('keys.devices.release');
 
     Route::post('keys/{key}/revoke', function (
         Request $request,
