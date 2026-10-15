@@ -500,6 +500,24 @@ final class KslpDeveloperAppsTest extends TestCase
         self::assertSame(1, (int) DB::table('kslp_licenses')->where('id', $license)->value('sequence'));
     }
 
+    public function test_device_release_requires_recent_password_confirmation(): void
+    {
+        [$owner, , $key, , $device] = $this->issuedDeviceSeat();
+
+        $this->actingAs($owner)
+            ->withSession(['auth.password_confirmed_at' => 0])
+            ->post('/developer/keys/'.$key.'/devices/'.$device.'/release', [
+                'reason' => 'Device lost and customer requests transfer',
+            ])->assertRedirect();
+
+        self::assertNull(
+            DB::table('kslp_activations')->where('id', $device)->value('deactivated_at'),
+        );
+        self::assertSame(0, DB::table('kslp_license_events')
+            ->where('action', 'developer_device_released')
+            ->count());
+    }
+
     public function test_invalid_device_release_route_ids_fail_before_postgresql_cast(): void
     {
         [$owner, , $key, , $device] = $this->issuedDeviceSeat();
