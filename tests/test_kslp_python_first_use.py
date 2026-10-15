@@ -24,19 +24,23 @@ HASH = hashlib.sha256(b"random per-install salt stored privately").hexdigest()
 
 
 class ActivationTests(unittest.TestCase):
-    def mock_post(self, calls, signed_lease=False, product="DEVELOPER.APP"):
+    def mock_post(self, calls, signed_lease=False, product="DEVELOPER.APP",
+                  receipt_status="activation_recorded_pending_signed_lease",
+                  challenge_expires_in=300, challenge_nonce="N" * 43):
         def post(url, body):
             calls.append((url, body))
             if url.endswith("/challenge"):
                 return {
                     "license_id": LICENSE_ID, "challenge_id": CHALLENGE_ID,
-                    "nonce": "N" * 43, "product": product,
+                    "nonce": challenge_nonce, "product": product,
+                    "expires_in": challenge_expires_in,
                 }
             return {
                 "activation_id": ACTIVATION_ID,
                 "product": product,
                 "device_registered": True,
                 "signed_lease_issued": signed_lease,
+                "status": receipt_status,
             }
         return post
 
@@ -93,6 +97,27 @@ class ActivationTests(unittest.TestCase):
             self.register(post=self.mock_post(calls, product="OTHER.APP"))
         self.assertEqual(len(calls), 1)
 
+    def test_forged_status_never_grants_entitlement(self):
+        calls = []
+        with self.assertRaisesRegex(kmj.ActivationError, "UNEXPECTED_ACTIVATION_STATE"):
+            self.register(post=self.mock_post(calls, receipt_status="active"))
+        self.assertEqual(len(calls), 2)
+
+    def test_noncanonical_challenge_or_expiry_never_reaches_complete(self):
+        for overrides in (
+            {"challenge_expires_in": 7200},
+            {"challenge_expires_in": None},
+            {"challenge_nonce": "N" * 44},
+            {"challenge_nonce": "invalid+base64/not-safe"},
+        ):
+            calls = []
+            with self.subTest(**overrides):
+                with self.assertRaisesRegex(
+                    kmj.ActivationError, "CHALLENGE_RESPONSE_INVALID"
+                ):
+                    self.register(post=self.mock_post(calls, **overrides))
+                self.assertEqual(len(calls), 1)
+
     def test_validation_rejects_before_network_request(self):
         def fail_post(*_):
             self.fail("No network request permitted")
@@ -104,6 +129,10 @@ class ActivationTests(unittest.TestCase):
             (dict(base_url="https://kmjtechno.com:8443"), "KSLP_HTTPS_ORIGIN_REQUIRED"),
             (dict(product="A" * 65), "PRODUCT_INVALID"),
             (dict(license_key="abc"), "LICENSE_KEY_FORMAT_INVALID"),
+            (dict(license_key=None), "LICENSE_KEY_FORMAT_INVALID"),
+            (dict(product=123), "PRODUCT_INVALID"),
+            (dict(machine_hash=None), "MACHINE_HASH_INVALID"),
+            (dict(app_version=123), "APP_VERSION_INVALID"),
             (dict(product="../wrong"), "PRODUCT_INVALID"),
             (dict(device_public_key=b"short"), "ED25519_PUBLIC_KEY_REQUIRED"),
             (dict(machine_hash="serial-number"), "MACHINE_HASH_INVALID"),
