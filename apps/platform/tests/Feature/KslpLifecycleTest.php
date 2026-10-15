@@ -31,7 +31,7 @@ final class KslpLifecycleTest extends TestCase
 
     private function activate(KslpLicenseControlPlane $c, string $id, string $key): array
     {
-        [$server,$challenge,$nonce,$sig] = $this->proof($id);
+        [$server, $challenge, $nonce, $sig] = $this->proof($id);
 
         return [$c->activate($id, $server, str_repeat('a', 64), $key, 'owner', $challenge, $nonce, $sig), $server];
     }
@@ -45,7 +45,7 @@ final class KslpLifecycleTest extends TestCase
         $again = $c->activate($l['id'], $a['server_identity'], str_repeat('a', 64), 'retry-1', 'owner', 'unused', 'unused', 'unused');
         self::assertSame($a['id'], $again['id']);
         self::assertSame('ACTIVE', $c->state($l['id'], Carbon::parse($l['starts_at'])->addDay()));
-        [$newServer,$challenge,$nonce,$sig] = $this->proof($l['id']);
+        [$newServer, $challenge, $nonce, $sig] = $this->proof($l['id']);
         $b = $c->transfer($l['id'], $newServer, str_repeat('b', 64), 'retry-2', 'owner', 'replacement', $challenge, $nonce, $sig);
         self::assertNotSame($a['id'], $b['id']);
         $this->assertDatabaseCount('kslp_license_events', 4);
@@ -129,7 +129,9 @@ final class KslpLifecycleTest extends TestCase
         $sk = sodium_crypto_sign_secretkey($kp);
         $signer = new class($sk) implements KslpSigner
         {
-            public function __construct(private string $sk) {}
+            public function __construct(private string $sk)
+            {
+            }
 
             public function kid(): string
             {
@@ -141,8 +143,20 @@ final class KslpLifecycleTest extends TestCase
                 return sodium_crypto_sign_detached($m, $this->sk);
             }
         };
-        $product = Product::query()->create(['slug' => 'cloudos-test', 'name' => 'CloudOS', 'status' => 'active']);
-        Plan::query()->create(['product_id' => $product->id, 'code' => 'cloudos.business', 'name' => 'Business', 'pricing_model' => 'quote', 'status' => 'active', 'features' => ['hosting' => true], 'limits' => ['nodes' => 3]]);
+        $product = Product::query()->create([
+            'slug' => 'cloudos-test',
+            'name' => 'CloudOS',
+            'status' => 'active',
+        ]);
+        Plan::query()->create([
+            'product_id' => $product->id,
+            'code' => 'cloudos.business',
+            'name' => 'Business',
+            'pricing_model' => 'quote',
+            'status' => 'active',
+            'features' => ['hosting' => true],
+            'limits' => ['nodes' => 3],
+        ]);
         $token = $c->lease($l['id'], $a['id'], $signer);
         self::assertSame(3, count(explode('.', $token)));
     }

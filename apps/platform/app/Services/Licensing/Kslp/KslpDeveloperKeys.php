@@ -60,7 +60,11 @@ final class KslpDeveloperKeys
                 'updated_at' => now(),
             ]);
 
-            return ['key' => $plain, 'license_id' => (string) $license['id'], 'product_code' => $productCode];
+            return [
+                'key' => $plain,
+                'license_id' => (string) $license['id'],
+                'product_code' => $productCode,
+            ];
         }, 3);
     }
 
