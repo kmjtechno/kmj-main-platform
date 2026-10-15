@@ -116,6 +116,10 @@ Route::middleware(['auth', 'verified'])->prefix('developer')->name('developer.')
             ->get(['license_id', 'action', 'created_at'])
             ->all();
 
+        // One-time plaintext bootstrap keys also appear in Inertia props.
+        // HTTP no-store alone does not protect client-side navigation history.
+        Inertia::encryptHistory();
+
         $response = Inertia::render('developer-apps', [
             'organizations' => $organizations,
             'applications' => $products,
