@@ -182,7 +182,7 @@ Route::middleware(['auth', 'verified'])->prefix('developer')->name('developer.')
                 ->where('id', $activation)
                 ->whereNull('deactivated_at')
                 ->update(['deactivated_at' => $now, 'updated_at' => $now]);
-            // Advance the license sequence to invalidate older signed leases.
+            // Bump the server sequence for subsequent verified lease checks.\n            // Already-issued offline leases cannot be recalled instantly.
             DB::table('kslp_licenses')->where('id', $record->license_id)
                 ->update(['sequence' => DB::raw('sequence + 1'), 'updated_at' => $now]);
             DB::table('kslp_license_events')->insert([
