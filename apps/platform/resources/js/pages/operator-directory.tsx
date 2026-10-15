@@ -53,7 +53,7 @@ function Pager({ data }: { data: Paginated<unknown> }) {
                             'rounded-lg border px-3 py-2 text-xs font-semibold',
                             link.active
                                 ? 'border-red-500/50 bg-red-500/10 text-red-300'
-                                : 'border-white/15 text-slate-300 hover:bg-white/10',
+                                : 'border-border text-muted-foreground hover:bg-accent',
                         ].join(' ')}
                     >
                         {index === 0
@@ -65,7 +65,7 @@ function Pager({ data }: { data: Paginated<unknown> }) {
                 ) : (
                     <span
                         key={index}
-                        className="rounded-lg border border-white/5 px-3 py-2 text-xs text-slate-500"
+                        className="rounded-lg border border-border/50 px-3 py-2 text-xs text-muted-foreground"
                     >
                         {index === 0
                             ? 'Previous'
@@ -99,11 +99,11 @@ export default function OperatorDirectory({
     return (
         <>
             <Head title="KMJ TECHNO — Users & Organizations" />
-            <main className="min-h-screen space-y-6 bg-[#080b10] p-4 text-white sm:p-8">
+            <main className="kmj-admin-shell min-h-screen space-y-6 p-4 sm:p-8">
                 <div className="mx-auto max-w-7xl">
                     <OperatorModuleNavigation active="customers" />
                 </div>
-                <header className="mx-auto max-w-7xl rounded-2xl border border-white/10 bg-[#11151d] p-6">
+                <header className="kmj-admin-hero mx-auto max-w-7xl rounded-[1.65rem] p-6 sm:p-8">
                     <div className="flex flex-wrap items-center gap-3">
                         <Users
                             className="size-8 text-red-400"
@@ -113,7 +113,7 @@ export default function OperatorDirectory({
                             Users & Organizations
                         </h1>
                     </div>
-                    <p className="mt-3 max-w-3xl text-sm leading-7 text-slate-300">
+                    <p className="mt-3 max-w-3xl text-muted-foreground text-sm leading-7">
                         Search and review your platform's users and customer
                         organizations. No permission changes, deletion or
                         account invitations are offered here until separately
