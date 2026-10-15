@@ -250,3 +250,33 @@
         transform: none !important;
     }
 }
+
+/* Roadmap-aligned owner IA: task groups instead of a wall of identical cards. */
+.kmj-admin-category {
+    border: 1px solid var(--kmj-workspace-border);
+    background:
+        linear-gradient(145deg, var(--kmj-workspace-highlight), transparent 57%),
+        var(--card);
+    box-shadow:
+        inset 0 1px 0 var(--kmj-workspace-highlight),
+        0 12px 32px rgb(4 11 24 / 10%);
+}
+.kmj-admin-workspace-map {
+    min-width: 0;
+}
+.kmj-admin-workspace-map a {
+    text-decoration: none;
+}
+.kmj-admin-workspace-map a:hover {
+    box-shadow: inset 3px 0 0 rgb(217 56 75 / 65%);
+}
+.kmj-admin-workspace-map [hidden] {
+    display: none !important;
+}
+@media (prefers-reduced-motion: reduce) {
+    .kmj-admin-workspace-map a,
+    .kmj-admin-workspace-map button {
+        transition-duration: 0.01ms !important;
+        transform: none !important;
+    }
+}
