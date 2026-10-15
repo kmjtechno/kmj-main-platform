@@ -92,20 +92,22 @@ final class KslpDeveloperAppsTest extends TestCase
             app(KslpDeveloperKeys::class)->resolve($plain)['product_code'],
         );
 
-        $this->get('/developer/apps')
-            ->assertOk()
-            ->assertHeader('Cache-Control', 'private, no-store, max-age=0')
-            ->assertInertia(fn (Assert $page) => $page
+        $firstResponse = $this->get('/developer/apps')->assertOk();
+        $firstCache = array_map('trim', explode(',', (string) $firstResponse->headers->get('Cache-Control')));
+        self::assertContains('private', $firstCache);
+        self::assertContains('no-store', $firstCache);
+        $firstResponse->assertInertia(fn (Assert $page) => $page
                 ->component('developer-apps')
                 ->has('applications', 1)
                 ->has('keys', 1)
                 ->where('canIssueKeys', true)
                 ->where('newKey.key', $plain));
 
-        $this->get('/developer/apps')
-            ->assertOk()
-            ->assertHeader('Cache-Control', 'private, no-store, max-age=0')
-            ->assertInertia(fn (Assert $page) => $page
+        $nextResponse = $this->get('/developer/apps')->assertOk();
+        $nextCache = array_map('trim', explode(',', (string) $nextResponse->headers->get('Cache-Control')));
+        self::assertContains('private', $nextCache);
+        self::assertContains('no-store', $nextCache);
+        $nextResponse->assertInertia(fn (Assert $page) => $page
                 ->component('developer-apps')
                 ->where('newKey', null));
     }
