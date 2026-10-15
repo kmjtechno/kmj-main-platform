@@ -7,6 +7,7 @@ import { fileURLToPath } from "node:url";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 export const ROUTES_PATH = path.join(root, "apps/platform/routes/codebridge-oauth.php");
+export const SERVER_PATH = path.join(root, "apps/platform/app/Services/CodeBridge/OAuth/OAuthServer.php");
 
 function occurrences(source, re) {
   return [...source.matchAll(re)].length;
@@ -61,10 +62,39 @@ export function auditOAuthRoutes(source) {
   return [...new Set(errors)];
 }
 
+// Guard the backing OAuth server as well as HTTP routes. A second permissive
+// validateAuthorization() implementation is both an auth bypass attempt and
+// a duplicate PHP method definition that can prevent application bootstrap.
+export function auditOAuthServer(source) {
+  if (typeof source !== "string" || source.length < 500)
+    throw new Error("CODEBRIDGE_OAUTH_SERVER_SOURCE_INVALID");
+  const errors = [];
+  if (occurrences(source, /function\\s+validateAuthorization\\s*\\(/g) !== 1)
+    errors.push("AUTHORIZATION_VALIDATOR_COUNT");
+  const checks = [
+    ["$this->resolveClient($clientId)", "CLIENT_REGISTRATION_NOT_VALIDATED"],
+    ["OAuthCore::redirectMatches($registered, $redirect)", "REDIRECT_NOT_VALIDATED"],
+    ["OAuthCore::isValidChallenge($query['code_challenge'])", "PKCE_CHALLENGE_NOT_VALIDATED"],
+    ["$resource !== $this->resource()", "RESOURCE_BINDING_NOT_VALIDATED"],
+    ["OAuthCore::parseScopes(", "SCOPES_NOT_VALIDATED"],
+    ["OAuthCore::verifyPkce(", "PKCE_VERIFIER_NOT_VALIDATED"],
+    ["public function approve(", "AUTHORIZATION_CONSENT_MISSING"],
+  ];
+  for (const [text, code] of checks) {
+    if (!source.includes(text)) errors.push(code);
+  }
+  if (/cb_super_admin|SUPER.?ADMIN BYPASS/i.test(source))
+    errors.push("SUPERADMIN_BYPASS_FORBIDDEN");
+  return [...new Set(errors)];
+}
+
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   // One fixed path only. Do not accept arbitrary callers' source paths,
   // print PHP source, or leak OAuth client/user/token data.
-  const failures = auditOAuthRoutes(fs.readFileSync(ROUTES_PATH, "utf8"));
+  const failures = [
+    ...auditOAuthRoutes(fs.readFileSync(ROUTES_PATH, "utf8")),
+    ...auditOAuthServer(fs.readFileSync(SERVER_PATH, "utf8")),
+  ];
   if (failures.length) {
     console.error("CODEBRIDGE_OAUTH_ROUTE_GUARD=FAIL " + failures.join(","));
     process.exitCode = 1;
