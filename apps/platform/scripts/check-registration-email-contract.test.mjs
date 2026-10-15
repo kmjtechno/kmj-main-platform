@@ -11,6 +11,7 @@ const verifyUi = read('resources/js/pages/auth/verify-email.tsx');
 const registerUi = read('resources/js/pages/auth/register.tsx');
 const doctor = read('app/Console/Commands/RegistrationMailDoctorCommand.php');
 const user = read('app/Models/User.php');
+const mailConfig = read('config/mail.php');
 const forgotUi = read('resources/js/pages/auth/forgot-password.tsx');
 
 void test('production registration is blocked before creating an unverifiable account', () => {
@@ -57,4 +58,19 @@ void test('reset emails cannot claim sent with log-only production mail', () => 
     assert.match(views, /'mailDeliveryAvailable'/);
     assert.match(forgotUi, /disabled=\{processing \|\| !mailDeliveryAvailable\}/);
     assert.match(forgotUi, /Inbox delivery is not confirmed/);
+});
+
+void test('temporary free relay is explicitly disabled, requires SMTPS credentials and remains replaceable', () => {
+    assert.match(mailConfig, /'kmj_brevo' => \[/);
+    assert.match(mailConfig, /'scheme' => 'smtps'/);
+    assert.match(mailConfig, /'host' => 'smtp-relay\.brevo\.com'/);
+    assert.match(mailConfig, /'port' => 465/);
+    assert.match(mailConfig, /'KMJ_BREVO_SMTP_KEY'/);
+    assert.match(mailConfig, /'KMJ_BREVO_ACTIVATED', false/);
+    assert.match(readiness, /'kmj_requires_credentials'/);
+    assert.match(readiness, /'kmj_activation_confirmed'/);
+    assert.match(readiness, /kmj_required_sender_domain/);
+    assert.match(readiness, /\$mailer\['scheme'\]/);
+    assert.match(mailConfig, /'default' => env\('MAIL_MAILER', 'log'\)/);
+    assert.doesNotMatch(mailConfig, /[a-zA-Z0-9]{20,}@smtp-brevo\.com/);
 });
