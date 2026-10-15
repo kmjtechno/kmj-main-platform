@@ -104,6 +104,36 @@ final class CodeBridgeDevicePairingHttpTest extends TestCase
         ])->assertStatus(410);
     }
 
+    public function test_unreachable_public_agent_gateway_cannot_create_ghost_device_grant(): void
+    {
+        config()->set('codebridge.enabled', true);
+        config()->set('services.codebridge_gateway.url', 'http://127.0.0.1:45678');
+        config()->set('services.codebridge_agent_public.url', 'http://127.0.0.1:45678');
+        $user = User::factory()->create();
+        [$tenant] = $this->fixture($user);
+
+        $created = $this->postJson('/api/codebridge/v1/device-enrollments', [
+            'product' => 'KMJ_CODEBRIDGE',
+            'device' => ['id' => 'vps-ghost', 'name' => 'Test Device', 'platform' => 'windows', 'arch' => 'x64'],
+            'project' => ['id' => 'project1', 'name' => 'App'],
+            'requested_permissions' => ['read', 'write', 'execute'],
+            'code_challenge' => rtrim(strtr(base64_encode(random_bytes(32)), '+/', '-_'), '='),
+            'code_challenge_method' => 'S256',
+        ])->assertCreated()->json();
+
+        $this->actingAs($user)->post('/codebridge/pair', [
+            'code' => $created['user_code'],
+            'tenant_id' => $tenant,
+        ])->assertSessionHasErrors(['code']);
+
+        $this->assertDatabaseHas('codebridge_device_pairings', [
+            'device_id' => 'vps-ghost',
+            'status' => 'pending',
+        ]);
+        $this->assertDatabaseCount('codebridge_device_credentials', 0);
+        $this->assertDatabaseCount('kslp_activations', 0);
+    }
+
     public function test_pairing_rejects_wrong_verifier_and_expired_code(): void
     {
         config()->set('codebridge.enabled', true);
