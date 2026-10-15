@@ -471,6 +471,23 @@ final class KslpDeveloperAppsTest extends TestCase
         self::assertSame(1, (int) DB::table('kslp_licenses')->where('id', $license)->value('sequence'));
     }
 
+    public function test_invalid_device_release_route_ids_fail_before_postgresql_cast(): void
+    {
+        [$owner, , $key, , $device] = $this->issuedDeviceSeat();
+        foreach ([
+            '/developer/keys/not-a-uuid/devices/'.$device.'/release',
+            '/developer/keys/'.$key.'/devices/not-a-uuid/release',
+        ] as $uri) {
+            $this->actingAs($owner)
+                ->withSession(['auth.password_confirmed_at' => time()])
+                ->post($uri, ['reason' => 'Invalid identity must fail closed'])
+                ->assertNotFound();
+        }
+        self::assertNull(
+            DB::table('kslp_activations')->where('id', $device)->value('deactivated_at'),
+        );
+    }
+
     public function test_device_release_requires_reason_and_enabled_flag(): void
     {
         [$owner, , $key, , $device] = $this->issuedDeviceSeat();
