@@ -10,6 +10,7 @@ use App\Services\Licensing\Kslp\KslpIssuerSubscriptionAuthority;
 use DomainException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
 
@@ -308,5 +309,128 @@ final class KslpDeveloperAppsTest extends TestCase
             ])->assertForbidden();
 
         self::assertNull(DB::table('kslp_license_keys')->where('id', $keyId)->value('revoked_at'));
+    }
+
+    /** @return array{User, string, string, string, string} */
+    private function issuedDeviceSeat(): array
+    {
+        [$owner, $org] = $this->owner('Device Seat Lab');
+        $this->enroll($org);
+        app(KslpIssuerSubscriptionAuthority::class)
+            ->registerProduct($org, 'SEATS.APP', 'Seat Lab');
+        $issued = app(KslpDeveloperKeys::class)->issue(
+            $org, 'SEATS.APP', 'seat-customer', 'trial', (string) $owner->id,
+        );
+        $keyId = (string) DB::table('kslp_license_keys')
+            ->where('license_id', $issued['license_id'])->value('id');
+        $deviceId = (string) Str::uuid();
+        $now = now();
+
+        // Direct fixture for already-proven PoP activation. This test never
+        // fabricates a client entitlement or skips proof in the HTTP API.
+        DB::table('kslp_activations')->insert([
+            'id' => $deviceId,
+            'license_id' => $issued['license_id'],
+            'server_identity' => 'ed25519:'.rtrim(strtr(base64_encode(random_bytes(32)), '+/', '-_'), '='),
+            'machine_identity_hash' => hash('sha256', 'test-device-only'),
+            'idempotency_key' => (string) Str::uuid(),
+            'activated_at' => $now,
+            'created_at' => $now,
+            'updated_at' => $now,
+        ]);
+
+        return [$owner, $org, $keyId, $issued['license_id'], $deviceId];
+    }
+
+    public function test_license_directory_only_exposes_masked_scoped_active_seats(): void
+    {
+        [$owner, , , , $device] = $this->issuedDeviceSeat();
+
+        $this->actingAs($owner)->get('/developer/apps')
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('developer-apps')
+                ->has('activeDevices', 1)
+                ->where('activeDevices.0.id', $device)
+                ->missing('activeDevices.0.server_identity')
+                ->missing('activeDevices.0.machine_identity_hash')
+                ->missing('activeDevices.0.idempotency_key'));
+
+        $stranger = User::factory()->create();
+        $this->actingAs($stranger)->get('/developer/apps')
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('developer-apps')
+                ->has('activeDevices', 0)
+                ->has('keys', 0));
+    }
+
+    public function test_authorized_developer_can_release_a_seat_with_reason_and_audit_exactly_once(): void
+    {
+        [$owner, , $key, $license, $device] = $this->issuedDeviceSeat();
+        $before = (int) DB::table('kslp_licenses')->where('id', $license)->value('sequence');
+        $uri = '/developer/keys/'.$key.'/devices/'.$device.'/release';
+
+        $this->actingAs($owner)
+            ->withSession(['auth.password_confirmed_at' => time()])
+            ->post($uri, ['reason' => 'Customer replaced laptop'])
+            ->assertRedirect(route('developer.apps.index'));
+
+        self::assertNotNull(DB::table('kslp_activations')->where('id', $device)->value('deactivated_at'));
+        self::assertSame($before + 1, (int) DB::table('kslp_licenses')->where('id', $license)->value('sequence'));
+        $this->assertDatabaseHas('kslp_license_events', [
+            'license_id' => $license,
+            'action' => 'developer_device_released',
+            'reason' => 'Customer replaced laptop',
+        ]);
+
+        // Idempotent retry: no sequence increment and no duplicate audit.
+        $this->actingAs($owner)
+            ->withSession(['auth.password_confirmed_at' => time()])
+            ->post($uri, ['reason' => 'Customer replaced laptop'])
+            ->assertRedirect(route('developer.apps.index'));
+        self::assertSame($before + 1, (int) DB::table('kslp_licenses')->where('id', $license)->value('sequence'));
+        self::assertSame(1, DB::table('kslp_license_events')
+            ->where('license_id', $license)
+            ->where('action', 'developer_device_released')->count());
+    }
+
+    public function test_device_release_fails_closed_for_unrelated_user_and_unknown_activation(): void
+    {
+        [$owner, , $key, , $device] = $this->issuedDeviceSeat();
+        $uri = '/developer/keys/'.$key.'/devices/'.$device.'/release';
+        $stranger = User::factory()->create();
+
+        $this->actingAs($stranger)
+            ->withSession(['auth.password_confirmed_at' => time()])
+            ->post($uri, ['reason' => 'Attempt unauthorized release'])
+            ->assertForbidden();
+
+        $this->actingAs($owner)
+            ->withSession(['auth.password_confirmed_at' => time()])
+            ->post('/developer/keys/'.$key.'/devices/'.Str::uuid().'/release', [
+                'reason' => 'Different customer device',
+            ])->assertNotFound();
+
+        self::assertNull(DB::table('kslp_activations')->where('id', $device)->value('deactivated_at'));
+    }
+
+    public function test_device_release_requires_reason_and_enabled_flag(): void
+    {
+        [$owner, , $key, , $device] = $this->issuedDeviceSeat();
+        $uri = '/developer/keys/'.$key.'/devices/'.$device.'/release';
+
+        $this->actingAs($owner)
+            ->withSession(['auth.password_confirmed_at' => time()])
+            ->post($uri, ['reason' => ''])
+            ->assertSessionHasErrors('reason');
+        self::assertNull(DB::table('kslp_activations')->where('id', $device)->value('deactivated_at'));
+
+        config()->set('services.kmj_developer_licensing.enabled', false);
+        $this->actingAs($owner)
+            ->withSession(['auth.password_confirmed_at' => time()])
+            ->post($uri, ['reason' => 'Device was replaced'])
+            ->assertStatus(503);
+        self::assertNull(DB::table('kslp_activations')->where('id', $device)->value('deactivated_at'));
     }
 }
