@@ -116,7 +116,7 @@ Route::middleware(['auth', 'verified'])->prefix('developer')->name('developer.')
             ->get(['license_id', 'action', 'created_at'])
             ->all();
 
-        return Inertia::render('developer-apps', [
+        $response = Inertia::render('developer-apps', [
             'organizations' => $organizations,
             'applications' => $products,
             'keys' => $keys,
@@ -125,7 +125,12 @@ Route::middleware(['auth', 'verified'])->prefix('developer')->name('developer.')
             'recentEvents' => $recentEvents,
             'canIssueKeys' => $storageReady && (bool) config('services.kmj_developer_licensing.enabled', false),
             'newKey' => $request->session()->get('developer_license_key'),
-        ]);
+        ])->toResponse($request);
+        // The first-use plaintext bootstrap key is displayed only once.
+        // Forbid browser/shared-proxy caching of this sensitive console.
+        $response->headers->set('Cache-Control', 'private, no-store, max-age=0');
+
+        return $response;
     })->name('apps.index');
 
     Route::post('organizations', function (
@@ -213,7 +218,8 @@ Route::middleware(['auth', 'verified'])->prefix('developer')->name('developer.')
                 ->where('id', $activation)
                 ->whereNull('deactivated_at')
                 ->update(['deactivated_at' => $now, 'updated_at' => $now]);
-            // Bump the server sequence for subsequent verified lease checks.\n            // Already-issued offline leases cannot be recalled instantly.
+            // Bump the server sequence for subsequent verified lease checks.
+            // Already-issued offline leases cannot be recalled instantly.
             DB::table('kslp_licenses')->where('id', $record->license_id)
                 ->update(['sequence' => DB::raw('sequence + 1'), 'updated_at' => $now]);
             DB::table('kslp_license_events')->insert([
