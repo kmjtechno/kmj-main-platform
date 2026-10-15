@@ -37,11 +37,20 @@ void test('admin visuals remain scoped to authenticated owner workspace', () => 
 
 void test('every admin section is a real owner route, not an inert card', () => {
     for (const url of [
-        '/operator', '/operator/products', '/operator#commercial-orders',
-        '/operator/directory', '/operator/payments', '/operator/kslp',
-        '/operator/codebridge/owner-plan', '/operator/ops', '/settings/security',
+        '/operator',
+        '/operator/products',
+        '/operator#commercial-orders',
+        '/operator/directory',
+        '/operator/payments',
+        '/operator/kslp',
+        '/operator/codebridge/owner-plan',
+        '/operator/ops',
+        '/settings/security',
     ]) {
-        assert.ok(nav.includes(`href: '${url}'`), `Missing real navigation: ${url}`);
+        assert.ok(
+            nav.includes(`href: '${url}'`),
+            `Missing real navigation: ${url}`,
+        );
     }
     assert.match(nav, /aria-label="Super Admin modules"/);
     assert.match(nav, /aria-current=/);
@@ -51,8 +60,18 @@ void test('every admin section is a real owner route, not an inert card', () => 
 });
 
 void test('design accents have semantic variety and reduced-motion accessibility', () => {
-    for (const token of ['text-violet-', 'text-sky-', 'text-amber-', 'text-emerald-', 'text-rose-', 'text-cyan-']) {
-        assert.ok(overview.includes(token), `Missing semantic accent: ${token}`);
+    for (const token of [
+        'text-violet-',
+        'text-sky-',
+        'text-amber-',
+        'text-emerald-',
+        'text-rose-',
+        'text-cyan-',
+    ]) {
+        assert.ok(
+            overview.includes(token),
+            `Missing semantic accent: ${token}`,
+        );
     }
     assert.match(styles, /prefers-reduced-motion/);
     assert.match(styles, /focus-visible/);
@@ -65,8 +84,14 @@ void test('owner dashboard entry remains authority-gated and leaves customer ser
     assert.match(dashboard, /Super Admin Control Center/);
     assert.match(dashboard, /href="\/operator"/);
     assert.match(dashboard, /href="\/operator\/kslp"/);
-    assert.ok(dashboard.indexOf('<OwnerProductsPanel') < dashboard.indexOf('Your authorized services'));
-    assert.match(routes, /\$isPlatformOwner = app\(PlatformOwnerAccess::class\)->allows\(\$user\)/);
+    assert.ok(
+        dashboard.indexOf('<OwnerProductsPanel') <
+            dashboard.indexOf('Your authorized services'),
+    );
+    assert.match(
+        routes,
+        /\$isPlatformOwner = app\(PlatformOwnerAccess::class\)->allows\(\$user\)/,
+    );
 });
 
 void test('owner action queue uses only actual catalog and order evidence', () => {
@@ -74,7 +99,10 @@ void test('owner action queue uses only actual catalog and order evidence', () =
     assert.match(overview, /count: awaitingConfirmation/);
     assert.match(overview, /count: readyForFulfillment/);
     assert.match(overview, /count: missingCanonicalSlugs\.length/);
-    assert.match(overview, /Based on the current catalog and displayed recent orders/);
+    assert.match(
+        overview,
+        /Based on the current catalog and displayed recent orders/,
+    );
     assert.match(overview, /\{actionItems\.length > 0 && \(/);
     assert.doesNotMatch(overview, /router\.post\(/);
 });
