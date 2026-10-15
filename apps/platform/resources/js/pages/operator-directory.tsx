@@ -127,12 +127,12 @@ export default function OperatorDirectory({
 
                 <form
                     onSubmit={search}
-                    className="mx-auto grid max-w-7xl gap-3 rounded-2xl border border-white/10 bg-[#11151d] p-5 md:grid-cols-[1fr_1fr_auto] md:items-end"
+                    className="mx-auto grid max-w-7xl gap-3 rounded-2xl border border-white/10 bg-card p-5 md:grid-cols-[1fr_1fr_auto] md:items-end"
                 >
-                    <label className="space-y-2 text-xs font-semibold text-slate-300">
+                    <label className="space-y-2 text-xs font-semibold text-muted-foreground">
                         <span>Search users by name or email</span>
                         <input
-                            className="w-full rounded-xl border border-white/20 bg-[#080b10] px-4 py-3 text-sm text-white"
+                            className="w-full rounded-xl border border-white/20 bg-background/50 px-4 py-3 text-sm text-white"
                             value={usersQuery}
                             onChange={(event) =>
                                 setUsersQuery(event.target.value)
@@ -141,10 +141,10 @@ export default function OperatorDirectory({
                             placeholder="Name or email"
                         />
                     </label>
-                    <label className="space-y-2 text-xs font-semibold text-slate-300">
+                    <label className="space-y-2 text-xs font-semibold text-muted-foreground">
                         <span>Search organizations</span>
                         <input
-                            className="w-full rounded-xl border border-white/20 bg-[#080b10] px-4 py-3 text-sm text-white"
+                            className="w-full rounded-xl border border-white/20 bg-background/50 px-4 py-3 text-sm text-white"
                             value={orgsQuery}
                             onChange={(event) =>
                                 setOrgsQuery(event.target.value)
@@ -162,7 +162,7 @@ export default function OperatorDirectory({
                 <div className="mx-auto grid max-w-7xl gap-6 xl:grid-cols-2">
                     <section
                         aria-label="Platform users"
-                        className="min-w-0 rounded-2xl border border-white/10 bg-[#11151d] p-5"
+                        className="min-w-0 rounded-2xl border border-white/10 bg-card p-5"
                     >
                         <h2 className="flex items-center gap-2 text-xl font-bold">
                             <Users
@@ -170,12 +170,12 @@ export default function OperatorDirectory({
                                 aria-hidden="true"
                             />
                             Users{' '}
-                            <span className="text-sm font-normal text-slate-400">
+                            <span className="text-sm font-normal text-muted-foreground">
                                 ({users.total})
                             </span>
                         </h2>
                         {users.data.length === 0 ? (
-                            <p className="mt-5 rounded-xl border border-dashed border-white/15 p-5 text-sm text-slate-400">
+                            <p className="mt-5 rounded-xl border border-dashed border-white/15 p-5 text-sm text-muted-foreground">
                                 No users match this search.
                             </p>
                         ) : (
@@ -189,11 +189,11 @@ export default function OperatorDirectory({
                                             <p className="font-semibold">
                                                 {user.name}
                                             </p>
-                                            <p className="mt-1 text-xs break-all text-slate-400">
+                                            <p className="mt-1 text-xs break-all text-muted-foreground">
                                                 {user.email}
                                             </p>
                                         </div>
-                                        <span className="rounded-full border border-white/15 px-2.5 py-1 text-[11px] text-slate-300">
+                                        <span className="rounded-full border border-white/15 px-2.5 py-1 text-[11px] text-muted-foreground">
                                             {user.is_platform_owner
                                                 ? 'Platform owner'
                                                 : user.email_verified_at
@@ -208,7 +208,7 @@ export default function OperatorDirectory({
                     </section>
                     <section
                         aria-label="Customer organizations"
-                        className="min-w-0 rounded-2xl border border-white/10 bg-[#11151d] p-5"
+                        className="min-w-0 rounded-2xl border border-white/10 bg-card p-5"
                     >
                         <h2 className="flex items-center gap-2 text-xl font-bold">
                             <Building2
@@ -216,12 +216,12 @@ export default function OperatorDirectory({
                                 aria-hidden="true"
                             />
                             Organizations{' '}
-                            <span className="text-sm font-normal text-slate-400">
+                            <span className="text-sm font-normal text-muted-foreground">
                                 ({organizations.total})
                             </span>
                         </h2>
                         {organizations.data.length === 0 ? (
-                            <p className="mt-5 rounded-xl border border-dashed border-white/15 p-5 text-sm text-slate-400">
+                            <p className="mt-5 rounded-xl border border-dashed border-white/15 p-5 text-sm text-muted-foreground">
                                 No organizations match this search.
                             </p>
                         ) : (
@@ -235,11 +235,11 @@ export default function OperatorDirectory({
                                             <p className="font-semibold">
                                                 {org.name}
                                             </p>
-                                            <p className="mt-1 font-mono text-[11px] break-all text-slate-500">
+                                            <p className="mt-1 font-mono text-[11px] break-all text-muted-foreground">
                                                 {org.id}
                                             </p>
                                         </div>
-                                        <span className="rounded-full border border-white/15 px-2.5 py-1 text-[11px] text-slate-300">
+                                        <span className="rounded-full border border-white/15 px-2.5 py-1 text-[11px] text-muted-foreground">
                                             {org.memberships_count} members
                                         </span>
                                     </div>
