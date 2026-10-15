@@ -19,6 +19,7 @@ const developerRoutes = read('routes/developer-licenses.php');
 const developerApps = read('resources/js/pages/developer-apps.tsx');
 const ownerLicensing = read('resources/js/pages/operator-kslp.tsx');
 const firstUseSdk = read('public/sdk/python/kmj_kslp_first_use.py');
+const localVerifier = read('../../scripts/ci/verify-authsp-licensing-local.sh');
 
 void test('Admin and developer routes both stay registered', () => {
     assert.ok(web.includes("require __DIR__.'/developer-licenses.php'"));
@@ -146,4 +147,16 @@ void test('Python first use proves device ownership without issuing a commercial
     assert.ok(firstUseSdk.includes('license_key'));
     assert.ok(!firstUseSdk.includes('open("private_key"'));
     assert.ok(developerRoutes.includes("'plan' => ['required', 'in:trial']"));
+});
+
+void test('Local licensing verifier cannot run from production or satisfy hosted CI', () => {
+    assert.ok(localVerifier.includes('ISOLATED_WORKTREE_REQUIRED'));
+    assert.ok(localVerifier.includes('HEAD_MISMATCH'));
+    assert.ok(localVerifier.includes('DIRTY_TRACKED_CHECKOUT'));
+    assert.ok(localVerifier.includes('PRODUCTION_ENV_DENIED'));
+    assert.ok(localVerifier.includes('ENV_SECRET_FILE_PRESENT'));
+    assert.ok(localVerifier.includes('LOCAL_ISOLATED_NOT_GITHUB_HOSTED'));
+    assert.ok(localVerifier.includes('HOSTED_BRANCH_PROTECTION=UNCHANGED'));
+    assert.ok(!localVerifier.includes('git push'));
+    assert.ok(!localVerifier.includes('artisan migrate'));
 });
