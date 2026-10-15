@@ -681,6 +681,8 @@ jobs:
             php -l apps/platform/routes/developer-licenses.php
             php -l apps/platform/tests/Feature/KslpDeveloperAppsTest.php
             php -l apps/platform/app/Services/Licensing/Kslp/KslpLicenseControlPlane.php
+            php -l apps/platform/app/Services/Licensing/Kslp/KslpActivationProof.php
+            php tests/codebridge/activation-proof.php apps/platform/app/Services/Licensing/Kslp/KslpActivationProof.php
             node --test tests/kslp-javascript-first-use.test.mjs
             cd apps/platform
             node --test scripts/check-licensing-integration.test.mjs
@@ -716,7 +718,7 @@ jobs:
             test "$(git rev-parse HEAD)" = "$CIRCLE_SHA1"
             cd apps/platform
             composer install --no-interaction --prefer-dist --no-progress
-            vendor/bin/pint --test routes/developer-licenses.php app/Services/Licensing/Kslp/KslpDeveloperKeys.php app/Services/Licensing/Kslp/KslpLicenseControlPlane.php tests/Feature/KslpDeveloperAppsTest.php tests/Feature/KslpLifecycleTest.php
+            vendor/bin/pint --test routes/developer-licenses.php app/Services/Licensing/Kslp/KslpDeveloperKeys.php app/Services/Licensing/Kslp/KslpLicenseControlPlane.php tests/Feature/KslpDeveloperAppsTest.php tests/Feature/KslpLifecycleTest.php app/Services/Licensing/Kslp/KslpActivationProof.php tests/Feature/KslpActivationProofTest.php
             echo "KMJ_KSLP_PHP_STYLE_PASS=$CIRCLE_SHA1"
       - run:
           name: Capture exact Pint changes without modifying checkout or pushing
@@ -726,7 +728,7 @@ jobs:
             mkdir -p /tmp/kmj-kslp-php-diagnostics
             cd apps/platform
             printf '%s\n' "$CIRCLE_SHA1" > /tmp/kmj-kslp-php-diagnostics/HEAD
-            files="routes/developer-licenses.php app/Services/Licensing/Kslp/KslpDeveloperKeys.php app/Services/Licensing/Kslp/KslpLicenseControlPlane.php tests/Feature/KslpDeveloperAppsTest.php tests/Feature/KslpLifecycleTest.php"
+            files="routes/developer-licenses.php app/Services/Licensing/Kslp/KslpDeveloperKeys.php app/Services/Licensing/Kslp/KslpLicenseControlPlane.php tests/Feature/KslpDeveloperAppsTest.php tests/Feature/KslpLifecycleTest.php app/Services/Licensing/Kslp/KslpActivationProof.php tests/Feature/KslpActivationProofTest.php"
             vendor/bin/pint --test $files > /tmp/kmj-kslp-php-diagnostics/pint-failure.txt 2>&1 || true
             vendor/bin/pint $files > /tmp/kmj-kslp-php-diagnostics/pint-autofix.txt 2>&1 || true
             git diff -- $files > /tmp/kmj-kslp-php-diagnostics/approved-php-format.patch
@@ -758,7 +760,7 @@ jobs:
             cd apps/platform
             composer install --no-interaction --prefer-dist --no-progress
             export APP_KEY="base64:$(php -r 'echo base64_encode(random_bytes(32));')"
-            php artisan test --filter='KslpDeveloperAppsTest|KslpLifecycleTest|KslpDeveloperActivationApiTest|KslpDelegatedIssueTest|KslpIssuerSubscriptionTest' --no-ansi
+            php artisan test --filter='KslpDeveloperAppsTest|KslpLifecycleTest|KslpDeveloperActivationApiTest|KslpDelegatedIssueTest|KslpIssuerSubscriptionTest|KslpActivationProofTest' --no-ansi
             echo "KMJ_KSLP_LARAVEL_TESTS_PASS=$CIRCLE_SHA1"
 
   kslp_authsp_frontend:
