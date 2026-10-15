@@ -58,8 +58,14 @@ async function boundedResponse(response) {
             chunks.push(value);
         }
     } finally {
+        if (size > MAX_BODY) {
+            try {
+                await reader.cancel();
+            } catch {
+                // Keep the size-limit rejection as the public error.
+            }
+        }
         reader.releaseLock();
-        if (size > MAX_BODY) await reader.cancel().catch(() => {});
     }
     const bytes = new Uint8Array(size);
     let offset = 0;
