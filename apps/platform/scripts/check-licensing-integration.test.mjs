@@ -170,3 +170,19 @@ void test('Local licensing verifier cannot run from production or satisfy hosted
     assert.ok(!localVerifier.includes('git push'));
     assert.ok(!localVerifier.includes('artisan migrate'));
 });
+
+void test('JavaScript + TypeScript first-use SDKs never mint an entitlement', () => {
+    assert.ok(jsFirstUse.includes("'KSLP-ACTIVATE-v1|'"));
+    assert.ok(jsFirstUse.includes("const ORIGIN = 'https://kmjtechno.com'"));
+    assert.ok(jsFirstUse.includes("credentials: 'omit'"));
+    assert.ok(jsFirstUse.includes("redirect: 'error'"));
+    assert.ok(jsFirstUse.includes("grantsEntitlement: false"));
+    assert.ok(jsFirstUse.includes("const MAX_BODY = 4096"));
+    assert.ok(jsFirstUse.includes("async function boundedResponse(response)"));
+    assert.doesNotMatch(jsFirstUse, /\blocalStorage\s*[.\[]/);
+    assert.ok(jsTypes.includes('readonly grantsEntitlement: false'));
+    assert.ok(developerApps.includes('Download JS first-use helper'));
+    assert.ok(developerApps.includes('Download TypeScript declarations'));
+    assert.ok(developerApps.includes('/sdk/javascript/kmj_kslp_first_use.mjs'));
+    assert.ok(developerApps.includes('/sdk/javascript/kmj_kslp_first_use.d.mts'));
+});
