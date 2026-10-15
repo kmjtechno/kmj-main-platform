@@ -44,6 +44,7 @@ type LicenseKey = {
     first_activated_at: string | null;
     status: string;
     grace_until: string | null;
+    display_state: string;
 };
 
 type ActiveDevice = {
@@ -953,7 +954,7 @@ export default function DeveloperApps({
                                             </p>
                                         )}
                                         <p className="text-muted-foreground mt-1 text-xs">
-                                            License: {key.status} · Expires{' '}
+                                            License: {key.display_state.replace(/_/g, ' ')} · Expires{' '}
                                             {new Date(key.expires_at).toLocaleDateString()} ·
                                             Active device seats:{' '}
                                             {activeSeatCounts[key.license_id] ?? 0}
@@ -963,7 +964,7 @@ export default function DeveloperApps({
                                             not a signed commercial lease.
                                         </p>
                                         {!key.revoked_at &&
-                                            key.status === 'active' &&
+                                            key.display_state !== 'REVOKED_OR_SUSPENDED' &&
                                             activeDevices
                                                 .filter(
                                                     (device) =>
@@ -1070,7 +1071,7 @@ export default function DeveloperApps({
                                                     </div>
                                                 ))}
                                         {!key.revoked_at &&
-                                            key.status === 'active' &&
+                                            key.display_state !== 'REVOKED_OR_SUSPENDED' &&
                                             canIssueKeys && (
                                             <button
                                                 type="button"
