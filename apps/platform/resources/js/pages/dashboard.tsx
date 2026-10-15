@@ -2,8 +2,6 @@ import { Head, Link } from '@inertiajs/react';
 import {
     ArrowRight,
     BadgeCheck,
-    Cable,
-    CheckCircle2,
     CreditCard,
     Crown,
     Download,
@@ -349,7 +347,7 @@ function CodeBridgeCard({
                 <div className="flex flex-col justify-between gap-5 lg:flex-row lg:items-start">
                     <div className="flex min-w-0 items-start gap-4">
                         <span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl border border-red-500/20 bg-red-500/10 text-red-500">
-                            <Cable className="h-6 w-6" />
+                            <img src="/assets/kmj-codebridge-icon.png" alt="KMJ CodeBridge product icon" className="size-8 object-contain" loading="lazy" />
                         </span>
                         <div className="min-w-0">
                             <div className="flex flex-wrap items-center gap-2">
@@ -450,8 +448,8 @@ function CodeBridgeCard({
                                     'https://kmjtechno.com/mcp'}
                             </code>
                             <span className="inline-flex items-center gap-1.5 text-[11px] font-bold text-emerald-600 dark:text-emerald-400">
-                                <CheckCircle2 className="h-3.5 w-3.5" />
-                                MCP endpoint ready
+                                <Server className="h-3.5 w-3.5" />
+                                Endpoint configured · Live status unverified
                             </span>
                         </div>
                     </div>
@@ -461,10 +459,7 @@ function CodeBridgeCard({
                             Authorized capabilities
                         </div>
                         <div className="mt-3 flex flex-wrap gap-2">
-                            {(permissions.length
-                                ? permissions
-                                : ['read', 'write', 'execute']
-                            ).map((permission) => (
+                            {permissions.map((permission) => (
                                 <span
                                     key={permission}
                                     className="rounded-lg border px-2.5 py-1 text-[10px] font-bold uppercase"
