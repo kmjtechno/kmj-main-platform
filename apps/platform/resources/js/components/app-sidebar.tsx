@@ -1,6 +1,7 @@
 import { Link, usePage } from '@inertiajs/react';
 import {
     Activity,
+    Boxes,
     Crown,
     CreditCard,
     Code2,
@@ -10,6 +11,7 @@ import {
     PackageOpen,
     ShieldCheck,
     ShoppingCart,
+    Users,
 } from 'lucide-react';
 import AppLogo from '@/components/app-logo';
 import { NavFooter } from '@/components/nav-footer';
@@ -73,34 +75,24 @@ export function AppSidebar() {
     const operator = usePage().props.operator as
         | { enabled?: boolean }
         | undefined;
-    const ownerNavItems: NavItem[] = operator?.enabled
+    const ownerBusiness: NavItem[] = operator?.enabled
         ? [
-              { title: 'Overview', href: '/operator', icon: Crown },
-              {
-                  title: 'Product Management',
-                  href: '/operator/products',
-                  icon: PackageOpen,
-              },
-              {
-                  title: 'Licensing Center',
-                  href: '/operator/kslp',
-                  icon: KeyRound,
-              },
-              {
-                  title: 'Customers & Organizations',
-                  href: '/operator/directory',
-                  icon: Crown,
-              },
-              {
-                  title: 'Payment Gateways',
-                  href: '/operator/payments',
-                  icon: CreditCard,
-              },
-              {
-                  title: 'Operations',
-                  href: '/operator/ops',
-                  icon: Activity,
-              },
+              { title: 'Command Center', href: '/operator', icon: Crown },
+              { title: 'Products', href: '/operator/products', icon: PackageOpen },
+              { title: 'Customers & Organizations', href: '/operator/directory', icon: Users },
+          ]
+        : [];
+    const ownerCommerce: NavItem[] = operator?.enabled
+        ? [
+              { title: 'Orders & Fulfillment', href: '/operator#commercial-orders', icon: ShoppingCart },
+              { title: 'Payments', href: '/operator/payments', icon: CreditCard },
+              { title: 'Entitlements & Licensing', href: '/operator/kslp', icon: KeyRound },
+          ]
+        : [];
+    const ownerSystems: NavItem[] = operator?.enabled
+        ? [
+              { title: 'Operations & Audit', href: '/operator/ops', icon: Activity },
+              { title: 'CodeBridge Controls', href: '/operator/codebridge/owner-plan', icon: Boxes },
           ]
         : [];
 
@@ -124,8 +116,12 @@ export function AppSidebar() {
 
             <SidebarContent>
                 <NavMain items={baseNavItems} label="My workspace" />
-                {ownerNavItems.length > 0 && (
-                    <NavMain items={ownerNavItems} label="Super Admin" />
+                {operator?.enabled && (
+                    <>
+                        <NavMain items={ownerBusiness} label="Business · Owner" />
+                        <NavMain items={ownerCommerce} label="Commerce & Access" />
+                        <NavMain items={ownerSystems} label="Systems & Trust" />
+                    </>
                 )}
             </SidebarContent>
 
