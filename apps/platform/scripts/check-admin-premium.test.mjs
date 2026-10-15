@@ -69,6 +69,16 @@ void test('owner dashboard entry remains authority-gated and leaves customer ser
     assert.match(routes, /\$isPlatformOwner = app\(PlatformOwnerAccess::class\)->allows\(\$user\)/);
 });
 
+void test('owner action queue uses only actual catalog and order evidence', () => {
+    assert.match(overview, /const actionItems = \[/);
+    assert.match(overview, /count: awaitingConfirmation/);
+    assert.match(overview, /count: readyForFulfillment/);
+    assert.match(overview, /count: missingCanonicalSlugs\.length/);
+    assert.match(overview, /Based on the current catalog and displayed recent orders/);
+    assert.match(overview, /\{actionItems\.length > 0 && \(/);
+    assert.doesNotMatch(overview, /router\.post\(/);
+});
+
 void test('payment and license security flows survive the visual redesign', () => {
     assert.match(operator, /ManualPaymentConfirmation/);
     assert.match(operator, /id="commercial-orders"/);
