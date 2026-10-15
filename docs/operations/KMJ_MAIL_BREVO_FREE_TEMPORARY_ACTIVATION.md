@@ -25,7 +25,7 @@
 
 ## Acceptance/activation (production change is separate)
 
-1. Owner creates **Brevo Free** account and completes any verification/SMPP activation.
+1. Owner creates **Brevo Free** account and completes any verification/SMTP activation.
 2. Brevo authenticates the KMJ sending domain using nonconflicting DNS and verifies the selected From address. Retain current SPF and inbound MX/aliases.
 3. An authorized operator securely provisions SMTP credentials in the **private production runtime secret configuration**, file permissions restricted. Never publish the key or pass it in shell arguments.
 4. In an isolated staged Laravel environment, configure `MAIL_MAILER=kmj_brevo` and `KMJ_BREVO_ACTIVATED=true`, reload config and the queue worker using the existing guarded deploy system. Verify SMTP TLS certificate, remote relay acceptance and **actual owner-controlled inbox arrival**, followed by signed HTTPS verification/password reset; distinguish SMTP 250 from inbox proof. Keep the user production mailer `log` until this succeeds.
