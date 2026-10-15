@@ -93,7 +93,9 @@ final class RegistrationMailReadiness
 
                 $requiredDomain = strtolower(trim((string) ($mailer['kmj_required_sender_domain'] ?? '')));
 
-                if ($requiredDomain === '' || ! str_ends_with(strtolower($from = (string) Config::get('mail.from.address', '')), '@'.$requiredDomain)) {
+                $sender = strtolower(trim((string) Config::get('mail.from.address', '')));
+
+                if ($requiredDomain === '' || ! str_ends_with($sender, '@'.$requiredDomain)) {
                     return false;
                 }
 
