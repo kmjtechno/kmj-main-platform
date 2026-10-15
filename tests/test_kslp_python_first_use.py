@@ -8,7 +8,7 @@ from uuid import UUID
 HERE = pathlib.Path(__file__).resolve().parent
 SPEC = importlib.util.spec_from_file_location(
     "kmj_kslp_first_use",
-    HERE.parent / "sdk" / "python" / "kmj_kslp_first_use.py",
+    HERE.parent / "apps" / "platform" / "public" / "sdk" / "python" / "kmj_kslp_first_use.py",
 )
 kmj = importlib.util.module_from_spec(SPEC)
 import sys
