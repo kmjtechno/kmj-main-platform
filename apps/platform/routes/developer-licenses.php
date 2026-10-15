@@ -239,14 +239,22 @@ Route::middleware(['auth', 'verified'])->prefix('developer')->name('developer.')
     ) {
         $actor = $request->user();
         abort_unless($actor instanceof User, 401);
+        abort_unless(Str::isUuid($key), 404);
         abort_unless((bool) config('services.kmj_developer_licensing.enabled', false), 503);
         abort_unless(Schema::hasTable('kslp_license_keys'), 503);
-        $data = $request->validate(['reason' => ['required', 'string', 'min:3', 'max:500']]);
+        $data = $request->validate(['reason' => ['required', 'string', 'min:3', 'max:500', 'regex:/\\S/']]);
 
         DB::transaction(function () use ($key, $capabilities, $control, $actor, $data): void {
             $record = DB::table('kslp_license_keys')->where('id', $key)->lockForUpdate()->first();
             abort_unless($record !== null, 404);
             abort_unless($capabilities->allows($actor->id, $record->organization_id, 'license.manage'), 403);
+            // Verify issuer/tenant linkage under the same lock boundary;
+            // a customer-supplied key ID never confers access to a license.
+            $license = DB::table('kslp_licenses')
+                ->where('id', $record->license_id)
+                ->lockForUpdate()
+                ->first(['issuer_organization_id']);
+            abort_unless($license !== null && $license->issuer_organization_id === $record->organization_id, 404);
             if ($record->revoked_at !== null) {
                 return;
             }
