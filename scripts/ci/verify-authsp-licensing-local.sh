@@ -44,6 +44,7 @@ for file in \
   php -l "$file"
 done
 python3 -m unittest discover -s tests -p 'test_kslp_python_first_use.py'
+node --test tests/kslp-javascript-first-use.test.mjs
 
 # Install from the checked-in lockfile. Skip third-party lifecycle scripts,
 # external audit services and any paid/production command.
