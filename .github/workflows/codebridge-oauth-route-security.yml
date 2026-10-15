@@ -4,6 +4,7 @@ on:
   pull_request:
     paths:
       - apps/platform/routes/codebridge-oauth.php
+      - apps/platform/app/Services/CodeBridge/OAuth/OAuthServer.php
       - scripts/security/check-codebridge-oauth-routes.mjs
       - tests/codebridge-oauth-route-security.test.mjs
       - .github/workflows/codebridge-oauth-route-security.yml
@@ -11,6 +12,7 @@ on:
     branches: [main]
     paths:
       - apps/platform/routes/codebridge-oauth.php
+      - apps/platform/app/Services/CodeBridge/OAuth/OAuthServer.php
       - scripts/security/check-codebridge-oauth-routes.mjs
       - tests/codebridge-oauth-route-security.test.mjs
       - .github/workflows/codebridge-oauth-route-security.yml
