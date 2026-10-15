@@ -34,36 +34,42 @@ const modules = [
     {
         name: 'Product Management',
         description: 'Catalog, categories, visibility and launch stages',
+        accent: 'text-violet-600 dark:text-violet-300',
         href: '/operator/products',
         icon: Package,
     },
     {
         name: 'Customers',
         description: 'Account and organization directory',
+        accent: 'text-sky-600 dark:text-sky-300',
         href: '/operator/directory',
         icon: Users,
     },
     {
         name: 'Licensing Center',
         description: 'Owner-governed plans, entitlements and audit history',
+        accent: 'text-amber-700 dark:text-amber-300',
         href: '/operator/kslp',
         icon: KeyRound,
     },
     {
         name: 'Payment Gateways',
         description: 'Credentials readiness, webhooks and transaction proof',
+        accent: 'text-emerald-700 dark:text-emerald-300',
         href: '/operator/payments',
         icon: CreditCard,
     },
     {
         name: 'CodeBridge',
         description: 'Device permissions and owner plan controls',
+        accent: 'text-rose-600 dark:text-rose-300',
         href: '/operator/codebridge/owner-plan',
         icon: Boxes,
     },
     {
         name: 'Operations',
         description: 'Infrastructure, backup and release verification',
+        accent: 'text-cyan-700 dark:text-cyan-300',
         href: '/operator/ops',
         icon: Activity,
     },
@@ -79,7 +85,7 @@ function SummaryMetric({
     description: string;
 }) {
     return (
-        <div className="bg-background/60 rounded-xl border p-4">
+        <div className="kmj-admin-metric p-5">
             <p className="text-muted-foreground text-sm">{label}</p>
             <p className="mt-2 text-3xl font-bold tracking-tight tabular-nums">
                 {count}
@@ -140,16 +146,16 @@ export default function OperatorControlOverview({
                     </span>
                 </div>
                 <div className="mt-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-                    {modules.map(({ name, description, href, icon: Icon }) => (
+                    {modules.map(({ name, description, href, icon: Icon, accent }) => (
                         <Link
                             key={href}
                             href={href}
-                            className="group bg-background/60 focus-visible:ring-ring flex min-h-32 flex-col justify-between gap-4 rounded-xl border p-4 transition hover:border-red-500/40 hover:bg-red-500/5 focus-visible:ring-2 focus-visible:outline-none"
+                            className="kmj-admin-module-card group focus-visible:ring-ring flex min-h-40 flex-col justify-between gap-5 rounded-2xl border p-5 transition focus-visible:ring-2 focus-visible:outline-none"
                         >
                             <div className="flex items-start justify-between gap-3">
-                                <span className="grid size-10 place-items-center rounded-lg border bg-red-500/5 text-red-500">
+                                <span className="grid size-11 place-items-center rounded-xl border border-border/60 bg-muted/50">
                                     <Icon
-                                        className="size-5"
+                                        className={`size-5 ${accent}`}
                                         aria-hidden="true"
                                     />
                                 </span>
@@ -159,7 +165,7 @@ export default function OperatorControlOverview({
                                 />
                             </div>
                             <div>
-                                <h3 className="text-sm font-bold">{name}</h3>
+                                <h3 className="text-base font-bold tracking-tight">{name}</h3>
                                 <p className="text-muted-foreground mt-1 text-xs leading-5">
                                     {description}
                                 </p>
