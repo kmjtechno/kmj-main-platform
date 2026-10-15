@@ -26,24 +26,41 @@ const shortcuts = [
     { label: 'Operations', href: '/operator/ops' },
 ];
 
-function guidance(query: string, counts: { orders: number; products: number; customers: number }): string {
-    const value = query.toLowerCase();
-    if (/payment|order|revenue|भुगतान|ऑर्डर/.test(value)) {
-        return `There are ${counts.orders} orders in the current operator snapshot. Review their evidence and fulfillment status in Commercial Orders. This is not a provider settlement report.`;
+function guidance(
+    query: string,
+    counts: { orders: number; products: number; customers: number },
+    language: 'en-IN' | 'hi-IN',
+): string {
+    const value = query.toLocaleLowerCase();
+    const hindi = language === 'hi-IN' || /[\u0900-\u097f]/.test(value);
+    if (/payment|order|revenue|भुगतान|ऑर्डर|आर्डर|पेमेंट/.test(value)) {
+        return hindi
+            ? `अभी के ऑपरेटर रिकॉर्ड में ${counts.orders} ऑर्डर हैं। भुगतान की पुष्टि और लाइसेंस प्रक्रिया के लिए Commercial Orders खोलें। यह बैंक सेटलमेंट रिपोर्ट नहीं है।`
+            : `The operator snapshot has ${counts.orders} orders. Review payment evidence and fulfillment in Commercial Orders. This is not a provider settlement report.`;
     }
-    if (/catalog|product|उत्पाद|प्रोडक्ट/.test(value)) {
-        return `The owner catalog currently lists ${counts.products} product entries. Open Product Management to review lifecycle and publication rules.`;
+    if (/catalog|product|उत्पाद|प्रोडक्ट|कैटलॉग/.test(value)) {
+        return hindi
+            ? `कैटलॉग में ${counts.products} प्रोडक्ट रिकॉर्ड हैं। प्रकाशन और लाइसेंसिंग स्थिति जाँचने के लिए Product Management खोलें।`
+            : `The owner catalog has ${counts.products} product records. Open Product Management to review publication and licensing policies.`;
     }
-    if (/customer|people|user|ग्राहक|कस्टमर/.test(value)) {
-        return `The current platform snapshot reports ${counts.customers} users. Open Customers & Organizations for an authorized directory search.`;
+    if (/customer|people|user|ग्राहक|कस्टमर|यूजर/.test(value)) {
+        return hindi
+            ? `प्लेटफ़ॉर्म रिकॉर्ड में ${counts.customers} उपयोगकर्ता हैं। अधिकृत खोज के लिए Customers & Organizations खोलें।`
+            : `The platform snapshot reports ${counts.customers} users. Open Customers & Organizations for an authorized directory search.`;
     }
-    if (/license|entitlement|लाइसेंस/.test(value)) {
-        return 'Open the Licensing Center to inspect entitlements, leases and audit history. Issuing or revoking rights always requires an explicit authorized action.';
+    if (/license|entitlement|लाइसेंस|अधिकार/.test(value)) {
+        return hindi
+            ? 'लाइसेंस और एंटाइटलमेंट की स्थिति Licensing Center में देखें। जारी करने या रद्द करने से पहले अलग स्पष्ट अनुमति जरूरी है।'
+            : 'Open Licensing Center for entitlements and audit history. Issuing or revoking rights needs a separate authorized confirmation.';
     }
-    if (/server|health|backup|status|सर्वर/.test(value)) {
-        return 'Open Operations & Audit for the actual runtime and backup evidence. This assistant does not infer a healthy server from the dashboard.';
+    if (/server|health|backup|status|सर्वर|बैकअप|स्टेटस/.test(value)) {
+        return hindi
+            ? 'सर्वर और बैकअप की वास्तविक जानकारी Operations & Audit में देखें। इस डैशबोर्ड से मैं सर्वर को बिना प्रमाण Healthy नहीं बता सकती।'
+            : 'Open Operations & Audit for actual server and backup evidence. This dashboard cannot independently prove live health.';
     }
-    return 'I can guide you to Products, Customers, Orders, Licensing or Operations. This is a local guided assistant; generative AI answers will require a separately verified KMJ model route.';
+    return hindi
+        ? 'मैं Products, Customers, Orders, Licensing और Operations खोलने में मदद कर सकती हूँ। वास्तविक जनरेटिव AI अभी कनेक्ट नहीं है; यह सुरक्षित guided mode है।'
+        : 'I can guide you to Products, Customers, Orders, Licensing or Operations. Generative AI is not connected; this is a local guided assistant.';
 }
 
 export default function KristiOwnerAssistant({
@@ -86,7 +103,7 @@ export default function KristiOwnerAssistant({
         setMessages((previous) => [
             ...previous,
             { kind: 'owner', text: clean },
-            { kind: 'kristi', text: guidance(clean, counts) },
+            { kind: 'kristi', text: guidance(clean, counts, voiceLanguage) },
         ].slice(-18));
         setDraft('');
     }
