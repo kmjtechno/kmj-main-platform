@@ -1,16 +1,7 @@
 import { type FormEvent } from 'react';
 import { Head, Link, router, useForm } from '@inertiajs/react';
-import OperatorModuleNavigation from '@/components/operator-module-navigation';
+import OperatorCommandOs from '@/components/operator-command-os';
 import OperatorControlOverview from '@/components/operator-control-overview';
-import {
-    BadgeIndianRupee,
-    Building2,
-    ExternalLink,
-    KeyRound,
-    ShieldCheck,
-    ShoppingCart,
-    Users,
-} from 'lucide-react';
 
 type FulfillmentState =
     | 'awaiting_confirmation'
@@ -70,30 +61,6 @@ function canIssueSandboxLicense(order: RecentOrder): boolean {
         order.fulfillment_state === 'entitled' &&
         order.entitlement_id !== null &&
         order.can_manage_license
-    );
-}
-
-function Metric({
-    icon: Icon,
-    label,
-    value,
-}: {
-    icon: typeof Users;
-    label: string;
-    value: number;
-}) {
-    return (
-        <div className="kmj-admin-metric p-5">
-            <div className="flex items-center justify-between gap-3">
-                <span className="text-muted-foreground text-xs font-semibold">
-                    {label}
-                </span>
-                <Icon className="h-4 w-4 text-red-500" />
-            </div>
-            <div className="mt-4 text-3xl font-black tracking-tight">
-                {value}
-            </div>
-        </div>
     );
 }
 
@@ -180,90 +147,28 @@ export default function Operator({
 }: OperatorProps) {
     return (
         <>
-            <Head title="Platform Operator" />
-            <div className="kmj-admin-shell flex h-full min-w-0 flex-1 flex-col gap-6 overflow-x-auto p-4 sm:p-6 lg:p-8">
-                <OperatorModuleNavigation active="overview" />
-                <section className="kmj-admin-hero rounded-[1.65rem] p-6 sm:p-8 lg:p-10">
-                    <div className="flex flex-col justify-between gap-5 lg:flex-row lg:items-end">
-                        <div className="max-w-2xl">
-                            <div className="inline-flex items-center gap-2 rounded-full border border-red-500/15 bg-red-500/5 px-3 py-1 text-xs font-bold text-red-500">
-                                <ShieldCheck className="h-3.5 w-3.5" />
-                                Platform Owner · Passkey gated
-                            </div>
-                            <h1 className="mt-4 text-3xl font-black tracking-tight sm:text-4xl">
-                                KMJ Operator Console
-                            </h1>
-                            <p className="text-muted-foreground mt-3 max-w-xl text-sm leading-6">
-                                Privileged platform authority is separated from
-                                customer access. Manual payment evidence is
-                                confirmed first; entitlement fulfillment and
-                                license issuance remain explicit governed steps.
-                            </p>
-                        </div>
-                        <div className="flex flex-wrap items-center gap-3">
-                            <div className="rounded-xl border border-emerald-500/15 bg-emerald-500/5 px-4 py-3 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
-                                Owner authority verified
-                            </div>
-                            <Link
-                                href="/operator/payments"
-                                className="inline-flex items-center gap-2 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-xs font-bold text-red-500 transition hover:bg-red-500/20"
-                            >
-                                Manage payment gateways
-                                <ExternalLink className="h-4 w-4" />
-                            </Link>
-                        </div>
-                    </div>
-                </section>
-
-                <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
-                    <Metric icon={Users} label="Users" value={metrics.users} />
-                    <Metric
-                        icon={Building2}
-                        label="Organizations"
-                        value={metrics.organizations}
-                    />
-                    <Metric
-                        icon={KeyRound}
-                        label="Entitlements"
-                        value={metrics.entitlements}
-                    />
-                    <Metric
-                        icon={ShoppingCart}
-                        label="Commercial orders"
-                        value={metrics.orders}
-                    />
-                    <Metric
-                        icon={BadgeIndianRupee}
-                        label="Confirmed orders"
-                        value={metrics.confirmed_orders}
-                    />
-                </section>
-
-                <OperatorControlOverview
-                    products={catalogProducts}
-                    orders={recentOrders}
-                    canonicalProductCount={canonicalProductCount}
+            <Head title="KMJ Enterprise Command OS · Super Admin" />
+            <div className="kmj-admin-shell kmj-os-page flex h-full min-w-0 flex-1 flex-col gap-6 overflow-x-auto p-0 sm:p-0">
+                <OperatorCommandOs
+                    metrics={metrics}
+                    catalogProducts={catalogProducts}
+                    recentOrders={recentOrders}
                     missingCanonicalSlugs={missingCanonicalSlugs}
                 />
 
-                <section className="bg-card flex flex-col justify-between gap-4 rounded-2xl border p-5 sm:flex-row sm:items-center">
-                    <div>
-                        <h2 className="text-lg font-bold">
-                            Product Management
-                        </h2>
-                        <p className="text-muted-foreground mt-1 max-w-xl text-sm">
-                            Create, categorize and edit your full catalog in its
-                            own workspace. Purchase and licensing decisions
-                            remain governed separately.
-                        </p>
+                <details className="kmj-os-advanced rounded-2xl border p-4 sm:p-6">
+                    <summary className="cursor-pointer text-sm font-semibold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-500">
+                        Advanced owner insights and audit-safe legacy controls
+                    </summary>
+                    <div className="mt-5">
+                        <OperatorControlOverview
+                            products={catalogProducts}
+                            orders={recentOrders}
+                            canonicalProductCount={canonicalProductCount}
+                            missingCanonicalSlugs={missingCanonicalSlugs}
+                        />
                     </div>
-                    <Link
-                        href="/operator/products"
-                        className="inline-flex min-h-11 shrink-0 items-center justify-center rounded-xl bg-red-600 px-5 text-sm font-bold text-white hover:bg-red-500"
-                    >
-                        Manage products
-                    </Link>
-                </section>
+                </details>
 
                 <section
                     id="commercial-orders"
