@@ -109,6 +109,9 @@ final class CodeBridgeDevicePairingService
         if (! $this->organizations->userCanManage($userId, $tenantId)) {
             throw new DomainException('CODEBRIDGE_PAIRING_DENIED');
         }
+        // Reject an unreachable or unsafe agent URL before issuing any device
+        // credential. A failed browser approval must not consume a device slot.
+        $this->publicAgentOrigin();
         $code = strtoupper(str_replace('-', '', trim($displayCode)));
 
         DB::transaction(function () use ($code, $tenantId, $now): void {
@@ -165,6 +168,27 @@ final class CodeBridgeDevicePairingService
         }, 3);
     }
 
+    private function publicAgentOrigin(): string
+    {
+        $gateway = rtrim((string) config('services.codebridge_agent_public.url'), '/');
+        $parts = parse_url($gateway);
+
+        if (! is_array($parts)
+            || ($parts['scheme'] ?? null) !== 'https'
+            || ! is_string($parts['host'] ?? null)
+            || $parts['host'] === ''
+            || strcasecmp($parts['host'], 'localhost') === 0
+            || isset($parts['user'], $parts['pass'])
+            || isset($parts['user'])
+            || isset($parts['path'])
+            || isset($parts['query'])
+            || isset($parts['fragment'])) {
+            throw new DomainException('CODEBRIDGE_GATEWAY_UNAVAILABLE');
+        }
+
+        return $gateway;
+    }
+
     /** @return array<string,mixed> */
     public function redeem(string $deviceCode, string $verifier, string $deviceId, int $now): array
     {
@@ -202,10 +226,7 @@ final class CodeBridgeDevicePairingService
                 'updated_at' => now(),
             ]);
 
-            $gateway = rtrim((string) config('services.codebridge_agent_public.url'), '/');
-            if (! preg_match('/\Ahttps:\/\/[^\/?#]+(?::[0-9]{1,5})?\z/D', $gateway)) {
-                throw new DomainException('CODEBRIDGE_GATEWAY_UNAVAILABLE');
-            }
+            $gateway = $this->publicAgentOrigin();
 
             return [
                 'gateway' => $gateway,
