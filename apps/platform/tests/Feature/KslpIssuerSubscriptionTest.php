@@ -42,6 +42,45 @@ final class KslpIssuerSubscriptionTest extends TestCase
         );
     }
 
+    public function test_product_code_rejects_trailing_newline_without_creating_product(): void
+    {
+        $organization = Organization::query()->create([
+            'name' => 'Strict Product Codes',
+            'slug' => 'strict-product-codes',
+        ]);
+        $id = (string) $organization->id;
+        $authority = app(KslpIssuerSubscriptionAuthority::class);
+        $authority->subscribe($id, 'professional', 2, 10);
+
+        try {
+            $authority->registerProduct($id, "VENDOR.CODE\\n", 'Invalid Product');
+            self::fail('Trailing newline product codes must never be stored.');
+        } catch (DomainException $exception) {
+            self::assertSame('KSLP_INVALID_PRODUCT_CODE', $exception->getMessage());
+        }
+        $this->assertDatabaseCount('kslp_licensed_products', 0);
+    }
+
+    public function test_issuer_expiry_is_exclusive_at_exact_period_end(): void
+    {
+        $organization = Organization::query()->create([
+            'name' => 'Issuer Expiration',
+            'slug' => 'issuer-expiration',
+        ]);
+        $id = (string) $organization->id;
+        $authority = app(KslpIssuerSubscriptionAuthority::class);
+        $now = now();
+        $authority->subscribe($id, 'professional', 2, 10, $now);
+
+        try {
+            $authority->registerProduct($id, 'VENDOR.EXPIRED', 'Expired Issuer');
+            self::fail('Exact expiration must fail closed.');
+        } catch (DomainException $exception) {
+            self::assertSame('KSLP_ISSUER_SUBSCRIPTION_EXPIRED', $exception->getMessage());
+        }
+        $this->assertDatabaseCount('kslp_licensed_products', 0);
+    }
+
     public function test_subscription_update_preserves_identity_and_updates_policy(): void
     {
         $organization = Organization::query()->create(['name' => 'Vendor', 'slug' => 'vendor-update']);
