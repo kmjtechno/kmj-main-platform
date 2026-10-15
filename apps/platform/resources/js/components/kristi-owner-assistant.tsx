@@ -59,6 +59,7 @@ export default function KristiOwnerAssistant({
     ]);
     const [draft, setDraft] = useState('');
     const [listening, setListening] = useState(false);
+    const [voiceLanguage, setVoiceLanguage] = useState<'en-IN' | 'hi-IN'>('en-IN');
     const [voiceAvailable, setVoiceAvailable] = useState(false);
     const [voiceNotice, setVoiceNotice] = useState('');
     const [expanded, setExpanded] = useState(true);
@@ -103,7 +104,7 @@ export default function KristiOwnerAssistant({
         }
         const session = new Recognition();
         recognition.current = session;
-        session.lang = 'en-IN';
+        session.lang = voiceLanguage;
         session.continuous = false;
         session.interimResults = false;
         session.onresult = (event) => {
@@ -135,7 +136,7 @@ export default function KristiOwnerAssistant({
         const last = [...messages].reverse().find((message) => message.kind === 'kristi');
         if (!last) return;
         const utterance = new SpeechSynthesisUtterance(last.text);
-        utterance.lang = 'en-IN';
+        utterance.lang = voiceLanguage;
         utterance.rate = 0.97;
         window.speechSynthesis.speak(utterance);
     }
@@ -194,6 +195,16 @@ export default function KristiOwnerAssistant({
                     <p className="text-sm font-bold">{listening ? 'Listening…' : 'Voice chat'}</p>
                     <p className="text-xs text-slate-400">{voiceAvailable ? 'Tap to dictate, then review & send' : 'Text chat available; microphone unsupported'}</p>
                 </div>
+                <button
+                    type="button"
+                    disabled={listening}
+                    onClick={() => setVoiceLanguage((current) => current === 'en-IN' ? 'hi-IN' : 'en-IN')}
+                    className="rounded-lg border border-white/15 px-2 py-2 text-xs hover:bg-white/10 disabled:opacity-40"
+                    aria-label="Change voice language between Hindi and English"
+                    title="Voice language"
+                >
+                    {voiceLanguage === 'en-IN' ? 'EN' : 'हिंदी'}
+                </button>
                 <button type="button" onClick={speakLast} className="rounded-xl border border-white/15 p-2.5 hover:bg-white/10" aria-label="Read Kristi's last message aloud" title="Speak last assistant message">
                     <Volume2 className="size-4" aria-hidden="true" />
                 </button>
