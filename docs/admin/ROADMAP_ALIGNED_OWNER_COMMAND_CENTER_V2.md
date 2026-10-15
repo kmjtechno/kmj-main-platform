@@ -9,7 +9,7 @@ Main Platform is an enterprise operating system, not a single dashboard. A premi
 
 The canonical roadmap's snapshot is dated **10 September 2026**. Its foundational architecture/authority rules remain normative; its old implementation statuses are not evidence of what was deployed in October. Route existence proves only a page is implemented, not that billing, mail or a release is production ready.
 
-The repo tree was indexed (**930 tracked paths** on baseline `main` at `54142f844c0bb2721c98617d1c4dd026f36ce384`); the owner-relevant routes, security, components, README, blueprint, release gate and theme lock were reviewed. This is a scoped architecture/UI audit, not a claim that all 930 files were individually line-reviewed.
+The repo tree was indexed (**930 Git tree entries: 754 tracked files plus 176 directory entries** on baseline `main` at `54142f844c0bb2721c98617d1c4dd026f36ce384`); the owner-relevant routes, security, components, README, blueprint, release gate and theme lock were reviewed. This is a scoped architecture/UI audit, not a claim that all 930 files were individually line-reviewed.
 
 ## Four everyday operator categories
 
