@@ -159,7 +159,7 @@ Route::middleware(['auth', 'verified'])->prefix('developer')->name('developer.')
         abort_unless((bool) config('services.kmj_developer_licensing.enabled', false), 503);
         $data = $request->validate([
             'organization_id' => ['required', 'uuid'],
-            'product_code' => ['required', 'string', 'regex:/^[A-Z0-9][A-Z0-9_.:-]{2,63}$/'],
+            'product_code' => ['required', 'string', 'regex:/^[A-Z0-9][A-Z0-9_.:-]{2,63}$/D'],
             'name' => ['required', 'string', 'min:2', 'max:160'],
         ]);
         abort_unless($capabilities->allows($actor->id, $data['organization_id'], 'license.manage'), 403);
