@@ -142,6 +142,14 @@ void test('Developer product ID fits the actual commercial license schema', () =
     assert.ok(keysService.includes('KSLP_PRODUCT_CODE_TOO_LONG'));
 });
 
+void test('Developer key revocation validates identity and issuer binding', () => {
+    assert.ok(developerRoutes.includes("Route::post('keys/{key}/revoke'"));
+    assert.ok(developerRoutes.includes("Str::isUuid($key)"));
+    assert.ok(developerRoutes.includes("$license->issuer_organization_id === $record->organization_id"));
+    assert.ok(developerRoutes.includes("'regex:/\\\\S/'"));
+    assert.ok(developerRoutes.includes("'password.confirm', 'throttle:5,1'"));
+});
+
 void test('Device seat release stays authenticated, governed and idempotent', () => {
     assert.ok(developerRoutes.includes("keys/{key}/devices/{activation}/release"));
     assert.ok(developerRoutes.includes("'license.manage'"));
