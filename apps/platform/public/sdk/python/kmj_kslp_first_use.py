@@ -93,17 +93,26 @@ def register_device(
     'sign' must be a caller-owned Ed25519 detached signer whose stable private
     key lives in an approved keychain/TPM. Never send the private key to KSLP.
     """
-    parts = urlsplit(base_url)
-    if (
-        parts.scheme != "https" or not parts.hostname or parts.username
-        or parts.password or parts.query or parts.fragment
-        or parts.path not in ("", "/") or parts.port not in (None, 443)
-        or parts.hostname.lower() != "kmjtechno.com"
-    ):
+    try:
+        parts = urlsplit(base_url)
+        allowed_origin = (
+            parts.scheme == "https"
+            and parts.hostname is not None
+            and parts.hostname.lower() == "kmjtechno.com"
+            and not parts.username
+            and not parts.password
+            and not parts.query
+            and not parts.fragment
+            and parts.path in ("", "/")
+            and parts.port in (None, 443)
+        )
+    except ValueError:
+        allowed_origin = False
+    if not allowed_origin:
         raise ActivationError("KSLP_HTTPS_ORIGIN_REQUIRED")
     if not re.fullmatch(r"KMJ1-[A-Za-z0-9_-]{43}", license_key):
         raise ActivationError("LICENSE_KEY_FORMAT_INVALID")
-    if not re.fullmatch(r"[A-Z0-9][A-Z0-9_.:-]{2,95}", product):
+    if not re.fullmatch(r"[A-Z0-9][A-Z0-9_.:-]{2,63}", product):
         raise ActivationError("PRODUCT_INVALID")
     if not isinstance(device_public_key, bytes) or len(device_public_key) != 32:
         raise ActivationError("ED25519_PUBLIC_KEY_REQUIRED")
