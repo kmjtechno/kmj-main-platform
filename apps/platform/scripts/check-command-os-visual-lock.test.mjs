@@ -69,7 +69,11 @@ void test('Kristi is a clearly labeled guided assistant with opt-in voice', () =
 
 void test('navigation, responsiveness and reduced motion remain accessible', () => {
     assert.match(command, /Control|Ctrl K/);
-    assert.match(command, /aria-modal="true"/);
+    assert.match(command, /<Dialog open=\{searchOpen\} onOpenChange=\{setSearchOpen\}>/);
+    assert.match(command, /<DialogContent/);
+    assert.match(command, /<DialogTitle/);
+    assert.match(command, /<DialogDescription/);
+    assert.doesNotMatch(command, /onMouseDown=\{\(event\)/);
     assert.match(command, /Escape/);
     assert.match(command, /aria-label="Search owner workspaces"/);
     assert.match(command, /ref=\{carousel\}/);
@@ -78,4 +82,13 @@ void test('navigation, responsiveness and reduced motion remain accessible', () 
     assert.match(styles, /@media\(prefers-reduced-motion:reduce\)/);
     assert.match(map, /People & access/);
     assert.match(map, /Revenue & entitlements/);
+});
+
+void test('Kristi Hindi voice selection changes guided answer language without remote AI', () => {
+    assert.match(kristi, /voiceLanguage/);
+    assert.match(kristi, /session\.lang = voiceLanguage/);
+    assert.match(kristi, /guidance\(clean, counts, voiceLanguage\)/);
+    assert.match(kristi, /भुगतान की पुष्टि/);
+    assert.match(kristi, /जनरेटिव AI अभी कनेक्ट नहीं है/);
+    assert.doesNotMatch(kristi, /fetch\(|router\.post\(/);
 });
