@@ -23,8 +23,10 @@ KMJ Main Platform stays the only licensing authority.
    signing material or stored bootstrap key is returned.
 7. Release an obsolete seat using recent password confirmation and an
    audited reason. Release locks the key/license/device in one transaction,
-   marks the registration inactive and increments license sequence to block
-   reuse of earlier lease versions. A retry is idempotent.
+   marks the registration inactive and increments the server license
+   sequence. An already-issued offline lease cannot be recalled instantly;
+   the device must enforce expiry and sequence on its next verified check.
+   A retry is idempotent.
 
 ## New Python first-use reference
 
