@@ -61,6 +61,5 @@ test("authorization approval cannot silently bypass verified middleware and cons
 test("only bounded status codes are returned; no source or user secrets", () => {
   const result = auditOAuthRoutes(trusted + "\nauth()->login($admin);");
   assert.deepEqual(result, ["IMPLICIT_USER_LOGIN"]);
-  assert.equal(auditOAuthRoutes("short").includes("IMPLICIT_USER_LOGIN"), false);
   assert.throws(() => auditOAuthRoutes("short"), /CODEBRIDGE_OAUTH_ROUTE_SOURCE_INVALID/);
 });
