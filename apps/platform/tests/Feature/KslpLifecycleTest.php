@@ -67,6 +67,33 @@ final class KslpLifecycleTest extends TestCase
         self::assertNotSame('REVOKED', $c->state($l['id']));
     }
 
+    public function test_suspended_license_cannot_grant_cloudos_entitlement_or_signed_lease(): void
+    {
+        $control = app(KslpLicenseControlPlane::class);
+        $license = $control->issue('suspended-customer', 'trial', 'owner');
+        DB::table('kslp_licenses')->where('id', $license['id'])
+            ->update(['status' => 'suspended']);
+
+        self::assertSame('RESTRICTED', $control->state($license['id']));
+
+        $signer = new class implements KslpSigner
+        {
+            public function kid(): string
+            {
+                return 'test-kid';
+            }
+
+            public function sign(string $message): string
+            {
+                throw new \RuntimeException('Suspended license must never be signed');
+            }
+        };
+
+        $this->expectException(\DomainException::class);
+        $this->expectExceptionMessage('KSLP_LICENSE_NOT_LEASABLE');
+        $control->lease($license['id'], (string) \Illuminate\Support\Str::uuid(), $signer);
+    }
+
     public function test_delegated_app_cannot_receive_cloudos_audience_signed_lease(): void
     {
         $control = app(KslpLicenseControlPlane::class);
