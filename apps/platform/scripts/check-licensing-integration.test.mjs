@@ -127,6 +127,14 @@ void test('AuthSP-inspired licensing directory contains no raw device identifier
     assert.ok(ownerLicensing.includes('/developer/apps'));
 });
 
+void test('Developer product ID fits the actual commercial license schema', () => {
+    const keysService = read('app/Services/Licensing/Kslp/KslpDeveloperKeys.php');
+    assert.ok(developerRoutes.includes("'max:64'"));
+    assert.ok(developerApps.includes('maxLength={64}'));
+    assert.ok(developerApps.includes('.slice(0, 60)'));
+    assert.ok(keysService.includes('KSLP_PRODUCT_CODE_TOO_LONG'));
+});
+
 void test('Device seat release stays authenticated, governed and idempotent', () => {
     assert.ok(developerRoutes.includes("keys/{key}/devices/{activation}/release"));
     assert.ok(developerRoutes.includes("'license.manage'"));
