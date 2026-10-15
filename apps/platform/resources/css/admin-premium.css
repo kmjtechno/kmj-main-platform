@@ -255,7 +255,11 @@
 .kmj-admin-category {
     border: 1px solid var(--kmj-workspace-border);
     background:
-        linear-gradient(145deg, var(--kmj-workspace-highlight), transparent 57%),
+        linear-gradient(
+            145deg,
+            var(--kmj-workspace-highlight),
+            transparent 57%
+        ),
         var(--card);
     box-shadow:
         inset 0 1px 0 var(--kmj-workspace-highlight),
