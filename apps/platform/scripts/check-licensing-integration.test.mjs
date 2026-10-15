@@ -113,6 +113,7 @@ void test('Guided AuthSP-style onboarding retains governed server issuance', () 
 
 void test('AuthSP-inspired licensing directory contains no raw device identifiers', () => {
     assert.ok(developerRoutes.includes("'activeDevices' => $activeDevices"));
+    assert.ok(developerRoutes.includes("'activeSeatCounts' => $activeSeatCounts"));
     assert.ok(developerRoutes.includes("'recentEvents' => $recentEvents"));
     assert.ok(developerRoutes.includes("->whereIn('license_id', $licenseIds)"));
     assert.ok(developerRoutes.includes("->whereNull('deactivated_at')"));
