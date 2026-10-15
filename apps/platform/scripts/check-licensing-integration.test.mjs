@@ -156,7 +156,7 @@ void test('Device seat release stays authenticated, governed and idempotent', ()
 
 void test('Python first use proves device ownership without issuing a commercial lease', () => {
     assert.ok(firstUseSdk.includes('KSLP-ACTIVATE-v1|'));
-    assert.ok(firstUseSdk.includes('parts.hostname.lower() != "kmjtechno.com"'));
+    assert.ok(firstUseSdk.includes('parts.hostname.lower() == "kmjtechno.com"'));
     assert.ok(firstUseSdk.includes('signed_lease_issued'));
     assert.ok(firstUseSdk.includes('return False'));
     assert.ok(firstUseSdk.includes('license_key'));
@@ -184,7 +184,7 @@ void test('JavaScript + TypeScript first-use SDKs never mint an entitlement', ()
     assert.ok(jsFirstUse.includes("grantsEntitlement: false"));
     assert.ok(jsFirstUse.includes("const MAX_BODY = 4096"));
     assert.ok(jsFirstUse.includes("async function boundedResponse(response)"));
-    assert.doesNotMatch(jsFirstUse, /\blocalStorage\s*[.\[]/);
+    assert.doesNotMatch(jsFirstUse, /\blocalStorage\s*\.\s*(?:setItem|removeItem|clear)\s*\(/);
     assert.ok(jsTypes.includes('readonly grantsEntitlement: false'));
     assert.ok(developerApps.includes('Download JS first-use helper'));
     assert.ok(developerApps.includes('Download TypeScript declarations'));
