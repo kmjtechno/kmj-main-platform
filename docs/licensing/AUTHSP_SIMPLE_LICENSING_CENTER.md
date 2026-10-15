@@ -81,3 +81,17 @@ handshake in an authorized staging environment before enabling client use.
   staging/browser QA and exact-head hosted/private CI recovery.
 - No private-to-public repository switch, CI protection bypass, self-hosted
   GitHub runner or paid cloud charge. Draft code is not deployed by writing a PR.
+
+## Zero-extra-hosted-CI local source verifier
+
+A clean **non-production, detached Git worktree** at the exact reviewed
+commit can run `bash scripts/ci/verify-authsp-licensing-local.sh <FULL_40_CHAR_HEAD_SHA>`.
+The script checks the SHA and isolated worktree, refuses dirty/untracked files,
+production checkout locations and actual .env secret files, and executes PHP
+syntax, offline Python SDK tests, locked Node install, frontend source checks,
+TypeScript and build. It never accesses a production database, issues a
+license, posts a payment, pushes code or sets a GitHub check status.
+
+A local receipt is **not** a hosted GitHub Actions PASS and does not permit
+overriding protected branch checks. PostgreSQL migrations/race and real
+browser/SDK signing integration are separate supervised tests.
