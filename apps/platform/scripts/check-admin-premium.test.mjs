@@ -10,6 +10,8 @@ const overview = read('resources/js/components/operator-control-overview.tsx');
 const dashboard = read('resources/js/pages/dashboard.tsx');
 const sidebar = read('resources/js/components/app-sidebar.tsx');
 const operator = read('resources/js/pages/operator.tsx');
+const products = read('resources/js/pages/operator-products.tsx');
+const directory = read('resources/js/pages/operator-directory.tsx');
 const payments = read('resources/js/pages/operator-payments.tsx');
 const license = read('resources/js/pages/operator-kslp.tsx');
 const ops = read('resources/js/pages/operator-ops.tsx');
@@ -23,6 +25,8 @@ void test('admin visuals remain scoped to authenticated owner workspace', () => 
     assert.match(styles, /\.dark \.kmj-admin-shell/);
     assert.match(styles, /\.kmj-premium-dashboard/);
     assert.match(operator, /kmj-admin-shell/);
+    assert.match(products, /kmj-admin-shell/);
+    assert.match(directory, /kmj-admin-shell/);
     assert.match(payments, /kmj-admin-shell/);
     assert.match(license, /kmj-admin-shell/);
     assert.match(ops, /kmj-admin-shell/);
