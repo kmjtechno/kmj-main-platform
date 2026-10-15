@@ -96,6 +96,11 @@ final class KslpDeveloperAppsTest extends TestCase
         $firstCache = array_map('trim', explode(',', (string) $firstResponse->headers->get('Cache-Control')));
         self::assertContains('private', $firstCache);
         self::assertContains('no-store', $firstCache);
+        $firstResponse->assertViewHas('page', static function ($page): bool {
+            $payload = json_decode(json_encode($page, JSON_THROW_ON_ERROR), true, 512, JSON_THROW_ON_ERROR);
+
+            return ($payload['encryptHistory'] ?? false) === true;
+        });
         $firstResponse->assertInertia(fn (Assert $page) => $page
                 ->component('developer-apps')
                 ->has('applications', 1)
