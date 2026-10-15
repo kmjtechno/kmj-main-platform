@@ -702,7 +702,7 @@ jobs:
 
   kslp_authsp_php_quality:
     docker:
-      - image: cimg/php:8.4-node
+      - image: cimg/php:8.5-node
     resource_class: small
     environment:
       APP_ENV: testing
@@ -721,7 +721,7 @@ jobs:
 
   kslp_authsp_laravel_features:
     docker:
-      - image: cimg/php:8.4-node
+      - image: cimg/php:8.5-node
     resource_class: small
     environment:
       APP_ENV: testing
@@ -748,7 +748,7 @@ jobs:
 
   kslp_authsp_frontend:
     docker:
-      - image: cimg/php:8.4-node
+      - image: cimg/php:8.5-node
     resource_class: small
     environment:
       APP_ENV: testing
@@ -775,7 +775,7 @@ jobs:
 
   kslp_authsp_candidate:
     docker:
-      - image: cimg/php:8.4-node
+      - image: cimg/php:8.5-node
     resource_class: small
     environment:
       APP_ENV: testing
