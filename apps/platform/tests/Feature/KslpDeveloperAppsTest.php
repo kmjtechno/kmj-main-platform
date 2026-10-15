@@ -441,6 +441,35 @@ final class KslpDeveloperAppsTest extends TestCase
         self::assertNull(DB::table('kslp_activations')->where('id', $device)->value('deactivated_at'));
     }
 
+    public function test_license_directory_uses_server_expiry_and_grace_not_browser_guess(): void
+    {
+        [$owner, , , $license] = $this->issuedDeviceSeat();
+        DB::table('kslp_licenses')->where('id', $license)->update([
+            'expires_at' => now()->subDay(),
+            'grace_until' => now()->addDay(),
+        ]);
+        $this->actingAs($owner)->get('/developer/apps')
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('developer-apps')
+                ->where('keys.0.display_state', 'GRACE')
+                ->missing('keys.0.license_revoked_at'));
+
+        DB::table('kslp_licenses')->where('id', $license)
+            ->update(['grace_until' => now()->subDay()]);
+        $this->actingAs($owner)->get('/developer/apps')
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('developer-apps')
+                ->where('keys.0.display_state', 'RESTRICTED'));
+
+        DB::table('kslp_licenses')->where('id', $license)
+            ->update(['revoked_at' => now(), 'status' => 'revoked']);
+        $this->actingAs($owner)->get('/developer/apps')
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('developer-apps')
+                ->where('keys.0.display_state', 'REVOKED_OR_SUSPENDED'));
+    }
+
     public function test_seat_release_cannot_target_another_license_in_same_organization(): void
     {
         [$owner, $org, $key, $license, $device] = $this->issuedDeviceSeat();
