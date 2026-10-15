@@ -7,6 +7,7 @@ use Illuminate\Auth\Events\Verified;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\URL;
+use Inertia\Testing\AssertableInertia as Assert;
 use Laravel\Fortify\Features;
 use Tests\TestCase;
 
@@ -28,6 +29,40 @@ class EmailVerificationTest extends TestCase
         $response = $this->actingAs($user)->get(route('verification.notice'));
 
         $response->assertOk();
+    }
+
+    public function test_verification_page_reports_when_mailer_only_logs(): void
+    {
+        $this->withoutVite();
+        config()->set('mail.default', 'log');
+
+        $user = User::factory()->unverified()->create();
+
+        $this->actingAs($user)
+            ->get(route('verification.notice'))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('auth/verify-email')
+                ->where('mailDeliveryAvailable', false)
+                ->etc());
+    }
+
+    public function test_verification_page_reports_external_smtp_is_configured_but_does_not_claim_delivery(): void
+    {
+        $this->withoutVite();
+        config()->set('mail.default', 'smtp');
+        config()->set('mail.from.address', 'no-reply@kmjtechno.com');
+        config()->set('mail.mailers.smtp', ['transport' => 'smtp', 'host' => 'smtp.example.net', 'port' => 587]);
+
+        $user = User::factory()->unverified()->create();
+
+        $this->actingAs($user)
+            ->get(route('verification.notice'))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('auth/verify-email')
+                ->where('mailDeliveryAvailable', true)
+                ->etc());
     }
 
     public function test_email_can_be_verified()

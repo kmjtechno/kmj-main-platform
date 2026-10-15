@@ -11,9 +11,10 @@ import { store } from '@/routes/register';
 
 type Props = {
     passwordRules: string;
+    registrationAvailable: boolean;
 };
 
-export default function Register({ passwordRules }: Props) {
+export default function Register({ passwordRules, registrationAvailable }: Props) {
     return (
         <>
             <Head title="Register" />
@@ -25,6 +26,12 @@ export default function Register({ passwordRules }: Props) {
             >
                 {({ processing, errors }) => (
                     <>
+                        {!registrationAvailable && (
+                            <p role="alert" className="rounded-lg border p-3 text-sm">
+                                Registration is temporarily unavailable while
+                                verification email delivery is being restored.
+                            </p>
+                        )}
                         <div className="grid gap-6">
                             <div className="grid gap-2">
                                 <Label htmlFor="name">Name</Label>
@@ -100,6 +107,7 @@ export default function Register({ passwordRules }: Props) {
 
                             <Button
                                 type="submit"
+                                disabled={processing || !registrationAvailable}
                                 className="mt-2 w-full"
                                 data-test="register-user-button"
                             >

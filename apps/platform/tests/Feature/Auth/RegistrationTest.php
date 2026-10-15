@@ -25,6 +25,35 @@ class RegistrationTest extends TestCase
         $response->assertOk();
     }
 
+    public function test_production_log_mailer_cannot_create_unverifiable_user_or_organization(): void
+    {
+        $originalEnvironment = app()->environment();
+
+        try {
+            // Tests run under PHPUnit CLI, which may force --env=testing
+            // and override EnvironmentDetector callback resolution.
+            // Override the actual app env binding used by isProduction().
+            app()->instance('env', 'production');
+            self::assertTrue(app()->isProduction());
+            config()->set('mail.default', 'log');
+
+            $this->post(route('register.store'), [
+                'name' => 'Undeliverable User',
+                'email' => 'undeliverable@example.test',
+                'password' => 'password',
+                'password_confirmation' => 'password',
+            ])->assertSessionHasErrors(['email']);
+
+            $this->assertDatabaseMissing('users', ['email' => 'undeliverable@example.test']);
+            $this->assertDatabaseMissing('organizations', [
+                'name' => "Undeliverable User's Organization",
+            ]);
+            $this->assertGuest();
+        } finally {
+            app()->instance('env', $originalEnvironment);
+        }
+    }
+
     public function test_new_users_can_register()
     {
         $response = $this->post(route('register.store'), [
