@@ -667,6 +667,39 @@ jobs:
             php artisan test --filter='OwnerDashboardCatalogTest|PlatformOwnerConsoleTest|OwnerProductManagementWorkspaceTest|OwnerLicensingCenterHttpTest' --no-ansi
             echo "SUPER_ADMIN_COMMAND_CENTER_HTTP_PASS=1"
 
+  kslp_authsp_source_preflight:
+    docker:
+      - image: cimg/php:8.4-node
+    resource_class: small
+    steps:
+      - checkout
+      - run:
+          name: Exact SHA PHP and JS no-dependency security checks
+          command: |
+            set -euo pipefail
+            test "$(git rev-parse HEAD)" = "$CIRCLE_SHA1"
+            php -l apps/platform/routes/developer-licenses.php
+            php -l apps/platform/tests/Feature/KslpDeveloperAppsTest.php
+            php -l apps/platform/app/Services/Licensing/Kslp/KslpLicenseControlPlane.php
+            node --test tests/kslp-javascript-first-use.test.mjs
+            cd apps/platform
+            node --test scripts/check-licensing-integration.test.mjs
+            echo "KMJ_KSLP_SOURCE_PREFLIGHT_PASS=$CIRCLE_SHA1"
+
+  kslp_authsp_python_sdk:
+    docker:
+      - image: cimg/python:3.12
+    resource_class: small
+    steps:
+      - checkout
+      - run:
+          name: Exact SHA Python PoP and denial tests (stdlib only)
+          command: |
+            set -euo pipefail
+            test "$(git rev-parse HEAD)" = "$CIRCLE_SHA1"
+            python3 -m unittest discover -s tests -p 'test_kslp_python_first_use.py' -v
+            echo "KMJ_KSLP_PYTHON_SDK_PASS=$CIRCLE_SHA1"
+
   kslp_authsp_candidate:
     docker:
       - image: cimg/php:8.4-node
@@ -729,6 +762,16 @@ jobs:
 workflows:
   review_kslp_authsp_candidate:
     jobs:
+      - kslp_authsp_source_preflight:
+          filters:
+            branches:
+              only:
+                - feat/authsp-license-device-center-20261016
+      - kslp_authsp_python_sdk:
+          filters:
+            branches:
+              only:
+                - feat/authsp-license-device-center-20261016
       - kslp_authsp_candidate:
           filters:
             branches:
