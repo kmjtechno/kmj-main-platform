@@ -163,8 +163,9 @@ Route::middleware(['auth', 'verified'])->prefix('developer')->name('developer.')
 
             $license = DB::table('kslp_licenses')
                 ->where('id', $record->license_id)
-                ->lockForUpdate()->first(['id', 'revoked_at', 'status']);
+                ->lockForUpdate()->first(['id', 'issuer_organization_id', 'revoked_at', 'status']);
             abort_unless($license !== null, 404);
+            abort_unless($license->issuer_organization_id === $record->organization_id, 404);
             abort_if($license->revoked_at !== null || $license->status !== 'active', 409);
 
             $device = DB::table('kslp_activations')
