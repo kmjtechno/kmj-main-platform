@@ -1230,7 +1230,21 @@ export default function DeveloperApps({
                         >
                             Download {language} setup
                         </button>
+                        {language === 'Python' && displayedApp && (
+                            <a
+                                href="/sdk/python/kmj_kslp_first_use.py"
+                                download="kmj_kslp_first_use.py"
+                                className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-red-500/30 px-4 text-sm font-bold text-red-500"
+                            >
+                                Download Python first-use helper
+                            </a>
+                        )}
                     </div>
+                    <p className="text-muted-foreground mt-2 text-xs">
+                        The Python helper only registers a device through a
+                        signed challenge. You must supply a secure Ed25519
+                        signer and verify a future production lease separately.
+                    </p>
                     <div className="mt-5 grid gap-3 sm:grid-cols-2">
                         <Link
                             href="/sandbox-licenses"
