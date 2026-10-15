@@ -69,7 +69,7 @@ export function auditOAuthServer(source) {
   if (typeof source !== "string" || source.length < 500)
     throw new Error("CODEBRIDGE_OAUTH_SERVER_SOURCE_INVALID");
   const errors = [];
-  if (occurrences(source, /function\\s+validateAuthorization\\s*\\(/g) !== 1)
+  if (occurrences(source, /function\s+validateAuthorization\s*\(/g) !== 1)
     errors.push("AUTHORIZATION_VALIDATOR_COUNT");
   const checks = [
     ["$this->resolveClient($clientId)", "CLIENT_REGISTRATION_NOT_VALIDATED"],
