@@ -123,6 +123,10 @@ void test('AuthSP-inspired licensing directory contains no raw device identifier
     assert.ok(developerRoutes.includes("->get(['id', 'license_id', 'activated_at'])"));
     assert.ok(developerRoutes.includes("->get(['license_id', 'action', 'created_at'])"));
     assert.ok(developerApps.includes('Search issued licenses'));
+    assert.ok(developerRoutes.includes("'l.revoked_at as license_revoked_at'"));
+    assert.ok(developerRoutes.includes("$key->display_state = 'GRACE'"));
+    assert.ok(developerRoutes.includes("unset($key->license_revoked_at)"));
+    assert.ok(developerApps.includes('display_state.replace'));
     assert.ok(developerApps.includes('Release device seat'));
     assert.ok(developerApps.includes('Confirm seat release'));
     assert.ok(ownerLicensing.includes('Licensing quick start'));
