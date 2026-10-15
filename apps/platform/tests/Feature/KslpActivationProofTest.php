@@ -39,6 +39,71 @@ final class KslpActivationProofTest extends TestCase
         }
     }
 
+    public function test_padded_device_identity_is_rejected_before_creating_challenge(): void
+    {
+        [$identity] = $this->identity();
+        $proof = app(KslpActivationProof::class);
+
+        try {
+            $proof->challenge('not-needed-for-validation', $identity.'=');
+            self::fail('Noncanonical public key representation must not be accepted.');
+        } catch (\DomainException $exception) {
+            self::assertSame('KSLP_SERVER_IDENTITY_INVALID', $exception->getMessage());
+        }
+
+        $this->assertDatabaseCount('kslp_activation_challenges', 0);
+    }
+
+    public function test_noncanonical_nonce_or_signature_does_not_consume_a_challenge(): void
+    {
+        $control = app(KslpLicenseControlPlane::class);
+        $license = $control->issue('canonical-proof-customer', 'professional', 'owner');
+        [$identity, $secret] = $this->identity();
+        $proof = app(KslpActivationProof::class);
+        $challenge = $proof->challenge($license['id'], $identity);
+        $message = 'KSLP-ACTIVATE-v1|'.$license['id'].'|'.$challenge['nonce'];
+        $signature = rtrim(strtr(
+            base64_encode(sodium_crypto_sign_detached($message, $secret)),
+            '+/',
+            '-_',
+        ), '=');
+
+        foreach ([
+            [$challenge['nonce'].'=', $signature],
+            [$challenge['nonce'], $signature.'='],
+        ] as [$nonce, $sig]) {
+            try {
+                $proof->consume(
+                    $challenge['challenge_id'],
+                    $license['id'],
+                    $identity,
+                    $nonce,
+                    $sig,
+                );
+                self::fail('Noncanonical proof must not be accepted.');
+            } catch (\DomainException $exception) {
+                self::assertSame('KSLP_ACTIVATION_PROOF_INVALID', $exception->getMessage());
+            }
+
+            $this->assertDatabaseHas('kslp_activation_challenges', [
+                'id' => $challenge['challenge_id'],
+                'used_at' => null,
+            ]);
+        }
+
+        $proof->consume(
+            $challenge['challenge_id'],
+            $license['id'],
+            $identity,
+            $challenge['nonce'],
+            $signature,
+        );
+        $this->assertDatabaseMissing('kslp_activation_challenges', [
+            'id' => $challenge['challenge_id'],
+            'used_at' => null,
+        ]);
+    }
+
     public function test_wrong_server_private_key_is_rejected(): void
     {
         $c = app(KslpLicenseControlPlane::class);
