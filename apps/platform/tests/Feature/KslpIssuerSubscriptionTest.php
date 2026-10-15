@@ -53,7 +53,7 @@ final class KslpIssuerSubscriptionTest extends TestCase
         $authority->subscribe($id, 'professional', 2, 10);
 
         try {
-            $authority->registerProduct($id, "VENDOR.CODE\\n", 'Invalid Product');
+            $authority->registerProduct($id, "VENDOR.CODE\n", 'Invalid Product');
             self::fail('Trailing newline product codes must never be stored.');
         } catch (DomainException $exception) {
             self::assertSame('KSLP_INVALID_PRODUCT_CODE', $exception->getMessage());
