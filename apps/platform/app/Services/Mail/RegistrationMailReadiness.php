@@ -75,6 +75,35 @@ final class RegistrationMailReadiness
         }
 
         if ($transport === 'smtp') {
+            // Credential-based free relay is opt-in, unlike a bare remote
+            // SMTP hostname. This prevents a nonexistent SMTP key or a
+            // non-verified sender domain from unblocking registration.
+            if (($mailer['kmj_requires_credentials'] ?? false) === true) {
+                if (($mailer['kmj_activation_confirmed'] ?? false) !== true) {
+                    return false;
+                }
+
+                $username = $mailer['username'] ?? null;
+                $password = $mailer['password'] ?? null;
+
+                if (! is_string($username) || filter_var($username, FILTER_VALIDATE_EMAIL) === false
+                    || ! is_string($password) || strlen($password) < 15) {
+                    return false;
+                }
+
+                $requiredDomain = strtolower(trim((string) ($mailer['kmj_required_sender_domain'] ?? '')));
+
+                if ($requiredDomain === '' || ! str_ends_with(strtolower($from = (string) Config::get('mail.from.address', '')), '@'.$requiredDomain)) {
+                    return false;
+                }
+
+                // Port 465 with implicit TLS prevents downgrade to cleartext
+                // credentials. An alternative TLS policy requires review.
+                if (($mailer['scheme'] ?? null) !== 'smtps' || (int) ($mailer['port'] ?? 0) !== 465) {
+                    return false;
+                }
+            }
+
             $host = trim((string) ($mailer['host'] ?? ''));
 
             if ($host === '') {
