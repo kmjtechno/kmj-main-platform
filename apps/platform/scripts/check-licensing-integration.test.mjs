@@ -14,6 +14,7 @@ const adminOverview = read(
 );
 const config = read('config/services.php');
 const keys = read('app/Services/Licensing/Kslp/KslpDeveloperKeys.php');
+const controlPlane = read('app/Services/Licensing/Kslp/KslpLicenseControlPlane.php');
 const activation = read('routes/developer-activation-api.php');
 const developerRoutes = read('routes/developer-licenses.php');
 const developerApps = read('resources/js/pages/developer-apps.tsx');
@@ -189,4 +190,10 @@ void test('JavaScript + TypeScript first-use SDKs never mint an entitlement', ()
     assert.ok(developerApps.includes('Download TypeScript declarations'));
     assert.ok(developerApps.includes('/sdk/javascript/kmj_kslp_first_use.mjs'));
     assert.ok(developerApps.includes('/sdk/javascript/kmj_kslp_first_use.d.mts'));
+});
+
+void test('CloudOS signing audience is never reused for delegated products', () => {
+    assert.ok(controlPlane.includes("KSLP_PRODUCT_LEASE_NOT_READY"));
+    assert.ok(controlPlane.includes("if ($l['product'] !== 'KMJ_CLOUDOS')"));
+    assert.ok(controlPlane.includes("'aud' => 'kmj-cloudos'"));
 });
