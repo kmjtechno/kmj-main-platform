@@ -211,7 +211,7 @@ function MetricCard({
     gauge?: number;
 }) {
     return (
-        <div className="bg-card rounded-2xl border p-5">
+        <div className="kmj-admin-metric p-5">
             <div className="flex items-center justify-between gap-3">
                 <span className="text-muted-foreground text-xs font-bold tracking-wide uppercase">
                     {label}
@@ -320,9 +320,9 @@ export default function OperatorOps({
     return (
         <>
             <Head title="Ops Command Center" />
-            <div className="flex h-full flex-1 flex-col gap-6 overflow-x-auto p-4 sm:p-6">
+            <div className="kmj-admin-shell flex h-full min-w-0 flex-1 flex-col gap-6 overflow-x-auto p-4 sm:p-6 lg:p-8">
                 <OperatorModuleNavigation active="operations" />
-                <section className="from-background via-background overflow-hidden rounded-2xl border bg-gradient-to-br to-red-950/10 p-6 sm:p-8">
+                <section className="kmj-admin-hero rounded-[1.65rem] p-6 sm:p-8 lg:p-10">
                     <div className="flex flex-col justify-between gap-5 lg:flex-row lg:items-end">
                         <div className="max-w-3xl">
                             <div className="inline-flex items-center gap-2 rounded-full border border-emerald-500/20 bg-emerald-500/5 px-3 py-1 text-xs font-bold text-emerald-600 dark:text-emerald-400">
