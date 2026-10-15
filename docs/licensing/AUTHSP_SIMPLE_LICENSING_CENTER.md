@@ -98,3 +98,48 @@ license, posts a payment, pushes code or sets a GitHub check status.
 A local receipt is **not** a hosted GitHub Actions PASS and does not permit
 overriding protected branch checks. PostgreSQL migrations/race and real
 browser/SDK signing integration are separate supervised tests.
+
+## JavaScript / TypeScript first-use helper (no paid dependencies)
+
+`apps/platform/public/sdk/javascript/kmj_kslp_first_use.mjs` is an
+ES-module JavaScript client; companion `kmj_kslp_first_use.d.mts` supplies
+TypeScript declarations. Both are available through **Developer Apps →
+TypeScript → Download** (and served under `/sdk/javascript/` once safely
+deployed). For Python, select Python and use the separately provided
+`kmj_kslp_first_use.py` reference.
+
+```javascript
+import { registerKslpFirstUseDevice } from './kmj_kslp_first_use.mjs';
+
+// Load bootstrapKey through a protected user setup flow, not source control.
+// The sign callback must use a non-extractable, stable Ed25519 device key.
+const registration = await registerKslpFirstUseDevice({
+    licenseKey: bootstrapKey,
+    productCode: 'YOUR.APP',
+    devicePublicKey: devicePublicKeyBytes, // Uint8Array(32)
+    machineHash: hashedRandomInstallIdentifier, // 64 lowercase hex
+    sign: (messageBytes) => secureDeviceSigner(messageBytes),
+    metadataConsent: false,
+});
+console.assert(registration.grantsEntitlement === false);
+```
+
+The JavaScript helper pins the official HTTPS origin, sends neither browser
+cookies nor referrer, denies redirects and caps request/response bytes. It
+uses 10-second fetch cancellation; the caller owns secure device key storage.
+A browser on a different origin may be blocked by CORS: no CORS weakening or
+server secret exposure is authorized by this helper.
+
+New offline Node tests use real ephemeral Ed25519 signatures against the
+exact `KSLP-ACTIVATE-v1|licenseId|nonce` PHP protocol string, consent
+withdrawal, invalid inputs, suspicious receipt states and HTTP response
+bounds. Run from repository root:
+
+```bash
+node --test tests/kslp-javascript-first-use.test.mjs
+python3 -m unittest discover -s tests -p 'test_kslp_python_first_use.py'
+```
+
+These are registration tests only. A future **verified** production
+`KSLP-v1` lease and product-scoped audience are still required before
+enabling any paid or offline features.
