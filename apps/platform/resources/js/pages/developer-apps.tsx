@@ -94,7 +94,7 @@ function suggestProductCode(name: string): string {
         .toUpperCase()
         .replace(/[^A-Z0-9]+/g, '_')
         .replace(/^_+|_+$/g, '')
-        .slice(0, 92);
+        .slice(0, 60);
     return slug ? `APP.${slug}` : '';
 }
 
@@ -250,7 +250,8 @@ export default function DeveloperApps({
     const eligibleApps = applications.filter(
         (app) =>
             app.organization_id === issueKey.data.organization_id &&
-            app.status === 'active',
+            app.status === 'active' &&
+            app.product_code.length <= 64,
     );
     const displayedApp = applications.find((app) => app.id === selectedApp);
     const selectedIssuer = organizations.find(
@@ -290,7 +291,8 @@ export default function DeveloperApps({
         activeApps.some(
             (app) =>
                 app.organization_id === issueKey.data.organization_id &&
-                app.product_code === issueKey.data.product_code,
+                app.product_code === issueKey.data.product_code &&
+                app.product_code.length <= 64,
         );
     const onboarding = [
         {
@@ -662,7 +664,7 @@ export default function DeveloperApps({
                             <input
                                 id="application-code"
                                 className="bg-background h-11 w-full rounded-xl border px-3 font-mono text-sm"
-                                maxLength={96}
+                                maxLength={64}
                                 placeholder="MYCOMPANY.CINEMA"
                                 value={createApp.data.product_code}
                                 onChange={(event) => {
@@ -678,7 +680,7 @@ export default function DeveloperApps({
                             />
                             <p className="text-muted-foreground text-xs">
                                 Suggested automatically from the name. You can
-                                edit it; it must contain 3–96 uppercase letters,
+                                edit it; it must contain 3–64 uppercase letters,
                                 numbers, dot, dash, underscore or colon.
                             </p>
                             {Object.values(createApp.errors).map(
@@ -889,7 +891,8 @@ export default function DeveloperApps({
                                         <p className="text-muted-foreground mt-1 font-mono text-xs">
                                             {app.product_code}
                                         </p>
-                                        {app.status === 'active' && (
+                                        {app.status === 'active' &&
+                                            app.product_code.length <= 64 && (
                                             <a
                                                 href="#developer-app-key"
                                                 onClick={() => {
