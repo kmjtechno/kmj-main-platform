@@ -22,6 +22,15 @@ case "$repo" in
   /home/kmjprod/*|/srv/www/*|/var/www/*) die PRODUCTION_CHECKOUT_DENIED ;;
 esac
 
+# Never load or package production/local secrets through the frontend build.
+[ "${APP_ENV:-testing}" != "production" ] || die PRODUCTION_ENV_DENIED
+for envfile in \
+  .env .env.local .env.production .env.production.local \
+  apps/platform/.env apps/platform/.env.local \
+  apps/platform/.env.production apps/platform/.env.production.local; do
+  [ ! -f "$envfile" ] || die ENV_SECRET_FILE_PRESENT
+done
+
 command -v php >/dev/null || die PHP_REQUIRED
 command -v python3 >/dev/null || die PYTHON_REQUIRED
 command -v npm >/dev/null || die NPM_REQUIRED
