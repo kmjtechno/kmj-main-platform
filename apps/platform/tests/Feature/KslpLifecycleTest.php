@@ -60,7 +60,8 @@ final class KslpLifecycleTest extends TestCase
             self::fail();
         } catch (\DomainException $e) {
             self::assertSame('KSLP_TRIAL_ALREADY_USED', $e->getMessage());
-        }$c->changePlan($l['id'], 'professional', 'owner', 'paid');
+        }
+        $c->changePlan($l['id'], 'professional', 'owner', 'paid');
         $c->revoke($l['id'], 'owner', 'security');
         self::assertSame('REVOKED', $c->state($l['id']));
         $c->reactivate($l['id'], 'owner', 'cleared');
@@ -104,12 +105,13 @@ final class KslpLifecycleTest extends TestCase
 
         $signer = new class implements KslpSigner
         {
-            public function kid(): string { return 'test-kid'; }
+            public function kid(): string
+            {
+                return 'test-kid';
+            }
             public function sign(string $message): string
             {
                 throw new \RuntimeException('Unexpected signer invocation');
-
-                return '';
             }
         };
 

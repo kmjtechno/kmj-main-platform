@@ -81,7 +81,8 @@ final class KslpLicenseControlPlane
             $trial = $plan === 'trial' ? hash('sha256', $issuerOrganizationId.'|'.$customer.'|'.$product) : null;
             if ($trial && DB::table('kslp_licenses')->where('trial_subject_hash', $trial)->exists()) {
                 throw new DomainException('KSLP_TRIAL_ALREADY_USED');
-            }$id = (string) Str::uuid();
+            }
+            $id = (string) Str::uuid();
             $exp = $plan === 'trial' ? $now->copy()->addDays(30) : $now->copy()->addYear();
             DB::table('kslp_licenses')->insert(['id' => $id, 'customer_id' => $customer, 'issuer_organization_id' => $issuerOrganizationId, 'product' => $product, 'plan' => $plan, 'status' => 'active', 'trial_subject_hash' => $trial, 'sequence' => 1, 'starts_at' => $now, 'expires_at' => $exp, 'grace_until' => $exp->copy()->addDays(7), 'created_at' => $now, 'updated_at' => $now]);
             $this->event($id, $actor, 'delegated_issued', $reason, ['issuer_organization_id' => $issuerOrganizationId, 'product' => $product]);
@@ -128,7 +129,8 @@ final class KslpLicenseControlPlane
                 KslpActivationReplayGuard::requireMatch((array) $active, $licenseId, $serverIdentity, $machineHash);
 
                 return (array) $active;
-            }$id = (string) Str::uuid();
+            }
+            $id = (string) Str::uuid();
             $now = now();
             DB::table('kslp_activations')->insert(['id' => $id, 'license_id' => $licenseId, 'server_identity' => $serverIdentity, 'machine_identity_hash' => $machineHash, 'idempotency_key' => $idempotencyKey, 'activated_at' => $now, 'created_at' => $now, 'updated_at' => $now]);
             $this->event($licenseId, $actor, 'activated', null, ['activation_id' => $id]);
@@ -252,7 +254,8 @@ final class KslpLicenseControlPlane
         }
         if ($at->lte(Carbon::parse($l['expires_at']))) {
             return $at->gte(Carbon::parse($l['expires_at'])->subDays(7)) ? 'RENEWAL_DUE' : 'ACTIVE';
-        }if ($l['grace_until'] && $at->lte(Carbon::parse($l['grace_until']))) {
+        }
+        if ($l['grace_until'] && $at->lte(Carbon::parse($l['grace_until']))) {
             return 'GRACE';
         }
 
@@ -273,10 +276,12 @@ final class KslpLicenseControlPlane
         $state = $this->state($id, $now);
         if (in_array($state, ['REVOKED', 'RESTRICTED'], true)) {
             throw new DomainException('KSLP_LICENSE_NOT_LEASABLE');
-        }$a = (array) DB::table('kslp_activations')->where('id', $activationId)->where('license_id', $id)->whereNull('deactivated_at')->first();
+        }
+        $a = (array) DB::table('kslp_activations')->where('id', $activationId)->where('license_id', $id)->whereNull('deactivated_at')->first();
         if (! $a) {
             throw new DomainException('KSLP_ACTIVATION_CONFLICT');
-        }[$features,$limits] = app(KslpEntitlementResolver::class)->resolve($l);
+        }
+        [$features, $limits] = app(KslpEntitlementResolver::class)->resolve($l);
         $claims = ['protocol_version' => 'KSLP-v1', 'license_id' => $id, 'customer_id' => $l['customer_id'], 'product' => $l['product'], 'plan' => $l['plan'], 'server_identity' => $a['server_identity'], 'activation_id' => $activationId, 'features' => $features, 'limits' => $limits, 'iat' => $now->getTimestamp(), 'nbf' => $now->getTimestamp() - 5, 'exp' => min($now->copy()->addHours(24)->getTimestamp(), Carbon::parse($l['grace_until'] ?? $l['expires_at'])->timestamp), 'sequence' => (int) $l['sequence'], 'nonce' => Str::random(32), 'kid' => $signer->kid(), 'jti' => (string) Str::uuid(), 'aud' => 'kmj-cloudos', 'grace_until' => $l['grace_until'] ? Carbon::parse($l['grace_until'])->timestamp : null];
 
         return KslpCodec::encode($claims, $signer->kid(), fn ($m) => $signer->sign($m));
@@ -293,7 +298,8 @@ final class KslpLicenseControlPlane
             $q = DB::table('kslp_licenses')->where('id', $id);
             if (! $q->lockForUpdate()->exists()) {
                 throw new DomainException('KSLP_LICENSE_NOT_FOUND');
-            }$fn($q);
+            }
+            $fn($q);
             $this->event($id, $actor, $action, $reason);
 
             return $this->license($id);
