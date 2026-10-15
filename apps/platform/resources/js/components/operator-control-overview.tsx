@@ -117,8 +117,70 @@ export default function OperatorControlOverview({
         (order) => order.fulfillment_state === 'ready',
     ).length;
 
+    const actionItems = [
+        {
+            label: 'Payment confirmation',
+            count: awaitingConfirmation,
+            detail: 'Orders requiring manual payment evidence review',
+            href: '/operator#commercial-orders',
+        },
+        {
+            label: 'Entitlement fulfillment',
+            count: readyForFulfillment,
+            detail: 'Confirmed orders awaiting explicit entitlement issuance',
+            href: '/operator#commercial-orders',
+        },
+        {
+            label: 'Catalog reconciliation',
+            count: missingCanonicalSlugs.length,
+            detail: 'Canonical product entries not present in the current catalog',
+            href: '/operator/products',
+        },
+    ].filter((item) => item.count > 0);
+
     return (
         <div className="space-y-6">
+            {actionItems.length > 0 && (
+                <section
+                    aria-labelledby="owner-attention-queue"
+                    className="rounded-2xl border border-amber-500/20 bg-amber-500/[0.035] p-5 sm:p-6"
+                >
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                        <div>
+                            <p className="text-xs font-bold tracking-widest text-amber-700 uppercase dark:text-amber-300">
+                                Owner action snapshot
+                            </p>
+                            <h2 id="owner-attention-queue" className="mt-2 text-xl font-extrabold tracking-tight">
+                                Needs attention
+                            </h2>
+                        </div>
+                        <span className="rounded-full border border-amber-500/25 px-3 py-1.5 text-xs font-semibold text-amber-700 dark:text-amber-300">
+                            {actionItems.length} review {actionItems.length === 1 ? 'area' : 'areas'}
+                        </span>
+                    </div>
+                    <p className="text-muted-foreground mt-2 text-xs leading-5">
+                        Based on the current catalog and displayed recent orders — not a live payment provider health check.
+                    </p>
+                    <div className="mt-5 grid gap-3 md:grid-cols-3">
+                        {actionItems.map((item) => (
+                            <Link
+                                key={item.label}
+                                href={item.href}
+                                className="group flex min-h-28 items-start gap-4 rounded-xl border border-border/70 bg-card/70 p-4 transition hover:border-amber-500/30 hover:bg-accent/50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-500"
+                            >
+                                <span className="grid size-11 shrink-0 place-items-center rounded-xl bg-amber-500/10 text-lg font-black tabular-nums text-amber-700 dark:text-amber-300">
+                                    {item.count}
+                                </span>
+                                <span className="min-w-0 flex-1">
+                                    <span className="block text-sm font-bold">{item.label}</span>
+                                    <span className="text-muted-foreground mt-1 block text-xs leading-5">{item.detail}</span>
+                                </span>
+                                <ArrowRight className="text-muted-foreground mt-1 size-4 shrink-0 transition-transform group-hover:translate-x-1" aria-hidden="true" />
+                            </Link>
+                        ))}
+                    </div>
+                </section>
+            )}
             <section
                 className="bg-card rounded-2xl border p-5 sm:p-6"
                 aria-labelledby="control-modules-title"
