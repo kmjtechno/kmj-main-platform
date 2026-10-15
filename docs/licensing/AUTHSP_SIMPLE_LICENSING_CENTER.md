@@ -57,7 +57,7 @@ assert receipt.device_registered
 assert receipt.grants_entitlement is False
 ```
 
-Running `python -m unittest discover -s tests -p 'kslp-python-first-use.test.py'`
+Running `python -m unittest discover -s tests -p 'test_kslp_python_first_use.py'`
 executes the offline transport-mocked contract tests, requiring no paid cloud
 service or live network. Test the actual PHP/Python cross-language Ed25519
 handshake in an authorized staging environment before enabling client use.
