@@ -31,7 +31,7 @@ final class KslpActivationProof
             if ($c->used_at) {
                 throw new DomainException('KSLP_REPLAY');
             }
-            if (now()->gt($c->expires_at)) {
+            if (now()->gte($c->expires_at)) {
                 throw new DomainException('KSLP_ACTIVATION_CHALLENGE_EXPIRED');
             }
             $raw = $this->unb64($nonce);
