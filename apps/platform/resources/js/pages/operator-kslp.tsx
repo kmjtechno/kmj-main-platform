@@ -176,6 +176,62 @@ export default function OperatorKslp({
                         </div>
                     </div>
                 </section>
+                <section
+                    aria-label="Licensing quick start"
+                    className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4"
+                >
+                    {[
+                        {
+                            href: '#license-issue',
+                            step: '01',
+                            title: 'Issue a license',
+                            description: 'Owner-controlled CloudOS issuance, not automatic payment proof',
+                        },
+                        {
+                            href: '#license-search',
+                            step: '02',
+                            title: 'Find a customer',
+                            description: 'Search real licenses and filter by plan',
+                        },
+                        {
+                            href: '#license-register',
+                            step: '03',
+                            title: 'Manage the lifecycle',
+                            description: 'Review expiry, seats, renewals and audited changes',
+                        },
+                        {
+                            href: '#license-audit',
+                            step: '04',
+                            title: 'Verify the audit',
+                            description: 'Review recorded actions before customer follow-up',
+                        },
+                    ].map((step) => (
+                        <a
+                            key={step.step}
+                            href={step.href}
+                            className="bg-card rounded-xl border p-4 transition-colors hover:border-red-500/40 hover:bg-red-500/5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-500"
+                        >
+                            <div className="text-xs font-bold text-red-500">
+                                STEP {step.step}
+                            </div>
+                            <h2 className="mt-2 font-semibold">{step.title}</h2>
+                            <p className="text-muted-foreground mt-1 text-xs leading-5">
+                                {step.description}
+                            </p>
+                        </a>
+                    ))}
+                </section>
+                <p className="text-muted-foreground text-xs">
+                    Developer self-service uses the same KSLP authority.{' '}
+                    <a
+                        className="font-semibold text-red-500 underline-offset-4 hover:underline"
+                        href="/developer/apps"
+                    >
+                        Open Developer Apps &amp; Keys
+                    </a>
+                    . Signed product verifiers and payment reconciliation have
+                    separate production release gates.
+                </p>
                 <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-6">
                     {cards.map(([l, v]) => (
                         <div key={l} className="bg-card rounded-xl border p-4">
