@@ -700,6 +700,29 @@ jobs:
             python3 -m unittest discover -s tests -p 'test_kslp_python_first_use.py' -v
             echo "KMJ_KSLP_PYTHON_SDK_PASS=$CIRCLE_SHA1"
 
+  kslp_authsp_composer_probe:
+    docker:
+      - image: cimg/php:8.5-node
+    resource_class: small
+    environment:
+      APP_ENV: testing
+      DB_CONNECTION: sqlite
+      DB_DATABASE: ":memory:"
+    steps:
+      - checkout
+      - run:
+          name: Exact SHA Composer lockfile platform probe
+          no_output_timeout: 10m
+          command: |
+            set -euo pipefail
+            test "$(git rev-parse HEAD)" = "$CIRCLE_SHA1"
+            php -v
+            cd apps/platform
+            composer check-platform-reqs --lock || true
+            composer install --no-interaction --prefer-dist --no-progress
+            test -f vendor/autoload.php
+            echo "KMJ_KSLP_COMPOSER_INSTALL_PASS=$CIRCLE_SHA1"
+
   kslp_authsp_php_quality:
     docker:
       - image: cimg/php:8.5-node
@@ -835,6 +858,11 @@ jobs:
 workflows:
   review_kslp_authsp_candidate:
     jobs:
+      - kslp_authsp_composer_probe:
+          filters:
+            branches:
+              only:
+                - feat/authsp-license-device-center-20261016
       - kslp_authsp_source_preflight:
           filters:
             branches:
@@ -846,16 +874,22 @@ workflows:
               only:
                 - feat/authsp-license-device-center-20261016
       - kslp_authsp_php_quality:
+          requires:
+            - kslp_authsp_composer_probe
           filters:
             branches:
               only:
                 - feat/authsp-license-device-center-20261016
       - kslp_authsp_laravel_features:
+          requires:
+            - kslp_authsp_composer_probe
           filters:
             branches:
               only:
                 - feat/authsp-license-device-center-20261016
       - kslp_authsp_frontend:
+          requires:
+            - kslp_authsp_composer_probe
           filters:
             branches:
               only:
