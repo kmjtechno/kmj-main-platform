@@ -81,12 +81,19 @@ Route::middleware(['auth', 'verified'])->prefix('developer')->name('developer.')
             ->limit(100)
             ->get(['id', 'license_id', 'activated_at'])
             ->all();
+        $recentEvents = $licenseIds === [] ? [] : DB::table('kslp_license_events')
+            ->whereIn('license_id', $licenseIds)
+            ->orderByDesc('created_at')
+            ->limit(100)
+            ->get(['license_id', 'action', 'created_at'])
+            ->all();
 
         return Inertia::render('developer-apps', [
             'organizations' => $organizations,
             'applications' => $products,
             'keys' => $keys,
             'activeDevices' => $activeDevices,
+            'recentEvents' => $recentEvents,
             'canIssueKeys' => $storageReady && (bool) config('services.kmj_developer_licensing.enabled', false),
             'newKey' => $request->session()->get('developer_license_key'),
         ]);
