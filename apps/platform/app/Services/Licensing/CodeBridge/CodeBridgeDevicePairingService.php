@@ -177,7 +177,12 @@ final class CodeBridgeDevicePairingService
             || ($parts['scheme'] ?? null) !== 'https'
             || ! is_string($parts['host'] ?? null)
             || $parts['host'] === ''
-            || strcasecmp($parts['host'], 'localhost') === 0
+            || ! filter_var($parts['host'], FILTER_VALIDATE_DOMAIN, FILTER_FLAG_HOSTNAME)
+            || ! str_contains($parts['host'], '.')
+            || filter_var($parts['host'], FILTER_VALIDATE_IP) !== false
+            || str_ends_with(strtolower($parts['host']), '.local')
+            || str_ends_with(strtolower($parts['host']), '.localhost')
+            || str_ends_with(strtolower($parts['host']), '.internal')
             || isset($parts['user'])
             || isset($parts['pass'])
             || isset($parts['path'])
