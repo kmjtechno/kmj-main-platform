@@ -149,7 +149,7 @@ Route::middleware(['auth', 'verified'])->prefix('developer')->name('developer.')
         abort_unless((bool) config('services.kmj_developer_licensing.enabled', false), 503);
         abort_unless(Schema::hasTable('kslp_license_keys'), 503);
         $data = $request->validate([
-            'reason' => ['required', 'string', 'min:3', 'max:500'],
+            'reason' => ['required', 'string', 'min:3', 'max:500', 'regex:/\\S/'],
         ]);
 
         DB::transaction(function () use ($key, $activation, $capabilities, $actor, $data): void {
