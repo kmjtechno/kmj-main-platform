@@ -97,6 +97,39 @@ final class RegistrationMailReadinessTest extends TestCase
         self::assertFalse(app(RegistrationMailReadiness::class)->canAttemptDelivery());
     }
 
+    public function test_temporary_free_smtp_requires_credentials_approval_and_matching_sender(): void
+    {
+        config()->set('mail.default', 'kmj_brevo');
+        config()->set('mail.mailers.kmj_brevo', [
+            'transport' => 'smtp',
+            'scheme' => 'smtps',
+            'host' => 'smtp-relay.brevo.com',
+            'port' => 465,
+            'username' => null,
+            'password' => null,
+            'kmj_requires_credentials' => true,
+            'kmj_required_sender_domain' => 'kmjtechno.com',
+            'kmj_activation_confirmed' => false,
+        ]);
+
+        $service = app(RegistrationMailReadiness::class);
+        self::assertFalse($service->canAttemptDelivery());
+
+        config()->set('mail.mailers.kmj_brevo.kmj_activation_confirmed', true);
+        self::assertFalse($service->canAttemptDelivery());
+
+        config()->set('mail.mailers.kmj_brevo.username', 'relay@smtp-brevo.com');
+        config()->set('mail.mailers.kmj_brevo.password', 'test-only-not-a-real-secret');
+        self::assertTrue($service->canAttemptDelivery());
+
+        config()->set('mail.from.address', 'no-reply@unapproved.example');
+        self::assertFalse($service->canAttemptDelivery());
+
+        config()->set('mail.from.address', 'no-reply@kmjtechno.com');
+        config()->set('mail.mailers.kmj_brevo.scheme', 'smtp');
+        self::assertFalse($service->canAttemptDelivery());
+    }
+
     public function test_circular_failover_references_are_rejected(): void
     {
         config()->set('mail.default', 'loop');
