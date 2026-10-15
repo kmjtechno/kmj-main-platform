@@ -29,7 +29,20 @@ final class KslpLicenseControlPlane
             }
             $id = (string) Str::uuid();
             $exp = $plan === 'trial' ? $now->copy()->addDays(30) : $now->copy()->addYear();
-            DB::table('kslp_licenses')->insert(['id' => $id, 'customer_id' => $customer, 'product' => 'KMJ_CLOUDOS', 'plan' => $plan, 'status' => 'active', 'trial_subject_hash' => $trial, 'sequence' => 1, 'starts_at' => $now, 'expires_at' => $exp, 'grace_until' => $exp->copy()->addDays(7), 'created_at' => $now, 'updated_at' => $now]);
+            DB::table('kslp_licenses')->insert([
+                'id' => $id,
+                'customer_id' => $customer,
+                'product' => 'KMJ_CLOUDOS',
+                'plan' => $plan,
+                'status' => 'active',
+                'trial_subject_hash' => $trial,
+                'sequence' => 1,
+                'starts_at' => $now,
+                'expires_at' => $exp,
+                'grace_until' => $exp->copy()->addDays(7),
+                'created_at' => $now,
+                'updated_at' => $now,
+            ]);
             $this->event($id, $actor, 'issued', $reason, ['plan' => $plan]);
 
             return $this->license($id);
@@ -84,7 +97,21 @@ final class KslpLicenseControlPlane
             }
             $id = (string) Str::uuid();
             $exp = $plan === 'trial' ? $now->copy()->addDays(30) : $now->copy()->addYear();
-            DB::table('kslp_licenses')->insert(['id' => $id, 'customer_id' => $customer, 'issuer_organization_id' => $issuerOrganizationId, 'product' => $product, 'plan' => $plan, 'status' => 'active', 'trial_subject_hash' => $trial, 'sequence' => 1, 'starts_at' => $now, 'expires_at' => $exp, 'grace_until' => $exp->copy()->addDays(7), 'created_at' => $now, 'updated_at' => $now]);
+            DB::table('kslp_licenses')->insert([
+                'id' => $id,
+                'customer_id' => $customer,
+                'issuer_organization_id' => $issuerOrganizationId,
+                'product' => $product,
+                'plan' => $plan,
+                'status' => 'active',
+                'trial_subject_hash' => $trial,
+                'sequence' => 1,
+                'starts_at' => $now,
+                'expires_at' => $exp,
+                'grace_until' => $exp->copy()->addDays(7),
+                'created_at' => $now,
+                'updated_at' => $now,
+            ]);
             $this->event($id, $actor, 'delegated_issued', $reason, ['issuer_organization_id' => $issuerOrganizationId, 'product' => $product]);
 
             return $this->license($id);
@@ -132,7 +159,16 @@ final class KslpLicenseControlPlane
             }
             $id = (string) Str::uuid();
             $now = now();
-            DB::table('kslp_activations')->insert(['id' => $id, 'license_id' => $licenseId, 'server_identity' => $serverIdentity, 'machine_identity_hash' => $machineHash, 'idempotency_key' => $idempotencyKey, 'activated_at' => $now, 'created_at' => $now, 'updated_at' => $now]);
+            DB::table('kslp_activations')->insert([
+                'id' => $id,
+                'license_id' => $licenseId,
+                'server_identity' => $serverIdentity,
+                'machine_identity_hash' => $machineHash,
+                'idempotency_key' => $idempotencyKey,
+                'activated_at' => $now,
+                'created_at' => $now,
+                'updated_at' => $now,
+            ]);
             $this->event($licenseId, $actor, 'activated', null, ['activation_id' => $id]);
 
             return (array) DB::table('kslp_activations')->where('id', $id)->first();
@@ -282,7 +318,26 @@ final class KslpLicenseControlPlane
             throw new DomainException('KSLP_ACTIVATION_CONFLICT');
         }
         [$features, $limits] = app(KslpEntitlementResolver::class)->resolve($l);
-        $claims = ['protocol_version' => 'KSLP-v1', 'license_id' => $id, 'customer_id' => $l['customer_id'], 'product' => $l['product'], 'plan' => $l['plan'], 'server_identity' => $a['server_identity'], 'activation_id' => $activationId, 'features' => $features, 'limits' => $limits, 'iat' => $now->getTimestamp(), 'nbf' => $now->getTimestamp() - 5, 'exp' => min($now->copy()->addHours(24)->getTimestamp(), Carbon::parse($l['grace_until'] ?? $l['expires_at'])->timestamp), 'sequence' => (int) $l['sequence'], 'nonce' => Str::random(32), 'kid' => $signer->kid(), 'jti' => (string) Str::uuid(), 'aud' => 'kmj-cloudos', 'grace_until' => $l['grace_until'] ? Carbon::parse($l['grace_until'])->timestamp : null];
+        $claims = [
+            'protocol_version' => 'KSLP-v1',
+            'license_id' => $id,
+            'customer_id' => $l['customer_id'],
+            'product' => $l['product'],
+            'plan' => $l['plan'],
+            'server_identity' => $a['server_identity'],
+            'activation_id' => $activationId,
+            'features' => $features,
+            'limits' => $limits,
+            'iat' => $now->getTimestamp(),
+            'nbf' => $now->getTimestamp() - 5,
+            'exp' => min($now->copy()->addHours(24)->getTimestamp(), Carbon::parse($l['grace_until'] ?? $l['expires_at'])->timestamp),
+            'sequence' => (int) $l['sequence'],
+            'nonce' => Str::random(32),
+            'kid' => $signer->kid(),
+            'jti' => (string) Str::uuid(),
+            'aud' => 'kmj-cloudos',
+            'grace_until' => $l['grace_until'] ? Carbon::parse($l['grace_until'])->timestamp : null,
+        ];
 
         return KslpCodec::encode($claims, $signer->kid(), fn ($m) => $signer->sign($m));
     }
@@ -331,6 +386,14 @@ final class KslpLicenseControlPlane
      */
     private function event(string $id, string $actor, string $action, ?string $reason, array $meta = []): void
     {
-        DB::table('kslp_license_events')->insert(['license_id' => $id, 'actor_id' => $actor, 'action' => $action, 'reason' => $reason, 'correlation_id' => (string) Str::uuid(), 'metadata' => $meta ? json_encode($meta) : null, 'created_at' => now()]);
+        DB::table('kslp_license_events')->insert([
+            'license_id' => $id,
+            'actor_id' => $actor,
+            'action' => $action,
+            'reason' => $reason,
+            'correlation_id' => (string) Str::uuid(),
+            'metadata' => $meta ? json_encode($meta) : null,
+            'created_at' => now(),
+        ]);
     }
 }
