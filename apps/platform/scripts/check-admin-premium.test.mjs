@@ -79,6 +79,15 @@ void test('owner action queue uses only actual catalog and order evidence', () =
     assert.doesNotMatch(overview, /router\.post\(/);
 });
 
+void test('dashboard never fabricates CodeBridge live connection or capabilities', () => {
+    assert.match(dashboard, /Endpoint configured · Live status unverified/);
+    assert.match(dashboard, /No authorized capabilities reported/);
+    assert.match(dashboard, /permissions\.map\(\(permission\)/);
+    assert.match(dashboard, /src="\/assets\/kmj-codebridge-icon\.png"/);
+    assert.doesNotMatch(dashboard, /MCP endpoint ready/);
+    assert.doesNotMatch(dashboard, /\['read', 'write', 'execute'\]/);
+});
+
 void test('payment and license security flows survive the visual redesign', () => {
     assert.match(operator, /ManualPaymentConfirmation/);
     assert.match(operator, /id="commercial-orders"/);
