@@ -199,6 +199,13 @@ export default function OperatorCommandOs({
                         </span>
                     </div>
                     <header className="kmj-os-hero">
+                        <img
+                            className="kmj-os-hero-image"
+                            src="/assets/admin/earth-orbit.svg"
+                            alt=""
+                            aria-hidden="true"
+                            decoding="async"
+                        />
                         <div className="kmj-os-hero-text">
                             <span className="kmj-os-eyebrow">
                                 KMJ TECHNO · ENTERPRISE CONTROL
