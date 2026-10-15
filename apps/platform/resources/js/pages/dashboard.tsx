@@ -347,7 +347,12 @@ function CodeBridgeCard({
                 <div className="flex flex-col justify-between gap-5 lg:flex-row lg:items-start">
                     <div className="flex min-w-0 items-start gap-4">
                         <span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl border border-red-500/20 bg-red-500/10 text-red-500">
-                            <img src="/assets/kmj-codebridge-icon.png" alt="KMJ CodeBridge product icon" className="size-8 object-contain" loading="lazy" />
+                            <img
+                                src="/assets/kmj-codebridge-icon.png"
+                                alt="KMJ CodeBridge product icon"
+                                className="size-8 object-contain"
+                                loading="lazy"
+                            />
                         </span>
                         <div className="min-w-0">
                             <div className="flex flex-wrap items-center gap-2">
@@ -460,7 +465,10 @@ function CodeBridgeCard({
                         </div>
                         <div className="mt-3 flex flex-wrap gap-2">
                             {permissions.length === 0 && (
-                                <span role="status" className="text-muted-foreground text-xs">
+                                <span
+                                    role="status"
+                                    className="text-muted-foreground text-xs"
+                                >
                                     No authorized capabilities reported
                                 </span>
                             )}
@@ -642,32 +650,65 @@ function OwnerProductsPanel({ products }: { products: OwnerProduct[] }) {
                     </Link>
                     <Link
                         href="/operator/kslp"
-                        className="hover:bg-accent inline-flex min-h-11 items-center gap-2 rounded-xl border border-border/80 bg-card/60 px-5 text-sm font-semibold transition"
+                        className="hover:bg-accent border-border/80 bg-card/60 inline-flex min-h-11 items-center gap-2 rounded-xl border px-5 text-sm font-semibold transition"
                     >
                         Licensing Center <KeyRound className="size-4" />
                     </Link>
                 </div>
             </div>
-            <nav aria-label="Super Admin quick access" className="mt-6 grid gap-3 border-t border-border/60 pt-6 sm:grid-cols-2 xl:grid-cols-4">
+            <nav
+                aria-label="Super Admin quick access"
+                className="border-border/60 mt-6 grid gap-3 border-t pt-6 sm:grid-cols-2 xl:grid-cols-4"
+            >
                 {[
-                    { title: 'Product catalog', detail: 'Publish and configure products', href: '/operator/products', icon: Package },
-                    { title: 'Customers', detail: 'Accounts and organizations', href: '/operator/directory', icon: Users },
-                    { title: 'Payment controls', detail: 'Gateway status and credentials', href: '/operator/payments', icon: CreditCard },
-                    { title: 'Operations', detail: 'Delivery and backup evidence', href: '/operator/ops', icon: Activity },
+                    {
+                        title: 'Product catalog',
+                        detail: 'Publish and configure products',
+                        href: '/operator/products',
+                        icon: Package,
+                    },
+                    {
+                        title: 'Customers',
+                        detail: 'Accounts and organizations',
+                        href: '/operator/directory',
+                        icon: Users,
+                    },
+                    {
+                        title: 'Payment controls',
+                        detail: 'Gateway status and credentials',
+                        href: '/operator/payments',
+                        icon: CreditCard,
+                    },
+                    {
+                        title: 'Operations',
+                        detail: 'Delivery and backup evidence',
+                        href: '/operator/ops',
+                        icon: Activity,
+                    },
                 ].map(({ title, detail, href, icon: Icon }) => (
                     <Link
                         key={href}
                         href={href}
-                        className="group flex min-h-24 items-center gap-3 rounded-2xl border border-border/70 bg-card/60 p-4 transition hover:-translate-y-0.5 hover:border-red-500/35 hover:bg-accent/60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-500"
+                        className="group border-border/70 bg-card/60 hover:bg-accent/60 flex min-h-24 items-center gap-3 rounded-2xl border p-4 transition hover:-translate-y-0.5 hover:border-red-500/35 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-500"
                     >
-                        <span className="grid size-10 shrink-0 place-items-center rounded-xl border border-border/60 bg-muted/60">
-                            <Icon className="size-5 text-foreground/80" aria-hidden="true" />
+                        <span className="border-border/60 bg-muted/60 grid size-10 shrink-0 place-items-center rounded-xl border">
+                            <Icon
+                                className="text-foreground/80 size-5"
+                                aria-hidden="true"
+                            />
                         </span>
                         <span className="min-w-0 flex-1">
-                            <span className="block text-sm font-bold">{title}</span>
-                            <span className="text-muted-foreground mt-1 block text-xs leading-5">{detail}</span>
+                            <span className="block text-sm font-bold">
+                                {title}
+                            </span>
+                            <span className="text-muted-foreground mt-1 block text-xs leading-5">
+                                {detail}
+                            </span>
                         </span>
-                        <ArrowRight className="text-muted-foreground size-4 shrink-0 transition-transform group-hover:translate-x-1 group-hover:text-foreground" aria-hidden="true" />
+                        <ArrowRight
+                            className="text-muted-foreground group-hover:text-foreground size-4 shrink-0 transition-transform group-hover:translate-x-1"
+                            aria-hidden="true"
+                        />
                     </Link>
                 ))}
             </nav>
@@ -687,9 +728,7 @@ function Metric({ label, value }: { label: string; value: number | string }) {
     return (
         <div className="kmj-admin-metric min-w-28 px-4 py-3">
             <div className="text-lg font-black">{value}</div>
-            <div className="text-muted-foreground mt-0.5 text-xs">
-                {label}
-            </div>
+            <div className="text-muted-foreground mt-0.5 text-xs">{label}</div>
         </div>
     );
 }
