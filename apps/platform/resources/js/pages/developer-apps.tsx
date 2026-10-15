@@ -245,6 +245,11 @@ export default function DeveloperApps({
     const liveKeys = keys.filter((key) => !key.revoked_at);
     const readyToIssue =
         canIssueKeys &&
+        organizations.some(
+            (org) =>
+                org.id === issueKey.data.organization_id &&
+                org.issuer_status === 'active',
+        ) &&
         activeApps.some(
             (app) =>
                 app.organization_id === issueKey.data.organization_id &&
