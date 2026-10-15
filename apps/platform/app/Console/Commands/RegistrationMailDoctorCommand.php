@@ -20,6 +20,7 @@ final class RegistrationMailDoctorCommand extends Command
         $state = [
             'environment' => app()->environment(),
             'transport' => $type,
+            'adapter' => $transport === 'kmj_brevo' ? 'temporary_brevo_free_smtps' : $transport,
             'can_attempt_external_delivery' => $readiness->canAttemptDelivery(),
             'live_delivery_proven' => false,
             'diagnostic' => $readiness->canAttemptDelivery()
@@ -34,6 +35,7 @@ final class RegistrationMailDoctorCommand extends Command
             $this->table(['Check', 'Result'], [
                 ['Environment', $state['environment']],
                 ['Mailer type', $state['transport'] !== '' ? $state['transport'] : 'missing'],
+                ['Active adapter', $state['adapter']],
                 ['Can attempt external delivery', $state['can_attempt_external_delivery'] ? 'YES (not confirmed delivered)' : 'NO'],
                 ['Recipient delivery verified', 'NO (requires real delivery test)'],
             ]);
