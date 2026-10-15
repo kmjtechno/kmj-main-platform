@@ -836,6 +836,33 @@ jobs:
             php artisan test --filter=KslpLifecycleTest --no-ansi
             echo "KMJ_KSLP_LIFECYCLE_FEATURE_PASS=$CIRCLE_SHA1"
 
+  kslp_authsp_activation_feature_probe:
+    docker:
+      - image: cimg/php:8.5-node
+    resource_class: small
+    environment:
+      APP_ENV: testing
+      DB_CONNECTION: sqlite
+      DB_DATABASE: ":memory:"
+      CACHE_STORE: array
+      SESSION_DRIVER: array
+      QUEUE_CONNECTION: sync
+      MAIL_MAILER: array
+      KMJ_DEVELOPER_LICENSING_ENABLED: "true"
+    steps:
+      - checkout
+      - run:
+          name: Exact SHA first-use activation API tests
+          no_output_timeout: 12m
+          command: |
+            set -euo pipefail
+            test "$(git rev-parse HEAD)" = "$CIRCLE_SHA1"
+            cd apps/platform
+            composer install --no-interaction --prefer-dist --no-progress
+            export APP_KEY="base64:$(php -r 'echo base64_encode(random_bytes(32));')"
+            php artisan test --filter=KslpDeveloperActivationApiTest --no-ansi
+            echo "KMJ_KSLP_ACTIVATION_FEATURE_PASS=$CIRCLE_SHA1"
+
   kslp_authsp_php_quality:
     docker:
       - image: cimg/php:8.5-node
@@ -971,6 +998,11 @@ jobs:
 workflows:
   review_kslp_authsp_candidate:
     jobs:
+      - kslp_authsp_activation_feature_probe:
+          filters:
+            branches:
+              only:
+                - feat/authsp-license-device-center-20261016
       - kslp_authsp_vp_check_probe:
           filters:
             branches:
