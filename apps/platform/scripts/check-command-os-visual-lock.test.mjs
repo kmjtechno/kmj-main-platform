@@ -77,9 +77,9 @@ void test('navigation, responsiveness and reduced motion remain accessible', () 
     assert.match(command, /Escape/);
     assert.match(command, /aria-label="Search owner workspaces"/);
     assert.match(command, /ref=\{carousel\}/);
-    assert.match(styles, /@media\(max-width:1170px\)/);
-    assert.match(styles, /@media\(max-width:720px\)/);
-    assert.match(styles, /@media\(prefers-reduced-motion:reduce\)/);
+    assert.match(styles, /@media\s*\(max-width:\s*1170px\)/);
+    assert.match(styles, /@media\s*\(max-width:\s*720px\)/);
+    assert.match(styles, /@media\s*\(prefers-reduced-motion:\s*reduce\)/);
     assert.match(map, /People & access/);
     assert.match(map, /Revenue & entitlements/);
 });
