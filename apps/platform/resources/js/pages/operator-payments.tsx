@@ -85,14 +85,14 @@ export default function OperatorPayments({
                                     <h2 className="text-lg font-bold">
                                         {gateway.label}
                                     </h2>
-                                    <p className="mt-1 text-xs font-medium text-muted-foreground">
+                                    <p className="text-muted-foreground mt-1 text-xs font-medium">
                                         {gateway.id === 'razorpay' ||
                                         gateway.id === 'cashfree'
                                             ? 'Primary payment provider'
                                             : 'Optional global provider'}
                                     </p>
                                 </div>
-                                <span className="rounded-full border border-border px-3 py-1 text-xs font-semibold text-muted-foreground">
+                                <span className="border-border text-muted-foreground rounded-full border px-3 py-1 text-xs font-semibold">
                                     {gateway.status ===
                                     'sandbox_validation_required'
                                         ? 'Test credentials present'
@@ -102,9 +102,9 @@ export default function OperatorPayments({
                                           : 'Not integrated'}
                                 </span>
                             </div>
-                            <dl className="mt-5 grid gap-3 text-sm text-foreground/90">
+                            <dl className="text-foreground/90 mt-5 grid gap-3 text-sm">
                                 <div className="flex items-center justify-between gap-3">
-                                    <dt className="flex items-center gap-2 text-muted-foreground">
+                                    <dt className="text-muted-foreground flex items-center gap-2">
                                         <BadgeCheck className="h-4 w-4" />
                                         Merchant status
                                     </dt>
@@ -116,7 +116,7 @@ export default function OperatorPayments({
                                     </dd>
                                 </div>
                                 <div className="flex items-center justify-between gap-3">
-                                    <dt className="flex items-center gap-2 text-muted-foreground">
+                                    <dt className="text-muted-foreground flex items-center gap-2">
                                         <KeyRound className="h-4 w-4" />
                                         Server credentials
                                     </dt>
@@ -127,7 +127,7 @@ export default function OperatorPayments({
                                     </dd>
                                 </div>
                                 <div className="flex items-center justify-between gap-3">
-                                    <dt className="flex items-center gap-2 text-muted-foreground">
+                                    <dt className="text-muted-foreground flex items-center gap-2">
                                         <Globe2 className="h-4 w-4" />
                                         Cross-border approval
                                     </dt>
@@ -138,7 +138,7 @@ export default function OperatorPayments({
                                     </dd>
                                 </div>
                                 <div className="flex items-center justify-between gap-3">
-                                    <dt className="flex items-center gap-2 text-muted-foreground">
+                                    <dt className="text-muted-foreground flex items-center gap-2">
                                         <ShieldCheck className="h-4 w-4" />
                                         Live payment evidence
                                     </dt>
@@ -153,11 +153,11 @@ export default function OperatorPayments({
                     ))}
                 </section>
 
-                <section className="mx-auto w-full max-w-6xl rounded-2xl border border-white/10 bg-card p-6">
+                <section className="bg-card mx-auto w-full max-w-6xl rounded-2xl border border-white/10 p-6">
                     <h2 className="text-lg font-bold">
                         Required before accepting money
                     </h2>
-                    <p className="mt-2 text-sm leading-6 text-muted-foreground">
+                    <p className="text-muted-foreground mt-2 text-sm leading-6">
                         Configure secrets only in the approved server secret
                         store, verify merchant-side international methods,
                         complete sandbox order and webhook tests, reconcile
@@ -165,7 +165,7 @@ export default function OperatorPayments({
                         ledger, then authorize production activation with a
                         signed and auditable owner action.
                     </p>
-                    <p className="mt-3 text-sm text-muted-foreground">
+                    <p className="text-muted-foreground mt-3 text-sm">
                         This screen is read-only. It does not create orders,
                         reveal API credentials, issue refunds, or activate
                         licenses from unverified webhooks.
