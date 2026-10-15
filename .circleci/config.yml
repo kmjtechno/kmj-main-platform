@@ -795,7 +795,6 @@ jobs:
       SESSION_DRIVER: array
       QUEUE_CONNECTION: sync
       MAIL_MAILER: array
-      KMJ_DEVELOPER_LICENSING_ENABLED: "true"
     steps:
       - checkout
       - run:
@@ -848,7 +847,6 @@ jobs:
       SESSION_DRIVER: array
       QUEUE_CONNECTION: sync
       MAIL_MAILER: array
-      KMJ_DEVELOPER_LICENSING_ENABLED: "true"
     steps:
       - checkout
       - run:
@@ -894,7 +892,6 @@ jobs:
       SESSION_DRIVER: array
       QUEUE_CONNECTION: sync
       MAIL_MAILER: array
-      KMJ_DEVELOPER_LICENSING_ENABLED: "true"
     steps:
       - checkout
       - run:
@@ -948,7 +945,6 @@ jobs:
       SESSION_DRIVER: array
       QUEUE_CONNECTION: sync
       MAIL_MAILER: array
-      KMJ_DEVELOPER_LICENSING_ENABLED: "true"
     steps:
       - checkout
       - run:
