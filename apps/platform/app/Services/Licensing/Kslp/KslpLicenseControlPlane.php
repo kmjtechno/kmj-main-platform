@@ -244,7 +244,13 @@ final class KslpLicenseControlPlane
         $at ??= now();
         if ($l['revoked_at']) {
             return 'REVOKED';
-        }if ($at->lte(Carbon::parse($l['expires_at']))) {
+        }
+        // Administrative suspension or pending states are not entitlement.
+        // A valid expiration date alone is insufficient to issue a lease.
+        if ($l['status'] !== 'active') {
+            return 'RESTRICTED';
+        }
+        if ($at->lte(Carbon::parse($l['expires_at']))) {
             return $at->gte(Carbon::parse($l['expires_at'])->subDays(7)) ? 'RENEWAL_DUE' : 'ACTIVE';
         }if ($l['grace_until'] && $at->lte(Carbon::parse($l['grace_until']))) {
             return 'GRACE';
