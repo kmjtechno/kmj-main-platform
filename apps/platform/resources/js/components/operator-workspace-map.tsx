@@ -77,6 +77,7 @@ const roadmapQueue = [
     { label: 'Support & Trust cases', detail: 'Case queues, incidents and disclosure governance', icon: ShieldCheck },
     { label: 'Content & SEO studio', detail: 'Editorial revisions, locales and publishing approvals', icon: Globe2 },
     { label: 'Release registry', detail: 'Signed artifacts, channels and promotion evidence', icon: FileClock },
+    { label: 'Reporting & analytics', detail: 'Verified operational, financial and customer reporting', icon: Activity },
 ] as const;
 
 export default function OperatorWorkspaceMap() {
@@ -204,8 +205,8 @@ export default function OperatorWorkspaceMap() {
                         </button>
                     )}
                 </div>
-                {listRoadmap && (
-                    <div id="kmj-roadmap-modules" className="mt-4 grid gap-3 sm:grid-cols-2">
+                <div id="kmj-roadmap-modules" hidden={!listRoadmap} className="mt-4 grid gap-3 sm:grid-cols-2">
+
                         {visibleRoadmap.map((item) => {
                             const Icon = item.icon;
                             return (
@@ -221,8 +222,7 @@ export default function OperatorWorkspaceMap() {
                                 </div>
                             );
                         })}
-                    </div>
-                )}
+                </div>
             </section>
         </section>
     );
