@@ -700,6 +700,79 @@ jobs:
             python3 -m unittest discover -s tests -p 'test_kslp_python_first_use.py' -v
             echo "KMJ_KSLP_PYTHON_SDK_PASS=$CIRCLE_SHA1"
 
+  kslp_authsp_php_quality:
+    docker:
+      - image: cimg/php:8.4-node
+    resource_class: small
+    environment:
+      APP_ENV: testing
+    steps:
+      - checkout
+      - run:
+          name: Exact SHA checked-in PHP formatting
+          no_output_timeout: 10m
+          command: |
+            set -euo pipefail
+            test "$(git rev-parse HEAD)" = "$CIRCLE_SHA1"
+            cd apps/platform
+            composer install --no-interaction --prefer-dist --no-progress
+            vendor/bin/pint --test routes/developer-licenses.php app/Services/Licensing/Kslp/KslpDeveloperKeys.php app/Services/Licensing/Kslp/KslpLicenseControlPlane.php tests/Feature/KslpDeveloperAppsTest.php tests/Feature/KslpLifecycleTest.php
+            echo "KMJ_KSLP_PHP_STYLE_PASS=$CIRCLE_SHA1"
+
+  kslp_authsp_laravel_features:
+    docker:
+      - image: cimg/php:8.4-node
+    resource_class: small
+    environment:
+      APP_ENV: testing
+      DB_CONNECTION: sqlite
+      DB_DATABASE: ":memory:"
+      CACHE_STORE: array
+      SESSION_DRIVER: array
+      QUEUE_CONNECTION: sync
+      MAIL_MAILER: array
+      KMJ_DEVELOPER_LICENSING_ENABLED: "true"
+    steps:
+      - checkout
+      - run:
+          name: Exact SHA authorized tenant lifecycle tests
+          no_output_timeout: 12m
+          command: |
+            set -euo pipefail
+            test "$(git rev-parse HEAD)" = "$CIRCLE_SHA1"
+            cd apps/platform
+            composer install --no-interaction --prefer-dist --no-progress
+            export APP_KEY="base64:$(php -r 'echo base64_encode(random_bytes(32));')"
+            php artisan test --filter='KslpDeveloperAppsTest|KslpLifecycleTest|KslpDeveloperActivationApiTest' --no-ansi
+            echo "KMJ_KSLP_LARAVEL_TESTS_PASS=$CIRCLE_SHA1"
+
+  kslp_authsp_frontend:
+    docker:
+      - image: cimg/php:8.4-node
+    resource_class: small
+    environment:
+      APP_ENV: testing
+      DB_CONNECTION: sqlite
+      DB_DATABASE: ":memory:"
+    steps:
+      - checkout
+      - run:
+          name: Exact SHA frontend format TypeScript and build
+          no_output_timeout: 12m
+          command: |
+            set -euo pipefail
+            test "$(git rev-parse HEAD)" = "$CIRCLE_SHA1"
+            cd apps/platform
+            composer install --no-interaction --prefer-dist --no-progress
+            npm ci --ignore-scripts --no-audit --no-fund
+            export APP_KEY="base64:$(php -r 'echo base64_encode(random_bytes(32));')"
+            npm run check
+            php artisan wayfinder:generate --with-form --no-ansi
+            npm run types:check
+            npm run build
+            test -s public/build/manifest.json
+            echo "KMJ_KSLP_FRONTEND_PASS=$CIRCLE_SHA1"
+
   kslp_authsp_candidate:
     docker:
       - image: cimg/php:8.4-node
@@ -772,7 +845,26 @@ workflows:
             branches:
               only:
                 - feat/authsp-license-device-center-20261016
+      - kslp_authsp_php_quality:
+          filters:
+            branches:
+              only:
+                - feat/authsp-license-device-center-20261016
+      - kslp_authsp_laravel_features:
+          filters:
+            branches:
+              only:
+                - feat/authsp-license-device-center-20261016
+      - kslp_authsp_frontend:
+          filters:
+            branches:
+              only:
+                - feat/authsp-license-device-center-20261016
       - kslp_authsp_candidate:
+          requires:
+            - kslp_authsp_php_quality
+            - kslp_authsp_laravel_features
+            - kslp_authsp_frontend
           filters:
             branches:
               only:
