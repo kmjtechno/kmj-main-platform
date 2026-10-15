@@ -454,13 +454,18 @@ export default function DeveloperApps({
                             href="#developer-app-sdk"
                             onClick={() => {
                                 const app = applications.find(
-                                    (item) => item.product_code === newKey.product_code,
+                                    (item) =>
+                                        item.product_code ===
+                                        newKey.product_code,
                                 );
-                                if (app) setSelectedApp(app.id);
+                                if (app) {
+                                    setSelectedApp(app.id);
+                                }
                             }}
                             className="mt-4 inline-flex min-h-11 items-center gap-2 rounded-lg border px-4 text-sm font-semibold"
                         >
-                            Continue to integration starter <ArrowRight className="size-4" />
+                            Continue to integration starter{' '}
+                            <ArrowRight className="size-4" />
                         </a>
                     </section>
                 )}
@@ -523,9 +528,13 @@ export default function DeveloperApps({
                 )}
                 {organizations.length > 0 &&
                     !organizations.some((org) => org.issuer_status === 'active') && (
-                        <section role="status" className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-4 text-sm">
-                            Your workspace is created. An active, owner-approved issuer subscription
-                            is required before registering an app or issuing customer keys.
+                        <section
+                            role="status"
+                            className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-4 text-sm"
+                        >
+                            Your workspace is created. An active,
+                            owner-approved issuer subscription is required
+                            before registering an app or issuing customer keys.
                             No payment or license is granted automatically.
                         </section>
                     )}
@@ -631,9 +640,9 @@ export default function DeveloperApps({
                                 required
                             />
                             <p className="text-muted-foreground text-xs">
-                                Suggested automatically from the name. You can edit it;
-                                it must contain 3–96 uppercase letters, numbers,
-                                dot, dash, underscore or colon.
+                                Suggested automatically from the name. You can
+                                edit it; it must contain 3–96 uppercase letters,
+                                numbers, dot, dash, underscore or colon.
                             </p>
                             {Object.values(createApp.errors).map(
                                 (error, index) => (
@@ -838,13 +847,16 @@ export default function DeveloperApps({
                                                     setSelectedApp(app.id);
                                                     issueKey.setData({
                                                         ...issueKey.data,
-                                                        organization_id: app.organization_id,
-                                                        product_code: app.product_code,
+                                                        organization_id:
+                                                            app.organization_id,
+                                                        product_code:
+                                                            app.product_code,
                                                     });
                                                 }}
                                                 className="mt-3 inline-flex min-h-10 items-center gap-1 rounded-lg border px-3 text-xs font-semibold hover:border-red-500/40 focus-visible:outline-2 focus-visible:outline-red-500"
                                             >
-                                                Use this app <ArrowRight className="size-3.5" />
+                                                Use this app{' '}
+                                                <ArrowRight className="size-3.5" />
                                             </a>
                                         )}
                                     </article>
