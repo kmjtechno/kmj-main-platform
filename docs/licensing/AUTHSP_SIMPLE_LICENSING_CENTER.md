@@ -30,7 +30,7 @@ KMJ Main Platform stays the only licensing authority.
 
 ## New Python first-use reference
 
-`sdk/python/kmj_kslp_first_use.py` implements bounded HTTPS-only
+`apps/platform/public/sdk/python/kmj_kslp_first_use.py` implements bounded HTTPS-only
 challenge/complete registration using the canonical `kmjtechno.com` origin.
 The caller must supply an existing Ed25519 public key and a stable
 **caller-managed** detached signer. Persist the private signing key only
