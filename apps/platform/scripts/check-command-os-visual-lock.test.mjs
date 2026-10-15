@@ -37,7 +37,11 @@ void test('visual lock retains exact signature sections and official assets', ()
     assert.match(command, /<OperatorWorkspaceMap/);
     assert.match(command, /<KristiOwnerAssistant/);
     assert.match(command, /earth-orbit\.svg|kmj-os-hero/);
-    assert.match(styles, /assets\/admin\/earth-orbit\.svg/);
+    assert.match(command, /src="\/assets\/admin\/earth-orbit\.svg"/);
+    assert.match(styles, /\.kmj-os-hero-image/);
+    assert.match(read('public/assets/admin/earth-orbit.svg'), /<svg/);
+    assert.match(read('public/assets/admin/kristi-neon.svg'), /<svg/);
+    assert.doesNotMatch(styles, /url\(['"]?\/assets\/admin\/earth-orbit\.svg/);
     assert.match(kristi, /assets\/admin\/kristi-neon\.svg/);
     assert.match(appCss, /command-os\.css/);
 });
