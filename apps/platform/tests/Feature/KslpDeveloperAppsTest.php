@@ -94,6 +94,7 @@ final class KslpDeveloperAppsTest extends TestCase
 
         $this->get('/developer/apps')
             ->assertOk()
+            ->assertHeader('Cache-Control', 'private, no-store, max-age=0')
             ->assertInertia(fn (Assert $page) => $page
                 ->component('developer-apps')
                 ->has('applications', 1)
@@ -103,6 +104,7 @@ final class KslpDeveloperAppsTest extends TestCase
 
         $this->get('/developer/apps')
             ->assertOk()
+            ->assertHeader('Cache-Control', 'private, no-store, max-age=0')
             ->assertInertia(fn (Assert $page) => $page
                 ->component('developer-apps')
                 ->where('newKey', null));
