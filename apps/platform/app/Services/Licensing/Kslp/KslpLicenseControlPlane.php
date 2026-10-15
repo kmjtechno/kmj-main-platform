@@ -257,6 +257,13 @@ final class KslpLicenseControlPlane
     {
         $now ??= now();
         $l = $this->license($id);
+        // KSLP-v1 CloudOS verifier and lease audience are CloudOS-only.
+        // Delegated developer products need a separately reviewed audience,
+        // signer policy and cross-language verifier; never sign them under
+        // the hard-coded CloudOS audience as a shortcut.
+        if ($l['product'] !== 'KMJ_CLOUDOS') {
+            throw new DomainException('KSLP_PRODUCT_LEASE_NOT_READY');
+        }
         $state = $this->state($id, $now);
         if (in_array($state, ['REVOKED', 'RESTRICTED'], true)) {
             throw new DomainException('KSLP_LICENSE_NOT_LEASABLE');
