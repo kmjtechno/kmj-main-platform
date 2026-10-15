@@ -160,6 +160,9 @@ export default function Operator({
                     <summary className="cursor-pointer text-sm font-semibold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-500">
                         Advanced owner insights and audit-safe legacy controls
                     </summary>
+                    <Link href="/operator/products" className="ml-2 inline-flex min-h-10 items-center rounded-lg border border-border px-3 text-xs font-semibold hover:bg-accent">
+                        Product Management
+                    </Link>
                     <div className="mt-5">
                         <OperatorControlOverview
                             products={catalogProducts}
