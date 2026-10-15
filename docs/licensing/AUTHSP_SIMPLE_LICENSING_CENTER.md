@@ -11,6 +11,9 @@ KMJ Main Platform stays the only licensing authority.
    subscription, payment or license is created by opening a page.
 2. Register an app. Its product code is auto-suggested from the name but
    remains editable and subject to global uniqueness and issuer product quotas.
+   Developer codes are capped at 64 characters because the existing
+   `kslp_licenses.product` column has that maximum; longer catalog IDs are
+   rejected before license issuance rather than producing a broken key.
 3. Issue an authorized **trial** key. The full random key is shown once, only
    to its issuer. Backend stores SHA-256 digest, never recoverable plaintext.
 4. Use app/language-specific setup starter. This is a **configuration**
