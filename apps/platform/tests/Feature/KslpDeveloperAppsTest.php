@@ -342,6 +342,28 @@ final class KslpDeveloperAppsTest extends TestCase
         return [$owner, $org, $keyId, $issued['license_id'], $deviceId];
     }
 
+    public function test_developer_product_id_cannot_exceed_persisted_license_column(): void
+    {
+        [$owner, $org] = $this->owner('Schema Length Guard');
+        $this->enroll($org);
+        $overlong = str_repeat('A', 65);
+
+        $this->actingAs($owner)
+            ->withSession(['auth.password_confirmed_at' => time()])
+            ->post('/developer/apps', [
+                'organization_id' => $org,
+                'name' => 'Oversized product code',
+                'product_code' => $overlong,
+            ])->assertSessionHasErrors('product_code');
+        $this->assertDatabaseCount('kslp_licensed_products', 0);
+
+        $this->expectException(DomainException::class);
+        $this->expectExceptionMessage('KSLP_PRODUCT_CODE_TOO_LONG');
+        app(KslpDeveloperKeys::class)->issue(
+            $org, $overlong, 'customer', 'trial', (string) $owner->id,
+        );
+    }
+
     public function test_license_directory_only_exposes_masked_scoped_active_seats(): void
     {
         [$owner, , , , $device] = $this->issuedDeviceSeat();
