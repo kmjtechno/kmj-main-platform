@@ -64,6 +64,7 @@ Route::middleware(['auth', 'verified'])->prefix('developer')->name('developer.')
                     'k.id', 'k.organization_id', 'k.licensed_product_id',
                     'k.license_id', 'k.display_prefix', 'k.first_activated_at',
                     'k.revoked_at', 'l.plan', 'l.customer_id', 'l.expires_at',
+                    'l.status', 'l.grace_until',
                 ])->all() : [];
 
         // Scoped to the visible 100 license keys: never load devices across
