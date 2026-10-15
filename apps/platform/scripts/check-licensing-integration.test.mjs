@@ -17,6 +17,8 @@ const keys = read('app/Services/Licensing/Kslp/KslpDeveloperKeys.php');
 const activation = read('routes/developer-activation-api.php');
 const developerRoutes = read('routes/developer-licenses.php');
 const developerApps = read('resources/js/pages/developer-apps.tsx');
+const ownerLicensing = read('resources/js/pages/operator-kslp.tsx');
+const firstUseSdk = read('../../sdk/python/kmj_kslp_first_use.py');
 
 void test('Admin and developer routes both stay registered', () => {
     assert.ok(web.includes("require __DIR__.'/developer-licenses.php'"));
@@ -107,4 +109,40 @@ void test('Guided AuthSP-style onboarding retains governed server issuance', () 
     assert.ok(developerRoutes.includes("'plan' => ['required', 'in:trial']"));
     assert.ok(developerRoutes.includes("'password.confirm'"));
     assert.ok(developerRoutes.includes("'throttle:10,1'"));
+});
+
+void test('AuthSP-inspired licensing directory contains no raw device identifiers', () => {
+    assert.ok(developerRoutes.includes("'activeDevices' => $activeDevices"));
+    assert.ok(developerRoutes.includes("'recentEvents' => $recentEvents"));
+    assert.ok(developerRoutes.includes("->whereIn('license_id', $licenseIds)"));
+    assert.ok(developerRoutes.includes("->whereNull('deactivated_at')"));
+    assert.ok(developerRoutes.includes("->get(['id', 'license_id', 'activated_at'])"));
+    assert.ok(developerRoutes.includes("->get(['license_id', 'action', 'created_at'])"));
+    assert.ok(developerApps.includes('Search issued licenses'));
+    assert.ok(developerApps.includes('Release device seat'));
+    assert.ok(developerApps.includes('Confirm seat release'));
+    assert.ok(ownerLicensing.includes('Licensing quick start'));
+    assert.ok(ownerLicensing.includes('/developer/apps'));
+});
+
+void test('Device seat release stays authenticated, governed and idempotent', () => {
+    assert.ok(developerRoutes.includes("keys/{key}/devices/{activation}/release"));
+    assert.ok(developerRoutes.includes("'license.manage'"));
+    assert.ok(developerRoutes.includes("'password.confirm', 'throttle:5,1'"));
+    assert.ok(developerRoutes.includes("->lockForUpdate()"));
+    assert.ok(developerRoutes.includes("where('license_id', $record->license_id)"));
+    assert.ok(developerRoutes.includes("if ($device->deactivated_at !== null)"));
+    assert.ok(developerRoutes.includes("'developer_device_released'"));
+    assert.ok(developerRoutes.includes("'sequence' => DB::raw('sequence + 1')"));
+    assert.ok(developerRoutes.includes("config('services.kmj_developer_licensing.enabled', false)"));
+});
+
+void test('Python first use proves device ownership without issuing a commercial lease', () => {
+    assert.ok(firstUseSdk.includes('KSLP-ACTIVATE-v1|'));
+    assert.ok(firstUseSdk.includes('parts.hostname.lower() != "kmjtechno.com"'));
+    assert.ok(firstUseSdk.includes('signed_lease_issued'));
+    assert.ok(firstUseSdk.includes('return False'));
+    assert.ok(firstUseSdk.includes('license_key'));
+    assert.ok(!firstUseSdk.includes('open("private_key"'));
+    assert.ok(developerRoutes.includes("'plan' => ['required', 'in:trial']"));
 });
