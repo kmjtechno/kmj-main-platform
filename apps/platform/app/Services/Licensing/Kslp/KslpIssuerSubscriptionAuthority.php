@@ -72,7 +72,7 @@ final class KslpIssuerSubscriptionAuthority
         array $features = [],
         array $limits = [],
     ): array {
-        if (! preg_match('/^[A-Z0-9][A-Z0-9_.:-]{2,95}$/', $code)) {
+        if (! preg_match('/^[A-Z0-9][A-Z0-9_.:-]{2,63}$/', $code)) {
             throw new DomainException('KSLP_INVALID_PRODUCT_CODE');
         }
 
