@@ -70,7 +70,8 @@ else
   echo 'FAIL: Vite build'; failed=$((failed+1))
 fi
 echo '== PHP syntax and Laravel mail readiness/registration tests =='
-if php -l app/Services/Mail/RegistrationMailReadiness.php \
+if php -l config/mail.php \
+  && php -l app/Services/Mail/RegistrationMailReadiness.php \
   && php -l app/Console/Commands/RegistrationMailDoctorCommand.php \
   && php -l app/Actions/Fortify/CreateNewUser.php \
   && php -l app/Models/User.php \
@@ -83,7 +84,7 @@ else
   echo 'FAIL: PHP syntax or onboarding regression tests'; failed=$((failed+1))
 fi
 echo '== PHP formatting and static analysis =='
-if ./vendor/bin/pint --test app/Services/Mail/RegistrationMailReadiness.php app/Console/Commands/RegistrationMailDoctorCommand.php app/Actions/Fortify/CreateNewUser.php app/Providers/FortifyServiceProvider.php app/Models/User.php tests/Unit/RegistrationMailReadinessTest.php tests/Feature/Auth/EmailVerificationTest.php tests/Feature/Auth/RegistrationTest.php tests/Feature/Auth/VerificationNotificationTest.php tests/Feature/Auth/PasswordResetTest.php; then
+if ./vendor/bin/pint --test config/mail.php app/Services/Mail/RegistrationMailReadiness.php app/Console/Commands/RegistrationMailDoctorCommand.php app/Actions/Fortify/CreateNewUser.php app/Providers/FortifyServiceProvider.php app/Models/User.php tests/Unit/RegistrationMailReadinessTest.php tests/Feature/Auth/EmailVerificationTest.php tests/Feature/Auth/RegistrationTest.php tests/Feature/Auth/VerificationNotificationTest.php tests/Feature/Auth/PasswordResetTest.php; then
   echo 'PASS: Pint'
 else
   echo 'FAIL: Pint'; failed=$((failed+1))
