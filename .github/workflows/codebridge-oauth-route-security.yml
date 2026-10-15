@@ -1,0 +1,35 @@
+name: CodeBridge OAuth Route Security
+
+on:
+  pull_request:
+    paths:
+      - apps/platform/routes/codebridge-oauth.php
+      - scripts/security/check-codebridge-oauth-routes.mjs
+      - tests/codebridge-oauth-route-security.test.mjs
+      - .github/workflows/codebridge-oauth-route-security.yml
+  push:
+    branches: [main]
+    paths:
+      - apps/platform/routes/codebridge-oauth.php
+      - scripts/security/check-codebridge-oauth-routes.mjs
+      - tests/codebridge-oauth-route-security.test.mjs
+      - .github/workflows/codebridge-oauth-route-security.yml
+
+permissions:
+  contents: read
+
+jobs:
+  oauth-route-guard:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '24'
+      - name: Reject unauthorized CodeBridge OAuth bypasses
+        run: node scripts/security/check-codebridge-oauth-routes.mjs
+      - name: OAuth route regression tests
+        run: node --test tests/codebridge-oauth-route-security.test.mjs
