@@ -52,6 +52,12 @@ type ActiveDevice = {
     activated_at: string;
 };
 
+type LicenseEvent = {
+    license_id: string;
+    action: string;
+    created_at: string;
+};
+
 type IssuedKey = {
     key: string;
     license_id: string;
@@ -63,6 +69,7 @@ type Props = {
     applications: Application[];
     keys: LicenseKey[];
     activeDevices: ActiveDevice[];
+    recentEvents: LicenseEvent[];
     canIssueKeys: boolean;
     newKey: IssuedKey | null;
 };
@@ -200,6 +207,7 @@ export default function DeveloperApps({
     applications,
     keys,
     activeDevices,
+    recentEvents,
     canIssueKeys,
     newKey,
 }: Props) {
@@ -926,6 +934,19 @@ export default function DeveloperApps({
                                                   ? 'First activation recorded'
                                                   : 'Not yet activated'}
                                         </p>
+                                        {recentEvents.find(
+                                            (event) =>
+                                                event.license_id === key.license_id,
+                                        ) && (
+                                            <p className="text-muted-foreground mt-1 text-xs">
+                                                Recent activity:{' '}
+                                                {recentEvents.find(
+                                                    (event) =>
+                                                        event.license_id ===
+                                                        key.license_id,
+                                                )?.action.replace(/_/g, ' ')}
+                                            </p>
+                                        )}
                                         <p className="text-muted-foreground mt-1 text-xs">
                                             License: {key.status} · Expires{' '}
                                             {new Date(key.expires_at).toLocaleDateString()} ·
@@ -1046,7 +1067,9 @@ export default function DeveloperApps({
                                                             )}
                                                     </div>
                                                 ))}
-                                        {!key.revoked_at && canIssueKeys && (
+                                        {!key.revoked_at &&
+                                            key.status === 'active' &&
+                                            canIssueKeys && (
                                             <button
                                                 type="button"
                                                 onClick={() => {
