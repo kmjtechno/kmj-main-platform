@@ -70,15 +70,19 @@ final class KslpIssuerSubscriptionTest extends TestCase
         $id = (string) $organization->id;
         $authority = app(KslpIssuerSubscriptionAuthority::class);
         $now = now();
-        $authority->subscribe($id, 'professional', 2, 10, $now);
-
+        $this->travelTo($now);
         try {
-            $authority->registerProduct($id, 'VENDOR.EXPIRED', 'Expired Issuer');
-            self::fail('Exact expiration must fail closed.');
-        } catch (DomainException $exception) {
-            self::assertSame('KSLP_ISSUER_SUBSCRIPTION_EXPIRED', $exception->getMessage());
+            $authority->subscribe($id, 'professional', 2, 10, $now);
+            try {
+                $authority->registerProduct($id, 'VENDOR.EXPIRED', 'Expired Issuer');
+                self::fail('Exact expiration must fail closed.');
+            } catch (DomainException $exception) {
+                self::assertSame('KSLP_ISSUER_SUBSCRIPTION_EXPIRED', $exception->getMessage());
+            }
+            $this->assertDatabaseCount('kslp_licensed_products', 0);
+        } finally {
+            $this->travelBack();
         }
-        $this->assertDatabaseCount('kslp_licensed_products', 0);
     }
 
     public function test_subscription_update_preserves_identity_and_updates_policy(): void
