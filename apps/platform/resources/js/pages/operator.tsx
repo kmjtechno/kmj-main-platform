@@ -83,7 +83,7 @@ function Metric({
     value: number;
 }) {
     return (
-        <div className="bg-card rounded-2xl border p-5">
+        <div className="kmj-admin-metric p-5">
             <div className="flex items-center justify-between gap-3">
                 <span className="text-muted-foreground text-xs font-semibold">
                     {label}
@@ -181,9 +181,9 @@ export default function Operator({
     return (
         <>
             <Head title="Platform Operator" />
-            <div className="flex h-full flex-1 flex-col gap-6 overflow-x-auto p-4 sm:p-6">
+            <div className="kmj-admin-shell flex h-full min-w-0 flex-1 flex-col gap-6 overflow-x-auto p-4 sm:p-6 lg:p-8">
                 <OperatorModuleNavigation active="overview" />
-                <section className="from-background via-background overflow-hidden rounded-2xl border bg-gradient-to-br to-red-950/10 p-6 sm:p-8">
+                <section className="kmj-admin-hero rounded-[1.65rem] p-6 sm:p-8 lg:p-10">
                     <div className="flex flex-col justify-between gap-5 lg:flex-row lg:items-end">
                         <div className="max-w-2xl">
                             <div className="inline-flex items-center gap-2 rounded-full border border-red-500/15 bg-red-500/5 px-3 py-1 text-xs font-bold text-red-500">

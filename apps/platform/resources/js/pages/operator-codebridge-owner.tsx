@@ -46,9 +46,9 @@ export default function OperatorCodeBridgeOwner({ licenses, limits }: Props) {
     return (
         <>
             <Head title="KMJ CodeBridge — Internal Owner Plan" />
-            <main className="flex flex-1 flex-col gap-6 p-4 sm:p-6">
+            <main className="kmj-admin-shell flex min-w-0 flex-1 flex-col gap-6 p-4 sm:p-6 lg:p-8">
                 <OperatorModuleNavigation active="codebridge" />
-                <section className="bg-card rounded-2xl border p-6">
+                <section className="kmj-admin-hero rounded-[1.65rem] p-6 sm:p-8">
                     <div className="flex items-center gap-3">
                         <ShieldCheck className="h-8 w-8 text-red-500" />
                         <div>
