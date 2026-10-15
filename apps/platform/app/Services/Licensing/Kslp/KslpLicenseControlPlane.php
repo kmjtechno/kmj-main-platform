@@ -54,6 +54,12 @@ final class KslpLicenseControlPlane
      */
     public function issueDelegated(string $issuerOrganizationId, string $customer, string $product, string $plan, string $actor, string $reason = ''): array
     {
+        // kslp_licenses.product is varchar(64). Validate at the core
+        // boundary, including calls that bypass the Developer Apps UI.
+        if (strlen($product) > 64) {
+            throw new DomainException('KSLP_PRODUCT_CODE_TOO_LONG');
+        }
+
         if (! in_array($plan, self::PLANS, true)) {
             throw new DomainException('KSLP_INVALID_PLAN');
         }
