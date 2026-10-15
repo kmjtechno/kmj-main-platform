@@ -417,6 +417,36 @@ final class KslpDeveloperAppsTest extends TestCase
         self::assertNull(DB::table('kslp_activations')->where('id', $device)->value('deactivated_at'));
     }
 
+    public function test_seat_release_cannot_target_another_license_in_same_organization(): void
+    {
+        [$owner, $org, $key, $license, $device] = $this->issuedDeviceSeat();
+        $another = app(KslpDeveloperKeys::class)->issue(
+            $org, 'SEATS.APP', 'different-customer', 'trial', (string) $owner->id,
+        );
+        $otherDeviceId = (string) Str::uuid();
+        $now = now();
+        DB::table('kslp_activations')->insert([
+            'id' => $otherDeviceId,
+            'license_id' => $another['license_id'],
+            'server_identity' => 'ed25519:'.rtrim(strtr(base64_encode(random_bytes(32)), '+/', '-_'), '='),
+            'machine_identity_hash' => hash('sha256', 'unrelated-device'),
+            'idempotency_key' => (string) Str::uuid(),
+            'activated_at' => $now,
+            'created_at' => $now,
+            'updated_at' => $now,
+        ]);
+
+        $this->actingAs($owner)
+            ->withSession(['auth.password_confirmed_at' => time()])
+            ->post('/developer/keys/'.$key.'/devices/'.$otherDeviceId.'/release', [
+                'reason' => 'Wrong device should stay registered',
+            ])->assertNotFound();
+
+        self::assertNull(DB::table('kslp_activations')->where('id', $otherDeviceId)->value('deactivated_at'));
+        self::assertNull(DB::table('kslp_activations')->where('id', $device)->value('deactivated_at'));
+        self::assertSame(1, (int) DB::table('kslp_licenses')->where('id', $license)->value('sequence'));
+    }
+
     public function test_device_release_requires_reason_and_enabled_flag(): void
     {
         [$owner, , $key, , $device] = $this->issuedDeviceSeat();
@@ -425,6 +455,10 @@ final class KslpDeveloperAppsTest extends TestCase
         $this->actingAs($owner)
             ->withSession(['auth.password_confirmed_at' => time()])
             ->post($uri, ['reason' => ''])
+            ->assertSessionHasErrors('reason');
+        $this->actingAs($owner)
+            ->withSession(['auth.password_confirmed_at' => time()])
+            ->post($uri, ['reason' => '   '])
             ->assertSessionHasErrors('reason');
         self::assertNull(DB::table('kslp_activations')->where('id', $device)->value('deactivated_at'));
 
