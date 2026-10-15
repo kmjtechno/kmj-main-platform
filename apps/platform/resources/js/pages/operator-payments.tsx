@@ -39,26 +39,26 @@ export default function OperatorPayments({
     return (
         <>
             <Head title="KMJ TECHNO — Payment Gateway Control" />
-            <main className="flex min-h-screen flex-col gap-6 bg-[#080b10] p-4 text-white sm:p-8">
+            <main className="kmj-admin-shell flex min-h-screen min-w-0 flex-col gap-6 p-4 sm:p-8">
                 <div className="mx-auto w-full max-w-6xl">
                     <OperatorModuleNavigation active="payments" />
                 </div>
                 <header className="mx-auto flex w-full max-w-6xl flex-col gap-4">
                     <Link
                         href="/operator"
-                        className="inline-flex w-fit items-center gap-2 text-sm text-slate-300 hover:text-white"
+                        className="text-muted-foreground hover:text-foreground inline-flex w-fit items-center gap-2 text-sm"
                     >
                         <ArrowLeft className="h-4 w-4" />
                         Back to Super Admin
                     </Link>
-                    <div className="rounded-2xl border border-red-500/20 bg-gradient-to-br from-[#181b23] to-[#080b10] p-6 sm:p-8">
+                    <div className="kmj-admin-hero rounded-[1.65rem] p-6 sm:p-8">
                         <div className="flex flex-wrap items-center gap-3">
                             <CreditCard className="h-8 w-8 text-red-500" />
                             <h1 className="text-2xl font-black tracking-tight sm:text-3xl">
                                 Payment Gateway Control
                             </h1>
                         </div>
-                        <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-300">
+                        <p className="text-muted-foreground mt-3 max-w-3xl text-sm leading-6">
                             KMJ TECHNO international commerce. Merchant
                             approval, credential configuration, transaction
                             proof and license entitlement are separate security
@@ -78,7 +78,7 @@ export default function OperatorPayments({
                     {paymentReadiness.providers.map((gateway) => (
                         <article
                             key={gateway.id}
-                            className="rounded-2xl border border-white/10 bg-[#10141b] p-5"
+                            className="bg-card rounded-2xl border p-5"
                         >
                             <div className="flex items-start justify-between gap-3">
                                 <div>
