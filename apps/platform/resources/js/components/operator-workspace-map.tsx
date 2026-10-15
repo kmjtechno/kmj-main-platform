@@ -205,7 +205,11 @@ export default function OperatorWorkspaceMap() {
                         </button>
                     )}
                 </div>
-                <div id="kmj-roadmap-modules" hidden={!listRoadmap} className="mt-4 grid gap-3 sm:grid-cols-2">
+                <div
+                    id="kmj-roadmap-modules"
+                    hidden={!listRoadmap}
+                    className={listRoadmap ? 'mt-4 grid gap-3 sm:grid-cols-2' : 'hidden'}
+                >
 
                         {visibleRoadmap.map((item) => {
                             const Icon = item.icon;
