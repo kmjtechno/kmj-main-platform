@@ -6,6 +6,7 @@ const read = (path) => readFileSync(new URL('../' + path, import.meta.url), 'utf
 const map = read('resources/js/components/operator-workspace-map.tsx');
 const overview = read('resources/js/components/operator-control-overview.tsx');
 const sidebar = read('resources/js/components/app-sidebar.tsx');
+const dashboard = read('resources/js/pages/dashboard.tsx');
 const css = read('resources/css/admin-premium.css');
 const routes = [
     read('routes/web.php'),
@@ -93,6 +94,9 @@ void test('owner-only sidebar separates personal workspace from governed areas',
     assert.match(sidebar, /Systems & Trust/);
     assert.match(sidebar, /<NavMain items=\{baseNavItems\} label="My workspace"/);
     assert.match(overview, /<OperatorWorkspaceMap \/>/);
+    assert.match(dashboard, /Open Command Center/);
+    assert.match(dashboard, /href="\/operator"/);
+    assert.match(dashboard, /ownerProducts !== null/);
     assert.match(overview, /<details className=/);
     assert.match(overview, /Advanced module index/);
 });
