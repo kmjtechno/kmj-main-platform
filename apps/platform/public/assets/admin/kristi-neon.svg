@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 340" aria-label="Stylized Kristi AI assistant visual">
+<defs><radialGradient id="bg"><stop stop-color="#442342"/><stop offset=".6" stop-color="#160e21"/><stop offset="1" stop-color="#0a0c18"/></radialGradient>
+<linearGradient id="hair" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#231421"/><stop offset=".52" stop-color="#0b1327"/><stop offset="1" stop-color="#8d2746"/></linearGradient>
+<linearGradient id="skin" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#d79284"/><stop offset=".6" stop-color="#a66568"/><stop offset="1" stop-color="#452c49"/></linearGradient>
+<linearGradient id="j" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#33253e"/><stop offset="1" stop-color="#090e21"/></linearGradient><filter id="glow"><feGaussianBlur stdDeviation="6"/></filter></defs>
+<rect width="360" height="340" fill="url(#bg)"/>
+<circle cx="186" cy="115" r="112" fill="#a52853" opacity=".18" filter="url(#glow)"/>
+<path d="M65 340 Q100 266 130 248 L144 187 Q94 159 106 87 Q118 25 190 29 Q271 27 282 103 L258 228 Q302 290 319 340Z" fill="url(#hair)" stroke="#dc365e" stroke-opacity=".35"/>
+<path d="M140 149 Q147 75 182 68 Q238 65 248 140 L235 210 Q202 247 172 214 L142 180Z" fill="url(#skin)"/>
+<path d="M139 104 Q156 54 205 59 Q249 70 254 122 Q219 96 194 92 Q164 111 138 118Z" fill="url(#hair)"/>
+<path d="M156 145 Q174 136 188 147 M205 149 Q221 137 235 146" fill="none" stroke="#271323" stroke-width="4" stroke-linecap="round"/>
+<circle cx="178" cy="149" r="3.1" fill="#1e1c31"/><circle cx="218" cy="149" r="3.1" fill="#1e1c31"/>
+<path d="M201 157 q-6 14 3 17 M183 195 q15 9 31 0" fill="none" stroke="#6d3544" stroke-width="2.2" stroke-linecap="round"/>
+<path d="M165 214 L165 238 Q198 270 230 238 L228 210" fill="url(#skin)"/>
+<path d="M112 254 Q154 235 165 239 L196 275 230 239 Q277 241 303 292 L330 340 H55Z" fill="url(#j)" stroke="#ec3656" stroke-width="3"/>
+<path d="M196 272 L196 338" stroke="#ec385d" stroke-width="4"/>
+<path d="M103 276 Q136 282 152 326 M280 276 Q254 291 239 328" fill="none" stroke="#d63753" stroke-width="4"/>
+<path d="M119 89 Q80 161 125 248 M263 98 Q297 169 253 262" fill="none" stroke="#b72b4d" stroke-width="9" opacity=".5"/>
+<text x="196" y="319" text-anchor="middle" fill="#e44a68" font-family="sans-serif" font-size="17" font-weight="bold">KMJ</text>
+</svg>
