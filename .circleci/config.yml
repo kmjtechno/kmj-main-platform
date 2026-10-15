@@ -723,6 +723,49 @@ jobs:
             test -f vendor/autoload.php
             echo "KMJ_KSLP_COMPOSER_INSTALL_PASS=$CIRCLE_SHA1"
 
+  kslp_authsp_migration_probe:
+    docker:
+      - image: cimg/php:8.5-node
+    resource_class: small
+    environment:
+      APP_ENV: testing
+      DB_CONNECTION: sqlite
+      DB_DATABASE: ":memory:"
+      CACHE_STORE: array
+      SESSION_DRIVER: array
+      QUEUE_CONNECTION: sync
+      MAIL_MAILER: array
+    steps:
+      - checkout
+      - run:
+          name: Diagnose fresh isolated Laravel schema
+          no_output_timeout: 12m
+          command: |
+            set -euo pipefail
+            test "$(git rev-parse HEAD)" = "$CIRCLE_SHA1"
+            cd apps/platform
+            composer install --no-interaction --prefer-dist --no-progress
+            export APP_KEY="base64:$(php -r 'echo base64_encode(random_bytes(32));')"
+            php artisan migrate:fresh --force --no-ansi
+            echo "KMJ_KSLP_FRESH_MIGRATIONS_PASS=$CIRCLE_SHA1"
+
+  kslp_authsp_frontend_check_probe:
+    docker:
+      - image: cimg/php:8.5-node
+    resource_class: small
+    steps:
+      - checkout
+      - run:
+          name: Diagnose frontend source formatting independently
+          no_output_timeout: 12m
+          command: |
+            set -euo pipefail
+            test "$(git rev-parse HEAD)" = "$CIRCLE_SHA1"
+            cd apps/platform
+            npm ci --ignore-scripts --no-audit --no-fund
+            npm run check
+            echo "KMJ_KSLP_FRONTEND_CHECK_PASS=$CIRCLE_SHA1"
+
   kslp_authsp_php_quality:
     docker:
       - image: cimg/php:8.5-node
@@ -859,6 +902,16 @@ workflows:
   review_kslp_authsp_candidate:
     jobs:
       - kslp_authsp_composer_probe:
+          filters:
+            branches:
+              only:
+                - feat/authsp-license-device-center-20261016
+      - kslp_authsp_migration_probe:
+          filters:
+            branches:
+              only:
+                - feat/authsp-license-device-center-20261016
+      - kslp_authsp_frontend_check_probe:
           filters:
             branches:
               only:
