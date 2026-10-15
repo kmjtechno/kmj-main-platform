@@ -1,4 +1,5 @@
 import { Link } from '@inertiajs/react';
+import OperatorWorkspaceMap from '@/components/operator-workspace-map';
 import {
     Activity,
     ArrowRight,
@@ -193,6 +194,13 @@ export default function OperatorControlOverview({
                     </div>
                 </section>
             )}
+            <OperatorWorkspaceMap />
+            <details className="rounded-2xl border border-border/70 bg-card/35 p-4 sm:p-5">
+                <summary className="cursor-pointer text-sm font-semibold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-500">
+                    Advanced module index
+                    <span className="text-muted-foreground ml-2 text-xs font-normal">Open the legacy six-module directory</span>
+                </summary>
+                <div className="mt-4">
             <section
                 className="bg-card rounded-2xl border p-5 sm:p-6"
                 aria-labelledby="control-modules-title"
@@ -253,6 +261,8 @@ export default function OperatorControlOverview({
                 </div>
             </section>
 
+                </div>
+            </details>
             <section
                 className="bg-card rounded-2xl border p-5 sm:p-6"
                 aria-labelledby="catalog-health-heading"
