@@ -18,7 +18,7 @@ const activation = read('routes/developer-activation-api.php');
 const developerRoutes = read('routes/developer-licenses.php');
 const developerApps = read('resources/js/pages/developer-apps.tsx');
 const ownerLicensing = read('resources/js/pages/operator-kslp.tsx');
-const firstUseSdk = read('../../sdk/python/kmj_kslp_first_use.py');
+const firstUseSdk = read('public/sdk/python/kmj_kslp_first_use.py');
 
 void test('Admin and developer routes both stay registered', () => {
     assert.ok(web.includes("require __DIR__.'/developer-licenses.php'"));
