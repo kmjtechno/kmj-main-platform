@@ -311,6 +311,36 @@ final class KslpDeveloperAppsTest extends TestCase
         self::assertNull(DB::table('kslp_license_keys')->where('id', $keyId)->value('revoked_at'));
     }
 
+    public function test_key_revocation_rejects_invalid_id_and_blank_reason_without_mutation(): void
+    {
+        [$owner, $org] = $this->owner('Revocation Validation');
+        $this->enroll($org);
+        app(KslpIssuerSubscriptionAuthority::class)
+            ->registerProduct($org, 'VENDOR.VALIDATE', 'Validate Key');
+        $issued = app(KslpDeveloperKeys::class)->issue(
+            $org, 'VENDOR.VALIDATE', 'customer-validate', 'trial', (string) $owner->id,
+        );
+        $keyId = (string) DB::table('kslp_license_keys')
+            ->where('license_id', $issued['license_id'])->value('id');
+
+        $this->actingAs($owner)
+            ->withSession(['auth.password_confirmed_at' => time()])
+            ->post('/developer/keys/not-a-uuid/revoke', [
+                'reason' => 'Malformed ID should not reach the database',
+            ])->assertNotFound();
+
+        $this->actingAs($owner)
+            ->withSession(['auth.password_confirmed_at' => time()])
+            ->post('/developer/keys/'.$keyId.'/revoke', [
+                'reason' => '   ',
+            ])->assertSessionHasErrors('reason');
+
+        self::assertNull(DB::table('kslp_license_keys')
+            ->where('id', $keyId)->value('revoked_at'));
+        self::assertSame('active', DB::table('kslp_licenses')
+            ->where('id', $issued['license_id'])->value('status'));
+    }
+
     /** @return array{User, string, string, string, string} */
     private function issuedDeviceSeat(): array
     {
