@@ -100,11 +100,11 @@ export default function KristiOwnerAssistant({
         event.preventDefault();
         const clean = draft.trim().slice(0, 400);
         if (!clean) return;
-        setMessages((previous) => [
-            ...previous,
+        const additions: ChatMessage[] = [
             { kind: 'owner', text: clean },
             { kind: 'kristi', text: guidance(clean, counts, voiceLanguage) },
-        ].slice(-18));
+        ];
+        setMessages((previous) => [...previous, ...additions].slice(-18));
         setDraft('');
     }
 
