@@ -1242,11 +1242,31 @@ export default function DeveloperApps({
                                 Download Python first-use helper
                             </a>
                         )}
+                        {language === 'TypeScript' && displayedApp && (
+                            <>
+                                <a
+                                    href="/sdk/javascript/kmj_kslp_first_use.mjs"
+                                    download="kmj_kslp_first_use.mjs"
+                                    className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-red-500/30 px-4 text-sm font-bold text-red-500"
+                                >
+                                    Download JS first-use helper
+                                </a>
+                                <a
+                                    href="/sdk/javascript/kmj_kslp_first_use.d.mts"
+                                    download="kmj_kslp_first_use.d.mts"
+                                    className="inline-flex min-h-11 items-center gap-2 rounded-xl border px-4 text-sm font-bold"
+                                >
+                                    Download TypeScript declarations
+                                </a>
+                            </>
+                        )}
                     </div>
                     <p className="text-muted-foreground mt-2 text-xs">
-                        The Python helper only registers a device through a
-                        signed challenge. You must supply a secure Ed25519
-                        signer and verify a future production lease separately.
+                        Python and JavaScript first-use helpers only register
+                        a device through a signed challenge. Supply your own
+                        secure Ed25519 signer, use the trusted KSLP origin and
+                        independently verify a future signed commercial lease
+                        before unlocking any product features.
                     </p>
                     <div className="mt-5 grid gap-3 sm:grid-cols-2">
                         <Link
