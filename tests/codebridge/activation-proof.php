@@ -16,7 +16,7 @@ namespace Illuminate\Support\Facades {
     }
 }
 namespace {
-    function now(): object {return new class {public function gt(mixed $time): bool {return false;}};}
+    function now(): object {return new class {public function gt(mixed $time): bool {return false;} public function gte(mixed $time): bool {return false;}};}
     require $argv[1];
     use App\Services\Licensing\Kslp\KslpActivationProof;
     use Illuminate\Support\Facades\DB;
