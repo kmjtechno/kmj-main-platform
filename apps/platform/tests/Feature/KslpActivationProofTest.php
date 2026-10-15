@@ -39,6 +39,52 @@ final class KslpActivationProofTest extends TestCase
         }
     }
 
+    public function test_proof_expires_at_exact_five_minute_boundary_without_consumption(): void
+    {
+        $control = app(KslpLicenseControlPlane::class);
+        $license = $control->issue('expiring-proof-customer', 'professional', 'owner');
+        [$identity, $secret] = $this->identity();
+        $proof = app(KslpActivationProof::class);
+        $challenge = $proof->challenge($license['id'], $identity);
+        $message = 'KSLP-ACTIVATE-v1|'.$license['id'].'|'.$challenge['nonce'];
+        $signature = rtrim(strtr(
+            base64_encode(sodium_crypto_sign_detached($message, $secret)),
+            '+/',
+            '-_',
+        ), '=');
+
+        $expiresAt = \Illuminate\Support\Carbon::parse(
+            \Illuminate\Support\Facades\DB::table('kslp_activation_challenges')
+                ->where('id', $challenge['challenge_id'])
+                ->value('expires_at'),
+        );
+        $this->travelTo($expiresAt);
+        try {
+            try {
+                $proof->consume(
+                    $challenge['challenge_id'],
+                    $license['id'],
+                    $identity,
+                    $challenge['nonce'],
+                    $signature,
+                );
+                self::fail('Challenge at expiration must be rejected.');
+            } catch (\DomainException $exception) {
+                self::assertSame(
+                    'KSLP_ACTIVATION_CHALLENGE_EXPIRED',
+                    $exception->getMessage(),
+                );
+            }
+
+            $this->assertDatabaseHas('kslp_activation_challenges', [
+                'id' => $challenge['challenge_id'],
+                'used_at' => null,
+            ]);
+        } finally {
+            $this->travelBack();
+        }
+    }
+
     public function test_padded_device_identity_is_rejected_before_creating_challenge(): void
     {
         [$identity] = $this->identity();
