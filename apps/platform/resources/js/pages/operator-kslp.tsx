@@ -185,25 +185,29 @@ export default function OperatorKslp({
                             href: '#license-issue',
                             step: '01',
                             title: 'Issue a license',
-                            description: 'Owner-controlled CloudOS issuance, not automatic payment proof',
+                            description:
+                                'Owner-controlled CloudOS issuance, not automatic payment proof',
                         },
                         {
                             href: '#license-search',
                             step: '02',
                             title: 'Find a customer',
-                            description: 'Search real licenses and filter by plan',
+                            description:
+                                'Search real licenses and filter by plan',
                         },
                         {
                             href: '#license-register',
                             step: '03',
                             title: 'Manage the lifecycle',
-                            description: 'Review expiry, seats, renewals and audited changes',
+                            description:
+                                'Review expiry, seats, renewals and audited changes',
                         },
                         {
                             href: '#license-audit',
                             step: '04',
                             title: 'Verify the audit',
-                            description: 'Review recorded actions before customer follow-up',
+                            description:
+                                'Review recorded actions before customer follow-up',
                         },
                     ].map((step) => (
                         <a

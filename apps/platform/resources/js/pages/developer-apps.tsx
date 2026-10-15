@@ -278,7 +278,12 @@ export default function DeveloperApps({
         const app = applications.find(
             (item) => item.id === key.licensed_product_id,
         );
-        return [key.customer_id, key.display_prefix, app?.name, app?.product_code]
+        return [
+            key.customer_id,
+            key.display_prefix,
+            app?.name,
+            app?.product_code,
+        ]
             .filter(Boolean)
             .some((value) => value?.toLowerCase().includes(match));
     });
@@ -866,7 +871,9 @@ export default function DeveloperApps({
                             aria-label="Search issued licenses"
                             maxLength={128}
                             value={licenseSearch}
-                            onChange={(event) => setLicenseSearch(event.target.value)}
+                            onChange={(event) =>
+                                setLicenseSearch(event.target.value)
+                            }
                         />
                     </label>
                     <div className="mt-4 grid gap-4 lg:grid-cols-2">
@@ -894,23 +901,23 @@ export default function DeveloperApps({
                                         </p>
                                         {app.status === 'active' &&
                                             app.product_code.length <= 64 && (
-                                            <a
-                                                href="#developer-app-key"
-                                                onClick={() => {
-                                                    setSelectedApp(app.id);
-                                                    issueKey.setData({
-                                                        ...issueKey.data,
-                                                        organization_id:
-                                                            app.organization_id,
-                                                        product_code:
-                                                            app.product_code,
-                                                    });
-                                                }}
-                                                className="mt-3 inline-flex min-h-10 items-center gap-1 rounded-lg border px-3 text-xs font-semibold hover:border-red-500/40 focus-visible:outline-2 focus-visible:outline-red-500"
-                                            >
-                                                Use this app{' '}
-                                                <ArrowRight className="size-3.5" />
-                                            </a>
+                                                <a
+                                                    href="#developer-app-key"
+                                                    onClick={() => {
+                                                        setSelectedApp(app.id);
+                                                        issueKey.setData({
+                                                            ...issueKey.data,
+                                                            organization_id:
+                                                                app.organization_id,
+                                                            product_code:
+                                                                app.product_code,
+                                                        });
+                                                    }}
+                                                    className="mt-3 inline-flex min-h-10 items-center gap-1 rounded-lg border px-3 text-xs font-semibold hover:border-red-500/40 focus-visible:outline-2 focus-visible:outline-red-500"
+                                                >
+                                                    Use this app{' '}
+                                                    <ArrowRight className="size-3.5" />
+                                                </a>
                                         )}
                                     </article>
                                 ))
@@ -954,7 +961,9 @@ export default function DeveloperApps({
                                             </p>
                                         )}
                                         <p className="text-muted-foreground mt-1 text-xs">
-                                            License: {key.display_state.replace(/_/g, ' ')} · Expires{' '}
+                                            License:{' '}
+                                            {key.display_state.replace(/_/g, ' ')}{' '}
+                                            · Expires{' '}
                                             {new Date(key.expires_at).toLocaleDateString()} ·
                                             Active device seats:{' '}
                                             {activeSeatCounts[key.license_id] ?? 0}
@@ -1073,16 +1082,16 @@ export default function DeveloperApps({
                                         {!key.revoked_at &&
                                             key.display_state !== 'REVOKED_OR_SUSPENDED' &&
                                             canIssueKeys && (
-                                            <button
-                                                type="button"
-                                                onClick={() => {
-                                                    setRevokeKeyId(key.id);
-                                                    revokeForm.reset();
-                                                }}
-                                                className="mt-2 min-h-10 rounded-lg border border-red-500/25 px-3 text-xs font-bold text-red-500"
-                                            >
-                                                Revoke key
-                                            </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                        setRevokeKeyId(key.id);
+                                                        revokeForm.reset();
+                                                    }}
+                                                    className="mt-2 min-h-10 rounded-lg border border-red-500/25 px-3 text-xs font-bold text-red-500"
+                                                >
+                                                    Revoke key
+                                                </button>
                                         )}
                                         {revokeKeyId === key.id && (
                                             <form
