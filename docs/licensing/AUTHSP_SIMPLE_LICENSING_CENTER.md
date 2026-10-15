@@ -143,3 +143,13 @@ python3 -m unittest discover -s tests -p 'test_kslp_python_first_use.py'
 These are registration tests only. A future **verified** production
 `KSLP-v1` lease and product-scoped audience are still required before
 enabling any paid or offline features.
+
+## Signed audience safety (P0 release boundary)
+
+The legacy `KslpLicenseControlPlane::lease()` is reserved for
+`KMJ_CLOUDOS` with `aud=kmj-cloudos`. It now fails closed with
+`KSLP_PRODUCT_LEASE_NOT_READY` for third-party developer products. A
+registered device or trial key is not authorization to sign a CloudOS lease.
+Do not remove this guard until the issuer product-specific audience, external
+signer/KMS policy, entitlement policy and independent device verifier have
+matching cross-language evidence. Existing CloudOS signing stays unchanged.
