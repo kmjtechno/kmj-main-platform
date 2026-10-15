@@ -1,4 +1,9 @@
 import assert from 'node:assert/strict';
+import {
+    generateKeyPairSync,
+    sign as ed25519Sign,
+    verify as ed25519Verify,
+} from 'node:crypto';
 import { test } from 'node:test';
 import {
     KslpFirstUseError,
@@ -61,6 +66,44 @@ test('exact challenge protocol, private key omitted and no entitlement granted',
     assert.equal(receipt.signedLeaseIssued, false);
     assert.equal(receipt.grantsEntitlement, false);
     assert.equal(Object.isFrozen(receipt), true);
+});
+
+test('real Ed25519 signature passes PHP canonical message contract', async () => {
+    const { publicKey, privateKey } = generateKeyPairSync('ed25519');
+    const spki = publicKey.export({ format: 'der', type: 'spki' });
+    const rawPublic = new Uint8Array(spki.subarray(spki.length - 32));
+    let checked = false;
+    const request = async (url, body) => {
+        if (url.endsWith('/challenge')) {
+            return {
+                license_id: license, challenge_id: challengeId, nonce,
+                expires_in: 300, product: productCode,
+            };
+        }
+        const signature = Buffer.from(
+            body.signature.replace(/-/g, '+').replace(/_/g, '/'),
+            'base64',
+        );
+        const expectedMessage = Buffer.from(
+            `KSLP-ACTIVATE-v1|${license}|${nonce}`,
+            'utf8',
+        );
+        assert.equal(body.server_identity, 'ed25519:' +
+            Buffer.from(rawPublic).toString('base64url'));
+        checked = ed25519Verify(null, expectedMessage, publicKey, signature);
+        return {
+            activation_id: activationId, product: productCode,
+            device_registered: true, signed_lease_issued: false,
+            status: 'activation_recorded_pending_signed_lease',
+        };
+    };
+    const receipt = await registerKslpFirstUseDevice(options({
+        devicePublicKey: rawPublic,
+        sign: async (message) => ed25519Sign(null, message, privateKey),
+        request,
+    }));
+    assert.equal(checked, true);
+    assert.equal(receipt.grantsEntitlement, false);
 });
 
 test('consent scopes optional metadata to explicit opt in', async () => {
