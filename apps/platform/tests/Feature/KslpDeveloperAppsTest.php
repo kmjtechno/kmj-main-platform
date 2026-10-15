@@ -352,6 +352,7 @@ final class KslpDeveloperAppsTest extends TestCase
                 ->component('developer-apps')
                 ->has('activeDevices', 1)
                 ->where('activeDevices.0.id', $device)
+                ->has('activeSeatCounts')
                 ->has('recentEvents')
                 ->missing('activeDevices.0.server_identity')
                 ->missing('activeDevices.0.machine_identity_hash')
@@ -363,6 +364,7 @@ final class KslpDeveloperAppsTest extends TestCase
             ->assertInertia(fn (Assert $page) => $page
                 ->component('developer-apps')
                 ->has('activeDevices', 0)
+                ->has('activeSeatCounts', 0)
                 ->has('recentEvents', 0)
                 ->has('keys', 0));
     }
