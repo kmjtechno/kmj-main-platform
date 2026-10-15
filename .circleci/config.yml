@@ -667,7 +667,74 @@ jobs:
             php artisan test --filter='OwnerDashboardCatalogTest|PlatformOwnerConsoleTest|OwnerProductManagementWorkspaceTest|OwnerLicensingCenterHttpTest' --no-ansi
             echo "SUPER_ADMIN_COMMAND_CENTER_HTTP_PASS=1"
 
+  kslp_authsp_candidate:
+    docker:
+      - image: cimg/php:8.4-node
+    resource_class: small
+    environment:
+      APP_ENV: testing
+      DB_CONNECTION: sqlite
+      DB_DATABASE: ":memory:"
+      CACHE_STORE: array
+      SESSION_DRIVER: array
+      QUEUE_CONNECTION: sync
+      MAIL_MAILER: array
+      KMJ_DEVELOPER_LICENSING_ENABLED: "true"
+    steps:
+      - checkout
+      - run:
+          name: Verify exact candidate head and PHP syntax without dependencies
+          command: |
+            set -euo pipefail
+            test "$(git rev-parse HEAD)" = "$CIRCLE_SHA1"
+            php -l apps/platform/routes/developer-licenses.php
+            php -l apps/platform/app/Services/Licensing/Kslp/KslpDeveloperKeys.php
+            php -l apps/platform/app/Services/Licensing/Kslp/KslpLicenseControlPlane.php
+            php -l apps/platform/tests/Feature/KslpDeveloperAppsTest.php
+            php -l apps/platform/tests/Feature/KslpLifecycleTest.php
+            echo "KMJ_KSLP_PHP_SYNTAX_PASS=$CIRCLE_SHA1"
+      - run:
+          name: Real JavaScript SDK and licensing source regression tests
+          command: |
+            set -euo pipefail
+            node --test tests/kslp-javascript-first-use.test.mjs
+            cd apps/platform
+            node --test scripts/check-licensing-integration.test.mjs
+            echo "KMJ_KSLP_NODE_TESTS_PASS=$CIRCLE_SHA1"
+      - run:
+          name: Locked dependency install in isolated ephemeral container
+          no_output_timeout: 12m
+          command: |
+            set -euo pipefail
+            cd apps/platform
+            composer install --no-interaction --prefer-dist --no-progress
+            npm ci --ignore-scripts --no-audit --no-fund
+      - run:
+          name: Licensing feature suite, PHP style and frontend check
+          no_output_timeout: 14m
+          command: |
+            set -euo pipefail
+            cd apps/platform
+            printf '# disposable CircleCI test environment only\n' > .env
+            export APP_KEY="base64:$(php -r 'echo base64_encode(random_bytes(32));')"
+            vendor/bin/pint --test routes/developer-licenses.php app/Services/Licensing/Kslp/KslpDeveloperKeys.php app/Services/Licensing/Kslp/KslpLicenseControlPlane.php tests/Feature/KslpDeveloperAppsTest.php tests/Feature/KslpLifecycleTest.php
+            php artisan test --filter='KslpDeveloperAppsTest|KslpLifecycleTest|KslpDeveloperActivationApiTest' --no-ansi
+            npm run check
+            php artisan wayfinder:generate --with-form --no-ansi
+            npm run types:check
+            npm run build
+            test -s public/build/manifest.json
+            echo "KMJ_KSLP_ISOLATED_QA_PASS=$CIRCLE_SHA1"
+
 workflows:
+  review_kslp_authsp_candidate:
+    jobs:
+      - kslp_authsp_candidate:
+          filters:
+            branches:
+              only:
+                - feat/authsp-license-device-center-20261016
+
   review_super_admin_command_center:
     jobs:
       - super_admin_command_center_ui:
