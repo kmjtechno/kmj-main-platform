@@ -627,10 +627,10 @@ function OwnerProductsPanel({ products }: { products: OwnerProduct[] }) {
                             Super Admin Control Center
                         </h2>
                         <p className="text-muted-foreground mt-1 max-w-xl text-sm">
-                            Run your full business from one owner-only
-                            workspace: products, customers, licensing, payments
-                            and operations. Personal services remain separate
-                            below.
+                            Find the right task in one owner-only command
+                            center. People, products, revenue and operations are
+                            clearly grouped; your personal services stay
+                            separate below.
                         </p>
                         <p
                             className="text-muted-foreground mt-2 text-xs"
@@ -646,7 +646,7 @@ function OwnerProductsPanel({ products }: { products: OwnerProduct[] }) {
                         href="/operator"
                         className="inline-flex min-h-10 items-center gap-2 rounded-xl bg-red-600 px-4 text-sm font-semibold text-white hover:bg-red-500"
                     >
-                        Open Super Admin <ArrowRight className="size-4" />
+                        Open Command Center <ArrowRight className="size-4" />
                     </Link>
                     <Link
                         href="/operator/kslp"
