@@ -81,6 +81,14 @@ Route::middleware(['auth', 'verified'])->prefix('developer')->name('developer.')
             ->limit(100)
             ->get(['id', 'license_id', 'activated_at'])
             ->all();
+        $activeSeatCounts = $licenseIds === [] ? [] : DB::table('kslp_activations')
+            ->whereIn('license_id', $licenseIds)
+            ->whereNull('deactivated_at')
+            ->selectRaw('license_id, count(*) as seats')
+            ->groupBy('license_id')
+            ->pluck('seats', 'license_id')
+            ->map(static fn ($n): int => (int) $n)
+            ->all();
         $recentEvents = $licenseIds === [] ? [] : DB::table('kslp_license_events')
             ->whereIn('license_id', $licenseIds)
             ->orderByDesc('created_at')
@@ -93,6 +101,7 @@ Route::middleware(['auth', 'verified'])->prefix('developer')->name('developer.')
             'applications' => $products,
             'keys' => $keys,
             'activeDevices' => $activeDevices,
+            'activeSeatCounts' => $activeSeatCounts,
             'recentEvents' => $recentEvents,
             'canIssueKeys' => $storageReady && (bool) config('services.kmj_developer_licensing.enabled', false),
             'newKey' => $request->session()->get('developer_license_key'),
