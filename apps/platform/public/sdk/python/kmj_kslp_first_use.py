@@ -110,19 +110,21 @@ def register_device(
         allowed_origin = False
     if not allowed_origin:
         raise ActivationError("KSLP_HTTPS_ORIGIN_REQUIRED")
-    if not re.fullmatch(r"KMJ1-[A-Za-z0-9_-]{43}", license_key):
+    if not isinstance(license_key, str) or not re.fullmatch(r"KMJ1-[A-Za-z0-9_-]{43}", license_key):
         raise ActivationError("LICENSE_KEY_FORMAT_INVALID")
-    if not re.fullmatch(r"[A-Z0-9][A-Z0-9_.:-]{2,63}", product):
+    if not isinstance(product, str) or not re.fullmatch(r"[A-Z0-9][A-Z0-9_.:-]{2,63}", product):
         raise ActivationError("PRODUCT_INVALID")
     if not isinstance(device_public_key, bytes) or len(device_public_key) != 32:
         raise ActivationError("ED25519_PUBLIC_KEY_REQUIRED")
-    if not re.fullmatch(r"[a-f0-9]{64}", machine_hash):
+    if not isinstance(machine_hash, str) or not re.fullmatch(r"[a-f0-9]{64}", machine_hash):
         raise ActivationError("MACHINE_HASH_INVALID")
     if platform is not None and platform not in {
         "windows", "linux", "macos", "android", "ios", "other"
     }:
         raise ActivationError("PLATFORM_INVALID")
-    if app_version is not None and len(app_version) > 64:
+    if app_version is not None and (
+        not isinstance(app_version, str) or len(app_version) > 64
+    ):
         raise ActivationError("APP_VERSION_INVALID")
     if not isinstance(metadata_consent, bool):
         raise ActivationError("CONSENT_INVALID")
@@ -140,7 +142,9 @@ def register_device(
         or not re.fullmatch(r"[0-9a-fA-F-]{36}", license_id)
         or not isinstance(challenge_id, str)
         or not re.fullmatch(r"[0-9a-fA-F-]{36}", challenge_id)
-        or not isinstance(nonce, str) or not 32 <= len(nonce) <= 128
+        or not isinstance(nonce, str)
+        or not re.fullmatch(r"[A-Za-z0-9_-]{43}", nonce)
+        or challenge.get("expires_in") != 300
         or challenge.get("product") != product
     ):
         raise ActivationError("CHALLENGE_RESPONSE_INVALID")
@@ -164,6 +168,7 @@ def register_device(
         result.get("product") != product
         or result.get("device_registered") is not True
         or result.get("signed_lease_issued") is not False
+        or result.get("status") != "activation_recorded_pending_signed_lease"
         or not isinstance(result.get("activation_id"), str)
         or not re.fullmatch(r"[0-9a-fA-F-]{36}", result["activation_id"])
     ):
