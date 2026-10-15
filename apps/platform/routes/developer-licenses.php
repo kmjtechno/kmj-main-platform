@@ -65,7 +65,27 @@ Route::middleware(['auth', 'verified'])->prefix('developer')->name('developer.')
                     'k.license_id', 'k.display_prefix', 'k.first_activated_at',
                     'k.revoked_at', 'l.plan', 'l.customer_id', 'l.expires_at',
                     'l.status', 'l.grace_until',
-                ])->all() : [];
+                    'l.revoked_at as license_revoked_at',
+                ])->map(static function ($key) {
+                    // The displayed state is evaluated by the server from
+                    // real timestamps: no client-clock guessing or N+1 calls.
+                    $now = now();
+                    $expiry = \Illuminate\Support\Carbon::parse($key->expires_at);
+                    if ($key->revoked_at !== null || $key->license_revoked_at !== null || $key->status !== 'active') {
+                        $key->display_state = 'REVOKED_OR_SUSPENDED';
+                    } elseif ($now->lte($expiry)) {
+                        $key->display_state = $now->gte($expiry->copy()->subDays(7))
+                            ? 'RENEWAL_DUE' : 'ACTIVE';
+                    } elseif ($key->grace_until !== null && $now->lte(\Illuminate\Support\Carbon::parse($key->grace_until))) {
+                        $key->display_state = 'GRACE';
+                    } else {
+                        $key->display_state = 'RESTRICTED';
+                    }
+
+                    unset($key->license_revoked_at);
+
+                    return $key;
+                })->all() : [];
 
         // Scoped to the visible 100 license keys: never load devices across
         // tenants, expose raw fingerprints/public identities, or query an
