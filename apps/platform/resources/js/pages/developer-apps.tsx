@@ -69,6 +69,7 @@ type Props = {
     applications: Application[];
     keys: LicenseKey[];
     activeDevices: ActiveDevice[];
+    activeSeatCounts: Record<string, number>;
     recentEvents: LicenseEvent[];
     canIssueKeys: boolean;
     newKey: IssuedKey | null;
@@ -207,6 +208,7 @@ export default function DeveloperApps({
     applications,
     keys,
     activeDevices,
+    activeSeatCounts,
     recentEvents,
     canIssueKeys,
     newKey,
@@ -951,10 +953,7 @@ export default function DeveloperApps({
                                             License: {key.status} · Expires{' '}
                                             {new Date(key.expires_at).toLocaleDateString()} ·
                                             Active device seats:{' '}
-                                            {activeDevices.filter(
-                                                (device) =>
-                                                    device.license_id === key.license_id,
-                                            ).length}
+                                            {activeSeatCounts[key.license_id] ?? 0}
                                         </p>
                                         <p className="text-muted-foreground mt-1 text-xs">
                                             Activation is device registration only,
