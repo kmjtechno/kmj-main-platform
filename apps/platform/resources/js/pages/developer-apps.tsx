@@ -42,6 +42,14 @@ type LicenseKey = {
     expires_at: string;
     revoked_at: string | null;
     first_activated_at: string | null;
+    status: string;
+    grace_until: string | null;
+};
+
+type ActiveDevice = {
+    id: string;
+    license_id: string;
+    activated_at: string;
 };
 
 type IssuedKey = {
@@ -54,6 +62,7 @@ type Props = {
     organizations: Organization[];
     applications: Application[];
     keys: LicenseKey[];
+    activeDevices: ActiveDevice[];
     canIssueKeys: boolean;
     newKey: IssuedKey | null;
 };
@@ -190,6 +199,7 @@ export default function DeveloperApps({
     organizations,
     applications,
     keys,
+    activeDevices,
     canIssueKeys,
     newKey,
 }: Props) {
@@ -208,7 +218,12 @@ export default function DeveloperApps({
     const [customProductCode, setCustomProductCode] = useState(false);
     const [copied, setCopied] = useState(false);
     const [revokeKeyId, setRevokeKeyId] = useState<string | null>(null);
+    const [releaseDeviceId, setReleaseDeviceId] = useState<string | null>(
+        null,
+    );
+    const [licenseSearch, setLicenseSearch] = useState('');
     const revokeForm = useForm({ reason: '' });
+    const releaseDeviceForm = useForm({ reason: '' });
     const createOrganization = useForm({ name: '' });
     const createApp = useForm({
         organization_id: preferredOrg?.id ?? '',
@@ -242,7 +257,19 @@ export default function DeveloperApps({
     const canRegister =
         canIssueKeys && selectedIssuer?.issuer_status === 'active';
     const activeApps = applications.filter((app) => app.status === 'active');
-    const liveKeys = keys.filter((key) => !key.revoked_at);
+    const liveKeys = keys.filter(
+        (key) => !key.revoked_at && key.status === 'active',
+    );
+    const visibleKeys = keys.filter((key) => {
+        const match = licenseSearch.trim().toLowerCase();
+        if (!match) return true;
+        const app = applications.find(
+            (item) => item.id === key.licensed_product_id,
+        );
+        return [key.customer_id, key.display_prefix, app?.name, app?.product_code]
+            .filter(Boolean)
+            .some((value) => value?.toLowerCase().includes(match));
+    });
     const readyToIssue =
         canIssueKeys &&
         organizations.some(
@@ -815,8 +842,20 @@ export default function DeveloperApps({
                     </h2>
                     <p className="text-muted-foreground mt-1 text-xs">
                         Tenant-scoped records. Existing keys cannot be retrieved
-                        in plaintext.
+                        in plaintext. Device identities and machine fingerprints
+                        are never displayed. Showing up to 100 recent keys.
                     </p>
+                    <label className="mt-4 block space-y-2 text-xs font-semibold">
+                        Find a license by customer, app or key prefix
+                        <input
+                            className="bg-background h-11 w-full rounded-xl border px-3 text-sm"
+                            placeholder="Search visible licenses"
+                            aria-label="Search issued licenses"
+                            maxLength={128}
+                            value={licenseSearch}
+                            onChange={(event) => setLicenseSearch(event.target.value)}
+                        />
+                    </label>
                     <div className="mt-4 grid gap-4 lg:grid-cols-2">
                         <div className="space-y-2">
                             {applications.length === 0 ? (
@@ -864,12 +903,12 @@ export default function DeveloperApps({
                             )}
                         </div>
                         <div className="space-y-2">
-                            {keys.length === 0 ? (
+                            {visibleKeys.length === 0 ? (
                                 <p className="text-muted-foreground rounded-xl border border-dashed p-5 text-sm">
-                                    No customer keys issued yet.
+                                    No licenses match this search in the recent list.
                                 </p>
                             ) : (
-                                keys.map((key) => (
+                                visibleKeys.map((key) => (
                                     <article
                                         key={key.id}
                                         className="rounded-xl border p-3"
@@ -887,6 +926,126 @@ export default function DeveloperApps({
                                                   ? 'First activation recorded'
                                                   : 'Not yet activated'}
                                         </p>
+                                        <p className="text-muted-foreground mt-1 text-xs">
+                                            License: {key.status} · Expires{' '}
+                                            {new Date(key.expires_at).toLocaleDateString()} ·
+                                            Active device seats:{' '}
+                                            {activeDevices.filter(
+                                                (device) =>
+                                                    device.license_id === key.license_id,
+                                            ).length}
+                                        </p>
+                                        <p className="text-muted-foreground mt-1 text-xs">
+                                            Activation is device registration only,
+                                            not a signed commercial lease.
+                                        </p>
+                                        {!key.revoked_at &&
+                                            key.status === 'active' &&
+                                            activeDevices
+                                                .filter(
+                                                    (device) =>
+                                                        device.license_id === key.license_id,
+                                                )
+                                                .map((device) => (
+                                                    <div
+                                                        className="mt-3 rounded-xl border p-3"
+                                                        key={device.id}
+                                                    >
+                                                        <p className="text-xs font-semibold">
+                                                            Device registered{' '}
+                                                            {new Date(
+                                                                device.activated_at,
+                                                            ).toLocaleDateString()}
+                                                        </p>
+                                                        <p className="text-muted-foreground mt-1 text-xs">
+                                                            Release this seat only if
+                                                            the device was replaced,
+                                                            lost or is no longer in use.
+                                                        </p>
+                                                        {canIssueKeys &&
+                                                            releaseDeviceId !== device.id && (
+                                                                <button
+                                                                    type="button"
+                                                                    className="mt-2 min-h-10 rounded-lg border px-3 text-xs font-bold"
+                                                                    onClick={() => {
+                                                                        setReleaseDeviceId(device.id);
+                                                                        releaseDeviceForm.reset();
+                                                                    }}
+                                                                >
+                                                                    Release device seat
+                                                                </button>
+                                                            )}
+                                                        {releaseDeviceId === device.id &&
+                                                            canIssueKeys && (
+                                                                <form
+                                                                    className="mt-3 space-y-2"
+                                                                    onSubmit={(event) => {
+                                                                        event.preventDefault();
+                                                                        releaseDeviceForm.post(
+                                                                            '/developer/keys/' +
+                                                                                key.id +
+                                                                                '/devices/' +
+                                                                                device.id +
+                                                                                '/release',
+                                                                            {
+                                                                                preserveScroll: true,
+                                                                                onSuccess: () => {
+                                                                                    setReleaseDeviceId(null);
+                                                                                    releaseDeviceForm.reset();
+                                                                                },
+                                                                            },
+                                                                        );
+                                                                    }}
+                                                                >
+                                                                    <label
+                                                                        htmlFor={'release-' + device.id}
+                                                                        className="block text-xs font-semibold"
+                                                                    >
+                                                                        Why release this device?
+                                                                    </label>
+                                                                    <input
+                                                                        id={'release-' + device.id}
+                                                                        className="bg-background h-10 w-full rounded-lg border px-3 text-xs"
+                                                                        placeholder="Device replaced or lost"
+                                                                        value={releaseDeviceForm.data.reason}
+                                                                        onChange={(event) =>
+                                                                            releaseDeviceForm.setData(
+                                                                                'reason',
+                                                                                event.target.value,
+                                                                            )
+                                                                        }
+                                                                        minLength={3}
+                                                                        maxLength={500}
+                                                                        required
+                                                                    />
+                                                                    {releaseDeviceForm.errors.reason && (
+                                                                        <p className="text-xs text-red-500">
+                                                                            {releaseDeviceForm.errors.reason}
+                                                                        </p>
+                                                                    )}
+                                                                    <div className="flex flex-wrap gap-2">
+                                                                        <button
+                                                                            type="submit"
+                                                                            disabled={releaseDeviceForm.processing}
+                                                                            className="min-h-10 rounded-lg bg-red-600 px-3 text-xs font-bold text-white disabled:opacity-50"
+                                                                        >
+                                                                            Confirm seat release
+                                                                        </button>
+                                                                        <button
+                                                                            type="button"
+                                                                            className="min-h-10 rounded-lg border px-3 text-xs"
+                                                                            onClick={() => {
+                                                                                setReleaseDeviceId(null);
+                                                                                releaseDeviceForm.reset();
+                                                                            }}
+                                                                        >
+                                                                            Cancel
+                                                                        </button>
+                                                                    </div>
+                                                                </form>
+                                                            )}
+                                                    </div>
+                                                ))}
                                         {!key.revoked_at && canIssueKeys && (
                                             <button
                                                 type="button"
