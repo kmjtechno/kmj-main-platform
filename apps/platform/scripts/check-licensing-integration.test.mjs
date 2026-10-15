@@ -19,6 +19,8 @@ const developerRoutes = read('routes/developer-licenses.php');
 const developerApps = read('resources/js/pages/developer-apps.tsx');
 const ownerLicensing = read('resources/js/pages/operator-kslp.tsx');
 const firstUseSdk = read('public/sdk/python/kmj_kslp_first_use.py');
+const jsFirstUse = read('public/sdk/javascript/kmj_kslp_first_use.mjs');
+const jsTypes = read('public/sdk/javascript/kmj_kslp_first_use.d.mts');
 const localVerifier = read('../../scripts/ci/verify-authsp-licensing-local.sh');
 
 void test('Admin and developer routes both stay registered', () => {
