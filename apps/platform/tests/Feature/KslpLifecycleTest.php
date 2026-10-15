@@ -67,6 +67,30 @@ final class KslpLifecycleTest extends TestCase
         self::assertNotSame('REVOKED', $c->state($l['id']));
     }
 
+    public function test_delegated_app_cannot_receive_cloudos_audience_signed_lease(): void
+    {
+        $control = app(KslpLicenseControlPlane::class);
+        $license = $control->issue('delegated-audience-fixture', 'trial', 'owner');
+        DB::table('kslp_licenses')->where('id', $license['id'])
+            ->update(['product' => 'THIRD_PARTY.APP']);
+        [$activation] = $this->activate($control, $license['id'], 'delegated-pair');
+
+        $signer = new class implements KslpSigner
+        {
+            public function kid(): string { return 'test-kid'; }
+            public function sign(string $message): string
+            {
+                throw new \RuntimeException('Unexpected signer invocation');
+
+                return '';
+            }
+        };
+
+        $this->expectException(\DomainException::class);
+        $this->expectExceptionMessage('KSLP_PRODUCT_LEASE_NOT_READY');
+        $control->lease($license['id'], $activation['id'], $signer);
+    }
+
     public function test_signed_lease_is_server_bound(): void
     {
         $c = app(KslpLicenseControlPlane::class);
