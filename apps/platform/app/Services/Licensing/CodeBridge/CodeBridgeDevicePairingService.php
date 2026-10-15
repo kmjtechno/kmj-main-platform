@@ -178,8 +178,8 @@ final class CodeBridgeDevicePairingService
             || ! is_string($parts['host'] ?? null)
             || $parts['host'] === ''
             || strcasecmp($parts['host'], 'localhost') === 0
-            || isset($parts['user'], $parts['pass'])
             || isset($parts['user'])
+            || isset($parts['pass'])
             || isset($parts['path'])
             || isset($parts['query'])
             || isset($parts['fragment'])) {
