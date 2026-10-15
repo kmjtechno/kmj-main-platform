@@ -30,6 +30,12 @@ final class KslpDeveloperKeys
         if ($plan !== 'trial') {
             throw new DomainException('KSLP_PAID_ENTITLEMENT_REQUIRED');
         }
+        // The existing kslp_licenses.product column is varchar(64), even
+        // though the product catalog can hold a longer registered code.
+        // Fail before starting a DB transaction, not after issuing a license.
+        if (strlen($productCode) > 64) {
+            throw new DomainException('KSLP_PRODUCT_CODE_TOO_LONG');
+        }
 
         return DB::transaction(function () use ($organizationId, $productCode, $customerId, $plan, $actor): array {
             $product = app(KslpIssuerSubscriptionAuthority::class)
