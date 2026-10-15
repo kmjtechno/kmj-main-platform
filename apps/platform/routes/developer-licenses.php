@@ -155,6 +155,7 @@ Route::middleware(['auth', 'verified'])->prefix('developer')->name('developer.')
     ) {
         $actor = $request->user();
         abort_unless($actor instanceof User, 401);
+        abort_unless(Str::isUuid($key) && Str::isUuid($activation), 404);
         abort_unless((bool) config('services.kmj_developer_licensing.enabled', false), 503);
         abort_unless(Schema::hasTable('kslp_license_keys'), 503);
         $data = $request->validate([
