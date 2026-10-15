@@ -195,72 +195,80 @@ export default function OperatorControlOverview({
                 </section>
             )}
             <OperatorWorkspaceMap />
-            <details className="rounded-2xl border border-border/70 bg-card/35 p-4 sm:p-5">
+            <details className="border-border/70 bg-card/35 rounded-2xl border p-4 sm:p-5">
                 <summary className="cursor-pointer text-sm font-semibold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-500">
                     Advanced module index
-                    <span className="text-muted-foreground ml-2 text-xs font-normal">Open the legacy six-module directory</span>
+                    <span className="text-muted-foreground ml-2 text-xs font-normal">
+                        Open the legacy six-module directory
+                    </span>
                 </summary>
                 <div className="mt-4">
-            <section
-                className="bg-card rounded-2xl border p-5 sm:p-6"
-                aria-labelledby="control-modules-title"
-            >
-                <div className="flex flex-wrap items-start justify-between gap-4">
-                    <div>
-                        <p className="text-muted-foreground text-xs font-semibold tracking-widest uppercase">
-                            Super Admin workspace
-                        </p>
-                        <h2
-                            id="control-modules-title"
-                            className="mt-2 text-xl font-bold tracking-tight"
-                        >
-                            Manage your platform
-                        </h2>
-                        <p className="text-muted-foreground mt-2 max-w-2xl text-sm leading-6">
-                            Each area has its own controls. Product visibility,
-                            accepting payments and issuing a customer license
-                            remain separate, permission-gated actions.
-                        </p>
-                    </div>
-                    <span className="inline-flex items-center gap-2 rounded-full border px-3 py-2 text-xs font-semibold">
-                        <ShieldCheck className="size-4 text-emerald-500" />
-                        Owner-only access
-                    </span>
-                </div>
-                <div className="mt-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-                    {modules.map(
-                        ({ name, description, href, icon: Icon, accent }) => (
-                            <Link
-                                key={href}
-                                href={href}
-                                className="kmj-admin-module-card group focus-visible:ring-ring flex min-h-40 flex-col justify-between gap-5 rounded-2xl border p-5 transition focus-visible:ring-2 focus-visible:outline-none"
-                            >
-                                <div className="flex items-start justify-between gap-3">
-                                    <span className="border-border/60 bg-muted/50 grid size-11 place-items-center rounded-xl border">
-                                        <Icon
-                                            className={`size-5 ${accent}`}
-                                            aria-hidden="true"
-                                        />
-                                    </span>
-                                    <ArrowRight
-                                        className="text-muted-foreground group-hover:text-foreground size-4"
-                                        aria-hidden="true"
-                                    />
-                                </div>
-                                <div>
-                                    <h3 className="text-base font-bold tracking-tight">
-                                        {name}
-                                    </h3>
-                                    <p className="text-muted-foreground mt-1 text-xs leading-5">
-                                        {description}
-                                    </p>
-                                </div>
-                            </Link>
-                        ),
-                    )}
-                </div>
-            </section>
-
+                    <section
+                        className="bg-card rounded-2xl border p-5 sm:p-6"
+                        aria-labelledby="control-modules-title"
+                    >
+                        <div className="flex flex-wrap items-start justify-between gap-4">
+                            <div>
+                                <p className="text-muted-foreground text-xs font-semibold tracking-widest uppercase">
+                                    Super Admin workspace
+                                </p>
+                                <h2
+                                    id="control-modules-title"
+                                    className="mt-2 text-xl font-bold tracking-tight"
+                                >
+                                    Manage your platform
+                                </h2>
+                                <p className="text-muted-foreground mt-2 max-w-2xl text-sm leading-6">
+                                    Each area has its own controls. Product
+                                    visibility, accepting payments and issuing a
+                                    customer license remain separate,
+                                    permission-gated actions.
+                                </p>
+                            </div>
+                            <span className="inline-flex items-center gap-2 rounded-full border px-3 py-2 text-xs font-semibold">
+                                <ShieldCheck className="size-4 text-emerald-500" />
+                                Owner-only access
+                            </span>
+                        </div>
+                        <div className="mt-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                            {modules.map(
+                                ({
+                                    name,
+                                    description,
+                                    href,
+                                    icon: Icon,
+                                    accent,
+                                }) => (
+                                    <Link
+                                        key={href}
+                                        href={href}
+                                        className="kmj-admin-module-card group focus-visible:ring-ring flex min-h-40 flex-col justify-between gap-5 rounded-2xl border p-5 transition focus-visible:ring-2 focus-visible:outline-none"
+                                    >
+                                        <div className="flex items-start justify-between gap-3">
+                                            <span className="border-border/60 bg-muted/50 grid size-11 place-items-center rounded-xl border">
+                                                <Icon
+                                                    className={`size-5 ${accent}`}
+                                                    aria-hidden="true"
+                                                />
+                                            </span>
+                                            <ArrowRight
+                                                className="text-muted-foreground group-hover:text-foreground size-4"
+                                                aria-hidden="true"
+                                            />
+                                        </div>
+                                        <div>
+                                            <h3 className="text-base font-bold tracking-tight">
+                                                {name}
+                                            </h3>
+                                            <p className="text-muted-foreground mt-1 text-xs leading-5">
+                                                {description}
+                                            </p>
+                                        </div>
+                                    </Link>
+                                ),
+                            )}
+                        </div>
+                    </section>
                 </div>
             </details>
             <section
