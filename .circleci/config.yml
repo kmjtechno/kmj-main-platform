@@ -758,7 +758,7 @@ jobs:
             cd apps/platform
             composer install --no-interaction --prefer-dist --no-progress
             export APP_KEY="base64:$(php -r 'echo base64_encode(random_bytes(32));')"
-            php artisan test --filter='KslpDeveloperAppsTest|KslpLifecycleTest|KslpDeveloperActivationApiTest' --no-ansi
+            php artisan test --filter='KslpDeveloperAppsTest|KslpLifecycleTest|KslpDeveloperActivationApiTest|KslpDelegatedIssueTest' --no-ansi
             echo "KMJ_KSLP_LARAVEL_TESTS_PASS=$CIRCLE_SHA1"
 
   kslp_authsp_frontend:
