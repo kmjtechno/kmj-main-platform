@@ -102,14 +102,22 @@
     border-bottom: 2px solid #e02c45;
     border-radius: 13px;
     overflow: hidden;
-    background: #0b1423 url('/assets/admin/earth-orbit.svg') right center/cover
-        no-repeat;
+    background: #0b1423;
     display: flex;
     align-items: center;
     justify-content: space-between;
     box-shadow:
         inset 0 1px 0 #ffffff17,
         0 16px 28px #0000002d;
+}
+.kmj-os-hero-image {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: right center;
+    pointer-events: none;
 }
 .kmj-os-hero::after {
     content: '';
