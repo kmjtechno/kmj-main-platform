@@ -459,10 +459,15 @@ function CodeBridgeCard({
                             Authorized capabilities
                         </div>
                         <div className="mt-3 flex flex-wrap gap-2">
+                            {permissions.length === 0 && (
+                                <span role="status" className="text-muted-foreground text-xs">
+                                    No authorized capabilities reported
+                                </span>
+                            )}
                             {permissions.map((permission) => (
                                 <span
                                     key={permission}
-                                    className="rounded-lg border px-2.5 py-1 text-[10px] font-bold uppercase"
+                                    className="rounded-lg border px-2.5 py-1 text-xs font-bold uppercase"
                                 >
                                     {permission}
                                 </span>
@@ -583,11 +588,11 @@ function ServiceMetric({
 }) {
     return (
         <div className="bg-background/70 rounded-xl border px-4 py-3">
-            <div className="text-muted-foreground text-[10px] font-bold tracking-wider uppercase">
+            <div className="text-muted-foreground text-xs font-bold tracking-wider uppercase">
                 {label}
             </div>
             <div className="mt-1 text-sm font-black">{value}</div>
-            <div className="text-muted-foreground mt-1 text-[10px]">{hint}</div>
+            <div className="text-muted-foreground mt-1 text-xs">{hint}</div>
         </div>
     );
 }
@@ -672,7 +677,7 @@ function OwnerProductsPanel({ products }: { products: OwnerProduct[] }) {
 
 function StatusBadge({ status }: { status: string }) {
     return (
-        <span className="rounded-full border border-emerald-500/15 bg-emerald-500/5 px-2 py-1 text-[9px] font-black text-emerald-600 uppercase dark:text-emerald-400">
+        <span className="rounded-full border border-emerald-500/15 bg-emerald-500/5 px-2 py-1 text-[11px] font-black text-emerald-600 uppercase dark:text-emerald-400">
             {status}
         </span>
     );
@@ -682,7 +687,7 @@ function Metric({ label, value }: { label: string; value: number | string }) {
     return (
         <div className="kmj-admin-metric min-w-28 px-4 py-3">
             <div className="text-lg font-black">{value}</div>
-            <div className="text-muted-foreground mt-0.5 text-[10px]">
+            <div className="text-muted-foreground mt-0.5 text-xs">
                 {label}
             </div>
         </div>
