@@ -98,6 +98,7 @@ def register_device(
         parts.scheme != "https" or not parts.hostname or parts.username
         or parts.password or parts.query or parts.fragment
         or parts.path not in ("", "/") or parts.port not in (None, 443)
+        or parts.hostname.lower() != "kmjtechno.com"
     ):
         raise ActivationError("KSLP_HTTPS_ORIGIN_REQUIRED")
     if not re.fullmatch(r"KMJ1-[A-Za-z0-9_-]{43}", license_key):
