@@ -295,7 +295,10 @@ export default function KristiOwnerAssistant({
                     className="mt-1 shrink-0"
                 />
                 <span>
-                    I understand that browser speech recognition may send microphone audio to my browser provider outside KMJ. I consent before starting dictation. Text guidance does not require microphone access.
+                    I understand that browser speech recognition may send
+                    microphone audio to my browser provider outside KMJ. I
+                    consent before starting dictation. Text guidance does not
+                    require microphone access.
                 </span>
             </label>
             <div className="kmj-os-voice">
