@@ -101,10 +101,16 @@ final class KnowledgeMemoryControllerTest extends TestCase
             'operation_id' => 'unique-operation-0003',
             'project' => 'kmj-cinecore',
             'organization_id' => $this->organizationA,
-        ]))->assertCreated();
+        ]))->assertUnprocessable()->assertJsonValidationErrors('scope');
 
-        // The request fields above cannot reassign scope. The authorized
-        // outsider's new record remains in B/kmj-codebridge only.
+        // A scope-spoofing request must not create records in either tenant.
+        $this->assertDatabaseCount('knowledge_observations', 1);
+
+        // An authorized B-owner can create only in the fixed CodeBridge
+        // project of their own tenant when providing no scope override.
+        $this->confirmed($this->outsider)->postJson($url, $this->memory([
+            'operation_id' => 'unique-operation-0004',
+        ]))->assertCreated();
         $this->assertDatabaseHas('knowledge_observations', [
             'organization_id' => $this->organizationB,
             'project_key' => 'kmj-codebridge',
