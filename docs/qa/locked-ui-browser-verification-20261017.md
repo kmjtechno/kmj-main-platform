@@ -15,12 +15,12 @@ Landing section order, dark/red visual system, 5×2 preview product grid, eight 
 | Real-component Vite preview production bundle | PASS |
 | Scoped type-aware lint of changed TSX components and preview | PASS |
 | Targeted landing/owner/section contract tests | PASS, 14/14 |
-| Broader source checks in materialized checkout | 69/71; two binary-asset checks blocked/failing because exact upstream binaries could not be materialized |
+| Full frontend check | PASS: formatting, lint, 71/71 tests and public-layout gate |
 | Browser preview | PASS, 6/6: landing + owner at 1536, 768, 390 |
 | Broken images / horizontal overflow / page JavaScript errors | None in those six cases |
 | Laravel production build | BLOCKED: PHP absent; Wayfinder generation cannot run |
 | Full TypeScript check | BLOCKED: generated Laravel routes/actions absent |
-| Full project check | NOT PASS: incomplete checkout/generated files and existing formatting differences |
+| Full application release check | BLOCKED: PHP/generated routes and authenticated runtime required |
 | Authenticated owner / database smoke | NOT RUN |
 | CodeBridge remote browser profile | NOT ACTIVATED |
 | Merge / production deployment | NOT DONE |
@@ -48,9 +48,9 @@ Generated output is provided separately as a review artifact; rerun `npm run vis
 6. The CodeBridge gateway exposes no browser tools or arbitrary command/profile-install capability. Repository automation is implemented, but administrator profile installation and exact-SHA remote execution are outstanding.
 7. Full PHP build, generated-route type checks and authenticated functional release gates remain required before production.
 
-The two broader-source failures concern `apple-touch-icon.png` (the live site's fetched icon is 64px instead of the repository test's 180px) and unavailable `kmj-codebridge-icon.png`. Neither binary is changed by this patch. The GitHub connector rejects binary reads, so local substitute files are not published.
+Follow-up: exact upstream binary assets were retrieved through the base64 file API and verified against Git blob hashes. They are not changed by this patch. Removed three unused test variables, updated the public-layout guard to validate the locked home shell explicitly, and restored the verified LinkedIn enquiry link. `npm run check` now exits 0 (71 tests plus public layout). The earlier missing-binary and formatting findings are resolved. The remote CodeBridge build command was also exercised: it is pinned to old SHA eb6762533c3d86561780ca33e08aede40cef8d77 and fails with `vp: not found`; this is not evidence for this PR.
 
-## Exact changed files (44)
+## Exact changed files (45)
 - `apps/platform/package.json`
 - `apps/platform/package-lock.json`
 - `apps/platform/resources/js/pages/welcome.tsx`
@@ -96,3 +96,4 @@ The two broader-source failures concern `apple-touch-icon.png` (the live site's 
 - `apps/platform/public/assets/locked/studio.webp`
 - `docs/qa/locked-ui-browser-verification-20261017.md`
 
+- `apps/platform/scripts/check-public-layout.mjs`

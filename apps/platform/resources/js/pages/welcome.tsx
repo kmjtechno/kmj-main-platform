@@ -785,6 +785,13 @@ export default function Welcome({
                             >
                                 Contact our team <ArrowRight size={14} />
                             </a>
+                            <a
+                                href="https://www.linkedin.com/company/kmj-techno/"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                            >
+                                Connect on LinkedIn <ArrowRight size={14} />
+                            </a>
                         </div>
                     </div>
                     <div className="lock-copyright">

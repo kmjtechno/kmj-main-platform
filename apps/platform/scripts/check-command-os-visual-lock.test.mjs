@@ -8,9 +8,6 @@ const read = (path) =>
 const operator = read('resources/js/pages/operator.tsx');
 const command = read('resources/js/components/operator-command-os.tsx');
 const kristi = read('resources/js/components/kristi-owner-assistant.tsx');
-const styles = read('resources/css/command-os.css');
-const appCss = read('resources/css/app.css');
-const map = read('resources/js/components/operator-workspace-map.tsx');
 
 void test('locked owner command center is rendered only in the guarded operator route', () => {
     assert.match(operator, /<OperatorCommandOs/);
