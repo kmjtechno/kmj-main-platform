@@ -577,7 +577,9 @@ export default function OperatorCommandOs({
                                 className="flex min-h-11 items-center justify-between rounded-lg px-3 text-sm hover:bg-white/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-500"
                             >
                                 <span className="min-w-0 flex-1">
-                                    <span className="block truncate">{result.label}</span>
+                                    <span className="block truncate">
+                                        {result.label}
+                                    </span>
                                     <span className="block text-[11px] text-slate-400">
                                         {result.category}
                                     </span>
