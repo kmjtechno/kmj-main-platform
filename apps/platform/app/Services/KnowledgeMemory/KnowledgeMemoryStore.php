@@ -189,7 +189,7 @@ final class KnowledgeMemoryStore
     {
         $this->assertScope($organizationId, $projectKey);
         $query = trim($query);
-        if (! preg_match('/^[\\pL\\pN][\\pL\\pM\\pN .:-]{0,79}$/uD', $query) || $limit < 1 || $limit > 20) {
+        if (! preg_match('/^[\pL\pN][\pL\pM\pN .:-]{0,79}$/uD', $query) || $limit < 1 || $limit > 20) {
             throw new InvalidArgumentException('KNOWLEDGE_INVALID_SEARCH');
         }
 
@@ -197,7 +197,7 @@ final class KnowledgeMemoryStore
             ->where('organization_id', $organizationId)
             ->where('project_key', $projectKey);
 
-        if (DB::getDriverName() === 'pgsql' && preg_match('/^[\\x00-\\x7F]*$/D', $query)) {
+        if (DB::getDriverName() === 'pgsql' && preg_match('/^[\x00-\x7F]*$/D', $query)) {
             // English/ASCII terms use the PostgreSQL native GIN FTS index.
             $builder->whereRaw(
                 "to_tsvector('simple', coalesce(title, '') || ' ' || coalesce(content, '')) @@ plainto_tsquery('simple', ?)",
@@ -230,7 +230,7 @@ final class KnowledgeMemoryStore
                 // CodeBridge's compact brief is single-line and rejects control
                 // characters. Sanitize only the preview; the authorized
                 // detail endpoint retains the exact original text.
-                'preview' => Str::limit(preg_replace('/[\\x00-\\x1F\\x7F]+/u', ' ', $row->content) ?? '', 240),
+                'preview' => Str::limit(preg_replace('/[\x00-\x1F\x7F]+/u', ' ', $row->content) ?? '', 240),
                 'updated_at' => $row->updated_at,
             ])
             ->all();
