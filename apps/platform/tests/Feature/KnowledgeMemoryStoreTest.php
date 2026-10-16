@@ -173,6 +173,20 @@ final class KnowledgeMemoryStoreTest extends TestCase
         )['content']);
     }
 
+    public function test_search_accepts_hindi_unicode_query_without_broadening_project_scope(): void
+    {
+        $saved = $this->store->save($this->orgA, 'kmj-codebridge', $this->input([
+            'title' => 'सुरक्षित प्रोजेक्ट निर्णय',
+            'content' => 'सुरक्षित तरीके से अलग वर्कट्री में बदलाव करें.',
+        ]));
+
+        $matches = $this->store->search($this->orgA, 'kmj-codebridge', 'सुरक्षित');
+        $this->assertCount(1, $matches);
+        $this->assertSame($saved['observation_id'], $matches[0]['observation_id']);
+        $this->assertSame($this->orgA, $matches[0]['organization_id']);
+        $this->assertSame([], $this->store->search($this->orgB, 'kmj-codebridge', 'सुरक्षित'));
+    }
+
     public function test_invalid_project_and_unknown_observation_id_fail_closed(): void
     {
         $this->assertNull($this->store->get($this->orgA, 'kmj-codebridge', (string) Str::uuid()));
