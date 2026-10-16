@@ -91,6 +91,14 @@ void test('navigation, responsiveness and reduced motion remain accessible', () 
     assert.match(map, /Revenue & entitlements/);
 });
 
+void test('Kristi chat updates never scroll the entire owner dashboard', () => {
+    assert.match(kristi, /const chatHistory = useRef/);
+    assert.match(kristi, /ref=\{chatHistory\}/);
+    assert.match(kristi, /history\.scrollTo\(/);
+    assert.match(kristi, /prefers-reduced-motion: reduce/);
+    assert.doesNotMatch(kristi, /scrollIntoView\(/);
+});
+
 void test('Kristi Hindi voice selection changes guided answer language without remote AI', () => {
     assert.match(kristi, /voiceLanguage/);
     assert.match(kristi, /session\.lang = voiceLanguage/);
