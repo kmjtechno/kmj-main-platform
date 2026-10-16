@@ -71,6 +71,7 @@ ALLOWED=(
  apps/platform/resources/js/pages/operator-kslp.tsx
  apps/platform/public/sdk/javascript/kmj_kslp_first_use.d.mts
  apps/platform/public/sdk/javascript/kmj_kslp_first_use.mjs
+ apps/platform/scripts/check-licensing-integration.test.mjs
 )
 cd apps/platform
 composer install --no-interaction --prefer-dist --no-progress
