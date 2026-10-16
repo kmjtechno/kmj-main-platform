@@ -92,7 +92,7 @@ export default function KristiOwnerAssistant({
     const [voiceNotice, setVoiceNotice] = useState('');
     const [expanded, setExpanded] = useState(true);
     const recognition = useRef<BrowserRecognition | null>(null);
-    const chatEnd = useRef<HTMLDivElement | null>(null);
+    const chatHistory = useRef<HTMLDivElement | null>(null);
 
     useEffect(() => {
         const browser = window as SpeechWindow;
@@ -108,11 +108,15 @@ export default function KristiOwnerAssistant({
     }, []);
 
     useEffect(() => {
-        if (expanded)
-            chatEnd.current?.scrollIntoView({
-                behavior: 'smooth',
-                block: 'nearest',
-            });
+        const history = chatHistory.current;
+        if (!expanded || !history) return;
+        history.scrollTo({
+            top: history.scrollHeight,
+            behavior: window.matchMedia('(prefers-reduced-motion: reduce)')
+                .matches
+                ? 'auto'
+                : 'smooth',
+        });
     }, [messages, expanded]);
 
     function send(event: FormEvent<HTMLFormElement>) {
@@ -244,6 +248,7 @@ export default function KristiOwnerAssistant({
                 {expanded && (
                     <div
                         className="kmj-os-chat-history mt-3"
+                        ref={chatHistory}
                         role="log"
                         aria-live="polite"
                         aria-relevant="additions text"
@@ -260,7 +265,6 @@ export default function KristiOwnerAssistant({
                                 {message.text}
                             </p>
                         ))}
-                        <div ref={chatEnd} />
                     </div>
                 )}
                 <div className="mt-3 flex flex-wrap gap-2">
