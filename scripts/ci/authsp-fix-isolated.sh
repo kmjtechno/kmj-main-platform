@@ -24,7 +24,9 @@ ATTACHED=0
 cleanup() {
   status=$?
   if [[ "$ATTACHED" == 1 ]]; then
-    git -C "$WORK" diff --binary > "$OUT/fix.patch" 2>/dev/null || true
+    if [[ ! -s "$OUT/fix.patch" ]]; then
+      git -C "$WORK" diff --binary > "$OUT/fix.patch" 2>/dev/null || true
+    fi
     git worktree remove --force "$WORK" >/dev/null 2>&1 || true
   fi
   printf 'SOURCE_SHA=%s\nREPORT_DIR=%s\nEXIT=%s\n' "$PIN" "$OUT" "$status"
