@@ -166,6 +166,15 @@ export default function OperatorCommandOs({
         },
     ].filter((item) => item.count > 0);
 
+    function scrollProducts(distance: number) {
+        carousel.current?.scrollBy({
+            left: distance,
+            behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches
+                ? 'auto'
+                : 'smooth',
+        });
+    }
+
     useEffect(() => {
         const shortcut = (event: KeyboardEvent) => {
             if (
@@ -324,12 +333,7 @@ export default function OperatorCommandOs({
                                 <button
                                     type="button"
                                     aria-label="Previous products"
-                                    onClick={() =>
-                                        carousel.current?.scrollBy({
-                                            left: -260,
-                                            behavior: 'smooth',
-                                        })
-                                    }
+                                    onClick={() => scrollProducts(-260)}
                                     className="kmj-os-icon"
                                 >
                                     <ChevronLeft className="size-4" />
@@ -337,12 +341,7 @@ export default function OperatorCommandOs({
                                 <button
                                     type="button"
                                     aria-label="Next products"
-                                    onClick={() =>
-                                        carousel.current?.scrollBy({
-                                            left: 260,
-                                            behavior: 'smooth',
-                                        })
-                                    }
+                                    onClick={() => scrollProducts(260)}
                                     className="kmj-os-icon"
                                 >
                                     <ChevronRight className="size-4" />
