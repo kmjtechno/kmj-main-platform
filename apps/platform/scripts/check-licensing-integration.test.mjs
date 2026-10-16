@@ -18,6 +18,12 @@ const controlPlane = read('app/Services/Licensing/Kslp/KslpLicenseControlPlane.p
 const activation = read('routes/developer-activation-api.php');
 const developerRoutes = read('routes/developer-licenses.php');
 const developerApps = read('resources/js/pages/developer-apps.tsx');
+// JSX formatters may turn inline text into multiple lines or explicit {' '}
+// expressions. Assert the user-facing label rather than its byte layout.
+const developerUiText = developerApps
+    .replace(/\{\s*['"]\s+['"]\s*\}/g, ' ')
+    .replace(/\s+/g, ' ');
+
 const ownerLicensing = read('resources/js/pages/operator-kslp.tsx');
 const firstUseSdk = read('public/sdk/python/kmj_kslp_first_use.py');
 const jsFirstUse = read('public/sdk/javascript/kmj_kslp_first_use.mjs');
@@ -128,8 +134,8 @@ void test('AuthSP-inspired licensing directory contains no raw device identifier
     assert.ok(developerRoutes.includes("$key->display_state = 'GRACE'"));
     assert.ok(developerRoutes.includes("unset($key->license_revoked_at)"));
     assert.ok(developerApps.includes('display_state.replace'));
-    assert.ok(developerApps.includes('Release device seat'));
-    assert.ok(developerApps.includes('Confirm seat release'));
+    assert.ok(developerUiText.includes('Release device seat'));
+    assert.ok(developerUiText.includes('Confirm seat release'));
     assert.ok(ownerLicensing.includes('Licensing quick start'));
     assert.ok(ownerLicensing.includes('/developer/apps'));
 });
