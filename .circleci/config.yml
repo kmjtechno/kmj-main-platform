@@ -678,6 +678,7 @@ jobs:
           command: |
             set -euo pipefail
             test "$(git rev-parse HEAD)" = "$CIRCLE_SHA1"
+            bash -n scripts/ci/authsp-fix-isolated.sh
             php -l apps/platform/routes/developer-licenses.php
             php -l apps/platform/tests/Feature/KslpDeveloperAppsTest.php
             php -l apps/platform/app/Services/Licensing/Kslp/KslpLicenseControlPlane.php
