@@ -189,7 +189,7 @@ final class KnowledgeMemoryStore
     {
         $this->assertScope($organizationId, $projectKey);
         $query = trim($query);
-        if (! preg_match('/^[a-zA-Z0-9][a-zA-Z0-9 .:-]{0,79}$/D', $query) || $limit < 1 || $limit > 20) {
+        if (! preg_match('/^[\\pL\\pN][\\pL\\pM\\pN .:-]{0,79}$/uD', $query) || $limit < 1 || $limit > 20) {
             throw new InvalidArgumentException('KNOWLEDGE_INVALID_SEARCH');
         }
 
