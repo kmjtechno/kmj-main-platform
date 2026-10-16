@@ -9,7 +9,11 @@
         "dev": "vp dev",
         "check": "vp check && node --test scripts/check-public-navigation.test.mjs scripts/check-homepage-portfolio.test.mjs scripts/check-owner-dashboard.test.mjs scripts/check-operator-command-center.test.mjs scripts/check-admin-premium.test.mjs scripts/check-admin-roadmap-navigation.test.mjs scripts/check-command-os-visual-lock.test.mjs scripts/check-codebridge-safe-onboarding.test.mjs scripts/check-codebridge-dashboard-truth.test.mjs scripts/check-brand-assets.test.mjs scripts/check-auth-focus-order.test.mjs scripts/check-licensing-integration.test.mjs scripts/check-no-auto-reload.test.mjs && node scripts/check-public-layout.mjs",
         "check:fix": "vp check --fix",
-        "types:check": "tsc --noEmit"
+        "types:check": "tsc --noEmit",
+        "visual:dev": "vite --config visual/vite.config.ts",
+        "visual:build": "vite build --config visual/vite.config.ts",
+        "visual:verify": "node scripts/run-browser-preview.mjs",
+        "visual:install": "playwright install chromium"
     },
     "dependencies": {
         "@inertiajs/react": "^3.0.0",
@@ -52,6 +56,7 @@
         "@rolldown/plugin-babel": "^0.2.3",
         "@types/node": "^22.13.5",
         "babel-plugin-react-compiler": "^1.0.0",
+        "playwright": "1.62.1",
         "vite-plus": "0.3.0"
     },
     "optionalDependencies": {

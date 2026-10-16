@@ -1,19 +1,32 @@
-import { Link } from '@inertiajs/react';
+import { Link, usePage } from '@inertiajs/react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
     Activity,
     ArrowRight,
+    Bell,
     Boxes,
-    CheckCircle2,
-    ChevronLeft,
+    ChartNoAxesCombined,
     ChevronRight,
-    Command,
+    Cloud,
+    Code2,
+    CreditCard,
+    Crown,
+    Database,
+    FileText,
+    Gauge,
+    Globe2,
+    Home,
     KeyRound,
+    Mail,
+    Menu,
     Package,
+    Plus,
     Search,
+    Settings,
     ShieldCheck,
     ShoppingCart,
     Users,
+    Zap,
 } from 'lucide-react';
 import {
     Dialog,
@@ -21,16 +34,10 @@ import {
     DialogDescription,
     DialogTitle,
 } from '@/components/ui/dialog';
+import LockedBrand from '@/components/locked-brand';
 import KristiOwnerAssistant from '@/components/kristi-owner-assistant';
-import OperatorWorkspaceMap from '@/components/operator-workspace-map';
+import '../../css/owner-lock.css';
 
-type Metrics = {
-    users: number;
-    organizations: number;
-    entitlements: number;
-    orders: number;
-    confirmed_orders: number;
-};
 type Product = {
     id: string;
     slug: string;
@@ -41,133 +48,146 @@ type Product = {
     purchase_enabled: boolean;
     licensing_enabled: boolean;
 };
-type Order = { id: string; status: string; fulfillment_state: string };
+type Order = {
+    id: string;
+    status: string;
+    fulfillment_state: string;
+    currency?: string | null;
+    amount_minor?: number | null;
+    created_at?: string | null;
+    product_id?: string;
+};
 type Props = {
-    metrics: Metrics;
+    metrics: {
+        users: number;
+        organizations: number;
+        entitlements: number;
+        orders: number;
+        confirmed_orders: number;
+    };
     catalogProducts: Product[];
     recentOrders: Order[];
     missingCanonicalSlugs: string[];
 };
-
-const images: Record<string, string> = {
-    'kmj-cloudos': '/assets/products/kmj-cloudos.webp',
-    'kmj-calibration-pro': '/assets/products/kmj-calibration.webp',
-    'kmj-cinema-platform': '/assets/products/kmj-cinema-platform.webp',
-    'kmj-360-dome': '/assets/products/kmj-360-dome.webp',
-    'kmj-cinema-player': '/assets/products/kmj-cinema-player.webp',
-    'kmj-cloud-nexus': '/assets/products/kmj-cloud-nexus.webp',
-    'kmj-forge': '/assets/products/kmj-forge.webp',
-    'kmj-connect': '/assets/products/kmj-connect.webp',
-    'kmj-agent': '/assets/products/kmj-agent.webp',
-    'kmj-creative-studio': '/assets/products/kmj-creative-studio.webp',
-    'kmj-licensing-hub': '/assets/products/kmj-licensing-hub.webp',
+const art: Record<string, string> = {
+    'kmj-cloudos': 'cloudos',
+    'kmj-codebridge': 'codebridge',
+    'kmj-omnidesk': 'omnidesk',
+    'kmj-calibration-pro': 'calibration',
+    'kmj-cinema-platform': 'cinema',
+    'kmj-cinecore': 'cinema',
+    'kmj-motiondirector': 'motion',
+    'kmj-cloud-nexus': 'nexus',
+    'kmj-forge': 'forge',
+    'kmj-agent': 'agent',
+    'kmj-creative-studio': 'studio',
+    'kmj-licensing-hub': 'licensing',
+    'kmj-360-dome': 'cinema',
+    'kmj-cinema-player': 'cinema',
+    'kmj-connect': 'omnidesk',
 };
-const destinations = [
-    { label: 'Command Center', href: '/operator' },
-    { label: 'Products & Catalog', href: '/operator/products' },
-    { label: 'Customers & Organizations', href: '/operator/directory' },
-    { label: 'Commercial Orders', href: '/operator#commercial-orders' },
-    { label: 'Payment Gateways', href: '/operator/payments' },
-    { label: 'Entitlements & Licensing', href: '/operator/kslp' },
-    { label: 'Operations & Audit', href: '/operator/ops' },
-    { label: 'CodeBridge Controls', href: '/operator/codebridge/owner-plan' },
-    { label: 'Developer Apps & Keys', href: '/developer/apps' },
-] as const;
-
-function Stat({
-    name,
-    value,
-    caption,
-    icon: Icon,
-    tone,
+const groups = [
+    {
+        title: 'BUSINESS',
+        items: [
+            ['Products & Catalog', '/operator/products', Package],
+            ['Customers & Orgs', '/operator/directory', Users],
+            ['Orders & Payments', '/operator#commercial-orders', ShoppingCart],
+            ['Licensing & Entitlements', '/operator/kslp', KeyRound],
+            ['Subscriptions & Plans', '/operator/kslp', FileText],
+            ['Revenue & Analytics', '#owner-revenue', ChartNoAxesCombined],
+        ],
+    },
+    {
+        title: 'PLATFORM',
+        items: [
+            ['Developer Apps & Keys', '/developer/apps', Code2],
+            ['CodeBridge & Devices', '/operator/codebridge/owner-plan', Boxes],
+            ['ModelFabric & AI', '/operator/ops', Gauge],
+            ['CloudOS & Infrastructure', '/operator/ops', Cloud],
+            ['OmniDesk Remote Access', '/operator/products', Globe2],
+            ['CineCore & Calibration', '/operator/products', Gauge],
+            ['Content & Website', '/operator/products', FileText],
+            ['Communication (Mail/SMS)', '/operator/ops', Mail],
+        ],
+    },
+    {
+        title: 'OPERATIONS',
+        items: [
+            ['System Health', '/operator/ops', Activity],
+            ['Backups & Restore', '/operator/ops', Database],
+            ['Security & Access', '/settings/security', ShieldCheck],
+            ['Audit Logs', '/operator/ops', FileText],
+            ['Monitoring & Alerts', '/operator/ops', Bell],
+            ['Task Automation', '/operator/ops', Zap],
+            ['Settings & Configuration', '/operator/ops', Settings],
+        ],
+    },
+];
+const quick = [
+    ['Add Product', '/operator/products', Plus],
+    ['Add Customer', '/operator/directory', Users],
+    ['Manage Orders', '#commercial-orders', ShoppingCart],
+    ['Issue License', '/operator/kslp', KeyRound],
+    ['Payment Settings', '/operator/payments', CreditCard],
+    ['View Analytics', '#owner-revenue', ChartNoAxesCombined],
+    ['Manage Content', '/operator/products', FileText],
+    ['Contact Support', '/products/kmj-codebridge/support', Mail],
+    ['System Settings', '/operator/ops', Settings],
+    ['Backup Status', '/operator/ops', Database],
+];
+function PanelTitle({
+    title,
+    href,
+    label = 'View All',
 }: {
-    name: string;
-    value: number;
-    caption: string;
-    icon: typeof Users;
-    tone: string;
+    title: string;
+    href?: string;
+    label?: string;
 }) {
     return (
-        <div className="kmj-os-stat">
-            <span className={'kmj-os-stat-icon ' + tone}>
-                <Icon className="size-5" aria-hidden="true" />
-            </span>
-            <div className="min-w-0">
-                <p className="text-xs font-semibold text-slate-300">{name}</p>
-                <p className="mt-1 text-2xl font-extrabold text-white tabular-nums">
-                    {value.toLocaleString('en-IN')}
-                </p>
-                <p className="mt-1 text-[11px] leading-4 text-slate-400">
-                    {caption}
-                </p>
-            </div>
+        <div className="owner-panel-title">
+            <h2>
+                <Activity size={17} />
+                {title}
+            </h2>
+            {href && (
+                <Link href={href}>
+                    {label}
+                    <ChevronRight size={13} />
+                </Link>
+            )}
         </div>
     );
 }
-
 export default function OperatorCommandOs({
     metrics,
     catalogProducts,
     recentOrders,
     missingCanonicalSlugs,
 }: Props) {
+    const { auth } = usePage().props;
+    const name = auth.user?.name || 'Narendra Singh Kushwah';
     const [searchOpen, setSearchOpen] = useState(false);
     const [query, setQuery] = useState('');
-    const input = useRef<HTMLInputElement | null>(null);
-    const carousel = useRef<HTMLDivElement | null>(null);
-    const results = useMemo(() => {
-        const term = query.trim().toLocaleLowerCase();
-        const workspaces = destinations.map((item) => ({
-            key: item.href,
-            label: item.label,
-            href: item.href,
-            category: 'Workspace',
-        }));
-        if (!term) return workspaces;
-        const matchingWorkspaces = workspaces.filter((item) =>
-            item.label.toLocaleLowerCase().includes(term),
-        );
-        const matchingProducts = catalogProducts
-            .filter((product) =>
-                (product.name + ' ' + product.slug)
-                    .toLocaleLowerCase()
-                    .includes(term),
-            )
-            .slice(0, 12)
-            .map((product) => ({
-                key: 'product:' + product.id,
-                label: product.name,
-                href: '/operator/products',
-                category: 'Catalog product',
-            }));
-        return [...matchingWorkspaces, ...matchingProducts].slice(0, 20);
-    }, [catalogProducts, query]);
-    const needsReview = [
-        {
-            name: 'Payment evidence',
-            count: recentOrders.filter((order) => order.status === 'requested')
-                .length,
-            href: '/operator#commercial-orders',
-            note: 'From the bounded order snapshot',
-        },
-        {
-            name: 'Entitlement fulfillment',
-            count: recentOrders.filter(
-                (order) => order.fulfillment_state === 'ready',
-            ).length,
-            href: '/operator#commercial-orders',
-            note: 'Explicit owner confirmation required',
-        },
-        {
-            name: 'Catalog reconciliation',
-            count: missingCanonicalSlugs.length,
-            href: '/operator/products',
-            note: 'Missing canonical catalog registrations',
-        },
-    ].filter((item) => item.count > 0);
-
+    const [navOpen, setNavOpen] = useState(false);
+    const track = useRef<HTMLDivElement>(null);
+    useEffect(() => {
+        const listener = (e: KeyboardEvent) => {
+            if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+                e.preventDefault();
+                setSearchOpen((v) => !v);
+            }
+            if (e.key === 'Escape') {
+                setSearchOpen(false);
+                setNavOpen(false);
+            }
+        };
+        window.addEventListener('keydown', listener);
+        return () => window.removeEventListener('keydown', listener);
+    }, []);
     function scrollProducts(distance: number) {
-        carousel.current?.scrollBy({
+        track.current?.scrollBy({
             left: distance,
             behavior: window.matchMedia('(prefers-reduced-motion: reduce)')
                 .matches
@@ -175,429 +195,633 @@ export default function OperatorCommandOs({
                 : 'smooth',
         });
     }
-
-    useEffect(() => {
-        const shortcut = (event: KeyboardEvent) => {
-            if (
-                (event.ctrlKey || event.metaKey) &&
-                event.key.toLowerCase() === 'k'
-            ) {
-                event.preventDefault();
-                setSearchOpen((opened) => !opened);
-            }
-            if (event.key === 'Escape') setSearchOpen(false);
-        };
-        window.addEventListener('keydown', shortcut);
-        return () => window.removeEventListener('keydown', shortcut);
-    }, []);
-    useEffect(() => {
-        if (searchOpen) input.current?.focus();
-    }, [searchOpen]);
-
+    const results = useMemo(() => {
+        const needle = query.toLowerCase();
+        const workspaces = groups
+            .flatMap((g) => g.items)
+            .filter(([label]) => String(label).toLowerCase().includes(needle))
+            .map(([label, href]) => ({
+                label: String(label),
+                href: String(href),
+                category: 'Workspace',
+            }));
+        const products = catalogProducts
+            .filter((product) =>
+                (product.name + ' ' + product.slug)
+                    .toLowerCase()
+                    .includes(needle),
+            )
+            .map((product) => ({
+                label: product.name,
+                href: '/operator/products',
+                category: 'Catalog product',
+            }));
+        return [...workspaces, ...products].slice(0, 20);
+    }, [query, catalogProducts]);
+    const confirmed = recentOrders.filter(
+        (o) =>
+            o.status === 'confirmed' &&
+            o.currency === 'INR' &&
+            typeof o.amount_minor === 'number',
+    );
+    const revenue =
+        confirmed.reduce((sum, o) => sum + (o.amount_minor || 0), 0) / 100;
+    const revenueByDay = useMemo(() => {
+        const map = new Map<string, number>();
+        for (const o of confirmed) {
+            if (!o.created_at) continue;
+            const d = o.created_at.slice(0, 10);
+            map.set(d, (map.get(d) || 0) + (o.amount_minor || 0) / 100);
+        }
+        return [...map.entries()].sort(([a], [b]) => a.localeCompare(b));
+    }, [confirmed]);
+    const max = Math.max(1, ...revenueByDay.map(([, v]) => v));
+    const points = revenueByDay
+        .map(
+            ([, v], i) =>
+                `${25 + (i * 365) / Math.max(1, revenueByDay.length - 1)},${145 - (v / max) * 120}`,
+        )
+        .join(' ');
     return (
-        <div className="kmj-command-os">
-            <div className="kmj-os-layout">
-                <main
-                    className="kmj-os-main"
-                    aria-label="Enterprise owner command center"
+        <div className="owner-lock">
+            <a className="owner-skip" href="#owner-main">
+                Skip to dashboard
+            </a>
+            <header className="owner-header">
+                <Link href="/" className="owner-brand">
+                    <LockedBrand compact />
+                </Link>
+                <button
+                    className="owner-mobile-nav"
+                    aria-label="Toggle owner navigation"
+                    aria-expanded={navOpen}
+                    onClick={() => setNavOpen(!navOpen)}
                 >
-                    <div className="kmj-os-toolbar">
-                        <button
-                            type="button"
-                            onClick={() => setSearchOpen(true)}
-                            className="kmj-os-search"
-                            aria-haspopup="dialog"
-                            aria-expanded={searchOpen}
-                        >
-                            <Search
-                                className="size-4 shrink-0"
-                                aria-hidden="true"
-                            />
-                            <span className="min-w-0 flex-1 truncate text-left">
-                                Find workspaces and catalog products…
-                            </span>
-                            <kbd>Ctrl K</kbd>
-                        </button>
-                        <Link
-                            href="/operator/ops"
-                            className="kmj-os-toolbar-link"
-                        >
-                            <Activity className="size-4" /> Check system status
-                        </Link>
-                        <span className="kmj-os-owner">
-                            <ShieldCheck className="size-4" /> Platform owner
-                        </span>
+                    <Menu />
+                </button>
+                <button
+                    className="owner-search"
+                    onClick={() => setSearchOpen(true)}
+                >
+                    <Search size={17} />
+                    <span>Search anything… (Ctrl + K)</span>
+                </button>
+                <Link href="/operator/ops" className="owner-status">
+                    <span />
+                    System Status
+                </Link>
+                <div className="owner-identity">
+                    <span className="owner-initials">NK</span>
+                    <div>
+                        <strong>{name}</strong>
+                        <small>Platform Owner / Super Admin</small>
                     </div>
-                    <header className="kmj-os-hero">
-                        <img
-                            className="kmj-os-hero-image"
-                            src="/assets/admin/earth-orbit.svg"
-                            alt=""
-                            aria-hidden="true"
-                            decoding="async"
-                        />
-                        <div className="kmj-os-hero-text">
-                            <span className="kmj-os-eyebrow">
-                                KMJ TECHNO · ENTERPRISE CONTROL
-                            </span>
-                            <h1>
-                                Super Admin <span>Command Center</span>
-                            </h1>
-                            <p>
-                                Your complete platform. People, products,
-                                commerce, licensing and operations—together in
-                                one secure workspace.
-                            </p>
-                            <div className="mt-5 flex flex-wrap gap-2.5">
-                                <a
-                                    href="#kmj-os-workspace"
-                                    className="kmj-os-primary"
-                                >
-                                    <Command className="size-4" /> Explore
-                                    workspaces <ArrowRight className="size-4" />
-                                </a>
+                    <ChevronRight size={13} />
+                </div>
+            </header>
+            <aside
+                className={'owner-sidebar ' + (navOpen ? 'is-open' : '')}
+                aria-label="Owner navigation"
+            >
+                <Link href="/operator" className="owner-nav-active">
+                    <Home size={17} />
+                    Dashboard
+                </Link>
+                <button onClick={() => setSearchOpen(true)}>
+                    <Gauge size={17} />
+                    Command Center
+                    <ChevronRight size={12} />
+                </button>
+                {groups.map((group) => (
+                    <nav key={group.title} aria-label={group.title}>
+                        <h2>{group.title}</h2>
+                        {group.items.map(([label, href, Icon]) => {
+                            const I = Icon as typeof Home;
+                            return (
                                 <Link
-                                    href="/operator/products"
-                                    className="kmj-os-secondary"
+                                    key={String(label)}
+                                    href={String(href)}
+                                    onClick={() => setNavOpen(false)}
                                 >
-                                    <Package className="size-4" /> Manage
-                                    products
+                                    <I size={17} />
+                                    {String(label)}
                                 </Link>
+                            );
+                        })}
+                    </nav>
+                ))}
+                <a href="#owner-kristi" className="owner-sidebar-kristi">
+                    <img src="/assets/locked/kristi-owner.webp" alt="" />
+                    <div>
+                        <strong>Kristi AI Assistant</strong>
+                        <small>Your Intelligent Copilot</small>
+                        <em>Guided mode</em>
+                    </div>
+                </a>
+            </aside>
+            <div className="owner-body">
+                <main id="owner-main" className="owner-main">
+                    <section className="owner-hero">
+                        <img src="/assets/locked/owner-earth.webp" alt="" />
+                        <div>
+                            <p>Good Evening,</p>
+                            <h1>
+                                {name} <Crown size={25} />
+                            </h1>
+                            <h2>
+                                Super Admin • KMJ TECHNO Enterprise Command OS
+                            </h2>
+                            <p className="owner-hero-description">
+                                Manage your products, customers, licensing,
+                                payments, infrastructure and everything
+                                <br /> from a single intelligent platform.
+                            </p>
+                            <div className="owner-hero-actions">
+                                <a
+                                    href="#owner-quick"
+                                    className="owner-primary"
+                                >
+                                    <Zap size={16} />
+                                    Quick Actions
+                                    <ChevronRight size={16} />
+                                </a>
+                                <button onClick={() => setSearchOpen(true)}>
+                                    <Boxes size={16} />
+                                    Explore Workspaces
+                                </button>
                             </div>
                         </div>
-                        <span className="kmj-os-hero-mark">
-                            INNOVATE | BUILD | SCALE
-                        </span>
-                    </header>
-                    <div
-                        className="kmj-os-stats"
+                        <aside>
+                            <strong>
+                                <b>KMJ</b> TECHNO
+                            </strong>
+                            <p>
+                                Global Innovation Platform
+                                <br />
+                                for a Smarter Tomorrow
+                            </p>
+                            <div>
+                                <span>
+                                    <b>{catalogProducts.length}</b>Products
+                                </span>
+                                <span>
+                                    <b>Global</b>Platform
+                                </span>
+                                <span>
+                                    <b>AI Powered</b>Vision
+                                </span>
+                            </div>
+                        </aside>
+                    </section>
+                    <section
+                        className="owner-stats"
                         aria-label="Authoritative platform snapshot"
                     >
-                        <Stat
-                            name="Users"
-                            value={metrics.users}
-                            caption="Platform records"
-                            icon={Users}
-                            tone="blue"
-                        />
-                        <Stat
-                            name="Organizations"
-                            value={metrics.organizations}
-                            caption="Registered organizations"
-                            icon={Boxes}
-                            tone="cyan"
-                        />
-                        <Stat
-                            name="Orders"
-                            value={metrics.orders}
-                            caption="Commercial orders"
-                            icon={ShoppingCart}
-                            tone="red"
-                        />
-                        <Stat
-                            name="Entitlements"
-                            value={metrics.entitlements}
-                            caption="Granted rights"
-                            icon={KeyRound}
-                            tone="amber"
-                        />
-                        <Stat
-                            name="Public products"
-                            value={
+                        {[
+                            [
+                                CreditCard,
+                                'Recorded Revenue',
+                                confirmed.length
+                                    ? '₹ ' + revenue.toLocaleString('en-IN')
+                                    : '—',
+                                'Confirmed INR orders shown',
+                                'cyan',
+                            ],
+                            [
+                                Users,
+                                'Total Customers',
+                                metrics.users.toLocaleString('en-IN'),
+                                'Platform user records',
+                                'purple',
+                            ],
+                            [
+                                KeyRound,
+                                'Entitlements',
+                                metrics.entitlements.toLocaleString('en-IN'),
+                                'Granted access rights',
+                                'amber',
+                            ],
+                            [
+                                Package,
+                                'Public Products',
                                 catalogProducts.filter((p) => p.is_public)
-                                    .length
-                            }
-                            caption="Catalog visibility"
-                            icon={Package}
-                            tone="violet"
-                        />
-                        <Stat
-                            name="Confirmed orders"
-                            value={metrics.confirmed_orders}
-                            caption="Not revenue"
-                            icon={CheckCircle2}
-                            tone="green"
-                        />
-                    </div>
-                    <section
-                        className="kmj-os-section"
-                        aria-labelledby="kmj-products-title"
-                    >
-                        <div className="kmj-os-heading">
-                            <div>
-                                <h2 id="kmj-products-title">
-                                    Product Suite Overview
-                                </h2>
-                                <p>Real governed KMJ product catalog</p>
-                            </div>
-                            <div className="flex items-center gap-2">
-                                <button
-                                    type="button"
-                                    aria-label="Previous products"
-                                    onClick={() => scrollProducts(-260)}
-                                    className="kmj-os-icon"
+                                    .length +
+                                    ' / ' +
+                                    catalogProducts.length,
+                                'Public catalog visibility',
+                                'green',
+                            ],
+                            [
+                                ShieldCheck,
+                                'System Health',
+                                'Not verified',
+                                'Open system checks',
+                                'green',
+                            ],
+                        ].map(([Icon, label, value, caption, tone]) => {
+                            const I = Icon as typeof Home;
+                            return (
+                                <article
+                                    key={String(label)}
+                                    className={'owner-stat ' + tone}
                                 >
-                                    <ChevronLeft className="size-4" />
-                                </button>
-                                <button
-                                    type="button"
-                                    aria-label="Next products"
-                                    onClick={() => scrollProducts(260)}
-                                    className="kmj-os-icon"
-                                >
-                                    <ChevronRight className="size-4" />
-                                </button>
-                                <Link
-                                    href="/operator/products"
-                                    className="kmj-os-link"
-                                >
-                                    View products{' '}
-                                    <ArrowRight className="size-4" />
-                                </Link>
-                            </div>
-                        </div>
-                        <div className="kmj-os-product-track" ref={carousel}>
-                            {catalogProducts.length === 0 && (
-                                <p
-                                    role="status"
-                                    className="p-5 text-sm text-slate-300"
-                                >
-                                    No registered products in this catalog
-                                    snapshot.
-                                </p>
-                            )}
-                            {catalogProducts.map((product) => (
-                                <Link
-                                    key={product.id}
-                                    href="/operator/products"
-                                    className="kmj-os-product"
-                                    aria-label={'Manage ' + product.name}
-                                >
-                                    <div className="kmj-os-product-title">
-                                        <Package className="size-4 text-red-400" />
-                                        <strong className="truncate">
-                                            {product.name}
-                                        </strong>
+                                    <span>
+                                        <I size={22} />
+                                    </span>
+                                    <div>
+                                        <h2>{String(label)}</h2>
+                                        <strong>{String(value)}</strong>
+                                        <p>{String(caption)}</p>
                                     </div>
-                                    <div className="kmj-os-product-image">
-                                        {images[product.slug] ? (
-                                            <img
-                                                loading="lazy"
-                                                src={images[product.slug]}
-                                                alt={
-                                                    product.name +
-                                                    ' product visual'
-                                                }
-                                                onError={(event) => {
-                                                    event.currentTarget.hidden = true;
-                                                }}
-                                            />
-                                        ) : (
-                                            <Boxes className="size-12 text-slate-500" />
-                                        )}
-                                    </div>
-                                    <p className="kmj-os-product-status">
-                                        <span>
-                                            {product.is_public
-                                                ? 'Public listing'
-                                                : 'Private listing'}
-                                        </span>
-                                        <span>
-                                            {product.lifecycle ||
-                                                product.status}
-                                        </span>
-                                    </p>
-                                    <div className="kmj-os-product-link">
-                                        Catalog · Licensing · Settings{' '}
-                                        <ArrowRight className="size-3.5" />
-                                    </div>
-                                </Link>
-                            ))}
-                        </div>
+                                </article>
+                            );
+                        })}
                     </section>
-                    <div id="kmj-os-workspace" className="kmj-os-workspace">
-                        <OperatorWorkspaceMap />
-                    </div>
-                    <div className="kmj-os-insights">
-                        <section
-                            className="kmj-os-section"
-                            aria-labelledby="kmj-review-title"
-                        >
-                            <div className="kmj-os-heading">
-                                <div>
-                                    <h2 id="kmj-review-title">
-                                        Attention & Review
-                                    </h2>
-                                    <p>From currently available records</p>
-                                </div>
-                                <a
-                                    href="#commercial-orders"
-                                    className="kmj-os-link"
-                                >
-                                    View orders{' '}
-                                    <ArrowRight className="size-4" />
-                                </a>
-                            </div>
-                            {needsReview.length ? (
-                                needsReview.map((item) => (
-                                    <Link
-                                        key={item.name}
-                                        href={item.href}
-                                        className="kmj-os-attention"
-                                    >
-                                        <span className="kmj-os-attention-number">
-                                            {item.count}
-                                        </span>
-                                        <span className="min-w-0 flex-1">
-                                            <strong>{item.name}</strong>
-                                            <small>{item.note}</small>
-                                        </span>
-                                        <ArrowRight className="size-4 text-slate-400" />
+                    <section className="owner-panel owner-suite">
+                        <PanelTitle
+                            title="Product Suite Overview"
+                            href="/operator/products"
+                            label="View All Products"
+                        />
+                        <p className="owner-panel-subtitle">
+                            Manage all KMJ products and services
+                        </p>
+                        <div className="owner-product-track" ref={track}>
+                            {catalogProducts.map((p) => (
+                                <article key={p.id} className="owner-product">
+                                    <h3>
+                                        <Package size={16} />
+                                        {p.name}
+                                    </h3>
+                                    <p>
+                                        {p.slug
+                                            .replace('kmj-', '')
+                                            .replaceAll('-', ' ')}
+                                    </p>
+                                    <Link href="/operator/products">
+                                        <img
+                                            src={
+                                                '/assets/locked/' +
+                                                (art[p.slug] || 'cloudos') +
+                                                '.webp'
+                                            }
+                                            alt={p.name + ' product artwork'}
+                                            loading="lazy"
+                                            width="480"
+                                            height="270"
+                                        />
                                     </Link>
-                                ))
-                            ) : (
-                                <p className="p-4 text-sm text-slate-300">
-                                    No flagged items in this snapshot; this does
-                                    not prove everything is healthy.
-                                </p>
-                            )}
-                        </section>
-                        <section
-                            className="kmj-os-section"
-                            aria-labelledby="kmj-growth-title"
-                        >
-                            <div className="kmj-os-heading">
-                                <div>
-                                    <h2 id="kmj-growth-title">
-                                        Revenue & Growth
-                                    </h2>
-                                    <p>Verified reporting only</p>
-                                </div>
-                            </div>
-                            <div className="kmj-os-no-data">
-                                <Activity className="size-8 text-slate-500" />
-                                <strong>Analytics not connected</strong>
-                                <p>
-                                    No invented revenue, trends, or growth
-                                    percentages.
-                                </p>
-                                <Link
-                                    href="/operator/payments"
-                                    className="kmj-os-link"
-                                >
-                                    Payment settings{' '}
-                                    <ArrowRight className="size-4" />
-                                </Link>
-                            </div>
-                        </section>
-                        <section
-                            className="kmj-os-section"
-                            aria-labelledby="kmj-health-title"
-                        >
-                            <div className="kmj-os-heading">
-                                <div>
-                                    <h2 id="kmj-health-title">System Health</h2>
-                                    <p>Evidence from Operations</p>
-                                </div>
-                                <Link
-                                    href="/operator/ops"
-                                    className="kmj-os-link"
-                                >
-                                    Details <ArrowRight className="size-4" />
-                                </Link>
-                            </div>
-                            {[
-                                'Application & deployment',
-                                'Database & queues',
-                                'Backups',
-                                'Security & audit',
-                            ].map((label) => (
-                                <Link
-                                    key={label}
-                                    href="/operator/ops"
-                                    className="kmj-os-health"
-                                >
-                                    <ShieldCheck className="size-4 text-slate-400" />
-                                    <span>{label}</span>
-                                    <span className="text-amber-200">
-                                        Check
-                                    </span>
-                                </Link>
+                                    <div className="owner-product-state">
+                                        <span>
+                                            {p.is_public
+                                                ? '● Public'
+                                                : 'Private'}
+                                        </span>
+                                        <small>{p.lifecycle || p.status}</small>
+                                    </div>
+                                    <div className="owner-product-actions">
+                                        <Link href="/operator/kslp">
+                                            <KeyRound size={14} />
+                                            Licensing
+                                        </Link>
+                                        <Link href="/operator/products">
+                                            <ChartNoAxesCombined size={14} />
+                                            Catalog
+                                        </Link>
+                                        <Link href="/operator/products">
+                                            <Settings size={14} />
+                                            Settings
+                                        </Link>
+                                    </div>
+                                </article>
                             ))}
-                        </section>
-                    </div>
-                    <p className="kmj-os-footnote">
-                        All figures above are backend records or clearly marked
-                        unavailable—not estimated revenue, live device
-                        heartbeats or uptime.
-                    </p>
-                </main>
-                <KristiOwnerAssistant
-                    counts={{
-                        orders: metrics.orders,
-                        customers: metrics.users,
-                        products: catalogProducts.length,
-                    }}
-                />
-            </div>
-            <Dialog open={searchOpen} onOpenChange={setSearchOpen}>
-                <DialogContent className="kmj-os-modal max-w-[min(550px,calc(100vw-32px))] gap-0 overflow-hidden border-[#466078] bg-[#101725] p-0 text-white">
-                    <div className="border-b border-white/10 px-5 py-4">
-                        <DialogTitle className="text-base font-bold">
-                            Find a workspace or product
-                        </DialogTitle>
-                        <DialogDescription className="mt-1 text-xs text-slate-400">
-                            Search workspaces and loaded catalog products. Press
-                            Escape to close.
-                        </DialogDescription>
-                    </div>
-                    <label className="flex items-center gap-3 px-4 py-3">
-                        <Search
-                            className="size-4 shrink-0 text-slate-400"
-                            aria-hidden="true"
-                        />
-                        <input
-                            ref={input}
-                            value={query}
-                            onChange={(event) => setQuery(event.target.value)}
-                            aria-label="Search owner workspaces and catalog products"
-                            placeholder="Workspaces or catalog products…"
-                            className="w-full bg-transparent py-2 text-sm text-white outline-none"
-                        />
-                    </label>
-                    <nav
-                        className="max-h-72 overflow-y-auto border-t border-white/10 p-2"
-                        aria-label="Search results"
-                    >
-                        {results.map((result) => (
-                            <Link
-                                key={result.key}
-                                href={result.href}
-                                onClick={() => setSearchOpen(false)}
-                                className="flex min-h-11 items-center justify-between rounded-lg px-3 text-sm hover:bg-white/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-500"
-                            >
-                                <span className="min-w-0 flex-1">
-                                    <span className="block truncate">
-                                        {result.label}
-                                    </span>
-                                    <span className="block text-[11px] text-slate-400">
-                                        {result.category}
-                                    </span>
-                                </span>
-                                <ArrowRight
-                                    className="size-4"
-                                    aria-hidden="true"
-                                />
-                            </Link>
-                        ))}
-                        {!results.length && (
-                            <p
-                                role="status"
-                                className="p-4 text-sm text-slate-400"
-                            >
-                                No matching workspace or loaded catalog product
+                        </div>
+                        <button
+                            className="owner-track-next"
+                            aria-label="Next products"
+                            onClick={() => scrollProducts(260)}
+                        >
+                            <ChevronRight size={18} />
+                        </button>
+                        <button
+                            className="owner-track-previous"
+                            aria-label="Previous products"
+                            onClick={() => scrollProducts(-260)}
+                        >
+                            <ChevronRight size={18} />
+                        </button>
+                        {!catalogProducts.length && (
+                            <p className="owner-empty">
+                                No products in this catalog snapshot.
                             </p>
                         )}
+                    </section>
+                    <div className="owner-middle">
+                        <section id="owner-revenue" className="owner-panel">
+                            <PanelTitle title="Revenue & Growth" />
+                            <p className="owner-panel-subtitle">
+                                Confirmed INR orders in the current snapshot
+                            </p>
+                            <div className="owner-chart">
+                                <svg
+                                    viewBox="0 0 420 180"
+                                    role="img"
+                                    aria-label={
+                                        confirmed.length
+                                            ? 'Confirmed order revenue by date'
+                                            : 'No confirmed INR revenue to chart'
+                                    }
+                                >
+                                    <defs>
+                                        <linearGradient
+                                            id="revenueFill"
+                                            x2="0"
+                                            y2="1"
+                                        >
+                                            <stop
+                                                stopColor="#ec1238"
+                                                stopOpacity=".45"
+                                            />
+                                            <stop
+                                                offset="1"
+                                                stopColor="#ec1238"
+                                                stopOpacity="0"
+                                            />
+                                        </linearGradient>
+                                    </defs>
+                                    {[25, 65, 105, 145].map((y) => (
+                                        <line
+                                            key={y}
+                                            x1="25"
+                                            x2="400"
+                                            y1={y}
+                                            y2={y}
+                                            stroke="#29323b"
+                                        />
+                                    ))}
+                                    {[25, 100, 175, 250, 325, 400].map((x) => (
+                                        <line
+                                            key={x}
+                                            x1={x}
+                                            x2={x}
+                                            y1="25"
+                                            y2="145"
+                                            stroke="#202930"
+                                        />
+                                    ))}
+                                    {revenueByDay.length > 1 && (
+                                        <>
+                                            <polygon
+                                                points={
+                                                    '25,145 ' +
+                                                    points +
+                                                    ' 390,145'
+                                                }
+                                                fill="url(#revenueFill)"
+                                            />
+                                            <polyline
+                                                points={points}
+                                                stroke="#ff123e"
+                                                strokeWidth="2"
+                                                fill="none"
+                                            />
+                                        </>
+                                    )}
+                                    {revenueByDay.map(([day, v], i) => (
+                                        <circle
+                                            key={day}
+                                            cx={
+                                                25 +
+                                                (i * 365) /
+                                                    Math.max(
+                                                        1,
+                                                        revenueByDay.length - 1,
+                                                    )
+                                            }
+                                            cy={145 - (v / max) * 120}
+                                            r="3"
+                                            fill="#ff3154"
+                                        />
+                                    ))}
+                                    <text
+                                        x="25"
+                                        y="170"
+                                        fill="#aab6c6"
+                                        fontSize="10"
+                                    >
+                                        {revenueByDay[0]?.[0] ||
+                                            'No confirmed orders'}
+                                    </text>
+                                    <text
+                                        x="400"
+                                        y="170"
+                                        fill="#aab6c6"
+                                        fontSize="10"
+                                        textAnchor="end"
+                                    >
+                                        {revenueByDay.at(-1)?.[0] || ''}
+                                    </text>
+                                </svg>
+                            </div>
+                        </section>
+                        <section className="owner-panel">
+                            <PanelTitle
+                                title="Recent Orders"
+                                href="#commercial-orders"
+                            />
+                            {recentOrders.slice(0, 4).map((o) => (
+                                <Link
+                                    className="owner-order"
+                                    key={o.id}
+                                    href="#commercial-orders"
+                                >
+                                    <ShoppingCart size={19} />
+                                    <span>
+                                        <strong>{o.id}</strong>
+                                        <small>
+                                            {catalogProducts.find(
+                                                (p) => p.id === o.product_id,
+                                            )?.name || 'Commercial order'}
+                                        </small>
+                                    </span>
+                                    <div>
+                                        <strong>
+                                            {o.amount_minor != null &&
+                                            o.currency
+                                                ? o.currency +
+                                                  ' ' +
+                                                  (
+                                                      o.amount_minor / 100
+                                                  ).toLocaleString('en-IN')
+                                                : '—'}
+                                        </strong>
+                                        <small>
+                                            {o.created_at?.slice(0, 10) ||
+                                                'Date unavailable'}
+                                        </small>
+                                    </div>
+                                    <em
+                                        className={
+                                            o.status === 'confirmed'
+                                                ? 'confirmed'
+                                                : ''
+                                        }
+                                    >
+                                        {o.status}
+                                    </em>
+                                </Link>
+                            ))}
+                            {!recentOrders.length && (
+                                <p className="owner-empty">
+                                    No commercial orders yet.
+                                </p>
+                            )}
+                        </section>
+                        <section className="owner-panel">
+                            <PanelTitle
+                                title="System Health"
+                                href="/operator/ops"
+                                label="Details"
+                            />
+                            <p className="owner-panel-subtitle">
+                                Live checks require operational evidence
+                            </p>
+                            {[
+                                'Website & API',
+                                'Database (PostgreSQL)',
+                                'Queue Workers',
+                                'CodeBridge Gateway',
+                                'Mail Service',
+                                'Payment Gateways',
+                                'Backup System',
+                            ].map((label) => (
+                                <Link
+                                    href="/operator/ops"
+                                    className="owner-health"
+                                    key={label}
+                                >
+                                    <span />
+                                    {label}
+                                    <small>Not verified</small>
+                                </Link>
+                            ))}
+                        </section>
+                    </div>
+                    <div className="owner-bottom">
+                        <section className="owner-panel">
+                            <PanelTitle
+                                title="Recent Platform Activity"
+                                href="/operator/ops"
+                                label="View All Activity"
+                            />
+                            <div className="owner-activity">
+                                <Link href="#commercial-orders">
+                                    <ShoppingCart />
+                                    <span>
+                                        <strong>
+                                            {metrics.orders} commercial orders
+                                        </strong>
+                                        <small>
+                                            {metrics.confirmed_orders} confirmed
+                                            orders
+                                        </small>
+                                    </span>
+                                </Link>
+                                <Link href="/operator/products">
+                                    <Package />
+                                    <span>
+                                        <strong>
+                                            {catalogProducts.length} catalog
+                                            products
+                                        </strong>
+                                        <small>
+                                            {missingCanonicalSlugs.length
+                                                ? missingCanonicalSlugs.length +
+                                                  ' catalog entries need review'
+                                                : 'Catalog snapshot loaded'}
+                                        </small>
+                                    </span>
+                                </Link>
+                                <Link href="/operator/directory">
+                                    <Users />
+                                    <span>
+                                        <strong>
+                                            {metrics.users} registered users
+                                        </strong>
+                                        <small>
+                                            {metrics.organizations}{' '}
+                                            organizations
+                                        </small>
+                                    </span>
+                                </Link>
+                                <Link href="/operator/kslp">
+                                    <KeyRound />
+                                    <span>
+                                        <strong>
+                                            {metrics.entitlements} entitlements
+                                        </strong>
+                                        <small>Governed platform access</small>
+                                    </span>
+                                </Link>
+                            </div>
+                        </section>
+                        <section id="owner-quick" className="owner-panel">
+                            <PanelTitle title="Quick Tools & Actions" />
+                            <div className="owner-quick">
+                                {quick.map(([label, href, Icon]) => {
+                                    const I = Icon as typeof Home;
+                                    return (
+                                        <Link
+                                            href={String(href)}
+                                            key={String(label)}
+                                        >
+                                            <I size={19} />
+                                            {String(label)}
+                                        </Link>
+                                    );
+                                })}
+                            </div>
+                        </section>
+                    </div>
+                </main>
+                <div id="owner-kristi" className="owner-assistant">
+                    <KristiOwnerAssistant
+                        counts={{
+                            orders: metrics.orders,
+                            customers: metrics.users,
+                            products: catalogProducts.length,
+                        }}
+                    />
+                </div>
+            </div>
+            <Dialog open={searchOpen} onOpenChange={setSearchOpen}>
+                <DialogContent className="border-red-900 bg-[#0b1119] text-white">
+                    <DialogTitle>Find a workspace or product</DialogTitle>
+                    <DialogDescription>
+                        Search your platform workspaces. Escape closes this
+                        window.
+                    </DialogDescription>
+                    <input
+                        autoFocus
+                        aria-label="Search owner workspaces and catalog products"
+                        className="rounded-lg border border-white/20 p-3"
+                        value={query}
+                        onChange={(e) => setQuery(e.target.value)}
+                        placeholder="Search anything…"
+                    />
+                    <nav className="grid max-h-80 overflow-auto">
+                        {results.map(({ label, href, category }) => (
+                            <Link
+                                key={String(label)}
+                                href={String(href)}
+                                className="rounded p-3 hover:bg-white/10"
+                                onClick={() => setSearchOpen(false)}
+                            >
+                                {String(label)} <small>{category}</small>
+                                <ArrowRight className="float-right" size={14} />
+                            </Link>
+                        ))}
+                        {!results.length && <p>No matching workspaces.</p>}
                     </nav>
                 </DialogContent>
             </Dialog>
