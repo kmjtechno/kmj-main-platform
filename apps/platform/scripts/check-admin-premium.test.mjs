@@ -123,5 +123,13 @@ void test('payment and license security flows survive the visual redesign', () =
     assert.match(payments, /live_charging_enabled/);
     assert.match(license, /Confirm/);
     assert.match(codebridge, /UPGRADE_CODEBRIDGE_OWNER/);
-    assert.doesNotMatch(styles, /display:\s*none\s*!important/);
+    // Only the roadmap disclosure may force its [hidden] state so that
+    // responsive Tailwind grid rules cannot display collapsed planned items.
+    const intentionalDisclosureHide =
+        /\.kmj-admin-workspace-map\s+\[hidden\]\s*\{\s*display:\s*none\s*!important;\s*\}/;
+    assert.match(styles, intentionalDisclosureHide);
+    assert.doesNotMatch(
+        styles.replace(intentionalDisclosureHide, ''),
+        /display:\s*none\s*!important/,
+    );
 });

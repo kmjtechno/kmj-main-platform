@@ -2,8 +2,11 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { readFileSync } from 'node:fs';
 
-const read = (path) => readFileSync(new URL('../' + path, import.meta.url), 'utf8');
+const read = (path) =>
+    readFileSync(new URL('../' + path, import.meta.url), 'utf8');
 const map = read('resources/js/components/operator-workspace-map.tsx');
+// Normalize source formatting only; every expected sentence still must exist.
+const normalizedMap = map.replace(/\s+/g, ' ');
 const overview = read('resources/js/components/operator-control-overview.tsx');
 const sidebar = read('resources/js/components/app-sidebar.tsx');
 const dashboard = read('resources/js/pages/dashboard.tsx');
@@ -41,7 +44,10 @@ void test('task-first categories contain real, inspectable workspaces', () => {
         '/sandbox-licenses',
     ];
     for (const href of links) {
-        assert.ok(map.includes("href: '" + href + "'"), 'Missing tested navigation: ' + href);
+        assert.ok(
+            map.includes("href: '" + href + "'"),
+            'Missing tested navigation: ' + href,
+        );
     }
     assert.match(routes, /Route::get\('products'/);
     assert.match(routes, /Route::get\('directory'/);
@@ -54,7 +60,10 @@ void test('task-first categories contain real, inspectable workspaces', () => {
 });
 
 void test('roadmap-only modules cannot look like operational services', () => {
-    const planned = map.slice(map.indexOf('const roadmapQueue = ['), map.indexOf('export default function'));
+    const planned = map.slice(
+        map.indexOf('const roadmapQueue = ['),
+        map.indexOf('export default function'),
+    );
     for (const name of [
         'KMJ Mail administration',
         'Support & Trust cases',
@@ -65,7 +74,10 @@ void test('roadmap-only modules cannot look like operational services', () => {
         assert.ok(planned.includes(name), 'Missing planned module: ' + name);
     }
     assert.doesNotMatch(planned, /href:/);
-    assert.match(map, /Roadmap concepts, not live services or available controls/);
+    assert.match(
+        normalizedMap,
+        /Roadmap concepts, not live services or available controls/,
+    );
     assert.match(map, /Planned/);
     assert.doesNotMatch(map, /99\.9%|fake|mockMetrics|activeLicenses:\s*\d+/);
 });
@@ -92,7 +104,10 @@ void test('owner-only sidebar separates personal workspace from governed areas',
     assert.match(sidebar, /Business · Owner/);
     assert.match(sidebar, /Commerce & Access/);
     assert.match(sidebar, /Systems & Trust/);
-    assert.match(sidebar, /<NavMain items=\{baseNavItems\} label="My workspace"/);
+    assert.match(
+        sidebar,
+        /<NavMain items=\{baseNavItems\} label="My workspace"/,
+    );
     assert.match(overview, /<OperatorWorkspaceMap \/>/);
     assert.match(dashboard, /Open Command Center/);
     assert.match(dashboard, /href="\/operator"/);
@@ -104,7 +119,10 @@ void test('owner-only sidebar separates personal workspace from governed areas',
 void test('task-based navigation never issues a license or payment as a side effect', () => {
     assert.doesNotMatch(map, /router\.(post|put|delete)\(/);
     assert.doesNotMatch(map, /fetch\(/);
-    assert.match(map, /Commercial approval, license issuance and production publishing/);
+    assert.match(
+        normalizedMap,
+        /Commercial approval, license issuance and production publishing/,
+    );
     assert.match(overview, /order\.fulfillment_state === 'ready'/);
     assert.match(overview, /product\.active_policy_count === 0/);
 });

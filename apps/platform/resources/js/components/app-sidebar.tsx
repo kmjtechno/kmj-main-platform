@@ -78,21 +78,49 @@ export function AppSidebar() {
     const ownerBusiness: NavItem[] = operator?.enabled
         ? [
               { title: 'Command Center', href: '/operator', icon: Crown },
-              { title: 'Products', href: '/operator/products', icon: PackageOpen },
-              { title: 'Customers & Organizations', href: '/operator/directory', icon: Users },
+              {
+                  title: 'Products',
+                  href: '/operator/products',
+                  icon: PackageOpen,
+              },
+              {
+                  title: 'Customers & Organizations',
+                  href: '/operator/directory',
+                  icon: Users,
+              },
           ]
         : [];
     const ownerCommerce: NavItem[] = operator?.enabled
         ? [
-              { title: 'Orders & Fulfillment', href: '/operator#commercial-orders', icon: ShoppingCart },
-              { title: 'Payments', href: '/operator/payments', icon: CreditCard },
-              { title: 'Entitlements & Licensing', href: '/operator/kslp', icon: KeyRound },
+              {
+                  title: 'Orders & Fulfillment',
+                  href: '/operator#commercial-orders',
+                  icon: ShoppingCart,
+              },
+              {
+                  title: 'Payments',
+                  href: '/operator/payments',
+                  icon: CreditCard,
+              },
+              {
+                  title: 'Entitlements & Licensing',
+                  href: '/operator/kslp',
+                  icon: KeyRound,
+              },
           ]
         : [];
     const ownerSystems: NavItem[] = operator?.enabled
         ? [
-              { title: 'Operations & Audit', href: '/operator/ops', icon: Activity },
-              { title: 'CodeBridge Controls', href: '/operator/codebridge/owner-plan', icon: Boxes },
+              {
+                  title: 'Operations & Audit',
+                  href: '/operator/ops',
+                  icon: Activity,
+              },
+              {
+                  title: 'CodeBridge Controls',
+                  href: '/operator/codebridge/owner-plan',
+                  icon: Boxes,
+              },
           ]
         : [];
 
@@ -118,8 +146,14 @@ export function AppSidebar() {
                 <NavMain items={baseNavItems} label="My workspace" />
                 {operator?.enabled && (
                     <>
-                        <NavMain items={ownerBusiness} label="Business · Owner" />
-                        <NavMain items={ownerCommerce} label="Commerce & Access" />
+                        <NavMain
+                            items={ownerBusiness}
+                            label="Business · Owner"
+                        />
+                        <NavMain
+                            items={ownerCommerce}
+                            label="Commerce & Access"
+                        />
                         <NavMain items={ownerSystems} label="Systems & Trust" />
                     </>
                 )}
