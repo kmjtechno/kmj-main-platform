@@ -91,6 +91,14 @@ void test('navigation, responsiveness and reduced motion remain accessible', () 
     assert.match(map, /Revenue & entitlements/);
 });
 
+void test('product carousel respects reduced-motion preference in both directions', () => {
+    assert.match(command, /function scrollProducts\\(distance: number\\)/);
+    assert.match(command, /prefers-reduced-motion: reduce/);
+    assert.match(command, /\\? 'auto'\\s*:\\s*'smooth'/);
+    assert.match(command, /onClick=\\{\\(\\) => scrollProducts\\(-260\\)\\}/);
+    assert.match(command, /onClick=\\{\\(\\) => scrollProducts\\(260\\)\\}/);
+});
+
 void test('owner palette searches only loaded catalog products and authorized workspaces', () => {
     assert.match(command, /catalogProducts\s*\.filter\(/);
     assert.match(command, /product\.name\s*\+\s*' '\s*\+\s*product\.slug/);
