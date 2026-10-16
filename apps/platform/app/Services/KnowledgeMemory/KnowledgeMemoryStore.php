@@ -42,7 +42,7 @@ final class KnowledgeMemoryStore
         if (! in_array($type, self::TYPES, true)
             || ! is_int($input['expected_revision']) || $input['expected_revision'] < 0
             || $input['expected_revision'] > 1000000
-            || preg_match('/-----BEGIN [A-Z ]*PRIVATE KEY-----|(?:gh[pousr]_|sk-(?:proj-)?)[A-Za-z0-9_-]{16,}|(?:password|api[_-]?key|access[_-]?token|secret)\s*[:=]\s*\S+/i', $title."\n".$content)
+            || preg_match('/-----BEGIN [A-Z ]*PRIVATE KEY-----|(?:gh[pousr]_|sk-(?:proj-)?)[A-Za-z0-9_-]{16,}|(?:password|api[_-]?key|access[_-]?token|secret|authorization|client[_-]?secret|private[_-]?key|x[_-]?api[_-]?key)\s*[:=]\s*\S+|\bBearer\s+[A-Za-z0-9._~-]{10,}/i', $title."\n".$content)
         ) {
             throw new InvalidArgumentException('KNOWLEDGE_INVALID_OR_SENSITIVE_INPUT');
         }
@@ -248,7 +248,9 @@ final class KnowledgeMemoryStore
     private function checkedString(mixed $value, string $pattern, int $maxBytes): string
     {
         if (! is_string($value) || strlen($value) < 1 || strlen($value) > $maxBytes
-            || trim($value) !== $value || ! preg_match($pattern, $value)
+            || trim($value) !== $value
+            || preg_match('/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/', $value)
+            || ! preg_match($pattern, $value)
         ) {
             throw new InvalidArgumentException('KNOWLEDGE_INVALID_PAYLOAD');
         }
