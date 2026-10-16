@@ -43,7 +43,7 @@ test ! -f apps/platform/.env || { echo SECRET_ENV_PRESENT; exit 3; }
 export APP_ENV=testing DB_CONNECTION=sqlite DB_DATABASE=:memory:
 export CACHE_STORE=array SESSION_DRIVER=array QUEUE_CONNECTION=sync MAIL_MAILER=array
 export KMJ_DEVELOPER_LICENSING_ENABLED=false
-export APP_KEY="base64:$(php -r 'echo base64_encode(random_bytes(32));')'"
+export APP_KEY="base64:$(php -r 'echo base64_encode(random_bytes(32));')"
 PHP_FILES=(
  routes/developer-licenses.php
  app/Services/Licensing/Kslp/KslpDeveloperKeys.php
@@ -69,6 +69,7 @@ ALLOWED=(
  apps/platform/tests/Feature/KslpIssuerSubscriptionTest.php
  apps/platform/resources/js/pages/developer-apps.tsx
  apps/platform/resources/js/pages/operator-kslp.tsx
+ apps/platform/public/sdk/javascript/kmj_kslp_first_use.d.mts
 )
 cd apps/platform
 composer install --no-interaction --prefer-dist --no-progress
