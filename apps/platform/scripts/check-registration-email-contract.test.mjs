@@ -70,9 +70,9 @@ void test('reset emails cannot claim sent with log-only production mail', () => 
     assert.match(views, /'mailDeliveryAvailable'/);
     assert.match(
         forgotUi,
-        /disabled=\{processing \|\| !mailDeliveryAvailable\}/,
+        /disabled=\{\s*processing\s*\|\|\s*!mailDeliveryAvailable\s*\}/,
     );
-    assert.match(forgotUi, /Inbox delivery is not confirmed/);
+    assert.match(forgotUi, /Inbox delivery is not\s+confirmed/);
 });
 
 void test('temporary free relay is explicitly disabled, requires SMTPS credentials and remains replaceable', () => {
