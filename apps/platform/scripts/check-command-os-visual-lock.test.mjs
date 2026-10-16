@@ -82,7 +82,7 @@ void test('navigation, responsiveness and reduced motion remain accessible', () 
     assert.match(command, /<DialogDescription/);
     assert.doesNotMatch(command, /onMouseDown=\{\(event\)/);
     assert.match(command, /Escape/);
-    assert.match(command, /aria-label="Search owner workspaces"/);
+    assert.match(command, /aria-label="Search owner workspaces and catalog products"/);
     assert.match(command, /ref=\{carousel\}/);
     assert.match(styles, /@media\s*\(max-width:\s*1170px\)/);
     assert.match(styles, /@media\s*\(max-width:\s*720px\)/);
@@ -140,7 +140,7 @@ void test('Kristi microphone requires explicit informed consent before browser s
     assert.match(kristi, /setSpeechConsent\(event\.target\.checked\)/);
     assert.match(
         kristi,
-        /browser speech recognition may send microphone audio/,
+        /browser speech recognition may send\s+microphone audio/,
     );
     assert.ok(
         kristi.indexOf('if (!speechConsent)') <
