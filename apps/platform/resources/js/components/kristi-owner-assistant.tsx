@@ -89,6 +89,7 @@ export default function KristiOwnerAssistant({
         'en-IN',
     );
     const [voiceAvailable, setVoiceAvailable] = useState(false);
+    const [speechConsent, setSpeechConsent] = useState(false);
     const [voiceNotice, setVoiceNotice] = useState('');
     const [expanded, setExpanded] = useState(true);
     const recognition = useRef<BrowserRecognition | null>(null);
@@ -136,6 +137,12 @@ export default function KristiOwnerAssistant({
             recognition.current?.stop();
             return;
         }
+        if (!speechConsent) {
+            setVoiceNotice(
+                'Before dictation, acknowledge that your browser speech provider may process audio outside KMJ. Text guidance remains available.',
+            );
+            return;
+        }
         const browser = window as SpeechWindow;
         const Recognition =
             browser.SpeechRecognition || browser.webkitSpeechRecognition;
@@ -167,7 +174,7 @@ export default function KristiOwnerAssistant({
         try {
             session.start();
             setVoiceNotice(
-                'Browser dictation may use your browser provider. Audio is not sent to KMJ AI by this preview.',
+                'Dictation started with your acknowledgement. Browser speech services may process audio outside KMJ; this preview does not send audio to KMJ AI.',
             );
             setListening(true);
         } catch {
@@ -279,6 +286,18 @@ export default function KristiOwnerAssistant({
                     ))}
                 </div>
             </div>
+            <label className="mx-4 mb-2 flex items-start gap-2 text-xs leading-5 text-slate-300">
+                <input
+                    type="checkbox"
+                    checked={speechConsent}
+                    disabled={listening}
+                    onChange={(event) => setSpeechConsent(event.target.checked)}
+                    className="mt-1 shrink-0"
+                />
+                <span>
+                    I understand that browser speech recognition may send microphone audio to my browser provider outside KMJ. I consent before starting dictation. Text guidance does not require microphone access.
+                </span>
+            </label>
             <div className="kmj-os-voice">
                 <button
                     type="button"
