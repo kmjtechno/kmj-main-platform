@@ -115,13 +115,33 @@ export default function OperatorCommandOs({
     const [query, setQuery] = useState('');
     const input = useRef<HTMLInputElement | null>(null);
     const carousel = useRef<HTMLDivElement | null>(null);
-    const results = useMemo(
-        () =>
-            destinations.filter((item) =>
-                item.label.toLowerCase().includes(query.trim().toLowerCase()),
-            ),
-        [query],
-    );
+    const results = useMemo(() => {
+        const term = query.trim().toLocaleLowerCase();
+        const workspaces = destinations.map((item) => ({
+            key: item.href,
+            label: item.label,
+            href: item.href,
+            category: 'Workspace',
+        }));
+        if (!term) return workspaces;
+        const matchingWorkspaces = workspaces.filter((item) =>
+            item.label.toLocaleLowerCase().includes(term),
+        );
+        const matchingProducts = catalogProducts
+            .filter((product) =>
+                (product.name + ' ' + product.slug)
+                    .toLocaleLowerCase()
+                    .includes(term),
+            )
+            .slice(0, 12)
+            .map((product) => ({
+                key: 'product:' + product.id,
+                label: product.name,
+                href: '/operator/products',
+                category: 'Catalog product',
+            }));
+        return [...matchingWorkspaces, ...matchingProducts].slice(0, 20);
+    }, [catalogProducts, query]);
     const needsReview = [
         {
             name: 'Payment evidence',
@@ -184,7 +204,7 @@ export default function OperatorCommandOs({
                                 aria-hidden="true"
                             />
                             <span className="min-w-0 flex-1 truncate text-left">
-                                Search products, orders, customers, licenses…
+                                Find workspaces and catalog products…
                             </span>
                             <kbd>Ctrl K</kbd>
                         </button>
@@ -524,10 +544,10 @@ export default function OperatorCommandOs({
                 <DialogContent className="kmj-os-modal max-w-[min(550px,calc(100vw-32px))] gap-0 overflow-hidden border-[#466078] bg-[#101725] p-0 text-white">
                     <div className="border-b border-white/10 px-5 py-4">
                         <DialogTitle className="text-base font-bold">
-                            Find an admin workspace
+                            Find a workspace or product
                         </DialogTitle>
                         <DialogDescription className="mt-1 text-xs text-slate-400">
-                            Search the approved owner navigation. Press Escape
+                            Search workspaces and loaded catalog products. Press Escape
                             to close.
                         </DialogDescription>
                     </div>
@@ -540,8 +560,8 @@ export default function OperatorCommandOs({
                             ref={input}
                             value={query}
                             onChange={(event) => setQuery(event.target.value)}
-                            aria-label="Search owner workspaces"
-                            placeholder="Products, payments, licenses…"
+                            aria-label="Search owner workspaces and catalog products"
+                            placeholder="Workspaces or catalog products…"
                             className="w-full bg-transparent py-2 text-sm text-white outline-none"
                         />
                     </label>
@@ -551,12 +571,17 @@ export default function OperatorCommandOs({
                     >
                         {results.map((result) => (
                             <Link
-                                key={result.href}
+                                key={result.key}
                                 href={result.href}
                                 onClick={() => setSearchOpen(false)}
                                 className="flex min-h-11 items-center justify-between rounded-lg px-3 text-sm hover:bg-white/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-500"
                             >
-                                {result.label}
+                                <span className="min-w-0 flex-1">
+                                    <span className="block truncate">{result.label}</span>
+                                    <span className="block text-[11px] text-slate-400">
+                                        {result.category}
+                                    </span>
+                                </span>
                                 <ArrowRight
                                     className="size-4"
                                     aria-hidden="true"
@@ -568,7 +593,7 @@ export default function OperatorCommandOs({
                                 role="status"
                                 className="p-4 text-sm text-slate-400"
                             >
-                                No matching workspace
+                                No matching workspace or loaded catalog product
                             </p>
                         )}
                     </nav>
