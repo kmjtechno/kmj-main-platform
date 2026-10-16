@@ -166,7 +166,17 @@ final class KnowledgeMemoryStore
             ->where('id', $observationId)
             ->first(['id', 'organization_id', 'project_key', 'topic_key', 'type', 'title', 'content', 'revision', 'updated_at']);
 
-        return $row === null ? null : (array) $row;
+        return $row === null ? null : [
+            'observation_id' => $row->id,
+            'organization_id' => $row->organization_id,
+            'project_key' => $row->project_key,
+            'topic_key' => $row->topic_key,
+            'type' => $row->type,
+            'title' => $row->title,
+            'content' => $row->content,
+            'revision' => (int) $row->revision,
+            'updated_at' => $row->updated_at,
+        ];
     }
 
     /**
