@@ -121,3 +121,14 @@ void test('Kristi Hindi voice selection changes guided answer language without r
     assert.match(kristi, /जनरेटिव AI अभी कनेक्ट नहीं है/);
     assert.doesNotMatch(kristi, /fetch\(|router\.post\(/);
 });
+
+void test('Kristi microphone requires explicit informed consent before browser speech starts', () => {
+    assert.match(kristi, /const \[speechConsent, setSpeechConsent\] = useState\(false\)/);
+    assert.match(kristi, /if \(!speechConsent\)\s*\{/);
+    assert.match(kristi, /checked=\{speechConsent\}/);
+    assert.match(kristi, /setSpeechConsent\(event\.target\.checked\)/);
+    assert.match(kristi, /browser speech recognition may send microphone audio/);
+    assert.ok(kristi.indexOf('if (!speechConsent)') < kristi.indexOf('session.start()'));
+    assert.match(kristi, /disabled=\{listening\}/);
+    assert.match(kristi, /setDraft\(transcript\.slice\(0, 400\)\)/);
+});
