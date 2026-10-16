@@ -70,6 +70,7 @@ ALLOWED=(
  apps/platform/resources/js/pages/developer-apps.tsx
  apps/platform/resources/js/pages/operator-kslp.tsx
  apps/platform/public/sdk/javascript/kmj_kslp_first_use.d.mts
+ apps/platform/public/sdk/javascript/kmj_kslp_first_use.mjs
 )
 cd apps/platform
 composer install --no-interaction --prefer-dist --no-progress
@@ -81,6 +82,8 @@ if ! npm run check:fix; then
 fi
 cd "$WORK"
 mapfile -t CHANGED < <(git diff --name-only)
+printf '%s\n' "${CHANGED[@]}" > "$OUT/formatter-changed-paths.txt"
+UNEXPECTED=0
 for path in "${CHANGED[@]}"; do
   ok=0
   for allowed in "${ALLOWED[@]}"; do
@@ -88,9 +91,13 @@ for path in "${CHANGED[@]}"; do
   done
   if [[ "$ok" != 1 ]]; then
     printf 'UNRELATED_FORMAT_CHANGE=%s\n' "$path" >&2
-    exit 21
+    UNEXPECTED=1
   fi
 done
+if [[ "$UNEXPECTED" -ne 0 ]]; then
+  echo "FORMATTER_CHANGED_PATHS=$OUT/formatter-changed-paths.txt" >&2
+  exit 21
+fi
 test -z "$(git ls-files --others --exclude-standard)" || {
   echo UNTRACKED_OUTPUT_DENIED >&2; exit 21;
 }
