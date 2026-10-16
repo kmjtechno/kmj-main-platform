@@ -667,7 +667,68 @@ jobs:
             php artisan test --filter='OwnerDashboardCatalogTest|PlatformOwnerConsoleTest|OwnerProductManagementWorkspaceTest|OwnerLicensingCenterHttpTest' --no-ansi
             echo "SUPER_ADMIN_COMMAND_CENTER_HTTP_PASS=1"
 
+
+  kmj_pg18_parity:
+    docker:
+      - image: cimg/php:8.4-node
+      - image: postgres:18.6-alpine
+        environment:
+          POSTGRES_USER: kmj_pg18_ci
+          POSTGRES_PASSWORD: kmj_pg18_ci_ephemeral_only
+          POSTGRES_DB: kmj_pg18_parity_ci
+    resource_class: medium
+    environment:
+      APP_ENV: testing
+      APP_DEBUG: "false"
+      APP_URL: "https://test.invalid"
+      DB_CONNECTION: pgsql
+      DB_HOST: "127.0.0.1"
+      DB_PORT: "5432"
+      DB_DATABASE: kmj_pg18_parity_ci
+      DB_USERNAME: kmj_pg18_ci
+      DB_PASSWORD: kmj_pg18_ci_ephemeral_only
+      DB_URL: ""
+      SESSION_DRIVER: array
+      CACHE_STORE: array
+      QUEUE_CONNECTION: sync
+      MAIL_MAILER: array
+      LOG_CHANNEL: stderr
+    steps:
+      - checkout
+      - run:
+          name: Pin exact source and validate PostgreSQL gate syntax
+          command: |
+            set -euo pipefail
+            test "$(git rev-parse HEAD)" = "$CIRCLE_SHA1"
+            bash -n scripts/qa/kmj-postgres18-parity.sh
+      - run:
+          name: Install locked application dependencies and build Inertia assets
+          no_output_timeout: 12m
+          command: |
+            set -euo pipefail
+            cd apps/platform
+            composer install --no-interaction --prefer-dist --no-progress
+            npm ci --ignore-scripts --no-audit --no-fund
+            php artisan wayfinder:generate --with-form --no-ansi
+            npm run build
+      - run:
+          name: PostgreSQL 18 migrations, catalog regressions and complete Laravel suite
+          no_output_timeout: 20m
+          command: |
+            set -euo pipefail
+            export APP_KEY="base64:$(php -r 'echo base64_encode(random_bytes(32));')"
+            bash scripts/qa/kmj-postgres18-parity.sh
+
+
 workflows:
+  review_kmj_postgres18_parity:
+    jobs:
+      - kmj_pg18_parity:
+          filters:
+            branches:
+              only:
+                - feat/postgres18-hyperspeed-parity-20261017
+
   review_super_admin_command_center:
     jobs:
       - super_admin_command_center_ui:
