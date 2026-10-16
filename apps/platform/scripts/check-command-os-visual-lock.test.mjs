@@ -91,6 +91,17 @@ void test('navigation, responsiveness and reduced motion remain accessible', () 
     assert.match(map, /Revenue & entitlements/);
 });
 
+void test('owner palette searches only loaded catalog products and authorized workspaces', () => {
+    assert.match(command, /catalogProducts\s*\.filter\(/);
+    assert.match(command, /product\.name\s*\+\s*' '\s*\+\s*product\.slug/);
+    assert.match(command, /category: 'Catalog product'/);
+    assert.match(command, /href: '\/operator\/products'/);
+    assert.match(command, /category: 'Workspace'/);
+    assert.match(command, /slice\(0, 20\)/);
+    assert.match(command, /loaded catalog products/);
+    assert.doesNotMatch(command, /fetch\(|router\.post\(/);
+});
+
 void test('Kristi chat updates never scroll the entire owner dashboard', () => {
     assert.match(kristi, /const chatHistory = useRef/);
     assert.match(kristi, /ref=\{chatHistory\}/);
