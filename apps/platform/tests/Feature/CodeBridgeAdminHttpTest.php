@@ -17,6 +17,10 @@ final class CodeBridgeAdminHttpTest extends TestCase
 {
     use RefreshDatabase;
 
+    private const TENANT_A = '11111111-1111-4111-8111-111111111111';
+
+    private const TENANT_B = '22222222-2222-4222-8222-222222222222';
+
     public function test_guest_and_regular_user_cannot_manage_codebridge_credentials(): void
     {
         $this->postJson('/operator/codebridge/devices/enroll', [])->assertUnauthorized();
@@ -40,11 +44,11 @@ final class CodeBridgeAdminHttpTest extends TestCase
 
     public function test_cross_tenant_license_binding_fails_closed(): void
     {
-        [$license, $activation] = $this->fixture('tenant-a');
+        [$license, $activation] = $this->fixture(self::TENANT_A);
         $owner = $this->platformOwner();
 
         $this->actingAs($owner)->withSession(['auth.password_confirmed_at' => time()])
-            ->postJson('/operator/codebridge/devices/enroll', ['license_id' => $license, 'activation_id' => $activation, 'tenant_id' => 'tenant-b', 'device_id' => 'device-a'])
+            ->postJson('/operator/codebridge/devices/enroll', ['license_id' => $license, 'activation_id' => $activation, 'tenant_id' => self::TENANT_B, 'device_id' => 'device-a'])
             ->assertForbidden();
 
         self::assertSame(0, DB::table('codebridge_device_credentials')->count());
@@ -52,14 +56,14 @@ final class CodeBridgeAdminHttpTest extends TestCase
 
     public function test_regular_user_cannot_upgrade_codebridge_owner_tier(): void
     {
-        [$license] = $this->fixture('tenant-a');
+        [$license] = $this->fixture(self::TENANT_A);
         $this->ownerPlan();
         $user = User::factory()->create(['email_verified_at' => now()]);
 
         $this->actingAs($user)->withSession(['auth.password_confirmed_at' => time()])
             ->postJson('/operator/codebridge/licenses/owner-tier', [
                 'license_id' => $license,
-                'tenant_id' => 'tenant-a',
+                'tenant_id' => self::TENANT_A,
                 'confirm' => 'UPGRADE_CODEBRIDGE_OWNER',
             ])->assertForbidden();
 
@@ -131,14 +135,14 @@ final class CodeBridgeAdminHttpTest extends TestCase
 
     public function test_owner_upgrade_requires_explicit_confirmation(): void
     {
-        [$license] = $this->fixture('tenant-a');
+        [$license] = $this->fixture(self::TENANT_A);
         $this->ownerPlan();
         $owner = $this->platformOwner();
 
         $this->actingAs($owner)->withSession(['auth.password_confirmed_at' => time()])
             ->postJson('/operator/codebridge/licenses/owner-tier', [
                 'license_id' => $license,
-                'tenant_id' => 'tenant-a',
+                'tenant_id' => self::TENANT_A,
                 'confirm' => 'wrong',
             ])->assertUnprocessable()
             ->assertJsonValidationErrors(['confirm']);
@@ -409,18 +413,18 @@ final class CodeBridgeAdminHttpTest extends TestCase
 
     public function test_owner_can_enroll_rotate_and_revoke_with_no_store_responses(): void
     {
-        [$license, $activation] = $this->fixture('tenant-a');
+        [$license, $activation] = $this->fixture(self::TENANT_A);
         $owner = $this->platformOwner();
-        $this->ownTenant($owner, 'tenant-a');
+        $this->ownTenant($owner, self::TENANT_A);
         $session = ['auth.password_confirmed_at' => time()];
-        $payload = ['license_id' => $license, 'activation_id' => $activation, 'tenant_id' => 'tenant-a', 'device_id' => 'device-a'];
+        $payload = ['license_id' => $license, 'activation_id' => $activation, 'tenant_id' => self::TENANT_A, 'device_id' => 'device-a'];
 
         $enroll = $this->actingAs($owner)->withSession($session)->postJson('/operator/codebridge/devices/enroll', $payload)
             ->assertCreated()->assertHeader('Cache-Control', 'no-store, private');
         $old = $enroll->json('credential');
         self::assertIsString($old);
 
-        $manage = ['license_id' => $license, 'tenant_id' => 'tenant-a', 'device_id' => 'device-a'];
+        $manage = ['license_id' => $license, 'tenant_id' => self::TENANT_A, 'device_id' => 'device-a'];
         $rotate = $this->actingAs($owner)->withSession($session)->postJson('/operator/codebridge/devices/rotate', $manage)
             ->assertOk()->assertHeader('Cache-Control', 'no-store, private');
         self::assertNotSame($old, $rotate->json('credential'));
@@ -432,19 +436,19 @@ final class CodeBridgeAdminHttpTest extends TestCase
 
     public function test_device_control_disconnect_requires_organization_manager_and_recent_confirmation(): void
     {
-        [$license, $activation] = $this->fixture('tenant-a');
+        [$license, $activation] = $this->fixture(self::TENANT_A);
         $owner = $this->platformOwner();
-        $this->ownTenant($owner, 'tenant-a');
+        $this->ownTenant($owner, self::TENANT_A);
         $session = ['auth.password_confirmed_at' => time()];
         $this->actingAs($owner)->withSession($session)
             ->postJson('/operator/codebridge/devices/enroll', [
                 'license_id' => $license,
                 'activation_id' => $activation,
-                'tenant_id' => 'tenant-a',
+                'tenant_id' => self::TENANT_A,
                 'device_id' => 'device-a',
             ])->assertCreated();
 
-        $path = '/services/kmj-codebridge/organizations/tenant-a/devices/device-a/disconnect';
+        $path = '/services/kmj-codebridge/organizations/'.self::TENANT_A.'/devices/device-a/disconnect';
         $outsider = User::factory()->create(['email_verified_at' => now()]);
         $this->actingAs($outsider)->withSession($session)
             ->postJson($path, ['confirm_device_id' => 'device-a'])->assertForbidden();
@@ -455,7 +459,7 @@ final class CodeBridgeAdminHttpTest extends TestCase
             ->postJson($path, ['confirm_device_id' => 'another-device'])->assertUnprocessable();
 
         $this->actingAs($owner)->withSession($session)
-            ->postJson('/services/kmj-codebridge/organizations/tenant-b/devices/device-a/disconnect',
+            ->postJson('/services/kmj-codebridge/organizations/'.self::TENANT_B.'/devices/device-a/disconnect',
                 ['confirm_device_id' => 'device-a'])->assertForbidden();
 
         self::assertNull(DB::table('codebridge_device_credentials')
@@ -464,19 +468,19 @@ final class CodeBridgeAdminHttpTest extends TestCase
 
     public function test_device_control_disconnect_is_audited_idempotent_and_never_returns_a_token(): void
     {
-        [$license, $activation] = $this->fixture('tenant-a');
+        [$license, $activation] = $this->fixture(self::TENANT_A);
         $owner = $this->platformOwner();
-        $this->ownTenant($owner, 'tenant-a');
+        $this->ownTenant($owner, self::TENANT_A);
         $session = ['auth.password_confirmed_at' => time()];
         $this->actingAs($owner)->withSession($session)
             ->postJson('/operator/codebridge/devices/enroll', [
                 'license_id' => $license,
                 'activation_id' => $activation,
-                'tenant_id' => 'tenant-a',
+                'tenant_id' => self::TENANT_A,
                 'device_id' => 'device-a',
             ])->assertCreated();
 
-        $path = '/services/kmj-codebridge/organizations/tenant-a/devices/device-a/disconnect';
+        $path = '/services/kmj-codebridge/organizations/'.self::TENANT_A.'/devices/device-a/disconnect';
         $response = $this->actingAs($owner)->withSession($session)
             ->post($path, ['confirm_device_id' => 'device-a']);
         $response->assertRedirect()->assertHeader('Cache-Control', 'no-store, private');
@@ -553,7 +557,7 @@ final class CodeBridgeAdminHttpTest extends TestCase
     /** @return array<string, string> */
     private function validPayload(): array
     {
-        return ['license_id' => (string) Str::uuid(), 'activation_id' => (string) Str::uuid(), 'tenant_id' => 'tenant-a', 'device_id' => 'device-a'];
+        return ['license_id' => (string) Str::uuid(), 'activation_id' => (string) Str::uuid(), 'tenant_id' => self::TENANT_A, 'device_id' => 'device-a'];
     }
 
     private function platformOwner(): User

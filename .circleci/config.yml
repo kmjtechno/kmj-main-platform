@@ -707,6 +707,8 @@ jobs:
           command: |
             set -euo pipefail
             cd apps/platform
+            # A literal test-only env prevents phpdotenv missing-file warnings.
+            printf '%s\n' 'APP_ENV=testing' > .env
             composer install --no-interaction --prefer-dist --no-progress
             npm ci --ignore-scripts --no-audit --no-fund
             php artisan wayfinder:generate --with-form --no-ansi
