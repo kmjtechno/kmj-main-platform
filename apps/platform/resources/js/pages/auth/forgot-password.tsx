@@ -9,20 +9,28 @@ import { Label } from '@/components/ui/label';
 import { login } from '@/routes';
 import { email } from '@/routes/password';
 
-export default function ForgotPassword({ status, mailDeliveryAvailable }: { status?: string; mailDeliveryAvailable: boolean }) {
+export default function ForgotPassword({
+    status,
+    mailDeliveryAvailable,
+}: {
+    status?: string;
+    mailDeliveryAvailable: boolean;
+}) {
     return (
         <>
             <Head title="Forgot password" />
 
             {status && mailDeliveryAvailable && (
                 <div className="mb-4 text-center text-sm font-medium text-green-600">
-                    Request accepted for processing. Inbox delivery is not confirmed.
+                    Request accepted for processing. Inbox delivery is not
+                    confirmed.
                 </div>
             )}
 
             {!mailDeliveryAvailable && (
                 <p role="alert" className="mb-4 rounded-lg border p-3 text-sm">
-                    Password reset emails are currently unavailable. Please try again later.
+                    Password reset emails are currently unavailable. Please try
+                    again later.
                 </p>
             )}
 
@@ -47,7 +55,9 @@ export default function ForgotPassword({ status, mailDeliveryAvailable }: { stat
                             <div className="my-6 flex items-center justify-start">
                                 <Button
                                     className="w-full"
-                                    disabled={processing || !mailDeliveryAvailable}
+                                    disabled={
+                                        processing || !mailDeliveryAvailable
+                                    }
                                     data-test="email-password-reset-link-button"
                                 >
                                     {processing && (
