@@ -25,7 +25,7 @@ final class KnowledgeMemoryController extends Controller
     {
         $organizationId = $this->organization($request);
         $validated = $request->validate([
-            'query' => ['required', 'string', 'max:80', 'regex:/\A[a-zA-Z0-9][a-zA-Z0-9 .:-]{0,79}\z/D'],
+            'query' => ['required', 'string', 'max:80', 'regex:/\A[\pL\pN][\pL\pM\pN .:-]{0,79}\z/uD'],
             'limit' => ['sometimes', 'integer', 'min:1', 'max:20'],
         ]);
 
