@@ -164,7 +164,7 @@ final class KnowledgeMemoryStore
             ->where('organization_id', $organizationId)
             ->where('project_key', $projectKey)
             ->where('id', $observationId)
-            ->first(['id', 'project_key', 'topic_key', 'type', 'title', 'content', 'revision', 'updated_at']);
+            ->first(['id', 'organization_id', 'project_key', 'topic_key', 'type', 'title', 'content', 'revision', 'updated_at']);
 
         return $row === null ? null : (array) $row;
     }
@@ -203,9 +203,11 @@ final class KnowledgeMemoryStore
         return $builder->orderByDesc('updated_at')
             ->orderBy('id')
             ->limit($limit)
-            ->get(['id', 'topic_key', 'type', 'title', 'content', 'revision', 'updated_at'])
+            ->get(['id', 'organization_id', 'project_key', 'topic_key', 'type', 'title', 'content', 'revision', 'updated_at'])
             ->map(fn ($row): array => [
                 'observation_id' => $row->id,
+                'organization_id' => $row->organization_id,
+                'project_key' => $row->project_key,
                 'topic_key' => $row->topic_key,
                 'type' => $row->type,
                 'title' => $row->title,
