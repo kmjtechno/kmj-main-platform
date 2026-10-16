@@ -119,7 +119,7 @@ final class KnowledgeMemoryControllerTest extends TestCase
     {
         config(['knowledge_memory.enabled' => true]);
         $url = '/services/kmj-codebridge/knowledge-memory';
-        $this->actingAs($this->owner)->postJson($url, $this->memory())->assertRedirect();
+        $this->actingAs($this->owner)->postJson($url, $this->memory())->assertStatus(423);
 
         $created = $this->confirmed($this->owner)->postJson($url, $this->memory())->assertCreated();
         $same = $this->confirmed($this->owner)->postJson($url, $this->memory())
