@@ -8,6 +8,7 @@ use App\Services\Licensing\Kslp\KslpSigner;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use KMJ\MainPlatform\Catalog\Models\Plan;
 use KMJ\MainPlatform\Catalog\Models\Product;
 use Tests\TestCase;
@@ -92,7 +93,7 @@ final class KslpLifecycleTest extends TestCase
 
         $this->expectException(\DomainException::class);
         $this->expectExceptionMessage('KSLP_LICENSE_NOT_LEASABLE');
-        $control->lease($license['id'], (string) \Illuminate\Support\Str::uuid(), $signer);
+        $control->lease($license['id'], (string) Str::uuid(), $signer);
     }
 
     public function test_delegated_app_cannot_receive_cloudos_audience_signed_lease(): void
@@ -109,6 +110,7 @@ final class KslpLifecycleTest extends TestCase
             {
                 return 'test-kid';
             }
+
             public function sign(string $message): string
             {
                 throw new \RuntimeException('Unexpected signer invocation');
@@ -129,9 +131,7 @@ final class KslpLifecycleTest extends TestCase
         $sk = sodium_crypto_sign_secretkey($kp);
         $signer = new class($sk) implements KslpSigner
         {
-            public function __construct(private string $sk)
-            {
-            }
+            public function __construct(private string $sk) {}
 
             public function kid(): string
             {

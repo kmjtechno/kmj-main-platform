@@ -1,7 +1,13 @@
 /** Types for the standalone KSLP first-use JS module.
  *  Device registration never grants signed commercial entitlement.
  */
-export type KslpPlatform = 'windows' | 'linux' | 'macos' | 'android' | 'ios' | 'other';
+export type KslpPlatform =
+    | 'windows'
+    | 'linux'
+    | 'macos'
+    | 'android'
+    | 'ios'
+    | 'other';
 
 export interface KslpFirstUseReceipt {
     readonly activationId: string;
@@ -22,7 +28,10 @@ export interface KslpFirstUseOptions {
     platform?: KslpPlatform | null;
     appVersion?: string | null;
     /** For offline test fixtures. Real integrations should not override this. */
-    request?: (url: string, payload: Record<string, unknown>) => Promise<Record<string, unknown>>;
+    request?: (
+        url: string,
+        payload: Record<string, unknown>,
+    ) => Promise<Record<string, unknown>>;
 }
 
 export class KslpFirstUseError extends Error {

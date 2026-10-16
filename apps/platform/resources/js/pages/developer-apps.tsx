@@ -219,8 +219,7 @@ export default function DeveloperApps({
         organizations[0];
     const initialApp = applications.find(
         (app) =>
-            app.status === 'active' &&
-            app.organization_id === preferredOrg?.id,
+            app.status === 'active' && app.organization_id === preferredOrg?.id,
     );
     const [language, setLanguage] = useState<string>('TypeScript');
     const [selectedApp, setSelectedApp] = useState<string>(
@@ -229,9 +228,7 @@ export default function DeveloperApps({
     const [customProductCode, setCustomProductCode] = useState(false);
     const [copied, setCopied] = useState(false);
     const [revokeKeyId, setRevokeKeyId] = useState<string | null>(null);
-    const [releaseDeviceId, setReleaseDeviceId] = useState<string | null>(
-        null,
-    );
+    const [releaseDeviceId, setReleaseDeviceId] = useState<string | null>(null);
     const [licenseSearch, setLicenseSearch] = useState('');
     const revokeForm = useForm({ reason: '' });
     const releaseDeviceForm = useForm({ reason: '' });
@@ -572,15 +569,17 @@ export default function DeveloperApps({
                     </section>
                 )}
                 {organizations.length > 0 &&
-                    !organizations.some((org) => org.issuer_status === 'active') && (
+                    !organizations.some(
+                        (org) => org.issuer_status === 'active',
+                    ) && (
                         <section
                             role="status"
                             className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-4 text-sm"
                         >
-                            Your workspace is created. An active,
-                            owner-approved issuer subscription is required
-                            before registering an app or issuing customer keys.
-                            No payment or license is granted automatically.
+                            Your workspace is created. An active, owner-approved
+                            issuer subscription is required before registering
+                            an app or issuing customer keys. No payment or
+                            license is granted automatically.
                         </section>
                     )}
                 <div className="grid gap-5 xl:grid-cols-2">
@@ -839,10 +838,7 @@ export default function DeveloperApps({
                             )}
                             <button
                                 type="submit"
-                                disabled={
-                                    !readyToIssue ||
-                                    issueKey.processing
-                                }
+                                disabled={!readyToIssue || issueKey.processing}
                                 className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-red-600 px-4 text-sm font-bold text-white disabled:opacity-40"
                             >
                                 <KeyRound className="size-4" />{' '}
@@ -918,7 +914,7 @@ export default function DeveloperApps({
                                                     Use this app{' '}
                                                     <ArrowRight className="size-3.5" />
                                                 </a>
-                                        )}
+                                            )}
                                     </article>
                                 ))
                             )}
@@ -926,7 +922,8 @@ export default function DeveloperApps({
                         <div className="space-y-2">
                             {visibleKeys.length === 0 ? (
                                 <p className="text-muted-foreground rounded-xl border border-dashed p-5 text-sm">
-                                    No licenses match this search in the recent list.
+                                    No licenses match this search in the recent
+                                    list.
                                 </p>
                             ) : (
                                 visibleKeys.map((key) => (
@@ -949,35 +946,46 @@ export default function DeveloperApps({
                                         </p>
                                         {recentEvents.find(
                                             (event) =>
-                                                event.license_id === key.license_id,
+                                                event.license_id ===
+                                                key.license_id,
                                         ) && (
                                             <p className="text-muted-foreground mt-1 text-xs">
                                                 Recent activity:{' '}
-                                                {recentEvents.find(
-                                                    (event) =>
-                                                        event.license_id ===
-                                                        key.license_id,
-                                                )?.action.replace(/_/g, ' ')}
+                                                {recentEvents
+                                                    .find(
+                                                        (event) =>
+                                                            event.license_id ===
+                                                            key.license_id,
+                                                    )
+                                                    ?.action.replace(/_/g, ' ')}
                                             </p>
                                         )}
                                         <p className="text-muted-foreground mt-1 text-xs">
                                             License:{' '}
-                                            {key.display_state.replace(/_/g, ' ')}{' '}
+                                            {key.display_state.replace(
+                                                /_/g,
+                                                ' ',
+                                            )}{' '}
                                             · Expires{' '}
-                                            {new Date(key.expires_at).toLocaleDateString()} ·
-                                            Active device seats:{' '}
-                                            {activeSeatCounts[key.license_id] ?? 0}
+                                            {new Date(
+                                                key.expires_at,
+                                            ).toLocaleDateString()}{' '}
+                                            · Active device seats:{' '}
+                                            {activeSeatCounts[key.license_id] ??
+                                                0}
                                         </p>
                                         <p className="text-muted-foreground mt-1 text-xs">
-                                            Activation is device registration only,
-                                            not a signed commercial lease.
+                                            Activation is device registration
+                                            only, not a signed commercial lease.
                                         </p>
                                         {!key.revoked_at &&
-                                            key.display_state !== 'REVOKED_OR_SUSPENDED' &&
+                                            key.display_state !==
+                                                'REVOKED_OR_SUSPENDED' &&
                                             activeDevices
                                                 .filter(
                                                     (device) =>
-                                                        device.license_id === key.license_id,
+                                                        device.license_id ===
+                                                        key.license_id,
                                                 )
                                                 .map((device) => (
                                                     <div
@@ -991,28 +999,37 @@ export default function DeveloperApps({
                                                             ).toLocaleDateString()}
                                                         </p>
                                                         <p className="text-muted-foreground mt-1 text-xs">
-                                                            Release this seat only if
-                                                            the device was replaced,
-                                                            lost or is no longer in use.
+                                                            Release this seat
+                                                            only if the device
+                                                            was replaced, lost
+                                                            or is no longer in
+                                                            use.
                                                         </p>
                                                         {canIssueKeys &&
-                                                            releaseDeviceId !== device.id && (
+                                                            releaseDeviceId !==
+                                                                device.id && (
                                                                 <button
                                                                     type="button"
                                                                     className="mt-2 min-h-10 rounded-lg border px-3 text-xs font-bold"
                                                                     onClick={() => {
-                                                                        setReleaseDeviceId(device.id);
+                                                                        setReleaseDeviceId(
+                                                                            device.id,
+                                                                        );
                                                                         releaseDeviceForm.reset();
                                                                     }}
                                                                 >
-                                                                    Release device seat
+                                                                    Release
+                                                                    device seat
                                                                 </button>
                                                             )}
-                                                        {releaseDeviceId === device.id &&
+                                                        {releaseDeviceId ===
+                                                            device.id &&
                                                             canIssueKeys && (
                                                                 <form
                                                                     className="mt-3 space-y-2"
-                                                                    onSubmit={(event) => {
+                                                                    onSubmit={(
+                                                                        event,
+                                                                    ) => {
                                                                         event.preventDefault();
                                                                         releaseDeviceForm.post(
                                                                             '/developer/keys/' +
@@ -1022,53 +1039,89 @@ export default function DeveloperApps({
                                                                                 '/release',
                                                                             {
                                                                                 preserveScroll: true,
-                                                                                onSuccess: () => {
-                                                                                    setReleaseDeviceId(null);
-                                                                                    releaseDeviceForm.reset();
-                                                                                },
+                                                                                onSuccess:
+                                                                                    () => {
+                                                                                        setReleaseDeviceId(
+                                                                                            null,
+                                                                                        );
+                                                                                        releaseDeviceForm.reset();
+                                                                                    },
                                                                             },
                                                                         );
                                                                     }}
                                                                 >
                                                                     <label
-                                                                        htmlFor={'release-' + device.id}
+                                                                        htmlFor={
+                                                                            'release-' +
+                                                                            device.id
+                                                                        }
                                                                         className="block text-xs font-semibold"
                                                                     >
-                                                                        Why release this device?
+                                                                        Why
+                                                                        release
+                                                                        this
+                                                                        device?
                                                                     </label>
                                                                     <input
-                                                                        id={'release-' + device.id}
+                                                                        id={
+                                                                            'release-' +
+                                                                            device.id
+                                                                        }
                                                                         className="bg-background h-10 w-full rounded-lg border px-3 text-xs"
                                                                         placeholder="Device replaced or lost"
-                                                                        value={releaseDeviceForm.data.reason}
-                                                                        onChange={(event) =>
+                                                                        value={
+                                                                            releaseDeviceForm
+                                                                                .data
+                                                                                .reason
+                                                                        }
+                                                                        onChange={(
+                                                                            event,
+                                                                        ) =>
                                                                             releaseDeviceForm.setData(
                                                                                 'reason',
-                                                                                event.target.value,
+                                                                                event
+                                                                                    .target
+                                                                                    .value,
                                                                             )
                                                                         }
-                                                                        minLength={3}
-                                                                        maxLength={500}
+                                                                        minLength={
+                                                                            3
+                                                                        }
+                                                                        maxLength={
+                                                                            500
+                                                                        }
                                                                         required
                                                                     />
-                                                                    {releaseDeviceForm.errors.reason && (
+                                                                    {releaseDeviceForm
+                                                                        .errors
+                                                                        .reason && (
                                                                         <p className="text-xs text-red-500">
-                                                                            {releaseDeviceForm.errors.reason}
+                                                                            {
+                                                                                releaseDeviceForm
+                                                                                    .errors
+                                                                                    .reason
+                                                                            }
                                                                         </p>
                                                                     )}
                                                                     <div className="flex flex-wrap gap-2">
                                                                         <button
                                                                             type="submit"
-                                                                            disabled={releaseDeviceForm.processing}
+                                                                            disabled={
+                                                                                releaseDeviceForm.processing
+                                                                            }
                                                                             className="min-h-10 rounded-lg bg-red-600 px-3 text-xs font-bold text-white disabled:opacity-50"
                                                                         >
-                                                                            Confirm seat release
+                                                                            Confirm
+                                                                            seat
+                                                                            release
                                                                         </button>
                                                                         <button
                                                                             type="button"
                                                                             className="min-h-10 rounded-lg border px-3 text-xs"
                                                                             onClick={() => {
-                                                                                setReleaseDeviceId(null);
+                                                                                setReleaseDeviceId(
+                                                                                    null,
+                                                                                );
                                                                                 releaseDeviceForm.reset();
                                                                             }}
                                                                         >
@@ -1080,7 +1133,8 @@ export default function DeveloperApps({
                                                     </div>
                                                 ))}
                                         {!key.revoked_at &&
-                                            key.display_state !== 'REVOKED_OR_SUSPENDED' &&
+                                            key.display_state !==
+                                                'REVOKED_OR_SUSPENDED' &&
                                             canIssueKeys && (
                                                 <button
                                                     type="button"
@@ -1092,7 +1146,7 @@ export default function DeveloperApps({
                                                 >
                                                     Revoke key
                                                 </button>
-                                        )}
+                                            )}
                                         {revokeKeyId === key.id && (
                                             <form
                                                 className="mt-3 space-y-2 border-t pt-3"
@@ -1272,8 +1326,8 @@ export default function DeveloperApps({
                         )}
                     </div>
                     <p className="text-muted-foreground mt-2 text-xs">
-                        Python and JavaScript first-use helpers only register
-                        a device through a signed challenge. Supply your own
+                        Python and JavaScript first-use helpers only register a
+                        device through a signed challenge. Supply your own
                         secure Ed25519 signer, use the trusted KSLP origin and
                         independently verify a future signed commercial lease
                         before unlocking any product features.

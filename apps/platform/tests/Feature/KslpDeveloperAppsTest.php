@@ -102,19 +102,19 @@ final class KslpDeveloperAppsTest extends TestCase
             return ($payload['encryptHistory'] ?? false) === true;
         });
         $firstResponse->assertInertia(fn (Assert $page) => $page
-                ->component('developer-apps')
-                ->has('applications', 1)
-                ->has('keys', 1)
-                ->where('canIssueKeys', true)
-                ->where('newKey.key', $plain));
+            ->component('developer-apps')
+            ->has('applications', 1)
+            ->has('keys', 1)
+            ->where('canIssueKeys', true)
+            ->where('newKey.key', $plain));
 
         $nextResponse = $this->get('/developer/apps')->assertOk();
         $nextCache = array_map('trim', explode(',', (string) $nextResponse->headers->get('Cache-Control')));
         self::assertContains('private', $nextCache);
         self::assertContains('no-store', $nextCache);
         $nextResponse->assertInertia(fn (Assert $page) => $page
-                ->component('developer-apps')
-                ->where('newKey', null));
+            ->component('developer-apps')
+            ->where('newKey', null));
     }
 
     public function test_duplicate_application_code_returns_validation_error_without_duplicate_record(): void

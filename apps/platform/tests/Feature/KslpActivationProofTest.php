@@ -5,6 +5,8 @@ namespace Tests\Feature;
 use App\Services\Licensing\Kslp\KslpActivationProof;
 use App\Services\Licensing\Kslp\KslpLicenseControlPlane;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
 final class KslpActivationProofTest extends TestCase
@@ -53,8 +55,8 @@ final class KslpActivationProofTest extends TestCase
             '-_',
         ), '=');
 
-        $expiresAt = \Illuminate\Support\Carbon::parse(
-            \Illuminate\Support\Facades\DB::table('kslp_activation_challenges')
+        $expiresAt = Carbon::parse(
+            DB::table('kslp_activation_challenges')
                 ->where('id', $challenge['challenge_id'])
                 ->value('expires_at'),
         );

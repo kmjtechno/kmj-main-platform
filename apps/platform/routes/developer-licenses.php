@@ -8,6 +8,7 @@ use App\Services\Licensing\Kslp\KslpDeveloperKeys;
 use App\Services\Licensing\Kslp\KslpIssuerSubscriptionAuthority;
 use App\Services\Licensing\Kslp\KslpLicenseControlPlane;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Schema;
@@ -70,13 +71,13 @@ Route::middleware(['auth', 'verified'])->prefix('developer')->name('developer.')
                     // The displayed state is evaluated by the server from
                     // real timestamps: no client-clock guessing or N+1 calls.
                     $now = now();
-                    $expiry = \Illuminate\Support\Carbon::parse($key->expires_at);
+                    $expiry = Carbon::parse($key->expires_at);
                     if ($key->revoked_at !== null || $key->license_revoked_at !== null || $key->status !== 'active') {
                         $key->display_state = 'REVOKED_OR_SUSPENDED';
                     } elseif ($now->lte($expiry)) {
                         $key->display_state = $now->gte($expiry->copy()->subDays(7))
                             ? 'RENEWAL_DUE' : 'ACTIVE';
-                    } elseif ($key->grace_until !== null && $now->lte(\Illuminate\Support\Carbon::parse($key->grace_until))) {
+                    } elseif ($key->grace_until !== null && $now->lte(Carbon::parse($key->grace_until))) {
                         $key->display_state = 'GRACE';
                     } else {
                         $key->display_state = 'RESTRICTED';
