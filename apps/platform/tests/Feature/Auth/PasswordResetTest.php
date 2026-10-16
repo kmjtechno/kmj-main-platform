@@ -4,7 +4,6 @@ namespace Tests\Feature\Auth;
 
 use App\Models\User;
 use Illuminate\Auth\Notifications\ResetPassword;
-use Illuminate\Foundation\Http\Middleware\ValidateCsrfToken;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Notification;
 use Laravel\Fortify\Features;
@@ -34,9 +33,12 @@ class PasswordResetTest extends TestCase
 
         try {
             app()->instance('env', 'production');
-            // Simulating the production environment also enables CSRF during PHPUnit.
-            // Keep this test scoped to mail rejection; real CSRF middleware is unchanged.
-            $this->withoutMiddleware(ValidateCsrfToken::class);
+            // Laravel 13 enforces request-forgery checks when a PHPUnit test
+            // simulates production. Supply a matching CSRF session/header pair
+            // instead of disabling the middleware being exercised.
+            $csrfToken = bin2hex(random_bytes(16));
+            $this->withSession(['_token' => $csrfToken])
+                ->withHeader('X-CSRF-TOKEN', $csrfToken);
             config()->set('mail.default', 'log');
             Notification::fake();
 
