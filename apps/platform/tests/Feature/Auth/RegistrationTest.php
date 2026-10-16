@@ -43,11 +43,15 @@ class RegistrationTest extends TestCase
             self::assertTrue(app()->isProduction());
             config()->set('mail.default', 'log');
 
+            // Satisfy the unchanged production password policy first, so this
+            // regression specifically reaches the mail-readiness rejection.
+            $validPassword = 'R7k!wQ2#nV9@tP4';
+
             $this->post(route('register.store'), [
                 'name' => 'Undeliverable User',
                 'email' => 'undeliverable@example.test',
-                'password' => 'password',
-                'password_confirmation' => 'password',
+                'password' => $validPassword,
+                'password_confirmation' => $validPassword,
             ])->assertSessionHasErrors(['email']);
 
             $this->assertDatabaseMissing('users', ['email' => 'undeliverable@example.test']);
