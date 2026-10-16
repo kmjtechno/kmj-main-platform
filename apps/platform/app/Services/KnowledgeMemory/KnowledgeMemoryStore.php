@@ -197,13 +197,18 @@ final class KnowledgeMemoryStore
             ->where('organization_id', $organizationId)
             ->where('project_key', $projectKey);
 
-        if (DB::getDriverName() === 'pgsql') {
+        if (DB::getDriverName() === 'pgsql' && preg_match('/^[\\x00-\\x7F]*$/D', $query)) {
+            // English/ASCII terms use the PostgreSQL native GIN FTS index.
             $builder->whereRaw(
                 "to_tsvector('simple', coalesce(title, '') || ' ' || coalesce(content, '')) @@ plainto_tsquery('simple', ?)",
                 [$query]
             );
         } else {
-            // CI-only fallback for phpunit.xml's in-memory SQLite database.
+            // Unicode text can contain combining marks that the server's
+            // PostgreSQL dictionary/tokenizer might split differently.
+            // Search a single authorized org/project with literal LIKE and a
+            // strict bounded query (no wildcard meta-characters). On SQLite
+            // this is also the test-only compatibility path.
             $builder->where(function ($nested) use ($query): void {
                 $nested->where('title', 'like', '%'.$query.'%')
                     ->orWhere('content', 'like', '%'.$query.'%');
