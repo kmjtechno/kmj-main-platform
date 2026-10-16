@@ -33,3 +33,21 @@ Engram's valuable ideas are **curated agent memory**, topic-key revisions, progr
 - Windows P720 rollout, active client tools and performance improvements require independent live tests, not just merged code.
 
 Acceptance: no billing or existing production route changes; no cross-tenant leakage, unauthorized writes, duplicate operations, silently truncated inputs or implied autonomous execution.
+
+
+## Implemented behind default-off flag (PR #443)
+
+The main-platform feature now includes:
+- `apps/platform/config/knowledge_memory.php`: `KMJ_KNOWLEDGE_MEMORY_ENABLED=false` by default.
+- `apps/platform/routes/knowledge-memory.php`: three **browser-session web routes** under `auth` + `verified`: `GET /services/kmj-codebridge/knowledge-memory?query=...`, `GET /services/kmj-codebridge/knowledge-memory/{observation}`, `POST /services/kmj-codebridge/knowledge-memory`.
+- `KnowledgeMemoryController` derives organization only through the existing membership-backed active CodeBridge entitlement resolver; members may read their own organization's `kmj-codebridge` knowledge, owner/managers may explicitly write only after recent password confirmation and CSRF protection. Read/write throttles and private/no-store cache policy are used.
+- Project is **hard-pinned** to `kmj-codebridge`; no request, header, session or model field can expand that grant. This implementation is not yet an OAuth/machine-to-machine endpoint.
+- Bounded memory writes, scoped uniqueness, replay-safe write receipts, strict revision conditions and compact scoped searches live in the internal PostgreSQL store.
+- No automatic capture, ChatGPT history import, sync, P720 deployment, network inference or data migration at source import.
+- `scripts/ci/verify-postgres-staging.sh <exact-git-sha>` was extended to require both memory tables, native GIN index, focused memory tests and clean rollback against a disposable UNIX-socket PostgreSQL cluster.
+
+**Activation block:** Unless this exact candidate has executable GitHub Actions PASS, isolated real PostgreSQL verification PASS and a backup/rollback rehearsal, leave the feature flag `false`. Do not flip it through CodeBridge or an AI request. A signed, authenticating CodeBridge API adapter requires separate authorization and deployment gates.
+
+## Evidence status
+
+GitHub run scheduling can fail independently of source tests. Do not label any job that failed before a test step as an application regression without a runnable stack trace, and do not treat it as PASS. A running/green CodeBridge hosted smoke does not prove this Main Platform database feature is deployed.
