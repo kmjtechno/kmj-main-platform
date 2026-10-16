@@ -667,7 +667,176 @@ jobs:
             php artisan test --filter='OwnerDashboardCatalogTest|PlatformOwnerConsoleTest|OwnerProductManagementWorkspaceTest|OwnerLicensingCenterHttpTest' --no-ansi
             echo "SUPER_ADMIN_COMMAND_CENTER_HTTP_PASS=1"
 
+  kslp_authsp_source_preflight:
+    docker:
+      - image: cimg/php:8.4-node
+    resource_class: small
+    steps:
+      - checkout
+      - run:
+          name: Exact SHA PHP and JS no-dependency security checks
+          command: |
+            set -euo pipefail
+            test "$(git rev-parse HEAD)" = "$CIRCLE_SHA1"
+            bash -n scripts/ci/authsp-fix-isolated.sh
+            php -l apps/platform/routes/developer-licenses.php
+            php -l apps/platform/tests/Feature/KslpDeveloperAppsTest.php
+            php -l apps/platform/app/Services/Licensing/Kslp/KslpLicenseControlPlane.php
+            php -l apps/platform/app/Services/Licensing/Kslp/KslpActivationProof.php
+            php tests/codebridge/activation-proof.php apps/platform/app/Services/Licensing/Kslp/KslpActivationProof.php
+            node --test tests/kslp-javascript-first-use.test.mjs
+            cd apps/platform
+            node --test scripts/check-licensing-integration.test.mjs
+            echo "KMJ_KSLP_SOURCE_PREFLIGHT_PASS=$CIRCLE_SHA1"
+
+  kslp_authsp_python_sdk:
+    docker:
+      - image: cimg/python:3.12
+    resource_class: small
+    steps:
+      - checkout
+      - run:
+          name: Exact SHA Python PoP and denial tests (stdlib only)
+          command: |
+            set -euo pipefail
+            test "$(git rev-parse HEAD)" = "$CIRCLE_SHA1"
+            python3 -m unittest discover -s tests -p 'test_kslp_python_first_use.py' -v
+            echo "KMJ_KSLP_PYTHON_SDK_PASS=$CIRCLE_SHA1"
+
+  kslp_authsp_php_quality:
+    docker:
+      - image: cimg/php:8.5-node
+    resource_class: small
+    environment:
+      APP_ENV: testing
+    steps:
+      - checkout
+      - run:
+          name: Exact SHA checked-in PHP formatting
+          no_output_timeout: 10m
+          command: |
+            set -euo pipefail
+            test "$(git rev-parse HEAD)" = "$CIRCLE_SHA1"
+            cd apps/platform
+            composer install --no-interaction --prefer-dist --no-progress
+            vendor/bin/pint --test routes/developer-licenses.php app/Services/Licensing/Kslp/KslpDeveloperKeys.php app/Services/Licensing/Kslp/KslpLicenseControlPlane.php tests/Feature/KslpDeveloperAppsTest.php tests/Feature/KslpLifecycleTest.php app/Services/Licensing/Kslp/KslpActivationProof.php tests/Feature/KslpActivationProofTest.php
+            echo "KMJ_KSLP_PHP_STYLE_PASS=$CIRCLE_SHA1"
+      - run:
+          name: Capture exact Pint changes without modifying checkout or pushing
+          when: on_fail
+          command: |
+            set -u
+            mkdir -p /tmp/kmj-kslp-php-diagnostics
+            cd apps/platform
+            printf '%s\n' "$CIRCLE_SHA1" > /tmp/kmj-kslp-php-diagnostics/HEAD
+            files="routes/developer-licenses.php app/Services/Licensing/Kslp/KslpDeveloperKeys.php app/Services/Licensing/Kslp/KslpLicenseControlPlane.php tests/Feature/KslpDeveloperAppsTest.php tests/Feature/KslpLifecycleTest.php app/Services/Licensing/Kslp/KslpActivationProof.php tests/Feature/KslpActivationProofTest.php"
+            vendor/bin/pint --test $files > /tmp/kmj-kslp-php-diagnostics/pint-failure.txt 2>&1 || true
+            vendor/bin/pint $files > /tmp/kmj-kslp-php-diagnostics/pint-autofix.txt 2>&1 || true
+            git diff -- $files > /tmp/kmj-kslp-php-diagnostics/approved-php-format.patch
+            git diff --check -- $files > /tmp/kmj-kslp-php-diagnostics/diff-whitespace.txt 2>&1 || true
+      - store_artifacts:
+          path: /tmp/kmj-kslp-php-diagnostics
+          when: on_fail
+
+  kslp_authsp_laravel_features:
+    docker:
+      - image: cimg/php:8.5-node
+    resource_class: small
+    environment:
+      APP_ENV: testing
+      DB_CONNECTION: sqlite
+      DB_DATABASE: ":memory:"
+      CACHE_STORE: array
+      SESSION_DRIVER: array
+      QUEUE_CONNECTION: sync
+      MAIL_MAILER: array
+    steps:
+      - checkout
+      - run:
+          name: Exact SHA authorized tenant lifecycle tests
+          no_output_timeout: 12m
+          command: |
+            set -euo pipefail
+            test "$(git rev-parse HEAD)" = "$CIRCLE_SHA1"
+            cd apps/platform
+            composer install --no-interaction --prefer-dist --no-progress
+            export APP_KEY="base64:$(php -r 'echo base64_encode(random_bytes(32));')"
+            php artisan test --filter='KslpDeveloperAppsTest|KslpLifecycleTest|KslpDeveloperActivationApiTest|KslpDelegatedIssueTest|KslpIssuerSubscriptionTest|KslpActivationProofTest' --no-ansi
+            echo "KMJ_KSLP_LARAVEL_TESTS_PASS=$CIRCLE_SHA1"
+
+  kslp_authsp_frontend:
+    docker:
+      - image: cimg/php:8.5-node
+    resource_class: small
+    environment:
+      APP_ENV: testing
+      DB_CONNECTION: sqlite
+      DB_DATABASE: ":memory:"
+    steps:
+      - checkout
+      - run:
+          name: Exact SHA frontend format TypeScript and build
+          no_output_timeout: 12m
+          command: |
+            set -euo pipefail
+            test "$(git rev-parse HEAD)" = "$CIRCLE_SHA1"
+            cd apps/platform
+            composer install --no-interaction --prefer-dist --no-progress
+            npm ci --ignore-scripts --no-audit --no-fund
+            export APP_KEY="base64:$(php -r 'echo base64_encode(random_bytes(32));')"
+            npm run check
+            php artisan wayfinder:generate --with-form --no-ansi
+            npm run types:check
+            npm run build
+            test -s public/build/manifest.json
+            echo "KMJ_KSLP_FRONTEND_PASS=$CIRCLE_SHA1"
+      - run:
+          name: Capture Oxfmt versus Oxlint/type errors and scoped autofix patch
+          when: on_fail
+          command: |
+            set -u
+            mkdir -p /tmp/kmj-kslp-frontend-diagnostics
+            cd apps/platform
+            printf '%s\n' "$CIRCLE_SHA1" > /tmp/kmj-kslp-frontend-diagnostics/HEAD
+            ./node_modules/.bin/vp check --no-fmt > /tmp/kmj-kslp-frontend-diagnostics/lint-type-check.txt 2>&1 || true
+            ./node_modules/.bin/vp check --no-lint > /tmp/kmj-kslp-frontend-diagnostics/format-type-check.txt 2>&1 || true
+            ./node_modules/.bin/vp fmt resources/js/pages/developer-apps.tsx resources/js/pages/operator-kslp.tsx --write > /tmp/kmj-kslp-frontend-diagnostics/formatter-output.txt 2>&1 || true
+            git diff -- resources/js/pages/developer-apps.tsx resources/js/pages/operator-kslp.tsx > /tmp/kmj-kslp-frontend-diagnostics/approved-ui-format.patch
+            git diff --check -- resources/js/pages/developer-apps.tsx resources/js/pages/operator-kslp.tsx > /tmp/kmj-kslp-frontend-diagnostics/diff-whitespace.txt 2>&1 || true
+      - store_artifacts:
+          path: /tmp/kmj-kslp-frontend-diagnostics
+          when: on_fail
+
+
 workflows:
+  review_kslp_authsp_candidate:
+    jobs:
+      - kslp_authsp_source_preflight:
+          filters:
+            branches:
+              only:
+                - feat/authsp-license-device-center-20261016
+      - kslp_authsp_python_sdk:
+          filters:
+            branches:
+              only:
+                - feat/authsp-license-device-center-20261016
+      - kslp_authsp_php_quality:
+          filters:
+            branches:
+              only:
+                - feat/authsp-license-device-center-20261016
+      - kslp_authsp_laravel_features:
+          filters:
+            branches:
+              only:
+                - feat/authsp-license-device-center-20261016
+      - kslp_authsp_frontend:
+          filters:
+            branches:
+              only:
+                - feat/authsp-license-device-center-20261016
+
   review_super_admin_command_center:
     jobs:
       - super_admin_command_center_ui:

@@ -72,7 +72,7 @@ final class KslpIssuerSubscriptionAuthority
         array $features = [],
         array $limits = [],
     ): array {
-        if (! preg_match('/^[A-Z0-9][A-Z0-9_.:-]{2,95}$/', $code)) {
+        if (! preg_match('/^[A-Z0-9][A-Z0-9_.:-]{2,63}$/D', $code)) {
             throw new DomainException('KSLP_INVALID_PRODUCT_CODE');
         }
 
@@ -155,7 +155,7 @@ final class KslpIssuerSubscriptionAuthority
             throw new DomainException('KSLP_ISSUER_SUBSCRIPTION_REQUIRED');
         }
 
-        if ($subscription->current_period_end && now()->gt($subscription->current_period_end)) {
+        if ($subscription->current_period_end && now()->gte($subscription->current_period_end)) {
             throw new DomainException('KSLP_ISSUER_SUBSCRIPTION_EXPIRED');
         }
     }

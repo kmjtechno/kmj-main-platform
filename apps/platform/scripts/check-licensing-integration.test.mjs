@@ -14,9 +14,23 @@ const adminOverview = read(
 );
 const config = read('config/services.php');
 const keys = read('app/Services/Licensing/Kslp/KslpDeveloperKeys.php');
+const controlPlane = read(
+    'app/Services/Licensing/Kslp/KslpLicenseControlPlane.php',
+);
 const activation = read('routes/developer-activation-api.php');
 const developerRoutes = read('routes/developer-licenses.php');
 const developerApps = read('resources/js/pages/developer-apps.tsx');
+// JSX formatters may turn inline text into multiple lines or explicit {' '}
+// expressions. Assert the user-facing label rather than its byte layout.
+const developerUiText = developerApps
+    .replace(/\{\s*['"]\s+['"]\s*\}/g, ' ')
+    .replace(/\s+/g, ' ');
+
+const ownerLicensing = read('resources/js/pages/operator-kslp.tsx');
+const firstUseSdk = read('public/sdk/python/kmj_kslp_first_use.py');
+const jsFirstUse = read('public/sdk/javascript/kmj_kslp_first_use.mjs');
+const jsTypes = read('public/sdk/javascript/kmj_kslp_first_use.d.mts');
+const localVerifier = read('../../scripts/ci/verify-authsp-licensing-local.sh');
 
 void test('Admin and developer routes both stay registered', () => {
     assert.ok(web.includes("require __DIR__.'/developer-licenses.php'"));
@@ -96,15 +110,139 @@ void test('Global PHP route imports cannot produce DomainException Wayfinder war
 });
 
 void test('Guided AuthSP-style onboarding retains governed server issuance', () => {
-    assert.ok(developerApps.includes('Four-step licensing setup'));
+    assert.ok(developerUiText.includes('Four-step licensing setup'));
     assert.ok(developerApps.includes('suggestProductCode(name)'));
     assert.ok(developerApps.includes('customProductCode'));
     assert.ok(developerApps.includes('readyToIssue'));
-    assert.ok(developerApps.includes('Use this app'));
-    assert.ok(developerApps.includes('Continue to integration starter'));
+    assert.ok(developerUiText.includes('Use this app'));
+    assert.ok(developerUiText.includes('Continue to integration starter'));
     assert.ok(developerApps.includes('disabled={!displayedApp}'));
     assert.ok(developerApps.includes('starter only, not a signed SDK'));
     assert.ok(developerRoutes.includes("'plan' => ['required', 'in:trial']"));
     assert.ok(developerRoutes.includes("'password.confirm'"));
     assert.ok(developerRoutes.includes("'throttle:10,1'"));
+});
+
+void test('AuthSP-inspired licensing directory contains no raw device identifiers', () => {
+    assert.ok(developerRoutes.includes("'activeDevices' => $activeDevices"));
+    assert.ok(
+        developerRoutes.includes("'activeSeatCounts' => $activeSeatCounts"),
+    );
+    assert.ok(developerRoutes.includes("'recentEvents' => $recentEvents"));
+    assert.ok(developerRoutes.includes("->whereIn('license_id', $licenseIds)"));
+    assert.ok(developerRoutes.includes("->whereNull('deactivated_at')"));
+    assert.ok(
+        developerRoutes.includes("->get(['id', 'license_id', 'activated_at'])"),
+    );
+    assert.ok(
+        developerRoutes.includes(
+            "->get(['license_id', 'action', 'created_at'])",
+        ),
+    );
+    assert.ok(developerUiText.includes('Search issued licenses'));
+    assert.ok(developerRoutes.includes("'l.revoked_at as license_revoked_at'"));
+    assert.ok(developerRoutes.includes("$key->display_state = 'GRACE'"));
+    assert.ok(developerRoutes.includes('unset($key->license_revoked_at)'));
+    assert.ok(developerApps.includes('display_state.replace'));
+    assert.ok(developerUiText.includes('Release device seat'));
+    assert.ok(developerUiText.includes('Confirm seat release'));
+    assert.ok(ownerLicensing.includes('Licensing quick start'));
+    assert.ok(ownerLicensing.includes('/developer/apps'));
+});
+
+void test('Developer product ID fits the actual commercial license schema', () => {
+    const keysService = read(
+        'app/Services/Licensing/Kslp/KslpDeveloperKeys.php',
+    );
+    assert.ok(developerRoutes.includes("'max:64'"));
+    assert.ok(developerApps.includes('maxLength={64}'));
+    assert.ok(developerApps.includes('.slice(0, 60)'));
+    assert.ok(keysService.includes('KSLP_PRODUCT_CODE_TOO_LONG'));
+});
+
+void test('Developer key revocation validates identity and issuer binding', () => {
+    assert.ok(developerRoutes.includes("Route::post('keys/{key}/revoke'"));
+    assert.ok(developerRoutes.includes('Str::isUuid($key)'));
+    assert.ok(
+        developerRoutes.includes(
+            '$license->issuer_organization_id === $record->organization_id',
+        ),
+    );
+    assert.ok(developerRoutes.includes("'regex:/\\\\S/'"));
+    assert.ok(developerRoutes.includes("'password.confirm', 'throttle:5,1'"));
+});
+
+void test('Device seat release stays authenticated, governed and idempotent', () => {
+    assert.ok(
+        developerRoutes.includes('keys/{key}/devices/{activation}/release'),
+    );
+    assert.ok(developerRoutes.includes("'license.manage'"));
+    assert.ok(developerRoutes.includes("'password.confirm', 'throttle:5,1'"));
+    assert.ok(developerRoutes.includes('->lockForUpdate()'));
+    assert.ok(
+        developerRoutes.includes("where('license_id', $record->license_id)"),
+    );
+    assert.ok(
+        developerRoutes.includes('if ($device->deactivated_at !== null)'),
+    );
+    assert.ok(developerRoutes.includes("'developer_device_released'"));
+    assert.ok(
+        developerRoutes.includes("'sequence' => DB::raw('sequence + 1')"),
+    );
+    assert.ok(
+        developerRoutes.includes(
+            "config('services.kmj_developer_licensing.enabled', false)",
+        ),
+    );
+});
+
+void test('Python first use proves device ownership without issuing a commercial lease', () => {
+    assert.ok(firstUseSdk.includes('KSLP-ACTIVATE-v1|'));
+    assert.ok(
+        firstUseSdk.includes('parts.hostname.lower() == "kmjtechno.com"'),
+    );
+    assert.ok(firstUseSdk.includes('signed_lease_issued'));
+    assert.ok(firstUseSdk.includes('return False'));
+    assert.ok(firstUseSdk.includes('license_key'));
+    assert.ok(!firstUseSdk.includes('open("private_key"'));
+    assert.ok(developerRoutes.includes("'plan' => ['required', 'in:trial']"));
+});
+
+void test('Local licensing verifier cannot run from production or satisfy hosted CI', () => {
+    assert.ok(localVerifier.includes('ISOLATED_WORKTREE_REQUIRED'));
+    assert.ok(localVerifier.includes('HEAD_MISMATCH'));
+    assert.ok(localVerifier.includes('DIRTY_TRACKED_CHECKOUT'));
+    assert.ok(localVerifier.includes('PRODUCTION_ENV_DENIED'));
+    assert.ok(localVerifier.includes('ENV_SECRET_FILE_PRESENT'));
+    assert.ok(localVerifier.includes('LOCAL_ISOLATED_NOT_GITHUB_HOSTED'));
+    assert.ok(localVerifier.includes('HOSTED_BRANCH_PROTECTION=UNCHANGED'));
+    assert.ok(!localVerifier.includes('git push'));
+    assert.ok(!localVerifier.includes('artisan migrate'));
+});
+
+void test('JavaScript + TypeScript first-use SDKs never mint an entitlement', () => {
+    assert.ok(jsFirstUse.includes("'KSLP-ACTIVATE-v1|'"));
+    assert.ok(jsFirstUse.includes("const ORIGIN = 'https://kmjtechno.com'"));
+    assert.ok(jsFirstUse.includes("credentials: 'omit'"));
+    assert.ok(jsFirstUse.includes("redirect: 'error'"));
+    assert.ok(jsFirstUse.includes('grantsEntitlement: false'));
+    assert.ok(jsFirstUse.includes('const MAX_BODY = 4096'));
+    assert.ok(jsFirstUse.includes('async function boundedResponse(response)'));
+    assert.doesNotMatch(
+        jsFirstUse,
+        /\blocalStorage\s*\.\s*(?:setItem|removeItem|clear)\s*\(/,
+    );
+    assert.ok(jsTypes.includes('readonly grantsEntitlement: false'));
+    assert.ok(developerUiText.includes('Download JS first-use helper'));
+    assert.ok(developerUiText.includes('Download TypeScript declarations'));
+    assert.ok(developerApps.includes('/sdk/javascript/kmj_kslp_first_use.mjs'));
+    assert.ok(
+        developerApps.includes('/sdk/javascript/kmj_kslp_first_use.d.mts'),
+    );
+});
+
+void test('CloudOS signing audience is never reused for delegated products', () => {
+    assert.ok(controlPlane.includes('KSLP_PRODUCT_LEASE_NOT_READY'));
+    assert.ok(controlPlane.includes("if ($l['product'] !== 'KMJ_CLOUDOS')"));
+    assert.ok(controlPlane.includes("'aud' => 'kmj-cloudos'"));
 });

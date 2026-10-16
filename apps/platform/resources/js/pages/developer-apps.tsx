@@ -42,6 +42,21 @@ type LicenseKey = {
     expires_at: string;
     revoked_at: string | null;
     first_activated_at: string | null;
+    status: string;
+    grace_until: string | null;
+    display_state: string;
+};
+
+type ActiveDevice = {
+    id: string;
+    license_id: string;
+    activated_at: string;
+};
+
+type LicenseEvent = {
+    license_id: string;
+    action: string;
+    created_at: string;
 };
 
 type IssuedKey = {
@@ -54,6 +69,9 @@ type Props = {
     organizations: Organization[];
     applications: Application[];
     keys: LicenseKey[];
+    activeDevices: ActiveDevice[];
+    activeSeatCounts: Record<string, number>;
+    recentEvents: LicenseEvent[];
     canIssueKeys: boolean;
     newKey: IssuedKey | null;
 };
@@ -77,7 +95,7 @@ function suggestProductCode(name: string): string {
         .toUpperCase()
         .replace(/[^A-Z0-9]+/g, '_')
         .replace(/^_+|_+$/g, '')
-        .slice(0, 92);
+        .slice(0, 60);
     return slug ? `APP.${slug}` : '';
 }
 
@@ -190,6 +208,9 @@ export default function DeveloperApps({
     organizations,
     applications,
     keys,
+    activeDevices,
+    activeSeatCounts,
+    recentEvents,
     canIssueKeys,
     newKey,
 }: Props) {
@@ -198,8 +219,7 @@ export default function DeveloperApps({
         organizations[0];
     const initialApp = applications.find(
         (app) =>
-            app.status === 'active' &&
-            app.organization_id === preferredOrg?.id,
+            app.status === 'active' && app.organization_id === preferredOrg?.id,
     );
     const [language, setLanguage] = useState<string>('TypeScript');
     const [selectedApp, setSelectedApp] = useState<string>(
@@ -208,7 +228,10 @@ export default function DeveloperApps({
     const [customProductCode, setCustomProductCode] = useState(false);
     const [copied, setCopied] = useState(false);
     const [revokeKeyId, setRevokeKeyId] = useState<string | null>(null);
+    const [releaseDeviceId, setReleaseDeviceId] = useState<string | null>(null);
+    const [licenseSearch, setLicenseSearch] = useState('');
     const revokeForm = useForm({ reason: '' });
+    const releaseDeviceForm = useForm({ reason: '' });
     const createOrganization = useForm({ name: '' });
     const createApp = useForm({
         organization_id: preferredOrg?.id ?? '',
@@ -225,7 +248,8 @@ export default function DeveloperApps({
     const eligibleApps = applications.filter(
         (app) =>
             app.organization_id === issueKey.data.organization_id &&
-            app.status === 'active',
+            app.status === 'active' &&
+            app.product_code.length <= 64,
     );
     const displayedApp = applications.find((app) => app.id === selectedApp);
     const selectedIssuer = organizations.find(
@@ -242,7 +266,24 @@ export default function DeveloperApps({
     const canRegister =
         canIssueKeys && selectedIssuer?.issuer_status === 'active';
     const activeApps = applications.filter((app) => app.status === 'active');
-    const liveKeys = keys.filter((key) => !key.revoked_at);
+    const liveKeys = keys.filter(
+        (key) => !key.revoked_at && key.status === 'active',
+    );
+    const visibleKeys = keys.filter((key) => {
+        const match = licenseSearch.trim().toLowerCase();
+        if (!match) return true;
+        const app = applications.find(
+            (item) => item.id === key.licensed_product_id,
+        );
+        return [
+            key.customer_id,
+            key.display_prefix,
+            app?.name,
+            app?.product_code,
+        ]
+            .filter(Boolean)
+            .some((value) => value?.toLowerCase().includes(match));
+    });
     const readyToIssue =
         canIssueKeys &&
         organizations.some(
@@ -253,7 +294,8 @@ export default function DeveloperApps({
         activeApps.some(
             (app) =>
                 app.organization_id === issueKey.data.organization_id &&
-                app.product_code === issueKey.data.product_code,
+                app.product_code === issueKey.data.product_code &&
+                app.product_code.length <= 64,
         );
     const onboarding = [
         {
@@ -527,15 +569,17 @@ export default function DeveloperApps({
                     </section>
                 )}
                 {organizations.length > 0 &&
-                    !organizations.some((org) => org.issuer_status === 'active') && (
+                    !organizations.some(
+                        (org) => org.issuer_status === 'active',
+                    ) && (
                         <section
                             role="status"
                             className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-4 text-sm"
                         >
-                            Your workspace is created. An active,
-                            owner-approved issuer subscription is required
-                            before registering an app or issuing customer keys.
-                            No payment or license is granted automatically.
+                            Your workspace is created. An active, owner-approved
+                            issuer subscription is required before registering
+                            an app or issuing customer keys. No payment or
+                            license is granted automatically.
                         </section>
                     )}
                 <div className="grid gap-5 xl:grid-cols-2">
@@ -625,7 +669,7 @@ export default function DeveloperApps({
                             <input
                                 id="application-code"
                                 className="bg-background h-11 w-full rounded-xl border px-3 font-mono text-sm"
-                                maxLength={96}
+                                maxLength={64}
                                 placeholder="MYCOMPANY.CINEMA"
                                 value={createApp.data.product_code}
                                 onChange={(event) => {
@@ -641,7 +685,7 @@ export default function DeveloperApps({
                             />
                             <p className="text-muted-foreground text-xs">
                                 Suggested automatically from the name. You can
-                                edit it; it must contain 3–96 uppercase letters,
+                                edit it; it must contain 3–64 uppercase letters,
                                 numbers, dot, dash, underscore or colon.
                             </p>
                             {Object.values(createApp.errors).map(
@@ -794,10 +838,7 @@ export default function DeveloperApps({
                             )}
                             <button
                                 type="submit"
-                                disabled={
-                                    !readyToIssue ||
-                                    issueKey.processing
-                                }
+                                disabled={!readyToIssue || issueKey.processing}
                                 className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-red-600 px-4 text-sm font-bold text-white disabled:opacity-40"
                             >
                                 <KeyRound className="size-4" />{' '}
@@ -815,8 +856,22 @@ export default function DeveloperApps({
                     </h2>
                     <p className="text-muted-foreground mt-1 text-xs">
                         Tenant-scoped records. Existing keys cannot be retrieved
-                        in plaintext.
+                        in plaintext. Device identities and machine fingerprints
+                        are never displayed. Showing up to 100 recent keys.
                     </p>
+                    <label className="mt-4 block space-y-2 text-xs font-semibold">
+                        Find a license by customer, app or key prefix
+                        <input
+                            className="bg-background h-11 w-full rounded-xl border px-3 text-sm"
+                            placeholder="Search visible licenses"
+                            aria-label="Search issued licenses"
+                            maxLength={128}
+                            value={licenseSearch}
+                            onChange={(event) =>
+                                setLicenseSearch(event.target.value)
+                            }
+                        />
+                    </label>
                     <div className="mt-4 grid gap-4 lg:grid-cols-2">
                         <div className="space-y-2">
                             {applications.length === 0 ? (
@@ -840,36 +895,38 @@ export default function DeveloperApps({
                                         <p className="text-muted-foreground mt-1 font-mono text-xs">
                                             {app.product_code}
                                         </p>
-                                        {app.status === 'active' && (
-                                            <a
-                                                href="#developer-app-key"
-                                                onClick={() => {
-                                                    setSelectedApp(app.id);
-                                                    issueKey.setData({
-                                                        ...issueKey.data,
-                                                        organization_id:
-                                                            app.organization_id,
-                                                        product_code:
-                                                            app.product_code,
-                                                    });
-                                                }}
-                                                className="mt-3 inline-flex min-h-10 items-center gap-1 rounded-lg border px-3 text-xs font-semibold hover:border-red-500/40 focus-visible:outline-2 focus-visible:outline-red-500"
-                                            >
-                                                Use this app{' '}
-                                                <ArrowRight className="size-3.5" />
-                                            </a>
-                                        )}
+                                        {app.status === 'active' &&
+                                            app.product_code.length <= 64 && (
+                                                <a
+                                                    href="#developer-app-key"
+                                                    onClick={() => {
+                                                        setSelectedApp(app.id);
+                                                        issueKey.setData({
+                                                            ...issueKey.data,
+                                                            organization_id:
+                                                                app.organization_id,
+                                                            product_code:
+                                                                app.product_code,
+                                                        });
+                                                    }}
+                                                    className="mt-3 inline-flex min-h-10 items-center gap-1 rounded-lg border px-3 text-xs font-semibold hover:border-red-500/40 focus-visible:outline-2 focus-visible:outline-red-500"
+                                                >
+                                                    Use this app{' '}
+                                                    <ArrowRight className="size-3.5" />
+                                                </a>
+                                            )}
                                     </article>
                                 ))
                             )}
                         </div>
                         <div className="space-y-2">
-                            {keys.length === 0 ? (
+                            {visibleKeys.length === 0 ? (
                                 <p className="text-muted-foreground rounded-xl border border-dashed p-5 text-sm">
-                                    No customer keys issued yet.
+                                    No licenses match this search in the recent
+                                    list.
                                 </p>
                             ) : (
-                                keys.map((key) => (
+                                visibleKeys.map((key) => (
                                     <article
                                         key={key.id}
                                         className="rounded-xl border p-3"
@@ -887,18 +944,209 @@ export default function DeveloperApps({
                                                   ? 'First activation recorded'
                                                   : 'Not yet activated'}
                                         </p>
-                                        {!key.revoked_at && canIssueKeys && (
-                                            <button
-                                                type="button"
-                                                onClick={() => {
-                                                    setRevokeKeyId(key.id);
-                                                    revokeForm.reset();
-                                                }}
-                                                className="mt-2 min-h-10 rounded-lg border border-red-500/25 px-3 text-xs font-bold text-red-500"
-                                            >
-                                                Revoke key
-                                            </button>
+                                        {recentEvents.find(
+                                            (event) =>
+                                                event.license_id ===
+                                                key.license_id,
+                                        ) && (
+                                            <p className="text-muted-foreground mt-1 text-xs">
+                                                Recent activity:{' '}
+                                                {recentEvents
+                                                    .find(
+                                                        (event) =>
+                                                            event.license_id ===
+                                                            key.license_id,
+                                                    )
+                                                    ?.action.replace(/_/g, ' ')}
+                                            </p>
                                         )}
+                                        <p className="text-muted-foreground mt-1 text-xs">
+                                            License:{' '}
+                                            {key.display_state.replace(
+                                                /_/g,
+                                                ' ',
+                                            )}{' '}
+                                            · Expires{' '}
+                                            {new Date(
+                                                key.expires_at,
+                                            ).toLocaleDateString()}{' '}
+                                            · Active device seats:{' '}
+                                            {activeSeatCounts[key.license_id] ??
+                                                0}
+                                        </p>
+                                        <p className="text-muted-foreground mt-1 text-xs">
+                                            Activation is device registration
+                                            only, not a signed commercial lease.
+                                        </p>
+                                        {!key.revoked_at &&
+                                            key.display_state !==
+                                                'REVOKED_OR_SUSPENDED' &&
+                                            activeDevices
+                                                .filter(
+                                                    (device) =>
+                                                        device.license_id ===
+                                                        key.license_id,
+                                                )
+                                                .map((device) => (
+                                                    <div
+                                                        className="mt-3 rounded-xl border p-3"
+                                                        key={device.id}
+                                                    >
+                                                        <p className="text-xs font-semibold">
+                                                            Device registered{' '}
+                                                            {new Date(
+                                                                device.activated_at,
+                                                            ).toLocaleDateString()}
+                                                        </p>
+                                                        <p className="text-muted-foreground mt-1 text-xs">
+                                                            Release this seat
+                                                            only if the device
+                                                            was replaced, lost
+                                                            or is no longer in
+                                                            use.
+                                                        </p>
+                                                        {canIssueKeys &&
+                                                            releaseDeviceId !==
+                                                                device.id && (
+                                                                <button
+                                                                    type="button"
+                                                                    className="mt-2 min-h-10 rounded-lg border px-3 text-xs font-bold"
+                                                                    onClick={() => {
+                                                                        setReleaseDeviceId(
+                                                                            device.id,
+                                                                        );
+                                                                        releaseDeviceForm.reset();
+                                                                    }}
+                                                                >
+                                                                    Release
+                                                                    device seat
+                                                                </button>
+                                                            )}
+                                                        {releaseDeviceId ===
+                                                            device.id &&
+                                                            canIssueKeys && (
+                                                                <form
+                                                                    className="mt-3 space-y-2"
+                                                                    onSubmit={(
+                                                                        event,
+                                                                    ) => {
+                                                                        event.preventDefault();
+                                                                        releaseDeviceForm.post(
+                                                                            '/developer/keys/' +
+                                                                                key.id +
+                                                                                '/devices/' +
+                                                                                device.id +
+                                                                                '/release',
+                                                                            {
+                                                                                preserveScroll: true,
+                                                                                onSuccess:
+                                                                                    () => {
+                                                                                        setReleaseDeviceId(
+                                                                                            null,
+                                                                                        );
+                                                                                        releaseDeviceForm.reset();
+                                                                                    },
+                                                                            },
+                                                                        );
+                                                                    }}
+                                                                >
+                                                                    <label
+                                                                        htmlFor={
+                                                                            'release-' +
+                                                                            device.id
+                                                                        }
+                                                                        className="block text-xs font-semibold"
+                                                                    >
+                                                                        Why
+                                                                        release
+                                                                        this
+                                                                        device?
+                                                                    </label>
+                                                                    <input
+                                                                        id={
+                                                                            'release-' +
+                                                                            device.id
+                                                                        }
+                                                                        className="bg-background h-10 w-full rounded-lg border px-3 text-xs"
+                                                                        placeholder="Device replaced or lost"
+                                                                        value={
+                                                                            releaseDeviceForm
+                                                                                .data
+                                                                                .reason
+                                                                        }
+                                                                        onChange={(
+                                                                            event,
+                                                                        ) =>
+                                                                            releaseDeviceForm.setData(
+                                                                                'reason',
+                                                                                event
+                                                                                    .target
+                                                                                    .value,
+                                                                            )
+                                                                        }
+                                                                        minLength={
+                                                                            3
+                                                                        }
+                                                                        maxLength={
+                                                                            500
+                                                                        }
+                                                                        required
+                                                                    />
+                                                                    {releaseDeviceForm
+                                                                        .errors
+                                                                        .reason && (
+                                                                        <p className="text-xs text-red-500">
+                                                                            {
+                                                                                releaseDeviceForm
+                                                                                    .errors
+                                                                                    .reason
+                                                                            }
+                                                                        </p>
+                                                                    )}
+                                                                    <div className="flex flex-wrap gap-2">
+                                                                        <button
+                                                                            type="submit"
+                                                                            disabled={
+                                                                                releaseDeviceForm.processing
+                                                                            }
+                                                                            className="min-h-10 rounded-lg bg-red-600 px-3 text-xs font-bold text-white disabled:opacity-50"
+                                                                        >
+                                                                            Confirm
+                                                                            seat
+                                                                            release
+                                                                        </button>
+                                                                        <button
+                                                                            type="button"
+                                                                            className="min-h-10 rounded-lg border px-3 text-xs"
+                                                                            onClick={() => {
+                                                                                setReleaseDeviceId(
+                                                                                    null,
+                                                                                );
+                                                                                releaseDeviceForm.reset();
+                                                                            }}
+                                                                        >
+                                                                            Cancel
+                                                                        </button>
+                                                                    </div>
+                                                                </form>
+                                                            )}
+                                                    </div>
+                                                ))}
+                                        {!key.revoked_at &&
+                                            key.display_state !==
+                                                'REVOKED_OR_SUSPENDED' &&
+                                            canIssueKeys && (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                        setRevokeKeyId(key.id);
+                                                        revokeForm.reset();
+                                                    }}
+                                                    className="mt-2 min-h-10 rounded-lg border border-red-500/25 px-3 text-xs font-bold text-red-500"
+                                                >
+                                                    Revoke key
+                                                </button>
+                                            )}
                                         {revokeKeyId === key.id && (
                                             <form
                                                 className="mt-3 space-y-2 border-t pt-3"
@@ -1049,7 +1297,41 @@ export default function DeveloperApps({
                         >
                             Download {language} setup
                         </button>
+                        {language === 'Python' && displayedApp && (
+                            <a
+                                href="/sdk/python/kmj_kslp_first_use.py"
+                                download="kmj_kslp_first_use.py"
+                                className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-red-500/30 px-4 text-sm font-bold text-red-500"
+                            >
+                                Download Python first-use helper
+                            </a>
+                        )}
+                        {language === 'TypeScript' && displayedApp && (
+                            <>
+                                <a
+                                    href="/sdk/javascript/kmj_kslp_first_use.mjs"
+                                    download="kmj_kslp_first_use.mjs"
+                                    className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-red-500/30 px-4 text-sm font-bold text-red-500"
+                                >
+                                    Download JS first-use helper
+                                </a>
+                                <a
+                                    href="/sdk/javascript/kmj_kslp_first_use.d.mts"
+                                    download="kmj_kslp_first_use.d.mts"
+                                    className="inline-flex min-h-11 items-center gap-2 rounded-xl border px-4 text-sm font-bold"
+                                >
+                                    Download TypeScript declarations
+                                </a>
+                            </>
+                        )}
                     </div>
+                    <p className="text-muted-foreground mt-2 text-xs">
+                        Python and JavaScript first-use helpers only register a
+                        device through a signed challenge. Supply your own
+                        secure Ed25519 signer, use the trusted KSLP origin and
+                        independently verify a future signed commercial lease
+                        before unlocking any product features.
+                    </p>
                     <div className="mt-5 grid gap-3 sm:grid-cols-2">
                         <Link
                             href="/sandbox-licenses"

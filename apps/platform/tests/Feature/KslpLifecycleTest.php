@@ -8,6 +8,7 @@ use App\Services\Licensing\Kslp\KslpSigner;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use KMJ\MainPlatform\Catalog\Models\Plan;
 use KMJ\MainPlatform\Catalog\Models\Product;
 use Tests\TestCase;
@@ -31,7 +32,7 @@ final class KslpLifecycleTest extends TestCase
 
     private function activate(KslpLicenseControlPlane $c, string $id, string $key): array
     {
-        [$server,$challenge,$nonce,$sig] = $this->proof($id);
+        [$server, $challenge, $nonce, $sig] = $this->proof($id);
 
         return [$c->activate($id, $server, str_repeat('a', 64), $key, 'owner', $challenge, $nonce, $sig), $server];
     }
@@ -45,7 +46,7 @@ final class KslpLifecycleTest extends TestCase
         $again = $c->activate($l['id'], $a['server_identity'], str_repeat('a', 64), 'retry-1', 'owner', 'unused', 'unused', 'unused');
         self::assertSame($a['id'], $again['id']);
         self::assertSame('ACTIVE', $c->state($l['id'], Carbon::parse($l['starts_at'])->addDay()));
-        [$newServer,$challenge,$nonce,$sig] = $this->proof($l['id']);
+        [$newServer, $challenge, $nonce, $sig] = $this->proof($l['id']);
         $b = $c->transfer($l['id'], $newServer, str_repeat('b', 64), 'retry-2', 'owner', 'replacement', $challenge, $nonce, $sig);
         self::assertNotSame($a['id'], $b['id']);
         $this->assertDatabaseCount('kslp_license_events', 4);
@@ -60,11 +61,65 @@ final class KslpLifecycleTest extends TestCase
             self::fail();
         } catch (\DomainException $e) {
             self::assertSame('KSLP_TRIAL_ALREADY_USED', $e->getMessage());
-        }$c->changePlan($l['id'], 'professional', 'owner', 'paid');
+        }
+        $c->changePlan($l['id'], 'professional', 'owner', 'paid');
         $c->revoke($l['id'], 'owner', 'security');
         self::assertSame('REVOKED', $c->state($l['id']));
         $c->reactivate($l['id'], 'owner', 'cleared');
         self::assertNotSame('REVOKED', $c->state($l['id']));
+    }
+
+    public function test_suspended_license_cannot_grant_cloudos_entitlement_or_signed_lease(): void
+    {
+        $control = app(KslpLicenseControlPlane::class);
+        $license = $control->issue('suspended-customer', 'trial', 'owner');
+        DB::table('kslp_licenses')->where('id', $license['id'])
+            ->update(['status' => 'suspended']);
+
+        self::assertSame('RESTRICTED', $control->state($license['id']));
+
+        $signer = new class implements KslpSigner
+        {
+            public function kid(): string
+            {
+                return 'test-kid';
+            }
+
+            public function sign(string $message): string
+            {
+                throw new \RuntimeException('Suspended license must never be signed');
+            }
+        };
+
+        $this->expectException(\DomainException::class);
+        $this->expectExceptionMessage('KSLP_LICENSE_NOT_LEASABLE');
+        $control->lease($license['id'], (string) Str::uuid(), $signer);
+    }
+
+    public function test_delegated_app_cannot_receive_cloudos_audience_signed_lease(): void
+    {
+        $control = app(KslpLicenseControlPlane::class);
+        $license = $control->issue('delegated-audience-fixture', 'trial', 'owner');
+        DB::table('kslp_licenses')->where('id', $license['id'])
+            ->update(['product' => 'THIRD_PARTY.APP']);
+        [$activation] = $this->activate($control, $license['id'], 'delegated-pair');
+
+        $signer = new class implements KslpSigner
+        {
+            public function kid(): string
+            {
+                return 'test-kid';
+            }
+
+            public function sign(string $message): string
+            {
+                throw new \RuntimeException('Unexpected signer invocation');
+            }
+        };
+
+        $this->expectException(\DomainException::class);
+        $this->expectExceptionMessage('KSLP_PRODUCT_LEASE_NOT_READY');
+        $control->lease($license['id'], $activation['id'], $signer);
     }
 
     public function test_signed_lease_is_server_bound(): void
@@ -88,8 +143,20 @@ final class KslpLifecycleTest extends TestCase
                 return sodium_crypto_sign_detached($m, $this->sk);
             }
         };
-        $product = Product::query()->create(['slug' => 'cloudos-test', 'name' => 'CloudOS', 'status' => 'active']);
-        Plan::query()->create(['product_id' => $product->id, 'code' => 'cloudos.business', 'name' => 'Business', 'pricing_model' => 'quote', 'status' => 'active', 'features' => ['hosting' => true], 'limits' => ['nodes' => 3]]);
+        $product = Product::query()->create([
+            'slug' => 'cloudos-test',
+            'name' => 'CloudOS',
+            'status' => 'active',
+        ]);
+        Plan::query()->create([
+            'product_id' => $product->id,
+            'code' => 'cloudos.business',
+            'name' => 'Business',
+            'pricing_model' => 'quote',
+            'status' => 'active',
+            'features' => ['hosting' => true],
+            'limits' => ['nodes' => 3],
+        ]);
         $token = $c->lease($l['id'], $a['id'], $signer);
         self::assertSame(3, count(explode('.', $token)));
     }
