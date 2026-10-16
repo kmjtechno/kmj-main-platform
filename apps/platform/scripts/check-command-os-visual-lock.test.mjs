@@ -82,7 +82,10 @@ void test('navigation, responsiveness and reduced motion remain accessible', () 
     assert.match(command, /<DialogDescription/);
     assert.doesNotMatch(command, /onMouseDown=\{\(event\)/);
     assert.match(command, /Escape/);
-    assert.match(command, /aria-label="Search owner workspaces and catalog products"/);
+    assert.match(
+        command,
+        /aria-label="Search owner workspaces and catalog products"/,
+    );
     assert.match(command, /ref=\{carousel\}/);
     assert.match(styles, /@media\s*\(max-width:\s*1170px\)/);
     assert.match(styles, /@media\s*\(max-width:\s*720px\)/);
