@@ -497,7 +497,8 @@ export default function OperatorCommandOs({
                             <div className="kmj-os-heading">
                                 <div>
                                     <h2 id="kmj-health-title">System Health</h2>
-                                    <p>Evidence from Operations</p>                                </div>
+                                    <p>Evidence from Operations</p>
+                                </div>
                                 <Link
                                     href="/operator/ops"
                                     className="kmj-os-link"
