@@ -30,14 +30,14 @@ final class PublicAiDiscoveryTest extends TestCase
         self::assertStringContainsString('# KMJ TECHNO', $body);
         self::assertStringContainsString('INNOVATE | BUILD | SCALE', $body);
         self::assertStringContainsString('Roadmap, development and preview labels must not be interpreted as production availability.', $body);
-        self::assertStringContainsString('KMJ 360 Dome | Media & Immersive Experience | Research', $body);
+        self::assertStringContainsString('KMJ 360 Dome | Cinema & Immersive | Research', $body);
         self::assertStringContainsString(
-            'KMJ Cinema Platform | Media & Immersive Experience | Research | Configurations: 5D, 7D, 9D, 12D, 14D, 16D, 5DX',
+            'KMJ Cinema Platform | Cinema & Immersive | Research | Configurations: 5D, 7D, 9D, 12D, 14D, 16D, 5DX',
             $body,
         );
-        self::assertStringContainsString('KMJ Cinema Player | Media & Immersive Experience | Research', $body);
-        self::assertStringContainsString('KMJ Licensing Hub | Commerce & Licensing | Research', $body);
-        self::assertStringContainsString('KMJ Desktop Commander | Secure Access & Connectivity | Free public beta', $body);
+        self::assertStringContainsString('KMJ Cinema Player | Cinema & Immersive | Research', $body);
+        self::assertStringContainsString('KMJ Licensing Hub | Business & Platform | Research', $body);
+        self::assertStringContainsString('KMJ Desktop Commander | Developer & AI | Free public beta', $body);
         self::assertStringContainsString('https://kmjtechno.com/products/kmj-codebridge/terms', $body);
         self::assertStringContainsString('https://kmjtechno.com/products/kmj-codebridge/privacy', $body);
         self::assertStringContainsString('https://kmjtechno.com/products/kmj-codebridge/support', $body);
