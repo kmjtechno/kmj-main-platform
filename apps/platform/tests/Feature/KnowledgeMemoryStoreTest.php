@@ -154,6 +154,25 @@ final class KnowledgeMemoryStoreTest extends TestCase
         $this->store->search($this->orgA, 'kmj-codebridge', 'a%');
     }
 
+    public function test_multiline_observation_is_sanitized_only_in_compact_search_preview(): void
+    {
+        $fullText = "Use the isolated QA cluster.\nKeep the original evidence intact.\tNever execute notes.";
+        $saved = $this->store->save($this->orgA, 'kmj-codebridge', $this->input([
+            'content' => $fullText,
+        ]));
+
+        $rows = $this->store->search($this->orgA, 'kmj-codebridge', 'isolated');
+        $this->assertCount(1, $rows);
+        $this->assertSame($this->orgA, $rows[0]['organization_id']);
+        $this->assertSame('kmj-codebridge', $rows[0]['project_key']);
+        $this->assertStringNotContainsString("\n", $rows[0]['preview']);
+        $this->assertStringNotContainsString("\t", $rows[0]['preview']);
+        $this->assertStringContainsString('Keep the original evidence', $rows[0]['preview']);
+        $this->assertSame($fullText, $this->store->get(
+            $this->orgA, 'kmj-codebridge', $saved['observation_id']
+        )['content']);
+    }
+
     public function test_invalid_project_and_unknown_observation_id_fail_closed(): void
     {
         $this->assertNull($this->store->get($this->orgA, 'kmj-codebridge', (string) Str::uuid()));
