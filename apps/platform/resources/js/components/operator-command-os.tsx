@@ -169,7 +169,8 @@ export default function OperatorCommandOs({
     function scrollProducts(distance: number) {
         carousel.current?.scrollBy({
             left: distance,
-            behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches
+            behavior: window.matchMedia('(prefers-reduced-motion: reduce)')
+                .matches
                 ? 'auto'
                 : 'smooth',
         });
@@ -496,8 +497,7 @@ export default function OperatorCommandOs({
                             <div className="kmj-os-heading">
                                 <div>
                                     <h2 id="kmj-health-title">System Health</h2>
-                                    <p>Evidence from Operations</p>
-                                </div>
+                                    <p>Evidence from Operations</p>                                </div>
                                 <Link
                                     href="/operator/ops"
                                     className="kmj-os-link"
@@ -546,8 +546,8 @@ export default function OperatorCommandOs({
                             Find a workspace or product
                         </DialogTitle>
                         <DialogDescription className="mt-1 text-xs text-slate-400">
-                            Search workspaces and loaded catalog products. Press Escape
-                            to close.
+                            Search workspaces and loaded catalog products. Press
+                            Escape to close.
                         </DialogDescription>
                     </div>
                     <label className="flex items-center gap-3 px-4 py-3">
