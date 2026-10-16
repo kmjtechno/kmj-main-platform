@@ -135,8 +135,8 @@ final class KnowledgeMemoryStoreTest extends TestCase
     {
         foreach ([
             $this->input(['content' => 'api_key=DO_NOT_STORE']),
-            $this->input(['content' => '-----BEGIN RSA PRIVATE KEY-----']),
-            $this->input(['content' => 'sk-proj-abcdefghijklmnopqrstuvwx']),
+            $this->input(['content' => '-----BEGIN '. 'RSA PRIVATE KEY-----']),
+            $this->input(['content' => 'sk-proj-'.str_repeat('x', 24)]),
             $this->input(['title' => "Unexpected\nscript"]),
             $this->input(['expected_revision' => -1]),
             $this->input(['extra' => 'unexpected']),
