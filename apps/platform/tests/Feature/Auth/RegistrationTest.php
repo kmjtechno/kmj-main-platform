@@ -2,7 +2,6 @@
 
 namespace Tests\Feature\Auth;
 
-use Illuminate\Foundation\Http\Middleware\ValidateCsrfToken;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use KMJ\MainPlatform\Organizations\Models\OrganizationMembership;
 use Laravel\Fortify\Features;
@@ -35,9 +34,12 @@ class RegistrationTest extends TestCase
             // and override EnvironmentDetector callback resolution.
             // Override the actual app env binding used by isProduction().
             app()->instance('env', 'production');
-            // Simulating the production environment also enables CSRF during PHPUnit.
-            // Keep this test scoped to mail rejection; real CSRF middleware is unchanged.
-            $this->withoutMiddleware(ValidateCsrfToken::class);
+            // Laravel 13 enforces request-forgery checks when a PHPUnit test
+            // simulates production. Supply a matching CSRF session/header pair
+            // instead of disabling the middleware being exercised.
+            $csrfToken = bin2hex(random_bytes(16));
+            $this->withSession(['_token' => $csrfToken])
+                ->withHeader('X-CSRF-TOKEN', $csrfToken);
             self::assertTrue(app()->isProduction());
             config()->set('mail.default', 'log');
 
