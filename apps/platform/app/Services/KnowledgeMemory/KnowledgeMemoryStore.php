@@ -212,7 +212,10 @@ final class KnowledgeMemoryStore
                 'type' => $row->type,
                 'title' => $row->title,
                 'revision' => (int) $row->revision,
-                'preview' => Str::limit($row->content, 240),
+                // CodeBridge's compact brief is single-line and rejects control
+                // characters. Sanitize only the preview; the authorized
+                // detail endpoint retains the exact original text.
+                'preview' => Str::limit(preg_replace('/[\\x00-\\x1F\\x7F]+/u', ' ', $row->content) ?? '', 240),
                 'updated_at' => $row->updated_at,
             ])
             ->all();
