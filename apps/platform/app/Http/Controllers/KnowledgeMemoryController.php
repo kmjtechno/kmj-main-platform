@@ -56,6 +56,12 @@ final class KnowledgeMemoryController extends Controller
     public function store(Request $request): JsonResponse
     {
         $organizationId = $this->organization($request, true);
+        // Reject attempted scope overrides rather than silently dropping them.
+        // Organization and project grants never originate from caller JSON.
+        if ($request->exists('organization_id') || $request->exists('project')
+            || $request->exists('project_key') || $request->exists('tenant_id')) {
+            throw ValidationException::withMessages(['scope' => 'Project and organization scope cannot be supplied.']);
+        }
         $input = $request->validate([
             'operation_id' => ['required', 'string', 'min:8', 'max:96', 'regex:/\A[A-Za-z0-9][A-Za-z0-9._:-]{7,95}\z/D'],
             'topic_key' => ['required', 'string', 'max:96', 'regex:/\A[a-z][a-z0-9-]{0,23}\/[a-z0-9][a-z0-9._-]{0,63}\z/D'],
