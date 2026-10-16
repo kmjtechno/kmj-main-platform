@@ -108,12 +108,12 @@ void test('Global PHP route imports cannot produce DomainException Wayfinder war
 });
 
 void test('Guided AuthSP-style onboarding retains governed server issuance', () => {
-    assert.ok(developerApps.includes('Four-step licensing setup'));
+    assert.ok(developerUiText.includes('Four-step licensing setup'));
     assert.ok(developerApps.includes('suggestProductCode(name)'));
     assert.ok(developerApps.includes('customProductCode'));
     assert.ok(developerApps.includes('readyToIssue'));
-    assert.ok(developerApps.includes('Use this app'));
-    assert.ok(developerApps.includes('Continue to integration starter'));
+    assert.ok(developerUiText.includes('Use this app'));
+    assert.ok(developerUiText.includes('Continue to integration starter'));
     assert.ok(developerApps.includes('disabled={!displayedApp}'));
     assert.ok(developerApps.includes('starter only, not a signed SDK'));
     assert.ok(developerRoutes.includes("'plan' => ['required', 'in:trial']"));
@@ -129,7 +129,7 @@ void test('AuthSP-inspired licensing directory contains no raw device identifier
     assert.ok(developerRoutes.includes("->whereNull('deactivated_at')"));
     assert.ok(developerRoutes.includes("->get(['id', 'license_id', 'activated_at'])"));
     assert.ok(developerRoutes.includes("->get(['license_id', 'action', 'created_at'])"));
-    assert.ok(developerApps.includes('Search issued licenses'));
+    assert.ok(developerUiText.includes('Search issued licenses'));
     assert.ok(developerRoutes.includes("'l.revoked_at as license_revoked_at'"));
     assert.ok(developerRoutes.includes("$key->display_state = 'GRACE'"));
     assert.ok(developerRoutes.includes("unset($key->license_revoked_at)"));
@@ -200,8 +200,8 @@ void test('JavaScript + TypeScript first-use SDKs never mint an entitlement', ()
     assert.ok(jsFirstUse.includes("async function boundedResponse(response)"));
     assert.doesNotMatch(jsFirstUse, /\blocalStorage\s*\.\s*(?:setItem|removeItem|clear)\s*\(/);
     assert.ok(jsTypes.includes('readonly grantsEntitlement: false'));
-    assert.ok(developerApps.includes('Download JS first-use helper'));
-    assert.ok(developerApps.includes('Download TypeScript declarations'));
+    assert.ok(developerUiText.includes('Download JS first-use helper'));
+    assert.ok(developerUiText.includes('Download TypeScript declarations'));
     assert.ok(developerApps.includes('/sdk/javascript/kmj_kslp_first_use.mjs'));
     assert.ok(developerApps.includes('/sdk/javascript/kmj_kslp_first_use.d.mts'));
 });
