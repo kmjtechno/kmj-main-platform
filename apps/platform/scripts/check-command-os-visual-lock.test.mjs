@@ -150,3 +150,12 @@ void test('owner badge derives from authenticated user and catalog art fails clo
     assert.match(command, /owner-product-art-unavailable/);
     assert.doesNotMatch(command, /art\[p\.slug\] \|\| 'cloudos'/);
 });
+
+void test('browser QA decodes off-screen lazy carousel images before checking failed assets', () => {
+    const browser = read('scripts/browser-preview-verify.mjs');
+    assert.match(browser, /image\.loading = 'eager'/);
+    assert.match(browser, /Promise\.allSettled\(/);
+    assert.match(browser, /image\.decode\(\)/);
+    assert.match(browser, /decoded\[index\]\?\.status === 'rejected'/);
+    assert.match(browser, /image\.naturalWidth === 0/);
+});
