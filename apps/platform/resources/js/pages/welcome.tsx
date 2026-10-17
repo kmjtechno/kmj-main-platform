@@ -522,13 +522,13 @@ export default function Welcome({
                                                 height="270"
                                             />
                                         ) : (
-                                            <div
+                                            <span
                                                 className="lock-product-art-unavailable"
                                                 role="img"
                                                 aria-label={p.name + ' artwork not available'}
                                             >
                                                 Artwork coming soon
-                                            </div>
+                                            </span>
                                         )}
                                         <span className="lock-product-category">
                                             {p.eyebrow || p.lifecycle_label}
