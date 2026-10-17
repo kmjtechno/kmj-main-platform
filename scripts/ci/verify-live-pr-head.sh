@@ -46,6 +46,14 @@ case "$remote" in
   *) echo 'BLOCKED: origin is not the approved private KMJ Main Platform repository' >&2; exit 3 ;;
 esac
 
+baseline_ref='refs/heads/main'
+remote_main="$(git -C "$repo" ls-remote --exit-code origin "$baseline_ref" | awk -v wanted="$baseline_ref" '$2 == wanted { print $1 }')"
+local_main="$(git -C "$repo" rev-parse HEAD)"
+[[ "$remote_main" =~ ^[0-9a-f]{40}$ && "$remote_main" == "$local_main" ]] || {
+  echo 'BLOCKED: baseline main checkout is not the current protected remote main SHA' >&2
+  exit 3
+}
+
 head_ref="refs/pull/$pr/head"
 remote_head="$(git -C "$repo" ls-remote --exit-code origin "$head_ref" | awk -v wanted="$head_ref" '$2 == wanted { print $1 }')"
 [[ "$remote_head" =~ ^[a-f0-9]{40}$ ]] || {
