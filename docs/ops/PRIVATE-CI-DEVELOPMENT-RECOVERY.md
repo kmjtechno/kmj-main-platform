@@ -40,7 +40,8 @@ uses the existing isolated PostgreSQL staging suite with a fresh local
 Unix-socket-only database cluster, never production PostgreSQL.
 
 This guarded dispatcher verifies:
-- exact approved GitHub origin and remotely advertised `refs/pull/N/head`;
+- exact approved GitHub origin, local clean `main` HEAD matching the live remote
+  protected `refs/heads/main`, and the advertised `refs/pull/N/head`;
 - caller SHA equals **current** remote PR HEAD (otherwise refuse);
 - pristine **tracked** source checkout (pre-existing **untracked** QA evidence
   is permitted and never touched);
