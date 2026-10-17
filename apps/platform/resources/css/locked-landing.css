@@ -668,7 +668,15 @@
     padding: 20px;
 }
 .lock-dialog {
+    position: fixed;
+    z-index: 101;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: calc(100% - 40px);
     max-width: 540px;
+    max-height: calc(100dvh - 40px);
+    overflow-y: auto;
     background: #10151b;
     border: 1px solid #ab1b32;
     border-radius: 15px;
