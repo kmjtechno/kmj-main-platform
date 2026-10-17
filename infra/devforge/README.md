@@ -15,8 +15,8 @@ This is a private host service; not yet a full GitHub replacement or an AI worke
 ## Bootstrap once after PR merge, CI acceptance and reviewed platform release
 
 1. Identify the actual PHP-FPM user on KMJ-elite. Check Docker Engine and Compose v2.
-2. As root from the deployed repo run: DEVFORGE_WEB_USER=www-data bash infra/devforge/bootstrap-kmj-elite.sh
-3. Replace www-data only if the running PHP-FPM application user differs.
+2. As root from the deployed repo run: bash infra/devforge/bootstrap-kmj-elite.sh
+3. The bootstrap discovers the single non-root PHP-FPM user, and stops if ambiguous. You may explicitly set DEVFORGE_WEB_USER only after verifying the effective application pool identity.
 4. Verify systemctl is-active kmj-devforge-broker.service equals active.
 5. Open Main Platform Super Admin -> KMJ DevForge and click One-click setup.
 6. Poll until the control center reports healthy; errors are shown as static codes.
@@ -33,3 +33,12 @@ This is a private host service; not yet a full GitHub replacement or an AI worke
 - A stopped service retains its volumes and can be started again.
 - Do not modify CodeBridge job concurrency limits without the signed entitlement and agent capacity checks.
 - Never claim the new Super Admin page is live until the exact source SHA is merged, deployed and browser-tested.
+
+## Current independent QA blockers (2026-10-17)
+
+- GitHub Actions 6/6 selected PR workflows report failure; detailed remote job logs could not be retrieved (BlobNotFound / unavailable). Never infer that PHP, Rust or frontend code failed from a missing log.
+- CodeBridge `main_platform_ui_ci:check` on isolated existing main SHA eb676253 failed exit 127 (`vp: not found`), before any new PR source was tested.
+- Explicit fixed `main_platform_ui_deps:ci` on the isolated existing main worktree failed exit 226 with npm ENOENT/TAR_ENTRY_ERROR; output truncated. Do not treat that as DevForge code failure or claim a green exact-head gate.
+- `verify-offline.sh` offers a dedicated Python broker unittest and basic PHP/Bash syntax suite; full exact-HEAD build and Laravel tests remain required.
+- Security: the Unix socket grants fixed actions to the effective PHP-FPM UID. If that UID is shared by another application, that app can call the broker directly. Production activation requires a dedicated isolated PHP-FPM pool or equivalent audited host boundary; a Laravel owner gate alone does not prevent same-UID local callers.
+- No production merge, DNS publication, external CI runner enrollment, backup/restore qualification, or host activation has occurred.
