@@ -46,13 +46,23 @@ try {
             await page
                 .locator(name === 'landing' ? 'h1' : '.owner-main h1')
                 .waitFor();
-            const broken = await page
-                .locator('img')
-                .evaluateAll((images) =>
-                    images
-                        .filter((i) => !i.complete || i.naturalWidth === 0)
-                        .map((i) => i.getAttribute('src')),
+            // Horizontal carousels can keep valid lazy images outside the
+            // viewport. Decode every asset before checking failures so that
+            // off-screen, unrequested images are not counted as broken.
+            const broken = await page.locator('img').evaluateAll(async (images) => {
+                for (const image of images) image.loading = 'eager';
+                const decoded = await Promise.allSettled(
+                    images.map((image) => image.decode()),
                 );
+                return images
+                    .filter(
+                        (image, index) =>
+                            decoded[index]?.status === 'rejected' ||
+                            !image.complete ||
+                            image.naturalWidth === 0,
+                    )
+                    .map((image) => image.getAttribute('src'));
+            });
             const overflow = await page.evaluate(
                 () => document.documentElement.scrollWidth > innerWidth + 1,
             );
