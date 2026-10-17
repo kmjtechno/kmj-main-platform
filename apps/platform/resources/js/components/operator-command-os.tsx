@@ -464,17 +464,27 @@ export default function OperatorCommandOs({
                                             .replaceAll('-', ' ')}
                                     </p>
                                     <Link href="/operator/products">
-                                        <img
-                                            src={
-                                                '/assets/locked/' +
-                                                (art[p.slug] || 'cloudos') +
-                                                '.webp'
-                                            }
-                                            alt={p.name + ' product artwork'}
-                                            loading="lazy"
-                                            width="480"
-                                            height="270"
-                                        />
+                                        {art[p.slug] ? (
+                                            <img
+                                                src={
+                                                    '/assets/locked/' +
+                                                    art[p.slug] +
+                                                    '.webp'
+                                                }
+                                                alt={p.name + ' product artwork'}
+                                                loading="lazy"
+                                                width="480"
+                                                height="270"
+                                            />
+                                        ) : (
+                                            <div
+                                                className="owner-product-art-unavailable"
+                                                role="img"
+                                                aria-label={p.name + ' artwork not available'}
+                                            >
+                                                Artwork pending
+                                            </div>
+                                        )}
                                     </Link>
                                     <div className="owner-product-state">
                                         <span>
