@@ -74,5 +74,8 @@ void test('unrecognized public products never inherit unrelated cinema artwork',
     assert.match(source, /artwork\[p\.slug\] \|\| p\.image_path/);
     assert.match(source, /lock-product-art-unavailable/);
     assert.match(source, /artwork not available/);
-    assert.doesNotMatch(source, /p\.image_path\s*\|\|\s*['"]\/assets\/locked\/cinema\.webp/);
+    assert.doesNotMatch(
+        source,
+        /p\.image_path\s*\|\|\s*['"]\/assets\/locked\/cinema\.webp/,
+    );
 });
