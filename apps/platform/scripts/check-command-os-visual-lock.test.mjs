@@ -137,3 +137,13 @@ void test('Kristi microphone requires explicit informed consent before browser s
     assert.match(kristi, /disabled=\{listening\}/);
     assert.match(kristi, /setDraft\(transcript\.slice\(0, 400\)\)/);
 });
+
+void test('owner badge derives from authenticated user and catalog art fails closed', () => {
+    assert.match(command, /auth\.user\?\.name\?\.trim\(\)/);
+    assert.match(command, /const initials =/);
+    assert.match(command, /\{initials\}/);
+    assert.doesNotMatch(command, /owner-initials">NK/);
+    assert.doesNotMatch(command, /auth\.user\?\.name \|\| 'Narendra Singh Kushwah'/);
+    assert.match(command, /owner-product-art-unavailable/);
+    assert.doesNotMatch(command, /art\[p\.slug\] \|\| 'cloudos'/);
+});
