@@ -49,20 +49,22 @@ try {
             // Horizontal carousels can keep valid lazy images outside the
             // viewport. Decode every asset before checking failures so that
             // off-screen, unrequested images are not counted as broken.
-            const broken = await page.locator('img').evaluateAll(async (images) => {
-                for (const image of images) image.loading = 'eager';
-                const decoded = await Promise.allSettled(
-                    images.map((image) => image.decode()),
-                );
-                return images
-                    .filter(
-                        (image, index) =>
-                            decoded[index]?.status === 'rejected' ||
-                            !image.complete ||
-                            image.naturalWidth === 0,
-                    )
-                    .map((image) => image.getAttribute('src'));
-            });
+            const broken = await page
+                .locator('img')
+                .evaluateAll(async (images) => {
+                    for (const image of images) image.loading = 'eager';
+                    const decoded = await Promise.allSettled(
+                        images.map((image) => image.decode()),
+                    );
+                    return images
+                        .filter(
+                            (image, index) =>
+                                decoded[index]?.status === 'rejected' ||
+                                !image.complete ||
+                                image.naturalWidth === 0,
+                        )
+                        .map((image) => image.getAttribute('src'));
+                });
             const overflow = await page.evaluate(
                 () => document.documentElement.scrollWidth > innerWidth + 1,
             );
