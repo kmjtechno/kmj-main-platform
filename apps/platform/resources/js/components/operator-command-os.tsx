@@ -167,7 +167,12 @@ export default function OperatorCommandOs({
     missingCanonicalSlugs,
 }: Props) {
     const { auth } = usePage().props;
-    const name = auth.user?.name || 'Narendra Singh Kushwah';
+    const name = auth.user?.name?.trim() || 'Platform Owner';
+    const nameParts = name.split(/\s+/);
+    const initials = (
+        (nameParts[0]?.[0] || '') +
+        (nameParts.length > 1 ? nameParts.at(-1)?.[0] || '' : nameParts[0]?.[1] || '')
+    ).toLocaleUpperCase();
     const [searchOpen, setSearchOpen] = useState(false);
     const [query, setQuery] = useState('');
     const [navOpen, setNavOpen] = useState(false);
