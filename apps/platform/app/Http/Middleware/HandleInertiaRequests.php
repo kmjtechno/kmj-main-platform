@@ -65,6 +65,7 @@ class HandleInertiaRequests extends Middleware
                 'enabled' => $user instanceof User && app(PlatformOwnerAccess::class)->allows($user),
             ],
             'flash' => [
+                'status' => fn () => $request->session()->get('status'),
                 'sandbox_license' => fn () => $request->session()->get('sandbox_license'),
                 'sandbox_license_validation' => fn () => $request->session()->get('sandbox_license_validation'),
             ],
