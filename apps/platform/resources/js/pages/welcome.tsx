@@ -399,8 +399,8 @@ export default function Welcome({
                                 >
                                     <DialogPrimitive.Trigger asChild>
                                         <button className="lock-outline">
-                                            <PlayCircle size={22} /> Watch Company
-                                            Video
+                                            <PlayCircle size={22} /> Watch
+                                            Company Video
                                         </button>
                                     </DialogPrimitive.Trigger>
                                     <DialogPrimitive.Portal>
@@ -417,7 +417,9 @@ export default function Welcome({
                                             <DialogPrimitive.Title asChild>
                                                 <h2>Build. Connect. Scale.</h2>
                                             </DialogPrimitive.Title>
-                                            <DialogPrimitive.Description asChild>
+                                            <DialogPrimitive.Description
+                                                asChild
+                                            >
                                                 <p>
                                                     Explore KMJ TECHNO's
                                                     software, cloud, AI and
@@ -516,7 +518,9 @@ export default function Welcome({
                                                           '.webp'
                                                         : (p.image_path ?? '')
                                                 }
-                                                alt={p.name + ' product artwork'}
+                                                alt={
+                                                    p.name + ' product artwork'
+                                                }
                                                 loading="lazy"
                                                 width="480"
                                                 height="270"
@@ -525,7 +529,10 @@ export default function Welcome({
                                             <span
                                                 className="lock-product-art-unavailable"
                                                 role="img"
-                                                aria-label={p.name + ' artwork not available'}
+                                                aria-label={
+                                                    p.name +
+                                                    ' artwork not available'
+                                                }
                                             >
                                                 Artwork coming soon
                                             </span>
