@@ -414,9 +414,7 @@ export default function Welcome({
                                                     <X />
                                                 </button>
                                             </DialogPrimitive.Close>
-                                            <DialogPrimitive.Title
-                                                className="sr-only"
-                                            >
+                                            <DialogPrimitive.Title className="sr-only">
                                                 Company overview
                                             </DialogPrimitive.Title>
                                             <h2>Build. Connect. Scale.</h2>
