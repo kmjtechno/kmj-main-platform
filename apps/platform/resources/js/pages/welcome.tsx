@@ -514,7 +514,7 @@ export default function Welcome({
                                                         ? '/assets/locked/' +
                                                           artwork[p.slug] +
                                                           '.webp'
-                                                        : p.image_path!
+                                                        : (p.image_path ?? '')
                                                 }
                                                 alt={p.name + ' product artwork'}
                                                 loading="lazy"
