@@ -8,7 +8,12 @@ die() { printf 'DEVFORGE_BOOTSTRAP=BLOCKED reason=%s\n' "$1" >&2; exit 1; }
 test "$(id -u)" -eq 0 || die ROOT_REQUIRED
 test "$(hostname)" = KMJ-elite || die NOT_KMJ_ELITE
 web_user="$(printenv DEVFORGE_WEB_USER || :)"
-test -n "$web_user" || web_user=www-data
+if test -z "$web_user"; then
+  command -v ps >/dev/null || die NO_PHP_WORKER_DISCOVERY
+  candidates="$(ps -eo user=,comm= | awk '$2 ~ /^php-fpm/ && $1 != "root" {print $1}' | sort -u)"
+  test "$(printf '%s\n' "$candidates" | sed '/^$/d' | wc -l)" -eq 1 || die PHP_FPM_USER_AMBIGUOUS
+  web_user="$candidates"
+fi
 [[ "$web_user" =~ ^[a-z_][a-z0-9_-]{0,31}$ ]] || die INVALID_WEB_USER
 id "$web_user" >/dev/null 2>&1 || die WEB_USER_NOT_FOUND
 for tool in python3 docker systemctl install getent; do
