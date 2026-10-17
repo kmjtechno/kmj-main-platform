@@ -78,13 +78,13 @@ class LivePRHeadContractTest(unittest.TestCase):
         )
         fake_id.chmod(0o700)
 
-    def run_qa(self, *args, pr_head=None):
+    def run_qa(self, *args, pr_head=None, main_head=None):
         env = os.environ.copy()
         env.update(
             PATH=f"{self.fakebin}:{env.get('PATH', '')}",
             SYNTHETIC_REAL_GIT=str(self.git),
             MOCK_PR_HEAD=pr_head or self.sha,
-            MOCK_MAIN_HEAD=self.sha,
+            MOCK_MAIN_HEAD=main_head or self.sha,
             POTENTIAL_PRODUCTION_SECRET="SECRET_MUST_NOT_REACH_VERIFIER",
         )
         return subprocess.run(
@@ -128,6 +128,14 @@ class LivePRHeadContractTest(unittest.TestCase):
         result = self.run_qa("445", self.sha, "frontend", pr_head="a" * 40)
         self.assertEqual(result.returncode, 3)
         self.assertIn("PR head advanced", result.stderr)
+        self.assertNotIn("SYNTHETIC_VERIFIER=PASS", result.stdout)
+
+    def test_changed_remote_main_blocks_stale_verifier_source(self):
+        result = self.run_qa(
+            "445", self.sha, "frontend", main_head="f" * 40
+        )
+        self.assertEqual(result.returncode, 3)
+        self.assertIn("not the current protected remote main", result.stderr)
         self.assertNotIn("SYNTHETIC_VERIFIER=PASS", result.stdout)
 
     def test_candidate_dependency_lockfile_drift_fails_closed(self):
