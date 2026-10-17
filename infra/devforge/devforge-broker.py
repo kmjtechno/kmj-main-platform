@@ -147,7 +147,7 @@ def reply(request):
     if not isinstance(request, dict) or set(request) != {"action"}:
         return {"ok": False, "error": "INVALID_REQUEST"}
     action = request.get("action")
-    if action not in ACTIONS:
+    if not isinstance(action, str) or action not in ACTIONS:
         return {"ok": False, "error": "ACTION_NOT_ALLOWED"}
     if action == "status":
         return {"ok": True, **service_state()}
