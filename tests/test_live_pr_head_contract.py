@@ -61,6 +61,9 @@ class LivePRHeadContractTest(unittest.TestCase):
             "  echo 'https://github.com/kmjtechno/kmj-main-platform.git'; exit 0\n"
             "fi\n"
             "if [[ \"$1\" == '-C' && \"$3\" == 'ls-remote' ]]; then\n"
+            "  if [[ \"$6\" == 'refs/heads/main' ]]; then\n"
+            "    printf '%s\\t%s\\n' \"$MOCK_MAIN_HEAD\" \"$6\"; exit 0\n"
+            "  fi\n"
             "  printf '%s\\t%s\\n' \"$MOCK_PR_HEAD\" \"$6\"; exit 0\n"
             "fi\n"
             "exec \"$SYNTHETIC_REAL_GIT\" \"$@\"\n",
@@ -81,6 +84,7 @@ class LivePRHeadContractTest(unittest.TestCase):
             PATH=f"{self.fakebin}:{env.get('PATH', '')}",
             SYNTHETIC_REAL_GIT=str(self.git),
             MOCK_PR_HEAD=pr_head or self.sha,
+            MOCK_MAIN_HEAD=self.sha,
             POTENTIAL_PRODUCTION_SECRET="SECRET_MUST_NOT_REACH_VERIFIER",
         )
         return subprocess.run(
