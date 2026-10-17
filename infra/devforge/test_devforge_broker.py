@@ -58,6 +58,18 @@ class BrokerBoundaryTests(unittest.TestCase):
         self.assertEqual(broker.RUNTIME["last_error"], "ALREADY_INSTALLED_OR_CONTAINER_CONFLICT")
         self.assertFalse(broker.LOCK.locked())
 
+    def test_foreign_loopback_service_blocks_install(self):
+        self.assertTrue(broker.LOCK.acquire(blocking=False))
+        with mock.patch.object(broker, "ensure_preconditions"), \
+             mock.patch.object(broker, "service_state", return_value={"state": "not_installed"}), \
+             mock.patch.object(broker.socket, "socket") as socket_mock, \
+             mock.patch.object(broker, "command") as docker:
+            socket_mock.return_value.__enter__.return_value.connect_ex.return_value = 0
+            broker.perform("install")
+        self.assertEqual(broker.RUNTIME["last_error"], "PORT_3030_CONFLICT")
+        self.assertFalse(broker.LOCK.locked())
+        docker.assert_not_called()
+
     def test_status_has_no_credential_payload(self):
         with mock.patch.object(broker, "service_state", return_value={
             "broker_ready": True, "healthy": False, "state": "not_installed",
