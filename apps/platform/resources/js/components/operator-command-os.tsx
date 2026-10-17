@@ -276,7 +276,7 @@ export default function OperatorCommandOs({
                     System Status
                 </Link>
                 <div className="owner-identity">
-                    <span className="owner-initials">NK</span>
+                    <span className="owner-initials">{initials}</span>
                     <div>
                         <strong>{name}</strong>
                         <small>Platform Owner / Super Admin</small>
