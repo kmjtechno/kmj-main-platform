@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\User;
+use App\Models\OperatorActionAudit;
 use App\Services\DevForge\DevForgeBrokerClient;
 use App\Services\PlatformOwnerAccess;
 use Illuminate\Http\Request;
@@ -33,8 +34,22 @@ Route::middleware(['auth', 'verified', 'password.confirm'])
             try {
                 $broker->action($validated['action']);
             } catch (\RuntimeException $exception) {
+                OperatorActionAudit::query()->create([
+                    'actor_user_id' => $user->id,
+                    'action' => 'devforge.'.$validated['action'],
+                    'outcome' => 'failed',
+                    'metadata' => ['reason' => 'BROKER_REJECTED'],
+                ]);
+
                 return back()->withErrors(['action' => $exception->getMessage()]);
             }
+
+            OperatorActionAudit::query()->create([
+                'actor_user_id' => $user->id,
+                'action' => 'devforge.'.$validated['action'],
+                'outcome' => 'accepted',
+                'metadata' => ['execution' => 'asynchronous', 'health_verified' => false],
+            ]);
 
             return redirect()->route('operator.devforge.index')
                 ->with('status', 'DevForge action accepted. Await verified host status.');
