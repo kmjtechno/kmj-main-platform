@@ -67,6 +67,11 @@ void test('company overview preserves keyboard focus and Escape semantics', () =
         assert.ok(source.includes(primitive), primitive);
     assert.match(source, /onOpenChange=\{setTour\}/);
     assert.match(source, /aria-label="Company overview"/);
+    assert.match(
+        source,
+        /<DialogPrimitive\.Title[\s\S]*?className="sr-only"[\s\S]*?Company overview[\s\S]*?<\/DialogPrimitive\.Title>/,
+    );
+    assert.match(source, /<h2>Build\. Connect\. Scale\.<\/h2>/);
     assert.doesNotMatch(source, /\{tour &&/);
 });
 
