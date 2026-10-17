@@ -10,6 +10,7 @@ import {
     PackageOpen,
     ShieldCheck,
     ShoppingCart,
+    GitBranch,
 } from 'lucide-react';
 import AppLogo from '@/components/app-logo';
 import { NavFooter } from '@/components/nav-footer';
@@ -95,6 +96,11 @@ export function AppSidebar() {
                   title: 'Payment Gateways',
                   href: '/operator/payments',
                   icon: CreditCard,
+              },
+              {
+                  title: 'KMJ DevForge',
+                  href: '/operator/devforge',
+                  icon: GitBranch,
               },
               {
                   title: 'Operations',
