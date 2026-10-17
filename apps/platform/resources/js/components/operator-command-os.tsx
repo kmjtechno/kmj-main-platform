@@ -160,6 +160,40 @@ function PanelTitle({
         </div>
     );
 }
+function ProductArtwork({ product }: { product: Product }) {
+    const [failed, setFailed] = useState(false);
+    if (failed) {
+        return (
+            <div
+                className="owner-product-art-fallback"
+                role="img"
+                aria-label={product.name + ' artwork unavailable'}
+                style={{
+                    height: 65,
+                    width: '100%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    borderRadius: 5,
+                    background: '#131d2b',
+                    color: '#c9d5e5',
+                }}
+            >
+                <Package size={26} aria-hidden="true" />
+            </div>
+        );
+    }
+    return (
+        <img
+            src={'/assets/locked/' + (art[product.slug] || 'cloudos') + '.webp'}
+            alt={product.name + ' product artwork'}
+            loading="lazy"
+            width="480"
+            height="270"
+            onError={() => setFailed(true)}
+        />
+    );
+}
 export default function OperatorCommandOs({
     metrics,
     catalogProducts,
@@ -459,17 +493,7 @@ export default function OperatorCommandOs({
                                             .replaceAll('-', ' ')}
                                     </p>
                                     <Link href="/operator/products">
-                                        <img
-                                            src={
-                                                '/assets/locked/' +
-                                                (art[p.slug] || 'cloudos') +
-                                                '.webp'
-                                            }
-                                            alt={p.name + ' product artwork'}
-                                            loading="lazy"
-                                            width="480"
-                                            height="270"
-                                        />
+                                        <ProductArtwork product={p} />
                                     </Link>
                                     <div className="owner-product-state">
                                         <span>
