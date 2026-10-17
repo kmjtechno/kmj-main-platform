@@ -126,13 +126,38 @@ class LivePRHeadContractTest(unittest.TestCase):
         self.assertIn("PR head advanced", result.stderr)
         self.assertNotIn("SYNTHETIC_VERIFIER=PASS", result.stdout)
 
-    def test_dependency_lockfile_drift_fails_closed(self):
-        (self.repo / "apps/platform/composer.lock").write_text('{"lock":"DRIFT"}\n', encoding="utf-8")
-        # A tracked main-file edit is a stricter check than dependency drift.
-        result = self.run_qa("445", self.sha, "frontend")
+    def test_candidate_dependency_lockfile_drift_fails_closed(self):
+        subprocess.run(
+            [self.git, "checkout", "-qb", "candidate"], cwd=self.repo, check=True
+        )
+        (self.repo / "apps/platform/composer.lock").write_text(
+            '{"lock":"CANDIDATE-DRIFT"}\\n', encoding="utf-8"
+        )
+        subprocess.run([self.git, "add", "apps/platform/composer.lock"], cwd=self.repo, check=True)
+        subprocess.run([self.git, "commit", "-qm", "candidate lock change"], cwd=self.repo, check=True)
+        candidate_sha = subprocess.check_output(
+            [self.git, "rev-parse", "HEAD"], cwd=self.repo, text=True
+        ).strip()
+        subprocess.run([self.git, "switch", "-q", "main"], cwd=self.repo, check=True)
+        result = self.run_qa("445", candidate_sha, "frontend", pr_head=candidate_sha)
         self.assertEqual(result.returncode, 3)
-        self.assertIn("uncommitted changes", result.stderr)
+        self.assertIn("composer.lock differs", result.stderr)
         self.assertNotIn("SYNTHETIC_VERIFIER=PASS", result.stdout)
+
+    def test_tracked_checkout_edits_block_qa_but_untracked_files_remain_safe(self):
+        original = self.repo / "work" / "qa" / "operator-evidence.txt"
+        original.parent.mkdir(parents=True)
+        original.write_text("DO-NOT-TOUCH\\n", encoding="utf-8")
+        valid = self.run_qa("445", self.sha, "frontend")
+        self.assertEqual(valid.returncode, 0, valid.stderr)
+        self.assertEqual(original.read_text(encoding="utf-8"), "DO-NOT-TOUCH\\n")
+        (self.repo / "apps/platform/composer.lock").write_text(
+            '{"lock":"MODIFIED"}\\n', encoding="utf-8"
+        )
+        blocked = self.run_qa("445", self.sha, "frontend")
+        self.assertEqual(blocked.returncode, 3)
+        self.assertIn("uncommitted changes", blocked.stderr)
+        self.assertEqual(original.read_text(encoding="utf-8"), "DO-NOT-TOUCH\\n")
 
 
 if __name__ == "__main__":
