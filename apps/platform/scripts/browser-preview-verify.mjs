@@ -84,6 +84,23 @@ try {
                     )
                 )
                     errors.push('Kristi guidance failed');
+                const overview = page.getByRole('button', {
+                    name: 'Watch Company Video',
+                });
+                await overview.click();
+                await page
+                    .getByRole('dialog', { name: 'Company overview' })
+                    .waitFor();
+                await page.keyboard.press('Escape');
+                await page
+                    .getByRole('dialog', { name: 'Company overview' })
+                    .waitFor({ state: 'hidden' });
+                if (
+                    !(await overview.evaluate(
+                        (element) => element === document.activeElement,
+                    ))
+                )
+                    errors.push('Company overview did not restore keyboard focus');
                 await page
                     .getByRole('button', { name: 'Close Kristi', exact: true })
                     .click();
