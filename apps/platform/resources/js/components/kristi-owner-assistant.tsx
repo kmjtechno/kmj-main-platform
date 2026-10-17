@@ -227,7 +227,7 @@ export default function KristiOwnerAssistant({
             </header>
             <div className="kmj-os-kristi-art" aria-hidden="true">
                 <img
-                    src="/assets/admin/kristi-neon.svg"
+                    src="/assets/locked/kristi-owner.webp"
                     alt=""
                     className="h-full w-full object-cover"
                 />

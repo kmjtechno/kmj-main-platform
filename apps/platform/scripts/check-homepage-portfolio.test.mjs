@@ -24,8 +24,8 @@ void test('the locked KMJ brand is the single shared public header/footer asset'
 });
 
 void test('public hero describes cross-platform engineering without inventing product availability', () => {
-    assert.match(source, /Build any software\./);
-    assert.match(source, /Power every experience\./);
+    assert.match(source, /Build Any Software\./);
+    assert.match(source, /Power Every[\s\S]*?Experience\./);
     assert.match(
         source,
         /Product\s+availability and access remain governed by/,

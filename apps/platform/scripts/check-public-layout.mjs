@@ -77,8 +77,20 @@ for (const page of publicPages) {
         join(root, 'resources/js/pages', page + '.tsx'),
         'utf8',
     );
+    const lockedHome = page === 'welcome';
+    if (lockedHome) {
+        assert.match(source, /<header className="lock-header">/);
+        assert.match(source, /<LockedBrand compact \/>/);
+        assert.match(source, /aria-label="Primary navigation"/);
+        assert.match(source, /aria-label="Toggle navigation"/);
+        assert.match(source, /aria-expanded=\{menu\}/);
+        assert.match(source, /<footer className="lock-footer">/);
+        assert.match(source, /href="#main-content"/);
+    }
     assert.ok(
-        source.includes('PublicSiteHeader') || source.includes('LegalDocument'),
+        lockedHome ||
+            source.includes('PublicSiteHeader') ||
+            source.includes('LegalDocument'),
         page + ' is missing its public header',
     );
     assert.ok(
@@ -86,7 +98,9 @@ for (const page of publicPages) {
         page + ' is missing public SEO metadata',
     );
     assert.ok(
-        source.includes('PublicSiteFooter') || source.includes('LegalDocument'),
+        lockedHome ||
+            source.includes('PublicSiteFooter') ||
+            source.includes('LegalDocument'),
         page + ' is missing its public footer',
     );
     assert.ok(
