@@ -35,7 +35,7 @@ class LivePRHeadContractTest(unittest.TestCase):
             script.write_text(
                 "#!/usr/bin/env bash\n"
                 "set -euo pipefail\n"
-                'test -z "$POTENTIAL_PRODUCTION_SECRET"\n'
+                'test -z "${POTENTIAL_PRODUCTION_SECRET:-}"\n'
                 'echo "SYNTHETIC_VERIFIER=PASS"\n',
                 encoding="utf-8",
             )
