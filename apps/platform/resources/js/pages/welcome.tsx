@@ -507,20 +507,29 @@ export default function Welcome({
                             {ecosystemProducts.map((p) => (
                                 <article className="lock-product" key={p.slug}>
                                     <Link href={'/products/' + p.slug}>
-                                        <img
-                                            src={
-                                                artwork[p.slug]
-                                                    ? '/assets/locked/' +
-                                                      artwork[p.slug] +
-                                                      '.webp'
-                                                    : p.image_path ||
-                                                      '/assets/locked/cinema.webp'
-                                            }
-                                            alt={p.name + ' product artwork'}
-                                            loading="lazy"
-                                            width="480"
-                                            height="270"
-                                        />
+                                        {artwork[p.slug] || p.image_path ? (
+                                            <img
+                                                src={
+                                                    artwork[p.slug]
+                                                        ? '/assets/locked/' +
+                                                          artwork[p.slug] +
+                                                          '.webp'
+                                                        : p.image_path!
+                                                }
+                                                alt={p.name + ' product artwork'}
+                                                loading="lazy"
+                                                width="480"
+                                                height="270"
+                                            />
+                                        ) : (
+                                            <div
+                                                className="lock-product-art-unavailable"
+                                                role="img"
+                                                aria-label={p.name + ' artwork not available'}
+                                            >
+                                                Artwork coming soon
+                                            </div>
+                                        )}
                                         <span className="lock-product-category">
                                             {p.eyebrow || p.lifecycle_label}
                                         </span>
