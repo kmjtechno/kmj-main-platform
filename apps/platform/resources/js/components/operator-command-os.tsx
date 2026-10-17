@@ -170,8 +170,8 @@ export default function OperatorCommandOs({
     const name = auth.user?.name?.trim() || 'Platform Owner';
     const nameParts = name.split(/\s+/);
     const initials = (
-        (nameParts[0]?.[0] || '') +
-        (nameParts.length > 1 ? nameParts.at(-1)?.[0] || '' : nameParts[0]?.[1] || '')
+        (nameParts[0]?.[0] ?? '') +
+        (nameParts.at(-1)?.[0] ?? '')
     ).toLocaleUpperCase();
     const [searchOpen, setSearchOpen] = useState(false);
     const [query, setQuery] = useState('');
