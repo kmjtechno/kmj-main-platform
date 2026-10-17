@@ -1,3 +1,4 @@
+import * as DialogPrimitive from '@radix-ui/react-dialog';
 import { Head, Link } from '@inertiajs/react';
 import { useState } from 'react';
 import {
@@ -392,12 +393,50 @@ export default function Welcome({
                                     Explore Our Products{' '}
                                     <ArrowRight size={16} />
                                 </Link>
-                                <button
-                                    className="lock-outline"
-                                    onClick={() => setTour(true)}
+                                <DialogPrimitive.Root
+                                    open={tour}
+                                    onOpenChange={setTour}
                                 >
-                                    <PlayCircle size={22} /> Watch Company Video
-                                </button>
+                                    <DialogPrimitive.Trigger asChild>
+                                        <button className="lock-outline">
+                                            <PlayCircle size={22} /> Watch Company
+                                            Video
+                                        </button>
+                                    </DialogPrimitive.Trigger>
+                                    <DialogPrimitive.Portal>
+                                        <DialogPrimitive.Overlay className="lock-dialog-backdrop" />
+                                        <DialogPrimitive.Content
+                                            className="lock-dialog"
+                                            aria-label="Company overview"
+                                        >
+                                            <DialogPrimitive.Close asChild>
+                                                <button aria-label="Close company overview">
+                                                    <X />
+                                                </button>
+                                            </DialogPrimitive.Close>
+                                            <DialogPrimitive.Title asChild>
+                                                <h2>Build. Connect. Scale.</h2>
+                                            </DialogPrimitive.Title>
+                                            <DialogPrimitive.Description asChild>
+                                                <p>
+                                                    Explore KMJ TECHNO's
+                                                    software, cloud, AI and
+                                                    immersive technology
+                                                    capabilities. A company
+                                                    video is not available yet.
+                                                </p>
+                                            </DialogPrimitive.Description>
+                                            <Link
+                                                href="/company"
+                                                className="lock-primary"
+                                                onClick={() => setTour(false)}
+                                            >
+                                                Explore our company{' '}
+                                                <ArrowRight size={16} />
+                                            </Link>
+                                        </DialogPrimitive.Content>
+                                    </DialogPrimitive.Portal>
+                                </DialogPrimitive.Root>
                             </div>
                         </div>
                         <div className="lock-hero-words">
@@ -803,37 +842,6 @@ export default function Welcome({
                     </div>
                 </footer>
                 <PublicKristi />
-                {tour && (
-                    <div
-                        className="lock-dialog-backdrop"
-                        onClick={() => setTour(false)}
-                    >
-                        <section
-                            role="dialog"
-                            aria-modal="true"
-                            aria-label="Company overview"
-                            className="lock-dialog"
-                            onClick={(e) => e.stopPropagation()}
-                        >
-                            <button
-                                autoFocus
-                                aria-label="Close company overview"
-                                onClick={() => setTour(false)}
-                            >
-                                <X />
-                            </button>
-                            <h2>Build. Connect. Scale.</h2>
-                            <p>
-                                Explore KMJ TECHNO's software, cloud, AI and
-                                immersive technology capabilities. A company
-                                video is not available yet.
-                            </p>
-                            <Link href="/company" className="lock-primary">
-                                Explore our company <ArrowRight size={16} />
-                            </Link>
-                        </section>
-                    </div>
-                )}
             </div>
         </>
     );
