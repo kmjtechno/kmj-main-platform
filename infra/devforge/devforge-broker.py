@@ -4,7 +4,6 @@
 Never accepts paths, URLs, repositories, command strings or shell arguments.
 Provision once as root; PHP-FPM can access only the local Unix socket.
 """
-import grp
 import json
 import os
 import pathlib
@@ -22,7 +21,6 @@ BASE = pathlib.Path("/opt/kmj-devforge")
 DATA = pathlib.Path("/var/lib/kmj-devforge")
 CREDENTIALS = DATA / "initial-admin-credentials.txt"
 ACTIONS = frozenset(("status", "install", "start", "stop", "restart"))
-MUTATIONS = ACTIONS - {"status"}
 LOCK = threading.Lock()
 RUNTIME = {"last_action": None, "last_error": None, "completed_at": None}
 COMPOSE = ["docker", "compose", "--project-name", "kmj-devforge", "-f", str(BASE / "compose.yaml")]
@@ -43,6 +41,14 @@ def service_state():
             state = "unknown"
     except (OSError, subprocess.TimeoutExpired):
         state = "unavailable"
+    # Never claim another container as DevForge, even if it shares our name/port.
+    if state not in ("not_installed", "unavailable"):
+        try:
+            identity = command("docker", "inspect", "--format", "{{.Config.Image}}", "kmj-devforge-server", timeout=5)
+            if identity.returncode != 0 or identity.stdout.strip() != "docker.gitea.com/gitea:1.27.3-rootless":
+                state = "unexpected_container"
+        except (OSError, subprocess.TimeoutExpired):
+            state = "unavailable"
     healthy = False
     if state == "running":
         try:
@@ -105,6 +111,14 @@ def perform(action):
     try:
         ensure_preconditions()
         if action == "install":
+            current = service_state()["state"]
+            if current != "not_installed":
+                raise RuntimeError("ALREADY_INSTALLED_OR_CONTAINER_CONFLICT")
+            # Guard against a different service already serving loopback port 3030.
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as probe:
+                probe.settimeout(0.7)
+                if probe.connect_ex(("127.0.0.1", 3030)) == 0:
+                    raise RuntimeError("PORT_3030_CONFLICT")
             result = command(*COMPOSE, "pull", "server", timeout=300)
             if result.returncode:
                 raise RuntimeError("IMAGE_PULL_FAILED")
