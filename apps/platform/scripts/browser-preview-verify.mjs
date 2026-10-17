@@ -100,7 +100,9 @@ try {
                         (element) => element === document.activeElement,
                     ))
                 )
-                    errors.push('Company overview did not restore keyboard focus');
+                    errors.push(
+                        'Company overview did not restore keyboard focus',
+                    );
                 await page
                     .getByRole('button', { name: 'Close Kristi', exact: true })
                     .click();
