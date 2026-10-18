@@ -47,7 +47,7 @@ export const deliveryMilestones: DeliveryMilestone[] = [
         state: 'active',
         detail: 'Platform-owner product management now binds lifecycle, public visibility, artwork, purchase/licensing controls and deterministic drag-and-drop ordering to the locked public landing while commercial state fails closed',
         evidence:
-            'PR #263 lifecycle/catalog ordering and non-available purchase regression; combined website + Super Admin source integration PR #338 at cdd47de with 12 frontend contract tests, isolated PHP Unit/Feature, PHPStan/Pint, fresh SQLite owner-policy seed and Chromium public guest QA 42/42 PASS; hosted CI and authenticated production Owner release still required; no live owner grant claimed',
+            'PR #263 lifecycle/catalog ordering and non-available purchase regression; combined website + Super Admin source integration PR #338 at cdd47de with 12 frontend contract tests, isolated PHP Unit/Feature, PHPStan/Pint, fresh SQLite owner-policy seed and Chromium public guest QA 42/42 PASS; PR #449 exact source 121695ee13d002dfad06f2d716cd7ae69a16ed49 completed isolated production-build and ephemeral PostgreSQL 18 authenticated owner/nonowner browser smoke; six of seven free standard GitHub-hosted workflows passed after the public-repository rerun on 18 October 2026. Verify Foundation required this delivery-progress sync and must pass on the NEW exact head. Landing artwork still awaits visual signoff; candidate is NOT merged or deployed, and owner product-management lifecycle acceptance and protected release approval remain pending; no live owner grant claimed',
     },
     {
         id: 'authority-foundation',
