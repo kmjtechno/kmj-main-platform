@@ -38,7 +38,18 @@ final class CodeBridgeCustomerDeviceDirectory
                 'p.consumed_at',
             ]);
 
-        return $rows->map(static function (object $row): array {
+        // Assignment requests are distinct from active/pairing grants. They
+        // are never included in the agent's credential introspection.
+        $requested = DB::table('codebridge_project_assignments')
+            ->where('tenant_id', $tenantId)
+            ->whereIn('device_id', $rows->pluck('device_id')->all())
+            ->where('status', 'pending_local_setup')
+            ->orderBy('created_at')
+            ->limit(200)
+            ->get(['device_id', 'project_id', 'project_name', 'repository_url', 'status'])
+            ->groupBy('device_id');
+
+        return $rows->map(static function (object $row) use ($requested): array {
             $projectId = is_string($row->project_id) && $row->project_id !== ''
                 ? $row->project_id : null;
 
@@ -53,6 +64,13 @@ final class CodeBridgeCustomerDeviceDirectory
                     'name' => is_string($row->project_name) && $row->project_name !== ''
                         ? $row->project_name : $projectId,
                 ]],
+                'pending_projects' => collect($requested->get($row->device_id, []))
+                    ->map(static fn (object $item): array => [
+                        'id' => (string) $item->project_id,
+                        'name' => (string) $item->project_name,
+                        'repository' => (string) $item->repository_url,
+                        'status' => 'pending_local_setup',
+                    ])->values()->all(),
                 'registered_at' => $row->consumed_at,
                 'registration' => 'registered',
                 'connection_status' => 'not_verified',
