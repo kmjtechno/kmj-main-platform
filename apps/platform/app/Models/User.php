@@ -57,7 +57,7 @@ class User extends Authenticatable implements MustVerifyEmail, PasskeyUser
     /**
      * Password resets must not be acknowledged by a log-only mailer.
      *
-     * @param string $token
+     * @param  string  $token
      */
     public function sendPasswordResetNotification($token): void
     {
