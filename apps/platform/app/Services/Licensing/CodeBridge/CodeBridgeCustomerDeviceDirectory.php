@@ -65,12 +65,16 @@ final class CodeBridgeCustomerDeviceDirectory
                         ? $row->project_name : $projectId,
                 ]],
                 'pending_projects' => collect($requested->get($row->device_id, []))
-                    ->map(static fn (object $item): array => [
-                        'id' => (string) $item->project_id,
-                        'name' => (string) $item->project_name,
-                        'repository' => (string) $item->repository_url,
-                        'status' => 'pending_local_setup',
-                    ])->values()->all(),
+                    ->map(static function (object $item): array {
+                        $fields = (array) $item;
+
+                        return [
+                            'id' => (string) $fields['project_id'],
+                            'name' => (string) $fields['project_name'],
+                            'repository' => (string) $fields['repository_url'],
+                            'status' => 'pending_local_setup',
+                        ];
+                    })->values()->all(),
                 'registered_at' => $row->consumed_at,
                 'registration' => 'registered',
                 'connection_status' => 'not_verified',
