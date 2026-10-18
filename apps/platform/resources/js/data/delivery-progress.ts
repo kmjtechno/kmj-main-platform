@@ -146,9 +146,9 @@ export const deliveryMilestones: DeliveryMilestone[] = [
         id: 'international-payment-gateways',
         title: 'Cashfree and Razorpay international gateway integration',
         state: 'active',
-        detail: 'Cashfree signed webhooks, sandbox-only server-created orders, provider-bound verification and read-only passkey-gated Super Admin payment readiness have source and regression coverage; merchant-approved accounts still need independently verified credentials, cross-border activation, payment settlement/reconciliation, subscriptions and refunds before live collection',
+        detail: 'Cashfree signed webhooks, sandbox-only server-created orders, provider-bound verification and read-only passkey-gated Super Admin payment readiness have source and regression coverage; merchant-approved accounts still need independently verified credentials, cross-border activation, payment settlement/reconciliation, subscriptions and refunds before live collection. PR #419 adds owner-only guided TEST credentials and opt-in sandbox connection probes behind review; production payments and license issuance remain disabled',
         evidence:
-            'PR #347: verified Cashfree raw-body HMAC/webhook, sandbox-only server order, provider-bound signature router, password-confirmed owner-only payment readiness console, and Git-worktree deploy evidence. Isolated payment/admin PHPUnit 25 tests/112 assertions, full Feature suite exit 0 (1796 assertions), lint/type/build/PHPStan/Pint/Vite guard PASS. Real credentials, cross-border approval and captured-payment reconciliation remain NOT verified; no live charges or license issuance from raw webhooks',
+            'PR #419 (feature candidate, not deployed): secure one-place Razorpay/Cashfree sandbox onboarding, phone-gated Cashfree test order, credential readiness, owner-confirmed audit-only probe. Real hosted CI and merchant sandbox acceptance are still release gates. PR #347: verified Cashfree raw-body HMAC/webhook, sandbox-only server order, provider-bound signature router, password-confirmed owner-only payment readiness console, and Git-worktree deploy evidence. Isolated payment/admin PHPUnit 25 tests/112 assertions, full Feature suite exit 0 (1796 assertions), lint/type/build/PHPStan/Pint/Vite guard PASS. Real credentials, cross-border approval and captured-payment reconciliation remain NOT verified; no live charges or license issuance from raw webhooks',
     },
     {
         id: 'desktop-commander-commercial-control-plane',
@@ -410,5 +410,5 @@ export const deliveryProgress = Math.round(
 export const deliveryProgressMeta = {
     label: 'Revenue-capable working phase',
     note: 'Evidence-based delivery milestones, not total product completion.',
-    refreshed: '2026-10-04',
+    refreshed: '2026-10-18',
 } as const;
