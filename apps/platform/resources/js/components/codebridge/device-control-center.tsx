@@ -5,6 +5,7 @@ import {
     CheckCircle2,
     Clipboard,
     HardDrive,
+    FolderPlus,
     Laptop2,
     LockKeyhole,
     MonitorSmartphone,
@@ -22,6 +23,12 @@ export type CodeBridgeDevice = {
     platform: string | null;
     arch: string | null;
     projects: Array<{ id: string; name: string }>;
+    pending_projects?: Array<{
+        id: string;
+        name: string;
+        repository: string;
+        status: 'pending_local_setup';
+    }>;
     registration: 'registered';
     connection_status: 'not_verified';
     registered_at?: string | null;
@@ -52,6 +59,10 @@ export default function DeviceControlCenter({
     const [confirmId, setConfirmId] = useState<string | null>(null);
     const [confirmation, setConfirmation] = useState('');
     const [submitting, setSubmitting] = useState(false);
+    const [assignDeviceId, setAssignDeviceId] = useState<string | null>(null);
+    const [newProjectId, setNewProjectId] = useState('');
+    const [newProjectName, setNewProjectName] = useState('');
+    const [newRepositoryUrl, setNewRepositoryUrl] = useState('');
     const [feedback, setFeedback] = useState('');
 
     const visibleDevices = useMemo(() => {
@@ -117,6 +128,33 @@ export default function DeviceControlCenter({
                     setFeedback(
                         'Disconnect was not completed. Check your account confirmation and retry.',
                     ),
+                onFinish: () => setSubmitting(false),
+            },
+        );
+    };
+
+    const assignProject = (device: CodeBridgeDevice) => {
+        if (!canManage || submitting || assignDeviceId !== device.id) return;
+        setSubmitting(true);
+        setFeedback('');
+        router.post(
+            `/services/kmj-codebridge/organizations/${encodeURIComponent(tenantId)}/devices/${encodeURIComponent(device.id)}/projects/assign`,
+            {
+                project_id: newProjectId.trim(),
+                project_name: newProjectName.trim(),
+                repository_url: newRepositoryUrl.trim(),
+            },
+            {
+                preserveScroll: true,
+                onSuccess: () => {
+                    setAssignDeviceId(null);
+                    setNewProjectId('');
+                    setNewProjectName('');
+                    setNewRepositoryUrl('');
+                    setFeedback('Assignment saved; local agent setup and heartbeat verification remain pending.');
+                },
+                onError: () =>
+                    setFeedback('Project assignment refused. Check ID, repository, permissions or existing request.'),
                 onFinish: () => setSubmitting(false),
             },
         );
@@ -196,7 +234,7 @@ export default function DeviceControlCenter({
                         (count, device) => count + device.projects.length,
                         0,
                     )}
-                    hint="From saved pairing records"
+                    hint="Active grants from approved device pairings"
                 />
                 <Stat
                     label="Live status"
@@ -339,6 +377,25 @@ export default function DeviceControlCenter({
                                 )}
                             </div>
 
+                            {(device.pending_projects ?? []).length > 0 && (
+                                <div className="mt-3 rounded-lg border border-amber-500/30 p-3">
+                                    <p className="text-xs font-black text-amber-600 dark:text-amber-400">
+                                        Awaiting local project setup
+                                    </p>
+                                    <p className="text-muted-foreground mt-1 text-xs">
+                                        Requests are not active agent grants. Verify device-side enrollment before using them.
+                                    </p>
+                                    <div className="mt-2 flex flex-wrap gap-1.5">
+                                        {(device.pending_projects ?? []).map((project) => (
+                                            <span key={project.id} title={project.repository}
+                                                className="rounded-lg border border-amber-500/30 px-2.5 py-1 text-xs">
+                                                {project.name} · Pending setup
+                                            </span>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+
                             <div className="mt-4 flex flex-wrap gap-2 border-t pt-3">
                                 <button
                                     type="button"
@@ -365,6 +422,21 @@ export default function DeviceControlCenter({
                                 {canManage && (
                                     <button
                                         type="button"
+                                        onClick={() => {
+                                            setAssignDeviceId(assignDeviceId === device.id ? null : device.id);
+                                            setConfirmId(null);
+                                            setFeedback('');
+                                        }}
+                                        disabled={submitting}
+                                        aria-expanded={assignDeviceId === device.id}
+                                        className="inline-flex items-center gap-1.5 rounded-lg border px-3 py-2 text-xs font-bold hover:border-red-500/40 disabled:opacity-50"
+                                    >
+                                        <FolderPlus className="h-3.5 w-3.5" /> Assign project
+                                    </button>
+                                )}
+                                {canManage && (
+                                    <button
+                                        type="button"
                                         onClick={() => startDisconnect(device)}
                                         disabled={submitting}
                                         className="inline-flex items-center gap-1.5 rounded-lg border border-red-500/30 px-3 py-2 text-xs font-bold text-red-500 disabled:opacity-50"
@@ -374,6 +446,60 @@ export default function DeviceControlCenter({
                                     </button>
                                 )}
                             </div>
+
+                            {assignDeviceId === device.id && canManage && (
+                                <form
+                                    onSubmit={(event) => {
+                                        event.preventDefault();
+                                        assignProject(device);
+                                    }}
+                                    className="mt-3 grid gap-3 rounded-xl border p-4"
+                                >
+                                    <h4 className="text-sm font-black">Assign a new project</h4>
+                                    <p className="text-muted-foreground text-xs leading-5">
+                                        Save a project request for this device. This does not install code,
+                                        authorize a local filesystem path or confirm the agent is online.
+                                    </p>
+                                    <label className="text-xs font-semibold">
+                                        Project ID
+                                        <input
+                                            required pattern="[a-z0-9][a-z0-9_-]{0,63}" maxLength={64}
+                                            value={newProjectId}
+                                            onChange={(event) => setNewProjectId(event.target.value)}
+                                            placeholder="kmj-calibration-studio"
+                                            className="bg-background mt-1 block h-10 w-full rounded-lg border px-3 text-sm"
+                                        />
+                                    </label>
+                                    <label className="text-xs font-semibold">
+                                        Display name
+                                        <input
+                                            required minLength={2} maxLength={100}
+                                            value={newProjectName}
+                                            onChange={(event) => setNewProjectName(event.target.value)}
+                                            placeholder="KMJ Calibration Studio"
+                                            className="bg-background mt-1 block h-10 w-full rounded-lg border px-3 text-sm"
+                                        />
+                                    </label>
+                                    <label className="text-xs font-semibold">
+                                        GitHub repository URL
+                                        <input
+                                            required type="url" maxLength={255}
+                                            value={newRepositoryUrl}
+                                            onChange={(event) => setNewRepositoryUrl(event.target.value)}
+                                            placeholder="https://github.com/kmjtechno/kmj-calibration-pro"
+                                            className="bg-background mt-1 block h-10 w-full rounded-lg border px-3 text-sm"
+                                        />
+                                    </label>
+                                    <div className="flex flex-wrap gap-2">
+                                        <button type="submit" disabled={submitting}
+                                            className="rounded-lg bg-red-600 px-4 py-2 text-xs font-black text-white disabled:opacity-50">
+                                            {submitting ? 'Saving…' : 'Save assignment request'}
+                                        </button>
+                                        <button type="button" disabled={submitting} onClick={() => setAssignDeviceId(null)}
+                                            className="rounded-lg border px-4 py-2 text-xs font-bold">Cancel</button>
+                                    </div>
+                                </form>
+                            )}
 
                             {details === device.id && (
                                 <div className="mt-3 rounded-xl border bg-black/[0.02] p-3 text-xs dark:bg-white/[0.02]">
