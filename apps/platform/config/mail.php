@@ -37,6 +37,29 @@ return [
 
     'mailers' => [
 
+        /*
+         * Temporary zero-subscription-cost outbound adapter.
+         * Do not select this mailer in production until Brevo Free, the sender
+         * domain and an authorized real-inbox delivery are independently tested.
+         *
+         * SMTPS port 465 uses implicit TLS (no downgrade to plaintext).
+         * Credentials are loaded only from the server secret environment.
+         * This is replaceable by KMJ Mail's own localhost SMTP transport.
+         */
+        'kmj_brevo' => [
+            'transport' => 'smtp',
+            'scheme' => 'smtps',
+            'host' => 'smtp-relay.brevo.com',
+            'port' => 465,
+            'username' => env('KMJ_BREVO_SMTP_LOGIN'),
+            'password' => env('KMJ_BREVO_SMTP_KEY'),
+            'timeout' => 10,
+            'local_domain' => env('MAIL_EHLO_DOMAIN', 'kmjtechno.com'),
+            'kmj_requires_credentials' => true,
+            'kmj_required_sender_domain' => 'kmjtechno.com',
+            'kmj_activation_confirmed' => env('KMJ_BREVO_ACTIVATED', false),
+        ],
+
         'smtp' => [
             'transport' => 'smtp',
             'scheme' => env('MAIL_SCHEME'),

@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Auth;
 
+use Illuminate\Foundation\Http\Middleware\PreventRequestForgery;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use KMJ\MainPlatform\Organizations\Models\OrganizationMembership;
 use Laravel\Fortify\Features;
@@ -23,6 +24,40 @@ class RegistrationTest extends TestCase
         $response = $this->get(route('register'));
 
         $response->assertOk();
+    }
+
+    public function test_production_log_mailer_cannot_create_unverifiable_user_or_organization(): void
+    {
+        $originalEnvironment = app()->environment();
+
+        try {
+            // Tests run under PHPUnit CLI, which may force --env=testing
+            // and override EnvironmentDetector callback resolution.
+            // Override the actual app env binding used by isProduction().
+            app()->instance('env', 'production');
+            // Laravel 13 re-enables request-forgery checks when tests simulate
+            // production; bypass only this middleware in this isolated test.
+            $this->withoutMiddleware(PreventRequestForgery::class);
+            self::assertTrue(app()->isProduction());
+            config()->set('mail.default', 'log');
+
+            $this->post(route('register.store'), [
+                'name' => 'Undeliverable User',
+                'email' => 'undeliverable@example.test',
+                // Exercise mail-readiness rather than production password policy.
+                // Production requires mixed case, digits, symbols and >=12 chars.
+                'password' => 'Kmj!9vX#2026sQ7rL8',
+                'password_confirmation' => 'Kmj!9vX#2026sQ7rL8',
+            ])->assertSessionHasErrors(['email']);
+
+            $this->assertDatabaseMissing('users', ['email' => 'undeliverable@example.test']);
+            $this->assertDatabaseMissing('organizations', [
+                'name' => "Undeliverable User's Organization",
+            ]);
+            $this->assertGuest();
+        } finally {
+            app()->instance('env', $originalEnvironment);
+        }
     }
 
     public function test_new_users_can_register()

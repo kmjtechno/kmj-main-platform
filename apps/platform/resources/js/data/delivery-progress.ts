@@ -10,6 +10,14 @@ export type DeliveryMilestone = {
 
 export const deliveryMilestones: DeliveryMilestone[] = [
     {
+        id: 'registration-email-delivery-p0',
+        title: 'Registration email verification and password reset delivery',
+        state: 'blocked',
+        detail: 'Fail-closed registration, resend, and password-reset source recovery is being integrated and tested. Live production outbound mail remains unverified until an authorized sender transport, independent inbox delivery, signed-link validation and guarded release acceptance all pass.',
+        evidence:
+            'Reviewable source-level integration on the latest main includes RegistrationMailReadiness, mail doctor, truthful UI and negative HTTP tests. No live SMTP, provider/PTR authorization or production email delivery is implied. Exact integrated-head GitHub CI and owner acceptance are separate gates.',
+    },
+    {
         id: 'codebridge-device-project-assignments',
         title: 'CodeBridge device project assignment requests',
         state: 'active',

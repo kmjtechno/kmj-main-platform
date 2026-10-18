@@ -4,6 +4,7 @@ namespace Tests\Feature\Auth;
 
 use App\Models\User;
 use Illuminate\Auth\Notifications\ResetPassword;
+use Illuminate\Foundation\Http\Middleware\PreventRequestForgery;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Notification;
 use Laravel\Fortify\Features;
@@ -25,6 +26,29 @@ class PasswordResetTest extends TestCase
         $response = $this->get(route('password.request'));
 
         $response->assertOk();
+    }
+
+    public function test_production_log_mailer_rejects_reset_link_instead_of_claiming_delivery(): void
+    {
+        $originalEnvironment = app()->environment();
+
+        try {
+            app()->instance('env', 'production');
+            // Laravel 13 re-enables request-forgery checks when tests simulate
+            // production; bypass only this middleware in this isolated test.
+            $this->withoutMiddleware(PreventRequestForgery::class);
+            config()->set('mail.default', 'log');
+            Notification::fake();
+
+            $user = User::factory()->create();
+
+            $this->post(route('password.email'), ['email' => $user->email])
+                ->assertSessionHasErrors(['email']);
+
+            Notification::assertNothingSent();
+        } finally {
+            app()->instance('env', $originalEnvironment);
+        }
     }
 
     public function test_reset_password_link_can_be_requested()
