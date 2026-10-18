@@ -2,7 +2,12 @@ name: Disposable Backup Restore Round Trip
 on:
   push:
     branches:
-      - test/p0-disposable-backup-roundtrip-20261018
+      - main
+    paths:
+      - 'scripts/backup_platform.sh'
+      - 'scripts/verify_backup_bundle.sh'
+      - 'scripts/ci/verify-disposable-backup-roundtrip.sh'
+      - '.github/workflows/disposable-backup-roundtrip.yml'
   pull_request:
     paths:
       - 'scripts/backup_platform.sh'
@@ -15,7 +20,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: disposable-backup-roundtrip
+  group: disposable-backup-roundtrip-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
