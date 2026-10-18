@@ -24,5 +24,15 @@ final class PostgresReleaseGateTest extends TestCase
         self::assertSame($socket, config('database.connections.pgsql.host'));
         self::assertTrue(Schema::hasTable('payment_gateway_settings'));
         self::assertTrue(Schema::hasTable('kslp_license_keys'));
+        self::assertTrue(Schema::hasTable('knowledge_observations'));
+        self::assertTrue(Schema::hasTable('knowledge_write_receipts'));
+
+        $index = DB::selectOne(
+            "select indexdef from pg_indexes where schemaname = 'public' and indexname = ?",
+            ['knowledge_observations_search_gin'],
+        );
+        self::assertNotNull($index);
+        self::assertStringContainsString('using gin', strtolower((string) $index->indexdef));
+
     }
 }

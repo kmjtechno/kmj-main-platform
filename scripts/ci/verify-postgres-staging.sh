@@ -80,13 +80,13 @@ query() { "$pgbin/psql" -X -A -t -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USERNAME" -
 echo "PG_STAGING_SHA=$sha"
 echo 'PG_STAGING_CLUSTER=private local Unix socket; NO production DB or network listener'
 php artisan migrate --force --no-interaction --no-ansi || { echo 'FAIL: PostgreSQL migration apply' >&2; exit 1; }
-check_sql="select (to_regclass('public.payment_gateway_settings') is not null and to_regclass('public.kslp_license_keys') is not null)::int"
+check_sql="select (to_regclass('public.payment_gateway_settings') is not null and to_regclass('public.kslp_license_keys') is not null and to_regclass('public.knowledge_observations') is not null and to_regclass('public.knowledge_write_receipts') is not null and to_regclass('public.knowledge_observations_search_gin') is not null)::int"
 [[ "$(query "$check_sql")" == 1 ]] || { echo 'FAIL: required product/payment schema absent' >&2; exit 1; }
-echo 'PASS: fresh PostgreSQL migration apply and both new schema tables'
+echo 'PASS: fresh PostgreSQL migration apply, core tables and native memory GIN index'
 failures=0
 # An explicit regression test must prove PHPUnit did not fall back to SQLite
 # from its default phpunit.xml configuration.
-if php artisan test --filter='PostgresReleaseGateTest|PlatformOwnerConsoleTest|OwnerPaymentGatewaySettingsTest|KslpDeveloperAppsTest|KslpDeveloperActivationApiTest|KslpLifecycleTest' --display-warnings --fail-on-warning --no-ansi; then
+if php artisan test --filter='PostgresReleaseGateTest|KnowledgeMemoryStoreTest|KnowledgeMemoryControllerTest|PlatformOwnerConsoleTest|OwnerPaymentGatewaySettingsTest|KslpDeveloperAppsTest|KslpDeveloperActivationApiTest|KslpLifecycleTest' --display-warnings --fail-on-warning --no-ansi; then
   echo 'PASS: selected PostgreSQL feature tests'
 else
   echo 'FAIL: selected PostgreSQL feature tests'
@@ -94,7 +94,7 @@ else
 fi
 if php artisan migrate:rollback --force --no-interaction --no-ansi; then
   if [[ "$(query "$check_sql")" == 0 ]]; then
-    echo 'PASS: PostgreSQL rollback; both new tables removed'
+    echo 'PASS: PostgreSQL rollback; core and memory tables and search index removed'
   else
     echo 'FAIL: PostgreSQL rollback left required schema behind'
     failures=$((failures + 1))
