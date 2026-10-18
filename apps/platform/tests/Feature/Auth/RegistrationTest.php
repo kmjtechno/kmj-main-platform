@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Auth;
 
+use Illuminate\Foundation\Http\Middleware\PreventRequestForgery;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use KMJ\MainPlatform\Organizations\Models\OrganizationMembership;
 use Laravel\Fortify\Features;
@@ -34,6 +35,9 @@ class RegistrationTest extends TestCase
             // and override EnvironmentDetector callback resolution.
             // Override the actual app env binding used by isProduction().
             app()->instance('env', 'production');
+            // Laravel 13 re-enables request-forgery checks when tests simulate
+            // production; bypass only this middleware in this isolated test.
+            $this->withoutMiddleware(PreventRequestForgery::class);
             self::assertTrue(app()->isProduction());
             config()->set('mail.default', 'log');
 
