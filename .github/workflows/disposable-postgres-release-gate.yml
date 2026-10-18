@@ -20,7 +20,7 @@ concurrency:
 jobs:
   migration-rollback:
     runs-on: ubuntu-24.04
-    timeout-minutes: 20
+    timeout-minutes: 25
     steps:
       - name: Checkout exact release candidate without persisted credentials
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
@@ -50,5 +50,7 @@ jobs:
           test "$(id -u)" -ne 0
           test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
           git status --porcelain
-      - name: Create private socket PostgreSQL cluster, test migrations, roll back
+      - name: Test all Feature cases on isolated PostgreSQL and roll back
+        env:
+          KMJ_PG_FULL_FEATURE_SUITE: '1'
         run: bash scripts/ci/verify-postgres-staging.sh "$GITHUB_SHA"
