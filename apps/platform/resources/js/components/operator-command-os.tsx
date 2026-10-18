@@ -64,6 +64,7 @@ type Props = {
         entitlements: number;
         orders: number;
         confirmed_orders: number;
+        confirmed_inr_revenue_minor: number;
     };
     catalogProducts: Product[];
     recentOrders: Order[];
@@ -167,7 +168,11 @@ export default function OperatorCommandOs({
     missingCanonicalSlugs,
 }: Props) {
     const { auth } = usePage().props;
-    const name = auth.user?.name || 'Narendra Singh Kushwah';
+    const name = auth.user?.name?.trim() || 'Platform Owner';
+    const nameParts = name.split(/\s+/);
+    const initials = (
+        (nameParts[0]?.[0] ?? '') + (nameParts.at(-1)?.[0] ?? '')
+    ).toLocaleUpperCase();
     const [searchOpen, setSearchOpen] = useState(false);
     const [query, setQuery] = useState('');
     const [navOpen, setNavOpen] = useState(false);
@@ -224,8 +229,9 @@ export default function OperatorCommandOs({
             o.currency === 'INR' &&
             typeof o.amount_minor === 'number',
     );
-    const revenue =
-        confirmed.reduce((sum, o) => sum + (o.amount_minor || 0), 0) / 100;
+    // The KPI uses the backend's complete confirmed-INR aggregate; the
+    // 20-row recentOrders collection below is only a chart preview.
+    const revenue = metrics.confirmed_inr_revenue_minor / 100;
     const revenueByDay = useMemo(() => {
         const map = new Map<string, number>();
         for (const o of confirmed) {
@@ -271,7 +277,7 @@ export default function OperatorCommandOs({
                     System Status
                 </Link>
                 <div className="owner-identity">
-                    <span className="owner-initials">NK</span>
+                    <span className="owner-initials">{initials}</span>
                     <div>
                         <strong>{name}</strong>
                         <small>Platform Owner / Super Admin</small>
@@ -381,10 +387,10 @@ export default function OperatorCommandOs({
                             [
                                 CreditCard,
                                 'Recorded Revenue',
-                                confirmed.length
+                                metrics.confirmed_orders
                                     ? '₹ ' + revenue.toLocaleString('en-IN')
                                     : '—',
-                                'Confirmed INR orders shown',
+                                'All confirmed INR orders',
                                 'cyan',
                             ],
                             [
@@ -459,17 +465,32 @@ export default function OperatorCommandOs({
                                             .replaceAll('-', ' ')}
                                     </p>
                                     <Link href="/operator/products">
-                                        <img
-                                            src={
-                                                '/assets/locked/' +
-                                                (art[p.slug] || 'cloudos') +
-                                                '.webp'
-                                            }
-                                            alt={p.name + ' product artwork'}
-                                            loading="lazy"
-                                            width="480"
-                                            height="270"
-                                        />
+                                        {art[p.slug] ? (
+                                            <img
+                                                src={
+                                                    '/assets/locked/' +
+                                                    art[p.slug] +
+                                                    '.webp'
+                                                }
+                                                alt={
+                                                    p.name + ' product artwork'
+                                                }
+                                                loading="lazy"
+                                                width="480"
+                                                height="270"
+                                            />
+                                        ) : (
+                                            <div
+                                                className="owner-product-art-unavailable"
+                                                role="img"
+                                                aria-label={
+                                                    p.name +
+                                                    ' artwork not available'
+                                                }
+                                            >
+                                                Artwork pending
+                                            </div>
+                                        )}
                                     </Link>
                                     <div className="owner-product-state">
                                         <span>
@@ -520,7 +541,7 @@ export default function OperatorCommandOs({
                         <section id="owner-revenue" className="owner-panel">
                             <PanelTitle title="Revenue & Growth" />
                             <p className="owner-panel-subtitle">
-                                Confirmed INR orders in the current snapshot
+                                Last 20 orders, confirmed INR only
                             </p>
                             <div className="owner-chart">
                                 <svg
@@ -528,7 +549,7 @@ export default function OperatorCommandOs({
                                     role="img"
                                     aria-label={
                                         confirmed.length
-                                            ? 'Confirmed order revenue by date'
+                                            ? 'Recent confirmed INR order revenue by date'
                                             : 'No confirmed INR revenue to chart'
                                     }
                                 >

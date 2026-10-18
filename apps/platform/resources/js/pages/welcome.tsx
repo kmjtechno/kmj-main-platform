@@ -399,8 +399,8 @@ export default function Welcome({
                                 >
                                     <DialogPrimitive.Trigger asChild>
                                         <button className="lock-outline">
-                                            <PlayCircle size={22} /> Watch Company
-                                            Video
+                                            <PlayCircle size={22} /> Watch
+                                            Company Video
                                         </button>
                                     </DialogPrimitive.Trigger>
                                     <DialogPrimitive.Portal>
@@ -414,10 +414,13 @@ export default function Welcome({
                                                     <X />
                                                 </button>
                                             </DialogPrimitive.Close>
-                                            <DialogPrimitive.Title asChild>
-                                                <h2>Build. Connect. Scale.</h2>
+                                            <DialogPrimitive.Title className="sr-only">
+                                                Company overview
                                             </DialogPrimitive.Title>
-                                            <DialogPrimitive.Description asChild>
+                                            <h2>Build. Connect. Scale.</h2>
+                                            <DialogPrimitive.Description
+                                                asChild
+                                            >
                                                 <p>
                                                     Explore KMJ TECHNO's
                                                     software, cloud, AI and
@@ -507,20 +510,34 @@ export default function Welcome({
                             {ecosystemProducts.map((p) => (
                                 <article className="lock-product" key={p.slug}>
                                     <Link href={'/products/' + p.slug}>
-                                        <img
-                                            src={
-                                                artwork[p.slug]
-                                                    ? '/assets/locked/' +
-                                                      artwork[p.slug] +
-                                                      '.webp'
-                                                    : p.image_path ||
-                                                      '/assets/locked/cinema.webp'
-                                            }
-                                            alt={p.name + ' product artwork'}
-                                            loading="lazy"
-                                            width="480"
-                                            height="270"
-                                        />
+                                        {artwork[p.slug] || p.image_path ? (
+                                            <img
+                                                src={
+                                                    artwork[p.slug]
+                                                        ? '/assets/locked/' +
+                                                          artwork[p.slug] +
+                                                          '.webp'
+                                                        : (p.image_path ?? '')
+                                                }
+                                                alt={
+                                                    p.name + ' product artwork'
+                                                }
+                                                loading="lazy"
+                                                width="480"
+                                                height="270"
+                                            />
+                                        ) : (
+                                            <span
+                                                className="lock-product-art-unavailable"
+                                                role="img"
+                                                aria-label={
+                                                    p.name +
+                                                    ' artwork not available'
+                                                }
+                                            >
+                                                Artwork coming soon
+                                            </span>
+                                        )}
                                         <span className="lock-product-category">
                                             {p.eyebrow || p.lifecycle_label}
                                         </span>

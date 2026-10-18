@@ -42,6 +42,7 @@ type OperatorProps = {
         entitlements: number;
         orders: number;
         confirmed_orders: number;
+        confirmed_inr_revenue_minor: number;
     };
     catalogProducts: CatalogProduct[];
     canonicalProductCount: number;

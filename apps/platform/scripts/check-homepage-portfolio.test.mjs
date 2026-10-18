@@ -67,5 +67,20 @@ void test('company overview preserves keyboard focus and Escape semantics', () =
         assert.ok(source.includes(primitive), primitive);
     assert.match(source, /onOpenChange=\{setTour\}/);
     assert.match(source, /aria-label="Company overview"/);
+    assert.match(
+        source,
+        /<DialogPrimitive\.Title[\s\S]*?className="sr-only"[\s\S]*?Company overview[\s\S]*?<\/DialogPrimitive\.Title>/,
+    );
+    assert.match(source, /<h2>Build\. Connect\. Scale\.<\/h2>/);
     assert.doesNotMatch(source, /\{tour &&/);
+});
+
+void test('unrecognized public products never inherit unrelated cinema artwork', () => {
+    assert.match(source, /artwork\[p\.slug\] \|\| p\.image_path/);
+    assert.match(source, /lock-product-art-unavailable/);
+    assert.match(source, /artwork not available/);
+    assert.doesNotMatch(
+        source,
+        /p\.image_path\s*\|\|\s*['"]\/assets\/locked\/cinema\.webp/,
+    );
 });

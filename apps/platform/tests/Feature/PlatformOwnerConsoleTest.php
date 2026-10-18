@@ -138,6 +138,7 @@ final class PlatformOwnerConsoleTest extends TestCase
             ->where('metrics.entitlements', 0)
             ->where('metrics.orders', 0)
             ->where('metrics.confirmed_orders', 0)
+            ->where('metrics.confirmed_inr_revenue_minor', 0)
             ->has('recentOrders', 0));
     }
 
@@ -210,11 +211,46 @@ final class PlatformOwnerConsoleTest extends TestCase
             ->component('operator')
             ->where('metrics.orders', 1)
             ->where('metrics.confirmed_orders', 1)
+            ->where('metrics.confirmed_inr_revenue_minor', 9900)
             ->has('recentOrders', 1)
             ->where('recentOrders.0.id', $order->getKey())
             ->where('recentOrders.0.fulfillment_state', 'ready')
             ->where('recentOrders.0.entitlement_id', null)
             ->where('recentOrders.0.can_manage_license', false));
+    }
+
+    public function test_recorded_inr_revenue_includes_confirmed_orders_older_than_the_recent_twenty(): void
+    {
+        $owner = $this->createPasskeyOwner();
+        [, $organization, $product] = $this->createReadyOrder($owner);
+
+        $orders = app(CommercialOrderService::class);
+        for ($index = 0; $index < 21; $index++) {
+            $order = $orders->request(
+                $organization->getKey(),
+                $product->getKey(),
+                $owner->id,
+                'revenue-kpi-order-'.$index,
+            );
+
+            $orders->confirm(
+                $order->getKey(),
+                $owner->id,
+                'INR',
+                100,
+                'revenue-kpi-confirmation-'.$index,
+            );
+        }
+
+        $this->actingAs($owner)
+            ->withSession(['auth.password_confirmed_at' => time()])
+            ->get('/operator')
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('metrics.orders', 22)
+                ->where('metrics.confirmed_orders', 22)
+                ->where('metrics.confirmed_inr_revenue_minor', 12000)
+                ->has('recentOrders', 20));
     }
 
     public function test_passkey_owner_can_idempotently_fulfill_ready_order(): void

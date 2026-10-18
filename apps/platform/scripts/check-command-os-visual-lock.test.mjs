@@ -51,7 +51,10 @@ void test('numbers and health indicators use authoritative data or honest missin
     assert.match(command, /o.status === 'confirmed'/);
     assert.match(command, /o.currency === 'INR'/);
     assert.match(command, /Not verified/);
-    assert.match(command, /Confirmed INR orders/);
+    // The KPI is an all-orders backend aggregate; the chart is a recent snapshot.
+    assert.match(command, /metrics\.confirmed_inr_revenue_minor/);
+    assert.match(command, /All confirmed INR orders/);
+    assert.match(command, /Last 20 orders, confirmed INR only/);
     assert.doesNotMatch(command, /12,64,380|All Healthy|99\.9%/);
 });
 
@@ -136,4 +139,26 @@ void test('Kristi microphone requires explicit informed consent before browser s
     );
     assert.match(kristi, /disabled=\{listening\}/);
     assert.match(kristi, /setDraft\(transcript\.slice\(0, 400\)\)/);
+});
+
+void test('owner badge derives from authenticated user and catalog art fails closed', () => {
+    assert.match(command, /auth\.user\?\.name\?\.trim\(\)/);
+    assert.match(command, /const initials =/);
+    assert.match(command, /\{initials\}/);
+    assert.doesNotMatch(command, /owner-initials">NK/);
+    assert.doesNotMatch(
+        command,
+        /auth\.user\?\.name \|\| 'Narendra Singh Kushwah'/,
+    );
+    assert.match(command, /owner-product-art-unavailable/);
+    assert.doesNotMatch(command, /art\[p\.slug\] \|\| 'cloudos'/);
+});
+
+void test('browser QA decodes off-screen lazy carousel images before checking failed assets', () => {
+    const browser = read('scripts/browser-preview-verify.mjs');
+    assert.match(browser, /image\.loading = 'eager'/);
+    assert.match(browser, /Promise\.allSettled\(/);
+    assert.match(browser, /image\.decode\(\)/);
+    assert.match(browser, /decoded\[index\]\?\.status === 'rejected'/);
+    assert.match(browser, /image\.naturalWidth === 0/);
 });

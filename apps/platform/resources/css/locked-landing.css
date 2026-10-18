@@ -261,10 +261,20 @@
     flex-direction: column;
     height: 100%;
 }
-.lock-product img {
+.lock-product img,
+.lock-product-art-unavailable {
     width: 100%;
     aspect-ratio: 2.12;
     object-fit: cover;
+}
+.lock-product-art-unavailable {
+    display: grid;
+    place-items: center;
+    padding: 10px;
+    background: linear-gradient(135deg, #111c28, #2c1321);
+    color: #b9c6d4;
+    font-size: 11px;
+    text-align: center;
 }
 .lock-product-category {
     position: absolute;

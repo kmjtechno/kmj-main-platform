@@ -447,11 +447,21 @@
     margin: 3px 0 8px 23px;
     text-transform: capitalize;
 }
-.owner-product img {
+.owner-product img,
+.owner-product-art-unavailable {
     height: 65px;
     width: 100%;
     object-fit: cover;
     border-radius: 5px;
+}
+.owner-product-art-unavailable {
+    display: grid;
+    place-items: center;
+    padding: 8px;
+    background: linear-gradient(135deg, #111c28, #2c1321);
+    color: #bdc9d6;
+    font-size: 10px;
+    text-align: center;
 }
 .owner-product-state {
     display: flex;
