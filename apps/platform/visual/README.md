@@ -11,7 +11,7 @@ npm run visual:build
 npm run visual:verify
 ```
 
-The verifier starts and closes a fixed loopback Vite server, opens landing and operator at 1536, 768 and 390 pixels, tests image loading, overflow, JavaScript errors, section order, Kristi guidance and command search, and writes six PNGs plus `visual-results/verification.json`. For manual review use `npm run visual:dev`. A preinstalled Chromium can be selected with `KMJ_CHROMIUM_EXECUTABLE`; the default uses Playwright's installed browser. `KMJ_SCREENSHOT_DIR` changes the output directory. These are local developer configuration, not remote tool arguments.
+The verifier starts and closes a fixed loopback Vite server, opens landing and operator at 320, 390, 768, 1170, 1440 and 1536 pixels, tests image loading, overflow, JavaScript errors, section order, Kristi guidance and command search, and writes twelve PNGs plus `visual-results/verification.json`. For manual review use `npm run visual:dev`. A preinstalled Chromium can be selected with `KMJ_CHROMIUM_EXECUTABLE`; the default uses Playwright's installed browser. `KMJ_SCREENSHOT_DIR` changes the output directory. These are local developer configuration, not remote tool arguments.
 
 ## CodeBridge integration boundary
 
