@@ -55,4 +55,10 @@ return [
         'url' => env('CODEBRIDGE_GATEWAY_URL', 'https://kmj-codebridge-gateway.onrender.com'),
     ],
 
+    // Public agent origin is distinct from the internal /mcp proxy upstream.
+    // Never return a loopback URL to an enrolled device.
+    'codebridge_agent_public' => [
+        'url' => env('CODEBRIDGE_AGENT_PUBLIC_URL', 'https://kmjtechno.com'),
+    ],
+
 ];
