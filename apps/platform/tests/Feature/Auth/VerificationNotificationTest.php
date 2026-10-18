@@ -4,6 +4,7 @@ namespace Tests\Feature\Auth;
 
 use App\Models\User;
 use Illuminate\Auth\Notifications\VerifyEmail;
+use Illuminate\Foundation\Http\Middleware\PreventRequestForgery;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Notification;
 use Laravel\Fortify\Features;
@@ -26,6 +27,9 @@ class VerificationNotificationTest extends TestCase
 
         try {
             app()->instance('env', 'production');
+            // Laravel 13 re-enables request-forgery checks when tests simulate
+            // production; bypass only this middleware in this isolated test.
+            $this->withoutMiddleware(PreventRequestForgery::class);
             config()->set('mail.default', 'log');
             Notification::fake();
 
