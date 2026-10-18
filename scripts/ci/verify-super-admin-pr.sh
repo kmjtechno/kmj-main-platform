@@ -60,6 +60,7 @@ echo "== PHP syntax =="
 for file in \
     routes/web.php routes/operator-directory.php routes/payments-console.php \
     app/Services/Payments/OwnerPaymentGatewaySettings.php \
+    app/Services/Payments/PaymentGatewaySandboxProbe.php \
     app/Services/Payments/PaymentGatewayReadiness.php \
     tests/Feature/PlatformOwnerConsoleTest.php \
     tests/Feature/OwnerDirectoryHttpTest.php \

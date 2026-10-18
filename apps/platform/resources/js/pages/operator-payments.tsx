@@ -1,5 +1,7 @@
 import { Head, Link } from '@inertiajs/react';
+import { useState } from 'react';
 import OperatorModuleNavigation from '@/components/operator-module-navigation';
+import PaymentGatewayOnboarding from '@/components/payment-gateway-onboarding';
 import OperatorPaymentSettings, {
     type OwnerGatewaySetting,
 } from '@/components/operator-payment-settings';
@@ -36,6 +38,9 @@ export default function OperatorPayments({
     paymentReadiness: PaymentReadiness;
     gatewaySettings: OwnerGatewaySetting[];
 }) {
+    const [selectedProvider, setSelectedProvider] =
+        useState<OwnerGatewaySetting['provider']>('razorpay');
+
     return (
         <>
             <Head title="KMJ TECHNO — Payment Gateway Control" />
@@ -73,9 +78,23 @@ export default function OperatorPayments({
                     </div>
                 </header>
 
-                <OperatorPaymentSettings gatewaySettings={gatewaySettings} />
+                <PaymentGatewayOnboarding
+                    gatewaySettings={gatewaySettings}
+                    provider={selectedProvider}
+                    onProviderChange={setSelectedProvider}
+                />
+                <OperatorPaymentSettings
+                    gatewaySettings={gatewaySettings}
+                    selectedProvider={selectedProvider}
+                />
                 <section className="mx-auto grid w-full max-w-6xl gap-4 md:grid-cols-2">
-                    {paymentReadiness.providers.map((gateway) => (
+                    {paymentReadiness.providers
+                        .filter(
+                            (gateway) =>
+                                gateway.id === 'razorpay' ||
+                                gateway.id === 'cashfree',
+                        )
+                        .map((gateway) => (
                         <article
                             key={gateway.id}
                             className="bg-card rounded-2xl border p-5"
@@ -153,6 +172,27 @@ export default function OperatorPayments({
                     ))}
                 </section>
 
+                <details className="bg-card mx-auto w-full max-w-6xl rounded-2xl border p-5">
+                    <summary className="text-foreground cursor-pointer text-sm font-semibold">
+                        Other payment options (planned, not integrated)
+                    </summary>
+                    <div className="mt-4 flex flex-wrap gap-2">
+                        {paymentReadiness.providers
+                            .filter(
+                                (gateway) =>
+                                    gateway.id !== 'razorpay' &&
+                                    gateway.id !== 'cashfree',
+                            )
+                            .map((gateway) => (
+                                <span
+                                    key={gateway.id}
+                                    className="border-border text-muted-foreground rounded-lg border px-3 py-2 text-xs"
+                                >
+                                    {gateway.label} · Not integrated
+                                </span>
+                            ))}
+                    </div>
+                </details>
                 <section className="bg-card mx-auto w-full max-w-6xl rounded-2xl border border-white/10 p-6">
                     <h2 className="text-lg font-bold">
                         Required before accepting money
@@ -166,9 +206,9 @@ export default function OperatorPayments({
                         signed and auditable owner action.
                     </p>
                     <p className="text-muted-foreground mt-3 text-sm">
-                        This screen is read-only. It does not create orders,
-                        reveal API credentials, issue refunds, or activate
-                        licenses from unverified webhooks.
+                        Only owner-initiated sandbox INR 1 order probes are available. No
+                        customer money is captured, API secrets stay hidden,
+                        and unverified webhooks cannot activate licenses.
                     </p>
                 </section>
             </main>

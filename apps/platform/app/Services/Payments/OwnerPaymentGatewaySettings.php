@@ -140,6 +140,36 @@ final class OwnerPaymentGatewaySettings
         });
     }
 
+    /**
+     * Internal-only test credentials. Never expose through Inertia, JSON or logs.
+     *
+     * @return array{client_id: string, client_secret: string}
+     */
+    public function sandboxCredentials(string $provider): array
+    {
+        $this->ensureProvider($provider);
+
+        if (! Schema::hasTable('payment_gateway_settings')) {
+            throw new InvalidArgumentException('SANDBOX_CREDENTIALS_NOT_READY');
+        }
+
+        $record = DB::table('payment_gateway_settings')->where('provider', $provider)->first();
+        if ($record === null || $record->environment !== 'sandbox'
+            || ! is_string($record->encrypted_client_id)
+            || ! is_string($record->encrypted_client_secret)) {
+            throw new InvalidArgumentException('SANDBOX_CREDENTIALS_NOT_READY');
+        }
+
+        $id = Crypt::decryptString($record->encrypted_client_id);
+        $secret = Crypt::decryptString($record->encrypted_client_secret);
+
+        if ($id === '' || $secret === '' || ($provider === 'razorpay' && ! str_starts_with($id, 'rzp_test_'))) {
+            throw new InvalidArgumentException('SANDBOX_CREDENTIALS_NOT_READY');
+        }
+
+        return ['client_id' => $id, 'client_secret' => $secret];
+    }
+
     private function ensureProvider(string $provider): void
     {
         if (! in_array($provider, self::PROVIDERS, true)) {
