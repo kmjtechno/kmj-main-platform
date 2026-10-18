@@ -295,7 +295,7 @@ final class OwnerPaymentGatewaySettingsTest extends TestCase
 
         Http::assertSent(fn (ProviderRequest $request): bool => $request->method() === 'POST'
             && $request->url() === 'https://sandbox.cashfree.com/pg/orders'
-            && $request['order_amount'] === 1
+            && $request['order_amount'] === 1.0
             && $request['order_currency'] === 'INR'
             && $request['customer_details']['customer_phone'] === '9876543210');
 
