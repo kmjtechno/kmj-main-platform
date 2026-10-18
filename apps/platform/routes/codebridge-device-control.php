@@ -5,6 +5,7 @@ use App\Services\Licensing\CodeBridge\CodeBridgeDeviceCredentialService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Str;
 use KMJ\MainPlatform\Organizations\Services\OrganizationDirectory;
 
 // Deliberately part of the existing auth + verified web route group.
@@ -122,7 +123,7 @@ Route::post('services/kmj-codebridge/organizations/{tenantId}/devices/{deviceId}
             return;
         }
         DB::table('codebridge_project_assignments')->insert([
-            'id' => (string) \Illuminate\Support\Str::uuid(),
+            'id' => (string) Str::uuid(),
             'tenant_id' => $tenantId,
             'device_id' => $deviceId,
             'project_id' => $projectId,
