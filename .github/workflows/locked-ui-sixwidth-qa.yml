@@ -1,0 +1,51 @@
+name: Locked UI Six-Width QA (isolated)
+on:
+  push:
+    branches:
+      - qa/production-visual-sixwidth-20261018
+permissions:
+  contents: read
+jobs:
+  visual:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      KMJ_SCREENSHOT_DIR: visual-results
+    steps:
+      - name: Checkout pinned source
+        uses: actions/checkout@v4
+      - name: Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: apps/platform/package-lock.json
+      - name: Install lockfile dependencies without lifecycle scripts
+        run: npm --prefix apps/platform ci --ignore-scripts --no-audit --no-fund
+      - name: Install fixed Chromium
+        run: cd apps/platform && npx playwright install --with-deps chromium
+      - name: Expand synthetic QA to 320 390 768 1170 1440 1536 widths
+        shell: bash
+        run: |
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          const path='apps/platform/scripts/browser-preview-verify.mjs';
+          const src=fs.readFileSync(path,'utf8');
+          const old='for (const width of [1536, 768, 390])';
+          if (src.split(old).length !== 2) throw new Error('PINNED_PREVIEW_SOURCE_CHANGED');
+          const out=src.replace(old,'for (const width of [320, 390, 768, 1170, 1440, 1536])');
+          fs.writeFileSync(path,out);
+          NODE
+      - name: Run real component synthetic Chrome verification
+        shell: bash
+        run: |
+          cd apps/platform
+          npm run visual:verify
+      - name: Upload 12 screenshots and verification JSON
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: locked-ui-sixwidth-qa
+          path: apps/platform/visual-results/
+          retention-days: 3
+          if-no-files-found: warn
