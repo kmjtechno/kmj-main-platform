@@ -10,6 +10,14 @@ export type DeliveryMilestone = {
 
 export const deliveryMilestones: DeliveryMilestone[] = [
     {
+        id: 'codebridge-device-project-assignments',
+        title: 'CodeBridge device project assignment requests',
+        state: 'active',
+        detail: 'Tenant-scoped Assign Project forms, durable pending local-setup requests, idempotence, and authorization checks are implemented for registered devices. Requests do not grant a new local root or claim online connectivity; operator-approved agent enrollment, server-side project grants, authenticated live browser acceptance and production deployment remain required.',
+        evidence:
+            'Candidate PR #456 adds a pending-only migration, customer dashboard UI, tenant-bound request endpoint and feature tests. Exact-head CI, production approval and real agent installation are still release gates; never treat a saved request as executable CodeBridge access.',
+    },
+    {
         id: 'codebridge-control-center-release-candidate',
         title: 'CodeBridge customer Control Center release candidate',
         state: 'active',
