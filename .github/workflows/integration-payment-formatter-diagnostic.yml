@@ -1,0 +1,22 @@
+name: Integration Payment Formatter Diff (temporary)
+on:
+  push:
+    branches:
+      - integration/locked-owner-payment-20261018
+permissions:
+  contents: read
+jobs:
+  formatter-diff:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install locked frontend tooling
+        run: npm --prefix apps/platform ci --ignore-scripts --no-audit --no-fund
+      - name: Report exact locked payment-page formatter diff only
+        run: |
+          npm --prefix apps/platform run check:fix >/dev/null 2>&1 || true
+          git --no-pager diff -- apps/platform/resources/js/pages/operator-payments.tsx
