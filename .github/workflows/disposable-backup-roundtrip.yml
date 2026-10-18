@@ -1,0 +1,41 @@
+name: Disposable Backup Restore Round Trip
+on:
+  push:
+    branches:
+      - test/p0-disposable-backup-roundtrip-20261018
+  pull_request:
+    paths:
+      - 'scripts/backup_platform.sh'
+      - 'scripts/verify_backup_bundle.sh'
+      - 'scripts/ci/verify-disposable-backup-roundtrip.sh'
+      - '.github/workflows/disposable-backup-roundtrip.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: disposable-backup-roundtrip
+  cancel-in-progress: true
+
+jobs:
+  synthetic-recovery:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - name: Checkout SHA without persisted GitHub credentials
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - name: Install isolated local restore dependencies
+        run: |
+          set -euo pipefail
+          sudo apt-get -qq update
+          sudo apt-get -qq -y install postgresql postgresql-client age rclone
+      - name: Prove encrypted offsite synthetic backup and actual recovery
+        run: |
+          set -euo pipefail
+          test "$(id -u)" -ne 0
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          bash -n scripts/ci/verify-disposable-backup-roundtrip.sh
+          bash scripts/ci/verify-disposable-backup-roundtrip.sh
