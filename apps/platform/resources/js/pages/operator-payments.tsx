@@ -95,81 +95,81 @@ export default function OperatorPayments({
                                 gateway.id === 'cashfree',
                         )
                         .map((gateway) => (
-                        <article
-                            key={gateway.id}
-                            className="bg-card rounded-2xl border p-5"
-                        >
-                            <div className="flex items-start justify-between gap-3">
-                                <div>
-                                    <h2 className="text-lg font-bold">
-                                        {gateway.label}
-                                    </h2>
-                                    <p className="text-muted-foreground mt-1 text-xs font-medium">
-                                        {gateway.id === 'razorpay' ||
-                                        gateway.id === 'cashfree'
-                                            ? 'Primary payment provider'
-                                            : 'Optional global provider'}
-                                    </p>
+                            <article
+                                key={gateway.id}
+                                className="bg-card rounded-2xl border p-5"
+                            >
+                                <div className="flex items-start justify-between gap-3">
+                                    <div>
+                                        <h2 className="text-lg font-bold">
+                                            {gateway.label}
+                                        </h2>
+                                        <p className="text-muted-foreground mt-1 text-xs font-medium">
+                                            {gateway.id === 'razorpay' ||
+                                            gateway.id === 'cashfree'
+                                                ? 'Primary payment provider'
+                                                : 'Optional global provider'}
+                                        </p>
+                                    </div>
+                                    <span className="border-border text-muted-foreground rounded-full border px-3 py-1 text-xs font-semibold">
+                                        {gateway.status ===
+                                        'sandbox_validation_required'
+                                            ? 'Test credentials present'
+                                            : gateway.status ===
+                                                'credentials_required'
+                                              ? 'Configuration required'
+                                              : 'Not integrated'}
+                                    </span>
                                 </div>
-                                <span className="border-border text-muted-foreground rounded-full border px-3 py-1 text-xs font-semibold">
-                                    {gateway.status ===
-                                    'sandbox_validation_required'
-                                        ? 'Test credentials present'
-                                        : gateway.status ===
-                                            'credentials_required'
-                                          ? 'Configuration required'
-                                          : 'Not integrated'}
-                                </span>
-                            </div>
-                            <dl className="text-foreground/90 mt-5 grid gap-3 text-sm">
-                                <div className="flex items-center justify-between gap-3">
-                                    <dt className="text-muted-foreground flex items-center gap-2">
-                                        <BadgeCheck className="h-4 w-4" />
-                                        Merchant status
-                                    </dt>
-                                    <dd className="text-right text-xs">
-                                        {gateway.merchant_approval ===
-                                        'reported_by_owner_not_api_verified'
-                                            ? 'Owner reported approved'
-                                            : 'Not verified'}
-                                    </dd>
-                                </div>
-                                <div className="flex items-center justify-between gap-3">
-                                    <dt className="text-muted-foreground flex items-center gap-2">
-                                        <KeyRound className="h-4 w-4" />
-                                        Server credentials
-                                    </dt>
-                                    <dd className="text-right text-xs">
-                                        {gateway.sandbox_credentials_present
-                                            ? 'Present, testing pending'
-                                            : 'Not configured'}
-                                    </dd>
-                                </div>
-                                <div className="flex items-center justify-between gap-3">
-                                    <dt className="text-muted-foreground flex items-center gap-2">
-                                        <Globe2 className="h-4 w-4" />
-                                        Cross-border approval
-                                    </dt>
-                                    <dd className="text-right text-xs">
-                                        {gateway.international_approval_recorded
-                                            ? 'Recorded, test still required'
-                                            : 'Not verified'}
-                                    </dd>
-                                </div>
-                                <div className="flex items-center justify-between gap-3">
-                                    <dt className="text-muted-foreground flex items-center gap-2">
-                                        <ShieldCheck className="h-4 w-4" />
-                                        Live payment evidence
-                                    </dt>
-                                    <dd className="text-right text-xs">
-                                        {gateway.live_transaction_verified
-                                            ? 'Verified'
-                                            : 'Not verified'}
-                                    </dd>
-                                </div>
-                            </dl>
-                        </article>
-                    ))}
+                                <dl className="text-foreground/90 mt-5 grid gap-3 text-sm">
+                                    <div className="flex items-center justify-between gap-3">
+                                        <dt className="text-muted-foreground flex items-center gap-2">
+                                            <BadgeCheck className="h-4 w-4" />
+                                            Merchant status
+                                        </dt>
+                                        <dd className="text-right text-xs">
+                                            {gateway.merchant_approval ===
+                                            'reported_by_owner_not_api_verified'
+                                                ? 'Owner reported approved'
+                                                : 'Not verified'}
+                                        </dd>
+                                    </div>
+                                    <div className="flex items-center justify-between gap-3">
+                                        <dt className="text-muted-foreground flex items-center gap-2">
+                                            <KeyRound className="h-4 w-4" />
+                                            Server credentials
+                                        </dt>
+                                        <dd className="text-right text-xs">
+                                            {gateway.sandbox_credentials_present
+                                                ? 'Present, testing pending'
+                                                : 'Not configured'}
+                                        </dd>
+                                    </div>
+                                    <div className="flex items-center justify-between gap-3">
+                                        <dt className="text-muted-foreground flex items-center gap-2">
+                                            <Globe2 className="h-4 w-4" />
+                                            Cross-border approval
+                                        </dt>
+                                        <dd className="text-right text-xs">
+                                            {gateway.international_approval_recorded
+                                                ? 'Recorded, test still required'
+                                                : 'Not verified'}
+                                        </dd>
+                                    </div>
+                                    <div className="flex items-center justify-between gap-3">
+                                        <dt className="text-muted-foreground flex items-center gap-2">
+                                            <ShieldCheck className="h-4 w-4" />
+                                            Live payment evidence
+                                        </dt>
+                                        <dd className="text-right text-xs">
+                                            {gateway.live_transaction_verified
+                                                ? 'Verified'
+                                                : 'Not verified'}
+                                        </dd>
+                                    </div>
+                                </dl>
+                            </article>
+                        ))}
                 </section>
 
                 <details className="bg-card mx-auto w-full max-w-6xl rounded-2xl border p-5">
@@ -206,9 +206,10 @@ export default function OperatorPayments({
                         signed and auditable owner action.
                     </p>
                     <p className="text-muted-foreground mt-3 text-sm">
-                        Only owner-initiated sandbox INR 1 order probes are available. No
-                        customer money is captured, API secrets stay hidden,
-                        and unverified webhooks cannot activate licenses.
+                        Only owner-initiated sandbox INR 1 order probes are
+                        available. No customer money is captured, API secrets
+                        stay hidden, and unverified webhooks cannot activate
+                        licenses.
                     </p>
                 </section>
             </main>
