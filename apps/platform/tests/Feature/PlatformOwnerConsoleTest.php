@@ -138,6 +138,7 @@ final class PlatformOwnerConsoleTest extends TestCase
             ->where('metrics.entitlements', 0)
             ->where('metrics.orders', 0)
             ->where('metrics.confirmed_orders', 0)
+            ->where('metrics.confirmed_inr_revenue_minor', 0)
             ->has('recentOrders', 0));
     }
 
@@ -210,6 +211,7 @@ final class PlatformOwnerConsoleTest extends TestCase
             ->component('operator')
             ->where('metrics.orders', 1)
             ->where('metrics.confirmed_orders', 1)
+            ->where('metrics.confirmed_inr_revenue_minor', 9900)
             ->has('recentOrders', 1)
             ->where('recentOrders.0.id', $order->getKey())
             ->where('recentOrders.0.fulfillment_state', 'ready')
