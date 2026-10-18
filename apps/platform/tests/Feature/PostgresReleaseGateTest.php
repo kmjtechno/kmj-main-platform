@@ -24,5 +24,12 @@ final class PostgresReleaseGateTest extends TestCase
         self::assertSame($socket, config('database.connections.pgsql.host'));
         self::assertTrue(Schema::hasTable('payment_gateway_settings'));
         self::assertTrue(Schema::hasTable('kslp_license_keys'));
+        self::assertTrue(Schema::hasTable('operator_action_audits'));
+        $outcomeMaxLength = DB::table('information_schema.columns')
+            ->where('table_schema', 'public')
+            ->where('table_name', 'operator_action_audits')
+            ->where('column_name', 'outcome')
+            ->value('character_maximum_length');
+        self::assertSame(64, (int) $outcomeMaxLength);
     }
 }
