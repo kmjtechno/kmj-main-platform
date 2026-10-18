@@ -21,7 +21,8 @@ if (process.env.KMJ_CHROMIUM_MODULE) {
 const browser = await chromium.launch({ headless: true, args, executablePath });
 const results = [];
 try {
-    for (const width of [1536, 768, 390])
+    // Covers the smallest supported mobile layout through full desktop.
+    for (const width of [320, 390, 768, 1170, 1440, 1536])
         for (const [name, route] of [
             ['landing', '/'],
             ['super-admin', '/operator'],
@@ -140,7 +141,7 @@ try {
                     errors.push('Command search failed');
                 await page.keyboard.press('Escape');
                 await page.getByRole('dialog').waitFor({ state: 'hidden' });
-                if (width === 390) {
+                if (width <= 390) {
                     await page
                         .getByRole('button', {
                             name: 'Toggle owner navigation',
