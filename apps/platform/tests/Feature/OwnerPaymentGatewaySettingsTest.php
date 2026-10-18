@@ -85,8 +85,8 @@ final class OwnerPaymentGatewaySettingsTest extends TestCase
             ->where('gatewaySettings.1.webhook_secret_stored', true)
             ->where('gatewaySettings.1.live_charging_enabled', false)
             ->where('gatewaySettings.1.sandbox_transaction_verified', false)
-            ->where('paymentReadiness.providers.1.webhook_secret_stored', true)
-            ->where('paymentReadiness.providers.1.webhook_verification_configured', false)
+            ->where('paymentReadiness.providers.0.webhook_secret_stored', true)
+            ->where('paymentReadiness.providers.0.webhook_verification_configured', false)
             ->where('paymentReadiness.live_charging_enabled', false));
         $response->assertDontSee($id)
             ->assertDontSee($secret)
@@ -274,7 +274,7 @@ final class OwnerPaymentGatewaySettingsTest extends TestCase
             ])->assertRedirect('/operator/payments');
 
         Http::preventStrayRequests();
-        Http::fake(['sandbox.cashfree.com/pg/orders' => function (ProviderRequest $request) {
+        Http::fake(['https://sandbox.cashfree.com/pg/orders' => function (ProviderRequest $request) {
             return Http::response([
                 'order_id' => $request['order_id'],
                 'order_currency' => 'INR',
@@ -319,7 +319,7 @@ final class OwnerPaymentGatewaySettingsTest extends TestCase
             ])->assertRedirect('/operator/payments');
 
         Http::preventStrayRequests();
-        Http::fake(['api.razorpay.com/v1/orders' => Http::response([
+        Http::fake(['https://api.razorpay.com/v1/orders' => Http::response([
             'error' => $secret,
         ], 403)]);
 
