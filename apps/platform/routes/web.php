@@ -809,6 +809,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
                 'entitlements' => Entitlement::query()->count(),
                 'orders' => CommercialOrder::query()->count(),
                 'confirmed_orders' => CommercialOrder::query()->where('status', 'confirmed')->count(),
+                // Compute the KPI over ALL confirmed INR orders, not the
+                // 20-row recentOrders sample used for the visual chart.
+                'confirmed_inr_revenue_minor' => (int) CommercialOrder::query()
+                    ->where('status', 'confirmed')
+                    ->where('currency', 'INR')
+                    ->sum('amount_minor'),
             ],
             'catalogProducts' => $catalogProducts,
             'recentOrders' => $recentOrders,
