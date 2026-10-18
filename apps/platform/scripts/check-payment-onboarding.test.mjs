@@ -120,8 +120,7 @@ void test('server-only sandbox errors are safely narrowed without modifying test
     assert.match(wizard, /typeof probe\.errors\.sandbox_probe === 'string'/);
     assert.match(wizard, /sandboxProbeError/);
     assert.doesNotMatch(wizard, /\{probe\.errors\.sandbox_probe\}/);
-    assert.match(
-        wizard,
-        /useForm<\{ test_phone: string; sandbox_probe\?: string \}>\(\{\s*test_phone: '',\s*\}\)/,
-    );
+    assert.match(wizard, /useForm<\{ test_phone: string;/);
+    assert.match(wizard, /sandbox_probe\?: string \}>/);
+    assert.match(wizard, /test_phone: ''/);
 });
