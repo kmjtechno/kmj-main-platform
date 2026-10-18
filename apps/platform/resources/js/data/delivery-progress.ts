@@ -47,7 +47,7 @@ export const deliveryMilestones: DeliveryMilestone[] = [
         state: 'active',
         detail: 'Platform-owner product management now binds lifecycle, public visibility, artwork, purchase/licensing controls and deterministic drag-and-drop ordering to the locked public landing while commercial state fails closed',
         evidence:
-            'PR #263 lifecycle/catalog ordering and non-available purchase regression; combined website + Super Admin source integration PR #338 at cdd47de with 12 frontend contract tests, isolated PHP Unit/Feature, PHPStan/Pint, fresh SQLite owner-policy seed and Chromium public guest QA 42/42 PASS; hosted CI and authenticated production Owner release still required; no live owner grant claimed',
+            'PR #263 lifecycle/catalog ordering and non-available purchase regression; combined website + Super Admin source integration PR #338 at cdd47de with 12 frontend contract tests, isolated PHP Unit/Feature, PHPStan/Pint, fresh SQLite owner-policy seed and Chromium public guest QA 42/42 PASS; PR #449 exact source 121695ee13d002dfad06f2d716cd7ae69a16ed49 completed isolated production-build and ephemeral PostgreSQL 18 authenticated owner/nonowner browser smoke; six of seven free standard GitHub-hosted workflows passed after the public-repository rerun on 18 October 2026. Verify Foundation required this delivery-progress sync and must pass on the NEW exact head. Landing artwork still awaits visual signoff; candidate is NOT merged or deployed, and owner product-management lifecycle acceptance and protected release approval remain pending; no live owner grant claimed',
     },
     {
         id: 'authority-foundation',
@@ -146,9 +146,9 @@ export const deliveryMilestones: DeliveryMilestone[] = [
         id: 'international-payment-gateways',
         title: 'Cashfree and Razorpay international gateway integration',
         state: 'active',
-        detail: 'Cashfree signed webhooks, sandbox-only server-created orders, provider-bound verification and read-only passkey-gated Super Admin payment readiness have source and regression coverage; merchant-approved accounts still need independently verified credentials, cross-border activation, payment settlement/reconciliation, subscriptions and refunds before live collection',
+        detail: 'Cashfree signed webhooks, sandbox-only server-created orders, provider-bound verification and read-only passkey-gated Super Admin payment readiness have source and regression coverage; merchant-approved accounts still need independently verified credentials, cross-border activation, payment settlement/reconciliation, subscriptions and refunds before live collection. PR #419 adds owner-only guided TEST credentials and opt-in sandbox connection probes behind review; production payments and license issuance remain disabled',
         evidence:
-            'PR #347: verified Cashfree raw-body HMAC/webhook, sandbox-only server order, provider-bound signature router, password-confirmed owner-only payment readiness console, and Git-worktree deploy evidence. Isolated payment/admin PHPUnit 25 tests/112 assertions, full Feature suite exit 0 (1796 assertions), lint/type/build/PHPStan/Pint/Vite guard PASS. Real credentials, cross-border approval and captured-payment reconciliation remain NOT verified; no live charges or license issuance from raw webhooks',
+            'PR #419 (feature candidate, not deployed): secure one-place Razorpay/Cashfree sandbox onboarding, phone-gated Cashfree test order, credential readiness, owner-confirmed audit-only probe. Real hosted CI and merchant sandbox acceptance are still release gates. PR #347: verified Cashfree raw-body HMAC/webhook, sandbox-only server order, provider-bound signature router, password-confirmed owner-only payment readiness console, and Git-worktree deploy evidence. Isolated payment/admin PHPUnit 25 tests/112 assertions, full Feature suite exit 0 (1796 assertions), lint/type/build/PHPStan/Pint/Vite guard PASS. Real credentials, cross-border approval and captured-payment reconciliation remain NOT verified; no live charges or license issuance from raw webhooks',
     },
     {
         id: 'desktop-commander-commercial-control-plane',
@@ -410,5 +410,5 @@ export const deliveryProgress = Math.round(
 export const deliveryProgressMeta = {
     label: 'Revenue-capable working phase',
     note: 'Evidence-based delivery milestones, not total product completion.',
-    refreshed: '2026-10-04',
+    refreshed: '2026-10-18',
 } as const;

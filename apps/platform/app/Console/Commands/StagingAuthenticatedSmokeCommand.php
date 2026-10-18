@@ -53,10 +53,13 @@ final class StagingAuthenticatedSmokeCommand extends Command
             Auth::guard()->setUser($user);
 
             $this->probe($router, '/dashboard', $user);
+            // Include the protected Super Admin Command OS itself. Smoke
+            // must exercise its real owner policy and database-backed props.
+            $this->probe($router, '/operator', $user);
             $this->probe($router, '/operator/ops', $user);
             $this->probe($router, '/purchase', $user);
 
-            $this->info('Authenticated staging surfaces PASS: /dashboard, /operator/ops, /purchase');
+            $this->info('Authenticated staging surfaces PASS: /dashboard, /operator, /operator/ops, /purchase');
 
             return self::SUCCESS;
         } catch (Throwable $exception) {

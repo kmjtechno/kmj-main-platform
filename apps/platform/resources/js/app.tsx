@@ -13,6 +13,7 @@ void createInertiaApp({
     title: (title) => (title ? `${title} - ${appName}` : appName),
     layout: (name) => {
         switch (true) {
+            case name === 'operator':
             case isPublicMarketingPage(name):
                 return null;
             case name.startsWith('auth/'):
