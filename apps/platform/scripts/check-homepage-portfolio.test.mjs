@@ -53,3 +53,19 @@ void test('homepage offers eight distinct capability areas and accessible naviga
     assert.match(source, /aria-labelledby="what-we-build-heading"/);
     assert.match(source, /href="\/capabilities"/);
 });
+
+void test('company overview preserves keyboard focus and Escape semantics', () => {
+    for (const primitive of [
+        'DialogPrimitive.Root',
+        'DialogPrimitive.Trigger',
+        'DialogPrimitive.Overlay',
+        'DialogPrimitive.Content',
+        'DialogPrimitive.Close',
+        'DialogPrimitive.Title',
+        'DialogPrimitive.Description',
+    ])
+        assert.ok(source.includes(primitive), primitive);
+    assert.match(source, /onOpenChange=\{setTour\}/);
+    assert.match(source, /aria-label="Company overview"/);
+    assert.doesNotMatch(source, /\{tour &&/);
+});
