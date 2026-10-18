@@ -4,8 +4,8 @@ import {
     Cable,
     CheckCircle2,
     Clipboard,
-    HardDrive,
     FolderPlus,
+    HardDrive,
     Laptop2,
     LockKeyhole,
     MonitorSmartphone,
@@ -151,10 +151,14 @@ export default function DeviceControlCenter({
                     setNewProjectId('');
                     setNewProjectName('');
                     setNewRepositoryUrl('');
-                    setFeedback('Assignment saved; local agent setup and heartbeat verification remain pending.');
+                    setFeedback(
+                        'Assignment saved; local agent setup and heartbeat verification remain pending.',
+                    );
                 },
                 onError: () =>
-                    setFeedback('Project assignment refused. Check ID, repository, permissions or existing request.'),
+                    setFeedback(
+                        'Project assignment refused. Check ID, repository, permissions or existing request.',
+                    ),
                 onFinish: () => setSubmitting(false),
             },
         );
@@ -383,15 +387,22 @@ export default function DeviceControlCenter({
                                         Awaiting local project setup
                                     </p>
                                     <p className="text-muted-foreground mt-1 text-xs">
-                                        Requests are not active agent grants. Verify device-side enrollment before using them.
+                                        Requests are not active agent grants.
+                                        Verify device-side enrollment before
+                                        using them.
                                     </p>
                                     <div className="mt-2 flex flex-wrap gap-1.5">
-                                        {(device.pending_projects ?? []).map((project) => (
-                                            <span key={project.id} title={project.repository}
-                                                className="rounded-lg border border-amber-500/30 px-2.5 py-1 text-xs">
-                                                {project.name} · Pending setup
-                                            </span>
-                                        ))}
+                                        {(device.pending_projects ?? []).map(
+                                            (project) => (
+                                                <span
+                                                    key={project.id}
+                                                    title={project.repository}
+                                                    className="rounded-lg border border-amber-500/30 px-2.5 py-1 text-xs"
+                                                >
+                                                    {project.name} · Pending setup
+                                                </span>
+                                            ),
+                                        )}
                                     </div>
                                 </div>
                             )}
@@ -423,15 +434,22 @@ export default function DeviceControlCenter({
                                     <button
                                         type="button"
                                         onClick={() => {
-                                            setAssignDeviceId(assignDeviceId === device.id ? null : device.id);
+                                            setAssignDeviceId(
+                                                assignDeviceId === device.id
+                                                    ? null
+                                                    : device.id,
+                                            );
                                             setConfirmId(null);
                                             setFeedback('');
                                         }}
                                         disabled={submitting}
-                                        aria-expanded={assignDeviceId === device.id}
+                                        aria-expanded={
+                                            assignDeviceId === device.id
+                                        }
                                         className="inline-flex items-center gap-1.5 rounded-lg border px-3 py-2 text-xs font-bold hover:border-red-500/40 disabled:opacity-50"
                                     >
-                                        <FolderPlus className="h-3.5 w-3.5" /> Assign project
+                                        <FolderPlus className="h-3.5 w-3.5" />{' '}
+                                        Assign project
                                     </button>
                                 )}
                                 {canManage && (
@@ -455,17 +473,25 @@ export default function DeviceControlCenter({
                                     }}
                                     className="mt-3 grid gap-3 rounded-xl border p-4"
                                 >
-                                    <h4 className="text-sm font-black">Assign a new project</h4>
+                                    <h4 className="text-sm font-black">
+                                        Assign a new project
+                                    </h4>
                                     <p className="text-muted-foreground text-xs leading-5">
-                                        Save a project request for this device. This does not install code,
-                                        authorize a local filesystem path or confirm the agent is online.
+                                        Save a project request for this device.
+                                        This does not install code, authorize a
+                                        local filesystem path or confirm the agent
+                                        is online.
                                     </p>
                                     <label className="text-xs font-semibold">
                                         Project ID
                                         <input
-                                            required pattern="[a-z0-9][a-z0-9_-]{0,63}" maxLength={64}
+                                            required
+                                            pattern="[a-z0-9][a-z0-9_-]{0,63}"
+                                            maxLength={64}
                                             value={newProjectId}
-                                            onChange={(event) => setNewProjectId(event.target.value)}
+                                            onChange={(event) =>
+                                                setNewProjectId(event.target.value)
+                                            }
                                             placeholder="kmj-calibration-studio"
                                             className="bg-background mt-1 block h-10 w-full rounded-lg border px-3 text-sm"
                                         />
@@ -473,9 +499,13 @@ export default function DeviceControlCenter({
                                     <label className="text-xs font-semibold">
                                         Display name
                                         <input
-                                            required minLength={2} maxLength={100}
+                                            required
+                                            minLength={2}
+                                            maxLength={100}
                                             value={newProjectName}
-                                            onChange={(event) => setNewProjectName(event.target.value)}
+                                            onChange={(event) =>
+                                                setNewProjectName(event.target.value)
+                                            }
                                             placeholder="KMJ Calibration Studio"
                                             className="bg-background mt-1 block h-10 w-full rounded-lg border px-3 text-sm"
                                         />
@@ -483,20 +513,37 @@ export default function DeviceControlCenter({
                                     <label className="text-xs font-semibold">
                                         GitHub repository URL
                                         <input
-                                            required type="url" maxLength={255}
+                                            required
+                                            type="url"
+                                            maxLength={255}
                                             value={newRepositoryUrl}
-                                            onChange={(event) => setNewRepositoryUrl(event.target.value)}
+                                            onChange={(event) =>
+                                                setNewRepositoryUrl(
+                                                    event.target.value,
+                                                )
+                                            }
                                             placeholder="https://github.com/kmjtechno/kmj-calibration-pro"
                                             className="bg-background mt-1 block h-10 w-full rounded-lg border px-3 text-sm"
                                         />
                                     </label>
                                     <div className="flex flex-wrap gap-2">
-                                        <button type="submit" disabled={submitting}
-                                            className="rounded-lg bg-red-600 px-4 py-2 text-xs font-black text-white disabled:opacity-50">
-                                            {submitting ? 'Saving…' : 'Save assignment request'}
+                                        <button
+                                            type="submit"
+                                            disabled={submitting}
+                                            className="rounded-lg bg-red-600 px-4 py-2 text-xs font-black text-white disabled:opacity-50"
+                                        >
+                                            {submitting
+                                                ? 'Saving…'
+                                                : 'Save assignment request'}
                                         </button>
-                                        <button type="button" disabled={submitting} onClick={() => setAssignDeviceId(null)}
-                                            className="rounded-lg border px-4 py-2 text-xs font-bold">Cancel</button>
+                                        <button
+                                            type="button"
+                                            disabled={submitting}
+                                            onClick={() => setAssignDeviceId(null)}
+                                            className="rounded-lg border px-4 py-2 text-xs font-bold"
+                                        >
+                                            Cancel
+                                        </button>
                                     </div>
                                 </form>
                             )}
