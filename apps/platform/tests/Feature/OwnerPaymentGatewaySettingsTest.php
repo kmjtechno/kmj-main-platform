@@ -6,11 +6,12 @@ namespace Tests\Feature;
 
 use App\Models\OperatorActionAudit;
 use App\Models\User;
+use App\Services\Payments\PaymentGatewayReadiness;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\Request as ProviderRequest;
-use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use Inertia\Testing\AssertableInertia as Assert;
@@ -259,7 +260,7 @@ final class OwnerPaymentGatewaySettingsTest extends TestCase
         self::assertSame('sandbox_order_created_only', OperatorActionAudit::query()
             ->where('action', 'payment_gateway.sandbox_order_probe')
             ->firstOrFail()->outcome);
-        self::assertFalse((bool) app(\App\Services\Payments\PaymentGatewayReadiness::class)->snapshot()['live_charging_enabled']);
+        self::assertFalse((bool) app(PaymentGatewayReadiness::class)->snapshot()['live_charging_enabled']);
     }
 
     public function test_owner_cashfree_probe_requires_authorized_phone_and_never_creates_a_live_payment(): void
