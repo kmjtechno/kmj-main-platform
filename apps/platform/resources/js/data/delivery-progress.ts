@@ -10,6 +10,14 @@ export type DeliveryMilestone = {
 
 export const deliveryMilestones: DeliveryMilestone[] = [
     {
+        id: 'registration-email-delivery-p0',
+        title: 'Registration email verification and password-reset delivery',
+        state: 'blocked',
+        detail: 'Registration, verification resend and password-reset endpoints have an evidence-backed fail-closed recovery candidate that refuses log-only and array-only delivery in production. Live customer email remains blocked because the verified production mailer is still log; a permitted SMTP transport, provider/PTR acceptance, protected release approval and a real owner-inbox signed-verification test are outstanding.',
+        evidence:
+            'On 18 October 2026 the immutable follow-up PR #455 head 6d60e17c6a27a9d8d07e3233928554ff43d10c37 passed 7/7 isolated source gates, including 29 focused Laravel tests / 94 assertions, frontend, PHPStan, Pint, TypeScript, build and offline DNS tests. This does not prove production SMTP or inbox delivery. DKIM public DNS matched the privately held signing key, while provider PTR and written self-hosted sending authorization were still unconfirmed. PR #423 and #455 remain draft; exact-head hosted GitHub required checks and a guarded production release are not accepted yet.',
+    },
+    {
         id: 'codebridge-control-center-release-candidate',
         title: 'CodeBridge customer Control Center release candidate',
         state: 'active',
