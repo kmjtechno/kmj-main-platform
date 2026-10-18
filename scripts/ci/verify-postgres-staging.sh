@@ -93,6 +93,16 @@ else
   failures=$((failures + 1))
 fi
 # Optional exhaustive PostgreSQL feature pass on the same private cluster.
+# Build the exact candidate's Vite manifest first. Normal CI builds assets
+# before testing; skipping that step gives false HTTP 500 failures.
+if [[ "${KMJ_PG_FULL_FEATURE_SUITE:-0}" == 1 ]]; then
+  command -v npm >/dev/null || { echo 'BLOCKED: npm not installed'; exit 3; }
+  npm ci --no-audit --no-fund
+  npm run build
+  test -s public/build/manifest.json || { echo 'BLOCKED: Vite manifest missing after build'; exit 3; }
+  echo 'PASS: exact-SHA frontend manifest prepared for full PostgreSQL tests'
+fi
+# Optional exhaustive PostgreSQL feature pass on the same private cluster.
 # No production credentials, network listener or database fallback.
 if [[ "${KMJ_PG_FULL_FEATURE_SUITE:-0}" == 1 ]]; then
   echo 'PG_FEATURE_MODE=ALL_TESTS_DISPOSABLE_POSTGRESQL'
