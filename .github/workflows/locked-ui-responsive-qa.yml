@@ -1,0 +1,41 @@
+name: Locked UI Responsive QA
+on:
+  pull_request:
+    paths:
+      - 'apps/platform/resources/js/**'
+      - 'apps/platform/resources/css/**'
+      - 'apps/platform/visual/**'
+      - 'apps/platform/scripts/browser-preview-verify.mjs'
+      - 'apps/platform/scripts/check-visual-qa-coverage.test.mjs'
+      - 'apps/platform/package-lock.json'
+      - '.github/workflows/locked-ui-responsive-qa.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  synthetic-owner-browser:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: apps/platform/package-lock.json
+      - name: Install source-pinned dependencies
+        run: npm --prefix apps/platform ci --ignore-scripts --no-audit --no-fund
+      - name: Verify six-width source contract without backend credentials
+        run: node --test apps/platform/scripts/check-visual-qa-coverage.test.mjs
+      - name: Install headless Chromium
+        run: cd apps/platform && npx playwright install --with-deps chromium
+      - name: Verify public landing and synthetic Super Admin at six viewports
+        run: cd apps/platform && npm run visual:verify
+      - name: Retain screenshots and verification result for owner review
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: locked-ui-responsive-screenshots
+          path: apps/platform/visual-results/
+          retention-days: 3
+          if-no-files-found: warn
