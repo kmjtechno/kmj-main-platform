@@ -51,7 +51,10 @@ void test('numbers and health indicators use authoritative data or honest missin
     assert.match(command, /o.status === 'confirmed'/);
     assert.match(command, /o.currency === 'INR'/);
     assert.match(command, /Not verified/);
-    assert.match(command, /Confirmed INR orders/);
+    // The KPI is an all-orders backend aggregate; the chart is a recent snapshot.
+    assert.match(command, /metrics\.confirmed_inr_revenue_minor/);
+    assert.match(command, /All confirmed INR orders/);
+    assert.match(command, /Last 20 orders, confirmed INR only/);
     assert.doesNotMatch(command, /12,64,380|All Healthy|99\.9%/);
 });
 
