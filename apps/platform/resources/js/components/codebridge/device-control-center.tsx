@@ -399,7 +399,8 @@ export default function DeviceControlCenter({
                                                     title={project.repository}
                                                     className="rounded-lg border border-amber-500/30 px-2.5 py-1 text-xs"
                                                 >
-                                                    {project.name} · Pending setup
+                                                    {project.name} · Pending
+                                                    setup
                                                 </span>
                                             ),
                                         )}
@@ -479,8 +480,8 @@ export default function DeviceControlCenter({
                                     <p className="text-muted-foreground text-xs leading-5">
                                         Save a project request for this device.
                                         This does not install code, authorize a
-                                        local filesystem path or confirm the agent
-                                        is online.
+                                        local filesystem path or confirm the
+                                        agent is online.
                                     </p>
                                     <label className="text-xs font-semibold">
                                         Project ID
@@ -490,7 +491,9 @@ export default function DeviceControlCenter({
                                             maxLength={64}
                                             value={newProjectId}
                                             onChange={(event) =>
-                                                setNewProjectId(event.target.value)
+                                                setNewProjectId(
+                                                    event.target.value,
+                                                )
                                             }
                                             placeholder="kmj-calibration-studio"
                                             className="bg-background mt-1 block h-10 w-full rounded-lg border px-3 text-sm"
@@ -504,7 +507,9 @@ export default function DeviceControlCenter({
                                             maxLength={100}
                                             value={newProjectName}
                                             onChange={(event) =>
-                                                setNewProjectName(event.target.value)
+                                                setNewProjectName(
+                                                    event.target.value,
+                                                )
                                             }
                                             placeholder="KMJ Calibration Studio"
                                             className="bg-background mt-1 block h-10 w-full rounded-lg border px-3 text-sm"
@@ -539,7 +544,9 @@ export default function DeviceControlCenter({
                                         <button
                                             type="button"
                                             disabled={submitting}
-                                            onClick={() => setAssignDeviceId(null)}
+                                            onClick={() =>
+                                                setAssignDeviceId(null)
+                                            }
                                             className="rounded-lg border px-4 py-2 text-xs font-bold"
                                         >
                                             Cancel
