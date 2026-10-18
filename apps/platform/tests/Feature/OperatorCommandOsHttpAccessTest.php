@@ -12,6 +12,12 @@ final class OperatorCommandOsHttpAccessTest extends TestCase
 {
     use RefreshDatabase;
 
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->withoutVite();
+    }
+
     public function test_guest_cannot_open_command_os_over_http(): void
     {
         $this->get('/operator')->assertRedirect(route('login'));
@@ -20,6 +26,7 @@ final class OperatorCommandOsHttpAccessTest extends TestCase
     public function test_verified_non_owner_cannot_open_command_os_over_http(): void
     {
         $this->actingAs(User::factory()->create())
+            ->withSession(['auth.password_confirmed_at' => time()])
             ->get('/operator')
             ->assertForbidden();
     }
@@ -32,7 +39,10 @@ final class OperatorCommandOsHttpAccessTest extends TestCase
             'platform_owner_granted_at' => now(),
         ])->save();
 
-        $this->actingAs($user)->get('/operator')->assertForbidden();
+        $this->actingAs($user)
+            ->withSession(['auth.password_confirmed_at' => time()])
+            ->get('/operator')
+            ->assertForbidden();
     }
 
     public function test_verified_owner_with_passkey_can_open_command_os_over_http(): void
@@ -53,8 +63,31 @@ final class OperatorCommandOsHttpAccessTest extends TestCase
         ]);
 
         $this->actingAs($user)
+            ->withSession(['auth.password_confirmed_at' => time()])
             ->get('/operator')
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page->component('operator'));
+    }
+
+    public function test_verified_passkey_owner_must_confirm_password_before_command_os(): void
+    {
+        $user = User::factory()->create();
+        $user->forceFill([
+            'is_platform_owner' => true,
+            'platform_owner_granted_at' => now(),
+        ])->save();
+
+        DB::table('passkeys')->insert([
+            'user_id' => $user->getKey(),
+            'name' => 'HTTP owner confirmation test',
+            'credential_id' => 'http-owner-confirm-'.bin2hex(random_bytes(12)),
+            'credential' => '{}',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $this->actingAs($user)
+            ->get('/operator')
+            ->assertRedirect(route('password.confirm'));
     }
 }
