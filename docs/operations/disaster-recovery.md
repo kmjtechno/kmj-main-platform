@@ -44,6 +44,20 @@ BACKUP_AGE_IDENTITY=/secure/path/identity.txt \
 
 The verifier decrypts into a temporary directory, verifies SHA-256 checksums, checks that PostgreSQL can read the archive with `pg_restore --list`, and confirms the storage tarball is readable. It never connects to or modifies a live database.
 
+## Release schema compatibility QA (not a backup restore)
+
+Before approving a new app SHA, the GitHub `Disposable PostgreSQL Release Gate`
+runs the exact candidate in a fresh, loopback-disabled Unix-socket-only PostgreSQL
+cluster. The optional `KMJ_PG_FULL_FEATURE_SUITE=1` mode first builds the actual
+Vite manifest, then runs the complete Laravel Feature suite against PostgreSQL,
+checks KSLP/payment tables and verifies `migrate:rollback`. It never connects
+to production or imports real customer data.
+
+A successful full PostgreSQL test **does not** replace the independent drill
+of restoring a fresh real encrypted offsite production bundle into a
+quarantined disposable recovery host. Also confirm owner-signed release SHA,
+correct current production pointer, authenticated owner browser smoke,
+outbound email acceptance and rollback before any cutover.
 ## Replacement VPS recovery
 
 1. Provision and harden a replacement VPS.

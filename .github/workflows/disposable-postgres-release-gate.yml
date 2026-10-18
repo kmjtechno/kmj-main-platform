@@ -20,7 +20,7 @@ concurrency:
 jobs:
   migration-rollback:
     runs-on: ubuntu-24.04
-    timeout-minutes: 20
+    timeout-minutes: 25
     steps:
       - name: Checkout exact release candidate without persisted credentials
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
@@ -32,6 +32,12 @@ jobs:
           php-version: '8.4'
           extensions: pdo_pgsql, pgsql, pdo_sqlite, sqlite3, sodium
           coverage: none
+      - name: Set up Node 22 for actual Vite manifests
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: apps/platform/package-lock.json
       - name: Install disposable local PostgreSQL binaries
         run: |
           set -euo pipefail
@@ -50,5 +56,7 @@ jobs:
           test "$(id -u)" -ne 0
           test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
           git status --porcelain
-      - name: Create private socket PostgreSQL cluster, test migrations, roll back
+      - name: Test all Feature cases on isolated PostgreSQL and roll back
+        env:
+          KMJ_PG_FULL_FEATURE_SUITE: '1'
         run: bash scripts/ci/verify-postgres-staging.sh "$GITHUB_SHA"
