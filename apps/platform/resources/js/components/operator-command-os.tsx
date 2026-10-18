@@ -64,6 +64,7 @@ type Props = {
         entitlements: number;
         orders: number;
         confirmed_orders: number;
+        confirmed_inr_revenue_minor: number;
     };
     catalogProducts: Product[];
     recentOrders: Order[];
@@ -228,8 +229,9 @@ export default function OperatorCommandOs({
             o.currency === 'INR' &&
             typeof o.amount_minor === 'number',
     );
-    const revenue =
-        confirmed.reduce((sum, o) => sum + (o.amount_minor || 0), 0) / 100;
+    // The KPI uses the backend's complete confirmed-INR aggregate; the
+    // 20-row recentOrders collection below is only a chart preview.
+    const revenue = metrics.confirmed_inr_revenue_minor / 100;
     const revenueByDay = useMemo(() => {
         const map = new Map<string, number>();
         for (const o of confirmed) {
@@ -385,10 +387,10 @@ export default function OperatorCommandOs({
                             [
                                 CreditCard,
                                 'Recorded Revenue',
-                                confirmed.length
+                                metrics.confirmed_orders
                                     ? '₹ ' + revenue.toLocaleString('en-IN')
                                     : '—',
-                                'Confirmed INR orders shown',
+                                'All confirmed INR orders',
                                 'cyan',
                             ],
                             [
@@ -539,7 +541,7 @@ export default function OperatorCommandOs({
                         <section id="owner-revenue" className="owner-panel">
                             <PanelTitle title="Revenue & Growth" />
                             <p className="owner-panel-subtitle">
-                                Confirmed INR orders in the current snapshot
+                                Last 20 orders, confirmed INR only
                             </p>
                             <div className="owner-chart">
                                 <svg
@@ -547,7 +549,7 @@ export default function OperatorCommandOs({
                                     role="img"
                                     aria-label={
                                         confirmed.length
-                                            ? 'Confirmed order revenue by date'
+                                            ? 'Recent confirmed INR order revenue by date'
                                             : 'No confirmed INR revenue to chart'
                                     }
                                 >
