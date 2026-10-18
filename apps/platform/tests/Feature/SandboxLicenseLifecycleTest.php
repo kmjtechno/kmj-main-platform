@@ -50,11 +50,11 @@ final class SandboxLicenseLifecycleTest extends TestCase
     {
         $revoker = new LicenseRevoker;
 
-        $first = $revoker->revoke('sandbox-idempotency-jti', 'initial reason');
-        $second = $revoker->revoke('sandbox-idempotency-jti', 'duplicate retry');
+        $first = $revoker->revoke('33333333-3333-4333-8333-333333333333', 'initial reason');
+        $second = $revoker->revoke('33333333-3333-4333-8333-333333333333', 'duplicate retry');
 
         self::assertSame($first->getKey(), $second->getKey());
-        self::assertSame(1, LicenseRevocation::query()->where('jti', 'sandbox-idempotency-jti')->count());
+        self::assertSame(1, LicenseRevocation::query()->where('jti', '33333333-3333-4333-8333-333333333333')->count());
         self::assertSame('initial reason', $second->reason);
     }
 
