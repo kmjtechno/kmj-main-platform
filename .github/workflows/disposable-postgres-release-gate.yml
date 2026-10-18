@@ -32,6 +32,12 @@ jobs:
           php-version: '8.4'
           extensions: pdo_pgsql, pgsql, pdo_sqlite, sqlite3, sodium
           coverage: none
+      - name: Set up Node 22 for actual Vite manifests
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: apps/platform/package-lock.json
       - name: Install disposable local PostgreSQL binaries
         run: |
           set -euo pipefail
