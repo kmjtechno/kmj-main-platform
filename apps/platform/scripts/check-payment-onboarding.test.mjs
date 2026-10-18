@@ -106,10 +106,7 @@ void test('Laravel route bootstrap avoids no-op global exception imports', () =>
         routes,
         /^use (DomainException|InvalidArgumentException);$/m,
     );
-    assert.match(
-        routes,
-        /catch \(DomainException\|InvalidArgumentException\)/,
-    );
+    assert.match(routes, /catch \(DomainException\|InvalidArgumentException\)/);
 });
 
 void test('server-only sandbox errors are safely narrowed without modifying test order payload', () => {
