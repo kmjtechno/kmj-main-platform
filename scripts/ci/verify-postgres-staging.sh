@@ -92,6 +92,17 @@ else
   echo 'FAIL: selected PostgreSQL feature tests'
   failures=$((failures + 1))
 fi
+# Optional exhaustive PostgreSQL feature pass on the same private cluster.
+# No production credentials, network listener or database fallback.
+if [[ "${KMJ_PG_FULL_FEATURE_SUITE:-0}" == 1 ]]; then
+  echo 'PG_FEATURE_MODE=ALL_TESTS_DISPOSABLE_POSTGRESQL'
+  if php artisan test --testsuite=Feature --display-warnings --fail-on-warning --no-ansi; then
+    echo 'PASS: full PostgreSQL Feature suite'
+  else
+    echo 'FAIL: full PostgreSQL Feature suite'
+    failures=$((failures + 1))
+  fi
+fi
 if php artisan migrate:rollback --force --no-interaction --no-ansi; then
   if [[ "$(query "$check_sql")" == 0 ]]; then
     echo 'PASS: PostgreSQL rollback; both new tables removed'
