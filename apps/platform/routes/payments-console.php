@@ -52,7 +52,7 @@ Route::middleware(['auth', 'verified', 'password.confirm'])
             if ($provider === 'razorpay'
                 && isset($input['client_id'])
                 && $input['client_id'] !== ''
-                && str_starts_with($input['client_id'], 'rzp_test_') === false) {
+                && ! preg_match('/\\Arzp_test_[A-Za-z0-9]+\\z/D', $input['client_id'])) {
                 return back()->withErrors(['client_id' => 'Only Razorpay test keys may be saved here.']);
             }
 
