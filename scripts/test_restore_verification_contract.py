@@ -166,6 +166,23 @@ def main() -> None:
         make_bundle(payload, inner_duplicate)
         check_case("duplicate storage entries", inner_duplicate, env, False)
 
+        # These two raw tar names describe the same extracted destination.
+        # Exact-string duplicate checking must not allow the second member.
+        with tarfile.open(storage, "w:gz") as archive:
+            for path in ("storage/app/proof.txt", "storage/app//proof.txt"):
+                data = b"canonical-target-proof"
+                item = tarfile.TarInfo(path)
+                item.size = len(data)
+                archive.addfile(item, io.BytesIO(data))
+        with (payload / "SHA256SUMS").open("w", encoding="utf-8") as out:
+            subprocess.run(
+                ["sha256sum", "database.dump", "storage.tar.gz", "metadata.txt"],
+                cwd=payload, text=True, stdout=out, check=True,
+            )
+        alias_duplicate = tmp / "alias-duplicate-storage.tar.gz.age"
+        make_bundle(payload, alias_duplicate)
+        check_case("normalized alias duplicate", alias_duplicate, env, False)
+
         # Build a valid first tar header declaring >256GiB of logical data
         # without allocating that much data. The verifier must reject this
         # *before* following the header's enormous next-entry offset.
@@ -183,7 +200,7 @@ def main() -> None:
         make_bundle(payload, inner_oversize)
         check_case("oversized storage logical size", inner_oversize, env, False)
 
-    print("Restore verification contract test PASS (1 valid, 7 unsafe rejected)")
+    print("Restore verification contract test PASS (1 valid, 8 unsafe rejected)")
 
 
 if __name__ == "__main__":
