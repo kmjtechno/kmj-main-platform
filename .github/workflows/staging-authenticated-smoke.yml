@@ -7,6 +7,16 @@ on:
     types:
       - completed
   workflow_dispatch:
+  push:
+    branches: [staging-approved]
+  pull_request:
+    paths:
+      - 'apps/platform/app/**'
+      - 'apps/platform/routes/**'
+      - 'apps/platform/tests/Feature/PlatformOwnerConsoleTest.php'
+      - 'apps/platform/tests/Feature/OwnerPaymentGatewaySettingsTest.php'
+      - 'apps/platform/composer.lock'
+      - '.github/workflows/staging-authenticated-smoke.yml'
 
 permissions:
   contents: read
@@ -18,28 +28,31 @@ concurrency:
 jobs:
   smoke:
     name: Verify authenticated surfaces for approved staging commit
-    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
+    if: ${{ github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
     timeout-minutes: 12
 
     steps:
-      - name: Checkout approved staging branch
+      - name: Checkout exact source for staging promotion, PR or deployed staging
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-          ref: staging-approved
+          ref: ${{ github.event_name == 'workflow_run' && 'staging-approved' || github.event.pull_request.head.sha || github.sha }}
           fetch-depth: 1
 
       - name: Resolve exact approved commit
         shell: bash
         env:
           DEPLOYED_SHA: ${{ github.event.workflow_run.head_sha }}
+          SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
         run: |
           set -euo pipefail
           approved_sha="$(git rev-parse HEAD)"
           if [ "${{ github.event_name }}" = "workflow_run" ]; then
             test -n "$DEPLOYED_SHA"
             test "$approved_sha" = "$DEPLOYED_SHA"
+          else
+            test "$approved_sha" = "$SOURCE_SHA"
           fi
           echo "SMOKE_SHA=$approved_sha" >> "$GITHUB_ENV"
 
@@ -82,6 +95,18 @@ jobs:
           set -euo pipefail
           php artisan staging:smoke-authenticated-surfaces
 
+      - name: Verify owner role, passkey and commercial policy regression
+        working-directory: apps/platform
+        env:
+          APP_ENV: testing
+          DB_CONNECTION: sqlite
+          DB_DATABASE: ${{ github.workspace }}/apps/platform/database/database.sqlite
+          MAIL_MAILER: log
+        shell: bash
+        run: |
+          set -euo pipefail
+          php artisan test --filter='PlatformOwnerConsoleTest|OwnerPaymentGatewaySettingsTest' --no-ansi
+
       - name: Authenticated smoke evidence
         if: always()
         shell: bash
@@ -91,7 +116,8 @@ jobs:
             echo
             echo "- approved commit: `${SMOKE_SHA:-unresolved}`"
             echo "- isolated authenticated route regression: ${{ job.status }}"
-            echo '- surfaces: `/dashboard`, `/operator/ops`, `/purchase`'
+            echo '- surfaces: `/dashboard`, `/operator`, `/operator/ops`, `/purchase`'
             echo '- synthetic owner data: transaction-scoped and rolled back'
+            echo '- this is synthetic isolated QA, not authenticated live browser acceptance or production cutover'
             echo '- live commit deployment is verified separately by Staging VPS Deploy'
           } >> "$GITHUB_STEP_SUMMARY"
