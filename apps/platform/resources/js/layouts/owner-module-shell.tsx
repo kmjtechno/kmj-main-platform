@@ -159,7 +159,20 @@ export default function OwnerModuleShell({
                             <Link
                                 key={label}
                                 href={href}
-                                aria-current={href === url ? 'page' : undefined}
+                                aria-current={
+                                    href === url &&
+                                    (
+                                        href === '/operator/ops'
+                                            ? label === 'System Health'
+                                            : href === '/operator/products'
+                                              ? label === 'Products & Catalog'
+                                              : href === '/operator/kslp'
+                                                ? label === 'Licensing & Entitlements'
+                                                : true
+                                    )
+                                        ? 'page'
+                                        : undefined
+                                }
                                 onClick={() => setNavOpen(false)}
                             >
                                 <Icon size={17} aria-hidden="true" />
