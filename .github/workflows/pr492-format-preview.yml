@@ -1,5 +1,7 @@
 name: PR492 formatting preview
 on:
+  pull_request:
+    types: [opened, synchronize]
   push:
     branches:
       - fix/owner-subpages-unified-shell-20261019
