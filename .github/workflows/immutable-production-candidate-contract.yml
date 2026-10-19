@@ -1,0 +1,36 @@
+name: Immutable Production Candidate Builder Contract
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/immutable-production-candidate-contract.yml'
+      - 'scripts/operations/build-main-platform-candidate-kmj-elite.sh'
+      - 'scripts/test_main_platform_candidate_build_contract.py'
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/immutable-production-candidate-contract.yml'
+      - 'scripts/operations/build-main-platform-candidate-kmj-elite.sh'
+      - 'scripts/test_main_platform_candidate_build_contract.py'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  contract:
+    name: Candidate builder no-deploy contract
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+          ref: \${{ github.event.pull_request.head.sha || github.sha }}
+      - name: Assert Bash parses and privileged operations are absent
+        run: |
+          set -euo pipefail
+          bash -n scripts/operations/build-main-platform-candidate-kmj-elite.sh
+          python3 -B scripts/test_main_platform_candidate_build_contract.py
+          echo 'CANDIDATE_BUILDER_CONTRACT=PASS'
+          echo 'PRODUCTION_DEPLOYMENT=NOT_ATTEMPTED'
