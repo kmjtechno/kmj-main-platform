@@ -6,6 +6,7 @@ on:
       - Staging VPS Deploy
     types:
       - completed
+  workflow_call:
   workflow_dispatch:
   push:
     branches: [staging-approved]
@@ -22,7 +23,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: staging-authenticated-surface-smoke
+  group: staged-owner-smoke-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:

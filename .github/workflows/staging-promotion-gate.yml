@@ -9,6 +9,12 @@ on:
       - 'KMJ_TECHNO_MAIN_PLATFORM_MASTER_ROADMAP_BLUEPRINT_V1_0.md'
       - 'docs/adr/**'
   workflow_dispatch:
+  pull_request:
+    paths:
+      - '.github/workflows/staging-promotion-gate.yml'
+      - '.github/workflows/staging-authenticated-smoke.yml'
+      - '.github/workflows/locked-ui-responsive-qa.yml'
+      - '.github/workflows/disposable-postgres-release-gate.yml'
 
 permissions:
   contents: read
@@ -28,7 +34,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-          ref: ${{ github.sha }}
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
 
       - name: Setup PHP 8.4
         uses: shivammathur/setup-php@87d00bde2555f25eb54fedf940384e99cbdc55ef
@@ -109,10 +115,25 @@ jobs:
           DB_DATABASE: ${{ github.workspace }}/apps/platform/database/database.sqlite
         run: bash "$GITHUB_WORKSPACE/ops/self-hosted-runner/verify-platform.sh"
 
+  owner_auth:
+    name: Staging owner, passkey and commerce acceptance
+    needs: verify
+    uses: ./.github/workflows/staging-authenticated-smoke.yml
+
+  locked_visual:
+    name: Locked landing and Super Admin responsive browser acceptance
+    needs: verify
+    uses: ./.github/workflows/locked-ui-responsive-qa.yml
+
+  postgres:
+    name: Disposable PostgreSQL full-feature migration and rollback
+    needs: verify
+    uses: ./.github/workflows/disposable-postgres-release-gate.yml
+
   promote:
     name: Promote verified commit to staging-approved
-    needs: verify
-    if: ${{ needs.verify.result == 'success' && github.ref == 'refs/heads/main' }}
+    needs: [verify, owner_auth, locked_visual, postgres]
+    if: ${{ needs.verify.result == 'success' && needs.owner_auth.result == 'success' && needs.locked_visual.result == 'success' && needs.postgres.result == 'success' && github.ref == 'refs/heads/main' }}
     permissions:
       contents: write
     runs-on: ubuntu-latest
