@@ -1,0 +1,79 @@
+name: Staging Exact SHA Readback
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/staging-exact-sha-readback.yml'
+      - 'scripts/operations/check-staging-readback.py'
+      - 'scripts/test_staging_readback.py'
+  workflow_run:
+    workflows: ['Staging Promotion Gate']
+    types: [completed]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: staging-readback-${{ github.workflow }}-${{ github.event.workflow_run.head_sha || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  contract:
+    name: Readback guard contract
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - run: python3 -B -m unittest discover -s scripts -p test_staging_readback.py -v
+
+  readback:
+    name: Independently verify staging VPS serves approved immutable SHA
+    needs: contract
+    if: ${{ github.event_name == 'workflow_dispatch' || (github.event_name == 'workflow_run' && github.event.workflow_run.event == 'push' && github.event.workflow_run.head_branch == 'main' && github.event.workflow_run.conclusion == 'success') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout protected approved staging source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+          ref: staging-approved
+      - name: Refuse stale, failed or mismatched promotion
+        env:
+          PROMOTED_SHA: ${{ github.event.workflow_run.head_sha }}
+          EVENT_NAME: ${{ github.event_name }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          sha="$(git rev-parse HEAD)"
+          [[ "$sha" =~ ^[a-f0-9]{40}$ ]]
+          if [ "$EVENT_NAME" = workflow_run ]; then
+            test "$sha" = "$PROMOTED_SHA"
+          fi
+          echo "EXPECTED_STAGING_SHA=$sha" >> "$GITHUB_ENV"
+      - name: Read back actual staging HTTPS release
+        shell: bash
+        run: |
+          set -euo pipefail
+          origin='https://staging.kmjtechno.com'
+          headers="$(mktemp)"
+          trap 'rm -f "$headers"' EXIT
+          status="$(curl --proto '=https' --fail --silent --show-error --max-time 20 \
+            --header 'Cache-Control: no-cache' -D "$headers" -o /dev/null \
+            -w '%{http_code}' "$origin/")" || {
+              echo 'STAGING_DEPLOY_READBACK=BLOCKED HTTPS_UNREACHABLE'
+              exit 1
+            }
+          python3 scripts/operations/check-staging-readback.py \
+            --expected "$EXPECTED_STAGING_SHA" --headers "$headers" --status "$status"
+          for path in /products /login; do
+            code="$(curl --proto '=https' --silent --show-error --max-time 20 \
+              -o /dev/null -w '%{http_code}' "$origin$path")" || exit 1
+            test "$code" = 200 || { echo "STAGING_ROUTE=FAIL PATH=$path STATUS=$code"; exit 1; }
+          done
+          echo 'STAGING_PUBLIC_ROUTES=PASS'
+          echo 'NOTE: this is staging, not an authenticated owner browser or production cutover.'
