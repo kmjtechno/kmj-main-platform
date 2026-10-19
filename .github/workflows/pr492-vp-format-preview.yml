@@ -1,4 +1,5 @@
 name: PR492 vp format preview
+# Read-only isolated formatter evidence; remove from branch after use.
 on:
   pull_request:
     types: [synchronize]
