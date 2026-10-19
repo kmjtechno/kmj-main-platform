@@ -53,7 +53,7 @@ export const deliveryMilestones: DeliveryMilestone[] = [
         id: 'locked-landing-product-portfolio',
         title: 'Locked landing product portfolio',
         state: 'verified',
-        detail: 'The locked black-and-red landing now receives the complete governed product portfolio, including OmniDesk and CodeBridge, with canonical product-detail routing; public commercial actions remain lifecycle-gated',
+        detail: 'The locked black-and-red landing receives the governed product portfolio including OmniDesk and CodeBridge, with canonical product-detail routing and lifecycle-gated actions. PR #469 under review adds an image-load-error fallback shared with the locked Super Admin product cards; original artwork and geometry are preserved for valid assets. Pixel-perfect owner visual signoff remains pending.',
         evidence:
             'PR #258 merged as 606ecf279172; staging promotion, exact-SHA deploy, desktop/mobile browser QA and authenticated surface smoke all passed; CodeBridge remains non-commercial until hosted identity, packaging and production security gates pass',
     },
