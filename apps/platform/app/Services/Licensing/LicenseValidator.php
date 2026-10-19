@@ -8,6 +8,10 @@ use JsonException;
 
 final class LicenseValidator
 {
+    // Sandbox claims are small. Reject oversized untrusted inputs before
+    // splitting, decoding, hashing or querying the revocation database.
+    private const MAX_LICENSE_BYTES = 16_384;
+
     public function __construct(
         private readonly string $secret,
     ) {
@@ -25,6 +29,10 @@ final class LicenseValidator
      */
     public function validate(string $license): array
     {
+        if (strlen($license) > self::MAX_LICENSE_BYTES) {
+            return $this->invalid('malformed');
+        }
+
         $parts = explode('.', $license);
 
         if (count($parts) !== 2) {
@@ -136,13 +144,24 @@ final class LicenseValidator
 
     private function base64UrlDecode(string $value): ?string
     {
-        $padding = strlen($value) % 4;
-        if ($padding !== 0) {
-            $value .= str_repeat('=', 4 - $padding);
+        // The issuer emits unpadded canonical base64url. Standard base64,
+        // padding, whitespace and alternative trailing-bit encodings must
+        // not create different wire representations for the same claims.
+        if ($value === '' || preg_match('/\\A[A-Za-z0-9_-]+\\z/D', $value) !== 1
+            || strlen($value) % 4 === 1) {
+            return null;
         }
 
-        $decoded = base64_decode(strtr($value, '-_', '+/'), true);
+        $padding = strlen($value) % 4;
+        $padded = $value.($padding === 0 ? '' : str_repeat('=', 4 - $padding));
+        $decoded = base64_decode(strtr($padded, '-_', '+/'), true);
 
-        return $decoded === false ? null : $decoded;
+        if ($decoded === false) {
+            return null;
+        }
+
+        $canonical = rtrim(strtr(base64_encode($decoded), '+/', '-_'), '=');
+
+        return hash_equals($canonical, $value) ? $decoded : null;
     }
 }
