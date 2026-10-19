@@ -89,15 +89,19 @@ try:
         for item in storage:
             storage_entries += 1
             storage_bytes += item.size
+            # Tar permits redundant slashes and dot components. Such entries
+            # can resolve to the same restore destination despite different
+            # raw header names, so the uniqueness key must be normalized.
+            name = PurePosixPath(item.name)
+            canonical_path = name.as_posix()
             if (
                 storage_entries > max_storage_entries
                 or item.size < 0
                 or storage_bytes > max_storage_bytes
-                or item.name in seen_storage_paths
+                or canonical_path in seen_storage_paths
             ):
                 raise ValueError("storage archive limits or uniqueness violated")
-            seen_storage_paths.add(item.name)
-            name = PurePosixPath(item.name)
+            seen_storage_paths.add(canonical_path)
             if (
                 name.is_absolute()
                 or ".." in name.parts
