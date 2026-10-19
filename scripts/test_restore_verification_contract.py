@@ -173,7 +173,7 @@ def main() -> None:
         oversized.size = 256 * 1024 * 1024 * 1024 + 1
         with gzip.open(storage, "wb") as out:
             out.write(oversized.tobuf())
-            out.write(b"\\0" * 1024)
+            out.write(bytes(1024))
         with (payload / "SHA256SUMS").open("w", encoding="utf-8") as out:
             subprocess.run(
                 ["sha256sum", "database.dump", "storage.tar.gz", "metadata.txt"],
