@@ -38,12 +38,15 @@ done
 exec 9>/run/lock/kmj-main-platform-production-release.lock
 flock -n 9 || fail PRODUCTION_RELEASE_IN_PROGRESS
 scratch="$(mktemp -d /tmp/kmj-local-recovery.XXXXXXXX)"
-chown kmjprod:kmjprod "$scratch"
-chmod 0700 "$scratch"
+# Root owns the parent and all archival outputs; only a narrow child workdir
+# is writable by the app user. Never write root files in app-writable directories.
+chown root:kmjprod "$scratch"
+chmod 0750 "$scratch"
+install -d -o kmjprod -g kmjprod -m 0700 "$scratch/restore"
 started=0
 cleanup() {
   if [[ "$started" == 1 ]]; then
-    runuser -u kmjprod -- "$pgdir/pg_ctl" -D "$scratch/pgdata" -m immediate -w stop >/dev/null 2>&1 || :
+    runuser -u kmjprod -- "$pgdir/pg_ctl" -D "$scratch/restore/pgdata" -m immediate -w stop >/dev/null 2>&1 || :
   fi
   rm -rf -- "$scratch"
 }
@@ -102,10 +105,14 @@ try {
     exit(2);
 }
 PHP
-chmod 0644 "$scratch/dump.php"
+chown root:kmjprod "$scratch/dump.php"
+chmod 0640 "$scratch/dump.php"
 status LOCAL_BACKUP STARTED
-runuser -u kmjprod -- php8.4 "$scratch/dump.php" "$OLD/apps/platform" "$scratch/database.dump" || fail REAL_DATABASE_DUMP_FAILED
-[[ -s "$scratch/database.dump" ]] || fail DUMP_EMPTY
+runuser -u kmjprod -- php8.4 "$scratch/dump.php" "$OLD/apps/platform" "$scratch/restore/database.dump" || fail REAL_DATABASE_DUMP_FAILED
+[[ -f "$scratch/restore/database.dump" && ! -L "$scratch/restore/database.dump" ]] || fail DUMP_NOT_REGULAR
+[[ "$(stat -c %U "$scratch/restore/database.dump")" == kmjprod ]] || fail DUMP_OWNER
+[[ -s "$scratch/restore/database.dump" ]] || fail DUMP_EMPTY
+install -o root -g root -m 0600 "$scratch/restore/database.dump" "$scratch/database.dump"
 "$pgdir/pg_restore" --list "$scratch/database.dump" >/dev/null || fail DUMP_UNREADABLE
 tar -czf "$scratch/storage.tar.gz" -C "$OLD/apps/platform" storage/app .env || fail STORAGE_BACKUP
 [[ -s "$scratch/storage.tar.gz" ]] || fail STORAGE_EMPTY
@@ -121,23 +128,23 @@ status LOCAL_BACKUP_INTEGRITY PASS
 
 # Actual restore into separately initialized local PostgreSQL cluster.
 # Never connects to the production socket, network or database.
-runuser -u kmjprod -- "$pgdir/initdb" -D "$scratch/pgdata" \
+runuser -u kmjprod -- "$pgdir/initdb" -D "$scratch/restore/pgdata" \
   -U kmj_restore_drill --auth-local=trust --auth-host=reject \
-  --no-instructions >"$scratch/initdb.log" 2>&1 || fail DISPOSABLE_INITDB
-install -d -o kmjprod -g kmjprod -m 0700 "$scratch/socket"
-runuser -u kmjprod -- "$pgdir/pg_ctl" -D "$scratch/pgdata" \
-  -l "$scratch/pg-server.log" \
+  --no-instructions >"$scratch/restore/initdb.log" 2>&1 || fail DISPOSABLE_INITDB
+install -d -o kmjprod -g kmjprod -m 0700 "$scratch/restore/socket"
+runuser -u kmjprod -- "$pgdir/pg_ctl" -D "$scratch/restore/pgdata" \
+  -l "$scratch/restore/pg-server.log" \
   -o "-c listen_addresses='' -c unix_socket_directories='$scratch/socket' -c unix_socket_permissions=0700 -c port=55479" \
   -w start >/dev/null 2>&1 || fail DISPOSABLE_PG_START
 started=1
 [[ -S "$scratch/socket/.s.PGSQL.55479" ]] || fail PRIVATE_SOCKET_ABSENT
 runuser -u kmjprod -- "$pgdir/createdb" \
-  -h "$scratch/socket" -p 55479 -U kmj_restore_drill kmj_recovered >/dev/null 2>&1 || fail RESTORE_CREATE_DB
+  -h "$scratch/restore/socket" -p 55479 -U kmj_restore_drill kmj_recovered >/dev/null 2>&1 || fail RESTORE_CREATE_DB
 runuser -u kmjprod -- "$pgdir/pg_restore" --exit-on-error --no-owner --no-acl \
-  -h "$scratch/socket" -p 55479 -U kmj_restore_drill -d kmj_recovered \
-  "$scratch/database.dump" >"$scratch/restore.log" 2>&1 || fail DATABASE_RESTORE_FAILED
+  -h "$scratch/restore/socket" -p 55479 -U kmj_restore_drill -d kmj_recovered \
+  "$scratch/restore/database.dump" >"$scratch/restore/restore.log" 2>&1 || fail DATABASE_RESTORE_FAILED
 schema="$(runuser -u kmjprod -- "$pgdir/psql" -X -A -t \
-  -h "$scratch/socket" -p 55479 -U kmj_restore_drill -d kmj_recovered \
+  -h "$scratch/restore/socket" -p 55479 -U kmj_restore_drill -d kmj_recovered \
   -v ON_ERROR_STOP=1 -c \
   "select (to_regclass('public.users') is not null and to_regclass('public.organizations') is not null and to_regclass('public.entitlements') is not null)::int" \
   2>/dev/null)" || fail SCHEMA_QUERY_FAILED
@@ -147,7 +154,7 @@ status LOCAL_DISPOSABLE_POSTGRES_RESTORE PASS
 status LOCAL_SCHEMA_VERIFICATION PASS
 status OFFSITE_INDEPENDENT_RESTORE NOT_VERIFIED
 status ROLLBACK_DRILL NOT_VERIFIED
-runuser -u kmjprod -- "$pgdir/pg_ctl" -D "$scratch/pgdata" -m immediate -w stop >/dev/null 2>&1 || fail DISPOSABLE_SHUTDOWN_FAILED
+runuser -u kmjprod -- "$pgdir/pg_ctl" -D "$scratch/restore/pgdata" -m immediate -w stop >/dev/null 2>&1 || fail DISPOSABLE_SHUTDOWN_FAILED
 started=0
 
 # Publish evidence only after real successful restore. Never overwrite.
