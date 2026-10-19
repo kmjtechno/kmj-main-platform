@@ -86,6 +86,30 @@ class RegistrationTest extends TestCase
         }
     }
 
+    public function test_public_registration_is_rate_limited_before_account_creation(): void
+    {
+        // A reserved test IP avoids collisions with other unrelated auth tests.
+        $this->withServerVariables(['REMOTE_ADDR' => '198.51.100.241']);
+
+        for ($attempt = 0; $attempt < 6; $attempt++) {
+            $this->post(route('register.store'), [
+                'name' => '',
+                'email' => 'invalid',
+                'password' => '',
+                'password_confirmation' => '',
+            ])->assertSessionHasErrors();
+        }
+
+        $this->post(route('register.store'), [
+            'name' => '',
+            'email' => 'invalid',
+            'password' => '',
+            'password_confirmation' => '',
+        ])->assertStatus(429);
+
+        $this->assertDatabaseCount('users', 0);
+    }
+
     public function test_new_users_can_register()
     {
         $response = $this->post(route('register.store'), [
