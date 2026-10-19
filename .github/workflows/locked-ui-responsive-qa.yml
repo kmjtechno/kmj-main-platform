@@ -9,6 +9,7 @@ on:
       - 'apps/platform/scripts/check-visual-qa-coverage.test.mjs'
       - 'apps/platform/package-lock.json'
       - '.github/workflows/locked-ui-responsive-qa.yml'
+  workflow_call:
   workflow_dispatch:
   push:
     branches: [staging-approved]
