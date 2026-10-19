@@ -86,6 +86,81 @@ class RegistrationTest extends TestCase
         }
     }
 
+    public function test_public_registration_is_rate_limited_before_account_creation(): void
+    {
+        $this->withServerVariables(['REMOTE_ADDR' => '198.51.100.241']);
+
+        for ($attempt = 0; $attempt < 6; $attempt++) {
+            $this->post(route('register.store'), [
+                'name' => '',
+                'email' => 'invalid',
+                'password' => '',
+                'password_confirmation' => '',
+            ])->assertSessionHasErrors();
+        }
+
+        $this->post(route('register.store'), [
+            'name' => '',
+            'email' => 'invalid',
+            'password' => '',
+            'password_confirmation' => '',
+        ])->assertStatus(429);
+
+        $this->assertDatabaseCount('users', 0);
+    }
+
+    public function test_signup_throttle_does_not_block_registration_view_or_login(): void
+    {
+        $this->withServerVariables(['REMOTE_ADDR' => '198.51.100.242']);
+
+        for ($attempt = 0; $attempt < 7; $attempt++) {
+            $response = $this->post(route('register.store'), [
+                'name' => '',
+                'email' => 'invalid',
+                'password' => '',
+                'password_confirmation' => '',
+            ]);
+
+            if ($attempt === 6) {
+                $response->assertStatus(429);
+            }
+        }
+
+        $this->get(route('register'))->assertOk();
+        $this->post('/login', [
+            'email' => 'nonexistent@example.test',
+            'password' => 'invalid-password',
+        ])->assertStatus(302);
+        $this->assertDatabaseCount('users', 0);
+    }
+
+    public function test_signup_hourly_quota_cannot_be_bypassed_by_waiting_one_minute(): void
+    {
+        $this->withServerVariables(['REMOTE_ADDR' => '198.51.100.243']);
+
+        for ($attempt = 0; $attempt < 30; $attempt++) {
+            if ($attempt > 0 && $attempt % 6 === 0) {
+                $this->travel(61)->seconds();
+            }
+
+            $this->post(route('register.store'), [
+                'name' => '',
+                'email' => 'invalid',
+                'password' => '',
+                'password_confirmation' => '',
+            ])->assertSessionHasErrors();
+        }
+
+        $this->post(route('register.store'), [
+            'name' => '',
+            'email' => 'invalid',
+            'password' => '',
+            'password_confirmation' => '',
+        ])->assertStatus(429);
+
+        $this->assertDatabaseCount('users', 0);
+    }
+
     public function test_new_users_can_register()
     {
         $response = $this->post(route('register.store'), [
