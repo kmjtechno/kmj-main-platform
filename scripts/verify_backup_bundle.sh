@@ -76,16 +76,34 @@ try:
     if len(filenames) != 3 or set(filenames) != required:
         raise ValueError("missing or duplicate checksum entries")
 
-    # Inner application storage must never reference host paths or special
-    # devices, even though this verifier only lists the archive.
+    # This is archive validation, not a restore. Nevertheless, a tiny
+    # compressed inner tar can advertise huge sparse members or millions of
+    # entries and exhaust resources when a later recovery extracts it.
+    # Use fixed, non-overridable limits so the verifier fails closed.
+    max_storage_entries = 100_000
+    max_storage_bytes = 256 * 1024 * 1024 * 1024
+    storage_entries = 0
+    storage_bytes = 0
+    seen_storage_paths = set()
     with tarfile.open(destination / "storage.tar.gz", "r:gz") as storage:
         for item in storage:
+            storage_entries += 1
+            storage_bytes += item.size
+            if (
+                storage_entries > max_storage_entries
+                or item.size < 0
+                or storage_bytes > max_storage_bytes
+                or item.name in seen_storage_paths
+            ):
+                raise ValueError("storage archive limits or uniqueness violated")
+            seen_storage_paths.add(item.name)
             name = PurePosixPath(item.name)
             if (
                 name.is_absolute()
                 or ".." in name.parts
                 or name.parts[:2] != ("storage", "app")
                 or not (item.isfile() or item.isdir())
+                or item.sparse is not None
             ):
                 raise ValueError("unsafe storage archive member")
 except (OSError, ValueError, UnicodeError, tarfile.TarError) as exc:
