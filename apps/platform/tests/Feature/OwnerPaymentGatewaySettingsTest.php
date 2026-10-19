@@ -87,6 +87,8 @@ final class OwnerPaymentGatewaySettingsTest extends TestCase
             ->where('gatewaySettings.1.webhook_secret_stored', true)
             ->where('gatewaySettings.1.live_charging_enabled', false)
             ->where('gatewaySettings.1.sandbox_transaction_verified', false)
+            ->where('paymentReadiness.providers.0.sandbox_credentials_present', true)
+            ->where('paymentReadiness.providers.0.status', 'sandbox_validation_required')
             ->where('paymentReadiness.providers.0.webhook_secret_stored', true)
             ->where('paymentReadiness.providers.0.webhook_verification_configured', false)
             ->where('paymentReadiness.live_charging_enabled', false));
