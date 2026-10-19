@@ -3,6 +3,7 @@
 namespace App\Http\Middleware;
 
 use App\Models\User;
+use App\Services\Mail\RegistrationMailReadiness;
 use App\Services\PlatformOwnerAccess;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
@@ -50,6 +51,11 @@ class HandleInertiaRequests extends Middleware
             'publicSite' => [
                 'base_url' => rtrim((string) config('app.url'), '/'),
                 'indexable' => (bool) config('app.public_indexing', false),
+                // Keep public sign-up CTAs aligned with Fortify's fail-closed
+                // production registration guard; this is attempt readiness,
+                // not evidence of external inbox delivery.
+                'registration_available' => ! app()->isProduction()
+                    || app(RegistrationMailReadiness::class)->canAttemptDelivery(),
             ],
             'localization' => [
                 'locale' => $locale,

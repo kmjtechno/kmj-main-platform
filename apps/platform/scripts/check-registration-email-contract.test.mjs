@@ -13,6 +13,8 @@ const doctor = read('app/Console/Commands/RegistrationMailDoctorCommand.php');
 const user = read('app/Models/User.php');
 const mailConfig = read('config/mail.php');
 const forgotUi = read('resources/js/pages/auth/forgot-password.tsx');
+const publicShared = read('app/Http/Middleware/HandleInertiaRequests.php');
+const publicHeader = read('resources/js/components/public-site-header.tsx');
 
 void test('production registration is blocked before creating an unverifiable account', () => {
     assert.match(registration, /app\(\)->isProduction\(\)/);
@@ -45,6 +47,24 @@ void test('new production signups are disabled when email cannot be delivered', 
         registerUi,
         /disabled=\{\s*processing\s*\|\|\s*!registrationAvailable\s*\}/,
     );
+});
+
+void test('public desktop and mobile registration CTAs respect production mail readiness', () => {
+    assert.match(publicShared, /'registration_available'/);
+    assert.match(publicShared, /! app\(\)->isProduction\(\)/);
+    assert.match(publicShared, /RegistrationMailReadiness::class/);
+    assert.match(publicShared, /canAttemptDelivery\(\)/);
+    assert.match(publicHeader, /publicSite\?\.registration_available === true/);
+    assert.equal(
+        (publicHeader.match(/registrationAvailable \? \(/g) ?? []).length,
+        2,
+    );
+    assert.equal(
+        (publicHeader.match(/href=\{register\(\)\}/g) ?? []).length,
+        2,
+    );
+    assert.equal((publicHeader.match(/Registration paused/g) ?? []).length, 2);
+    assert.doesNotMatch(publicHeader, /href=\{register\(\)\}[\s\S]*?disabled=/);
 });
 
 void test('mail doctor never prints credentials or verification URLs', () => {

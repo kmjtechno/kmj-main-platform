@@ -4,6 +4,7 @@ namespace Tests\Feature\Auth;
 
 use Illuminate\Foundation\Http\Middleware\PreventRequestForgery;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Inertia\Testing\AssertableInertia as Assert;
 use KMJ\MainPlatform\Organizations\Models\OrganizationMembership;
 use Laravel\Fortify\Features;
 use Tests\TestCase;
@@ -24,6 +25,31 @@ class RegistrationTest extends TestCase
         $response = $this->get(route('register'));
 
         $response->assertOk();
+    }
+
+    public function test_public_registration_cta_respects_production_mail_readiness(): void
+    {
+        $this->withoutVite();
+
+        // Development/testing can still exercise isolated registration.
+        $this->get('/')->assertOk()->assertInertia(fn (Assert $page) => $page
+            ->where('publicSite.registration_available', true)
+            ->etc());
+
+        $originalEnvironment = app()->environment();
+
+        try {
+            app()->instance('env', 'production');
+            config()->set('mail.default', 'log');
+
+            // The public header must not offer a working signup CTA while
+            // the production registration endpoint fails closed.
+            $this->get('/')->assertOk()->assertInertia(fn (Assert $page) => $page
+                ->where('publicSite.registration_available', false)
+                ->etc());
+        } finally {
+            app()->instance('env', $originalEnvironment);
+        }
     }
 
     public function test_production_log_mailer_cannot_create_unverifiable_user_or_organization(): void

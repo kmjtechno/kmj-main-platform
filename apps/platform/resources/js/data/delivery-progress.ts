@@ -13,9 +13,9 @@ export const deliveryMilestones: DeliveryMilestone[] = [
         id: 'registration-email-delivery-p0',
         title: 'Registration email verification and password reset delivery',
         state: 'blocked',
-        detail: 'Fail-closed registration, resend, and password-reset source recovery is being integrated and tested. Live production outbound mail remains unverified until an authorized sender transport, independent inbox delivery, signed-link validation and guarded release acceptance all pass.',
+        detail: 'Fail-closed registration, resend, and password-reset source checks are implemented. The public desktop/mobile Create account links are gated by the same delivery-attempt readiness signal in PR #461, still under review. Live production outbound mail remains unverified until an authorized sender, independent inbox delivery, signed-link validation and guarded release acceptance all pass.',
         evidence:
-            'Reviewable source-level integration on the latest main includes RegistrationMailReadiness, mail doctor, truthful UI and negative HTTP tests. No live SMTP, provider/PTR authorization or production email delivery is implied. Exact integrated-head GitHub CI and owner acceptance are separate gates.',
+            'Current main includes RegistrationMailReadiness and negative HTTP mail tests. Draft PR #461 adds shared availability and responsive header/HTTP contract tests; new PR-head CI and owner signoff are mandatory. A configured transport is not proof of successful SMTP delivery, domain/PTR authorization or inbox receipt.',
     },
     {
         id: 'codebridge-device-project-assignments',
