@@ -177,3 +177,39 @@ void test('owner commercial actions require dialog confirmation before any POST'
     );
     assert.doesNotMatch(operator, /onClick=\{\(\) =>\s*router\.post\(/);
 });
+
+void test('guarded owner subpages share the locked shell without changing customer layouts', () => {
+    const app = read('resources/js/app.tsx');
+    const shell = read('resources/js/layouts/owner-module-shell.tsx');
+    const styles = read('resources/css/owner-module-shell.css');
+
+    assert.match(app, /case name === 'operator':/);
+    assert.match(app, /case name\.startsWith\('operator-'\):\s*return OwnerModuleShell;/);
+    assert.match(app, /case name\.startsWith\('settings\/'\):\s*return \[AppLayout, SettingsLayout\];/);
+    assert.match(app, /default:\s*return AppLayout;/);
+
+    for (const marker of [
+        '<LockedBrand compact />',
+        'owner-header',
+        'owner-sidebar',
+        'owner-module-body',
+        'owner-module-content',
+        'Toggle owner navigation',
+        'aria-expanded={navOpen}',
+        'aria-current=',
+        'Skip to owner module',
+        'System Health',
+        'Payment Gateways',
+        'Licensing & Entitlements',
+        'CodeBridge & Devices',
+        'Guided mode',
+    ])
+        assert.ok(shell.includes(marker), marker);
+
+    assert.match(shell, /auth\.user\?\.name\?\.trim\(\)/);
+    assert.match(shell, /href="\/operator#owner-kristi"/);
+    assert.match(styles, /\.owner-module-shell \.owner-module-body/);
+    assert.match(styles, /@media \(max-width: 700px\)/);
+    assert.match(styles, /prefers-reduced-motion/);
+    assert.doesNotMatch(shell, /router\.post\(|fetch\(|is_platform_owner\s*=|password\.confirm/);
+});
