@@ -54,6 +54,8 @@ jobs:
           grep -q 'No secret values were printed' scripts/backup_preflight.sh
           python3 scripts/test_backup_contract.py
           python3 scripts/test_restore_verification_contract.py
+          bash -n scripts/operations/verify-real-offsite-recovery.sh
+          python3 -B scripts/test_real_offsite_recovery_contract.py
           bash -n infra/server/KMJ_SERVER_BOOTSTRAP.sh
           bash -n infra/server/KMJ_STAGE_TLS_REPAIR.sh
       - name: Verify architecture foundation
