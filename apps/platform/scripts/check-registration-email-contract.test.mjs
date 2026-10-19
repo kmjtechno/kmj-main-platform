@@ -55,10 +55,22 @@ void test('public desktop and mobile registration CTAs respect production mail r
     assert.match(publicShared, /RegistrationMailReadiness::class/);
     assert.match(publicShared, /canAttemptDelivery\(\)/);
     assert.match(publicHeader, /publicSite\?\.registration_available === true/);
-    assert.equal((publicHeader.match(/registrationAvailable \? \(/g) ?? []).length, 2);
-    assert.equal((publicHeader.match(/href=\{register\(\)\}/g) ?? []).length, 2);
-    assert.equal((publicHeader.match(/Registration paused/g) ?? []).length, 2);
-    assert.doesNotMatch(publicHeader, /href=\{register\(\)\}[\s\S]*?disabled=/);
+    assert.equal(
+        (publicHeader.match(/registrationAvailable \? \(/g) ?? []).length,
+        2,
+    );
+    assert.equal(
+        (publicHeader.match(/href=\{register\(\)\}/g) ?? []).length,
+        2,
+    );
+    assert.equal(
+        (publicHeader.match(/Registration paused/g) ?? []).length,
+        2,
+    );
+    assert.doesNotMatch(
+        publicHeader,
+        /href=\{register\(\)\}[\s\S]*?disabled=/,
+    );
 });
 
 void test('mail doctor never prints credentials or verification URLs', () => {
