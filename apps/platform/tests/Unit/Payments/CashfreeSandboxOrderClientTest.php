@@ -72,6 +72,12 @@ final class CashfreeSandboxOrderClientTest extends TestCase
             ['kmj_test_order_001', 199900, 'INR', 'kmj_user1', 'bad', 'id', 'secret'],
             ['kmj_test_order_001', 199900, 'INR', 'kmj_user1', '9876543210', '', 'secret'],
             ['kmj_test_order_001', 199900, 'INR', 'kmj_user1', '9876543210', 'id', ''],
+            ['kmj_test_order_001', 199900, 'INR', 'kmj_user1', '9876543210', "id\r\nInjected", 'secret'],
+            ['kmj_test_order_001', 199900, 'INR', 'kmj_user1', '9876543210', 'id', "secret\r\nInjected"],
+            ['kmj_test_order_001', 199900, 'INR', 'kmj_user1', '9876543210', "id\0bad", 'secret'],
+            ['kmj_test_order_001', 199900, 'INR', 'kmj_user1', '9876543210', 'id', "secret\x7Fbad"],
+            ['kmj_test_order_001', 199900, 'INR', 'kmj_user1', '9876543210', str_repeat('i', 256), 'secret'],
+            ['kmj_test_order_001', 199900, 'INR', 'kmj_user1', '9876543210', 'id', str_repeat('s', 1025)],
         ] as $parameters) {
             try {
                 $this->client->create(...$parameters);
