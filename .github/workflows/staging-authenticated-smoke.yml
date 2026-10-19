@@ -6,6 +6,7 @@ on:
       - Staging VPS Deploy
     types:
       - completed
+  workflow_call:
   workflow_dispatch:
   push:
     branches: [staging-approved]
