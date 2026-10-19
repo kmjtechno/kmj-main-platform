@@ -130,19 +130,19 @@ status LOCAL_BACKUP_INTEGRITY PASS
 # Never connects to the production socket, network or database.
 runuser -u kmjprod -- "$pgdir/initdb" -D "$scratch/restore/pgdata" \
   -U kmj_restore_drill --auth-local=trust --auth-host=reject \
-  --no-instructions >"$scratch/restore/initdb.log" 2>&1 || fail DISPOSABLE_INITDB
+  --no-instructions >"$scratch/initdb.log" 2>&1 || fail DISPOSABLE_INITDB
 install -d -o kmjprod -g kmjprod -m 0700 "$scratch/restore/socket"
 runuser -u kmjprod -- "$pgdir/pg_ctl" -D "$scratch/restore/pgdata" \
   -l "$scratch/restore/pg-server.log" \
-  -o "-c listen_addresses='' -c unix_socket_directories='$scratch/socket' -c unix_socket_permissions=0700 -c port=55479" \
+  -o "-c listen_addresses='' -c unix_socket_directories='$scratch/restore/socket' -c unix_socket_permissions=0700 -c port=55479" \
   -w start >/dev/null 2>&1 || fail DISPOSABLE_PG_START
 started=1
-[[ -S "$scratch/socket/.s.PGSQL.55479" ]] || fail PRIVATE_SOCKET_ABSENT
+[[ -S "$scratch/restore/socket/.s.PGSQL.55479" ]] || fail PRIVATE_SOCKET_ABSENT
 runuser -u kmjprod -- "$pgdir/createdb" \
   -h "$scratch/restore/socket" -p 55479 -U kmj_restore_drill kmj_recovered >/dev/null 2>&1 || fail RESTORE_CREATE_DB
 runuser -u kmjprod -- "$pgdir/pg_restore" --exit-on-error --no-owner --no-acl \
   -h "$scratch/restore/socket" -p 55479 -U kmj_restore_drill -d kmj_recovered \
-  "$scratch/restore/database.dump" >"$scratch/restore/restore.log" 2>&1 || fail DATABASE_RESTORE_FAILED
+  "$scratch/restore/database.dump" >"$scratch/restore.log" 2>&1 || fail DATABASE_RESTORE_FAILED
 schema="$(runuser -u kmjprod -- "$pgdir/psql" -X -A -t \
   -h "$scratch/restore/socket" -p 55479 -U kmj_restore_drill -d kmj_recovered \
   -v ON_ERROR_STOP=1 -c \
