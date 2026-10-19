@@ -106,6 +106,17 @@ class FortifyServiceProvider extends ServiceProvider
         });
         /* @end-chisel-2fa */
 
+        // Separate signup limits: the Fortify login limiter does not protect POST /register.
+        // Hash network identifiers so they are never stored as plain text in cache keys.
+        RateLimiter::for('public-registration', static function (Request $request) {
+            $ipKey = hash('sha256', (string) $request->ip());
+
+            return [
+                Limit::perMinute(6)->by('public-registration-minute:'.$ipKey),
+                Limit::perHour(30)->by('public-registration-hour:'.$ipKey),
+            ];
+        });
+
         RateLimiter::for('login', function (Request $request) {
             $throttleKey = Str::transliterate(Str::lower($request->input(Fortify::username())).'|'.$request->ip());
 
