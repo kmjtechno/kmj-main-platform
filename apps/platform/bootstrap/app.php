@@ -4,6 +4,7 @@ use App\Http\Middleware\HandleAppearance;
 use App\Http\Middleware\HandleInertiaRequests;
 use App\Http\Middleware\SetPreferredLocale;
 use App\Http\Middleware\StagingDeploymentEvidence;
+use App\Http\Middleware\ThrottlePublicRegistration;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -36,7 +37,7 @@ return Application::configure(basePath: dirname(__DIR__))
             HandleInertiaRequests::class,
             AddLinkHeadersForPreloadedAssets::class,
             StagingDeploymentEvidence::class,
-            \App\Http\Middleware\ThrottlePublicRegistration::class,
+            ThrottlePublicRegistration::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
