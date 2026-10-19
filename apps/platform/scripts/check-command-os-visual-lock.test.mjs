@@ -151,6 +151,8 @@ void test('owner badge derives from authenticated user and catalog art fails clo
         /auth\.user\?\.name \|\| 'Narendra Singh Kushwah'/,
     );
     assert.match(command, /owner-product-art-unavailable/);
+    assert.match(command, /<ProductArtwork/);
+    assert.match(command, /fallbackText="Artwork pending"/);
     assert.doesNotMatch(command, /art\[p\.slug\] \|\| 'cloudos'/);
 });
 
