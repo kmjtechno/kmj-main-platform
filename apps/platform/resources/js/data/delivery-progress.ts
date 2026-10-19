@@ -10,6 +10,13 @@ export type DeliveryMilestone = {
 
 export const deliveryMilestones: DeliveryMilestone[] = [
     {
+        id: 'registration-abuse-protection-p0',
+        title: 'Public account registration abuse protection',
+        state: 'active',
+        detail: 'PR #473 implements a separate hashed-IP POST /register throttle (six per minute and 30 per hour) with a negative seven-attempt regression. Code is under review; it is NOT merged, deployed or evidence that the reported 22 accounts are bots. Cloudflare Turnstile Siteverify, consented live testing and aggregate-only signup analytics remain outstanding.',
+        evidence: 'Draft PR #473 has no production effect. Do not block or delete existing users without read-only aggregate evidence and customer-safe review. Exact-head CI and protected release approval must pass before activating this protection.',
+    },
+    {
         id: 'registration-email-delivery-p0',
         title: 'Registration email verification and password reset delivery',
         state: 'blocked',
