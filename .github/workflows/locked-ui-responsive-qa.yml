@@ -10,6 +10,8 @@ on:
       - 'apps/platform/package-lock.json'
       - '.github/workflows/locked-ui-responsive-qa.yml'
   workflow_dispatch:
+  push:
+    branches: [staging-approved]
 permissions:
   contents: read
 jobs:
