@@ -2,17 +2,15 @@
 
 **19 October 2026 evidence:** GitHub staging exact SHA readback run 39242853781 was blocked by TLS SAN mismatch on `staging.kmjtechno.com`. Cloudflare DNS for that hostname is a DNS-only A record to **103.212.136.154**. A protected staging TLS repair workflow was added in PR #485; its first action run 39243921990 failed **before connecting to any server** because old `STAGING_SSH_HOST` did not match the verified staging IP. The `STAGING_SSH_KNOWN_HOSTS` secret was also empty. Do not report TLS repaired or staging deployed.
 
-The workflow now pins the reviewed staging IP as source code; it does not use the old SSH host secret. This does **not** grant SSH trust. A trusted operator must securely verify and provision the host's real public SSH host key for this fixed endpoint.
+The workflow pins the staging host IP in source code. On 19 October 2026 the owner provided the Ed25519 **public host key** directly from an authenticated `root@KMJ-elite` console. The reviewed `known_hosts` line is committed at `infra/server/trust/kmj-elite-staging-known_hosts`; it is a public server identity, **not** a private SSH login credential.
 
-## Only remaining one-time trust dependency
+The trust check remains `StrictHostKeyChecking=yes` with exactly one source-pinned host key. We do **not** use `ssh-keyscan` or a host key obtained on first connection, do not downgrade certificate validation, and no longer require `STAGING_SSH_KNOWN_HOSTS` environment secret. The previous missing host-key-secret blocker is fixed at source level. Host key rotation must be verified from the console before modifying this file, followed by normal PR review and exact-head CI.
 
-From an **already trusted** KMJ-elite console or previously authenticated known-good SSH connection (not a first-use `ssh-keyscan`), an authorized operator can inspect `/etc/ssh/ssh_host_ed25519_key.pub` and independently verify its fingerprint. The public Ed25519 host key is *not a private SSH login key*. Create/update the GitHub **staging environment** Actions secret named `STAGING_SSH_KNOWN_HOSTS` with one validated known-hosts line for the SSH endpoint:
+The staging GitHub Environment still needs valid `STAGING_SSH_USER` and `STAGING_SSH_PRIVATE_KEY` (already configured previously). These are login credentials, never to be pasted into issues or committed. A pinned public host key does not grant login permission.
 
-    103.212.136.154 ssh-ed25519 <the independently verified server public host key>
+## Previously observed failure
 
-Never invent or copy the key from an unverified internet scan. Never put login private keys or backup-age identities into issues, chat or commit history. Existing `STAGING_SSH_USER` and `STAGING_SSH_PRIVATE_KEY` remain restricted to the authorized staging environment; verify these values are current without displaying them.
-
-[GitHub Staging Environment Settings](https://github.com/kmjtechno/kmj-main-platform/settings/environments): select the existing staging environment, then Environment secrets. No upgrade is needed for this source change.
+Staging readback Action 39242853781 failed because the certificate did not cover `staging.kmjtechno.com`. Earlier guarded repair runs failed closed first on a stale SSH host secret and then on absent `STAGING_SSH_KNOWN_HOSTS`. These are past observations only: source correction is not proof that the new release's live repair succeeded. Read the latest guarded workflow logs and externally verify normal TLS and exact SHA before declaring a production-ready stage.
 
 ## Exact runbook after trust exists
 
