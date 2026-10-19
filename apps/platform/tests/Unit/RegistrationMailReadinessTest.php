@@ -59,6 +59,60 @@ final class RegistrationMailReadinessTest extends TestCase
         }
     }
 
+    public function test_malformed_smtp_ports_and_wildcard_hosts_cannot_enable_registration(): void
+    {
+        config()->set('mail.default', 'smtp');
+        config()->set('mail.mailers.smtp', [
+            'transport' => 'smtp', 'host' => 'smtp.example.net', 'port' => 587,
+        ]);
+
+        $readiness = app(RegistrationMailReadiness::class);
+        self::assertTrue($readiness->canAttemptDelivery());
+
+        foreach (['587junk', '587.0', '1e3', ''] as $malformed) {
+            config()->set('mail.mailers.smtp.port', $malformed);
+            self::assertFalse($readiness->canAttemptDelivery());
+        }
+
+        config()->set('mail.mailers.smtp.port', '587');
+        self::assertTrue($readiness->canAttemptDelivery());
+
+        foreach (['0.0.0.0', '::', '[::]'] as $wildcard) {
+            config()->set('mail.mailers.smtp.host', $wildcard);
+            self::assertFalse($readiness->canAttemptDelivery());
+        }
+    }
+
+    public function test_ipv6_loopback_requires_a_real_listener_and_never_proves_inbox_delivery(): void
+    {
+        $errorCode = 0;
+        $errorMessage = '';
+        $listener = @stream_socket_server('tcp://[::1]:0', $errorCode, $errorMessage);
+
+        if ($listener === false) {
+            $this->markTestSkipped('IPv6 loopback is unavailable on this isolated test runner.');
+        }
+
+        $address = stream_socket_get_name($listener, false);
+        self::assertIsString($address);
+        $port = (int) preg_replace('/^.*:/', '', $address);
+
+        config()->set('mail.default', 'smtp');
+        config()->set('mail.mailers.smtp', [
+            'transport' => 'smtp', 'host' => '::1', 'port' => $port,
+        ]);
+
+        try {
+            self::assertTrue(app(RegistrationMailReadiness::class)->canAttemptDelivery());
+            config()->set('mail.mailers.smtp.host', '[::1]');
+            self::assertTrue(app(RegistrationMailReadiness::class)->canAttemptDelivery());
+        } finally {
+            fclose($listener);
+        }
+
+        self::assertFalse(app(RegistrationMailReadiness::class)->canAttemptDelivery());
+    }
+
     public function test_local_relay_must_accept_a_loopback_connection(): void
     {
         $listener = stream_socket_server('tcp://127.0.0.1:0', $errorCode, $errorMessage);
