@@ -1,0 +1,67 @@
+/* Shared presentation for guarded owner subpages. Customer dashboard is untouched. */
+.owner-module-shell {
+    min-height: 100vh;
+    background: #070c11;
+}
+
+.owner-module-shell .owner-module-body {
+    display: block;
+    grid-template-columns: none;
+    min-height: calc(100vh - 58px);
+    padding-right: 18px;
+}
+
+.owner-module-shell .owner-module-main,
+.owner-module-shell .owner-module-content {
+    width: 100%;
+    max-width: none;
+    min-width: 0;
+}
+
+.owner-module-shell .owner-module-content {
+    min-height: calc(100vh - 90px);
+    border-radius: 14px;
+    background: radial-gradient(ellipse at 42% 0%, #182438 0%, #0b1320 30%, #080d15 85%);
+    --background: #080d16;
+    --foreground: #e9effb;
+    --card: #111a29;
+    --muted-foreground: #9eacc1;
+}
+
+.owner-module-shell .owner-module-content .kmj-admin-shell {
+    min-width: 0;
+    max-width: none;
+}
+
+.owner-module-shell .owner-sidebar nav > a[aria-current='page'] {
+    border-radius: 8px;
+    background: linear-gradient(95deg, #d20a31, #951026);
+    color: white;
+    font-weight: 700;
+}
+
+.owner-module-shell .owner-sidebar > a:hover,
+.owner-module-shell .owner-search:hover,
+.owner-module-shell .owner-search:focus-visible {
+    color: #fff;
+    background: #221824;
+}
+
+@media (max-width: 700px) {
+    .owner-module-shell .owner-module-body {
+        margin-left: 0;
+        padding: 10px;
+        min-height: calc(100vh - 62px);
+    }
+
+    .owner-module-shell .owner-module-content {
+        border-radius: 10px;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .owner-module-shell * {
+        scroll-behavior: auto !important;
+        transition: none !important;
+    }
+}
