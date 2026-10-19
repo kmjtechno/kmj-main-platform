@@ -6,7 +6,8 @@ import PublicLanguageSwitch from '@/components/public-language-switch';
 import { dashboard, login, register } from '@/routes';
 
 export default function PublicSiteHeader() {
-    const { auth } = usePage().props;
+    const { auth, publicSite } = usePage().props;
+    const registrationAvailable = publicSite?.registration_available === true;
     const [open, setOpen] = useState(false);
 
     return (
@@ -82,13 +83,22 @@ export default function PublicSiteHeader() {
                             >
                                 Sign in
                             </Link>
-                            <Link
-                                href={register()}
-                                className="inline-flex h-10 items-center gap-2 rounded-lg bg-white px-4 text-sm font-black text-[#07090c] transition hover:bg-white/90"
-                            >
-                                Create account
-                                <ArrowUpRight className="h-3.5 w-3.5" />
-                            </Link>
+                            {registrationAvailable ? (
+                                <Link
+                                    href={register()}
+                                    className="inline-flex h-10 items-center gap-2 rounded-lg bg-white px-4 text-sm font-black text-[#07090c] transition hover:bg-white/90"
+                                >
+                                    Create account
+                                    <ArrowUpRight className="h-3.5 w-3.5" />
+                                </Link>
+                            ) : (
+                                <span
+                                    role="status"
+                                    className="inline-flex h-10 items-center rounded-lg border border-amber-500/20 px-4 text-xs font-semibold text-amber-200"
+                                >
+                                    Registration paused
+                                </span>
+                            )}
                         </>
                     )}
                 </div>
@@ -170,12 +180,21 @@ export default function PublicSiteHeader() {
                                     >
                                         Sign in
                                     </Link>
-                                    <Link
-                                        href={register()}
-                                        className="inline-flex h-11 items-center justify-center rounded-xl bg-white text-sm font-black text-black"
-                                    >
-                                        Create account
-                                    </Link>
+                                    {registrationAvailable ? (
+                                        <Link
+                                            href={register()}
+                                            className="inline-flex h-11 items-center justify-center rounded-xl bg-white text-sm font-black text-black"
+                                        >
+                                            Create account
+                                        </Link>
+                                    ) : (
+                                        <span
+                                            role="status"
+                                            className="inline-flex h-11 items-center justify-center rounded-xl border border-amber-500/20 text-xs font-semibold text-amber-200"
+                                        >
+                                            Registration paused
+                                        </span>
+                                    )}
                                 </div>
                             )}
                         </div>
