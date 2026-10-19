@@ -29,19 +29,10 @@ final class OwnerPaymentGatewaySettings
 
         return array_map(static function (string $provider) use ($rows, $storageReady): array {
             $row = $rows->get($provider);
-            $storedClientIdValid = $row?->encrypted_client_id !== null;
-
-            if ($provider === 'razorpay' && $storedClientIdValid) {
-                try {
-                    // Old vault rows may contain test-like IDs rejected by
-                    // the provider adapter. Never claim these keys usable.
-                    $storedClientIdValid = self::validRazorpaySandboxKey(
-                        Crypt::decryptString((string) $row->encrypted_client_id),
-                    );
-                } catch (DecryptException) {
-                    $storedClientIdValid = false;
-                }
-            }
+            // Ciphertext existing in the DB does not prove it can be
+            // decrypted or used by the sandbox provider.
+            $storedClientIdValid = self::usableStoredCredential($row?->encrypted_client_id, $provider, true);
+            $storedClientSecretValid = self::usableStoredCredential($row?->encrypted_client_secret, $provider, false);
 
             return [
                 'provider' => $provider,
@@ -51,7 +42,7 @@ final class OwnerPaymentGatewaySettings
                 'merchant_status' => $row === null ? 'not_verified' : (string) $row->merchant_status,
                 'international_requested' => $row !== null && (bool) $row->international_requested,
                 'client_id_stored' => $storedClientIdValid,
-                'client_secret_stored' => $row?->encrypted_client_secret !== null,
+                'client_secret_stored' => $storedClientSecretValid,
                 'webhook_secret_stored' => $row?->encrypted_webhook_secret !== null,
                 'last_updated' => $row?->updated_at,
                 'live_charging_enabled' => false,
@@ -174,14 +165,44 @@ final class OwnerPaymentGatewaySettings
             throw new InvalidArgumentException('SANDBOX_CREDENTIALS_NOT_READY');
         }
 
-        $id = Crypt::decryptString($record->encrypted_client_id);
-        $secret = Crypt::decryptString($record->encrypted_client_secret);
+        try {
+            $id = Crypt::decryptString($record->encrypted_client_id);
+            $secret = Crypt::decryptString($record->encrypted_client_secret);
+        } catch (DecryptException) {
+            // Never surface invalid ciphertext or decrypt internals to the
+            // owner session. A corrupt vault is unready, not a provider error.
+            throw new InvalidArgumentException('SANDBOX_CREDENTIALS_NOT_READY');
+        }
 
-        if ($id === '' || $secret === '' || ($provider === 'razorpay' && ! self::validRazorpaySandboxKey($id))) {
+        if (! self::usableCredential($id, $provider, true)
+            || ! self::usableCredential($secret, $provider, false)) {
             throw new InvalidArgumentException('SANDBOX_CREDENTIALS_NOT_READY');
         }
 
         return ['client_id' => $id, 'client_secret' => $secret];
+    }
+
+    private static function usableStoredCredential(mixed $encrypted, string $provider, bool $isClientId): bool
+    {
+        if (! is_string($encrypted) || $encrypted === '') {
+            return false;
+        }
+
+        try {
+            return self::usableCredential(Crypt::decryptString($encrypted), $provider, $isClientId);
+        } catch (DecryptException) {
+            return false;
+        }
+    }
+
+    private static function usableCredential(string $plain, string $provider, bool $isClientId): bool
+    {
+        if ($plain === '' || strlen($plain) > ($isClientId ? 255 : 1024)
+            || preg_match('/[\\x00-\\x1F\\x7F]/', $plain)) {
+            return false;
+        }
+
+        return ! $isClientId || $provider !== 'razorpay' || self::validRazorpaySandboxKey($plain);
     }
 
     private static function validRazorpaySandboxKey(mixed $key): bool

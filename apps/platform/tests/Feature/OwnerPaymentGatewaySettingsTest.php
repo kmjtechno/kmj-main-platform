@@ -6,7 +6,9 @@ namespace Tests\Feature;
 
 use App\Models\OperatorActionAudit;
 use App\Models\User;
+use App\Services\Payments\OwnerPaymentGatewaySettings;
 use App\Services\Payments\PaymentGatewayReadiness;
+use App\Services\Payments\PaymentGatewaySandboxProbe;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\Request as ProviderRequest;
 use Illuminate\Support\Facades\Crypt;
@@ -180,6 +182,73 @@ final class OwnerPaymentGatewaySettingsTest extends TestCase
             ->assertSessionHasErrors('sandbox_probe');
 
         Http::assertNothingSent();
+    }
+
+    public function test_corrupt_gateway_vault_ciphertext_never_claims_readiness_or_calls_provider(): void
+    {
+        $owner = $this->owner();
+
+        Http::preventStrayRequests();
+        Http::fake();
+
+        foreach (['cashfree', 'razorpay'] as $provider) {
+            $clientId = $provider === 'razorpay' ? 'rzp_test_ABC123' : 'cashfree_test_ABC123';
+            $this->actingAs($owner)->withSession(['auth.password_confirmed_at' => time()])
+                ->put('/operator/payments/gateways/'.$provider, [
+                    ...$this->payload(),
+                    'client_id' => $clientId,
+                    'client_secret' => 'synthetic_secret_never_live',
+                ])->assertRedirect('/operator/payments');
+
+            foreach (['encrypted_client_id', 'encrypted_client_secret'] as $damagedColumn) {
+                DB::table('payment_gateway_settings')->where('provider', $provider)->update([
+                    'encrypted_client_id' => Crypt::encryptString($clientId),
+                    'encrypted_client_secret' => Crypt::encryptString('synthetic_secret_never_live'),
+                    $damagedColumn => 'corrupt_not_decryptable',
+                ]);
+
+                $settingsIndex = $provider === 'cashfree' ? 0 : 1;
+                $readinessIndex = $provider === 'razorpay' ? 0 : 1;
+                $damagedFlag = $damagedColumn === 'encrypted_client_id'
+                    ? 'client_id_stored' : 'client_secret_stored';
+
+                $this->actingAs($owner)->withSession(['auth.password_confirmed_at' => time()])
+                    ->get('/operator/payments')
+                    ->assertOk()
+                    ->assertInertia(fn (Assert $page) => $page
+                        ->component('operator-payments')
+                        ->where('gatewaySettings.'.$settingsIndex.'.'.$damagedFlag, false)
+                        ->where('paymentReadiness.providers.'.$readinessIndex.'.sandbox_credentials_present', false)
+                        ->where('paymentReadiness.providers.'.$readinessIndex.'.status', 'credentials_required')
+                        ->where('paymentReadiness.live_charging_enabled', false))
+                    ->assertDontSee('synthetic_secret_never_live');
+
+                // Credential recovery is a service contract, distinct from
+                // the HTTP route's 3-per-10-minute security throttle. Other
+                // feature tests cover authenticated owner-only access.
+                try {
+                    app(OwnerPaymentGatewaySettings::class)
+                        ->sandboxCredentials($provider);
+                    self::fail('Corrupt gateway credentials were returned.');
+                } catch (\InvalidArgumentException $exception) {
+                    self::assertSame('SANDBOX_CREDENTIALS_NOT_READY', $exception->getMessage());
+                }
+
+                try {
+                    app(PaymentGatewaySandboxProbe::class)->run(
+                        $owner,
+                        $provider,
+                        $provider === 'cashfree' ? '9876543210' : null,
+                    );
+                    self::fail('Corrupt gateway vault reached sandbox provider.');
+                } catch (\DomainException $exception) {
+                    self::assertSame('SANDBOX_PROBE_UNVERIFIED', $exception->getMessage());
+                }
+            }
+        }
+
+        Http::assertNothingSent();
+        $this->assertDatabaseCount('operator_action_audits', 2);
     }
 
     public function test_live_mode_invalid_provider_and_live_razorpay_key_fail_closed(): void
