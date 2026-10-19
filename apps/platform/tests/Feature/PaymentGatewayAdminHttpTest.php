@@ -70,6 +70,41 @@ final class PaymentGatewayAdminHttpTest extends TestCase
             ->assertDontSee('TEST-CASHFREE-CLIENT-ID');
     }
 
+    public function test_live_or_malformed_razorpay_config_never_claims_sandbox_keys(): void
+    {
+        $owner = $this->platformOwner();
+        config()->set('payment-providers.providers.razorpay.client_secret', 'configured_secret_not_public');
+
+        foreach (['rzp_live_ABC123', 'rzp_test_bad'.chr(10).'key', 'rzp_test_ABC123 '] as $key) {
+            config()->set('payment-providers.providers.razorpay.client_id', $key);
+
+            $this->actingAs($owner)
+                ->withSession(['auth.password_confirmed_at' => time()])
+                ->get('/operator/payments')
+                ->assertOk()
+                ->assertInertia(fn (AssertableInertia $page) => $page
+                    ->component('operator-payments')
+                    ->where('paymentReadiness.providers.0.id', 'razorpay')
+                    ->where('paymentReadiness.providers.0.sandbox_credentials_present', false)
+                    ->where('paymentReadiness.providers.0.status', 'credentials_required')
+                    ->where('paymentReadiness.providers.0.live_transaction_verified', false)
+                    ->where('paymentReadiness.live_charging_enabled', false));
+        }
+
+        config()->set('payment-providers.providers.razorpay.client_id', 'rzp_test_ABC123');
+        $this->actingAs($owner)
+            ->withSession(['auth.password_confirmed_at' => time()])
+            ->get('/operator/payments')
+            ->assertOk()
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->component('operator-payments')
+                ->where('paymentReadiness.providers.0.sandbox_credentials_present', true)
+                ->where('paymentReadiness.providers.0.status', 'sandbox_validation_required')
+                ->where('paymentReadiness.providers.0.live_transaction_verified', false)
+                ->where('paymentReadiness.live_charging_enabled', false))
+            ->assertDontSee('configured_secret_not_public');
+    }
+
     private function platformOwner(): User
     {
         $user = User::factory()->create([
