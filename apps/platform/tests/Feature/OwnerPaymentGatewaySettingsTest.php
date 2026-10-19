@@ -53,7 +53,7 @@ final class OwnerPaymentGatewaySettingsTest extends TestCase
     public function test_owner_can_save_write_only_encrypted_test_keys_and_sanitized_status(): void
     {
         $owner = $this->owner();
-        $id = 'rzp_test_demo_key_12345';
+        $id = 'rzp_test_demoKey12345';
         $secret = 'sandbox_secret_example_12345';
         $webhook = 'sandbox_webhook_secret_12345';
 
@@ -134,6 +134,52 @@ final class OwnerPaymentGatewaySettingsTest extends TestCase
             'action' => 'payment_gateway.sandbox_credentials_revoked',
             'outcome' => 'revoked',
         ]);
+    }
+
+    public function test_malformed_razorpay_test_like_key_is_rejected_and_legacy_vault_row_fails_closed(): void
+    {
+        $owner = $this->owner();
+        $invalidId = 'rzp_test_bad'.chr(10).'key';
+
+        $this->actingAs($owner)->withSession(['auth.password_confirmed_at' => time()])
+            ->put('/operator/payments/gateways/razorpay', [
+                ...$this->payload(),
+                'client_id' => $invalidId,
+                'client_secret' => 'synthetic_not_a_merchant_secret',
+            ])->assertSessionHasErrors('client_id');
+
+        $this->assertDatabaseCount('payment_gateway_settings', 0);
+
+        $this->actingAs($owner)->withSession(['auth.password_confirmed_at' => time()])
+            ->put('/operator/payments/gateways/razorpay', [
+                ...$this->payload(),
+                'client_id' => 'rzp_test_ABC123',
+                'client_secret' => 'synthetic_not_a_merchant_secret',
+            ])->assertRedirect('/operator/payments');
+
+        // Simulate a legacy vault row created before strict validation.
+        // No live credentials or provider network requests are involved.
+        DB::table('payment_gateway_settings')->where('provider', 'razorpay')->update([
+            'encrypted_client_id' => Crypt::encryptString($invalidId),
+        ]);
+
+        $this->actingAs($owner)->withSession(['auth.password_confirmed_at' => time()])
+            ->get('/operator/payments')
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('operator-payments')
+                ->where('gatewaySettings.1.client_id_stored', false)
+                ->where('paymentReadiness.providers.0.sandbox_credentials_present', false)
+                ->where('paymentReadiness.live_charging_enabled', false));
+
+        Http::preventStrayRequests();
+        Http::fake();
+
+        $this->actingAs($owner)->withSession(['auth.password_confirmed_at' => time()])
+            ->post('/operator/payments/gateways/razorpay/test-connection')
+            ->assertSessionHasErrors('sandbox_probe');
+
+        Http::assertNothingSent();
     }
 
     public function test_live_mode_invalid_provider_and_live_razorpay_key_fail_closed(): void
