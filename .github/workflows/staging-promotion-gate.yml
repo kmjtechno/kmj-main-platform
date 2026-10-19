@@ -109,10 +109,25 @@ jobs:
           DB_DATABASE: ${{ github.workspace }}/apps/platform/database/database.sqlite
         run: bash "$GITHUB_WORKSPACE/ops/self-hosted-runner/verify-platform.sh"
 
+  owner_auth:
+    name: Staging owner, passkey and commerce acceptance
+    needs: verify
+    uses: ./.github/workflows/staging-authenticated-smoke.yml
+
+  locked_visual:
+    name: Locked landing and Super Admin responsive browser acceptance
+    needs: verify
+    uses: ./.github/workflows/locked-ui-responsive-qa.yml
+
+  postgres:
+    name: Disposable PostgreSQL full-feature migration and rollback
+    needs: verify
+    uses: ./.github/workflows/disposable-postgres-release-gate.yml
+
   promote:
     name: Promote verified commit to staging-approved
-    needs: verify
-    if: ${{ needs.verify.result == 'success' && github.ref == 'refs/heads/main' }}
+    needs: [verify, owner_auth, locked_visual, postgres]
+    if: ${{ needs.verify.result == 'success' && needs.owner_auth.result == 'success' && needs.locked_visual.result == 'success' && needs.postgres.result == 'success' && github.ref == 'refs/heads/main' }}
     permissions:
       contents: write
     runs-on: ubuntu-latest
