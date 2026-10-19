@@ -1,0 +1,30 @@
+name: PR492 formatting preview
+on:
+  push:
+    branches:
+      - fix/owner-subpages-unified-shell-20261019
+permissions:
+  contents: read
+jobs:
+  format-preview:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Install locked frontend tools
+        working-directory: apps/platform
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Produce exact oxfmt source without writing to repository
+        working-directory: apps/platform
+        run: |
+          set -euo pipefail
+          ./node_modules/.bin/oxfmt --write resources/js/layouts/owner-module-shell.tsx
+          echo 'KMJ_PR492_FORMAT_BEGIN'
+          base64 -w0 resources/js/layouts/owner-module-shell.tsx
+          echo
+          echo 'KMJ_PR492_FORMAT_END'
