@@ -221,10 +221,17 @@ final class OwnerPaymentGatewaySettingsTest extends TestCase
                         ->where('paymentReadiness.live_charging_enabled', false))
                     ->assertDontSee('synthetic_secret_never_live');
 
-                $this->actingAs($owner)->withSession(['auth.password_confirmed_at' => time()])
-                    ->post('/operator/payments/gateways/'.$provider.'/test-connection',
-                        $provider === 'cashfree' ? ['test_phone' => '9876543210'] : [])
-                    ->assertSessionHasErrors('sandbox_probe');
+                // The route is deliberately throttled at 3 requests / 10
+                // minutes. Probe one corrupt field per provider; all four
+                // combinations above still exercise the read-only status.
+                $probeCase = ($provider === 'cashfree' && $damagedColumn === 'encrypted_client_secret')
+                    || ($provider === 'razorpay' && $damagedColumn === 'encrypted_client_id');
+                if ($probeCase) {
+                    $this->actingAs($owner)->withSession(['auth.password_confirmed_at' => time()])
+                        ->post('/operator/payments/gateways/'.$provider.'/test-connection',
+                            $provider === 'cashfree' ? ['test_phone' => '9876543210'] : [])
+                        ->assertSessionHasErrors('sandbox_probe');
+                }
             }
         }
 
