@@ -103,4 +103,12 @@ PY
 pg_restore --list "$WORKDIR/database.dump" >/dev/null
 tar -tzf "$WORKDIR/storage.tar.gz" >/dev/null
 
-echo 'Backup verification PASS: encryption, checksums, database archive, and storage archive are readable.'
+# This verifier only checks archive readability and integrity. It never
+# restores PostgreSQL, independently downloads the remote object, or validates
+# a recovered application's behavior. Do not promote this result to a release
+# recovery signoff.
+echo 'Backup verification PASS: encrypted archive decrypts, checksums match, and archives are readable.'
+echo 'BACKUP_ARCHIVE_INTEGRITY=PASS'
+echo 'INDEPENDENT_OFFSITE_RETRIEVAL=NOT_VERIFIED'
+echo 'DATABASE_RESTORE=NOT_RUN'
+echo 'APPLICATION_RECOVERY=NOT_VERIFIED'

@@ -52,9 +52,15 @@ def check_case(name: str, encrypted: Path, env: dict[str, str],
         assert run.returncode == 0, f"{name}: {output}"
         assert "Backup verification PASS" in output, name
         assert "bounded backup archive member" in output, name
+        assert "BACKUP_ARCHIVE_INTEGRITY=PASS" in output, name
+        assert "INDEPENDENT_OFFSITE_RETRIEVAL=NOT_VERIFIED" in output, name
+        assert "DATABASE_RESTORE=NOT_RUN" in output, name
+        assert "APPLICATION_RECOVERY=NOT_VERIFIED" in output, name
+        assert "DATABASE_RESTORE=PASS" not in output, name
     else:
         assert run.returncode != 0, f"{name}: invalid archive passed verification"
         assert "Backup verification PASS" not in output, name
+        assert "BACKUP_ARCHIVE_INTEGRITY=PASS" not in output, name
     assert "AGE-SECRET-KEY-TEST" not in output, name
 
 
