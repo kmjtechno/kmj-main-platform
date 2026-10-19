@@ -5,6 +5,7 @@ on:
     paths:
       - '.github/workflows/staging-tls-repair-pinned.yml'
       - 'scripts/test_staging_tls_repair_contract.py'
+      - 'infra/server/trust/kmj-elite-staging-known_hosts'
   push:
     branches: [main]
     paths:
@@ -53,7 +54,6 @@ jobs:
           SSH_HOST: '103.212.136.154'
           SSH_USER: ${{ secrets.STAGING_SSH_USER }}
           SSH_PRIVATE_KEY: ${{ secrets.STAGING_SSH_PRIVATE_KEY }}
-          SSH_PINNED_KNOWN_HOSTS: ${{ secrets.STAGING_SSH_KNOWN_HOSTS }}
         run: |
           set -Eeuo pipefail
           umask 077
@@ -64,14 +64,21 @@ jobs:
           [[ "$SSH_USER" =~ ^[a-z_][a-z0-9_-]*$ ]] || {
             echo 'STAGING_TLS_REPAIR=BLOCKED SSH_USER_NOT_CONFIGURED'; exit 2;
           }
-          [[ -n "$SSH_PRIVATE_KEY" && -n "$SSH_PINNED_KNOWN_HOSTS" ]] || {
-            echo 'STAGING_TLS_REPAIR=BLOCKED PINNED_SSH_TRUST_OR_KEY_MISSING'; exit 2;
+          [[ -n "$SSH_PRIVATE_KEY" ]] || {
+            echo 'STAGING_TLS_REPAIR=BLOCKED LOGIN_KEY_MISSING'; exit 2;
+          }
+          trusted_hosts='infra/server/trust/kmj-elite-staging-known_hosts'
+          [[ -f "$trusted_hosts" && ! -L "$trusted_hosts" ]] || {
+            echo 'STAGING_TLS_REPAIR=BLOCKED TRUSTED_HOSTS_FILE_MISSING'; exit 2;
+          }
+          [[ "$(wc -l < "$trusted_hosts")" -eq 1 ]] || {
+            echo 'STAGING_TLS_REPAIR=BLOCKED TRUSTED_HOSTS_FILE_INVALID'; exit 2;
           }
           work="$(mktemp -d)"
           trap 'rm -rf -- "$work"' EXIT
           chmod 700 "$work"
           printf '%s\n' "$SSH_PRIVATE_KEY" | sed 's/\\n/\n/g' | tr -d '\r' >"$work/id"
-          printf '%s\n' "$SSH_PINNED_KNOWN_HOSTS" >"$work/known_hosts"
+          cp "$trusted_hosts" "$work/known_hosts"
           chmod 600 "$work/id" "$work/known_hosts"
           ssh-keygen -y -f "$work/id" >/dev/null 2>&1 || {
             echo 'STAGING_TLS_REPAIR=BLOCKED INVALID_PINNED_SSH_KEY'; exit 2;
