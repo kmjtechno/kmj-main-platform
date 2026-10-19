@@ -27,7 +27,7 @@ done
 systemctl is-active --quiet nginx || block NGINX_NOT_ACTIVE
 systemctl is-active --quiet php8.4-fpm || block PHP_FPM_NOT_ACTIVE
 df -Pk "$ROOT" | awk 'END {exit !($4 > 3145728)}' || block INSUFFICIENT_DISK
-[[ ! -e "$SCRATCH" && ! -L "$SCRATCH" ]] || block PREVIOUS_BUILD_SCRATCH_EXISTS
+[[ ! -L "$SCRATCH" ]] || block SCRATCH_SYMLINK_UNSAFE
 if [[ -e "$DEST" || -L "$DEST" ]]; then
   [[ -d "$DEST/.git" ]] || block CANDIDATE_ALREADY_EXISTS_UNVERIFIED
   existing="$(runuser -u kmjprod -- git -C "$DEST" rev-parse HEAD)" || block CANDIDATE_GIT_ERROR
@@ -40,9 +40,28 @@ if [[ -e "$DEST" || -L "$DEST" ]]; then
   exit 0
 fi
 [[ -f "$before/apps/platform/.env" ]] || block CURRENT_APP_ENV_NOT_PRESENT
-install -d -m 0750 -o kmjprod -g kmjprod "$SCRATCH"
-runuser -u kmjprod -- env HOME="$ROOT" \
-  bash -s -- "$SOURCE" "$SCRATCH" "$SHA" <<'PREPARE'
+if [[ -d "$SCRATCH" ]]; then
+  # Previous invocation passed real Composer/npm/Vite builds but ended because
+  # a clean git status was mistakenly the final (false) expression under -e.
+  # Never delete/rebuild or trust arbitrary scratch contents; fail closed.
+  [[ ! -L "$SCRATCH" && -d "$SCRATCH/repo/.git" ]] || block SCRATCH_INCOMPLETE
+  [[ "$(stat -c %U "$SCRATCH")" == kmjprod ]] || block SCRATCH_OWNER_MISMATCH
+  [[ "$(stat -c %U "$SCRATCH/repo")" == kmjprod ]] || block SCRATCH_REPO_OWNER_MISMATCH
+  [[ ! -L "$SCRATCH/repo" ]] || block SCRATCH_REPO_SYMLINK
+  [[ ! -e "$SCRATCH/repo/apps/platform/.env" ]] || block SCRATCH_HAS_RUNTIME_ENV
+  [[ "$(runuser -u kmjprod -- git -C "$SCRATCH/repo" rev-parse HEAD)" == "$SHA" ]] ||
+    block SCRATCH_SHA_MISMATCH
+  [[ -z "$(runuser -u kmjprod -- git -C "$SCRATCH/repo" status --porcelain --untracked-files=normal)" ]] ||
+    block SCRATCH_WORKTREE_DIRTY
+  for file in apps/platform/vendor/autoload.php apps/platform/public/build/manifest.json apps/platform/public/assets/kmj-codebridge-icon.png; do
+    [[ -s "$SCRATCH/repo/$file" && ! -L "$SCRATCH/repo/$file" ]] || block SCRATCH_ARTIFACT_MISSING
+  done
+  notice "KMJ_CANDIDATE=RESUMING_VERIFIED_SCRATCH"
+else
+  [[ ! -e "$SCRATCH" ]] || block SCRATCH_PATH_UNSAFE
+  install -d -m 0750 -o kmjprod -g kmjprod "$SCRATCH"
+  runuser -u kmjprod -- env HOME="$ROOT" \
+    bash -s -- "$SOURCE" "$SCRATCH" "$SHA" <<'PREPARE'
 set -Eeuo pipefail
 umask 027
 source_url="$1"; out="$2"; sha="$3"
@@ -64,14 +83,18 @@ test -s public/build/manifest.json
 test -s public/assets/kmj-codebridge-icon.png
 test -s vendor/autoload.php
 rm -f .env
-git status --porcelain --untracked-files=normal | grep -q . && {
+if [[ -n "$(git status --porcelain --untracked-files=normal)" ]]; then
   echo 'CANDIDATE_GIT_WORKTREE_DIRTY'; exit 2;
-}
+fi
+echo 'CANDIDATE_SOURCE_BUILD_PASS'
 PREPARE
+fi
+[[ -z "$(runuser -u kmjprod -- git -C "$SCRATCH/repo" status --porcelain --untracked-files=normal)" ]] ||
+  block CANDIDATE_FINAL_WORKTREE_DIRTY
 install -o kmjprod -g kmjprod -m 0600 "$before/apps/platform/.env" \
   "$SCRATCH/repo/apps/platform/.env"
-runuser -u kmjprod -- git -C "$SCRATCH/repo" status --porcelain | grep -q . && \
-  block CANDIDATE_FINAL_WORKTREE_DIRTY
+[[ -z "$(runuser -u kmjprod -- git -C "$SCRATCH/repo" status --porcelain --untracked-files=normal)" ]] ||
+  block CANDIDATE_AFTER_ENV_WORKTREE_DIRTY
 [[ "$(runuser -u kmjprod -- git -C "$SCRATCH/repo" rev-parse HEAD)" == "$SHA" ]] ||
   block CANDIDATE_FINAL_SHA_MISMATCH
 mv -T -- "$SCRATCH/repo" "$DEST"
