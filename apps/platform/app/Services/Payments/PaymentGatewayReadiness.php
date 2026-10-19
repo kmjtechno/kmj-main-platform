@@ -19,18 +19,12 @@ final class PaymentGatewayReadiness
         foreach (['razorpay', 'cashfree'] as $provider) {
             $settings = (array) config('payment-providers.providers.'.$provider, []);
             $record = $ownerSettings->get($provider);
-            // A production Razorpay key is never a sandbox credential.
-            // The test Orders API adapter accepts only rzp_test_* key IDs;
-            // keep owner-facing readiness aligned with that fail-closed gate.
-            $configClientId = $settings['client_id'] ?? null;
-            $configKeysPresent = $this->present($configClientId)
-                && $this->present($settings['client_secret'] ?? null)
-                && ($provider !== 'razorpay'
-                    || (is_string($configClientId)
-                        && (bool) preg_match('/\\Arzp_test_[A-Za-z0-9]+\\z/D', $configClientId)));
-            $keysPresent = $configKeysPresent
-                || ((bool) ($record['client_id_stored'] ?? false)
-                    && (bool) ($record['client_secret_stored'] ?? false));
+            // The owner-only sandbox order probe reads its test keys from
+            // encrypted owner vault rows, not from environment config. Even
+            // rzp_test_* config keys alone cannot make that probe executable.
+            // Vault snapshot checks decrypted-key validity fail-closed.
+            $keysPresent = (bool) ($record['client_id_stored'] ?? false)
+                && (bool) ($record['client_secret_stored'] ?? false);
             $webhookSecretStored = (bool) ($record['webhook_secret_stored'] ?? false)
                 || ($provider === 'cashfree'
                     ? $this->present($settings['client_secret'] ?? null)
