@@ -6,6 +6,7 @@ namespace App\Services\Payments;
 
 use App\Models\OperatorActionAudit;
 use App\Models\User;
+use Illuminate\Contracts\Encryption\DecryptException;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
@@ -28,6 +29,19 @@ final class OwnerPaymentGatewaySettings
 
         return array_map(static function (string $provider) use ($rows, $storageReady): array {
             $row = $rows->get($provider);
+            $storedClientIdValid = $row?->encrypted_client_id !== null;
+
+            if ($provider === 'razorpay' && $storedClientIdValid) {
+                try {
+                    // Old vault rows may contain test-like IDs rejected by
+                    // the provider adapter. Never claim these keys usable.
+                    $storedClientIdValid = self::validRazorpaySandboxKey(
+                        Crypt::decryptString((string) $row->encrypted_client_id),
+                    );
+                } catch (DecryptException) {
+                    $storedClientIdValid = false;
+                }
+            }
 
             return [
                 'provider' => $provider,
@@ -36,7 +50,7 @@ final class OwnerPaymentGatewaySettings
                 'environment' => 'sandbox',
                 'merchant_status' => $row === null ? 'not_verified' : (string) $row->merchant_status,
                 'international_requested' => $row !== null && (bool) $row->international_requested,
-                'client_id_stored' => $row?->encrypted_client_id !== null,
+                'client_id_stored' => $storedClientIdValid,
                 'client_secret_stored' => $row?->encrypted_client_secret !== null,
                 'webhook_secret_stored' => $row?->encrypted_webhook_secret !== null,
                 'last_updated' => $row?->updated_at,
@@ -71,7 +85,7 @@ final class OwnerPaymentGatewaySettings
             $plain = $input[$inputName] ?? null;
             if (is_string($plain) && $plain !== '') {
                 if ($provider === 'razorpay' && $inputName === 'client_id'
-                    && ! str_starts_with($plain, 'rzp_test_')) {
+                    && ! self::validRazorpaySandboxKey($plain)) {
                     throw new InvalidArgumentException('Razorpay test keys only.');
                 }
 
@@ -163,11 +177,16 @@ final class OwnerPaymentGatewaySettings
         $id = Crypt::decryptString($record->encrypted_client_id);
         $secret = Crypt::decryptString($record->encrypted_client_secret);
 
-        if ($id === '' || $secret === '' || ($provider === 'razorpay' && ! str_starts_with($id, 'rzp_test_'))) {
+        if ($id === '' || $secret === '' || ($provider === 'razorpay' && ! self::validRazorpaySandboxKey($id))) {
             throw new InvalidArgumentException('SANDBOX_CREDENTIALS_NOT_READY');
         }
 
         return ['client_id' => $id, 'client_secret' => $secret];
+    }
+
+    private static function validRazorpaySandboxKey(mixed $key): bool
+    {
+        return is_string($key) && (bool) preg_match('/\\Arzp_test_[A-Za-z0-9]+\\z/D', $key);
     }
 
     private function ensureProvider(string $provider): void
