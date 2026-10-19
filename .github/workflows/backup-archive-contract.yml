@@ -1,0 +1,47 @@
+name: Backup Archive Contract - Exact Head
+
+on:
+  pull_request:
+    paths:
+      - 'scripts/verify_backup_bundle.sh'
+      - 'scripts/test_restore_verification_contract.py'
+      - '.github/workflows/backup-archive-contract.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/verify_backup_bundle.sh'
+      - 'scripts/test_restore_verification_contract.py'
+      - '.github/workflows/backup-archive-contract.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  archive-contract-exact-head:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Check out exact PR head (not the synthetic merge)
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+
+      - name: Verify the checked-out SHA
+        env:
+          EXPECTED_SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          set -Eeuo pipefail
+          test "$(git rev-parse HEAD)" = "$EXPECTED_SOURCE_SHA"
+          test "$(git status --porcelain)" = ''
+          echo "ARCHIVE_CONTRACT_SOURCE_SHA=$EXPECTED_SOURCE_SHA"
+
+      - name: Prove bounded archive contract with adversarial fixtures
+        run: |
+          set -Eeuo pipefail
+          bash -n scripts/verify_backup_bundle.sh
+          python3 -B scripts/test_restore_verification_contract.py
+          echo 'ARCHIVE_CONTRACT=PASS'
+          echo 'REAL_OFFSITE_DOWNLOAD=NOT_VERIFIED'
+          echo 'PRODUCTION_DATABASE_RESTORE=NOT_VERIFIED'
