@@ -221,16 +221,26 @@ final class OwnerPaymentGatewaySettingsTest extends TestCase
                         ->where('paymentReadiness.live_charging_enabled', false))
                     ->assertDontSee('synthetic_secret_never_live');
 
-                // The route is deliberately throttled at 3 requests / 10
-                // minutes. Probe one corrupt field per provider; all four
-                // combinations above still exercise the read-only status.
-                $probeCase = ($provider === 'cashfree' && $damagedColumn === 'encrypted_client_secret')
-                    || ($provider === 'razorpay' && $damagedColumn === 'encrypted_client_id');
-                if ($probeCase) {
-                    $this->actingAs($owner)->withSession(['auth.password_confirmed_at' => time()])
-                        ->post('/operator/payments/gateways/'.$provider.'/test-connection',
-                            $provider === 'cashfree' ? ['test_phone' => '9876543210'] : [])
-                        ->assertSessionHasErrors('sandbox_probe');
+                // Credential recovery is a service contract, distinct from
+                // the HTTP route's 3-per-10-minute security throttle. Other
+                // feature tests cover authenticated owner-only access.
+                try {
+                    app(\App\Services\Payments\OwnerPaymentGatewaySettings::class)
+                        ->sandboxCredentials($provider);
+                    self::fail('Corrupt gateway credentials were returned.');
+                } catch (\InvalidArgumentException $exception) {
+                    self::assertSame('SANDBOX_CREDENTIALS_NOT_READY', $exception->getMessage());
+                }
+
+                try {
+                    app(\App\Services\Payments\PaymentGatewaySandboxProbe::class)->run(
+                        $owner,
+                        $provider,
+                        $provider === 'cashfree' ? '9876543210' : null,
+                    );
+                    self::fail('Corrupt gateway vault reached sandbox provider.');
+                } catch (\DomainException $exception) {
+                    self::assertSame('SANDBOX_PROBE_UNVERIFIED', $exception->getMessage());
                 }
             }
         }
