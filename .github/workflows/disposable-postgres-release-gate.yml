@@ -11,6 +11,7 @@ on:
       - 'packages/**'
       - 'scripts/ci/verify-postgres-staging.sh'
       - '.github/workflows/disposable-postgres-release-gate.yml'
+  workflow_call:
   workflow_dispatch:
   push:
     branches: [staging-approved]
