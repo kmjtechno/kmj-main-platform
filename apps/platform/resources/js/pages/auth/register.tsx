@@ -36,6 +36,11 @@ export default function Register({
                             >
                                 Registration is temporarily unavailable while
                                 verification email delivery is being restored.
+                                For assistance, email{' '}
+                                <TextLink href="mailto:info@kmjtechno.com">
+                                    info@kmjtechno.com
+                                </TextLink>
+                                . Never send passwords or verification codes.
                             </p>
                         )}
                         <div className="grid gap-6">
