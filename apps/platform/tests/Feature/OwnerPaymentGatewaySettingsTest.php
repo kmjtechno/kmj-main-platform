@@ -6,7 +6,9 @@ namespace Tests\Feature;
 
 use App\Models\OperatorActionAudit;
 use App\Models\User;
+use App\Services\Payments\OwnerPaymentGatewaySettings;
 use App\Services\Payments\PaymentGatewayReadiness;
+use App\Services\Payments\PaymentGatewaySandboxProbe;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\Request as ProviderRequest;
 use Illuminate\Support\Facades\Crypt;
@@ -225,7 +227,7 @@ final class OwnerPaymentGatewaySettingsTest extends TestCase
                 // the HTTP route's 3-per-10-minute security throttle. Other
                 // feature tests cover authenticated owner-only access.
                 try {
-                    app(\App\Services\Payments\OwnerPaymentGatewaySettings::class)
+                    app(OwnerPaymentGatewaySettings::class)
                         ->sandboxCredentials($provider);
                     self::fail('Corrupt gateway credentials were returned.');
                 } catch (\InvalidArgumentException $exception) {
@@ -233,7 +235,7 @@ final class OwnerPaymentGatewaySettingsTest extends TestCase
                 }
 
                 try {
-                    app(\App\Services\Payments\PaymentGatewaySandboxProbe::class)->run(
+                    app(PaymentGatewaySandboxProbe::class)->run(
                         $owner,
                         $provider,
                         $provider === 'cashfree' ? '9876543210' : null,
