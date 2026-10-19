@@ -75,7 +75,7 @@ final class PaymentGatewayAdminHttpTest extends TestCase
         $owner = $this->platformOwner();
         config()->set('payment-providers.providers.razorpay.client_secret', 'configured_secret_not_public');
 
-        foreach (['rzp_live_ABC123', "rzp_test_bad\\nkey", 'rzp_test_ABC123 '] as $key) {
+        foreach (['rzp_live_ABC123', 'rzp_test_bad'.chr(10).'key', 'rzp_test_ABC123 '] as $key) {
             config()->set('payment-providers.providers.razorpay.client_id', $key);
 
             $this->actingAs($owner)
