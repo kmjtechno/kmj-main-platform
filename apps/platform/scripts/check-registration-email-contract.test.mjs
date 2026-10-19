@@ -63,14 +63,8 @@ void test('public desktop and mobile registration CTAs respect production mail r
         (publicHeader.match(/href=\{register\(\)\}/g) ?? []).length,
         2,
     );
-    assert.equal(
-        (publicHeader.match(/Registration paused/g) ?? []).length,
-        2,
-    );
-    assert.doesNotMatch(
-        publicHeader,
-        /href=\{register\(\)\}[\s\S]*?disabled=/,
-    );
+    assert.equal((publicHeader.match(/Registration paused/g) ?? []).length, 2);
+    assert.doesNotMatch(publicHeader, /href=\{register\(\)\}[\s\S]*?disabled=/);
 });
 
 void test('mail doctor never prints credentials or verification URLs', () => {
