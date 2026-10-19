@@ -64,13 +64,14 @@ final class PaymentGatewayAdminHttpTest extends TestCase
                 ->where('paymentReadiness.live_charging_enabled', false)
                 ->has('paymentReadiness.providers', 5)
                 ->where('paymentReadiness.providers.1.id', 'cashfree')
-                ->where('paymentReadiness.providers.1.sandbox_credentials_present', true)
+                ->where('paymentReadiness.providers.1.sandbox_credentials_present', false)
+                ->where('paymentReadiness.providers.1.status', 'credentials_required')
                 ->where('paymentReadiness.providers.1.live_transaction_verified', false))
             ->assertDontSee('TOP-SECRET-CASHFREE-123')
             ->assertDontSee('TEST-CASHFREE-CLIENT-ID');
     }
 
-    public function test_live_or_malformed_razorpay_config_never_claims_sandbox_keys(): void
+    public function test_config_only_razorpay_keys_never_claim_sandbox_probe_readiness(): void
     {
         $owner = $this->platformOwner();
         config()->set('payment-providers.providers.razorpay.client_secret', 'configured_secret_not_public');
@@ -98,8 +99,8 @@ final class PaymentGatewayAdminHttpTest extends TestCase
             ->assertOk()
             ->assertInertia(fn (AssertableInertia $page) => $page
                 ->component('operator-payments')
-                ->where('paymentReadiness.providers.0.sandbox_credentials_present', true)
-                ->where('paymentReadiness.providers.0.status', 'sandbox_validation_required')
+                ->where('paymentReadiness.providers.0.sandbox_credentials_present', false)
+                ->where('paymentReadiness.providers.0.status', 'credentials_required')
                 ->where('paymentReadiness.providers.0.live_transaction_verified', false)
                 ->where('paymentReadiness.live_charging_enabled', false))
             ->assertDontSee('configured_secret_not_public');
