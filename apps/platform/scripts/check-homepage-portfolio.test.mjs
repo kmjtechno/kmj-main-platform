@@ -100,3 +100,14 @@ void test('loaded KMJ artwork keeps original geometry while missing assets fail 
     assert.match(source, /fallbackClassName="lock-product-art-unavailable"/);
     assert.doesNotMatch(image, /(?:cinema|cloudos)\.webp/);
 });
+
+void test('public Kristi guidance routes support, mobile and licensing honestly', () => {
+    assert.match(
+        source,
+        /function publicGuidanceIndex\(input: string\): number/,
+    );
+    assert.match(source, /if \(\/support\|help/);
+    assert.match(source, /if \(\/android\|ios\|mobile/);
+    assert.match(source, /setAnswer\(publicGuidanceIndex\(query\)\)/);
+    assert.doesNotMatch(source, /\/licens\|price\/i\.test\(query\)/);
+});

@@ -1,4 +1,11 @@
-import { type FormEvent } from 'react';
+import { type FormEvent, useState } from 'react';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogTitle,
+    DialogTrigger,
+} from '@/components/ui/dialog';
 import { Head, Link, router, useForm } from '@inertiajs/react';
 import OperatorCommandOs from '@/components/operator-command-os';
 import OperatorControlOverview from '@/components/operator-control-overview';
@@ -62,6 +69,78 @@ function canIssueSandboxLicense(order: RecentOrder): boolean {
         order.fulfillment_state === 'entitled' &&
         order.entitlement_id !== null &&
         order.can_manage_license
+    );
+}
+
+/**
+ * Requires a conscious owner action before sending access-granting requests.
+ * Server-side owner/passkey and fulfillment checks stay authoritative.
+ */
+function ConfirmOwnerAction({
+    orderId,
+    action,
+}: {
+    orderId: string;
+    action: 'fulfill' | 'sandbox-license';
+}) {
+    const [open, setOpen] = useState(false);
+    const grantingAccess = action === 'fulfill';
+    const label = grantingAccess
+        ? 'Issue entitlement'
+        : 'Issue sandbox license';
+    const path = `/operator/orders/${orderId}/${action}`;
+
+    return (
+        <Dialog open={open} onOpenChange={setOpen}>
+            <DialogTrigger asChild>
+                <button
+                    type="button"
+                    data-test={
+                        grantingAccess
+                            ? 'fulfill-order'
+                            : 'issue-sandbox-license'
+                    }
+                    className={
+                        grantingAccess
+                            ? 'inline-flex rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-[10px] font-bold text-red-500 transition hover:bg-red-500/15'
+                            : 'inline-flex rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-[10px] font-bold text-emerald-600 transition hover:bg-emerald-500/15 dark:text-emerald-400'
+                    }
+                >
+                    {label}
+                </button>
+            </DialogTrigger>
+            <DialogContent className="border-red-900 bg-[#0b1119] text-white">
+                <DialogTitle>Confirm {label.toLowerCase()}</DialogTitle>
+                <DialogDescription className="text-slate-300">
+                    {grantingAccess
+                        ? 'Verify organization, product and independent payment evidence before granting access. Recorded orders do not prove gateway settlement.'
+                        : 'Issues a test-only sandbox license. This is not a paid production commercial license.'}
+                </DialogDescription>
+                <p className="text-xs break-all text-slate-400">
+                    Order: {orderId}
+                </p>
+                <div className="flex flex-wrap justify-end gap-3">
+                    <button
+                        type="button"
+                        onClick={() => setOpen(false)}
+                        className="rounded-lg border border-white/30 px-4 py-2 text-xs"
+                    >
+                        Cancel
+                    </button>
+                    <button
+                        type="button"
+                        data-test="confirm-owner-commercial-action"
+                        onClick={() => {
+                            setOpen(false);
+                            router.post(path, {}, { preserveScroll: true });
+                        }}
+                        className="rounded-lg bg-red-600 px-4 py-2 text-xs font-semibold text-white"
+                    >
+                        Confirm {label.toLowerCase()}
+                    </button>
+                </div>
+            </DialogContent>
+        </Dialog>
     );
 }
 
@@ -246,37 +325,17 @@ export default function Operator({
                                                 />
                                             ) : order.fulfillment_state ===
                                               'ready' ? (
-                                                <button
-                                                    type="button"
-                                                    className="inline-flex rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-[10px] font-bold text-red-500 transition hover:bg-red-500/15"
-                                                    data-test="fulfill-order"
-                                                    onClick={() =>
-                                                        router.post(
-                                                            `/operator/orders/${order.id}/fulfill`,
-                                                            {},
-                                                            {
-                                                                preserveScroll: true,
-                                                            },
-                                                        )
-                                                    }
-                                                >
-                                                    Issue entitlement
-                                                </button>
+                                                <ConfirmOwnerAction
+                                                    orderId={order.id}
+                                                    action="fulfill"
+                                                />
                                             ) : canIssueSandboxLicense(
                                                   order,
                                               ) ? (
-                                                <button
-                                                    type="button"
-                                                    className="inline-flex rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-[10px] font-bold text-emerald-600 transition hover:bg-emerald-500/15 dark:text-emerald-400"
-                                                    data-test="issue-sandbox-license"
-                                                    onClick={() =>
-                                                        router.post(
-                                                            `/operator/orders/${order.id}/sandbox-license`,
-                                                        )
-                                                    }
-                                                >
-                                                    Issue sandbox license
-                                                </button>
+                                                <ConfirmOwnerAction
+                                                    orderId={order.id}
+                                                    action="sandbox-license"
+                                                />
                                             ) : (
                                                 <span className="text-muted-foreground text-[10px] font-semibold">
                                                     No action
