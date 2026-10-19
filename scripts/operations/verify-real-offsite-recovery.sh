@@ -9,7 +9,10 @@ block() { status "$1" BLOCKED; exit 2; }
 [[ "$(id -u)" != 0 ]] || block UNPRIVILEGED_OPERATOR
 [[ "${KMJ_ACK_ISOLATED_RECOVERY:-}" == YES ]] || block OPERATOR_CONSENT
 [[ -n "${BACKUP_REMOTE_OBJECT:-}" ]] || block REMOTE_OBJECT_SELECTION
-[[ "$BACKUP_REMOTE_OBJECT" != *[[ -n "${BACKUP_AGE_IDENTITY:-}" ]] || block AGE_IDENTITY
+[[ -n "${BACKUP_AGE_IDENTITY:-}" ]] || block AGE_IDENTITY
+remote_name="${BACKUP_REMOTE_OBJECT%%:*}"
+remote_path="${BACKUP_REMOTE_OBJECT#*:}"
+[[ "$BACKUP_REMOTE_OBJECT" == *:* && "$remote_name" =~ ^[A-Za-z][A-Za-z0-9_-]*$ && -n "$remote_path" ]] || block REMOTE_OBJECT_SELECTION
 [[ -f "$BACKUP_AGE_IDENTITY" && ! -L "$BACKUP_AGE_IDENTITY" ]] || block AGE_IDENTITY
 case "$(hostname -s | tr '[:upper:]' '[:lower:]')" in
   kmj-elite|kmj-main-prod-01) block INDEPENDENT_HOST_REQUIRED ;;
