@@ -48,6 +48,37 @@ final class SandboxLicenseIssuerIdentityContractTest extends TestCase
         );
     }
 
+    #[DataProvider('oversizedIdentityProvider')]
+    public function test_issuer_rejects_identity_larger_than_validation_contract(
+        string $organizationId,
+        string $productId,
+        string $entitlementId,
+    ): void {
+        $issuer = new SandboxLicenseIssuer(str_repeat('s', 32));
+
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('Sandbox license identity values exceed maximum length.');
+
+        $issuer->issue(
+            $organizationId,
+            $productId,
+            $entitlementId,
+            new DateTimeImmutable('+5 minutes'),
+        );
+    }
+
+    /**
+     * @return array<string, array{string, string, string}>
+     */
+    public static function oversizedIdentityProvider(): array
+    {
+        return [
+            'long organization' => [str_repeat('a', 256), 'product', 'entitlement'],
+            'long product' => ['organization', str_repeat('p', 256), 'entitlement'],
+            'long entitlement' => ['organization', 'product', str_repeat('e', 256)],
+        ];
+    }
+
     /**
      * @return array<string, array{string, string, string}>
      */
