@@ -185,8 +185,8 @@ export const deliveryMilestones: DeliveryMilestone[] = [
         id: 'license-claim-contract',
         title: 'License tenant claim hardening',
         state: 'verified',
-        detail: 'Complete tenant/product/entitlement identity and coherent issue/expiry ordering are required before sandbox validation succeeds',
-        evidence: 'PR #99',
+        detail: 'Complete tenant/product/entitlement identity and coherent issue/expiry ordering are required before sandbox validation succeeds. PR #471 is separately under review for bounded canonical base64url parsing and issuer length parity; this is not a production license activation.',
+        evidence: 'PR #99; PR #471 pending exact-head CI and review',
     },
     {
         id: 'license-time-contract',
