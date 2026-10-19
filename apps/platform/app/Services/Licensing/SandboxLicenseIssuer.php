@@ -41,6 +41,14 @@ final class SandboxLicenseIssuer
             throw new InvalidArgumentException('Sandbox license identity values must not contain surrounding whitespace.');
         }
 
+        // Keep tokens emitted by the sandbox issuer within the validator's
+        // bounded wire contract; account/product identifiers are never blobs.
+        if (strlen($organizationId) > 255
+            || strlen($productId) > 255
+            || strlen($entitlementId) > 255) {
+            throw new InvalidArgumentException('Sandbox license identity values exceed maximum length.');
+        }
+
         $now = new DateTimeImmutable('now');
         $issuedAt = $now->getTimestamp();
         $expiresAtTimestamp = $expiresAt->getTimestamp();
