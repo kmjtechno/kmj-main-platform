@@ -1,0 +1,35 @@
+name: Local Production Recovery Contract
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/local-production-recovery-contract.yml'
+      - 'scripts/operations/prepare-main-platform-local-recovery-kmj-elite.sh'
+      - 'scripts/test_main_platform_local_recovery_contract.py'
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/local-production-recovery-contract.yml'
+      - 'scripts/operations/prepare-main-platform-local-recovery-kmj-elite.sh'
+      - 'scripts/test_main_platform_local_recovery_contract.py'
+
+permissions:
+  contents: read
+
+jobs:
+  contract:
+    name: True local backup witness and no-deploy contract
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - name: Verify exact-head recovery script contract
+        run: |
+          set -euo pipefail
+          bash -n scripts/operations/prepare-main-platform-local-recovery-kmj-elite.sh
+          python3 -B scripts/test_main_platform_local_recovery_contract.py
+          echo 'RECOVERY_CONTRACT=PASS'
+          echo 'PRODUCTION_ACTIVATION=NOT_ATTEMPTED'
