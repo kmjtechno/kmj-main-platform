@@ -4,9 +4,9 @@ namespace Tests\Feature\Auth;
 
 use Illuminate\Foundation\Http\Middleware\PreventRequestForgery;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Inertia\Testing\AssertableInertia as Assert;
 use KMJ\MainPlatform\Organizations\Models\OrganizationMembership;
 use Laravel\Fortify\Features;
-use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
 
 class RegistrationTest extends TestCase
