@@ -29,7 +29,7 @@ export const deliveryMilestones: DeliveryMilestone[] = [
         id: 'codebridge-control-center-release-candidate',
         title: 'CodeBridge customer Control Center release candidate',
         state: 'active',
-        detail: 'Tenant-scoped device management, password-confirmed disconnect, accessible dashboard workspaces, OAuth state handling and official CodeBridge branding have passed integrated source and real-browser testing. Production deployment, live agent presence and connected ChatGPT app metadata acceptance remain pending.',
+        detail: 'Tenant-scoped device management, password-confirmed disconnect, accessible dashboard workspaces, OAuth state handling and official CodeBridge branding have passed integrated source and real-browser testing. Production deployment, live agent presence and connected ChatGPT app metadata acceptance remain pending. PR #472 is under review to add fail-closed OAuth consent/PKCE/implicit-login regression checks to the existing frontend CI; static checks are not authenticated production OAuth evidence.',
         evidence:
             'Consolidated Main Platform RC PR #398 head 88182bb149f3001dcdedbd197ed7437d8acc14c6 is based on 81 integration commits across 42 changed files. Prior Claude PR #387 exact-head GitHub Actions Verify Foundation, Platform Runtime, Main Platform CI, License Contract and real-browser UI smoke all passed, as did CircleCI PHP tests, Pint, PHPStan and CodeBridge device-control. Main-target PR #398 found a missing delivery-progress synchronization record; this entry provides accurate ACTIVE status, not a deployed/verified claim. Final PR-head CI, independent auth/tenant review, staging deployment, customer-domain SHA and authenticated live acceptance are still required.',
     },
