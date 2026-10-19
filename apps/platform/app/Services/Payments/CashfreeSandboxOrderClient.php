@@ -31,7 +31,12 @@ final class CashfreeSandboxOrderClient
             || $currency !== 'INR'
             || ! preg_match('/\\A[A-Za-z0-9_-]{1,40}\\z/D', $customerId)
             || ! preg_match('/\\A[6-9][0-9]{9}\\z/D', $customerPhone)
-            || $clientId === '' || $clientSecret === '') {
+            || $clientId === '' || strlen($clientId) > 255
+            || $clientSecret === '' || strlen($clientSecret) > 1024
+            // These values become HTTP headers. Refuse C0/DEL bytes before
+            // invoking the provider client, regardless of transport behavior.
+            || preg_match('/[\x00-\x1F\x7F]/', $clientId)
+            || preg_match('/[\x00-\x1F\x7F]/', $clientSecret)) {
             throw new DomainException('CASHFREE_SANDBOX_INVALID_ORDER');
         }
 
