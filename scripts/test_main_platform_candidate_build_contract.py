@@ -17,6 +17,14 @@ required=[
   "PRODUCTION_ACTIVATION=NOT_ATTEMPTED",
   "PRODUCTION_SWITCH=NOT_ATTEMPTED",
   "BACKUP_AND_APPROVAL=STILL_REQUIRED",
+  "RESUMING_VERIFIED_SCRATCH",
+  "SCRATCH_OWNER_MISMATCH",
+  "SCRATCH_SHA_MISMATCH",
+  "SCRATCH_HAS_RUNTIME_ENV",
+  "SCRATCH_WORKTREE_DIRTY",
+  "SCRATCH_ARTIFACT_MISSING",
+  "CANDIDATE_SOURCE_BUILD_PASS",
+  "CANDIDATE_AFTER_ENV_WORKTREE_DIRTY",
 ]
 for p in required:
   assert p in source, f"candidate builder missing required protection: {p}"
@@ -27,4 +35,7 @@ for forbidden in (
   "pre-deploy-8070dad72c55.json",
 ):
   assert forbidden not in source, f"unsafe production action: {forbidden}"
-print("Candidate build non-deployment contract PASS")
+assert "git status --porcelain --untracked-files=normal | grep -q ." not in source, "clean worktree must not be treated as shell failure"
+assert "if [[ -n \"$(git status --porcelain --untracked-files=normal)\" ]]; then" in source, "clean-status guard regression"
+assert source.index("SCRATCH_WORKTREE_DIRTY") < source.index("RESUMING_VERIFIED_SCRATCH"), "reused scratch must be verified first"
+print("Candidate build non-deployment and resume contract PASS")
