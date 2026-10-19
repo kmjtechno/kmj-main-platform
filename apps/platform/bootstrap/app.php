@@ -36,6 +36,7 @@ return Application::configure(basePath: dirname(__DIR__))
             HandleInertiaRequests::class,
             AddLinkHeadersForPreloadedAssets::class,
             StagingDeploymentEvidence::class,
+            \App\Http\Middleware\ThrottlePublicRegistration::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
