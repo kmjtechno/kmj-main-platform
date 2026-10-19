@@ -164,3 +164,13 @@ void test('browser QA decodes off-screen lazy carousel images before checking fa
     assert.match(browser, /decoded\[index\]\?\.status === 'rejected'/);
     assert.match(browser, /image\.naturalWidth === 0/);
 });
+
+void test('owner commercial actions require dialog confirmation before any POST', () => {
+    assert.match(operator, /function ConfirmOwnerAction\(/);
+    assert.match(operator, /<DialogTrigger asChild>/);
+    assert.match(operator, /data-test="confirm-owner-commercial-action"/);
+    assert.match(operator, /action="fulfill"/);
+    assert.match(operator, /action="sandbox-license"/);
+    assert.match(operator, /router\.post\(path, \{\}, \{ preserveScroll: true \}\)/);
+    assert.doesNotMatch(operator, /onClick=\{\(\) =>\s*router\.post\(/);
+});
