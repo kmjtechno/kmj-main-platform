@@ -10,6 +10,14 @@ export type DeliveryMilestone = {
 
 export const deliveryMilestones: DeliveryMilestone[] = [
     {
+        id: 'registration-abuse-protection-p0',
+        title: 'Public account registration abuse protection',
+        state: 'active',
+        detail: 'A code-reviewed candidate applies independent hashed-IP quotas of 6 POST /register attempts per minute and 30 per hour, with 429, route-scope and hourly-negative tests. This is not deployed or proof that any existing account is fraudulent.',
+        evidence:
+            'Registration throttle integration is under exact-head review; owner-approved deployment, abuse-metric review and customer-safe rate policy acceptance remain pending.',
+    },
+    {
         id: 'registration-email-delivery-p0',
         title: 'Registration email verification and password reset delivery',
         state: 'blocked',
