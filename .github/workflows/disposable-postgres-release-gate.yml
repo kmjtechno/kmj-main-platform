@@ -18,7 +18,7 @@ on:
 permissions:
   contents: read
 concurrency:
-  group: disposable-pg-${{ github.ref }}
+  group: disposable-pg-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 jobs:
   migration-rollback:
