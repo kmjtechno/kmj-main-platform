@@ -73,7 +73,10 @@ function audit(source, authority) {
 
     for (const [must, label] of [
         ['$this->resolveClient($clientId)', 'CLIENT_NOT_VALIDATED'],
-        ['OAuthCore::redirectMatches($registered, $redirect)', 'REDIRECT_NOT_VALIDATED'],
+        [
+            'OAuthCore::redirectMatches($registered, $redirect)',
+            'REDIRECT_NOT_VALIDATED',
+        ],
         [
             "OAuthCore::isValidChallenge($query['code_challenge'])",
             'CHALLENGE_NOT_VALIDATED',
@@ -94,11 +97,11 @@ function audit(source, authority) {
     return [...new Set(issues)];
 }
 
-void test('current Main Platform OAuth source has guarded authorization contract', () => {
+void test('Main Platform OAuth consent is guarded', () => {
     assert.deepEqual(audit(routes, server), []);
 });
 
-void test('implicit owner login and super-admin client injection are rejected', () => {
+void test('silent owner login and admin client injection fail', () => {
     for (const malicious of [
         'auth()->login($admin);',
         'Auth::loginUsingId(1);',
@@ -119,7 +122,7 @@ void test('wildcard or duplicate OAuth handlers cannot pass the guard', () => {
     }
 });
 
-void test('removing consent, session or identity binding fails the guard', () => {
+void test('missing consent or session binding fails the guard', () => {
     for (const required of [
         "Route::middleware(['auth', 'verified'])->group",
         '$server->validateAuthorization($request->query())',
@@ -127,7 +130,10 @@ void test('removing consent, session or identity binding fails the guard', () =>
         "$pending['consenting_user_id']",
         '$server->approve($pending,',
     ]) {
-        assert.notDeepEqual(audit(routes.replace(required, 'REMOVED_GUARD'), server), []);
+        assert.notDeepEqual(
+            audit(routes.replace(required, 'REMOVED_GUARD'), server),
+            [],
+        );
     }
 });
 
@@ -138,11 +144,17 @@ void test('OAuth server cannot omit PKCE/client/redirect validation', () => {
         "OAuthCore::isValidChallenge($query['code_challenge'])",
         'OAuthCore::verifyPkce(',
     ]) {
-        assert.notDeepEqual(audit(routes, server.replace(required, 'REMOVED_GUARD')), []);
+        assert.notDeepEqual(
+            audit(routes, server.replace(required, 'REMOVED_GUARD')),
+            [],
+        );
     }
 });
 
 void test('a duplicate permissive authorization validator is rejected', () => {
-    const injected = server + '\npublic function validateAuthorization(array $query) { return []; }\n';
+    const injected = [
+        server,
+        'public function validateAuthorization(array $query) { return []; }',
+    ].join('\n');
     assert.ok(audit(routes, injected).includes('AUTH_VALIDATOR_COUNT'));
 });
