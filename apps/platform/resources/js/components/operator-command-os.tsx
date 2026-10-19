@@ -35,6 +35,7 @@ import {
     DialogTitle,
 } from '@/components/ui/dialog';
 import LockedBrand from '@/components/locked-brand';
+import ProductArtwork from '@/components/product-artwork';
 import KristiOwnerAssistant from '@/components/kristi-owner-assistant';
 import '../../css/owner-lock.css';
 
@@ -465,32 +466,18 @@ export default function OperatorCommandOs({
                                             .replaceAll('-', ' ')}
                                     </p>
                                     <Link href="/operator/products">
-                                        {art[p.slug] ? (
-                                            <img
-                                                src={
-                                                    '/assets/locked/' +
-                                                    art[p.slug] +
-                                                    '.webp'
-                                                }
-                                                alt={
-                                                    p.name + ' product artwork'
-                                                }
-                                                loading="lazy"
-                                                width="480"
-                                                height="270"
-                                            />
-                                        ) : (
-                                            <div
-                                                className="owner-product-art-unavailable"
-                                                role="img"
-                                                aria-label={
-                                                    p.name +
-                                                    ' artwork not available'
-                                                }
-                                            >
-                                                Artwork pending
-                                            </div>
-                                        )}
+                                        <ProductArtwork
+                                            src={
+                                                art[p.slug]
+                                                    ? '/assets/locked/' +
+                                                      art[p.slug] +
+                                                      '.webp'
+                                                    : null
+                                            }
+                                            name={p.name}
+                                            fallbackClassName="owner-product-art-unavailable"
+                                            fallbackText="Artwork pending"
+                                        />
                                     </Link>
                                     <div className="owner-product-state">
                                         <span>

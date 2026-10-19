@@ -24,6 +24,7 @@ import {
     ChevronRight,
 } from 'lucide-react';
 import LockedBrand from '@/components/locked-brand';
+import ProductArtwork from '@/components/product-artwork';
 import PublicSeo from '@/components/public-seo';
 import '../../css/locked-landing.css';
 
@@ -510,34 +511,18 @@ export default function Welcome({
                             {ecosystemProducts.map((p) => (
                                 <article className="lock-product" key={p.slug}>
                                     <Link href={'/products/' + p.slug}>
-                                        {artwork[p.slug] || p.image_path ? (
-                                            <img
-                                                src={
-                                                    artwork[p.slug]
-                                                        ? '/assets/locked/' +
-                                                          artwork[p.slug] +
-                                                          '.webp'
-                                                        : (p.image_path ?? '')
-                                                }
-                                                alt={
-                                                    p.name + ' product artwork'
-                                                }
-                                                loading="lazy"
-                                                width="480"
-                                                height="270"
-                                            />
-                                        ) : (
-                                            <span
-                                                className="lock-product-art-unavailable"
-                                                role="img"
-                                                aria-label={
-                                                    p.name +
-                                                    ' artwork not available'
-                                                }
-                                            >
-                                                Artwork coming soon
-                                            </span>
-                                        )}
+                                        <ProductArtwork
+                                            src={
+                                                artwork[p.slug]
+                                                    ? '/assets/locked/' +
+                                                      artwork[p.slug] +
+                                                      '.webp'
+                                                    : p.image_path
+                                            }
+                                            name={p.name}
+                                            fallbackClassName="lock-product-art-unavailable"
+                                            fallbackText="Artwork coming soon"
+                                        />
                                         <span className="lock-product-category">
                                             {p.eyebrow || p.lifecycle_label}
                                         </span>
