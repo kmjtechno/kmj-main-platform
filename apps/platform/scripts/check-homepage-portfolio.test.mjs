@@ -102,7 +102,10 @@ void test('loaded KMJ artwork keeps original geometry while missing assets fail 
 });
 
 void test('public Kristi guidance routes support, mobile and licensing honestly', () => {
-    assert.match(source, /function publicGuidanceIndex\(input: string\): number/);
+    assert.match(
+        source,
+        /function publicGuidanceIndex\(input: string\): number/,
+    );
     assert.match(source, /if \(\/support\|help/);
     assert.match(source, /if \(\/android\|ios\|mobile/);
     assert.match(source, /setAnswer\(publicGuidanceIndex\(query\)\)/);
