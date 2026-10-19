@@ -6,6 +6,7 @@ workflow = W.read_text(encoding="utf-8")
 guard = S.read_text(encoding="utf-8")
 required_workflow = (
     "STAGING_SSH_KNOWN_HOSTS",
+    "SSH_HOST: '103.212.136.154'",
     "StrictHostKeyChecking=yes",
     "UserKnownHostsFile=",
     "HOST_KEY_NOT_PINNED",

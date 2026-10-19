@@ -49,7 +49,8 @@ jobs:
       - name: Verify pinned SSH connection and execute staging-only repair
         shell: bash
         env:
-          SSH_HOST: ${{ secrets.STAGING_SSH_HOST }}
+          # Fixed from reviewed Cloudflare staging A record; never reuse stale old-server secret.
+          SSH_HOST: '103.212.136.154'
           SSH_USER: ${{ secrets.STAGING_SSH_USER }}
           SSH_PRIVATE_KEY: ${{ secrets.STAGING_SSH_PRIVATE_KEY }}
           SSH_PINNED_KNOWN_HOSTS: ${{ secrets.STAGING_SSH_KNOWN_HOSTS }}
