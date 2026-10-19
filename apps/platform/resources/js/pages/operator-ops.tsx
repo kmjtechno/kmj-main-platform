@@ -285,13 +285,25 @@ export default function OperatorOps({
     };
 
     useEffect(() => {
-        const timer = window.setInterval(() => {
+        // Owner telemetry does not need to poll when this browser tab is
+        // hidden. This reduces idle VPS load without stopping background jobs.
+        const refreshVisible = () => {
+            if (document.visibilityState !== 'visible') return;
+
             router.reload({
                 only: ['snapshot', 'readiness', 'outbox', 'recentActions'],
             });
-        }, 15_000);
+        };
+        const resumeWhenVisible = () => {
+            if (document.visibilityState === 'visible') refreshVisible();
+        };
+        const timer = window.setInterval(refreshVisible, 15_000);
+        document.addEventListener('visibilitychange', resumeWhenVisible);
 
-        return () => window.clearInterval(timer);
+        return () => {
+            window.clearInterval(timer);
+            document.removeEventListener('visibilitychange', resumeWhenVisible);
+        };
     }, []);
 
     const restartQueue = () => {
