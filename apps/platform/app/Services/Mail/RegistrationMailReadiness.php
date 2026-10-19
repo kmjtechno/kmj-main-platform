@@ -112,26 +112,35 @@ final class RegistrationMailReadiness
                 return false;
             }
 
-            $port = (int) ($mailer['port'] ?? 0);
+            // Casting malformed ports such as "587junk" to 587 could falsely
+            // enable registration even though the transport cannot connect.
+            $port = filter_var($mailer['port'] ?? null, FILTER_VALIDATE_INT);
 
-            if ($port < 1 || $port > 65535) {
+            if ($port === false || $port < 1 || $port > 65535) {
                 return false;
             }
 
-            // A configured local relay is not usable if the loopback listener
-            // is absent. Probe only localhost, never arbitrary remote hosts.
-            // This remains an attempt-readiness check, NOT inbox delivery proof.
-            if (in_array(strtolower($host), ['127.0.0.1', 'localhost'], true)) {
+            $normalizedHost = strtolower($host);
+            if (in_array($normalizedHost, ['0.0.0.0', '::', '[::]'], true)) {
+                return false; // Wildcard bind addresses are not SMTP peers.
+            }
+
+            // Every supported loopback spelling must confirm a listener;
+            // otherwise IPv6 localhost is incorrectly treated as remote SMTP.
+            // Do not probe arbitrary remote hosts in this readiness check.
+            $isIpv6Loopback = in_array($normalizedHost, ['::1', '[::1]'], true);
+            $isIpv4Loopback = in_array($normalizedHost, ['127.0.0.1', 'localhost'], true);
+
+            if ($isIpv4Loopback || $isIpv6Loopback) {
                 if ($port === 2525) {
                     return false; // Laravel's example/development default.
                 }
 
-                // Initialize socket error parameters explicitly so the
-                // readiness probe is compatible with strict static analysis.
                 $errorCode = 0;
                 $errorMessage = '';
+                $target = $isIpv6Loopback ? '[::1]' : '127.0.0.1';
                 $connection = @stream_socket_client(
-                    sprintf('tcp://127.0.0.1:%d', $port),
+                    sprintf('tcp://%s:%d', $target, $port),
                     $errorCode,
                     $errorMessage,
                     0.2,
