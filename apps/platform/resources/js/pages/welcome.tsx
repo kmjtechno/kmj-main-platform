@@ -185,6 +185,16 @@ function SectionHeading({
         </div>
     );
 }
+/** Read-only deterministic guidance: no live AI or commerce claims. */
+function publicGuidanceIndex(input: string): number {
+    const query = input.trim().toLowerCase();
+    if (/support|help|problem|issue|error|troubleshoot|refund/.test(query)) return 3;
+    if (/android|ios|mobile|smartphone/.test(query)) return 2;
+    if (/contact|quote|consult|project inquiry|enterprise inquiry/.test(query)) return 4;
+    if (/software|website|desktop|cloud|automation|development/.test(query)) return 1;
+    // Pricing and licensing requests point to factual catalog information.
+    return 0;
+}
 function PublicKristi() {
     const [open, setOpen] = useState(true);
     const [answer, setAnswer] = useState<number | null>(null);
@@ -238,13 +248,7 @@ function PublicKristi() {
                         <form
                             onSubmit={(e) => {
                                 e.preventDefault();
-                                setAnswer(
-                                    /licens|price/i.test(query)
-                                        ? 1
-                                        : /support|help/i.test(query)
-                                          ? 4
-                                          : 0,
-                                );
+                                setAnswer(publicGuidanceIndex(query));
                                 setQuery('');
                             }}
                         >
