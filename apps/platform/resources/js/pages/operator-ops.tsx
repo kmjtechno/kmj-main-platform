@@ -536,7 +536,9 @@ export default function OperatorOps({
                     <p className="text-muted-foreground mt-1 text-xs leading-5">
                         A marker is written only after encrypted remote upload
                         succeeds. Missing markers are shown as unknown/missing,
-                        never assumed healthy.
+                        never assumed healthy. Upload freshness does not prove
+                        independent offsite retrieval, PostgreSQL restore, or
+                        recovered application acceptance.
                     </p>
                     <div className="mt-5 grid gap-3 md:grid-cols-3">
                         {(['daily', 'weekly', 'monthly'] as const).map(
