@@ -7,10 +7,10 @@ status() { printf '%s=%s\n' "$1" "$2"; }
 block() { status "$1" BLOCKED; exit 2; }
 
 [[ "$(id -u)" != 0 ]] || block UNPRIVILEGED_OPERATOR
-[[ "\${KMJ_ACK_ISOLATED_RECOVERY:-}" == YES ]] || block OPERATOR_CONSENT
-[[ -n "\${BACKUP_REMOTE_OBJECT:-}" ]] || block REMOTE_OBJECT_SELECTION
+[[ "${KMJ_ACK_ISOLATED_RECOVERY:-}" == YES ]] || block OPERATOR_CONSENT
+[[ -n "${BACKUP_REMOTE_OBJECT:-}" ]] || block REMOTE_OBJECT_SELECTION
 [[ "$BACKUP_REMOTE_OBJECT" != *$'\n'* ]] || block REMOTE_OBJECT_SELECTION
-[[ -n "\${BACKUP_AGE_IDENTITY:-}" ]] || block AGE_IDENTITY
+[[ -n "${BACKUP_AGE_IDENTITY:-}" ]] || block AGE_IDENTITY
 [[ -f "$BACKUP_AGE_IDENTITY" && ! -L "$BACKUP_AGE_IDENTITY" ]] || block AGE_IDENTITY
 case "$(hostname -s | tr '[:upper:]' '[:lower:]')" in
   kmj-elite|kmj-main-prod-01) block INDEPENDENT_HOST_REQUIRED ;;
