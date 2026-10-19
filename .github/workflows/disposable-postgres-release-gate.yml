@@ -12,6 +12,8 @@ on:
       - 'scripts/ci/verify-postgres-staging.sh'
       - '.github/workflows/disposable-postgres-release-gate.yml'
   workflow_dispatch:
+  push:
+    branches: [staging-approved]
 permissions:
   contents: read
 concurrency:
@@ -26,6 +28,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           persist-credentials: false
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
       - name: Set up PHP 8.4 with PostgreSQL driver
         uses: shivammathur/setup-php@87d00bde2555f25eb54fedf940384e99cbdc55ef
         with:
@@ -50,13 +53,26 @@ jobs:
         run: |
           set -euo pipefail
           composer install --no-interaction --prefer-dist --no-progress --optimize-autoloader
-      - name: Fail closed unless CI is running as an unprivileged user
+      - name: Fail closed unless CI is unprivileged and checked out at exact source SHA
+        env:
+          EXPECTED_SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
         run: |
           set -euo pipefail
           test "$(id -u)" -ne 0
-          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
-          git status --porcelain
+          [[ "$EXPECTED_SOURCE_SHA" =~ ^[a-f0-9]{40}$ ]]
+          test "$(git rev-parse HEAD)" = "$EXPECTED_SOURCE_SHA"
+          test -z "$(git status --porcelain)"
+          echo "DISPOSABLE_PG_SOURCE_SHA=$EXPECTED_SOURCE_SHA"
       - name: Test all Feature cases on isolated PostgreSQL and roll back
         env:
           KMJ_PG_FULL_FEATURE_SUITE: '1'
-        run: bash scripts/ci/verify-postgres-staging.sh "$GITHUB_SHA"
+          EXPECTED_SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$EXPECTED_SOURCE_SHA"
+          # GitHub sets GITHUB_SHA to synthetic PR merge; the exact source is
+          # validated above and passed explicitly. Unset only for the script's
+          # existing synthetic-merge guard, never for source verification.
+          env -u GITHUB_SHA bash scripts/ci/verify-postgres-staging.sh "$EXPECTED_SOURCE_SHA"
+          echo "DISPOSABLE_PG_RESULT=PASS SOURCE_SHA=$EXPECTED_SOURCE_SHA"
+          echo 'PRODUCTION_POSTGRES_RESTORE=NOT_VERIFIED'
