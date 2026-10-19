@@ -21,7 +21,12 @@
 .owner-module-shell .owner-module-content {
     min-height: calc(100vh - 90px);
     border-radius: 14px;
-    background: radial-gradient(ellipse at 42% 0%, #182438 0%, #0b1320 30%, #080d15 85%);
+    background: radial-gradient(
+        ellipse at 42% 0%,
+        #182438 0%,
+        #0b1320 30%,
+        #080d15 85%
+    );
     --background: #080d16;
     --foreground: #e9effb;
     --card: #111a29;
