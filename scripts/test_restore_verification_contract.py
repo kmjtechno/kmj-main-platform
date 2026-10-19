@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import gzip
 import io
 import os
 import stat
@@ -147,7 +148,42 @@ def main() -> None:
         make_bundle(payload, inner_link)
         check_case("storage symlink", inner_link, env, False)
 
-    print("Restore verification contract test PASS (1 valid, 5 unsafe rejected)")
+        # Duplicated entries can overwrite each other during a later restore.
+        # The backup checksum still matches: the verifier must catch this
+        # based on the inner archive's own entry list.
+        with tarfile.open(storage, "w:gz") as archive:
+            for _ in range(2):
+                data = b"duplicated-storage-entry"
+                item = tarfile.TarInfo("storage/app/proof.txt")
+                item.size = len(data)
+                archive.addfile(item, io.BytesIO(data))
+        with (payload / "SHA256SUMS").open("w", encoding="utf-8") as out:
+            subprocess.run(
+                ["sha256sum", "database.dump", "storage.tar.gz", "metadata.txt"],
+                cwd=payload, text=True, stdout=out, check=True,
+            )
+        inner_duplicate = tmp / "duplicate-storage.tar.gz.age"
+        make_bundle(payload, inner_duplicate)
+        check_case("duplicate storage entries", inner_duplicate, env, False)
+
+        # Build a valid first tar header declaring >256GiB of logical data
+        # without allocating that much data. The verifier must reject this
+        # *before* following the header's enormous next-entry offset.
+        oversized = tarfile.TarInfo("storage/app/bomb.bin")
+        oversized.size = 256 * 1024 * 1024 * 1024 + 1
+        with gzip.open(storage, "wb") as out:
+            out.write(oversized.tobuf())
+            out.write(bytes(1024))
+        with (payload / "SHA256SUMS").open("w", encoding="utf-8") as out:
+            subprocess.run(
+                ["sha256sum", "database.dump", "storage.tar.gz", "metadata.txt"],
+                cwd=payload, text=True, stdout=out, check=True,
+            )
+        inner_oversize = tmp / "oversized-storage.tar.gz.age"
+        make_bundle(payload, inner_oversize)
+        check_case("oversized storage logical size", inner_oversize, env, False)
+
+    print("Restore verification contract test PASS (1 valid, 7 unsafe rejected)")
 
 
 if __name__ == "__main__":
