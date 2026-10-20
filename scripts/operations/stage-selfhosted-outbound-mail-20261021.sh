@@ -80,6 +80,7 @@ cleanup() {
   local rc=$?
   if [[ $rc -ne 0 ]]; then
     systemctl stop postfix opendkim >/dev/null 2>&1 || true
+    systemctl disable postfix opendkim >/dev/null 2>&1 || true
     echo "MAIL_STAGE=INCOMPLETE_EXIT_$rc"
     echo 'NO_PRODUCTION_CUTOVER_ATTEMPTED'
   fi
@@ -154,6 +155,17 @@ postfix check || fail POSTFIX_CHECK_FAILED
 
 systemctl stop postfix opendkim >/dev/null 2>&1 || true
 systemctl disable postfix opendkim >/dev/null 2>&1 || true
+# Do not claim stopped/disabled unless actually checked. "static" is
+# permitted because it cannot start automatically via enablement alone.
+for service in postfix opendkim; do
+  active=$(systemctl is-active "$service" 2>/dev/null || true)
+  [[ "$active" != active && "$active" != activating ]] || fail MAIL_SERVICE_STILL_ACTIVE
+  enabled=$(systemctl is-enabled "$service" 2>/dev/null || true)
+  case "$enabled" in
+    enabled|enabled-runtime|linked|linked-runtime)
+      fail MAIL_SERVICE_AUTOSTART_NOT_DISABLED ;;
+  esac
+done
 if ss -ltnH | awk '{print $4}' | grep -Eq '(^|:)(25|465|587|993|8891)$'; then
   fail UNEXPECTED_MAIL_LISTENER
 fi
