@@ -15,7 +15,7 @@ KEYDIR=/etc/opendkim/keys/kmjtechno.com
 
 fail() { echo "MAIL_STAGE=BLOCKED"; echo "REASON=$1"; exit 2; }
 
-if [[ "\${1:-}" != --stage ]] || [[ $# -ne 1 ]]; then
+if [[ "${1:-}" != --stage ]] || [[ $# -ne 1 ]]; then
   echo 'USAGE=bash script.sh --stage'; exit 2
 fi
 [[ $(id -u) -eq 0 ]] || fail ROOT_REQUIRED
@@ -23,7 +23,7 @@ fi
 [[ -f /etc/os-release ]] || fail OS_UNKNOWN
 # shellcheck disable=SC1091
 . /etc/os-release
-[[ "\${ID:-}" == ubuntu && "\${VERSION_ID:-}" == '24.04' ]] || fail UNSUPPORTED_OS
+[[ "${ID:-}" == ubuntu && "${VERSION_ID:-}" == '24.04' ]] || fail UNSUPPORTED_OS
 [[ -t 0 && -t 1 ]] || fail OWNER_TTY_REQUIRED
 [[ ! -e "$STAMP" && ! -L "$STAMP" ]] || fail ALREADY_STAGED
 [[ ! -e /etc/postfix/main.cf && ! -L /etc/postfix/main.cf && ! -e "$KEYDIR" && ! -L "$KEYDIR" ]] || fail EXISTING_MAIL_CONFIG_DO_NOT_OVERWRITE
