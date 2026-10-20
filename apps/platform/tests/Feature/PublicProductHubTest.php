@@ -26,8 +26,8 @@ final class PublicProductHubTest extends TestCase
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->component('welcome')
-                ->where('portfolioCount', 15)
-                ->has('products', 15)
+                ->where('portfolioCount', 14)
+                ->has('products', 14)
                 ->where('products', function ($products): bool {
                     $bySlug = collect($products)->keyBy('slug');
 
@@ -37,11 +37,20 @@ final class PublicProductHubTest extends TestCase
                         && $bySlug->has('kmj-360-dome')
                         && $bySlug->has('kmj-omnidesk')
                         && $bySlug->has('kmj-codebridge')
-                        && $bySlug->has('kmj-desktop-commander')
+                        && ! $bySlug->has('kmj-desktop-commander')
                         && $bySlug['kmj-cloudos']['lifecycle'] === 'available'
-                        && $bySlug['kmj-codebridge']['lifecycle'] === 'research'
-                        && $bySlug['kmj-desktop-commander']['lifecycle'] === 'public-beta';
+                        && $bySlug['kmj-codebridge']['lifecycle'] === 'research';
                 }));
+    }
+
+    public function test_retired_desktop_commander_remains_in_historical_catalog_but_has_no_public_product_page(): void
+    {
+        $this->assertDatabaseHas('products', [
+            'slug' => KmjProductCatalog::DESKTOP_COMMANDER_SLUG,
+        ]);
+
+        $this->get('/products/'.KmjProductCatalog::DESKTOP_COMMANDER_SLUG)
+            ->assertNotFound();
     }
 
     public function test_admin_product_order_drives_the_locked_landing_order(): void
@@ -128,7 +137,6 @@ final class PublicProductHubTest extends TestCase
             'kmj-forge' => 'research',
             'kmj-omnidesk' => 'research',
             'kmj-codebridge' => 'research',
-            'kmj-desktop-commander' => 'public-beta',
             'kmj-connect' => 'planned',
             'kmj-cloud-nexus' => 'research',
             'kmj-agent' => 'research',
