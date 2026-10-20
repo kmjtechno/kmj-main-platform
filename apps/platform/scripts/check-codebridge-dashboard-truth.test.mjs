@@ -143,3 +143,15 @@ void test('CodeBridge dashboard uses the existing official product icon', () => 
     assert.doesNotMatch(ui, /laravel\.(?:svg|png)|<Cable className="h-7 w-7"/i);
     assert.match(ui, /setActiveSection\('devices'\)/);
 });
+
+void test('project setup entry is visible only to managers and never invents an active OmniDesk agent', () => {
+    assert.match(deviceCenter, /canManage && showProjectSetup/);
+    assert.match(deviceCenter, /Add project/);
+    assert.match(deviceCenter, /kmj-omnidesk/);
+    assert.match(deviceCenter, /\/downloads\/codebridge\/enroll-p720-omnidesk\.ps1/);
+    assert.match(deviceCenter, /\/downloads\/codebridge\/enroll-p720-omnidesk\.ps1/);
+    assert.match(deviceCenter, /id="codebridge-add-project"/);
+    assert.match(deviceCenter, /requires a verified CodeBridge gateway check/);
+    assert.match(deviceCenter, /Project status\s+changes only after a real enrollment/);
+    assert.doesNotMatch(deviceCenter, /project\.status\s*=\s*'online'/);
+});

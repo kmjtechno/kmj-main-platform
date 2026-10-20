@@ -54,6 +54,7 @@ type Service = {
     device_limit: number | null;
     managed_devices: number;
     devices: RegisteredDevice[];
+    pending_project_ids: string[];
     pending_pairings: number;
     connected_clients: ConnectedClient[];
     access_token_ttl_seconds: number;
@@ -464,6 +465,7 @@ export default function CodeBridgeService({
                         <DeviceControlCenter
                             tenantId={organization.id}
                             devices={service.devices}
+                            pendingProjectIds={service.pending_project_ids}
                             managedCount={service.managed_devices}
                             deviceLimit={service.device_limit}
                             canManage={canManageDevices}
