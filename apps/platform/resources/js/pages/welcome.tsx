@@ -345,15 +345,24 @@ export default function Welcome({
                         ))}
                         <div className="lock-mobile-account">
                             {auth.user ? (
-                                <Link href="/dashboard" onClick={() => setMenu(false)}>
+                                <Link
+                                    href="/dashboard"
+                                    onClick={() => setMenu(false)}
+                                >
                                     My dashboard
                                 </Link>
                             ) : (
                                 <>
-                                    <Link href="/login" onClick={() => setMenu(false)}>
+                                    <Link
+                                        href="/login"
+                                        onClick={() => setMenu(false)}
+                                    >
                                         Sign in
                                     </Link>
-                                    <Link href="/register" onClick={() => setMenu(false)}>
+                                    <Link
+                                        href="/register"
+                                        onClick={() => setMenu(false)}
+                                    >
                                         {registrationAvailable
                                             ? 'Create account'
                                             : 'Registration paused — details'}
@@ -377,10 +386,7 @@ export default function Welcome({
                     </Link>
                     <div className="lock-auth" aria-label="Account access">
                         {auth.user ? (
-                            <Link
-                                href="/dashboard"
-                                className="lock-auth-login"
-                            >
+                            <Link href="/dashboard" className="lock-auth-login">
                                 Dashboard
                             </Link>
                         ) : (
