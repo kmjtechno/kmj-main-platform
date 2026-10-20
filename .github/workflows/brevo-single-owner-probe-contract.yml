@@ -1,0 +1,36 @@
+name: Brevo Owner One-Message Probe Contract
+
+on:
+  pull_request:
+    paths:
+      - 'scripts/operations/probe-owner-brevo-smtps-20261020.py'
+      - 'scripts/test_brevo_owner_smtps_probe_20261020.py'
+      - '.github/workflows/brevo-single-owner-probe-contract.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/operations/probe-owner-brevo-smtps-20261020.py'
+      - 'scripts/test_brevo_owner_smtps_probe_20261020.py'
+      - '.github/workflows/brevo-single-owner-probe-contract.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  static-negative-controls:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - name: Parse source and run no-send/no-secret negative tests
+        run: |
+          set -euo pipefail
+          python3 -B -m py_compile scripts/operations/probe-owner-brevo-smtps-20261020.py
+          python3 -B scripts/test_brevo_owner_smtps_probe_20261020.py
+          echo 'SMTPS_SOURCE_CONTRACT=PASS'
+          echo 'REAL_SMTP_SEND=NOT_ATTEMPTED'
+          echo 'SMTP_INBOX_DELIVERY=NOT_VERIFIED'
+          echo 'PRODUCTION_MAIL_CONFIG=UNCHANGED'
