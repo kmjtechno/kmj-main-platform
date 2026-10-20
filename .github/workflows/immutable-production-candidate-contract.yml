@@ -6,12 +6,16 @@ on:
       - '.github/workflows/immutable-production-candidate-contract.yml'
       - 'scripts/operations/build-main-platform-candidate-kmj-elite.sh'
       - 'scripts/test_main_platform_candidate_build_contract.py'
+      - 'scripts/operations/build-main-platform-candidate-20261020-owner-shell.sh'
+      - 'scripts/test_main_platform_owner_shell_candidate_contract.py'
   push:
     branches: [main]
     paths:
       - '.github/workflows/immutable-production-candidate-contract.yml'
       - 'scripts/operations/build-main-platform-candidate-kmj-elite.sh'
       - 'scripts/test_main_platform_candidate_build_contract.py'
+      - 'scripts/operations/build-main-platform-candidate-20261020-owner-shell.sh'
+      - 'scripts/test_main_platform_owner_shell_candidate_contract.py'
   workflow_dispatch:
 
 permissions:
@@ -32,5 +36,7 @@ jobs:
           set -euo pipefail
           bash -n scripts/operations/build-main-platform-candidate-kmj-elite.sh
           python3 -B scripts/test_main_platform_candidate_build_contract.py
+          bash -n scripts/operations/build-main-platform-candidate-20261020-owner-shell.sh
+          python3 -B scripts/test_main_platform_owner_shell_candidate_contract.py
           echo 'CANDIDATE_BUILDER_CONTRACT=PASS'
           echo 'PRODUCTION_DEPLOYMENT=NOT_ATTEMPTED'
