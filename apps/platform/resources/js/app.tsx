@@ -3,6 +3,7 @@ import { Toaster } from '@/components/ui/sonner';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { initializeTheme } from '@/hooks/use-appearance';
 import AppLayout from '@/layouts/app-layout';
+import OwnerModuleShell from '@/layouts/owner-module-shell';
 import { isPublicMarketingPage } from '@/lib/public-page-layout';
 import AuthLayout from '@/layouts/auth-layout';
 import SettingsLayout from '@/layouts/settings/layout';
@@ -16,6 +17,8 @@ void createInertiaApp({
             case name === 'operator':
             case isPublicMarketingPage(name):
                 return null;
+            case name.startsWith('operator-'):
+                return OwnerModuleShell;
             case name.startsWith('auth/'):
                 return AuthLayout;
             case name.startsWith('settings/'):

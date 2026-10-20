@@ -26,6 +26,7 @@ try {
         for (const [name, route] of [
             ['landing', '/'],
             ['super-admin', '/operator'],
+            ['owner-ops', '/operator/ops'],
         ]) {
             const page = await browser.newPage({
                 viewport: { width, height: 1024 },
@@ -45,7 +46,13 @@ try {
                 await document.fonts.ready;
             });
             await page
-                .locator(name === 'landing' ? 'h1' : '.owner-main h1')
+                .locator(
+                    name === 'landing'
+                        ? 'h1'
+                        : name === 'owner-ops'
+                          ? '.owner-module-main h1'
+                          : '.owner-main h1',
+                )
                 .waitFor();
             // Horizontal carousels can keep valid lazy images outside the
             // viewport. Decode every asset before checking failures so that
@@ -125,7 +132,7 @@ try {
                         exact: true,
                     })
                     .click();
-            } else {
+            } else if (name === 'super-admin') {
                 await page.keyboard.press('Control+k');
                 await page.getByRole('dialog').waitFor();
                 await page
@@ -151,6 +158,59 @@ try {
                         .getByRole('navigation', { name: 'BUSINESS' })
                         .waitFor({ state: 'visible' });
                     await page.keyboard.press('Escape');
+                }
+            }
+            if (name === 'owner-ops') {
+                if (
+                    (await page
+                        .getByRole('heading', {
+                            name: 'KMJ Ops Command Center',
+                            exact: true,
+                        })
+                        .count()) !== 1
+                )
+                    errors.push('Real Operations component missing');
+                if (
+                    (await page
+                        .locator('aside[aria-label="Owner navigation"]')
+                        .count()) !== 1
+                )
+                    errors.push('Shared owner sidebar missing');
+                if (
+                    (await page
+                        .locator('.owner-sidebar [aria-current="page"]')
+                        .count()) !== 1
+                )
+                    errors.push('Exactly one current owner module required');
+                if (
+                    (await page
+                        .getByRole('navigation', {
+                            name: 'Super Admin modules',
+                        })
+                        .count()) !== 1
+                )
+                    errors.push('Real Operations module tabs missing');
+                if (
+                    (await page
+                        .getByText('My workspace', { exact: true })
+                        .count()) > 0
+                )
+                    errors.push(
+                        'Old customer workspace leaked into owner page',
+                    );
+                if (width <= 390) {
+                    await page
+                        .getByRole('button', {
+                            name: 'Toggle owner navigation',
+                        })
+                        .click();
+                    await page
+                        .getByRole('navigation', { name: 'OPERATIONS' })
+                        .waitFor({ state: 'visible' });
+                    await page.keyboard.press('Escape');
+                    await page
+                        .getByRole('navigation', { name: 'OPERATIONS' })
+                        .waitFor({ state: 'hidden' });
                 }
             }
             if (name === 'landing') {
