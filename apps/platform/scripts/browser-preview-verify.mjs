@@ -172,9 +172,7 @@ try {
                     errors.push('Real Operations component missing');
                 if (
                     (await page
-                        .getByRole('complementary', {
-                            name: 'Owner navigation',
-                        })
+                        .locator('aside[aria-label="Owner navigation"]')
                         .count()) !== 1
                 )
                     errors.push('Shared owner sidebar missing');
