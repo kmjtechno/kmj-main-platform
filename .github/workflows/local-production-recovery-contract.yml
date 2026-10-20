@@ -6,12 +6,16 @@ on:
       - '.github/workflows/local-production-recovery-contract.yml'
       - 'scripts/operations/prepare-main-platform-local-recovery-kmj-elite.sh'
       - 'scripts/test_main_platform_local_recovery_contract.py'
+      - 'scripts/operations/prepare-owner-shell-local-recovery-kmj-elite-20261020.sh'
+      - 'scripts/test_owner_shell_local_recovery_contract.py'
   push:
     branches: [main]
     paths:
       - '.github/workflows/local-production-recovery-contract.yml'
       - 'scripts/operations/prepare-main-platform-local-recovery-kmj-elite.sh'
       - 'scripts/test_main_platform_local_recovery_contract.py'
+      - 'scripts/operations/prepare-owner-shell-local-recovery-kmj-elite-20261020.sh'
+      - 'scripts/test_owner_shell_local_recovery_contract.py'
 
 permissions:
   contents: read
@@ -31,5 +35,7 @@ jobs:
           set -euo pipefail
           bash -n scripts/operations/prepare-main-platform-local-recovery-kmj-elite.sh
           python3 -B scripts/test_main_platform_local_recovery_contract.py
+          bash -n scripts/operations/prepare-owner-shell-local-recovery-kmj-elite-20261020.sh
+          python3 -B scripts/test_owner_shell_local_recovery_contract.py
           echo 'RECOVERY_CONTRACT=PASS'
           echo 'PRODUCTION_ACTIVATION=NOT_ATTEMPTED'
