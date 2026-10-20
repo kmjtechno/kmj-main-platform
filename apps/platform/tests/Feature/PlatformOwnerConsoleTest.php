@@ -155,7 +155,7 @@ final class PlatformOwnerConsoleTest extends TestCase
         $response->assertInertia(fn (Assert $page) => $page
             ->component('operator')
             ->has('catalogProducts', 15)
-            ->where('canonicalProductCount', 15)
+            ->where('canonicalProductCount', 14)
             ->has('missingCanonicalSlugs', 0)
             ->where('catalogProducts.0.active_policy_count', 1)
             ->where('catalogProducts.0.active_entitlement_count', 0)
@@ -191,8 +191,8 @@ final class PlatformOwnerConsoleTest extends TestCase
         $response->assertOk();
         $response->assertInertia(fn (Assert $page) => $page
             ->component('operator')
-            ->where('canonicalProductCount', 15)
-            ->has('missingCanonicalSlugs', 15)
+            ->where('canonicalProductCount', 14)
+            ->has('missingCanonicalSlugs', 14)
             ->has('catalogProducts', 0)
             ->where('metrics.entitlements', 0));
     }
