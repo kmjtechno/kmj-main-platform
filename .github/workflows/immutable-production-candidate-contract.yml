@@ -8,6 +8,8 @@ on:
       - 'scripts/test_main_platform_candidate_build_contract.py'
       - 'scripts/operations/build-main-platform-candidate-20261020-owner-shell.sh'
       - 'scripts/test_main_platform_owner_shell_candidate_contract.py'
+      - 'scripts/operations/build-main-platform-candidate-20261020-final.sh'
+      - 'scripts/test_final98cc_candidate_contract.py'
   push:
     branches: [main]
     paths:
@@ -16,6 +18,8 @@ on:
       - 'scripts/test_main_platform_candidate_build_contract.py'
       - 'scripts/operations/build-main-platform-candidate-20261020-owner-shell.sh'
       - 'scripts/test_main_platform_owner_shell_candidate_contract.py'
+      - 'scripts/operations/build-main-platform-candidate-20261020-final.sh'
+      - 'scripts/test_final98cc_candidate_contract.py'
   workflow_dispatch:
 
 permissions:
@@ -38,5 +42,7 @@ jobs:
           python3 -B scripts/test_main_platform_candidate_build_contract.py
           bash -n scripts/operations/build-main-platform-candidate-20261020-owner-shell.sh
           python3 -B scripts/test_main_platform_owner_shell_candidate_contract.py
+          bash -n scripts/operations/build-main-platform-candidate-20261020-final.sh
+          python3 -B scripts/test_final98cc_candidate_contract.py
           echo 'CANDIDATE_BUILDER_CONTRACT=PASS'
           echo 'PRODUCTION_DEPLOYMENT=NOT_ATTEMPTED'
