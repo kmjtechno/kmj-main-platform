@@ -16,6 +16,7 @@ final class CustomerProfile extends Model
         'service_interest',
     ];
 
+    /** @return BelongsTo<User, $this> */
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
