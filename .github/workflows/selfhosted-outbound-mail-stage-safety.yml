@@ -1,0 +1,35 @@
+name: KMJ Self-Hosted Mail Stage Safety
+
+on:
+  pull_request:
+    paths:
+      - 'scripts/operations/stage-selfhosted-outbound-mail-20261021.sh'
+      - 'scripts/operations/test-stage-selfhosted-outbound-mail-20261021.py'
+      - '.github/workflows/selfhosted-outbound-mail-stage-safety.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/operations/stage-selfhosted-outbound-mail-20261021.sh'
+      - 'scripts/operations/test-stage-selfhosted-outbound-mail-20261021.py'
+      - '.github/workflows/selfhosted-outbound-mail-stage-safety.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  static-no-install:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - name: Validate source without installing packages or sending email
+        run: |
+          set -euo pipefail
+          bash -n scripts/operations/stage-selfhosted-outbound-mail-20261021.sh
+          python3 -B scripts/operations/test-stage-selfhosted-outbound-mail-20261021.py
+          echo 'STATIC_STAGING_CONTRACT=PASS'
+          echo 'REAL_PACKAGE_INSTALL=NOT_ATTEMPTED'
+          echo 'REAL_SMTP_DELIVERY=NOT_VERIFIED'
+          echo 'PRODUCTION_CONFIGURATION=UNCHANGED'
