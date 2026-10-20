@@ -26,8 +26,32 @@ fi
 [[ "${ID:-}" == ubuntu && "${VERSION_ID:-}" == '24.04' ]] || fail UNSUPPORTED_OS
 [[ -t 0 && -t 1 ]] || fail OWNER_TTY_REQUIRED
 [[ ! -e "$STAMP" && ! -L "$STAMP" ]] || fail ALREADY_STAGED
-[[ ! -e /etc/postfix/main.cf && ! -L /etc/postfix/main.cf && ! -e "$KEYDIR" && ! -L "$KEYDIR" ]] || fail EXISTING_MAIL_CONFIG_DO_NOT_OVERWRITE
-[[ ! -e /etc/opendkim.conf && ! -L /etc/opendkim.conf && ! -e /etc/opendkim && ! -L /etc/opendkim ]] || fail EXISTING_OPENDKIM_CONFIG_DO_NOT_OVERWRITE
+[[ ! -e /etc/postfix/main.cf && ! -L /etc/postfix/main.cf ]] || fail EXISTING_MAIL_CONFIG_DO_NOT_OVERWRITE
+[[ ! -e /etc/opendkim.conf && ! -L /etc/opendkim.conf ]] || fail EXISTING_OPENDKIM_CONFIG_DO_NOT_OVERWRITE
+
+# Existing /etc/opendkim/keys/kmjtechno.com may be an *empty* scaffold
+# from an aborted setup. Read metadata only. Reject any existing files,
+# extra key directories, symlinks or objects that would be overwritten.
+check_preexisting_dkim_tree() {
+  local dir="$1" keys="$1/keys" keydir="$1/keys/kmjtechno.com" p found
+  for p in "$dir" "$keys" "$keydir"; do
+    [[ ! -L "$p" ]] || fail EXISTING_DKIM_SYMLINK
+    [[ ! -e "$p" || -d "$p" ]] || fail EXISTING_DKIM_NON_DIRECTORY
+  done
+  if [[ -d "$dir" ]]; then
+    found=$(find "$dir" -mindepth 1 -maxdepth 1 ! -name keys -print -quit) || fail DKIM_TREE_READ_FAILED
+    [[ -z "$found" ]] || fail EXISTING_OPENDKIM_CONFIG_DO_NOT_OVERWRITE
+  fi
+  if [[ -d "$keys" ]]; then
+    found=$(find "$keys" -mindepth 1 -maxdepth 1 ! -name kmjtechno.com -print -quit) || fail DKIM_TREE_READ_FAILED
+    [[ -z "$found" ]] || fail EXISTING_OTHER_DKIM_KEYS_DO_NOT_OVERWRITE
+  fi
+  if [[ -d "$keydir" ]]; then
+    found=$(find "$keydir" -mindepth 1 -print -quit) || fail DKIM_TREE_READ_FAILED
+    [[ -z "$found" ]] || fail EXISTING_DKIM_KEY_MATERIAL_DO_NOT_OVERWRITE
+  fi
+}
+check_preexisting_dkim_tree /etc/opendkim
 [[ ! -e /etc/opendkim.conf.kmj-package-default-20261021 && ! -L /etc/opendkim.conf.kmj-package-default-20261021 ]] || fail EXISTING_BACKUP_DO_NOT_OVERWRITE
 [[ $(getent ahostsv4 "$HOST" | awk 'NR==1 {print $1}') == "$IP" ]] || fail MAIL_A_RECORD_MISMATCH
 if ss -ltnH | awk '{print $4}' | grep -Eq '(^|:)(25|465|587|993)$'; then
@@ -76,6 +100,9 @@ if [[ $(postconf -h inet_interfaces) != 'loopback-only' ]]; then
 fi
 systemctl stop postfix opendkim >/dev/null 2>&1 || true
 
+# Validate again because package installation may have created defaults.
+# Never overwrite package-provided /etc/opendkim/TrustedHosts or existing keys.
+check_preexisting_dkim_tree /etc/opendkim
 command -v opendkim-genkey >/dev/null 2>&1 || fail OPENDKIM_GENERATOR_MISSING
 id opendkim >/dev/null 2>&1 || fail OPENDKIM_USER_MISSING
 install -d -o opendkim -g opendkim -m 0750 "$KEYDIR"
