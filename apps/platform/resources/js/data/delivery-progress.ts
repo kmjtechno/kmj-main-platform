@@ -13,23 +13,23 @@ export const deliveryMilestones: DeliveryMilestone[] = [
         id: 'truthful-premium-product-imagery-p0',
         title: 'Product-identity-accurate media and responsive portfolio',
         state: 'active',
-        detail: 'PR #500 merged guarded owner media filenames and reliable branded fallbacks without substituting unrelated imagery. A follow-up candidate removes known hard-coded cross-product media aliases and fixes image-label positioning on centered and mobile card grids. The source guards do not prove every published product image accurately depicts its actual product.',
+        detail: 'PRs #500 and #502 merged product image identity checks, removed unrelated hard-coded artwork aliases, added branded fallbacks and corrected category overlays across responsive layouts. Actual physical product image fidelity still needs authoritative artwork and owner visual acceptance.',
         evidence:
-            'PR #500 merged after 5/5 isolated checks. The separate responsive art clean-up remains under exact-head review. Final real product screenshots, brand owner acceptance and protected production deployment are still required before declaring published artwork complete.',
+            'PR #500 and #502 each merged following 5/5 exact-head CI workflows including browser UI checks. No new physical product screenshots were approved or published; protected production release and live browser QA remain outstanding.',
     },
     {
         id: 'customer-context-progressive-registration',
         title: 'International customer registration contact and business context',
         state: 'active',
-        detail: 'An additive schema and Fortify registration candidate capture customer account type, country, contact phone, conditional business organization and optional service interest. Billing addresses, tax identities and installation sites remain deferred to the relevant order or service workflow; production SMTP and owner deployment gates remain unverified.',
+        detail: 'PR #499 merged an additive private customer profile schema and transaction-safe Fortify registration for account type, country, phone, conditional business organization and optional interest. PR #501 merged an owner-only searchable customer directory. Production mail delivery, backup, guarded migration and live onboarding remain unverified.',
         evidence:
-            'PR #499 merged the private customer_profiles table with transaction-safe user+organization creation and exact-head isolated CI. The owner-only directory enhancement is separately under review: it presents a strict, read-only contact-field allowlist with no customer credential fields. Neither merged code nor owner UI proves the production SMTP, protected migration or live onboarding has been accepted.',
+            'PR #499 and #501 merged after 7/7 exact-head workflows each, covering isolated PostgreSQL and protected owner HTTP checks. No owner access is granted to customers; deployment, inbox verification and real authenticated production browser QA still require separate evidence.',
     },
     {
         id: 'legacy-desktop-commander-public-retirement',
         title: 'Retire Desktop Commander public catalog surface',
         state: 'active',
-        detail: 'KMJ Desktop Commander is being retired from public landing, product details, sitemap and AI discovery, while existing product IDs, issued entitlements, historical orders and compatibility endpoints remain intact. This is an un-deployed candidate, not proof that live public discovery has been removed.',
+        detail: 'KMJ Desktop Commander is being retired from public landing, product details, sitemap and AI discovery, while existing product IDs, issued entitlements, historical orders and compatibility endpoints remain intact. Merged source exclusion, not proof that live public discovery has been removed.',
         evidence:
             'PR #497 merged following exact-head isolated CI; public listing, sitemap and detail exclusion are code-verified. A new protected production deployment and live anonymous QA are still required before declaring the old listing gone from kmjtechno.com.',
     },
@@ -458,5 +458,5 @@ export const deliveryProgress = Math.round(
 export const deliveryProgressMeta = {
     label: 'Revenue-capable working phase',
     note: 'Evidence-based delivery milestones, not total product completion.',
-    refreshed: '2026-10-18',
+    refreshed: '2026-10-20',
 } as const;
