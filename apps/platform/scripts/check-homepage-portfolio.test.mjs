@@ -198,3 +198,25 @@ void test('owner-configured product imagery never displays an unrelated product 
     assert.match(artwork, /<strong>\{name\}<\/strong>/);
     assert.doesNotMatch(policy, /\/private\/|fetch\(|eval\(/);
 });
+
+
+void test('locked and owner product galleries never borrow adjacent product artwork', () => {
+    const owner = readFileSync(
+        'resources/js/components/operator-command-os.tsx',
+        'utf8',
+    );
+    const css = readFileSync('resources/css/locked-landing.css', 'utf8');
+    assert.doesNotMatch(source, /'kmj-cinecore': 'cinema'/);
+    for (const oldMapping of [
+        "'kmj-cinecore': 'cinema'",
+        "'kmj-360-dome': 'cinema'",
+        "'kmj-cinema-player': 'cinema'",
+        "'kmj-connect': 'omnidesk'",
+    ]) {
+        assert.ok(!owner.includes(oldMapping), oldMapping);
+    }
+    assert.match(css, /grid-template-columns: repeat\(4, minmax\(0, 1fr\)\)/);
+    assert.match(css, /@media \(max-width: 420px\)/);
+    assert.doesNotMatch(css, /top: calc\(\(100vw - (?:8vw|12vw)\) \/(?:5|3|2)\/2\.12/);
+    assert.match(css, /\.lock-product-category \{[\s\S]*?top: 12px;/);
+});
