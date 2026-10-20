@@ -15,7 +15,7 @@ export const deliveryMilestones: DeliveryMilestone[] = [
         state: 'active',
         detail: 'An additive schema and Fortify registration candidate capture customer account type, country, contact phone, conditional business organization and optional service interest. Billing addresses, tax identities and installation sites remain deferred to the relevant order or service workflow; production SMTP and owner deployment gates remain unverified.',
         evidence:
-            'PR #498 provides one-to-one private customer_profiles table, transaction-safe user+profile+organization creation and negative validation tests. Isolated PostgreSQL migration/rollback, exact-head CI and protected release approval are required before any live customer-data collection is claimed.',
+            'PR #499 merged the private customer_profiles table with transaction-safe user+organization creation and exact-head isolated CI. The owner-only directory enhancement is separately under review: it presents a strict, read-only contact-field allowlist with no customer credential fields. Neither merged code nor owner UI proves the production SMTP, protected migration or live onboarding has been accepted.',
     },
     {
         id: 'legacy-desktop-commander-public-retirement',
@@ -23,7 +23,7 @@ export const deliveryMilestones: DeliveryMilestone[] = [
         state: 'active',
         detail: 'KMJ Desktop Commander is being retired from public landing, product details, sitemap and AI discovery, while existing product IDs, issued entitlements, historical orders and compatibility endpoints remain intact. This is an un-deployed candidate, not proof that live public discovery has been removed.',
         evidence:
-            'PR #497 contains PublicProductCatalog fail-closed marketing hide, 404 detail and updated sitemap/AI/owner HTTP regressions. Exact-head CI and fresh guarded deployment must pass before any live retirement claim.',
+            'PR #497 merged following exact-head isolated CI; public listing, sitemap and detail exclusion are code-verified. A new protected production deployment and live anonymous QA are still required before declaring the old listing gone from kmjtechno.com.',
     },
     {
         id: 'registration-abuse-protection-p0',

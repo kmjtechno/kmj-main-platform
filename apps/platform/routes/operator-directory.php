@@ -32,11 +32,19 @@ Route::middleware(['auth', 'verified', 'password.confirm'])
             // authentication model (password, passkeys, tokens or recovery).
             $users = User::query()
                 ->select(['id', 'name', 'email', 'email_verified_at', 'created_at', 'is_platform_owner'])
+                // Explicit allowlist of business/contact fields: never expose
+                // auth credentials or arbitrary customer profile columns.
+                ->with('customerProfile:user_id,account_type,phone,country,company_name,service_interest')
                 ->when($userFilter !== '', static function ($query) use ($userFilter): void {
                     $escaped = addcslashes($userFilter, '%_\\');
                     $query->where(static function ($q) use ($escaped): void {
                         $q->where('name', 'like', '%'.$escaped.'%')
-                            ->orWhere('email', 'like', '%'.$escaped.'%');
+                            ->orWhere('email', 'like', '%'.$escaped.'%')
+                            ->orWhereHas('customerProfile', static function ($profile) use ($escaped): void {
+                                $profile->where('company_name', 'like', '%'.$escaped.'%')
+                                    ->orWhere('phone', 'like', '%'.$escaped.'%')
+                                    ->orWhere('country', 'like', '%'.$escaped.'%');
+                            });
                     });
                 })
                 ->orderByDesc('id')

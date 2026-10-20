@@ -13,7 +13,16 @@ type Paginated<T> = {
     to: number | null;
     links: PageLink[];
 };
+type CustomerContact = {
+    account_type: 'individual' | 'business';
+    phone: string;
+    country: string;
+    company_name: string | null;
+    service_interest: string | null;
+};
+
 type DirectoryUser = {
+    customer_profile: CustomerContact | null;
     id: number;
     name: string;
     email: string;
@@ -98,7 +107,7 @@ export default function OperatorDirectory({
 
     return (
         <>
-            <Head title="KMJ TECHNO — Users & Organizations" />
+            <Head title="KMJ TECHNO — Customer Accounts & Organizations" />
             <main className="kmj-admin-shell min-h-screen space-y-6 p-4 sm:p-8">
                 <div className="mx-auto max-w-7xl">
                     <OperatorModuleNavigation active="customers" />
@@ -114,10 +123,11 @@ export default function OperatorDirectory({
                         </h1>
                     </div>
                     <p className="text-muted-foreground mt-3 max-w-3xl text-sm leading-7">
-                        Search and review your platform's users and customer
-                        organizations. No permission changes, deletion or
-                        account invitations are offered here until separately
-                        audited workflows are available.
+                        Review verified identities, signup contact details and
+                        customer organizations from one owner-only workspace.
+                        Contact fields appear only when customers supplied them.
+                        This module cannot grant permissions, licenses or
+                        account invitations.
                     </p>
                     <div className="mt-4 inline-flex items-center gap-2 rounded-full border border-blue-500/20 px-3 py-1.5 text-xs font-bold text-blue-200">
                         <ShieldCheck className="size-4" aria-hidden="true" />
@@ -130,7 +140,9 @@ export default function OperatorDirectory({
                     className="bg-card mx-auto grid max-w-7xl gap-3 rounded-2xl border border-white/10 p-5 md:grid-cols-[1fr_1fr_auto] md:items-end"
                 >
                     <label className="text-muted-foreground space-y-2 text-xs font-semibold">
-                        <span>Search users by name or email</span>
+                        <span>
+                            Search name, email, company, country or phone
+                        </span>
                         <input
                             className="bg-background/50 w-full rounded-xl border border-white/20 px-4 py-3 text-sm text-white"
                             value={usersQuery}
@@ -138,7 +150,7 @@ export default function OperatorDirectory({
                                 setUsersQuery(event.target.value)
                             }
                             maxLength={80}
-                            placeholder="Name or email"
+                            placeholder="Name, email, business, phone or country"
                         />
                     </label>
                     <label className="text-muted-foreground space-y-2 text-xs font-semibold">
@@ -192,6 +204,75 @@ export default function OperatorDirectory({
                                             <p className="text-muted-foreground mt-1 text-xs break-all">
                                                 {user.email}
                                             </p>
+                                            {user.customer_profile && (
+                                                <dl className="mt-3 grid gap-x-5 gap-y-2 text-xs sm:grid-cols-2">
+                                                    <div className="min-w-0">
+                                                        <dt className="text-muted-foreground">
+                                                            Account
+                                                        </dt>
+                                                        <dd className="mt-1 font-medium capitalize">
+                                                            {
+                                                                user
+                                                                    .customer_profile
+                                                                    .account_type
+                                                            }
+                                                        </dd>
+                                                    </div>
+                                                    <div className="min-w-0">
+                                                        <dt className="text-muted-foreground">
+                                                            Country
+                                                        </dt>
+                                                        <dd className="mt-1 break-words">
+                                                            {
+                                                                user
+                                                                    .customer_profile
+                                                                    .country
+                                                            }
+                                                        </dd>
+                                                    </div>
+                                                    <div className="min-w-0">
+                                                        <dt className="text-muted-foreground">
+                                                            Contact phone
+                                                        </dt>
+                                                        <dd className="mt-1 break-all">
+                                                            {
+                                                                user
+                                                                    .customer_profile
+                                                                    .phone
+                                                            }
+                                                        </dd>
+                                                    </div>
+                                                    {user.customer_profile
+                                                        .company_name && (
+                                                        <div className="min-w-0">
+                                                            <dt className="text-muted-foreground">
+                                                                Company
+                                                            </dt>
+                                                            <dd className="mt-1 break-words">
+                                                                {
+                                                                    user
+                                                                        .customer_profile
+                                                                        .company_name
+                                                                }
+                                                            </dd>
+                                                        </div>
+                                                    )}
+                                                    {user.customer_profile
+                                                        .service_interest && (
+                                                        <div className="min-w-0">
+                                                            <dt className="text-muted-foreground">
+                                                                Service interest
+                                                            </dt>
+                                                            <dd className="mt-1 break-words">
+                                                                {user.customer_profile.service_interest.replaceAll(
+                                                                    '_',
+                                                                    ' ',
+                                                                )}
+                                                            </dd>
+                                                        </div>
+                                                    )}
+                                                </dl>
+                                            )}
                                         </div>
                                         <span className="text-muted-foreground rounded-full border border-white/15 px-2.5 py-1 text-[11px]">
                                             {user.is_platform_owner
