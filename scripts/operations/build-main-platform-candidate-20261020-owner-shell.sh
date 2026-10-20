@@ -58,6 +58,7 @@ if [[ -e "$DEST" || -L "$DEST" ]]; then
     [[ -s "$DEST/$file" ]] || block CANDIDATE_ARTIFACT_MISSING
   done
   verify_public_acl
+  [[ "$(readlink -f "$ROOT/current")" == "$before" ]] || block PRODUCTION_POINTER_CHANGED
   notice "KMJ_CANDIDATE=EXISTING_SOURCE_ARTIFACTS_CHECK_PASS SHA=$SHA"
   notice 'PRODUCTION_ACTIVATION=NOT_ATTEMPTED'
   exit 0
