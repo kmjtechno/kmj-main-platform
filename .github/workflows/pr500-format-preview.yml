@@ -1,0 +1,32 @@
+name: PR500 Exact Frontend Format Preview
+on:
+  pull_request:
+    types: [synchronize]
+permissions:
+  contents: read
+jobs:
+  preview:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Install locked frontend tools
+        working-directory: apps/platform
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Produce exact formatted files without committing
+        working-directory: apps/platform
+        run: |
+          set -euo pipefail
+          ./node_modules/.bin/vp fmt
+          ./node_modules/.bin/vp fmt --check
+          for filename in resources/css/locked-landing.css scripts/check-homepage-portfolio.test.mjs; do
+            echo "KMJ_PR500_BEGIN ${filename}"
+            base64 -w0 "${filename}"
+            echo
+            echo "KMJ_PR500_END ${filename}"
+          done
