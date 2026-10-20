@@ -4,10 +4,12 @@ namespace App\Actions\Fortify;
 
 use App\Concerns\PasswordValidationRules;
 use App\Concerns\ProfileValidationRules;
+use App\Models\CustomerProfile;
 use App\Models\User;
 use App\Services\Mail\RegistrationMailReadiness;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use KMJ\MainPlatform\Organizations\Services\OrganizationCreator;
 use Laravel\Fortify\Contracts\CreatesNewUsers;
@@ -28,9 +30,16 @@ class CreateNewUser implements CreatesNewUsers
      */
     public function create(array $input): User
     {
-        Validator::make($input, [
+        $validated = Validator::make($input, [
             ...$this->profileRules(),
             'password' => $this->passwordRules(),
+            'account_type' => ['required', Rule::in(['individual', 'business'])],
+            'phone' => ['required', 'string', 'max:32', 'regex:/^\\+?[0-9][0-9 .()\\-]{6,30}$/'],
+            'country' => ['required', 'string', 'min:2', 'max:80'],
+            'company_name' => ['exclude_unless:account_type,business', 'required_if:account_type,business', 'string', 'min:2', 'max:160'],
+            'service_interest' => ['nullable', Rule::in([
+                'software', 'cloud', 'remote_access', 'calibration', 'cinema', 'other',
+            ])],
         ])->validate();
 
         // A live account that cannot receive its verification link is unusable.
@@ -42,17 +51,31 @@ class CreateNewUser implements CreatesNewUsers
             ]);
         }
 
-        return DB::transaction(function () use ($input): User {
+        return DB::transaction(function () use ($validated): User {
             $user = User::create([
-                'name' => $input['name'],
-                'email' => $input['email'],
-                'password' => $input['password'],
+                'name' => trim($validated['name']),
+                'email' => trim($validated['email']),
+                'password' => $validated['password'],
             ]);
 
-            $this->organizations->create(
-                sprintf("%s's Organization", trim($user->name)),
-                (int) $user->getKey(),
-            );
+            // A private account contact record, NOT an entitlement, license,
+            // email verification or high-assurance organization approval.
+            CustomerProfile::query()->create([
+                'user_id' => $user->getKey(),
+                'account_type' => $validated['account_type'],
+                'phone' => trim($validated['phone']),
+                'country' => trim($validated['country']),
+                'company_name' => isset($validated['company_name'])
+                    ? trim($validated['company_name'])
+                    : null,
+                'service_interest' => $validated['service_interest'] ?? null,
+            ]);
+
+            $organizationName = $validated['account_type'] === 'business'
+                ? trim($validated['company_name'])
+                : sprintf("%s's Organization", trim($user->name));
+
+            $this->organizations->create($organizationName, (int) $user->getKey());
 
             return $user;
         });
