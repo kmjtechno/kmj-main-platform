@@ -10,6 +10,14 @@ export type DeliveryMilestone = {
 
 export const deliveryMilestones: DeliveryMilestone[] = [
     {
+        id: 'legacy-desktop-commander-public-retirement',
+        title: 'Retire Desktop Commander public catalog surface',
+        state: 'active',
+        detail: 'KMJ Desktop Commander is being retired from public landing, product details, sitemap and AI discovery, while existing product IDs, issued entitlements, historical orders and compatibility endpoints remain intact. This is an un-deployed candidate, not proof that live public discovery has been removed.',
+        evidence:
+            'PR #497 contains PublicProductCatalog fail-closed marketing hide, 404 detail and updated sitemap/AI/owner HTTP regressions. Exact-head CI and fresh guarded deployment must pass before any live retirement claim.',
+    },
+    {
         id: 'registration-abuse-protection-p0',
         title: 'Public account registration abuse protection',
         state: 'active',

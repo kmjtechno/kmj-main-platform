@@ -52,7 +52,6 @@ final class PublicProductCatalog
         return [
             CloudOSProductCatalog::SLUG,
             KmjProductCatalog::CALIBRATION_SLUG,
-            KmjProductCatalog::DESKTOP_COMMANDER_SLUG,
             KmjProductCatalog::FORGE_SLUG,
             KmjProductCatalog::CONNECT_SLUG,
             KmjProductCatalog::OMNIDESK_SLUG,
@@ -73,7 +72,11 @@ final class PublicProductCatalog
      */
     private function present(?Product $product): ?array
     {
-        if ($product === null) {
+        // Retire only the public marketing surface. Preserve product rows,
+        // existing entitlements, customer history and compatibility endpoints.
+        if ($product === null
+            || (string) $product->getAttribute('slug') === KmjProductCatalog::DESKTOP_COMMANDER_SLUG
+        ) {
             return null;
         }
 
