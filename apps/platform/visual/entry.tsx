@@ -219,5 +219,6 @@ void createInertiaApp({
         clearHistory: false,
         encryptHistory: false,
     },
-    resolve: () => (ownerOps ? OwnerOpsPreview : owner ? OperatorCommandOs : Welcome),
+    resolve: () =>
+        ownerOps ? OwnerOpsPreview : owner ? OperatorCommandOs : Welcome,
 });
