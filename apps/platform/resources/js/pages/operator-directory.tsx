@@ -140,7 +140,9 @@ export default function OperatorDirectory({
                     className="bg-card mx-auto grid max-w-7xl gap-3 rounded-2xl border border-white/10 p-5 md:grid-cols-[1fr_1fr_auto] md:items-end"
                 >
                     <label className="text-muted-foreground space-y-2 text-xs font-semibold">
-                        <span>Search name, email, company, country or phone</span>
+                        <span>
+                            Search name, email, company, country or phone
+                        </span>
                         <input
                             className="bg-background/50 w-full rounded-xl border border-white/20 px-4 py-3 text-sm text-white"
                             value={usersQuery}
@@ -205,36 +207,67 @@ export default function OperatorDirectory({
                                             {user.customer_profile && (
                                                 <dl className="mt-3 grid gap-x-5 gap-y-2 text-xs sm:grid-cols-2">
                                                     <div className="min-w-0">
-                                                        <dt className="text-muted-foreground">Account</dt>
+                                                        <dt className="text-muted-foreground">
+                                                            Account
+                                                        </dt>
                                                         <dd className="mt-1 font-medium capitalize">
-                                                            {user.customer_profile.account_type}
+                                                            {
+                                                                user
+                                                                    .customer_profile
+                                                                    .account_type
+                                                            }
                                                         </dd>
                                                     </div>
                                                     <div className="min-w-0">
-                                                        <dt className="text-muted-foreground">Country</dt>
+                                                        <dt className="text-muted-foreground">
+                                                            Country
+                                                        </dt>
                                                         <dd className="mt-1 break-words">
-                                                            {user.customer_profile.country}
+                                                            {
+                                                                user
+                                                                    .customer_profile
+                                                                    .country
+                                                            }
                                                         </dd>
                                                     </div>
                                                     <div className="min-w-0">
-                                                        <dt className="text-muted-foreground">Contact phone</dt>
+                                                        <dt className="text-muted-foreground">
+                                                            Contact phone
+                                                        </dt>
                                                         <dd className="mt-1 break-all">
-                                                            {user.customer_profile.phone}
+                                                            {
+                                                                user
+                                                                    .customer_profile
+                                                                    .phone
+                                                            }
                                                         </dd>
                                                     </div>
-                                                    {user.customer_profile.company_name && (
+                                                    {user.customer_profile
+                                                        .company_name && (
                                                         <div className="min-w-0">
-                                                            <dt className="text-muted-foreground">Company</dt>
+                                                            <dt className="text-muted-foreground">
+                                                                Company
+                                                            </dt>
                                                             <dd className="mt-1 break-words">
-                                                                {user.customer_profile.company_name}
+                                                                {
+                                                                    user
+                                                                        .customer_profile
+                                                                        .company_name
+                                                                }
                                                             </dd>
                                                         </div>
                                                     )}
-                                                    {user.customer_profile.service_interest && (
+                                                    {user.customer_profile
+                                                        .service_interest && (
                                                         <div className="min-w-0">
-                                                            <dt className="text-muted-foreground">Service interest</dt>
+                                                            <dt className="text-muted-foreground">
+                                                                Service interest
+                                                            </dt>
                                                             <dd className="mt-1 break-words">
-                                                                {user.customer_profile.service_interest.replaceAll('_', ' ')}
+                                                                {user.customer_profile.service_interest.replaceAll(
+                                                                    '_',
+                                                                    ' ',
+                                                                )}
                                                             </dd>
                                                         </div>
                                                     )}
