@@ -191,7 +191,11 @@ export default function OwnerModuleShell({
                 >
                     <Menu aria-hidden="true" />
                 </button>
-                <Link href="/operator" className="owner-search">
+                <Link
+                    href="/operator"
+                    className="owner-search"
+                    aria-label="Open Command Center search"
+                >
                     <Search size={17} aria-hidden="true" />
                     <span>Search in Command Center</span>
                 </Link>
