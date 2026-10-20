@@ -69,6 +69,18 @@ const languages = [
     'PHP',
 ] as const;
 
+function suggestProductCode(name: string): string {
+    // An editable default only: never replace an ID the developer customized.
+    const slug = name
+        .normalize('NFKD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toUpperCase()
+        .replace(/[^A-Z0-9]+/g, '_')
+        .replace(/^_+|_+$/g, '')
+        .slice(0, 92);
+    return slug ? `APP.${slug}` : '';
+}
+
 function sdkConfiguration(language: string, productCode: string): string {
     // Generate source-only integration starters from a canonical public
     // configuration. Never embed an issuer private key or customer's key.
@@ -181,20 +193,31 @@ export default function DeveloperApps({
     canIssueKeys,
     newKey,
 }: Props) {
+    const preferredOrg =
+        organizations.find((org) => org.issuer_status === 'active') ??
+        organizations[0];
+    const initialApp = applications.find(
+        (app) =>
+            app.status === 'active' &&
+            app.organization_id === preferredOrg?.id,
+    );
     const [language, setLanguage] = useState<string>('TypeScript');
-    const [selectedApp, setSelectedApp] = useState<string>('');
+    const [selectedApp, setSelectedApp] = useState<string>(
+        initialApp?.id ?? '',
+    );
+    const [customProductCode, setCustomProductCode] = useState(false);
     const [copied, setCopied] = useState(false);
     const [revokeKeyId, setRevokeKeyId] = useState<string | null>(null);
     const revokeForm = useForm({ reason: '' });
     const createOrganization = useForm({ name: '' });
     const createApp = useForm({
-        organization_id: organizations[0]?.id ?? '',
+        organization_id: preferredOrg?.id ?? '',
         name: '',
         product_code: '',
     });
     const issueKey = useForm({
-        organization_id: organizations[0]?.id ?? '',
-        product_code: '',
+        organization_id: preferredOrg?.id ?? '',
+        product_code: initialApp?.product_code ?? '',
         customer_id: '',
         plan: 'trial',
     });
@@ -218,6 +241,64 @@ export default function DeveloperApps({
     );
     const canRegister =
         canIssueKeys && selectedIssuer?.issuer_status === 'active';
+    const activeApps = applications.filter((app) => app.status === 'active');
+    const liveKeys = keys.filter((key) => !key.revoked_at);
+    const readyToIssue =
+        canIssueKeys &&
+        organizations.some(
+            (org) =>
+                org.id === issueKey.data.organization_id &&
+                org.issuer_status === 'active',
+        ) &&
+        activeApps.some(
+            (app) =>
+                app.organization_id === issueKey.data.organization_id &&
+                app.product_code === issueKey.data.product_code,
+        );
+    const onboarding = [
+        {
+            step: '01',
+            title: 'Organization',
+            detail:
+                organizations.length === 0
+                    ? 'Create your workspace'
+                    : preferredOrg?.issuer_status === 'active'
+                      ? 'Issuer approved'
+                      : 'Issuer approval required',
+            ready: preferredOrg?.issuer_status === 'active',
+            href:
+                organizations.length === 0
+                    ? '#developer-org-create'
+                    : '#developer-app-create',
+        },
+        {
+            step: '02',
+            title: 'Application',
+            detail:
+                activeApps.length > 0
+                    ? `${activeApps.length} registered app(s)`
+                    : 'Name your app; its ID is suggested',
+            ready: activeApps.length > 0,
+            href: '#developer-app-create',
+        },
+        {
+            step: '03',
+            title: 'Customer key',
+            detail:
+                liveKeys.length > 0
+                    ? `${liveKeys.length} active trial key(s)`
+                    : 'Issue a governed trial key',
+            ready: liveKeys.length > 0,
+            href: '#developer-app-key',
+        },
+        {
+            step: '04',
+            title: 'Integrate',
+            detail: 'Choose language; starter only, not a signed SDK',
+            ready: false,
+            href: '#developer-app-sdk',
+        },
+    ] as const;
 
     const downloadSetup = () => {
         const extension: Record<string, string> = {
@@ -285,38 +366,36 @@ export default function DeveloperApps({
                             </span>
                         </div>
                     </div>
-                    <div className="mt-7 grid gap-3 sm:grid-cols-3">
-                        {[
-                            [
-                                '1',
-                                'Create your app',
-                                'Register under an approved developer organization',
-                            ],
-                            [
-                                '2',
-                                'Generate a key',
-                                'Issue against an authorized subscription and license',
-                            ],
-                            [
-                                '3',
-                                'Integrate SDK',
-                                'Select language and complete device activation',
-                            ],
-                        ].map(([step, title, detail]) => (
-                            <div
-                                key={step}
-                                className="rounded-xl border border-white/10 bg-white/5 p-4"
+                    <nav
+                        aria-label="Four-step licensing setup"
+                        className="mt-7 grid gap-3 sm:grid-cols-2 xl:grid-cols-4"
+                    >
+                        {onboarding.map((step) => (
+                            <a
+                                key={step.step}
+                                href={step.href}
+                                className="group rounded-xl border border-white/15 bg-white/5 p-4 transition-colors hover:border-amber-300/60 hover:bg-white/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-300"
                             >
-                                <span className="text-xs font-black text-amber-300">
-                                    STEP {step}
-                                </span>
-                                <h2 className="mt-2 font-bold">{title}</h2>
+                                <div className="flex items-center justify-between gap-2">
+                                    <span className="text-xs font-black text-amber-300">
+                                        STEP {step.step}
+                                    </span>
+                                    <span
+                                        className={`text-[11px] font-semibold ${step.ready ? 'text-emerald-300' : 'text-slate-300'}`}
+                                    >
+                                        {step.ready ? 'Ready' : 'Next / gated'}
+                                    </span>
+                                </div>
+                                <h2 className="mt-2 flex items-center gap-2 font-bold">
+                                    {step.title}
+                                    <ArrowRight className="size-3.5" />
+                                </h2>
                                 <p className="mt-1 text-xs leading-5 text-slate-300">
-                                    {detail}
+                                    {step.detail}
                                 </p>
-                            </div>
+                            </a>
                         ))}
-                    </div>
+                    </nav>
                 </section>
 
                 {!canIssueKeys && (
@@ -371,11 +450,31 @@ export default function DeveloperApps({
                             App: {newKey.product_code} · License ID:{' '}
                             {newKey.license_id}
                         </p>
+                        <a
+                            href="#developer-app-sdk"
+                            onClick={() => {
+                                const app = applications.find(
+                                    (item) =>
+                                        item.product_code ===
+                                        newKey.product_code,
+                                );
+                                if (app) {
+                                    setSelectedApp(app.id);
+                                }
+                            }}
+                            className="mt-4 inline-flex min-h-11 items-center gap-2 rounded-lg border px-4 text-sm font-semibold"
+                        >
+                            Continue to integration starter{' '}
+                            <ArrowRight className="size-4" />
+                        </a>
                     </section>
                 )}
 
                 {organizations.length === 0 && (
-                    <section className="bg-card rounded-2xl border p-5 sm:p-6">
+                    <section
+                        id="developer-org-create"
+                        className="bg-card scroll-mt-6 rounded-2xl border p-5 sm:p-6"
+                    >
                         <h2 className="text-lg font-bold">
                             Start by creating your organization
                         </h2>
@@ -427,10 +526,22 @@ export default function DeveloperApps({
                         )}
                     </section>
                 )}
+                {organizations.length > 0 &&
+                    !organizations.some((org) => org.issuer_status === 'active') && (
+                        <section
+                            role="status"
+                            className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-4 text-sm"
+                        >
+                            Your workspace is created. An active,
+                            owner-approved issuer subscription is required
+                            before registering an app or issuing customer keys.
+                            No payment or license is granted automatically.
+                        </section>
+                    )}
                 <div className="grid gap-5 xl:grid-cols-2">
                     <section
                         id="developer-app-create"
-                        className="bg-card rounded-2xl border p-5 sm:p-6"
+                        className="bg-card scroll-mt-6 rounded-2xl border p-5 sm:p-6"
                     >
                         <h2 className="flex items-center gap-2 text-lg font-bold">
                             <Plus className="size-5 text-red-500" /> 1. Register
@@ -446,6 +557,10 @@ export default function DeveloperApps({
                                 event.preventDefault();
                                 createApp.post('/developer/apps', {
                                     preserveScroll: true,
+                                    onSuccess: () => {
+                                        createApp.reset('name', 'product_code');
+                                        setCustomProductCode(false);
+                                    },
                                 });
                             }}
                         >
@@ -489,12 +604,16 @@ export default function DeveloperApps({
                                 maxLength={160}
                                 placeholder="My Cinema Player"
                                 value={createApp.data.name}
-                                onChange={(event) =>
-                                    createApp.setData(
-                                        'name',
-                                        event.target.value,
-                                    )
-                                }
+                                onChange={(event) => {
+                                    const name = event.target.value;
+                                    createApp.setData({
+                                        ...createApp.data,
+                                        name,
+                                        product_code: customProductCode
+                                            ? createApp.data.product_code
+                                            : suggestProductCode(name),
+                                    });
+                                }}
                                 required
                             />
                             <label
@@ -509,19 +628,21 @@ export default function DeveloperApps({
                                 maxLength={96}
                                 placeholder="MYCOMPANY.CINEMA"
                                 value={createApp.data.product_code}
-                                onChange={(event) =>
+                                onChange={(event) => {
+                                    setCustomProductCode(true);
                                     createApp.setData(
                                         'product_code',
                                         event.target.value
                                             .toUpperCase()
                                             .replace(/[^A-Z0-9_.:-]/g, ''),
-                                    )
-                                }
+                                    );
+                                }}
                                 required
                             />
                             <p className="text-muted-foreground text-xs">
-                                Use 3–96 uppercase letters, numbers, dot, dash,
-                                underscore or colon.
+                                Suggested automatically from the name. You can
+                                edit it; it must contain 3–96 uppercase letters,
+                                numbers, dot, dash, underscore or colon.
                             </p>
                             {Object.values(createApp.errors).map(
                                 (error, index) => (
@@ -548,7 +669,7 @@ export default function DeveloperApps({
 
                     <section
                         id="developer-app-key"
-                        className="bg-card rounded-2xl border p-5 sm:p-6"
+                        className="bg-card scroll-mt-6 rounded-2xl border p-5 sm:p-6"
                     >
                         <h2 className="flex items-center gap-2 text-lg font-bold">
                             <KeyRound className="size-5 text-red-500" /> 2.
@@ -674,8 +795,7 @@ export default function DeveloperApps({
                             <button
                                 type="submit"
                                 disabled={
-                                    !canIssueKeys ||
-                                    !issueKey.data.product_code ||
+                                    !readyToIssue ||
                                     issueKey.processing
                                 }
                                 className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-red-600 px-4 text-sm font-bold text-white disabled:opacity-40"
@@ -720,6 +840,25 @@ export default function DeveloperApps({
                                         <p className="text-muted-foreground mt-1 font-mono text-xs">
                                             {app.product_code}
                                         </p>
+                                        {app.status === 'active' && (
+                                            <a
+                                                href="#developer-app-key"
+                                                onClick={() => {
+                                                    setSelectedApp(app.id);
+                                                    issueKey.setData({
+                                                        ...issueKey.data,
+                                                        organization_id:
+                                                            app.organization_id,
+                                                        product_code:
+                                                            app.product_code,
+                                                    });
+                                                }}
+                                                className="mt-3 inline-flex min-h-10 items-center gap-1 rounded-lg border px-3 text-xs font-semibold hover:border-red-500/40 focus-visible:outline-2 focus-visible:outline-red-500"
+                                            >
+                                                Use this app{' '}
+                                                <ArrowRight className="size-3.5" />
+                                            </a>
+                                        )}
                                     </article>
                                 ))
                             )}
@@ -865,7 +1004,7 @@ export default function DeveloperApps({
                                     setSelectedApp(event.target.value)
                                 }
                             >
-                                <option value="">Example application</option>
+                                <option value="">Select an application</option>
                                 {applications.map((app) => (
                                     <option key={app.id} value={app.id}>
                                         {app.name}
@@ -898,6 +1037,7 @@ export default function DeveloperApps({
                             type="button"
                             className="inline-flex min-h-11 items-center gap-2 rounded-xl border px-4 text-sm font-bold"
                             onClick={() => void copyText(sdkText)}
+                            disabled={!displayedApp}
                         >
                             <Copy className="size-4" /> Copy starter code
                         </button>
@@ -905,6 +1045,7 @@ export default function DeveloperApps({
                             type="button"
                             className="inline-flex min-h-11 items-center gap-2 rounded-xl border px-4 text-sm font-bold"
                             onClick={downloadSetup}
+                            disabled={!displayedApp}
                         >
                             Download {language} setup
                         </button>
