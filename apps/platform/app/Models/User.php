@@ -39,6 +39,7 @@ class User extends Authenticatable implements MustVerifyEmail, PasskeyUser
     /** @use HasFactory<UserFactory> */
     use HasFactory, Notifiable, PasskeyAuthenticatable, TwoFactorAuthenticatable;
 
+    /** @return HasOne<CustomerProfile, $this> */
     public function customerProfile(): HasOne
     {
         return $this->hasOne(CustomerProfile::class);
