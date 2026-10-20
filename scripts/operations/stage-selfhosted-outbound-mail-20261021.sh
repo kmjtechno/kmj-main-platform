@@ -26,14 +26,15 @@ fi
 [[ "\${ID:-}" == ubuntu && "\${VERSION_ID:-}" == '24.04' ]] || fail UNSUPPORTED_OS
 [[ -t 0 && -t 1 ]] || fail OWNER_TTY_REQUIRED
 [[ ! -e "$STAMP" && ! -L "$STAMP" ]] || fail ALREADY_STAGED
-[[ ! -e /etc/postfix/main.cf && ! -e "$KEYDIR" ]] || fail EXISTING_MAIL_CONFIG_DO_NOT_OVERWRITE
-[[ ! -e /etc/opendkim.conf && ! -e /etc/opendkim ]] || fail EXISTING_OPENDKIM_CONFIG_DO_NOT_OVERWRITE
+[[ ! -e /etc/postfix/main.cf && ! -L /etc/postfix/main.cf && ! -e "$KEYDIR" && ! -L "$KEYDIR" ]] || fail EXISTING_MAIL_CONFIG_DO_NOT_OVERWRITE
+[[ ! -e /etc/opendkim.conf && ! -L /etc/opendkim.conf && ! -e /etc/opendkim && ! -L /etc/opendkim ]] || fail EXISTING_OPENDKIM_CONFIG_DO_NOT_OVERWRITE
+[[ ! -e /etc/opendkim.conf.kmj-package-default-20261021 && ! -L /etc/opendkim.conf.kmj-package-default-20261021 ]] || fail EXISTING_BACKUP_DO_NOT_OVERWRITE
 [[ $(getent ahostsv4 "$HOST" | awk 'NR==1 {print $1}') == "$IP" ]] || fail MAIL_A_RECORD_MISMATCH
 if ss -ltnH | awk '{print $4}' | grep -Eq '(^|:)(25|465|587|993)$'; then
   fail EXISTING_MAIL_LISTENER
 fi
 [[ $(df -Pk / | awk 'NR==2 {print $4}') -ge 1048576 ]] || fail INSUFFICIENT_DISK
-for cmd in apt-get dpkg-query debconf-set-selections postconf ss getent openssl; do
+for cmd in apt-get dpkg-query debconf-set-selections ss getent openssl systemctl; do
   command -v "$cmd" >/dev/null 2>&1 || fail "MISSING_TOOL_$cmd"
 done
 
@@ -67,6 +68,7 @@ printf '%s\n' \
 export DEBIAN_FRONTEND=noninteractive
 apt-get update -qq
 apt-get install -y -qq --no-install-recommends postfix opendkim opendkim-tools
+command -v postconf >/dev/null 2>&1 || fail POSTCONF_NOT_INSTALLED
 # Fail if package preseed did not apply: stop services without affecting web.
 if [[ $(postconf -h inet_interfaces) != 'loopback-only' ]]; then
   systemctl stop postfix opendkim >/dev/null 2>&1 || true
