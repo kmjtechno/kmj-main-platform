@@ -26,7 +26,7 @@ class StageControls(unittest.TestCase):
 
     def test_bash_variables_expand_instead_of_literal_backslashes(self):
         source = SCRIPT.read_text()
-        self.assertNotIn("\\\\${", source)
+        self.assertNotIn("\\${", source)
         self.assertIn('"${1:-}" != --stage', source)
         self.assertIn('"${ID:-}" == ubuntu', source)
         self.assertIn('"${VERSION_ID:-}" ==', source)
