@@ -278,5 +278,4 @@ class RegistrationTest extends TestCase
             'email' => 'bad-interest@example.test',
         ]);
     }
-
 }
