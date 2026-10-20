@@ -5,12 +5,16 @@ on:
     paths:
       - 'scripts/operations/stage-selfhosted-outbound-mail-20261021.sh'
       - 'scripts/operations/test-stage-selfhosted-outbound-mail-20261021.py'
+      - 'scripts/operations/stage-existing-kmj2026-mail-20261021.sh'
+      - 'scripts/operations/test-stage-existing-kmj2026-mail-20261021.py'
       - '.github/workflows/selfhosted-outbound-mail-stage-safety.yml'
   push:
     branches: [main]
     paths:
       - 'scripts/operations/stage-selfhosted-outbound-mail-20261021.sh'
       - 'scripts/operations/test-stage-selfhosted-outbound-mail-20261021.py'
+      - 'scripts/operations/stage-existing-kmj2026-mail-20261021.sh'
+      - 'scripts/operations/test-stage-existing-kmj2026-mail-20261021.py'
       - '.github/workflows/selfhosted-outbound-mail-stage-safety.yml'
 
 permissions:
@@ -29,6 +33,8 @@ jobs:
           set -euo pipefail
           bash -n scripts/operations/stage-selfhosted-outbound-mail-20261021.sh
           python3 -B scripts/operations/test-stage-selfhosted-outbound-mail-20261021.py
+          bash -n scripts/operations/stage-existing-kmj2026-mail-20261021.sh
+          python3 -B scripts/operations/test-stage-existing-kmj2026-mail-20261021.py
           echo 'STATIC_STAGING_CONTRACT=PASS'
           echo 'REAL_PACKAGE_INSTALL=NOT_ATTEMPTED'
           echo 'REAL_SMTP_DELIVERY=NOT_VERIFIED'
