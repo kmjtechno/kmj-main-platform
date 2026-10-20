@@ -2,6 +2,7 @@
 
 use App\Services\Licensing\Kslp\KslpKeyRegistry;
 use App\Services\Licensing\OmniDeskLicenseContract;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('api/v1/kslp')->group(function (): void {
@@ -40,8 +41,8 @@ Route::get(OmniDeskLicenseContract::KEYS_ENDPOINT, function (KslpKeyRegistry $ke
                 'kid' => (string) $key['kid'],
                 'algorithm' => OmniDeskLicenseContract::SIGNING_ALGORITHM,
                 'public_key_base64' => base64_encode($raw),
-                'not_before' => \Illuminate\Support\Carbon::parse($key['not_before'])->getTimestamp(),
-                'not_after' => \Illuminate\Support\Carbon::parse($key['not_after'])->getTimestamp(),
+                'not_before' => Carbon::parse($key['not_before'])->getTimestamp(),
+                'not_after' => Carbon::parse($key['not_after'])->getTimestamp(),
                 'status' => $key['status'] === 'retiring' ? 'ROLLOVER' : 'ACTIVE',
             ];
         })
