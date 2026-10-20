@@ -10,6 +10,14 @@ export type DeliveryMilestone = {
 
 export const deliveryMilestones: DeliveryMilestone[] = [
     {
+        id: 'customer-context-progressive-registration',
+        title: 'International customer registration contact and business context',
+        state: 'active',
+        detail: 'An additive schema and Fortify registration candidate capture customer account type, country, contact phone, conditional business organization and optional service interest. Billing addresses, tax identities and installation sites remain deferred to the relevant order or service workflow; production SMTP and owner deployment gates remain unverified.',
+        evidence:
+            'PR #498 provides one-to-one private customer_profiles table, transaction-safe user+profile+organization creation and negative validation tests. Isolated PostgreSQL migration/rollback, exact-head CI and protected release approval are required before any live customer-data collection is claimed.',
+    },
+    {
         id: 'legacy-desktop-commander-public-retirement',
         title: 'Retire Desktop Commander public catalog surface',
         state: 'active',

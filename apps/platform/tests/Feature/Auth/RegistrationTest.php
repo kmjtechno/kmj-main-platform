@@ -74,6 +74,9 @@ class RegistrationTest extends TestCase
                 // Production requires mixed case, digits, symbols and >=12 chars.
                 'password' => 'Kmj!9vX#2026sQ7rL8',
                 'password_confirmation' => 'Kmj!9vX#2026sQ7rL8',
+                'account_type' => 'individual',
+                'phone' => '+91 98765 43210',
+                'country' => 'India',
             ])->assertSessionHasErrors(['email']);
 
             $this->assertDatabaseMissing('users', ['email' => 'undeliverable@example.test']);
@@ -168,6 +171,10 @@ class RegistrationTest extends TestCase
             'email' => 'test@example.com',
             'password' => 'password',
             'password_confirmation' => 'password',
+            'account_type' => 'individual',
+            'phone' => '+91 98765 43210',
+            'country' => 'India',
+            'service_interest' => 'software',
         ]);
 
         $user = $this->app['auth']->user();
@@ -176,6 +183,14 @@ class RegistrationTest extends TestCase
         $this->assertNotNull($user);
         $this->assertDatabaseHas('organizations', [
             'name' => "Test User's Organization",
+        ]);
+        $this->assertDatabaseHas('customer_profiles', [
+            'user_id' => $user->getKey(),
+            'account_type' => 'individual',
+            'phone' => '+91 98765 43210',
+            'country' => 'India',
+            'company_name' => null,
+            'service_interest' => 'software',
         ]);
 
         $membership = OrganizationMembership::query()
@@ -189,5 +204,79 @@ class RegistrationTest extends TestCase
             'name' => "Test User's Organization",
         ]);
         $response->assertRedirect(route('dashboard', absolute: false));
+    }
+
+    public function test_business_registration_requires_company_name_before_any_write(): void
+    {
+        $this->withServerVariables(['REMOTE_ADDR' => '198.51.100.244']);
+
+        $this->post(route('register.store'), [
+            'name' => 'Business Owner',
+            'email' => 'company-required@example.test',
+            'password' => 'password',
+            'password_confirmation' => 'password',
+            'account_type' => 'business',
+            'phone' => '+44 20 7946 0123',
+            'country' => 'United Kingdom',
+        ])->assertSessionHasErrors(['company_name']);
+
+        $this->assertDatabaseMissing('users', [
+            'email' => 'company-required@example.test',
+        ]);
+        $this->assertDatabaseCount('customer_profiles', 0);
+    }
+
+    public function test_business_registration_persists_contact_and_creates_owned_business_organization(): void
+    {
+        $this->withServerVariables(['REMOTE_ADDR' => '198.51.100.245']);
+
+        $this->post(route('register.store'), [
+            'name' => 'Business Owner',
+            'email' => 'business-owner@example.test',
+            'password' => 'password',
+            'password_confirmation' => 'password',
+            'account_type' => 'business',
+            'company_name' => 'World Cinema Systems',
+            'phone' => '+44 20 7946 0123',
+            'country' => 'United Kingdom',
+            'service_interest' => 'cinema',
+        ])->assertRedirect(route('dashboard', absolute: false));
+
+        $user = $this->app['auth']->user();
+        $this->assertNotNull($user);
+
+        $this->assertDatabaseHas('customer_profiles', [
+            'user_id' => $user->getKey(),
+            'account_type' => 'business',
+            'company_name' => 'World Cinema Systems',
+            'country' => 'United Kingdom',
+            'service_interest' => 'cinema',
+        ]);
+        $this->assertDatabaseHas('organizations', ['name' => 'World Cinema Systems']);
+        $this->assertDatabaseHas('organization_memberships', [
+            'user_id' => $user->getKey(),
+            'role' => 'owner',
+        ]);
+        $this->assertDatabaseCount('entitlements', 0);
+    }
+
+    public function test_registration_does_not_accept_unrecognized_product_interests(): void
+    {
+        $this->withServerVariables(['REMOTE_ADDR' => '198.51.100.246']);
+
+        $this->post(route('register.store'), [
+            'name' => 'Potential Customer',
+            'email' => 'bad-interest@example.test',
+            'password' => 'password',
+            'password_confirmation' => 'password',
+            'account_type' => 'individual',
+            'phone' => '+1 415 555 0134',
+            'country' => 'United States',
+            'service_interest' => 'grant_superadmin_license',
+        ])->assertSessionHasErrors(['service_interest']);
+
+        $this->assertDatabaseMissing('users', [
+            'email' => 'bad-interest@example.test',
+        ]);
     }
 }

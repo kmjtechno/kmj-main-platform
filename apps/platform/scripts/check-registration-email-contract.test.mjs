@@ -109,3 +109,34 @@ void test('temporary free relay is explicitly disabled, requires SMTPS credentia
     assert.match(mailConfig, /'default' => env\('MAIL_MAILER', 'log'\)/);
     assert.doesNotMatch(mailConfig, /[a-zA-Z0-9]{20,}@smtp-brevo\.com/);
 });
+
+void test('customer signup collects only essential service contact and business context with server validation', () => {
+    const profile = read('app/Models/CustomerProfile.php');
+    const migration = read(
+        'database/migrations/2026_10_20_070000_create_customer_profiles_table.php',
+    );
+    for (const marker of [
+        "'account_type'",
+        "'phone'",
+        "'country'",
+        "'company_name'",
+        "'service_interest'",
+    ]) {
+        assert.ok(
+            registerUi.includes('name=' + marker.replaceAll("'", '"')) ||
+                registerUi.includes(marker.replaceAll("'", '"')),
+            marker,
+        );
+        assert.ok(registration.includes(marker), marker);
+        assert.ok(migration.includes(marker), marker);
+    }
+    assert.match(registerUi, /accountType === 'business'/);
+    assert.match(registerUi, /billing addresses, tax IDs and/);
+    assert.match(
+        registration,
+        /DB::transaction\(function \(\) use \(\$validated\)/,
+    );
+    assert.match(registration, /CustomerProfile::query\(\)->create/);
+    assert.match(migration, /cascadeOnDelete\(\)/);
+    assert.doesNotMatch(profile, /password|passkey|license|entitlement/i);
+});
