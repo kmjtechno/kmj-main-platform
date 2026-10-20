@@ -10,6 +10,22 @@ export type DeliveryMilestone = {
 
 export const deliveryMilestones: DeliveryMilestone[] = [
     {
+        id: 'customer-context-progressive-registration',
+        title: 'International customer registration contact and business context',
+        state: 'active',
+        detail: 'An additive schema and Fortify registration candidate capture customer account type, country, contact phone, conditional business organization and optional service interest. Billing addresses, tax identities and installation sites remain deferred to the relevant order or service workflow; production SMTP and owner deployment gates remain unverified.',
+        evidence:
+            'PR #498 provides one-to-one private customer_profiles table, transaction-safe user+profile+organization creation and negative validation tests. Isolated PostgreSQL migration/rollback, exact-head CI and protected release approval are required before any live customer-data collection is claimed.',
+    },
+    {
+        id: 'legacy-desktop-commander-public-retirement',
+        title: 'Retire Desktop Commander public catalog surface',
+        state: 'active',
+        detail: 'KMJ Desktop Commander is being retired from public landing, product details, sitemap and AI discovery, while existing product IDs, issued entitlements, historical orders and compatibility endpoints remain intact. This is an un-deployed candidate, not proof that live public discovery has been removed.',
+        evidence:
+            'PR #497 contains PublicProductCatalog fail-closed marketing hide, 404 detail and updated sitemap/AI/owner HTTP regressions. Exact-head CI and fresh guarded deployment must pass before any live retirement claim.',
+    },
+    {
         id: 'registration-abuse-protection-p0',
         title: 'Public account registration abuse protection',
         state: 'active',
