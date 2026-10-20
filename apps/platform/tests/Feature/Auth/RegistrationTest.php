@@ -205,6 +205,7 @@ class RegistrationTest extends TestCase
         ]);
         $response->assertRedirect(route('dashboard', absolute: false));
     }
+
     public function test_business_registration_requires_company_name_before_any_write(): void
     {
         $this->withServerVariables(['REMOTE_ADDR' => '198.51.100.244']);
