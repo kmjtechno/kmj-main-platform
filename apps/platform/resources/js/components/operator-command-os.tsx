@@ -77,16 +77,12 @@ const art: Record<string, string> = {
     'kmj-omnidesk': 'omnidesk',
     'kmj-calibration-pro': 'calibration',
     'kmj-cinema-platform': 'cinema',
-    'kmj-cinecore': 'cinema',
     'kmj-motiondirector': 'motion',
     'kmj-cloud-nexus': 'nexus',
     'kmj-forge': 'forge',
     'kmj-agent': 'agent',
     'kmj-creative-studio': 'studio',
     'kmj-licensing-hub': 'licensing',
-    'kmj-360-dome': 'cinema',
-    'kmj-cinema-player': 'cinema',
-    'kmj-connect': 'omnidesk',
 };
 const groups = [
     {

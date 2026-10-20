@@ -101,7 +101,6 @@ const artwork: Record<string, string> = {
     'kmj-omnidesk': 'omnidesk',
     'kmj-calibration-pro': 'calibration',
     'kmj-cinema-platform': 'cinema',
-    'kmj-cinecore': 'cinema',
     'kmj-forge': 'forge',
     'kmj-agent': 'agent',
     'kmj-cloud-nexus': 'nexus',

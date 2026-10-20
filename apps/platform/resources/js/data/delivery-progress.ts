@@ -10,6 +10,14 @@ export type DeliveryMilestone = {
 
 export const deliveryMilestones: DeliveryMilestone[] = [
     {
+        id: 'truthful-premium-product-imagery-p0',
+        title: 'Product-identity-accurate media and responsive portfolio',
+        state: 'active',
+        detail: 'PR #500 merged guarded owner media filenames and reliable branded fallbacks without substituting unrelated imagery. A follow-up candidate removes known hard-coded cross-product media aliases and fixes image-label positioning on centered and mobile card grids. The source guards do not prove every published product image accurately depicts its actual product.',
+        evidence:
+            'PR #500 merged after 5/5 isolated checks. The separate responsive art clean-up remains under exact-head review. Final real product screenshots, brand owner acceptance and protected production deployment are still required before declaring published artwork complete.',
+    },
+    {
         id: 'customer-context-progressive-registration',
         title: 'International customer registration contact and business context',
         state: 'active',
