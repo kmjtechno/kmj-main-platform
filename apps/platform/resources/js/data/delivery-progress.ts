@@ -10,6 +10,14 @@ export type DeliveryMilestone = {
 
 export const deliveryMilestones: DeliveryMilestone[] = [
     {
+        id: 'omnidesk-production-licensing-boundary',
+        title: 'OmniDesk production licensing boundary',
+        state: 'active',
+        detail: 'A current-main candidate hardens Ed25519 verification-key discovery for OmniDesk, enforces signing-key validity windows and prevents the CloudOS lease signer from issuing OmniDesk product leases. This is source-level release hardening only; authenticated OmniDesk activation/renewal adapters, production KMS/HSM signing, cross-service entitlement proof and protected deployment remain release gates.',
+        evidence:
+            'PR #510 is under exact-head CI. Its public key endpoint contains no private key material and maps active/retiring license verification keys to ACTIVE/ROLLOVER only while valid. Production signing, customer activation and live entitlement acceptance are not claimed.',
+    },
+    {
         id: 'truthful-premium-product-imagery-p0',
         title: 'Product-identity-accurate media and responsive portfolio',
         state: 'active',
