@@ -137,7 +137,6 @@ void test('public homepage exposes accessible account entry without bypassing ve
     );
 });
 
-
 void test('owner-configured product imagery never displays an unrelated product visual', async () => {
     const policy = readFileSync(
         'resources/js/lib/product-image-identity.ts',
@@ -191,7 +190,10 @@ void test('owner-configured product imagery never displays an unrelated product 
         'utf8',
     );
     assert.match(detail, /productImageForSlug\(slug, imagePath\)/);
-    assert.match(detail, /onError=\{\(\) => setFailedVisual\(generatedVisual\)\}/);
+    assert.match(
+        detail,
+        /onError=\{\(\) => setFailedVisual\(generatedVisual\)\}/,
+    );
     assert.match(source, /productImageForSlug\(\s*p\.slug,\s*p\.image_path/);
     assert.match(artwork, /<strong>\{name\}<\/strong>/);
     assert.doesNotMatch(policy, /\/private\/|fetch\(|eval\(/);
