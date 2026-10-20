@@ -21,7 +21,7 @@ fail() { printf 'MAIL_STAGE=BLOCKED\nREASON=%s\n' "$1"; exit 2; }
 . /etc/os-release
 [ "${ID:-}" = ubuntu ] && [ "${VERSION_ID:-}" = 24.04 ] || fail OS_UNSUPPORTED
 [ -t 0 ] && [ -t 1 ] || fail INTERACTIVE_TTY_REQUIRED
-for cmd in apt-get debconf-set-selections dpkg-query openssl python3 ss getent systemctl find stat install sha256sum; do
+for cmd in apt-get debconf-set-selections dpkg-query openssl python3 ss getent systemctl find stat install sha256sum cmp cut awk grep df; do
   command -v "$cmd" >/dev/null 2>&1 || fail "TOOL_MISSING_$cmd"
 done
 [ ! -e "$STAGED" ] && [ ! -L "$STAGED" ] || fail ALREADY_STAGED
@@ -78,6 +78,7 @@ then echo 'PRIVATE_LOCAL_PUBLIC_DNS=PASS'
 else fail PRIVATE_OR_PUBLIC_DKIM_MISMATCH
 fi
 
+original_digest=$(sha256sum "$ORIGINAL_KEY" | cut -d' ' -f1)
 echo 'KMJ_MAIL_REUSE=PREINSTALL_PREFLIGHT_PASS'
 echo "MAIL_HOST=$HOST"
 echo 'EXISTING_DKIM_KEY=REUSE_WITH_RESTRICTED_COPY'
@@ -117,7 +118,7 @@ id opendkim >/dev/null 2>&1 || fail OPENDKIM_USER_MISSING
 
 # Copy from immutable original; original ownership, permissions and bytes
 # remain untouched. No private material is committed, logged or displayed.
-original_digest=$(sha256sum "$ORIGINAL_KEY" | cut -d' ' -f1)
+[ "$(sha256sum "$ORIGINAL_KEY" | cut -d' ' -f1)" = "$original_digest" ] || fail ORIGINAL_PRIVATE_KEY_CHANGED_DURING_INSTALL
 install -d -o opendkim -g opendkim -m 0700 "$ACTIVE_DIR"
 install -o opendkim -g opendkim -m 0400 "$ORIGINAL_KEY" "$ACTIVE_DIR/kmj2026.private"
 cmp -s "$ORIGINAL_KEY" "$ACTIVE_DIR/kmj2026.private" || fail DKIM_PRIVATE_COPY_MISMATCH
