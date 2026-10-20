@@ -1,0 +1,38 @@
+name: Owner Shell Source Rollback Delta
+
+on:
+  pull_request:
+    paths:
+      - 'scripts/ci/verify-owner-shell-rollback-delta-20261020.py'
+      - 'scripts/test_owner_shell_rollback_delta_contract.py'
+      - '.github/workflows/owner-shell-rollback-delta.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/ci/verify-owner-shell-rollback-delta-20261020.py'
+      - 'scripts/test_owner_shell_rollback_delta_contract.py'
+      - '.github/workflows/owner-shell-rollback-delta.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  source-delta:
+    name: Immutable UI delta and old-SHA compatibility boundary
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+          fetch-depth: 32
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - name: Negative safety cases
+        run: |
+          set -euo pipefail
+          python3 -B scripts/test_owner_shell_rollback_delta_contract.py
+      - name: Exact commit to commit delta (no live database)
+        run: |
+          set -euo pipefail
+          python3 -B scripts/ci/verify-owner-shell-rollback-delta-20261020.py
+          echo 'PRODUCTION_ROLLBACK_NOT_PERFORMED=TRUE'
