@@ -245,7 +245,7 @@
 }
 .lock-products {
     display: grid;
-    grid-template-columns: repeat(5, minmax(0, 1fr));
+    grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 12px;
 }
 .lock-product {
@@ -318,9 +318,8 @@
 
 .lock-product-category {
     position: absolute;
-    right: 8px;
-    top: calc((100vw - 8vw) /5/2.12 - 2px);
-    transform: translateY(-50%);
+    right: 12px;
+    top: 12px;
     padding: 3px 7px;
     background: #086599;
     border-radius: 8px;
@@ -891,7 +890,7 @@
         grid-template-columns: repeat(3, 1fr);
     }
     .lock-product-category {
-        top: calc((100vw - 8vw) /3/2.12 - 2px);
+        top: 10px;
     }
     .lock-capabilities,
     .lock-industries {
@@ -1016,7 +1015,7 @@
         gap: 10px;
     }
     .lock-product-category {
-        top: calc((100vw - 12vw) /2/2.12 - 2px);
+        top: 10px;
         font-size: 7px;
     }
     .lock-product > a > div {
@@ -1292,3 +1291,15 @@
         max-width: 100%;
     }
 }
+
+@media (max-width: 420px) {
+    .lock-products {
+        grid-template-columns: minmax(0, 1fr);
+    }
+    .lock-product-category {
+        top: 12px;
+        right: 12px;
+        font-size: 9px;
+    }
+}
+
