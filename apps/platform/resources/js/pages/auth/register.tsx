@@ -80,7 +80,9 @@ export default function Register({
                             </div>
 
                             <div className="grid gap-2">
-                                <Label htmlFor="account_type">Account type</Label>
+                                <Label htmlFor="account_type">
+                                    Account type
+                                </Label>
                                 <select
                                     id="account_type"
                                     name="account_type"
@@ -95,7 +97,9 @@ export default function Register({
                                     }
                                     className="border-input bg-background h-10 w-full rounded-md border px-3 text-sm"
                                 >
-                                    <option value="individual">Individual</option>
+                                    <option value="individual">
+                                        Individual
+                                    </option>
                                     <option value="business">
                                         Business / organization
                                     </option>
@@ -122,7 +126,9 @@ export default function Register({
                             )}
 
                             <div className="grid gap-2">
-                                <Label htmlFor="phone">Contact phone number</Label>
+                                <Label htmlFor="phone">
+                                    Contact phone number
+                                </Label>
                                 <Input
                                     id="phone"
                                     name="phone"
@@ -160,12 +166,24 @@ export default function Register({
                                     className="border-input bg-background h-10 w-full rounded-md border px-3 text-sm"
                                 >
                                     <option value="">Select later</option>
-                                    <option value="software">Software & AI</option>
-                                    <option value="cloud">CloudOS & hosting</option>
-                                    <option value="remote_access">OmniDesk remote access</option>
-                                    <option value="calibration">Calibration technology</option>
-                                    <option value="cinema">Cinema & immersive</option>
-                                    <option value="other">Other services</option>
+                                    <option value="software">
+                                        Software & AI
+                                    </option>
+                                    <option value="cloud">
+                                        CloudOS & hosting
+                                    </option>
+                                    <option value="remote_access">
+                                        OmniDesk remote access
+                                    </option>
+                                    <option value="calibration">
+                                        Calibration technology
+                                    </option>
+                                    <option value="cinema">
+                                        Cinema & immersive
+                                    </option>
+                                    <option value="other">
+                                        Other services
+                                    </option>
                                 </select>
                                 <InputError message={errors.service_interest} />
                                 <p className="text-muted-foreground text-xs leading-5">
@@ -241,5 +259,6 @@ export default function Register({
 
 Register.layout = {
     title: 'Create an account',
-    description: 'Secure access for individuals and businesses — no billing details required yet',
+    description:
+        'Secure access for individuals and businesses — no billing details required yet',
 };
