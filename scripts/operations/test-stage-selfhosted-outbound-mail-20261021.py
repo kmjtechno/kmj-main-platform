@@ -85,6 +85,21 @@ class StageControls(unittest.TestCase):
         self.assertGreater(source.rindex("check_preexisting_dkim_tree /etc/opendkim"),
                            source.index("apt-get install -y -qq"))
 
+    def test_abort_disables_services_and_success_checks_reboot_safety(self):
+        source = SCRIPT.read_text()
+        cleanup_start = source.index("cleanup() {")
+        cleanup_end = source.index("\n}\ntrap cleanup EXIT", cleanup_start)
+        cleanup = source[cleanup_start:cleanup_end]
+        self.assertIn("systemctl stop postfix opendkim", cleanup)
+        self.assertIn("systemctl disable postfix opendkim", cleanup)
+        self.assertIn("MAIL_STAGE=INCOMPLETE_EXIT_", cleanup)
+        self.assertIn('active=$(systemctl is-active "$service"', source)
+        self.assertIn('enabled=$(systemctl is-enabled "$service"', source)
+        self.assertIn("MAIL_SERVICE_STILL_ACTIVE", source)
+        self.assertIn("MAIL_SERVICE_AUTOSTART_NOT_DISABLED", source)
+        self.assertLess(source.index("MAIL_SERVICE_AUTOSTART_NOT_DISABLED"),
+                        source.index("MAIL_STAGE=PASS"))
+
     def test_fail_closed_host_and_operator(self):
         s = SCRIPT.read_text()
         for required in [
