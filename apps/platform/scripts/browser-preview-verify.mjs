@@ -184,15 +184,20 @@ try {
                     errors.push('Exactly one current owner module required');
                 if (
                     (await page
-                        .getByRole('navigation', { name: 'Super Admin modules' })
+                        .getByRole('navigation', {
+                            name: 'Super Admin modules',
+                        })
                         .count()) !== 1
                 )
                     errors.push('Real Operations module tabs missing');
                 if (
-                    (await page.getByText('My workspace', { exact: true }).count()) >
-                    0
+                    (await page
+                        .getByText('My workspace', { exact: true })
+                        .count()) > 0
                 )
-                    errors.push('Old customer workspace leaked into owner page');
+                    errors.push(
+                        'Old customer workspace leaked into owner page',
+                    );
                 if (width <= 390) {
                     await page
                         .getByRole('button', {
