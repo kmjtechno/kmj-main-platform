@@ -1,11 +1,36 @@
 #!/usr/bin/env python3
 """Static-only assertions: never execute installer or connect to any mail server."""
 from pathlib import Path
+import subprocess
 import unittest
 
 SCRIPT = Path(__file__).resolve().with_name("stage-selfhosted-outbound-mail-20261021.sh")
 
 class StageControls(unittest.TestCase):
+    def test_actual_argument_guard_without_running_installer(self):
+        source = SCRIPT.read_text()
+        start = source.index('if [[ "${1:-}" != --stage ]]')
+        end = source.index("\nfi", start) + len("\nfi")
+        isolated_guard = "set -eu\n" + source[start:end]
+        def check(*args):
+            return subprocess.run(
+                ["bash", "-c", isolated_guard, "stage-guard", *args],
+                capture_output=True, text=True, timeout=5, check=False,
+            )
+        valid = check("--stage")
+        self.assertEqual(valid.returncode, 0, valid.stdout + valid.stderr)
+        for invalid in ((), ("stage",), ("--stage", "unexpected")):
+            failed = check(*invalid)
+            self.assertEqual(failed.returncode, 2, failed.stderr)
+            self.assertIn("USAGE=bash script.sh --stage", failed.stdout)
+
+    def test_bash_variables_expand_instead_of_literal_backslashes(self):
+        source = SCRIPT.read_text()
+        self.assertNotIn("\\\\${", source)
+        self.assertIn('"${1:-}" != --stage', source)
+        self.assertIn('"${ID:-}" == ubuntu', source)
+        self.assertIn('"${VERSION_ID:-}" ==', source)
+
     def test_fail_closed_host_and_operator(self):
         s = SCRIPT.read_text()
         for required in [
