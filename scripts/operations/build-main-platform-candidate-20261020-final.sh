@@ -1,0 +1,136 @@
+#!/usr/bin/env bash
+# Exact SHA owner-shell/public-registration final source: non-deploying immutable source+frontend candidate builder on KMJ-elite.
+# Live pointer must remain platform-8070dad72c55 throughout.
+# It must NOT modify live current/previous, database, approval, nginx, PHP,
+# backup, DNS, payment, entitlement or email.
+set -Eeuo pipefail
+umask 027
+readonly SHA='98cc5c7e1603cd2616ca2da7a8dc5f577f01c348'
+readonly PREFIX="$(printf '%s' "$SHA" | cut -c 1-12)"
+readonly ROOT='/home/kmjprod'
+readonly DEST="$ROOT/releases/platform-$PREFIX"
+readonly SCRATCH="$ROOT/releases/.building-platform-$PREFIX"
+readonly SOURCE='https://github.com/kmjtechno/kmj-main-platform.git'
+notice() { printf '%s\n' "$1"; }
+block() { notice "KMJ_CANDIDATE=BLOCKED REASON=$1"; exit 2; }
+on_error() { notice 'KMJ_CANDIDATE=FAIL (current production unchanged)'; }
+trap on_error ERR
+# Grant Nginx read to PUBLIC candidate files only; never grant access to
+# runtime env, vendor, storage, git metadata or other releases. Same scoped
+# fix verified after Oct 19 Nginx permission-denied rollback.
+verify_public_acl() {
+  for p in "$DEST" "$DEST/apps" "$DEST/apps/platform"; do
+    [[ -d "$p" && ! -L "$p" ]] || block CANDIDATE_ANCESTOR_UNSAFE
+    setfacl -m 'u:www-data:--x' "$p" || block PUBLIC_ANCESTOR_ACL_FAIL
+  done
+  [[ -d "$DEST/apps/platform/public" && ! -L "$DEST/apps/platform/public" ]] ||
+    block CANDIDATE_PUBLIC_UNSAFE
+  setfacl -R -m 'u:www-data:rX' "$DEST/apps/platform/public" ||
+    block PUBLIC_TREE_ACL_FAIL
+  runuser -u www-data -- test -r "$DEST/apps/platform/public/index.php" ||
+    block NGINX_PUBLIC_INDEX_UNREADABLE
+  runuser -u www-data -- test ! -r "$DEST/apps/platform/.env" ||
+    block NGINX_PRIVATE_ENV_EXPOSED
+  [[ -z "$(runuser -u kmjprod -- git -C "$DEST" status --porcelain --untracked-files=normal)" ]] ||
+    block CANDIDATE_DIRTY_AFTER_ACL
+  notice 'CANDIDATE_PUBLIC_ACL=PASS PRIVATE_ENV_NGINX=DENIED'
+}
+
+[[ "$(id -u)" == 0 && "$(hostname -s)" == KMJ-elite ]] || block WRONG_HOST
+id kmjprod >/dev/null 2>&1 || block SERVICE_USER_MISSING
+[[ -L "$ROOT/current" ]] || block CURRENT_RELEASE_NOT_SYMLINK
+before="$(readlink -f "$ROOT/current")" || block CURRENT_RELEASE_MISSING
+[[ "$before" == "$ROOT"/releases/* && -d "$before" ]] || block CURRENT_RELEASE_UNSAFE
+[[ "$before" == "$ROOT/releases/platform-8070dad72c55" ]] || block EXPECTED_CURRENT_RELEASE_CHANGED
+[[ -d "$ROOT/releases" && ! -L "$ROOT/releases" ]] || block RELEASES_ROOT_MISSING
+for bin in git php8.4 composer npm node runuser sha256sum setfacl; do
+  command -v "$bin" >/dev/null 2>&1 || block "MISSING_$bin"
+done
+systemctl is-active --quiet nginx || block NGINX_NOT_ACTIVE
+systemctl is-active --quiet php8.4-fpm || block PHP_FPM_NOT_ACTIVE
+df -Pk "$ROOT" | awk 'END {exit !($4 > 3145728)}' || block INSUFFICIENT_DISK
+[[ ! -L "$SCRATCH" ]] || block SCRATCH_SYMLINK_UNSAFE
+if [[ -e "$DEST" || -L "$DEST" ]]; then
+  [[ -d "$DEST/.git" ]] || block CANDIDATE_ALREADY_EXISTS_UNVERIFIED
+  existing="$(runuser -u kmjprod -- git -C "$DEST" rev-parse HEAD)" || block CANDIDATE_GIT_ERROR
+  [[ "$existing" == "$SHA" ]] || block CANDIDATE_EXISTING_WRONG_SHA
+  for file in apps/platform/vendor/autoload.php apps/platform/public/build/manifest.json apps/platform/public/assets/kmj-codebridge-icon.png apps/platform/database/migrations/2026_10_20_070000_create_customer_profiles_table.php; do
+    [[ -s "$DEST/$file" ]] || block CANDIDATE_ARTIFACT_MISSING
+  done
+  verify_public_acl
+  [[ "$(readlink -f "$ROOT/current")" == "$before" ]] || block PRODUCTION_POINTER_CHANGED
+  notice "KMJ_CANDIDATE=EXISTING_SOURCE_ARTIFACTS_CHECK_PASS SHA=$SHA"
+  notice 'PRODUCTION_ACTIVATION=NOT_ATTEMPTED'
+  exit 0
+fi
+[[ -f "$before/apps/platform/.env" ]] || block CURRENT_APP_ENV_NOT_PRESENT
+if [[ -d "$SCRATCH" ]]; then
+  # Previous invocation passed real Composer/npm/Vite builds but ended because
+  # a clean git status was mistakenly the final (false) expression under -e.
+  # Never delete/rebuild or trust arbitrary scratch contents; fail closed.
+  [[ ! -L "$SCRATCH" && -d "$SCRATCH/repo/.git" ]] || block SCRATCH_INCOMPLETE
+  [[ "$(stat -c %U "$SCRATCH")" == kmjprod ]] || block SCRATCH_OWNER_MISMATCH
+  [[ "$(stat -c %U "$SCRATCH/repo")" == kmjprod ]] || block SCRATCH_REPO_OWNER_MISMATCH
+  [[ ! -L "$SCRATCH/repo" ]] || block SCRATCH_REPO_SYMLINK
+  [[ ! -e "$SCRATCH/repo/apps/platform/.env" ]] || block SCRATCH_HAS_RUNTIME_ENV
+  [[ "$(runuser -u kmjprod -- git -C "$SCRATCH/repo" rev-parse HEAD)" == "$SHA" ]] ||
+    block SCRATCH_SHA_MISMATCH
+  [[ -z "$(runuser -u kmjprod -- git -C "$SCRATCH/repo" status --porcelain --untracked-files=normal)" ]] ||
+    block SCRATCH_WORKTREE_DIRTY
+  for file in apps/platform/vendor/autoload.php apps/platform/public/build/manifest.json apps/platform/public/assets/kmj-codebridge-icon.png apps/platform/database/migrations/2026_10_20_070000_create_customer_profiles_table.php; do
+    [[ -s "$SCRATCH/repo/$file" && ! -L "$SCRATCH/repo/$file" ]] || block SCRATCH_ARTIFACT_MISSING
+  done
+  notice "KMJ_CANDIDATE=RESUMING_VERIFIED_SCRATCH"
+else
+  [[ ! -e "$SCRATCH" ]] || block SCRATCH_PATH_UNSAFE
+  install -d -m 0750 -o kmjprod -g kmjprod "$SCRATCH"
+  runuser -u kmjprod -- env HOME="$ROOT" \
+    bash -s -- "$SOURCE" "$SCRATCH" "$SHA" <<'PREPARE'
+set -Eeuo pipefail
+umask 027
+source_url="$1"; out="$2"; sha="$3"
+git clone --depth 64 --single-branch --branch main --no-tags "$source_url" "$out/repo"
+cd "$out/repo"
+git cat-file -e "$sha^{commit}" || { echo 'CANDIDATE_SHA_NOT_IN_FETCH'; exit 2; }
+git checkout --detach "$sha"
+[[ "$(git rev-parse HEAD)" == "$sha" ]] || exit 2
+app="$PWD/apps/platform"
+test -f "$app/composer.lock"
+test -f "$app/package-lock.json"
+cd "$app"
+cp .env.example .env
+chmod 600 .env
+composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader --no-scripts --no-progress
+npm ci --ignore-scripts --no-audit --no-fund
+npm run build
+test -s public/build/manifest.json
+test -s public/assets/kmj-codebridge-icon.png
+test -s database/migrations/2026_10_20_070000_create_customer_profiles_table.php
+test -s vendor/autoload.php
+rm -f .env
+if [[ -n "$(git status --porcelain --untracked-files=normal)" ]]; then
+  echo 'CANDIDATE_GIT_WORKTREE_DIRTY'; exit 2;
+fi
+echo 'CANDIDATE_SOURCE_BUILD_PASS'
+PREPARE
+fi
+[[ -z "$(runuser -u kmjprod -- git -C "$SCRATCH/repo" status --porcelain --untracked-files=normal)" ]] ||
+  block CANDIDATE_FINAL_WORKTREE_DIRTY
+install -o kmjprod -g kmjprod -m 0600 "$before/apps/platform/.env" \
+  "$SCRATCH/repo/apps/platform/.env"
+[[ -z "$(runuser -u kmjprod -- git -C "$SCRATCH/repo" status --porcelain --untracked-files=normal)" ]] ||
+  block CANDIDATE_AFTER_ENV_WORKTREE_DIRTY
+[[ "$(runuser -u kmjprod -- git -C "$SCRATCH/repo" rev-parse HEAD)" == "$SHA" ]] ||
+  block CANDIDATE_FINAL_SHA_MISMATCH
+mv -T -- "$SCRATCH/repo" "$DEST"
+rmdir -- "$SCRATCH"
+chmod 0750 "$DEST"
+verify_public_acl
+[[ "$(readlink -f "$ROOT/current")" == "$before" ]] ||
+  block PRODUCTION_POINTER_CHANGED
+notice "KMJ_CANDIDATE=BUILT_SHA_$SHA"
+notice 'PRODUCTION_SWITCH=NOT_ATTEMPTED'
+notice 'BACKUP_AND_APPROVAL=STILL_REQUIRED'
+notice 'CUSTOMER_PROFILE_MIGRATION=NOT_ATTEMPTED'
+notice 'OFFSITE_INDEPENDENT_RESTORE=NOT_VERIFIED'
+notice 'SMTP_DELIVERY=NOT_VERIFIED'
