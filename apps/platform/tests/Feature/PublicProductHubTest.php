@@ -84,7 +84,7 @@ final class PublicProductHubTest extends TestCase
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->component('products/index')
-                ->has('products', 15)
+                ->has('products', 14)
                 ->where('products', function ($products): bool {
                     $allowed = ['available', 'preview', 'research', 'planned', 'public-beta'];
 
