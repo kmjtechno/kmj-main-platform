@@ -27,6 +27,12 @@ class StageControls(unittest.TestCase):
         ]:
             self.assertIn(required, s)
 
+    def test_bootstrap_does_not_require_uninstalled_postconf(self):
+        s = SCRIPT.read_text()
+        preinstall = s.split("apt-get install -y -qq", 1)[0]
+        self.assertNotIn("for cmd in apt-get dpkg-query debconf-set-selections postconf", preinstall)
+        self.assertIn("POSTCONF_NOT_INSTALLED", s)
+
     def test_preserves_production(self):
         s = SCRIPT.read_text()
         for prohibited in [
