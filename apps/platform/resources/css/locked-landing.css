@@ -280,7 +280,8 @@
     position: relative;
     isolation: isolate;
     overflow: hidden;
-    background: radial-gradient(circle at 78% 22%, #c323424d 0%, transparent 43%),
+    background:
+        radial-gradient(circle at 78% 22%, #c323424d 0%, transparent 43%),
         linear-gradient(140deg, #172638, #0b121b 63%, #2a1428);
 }
 .lock-product-art-unavailable::before {
