@@ -1,3 +1,6 @@
+import { useState } from 'react';
+import { productImageForSlug } from '@/lib/product-image-identity';
+
 type ProductVisualProps = {
     slug: string;
     name: string;
@@ -50,13 +53,13 @@ export default function ProductVisual({
     compact = false,
     className,
 }: ProductVisualProps) {
-    const managedVisual =
-        imagePath?.startsWith('/assets/products/') === true ? imagePath : null;
+    const managedVisual = productImageForSlug(slug, imagePath);
     const generatedVisual = managedVisual ?? generatedVisuals[slug];
+    const [failedVisual, setFailedVisual] = useState<string | null>(null);
     const [accent, accent2] = palette[slug] ?? ['#e21b23', '#6d28d9'];
     const isCloud = kind === 'cloudos' || slug === 'kmj-cloudos';
 
-    if (generatedVisual) {
+    if (generatedVisual && generatedVisual !== failedVisual) {
         return (
             <div
                 className={
@@ -74,6 +77,7 @@ export default function ProductVisual({
                     height={960}
                     loading={compact ? 'lazy' : 'eager'}
                     decoding="async"
+                    onError={() => setFailedVisual(generatedVisual)}
                     className="h-full w-full object-cover"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-[#05070a]/45 via-transparent to-transparent" />
