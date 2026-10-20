@@ -213,6 +213,7 @@ void test('guarded owner subpages share the locked shell without changing custom
         assert.ok(shell.includes(marker), marker);
 
     assert.match(shell, /auth\.user\?\.name\?\.trim\(\)/);
+    assert.match(shell, /aria-label="Open Command Center search"/);
     assert.match(shell, /href="\/operator#owner-kristi"/);
     assert.match(styles, /\.owner-module-shell \.owner-module-body/);
     assert.match(styles, /@media \(max-width: 700px\)/);
