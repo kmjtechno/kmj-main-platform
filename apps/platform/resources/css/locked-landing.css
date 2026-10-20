@@ -1116,3 +1116,139 @@
         height: auto;
     }
 }
+
+/* Owner-approved compact premium canvas: generous breathing room without
+   stretching every card and hero scene across ultrawide monitors. */
+.locked-landing {
+    min-width: 0;
+    max-width: 100%;
+}
+.lock-header,
+.lock-hero,
+.lock-trust,
+.lock-section,
+.lock-footer-main {
+    max-width: 1360px;
+    margin-inline: auto;
+}
+.lock-header {
+    gap: clamp(8px, 1vw, 16px);
+    padding-inline: clamp(16px, 2.4vw, 32px);
+}
+.lock-header > a:first-of-type {
+    width: clamp(156px, 15vw, 204px);
+}
+.lock-header nav {
+    gap: clamp(10px, 1.2vw, 19px);
+    font-size: 12px;
+}
+.lock-auth {
+    display: flex;
+    flex: 0 0 auto;
+    align-items: center;
+    gap: 8px;
+}
+.lock-auth-login,
+.lock-auth-register {
+    display: inline-flex;
+    min-height: 40px;
+    align-items: center;
+    justify-content: center;
+    padding: 8px 11px;
+    border-radius: 9px;
+    font-size: 12px;
+    font-weight: 700;
+    white-space: nowrap;
+}
+.lock-auth-login {
+    border: 1px solid #485569;
+    background: #0c1420;
+    color: #f4f6fa;
+}
+.lock-auth-register {
+    border: 1px solid #ee334d;
+    background: linear-gradient(130deg, #fa1c43, #b80b28);
+    color: white;
+}
+.lock-auth-login:hover,
+.lock-auth-register:hover {
+    filter: brightness(1.14);
+}
+.lock-mobile-account {
+    display: none;
+}
+.lock-footer-main {
+    width: 100%;
+}
+@media (max-width: 1450px) {
+    .lock-header .lock-search,
+    .lock-header .lock-contact {
+        display: none;
+    }
+}
+@media (max-width: 1050px) {
+    .lock-header nav {
+        display: none;
+    }
+    .lock-header nav.is-open {
+        display: flex;
+        flex-direction: column;
+        align-items: stretch;
+        position: absolute;
+        top: 100%;
+        right: 0;
+        left: 0;
+        z-index: 40;
+        padding: 14px clamp(16px, 4vw, 32px) 22px;
+        gap: 3px;
+        border-bottom: 1px solid #40516b;
+        background: #09111c;
+        box-shadow: 0 14px 30px #0009;
+        white-space: normal;
+    }
+    .lock-header nav.is-open a {
+        padding: 10px 12px;
+        border-radius: 8px;
+    }
+    .lock-mobile-account {
+        display: flex;
+        flex-direction: column;
+        padding-top: 10px;
+        margin-top: 10px;
+        border-top: 1px solid #344150;
+    }
+    .lock-menu {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+    }
+    .lock-header .lock-language {
+        display: none;
+    }
+    .lock-auth {
+        margin-left: auto;
+    }
+}
+@media (max-width: 560px) {
+    .lock-header {
+        gap: 8px;
+        padding-inline: 12px;
+    }
+    .lock-header > a:first-of-type {
+        width: clamp(128px, 40vw, 175px);
+    }
+    .lock-auth-register {
+        display: none;
+    }
+    .lock-auth-login {
+        padding-inline: 10px;
+        min-height: 36px;
+    }
+    .lock-hero,
+    .lock-trust,
+    .lock-section,
+    .lock-footer-main {
+        min-width: 0;
+        max-width: 100%;
+    }
+}

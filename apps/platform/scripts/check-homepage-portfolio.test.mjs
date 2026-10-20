@@ -111,3 +111,27 @@ void test('public Kristi guidance routes support, mobile and licensing honestly'
     assert.match(source, /setAnswer\(publicGuidanceIndex\(query\)\)/);
     assert.doesNotMatch(source, /\/licens\|price\/i\.test\(query\)/);
 });
+
+void test('public homepage exposes accessible account entry without bypassing verification readiness', () => {
+    const styles = readFileSync('resources/css/locked-landing.css', 'utf8');
+    assert.match(source, /usePage\(\)\.props/);
+    assert.match(
+        source,
+        /registrationAvailable = publicSite\?\.registration_available === true/,
+    );
+    assert.match(source, /href="\/login"/);
+    assert.match(source, /href="\/register"/);
+    assert.match(source, /className="lock-auth-login"/);
+    assert.match(source, /className="lock-auth-register"/);
+    assert.match(source, /lock-mobile-account/);
+    assert.match(source, /Registration paused — details/);
+    assert.match(styles, /\.lock-auth-login/);
+    assert.match(styles, /\.lock-mobile-account/);
+    assert.match(styles, /max-width: 1360px/);
+    assert.match(styles, /@media \(max-width: 1050px\)/);
+    assert.match(styles, /@media \(max-width: 560px\)/);
+    assert.doesNotMatch(
+        source,
+        /autoSubmitRegistration|bypassEmailVerification/,
+    );
+});

@@ -1,5 +1,5 @@
 import * as DialogPrimitive from '@radix-ui/react-dialog';
-import { Head, Link } from '@inertiajs/react';
+import { Head, Link, usePage } from '@inertiajs/react';
 import { useState } from 'react';
 import {
     ArrowRight,
@@ -283,6 +283,8 @@ export default function Welcome({
 }) {
     const [menu, setMenu] = useState(false);
     const [tour, setTour] = useState(false);
+    const { auth, publicSite } = usePage().props;
+    const registrationAvailable = publicSite?.registration_available === true;
     // Catalog ordering and visibility remain controlled by the backend.
     const ecosystemProducts = products.filter(
         (p) => p.slug !== 'kmj-immersive-cinema-suite',
@@ -341,6 +343,33 @@ export default function Welcome({
                                 {label}
                             </Link>
                         ))}
+                        <div className="lock-mobile-account">
+                            {auth.user ? (
+                                <Link
+                                    href="/dashboard"
+                                    onClick={() => setMenu(false)}
+                                >
+                                    My dashboard
+                                </Link>
+                            ) : (
+                                <>
+                                    <Link
+                                        href="/login"
+                                        onClick={() => setMenu(false)}
+                                    >
+                                        Sign in
+                                    </Link>
+                                    <Link
+                                        href="/register"
+                                        onClick={() => setMenu(false)}
+                                    >
+                                        {registrationAvailable
+                                            ? 'Create account'
+                                            : 'Registration paused — details'}
+                                    </Link>
+                                </>
+                            )}
+                        </div>
                     </nav>
                     <Link
                         className="lock-search"
@@ -355,6 +384,32 @@ export default function Welcome({
                     <Link href="#contact" className="lock-primary lock-contact">
                         Contact Us <ArrowRight size={13} />
                     </Link>
+                    <div className="lock-auth" aria-label="Account access">
+                        {auth.user ? (
+                            <Link href="/dashboard" className="lock-auth-login">
+                                Dashboard
+                            </Link>
+                        ) : (
+                            <>
+                                <Link href="/login" className="lock-auth-login">
+                                    Sign in
+                                </Link>
+                                <Link
+                                    href="/register"
+                                    className="lock-auth-register"
+                                    aria-label={
+                                        registrationAvailable
+                                            ? 'Create KMJ TECHNO account'
+                                            : 'Register account — registration currently paused'
+                                    }
+                                >
+                                    {registrationAvailable
+                                        ? 'Create account'
+                                        : 'Register'}
+                                </Link>
+                            </>
+                        )}
+                    </div>
                     <button
                         className="lock-menu"
                         aria-label="Toggle navigation"
