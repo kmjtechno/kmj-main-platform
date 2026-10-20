@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync, statSync } from 'node:fs';
+import ts from 'typescript';
 
 const source = readFileSync('resources/js/pages/welcome.tsx', 'utf8');
 const brand = readFileSync('resources/js/components/locked-brand.tsx', 'utf8');
@@ -134,4 +135,64 @@ void test('public homepage exposes accessible account entry without bypassing ve
         source,
         /autoSubmitRegistration|bypassEmailVerification/,
     );
+});
+
+
+void test('owner-configured product imagery never displays an unrelated product visual', async () => {
+    const policy = readFileSync(
+        'resources/js/lib/product-image-identity.ts',
+        'utf8',
+    );
+    const compiled = ts.transpileModule(policy, {
+        compilerOptions: {
+            module: ts.ModuleKind.ESNext,
+            target: ts.ScriptTarget.ES2022,
+        },
+    }).outputText;
+    const { productImageForSlug } = await import(
+        'data:text/javascript;charset=utf-8,' + encodeURIComponent(compiled)
+    );
+
+    assert.equal(
+        productImageForSlug('kmj-cloudos', '/assets/products/kmj-cloudos.webp'),
+        '/assets/products/kmj-cloudos.webp',
+    );
+    assert.equal(
+        productImageForSlug(
+            'kmj-codebridge',
+            '/assets/products/kmj-codebridge-screenshot.webp',
+        ),
+        '/assets/products/kmj-codebridge-screenshot.webp',
+    );
+    assert.equal(
+        productImageForSlug(
+            'kmj-calibration-pro',
+            '/assets/products/kmj-calibration.webp',
+        ),
+        '/assets/products/kmj-calibration.webp',
+    );
+    for (const bad of [
+        '/assets/products/kmj-cloudos.webp',
+        '/assets/products/kmj-codebridge.webp',
+        '/assets/products/../private.webp',
+        'https://example.com/kmj-omnidesk.webp',
+        '/assets/locked/cinema.webp',
+        '/assets/products/kmj-omnidesk.svg',
+        '/assets/products/kmj-omnidesk.webp?token=secret',
+    ])
+        assert.equal(productImageForSlug('kmj-omnidesk', bad), null, bad);
+
+    const detail = readFileSync(
+        'resources/js/components/public/product-visual.tsx',
+        'utf8',
+    );
+    const artwork = readFileSync(
+        'resources/js/components/product-artwork.tsx',
+        'utf8',
+    );
+    assert.match(detail, /productImageForSlug\(slug, imagePath\)/);
+    assert.match(detail, /onError=\{\(\) => setFailedVisual\(generatedVisual\)\}/);
+    assert.match(source, /productImageForSlug\(\s*p\.slug,\s*p\.image_path/);
+    assert.match(artwork, /<strong>\{name\}<\/strong>/);
+    assert.doesNotMatch(policy, /\/private\/|fetch\(|eval\(/);
 });
