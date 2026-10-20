@@ -276,6 +276,46 @@
     font-size: 11px;
     text-align: center;
 }
+.lock-product-art-unavailable {
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+    background:
+        radial-gradient(circle at 78% 22%, #c323424d 0%, transparent 43%),
+        linear-gradient(140deg, #172638, #0b121b 63%, #2a1428);
+}
+.lock-product-art-unavailable::before {
+    content: '';
+    position: absolute;
+    inset: 16%;
+    border: 1px solid #8bacc52f;
+    border-radius: 50%;
+    transform: rotate(-24deg) scaleX(1.6);
+    pointer-events: none;
+}
+.lock-artwork-identity {
+    position: relative;
+    display: flex;
+    min-width: 0;
+    max-width: 95%;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+}
+.lock-artwork-identity strong {
+    max-width: 100%;
+    font-size: clamp(13px, 1.6vw, 20px);
+    line-height: 1.2;
+    letter-spacing: -0.02em;
+    color: #f7f9fd;
+    overflow-wrap: anywhere;
+}
+.lock-artwork-identity small {
+    font-size: 10px;
+    font-weight: 600;
+    color: #afbdd1;
+}
+
 .lock-product-category {
     position: absolute;
     right: 8px;

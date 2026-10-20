@@ -26,6 +26,7 @@ import {
 import LockedBrand from '@/components/locked-brand';
 import ProductArtwork from '@/components/product-artwork';
 import PublicSeo from '@/components/public-seo';
+import { productImageForSlug } from '@/lib/product-image-identity';
 import '../../css/locked-landing.css';
 
 type Product = {
@@ -579,7 +580,10 @@ export default function Welcome({
                                                     ? '/assets/locked/' +
                                                       artwork[p.slug] +
                                                       '.webp'
-                                                    : p.image_path
+                                                    : productImageForSlug(
+                                                          p.slug,
+                                                          p.image_path,
+                                                      )
                                             }
                                             name={p.name}
                                             fallbackClassName="lock-product-art-unavailable"

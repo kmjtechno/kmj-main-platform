@@ -39,7 +39,10 @@ export default function ProductArtwork({
             role="img"
             aria-label={name + ' artwork not available'}
         >
-            {fallbackText}
+            <span aria-hidden="true" className="lock-artwork-identity">
+                <strong>{name}</strong>
+                <small>{fallbackText}</small>
+            </span>
         </span>
     );
 }
