@@ -346,7 +346,11 @@ export default function Welcome({
                         <div className="lock-mobile-account">
                             {auth.user ? (
                                 <Link
-                                    href={operator?.enabled ? '/super-admin' : '/dashboard'}
+                                    href={
+                                        operator?.enabled
+                                            ? '/super-admin'
+                                            : '/dashboard'
+                                    }
                                     onClick={() => setMenu(false)}
                                 >
                                     My dashboard
@@ -386,7 +390,14 @@ export default function Welcome({
                     </Link>
                     <div className="lock-auth" aria-label="Account access">
                         {auth.user ? (
-                            <Link href={operator?.enabled ? '/super-admin' : '/dashboard'} className="lock-auth-login">
+                            <Link
+                                href={
+                                    operator?.enabled
+                                        ? '/super-admin'
+                                        : '/dashboard'
+                                }
+                                className="lock-auth-login"
+                            >
                                 Dashboard
                             </Link>
                         ) : (
