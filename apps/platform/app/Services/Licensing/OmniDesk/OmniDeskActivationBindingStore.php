@@ -88,11 +88,13 @@ final class OmniDeskActivationBindingStore
                 ->where('product_id', $product->getKey())
                 ->where('capability', OmniDeskLicenseContract::CAPABILITY)
                 ->where('status', 'active')
+                ->where('starts_at', '<=', now())
+                ->where(static function ($query): void {
+                    $query->whereNull('ends_at')->orWhere('ends_at', '>', now());
+                })
                 ->lockForUpdate()
                 ->first();
-            if (! $entitlement instanceof Entitlement
-                || $entitlement->starts_at->isFuture()
-                || ($entitlement->ends_at !== null && ! $entitlement->ends_at->isFuture())) {
+            if (! $entitlement instanceof Entitlement) {
                 throw new DomainException('OMNIDESK_ENTITLEMENT_INACTIVE');
             }
 
