@@ -137,17 +137,25 @@ void test('public homepage exposes accessible account entry without bypassing ve
     );
 });
 
-
 void test('locked canvas keeps both account buttons visible on mobile and owner links target secure super-admin', () => {
     const styles = readFileSync('resources/css/locked-landing.css', 'utf8');
     const ownerStyles = readFileSync('resources/css/owner-lock.css', 'utf8');
-    const owner = readFileSync('resources/js/components/operator-command-os.tsx', 'utf8');
+    const owner = readFileSync(
+        'resources/js/components/operator-command-os.tsx',
+        'utf8',
+    );
     assert.match(styles, /max-width: 1280px/);
-    assert.match(styles, /\.lock-auth-register,\s*\.lock-auth-login\s*\{\s*display: inline-flex/);
+    assert.match(
+        styles,
+        /\.lock-auth-register,\s*\.lock-auth-login\s*\{\s*display: inline-flex/,
+    );
     assert.doesNotMatch(styles, /\.lock-auth-register\s*\{\s*display: none/);
     assert.match(ownerStyles, /max-width: 1520px/);
     assert.match(owner, /href="\/super-admin"/);
-    assert.match(source, /operator\?\.enabled \? '\/super-admin' : '\/dashboard'/);
+    assert.match(
+        source,
+        /operator\?\.enabled \? '\/super-admin' : '\/dashboard'/,
+    );
     assert.match(source, /href="\/login"/);
     assert.match(source, /href="\/register"/);
 });
