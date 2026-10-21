@@ -441,9 +441,9 @@ export const deliveryMilestones: DeliveryMilestone[] = [
         id: 'omnidesk-licensing-contract',
         title: 'KMJ OmniDesk licensing contract',
         state: 'active',
-        detail: 'Dedicated omnidesk.remote_access authority, KSLP-v1 identity, signed-entitlement claims, device activation, renewable lease, offline grace, revocation and versioned API boundaries are contract-locked; Main Platform is explicitly limited to OmniDesk billing/licensing and cannot become its session, signaling, relay or media runtime; production Ed25519 signing remains KMS/HSM-gated',
+        detail: 'Dedicated omnidesk.remote_access authority, KSLP-v1 identity, signed-entitlement claims, device activation, renewable lease, offline grace, revocation and versioned API boundaries are contract-locked; first activation now has a cross-language Ed25519 device proof-of-possession verifier, while Main Platform remains limited to OmniDesk billing/licensing and production signing remains KMS/HSM-gated',
         evidence:
-            'PR #246 contract + ProductLicenseProfileRegistry dedicated capability + OmniDeskLicenseContractTest; production signer intentionally not enabled',
+            'PR #246 contract + ProductLicenseProfileRegistry dedicated capability + OmniDeskLicenseContractTest; current activation-proof slice verifies the same KMJ-OMNIDESK-ACTIVATE-v1 golden vector in OmniDesk Rust and Main Platform PHP; production signer and private activation endpoints remain gated',
     },
     {
         id: 'production-hardening',
