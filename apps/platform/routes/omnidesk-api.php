@@ -8,6 +8,7 @@ use App\Services\Licensing\OmniDesk\OmniDeskApiPrincipal;
 use DomainException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Validation\ValidationException;
 
 $omnideskPrincipal = static function (Request $request): OmniDeskApiPrincipal {
     if (! app()->bound(OmniDeskApiAuthorizer::class)) {
@@ -21,6 +22,11 @@ $omnideskError = static function (Throwable $error) {
     if ($error instanceof RuntimeException
         && $error->getMessage() === 'OMNIDESK_AUTHORIZER_UNAVAILABLE') {
         return response()->json(['error' => 'SERVER_UNAVAILABLE'], 503)
+            ->header('Cache-Control', 'no-store');
+    }
+
+    if ($error instanceof ValidationException) {
+        return response()->json(['error' => 'INVALID_REQUEST'], 422)
             ->header('Cache-Control', 'no-store');
     }
 
