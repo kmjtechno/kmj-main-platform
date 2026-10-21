@@ -17,7 +17,7 @@ const modules = [
     {
         key: 'overview',
         label: 'Overview',
-        href: '/operator',
+        href: '/super-admin',
         icon: LayoutDashboard,
         help: 'Business overview and decisions',
     },
@@ -31,7 +31,7 @@ const modules = [
     {
         key: 'orders',
         label: 'Orders',
-        href: '/operator#commercial-orders',
+        href: '/super-admin#commercial-orders',
         icon: ShoppingCart,
         help: 'Sales and fulfillment',
     },
