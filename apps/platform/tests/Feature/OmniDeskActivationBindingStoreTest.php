@@ -158,8 +158,10 @@ final class OmniDeskActivationBindingStoreTest extends TestCase
             $fixture['activation_id'],
             null,
             0,
+            null,
             'jti-0000000000000001',
             1,
+            'nonce-0000000000000000000000000001',
         );
         self::assertSame(1, (int) $first['current_sequence']);
         self::assertSame('jti-0000000000000001', $first['current_jti']);
@@ -169,10 +171,27 @@ final class OmniDeskActivationBindingStoreTest extends TestCase
                 $fixture['activation_id'],
                 null,
                 0,
+                null,
                 'jti-replay-0000000002',
                 1,
+                'nonce-0000000000000000000000000002',
             );
             self::fail('Replayed lease cursor must fail closed.');
+        } catch (DomainException $exception) {
+            self::assertSame('OMNIDESK_REPLAY_DETECTED', $exception->getMessage());
+        }
+
+        try {
+            $store->advanceLease(
+                $fixture['activation_id'],
+                'jti-0000000000000001',
+                1,
+                'nonce-wrong-000000000000000000000000',
+                'jti-0000000000000002',
+                2,
+                'nonce-0000000000000000000000000003',
+            );
+            self::fail('Wrong renewal challenge must fail closed.');
         } catch (DomainException $exception) {
             self::assertSame('OMNIDESK_REPLAY_DETECTED', $exception->getMessage());
         }
@@ -181,10 +200,13 @@ final class OmniDeskActivationBindingStoreTest extends TestCase
             $fixture['activation_id'],
             'jti-0000000000000001',
             1,
+            'nonce-0000000000000000000000000001',
             'jti-0000000000000002',
             2,
+            'nonce-0000000000000000000000000004',
         );
         self::assertSame(2, (int) $second['current_sequence']);
+        self::assertSame('nonce-0000000000000000000000000004', $second['current_nonce']);
     }
 
     public function test_deactivated_activation_cannot_be_bound(): void
