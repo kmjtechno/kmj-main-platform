@@ -7,6 +7,7 @@ import { dashboard, login, register } from '@/routes';
 
 export default function PublicSiteHeader() {
     const { auth, publicSite, operator } = usePage().props;
+    const ownerEnabled = (operator as { enabled?: boolean } | undefined)?.enabled === true;
     const registrationAvailable = publicSite?.registration_available === true;
     const [open, setOpen] = useState(false);
 
@@ -70,7 +71,7 @@ export default function PublicSiteHeader() {
                     {auth.user ? (
                         <Link
                             href={
-                                operator?.enabled ? '/super-admin' : dashboard()
+                                ownerEnabled ? '/super-admin' : dashboard()
                             }
                             className="inline-flex h-10 items-center gap-2 rounded-lg border border-white/10 bg-white/[0.035] px-4 text-sm font-bold text-white/84 transition hover:border-white/20 hover:bg-white/[0.07]"
                         >
@@ -170,7 +171,7 @@ export default function PublicSiteHeader() {
                             {auth.user ? (
                                 <Link
                                     href={
-                                        operator?.enabled
+                                        ownerEnabled
                                             ? '/super-admin'
                                             : dashboard()
                                     }
