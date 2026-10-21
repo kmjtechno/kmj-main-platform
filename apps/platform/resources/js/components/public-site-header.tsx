@@ -7,7 +7,7 @@ import { dashboard, login, register } from '@/routes';
 
 export default function PublicSiteHeader() {
     const { auth, publicSite, operator } = usePage().props;
-    const ownerEnabled = (operator as { enabled?: boolean } | undefined)?.enabled === true;
+    const ownerEnabled = (operator as { enabled?: boolean })?.enabled === true;
     const registrationAvailable = publicSite?.registration_available === true;
     const [open, setOpen] = useState(false);
 
