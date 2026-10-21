@@ -8,6 +8,7 @@ use App\Services\AiProviders\ResolvesAiProviderScope;
 use App\Services\Events\LaravelEventOutboxPublisher;
 use App\Services\Events\TransactionalOutbox;
 use App\Services\Licensing\LicenseRevoker;
+use App\Services\Mail\BrandedAuthNotifications;
 use App\Services\Licensing\LicenseValidator;
 use App\Services\Licensing\RustSandboxLicenseVerifier;
 use App\Services\Licensing\SandboxLicenseIssuer;
@@ -69,6 +70,7 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->configureDefaults();
+        BrandedAuthNotifications::register();
     }
 
     /**
