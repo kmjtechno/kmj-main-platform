@@ -52,10 +52,10 @@ export const deliveryMilestones: DeliveryMilestone[] = [
     {
         id: 'registration-email-delivery-p0',
         title: 'Registration email verification and password reset delivery',
-        state: 'blocked',
-        detail: 'Fail-closed registration, resend, and password-reset source checks are implemented. Public desktop/mobile Create account links are guarded by the merged PR #461. PR #470 under review additionally rejects malformed SMTP ports and requires an actual IPv4/IPv6 loopback listener before advertising attempt readiness. Live production outbound mail remains unverified until an authorized sender, independent inbox delivery, signed-link validation and guarded release acceptance all pass.',
+        state: 'active',
+        detail: 'Fail-closed public registration, verification resend and password-reset guards are implemented. The existing Brevo free SMTP provider accepted a real owner-authorized test on 21 October 2026, and the owner Gmail inbox received it with SPF, DKIM (aligned kmjtechno.com) and DMARC PASS. Candidate PR #519 adds official-logo HTML and plaintext designs wired to Laravel signed verification/reset notifications. Branded-template inbox rendering, Laravel production credentials, customer end-to-end flow and release promotion remain gated.',
         evidence:
-            'Current main includes RegistrationMailReadiness and negative HTTP mail tests. PR #461 merged public header/HTTP availability contract with exact-head CI. PR #470 is a candidate mail configuration-readiness guard pending exact-head CI. A configured transport is not proof of successful SMTP delivery, domain/PTR authorization or inbox receipt.',
+            'SMTP auth PASS and Brevo acceptance PASS from KMJ-elite; owner Gmail original headers confirmed SPF=pass, DKIM=pass d=kmjtechno.com selector brevo2, and DMARC=pass for test ec1582c5674f. PR #519 is still under exact-head CI and NOT deployed. Direct VPS SMTP is rejected by Gmail with 550 5.7.1; no production mailer switch, customer signup deliverability, or protected release success has been claimed.',
     },
     {
         id: 'codebridge-device-project-assignments',
