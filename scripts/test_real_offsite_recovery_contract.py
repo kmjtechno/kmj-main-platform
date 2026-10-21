@@ -25,6 +25,24 @@ class RealOffsiteRestoreDrillContract(unittest.TestCase):
         self.assertIn("BLOCKED", result.stdout)
         self.assertNotIn("OFFSITE_RETRIEVAL=PASS", result.stdout)
 
+    def test_persistent_private_scratch_for_large_backup(self) -> None:
+        source = DRILL.read_text(encoding="utf-8")
+        for required in (
+            'scratch="$HOME/kmj-recovery-scratch"',
+            '[[ -d "$scratch" && ! -L "$scratch" ]]',
+            "RECOVERY_SCRATCH_OWNER",
+            "RECOVERY_SCRATCH_MODE_700",
+            "RECOVERY_SCRATCH_DEVICE_MISMATCH",
+            'df -Pk "$scratch"',
+            'export TMPDIR="$scratch"',
+            'mktemp -d "$scratch/kmj-real-offsite-restore.XXXXXXXX"',
+        ):
+            self.assertIn(required, source)
+        self.assertNotIn("df -Pk /tmp", source)
+        self.assertNotIn("mktemp -d /tmp/kmj-real-offsite-restore", source)
+        self.assertLess(source.index("RECOVERY_SCRATCH_MODE_700"), source.index("rclone copyto"))
+        self.assertLess(source.index("export TMPDIR="), source.index("verify_backup_bundle.sh\" \"$tmp/encrypted.age\""))
+
     def test_disposable_restore_and_release_evidence_boundaries(self) -> None:
         source = DRILL.read_text(encoding="utf-8")
         for required in (
