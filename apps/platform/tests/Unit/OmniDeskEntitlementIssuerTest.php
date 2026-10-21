@@ -58,8 +58,11 @@ final class OmniDeskEntitlementIssuerTest extends TestCase
         $keypair = sodium_crypto_sign_seed_keypair($seed);
         $secret = sodium_crypto_sign_secretkey($keypair);
 
-        return new class($secret) implements OmniDeskSigner {
-            public function __construct(private readonly string $secret) {}
+        return new class($secret) implements OmniDeskSigner
+        {
+            public function __construct(private readonly string $secret)
+            {
+            }
 
             public function kid(): string
             {
@@ -118,7 +121,8 @@ final class OmniDeskEntitlementIssuerTest extends TestCase
 
     public function test_invalid_signature_length_from_signer_is_rejected(): void
     {
-        $signer = new class implements OmniDeskSigner {
+        $signer = new class implements OmniDeskSigner
+        {
             public function kid(): string
             {
                 return 'test-kid-ed25519-v1';
