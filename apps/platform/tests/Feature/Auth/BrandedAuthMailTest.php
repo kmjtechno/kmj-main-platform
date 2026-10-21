@@ -77,8 +77,8 @@ class BrandedAuthMailTest extends TestCase
 
     public function test_login_and_mail_transport_config_remain_untouched(): void
     {
-        $this->assertSame('log', config('mail.default'));
         $this->assertSame('smtp-relay.brevo.com', config('mail.mailers.kmj_brevo.host'));
-        $this->assertFalse((bool) config('mail.mailers.kmj_brevo.kmj_activation_confirmed'));
+        $this->assertSame('smtps', config('mail.mailers.kmj_brevo.scheme'));
+        $this->assertSame(465, config('mail.mailers.kmj_brevo.port'));
     }
 }
