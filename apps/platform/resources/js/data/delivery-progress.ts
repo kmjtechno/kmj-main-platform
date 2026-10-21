@@ -98,6 +98,15 @@ export const deliveryMilestones: DeliveryMilestone[] = [
             'PR #258 merged as 606ecf279172; staging promotion, exact-SHA deploy, desktop/mobile browser QA and authenticated surface smoke all passed; CodeBridge remains non-commercial until hosted identity, packaging and production security gates pass',
     },
     {
+        id: 'p0-locked-width-public-auth-super-admin-url',
+        title: 'Locked width and public account entry / Super Admin route',
+        state: 'active',
+        detail: 'P0 code candidate caps the landing at 1280px while preserving locked artwork and responsive breakpoints, keeps both Login/Register visible on compact mobile, and exposes a named, owner-only password-confirmed /super-admin dashboard alias without removing legacy /operator. This is source work, not live production acceptance.',
+        evidence:
+            'Candidate P0 PR is under exact-head CI. Production still serves platform-8070dad72c55 and the protected release controller reports readyToActivate=false due to a stale expected-current release. Public registration remains correctly fail-closed until Laravel mail transport is actually activated; no permissions, billing or database changes were made.',
+    },
+
+    {
         id: 'admin-product-authority',
         title: 'Admin product authority',
         state: 'active',
