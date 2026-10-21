@@ -9,6 +9,7 @@ on:
       - 'apps/platform/resources/views/emails/kmj-auth-transactional-text.blade.php'
       - 'apps/platform/tests/Feature/Auth/BrandedAuthMailTest.php'
       - 'scripts/operations/probe-owner-brevo-branded-email-20261021.py'
+      - 'scripts/operations/probe-owner-brevo-enterprise-email-20261021.py'
       - 'scripts/test_brevo_branded_mail_20261021.py'
       - '.github/workflows/kmj-branded-auth-mail-safety.yml'
   push:
@@ -20,6 +21,7 @@ on:
       - 'apps/platform/resources/views/emails/kmj-auth-transactional-text.blade.php'
       - 'apps/platform/tests/Feature/Auth/BrandedAuthMailTest.php'
       - 'scripts/operations/probe-owner-brevo-branded-email-20261021.py'
+      - 'scripts/operations/probe-owner-brevo-enterprise-email-20261021.py'
       - 'scripts/test_brevo_branded_mail_20261021.py'
       - '.github/workflows/kmj-branded-auth-mail-safety.yml'
 
@@ -44,6 +46,7 @@ jobs:
         run: |
           set -euo pipefail
           python3 -B -m py_compile scripts/operations/probe-owner-brevo-branded-email-20261021.py
+          python3 -B -m py_compile scripts/operations/probe-owner-brevo-enterprise-email-20261021.py
           python3 -B scripts/test_brevo_branded_mail_20261021.py
           echo 'BRANDED_TEMPLATE_STATIC_TESTS=PASS'
           echo 'SMTP_SEND_NOT_ATTEMPTED=YES'
