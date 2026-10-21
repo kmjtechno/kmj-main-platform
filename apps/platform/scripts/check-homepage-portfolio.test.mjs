@@ -154,7 +154,7 @@ void test('locked canvas keeps both account buttons visible on mobile and owner 
     assert.match(owner, /href="\/super-admin"/);
     assert.match(
         source,
-        /operator\?\.enabled\s*\?\s*'\/super-admin'\s*:\s*'\/dashboard'/,
+        /ownerEnabled\s*\?\s*'\/super-admin'\s*:\s*'\/dashboard'/,
     );
     assert.match(source, /href="\/login"/);
     assert.match(source, /href="\/register"/);
