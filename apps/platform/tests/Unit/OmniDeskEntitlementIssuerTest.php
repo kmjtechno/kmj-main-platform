@@ -60,9 +60,7 @@ final class OmniDeskEntitlementIssuerTest extends TestCase
 
         return new class($secret) implements OmniDeskSigner
         {
-            public function __construct(private readonly string $secret)
-            {
-            }
+            public function __construct(private readonly string $secret) {}
 
             public function kid(): string
             {
