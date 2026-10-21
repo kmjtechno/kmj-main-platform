@@ -1,0 +1,32 @@
+name: KMJ P0 Google SFTP Restore Safety
+on:
+  pull_request:
+    paths:
+      - 'scripts/operations/verify-p0-google-sftp-import-restore-20261021.sh'
+      - 'scripts/test_p0_google_sftp_import_restore_contract.py'
+      - '.github/workflows/kmj-p0-google-sftp-restore-safety.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/operations/verify-p0-google-sftp-import-restore-20261021.sh'
+      - 'scripts/test_p0_google_sftp_import_restore_contract.py'
+      - '.github/workflows/kmj-p0-google-sftp-restore-safety.yml'
+permissions:
+  contents: read
+jobs:
+  exact-sha-import-no-live-contract:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - name: Verify no-live-change, exact SHA and private PostgreSQL source contract
+        run: |
+          set -euo pipefail
+          bash -n scripts/operations/verify-p0-google-sftp-import-restore-20261021.sh
+          python3 -B scripts/test_p0_google_sftp_import_restore_contract.py
+          echo 'P0_SFTP_IMPORT_CONTRACT=PASS'
+          echo 'REAL_TRANSFER=NOT_ATTEMPTED'
+          echo 'REAL_OFFSITE_RESTORE=NOT_ATTEMPTED'
