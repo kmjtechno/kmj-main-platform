@@ -1,0 +1,33 @@
+name: KMJ P0 Offsite Sealing Safety
+on:
+  pull_request:
+    paths:
+      - 'scripts/operations/seal-p0-local-backup-for-offsite-20261021.py'
+      - 'scripts/test_seal_p0_offsite_backup_20261021.py'
+      - '.github/workflows/kmj-p0-offsite-seal-safety.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/operations/seal-p0-local-backup-for-offsite-20261021.py'
+      - 'scripts/test_seal_p0_offsite_backup_20261021.py'
+      - '.github/workflows/kmj-p0-offsite-seal-safety.yml'
+permissions:
+  contents: read
+jobs:
+  synthetic-witness-and-secret-exclusion:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - name: Verify fixed-P0 archival contracts without real customer data
+        run: |
+          set -euo pipefail
+          python3 -m py_compile scripts/operations/seal-p0-local-backup-for-offsite-20261021.py
+          python3 -B scripts/test_seal_p0_offsite_backup_20261021.py
+          echo 'SOURCE_WITNESS_AND_SANITIZED_BUNDLE_TEST=PASS'
+          echo 'PRODUCTION_COPY=NOT_ATTEMPTED'
+          echo 'OFFSITE_TRANSFER=NOT_ATTEMPTED'
+          echo 'OFFSITE_RESTORE=NOT_VERIFIED'
