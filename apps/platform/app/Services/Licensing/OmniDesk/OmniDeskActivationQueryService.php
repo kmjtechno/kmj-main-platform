@@ -35,17 +35,21 @@ final class OmniDeskActivationQueryService
             $reasonCodes[] = 'LICENSE_REVOKED';
         }
 
-        $entitlement = DB::table('entitlements')
+        $entitlementRow = DB::table('entitlements')
             ->where('id', $binding['entitlement_id'])
             ->where('organization_id', $principal->organizationId)
             ->first();
 
-        if ($entitlement === null) {
+        if ($entitlementRow === null) {
             $reasonCodes[] = 'ENTITLEMENT_INACTIVE';
-        } elseif ((string) $entitlement->status !== 'active') {
-            $reasonCodes[] = 'ENTITLEMENT_REVOKED';
-        } elseif ($entitlement->ends_at !== null && now()->gte($entitlement->ends_at)) {
-            $reasonCodes[] = 'ENTITLEMENT_EXPIRED';
+        } else {
+            /** @var array{status:string,ends_at:mixed} $entitlement */
+            $entitlement = (array) $entitlementRow;
+            if ((string) $entitlement['status'] !== 'active') {
+                $reasonCodes[] = 'ENTITLEMENT_REVOKED';
+            } elseif ($entitlement['ends_at'] !== null && now()->gte($entitlement['ends_at'])) {
+                $reasonCodes[] = 'ENTITLEMENT_EXPIRED';
+            }
         }
 
         $explicitlyRevoked = array_intersect(
@@ -98,12 +102,17 @@ final class OmniDeskActivationQueryService
             ->where('capability', OmniDeskLicenseContract::CAPABILITY)
             ->orderByDesc('created_at')
             ->get(['id', 'status', 'starts_at', 'ends_at'])
-            ->map(static fn (object $row): array => [
-                'entitlement_id' => (string) $row->id,
-                'status' => (string) $row->status,
-                'starts_at' => (string) $row->starts_at,
-                'ends_at' => $row->ends_at === null ? null : (string) $row->ends_at,
-            ])
+            ->map(static function (object $row): array {
+                /** @var array{id:mixed,status:mixed,starts_at:mixed,ends_at:mixed} $data */
+                $data = (array) $row;
+
+                return [
+                    'entitlement_id' => (string) $data['id'],
+                    'status' => (string) $data['status'],
+                    'starts_at' => (string) $data['starts_at'],
+                    'ends_at' => $data['ends_at'] === null ? null : (string) $data['ends_at'],
+                ];
+            })
             ->all());
 
         return [
@@ -168,7 +177,6 @@ final class OmniDeskActivationQueryService
                 ], JSON_THROW_ON_ERROR),
                 'created_at' => $now,
             ]);
-
         }, 3);
 
         return $this->status($activationId, $principal);
@@ -209,6 +217,13 @@ final class OmniDeskActivationQueryService
         if ($bindingRow === null) {
             throw new DomainException('OMNIDESK_ACTIVATION_NOT_FOUND');
         }
+        /** @var array{
+         *   activation_id:string,
+         *   entitlement_id:string,
+         *   organization_id:string,
+         *   current_sequence:int|string
+         * } $binding
+         */
         $binding = (array) $bindingRow;
         if (! hash_equals((string) ($binding['organization_id'] ?? ''), $principal->organizationId)) {
             throw new DomainException('OMNIDESK_ACTIVATION_NOT_FOUND');
@@ -223,6 +238,7 @@ final class OmniDeskActivationQueryService
         if ($activationRow === null) {
             throw new DomainException('OMNIDESK_ACTIVATION_NOT_FOUND');
         }
+        /** @var array{id:string,license_id:string,deactivated_at:mixed} $activation */
         $activation = (array) $activationRow;
 
         $licenseQuery = DB::table('kslp_licenses')
@@ -236,17 +252,9 @@ final class OmniDeskActivationQueryService
         if ($licenseRow === null) {
             throw new DomainException('OMNIDESK_ACTIVATION_NOT_FOUND');
         }
+        /** @var array{id:string,status:string,revoked_at:mixed} $license */
         $license = (array) $licenseRow;
 
-        /** @var array{
-         *   activation_id:string,
-         *   entitlement_id:string,
-         *   organization_id:string,
-         *   current_sequence:int|string
-         * } $binding
-         */
-        /** @var array{id:string,license_id:string,deactivated_at:mixed} $activation */
-        /** @var array{id:string,status:string,revoked_at:mixed} $license */
         return [$binding, $activation, $license];
     }
 }
