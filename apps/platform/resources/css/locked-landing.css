@@ -1160,14 +1160,17 @@
    stretching every card and hero scene across ultrawide monitors. */
 .locked-landing {
     min-width: 0;
-    max-width: 100%;
+    width: 100%;
+    max-width: 1280px;
+    margin-inline: auto;
+    box-shadow: 0 24px 80px #00000030;
 }
 .lock-header,
 .lock-hero,
 .lock-trust,
 .lock-section,
 .lock-footer-main {
-    max-width: 1360px;
+    max-width: 100%;
     margin-inline: auto;
 }
 .lock-header {
@@ -1274,14 +1277,18 @@
         padding-inline: 12px;
     }
     .lock-header > a:first-of-type {
-        width: clamp(128px, 40vw, 175px);
+        width: clamp(108px, 31vw, 140px);
     }
-    .lock-auth-register {
-        display: none;
+    /* Both account actions must remain visible on compact mobile widths. */
+    .lock-auth {
+        gap: 5px;
     }
+    .lock-auth-register,
     .lock-auth-login {
-        padding-inline: 10px;
+        display: inline-flex;
+        padding-inline: 7px;
         min-height: 36px;
+        font-size: 10px;
     }
     .lock-hero,
     .lock-trust,
@@ -1300,5 +1307,28 @@
         top: 12px;
         right: 12px;
         font-size: 9px;
+    }
+}
+
+/* Keep the approved 1280px marketing canvas readable on ultrawide displays,
+   without shrinking or horizontally scrolling mobile content. */
+@media (min-width: 1281px) {
+    .locked-landing {
+        border-inline: 1px solid #293342;
+    }
+}
+@media (max-width: 420px) {
+    .lock-header {
+        padding-inline: 8px;
+        gap: 5px;
+    }
+    .lock-auth {
+        gap: 4px;
+    }
+    .lock-auth-login,
+    .lock-auth-register {
+        font-size: 10px;
+        padding-inline: 6px;
+        min-height: 34px;
     }
 }

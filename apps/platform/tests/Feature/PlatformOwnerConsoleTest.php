@@ -96,6 +96,35 @@ final class PlatformOwnerConsoleTest extends TestCase
             ->assertForbidden();
     }
 
+    public function test_super_admin_route_is_owner_only_and_keeps_legacy_operator_url(): void
+    {
+        $regular = User::factory()->create(['email_verified_at' => now()]);
+
+        $this->actingAs($regular)
+            ->withSession(['auth.password_confirmed_at' => time()])
+            ->get('/super-admin')->assertForbidden();
+
+        $owner = $this->createPasskeyOwner();
+
+        $this->actingAs($owner)
+            ->withSession(['auth.password_confirmed_at' => time()])
+            ->get('/super-admin')
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('operator')
+                ->has('metrics')
+                ->has('catalogProducts'));
+
+        $this->actingAs($owner)
+            ->withSession(['auth.password_confirmed_at' => time()])
+            ->get('/operator')
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page->component('operator'));
+
+        $this->assertSame('/super-admin', route('super-admin.index', absolute: false));
+        $this->assertSame('/operator', route('operator.index', absolute: false));
+    }
+
     public function test_regular_user_cannot_open_operator_console(): void
     {
         $user = User::factory()->create(['email_verified_at' => now()]);

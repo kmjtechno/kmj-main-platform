@@ -90,7 +90,11 @@ const groups = [
         items: [
             ['Products & Catalog', '/operator/products', Package],
             ['Customers & Orgs', '/operator/directory', Users],
-            ['Orders & Payments', '/operator#commercial-orders', ShoppingCart],
+            [
+                'Orders & Payments',
+                '/super-admin#commercial-orders',
+                ShoppingCart,
+            ],
             ['Licensing & Entitlements', '/operator/kslp', KeyRound],
             ['Subscriptions & Plans', '/operator/kslp', FileText],
             ['Revenue & Analytics', '#owner-revenue', ChartNoAxesCombined],
@@ -286,7 +290,7 @@ export default function OperatorCommandOs({
                 className={'owner-sidebar ' + (navOpen ? 'is-open' : '')}
                 aria-label="Owner navigation"
             >
-                <Link href="/operator" className="owner-nav-active">
+                <Link href="/super-admin" className="owner-nav-active">
                     <Home size={17} />
                     Dashboard
                 </Link>

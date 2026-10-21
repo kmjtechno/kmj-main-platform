@@ -702,7 +702,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
         return response()->json($policy->describe($user));
     })->name('operator.super-admin.profile')->middleware('password.confirm');
 
-    Route::get('operator', function (
+    // One protected controller action for both legacy /operator and readable /super-admin.
+    // Keep the legacy URL and route name for existing integrations.
+    $ownerCommandDashboard = function (
         Request $request,
         PlatformOwnerAccess $access,
         OrganizationCapabilityContext $capabilities,
@@ -820,7 +822,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
             'recentOrders' => $recentOrders,
             'products' => $managedProducts,
         ]);
-    })->name('operator.index')->middleware('password.confirm');
+    };
+
+    Route::get('operator', $ownerCommandDashboard)
+        ->name('operator.index')->middleware('password.confirm');
+    Route::get('super-admin', $ownerCommandDashboard)
+        ->name('super-admin.index')->middleware('password.confirm');
 
     Route::post('operator/orders/{order}/fulfill', function (
         Request $request,
