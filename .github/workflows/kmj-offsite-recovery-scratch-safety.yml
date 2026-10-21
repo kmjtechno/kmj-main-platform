@@ -1,0 +1,33 @@
+name: KMJ Offsite Recovery Scratch Safety
+on:
+  pull_request:
+    paths:
+      - 'scripts/operations/verify-real-offsite-recovery.sh'
+      - 'scripts/test_real_offsite_recovery_contract.py'
+      - 'docs/operations/REAL_OFFSITE_RECOVERY_DRILL.md'
+      - '.github/workflows/kmj-offsite-recovery-scratch-safety.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/operations/verify-real-offsite-recovery.sh'
+      - 'scripts/test_real_offsite_recovery_contract.py'
+      - '.github/workflows/kmj-offsite-recovery-scratch-safety.yml'
+permissions:
+  contents: read
+jobs:
+  no-live-restore-contract:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - name: Validate shell syntax and fail-closed safety contracts
+        run: |
+          set -euo pipefail
+          bash -n scripts/operations/verify-real-offsite-recovery.sh
+          python3 -B scripts/test_real_offsite_recovery_contract.py
+          echo 'PERSISTENT_SCRATCH_AND_NESTED_VERIFIER=PASS'
+          echo 'PRODUCTION_MODIFICATION=NOT_ATTEMPTED'
+          echo 'REMOTE_DOWNLOAD=NOT_ATTEMPTED'
