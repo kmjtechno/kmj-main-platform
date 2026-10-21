@@ -29,7 +29,7 @@ $omnideskError = static function (Throwable $error) {
             ->header('Cache-Control', 'no-store');
     }
 
-    if (! $error instanceof \DomainException) {
+    if (($error instanceof DomainException) === false) {
         return response()->json(['error' => 'SERVER_UNAVAILABLE'], 503)
             ->header('Cache-Control', 'no-store');
     }
