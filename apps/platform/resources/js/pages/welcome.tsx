@@ -284,6 +284,7 @@ export default function Welcome({
     const [menu, setMenu] = useState(false);
     const [tour, setTour] = useState(false);
     const { auth, publicSite, operator } = usePage().props;
+    const ownerEnabled = (operator as { enabled?: boolean } | undefined)?.enabled === true;
     const registrationAvailable = publicSite?.registration_available === true;
     // Catalog ordering and visibility remain controlled by the backend.
     const ecosystemProducts = products.filter(
@@ -347,7 +348,7 @@ export default function Welcome({
                             {auth.user ? (
                                 <Link
                                     href={
-                                        operator?.enabled
+                                        ownerEnabled
                                             ? '/super-admin'
                                             : '/dashboard'
                                     }
@@ -392,7 +393,7 @@ export default function Welcome({
                         {auth.user ? (
                             <Link
                                 href={
-                                    operator?.enabled
+                                    ownerEnabled
                                         ? '/super-admin'
                                         : '/dashboard'
                                 }
