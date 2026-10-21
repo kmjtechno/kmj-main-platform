@@ -30,7 +30,7 @@ final class OmniDeskCanonicalJson
 
     private function normalize(mixed $value): mixed
     {
-        if (!is_array($value)) {
+        if (! is_array($value)) {
             return $value;
         }
 
