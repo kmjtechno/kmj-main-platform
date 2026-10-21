@@ -56,10 +56,12 @@ final class StagingAuthenticatedSmokeCommand extends Command
             // Include the protected Super Admin Command OS itself. Smoke
             // must exercise its real owner policy and database-backed props.
             $this->probe($router, '/operator', $user);
+            // Canonical secured dashboard must render the same owner-only page.
+            $this->probe($router, '/super-admin', $user);
             $this->probe($router, '/operator/ops', $user);
             $this->probe($router, '/purchase', $user);
 
-            $this->info('Authenticated staging surfaces PASS: /dashboard, /operator, /operator/ops, /purchase');
+            $this->info('Authenticated staging surfaces PASS: /dashboard, /operator, /super-admin, /operator/ops, /purchase');
 
             return self::SUCCESS;
         } catch (Throwable $exception) {

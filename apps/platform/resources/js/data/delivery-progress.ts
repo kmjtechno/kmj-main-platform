@@ -107,6 +107,14 @@ export const deliveryMilestones: DeliveryMilestone[] = [
     },
 
     {
+        id: 'p0-real-guest-locked-qa-canonical-owner-route',
+        title: 'Guest Login/Register and canonical Super Admin browser acceptance',
+        state: 'active',
+        detail: 'Candidate PR #528 changes the local six-width browser preview to a signed-out guest for the public landing and a synthetic authorized owner for /super-admin. It checks actually visible and viewport-bounded Login/Register links, truthful registration-paused label, centered 1280px landing, bounded 1520px owner workspace, and the canonical owner route. Staging authenticated smoke also probes /super-admin while preserving /operator.',
+        evidence:
+            'This remains a source QA candidate pending exact-head checks, protected deployment approval for the actual running production release, external registration email proof, and post-cutover guest/owner live acceptance. No production files, users, payment records or secrets were changed.',
+    },
+    {
         id: 'admin-product-authority',
         title: 'Admin product authority',
         state: 'active',
