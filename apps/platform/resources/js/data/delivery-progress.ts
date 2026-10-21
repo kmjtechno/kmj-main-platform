@@ -13,9 +13,9 @@ export const deliveryMilestones: DeliveryMilestone[] = [
         id: 'omnidesk-production-licensing-boundary',
         title: 'OmniDesk production licensing boundary',
         state: 'active',
-        detail: 'A current-main candidate hardens Ed25519 verification-key discovery for OmniDesk, enforces signing-key validity windows and prevents the CloudOS lease signer from issuing OmniDesk product leases. This is source-level release hardening only; authenticated OmniDesk activation/renewal adapters, production KMS/HSM signing, cross-service entitlement proof and protected deployment remain release gates.',
+        detail: 'Current main hardens Ed25519 verification-key discovery for OmniDesk, enforces signing-key validity windows, verifies first-activation device proof across Rust/PHP, and keeps the CloudOS signer from issuing OmniDesk leases. PR #517 adds an OmniDesk-specific canonical payload issuer behind an external signer interface so a KMS/HSM implementation can plug in without exposing private key material. Authenticated activation/renewal adapters, production KMS/HSM binding, live cross-service entitlement acceptance and protected deployment remain release gates.',
         evidence:
-            'PR #510 is under exact-head CI. Its public key endpoint contains no private key material and maps active/retiring license verification keys to ACTIVE/ROLLOVER only while valid. Production signing, customer activation and live entitlement acceptance are not claimed.',
+            'Main includes the public key-discovery boundary and the cross-language KMJ-OMNIDESK-ACTIVATE-v1 proof vector. PR #517 is under exact-head CI and matches the OmniDesk Rust Ed25519 entitlement vector byte-for-byte in PHP while committing no production key. Production signing and customer activation are not claimed.',
     },
     {
         id: 'truthful-premium-product-imagery-p0',
