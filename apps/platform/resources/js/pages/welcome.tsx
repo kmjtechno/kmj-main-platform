@@ -393,9 +393,7 @@ export default function Welcome({
                         {auth.user ? (
                             <Link
                                 href={
-                                    ownerEnabled
-                                        ? '/super-admin'
-                                        : '/dashboard'
+                                    ownerEnabled ? '/super-admin' : '/dashboard'
                                 }
                                 className="lock-auth-login"
                             >
