@@ -39,12 +39,23 @@ fi
 for tool in initdb pg_ctl createdb psql pg_restore; do
   [[ -x "$pgbin/$tool" ]] || block DISPOSABLE_POSTGRES_TOOLS
 done
-free_kib="$(df -Pk /tmp | awk 'END {print $4}')"
+# /tmp can be a small RAM-backed tmpfs on cloud VMs. Use ONLY an
+# operator-prepared private persistent scratch directory. This is also passed
+# to the nested archive verifier, whose mktemp must use the same disk.
+[[ -n "${HOME:-}" && -d "$HOME" && ! -L "$HOME" ]] || block RECOVERY_HOME_UNSAFE
+scratch="$HOME/kmj-recovery-scratch"
+[[ -d "$scratch" && ! -L "$scratch" ]] || block RECOVERY_SCRATCH_NOT_READY
+[[ "$(stat -c '%u' -- "$scratch")" == "$(id -u)" ]] || block RECOVERY_SCRATCH_OWNER
+[[ "$(stat -c '%a' -- "$scratch")" == 700 ]] || block RECOVERY_SCRATCH_MODE_700
+[[ "$(stat -c '%d' -- "$scratch")" == "$(stat -c '%d' -- "$HOME")" ]] ||
+  block RECOVERY_SCRATCH_DEVICE_MISMATCH
+free_kib="$(df -Pk "$scratch" | awk 'END {print $4}')"
 [[ "$free_kib" =~ ^[0-9]+$ ]] || block RECOVERY_FREE_SPACE
 (( free_kib >= 12582912 )) || block RECOVERY_FREE_SPACE_12GIB
+export TMPDIR="$scratch"
 repo="$(cd -- "$(dirname -- "$0")/../.." && pwd)"
 [[ -f "$repo/scripts/verify_backup_bundle.sh" ]] || block ARCHIVE_VERIFIER
-tmp="$(mktemp -d /tmp/kmj-real-offsite-restore.XXXXXXXX)"
+tmp="$(mktemp -d "$scratch/kmj-real-offsite-restore.XXXXXXXX")"
 chmod 700 "$tmp"
 pg_started=0
 cleanup() {
