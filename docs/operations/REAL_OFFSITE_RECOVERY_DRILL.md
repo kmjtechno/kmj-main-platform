@@ -6,11 +6,19 @@ Synthetic PostgreSQL backup and archive-signature checks cannot prove an actual 
 
 ## Preconditions
 
-- A non-root account on an independent disposable recovery host with at least 12 GiB free; larger real backups may need much more. Refuses the known KMJ-elite production hostnames.
+- A non-root account on an independent disposable recovery host. It needs at least **12 GiB free on its persistent recovery scratch filesystem**, and larger real backups may need much more. Refuses the known KMJ-elite production hostnames. A cloud `/tmp` often has less than 12 GiB because it is RAM-backed and must not be used.
 - Installed PostgreSQL server/client binaries, age, rclone and Python, and a preconfigured existing backup remote.
 - Private age identity installed securely on the recovery host; do not paste its contents or any rclone token into chat, issues or CI.
 - Confirm the existing backup remote's download fees and approved egress budget first. Some remote storage providers bill for retrieval: **zero additional cost is not automatic**.
 - Do not use placeholder remote values or point this at live production PostgreSQL.
+
+## Persistent scratch preflight
+
+Prepare a private, non-symlink directory under the logged-in recovery user's home (NOT on KMJ-elite). On Google VPS this is `/home/info/kmj-recovery-scratch` and lives on the persistent root filesystem:
+
+    install -d -m 700 "$HOME/kmj-recovery-scratch"
+
+The operator script checks ownership, exactly 0700 permissions, same filesystem as the user's home, and at least 12 GiB free. Both its private PostgreSQL restore and the nested checksum/archive verifier use this directory by exporting `TMPDIR`. They clean up only their own randomly named temporary directories on exit. No existing home or recovery-vault files are deleted. Make sure the backup plus its temporary decrypted/extracted copies will fit comfortably beyond the 12 GiB minimum.
 
 ## Operator invocation
 
