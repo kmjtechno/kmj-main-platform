@@ -1,0 +1,50 @@
+name: KMJ Branded Transactional Email Safety
+
+on:
+  pull_request:
+    paths:
+      - 'apps/platform/app/Providers/AppServiceProvider.php'
+      - 'apps/platform/app/Services/Mail/BrandedAuthNotifications.php'
+      - 'apps/platform/resources/views/emails/kmj-auth-transactional.blade.php'
+      - 'apps/platform/resources/views/emails/kmj-auth-transactional-text.blade.php'
+      - 'apps/platform/tests/Feature/Auth/BrandedAuthMailTest.php'
+      - 'scripts/operations/probe-owner-brevo-branded-email-20261021.py'
+      - 'scripts/test_brevo_branded_mail_20261021.py'
+      - '.github/workflows/kmj-branded-auth-mail-safety.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'apps/platform/app/Providers/AppServiceProvider.php'
+      - 'apps/platform/app/Services/Mail/BrandedAuthNotifications.php'
+      - 'apps/platform/resources/views/emails/kmj-auth-transactional.blade.php'
+      - 'apps/platform/resources/views/emails/kmj-auth-transactional-text.blade.php'
+      - 'apps/platform/tests/Feature/Auth/BrandedAuthMailTest.php'
+      - 'scripts/operations/probe-owner-brevo-branded-email-20261021.py'
+      - 'scripts/test_brevo_branded_mail_20261021.py'
+      - '.github/workflows/kmj-branded-auth-mail-safety.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  static-no-send-gates:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - name: PHP auth notification syntax
+        run: |
+          php -l apps/platform/app/Providers/AppServiceProvider.php
+          php -l apps/platform/app/Services/Mail/BrandedAuthNotifications.php
+          php -l apps/platform/tests/Feature/Auth/BrandedAuthMailTest.php
+      - name: Python preview contract without SMTP or secrets
+        run: |
+          set -euo pipefail
+          python3 -B -m py_compile scripts/operations/probe-owner-brevo-branded-email-20261021.py
+          python3 -B scripts/test_brevo_branded_mail_20261021.py
+          echo 'BRANDED_TEMPLATE_STATIC_TESTS=PASS'
+          echo 'SMTP_SEND_NOT_ATTEMPTED=YES'
+          echo 'PRODUCTION_MAIL_CONFIG=UNCHANGED'

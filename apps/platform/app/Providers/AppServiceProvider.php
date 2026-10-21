@@ -13,6 +13,7 @@ use App\Services\Licensing\RustSandboxLicenseVerifier;
 use App\Services\Licensing\SandboxLicenseIssuer;
 use App\Services\Licensing\SandboxLicenseLifecycle;
 use App\Services\Licensing\SandboxLicenseValidationEngine;
+use App\Services\Mail\BrandedAuthNotifications;
 use Carbon\CarbonImmutable;
 use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Support\Facades\Date;
@@ -69,6 +70,7 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->configureDefaults();
+        BrandedAuthNotifications::register();
     }
 
     /**
