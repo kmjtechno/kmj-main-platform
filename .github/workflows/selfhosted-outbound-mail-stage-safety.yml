@@ -13,6 +13,8 @@ on:
       - 'scripts/operations/test-activate-local-selfhosted-mail-20261021.py'
       - 'scripts/operations/fix-opendkim-pidfile-20261021.sh'
       - 'scripts/operations/test-fix-opendkim-pidfile-20261021.py'
+      - 'scripts/operations/send-one-selfhosted-gmail-test-20261021.sh'
+      - 'scripts/operations/test-send-one-selfhosted-gmail-test-20261021.py'
       - '.github/workflows/selfhosted-outbound-mail-stage-safety.yml'
   push:
     branches: [main]
@@ -27,6 +29,8 @@ on:
       - 'scripts/operations/test-activate-local-selfhosted-mail-20261021.py'
       - 'scripts/operations/fix-opendkim-pidfile-20261021.sh'
       - 'scripts/operations/test-fix-opendkim-pidfile-20261021.py'
+      - 'scripts/operations/send-one-selfhosted-gmail-test-20261021.sh'
+      - 'scripts/operations/test-send-one-selfhosted-gmail-test-20261021.py'
       - '.github/workflows/selfhosted-outbound-mail-stage-safety.yml'
 
 permissions:
@@ -53,6 +57,8 @@ jobs:
           python3 -B scripts/operations/test-activate-local-selfhosted-mail-20261021.py
           bash -n scripts/operations/fix-opendkim-pidfile-20261021.sh
           python3 -B scripts/operations/test-fix-opendkim-pidfile-20261021.py
+          bash -n scripts/operations/send-one-selfhosted-gmail-test-20261021.sh
+          python3 -B scripts/operations/test-send-one-selfhosted-gmail-test-20261021.py
           echo 'STATIC_STAGING_CONTRACT=PASS'
           echo 'REAL_PACKAGE_INSTALL=NOT_ATTEMPTED'
           echo 'REAL_SMTP_DELIVERY=NOT_VERIFIED'
