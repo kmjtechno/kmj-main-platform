@@ -24,7 +24,6 @@
                         <a href="https://kmjtechno.com" style="text-decoration:none;border:0;display:inline-block;" target="_blank">
                             <img src="https://kmjtechno.com/assets/brand/kmj-logo-horizontal.webp" width="178" alt="KMJ TECHNO" style="display:block;max-width:178px;height:auto;min-height:24px;border:0;outline:none;text-decoration:none;color:#ffffff;font-size:19px;font-weight:800;">
                         </a>
-                        <div style="padding-top:12px;font-size:11px;line-height:18px;color:#c1c8d4;letter-spacing:2px;font-weight:bold;">INNOVATE | BUILD | SCALE</div>
                     </td>
                 </tr>
                 <tr>
