@@ -25,6 +25,6 @@ jobs:
           set -euo pipefail
           cd apps/platform
           npm ci --ignore-scripts --no-audit --no-fund --silent
-          npx prettier --write resources/js/components/operator-command-os.tsx resources/js/components/public-site-header.tsx resources/js/data/delivery-progress.ts resources/js/pages/welcome.tsx scripts/check-homepage-portfolio.test.mjs
+          npm run check:fix
           git diff -- resources/js/components/operator-command-os.tsx resources/js/components/public-site-header.tsx resources/js/data/delivery-progress.ts resources/js/pages/welcome.tsx scripts/check-homepage-portfolio.test.mjs
           echo 'FORMAT_DIFF_ONLY=PASS'
