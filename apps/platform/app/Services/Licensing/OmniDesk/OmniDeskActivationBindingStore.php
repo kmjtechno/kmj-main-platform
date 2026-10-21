@@ -7,6 +7,7 @@ namespace App\Services\Licensing\OmniDesk;
 use App\Services\Licensing\OmniDeskLicenseContract;
 use DomainException;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use KMJ\MainPlatform\Catalog\Models\Product;
 use KMJ\MainPlatform\Entitlements\Models\Entitlement;
 
@@ -138,7 +139,7 @@ final class OmniDeskActivationBindingStore
                 'actor_id' => $actorId,
                 'action' => 'omnidesk_device_bound',
                 'reason' => null,
-                'correlation_id' => (string) \Illuminate\Support\Str::uuid(),
+                'correlation_id' => (string) Str::uuid(),
                 'metadata' => json_encode([
                     'activation_id' => $activationId,
                     'entitlement_id' => $entitlementId,
@@ -210,8 +211,8 @@ final class OmniDeskActivationBindingStore
     }
 
     /**
-     * @param array<string, mixed> $existing
-     * @param array<string, string> $candidate
+     * @param  array<string, mixed>  $existing
+     * @param  array<string, string>  $candidate
      */
     private function requireExactBinding(array $existing, array $candidate): void
     {
