@@ -65,6 +65,7 @@ def make_snapshot(root: Path, *, include_env=True, with_link=False) -> tuple[Pat
     ).encode()
     original = root / "original.tar.gz"
     archive_file(original, [(k,v,"file") for k,v in files.items()])
+    (root / "source-repack").mkdir(mode=0o700)
     witness = root / "witness.json"
     witness.write_text(json.dumps({
         "backupSha256": hashlib.sha256(original.read_bytes()).hexdigest(),
