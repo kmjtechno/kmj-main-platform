@@ -1,0 +1,30 @@
+name: KMJ P0 Formatting Diff (Temporary)
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/kmj-p0-format-diff.yml'
+      - 'apps/platform/resources/js/**'
+      - 'apps/platform/scripts/check-homepage-portfolio.test.mjs'
+permissions:
+  contents: read
+jobs:
+  show-prettier-fixes:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22'
+      - name: Show exact deterministic Prettier formatting changes (no writes to GitHub)
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd apps/platform
+          npm ci --ignore-scripts --no-audit --no-fund --silent
+          npx prettier --write resources/js/components/operator-command-os.tsx resources/js/components/public-site-header.tsx resources/js/data/delivery-progress.ts resources/js/pages/welcome.tsx scripts/check-homepage-portfolio.test.mjs
+          git diff -- resources/js/components/operator-command-os.tsx resources/js/components/public-site-header.tsx resources/js/data/delivery-progress.ts resources/js/pages/welcome.tsx scripts/check-homepage-portfolio.test.mjs
+          echo 'FORMAT_DIFF_ONLY=PASS'
