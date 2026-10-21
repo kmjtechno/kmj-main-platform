@@ -28,15 +28,15 @@ final class OmniDeskActivationQueryService
         [$binding, $activation, $license] = $this->recordsForPrincipal($activationId, $principal);
         $reasonCodes = [];
 
-        if ($activation->deactivated_at !== null) {
+        if ($activation['deactivated_at'] !== null) {
             $reasonCodes[] = 'ACTIVATION_REVOKED';
         }
-        if ($license->revoked_at !== null || (string) $license->status === 'revoked') {
+        if ($license['revoked_at'] !== null || (string) $license['status'] === 'revoked') {
             $reasonCodes[] = 'LICENSE_REVOKED';
         }
 
         $entitlement = DB::table('entitlements')
-            ->where('id', $binding->entitlement_id)
+            ->where('id', $binding['entitlement_id'])
             ->where('organization_id', $principal->organizationId)
             ->first();
 
@@ -58,14 +58,14 @@ final class OmniDeskActivationQueryService
         } elseif ($reasonCodes !== []) {
             $state = 'RESTRICTED';
         } else {
-            $state = app(KslpLicenseControlPlane::class)->state((string) $activation->license_id);
+            $state = app(KslpLicenseControlPlane::class)->state((string) $activation['license_id']);
         }
 
         return [
             'activation_id' => $activationId,
             'state' => $state,
-            'reason_codes' => array_values($reasonCodes),
-            'current_sequence' => (int) $binding->current_sequence,
+            'reason_codes' => $reasonCodes,
+            'current_sequence' => (int) $binding['current_sequence'],
             'server_time' => time(),
         ];
     }
@@ -92,7 +92,7 @@ final class OmniDeskActivationQueryService
             throw new DomainException('OMNIDESK_PRODUCT_NOT_FOUND');
         }
 
-        $entitlements = DB::table('entitlements')
+        $entitlements = array_values(DB::table('entitlements')
             ->where('organization_id', $principal->organizationId)
             ->where('product_id', $product->getKey())
             ->where('capability', OmniDeskLicenseContract::CAPABILITY)
@@ -104,8 +104,7 @@ final class OmniDeskActivationQueryService
                 'starts_at' => (string) $row->starts_at,
                 'ends_at' => $row->ends_at === null ? null : (string) $row->ends_at,
             ])
-            ->values()
-            ->all();
+            ->all());
 
         return [
             'product_id' => OmniDeskLicenseContract::PRODUCT_ID,
@@ -144,7 +143,7 @@ final class OmniDeskActivationQueryService
                 true,
             );
 
-            if ($activation->deactivated_at !== null) {
+            if ($activation['deactivated_at'] !== null) {
                 return;
             }
 
@@ -158,14 +157,14 @@ final class OmniDeskActivationQueryService
                 ]);
 
             DB::table('kslp_license_events')->insert([
-                'license_id' => (string) $activation->license_id,
+                'license_id' => (string) $activation['license_id'],
                 'actor_id' => $principal->actorId,
                 'action' => 'omnidesk_activation_deactivated',
                 'reason' => $reason,
                 'correlation_id' => (string) Str::uuid(),
                 'metadata' => json_encode([
                     'activation_id' => $activationId,
-                    'entitlement_id' => (string) $binding->entitlement_id,
+                    'entitlement_id' => (string) $binding['entitlement_id'],
                 ], JSON_THROW_ON_ERROR),
                 'created_at' => $now,
             ]);
@@ -176,7 +175,24 @@ final class OmniDeskActivationQueryService
     }
 
     /**
-     * @return array{0:object,1:object,2:object}
+     * @return array{
+     *   0:array{
+     *     activation_id:string,
+     *     entitlement_id:string,
+     *     organization_id:string,
+     *     current_sequence:int|string
+     *   },
+     *   1:array{
+     *     id:string,
+     *     license_id:string,
+     *     deactivated_at:mixed
+     *   },
+     *   2:array{
+     *     id:string,
+     *     status:string,
+     *     revoked_at:mixed
+     *   }
+     * }
      */
     private function recordsForPrincipal(
         string $activationId,
@@ -188,10 +204,13 @@ final class OmniDeskActivationQueryService
         if ($lock) {
             $bindingQuery->lockForUpdate();
         }
-        $binding = $bindingQuery->first();
+        $bindingRow = $bindingQuery->first();
 
-        if ($binding === null
-            || ! hash_equals((string) $binding->organization_id, $principal->organizationId)) {
+        if ($bindingRow === null) {
+            throw new DomainException('OMNIDESK_ACTIVATION_NOT_FOUND');
+        }
+        $binding = (array) $bindingRow;
+        if (! hash_equals((string) ($binding['organization_id'] ?? ''), $principal->organizationId)) {
             throw new DomainException('OMNIDESK_ACTIVATION_NOT_FOUND');
         }
 
@@ -200,23 +219,34 @@ final class OmniDeskActivationQueryService
         if ($lock) {
             $activationQuery->lockForUpdate();
         }
-        $activation = $activationQuery->first();
-        if ($activation === null) {
+        $activationRow = $activationQuery->first();
+        if ($activationRow === null) {
             throw new DomainException('OMNIDESK_ACTIVATION_NOT_FOUND');
         }
+        $activation = (array) $activationRow;
 
         $licenseQuery = DB::table('kslp_licenses')
-            ->where('id', $activation->license_id)
+            ->where('id', $activation['license_id'])
             ->where('customer_id', $principal->organizationId)
             ->where('product', OmniDeskLicenseContract::PRODUCT_ID);
         if ($lock) {
             $licenseQuery->lockForUpdate();
         }
-        $license = $licenseQuery->first();
-        if ($license === null) {
+        $licenseRow = $licenseQuery->first();
+        if ($licenseRow === null) {
             throw new DomainException('OMNIDESK_ACTIVATION_NOT_FOUND');
         }
+        $license = (array) $licenseRow;
 
+        /** @var array{
+         *   activation_id:string,
+         *   entitlement_id:string,
+         *   organization_id:string,
+         *   current_sequence:int|string
+         * } $binding
+         */
+        /** @var array{id:string,license_id:string,deactivated_at:mixed} $activation */
+        /** @var array{id:string,status:string,revoked_at:mixed} $license */
         return [$binding, $activation, $license];
     }
 }
