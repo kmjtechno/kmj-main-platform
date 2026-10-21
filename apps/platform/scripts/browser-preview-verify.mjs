@@ -25,7 +25,7 @@ try {
     for (const width of [320, 390, 768, 1170, 1440, 1536])
         for (const [name, route] of [
             ['landing', '/'],
-            ['super-admin', '/operator'],
+            ['super-admin', '/super-admin'],
             ['owner-ops', '/operator/ops'],
         ]) {
             const page = await browser.newPage({
@@ -77,6 +77,45 @@ try {
                 () => document.documentElement.scrollWidth > innerWidth + 1,
             );
             if (name === 'landing') {
+                // Previous fixture was signed in and never displayed the
+                // public Login / Register CTAs. Check actual rendered bounds.
+                const account = await page.evaluate(() => {
+                    const shell = document.querySelector('.locked-landing');
+                    const login = document.querySelector('.lock-auth .lock-auth-login');
+                    const register = document.querySelector('.lock-auth .lock-auth-register');
+                    const rect = (el) => {
+                        if (!el) return null;
+                        const r = el.getBoundingClientRect();
+                        const style = getComputedStyle(el);
+                        return {
+                            left: r.left, right: r.right, width: r.width,
+                            height: r.height, visible: style.display !== 'none' &&
+                                style.visibility !== 'hidden' && r.width > 0 && r.height > 0,
+                        };
+                    };
+                    return {
+                        shell: rect(shell), login: rect(login), register: rect(register),
+                        loginHref: login?.getAttribute('href'),
+                        registerHref: register?.getAttribute('href'),
+                        registerText: register?.textContent?.trim(),
+                    };
+                });
+                const withinViewport = (rect) =>
+                    !!rect && rect.visible && rect.left >= -1 &&
+                    rect.right <= width + 1;
+                if (!withinViewport(account.login) || account.loginHref !== '/login')
+                    errors.push('Signed-out Login CTA missing or outside viewport');
+                if (!withinViewport(account.register) ||
+                    account.registerHref !== '/register')
+                    errors.push('Signed-out Register CTA missing or outside viewport');
+                if (account.registerText !== 'Register')
+                    errors.push('Paused-registration label was not disclosed');
+                if (!withinViewport(account.shell) ||
+                    account.shell.width > Math.min(1280, width) + 1)
+                    errors.push('Locked landing exceeds centered 1280px canvas');
+                if (width > 1280 &&
+                    Math.abs(account.shell.left - (width - account.shell.width) / 2) > 2)
+                    errors.push('Landing canvas is not centered');
                 const expected = [
                     'Our Flagship Products',
                     'What We Build',
@@ -133,6 +172,12 @@ try {
                     })
                     .click();
             } else if (name === 'super-admin') {
+                // Canonical URL is required; a preview silently serving the
+                // guest landing at this path must never satisfy visual QA.
+                const ownerShell = await page.locator('.owner-lock').boundingBox();
+                if (!ownerShell || ownerShell.width > Math.min(1520, width) + 1 ||
+                    ownerShell.x < -1 || ownerShell.x + ownerShell.width > width + 1)
+                    errors.push('Owner Command OS exceeds 1520px bounded canvas');
                 await page.keyboard.press('Control+k');
                 await page.getByRole('dialog').waitFor();
                 await page
