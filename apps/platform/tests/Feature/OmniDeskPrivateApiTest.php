@@ -33,7 +33,7 @@ final class OmniDeskPrivateApiTest extends TestCase
         $response
             ->assertStatus(503)
             ->assertExactJson(['error' => 'SERVER_UNAVAILABLE'])
-            ->assertHeader('Cache-Control', 'no-store');
+            ->assertHeader('Cache-Control', 'no-store, private');
     }
 
     public function test_authorized_tenant_can_read_its_activation_status(): void
@@ -51,7 +51,7 @@ final class OmniDeskPrivateApiTest extends TestCase
             ->assertJsonPath('state', 'ACTIVE')
             ->assertJsonPath('current_sequence', 1)
             ->assertJsonPath('reason_codes', [])
-            ->assertHeader('Cache-Control', 'no-store');
+            ->assertHeader('Cache-Control', 'no-store, private');
     }
 
     public function test_cross_tenant_activation_lookup_does_not_disclose_binding(): void
@@ -67,7 +67,7 @@ final class OmniDeskPrivateApiTest extends TestCase
         $response
             ->assertStatus(404)
             ->assertExactJson(['error' => 'ACTIVATION_REVOKED'])
-            ->assertHeader('Cache-Control', 'no-store');
+            ->assertHeader('Cache-Control', 'no-store, private');
     }
 
     public function test_current_entitlements_are_scoped_to_tenant_product_and_capability(): void
@@ -104,7 +104,7 @@ final class OmniDeskPrivateApiTest extends TestCase
             ->assertJsonPath('product_slug', OmniDeskLicenseContract::PRODUCT_SLUG)
             ->assertJsonCount(1, 'entitlements')
             ->assertJsonPath('entitlements.0.entitlement_id', $fixture['entitlement_id'])
-            ->assertHeader('Cache-Control', 'no-store');
+            ->assertHeader('Cache-Control', 'no-store, private');
     }
 
     public function test_non_manager_cannot_deactivate_activation(): void
@@ -120,7 +120,7 @@ final class OmniDeskPrivateApiTest extends TestCase
         $response
             ->assertStatus(403)
             ->assertExactJson(['error' => 'FORBIDDEN'])
-            ->assertHeader('Cache-Control', 'no-store');
+            ->assertHeader('Cache-Control', 'no-store, private');
         $this->assertDatabaseHas('kslp_activations', [
             'id' => $fixture['activation_id'],
             'deactivated_at' => null,
@@ -141,7 +141,7 @@ final class OmniDeskPrivateApiTest extends TestCase
             ->assertJsonPath('activation_id', $fixture['activation_id'])
             ->assertJsonPath('state', 'REVOKED')
             ->assertJsonFragment(['ACTIVATION_REVOKED'])
-            ->assertHeader('Cache-Control', 'no-store');
+            ->assertHeader('Cache-Control', 'no-store, private');
 
         $this->assertDatabaseMissing('kslp_activations', [
             'id' => $fixture['activation_id'],
@@ -181,7 +181,7 @@ final class OmniDeskPrivateApiTest extends TestCase
         $response
             ->assertStatus(422)
             ->assertExactJson(['error' => 'INVALID_REQUEST'])
-            ->assertHeader('Cache-Control', 'no-store');
+            ->assertHeader('Cache-Control', 'no-store, private');
     }
 
     private function bindPrincipal(string $organizationId, bool $canManage = true): void
