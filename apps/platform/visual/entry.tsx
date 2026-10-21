@@ -184,23 +184,32 @@ function OwnerOpsPreview() {
 }
 const ownerOps = location.pathname === '/operator/ops';
 
-const owner = location.pathname === '/operator';
+const owner = ['/operator', '/super-admin'].includes(location.pathname);
 void createInertiaApp({
     page: {
         component: ownerOps ? 'operator-ops' : owner ? 'operator' : 'welcome',
         props: {
             errors: {},
+            // Landing is a signed-out customer preview; owner routes use
+            // synthetic session data. Never authenticate or persist a user.
             auth: {
-                user: {
-                    id: 1,
-                    name: 'Narendra Singh Kushwah',
-                    email: 'owner@example.invalid',
-                    email_verified_at: null,
-                    created_at: '2026-01-01',
-                    updated_at: '2026-01-01',
-                },
+                user: owner || ownerOps
+                    ? {
+                          id: 1,
+                          name: 'KMJ QA Owner',
+                          email: 'owner@example.invalid',
+                          email_verified_at: null,
+                          created_at: '2026-01-01',
+                          updated_at: '2026-01-01',
+                      }
+                    : null,
             },
-            publicSite: { base_url: 'http://127.0.0.1:4173', indexable: false },
+            operator: { enabled: owner || ownerOps },
+            publicSite: {
+                base_url: 'http://127.0.0.1:4173',
+                indexable: false,
+                registration_available: false,
+            },
             products: catalog,
             portfolioCount: catalog.length,
             metrics: {
