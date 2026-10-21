@@ -1,0 +1,36 @@
+name: KMJ P0 Real Local Restore Contract
+
+on:
+  pull_request:
+    paths:
+      - 'scripts/operations/prepare-p0-f4b6-local-recovery-20261021.sh'
+      - 'scripts/test_p0_f4b6_local_recovery_contract.py'
+      - '.github/workflows/kmj-p0-local-restore-contract.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/operations/prepare-p0-f4b6-local-recovery-20261021.sh'
+      - 'scripts/test_p0_f4b6_local_recovery_contract.py'
+      - '.github/workflows/kmj-p0-local-restore-contract.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  no-live-mutation:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - name: Verify read-only production and disposable PostgreSQL safety
+        run: |
+          set -euo pipefail
+          bash -n scripts/operations/prepare-p0-f4b6-local-recovery-20261021.sh
+          python3 -B scripts/test_p0_f4b6_local_recovery_contract.py
+          echo 'REAL_LOCAL_RECOVERY_CONTRACT=PASS'
+          echo 'PRODUCTION_BACKUP_RUN=NOT_ATTEMPTED_IN_CI'
+          echo 'OFFSITE_RESTORE=NOT_VERIFIED'
+          echo 'DEPLOYMENT_ACTIVATION=NOT_ATTEMPTED'
