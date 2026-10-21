@@ -5,7 +5,6 @@ declare(strict_types=1);
 use App\Services\Licensing\OmniDesk\OmniDeskActivationQueryService;
 use App\Services\Licensing\OmniDesk\OmniDeskApiAuthorizer;
 use App\Services\Licensing\OmniDesk\OmniDeskApiPrincipal;
-use DomainException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Validation\ValidationException;
@@ -30,7 +29,7 @@ $omnideskError = static function (Throwable $error) {
             ->header('Cache-Control', 'no-store');
     }
 
-    if (! $error instanceof DomainException) {
+    if (! $error instanceof \DomainException) {
         return response()->json(['error' => 'SERVER_UNAVAILABLE'], 503)
             ->header('Cache-Control', 'no-store');
     }
