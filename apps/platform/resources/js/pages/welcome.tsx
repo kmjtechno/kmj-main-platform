@@ -283,7 +283,7 @@ export default function Welcome({
 }) {
     const [menu, setMenu] = useState(false);
     const [tour, setTour] = useState(false);
-    const { auth, publicSite } = usePage().props;
+    const { auth, publicSite, operator } = usePage().props;
     const registrationAvailable = publicSite?.registration_available === true;
     // Catalog ordering and visibility remain controlled by the backend.
     const ecosystemProducts = products.filter(
@@ -346,7 +346,7 @@ export default function Welcome({
                         <div className="lock-mobile-account">
                             {auth.user ? (
                                 <Link
-                                    href="/dashboard"
+                                    href={operator?.enabled ? '/super-admin' : '/dashboard'}
                                     onClick={() => setMenu(false)}
                                 >
                                     My dashboard
@@ -386,7 +386,7 @@ export default function Welcome({
                     </Link>
                     <div className="lock-auth" aria-label="Account access">
                         {auth.user ? (
-                            <Link href="/dashboard" className="lock-auth-login">
+                            <Link href={operator?.enabled ? '/super-admin' : '/dashboard'} className="lock-auth-login">
                                 Dashboard
                             </Link>
                         ) : (
