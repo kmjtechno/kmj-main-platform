@@ -3,7 +3,7 @@
 {{ $intro }}
 
 {{ $actionText }}:
-{{ $actionUrl }}
+{!! $actionUrl !!}
 
 {{ $expiryText }}
 
