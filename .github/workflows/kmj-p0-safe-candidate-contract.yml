@@ -1,0 +1,32 @@
+name: KMJ P0 Safe Candidate Contract
+on:
+  pull_request:
+    paths:
+      - 'scripts/operations/stage-p0-ui-candidate-no-activation-20261021.sh'
+      - 'scripts/test_p0_safe_candidate_20261021.py'
+      - '.github/workflows/kmj-p0-safe-candidate-contract.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/operations/stage-p0-ui-candidate-no-activation-20261021.sh'
+      - 'scripts/test_p0_safe_candidate_20261021.py'
+      - '.github/workflows/kmj-p0-safe-candidate-contract.yml'
+permissions:
+  contents: read
+jobs:
+  no-deploy-contract:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - name: Bash syntax and strict no-production-change contracts
+        run: |
+          set -euo pipefail
+          bash -n scripts/operations/stage-p0-ui-candidate-no-activation-20261021.sh
+          python3 -B scripts/test_p0_safe_candidate_20261021.py
+          echo 'RELEASE_CANDIDATE_CONTRACT=PASS'
+          echo 'NO_PRODUCTION_ACTIVATION=YES'
+          echo 'NO_PRODUCTION_SECRET_INPUT=YES'
