@@ -14,7 +14,7 @@ final class OmniDeskCanonicalJson
      * verifier: object keys sorted lexicographically, list order preserved,
      * no insignificant whitespace.
      *
-     * @param array<string, mixed> $payload
+     * @param  array<string, mixed>  $payload
      */
     public function encode(array $payload): string
     {
@@ -30,7 +30,7 @@ final class OmniDeskCanonicalJson
 
     private function normalize(mixed $value): mixed
     {
-        if (! is_array($value)) {
+        if (!is_array($value)) {
             return $value;
         }
 
