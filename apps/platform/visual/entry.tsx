@@ -193,16 +193,17 @@ void createInertiaApp({
             // Landing is a signed-out customer preview; owner routes use
             // synthetic session data. Never authenticate or persist a user.
             auth: {
-                user: owner || ownerOps
-                    ? {
-                          id: 1,
-                          name: 'KMJ QA Owner',
-                          email: 'owner@example.invalid',
-                          email_verified_at: null,
-                          created_at: '2026-01-01',
-                          updated_at: '2026-01-01',
-                      }
-                    : null,
+                user:
+                    owner || ownerOps
+                        ? {
+                              id: 1,
+                              name: 'KMJ QA Owner',
+                              email: 'owner@example.invalid',
+                              email_verified_at: null,
+                              created_at: '2026-01-01',
+                              updated_at: '2026-01-01',
+                          }
+                        : null,
             },
             operator: { enabled: owner || ownerOps },
             publicSite: {
