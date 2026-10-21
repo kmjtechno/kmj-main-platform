@@ -17,7 +17,7 @@ final class OmniDeskEntitlementIssuer
      * Create a detached-signature envelope without ever exposing private key
      * material to the licensing service.
      *
-     * @param array<string, mixed> $claims
+     * @param  array<string, mixed>  $claims
      * @return array{
      *   algorithm: string,
      *   kid: string,
@@ -45,7 +45,7 @@ final class OmniDeskEntitlementIssuer
     }
 
     /**
-     * @param array<string, mixed> $claims
+     * @param  array<string, mixed>  $claims
      */
     private function validate(array $claims, OmniDeskSigner $signer): void
     {
@@ -60,7 +60,7 @@ final class OmniDeskEntitlementIssuer
             || ($claims['product_id'] ?? null) !== OmniDeskLicenseContract::PRODUCT_ID
             || ($claims['product_slug'] ?? null) !== OmniDeskLicenseContract::PRODUCT_SLUG
             || ($claims['kid'] ?? null) !== $signer->kid()
-            || ! in_array($claims['plan'] ?? null, OmniDeskLicenseContract::PLANS, true)) {
+            || !in_array($claims['plan'] ?? null, OmniDeskLicenseContract::PLANS, true)) {
             throw new DomainException('OMNIDESK_ENTITLEMENT_PAYLOAD_INVALID');
         }
 
@@ -75,18 +75,18 @@ final class OmniDeskEntitlementIssuer
             'installation_id',
             'nonce',
         ] as $field) {
-            if (! is_string($claims[$field] ?? null) || trim($claims[$field]) === '') {
+            if (!is_string($claims[$field] ?? null) || trim($claims[$field]) === '') {
                 throw new DomainException('OMNIDESK_ENTITLEMENT_PAYLOAD_INVALID');
             }
         }
 
         if (($claims['organization_id'] ?? null) !== null
-            && (! is_string($claims['organization_id']) || trim($claims['organization_id']) === '')) {
+            && (!is_string($claims['organization_id']) || trim($claims['organization_id']) === '')) {
             throw new DomainException('OMNIDESK_ENTITLEMENT_PAYLOAD_INVALID');
         }
 
         foreach (['iat', 'nbf', 'exp', 'lease_expires_at', 'sequence'] as $field) {
-            if (! is_int($claims[$field] ?? null) || $claims[$field] < 0) {
+            if (!is_int($claims[$field] ?? null) || $claims[$field] < 0) {
                 throw new DomainException('OMNIDESK_ENTITLEMENT_PAYLOAD_INVALID');
             }
         }
@@ -99,16 +99,16 @@ final class OmniDeskEntitlementIssuer
         }
 
         $capabilities = $claims['capabilities'] ?? null;
-        if (! is_array($capabilities)
+        if (!is_array($capabilities)
             || ! array_is_list($capabilities)
             || $capabilities === []
             || count($capabilities) !== count(array_unique($capabilities))
-            || array_filter($capabilities, fn (mixed $value): bool => ! is_string($value) || trim($value) === '') !== []) {
+            || array_filter($capabilities, fn (mixed $value): bool => !is_string($value) || trim($value) === '') !== []) {
             throw new DomainException('OMNIDESK_ENTITLEMENT_PAYLOAD_INVALID');
         }
 
         $limits = $claims['limits'] ?? null;
-        if (! is_array($limits) || array_is_list($limits)) {
+        if (!is_array($limits) || array_is_list($limits)) {
             throw new DomainException('OMNIDESK_ENTITLEMENT_PAYLOAD_INVALID');
         }
 
@@ -134,12 +134,12 @@ final class OmniDeskEntitlementIssuer
             'relay_bytes_monthly',
         ] as $limit) {
             $value = $limits[$limit];
-            if ($value !== null && (! is_int($value) || $value < 0)) {
+            if ($value !== null && (!is_int($value) || $value < 0)) {
                 throw new DomainException('OMNIDESK_ENTITLEMENT_PAYLOAD_INVALID');
             }
         }
 
-        if (! is_string($limits['relay_policy']) || trim($limits['relay_policy']) === '') {
+        if (!is_string($limits['relay_policy']) || trim($limits['relay_policy']) === '') {
             throw new DomainException('OMNIDESK_ENTITLEMENT_PAYLOAD_INVALID');
         }
     }
