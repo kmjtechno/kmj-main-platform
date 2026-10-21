@@ -138,7 +138,7 @@ final class OmniDeskActivationQueryService
         }
 
         DB::transaction(function () use ($activationId, $principal, $reason): void {
-            [$binding, $activation, $license] = $this->recordsForPrincipal(
+            [$binding, $activation] = $this->recordsForPrincipal(
                 $activationId,
                 $principal,
                 true,
@@ -170,7 +170,6 @@ final class OmniDeskActivationQueryService
                 'created_at' => $now,
             ]);
 
-            unset($license);
         }, 3);
 
         return $this->status($activationId, $principal);
