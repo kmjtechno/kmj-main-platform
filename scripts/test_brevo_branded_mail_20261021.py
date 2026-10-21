@@ -5,7 +5,7 @@ from pathlib import Path
 import unittest
 
 ROOT = Path(__file__).resolve().parents[1]
-PROBE = ROOT / "scripts/operations/probe-owner-brevo-branded-email-20261021.py"
+PROBE = ROOT / "scripts/operations/probe-owner-brevo-enterprise-email-20261021.py"
 VIEW = ROOT / "apps/platform/resources/views/emails/kmj-auth-transactional.blade.php"
 TEXT = ROOT / "apps/platform/resources/views/emails/kmj-auth-transactional-text.blade.php"
 spec = importlib.util.spec_from_file_location("kmj_mail_preview", PROBE)
@@ -40,6 +40,18 @@ class BrandedEmailProbeSafety(unittest.TestCase):
             probe.render_blade_fixture("{{ $secret }}", {}, True)
         with self.assertRaises(ValueError):
             probe.render_blade_fixture("@if(true) insecure @endif", {}, True)
+
+    def test_enterprise_display_name_and_logo_readability(self):
+        source = PROBE.read_text(encoding="utf-8")
+        markup = VIEW.read_text(encoding="utf-8")
+        self.assertIn('formataddr(("KMJ TECHNO", SENDER))', source)
+        self.assertIn(".kmj-brevo-enterprise-20261021.once", source)
+        self.assertIn("KMJ TECHNO Enterprise Mail QA", source)
+        self.assertIn('width="305" alt="KMJ TECHNO', markup)
+        self.assertIn("SECURITY NOTICE", markup)
+        self.assertIn("PRIVATE ACCOUNT COMMUNICATION", markup)
+        self.assertIn("SECURE ACTION", markup)
+        self.assertIn("https://kmjtechno.com/assets/brand/kmj-logo-horizontal.webp", markup)
 
     def test_single_owner_only_key_never_persisted(self):
         s = PROBE.read_text(encoding="utf-8")
