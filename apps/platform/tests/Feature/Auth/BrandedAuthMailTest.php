@@ -6,6 +6,7 @@ use App\Models\User;
 use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Auth\Notifications\VerifyEmail;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\URL;
 use Tests\TestCase;
 
@@ -28,7 +29,7 @@ class BrandedAuthMailTest extends TestCase
         $url = $message->viewData['actionUrl'];
         $this->assertStringContainsString('/email/verify/', $url);
         $this->assertStringContainsString('signature=', $url);
-        $this->assertTrue(URL::hasValidSignature(\Illuminate\Http\Request::create($url)));
+        $this->assertTrue(URL::hasValidSignature(Request::create($url)));
 
         $html = view('emails.kmj-auth-transactional', $message->viewData)->render();
         $text = view('emails.kmj-auth-transactional-text', $message->viewData)->render();
