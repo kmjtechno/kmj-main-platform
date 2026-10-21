@@ -132,6 +132,7 @@ final class OmniDeskActivationBindingStore
             DB::table('omnidesk_activation_bindings')->insert($candidate + [
                 'current_jti' => null,
                 'current_sequence' => 0,
+                'current_nonce' => null,
                 'created_at' => $now,
                 'updated_at' => $now,
             ]);
@@ -165,13 +166,20 @@ final class OmniDeskActivationBindingStore
         string $activationId,
         ?string $expectedJti,
         int $expectedSequence,
+        ?string $expectedNonce,
         string $nextJti,
         int $nextSequence,
+        string $nextNonce,
     ): array {
         if ($expectedSequence < 0
             || $nextSequence !== $expectedSequence + 1
             || trim($nextJti) === ''
-            || strlen($nextJti) > 128) {
+            || strlen($nextJti) > 128
+            || preg_match('/\A[A-Za-z0-9_-]{32,128}\z/', $nextNonce) !== 1
+            || ($expectedSequence === 0 && $expectedNonce !== null)
+            || ($expectedSequence > 0
+                && (! is_string($expectedNonce)
+                    || preg_match('/\A[A-Za-z0-9_-]{32,128}\z/', $expectedNonce) !== 1))) {
             throw new DomainException('OMNIDESK_LEASE_SEQUENCE_INVALID');
         }
 
@@ -179,8 +187,10 @@ final class OmniDeskActivationBindingStore
             $activationId,
             $expectedJti,
             $expectedSequence,
+            $expectedNonce,
             $nextJti,
             $nextSequence,
+            $nextNonce,
         ): array {
             $binding = DB::table('omnidesk_activation_bindings')
                 ->where('activation_id', $activationId)
@@ -194,6 +204,10 @@ final class OmniDeskActivationBindingStore
                 || ($binding->current_jti === null ? $expectedJti !== null : ! hash_equals(
                     (string) $binding->current_jti,
                     (string) $expectedJti,
+                ))
+                || ($binding->current_nonce === null ? $expectedNonce !== null : ! hash_equals(
+                    (string) $binding->current_nonce,
+                    (string) $expectedNonce,
                 ))) {
                 throw new DomainException('OMNIDESK_REPLAY_DETECTED');
             }
@@ -203,6 +217,7 @@ final class OmniDeskActivationBindingStore
                 ->update([
                     'current_jti' => $nextJti,
                     'current_sequence' => $nextSequence,
+                    'current_nonce' => $nextNonce,
                     'updated_at' => now(),
                 ]);
 
