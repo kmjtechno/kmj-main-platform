@@ -69,7 +69,9 @@ export default function PublicSiteHeader() {
                 <div className="hidden items-center gap-2 sm:flex">
                     {auth.user ? (
                         <Link
-                            href={operator?.enabled ? '/super-admin' : dashboard()}
+                            href={
+                                operator?.enabled ? '/super-admin' : dashboard()
+                            }
                             className="inline-flex h-10 items-center gap-2 rounded-lg border border-white/10 bg-white/[0.035] px-4 text-sm font-bold text-white/84 transition hover:border-white/20 hover:bg-white/[0.07]"
                         >
                             Dashboard
@@ -167,7 +169,11 @@ export default function PublicSiteHeader() {
                         <div className="mt-2 border-t border-white/[0.07] pt-4">
                             {auth.user ? (
                                 <Link
-                                    href={operator?.enabled ? '/super-admin' : dashboard()}
+                                    href={
+                                        operator?.enabled
+                                            ? '/super-admin'
+                                            : dashboard()
+                                    }
                                     className="inline-flex h-11 w-full items-center justify-center rounded-xl bg-white text-sm font-black text-black"
                                 >
                                     Open dashboard
