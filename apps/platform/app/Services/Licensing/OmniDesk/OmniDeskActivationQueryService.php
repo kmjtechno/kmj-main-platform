@@ -225,7 +225,7 @@ final class OmniDeskActivationQueryService
          * } $binding
          */
         $binding = (array) $bindingRow;
-        if (! hash_equals((string) ($binding['organization_id'] ?? ''), $principal->organizationId)) {
+        if (! hash_equals((string) $binding['organization_id'], $principal->organizationId)) {
             throw new DomainException('OMNIDESK_ACTIVATION_NOT_FOUND');
         }
 
