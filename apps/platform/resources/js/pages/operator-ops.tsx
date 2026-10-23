@@ -576,7 +576,9 @@ export default function OperatorOps({
                                         </p>
                                         {backup.completed_at ? (
                                             <p className="text-muted-foreground mt-1 text-[10px]">
-                                                {formatIstDateTime(backup.completed_at)}
+                                                {formatIstDateTime(
+                                                    backup.completed_at,
+                                                )}
                                             </p>
                                         ) : null}
                                     </div>
@@ -723,7 +725,9 @@ export default function OperatorOps({
                                     </div>
                                     <div className="text-muted-foreground">
                                         {event.created_at
-                                            ? formatIstDateTime(event.created_at)
+                                            ? formatIstDateTime(
+                                                  event.created_at,
+                                              )
                                             : 'Unknown time'}
                                     </div>
                                 </div>
