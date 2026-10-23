@@ -17,7 +17,10 @@ export function formatIstDateTime(
 
     // A server datetime without a timezone is ambiguous and must not be
     // silently treated as the customer's browser-local clock.
-    if (typeof value === 'string' && !/(?:Z|[+-]\d{2}:\d{2})$/i.test(value.trim())) {
+    if (
+        typeof value === 'string' &&
+        !/(?:Z|[+-]\d{2}:\d{2})$/i.test(value.trim())
+    ) {
         return 'Time unavailable';
     }
 
