@@ -1,4 +1,5 @@
 import { router, useForm } from '@inertiajs/react';
+import { formatIstDateTime } from '@/lib/format-ist-date-time';
 import {
     CheckCircle2,
     KeyRound,
@@ -267,7 +268,7 @@ function GatewaySettingsCard({ setting }: { setting: OwnerGatewaySetting }) {
                 <p className="text-xs leading-6 text-slate-400">
                     {setting.note}
                     {setting.last_updated
-                        ? ` Last changed: ${new Date(setting.last_updated).toLocaleString()}.`
+                        ? ` Last changed: ${formatIstDateTime(setting.last_updated)}.`
                         : ''}
                 </p>
             </form>

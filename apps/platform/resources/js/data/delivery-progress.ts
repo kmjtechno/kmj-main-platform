@@ -10,6 +10,14 @@ export type DeliveryMilestone = {
 
 export const deliveryMilestones: DeliveryMilestone[] = [
     {
+        id: 'unverified-customer-hygiene-readonly-audit',
+        title: 'Pre-release customer database hygiene and IST/UTC operations',
+        state: 'active',
+        detail: 'An additive, read-only Laravel command inventories non-owner unverified accounts by age and selected linked sessions/passkeys/OAuth records without exposing PII or modifying database state. KMJ-elite system clock is verified Asia/Kolkata with active NTP, while persistent token/payment timestamps deliberately remain UTC. A stopped Windows Time service and guarded Main Platform production release-pointer drift are unresolved.',
+        evidence:
+            'PR #538 adds kmj:users:audit-unverified and no-write regression coverage. Production DB counts, restorable backup verification, licensing/customer identity reconciliation, actual cleanup, exact-head CI and deployment are not yet verified.',
+    },
+    {
         id: 'codebridge-public-agent-origin-separation',
         title: 'CodeBridge Home Office pairing gateway repair',
         state: 'active',
