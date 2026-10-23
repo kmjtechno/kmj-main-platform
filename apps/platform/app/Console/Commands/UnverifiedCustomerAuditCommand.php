@@ -70,6 +70,7 @@ final class UnverifiedCustomerAuditCommand extends Command
         ] as $table => $column) {
             if (! Schema::hasTable($table) || ! Schema::hasColumn($table, $column)) {
                 $counts['linked_record_counts'][$table] = 'not_checked_table_missing';
+
                 continue;
             }
             $counts['linked_record_counts'][$table] = DB::table($table)
