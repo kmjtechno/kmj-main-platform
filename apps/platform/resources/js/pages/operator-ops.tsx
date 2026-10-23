@@ -1,4 +1,5 @@
 import { Head, router } from '@inertiajs/react';
+import { formatIstDateTime } from '@/lib/format-ist-date-time';
 import OperatorModuleNavigation from '@/components/operator-module-navigation';
 import {
     Activity,
@@ -575,9 +576,7 @@ export default function OperatorOps({
                                         </p>
                                         {backup.completed_at ? (
                                             <p className="text-muted-foreground mt-1 text-[10px]">
-                                                {new Date(
-                                                    backup.completed_at,
-                                                ).toLocaleString()}
+                                                {formatIstDateTime(backup.completed_at)}
                                             </p>
                                         ) : null}
                                     </div>
@@ -630,7 +629,7 @@ export default function OperatorOps({
                         </div>
                         <div className="text-muted-foreground mt-4 text-[11px]">
                             Snapshot{' '}
-                            {new Date(snapshot.captured_at).toLocaleString()} ·
+                            {formatIstDateTime(snapshot.captured_at)} ·
                             auto-refresh every 15 seconds
                         </div>
                     </div>
@@ -724,9 +723,7 @@ export default function OperatorOps({
                                     </div>
                                     <div className="text-muted-foreground">
                                         {event.created_at
-                                            ? new Date(
-                                                  event.created_at,
-                                              ).toLocaleString()
+                                            ? formatIstDateTime(event.created_at)
                                             : 'Unknown time'}
                                     </div>
                                 </div>
