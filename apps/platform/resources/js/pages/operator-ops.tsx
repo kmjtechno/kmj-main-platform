@@ -1,5 +1,4 @@
 import { Head, router } from '@inertiajs/react';
-import { formatIstDateTime } from '@/lib/format-ist-date-time';
 import OperatorModuleNavigation from '@/components/operator-module-navigation';
 import {
     Activity,
@@ -576,9 +575,9 @@ export default function OperatorOps({
                                         </p>
                                         {backup.completed_at ? (
                                             <p className="text-muted-foreground mt-1 text-[10px]">
-                                                {formatIstDateTime(
+                                                {new Date(
                                                     backup.completed_at,
-                                                )}
+                                                ).toLocaleString()}
                                             </p>
                                         ) : null}
                                     </div>
@@ -631,7 +630,7 @@ export default function OperatorOps({
                         </div>
                         <div className="text-muted-foreground mt-4 text-[11px]">
                             Snapshot{' '}
-                            {formatIstDateTime(snapshot.captured_at)} ·
+                            {new Date(snapshot.captured_at).toLocaleString()} ·
                             auto-refresh every 15 seconds
                         </div>
                     </div>
@@ -725,9 +724,9 @@ export default function OperatorOps({
                                     </div>
                                     <div className="text-muted-foreground">
                                         {event.created_at
-                                            ? formatIstDateTime(
+                                            ? new Date(
                                                   event.created_at,
-                                              )
+                                              ).toLocaleString()
                                             : 'Unknown time'}
                                     </div>
                                 </div>
