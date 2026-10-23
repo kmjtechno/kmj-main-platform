@@ -52,7 +52,11 @@ return [
     ],
 
     'codebridge_gateway' => [
+        // Private upstream for Laravel MCP proxying; may be loopback HTTP.
         'url' => env('CODEBRIDGE_GATEWAY_URL', 'https://kmj-codebridge-gateway.onrender.com'),
+        // Separate public HTTPS origin handed to newly paired outbound agents.
+        // No implicit fallback: the operator must verify the public agent routes.
+        'agent_public_url' => env('CODEBRIDGE_AGENT_PUBLIC_URL', ''),
     ],
 
 ];
