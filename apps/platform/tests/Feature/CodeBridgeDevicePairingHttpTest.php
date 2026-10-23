@@ -16,7 +16,8 @@ final class CodeBridgeDevicePairingHttpTest extends TestCase
     public function test_fresh_device_can_create_approve_redeem_once_without_manual_agent_token(): void
     {
         config()->set('codebridge.enabled', true);
-        config()->set('services.codebridge_gateway.url', 'https://gateway.example');
+        config()->set('services.codebridge_gateway.url', 'http://127.0.0.1:18787');
+        config()->set('services.codebridge_gateway.agent_public_url', 'https://gateway.example');
         $user = User::factory()->create();
         [$tenant] = $this->fixture($user);
 

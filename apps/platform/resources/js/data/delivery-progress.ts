@@ -10,6 +10,14 @@ export type DeliveryMilestone = {
 
 export const deliveryMilestones: DeliveryMilestone[] = [
     {
+        id: 'codebridge-public-agent-origin-separation',
+        title: 'CodeBridge Home Office pairing gateway repair',
+        state: 'active',
+        detail: 'A draft fix separates the public HTTPS device enrollment agent origin from the private loopback MCP upstream. Existing routed agent endpoints return an authentication challenge, but the new Windows Home Office agent remains unenrolled until exact-head CI, guarded production rollout and fresh browser approval succeed.',
+        evidence:
+            'PR #537 adds an explicit CODEBRIDGE_AGENT_PUBLIC_URL with no implicit fallback and updates the pairing feature test for loopback upstream plus HTTPS enrollment response. Home Office enrollment previously failed CODEBRIDGE_GATEWAY_UNAVAILABLE; no production deployment or authenticated agent heartbeat is yet verified.',
+    },
+    {
         id: 'omnidesk-production-licensing-boundary',
         title: 'OmniDesk production licensing boundary',
         state: 'active',
