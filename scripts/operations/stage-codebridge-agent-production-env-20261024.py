@@ -4,6 +4,7 @@
 Operator must review pinned source, archive/witness and approve. No live edits,
 no database queries, no network calls, no production cutover, no secrets printed.
 """
+import fcntl
 import hashlib
 import json
 import os
@@ -20,6 +21,7 @@ OLD = "platform-8070dad72c55"
 CANDIDATE = BASE / "releases" / ("platform-" + SHA[:12])
 ARCHIVE = Path("/var/backups/kmj-platform") / ("pre-deploy-" + SHA[:12] + ".tar.gz")
 WITNESS = ARCHIVE.with_suffix("").with_suffix(".json")
+LOCK = Path("/run/lock/kmj-main-platform-production-release.lock")
 ORIGIN_LINE = "CODEBRIDGE_AGENT_PUBLIC_URL=https://kmjtechno.com"
 
 
@@ -97,6 +99,12 @@ def main():
     os.umask(0o077)
     if os.geteuid() != 0 or os.uname().nodename.split(".")[0] != "KMJ-elite":
         fail("WRONG_OPERATOR_OR_HOST")
+    # Shared nonblocking lock prevents races with the guarded production unit.
+    lock_fd = os.open(LOCK, os.O_RDWR | os.O_CREAT | os.O_NOFOLLOW, 0o600)
+    try:
+        fcntl.flock(lock_fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except OSError:
+        fail("RELEASE_OPERATION_BUSY")
     if not CURRENT.is_symlink() or CURRENT.resolve() != BASE / "releases" / OLD:
         fail("CURRENT_RELEASE_CHANGED")
     if not (CANDIDATE / ".git").is_dir() or CANDIDATE.is_symlink():
