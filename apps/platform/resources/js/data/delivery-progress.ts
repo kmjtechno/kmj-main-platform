@@ -29,9 +29,9 @@ export const deliveryMilestones: DeliveryMilestone[] = [
         id: 'codebridge-public-agent-origin-separation',
         title: 'CodeBridge Home Office pairing gateway repair',
         state: 'active',
-        detail: 'Draft gateway-origin separation and approval-time origin validation are implemented in source. The current Home Office device has account registration but no verified agent heartbeat or local recovered credential; browser approval alone is not proof of a usable agent. PR #547 prevents an invalid public-agent origin from silently registering an unredeemable device; exact-head gates, current production configuration, guarded deployment and owner reconnect remain independent blockers.',
+        detail: 'Source merges and review-candidate changes address two distinct first-time Home Office blockers: PR #547 prevents device registration before valid public HTTPS agent origin is configured, and PR #546 improves duplicate-enrollment recovery messaging without automatic credential revocation. Registered is not online: the Home Office CodeBridge agent still lacks an authenticated gateway heartbeat and usable local credential. No projector capture or production cutover is implied.',
         evidence:
-            'PR #537 adds explicit CODEBRIDGE_AGENT_PUBLIC_URL without fallback. PR #547 moves canonical public HTTPS origin validation before credential issuance and adds a regression verifying no activation or device registration is created when it is missing. Staging/CI verification is separate from live production deployment; no authenticated Home Office agent heartbeat or safe-to-deploy evidence is claimed.',
+            'PR #537 merged public agent URL separation. PR #547 merged pre-approval origin validation after 9/9 exact-head CI; follow-up PR #546 improves safe duplicate-device recovery guidance and button state with dedicated regression checks. Physical Home Office pairing/READY and an approved guarded production deployment remain separately unverified.',
     },
     {
         id: 'omnidesk-production-licensing-boundary',
