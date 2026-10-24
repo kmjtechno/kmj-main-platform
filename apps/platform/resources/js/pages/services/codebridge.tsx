@@ -6,6 +6,7 @@ import CodeBridgeControlCenterHub, {
 import DeviceControlCenter, {
     type CodeBridgeDevice,
 } from '@/components/codebridge/device-control-center';
+import { codeBridgeDeviceQuotaDisplay } from '@/components/codebridge/device-policy-display';
 import {
     ArrowLeft,
     CheckCircle2,
@@ -168,7 +169,7 @@ export default function CodeBridgeService({
                                         KMJ CodeBridge
                                     </h1>
                                     <span className="rounded-full border border-emerald-500/15 bg-emerald-500/5 px-2 py-1 text-xs font-black text-emerald-600 uppercase dark:text-emerald-400">
-                                        {entitlement.status}
+                                        Entitlement: {entitlement.status}
                                     </span>
                                 </div>
                                 <p className="text-muted-foreground mt-1 text-xs">
@@ -272,9 +273,11 @@ export default function CodeBridgeService({
                                 label="Registered devices"
                                 value={service.managed_devices}
                                 hint={
-                                    service.device_limit
-                                        ? 'Limit ' + service.device_limit
-                                        : 'No plan limit reported'
+                                    codeBridgeDeviceQuotaDisplay(
+                                        service.plan,
+                                        service.managed_devices,
+                                        service.device_limit,
+                                    ).registrationHint
                                 }
                             />
                             <Metric
