@@ -33,6 +33,13 @@ class StagingMonitorContractTests(unittest.TestCase):
         self.assertIn("Staging UI assertion failed", workflow)
         self.assertNotIn("STAGING_SSH_PRIVATE_KEY", workflow)
         self.assertNotIn("ssh -i", workflow)
+        self.assertLess(
+            workflow.index("      - name: Verify staging TLS identity"),
+            workflow.index("      - name: Prepare staging browser"),
+            "Certificate identity must fail before browser prep or expensive QA",
+        )
+        self.assertIn("DNS:$host", workflow)
+        self.assertNotIn("curl -k", workflow)
         self.assertNotIn("ops/staging/verify-monitor.py", workflow)
         self.assertNotIn("https://staging.kmjtechno.com/info", workflow)
 
