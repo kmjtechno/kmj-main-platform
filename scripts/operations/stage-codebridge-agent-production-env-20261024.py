@@ -122,7 +122,7 @@ def main():
     fd = os.open(dest, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600)
     try:
         os.fchown(fd, metadata.st_uid, metadata.st_gid)
-        os.fchmod(fd, metadata.st_mode & 0o600)  # no other users gain read access
+        os.fchmod(fd, metadata.st_mode & 0o660)  # preserve owner/group read; no world access or write
         with os.fdopen(fd, "wb") as stream:
             fd = -1
             stream.write(configured_bytes)
