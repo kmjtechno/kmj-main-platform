@@ -1,4 +1,5 @@
 import { Link, router } from '@inertiajs/react';
+import { codeBridgeDeviceQuotaDisplay } from './device-policy-display';
 import {
     ArrowRight,
     Cable,
@@ -36,6 +37,7 @@ export type CodeBridgeDevice = {
 
 type Props = {
     tenantId: string;
+    plan: string | null;
     devices: CodeBridgeDevice[];
     managedCount: number;
     deviceLimit: number | null;
@@ -47,6 +49,7 @@ type View = 'all' | 'with-projects' | 'needs-projects';
 
 export default function DeviceControlCenter({
     tenantId,
+    plan,
     devices,
     managedCount,
     deviceLimit,
@@ -234,9 +237,11 @@ export default function DeviceControlCenter({
                     label="Authorized devices"
                     value={managedCount}
                     hint={
-                        deviceLimit !== null
-                            ? `Plan limit: ${deviceLimit}`
-                            : 'Plan limit not reported'
+                        codeBridgeDeviceQuotaDisplay(
+                            plan,
+                            managedCount,
+                            deviceLimit,
+                        ).registrationHint
                     }
                 />
                 <Stat

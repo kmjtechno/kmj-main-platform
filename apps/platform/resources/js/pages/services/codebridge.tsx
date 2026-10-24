@@ -500,6 +500,7 @@ export default function CodeBridgeService({
                     {activeSection === 'devices' && (
                         <DeviceControlCenter
                             tenantId={organization.id}
+                            plan={service.plan}
                             devices={service.devices}
                             managedCount={service.managed_devices}
                             deviceLimit={service.device_limit}

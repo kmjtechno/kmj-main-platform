@@ -58,8 +58,10 @@ jobs:
             echo 'Frontend dependencies unavailable; no format preview.'
             exit 0
           fi
-          node_modules/.bin/vp fmt             resources/js/components/codebridge/device-control-center.tsx             resources/js/pages/services/codebridge.tsx             scripts/check-codebridge-dashboard-truth.test.mjs || true
-          git diff --             resources/js/components/codebridge/device-control-center.tsx             resources/js/pages/services/codebridge.tsx             scripts/check-codebridge-dashboard-truth.test.mjs
+          node_modules/.bin/vp fmt             resources/js/components/codebridge/device-policy-display.ts \
+            resources/js/components/codebridge/device-control-center.tsx             resources/js/pages/services/codebridge.tsx             scripts/check-codebridge-dashboard-truth.test.mjs || true
+          git diff --             resources/js/components/codebridge/device-policy-display.ts \
+            resources/js/components/codebridge/device-control-center.tsx             resources/js/pages/services/codebridge.tsx             scripts/check-codebridge-dashboard-truth.test.mjs
 
   license-core:
     name: Native Rust license verifier
