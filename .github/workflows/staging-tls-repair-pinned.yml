@@ -4,6 +4,8 @@ on:
   pull_request:
     paths:
       - '.github/workflows/staging-tls-repair-pinned.yml'
+      - '.github/workflows/staging-deploy-recovery.yml'
+      - 'scripts/test_staging_recovery_failsafe.py'
       - '.github/workflows/staging-tls-repair-execute.yml'
       - 'scripts/test_staging_tls_repair_contract.py'
       - 'infra/server/KMJ_STAGE_TLS_REPAIR.sh'
@@ -26,4 +28,5 @@ jobs:
           set -Eeuo pipefail
           bash -n infra/server/KMJ_STAGE_TLS_REPAIR.sh
           python3 -B scripts/test_staging_tls_repair_contract.py
+          python3 -B scripts/test_staging_recovery_failsafe.py
 

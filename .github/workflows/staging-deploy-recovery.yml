@@ -35,60 +35,29 @@ jobs:
             "https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/runs/${RUN_ID}/logs" \
             --output "$archive"
           unzip -p "$archive" >"$text"
-          if grep -Fq 'Certificate does not cover staging.kmjtechno.com' "$text"; then
+          if grep -Eiq 'Certificate does not cover staging\.kmjtechno\.com|Staging TLS hostname mismatch|TLS validation failed; fix the staging certificate/vhost|curl: \(60\) SSL: no alternative certificate subject name matches' "$text"; then
             echo 'tls_repair=true' >>"$GITHUB_OUTPUT"
-            echo 'Detected canonical staging TLS hostname mismatch.'
+            echo 'STAGING_RECOVERY=BLOCKED TLS_CERTIFICATE_IDENTITY_MISMATCH'
+            echo 'Use protected Staging P0 TLS Repair (Pinned Host) after its authorized SSH identity and operator script are restored.'
           else
             echo 'tls_repair=false' >>"$GITHUB_OUTPUT"
-            echo 'No staging TLS hostname mismatch detected; recovery will only retry failed jobs.'
+            echo 'STAGING_RECOVERY=TRANSIENT_RETRY_ELIGIBLE'
           fi
 
-      - name: Configure strict staging SSH
+      # Certificate/identity errors are structural and must not be retried.
+      # Repair is isolated in the separately reviewed pinned-host workflow,
+      # which uses an exact source-pinned host key and approved script digest.
+      - name: Preserve TLS blocker without unsafe SSH trust-on-first-use
         if: ${{ steps.classify.outputs.tls_repair == 'true' }}
-        env:
-          STAGING_HOST: ${{ secrets.STAGING_SSH_HOST }}
-          STAGING_USER: ${{ secrets.STAGING_SSH_USER }}
-          STAGING_KEY: ${{ secrets.STAGING_SSH_PRIVATE_KEY }}
         shell: bash
         run: |
-          set -euo pipefail
-          test -n "$STAGING_HOST"
-          test -n "$STAGING_USER"
-          test -n "$STAGING_KEY"
-          install -m 700 -d "$HOME/.ssh"
-          key="$RUNNER_TEMP/kmj-staging-tls-repair-key"
-          printf '%s' "$STAGING_KEY" | sed 's/\\n/\n/g' | tr -d '\r' >"$key"
-          printf '\n' >>"$key"
-          chmod 600 "$key"
-          ssh-keygen -y -f "$key" >/dev/null
-          ssh-keyscan -T 10 -H "$STAGING_HOST" >"$HOME/.ssh/known_hosts"
-          chmod 600 "$HOME/.ssh/known_hosts"
-          cat >"$HOME/.ssh/config" <<EOF
-          Host $STAGING_HOST
-            IdentityFile $key
-            IdentitiesOnly yes
-            UserKnownHostsFile $HOME/.ssh/known_hosts
-            StrictHostKeyChecking yes
-          EOF
-          chmod 600 "$HOME/.ssh/config"
-
-      - name: Repair canonical staging TLS certificate
-        if: ${{ steps.classify.outputs.tls_repair == 'true' }}
-        env:
-          STAGING_HOST: ${{ secrets.STAGING_SSH_HOST }}
-          STAGING_USER: ${{ secrets.STAGING_SSH_USER }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          ssh -o BatchMode=yes -o ConnectTimeout=15 "$STAGING_USER@$STAGING_HOST" \
-            'if [ "$(id -u)" -eq 0 ]; then exec /root/KMJ_STAGE_TLS_REPAIR.sh; else exec sudo -n /root/KMJ_STAGE_TLS_REPAIR.sh; fi'
-
-      - name: Remove temporary SSH key
-        if: ${{ always() }}
-        shell: bash
-        run: rm -f "$RUNNER_TEMP/kmj-staging-tls-repair-key"
+          set -Eeuo pipefail
+          echo 'STAGING_CERT_RECOVERY=BLOCKED AWAIT_PINNED_OPERATOR_REPAIR'
+          echo 'STAGING_RETRY=SKIPPED TERMINAL_TLS_ERROR'
+          echo 'No DNS modification, ssh-keyscan, certificate bypass, or production release action.'
 
       - name: Re-run failed staging deployment jobs
+        if: ${{ steps.classify.outputs.tls_repair == 'false' }}
         env:
           GH_TOKEN: ${{ github.token }}
           RUN_ID: ${{ github.event.workflow_run.id }}
