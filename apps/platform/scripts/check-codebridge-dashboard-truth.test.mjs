@@ -114,9 +114,24 @@ void test('usage billing and device state never invent measurements or connectiv
     assert.match(hub, /Registration does not establish live presence/);
     assert.match(hub, /Refresh grants, not live app sessions/);
     assert.match(hub, /Invoices and paid consumption must be obtained/);
-    assert.match(hub, /deviceLimit === null \? 'Not reported'/);
+    assert.match(hub, /codeBridgeDeviceQuotaDisplay/);
     assert.doesNotMatch(hub, /connection_status === 'online'/);
     assert.doesNotMatch(hub, /100%|unlimited calls|live sessions/);
+});
+
+const deviceQuota = readSourceText(
+    'resources/js/components/codebridge/device-policy-display.ts',
+);
+
+void test('owner numeric sentinel never appears as a customer-facing hard limit', () => {
+    assert.match(deviceQuota, /OWNER_POLICY_DEVICE_CEILING = 2147483647/);
+    assert.match(deviceQuota, /plan === 'owner'/);
+    assert.match(deviceQuota, /Owner-tier technical ceiling/);
+    assert.match(deviceQuota, /not live or executable capacity/);
+    assert.match(deviceCenter, /codeBridgeDeviceQuotaDisplay/);
+    assert.match(deviceCenter, /plan: string \| null/);
+    assert.match(ui, /plan=\{service\.plan\}/);
+    assert.doesNotMatch(deviceQuota, /unlimited device capacity/i);
 });
 
 void test('control center uses accessible section switching instead of one long dashboard', () => {
