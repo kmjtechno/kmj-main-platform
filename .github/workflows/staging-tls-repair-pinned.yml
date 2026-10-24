@@ -1,23 +1,16 @@
-name: Staging P0 TLS Repair (Pinned Host)
+name: Staging P0 TLS Guard Contract
 
 on:
   pull_request:
     paths:
       - '.github/workflows/staging-tls-repair-pinned.yml'
+      - '.github/workflows/staging-tls-repair-execute.yml'
       - 'scripts/test_staging_tls_repair_contract.py'
+      - 'infra/server/KMJ_STAGE_TLS_REPAIR.sh'
       - 'infra/server/trust/kmj-elite-staging-known_hosts'
-  push:
-    branches: [main]
-    paths:
-      - '.github/workflows/staging-tls-repair-pinned.yml'
-  workflow_dispatch:
 
 permissions:
   contents: read
-
-concurrency:
-  group: staging-p0-tls-repair
-  cancel-in-progress: false
 
 jobs:
   contract:
@@ -34,95 +27,3 @@ jobs:
           bash -n infra/server/KMJ_STAGE_TLS_REPAIR.sh
           python3 -B scripts/test_staging_tls_repair_contract.py
 
-  repair:
-    name: Repair staging-only certificate with pinned SSH trust
-    if: ${{ github.event_name == 'push' || github.event_name == 'workflow_dispatch' }}
-    needs: contract
-    runs-on: ubuntu-24.04
-    timeout-minutes: 8
-    environment: staging
-    steps:
-      - name: Checkout protected source of the fixed staging repair script
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
-        with:
-          persist-credentials: false
-          ref: ${{ github.sha }}
-      - name: Verify pinned SSH connection and execute staging-only repair
-        shell: bash
-        env:
-          # Fixed from reviewed Cloudflare staging A record; never reuse stale old-server secret.
-          SSH_HOST: '103.212.136.154'
-          SSH_USER: ${{ secrets.STAGING_SSH_USER }}
-          SSH_PRIVATE_KEY: ${{ secrets.STAGING_SSH_PRIVATE_KEY }}
-        run: |
-          set -Eeuo pipefail
-          umask 077
-          # Staging A record confirmed on 19 Oct 2026. Do not select a different VPS.
-          [[ "$SSH_HOST" == '103.212.136.154' ]] || {
-            echo 'STAGING_TLS_REPAIR=BLOCKED STAGING_VPS_IDENTITY_MISMATCH'; exit 2;
-          }
-          [[ "$SSH_USER" =~ ^[a-z_][a-z0-9_-]*$ ]] || {
-            echo 'STAGING_TLS_REPAIR=BLOCKED SSH_USER_NOT_CONFIGURED'; exit 2;
-          }
-          [[ -n "$SSH_PRIVATE_KEY" ]] || {
-            echo 'STAGING_TLS_REPAIR=BLOCKED LOGIN_KEY_MISSING'; exit 2;
-          }
-          trusted_hosts='infra/server/trust/kmj-elite-staging-known_hosts'
-          [[ -f "$trusted_hosts" && ! -L "$trusted_hosts" ]] || {
-            echo 'STAGING_TLS_REPAIR=BLOCKED TRUSTED_HOSTS_FILE_MISSING'; exit 2;
-          }
-          [[ "$(wc -l < "$trusted_hosts")" -eq 1 ]] || {
-            echo 'STAGING_TLS_REPAIR=BLOCKED TRUSTED_HOSTS_FILE_INVALID'; exit 2;
-          }
-          work="$(mktemp -d)"
-          trap 'rm -rf -- "$work"' EXIT
-          chmod 700 "$work"
-          printf '%s\n' "$SSH_PRIVATE_KEY" | sed 's/\\n/\n/g' | tr -d '\r' >"$work/id"
-          cp "$trusted_hosts" "$work/known_hosts"
-          chmod 600 "$work/id" "$work/known_hosts"
-          ssh-keygen -y -f "$work/id" >/dev/null 2>&1 || {
-            echo 'STAGING_TLS_REPAIR=BLOCKED INVALID_PINNED_SSH_KEY'; exit 2;
-          }
-          ssh-keygen -F "$SSH_HOST" -f "$work/known_hosts" >/dev/null 2>&1 || {
-            echo 'STAGING_TLS_REPAIR=BLOCKED HOST_KEY_NOT_PINNED'; exit 2;
-          }
-          source_sha256="$(sha256sum infra/server/KMJ_STAGE_TLS_REPAIR.sh | cut -d' ' -f1)"
-          [[ "$source_sha256" =~ ^[a-f0-9]{64}$ ]]
-          ssh -i "$work/id" -o IdentitiesOnly=yes -o BatchMode=yes \
-            -o StrictHostKeyChecking=yes -o UserKnownHostsFile="$work/known_hosts" \
-            -o ConnectTimeout=12 "$SSH_USER@$SSH_HOST" bash -se -- "$source_sha256" <<'KMJ_STAGE_ONLY'
-          set -Eeuo pipefail
-          expected_sha="$1"
-          [[ "$expected_sha" =~ ^[a-f0-9]{64}$ ]] || exit 2
-          # Only the existing, checksum-matching guarded staging certificate
-          # repair is authorized. Production release pointer must not change.
-          [[ "$(hostname -s)" == 'KMJ-elite' ]] || {
-            echo 'STAGING_TLS_REPAIR=BLOCKED WRONG_HOST'; exit 2;
-          }
-          f=/root/KMJ_STAGE_TLS_REPAIR.sh
-          before="$(readlink -f /home/kmjprod/current)" || exit 2
-          [[ -d "$before" ]] || exit 2
-          actual_sha="$(sudo -n sha256sum "$f" | cut -d' ' -f1)" || {
-            echo 'STAGING_TLS_REPAIR=BLOCKED OPERATOR_SCRIPT_NOT_INSTALLED'; exit 2;
-          }
-          [[ "$actual_sha" == "$expected_sha" ]] || {
-            echo 'STAGING_TLS_REPAIR=BLOCKED SCRIPT_SHA_MISMATCH'; exit 2;
-          }
-          sudo -n bash "$f" || {
-            echo 'STAGING_TLS_REPAIR=FAIL GUARDED_STAGE_CERT_REPAIR'; exit 1;
-          }
-          after="$(readlink -f /home/kmjprod/current)" || exit 1
-          [[ "$before" == "$after" ]] || {
-            echo 'STAGING_TLS_REPAIR=FAIL PRODUCTION_RELEASE_POINTER_CHANGED'; exit 1;
-          }
-          echo 'STAGING_TLS_REPAIR=PASS GUARDED_SCRIPT'
-          KMJ_STAGE_ONLY
-      - name: Verify exact staging hostname TLS without bypass or redirect
-        shell: bash
-        run: |
-          set -Eeuo pipefail
-          status="$(curl --proto '=https' --fail --silent --show-error --max-time 20 \
-            -o /dev/null -w '%{http_code}' https://staging.kmjtechno.com/)"
-          [[ "$status" == 200 ]] || exit 1
-          echo 'STAGING_TLS_EXTERNAL_VALIDATION=PASS'
-          echo 'PRODUCTION_DEPLOYMENT=NOT_ATTEMPTED'
