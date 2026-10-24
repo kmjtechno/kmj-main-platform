@@ -366,7 +366,14 @@ Route::middleware(['auth', 'verified'])->group(function () {
         try {
             $pairings->approve($v['code'], $user->id, $v['tenant_id'], time());
         } catch (DomainException $e) {
-            return back()->withErrors(['code' => $e->getMessage()]);
+            // A bounded, short-lived recovery hint for the exact duplicate
+            // enrollment case. No tokens or extra device metadata in session.
+            $response = back()->withErrors(['code' => $e->getMessage()]);
+            if ($e->getMessage() === 'CODEBRIDGE_DEVICE_ALREADY_ENROLLED') {
+                $response->with('codebridge_pairing_problem', 'CODEBRIDGE_DEVICE_ALREADY_ENROLLED');
+            }
+
+            return $response;
         }
 
         return redirect()->route('codebridge.pair', ['code' => $v['code']])
