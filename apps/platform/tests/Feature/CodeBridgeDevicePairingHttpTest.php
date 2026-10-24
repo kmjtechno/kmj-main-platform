@@ -130,6 +130,55 @@ final class CodeBridgeDevicePairingHttpTest extends TestCase
         self::assertNull(DB::table('codebridge_device_pairings')->value('credential_ciphertext'));
     }
 
+    public function test_existing_device_error_shows_recovery_without_repeat_approval(): void
+    {
+        config()->set('codebridge.enabled', true);
+        config()->set('services.codebridge_gateway.agent_public_url', 'https://gateway.example');
+        $user = User::factory()->create();
+        [$tenant] = $this->fixture($user);
+
+        $newPairing = function (): array {
+            $verifier = rtrim(strtr(base64_encode(random_bytes(32)), '+/', '-_'), '=');
+            $challenge = rtrim(strtr(base64_encode(hash('sha256', $verifier, true)), '+/', '-_'), '=');
+
+            return $this->postJson('/api/codebridge/v1/device-enrollments', [
+                'product' => 'KMJ_CODEBRIDGE',
+                'device' => ['id' => 'vps1', 'name' => 'Existing VPS', 'platform' => 'win32', 'arch' => 'x64'],
+                'project' => ['id' => 'project1', 'name' => 'App'],
+                'requested_permissions' => ['read', 'write', 'execute'],
+                'code_challenge' => $challenge,
+                'code_challenge_method' => 'S256',
+            ])->assertCreated()->json();
+        };
+
+        $first = $newPairing();
+        $this->actingAs($user)->post('/codebridge/pair', [
+            'code' => $first['user_code'],
+            'tenant_id' => $tenant,
+        ])->assertRedirect();
+        self::assertSame(1, DB::table('codebridge_device_credentials')->count());
+
+        $second = $newPairing();
+        $uri = '/codebridge/pair?code='.urlencode($second['user_code']);
+        $this->actingAs($user)
+            ->from($uri)
+            ->post('/codebridge/pair', ['code' => $second['user_code'], 'tenant_id' => $tenant])
+            ->assertRedirect($uri)
+            ->assertSessionHasErrors('code');
+
+        $this->actingAs($user)
+            ->get($uri)
+            ->assertOk()
+            ->assertSee('Existing VPS')
+            ->assertSee('This device is already registered.')
+            ->assertSee('CONNECT-ANY-DEVICE.cmd')
+            ->assertSee('/services/kmj-codebridge#codebridge-device-control', false)
+            ->assertDontSee('Approve CodeBridge device</button>', false);
+
+        // Repeated approval must never revoke, overwrite or replace the token hash.
+        self::assertSame(1, DB::table('codebridge_device_credentials')->whereNull('revoked_at')->count());
+    }
+
     public function test_pairing_rejects_wrong_verifier_and_expired_code(): void
     {
         config()->set('codebridge.enabled', true);

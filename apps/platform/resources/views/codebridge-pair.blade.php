@@ -23,7 +23,16 @@
     @endif
 
     @if ($errors->any())
-        <div class="err">{{ $errors->first() }}</div>
+        <div class="err" role="alert">{{ $errors->first() }}</div>
+    @endif
+
+    @if (session('codebridge_pairing_problem') === 'CODEBRIDGE_DEVICE_ALREADY_ENROLLED')
+        <div class="card" role="status" aria-label="Existing device recovery">
+            <strong>This device is already registered.</strong>
+            <p>Do not repeat pairing or create a second device. On this Windows PC, open the existing CodeBridge <strong>CONNECT-ANY-DEVICE.cmd</strong> launcher and choose <strong>YES</strong> to reconnect using the original private agent configuration.</p>
+            <p>If the original private agent configuration is genuinely unavailable, an authorized organization manager can disconnect this exact device from Device Control Center, confirm their account password and device ID, then approve a fresh pairing. Disconnect revokes the existing credential; it cannot recover or show the old token.</p>
+            <a href="/services/kmj-codebridge#codebridge-device-control">Open CodeBridge Device Control Center</a>
+        </div>
     @endif
 
     @if (!$pairing)
@@ -44,7 +53,7 @@
 
         @if (count($pairing['organizations']) === 0)
             <div class="err">No eligible KMJ CodeBridge license is available for an organization you manage.</div>
-        @else
+        @elseif (session('codebridge_pairing_problem') !== 'CODEBRIDGE_DEVICE_ALREADY_ENROLLED')
             <form method="POST" action="{{ route('codebridge.pair.approve') }}">
                 @csrf
                 <input type="hidden" name="code" value="{{ $pairing['code'] }}">
