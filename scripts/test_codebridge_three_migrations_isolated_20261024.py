@@ -92,9 +92,10 @@ class IsolatedThreeMigrations(unittest.TestCase):
         for token in (
             "ISOLATED_ROLLBACK_SQLSTATE=",
             "ISOLATED_ROLLBACK_CLASS=",
-            "ROLLBACK_LOG_MENTIONS_CUSTOMER_PROFILE=",
-            "ROLLBACK_LOG_MENTIONS_OMNIDESK_BINDING=",
-            "ROLLBACK_LOG_MENTIONS_OMNIDESK_NONCE=",
+            "ROLLBACK_LOG_MENTIONS_",
+            '("CUSTOMER_PROFILE", "2026_10_20_070000_create_customer_profiles_table")',
+            '("OMNIDESK_BINDING", "2026_10_21_020500_create_omnidesk_activation_bindings")',
+            '("OMNIDESK_NONCE", "2026_10_21_030000_add_current_nonce_to_omnidesk_activation_bindings")',
             "ISOLATED_MIGRATION_ROWS=",
             "ISOLATED_CUSTOMER_TABLE=",
             "ISOLATED_OMNIDESK_TABLE=",
