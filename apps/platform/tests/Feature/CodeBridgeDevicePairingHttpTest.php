@@ -102,9 +102,38 @@ final class CodeBridgeDevicePairingHttpTest extends TestCase
         ])->assertStatus(410);
     }
 
+    public function test_gateway_origin_missing_fails_before_device_registration(): void
+    {
+        config()->set('codebridge.enabled', true);
+        config()->set('services.codebridge_gateway.agent_public_url', '');
+        $user = User::factory()->create();
+        [$tenant] = $this->fixture($user);
+        $verifier = rtrim(strtr(base64_encode(random_bytes(32)), '+/', '-_'), '=');
+        $challenge = rtrim(strtr(base64_encode(hash('sha256', $verifier, true)), '+/', '-_'), '=');
+        $created = $this->postJson('/api/codebridge/v1/device-enrollments', [
+            'product' => 'KMJ_CODEBRIDGE',
+            'device' => ['id' => 'home-office', 'name' => 'Home Office', 'platform' => 'win32', 'arch' => 'x64'],
+            'project' => ['id' => 'calibration', 'name' => 'Calibration Pro'],
+            'requested_permissions' => ['read', 'write', 'execute'],
+            'code_challenge' => $challenge,
+            'code_challenge_method' => 'S256',
+        ])->assertCreated()->json();
+
+        $this->actingAs($user)
+            ->post('/codebridge/pair', ['code' => $created['user_code'], 'tenant_id' => $tenant])
+            ->assertRedirect()
+            ->assertSessionHasErrors(['code' => 'CODEBRIDGE_GATEWAY_UNAVAILABLE']);
+
+        self::assertSame(0, DB::table('codebridge_device_credentials')->count());
+        self::assertSame(0, DB::table('kslp_activations')->count());
+        self::assertSame('pending', DB::table('codebridge_device_pairings')->value('status'));
+        self::assertNull(DB::table('codebridge_device_pairings')->value('credential_ciphertext'));
+    }
+
     public function test_pairing_rejects_wrong_verifier_and_expired_code(): void
     {
         config()->set('codebridge.enabled', true);
+        config()->set('services.codebridge_gateway.agent_public_url', 'https://gateway.example');
         $user = User::factory()->create();
         [$tenant] = $this->fixture($user);
         $verifier = rtrim(strtr(base64_encode(random_bytes(32)), '+/', '-_'), '=');

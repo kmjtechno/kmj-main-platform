@@ -133,6 +133,14 @@ final class CodeBridgeDevicePairingService
                 throw new DomainException('CODEBRIDGE_PAIRING_NO_LICENSE');
             }
 
+            // Validate the public agent origin BEFORE creating a device credential.
+            // Otherwise browser approval registers the device while redemption
+            // fails and the owner cannot recover the one-time bearer locally.
+            $publicAgentOrigin = rtrim((string) config('services.codebridge_gateway.agent_public_url'), '/');
+            if (! preg_match('/\\Ahttps:\\/\\/[^\\/?#]+(?::[0-9]{1,5})?\\z/D', $publicAgentOrigin)) {
+                throw new DomainException('CODEBRIDGE_GATEWAY_UNAVAILABLE');
+            }
+
             $activationId = (string) Str::uuid();
             DB::table('kslp_activations')->insert([
                 'id' => $activationId,

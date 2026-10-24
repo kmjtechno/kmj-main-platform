@@ -29,9 +29,9 @@ export const deliveryMilestones: DeliveryMilestone[] = [
         id: 'codebridge-public-agent-origin-separation',
         title: 'CodeBridge Home Office pairing gateway repair',
         state: 'active',
-        detail: 'A draft fix separates the public HTTPS device enrollment agent origin from the private loopback MCP upstream. Existing routed agent endpoints return an authentication challenge, but the new Windows Home Office agent remains unenrolled until exact-head CI, guarded production rollout and fresh browser approval succeed.',
+        detail: 'Draft gateway-origin separation and approval-time origin validation are implemented in source. The current Home Office device has account registration but no verified agent heartbeat or local recovered credential; browser approval alone is not proof of a usable agent. PR #547 prevents an invalid public-agent origin from silently registering an unredeemable device; exact-head gates, current production configuration, guarded deployment and owner reconnect remain independent blockers.',
         evidence:
-            'PR #537 adds an explicit CODEBRIDGE_AGENT_PUBLIC_URL with no implicit fallback and updates the pairing feature test for loopback upstream plus HTTPS enrollment response. Home Office enrollment previously failed CODEBRIDGE_GATEWAY_UNAVAILABLE; no production deployment or authenticated agent heartbeat is yet verified.',
+            'PR #537 adds explicit CODEBRIDGE_AGENT_PUBLIC_URL without fallback. PR #547 moves canonical public HTTPS origin validation before credential issuance and adds a regression verifying no activation or device registration is created when it is missing. Staging/CI verification is separate from live production deployment; no authenticated Home Office agent heartbeat or safe-to-deploy evidence is claimed.',
     },
     {
         id: 'omnidesk-production-licensing-boundary',
