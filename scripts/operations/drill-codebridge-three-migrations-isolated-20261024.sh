@@ -119,6 +119,9 @@ try {
     require $root.'/vendor/autoload.php';
     $app = require $root.'/bootstrap/app.php';
     $app->make(\Illuminate\Contracts\Console\Kernel::class)->bootstrap();
+    if ($app->environment() !== 'testing' || $app->isProduction()) {
+        throw new RuntimeException('ISOLATED_ENV_REQUIRED');
+    }
     $name = config('database.default');
     $db = config('database.connections.'.$name);
     if ($name !== 'pgsql' || !is_array($db) ||
@@ -169,7 +172,12 @@ chmod 0640 "$scratch/verify.php"
 
 readonly SOCKET="$scratch/restore/socket"
 app() {
+  # Candidate .env is production; force a NON-PRODUCTION Laravel environment only
+  # for this disposable Unix-socket database. Retain AppServiceProvider's real
+  # production destructive-command prohibition for all production workloads.
   runuser -u kmjprod -- env \
+    APP_ENV=testing APP_DEBUG=false MAIL_MAILER=log QUEUE_CONNECTION=sync \
+    CACHE_STORE=array SESSION_DRIVER=array APP_URL=http://localhost \
     DB_CONNECTION=pgsql DB_URL= DB_HOST="$SOCKET" DB_PORT="$PORT" \
     DB_DATABASE="$DATABASE" DB_USERNAME="$ROLE" DB_PASSWORD= \
     PGHOST="$SOCKET" PGPORT="$PORT" PGUSER="$ROLE" PGDATABASE="$DATABASE" \
