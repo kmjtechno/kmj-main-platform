@@ -78,6 +78,12 @@ class StagingMonitorContractTests(unittest.TestCase):
         self.assertIn(r"Certificate does not cover staging\.kmjtechno\.com", workflow)
         self.assertIn("STAGING_RECOVERY=BLOCKED TLS_CERTIFICATE_IDENTITY_MISMATCH", workflow)
         self.assertIn("STAGING_RETRY=SKIPPED TERMINAL_TLS_ERROR", workflow)
+        self.assertIn(
+            "exit 1",
+            workflow.split("name: Preserve TLS blocker", 1)[1].split(
+                "name: Re-run failed staging deployment jobs", 1
+            )[0],
+        )
         self.assertIn("steps.classify.outputs.tls_repair == 'false'", workflow)
         self.assertNotIn("STAGING_SSH_PRIVATE_KEY", workflow)
         self.assertNotIn("ssh-keyscan -", workflow)
