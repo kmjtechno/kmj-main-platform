@@ -30,6 +30,47 @@ final class CodeBridgeInstallerBootstrapTest extends TestCase
         self::assertStringNotContainsString('Authorization: Bearer ', $script);
     }
 
+    public function test_windows_device_installer_is_first_party_pinned_and_checksum_verified(): void
+    {
+        $scriptResponse = $this->get('/install-codebridge-windows.ps1')
+            ->assertOk()
+            ->assertHeader('Content-Type', 'text/plain; charset=UTF-8')
+            ->assertHeader('X-Content-Type-Options', 'nosniff');
+        $script = $scriptResponse->getContent();
+        self::assertIsString($script);
+        self::assertStringContainsString(
+            '$pin = \'9dc0ae25648c33a62631fdd35068e6b60820637d\'',
+            $script,
+        );
+        self::assertStringContainsString('git clone', $script);
+        self::assertStringContainsString('checkout --detach $pin', $script);
+        self::assertStringContainsString('npm ci --omit=dev --ignore-scripts', $script);
+        self::assertStringContainsString('ONE-CLICK-ANY-DEVICE.ps1', $script);
+        self::assertStringContainsString('KMJ_RUNTIME_UNTRUSTED_OR_MODIFIED', $script);
+        self::assertStringContainsString('ACCOUNT_READY=CHECK_AUTHENTICATED_GATEWAY_STATUS', $script);
+        self::assertStringNotContainsString('CODEBRIDGE_AGENT_TOKEN=', $script);
+        self::assertStringNotContainsString('Authorization: Bearer', $script);
+
+        $download = $this->get('/install-codebridge-windows.cmd')
+            ->assertOk()
+            ->assertHeader('Content-Type', 'application/octet-stream')
+            ->assertHeader('X-Content-Type-Options', 'nosniff')
+            ->assertHeader('Cache-Control', 'no-store, private')
+            ->assertHeader(
+                'Content-Disposition',
+                'attachment; filename="KMJ-CodeBridge-Connect-Windows.cmd"',
+            );
+        $launcher = $download->getContent();
+        self::assertIsString($launcher);
+        self::assertStringStartsWith("@echo off\n", str_replace("\r\n", "\n", $launcher));
+        self::assertStringContainsString('https://kmjtechno.com/install-codebridge-windows.ps1', $launcher);
+        self::assertStringContainsString(strtoupper(hash('sha256', $script)), $launcher);
+        self::assertStringContainsString('Get-FileHash -LiteralPath $p -Algorithm SHA256', $launcher);
+        self::assertStringNotContainsString('%%EXPECTED_SHA256%%', $launcher);
+        self::assertStringNotContainsString('ExecutionPolicy Bypass', $launcher);
+        self::assertStringNotContainsString('Authorization: Bearer', $launcher);
+    }
+
     public function test_chatgpt_desktop_setup_uses_public_marketplace_without_credentials(): void
     {
         $response = $this->get('/install-chatgpt-desktop.ps1')

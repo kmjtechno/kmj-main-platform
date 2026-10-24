@@ -74,10 +74,17 @@ void test('many OAuth grants have compact, searchable cards and unique client cl
     assert.match(ui, /Search client name or scope/);
 });
 
-void test('offline remediation links to exact documented Connection Doctor', () => {
-    assert.match(deviceCenter, /docs\/CONNECTION-DOCTOR\.md/);
-    assert.match(deviceUi, /connection_overview/);
+void test('offline recovery stays inside the KMJ-hosted device dashboard', () => {
+    assert.match(deviceCenter, /\/install-codebridge-windows\.cmd/);
+    assert.match(deviceCenter, /Connect this Windows PC/);
+    assert.match(deviceCenter, /Reconnect on Windows/);
+    assert.match(deviceCenter, /Registration alone is not an/);
     assert.match(deviceCenter, /Live connection has not been verified/);
+    assert.doesNotMatch(deviceCenter, /github\.com\/kmjtechno\/kmj-codebridge/);
+    assert.doesNotMatch(
+        ui,
+        /raw\.githubusercontent\.com\/kmjtechno\/kmj-codebridge/,
+    );
 });
 
 const hub = readSourceText(

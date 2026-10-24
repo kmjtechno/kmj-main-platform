@@ -131,13 +131,14 @@ export default function CodeBridgeControlCenterHub({
                         </button>
                     ))}
                 </nav>
-                <Link
-                    href="/codebridge/pair"
+                <a
+                    href="/install-codebridge-windows.cmd"
+                    download="KMJ-CodeBridge-Connect-Windows.cmd"
                     className="mt-4 inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-xl bg-red-600 px-3 text-xs font-black text-white hover:bg-red-500"
                 >
                     <MonitorSmartphone className="h-4 w-4" />
-                    Add a device
-                </Link>
+                    Connect Windows device
+                </a>
             </aside>
 
             <div className="min-w-0 space-y-5">
@@ -163,7 +164,7 @@ export default function CodeBridgeControlCenterHub({
                             href="/codebridge/pair"
                             className="inline-flex min-h-10 items-center gap-2 rounded-xl border px-4 text-xs font-bold hover:border-red-500/40"
                         >
-                            Connect a device
+                            Approve a new pairing
                             <ArrowRight className="h-4 w-4" />
                         </Link>
                     </div>
@@ -302,6 +303,14 @@ export default function CodeBridgeControlCenterHub({
                         section. Connected app grants are managed below.
                     </p>
                     <div className="mt-4 flex flex-wrap gap-2">
+                        <button
+                            type="button"
+                            onClick={() => onSectionChange('devices')}
+                            className="inline-flex min-h-10 items-center gap-2 rounded-xl border px-4 text-xs font-bold hover:border-red-500/40"
+                        >
+                            <MonitorSmartphone className="h-4 w-4 text-red-500" />
+                            Manage device approvals
+                        </button>
                         <Link
                             href="/settings/security"
                             className="inline-flex min-h-10 items-center gap-2 rounded-xl border px-4 text-xs font-bold hover:border-red-500/40"

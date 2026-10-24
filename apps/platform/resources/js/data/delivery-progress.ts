@@ -10,6 +10,14 @@ export type DeliveryMilestone = {
 
 export const deliveryMilestones: DeliveryMilestone[] = [
     {
+        id: 'codebridge-first-party-windows-dashboard-connection',
+        title: 'CodeBridge first-party Windows one-click dashboard connector',
+        state: 'active',
+        detail: 'Candidate Main Platform CodeBridge Dashboard now provides a KMJ-hosted Windows connector download and device-specific reconnect guidance, replacing GitHub website onboarding links. The downloaded CMD pins SHA-256 of a first-party PowerShell bootstrap; its runtime source is pinned to an exact previously green CodeBridge commit, owner folders are preserved and new grants still require browser approval. Local Windows execution, active gateway heartbeat, production rollout and full customer browser acceptance are not yet verified.',
+        evidence:
+            'Candidate PR #539 adds Windows download routes and SHA verification, a pinned script that validates Git/Node24 and source HEAD, first-party dashboard connect/reconnect buttons, PHP regression tests and dashboard truth checks. Exact-head Main Platform CI and verified production deploy remain release gates; neither registered devices nor first-party download imply the agent is online.',
+    },
+    {
         id: 'unverified-customer-hygiene-readonly-audit',
         title: 'Pre-release customer database hygiene and IST/UTC operations',
         state: 'active',

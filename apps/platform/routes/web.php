@@ -32,6 +32,8 @@ use KMJ\MainPlatform\Organizations\Services\OrganizationCapabilityContext;
 use KMJ\MainPlatform\Organizations\Services\OrganizationDirectory;
 use KMJ\MainPlatform\Releases\Models\ReleaseArtifact;
 
+require __DIR__.'/codebridge-windows-installer.php';
+
 Route::get('api/public/commander/bootstrap', function (DesktopCommanderCommercialPolicy $policy) {
     return response()
         ->json($policy->publicBootstrap())
