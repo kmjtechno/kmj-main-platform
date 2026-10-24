@@ -96,7 +96,7 @@ chmod 0600 "$scratch/restore/database.dump"
 runuser -u kmjprod -- "$pgdir/initdb" -D "$scratch/restore/pgdata" -U "$ROLE" \
   --auth-local=trust --auth-host=reject --no-instructions >"$scratch/initdb.log" 2>&1 || block INITDB_FAILED
 runuser -u kmjprod -- "$pgdir/pg_ctl" -D "$scratch/restore/pgdata" \
-  -l "$scratch/pg.log" -o "-c listen_addresses='' -c unix_socket_directories='$scratch/restore/socket' -c unix_socket_permissions=0700 -c port=$PORT" \
+  -l "$scratch/restore/pg-server.log" -o "-c listen_addresses='' -c unix_socket_directories='$scratch/restore/socket' -c unix_socket_permissions=0700 -c port=$PORT" \
   -w start >/dev/null 2>&1 || block ISOLATED_POSTGRES_START_FAILED
 started=1
 [[ -S "$scratch/restore/socket/.s.PGSQL.$PORT" ]] || block PRIVATE_SOCKET_MISSING
@@ -144,15 +144,15 @@ try {
     $all = array_map(fn($p) => basename($p, '.php'), glob($root.'/database/migrations/*.php'));
     $pending = array_values(array_diff($all, $ran));
     sort($pending);
-    $hasSchema = \Illuminate\Support\Facades\Schema::hasTable('customer_profiles')
-        && \Illuminate\Support\Facades\Schema::hasTable('omnidesk_activation_bindings')
-        && \Illuminate\Support\Facades\Schema::hasColumn('omnidesk_activation_bindings', 'current_nonce');
+    $hasCustomer = \Illuminate\Support\Facades\Schema::hasTable('customer_profiles');
+    $hasOmnidesk = \Illuminate\Support\Facades\Schema::hasTable('omnidesk_activation_bindings');
+    $hasNonce = $hasOmnidesk && \Illuminate\Support\Facades\Schema::hasColumn('omnidesk_activation_bindings', 'current_nonce');
     if ($phase === 'before' || $phase === 'rollback') {
-        if ($pending !== $expected || $hasSchema) {
+        if ($pending !== $expected || $hasCustomer || $hasOmnidesk || $hasNonce) {
             throw new RuntimeException('MIGRATION_BASELINE_MISMATCH');
         }
     } elseif ($phase === 'after') {
-        if ($pending !== [] || !$hasSchema) {
+        if ($pending !== [] || !$hasCustomer || !$hasOmnidesk || !$hasNonce) {
             throw new RuntimeException('MIGRATION_AFTER_MISMATCH');
         }
     } else {
