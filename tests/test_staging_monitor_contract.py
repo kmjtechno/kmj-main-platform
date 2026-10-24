@@ -61,19 +61,25 @@ class StagingMonitorContractTests(unittest.TestCase):
         self.assertNotIn("kmj-main-platform-ci", workflow)
         self.assertIn("rerun-failed-jobs", workflow)
 
-    def test_staging_recovery_repairs_only_the_canonical_tls_mismatch(self):
+    def test_staging_recovery_blocks_terminal_tls_and_defers_to_pinned_repair(self):
         workflow = RECOVERY_WORKFLOW.read_text(encoding="utf-8")
+        fixed_repair = (
+            ROOT / ".github" / "workflows" / "staging-tls-repair-execute.yml"
+        ).read_text(encoding="utf-8")
 
         self.assertIn("environment: staging", workflow)
-        self.assertIn(
-            "Certificate does not cover staging.kmjtechno.com",
-            workflow,
-        )
-        self.assertIn("/root/KMJ_STAGE_TLS_REPAIR.sh", workflow)
-        self.assertIn("sudo -n /root/KMJ_STAGE_TLS_REPAIR.sh", workflow)
-        self.assertIn("STAGING_SSH_PRIVATE_KEY", workflow)
+        self.assertIn(r"Certificate does not cover staging\.kmjtechno\.com", workflow)
+        self.assertIn("STAGING_RECOVERY=BLOCKED TLS_CERTIFICATE_IDENTITY_MISMATCH", workflow)
+        self.assertIn("STAGING_RETRY=SKIPPED TERMINAL_TLS_ERROR", workflow)
+        self.assertIn("steps.classify.outputs.tls_repair == 'false'", workflow)
+        self.assertNotIn("STAGING_SSH_PRIVATE_KEY", workflow)
+        self.assertNotIn("ssh-keyscan -", workflow)
+        self.assertNotIn("sudo -n /root/KMJ_STAGE_TLS_REPAIR.sh", workflow)
         self.assertNotIn("KMJ_STAGE_DOMAIN=", workflow)
         self.assertNotIn("KMJ_PRODUCTION_DOMAIN=", workflow)
+        self.assertIn("/root/KMJ_STAGE_TLS_REPAIR.sh", fixed_repair)
+        self.assertIn("StrictHostKeyChecking=yes", fixed_repair)
+        self.assertIn("SCRIPT_SHA_MISMATCH", fixed_repair)
 
     def test_worker_completion_has_delivery_status_finalizer(self):
         workflow = DELIVERY_FINALIZER_WORKFLOW.read_text(encoding="utf-8")
