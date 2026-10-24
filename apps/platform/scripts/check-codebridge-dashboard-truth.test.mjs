@@ -20,7 +20,7 @@ void test('green entitlement badge and owner plan ceiling cannot imply device on
     assert.match(ui, /Entitlement: \{entitlement\.status\}/);
     assert.match(ui, /codeBridgeDeviceQuotaDisplay/);
     assert.match(ui, /\.registrationHint/);
-    assert.doesNotMatch(ui, /\{entitlement\.status\}\s*<\/span>/);
+    assert.doesNotMatch(ui, />\s*\{entitlement\.status\}\s*<\/span>/);
     assert.doesNotMatch(ui, /'Limit ' \+ service\.device_limit/);
 });
 
