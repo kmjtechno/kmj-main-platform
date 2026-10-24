@@ -16,6 +16,14 @@ const directory = readFileSync(
 );
 const routes = readFileSync('routes/web.php', 'utf8');
 
+void test('green entitlement badge and owner plan ceiling cannot imply device online', () => {
+    assert.match(ui, /Entitlement: \{entitlement\.status\}/);
+    assert.match(ui, /codeBridgeDeviceQuotaDisplay/);
+    assert.match(ui, /\.registrationHint/);
+    assert.doesNotMatch(ui, /\{entitlement\.status\}\s*<\/span>/);
+    assert.doesNotMatch(ui, /'Limit ' \+ service\.device_limit/);
+});
+
 void test('dashboard never invents online device presence from registration', () => {
     assert.match(directory, /'connection_status' => 'not_verified'/);
     assert.match(deviceCenter, /Online status: Not verified/);
