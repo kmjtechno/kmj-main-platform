@@ -55,7 +55,7 @@ final class CodeBridgeInstallerBootstrapTest extends TestCase
             ->assertOk()
             ->assertHeader('Content-Type', 'application/octet-stream')
             ->assertHeader('X-Content-Type-Options', 'nosniff')
-            ->assertHeader('Cache-Control', 'no-store')
+            ->assertHeader('Cache-Control', 'no-store, private')
             ->assertHeader(
                 'Content-Disposition',
                 'attachment; filename="KMJ-CodeBridge-Connect-Windows.cmd"',
