@@ -7,6 +7,8 @@ use App\Services\Licensing\CodeBridge\CodeBridgeCustomerDeviceDirectory;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use Illuminate\Support\MessageBag;
+use Illuminate\Support\ViewErrorBag;
 use Tests\TestCase;
 
 final class CodeBridgeDevicePairingHttpTest extends TestCase
@@ -100,6 +102,40 @@ final class CodeBridgeDevicePairingHttpTest extends TestCase
             'code_verifier' => $verifier,
             'device_id' => 'vps1',
         ])->assertStatus(410);
+    }
+
+    public function test_existing_device_error_shows_recovery_without_repeat_approval(): void
+    {
+        config()->set('codebridge.enabled', true);
+        $user = User::factory()->create();
+        [$tenant] = $this->fixture($user);
+        $challenge = rtrim(strtr(base64_encode(random_bytes(32)), '+/', '-_'), '=');
+
+        $created = $this->postJson('/api/codebridge/v1/device-enrollments', [
+            'product' => 'KMJ_CODEBRIDGE',
+            'device' => ['id' => 'vps1', 'name' => 'Existing VPS', 'platform' => 'win32', 'arch' => 'x64'],
+            'project' => ['id' => 'project1', 'name' => 'App'],
+            'requested_permissions' => ['read', 'write', 'execute'],
+            'code_challenge' => $challenge,
+            'code_challenge_method' => 'S256',
+        ])->assertCreated()->json();
+
+        $errors = new ViewErrorBag;
+        $errors->put('default', new MessageBag([
+            'pairing' => ['CODEBRIDGE_DEVICE_ALREADY_ENROLLED'],
+        ]));
+
+        $this->actingAs($user)
+            ->withSession(['errors' => $errors])
+            ->get('/codebridge/pair?code='.urlencode($created['user_code']))
+            ->assertOk()
+            ->assertSee('Existing VPS')
+            ->assertSee('This device is already registered.')
+            ->assertSee('CONNECT-ANY-DEVICE.cmd')
+            ->assertSee('/services/kmj-codebridge#codebridge-device-control', false)
+            ->assertDontSee('Approve CodeBridge device</button>', false);
+
+        self::assertSame(0, DB::table('codebridge_device_credentials')->count());
     }
 
     public function test_pairing_rejects_wrong_verifier_and_expired_code(): void
