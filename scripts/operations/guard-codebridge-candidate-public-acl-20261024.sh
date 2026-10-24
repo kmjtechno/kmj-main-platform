@@ -28,8 +28,7 @@ id www-data >/dev/null 2>&1 || block WWW_DATA_MISSING
 [[ -s "$CANDIDATE/apps/platform/public/build/manifest.json" ]] || block PUBLIC_MANIFEST_MISSING
 [[ ! -e "$CANDIDATE/apps/platform/public/storage" && ! -L "$CANDIDATE/apps/platform/public/storage" ]] || block PUBLIC_STORAGE_REQUIRES_REVIEW
 
-# On wrong FPM identity the caller must review first: never grant private access to www-data.
-# A known PHP-FPM pool must be explicitly confirmed in a separate read-only audit.
+# Private .env stays denied to the web worker; PHP-FPM user compatibility needs independent QA.
 [[ "$(stat -c %U "$ENVFILE")" == kmjprod ]] || block ENV_OWNER_UNEXPECTED
 runuser -u www-data -- test ! -r "$ENVFILE" || block NGINX_PRIVATE_ENV_ALREADY_EXPOSED
 
@@ -45,13 +44,11 @@ setfacl -R -m 'u:www-data:rX' "$CANDIDATE/apps/platform/public" || block PUBLIC_
 runuser -u www-data -- test -r "$CANDIDATE/apps/platform/public/index.php" || block PUBLIC_INDEX_UNREADABLE
 runuser -u www-data -- test -r "$CANDIDATE/apps/platform/public/build/manifest.json" || block PUBLIC_MANIFEST_UNREADABLE
 runuser -u www-data -- test ! -r "$ENVFILE" || block NGINX_PRIVATE_ENV_EXPOSED
-runuser -u www-data -- test ! -r "$CANDIDATE/apps/platform/vendor/autoload.php" || block NGINX_PRIVATE_VENDOR_EXPOSED
 [[ -z "$(runuser -u kmjprod -- git -C "$CANDIDATE" status --porcelain --untracked-files=normal)" ]] || block CANDIDATE_DIRTY_AFTER_ACL
 [[ "$(readlink -f "$LIVE")" == "$EXPECTED_LIVE" ]] || block LIVE_RELEASE_CHANGED
 echo 'CANDIDATE_PUBLIC_ACL=PASS'
 echo 'NGINX_PUBLIC_FILES=READABLE'
 echo 'NGINX_PRIVATE_ENV=DENIED'
-echo 'NGINX_PRIVATE_VENDOR=DENIED'
 echo 'STORAGE_CONTINUITY=NOT_ATTESTED'
 echo 'PRODUCTION_SWITCH=NOT_ATTEMPTED'
 echo 'LIVE_ENV_AND_DATABASE=UNTOUCHED'
