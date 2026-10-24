@@ -68,8 +68,6 @@ type Props = {
 };
 
 const CHATGPT_DESKTOP_SETUP_URL = '/install-chatgpt-desktop.ps1';
-const VSCODE_COPILOT_SETUP_URL =
-    'https://raw.githubusercontent.com/kmjtechno/kmj-codebridge/dbac6b574500804fea9ff493f27b84f2a5d73efa/scripts/install-vscode-copilot.cmd';
 const DESKTOP_INSTALL_DESCRIPTION =
     'Download the KMJ Desktop setup once. It adds the official KMJ marketplace; CodeBridge is installed by default and opens browser OAuth on first use.';
 const CONNECTED_CLIENTS_DESCRIPTION =
@@ -187,6 +185,14 @@ export default function CodeBridgeService({
                         </div>
 
                         <div className="flex flex-wrap gap-2">
+                            <a
+                                href="/install-codebridge-windows.cmd"
+                                download="KMJ-CodeBridge-Connect-Windows.cmd"
+                                className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-red-600 px-4 text-xs font-black text-white transition hover:bg-red-500"
+                            >
+                                <Laptop2 className="h-3.5 w-3.5" />
+                                Connect Windows PC
+                            </a>
                             <button
                                 type="button"
                                 onClick={() => setActiveSection('devices')}
@@ -301,6 +307,37 @@ export default function CodeBridgeService({
                                     <div className="mt-3 inline-flex items-center gap-1.5 text-xs font-bold text-emerald-600 dark:text-emerald-400">
                                         <CheckCircle2 className="h-3.5 w-3.5" />
                                         Protected by OAuth 2.1 + PKCE
+                                    </div>
+                                </div>
+
+                                <div className="mt-5 rounded-xl border border-red-500/20 bg-red-500/[0.03] p-4">
+                                    <div className="flex flex-wrap items-center justify-between gap-3">
+                                        <div>
+                                            <div className="flex items-center gap-2 text-xs font-black">
+                                                <Laptop2 className="h-3.5 w-3.5 text-red-500" />
+                                                Windows PC / workstation
+                                            </div>
+                                            <p className="text-muted-foreground mt-2 text-xs leading-5">
+                                                Download from this dashboard,
+                                                then double-click on that PC.
+                                                Already enrolled? Choose YES
+                                                to reuse its private config.
+                                                First connection? Choose NO
+                                                and approve in your KMJ account.
+                                                Git and Node.js 24 are required;
+                                                missing prerequisites are
+                                                reported safely, never installed
+                                                without your approval.
+                                            </p>
+                                        </div>
+                                        <a
+                                            href="/install-codebridge-windows.cmd"
+                                            download="KMJ-CodeBridge-Connect-Windows.cmd"
+                                            className="inline-flex h-10 shrink-0 items-center gap-2 rounded-xl bg-red-600 px-4 text-xs font-black text-white hover:bg-red-500"
+                                        >
+                                            <Laptop2 className="h-3.5 w-3.5" />
+                                            Download Windows connector
+                                        </a>
                                     </div>
                                 </div>
 
@@ -499,12 +536,7 @@ export default function CodeBridgeService({
                                 >
                                     VS Code Insiders
                                 </a>
-                                <a
-                                    href={VSCODE_COPILOT_SETUP_URL}
-                                    className="inline-flex h-10 items-center rounded-xl border px-4 text-xs font-bold"
-                                >
-                                    Windows setup fallback
-                                </a>
+
                                 <a
                                     href={CHATGPT_DESKTOP_SETUP_URL}
                                     download
