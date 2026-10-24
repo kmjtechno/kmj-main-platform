@@ -199,10 +199,10 @@ export default function DeviceControlCenter({
                     <p className="text-muted-foreground mt-2 text-xs leading-5">
                         Connection recovery is managed here. Download the
                         first-party Windows connector once, double-click it on
-                        the computer, choose your existing approved device,
-                        then refresh this dashboard. Browser pairing is required
-                        only for new grants. No GitHub page or PowerShell
-                        commands are needed.
+                        the computer, choose your existing approved device, then
+                        refresh this dashboard. Browser pairing is required only
+                        for new grants. No GitHub page or PowerShell commands
+                        are needed.
                     </p>
                 </div>
                 <div className="flex flex-wrap gap-2">
@@ -591,8 +591,8 @@ export default function DeviceControlCenter({
                                     <p className="text-muted-foreground mt-3 leading-5">
                                         Existing device: use the Windows
                                         connector on this computer and choose
-                                        YES to reuse its private approval.
-                                        New device: choose NO and approve its
+                                        YES to reuse its private approval. New
+                                        device: choose NO and approve its
                                         short-lived code through your KMJ
                                         account. The browser cannot start an
                                         agent on a powered-off or unreachable
