@@ -1,4 +1,5 @@
 import { Link } from '@inertiajs/react';
+import { codeBridgeDeviceQuotaDisplay } from './device-policy-display';
 import type { ReactNode } from 'react';
 import {
     Activity,
@@ -211,11 +212,19 @@ export default function CodeBridgeControlCenterHub({
                         <Metric
                             label="Device allocation"
                             value={
-                                deviceLimit === null
-                                    ? 'Not reported'
-                                    : `${managedDevices} / ${deviceLimit}`
+                                codeBridgeDeviceQuotaDisplay(
+                                    plan,
+                                    managedDevices,
+                                    deviceLimit,
+                                ).value
                             }
-                            detail="Known registrations against the licensed limit"
+                            detail={
+                                codeBridgeDeviceQuotaDisplay(
+                                    plan,
+                                    managedDevices,
+                                    deviceLimit,
+                                ).detail
+                            }
                         />
                         <Metric
                             label="Monthly execution usage"
