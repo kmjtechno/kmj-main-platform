@@ -75,6 +75,40 @@ class IsolatedThreeMigrations(unittest.TestCase):
                          "PRODUCTION_ROLLBACK NOT_VERIFIED"):
             self.assertIn(expected, CODE)
 
+    def test_disposable_environment_only_with_strict_db_target(self):
+        # Laravel's AppServiceProvider prohibits destructive commands in production;
+        # rehearsal must select testing while retaining the production safeguard.
+        for token in ("APP_ENV=testing", "APP_DEBUG=false", "MAIL_MAILER=log",
+                      "QUEUE_CONNECTION=sync", "CACHE_STORE=array",
+                      "SESSION_DRIVER=array", "APP_URL=http://localhost",
+                      "$app->environment() !== 'testing'", "$app->isProduction()",
+                      "ISOLATED_ENV_REQUIRED", "ISOLATED_CONNECTION_INVALID"):
+            self.assertIn(token, CODE, token)
+        self.assertNotIn("DB::prohibitDestructiveCommands(false)", CODE)
+        self.assertNotIn('sed -i', CODE)
+        self.assertLess(CODE.index('"$scratch/verify.php" before'), CODE.index("artisan migrate --force"))
+
+    def test_rollback_failure_reports_no_raw_exception_or_sql_values(self):
+        for token in (
+            "ISOLATED_ROLLBACK_SQLSTATE=",
+            "ISOLATED_ROLLBACK_CLASS=",
+            "ROLLBACK_LOG_MENTIONS_",
+            '("CUSTOMER_PROFILE", "2026_10_20_070000_create_customer_profiles_table")',
+            '("OMNIDESK_BINDING", "2026_10_21_020500_create_omnidesk_activation_bindings")',
+            '("OMNIDESK_NONCE", "2026_10_21_030000_add_current_nonce_to_omnidesk_activation_bindings")',
+            "ISOLATED_MIGRATION_ROWS=",
+            "ISOLATED_CUSTOMER_TABLE=",
+            "ISOLATED_OMNIDESK_TABLE=",
+            "log = Path(sys.argv[1]).read_text",
+            "[-131072:]",
+            "rollback_diagnostics",
+        ):
+            self.assertIn(token, CODE, token)
+        self.assertNotIn('cat "$scratch/rollback.log"', CODE)
+        self.assertNotIn('tail "$scratch/rollback.log"', CODE)
+        self.assertNotIn('print(log)', CODE)
+        self.assertNotIn('echo "$log"', CODE)
+
     def test_cleanup_no_archived_secret_print(self):
         for value in ("trap cleanup EXIT", "rm -rf -- \"$scratch\"",
                       "chmod 0600", "root:kmjprod", "OFFSITE_INDEPENDENT_RESTORE NOT_VERIFIED"):
