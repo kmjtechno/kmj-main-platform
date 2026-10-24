@@ -48,7 +48,7 @@ jobs:
       # Repair is isolated in the separately reviewed pinned-host workflow,
       # which uses an exact source-pinned host key and approved script digest.
       - name: Preserve TLS blocker without unsafe SSH trust-on-first-use
-        if: \${{ steps.classify.outputs.tls_repair == 'true' }}
+        if: ${{ steps.classify.outputs.tls_repair == 'true' }}
         shell: bash
         run: |
           set -Eeuo pipefail
