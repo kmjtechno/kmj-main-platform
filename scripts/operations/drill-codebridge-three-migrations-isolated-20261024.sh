@@ -173,11 +173,15 @@ chown root:kmjprod "$scratch/verify.php"
 chmod 0640 "$scratch/verify.php"
 
 readonly SOCKET="$scratch/restore/socket"
+# Force config-cache bypass so old production's cached DSN cannot be reused.
+readonly ISOLATED_CONFIG_CACHE="$scratch/restore/kmj-isolated-config-cache.php"
+[[ ! -e "$ISOLATED_CONFIG_CACHE" && ! -L "$ISOLATED_CONFIG_CACHE" ]] || block ISOLATED_CONFIG_CACHE_EXISTS
 app() {
   # Candidate .env is production; force a NON-PRODUCTION Laravel environment only
   # for this disposable Unix-socket database. Retain AppServiceProvider's real
   # production destructive-command prohibition for all production workloads.
   runuser -u kmjprod -- env \
+    APP_CONFIG_CACHE="$ISOLATED_CONFIG_CACHE" \
     APP_ENV=testing APP_DEBUG=false MAIL_MAILER=log QUEUE_CONNECTION=sync \
     CACHE_STORE=array SESSION_DRIVER=array APP_URL=http://localhost \
     DB_CONNECTION=pgsql DB_URL= DB_HOST="$SOCKET" DB_PORT="$PORT" \
