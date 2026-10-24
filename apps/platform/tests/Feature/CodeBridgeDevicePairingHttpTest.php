@@ -133,6 +133,7 @@ final class CodeBridgeDevicePairingHttpTest extends TestCase
     public function test_existing_device_error_shows_recovery_without_repeat_approval(): void
     {
         config()->set('codebridge.enabled', true);
+        config()->set('services.codebridge_gateway.agent_public_url', 'https://gateway.example');
         $user = User::factory()->create();
         [$tenant] = $this->fixture($user);
 
