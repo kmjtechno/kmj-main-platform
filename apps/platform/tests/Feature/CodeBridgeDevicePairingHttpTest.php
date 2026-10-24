@@ -133,6 +133,7 @@ final class CodeBridgeDevicePairingHttpTest extends TestCase
     public function test_pairing_rejects_wrong_verifier_and_expired_code(): void
     {
         config()->set('codebridge.enabled', true);
+        config()->set('services.codebridge_gateway.agent_public_url', 'https://gateway.example');
         $user = User::factory()->create();
         [$tenant] = $this->fixture($user);
         $verifier = rtrim(strtr(base64_encode(random_bytes(32)), '+/', '-_'), '=');
