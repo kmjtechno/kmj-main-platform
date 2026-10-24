@@ -55,6 +55,8 @@ jobs:
           echo 'STAGING_CERT_RECOVERY=BLOCKED AWAIT_PINNED_OPERATOR_REPAIR'
           echo 'STAGING_RETRY=SKIPPED TERMINAL_TLS_ERROR'
           echo 'No DNS modification, ssh-keyscan, certificate bypass, or production release action.'
+          # Preserve a truthful failed run; a reported blocker is NOT recovery.
+          exit 1
 
       - name: Re-run failed staging deployment jobs
         if: ${{ steps.classify.outputs.tls_repair == 'false' }}

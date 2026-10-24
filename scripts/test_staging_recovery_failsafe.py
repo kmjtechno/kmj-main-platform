@@ -13,6 +13,7 @@ assert "if: ${{ steps.classify.outputs.tls_repair == 'true' }}" in recovery
 assert "if: ${{ steps.classify.outputs.tls_repair == 'false' }}" in recovery
 assert "STAGING_CERT_RECOVERY=BLOCKED AWAIT_PINNED_OPERATOR_REPAIR" in recovery
 assert "STAGING_RETRY=SKIPPED TERMINAL_TLS_ERROR" in recovery
+assert "exit 1" in recovery.split("name: Preserve TLS blocker", 1)[1].split("name: Re-run failed staging deployment jobs", 1)[0], "unresolved certificate must fail recovery job"
 assert "ssh-keyscan -" not in recovery
 assert "StrictHostKeyChecking=no" not in recovery
 assert "ssh -o " not in recovery
