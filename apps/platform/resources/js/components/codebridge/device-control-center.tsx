@@ -196,16 +196,23 @@ export default function DeviceControlCenter({
                         necessarily online: Main Platform does not receive live
                         gateway heartbeats.
                     </p>
-                    <a
-                        href="https://github.com/kmjtechno/kmj-codebridge/blob/main/docs/CONNECTION-DOCTOR.md"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="mt-2 inline-flex min-h-9 items-center text-xs font-bold text-red-500 underline underline-offset-4"
-                    >
-                        Open Connection Doctor guide
-                    </a>
+                    <p className="text-muted-foreground mt-2 text-xs leading-5">
+                        Connection recovery is managed here. Download the
+                        first-party Windows connector once, double-click it on
+                        the computer, choose your existing approved device,
+                        then refresh this dashboard. Browser pairing is required
+                        only for new grants. No GitHub page or PowerShell
+                        commands are needed.
+                    </p>
                 </div>
                 <div className="flex flex-wrap gap-2">
+                    <a
+                        href="/install-codebridge-windows.cmd"
+                        download="KMJ-CodeBridge-Connect-Windows.cmd"
+                        className="inline-flex h-10 items-center gap-2 rounded-xl bg-red-600 px-4 text-xs font-black text-white hover:bg-red-500"
+                    >
+                        <Laptop2 className="h-4 w-4" /> Connect this Windows PC
+                    </a>
                     <button
                         type="button"
                         onClick={() => router.reload({ only: ['service'] })}
@@ -425,12 +432,13 @@ export default function DeviceControlCenter({
                                         ? 'Hide details'
                                         : 'Details & diagnose'}
                                 </button>
-                                <Link
-                                    href="/codebridge/pair"
+                                <a
+                                    href="/install-codebridge-windows.cmd"
+                                    download="KMJ-CodeBridge-Connect-Windows.cmd"
                                     className="rounded-lg border px-3 py-2 text-xs font-bold"
                                 >
-                                    Reconnect guide
-                                </Link>
+                                    Reconnect on Windows
+                                </a>
                                 {canManage && (
                                     <button
                                         type="button"
@@ -581,11 +589,15 @@ export default function DeviceControlCenter({
                                         </button>
                                     </div>
                                     <p className="text-muted-foreground mt-3 leading-5">
-                                        In your connected AI chat, run{' '}
-                                        <strong>connection_overview</strong> for
-                                        this device and project. This page only
-                                        verifies stored registration; it cannot
-                                        start or stop a remote process.
+                                        Existing device: use the Windows
+                                        connector on this computer and choose
+                                        YES to reuse its private approval.
+                                        New device: choose NO and approve its
+                                        short-lived code through your KMJ
+                                        account. The browser cannot start an
+                                        agent on a powered-off or unreachable
+                                        machine. Registration alone is not an
+                                        authenticated gateway heartbeat.
                                     </p>
                                 </div>
                             )}
