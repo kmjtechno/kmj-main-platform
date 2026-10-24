@@ -75,6 +75,26 @@ class IsolatedThreeMigrations(unittest.TestCase):
                          "PRODUCTION_ROLLBACK NOT_VERIFIED"):
             self.assertIn(expected, CODE)
 
+    def test_rollback_failure_reports_no_raw_exception_or_sql_values(self):
+        for token in (
+            "ISOLATED_ROLLBACK_SQLSTATE=",
+            "ISOLATED_ROLLBACK_CLASS=",
+            "ROLLBACK_LOG_MENTIONS_CUSTOMER_PROFILE=",
+            "ROLLBACK_LOG_MENTIONS_OMNIDESK_BINDING=",
+            "ROLLBACK_LOG_MENTIONS_OMNIDESK_NONCE=",
+            "ISOLATED_MIGRATION_ROWS=",
+            "ISOLATED_CUSTOMER_TABLE=",
+            "ISOLATED_OMNIDESK_TABLE=",
+            "log = Path(sys.argv[1]).read_text",
+            "[-131072:]",
+            "rollback_diagnostics",
+        ):
+            self.assertIn(token, CODE, token)
+        self.assertNotIn('cat "$scratch/rollback.log"', CODE)
+        self.assertNotIn('tail "$scratch/rollback.log"', CODE)
+        self.assertNotIn('print(log)', CODE)
+        self.assertNotIn('echo "$log"', CODE)
+
     def test_cleanup_no_archived_secret_print(self):
         for value in ("trap cleanup EXIT", "rm -rf -- \"$scratch\"",
                       "chmod 0600", "root:kmjprod", "OFFSITE_INDEPENDENT_RESTORE NOT_VERIFIED"):
