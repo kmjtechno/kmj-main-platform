@@ -81,7 +81,10 @@ void test('offline recovery stays inside the KMJ-hosted device dashboard', () =>
     assert.match(deviceCenter, /Registration alone is not an/);
     assert.match(deviceCenter, /Live connection has not been verified/);
     assert.doesNotMatch(deviceCenter, /github\.com\/kmjtechno\/kmj-codebridge/);
-    assert.doesNotMatch(ui, /raw\.githubusercontent\.com\/kmjtechno\/kmj-codebridge/);
+    assert.doesNotMatch(
+        ui,
+        /raw\.githubusercontent\.com\/kmjtechno\/kmj-codebridge/,
+    );
 });
 
 const hub = readSourceText(
