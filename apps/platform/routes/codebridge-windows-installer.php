@@ -32,7 +32,7 @@ echo No password or private token is embedded in this file.
 echo.
 where powershell.exe >nul 2>&1
 if errorlevel 1 goto :blocked
-powershell.exe -NoProfile -STA -ExecutionPolicy RemoteSigned -Command "$ErrorActionPreference='Stop'; $p=Join-Path $env:TEMP ('kmj-connect-'+[guid]::NewGuid().ToString('N')+'.ps1'); try { Invoke-WebRequest -UseBasicParsing -Uri 'https://kmjtechno.com/install-codebridge-windows.ps1' -OutFile $p; if ((Get-FileHash -LiteralPath $p -Algorithm SHA256).Hash -cne '%%EXPECTED_SHA256%%') { throw 'KMJ_INSTALLER_HASH_MISMATCH' }; & $p; if (!$?) { exit 2 } } finally { Remove-Item -LiteralPath $p -ErrorAction SilentlyContinue }"
+powershell.exe -NoProfile -STA -ExecutionPolicy RemoteSigned -Command "$ErrorActionPreference='Stop'; $p=Join-Path $env:TEMP ('kmj-connect-'+[guid]::NewGuid().ToString('N')+'.ps1'); try { Invoke-WebRequest -UseBasicParsing -Uri 'https://kmjtechno.com/install-codebridge-windows.ps1' -OutFile $p; if ((Get-FileHash -LiteralPath $p -Algorithm SHA256).Hash -cne '%%EXPECTED_SHA256%%') { throw 'KMJ_INSTALLER_HASH_MISMATCH' }; Unblock-File -LiteralPath $p; & $p; if (!$?) { exit 2 } } finally { Remove-Item -LiteralPath $p -ErrorAction SilentlyContinue }"
 set "RC=%ERRORLEVEL%"
 echo.
 echo KMJ Setup exit code: %RC%
