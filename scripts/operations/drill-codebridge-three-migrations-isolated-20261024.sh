@@ -189,11 +189,70 @@ status ONLY_THREE_EXPECTED_PENDING PASS
 app php8.4 "$scratch/verify.php" after "$CANDIDATE/apps/platform" || block MIGRATED_SCHEMA_INVALID
 status ISOLATED_THREE_MIGRATIONS PASS
 
-(
+# Report only bounded, allowlisted failure metadata. Never echo raw
+# Laravel or SQL exception messages, SQL values, production secrets or logs.
+rollback_diagnostics() {
+  python3 - "$scratch/rollback.log" <<'PY_ROLLBACK_DIAG'
+from pathlib import Path
+import re
+import sys
+
+try:
+    log = Path(sys.argv[1]).read_text("utf-8", errors="replace")[-131072:]
+except OSError:
+    log = ""
+states = re.findall(r"SQLSTATE\[([A-Z0-9]{5})\]", log)
+codes = {
+    "2BP01": "DEPENDENT_OBJECTS",
+    "42P01": "UNDEFINED_TABLE",
+    "42703": "UNDEFINED_COLUMN",
+    "42704": "UNDEFINED_OBJECT",
+    "23503": "FOREIGN_KEY_VIOLATION",
+    "23505": "UNIQUE_VIOLATION",
+    "42501": "INSUFFICIENT_PRIVILEGE",
+    "42601": "SQL_SYNTAX",
+}
+code = states[-1] if states else "NONE"
+print("ISOLATED_ROLLBACK_SQLSTATE=" + code)
+print("ISOLATED_ROLLBACK_CLASS=" + (
+    codes.get(code, "OTHER_SQLSTATE")
+    if states else
+    ("LARAVEL_QUERY_EXCEPTION" if "QueryException" in log else
+     "LARAVEL_RUNTIME_EXCEPTION" if "Exception" in log else
+     "NON_SQL_OR_UNKNOWN_FAILURE")
+))
+for label, migration in (
+    ("CUSTOMER_PROFILE", "2026_10_20_070000_create_customer_profiles_table"),
+    ("OMNIDESK_BINDING", "2026_10_21_020500_create_omnidesk_activation_bindings"),
+    ("OMNIDESK_NONCE", "2026_10_21_030000_add_current_nonce_to_omnidesk_activation_bindings"),
+):
+    print("ROLLBACK_LOG_MENTIONS_" + label + "=" + ("YES" if migration in log else "NO"))
+PY_ROLLBACK_DIAG
+  # Enumerate ONLY fixed migration schema objects in the disposable DB.
+  runuser -u kmjprod -- "$pgdir/psql" -X -A -t \
+    -h "$SOCKET" -p "$PORT" -U "$ROLE" -d "$DATABASE" \
+    -v ON_ERROR_STOP=1 -c "
+    select 'ISOLATED_CUSTOMER_TABLE=' ||
+      case when to_regclass('public.customer_profiles') is null then 'ABSENT' else 'PRESENT' end
+    union all select 'ISOLATED_OMNIDESK_TABLE=' ||
+      case when to_regclass('public.omnidesk_activation_bindings') is null then 'ABSENT' else 'PRESENT' end
+    union all select 'ISOLATED_MIGRATION_ROWS=' ||
+      (select count(*)::text from migrations where migration in (
+      '2026_10_20_070000_create_customer_profiles_table',
+      '2026_10_21_020500_create_omnidesk_activation_bindings',
+      '2026_10_21_030000_add_current_nonce_to_omnidesk_activation_bindings'
+      ))
+    " || echo 'ISOLATED_DB_INSPECTION=FAIL'
+}
+
+if ! (
   cd "$CANDIDATE/apps/platform"
   app php8.4 artisan migrate:rollback --step=3 --force --no-interaction --no-ansi \
-    >"$scratch/rollback.log" 2>&1 || block ISOLATED_ROLLBACK_FAILED
-)
+    >"$scratch/rollback.log" 2>&1
+); then
+  rollback_diagnostics
+  block ISOLATED_ROLLBACK_FAILED
+fi
 app php8.4 "$scratch/verify.php" rollback "$CANDIDATE/apps/platform" || block ISOLATED_ROLLBACK_SCHEMA_INVALID
 status ISOLATED_SCHEMA_ROLLBACK PASS
 
