@@ -47,6 +47,18 @@ jobs:
         with:
           persist-credentials: false
           ref: ${{ github.sha }}
+      - name: Fail closed if public staging DNS no longer targets reviewed VPS
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          stage_host='staging.kmjtechno.com'
+          expected_ipv4='103.212.136.154'
+          mapfile -t resolved < <(getent ahostsv4 "$stage_host" | awk '{print $1}' | sort -u)
+          [[ "${#resolved[@]}" -eq 1 && "${resolved[0]}" == "$expected_ipv4" ]] || {
+            echo 'STAGING_TLS_REPAIR=BLOCKED DNS_CHANGED_OR_AMBIGUOUS'
+            exit 2
+          }
+          echo 'STAGING_DNS_PIN=PASS'
       - name: Verify pinned SSH connection and execute staging-only repair
         shell: bash
         env:
