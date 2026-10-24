@@ -39,7 +39,7 @@ final class CodeBridgeInstallerBootstrapTest extends TestCase
         $script = $scriptResponse->getContent();
         self::assertIsString($script);
         self::assertStringContainsString(
-            "$pin = '9dc0ae25648c33a62631fdd35068e6b60820637d'",
+            '$pin = \'9dc0ae25648c33a62631fdd35068e6b60820637d\'',
             $script,
         );
         self::assertStringContainsString('git clone', $script);
