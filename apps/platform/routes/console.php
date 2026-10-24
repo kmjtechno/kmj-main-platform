@@ -7,6 +7,7 @@ use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Schedule;
+use Throwable;
 
 Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());
@@ -127,7 +128,7 @@ Artisan::command('codebridge:agent-origin-doctor', function () {
                 ->withHeaders(['Accept' => 'application/json'])
                 ->post('https://kmjtechno.com/agent/health', []);
             $challengeReady = $response->status() === 401;
-        } catch (\Throwable) {
+        } catch (Throwable) {
             $challengeReady = false;
         }
     }
