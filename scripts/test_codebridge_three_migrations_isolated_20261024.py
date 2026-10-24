@@ -109,6 +109,29 @@ class IsolatedThreeMigrations(unittest.TestCase):
         self.assertNotIn('print(log)', CODE)
         self.assertNotIn('echo "$log"', CODE)
 
+    def test_previous_release_reads_expanded_schema_only_in_disposable_db(self):
+        for token in (
+            'OLD_APP="$EXPECTED_LIVE/apps/platform"',
+            'OLD_APP_RUNTIME_MISSING',
+            "OLD_RELEASE_EXPANDED_SCHEMA_BOOTSTRAP=PASS",
+            "OLD_RELEASE_DISPOSABLE_DB_READ=PASS",
+            "OLD_RELEASE_EXPANDED_SCHEMA=FAIL",
+            "OLD_APP_ISOLATION_ENV_INVALID",
+            "OLD_APP_DISPOSABLE_DB_TARGET_INVALID",
+            "OLD_APP_READ_ONLY_QUERY_FAILED",
+            "OLD_RELEASE_COMPATIBILITY_SMOKE_FAILED",
+            "OLD_APP_NONCE_COLUMN_ABSENT",
+            "OLD_APP_REQUIRED_SCHEMA_ABSENT",
+            "SELECT 1 AS readiness",
+            'APP_CONFIG_CACHE="$ISOLATED_CONFIG_CACHE"',
+            "ISOLATED_CONFIG_CACHE_EXISTS"
+        ):
+            self.assertIn(token, CODE, token)
+        self.assertLess(CODE.index("ISOLATED_THREE_MIGRATIONS PASS"),
+                        CODE.index('app php8.4 "$scratch/verify-old.php" "$OLD_APP"'))
+        self.assertNotIn("UPDATE customer_profiles", CODE)
+        self.assertNotIn("DELETE FROM omnidesk_activation_bindings", CODE)
+
     def test_cleanup_no_archived_secret_print(self):
         for value in ("trap cleanup EXIT", "rm -rf -- \"$scratch\"",
                       "chmod 0600", "root:kmjprod", "OFFSITE_INDEPENDENT_RESTORE NOT_VERIFIED"):
