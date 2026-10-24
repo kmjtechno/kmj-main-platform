@@ -75,6 +75,19 @@ class IsolatedThreeMigrations(unittest.TestCase):
                          "PRODUCTION_ROLLBACK NOT_VERIFIED"):
             self.assertIn(expected, CODE)
 
+    def test_disposable_environment_only_with_strict_db_target(self):
+        # Laravel's AppServiceProvider prohibits destructive commands in production;
+        # rehearsal must select testing while retaining the production safeguard.
+        for token in ("APP_ENV=testing", "APP_DEBUG=false", "MAIL_MAILER=log",
+                      "QUEUE_CONNECTION=sync", "CACHE_STORE=array",
+                      "SESSION_DRIVER=array", "APP_URL=http://localhost",
+                      "$app->environment() !== 'testing'", "$app->isProduction()",
+                      "ISOLATED_ENV_REQUIRED", "ISOLATED_CONNECTION_INVALID"):
+            self.assertIn(token, CODE, token)
+        self.assertNotIn("DB::prohibitDestructiveCommands(false)", CODE)
+        self.assertNotIn('sed -i', CODE)
+        self.assertLess(CODE.index('"$scratch/verify.php" before'), CODE.index("artisan migrate --force"))
+
     def test_rollback_failure_reports_no_raw_exception_or_sql_values(self):
         for token in (
             "ISOLATED_ROLLBACK_SQLSTATE=",
