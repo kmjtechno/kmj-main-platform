@@ -1,8 +1,10 @@
 from pathlib import Path
 
 W = Path(__file__).resolve().parents[1] / ".github/workflows/staging-tls-repair-pinned.yml"
+EXECUTION = Path(__file__).resolve().parents[1] / ".github/workflows/staging-tls-repair-execute.yml"
 S = Path(__file__).resolve().parents[1] / "infra/server/KMJ_STAGE_TLS_REPAIR.sh"
-workflow = W.read_text(encoding="utf-8")
+pr_workflow = W.read_text(encoding="utf-8")
+workflow = EXECUTION.read_text(encoding="utf-8")
 guard = S.read_text(encoding="utf-8")
 required_workflow = (
     "infra/server/trust/kmj-elite-staging-known_hosts",
@@ -38,6 +40,13 @@ for s in required_guard:
 HOST_KEY_FILE = Path(__file__).resolve().parents[1] / "infra/server/trust/kmj-elite-staging-known_hosts"
 EXPECTED_HOST_KEY = "103.212.136.154 ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAINZMT7YHsS5qRX/ciXTbLxKZVCgpJS7m/L9Nwgr3RNZS"
 assert HOST_KEY_FILE.read_text(encoding="utf-8").strip() == EXPECTED_HOST_KEY, "reviewed host key drift"
+assert "pull_request:" in pr_workflow, "PR contract workflow required"
+assert "staging-tls-repair-execute.yml" in pr_workflow, "PR must test execution source"
+assert "repair:" not in pr_workflow, "staging mutation must never execute on PR"
+assert "pull_request:" not in workflow, "repair workflow cannot be invoked by PR"
+assert "environment: staging" in workflow, "protected staging environment required"
+assert "branches: [main]" in workflow, "TLS repair requires protected main push"
+assert "workflow_dispatch:" in workflow, "manual authorized recovery must remain available"
 assert "STAGING_SSH_KNOWN_HOSTS" not in workflow, "source-pinned host key should not need GitHub secret"
 assert "StrictHostKeyChecking=no" not in workflow
 assert "curl -k" not in workflow
