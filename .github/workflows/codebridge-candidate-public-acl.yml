@@ -1,0 +1,34 @@
+name: CodeBridge Candidate Public ACL Safety
+
+on:
+  pull_request:
+    paths:
+      - 'scripts/operations/guard-codebridge-candidate-public-acl-20261024.sh'
+      - 'scripts/test_codebridge_candidate_public_acl_20261024.py'
+      - '.github/workflows/codebridge-candidate-public-acl.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/operations/guard-codebridge-candidate-public-acl-20261024.sh'
+      - 'scripts/test_codebridge_candidate_public_acl_20261024.py'
+      - '.github/workflows/codebridge-candidate-public-acl.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  acl-contract:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - name: Verify safe public-only ACL changes and never-deploy invariants
+        run: |
+          set -euo pipefail
+          bash -n scripts/operations/guard-codebridge-candidate-public-acl-20261024.sh
+          python3 -B scripts/test_codebridge_candidate_public_acl_20261024.py -v
+          echo 'CANDIDATE_PUBLIC_ACL_SOURCE_CONTRACT=PASS'
+          echo 'ACL_CHANGE_ON_CI=NOT_ATTEMPTED'
+          echo 'PRODUCTION_ACTIVATION=NOT_ATTEMPTED'
