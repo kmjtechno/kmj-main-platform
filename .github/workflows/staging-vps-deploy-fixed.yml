@@ -65,9 +65,6 @@ jobs:
           esac
           echo 'Staging public verification configuration is valid.'
 
-      - name: Prepare staging browser without privileged installation
-        shell: bash
-        run: bash ops/self-hosted-runner/prepare-staging-browser.sh
       - name: Verify staging TLS identity
         shell: bash
         run: |
@@ -90,6 +87,9 @@ jobs:
           fi
           echo 'Staging TLS certificate covers the canonical staging hostname.'
 
+      - name: Prepare staging browser without privileged installation
+        shell: bash
+        run: bash ops/self-hosted-runner/prepare-staging-browser.sh
       - name: Wait for VPS auto-deploy exact commit
         id: deploy
         env:
