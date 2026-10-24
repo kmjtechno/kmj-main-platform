@@ -10,8 +10,7 @@ export function codeBridgeDeviceQuotaDisplay(
     if (plan === 'owner' && deviceLimit === OWNER_POLICY_DEVICE_CEILING) {
         return {
             value: `${managedDevices} registered · Owner tier`,
-            detail:
-                'Owner plan technical ceiling; not live or executable capacity',
+            detail: 'Owner plan technical ceiling; not live or executable capacity',
             registrationHint:
                 'Owner-tier technical ceiling (not a live device limit)',
         };
