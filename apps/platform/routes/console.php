@@ -127,7 +127,7 @@ Artisan::command('codebridge:agent-origin-doctor', function () {
                 ->withHeaders(['Accept' => 'application/json'])
                 ->post('https://kmjtechno.com/agent/health', []);
             $challengeReady = $response->status() === 401;
-        } catch (\\Throwable) {
+        } catch (\Throwable) {
             $challengeReady = false;
         }
     }
