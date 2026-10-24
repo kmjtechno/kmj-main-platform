@@ -5,6 +5,7 @@ use Illuminate\Console\Command;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Schedule;
 
 Artisan::command('inspire', function () {
@@ -98,3 +99,43 @@ Artisan::command('staging:promote-platform-owner {email}', function () {
 Schedule::command('outbox:work --limit=25 --max-attempts=8 --base-delay=15')
     ->everyMinute()
     ->withoutOverlapping(2);
+
+/*
+| Read-only operator diagnostic for Home Office device enrollment.
+| Does NOT revoke, enroll, configure, deploy or output any credentials/URLs.
+| Laravel config() intentionally reads the effective cached production values.
+*/
+Artisan::command('codebridge:agent-origin-doctor', function () {
+    $publicOrigin = rtrim((string) config('services.codebridge_gateway.agent_public_url', ''), '/');
+    $privateUpstream = rtrim((string) config('services.codebridge_gateway.url', ''), '/');
+
+    // Home Office agent is currently pinned to the public KMJ origin.
+    // A private loopback or unrelated HTTPS server must never be issued to it.
+    $publicReady = $publicOrigin === 'https://kmjtechno.com';
+    $upstreamReady = preg_match('/\\A(?:https:\\/\\/[^\\/?#]+|http:\\/\\/127[.]0[.]0[.]1:[1-9][0-9]{1,4})\\z/D', $privateUpstream) === 1;
+
+    $this->line('CODEBRIDGE_PUBLIC_AGENT_ORIGIN='.($publicReady ? 'PASS' : 'FAIL'));
+    $this->line('CODEBRIDGE_PRIVATE_MCP_UPSTREAM='.($upstreamReady ? 'CONFIGURED' : 'INVALID'));
+
+    $challengeReady = false;
+    if ($publicReady && $upstreamReady) {
+        try {
+            // Anonymous, fixed origin only; no token, cookies or redirects.
+            $response = Http::timeout(8)
+                ->connectTimeout(3)
+                ->withoutRedirecting()
+                ->withHeaders(['Accept' => 'application/json'])
+                ->post('https://kmjtechno.com/agent/health', []);
+            $challengeReady = $response->status() === 401;
+        } catch (Throwable) {
+            $challengeReady = false;
+        }
+    }
+    $this->line('CODEBRIDGE_PUBLIC_AGENT_AUTH_CHALLENGE='.($challengeReady ? 'PASS' : 'FAIL'));
+    $this->line('CODEBRIDGE_PAIRING_CONFIG='.($publicReady && $upstreamReady && $challengeReady ? 'PREFLIGHT_PASS_NOT_DEVICE_READY' : 'BLOCKED'));
+    $this->line('CODEBRIDGE_DEVICE_READY=NOT_ATTESTED_BY_THIS_COMMAND');
+
+    return $publicReady && $upstreamReady && $challengeReady
+        ? Command::SUCCESS
+        : Command::FAILURE;
+})->purpose('Read-only, secret-free Home Office agent pairing configuration preflight');
