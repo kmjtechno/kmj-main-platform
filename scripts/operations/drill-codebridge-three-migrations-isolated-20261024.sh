@@ -9,6 +9,7 @@ readonly SHA='b1d672bbc83a51ca3f8271435692825072444c8e'
 readonly SHORT='b1d672bbc83a'
 readonly LIVE='/home/kmjprod/current'
 readonly EXPECTED_LIVE='/home/kmjprod/releases/platform-8070dad72c55'
+readonly OLD_APP="$EXPECTED_LIVE/apps/platform"
 readonly CANDIDATE="/home/kmjprod/releases/platform-$SHORT"
 readonly BACKUP="/var/backups/kmj-platform/pre-deploy-$SHORT.tar.gz"
 readonly WITNESS="/var/backups/kmj-platform/pre-deploy-$SHORT.json"
@@ -23,6 +24,7 @@ status() { printf '%s=%s\n' "$1" "$2"; }
 [[ "$(id -u)" -eq 0 && "$(hostname -s)" == KMJ-elite ]] || block WRONG_OPERATOR_OR_HOST
 [[ -L "$LIVE" && "$(readlink -f "$LIVE")" == "$EXPECTED_LIVE" ]] || block LIVE_RELEASE_CHANGED
 [[ -d "$CANDIDATE/.git" && ! -L "$CANDIDATE" ]] || block CANDIDATE_NOT_STAGED
+[[ -s "$OLD_APP/vendor/autoload.php" && -s "$OLD_APP/bootstrap/app.php" ]] || block OLD_APP_RUNTIME_MISSING
 [[ -s "$CANDIDATE/apps/platform/.env" && ! -L "$CANDIDATE/apps/platform/.env" ]] || block CANDIDATE_ENV_MISSING
 [[ ! -e "$CANDIDATE/apps/platform/bootstrap/cache/config.php" ]] || block CANDIDATE_CONFIG_CACHED
 [[ "$(runuser -u kmjprod -- git -C "$CANDIDATE" rev-parse HEAD)" == "$SHA" ]] || block CANDIDATE_WRONG_SHA
@@ -196,6 +198,59 @@ status ONLY_THREE_EXPECTED_PENDING PASS
 )
 app php8.4 "$scratch/verify.php" after "$CANDIDATE/apps/platform" || block MIGRATED_SCHEMA_INVALID
 status ISOLATED_THREE_MIGRATIONS PASS
+
+# Run the OLD production application code against the EXPANDED disposable
+# schema. This is only a read-only bootstrap/connection/schema smoke, NOT
+# authenticated production QA or a full application rollback drill.
+cat >"$scratch/verify-old.php" <<'PHP_OLD'
+<?php
+try {
+    $root = $argv[1] ?? '';
+    require $root.'/vendor/autoload.php';
+    $app = require $root.'/bootstrap/app.php';
+    $app->make(\Illuminate\Contracts\Console\Kernel::class)->bootstrap();
+    if ($app->environment() !== 'testing' || $app->isProduction()) {
+        throw new RuntimeException('OLD_APP_ISOLATION_ENV_INVALID');
+    }
+    $db = config('database.connections.'.config('database.default'));
+    if (config('database.default') !== 'pgsql' || !is_array($db)
+        || ($db['driver'] ?? null) !== 'pgsql'
+        || (string) ($db['host'] ?? '') !== getenv('DB_HOST')
+        || (string) ($db['port'] ?? '') !== getenv('DB_PORT')
+        || (string) ($db['database'] ?? '') !== getenv('DB_DATABASE')
+        || (string) ($db['username'] ?? '') !== getenv('DB_USERNAME')
+        || (string) ($db['database'] ?? '') !== 'kmj_migration_rehearsal'
+        || (string) ($db['username'] ?? '') !== 'kmj_restore_drill'
+        || !str_starts_with((string) ($db['host'] ?? ''), '/tmp/kmj-schema-drill.')
+        || !str_ends_with((string) ($db['host'] ?? ''), '/restore/socket')
+        || (string) ($db['port'] ?? '') !== '55489'
+        || !empty($db['url']) || !empty($db['read']) || !empty($db['write'])) {
+        throw new RuntimeException('OLD_APP_DISPOSABLE_DB_TARGET_INVALID');
+    }
+    $tables = ['users', 'organizations', 'entitlements', 'customer_profiles',
+        'omnidesk_activation_bindings'];
+    foreach ($tables as $table) {
+        if (!\Illuminate\Support\Facades\Schema::hasTable($table)) {
+            throw new RuntimeException('OLD_APP_REQUIRED_SCHEMA_ABSENT');
+        }
+    }
+    if (!\Illuminate\Support\Facades\Schema::hasColumn('omnidesk_activation_bindings', 'current_nonce')) {
+        throw new RuntimeException('OLD_APP_NONCE_COLUMN_ABSENT');
+    }
+    $query = \Illuminate\Support\Facades\DB::select('SELECT 1 AS readiness');
+    if (count($query) !== 1 || (int) ($query[0]->readiness ?? 0) !== 1) {
+        throw new RuntimeException('OLD_APP_READ_ONLY_QUERY_FAILED');
+    }
+    echo "OLD_RELEASE_EXPANDED_SCHEMA_BOOTSTRAP=PASS\n";
+    echo "OLD_RELEASE_DISPOSABLE_DB_READ=PASS\n";
+} catch (Throwable $ignored) {
+    fwrite(STDERR, "OLD_RELEASE_EXPANDED_SCHEMA=FAIL\n");
+    exit(2);
+}
+PHP_OLD
+chown root:kmjprod "$scratch/verify-old.php"
+chmod 0640 "$scratch/verify-old.php"
+app php8.4 "$scratch/verify-old.php" "$OLD_APP" || block OLD_RELEASE_COMPATIBILITY_SMOKE_FAILED
 
 # Report only bounded, allowlisted failure metadata. Never echo raw
 # Laravel or SQL exception messages, SQL values, production secrets or logs.
