@@ -1,0 +1,35 @@
+name: KMJ CodeBridge b1d672 Google SFTP Independent Restore Safety
+
+on:
+  pull_request:
+    paths:
+      - 'scripts/operations/verify-codebridge-b1d672-google-sftp-restore-20261024.sh'
+      - 'scripts/test_codebridge_b1d672_google_sftp_restore_contract.py'
+      - '.github/workflows/codebridge-b1d672-google-vps-sftp-restore.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/operations/verify-codebridge-b1d672-google-sftp-restore-20261024.sh'
+      - 'scripts/test_codebridge_b1d672_google_sftp_restore_contract.py'
+      - '.github/workflows/codebridge-b1d672-google-vps-sftp-restore.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  exact-sha-source-contract:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - name: Verify pinned Google VPS restore contract is nondeploying
+        run: |
+          set -euo pipefail
+          bash -n scripts/operations/verify-codebridge-b1d672-google-sftp-restore-20261024.sh
+          python3 -B scripts/test_codebridge_b1d672_google_sftp_restore_contract.py -v
+          echo 'GOOGLE_B1D672_RESTORE_SOURCE_CONTRACT=PASS'
+          echo 'REMOTE_ARCHIVE_TRANSFER=NOT_ATTEMPTED_IN_CI'
+          echo 'INDEPENDENT_REMOTE_RESTORE=NOT_ATTESTED_IN_CI'
+          echo 'PRODUCTION_ACTIVATION=NOT_ATTEMPTED'
