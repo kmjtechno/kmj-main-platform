@@ -49,6 +49,17 @@ jobs:
           DB_CONNECTION: sqlite
           DB_DATABASE: ${{ github.workspace }}/apps/platform/database/database.sqlite
         run: bash "$GITHUB_WORKSPACE/ops/self-hosted-runner/verify-platform.sh"
+      - name: Show frontend format patch when verification fails
+        if: failure()
+        run: |
+          set -Eeuo pipefail
+          cd apps/platform
+          if [[ ! -x node_modules/.bin/vp ]]; then
+            echo 'Frontend dependencies unavailable; no format preview.'
+            exit 0
+          fi
+          node_modules/.bin/vp fmt --fix             resources/js/components/codebridge/device-control-center.tsx             resources/js/pages/services/codebridge.tsx             scripts/check-codebridge-dashboard-truth.test.mjs || true
+          git diff --             resources/js/components/codebridge/device-control-center.tsx             resources/js/pages/services/codebridge.tsx             scripts/check-codebridge-dashboard-truth.test.mjs
 
   license-core:
     name: Native Rust license verifier
