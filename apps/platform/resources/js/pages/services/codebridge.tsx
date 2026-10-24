@@ -320,11 +320,11 @@ export default function CodeBridgeService({
                                             <p className="text-muted-foreground mt-2 text-xs leading-5">
                                                 Download from this dashboard,
                                                 then double-click on that PC.
-                                                Already enrolled? Choose YES
-                                                to reuse its private config.
-                                                First connection? Choose NO
-                                                and approve in your KMJ account.
-                                                Git and Node.js 24 are required;
+                                                Already enrolled? Choose YES to
+                                                reuse its private config. First
+                                                connection? Choose NO and
+                                                approve in your KMJ account. Git
+                                                and Node.js 24 are required;
                                                 missing prerequisites are
                                                 reported safely, never installed
                                                 without your approval.
