@@ -1,11 +1,6 @@
 name: Staging Exact SHA Readback
 
 on:
-  pull_request:
-    paths:
-      - '.github/workflows/staging-exact-sha-readback.yml'
-      - 'scripts/operations/check-staging-readback.py'
-      - 'scripts/test_staging_readback.py'
   workflow_run:
     workflows: ['Staging VPS Deploy']
     types: [completed]
