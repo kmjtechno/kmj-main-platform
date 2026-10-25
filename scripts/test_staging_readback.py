@@ -39,6 +39,18 @@ class StageReadbackTests(unittest.TestCase):
                 with self.assertRaises(ValueError):
                     readback.check_readback(candidate, GOOD, status)
 
+    def test_live_readback_not_a_skipped_pr_required_check(self):
+        workflows = Path(__file__).resolve().parents[1] / ".github" / "workflows"
+        live = (workflows / "staging-exact-sha-readback.yml").read_text(encoding="utf-8")
+        contract = (workflows / "staging-readback-contract-ci.yml").read_text(encoding="utf-8")
+        self.assertNotIn("\n  pull_request:", live)
+        self.assertIn("\n  workflow_run:", live)
+        self.assertIn("\n  pull_request:", contract)
+        self.assertIn("Staging readback source contract (PR only)", contract)
+        self.assertIn("persist-credentials: false", contract)
+        self.assertIn("github.event.pull_request.head.sha", contract)
+        self.assertIn("python3 -B -m unittest discover -s scripts -p test_staging_readback.py -v", contract)
+
     def test_readback_requires_successful_real_staging_deploy_not_just_source_promotion(self):
         # This job must not run merely because CI promoted a branch: the
         # physical staging deployment is separately guarded and may be absent.
