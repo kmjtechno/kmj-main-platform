@@ -182,3 +182,60 @@ jobs:
         run: |
           echo 'This job tests the exact 69ac application tree only in disposable GitHub-hosted SQLite.' >> "$GITHUB_STEP_SUMMARY"
           echo 'Not a live authenticated owner browser test, real production payment test, SMTP inbox delivery, or deployment approval.' >> "$GITHUB_STEP_SUMMARY"
+
+  isolated_visual_lock_69ac:
+    name: Exact 69ac locked landing and owner preview QA (18 viewport routes)
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout exact PR head
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+      - name: Require exact 69ac application source
+        run: |
+          set -euo pipefail
+          git cat-file -e 69acb9b3f738e5edcc6ea85c3c76729eaa1b5b62
+          git diff --quiet 69acb9b3f738e5edcc6ea85c3c76729eaa1b5b62 HEAD -- apps/platform
+          echo 'VISUAL_CANDIDATE_APP_SHA=PASS_69AC'
+      - name: Node 24 pinned preview runtime
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: apps/platform/package-lock.json
+      - name: Install lockfile frontend dependencies
+        working-directory: apps/platform
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Install pinned Playwright Chromium
+        working-directory: apps/platform
+        run: npx playwright install chromium
+      - name: Verify 18 synthetic locked landing, super-admin and owner ops browser cases
+        working-directory: apps/platform
+        env:
+          KMJ_SCREENSHOT_DIR: visual-results
+        run: |
+          set -euo pipefail
+          npm run visual:verify
+          test -s visual-results/verification.json
+          echo 'CANDIDATE_SYNTHETIC_VISUAL_QA=PASS'
+      - name: Preserve bounded synthetic screenshots for owner review
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: kmj-69ac-visual-preview-evidence
+          path: |
+            apps/platform/visual-results/*.png
+            apps/platform/visual-results/verification.json
+          if-no-files-found: warn
+          retention-days: 3
+      - name: State visual QA scope
+        if: always()
+        run: |
+          echo '18 synthetic loopback browser cases using exact 69ac app tree; no authenticated owner account, production DB or deployment.' >> "$GITHUB_STEP_SUMMARY"
+          echo 'Screenshots require comparison with owner-supplied locked reference before acceptance.' >> "$GITHUB_STEP_SUMMARY"
