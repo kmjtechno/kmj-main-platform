@@ -47,7 +47,7 @@ class BrandedEmailProbeSafety(unittest.TestCase):
         self.assertIn('formataddr(("KMJ TECHNO", SENDER))', source)
         self.assertIn(".kmj-brevo-enterprise-20261021.once", source)
         self.assertIn("KMJ TECHNO Enterprise Mail QA", source)
-        self.assertIn('width="305" alt="KMJ TECHNO', markup)
+        self.assertIn('width="320" alt="KMJ TECHNO', markup)
         self.assertIn("SECURITY NOTICE", markup)
         self.assertIn("PRIVATE ACCOUNT COMMUNICATION", markup)
         self.assertIn("SECURE ACTION", markup)
