@@ -66,3 +66,35 @@ void test('customer-facing UI source carries no Laravel starter-kit links or log
         );
     }
 });
+
+
+void test('locked-owner mark is correctly framed for avatar, favicon and email', () => {
+    const pngSignature = Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]);
+    const checkPng = (filename, width, height) => {
+        const raw = readFileSync(filename);
+        assert.ok(raw.subarray(0, 8).equals(pngSignature), filename + ' must be PNG');
+        assert.equal(raw.readUInt32BE(16), width, filename + ' width');
+        assert.equal(raw.readUInt32BE(20), height, filename + ' height');
+        assert.equal(raw[25], 6, filename + ' must have RGBA transparency');
+    };
+    checkPng('public/favicon-32.png', 32, 32);
+    checkPng('public/assets/brand/kmj-sender-avatar.png', 1024, 1024);
+    checkPng('public/assets/brand/kmj-email-lockup.png', 1500, 400);
+
+    const icon = readFileSync('public/favicon.ico');
+    assert.equal(icon.readUInt16LE(0), 0);
+    assert.equal(icon.readUInt16LE(2), 1);
+    assert.ok(icon.readUInt16LE(4) >= 5, 'favicon must have five or more resolutions');
+
+    const svg = readFileSync('public/favicon.svg', 'utf8');
+    assert.match(svg, /data:image\/png;base64,/);
+    assert.match(svg, /viewBox="0 0 256 256"/);
+    // Favicon must contain the same transparent red/charcoal mark; never a stock framework icon.
+    const embedded = svg.match(/data:image\/png;base64,([A-Za-z0-9+/=]+)/)?.[1];
+    assert.ok(embedded, 'missing embedded locked mark');
+    const decoded = Buffer.from(embedded, 'base64');
+    assert.ok(decoded.subarray(0, 8).equals(pngSignature));
+    assert.equal(decoded.readUInt32BE(16), 256);
+    assert.equal(decoded.readUInt32BE(20), 256);
+    assert.equal(decoded[25], 6);
+});
