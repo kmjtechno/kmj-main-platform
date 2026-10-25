@@ -41,7 +41,9 @@ verify() {
   local tree="$1"
   [[ -d "$tree/.git" && ! -L "$tree" ]] || block CANDIDATE_NOT_GIT
   [[ "$(runuser -u kmjprod -- git -C "$tree" rev-parse HEAD 2>/dev/null)" == "$sha" ]] || block CANDIDATE_HEAD_WRONG
-  [[ -z "$(runuser -u kmjprod -- git -C "$tree" status --porcelain --untracked-files=normal 2>/dev/null)" ]] || block CANDIDATE_DIRTY
+  local dirty
+  dirty="$(runuser -u kmjprod -- git -C "$tree" status --porcelain --untracked-files=normal 2>/dev/null)" || block CANDIDATE_STATUS_UNAVAILABLE
+  [[ -z "$dirty" ]] || block CANDIDATE_DIRTY
   [[ ! -e "$tree/apps/platform/.env" && ! -L "$tree/apps/platform/.env" ]] || block RUNTIME_ENV_REQUIRES_REVIEW
   for item in apps/platform/vendor/autoload.php apps/platform/public/build/manifest.json apps/platform/public/assets/kmj-codebridge-icon.png; do
     [[ -s "$tree/$item" && ! -L "$tree/$item" ]] || block BUILD_ARTIFACT_MISSING
@@ -88,7 +90,8 @@ npm run build
 [[ -s public/build/manifest.json && -s vendor/autoload.php ]] || exit 2
 rm -f -- .env
 trap - EXIT
-[[ -z "$(git -C "$dest" status --porcelain --untracked-files=normal)" ]] || exit 2
+dirty="$(git -C "$dest" status --porcelain --untracked-files=normal)" || exit 2
+[[ -z "$dirty" ]] || exit 2
 echo 'KMJ_ISOLATED_COMPOSER_NPM_VITE=PASS'
 BUILD
 
@@ -101,7 +104,7 @@ verify "$dest"
 [[ "$(readlink -f "$LIVE")" == "$before" ]] || block LIVE_POINTER_CHANGED
 echo 'KMJ_FAST_STAGE=PASS'
 echo "KMJ_CANDIDATE_SHA=$sha"
-echo 'KMJ_PUBLIC_ORIGIN=https://kmjtechno.com'
+echo 'KMJ_PUBLIC_ORIGIN_POLICY=https://kmjtechno.com'
 echo 'KMJ_PUBLIC_STAGING_REQUIRED=NO'
 echo 'KMJ_PRODUCTION=UNCHANGED'
 echo 'KMJ_NEXT=NEW_BACKUP_RESTORE_OWNER_APPROVAL_AND_GUARDED_ACTIVATION'
