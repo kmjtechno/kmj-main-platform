@@ -103,3 +103,82 @@ jobs:
         run: python3 scripts/verify_architecture.py
       - name: Verify platform runtime provenance
         run: python3 scripts/verify_runtime.py
+
+  isolated_owner_auth_69ac:
+    name: Exact 69ac source synthetic owner and commerce QA (nonproduction)
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout exact PR head without GitHub credentials
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+      - name: Verify full app source equals staged release candidate
+        env:
+          PINNED_APP_SHA: 69acb9b3f738e5edcc6ea85c3c76729eaa1b5b62
+        run: |
+          set -euo pipefail
+          git cat-file -e "$PINNED_APP_SHA"
+          git diff --quiet "$PINNED_APP_SHA" HEAD -- apps/platform
+          test "$(git rev-parse "$PINNED_APP_SHA")" = "69acb9b3f738e5edcc6ea85c3c76729eaa1b5b62"
+          echo 'CANDIDATE_APP_TREE_EXACT_69AC=PASS'
+      - name: Prepare isolated PHP 8.4 with SQLite only
+        uses: shivammathur/setup-php@87d00bde2555f25eb54fedf940384e99cbdc55ef
+        with:
+          php-version: '8.4'
+          extensions: pdo_sqlite, sqlite3, sodium
+          coverage: none
+      - name: Install isolated test dependencies and generate disposable app key
+        working-directory: apps/platform
+        run: |
+          set -euo pipefail
+          composer install --no-interaction --prefer-dist --no-progress
+          cp .env.example .env
+          mkdir -p database
+          touch database/database.sqlite
+          php artisan key:generate --force
+      - name: Migrate only disposable SQLite database
+        working-directory: apps/platform
+        env:
+          APP_ENV: staging
+          DB_CONNECTION: sqlite
+          DB_DATABASE: ${{ github.workspace }}/apps/platform/database/database.sqlite
+          MAIL_MAILER: log
+          QUEUE_CONNECTION: sync
+        run: |
+          set -euo pipefail
+          php artisan migrate:fresh --force
+      - name: Synthetic authenticated staging route smoke
+        working-directory: apps/platform
+        env:
+          APP_ENV: staging
+          DB_CONNECTION: sqlite
+          DB_DATABASE: ${{ github.workspace }}/apps/platform/database/database.sqlite
+          MAIL_MAILER: log
+          QUEUE_CONNECTION: sync
+        run: |
+          set -euo pipefail
+          php artisan staging:smoke-authenticated-surfaces
+          echo 'SYNTHETIC_OWNER_ROUTES=PASS'
+      - name: Platform owner, denial and payment secrets policy regression
+        working-directory: apps/platform
+        env:
+          APP_ENV: testing
+          DB_CONNECTION: sqlite
+          DB_DATABASE: ${{ github.workspace }}/apps/platform/database/database.sqlite
+          MAIL_MAILER: log
+          QUEUE_CONNECTION: sync
+        run: |
+          set -euo pipefail
+          php artisan test --filter='PlatformOwnerConsoleTest|OwnerPaymentGatewaySettingsTest|StagingAuthenticatedSmokeCommandTest' --no-ansi
+          echo 'SYNTHETIC_OWNER_AUTH_AND_PAYMENT_POLICY=PASS'
+      - name: State evidence limits explicitly
+        if: always()
+        run: |
+          echo 'This job tests the exact 69ac application tree only in disposable GitHub-hosted SQLite.' >> "$GITHUB_STEP_SUMMARY"
+          echo 'Not a live authenticated owner browser test, real production payment test, SMTP inbox delivery, or deployment approval.' >> "$GITHUB_STEP_SUMMARY"
