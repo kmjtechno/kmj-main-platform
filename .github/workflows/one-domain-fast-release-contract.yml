@@ -1,0 +1,38 @@
+name: One Public Origin Fast Release Contract
+on:
+  pull_request:
+    paths:
+      - 'scripts/operations/stage-fast-main-candidate-no-activation.sh'
+      - 'scripts/test_fast_main_candidate_contract.py'
+      - 'docs/operations/ONE_PUBLIC_ORIGIN_FAST_RELEASE_20261025.md'
+      - '.github/workflows/one-domain-fast-release-contract.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/operations/stage-fast-main-candidate-no-activation.sh'
+      - 'scripts/test_fast_main_candidate_contract.py'
+      - 'docs/operations/ONE_PUBLIC_ORIGIN_FAST_RELEASE_20261025.md'
+      - '.github/workflows/one-domain-fast-release-contract.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  contract:
+    name: Exact-main isolated builder safety contract
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Fetch exact revision without credentials
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - name: Parse and verify fail-closed operational contract
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          bash -n scripts/operations/stage-fast-main-candidate-no-activation.sh
+          python3 -B -m unittest discover -s scripts -p test_fast_main_candidate_contract.py -v
+          echo 'KMJ_ONE_PUBLIC_ORIGIN_CONTRACT=PASS'
+          echo 'KMJ_PRODUCTION_DEPLOYMENT=NOT_ATTEMPTED'
