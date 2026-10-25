@@ -108,6 +108,7 @@ Schedule::command('outbox:work --limit=25 --max-attempts=8 --base-delay=15')
 Artisan::command('codebridge:agent-origin-doctor', function () {
     $publicOrigin = rtrim((string) config('services.codebridge_gateway.agent_public_url', ''), '/');
     $privateUpstream = rtrim((string) config('services.codebridge_gateway.url', ''), '/');
+    $enrollmentEnabled = config('codebridge.enabled', false) === true;
 
     // Home Office agent is currently pinned to the public KMJ origin.
     // A private loopback or unrelated HTTPS server must never be issued to it.
@@ -116,9 +117,10 @@ Artisan::command('codebridge:agent-origin-doctor', function () {
 
     $this->line('CODEBRIDGE_PUBLIC_AGENT_ORIGIN='.($publicReady ? 'PASS' : 'FAIL'));
     $this->line('CODEBRIDGE_PRIVATE_MCP_UPSTREAM='.($upstreamReady ? 'CONFIGURED' : 'INVALID'));
+    $this->line('CODEBRIDGE_ENROLLMENT_API='.($enrollmentEnabled ? 'CONFIG_ENABLED' : 'CONFIG_DISABLED'));
 
     $challengeReady = false;
-    if ($publicReady && $upstreamReady) {
+    if ($publicReady && $upstreamReady && $enrollmentEnabled) {
         try {
             // Anonymous, fixed origin only; no token, cookies or redirects.
             $response = Http::timeout(8)
@@ -132,10 +134,10 @@ Artisan::command('codebridge:agent-origin-doctor', function () {
         }
     }
     $this->line('CODEBRIDGE_PUBLIC_AGENT_AUTH_CHALLENGE='.($challengeReady ? 'PASS' : 'FAIL'));
-    $this->line('CODEBRIDGE_PAIRING_CONFIG='.($publicReady && $upstreamReady && $challengeReady ? 'PREFLIGHT_PASS_NOT_DEVICE_READY' : 'BLOCKED'));
+    $this->line('CODEBRIDGE_PAIRING_CONFIG='.($publicReady && $upstreamReady && $enrollmentEnabled && $challengeReady ? 'PREFLIGHT_PASS_NOT_DEVICE_READY' : 'BLOCKED'));
     $this->line('CODEBRIDGE_DEVICE_READY=NOT_ATTESTED_BY_THIS_COMMAND');
 
-    return $publicReady && $upstreamReady && $challengeReady
+    return $publicReady && $upstreamReady && $enrollmentEnabled && $challengeReady
         ? Command::SUCCESS
         : Command::FAILURE;
 })->purpose('Read-only, secret-free Home Office agent pairing configuration preflight');
