@@ -54,6 +54,7 @@ jobs:
           grep -q 'No secret values were printed' scripts/backup_preflight.sh
           python3 scripts/test_backup_contract.py
           python3 scripts/test_restore_verification_contract.py
+          python3 -c "import ast, pathlib; p=pathlib.Path('scripts/operations/independent-local-recovery-brand-v2-20261025.py'); s=p.read_text(); ast.parse(s); assert '69acb9b3f738e5edcc6ea85c3c76729eaa1b5b62' in s and \"listen_addresses=''\" in s and 'PRODUCTION_ACTIVATION=NOT_AUTHORIZED' in s"
           bash -n scripts/operations/verify-real-offsite-recovery.sh
           python3 -B scripts/test_real_offsite_recovery_contract.py
           bash -n infra/server/KMJ_SERVER_BOOTSTRAP.sh
