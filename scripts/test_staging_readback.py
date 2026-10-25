@@ -39,6 +39,19 @@ class StageReadbackTests(unittest.TestCase):
                 with self.assertRaises(ValueError):
                     readback.check_readback(candidate, GOOD, status)
 
+    def test_readback_requires_successful_real_staging_deploy_not_just_source_promotion(self):
+        # This job must not run merely because CI promoted a branch: the
+        # physical staging deployment is separately guarded and may be absent.
+        workflow = (Path(__file__).resolve().parents[1] / ".github" / "workflows" / "staging-exact-sha-readback.yml").read_text(encoding="utf-8")
+        self.assertIn("workflows: ['Staging VPS Deploy']", workflow)
+        self.assertNotIn("workflows: ['Staging Promotion Gate']", workflow)
+        self.assertIn("github.event.workflow_run.conclusion == 'success'", workflow)
+        self.assertIn("github.event.workflow_run.head_branch == 'main'", workflow)
+        self.assertNotIn("github.event.workflow_run.event == 'push'", workflow)
+        self.assertIn("test \"$sha\" = \"$PROMOTED_SHA\"", workflow)
+        self.assertIn("check-staging-readback.py", workflow)
+        self.assertIn("https://staging.kmjtechno.com", workflow)
+
 
 if __name__ == "__main__":
     unittest.main()
