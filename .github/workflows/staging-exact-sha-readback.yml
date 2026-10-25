@@ -42,18 +42,15 @@ jobs:
         with:
           persist-credentials: false
           ref: staging-approved
-      - name: Refuse stale, failed or mismatched promotion
-        env:
-          PROMOTED_SHA: ${{ github.event.workflow_run.head_sha }}
-          EVENT_NAME: ${{ github.event_name }}
+      - name: Pin exact currently approved staging source
         shell: bash
         run: |
           set -euo pipefail
           sha="$(git rev-parse HEAD)"
           [[ "$sha" =~ ^[a-f0-9]{40}$ ]]
-          if [ "$EVENT_NAME" = workflow_run ]; then
-            test "$sha" = "$PROMOTED_SHA"
-          fi
+          # A scheduled/dispatch deploy workflow is sourced from main, while
+          # the deployed commit is the independently guarded staging-approved.
+          # The event head_sha therefore must not stand in for deployed SHA.
           echo "EXPECTED_STAGING_SHA=$sha" >> "$GITHUB_ENV"
       - name: Read back actual staging HTTPS release
         shell: bash
