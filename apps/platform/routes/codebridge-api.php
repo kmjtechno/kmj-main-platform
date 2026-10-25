@@ -35,6 +35,30 @@ Route::post('v1/codebridge/renew', function (Request $request) {
     }
 })->middleware('throttle:30,1');
 
+// Credential-free, read-only compatibility contract used BEFORE first device
+// enrollment. Prevents older deployments from issuing a device grant that
+// cannot be redeemed because private MCP gateway != public agent HTTPS origin.
+// A 200 means only the configured origin is compatible; it does not attest to
+// a license, authenticated approval, live agent heartbeat or future uptime.
+// No upstream request, DB query, device registration or secret disclosure.
+Route::get('codebridge/v1/device-enrollments/readiness', function () {
+    $origin = config('services.codebridge_gateway.agent_public_url');
+    $appOrigin = config('app.url');
+    $ready = config('codebridge.enabled', false) === true
+        && is_string($origin)
+        && is_string($appOrigin)
+        && preg_match('/\Ahttps:\/\/[a-z0-9.-]+(?::443)?\z/Di', $origin) === 1
+        && preg_match('/\Ahttps:\/\/[a-z0-9.-]+(?::443)?\z/Di', $appOrigin) === 1
+        && hash_equals(rtrim($appOrigin, '/'), rtrim($origin, '/'));
+
+    return response()->json(
+        $ready
+            ? ['pairing_config' => 'ready', 'protocol' => 2]
+            : ['pairing_config' => 'unavailable'],
+        $ready ? 200 : 503,
+    )->header('Cache-Control', 'no-store, private');
+})->middleware('throttle:30,1');
+
 Route::post('codebridge/v1/device-enrollments', function (Request $request, CodeBridgeDevicePairingService $pairings) {
     if (! config('codebridge.enabled', false)) {
         abort(503);
