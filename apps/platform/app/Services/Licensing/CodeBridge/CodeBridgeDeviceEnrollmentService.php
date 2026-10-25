@@ -31,10 +31,13 @@ final class CodeBridgeDeviceEnrollmentService
                 ->where('device_id', $deviceId)
                 ->lockForUpdate()
                 ->first();
-            // Never reuse a prior activation. Active credentials cannot be
-            // overwritten; a revoked device requires fresh owner pairing.
+            // Never reuse a prior activation. An unexpired active credential
+            // must not be rotated or replaced by a second pairing. However,
+            // an expired credential has already lost gateway authorization:
+            // the owner may explicitly approve fresh proof-bound enrollment
+            // without a dangerous manual DB revoke. Never renew silently.
             if (DB::table('codebridge_device_credentials')->where('activation_id', $activationId)->exists()
-                || ($existing !== null && $existing->revoked_at === null)) {
+                || ($existing !== null && $existing->revoked_at === null && (int) $existing->expires_at_epoch > $now)) {
                 throw new DomainException('CODEBRIDGE_DEVICE_ALREADY_ENROLLED');
             }
             $policy = DB::table('plans')->where('code', 'codebridge.'.$license->plan)->where('status', 'active')->first();
@@ -60,7 +63,9 @@ final class CodeBridgeDeviceEnrollmentService
                     ->update(['deactivated_at' => now()]);
                 $updated = DB::table('codebridge_device_credentials')
                     ->where('id', $existing->id)
-                    ->whereNotNull('revoked_at')
+                    ->where(function ($query) use ($now): void {
+                        $query->whereNotNull('revoked_at')->orWhere('expires_at_epoch', '<=', $now);
+                    })
                     ->update([
                         'license_id' => $licenseId,
                         'activation_id' => $activationId,
