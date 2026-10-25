@@ -1,0 +1,25 @@
+name: Staging Readback Contract CI
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/staging-exact-sha-readback.yml'
+      - '.github/workflows/staging-readback-contract-ci.yml'
+      - 'scripts/operations/check-staging-readback.py'
+      - 'scripts/test_staging_readback.py'
+
+permissions:
+  contents: read
+
+jobs:
+  contract:
+    name: Staging readback source contract (PR only)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          ref: ${{ github.event.pull_request.head.sha }}
+      - name: Verify exact-head source-only readback invariants
+        run: python3 -B -m unittest discover -s scripts -p test_staging_readback.py -v
