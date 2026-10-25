@@ -48,7 +48,13 @@ class StageReadbackTests(unittest.TestCase):
         self.assertIn("github.event.workflow_run.conclusion == 'success'", workflow)
         self.assertIn("github.event.workflow_run.head_branch == 'main'", workflow)
         self.assertNotIn("github.event.workflow_run.event == 'push'", workflow)
-        self.assertIn("test \"$sha\" = \"$PROMOTED_SHA\"", workflow)
+        # Staging VPS Deploy may start from a scheduled/default-main workflow
+        # whose head_sha differs from the real staging-approved deployment.
+        self.assertIn("ref: staging-approved", workflow)
+        self.assertIn('echo "EXPECTED_STAGING_SHA=$sha" >> "$GITHUB_ENV"', workflow)
+        self.assertIn('--expected "$EXPECTED_STAGING_SHA"', workflow)
+        self.assertNotIn("PROMOTED_SHA:", workflow)
+        self.assertNotIn("github.event.workflow_run.head_sha", workflow.split("jobs:", 1)[1])
         self.assertIn("check-staging-readback.py", workflow)
         self.assertIn("https://staging.kmjtechno.com", workflow)
 
