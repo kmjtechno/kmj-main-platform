@@ -10,6 +10,7 @@ final class CodeBridgeAgentOriginDoctorTest extends TestCase
 {
     public function test_missing_public_origin_fails_closed_without_network_or_credentials(): void
     {
+        config()->set('codebridge.enabled', true);
         config()->set('services.codebridge_gateway.agent_public_url', '');
         config()->set('services.codebridge_gateway.url', 'http://127.0.0.1:18787');
         Http::fake();
@@ -25,6 +26,7 @@ final class CodeBridgeAgentOriginDoctorTest extends TestCase
 
     public function test_exact_public_origin_and_unauthenticated_401_are_preflight_only(): void
     {
+        config()->set('codebridge.enabled', true);
         config()->set('services.codebridge_gateway.agent_public_url', 'https://kmjtechno.com/');
         config()->set('services.codebridge_gateway.url', 'http://127.0.0.1:18787');
         Http::fake([
@@ -36,6 +38,7 @@ final class CodeBridgeAgentOriginDoctorTest extends TestCase
         $this->artisan('codebridge:agent-origin-doctor')
             ->expectsOutput('CODEBRIDGE_PUBLIC_AGENT_ORIGIN=PASS')
             ->expectsOutput('CODEBRIDGE_PRIVATE_MCP_UPSTREAM=CONFIGURED')
+            ->expectsOutput('CODEBRIDGE_ENROLLMENT_API=CONFIG_ENABLED')
             ->expectsOutput('CODEBRIDGE_PUBLIC_AGENT_AUTH_CHALLENGE=PASS')
             ->expectsOutput('CODEBRIDGE_PAIRING_CONFIG=PREFLIGHT_PASS_NOT_DEVICE_READY')
             ->expectsOutput('CODEBRIDGE_DEVICE_READY=NOT_ATTESTED_BY_THIS_COMMAND')
@@ -49,6 +52,7 @@ final class CodeBridgeAgentOriginDoctorTest extends TestCase
 
     public function test_private_or_foreign_agent_origin_is_rejected_without_network(): void
     {
+        config()->set('codebridge.enabled', true);
         Http::fake();
 
         foreach (['http://127.0.0.1:18787', 'https://example.invalid', 'https://kmjtechno.com.evil.invalid'] as $origin) {
@@ -65,6 +69,7 @@ final class CodeBridgeAgentOriginDoctorTest extends TestCase
 
     public function test_gateway_error_or_redirect_fails_without_calling_it_ready(): void
     {
+        config()->set('codebridge.enabled', true);
         config()->set('services.codebridge_gateway.agent_public_url', 'https://kmjtechno.com');
         config()->set('services.codebridge_gateway.url', 'http://127.0.0.1:18787');
         Http::fake(['https://kmjtechno.com/agent/health' => Http::response('', 503)]);
@@ -74,4 +79,23 @@ final class CodeBridgeAgentOriginDoctorTest extends TestCase
             ->expectsOutput('CODEBRIDGE_PAIRING_CONFIG=BLOCKED')
             ->assertExitCode(1);
     }
+
+    public function test_disabled_enrollment_api_blocks_pairing_without_network_or_credentials(): void
+    {
+        config()->set('codebridge.enabled', false);
+        config()->set('services.codebridge_gateway.agent_public_url', 'https://kmjtechno.com');
+        config()->set('services.codebridge_gateway.url', 'http://127.0.0.1:18787');
+        Http::fake();
+
+        $this->artisan('codebridge:agent-origin-doctor')
+            ->expectsOutput('CODEBRIDGE_PUBLIC_AGENT_ORIGIN=PASS')
+            ->expectsOutput('CODEBRIDGE_PRIVATE_MCP_UPSTREAM=CONFIGURED')
+            ->expectsOutput('CODEBRIDGE_ENROLLMENT_API=CONFIG_DISABLED')
+            ->expectsOutput('CODEBRIDGE_PUBLIC_AGENT_AUTH_CHALLENGE=FAIL')
+            ->expectsOutput('CODEBRIDGE_PAIRING_CONFIG=BLOCKED')
+            ->assertExitCode(1);
+
+        Http::assertNothingSent();
+    }
+
 }
