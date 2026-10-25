@@ -7,7 +7,7 @@ on:
       - 'scripts/operations/check-staging-readback.py'
       - 'scripts/test_staging_readback.py'
   workflow_run:
-    workflows: ['Staging Promotion Gate']
+    workflows: ['Staging VPS Deploy']
     types: [completed]
   workflow_dispatch:
 
@@ -33,7 +33,7 @@ jobs:
   readback:
     name: Independently verify staging VPS serves approved immutable SHA
     needs: contract
-    if: ${{ github.event_name == 'workflow_dispatch' || (github.event_name == 'workflow_run' && github.event.workflow_run.event == 'push' && github.event.workflow_run.head_branch == 'main' && github.event.workflow_run.conclusion == 'success') }}
+    if: ${{ github.event_name == 'workflow_dispatch' || (github.event_name == 'workflow_run' && github.event.workflow_run.head_branch == 'main' && github.event.workflow_run.conclusion == 'success') }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
