@@ -27,7 +27,7 @@ class BrandedEmailProbeSafety(unittest.TestCase):
         }
         html = probe.render_blade_fixture(html_source, d, True)
         plain = probe.render_blade_fixture(text_source, d, False)
-        self.assertIn('kmj-logo-horizontal.webp', html)
+        self.assertIn('kmj-email-lockup-dark.png', html)
         self.assertIn("INNOVATE | BUILD | SCALE", html)
         self.assertNotIn("<script>", html)
         self.assertIn("&lt;script&gt;", html)
@@ -47,11 +47,11 @@ class BrandedEmailProbeSafety(unittest.TestCase):
         self.assertIn('formataddr(("KMJ TECHNO", SENDER))', source)
         self.assertIn(".kmj-brevo-enterprise-20261021.once", source)
         self.assertIn("KMJ TECHNO Enterprise Mail QA", source)
-        self.assertIn('width="305" alt="KMJ TECHNO', markup)
+        self.assertIn('width="320" alt="KMJ TECHNO', markup)
         self.assertIn("SECURITY NOTICE", markup)
         self.assertIn("PRIVATE ACCOUNT COMMUNICATION", markup)
         self.assertIn("SECURE ACTION", markup)
-        self.assertIn("https://kmjtechno.com/assets/brand/kmj-logo-horizontal.webp", markup)
+        self.assertIn("https://kmjtechno.com/assets/brand/kmj-email-lockup-dark.png", markup)
 
     def test_single_owner_only_key_never_persisted(self):
         s = PROBE.read_text(encoding="utf-8")
