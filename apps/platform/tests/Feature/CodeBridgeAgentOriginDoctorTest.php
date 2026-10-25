@@ -97,5 +97,4 @@ final class CodeBridgeAgentOriginDoctorTest extends TestCase
 
         Http::assertNothingSent();
     }
-
 }
