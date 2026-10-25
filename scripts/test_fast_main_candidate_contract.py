@@ -36,11 +36,12 @@ class OneDomainFastStageContract(unittest.TestCase):
         self.assertIn("npm ci --ignore-scripts --no-audit --no-fund", SOURCE)
         self.assertIn("composer install --no-dev --no-interaction", SOURCE)
         self.assertIn("CANDIDATE_DIRTY", SOURCE)
+        self.assertIn("CANDIDATE_STATUS_UNAVAILABLE", SOURCE)
         self.assertIn("RUNTIME_ENV_REQUIRES_REVIEW", SOURCE)
         self.assertIn("LIVE_POINTER_CHANGED", SOURCE)
 
     def test_never_changes_production_or_demands_public_staging(self):
-        self.assertIn("KMJ_PUBLIC_ORIGIN=https://kmjtechno.com", SOURCE)
+        self.assertIn("KMJ_PUBLIC_ORIGIN_POLICY=https://kmjtechno.com", SOURCE)
         self.assertIn("KMJ_PUBLIC_STAGING_REQUIRED=NO", SOURCE)
         self.assertIn("KMJ_PRODUCTION=UNCHANGED", SOURCE)
         self.assertIn("NEW_BACKUP_RESTORE_OWNER_APPROVAL_AND_GUARDED_ACTIVATION", SOURCE)
