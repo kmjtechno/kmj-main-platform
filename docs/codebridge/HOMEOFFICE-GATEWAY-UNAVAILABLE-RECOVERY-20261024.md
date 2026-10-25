@@ -11,6 +11,8 @@
 
 A Windows install succeeded at CodeBridge SHA `4b6eee169b057451d3e512cd0197be08879bf8f6`. No credentials were exported. Both projectors are ON but no scan is approved.
 
+**October 25 follow-up (Home Office):** A credential-free empty-body POST to the live `/api/codebridge/v1/device-enrollments` returned `HTTP 422`. This establishes that the route reached validation with the feature gate enabled for that request; it does **not** establish that a valid enrollment can create a pending request (expected 201), that DB writes work, that approval/redemption will succeed, or that the device is READY. The exact preceding full-payload `ENROLLMENT_UNAVAILABLE` HTTP status remains unknown because the pinned old Windows client collapses non-201 statuses. No repeated owner pairing should be attempted until the guarded production origin/release issue is resolved. The source regression explicitly checks disabled=503, enabled+empty=422, and zero pairing/credential rows for either request.
+
 The **observed live** Laravel release, `platform-8070dad72c55` (source SHA `8070dad72c551e5e13d1a78b0d4e6933c2d2ae9b`), uses **`services.codebridge_gateway.url`** for the device enrollment response. This is the old private MCP upstream, which can be a loopback origin. A loopback URL cannot be a remote Windows agent's public HTTPS endpoint. The newer source separates `CODEBRIDGE_AGENT_PUBLIC_URL` and validates it before credential issuance (PRs #537 and #547). **Merged source is not proof of deployment.** Exact live env/cache cause is still not independently measured.
 
 ## Guarded operator sequence
