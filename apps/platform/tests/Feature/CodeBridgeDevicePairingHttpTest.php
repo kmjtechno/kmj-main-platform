@@ -13,6 +13,18 @@ final class CodeBridgeDevicePairingHttpTest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_empty_enrollment_probe_reports_validation_only_when_api_enabled_without_creating_pairing(): void
+    {
+        config()->set('codebridge.enabled', false);
+        $this->postJson('/api/codebridge/v1/device-enrollments', [])->assertStatus(503);
+        self::assertDatabaseCount('codebridge_device_pairings', 0);
+
+        config()->set('codebridge.enabled', true);
+        $this->postJson('/api/codebridge/v1/device-enrollments', [])->assertStatus(422);
+        self::assertDatabaseCount('codebridge_device_pairings', 0);
+        self::assertDatabaseCount('codebridge_device_credentials', 0);
+    }
+
     public function test_fresh_device_can_create_approve_redeem_once_without_manual_agent_token(): void
     {
         config()->set('codebridge.enabled', true);
