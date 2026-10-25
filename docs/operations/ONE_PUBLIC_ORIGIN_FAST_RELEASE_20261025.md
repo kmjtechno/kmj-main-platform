@@ -6,18 +6,18 @@ that a candidate has deployed.
 
 ## 25 October 2026 live evidence
 
-- \`/home/kmjprod/current\` resolves to \`platform-8070dad72c55\`.
-- Existing SHA-pinned candidate \`b1d672bbc83a51ca3f8271435692825072444c8e\` is staged.
+- `/home/kmjprod/current` resolves to `platform-8070dad72c55`.
+- Existing SHA-pinned candidate `b1d672bbc83a51ca3f8271435692825072444c8e` is staged.
 - The root-owned backup + witness for **that candidate** passed independent SHA-256 verification.
   This is **not** a backup/rollback approval for any newer SHA.
-- \`staging.kmjtechno.com\` has a DNS-only A record to the same server,
+- `staging.kmjtechno.com` has a DNS-only A record to the same server,
   but no staging-specific Nginx vhost, no CloudPanel CLI, and TLS fails with
   curl exit 60. A browser redirect to the main site is not staging acceptance.
 - The protected production activation manifest expects the *older*
-  \`platform-54142f844c0b\` pointer. Actual live is different. Supervisor
-  \`readyToActivate=false\`. **Do not edit the current symlink or overwrite
+  `platform-54142f844c0b` pointer. Actual live is different. Supervisor
+  `readyToActivate=false`. **Do not edit the current symlink or overwrite
   the approval manifest to make this check green.**
-- \`main\` has advanced beyond the older candidate. A verified candidate must
+- `main` has advanced beyond the older candidate. A verified candidate must
   be built from the exact newly approved main commit.
 
 ## Fastest safe pipeline without a public staging hostname
@@ -26,8 +26,8 @@ that a candidate has deployed.
    GitHub CI, isolated Laravel/PostgreSQL testing, and Windows/browser QA
    appropriate for the release. Reject unrun or failed tests.
 2. On KMJ-elite, stage the *current exact main SHA* in a **new isolated**
-   \`/home/kmjprod/releases/platform-<sha12>\` using
-   \`scripts/operations/stage-fast-main-candidate-no-activation.sh <40-SHA>\`.
+   `/home/kmjprod/releases/platform-<sha12>` using
+   `scripts/operations/stage-fast-main-candidate-no-activation.sh <40-SHA>`.
    It refuses stale main commits, unexpected host, dirty/changed checkout,
    present candidate .env, missing build artifacts and release-lock contention.
    It never modifies the live site, shared development checkout, production
@@ -43,8 +43,8 @@ that a candidate has deployed.
    calibration tests remain separate.
 5. After explicit protected approval for exact SHA and **actual** current
    release, the installed CodeBridge supervisor must report
-   \`readyToActivate=true\`. Only then use its fixed guarded
-   \`supervisor_main_platform_production_activate\` operation. No arbitrary
+   `readyToActivate=true`. Only then use its fixed guarded
+   `supervisor_main_platform_production_activate` operation. No arbitrary
    SSH deploy, symlink overwrite, forced manifest update, insecure TLS or
    CloudPanel CLI assumption.
 6. Immediately verify https://kmjtechno.com/ (public and authenticated owner
