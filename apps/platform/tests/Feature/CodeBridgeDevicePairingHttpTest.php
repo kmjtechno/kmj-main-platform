@@ -191,6 +191,97 @@ final class CodeBridgeDevicePairingHttpTest extends TestCase
         self::assertSame(1, DB::table('codebridge_device_credentials')->whereNull('revoked_at')->count());
     }
 
+    public function test_expired_device_credential_can_be_repaired_only_with_new_owner_approval(): void
+    {
+        config()->set('codebridge.enabled', true);
+        config()->set('services.codebridge_gateway.agent_public_url', 'https://gateway.example');
+        $user = User::factory()->create();
+        [$tenant] = $this->fixture($user);
+
+        $newPairing = function (): array {
+            $verifier = rtrim(strtr(base64_encode(random_bytes(32)), '+/', '-_'), '=');
+            $challenge = rtrim(strtr(base64_encode(hash('sha256', $verifier, true)), '+/', '-_'), '=');
+            $created = $this->postJson('/api/codebridge/v1/device-enrollments', [
+                'product' => 'KMJ_CODEBRIDGE',
+                'device' => ['id' => 'home-office-p520', 'name' => 'Home Office P520', 'platform' => 'win32', 'arch' => 'x64'],
+                'project' => ['id' => 'calibration-pro', 'name' => 'Calibration Pro'],
+                'requested_permissions' => ['read', 'write', 'execute'],
+                'code_challenge' => $challenge,
+                'code_challenge_method' => 'S256',
+            ])->assertCreated()->json();
+
+            return [$created, $verifier];
+        };
+
+        [$first, $firstVerifier] = $newPairing();
+        $this->actingAs($user)->post('/codebridge/pair', [
+            'code' => $first['user_code'],
+            'tenant_id' => $tenant,
+        ])->assertRedirect();
+        $initial = $this->postJson('/api/codebridge/v1/device-enrollments/token', [
+            'product' => 'KMJ_CODEBRIDGE',
+            'device_code' => $first['device_code'],
+            'code_verifier' => $firstVerifier,
+            'device_id' => 'home-office-p520',
+        ])->assertOk()->json();
+
+        $oldActivation = DB::table('codebridge_device_credentials')->value('activation_id');
+        $oldHash = DB::table('codebridge_device_credentials')->value('token_hash');
+        $this->withToken($initial['agent']['token'])
+            ->postJson('/api/codebridge/v1/device-credentials/introspect')
+            ->assertOk();
+
+        // Emulate expiry without revocation, e.g. the old device lease ended.
+        // Gateway authorization must be absent and the old credential stay inert.
+        DB::table('codebridge_device_credentials')->update(['expires_at_epoch' => time() - 1]);
+        $this->withToken($initial['agent']['token'])
+            ->postJson('/api/codebridge/v1/device-credentials/introspect')
+            ->assertUnauthorized()
+            ->assertJson(['active' => false]);
+
+        [$second, $secondVerifier] = $newPairing();
+        self::assertSame($oldHash, DB::table('codebridge_device_credentials')->value('token_hash'));
+        self::assertSame($oldActivation, DB::table('codebridge_device_credentials')->value('activation_id'));
+
+        // Creating a pairing request is not approval; only the owner can
+        // authorize replacement and verifier-bound credential redemption.
+        $this->postJson('/api/codebridge/v1/device-enrollments/token', [
+            'product' => 'KMJ_CODEBRIDGE',
+            'device_code' => $second['device_code'],
+            'code_verifier' => $secondVerifier,
+            'device_id' => 'home-office-p520',
+        ])->assertStatus(428);
+
+        $this->actingAs($user)->post('/codebridge/pair', [
+            'code' => $second['user_code'],
+            'tenant_id' => $tenant,
+        ])->assertRedirect()->assertSessionHasNoErrors();
+
+        $newGrant = $this->postJson('/api/codebridge/v1/device-enrollments/token', [
+            'product' => 'KMJ_CODEBRIDGE',
+            'device_code' => $second['device_code'],
+            'code_verifier' => $secondVerifier,
+            'device_id' => 'home-office-p520',
+        ])->assertOk()->json();
+        self::assertSame('home-office-p520', $newGrant['agent']['id']);
+        self::assertSame([['id' => 'calibration-pro']], $newGrant['projects']);
+        self::assertNotSame($initial['agent']['token'], $newGrant['agent']['token']);
+
+        self::assertSame(1, DB::table('codebridge_device_credentials')->count());
+        self::assertDatabaseHas('kslp_activations', ['id' => $oldActivation]);
+        self::assertNotNull(DB::table('kslp_activations')->where('id', $oldActivation)->value('deactivated_at'));
+        self::assertSame(1, DB::table('codebridge_device_credentials')->whereNull('revoked_at')
+            ->where('expires_at_epoch', '>', time())->count());
+
+        $this->withToken($initial['agent']['token'])
+            ->postJson('/api/codebridge/v1/device-credentials/introspect')
+            ->assertUnauthorized();
+        $this->withToken($newGrant['agent']['token'])
+            ->postJson('/api/codebridge/v1/device-credentials/introspect')
+            ->assertOk()
+            ->assertJson(['active' => true, 'device_id' => 'home-office-p520']);
+    }
+
     public function test_pairing_rejects_wrong_verifier_and_expired_code(): void
     {
         config()->set('codebridge.enabled', true);
