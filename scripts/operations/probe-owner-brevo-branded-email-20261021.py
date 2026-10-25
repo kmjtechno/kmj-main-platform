@@ -75,7 +75,7 @@ def main() -> int:
         }
         html_body = render_blade_fixture(HTML.read_text(encoding="utf-8"), data, True)
         text_body = render_blade_fixture(TEXT.read_text(encoding="utf-8"), data, False)
-        if 'kmj-logo-horizontal.webp' not in html_body or token not in html_body or token not in text_body:
+        if 'kmj-email-lockup-dark.png' not in html_body or token not in html_body or token not in text_body:
             return fail("BRANDING_OR_CONTENT_MISSING")
         message = EmailMessage()
         message["From"] = SENDER

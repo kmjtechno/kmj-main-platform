@@ -34,7 +34,7 @@
                                 <tr>
                                     <td align="left" valign="middle">
                                         <a href="https://kmjtechno.com" target="_blank" style="text-decoration:none;display:inline-block;border:0;">
-                                            <img class="kmj-logo" src="https://kmjtechno.com/assets/brand/kmj-logo-horizontal.webp" width="305" alt="KMJ TECHNO | INNOVATE BUILD SCALE" style="display:block;border:0;outline:none;width:305px;max-width:100%;height:auto;color:#ffffff;font-size:24px;line-height:32px;font-weight:bold;">
+                                            <img class="kmj-logo" src="https://kmjtechno.com/assets/brand/kmj-email-lockup-dark.png" width="320" alt="KMJ TECHNO | INNOVATE BUILD SCALE" style="display:block;border:0;outline:none;width:320px;max-width:100%;height:auto;color:#ffffff;font-size:24px;line-height:32px;font-weight:bold;">
                                         </a>
                                     </td>
                                 </tr>
