@@ -1,0 +1,101 @@
+name: Staging External TLS and SHA Evidence
+on:
+  workflow_run:
+    workflows: ['Staging Promotion Gate']
+    types: [completed]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: staging-external-evidence
+  cancel-in-progress: true
+jobs:
+  probe:
+    if: ${{ github.event_name == 'workflow_dispatch' || (github.event.workflow_run.head_branch == 'main' && github.event.workflow_run.conclusion == 'success') }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+          ref: staging-approved
+      - name: Confirm exact approved staging SHA
+        shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          PROMOTED_SHA: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          set -Eeuo pipefail
+          sha="$(git rev-parse HEAD)"
+          [[ "$sha" =~ ^[a-f0-9]{40}$ ]] || exit 2
+          if [[ "$EVENT_NAME" == workflow_run && "$sha" != "$PROMOTED_SHA" ]]; then
+            echo 'STAGING_EXTERNAL=BLOCKED APPROVED_SHA_DRIFT'
+            exit 2
+          fi
+          echo "EXPECTED_STAGING_SHA=$sha" >> "$GITHUB_ENV"
+      - name: Validate staging public DNS
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          mapfile -t ips < <(getent ahostsv4 staging.kmjtechno.com | awk '{print $1}' | sort -u)
+          [[ "${#ips[@]}" == 1 && "${ips[0]}" == 103.212.136.154 ]] || {
+            echo 'STAGING_EXTERNAL=BLOCKED DNS_PIN_MISMATCH'; exit 2;
+          }
+          echo 'STAGING_DNS_PIN=PASS'
+      - name: Validate public SNI certificate SAN
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          cert="$(mktemp)"
+          trap 'rm -f "$cert"' EXIT
+          if ! timeout 15 openssl s_client -connect staging.kmjtechno.com:443 -servername staging.kmjtechno.com -showcerts </dev/null 2>/dev/null | openssl x509 -outform PEM > "$cert"; then
+            echo 'STAGING_EXTERNAL=BLOCKED CERTIFICATE_UNAVAILABLE'
+            exit 3
+          fi
+          if ! openssl x509 -in "$cert" -noout -ext subjectAltName | grep -Fq 'DNS:staging.kmjtechno.com'; then
+            echo 'STAGING_EXTERNAL=BLOCKED TLS_SAN_MISMATCH'
+            exit 3
+          fi
+          echo 'STAGING_TLS_SAN=PASS'
+      - name: Validate trusted HTTPS and exact deployed SHA
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          origin=https://staging.kmjtechno.com
+          headers="$(mktemp)"
+          trap 'rm -f "$headers"' EXIT
+          set +e
+          code="$(curl --proto '=https' --fail --silent --show-error --connect-timeout 8 --max-time 20 --header 'Cache-Control: no-cache' --dump-header "$headers" --output /dev/null --write-out '%{http_code}' "$origin/")"
+          result=$?
+          set -e
+          if [[ "$result" -ne 0 ]]; then
+            case "$result" in
+              60) echo 'STAGING_EXTERNAL=BLOCKED TLS_CHAIN_OR_HOST_INVALID' ;;
+              6|7|28) echo 'STAGING_EXTERNAL=BLOCKED HTTPS_UNREACHABLE' ;;
+              *) echo 'STAGING_EXTERNAL=BLOCKED HTTPS_PROBE_FAILED' ;;
+            esac
+            exit 4
+          fi
+          python3 scripts/operations/check-staging-readback.py --expected "$EXPECTED_STAGING_SHA" --headers "$headers" --status "$code"
+          for route in /products /login; do
+            code="$(curl --proto '=https' --fail --silent --show-error --max-time 20 --output /dev/null --write-out '%{http_code}' "$origin$route")" || {
+              echo "STAGING_EXTERNAL=BLOCKED ROUTE_UNREACHABLE $route"; exit 5;
+            }
+            [[ "$code" == 200 ]] || {
+              echo "STAGING_EXTERNAL=BLOCKED ROUTE_NOT_200 $route"; exit 5;
+            }
+          done
+          echo 'STAGING_EXTERNAL_EXACT_SHA=PASS'
+          echo 'PRODUCTION_DEPLOYMENT=NOT_ATTEMPTED'
+          echo 'AUTHENTICATED_OWNER_BROWSER=NOT_VERIFIED'
+      - name: Report fail-closed staging evidence
+        if: always()
+        shell: bash
+        run: |
+          {
+            echo '## KMJ staging TLS / exact SHA evidence'
+            echo "- Approved SHA: `${EXPECTED_STAGING_SHA:-unresolved}`"
+            echo '- Default TLS validation + direct HTTP 200 + exact SHA required'
+            echo '- No SSH, no DNS mutation, no deploy, no owner session'
+            echo "Result: ${{ job.status }}"
+          } >> "$GITHUB_STEP_SUMMARY"
