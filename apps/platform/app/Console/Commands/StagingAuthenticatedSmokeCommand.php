@@ -118,8 +118,23 @@ final class StagingAuthenticatedSmokeCommand extends Command
         // Command OS that is separately exercised below. A wrong, external or
         // generic dashboard redirect must fail this authenticated smoke.
         if ($uri === '/dashboard') {
+            $target = $result instanceof RedirectResponse
+                ? parse_url($result->getTargetUrl())
+                : false;
+            $expected = parse_url(route('super-admin.index'));
+            // Laravel CLI's default URL root may differ from the synthetic
+            // Request host. Accept only the named local route, never a
+            // cross-origin, query-bearing or arbitrary redirected destination.
+            $allowedHosts = array_filter(array_unique([
+                $request->getHost(),
+                is_array($expected) ? ($expected['host'] ?? null) : null,
+            ]));
             if (! $result instanceof RedirectResponse
-                || $result->getTargetUrl() !== route('super-admin.index')) {
+                || ! is_array($target)
+                || ($target['path'] ?? null) !== route('super-admin.index', absolute: false)
+                || (isset($target['host']) && ! in_array($target['host'], $allowedHosts, true))
+                || isset($target['query'])
+                || isset($target['fragment'])) {
                 throw new RuntimeException('Owner dashboard did not redirect to the canonical protected Super Admin route.');
             }
 
