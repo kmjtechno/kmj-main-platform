@@ -25,7 +25,8 @@ jobs:
         working-directory: apps/platform
         shell: bash
         run: |
-          set -u
+          set +e
+          set +o pipefail
           composer update symfony/http-foundation --with-all-dependencies --minimal-changes --no-install --no-scripts --no-interaction > /tmp/kmj-composer-remediation.log 2>&1
           echo "COMPOSER_UPDATE_EXIT=$?"
           npm audit fix --package-lock-only --ignore-scripts --no-fund > /tmp/kmj-npm-remediation.log 2>&1
@@ -38,3 +39,4 @@ jobs:
           tail -n 12 /tmp/kmj-composer-remediation.log || true
           echo '=== NPM_LAST_LINES ==='
           tail -n 12 /tmp/kmj-npm-remediation.log || true
+          exit 0
