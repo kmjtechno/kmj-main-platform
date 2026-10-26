@@ -201,12 +201,12 @@ export default function DeviceControlCenter({
                         gateway heartbeats.
                     </p>
                     <p className="text-muted-foreground mt-2 text-xs leading-5">
-                        Download the official Windows connector and
-                        double-click it on your computer. Home Office P520
-                        automatically selects its approved Calibration Pro
-                        device; other PCs use the guided device picker. Approve
-                        new pairing once in your browser, then reconnect at
-                        Windows sign-in. No GitHub visit or manual commands.
+                        Connection recovery is managed here. Download the
+                        first-party Windows connector once, double-click it on
+                        the computer, choose your existing approved device, then
+                        refresh this dashboard. Browser pairing is required only
+                        for new grants. No GitHub page or PowerShell commands
+                        are needed.
                     </p>
                 </div>
                 <div className="flex flex-wrap gap-2">
