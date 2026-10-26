@@ -54,11 +54,13 @@ class PG18Contract(unittest.TestCase):
             self.assertIn(marker, self.script, marker)
 
     def test_no_production_deploy_or_credentials(self):
-        for prohibited in ("systemctl ", "ln -sfn ", "pg_dump ", "psql -h ",
+        for prohibited in ("systemctl ", "ln -sfn ", "pg_dump ", "psql -h kmjtechno.com",
                            "artisan db:wipe", "DB_HOST=kmjtechno.com",
                            "POSTGRES_HOST_AUTH_METHOD=trust"):
             self.assertNotIn(prohibited, self.script)
         self.assertIn("PRODUCTION_DATABASE_TOUCHED=NO", self.script)
+        self.assertEqual(self.script.count("psql -h /kmj-socket"), 3)
+        self.assertNotIn("psql -h 127.0.0.1", self.script)
 
     def test_workflow_is_read_only_and_exact_head(self):
         self.assertIn("contents: read", self.workflow)
