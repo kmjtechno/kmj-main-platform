@@ -476,37 +476,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
             $items[] = $organization;
         }
 
-        $isPlatformOwner = app(PlatformOwnerAccess::class)->allows($user);
+        // Verified platform owners have already entered the protected
+        // /super-admin route above. The remaining /dashboard response is
+        // strictly customer-scoped; never attach owner-only catalog data.
         $ownerProducts = null;
-
-        if ($isPlatformOwner) {
-            // Owner-only: the whole catalog, so a platform owner who holds an entitlement for a
-            // single product still sees every product and can reach its controls. This is never
-            // sent to customers; they only ever see their own organizations' entitlements.
-            $activeEntitlementCounts = Entitlement::query()
-                ->where('status', 'active')
-                ->selectRaw('product_id, count(*) as aggregate')
-                ->groupBy('product_id')
-                ->pluck('aggregate', 'product_id');
-
-            $ownerProducts = Product::query()
-                ->orderBy('sort_order')
-                ->orderBy('name')
-                ->get(['id', 'slug', 'name', 'status', 'lifecycle', 'is_public', 'image_path', 'purchase_enabled', 'licensing_enabled'])
-                ->map(fn (Product $product): array => [
-                    'id' => (string) $product->getKey(),
-                    'slug' => (string) $product->getAttribute('slug'),
-                    'name' => (string) $product->getAttribute('name'),
-                    'status' => (string) $product->getAttribute('status'),
-                    'lifecycle' => (string) $product->getAttribute('lifecycle'),
-                    'is_public' => (bool) $product->getAttribute('is_public'),
-                    'image_path' => $product->getAttribute('image_path'),
-                    'purchase_enabled' => (bool) $product->getAttribute('purchase_enabled'),
-                    'licensing_enabled' => (bool) $product->getAttribute('licensing_enabled'),
-                    'active_entitlements' => (int) $activeEntitlementCounts->get((string) $product->getKey(), 0),
-                ])
-                ->all();
-        }
 
         // Public catalog is separate from issued customer entitlements.
         // Never imply a listed product is licensed or commercially available.
@@ -525,7 +498,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
             'discoverableProducts' => $discoverableProducts,
             'organizations' => $items,
             'hasPasskey' => $user->passkeys()->exists(),
-            'canManageCodeBridgeOwnerPlan' => app(PlatformOwnerAccess::class)->allows($user),
+            'canManageCodeBridgeOwnerPlan' => false,
             'ownerProducts' => $ownerProducts,
         ]);
     })->name('dashboard');
