@@ -61,7 +61,7 @@ assert 'nginx -t' in guard, "Nginx syntax must be verified before reload"
 assert 'production_before="$(readlink -f /home/kmjprod/current)"' in guard
 assert 'STAGING_TLS_REPAIR=FAIL PRODUCTION_RELEASE_POINTER_CHANGED' in guard
 assert 'if command -v clpctl >/dev/null 2>&1; then' in guard, "CloudPanel must remain supported"
-assert 'server_name[[:space:]]+staging' in guard, "Require exact stage hostname"
+assert "server_name[[:space:]]+staging[.]kmjtechno[.]com[[:space:]]*;" in guard, "Require isolated exact-only staging server_name"
 assert 'certbot --nginx' in guard and 'certbot --apache' not in guard
 assert 'curl -k' not in guard and '--insecure' not in guard
 print("Guarded staging-only TLS repair contract PASS")
