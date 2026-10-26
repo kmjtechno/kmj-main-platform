@@ -62,6 +62,7 @@ jobs:
           python3 -B scripts/test_real_offsite_recovery_contract.py
           bash -n infra/server/KMJ_SERVER_BOOTSTRAP.sh
           bash -n infra/server/KMJ_STAGE_TLS_REPAIR.sh
+          python3 -B -m unittest tests.test_native_stage_preflight_contract
       - name: Verify architecture foundation
         run: |
           set -euo pipefail
