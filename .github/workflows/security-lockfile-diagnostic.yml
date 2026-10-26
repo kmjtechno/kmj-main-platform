@@ -29,7 +29,7 @@ jobs:
           set +o pipefail
           composer update symfony/http-foundation --with-all-dependencies --minimal-changes --no-install --no-scripts --no-interaction > /tmp/kmj-composer-remediation.log 2>&1
           echo "COMPOSER_UPDATE_EXIT=$?"
-          npm install vite@8.3.3 --package-lock-only --no-save --ignore-scripts --no-audit --no-fund > /tmp/kmj-npm-remediation.log 2>&1
+          npm install vite@8.3.3 --package-lock-only --ignore-scripts --no-audit --no-fund > /tmp/kmj-npm-remediation.log 2>&1
           echo "NPM_UPDATE_EXIT=$?"
           echo '=== LOCKFILE_PATCH_BEGIN ==='
           git --no-pager diff -- composer.lock package-lock.json | head -c 65000
