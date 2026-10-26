@@ -390,6 +390,13 @@ Route::middleware(['auth', 'verified'])->group(function () {
         $user = $request->user();
         abort_unless($user instanceof User, 401);
 
+        // Verified owners land in the already protected Enterprise Command OS
+        // after login. Keep the customer dashboard and every customer permission
+        // unchanged; the owner route retains its password.confirm + policy gates.
+        if (app(PlatformOwnerAccess::class)->allows($user)) {
+            return redirect()->route('super-admin.index');
+        }
+
         $items = [];
 
         foreach ($organizations->forUser($user->id) as $organization) {
