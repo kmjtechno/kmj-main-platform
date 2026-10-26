@@ -62,6 +62,12 @@ assert 'production_before="$(readlink -f /home/kmjprod/current)"' in guard
 assert 'STAGING_TLS_REPAIR=FAIL PRODUCTION_RELEASE_POINTER_CHANGED' in guard
 assert 'if command -v clpctl >/dev/null 2>&1; then' in guard, "CloudPanel must remain supported"
 assert "server_name[[:space:]]+staging[.]kmjtechno[.]com[[:space:]]*;" in guard, "Require isolated exact-only staging server_name"
+assert 'nginx_vhosts="$(nginx -T 2>/dev/null)"' in guard, "Capture effective configuration without SIGPIPE"
+assert 'nginx -T 2>/dev/null | grep -Eq' not in guard, "No grep -q pipefail false negatives"
+assert '<<< "$nginx_vhosts"' in guard, "Match against completed Nginx dump"
+assert 'STAGING_VHOST_NOT_ISOLATED' in guard, "Shared vhost names must fail closed"
+assert 'STAGING_VHOST_ISOLATED=PASS' in guard, "No vhost success without exact names"
+assert 'NGINX_EFFECTIVE_CONFIG_UNREADABLE' in guard
 assert 'certbot --nginx' in guard and 'certbot --apache' not in guard
 assert 'curl -k' not in guard and '--insecure' not in guard
 print("Guarded staging-only TLS repair contract PASS")
