@@ -16,6 +16,9 @@ void test('visual preview covers locked pages and real owner Operations shell at
     assert.match(script, /\['super-admin', '\/super-admin'\]/);
     assert.match(script, /\['owner-ops', '\/operator\/ops'\]/);
     assert.match(script, /Real Operations component missing/);
+    assert.match(script, /Owner CodeBridge controls missing/);
+    assert.match(script, /Real device control component missing/);
+    assert.match(script, /chromiumSandbox: true/);
     assert.match(script, /Old customer workspace leaked into owner page/);
     assert.match(script, /Exactly one current owner module required/);
     assert.match(script, /if \(width <= 390\)/);
@@ -45,7 +48,7 @@ void test('owner Operations preview is synthetic-only and renders the real owner
     assert.match(fixture, /function OwnerOpsPreview\(/);
     assert.match(fixture, /<OwnerModuleShell>/);
     assert.match(fixture, /<OperatorOps/);
-    assert.match(fixture, /ownerOps \? 'operator-ops'/);
+    assert.match(fixture, /ownerOps\s*\?\s*'operator-ops'/);
     assert.match(fixture, /\['\/operator', '\/super-admin'\]\.includes/);
     assert.match(fixture, /registration_available: false/);
     assert.match(fixture, /: null,/);
