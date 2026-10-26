@@ -108,6 +108,25 @@ jobs:
           set -euo pipefail
           php artisan test --filter='PlatformOwnerConsoleTest|OwnerPaymentGatewaySettingsTest' --no-ansi
 
+      - name: Verify real HTTP owner guards and CodeBridge pairing readiness
+        working-directory: apps/platform
+        env:
+          APP_ENV: testing
+          DB_CONNECTION: sqlite
+          DB_DATABASE: ${{ github.workspace }}/apps/platform/database/database.sqlite
+          MAIL_MAILER: log
+        shell: bash
+        run: |
+          set -euo pipefail
+          # HTTP feature tests go through Laravel middleware, unlike route-only smoke.
+          # They exercise guest denial, non-owner denial, passkey/step-up,
+          # canonical owner UI, and fail-closed pairing origin/readiness.
+          php artisan test \
+            tests/Feature/OperatorCommandOsHttpAccessTest.php \
+            tests/Feature/CodeBridgeEnrollmentReadinessTest.php \
+            tests/Feature/CodeBridgeAgentOriginDoctorTest.php \
+            --no-ansi
+
       - name: Authenticated smoke evidence
         if: always()
         shell: bash
@@ -117,7 +136,8 @@ jobs:
             echo
             echo "- approved commit: `${SMOKE_SHA:-unresolved}`"
             echo "- isolated authenticated route regression: ${{ job.status }}"
-            echo '- surfaces: `/dashboard`, `/operator`, `/operator/ops`, `/purchase`'
+            echo '- surfaces: `/dashboard`, `/operator`, `/super-admin`, `/operator/ops`, `/purchase`'
+            echo '- separate real HTTP feature suite: owner middleware + passkey/step-up + fail-closed CodeBridge public origin/readiness'
             echo '- synthetic owner data: transaction-scoped and rolled back'
             echo '- this is synthetic isolated QA, not authenticated live browser acceptance or production cutover'
             echo '- live commit deployment is verified separately by Staging VPS Deploy'
