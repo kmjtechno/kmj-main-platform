@@ -63,7 +63,7 @@ class StageBackendSafety(unittest.TestCase):
         self.assertIn("listen = /run/php/kmjstage-php84-fpm.sock", SCRIPT)
         self.assertIn("listen.owner = www-data", SCRIPT)
         self.assertIn("SITE_LINK=/home/kmjstage/htdocs/staging.kmjtechno.com", SCRIPT)
-        self.assertIn("No production", SCRIPT)
+        self.assertIn("production pointer", SCRIPT)
         self.assertNotIn("php8.5", SCRIPT)
 
 if __name__=="__main__":
