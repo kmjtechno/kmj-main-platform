@@ -194,3 +194,20 @@
 .owner-module-shell .owner-module-content :is(input, textarea, select) {
     color-scheme: dark;
 }
+
+.owner-module-shell .owner-shared-page {
+    gap: 12px;
+}
+
+.owner-module-shell .owner-shared-page > section {
+    border: 1px solid #394451;
+    border-radius: 11px;
+    background: linear-gradient(130deg, #0b1016, #070c11);
+    padding: 16px;
+    box-shadow: none;
+}
+
+.owner-module-shell .owner-shared-page h1 {
+    font-size: 22px;
+    line-height: 1.3;
+}
