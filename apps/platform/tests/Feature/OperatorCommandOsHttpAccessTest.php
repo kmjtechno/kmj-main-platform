@@ -26,11 +26,14 @@ final class OperatorCommandOsHttpAccessTest extends TestCase
 
     public function test_verified_non_owner_cannot_open_command_os_over_http(): void
     {
-        $this->actingAs(User::factory()->create())
+        $nonOwner = User::factory()->create();
+
+        $this->actingAs($nonOwner)
             ->withSession(['auth.password_confirmed_at' => time()])
             ->get('/operator')
             ->assertForbidden();
-        $this->actingAs(User::query()->firstOrFail())
+
+        $this->actingAs($nonOwner)
             ->withSession(['auth.password_confirmed_at' => time()])
             ->get('/super-admin')
             ->assertForbidden();
@@ -47,6 +50,11 @@ final class OperatorCommandOsHttpAccessTest extends TestCase
         $this->actingAs($user)
             ->withSession(['auth.password_confirmed_at' => time()])
             ->get('/operator')
+            ->assertForbidden();
+
+        $this->actingAs($user)
+            ->withSession(['auth.password_confirmed_at' => time()])
+            ->get('/super-admin')
             ->assertForbidden();
     }
 
