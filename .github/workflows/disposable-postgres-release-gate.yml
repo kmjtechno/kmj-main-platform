@@ -10,6 +10,9 @@ on:
       - 'apps/platform/composer.lock'
       - 'packages/**'
       - 'scripts/ci/verify-postgres-staging.sh'
+      - 'scripts/ci/postgres_schema_metadata.sql'
+      - 'scripts/ci/compare_postgres_schema_metadata.py'
+      - 'tests/test_postgres_schema_metadata.py'
       - '.github/workflows/disposable-postgres-release-gate.yml'
   workflow_call:
   workflow_dispatch:
