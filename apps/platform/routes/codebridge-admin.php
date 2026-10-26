@@ -68,12 +68,15 @@ Route::middleware(['auth', 'verified', 'password.confirm'])
                 ];
             })->all();
 
-            return Inertia::render('operator-codebridge-owner', [
+            $response = Inertia::render('operator-codebridge-owner', [
                 'organizations' => $controls,
                 'endpoint' => $oauth->resource(),
                 'licenses' => $licenses,
                 'limits' => ['devices' => PlanCatalog::CODEBRIDGE_OWNER_DEVICES, 'concurrent_jobs' => PlanCatalog::CODEBRIDGE_OWNER_CONCURRENCY],
-            ])->toResponse($request)->header('Cache-Control', 'no-store, private');
+            ])->toResponse($request);
+            $response->headers->set('Cache-Control', 'no-store, private');
+
+            return $response;
         })->name('owner-plan');
 
         Route::post('licenses/owner-tier', function (Request $request, PlatformOwnerAccess $access, OrganizationDirectory $organizations, CodeBridgeOwnerTierService $service) {
@@ -172,3 +175,4 @@ Route::middleware(['auth', 'verified', 'password.confirm'])
             }
         })->name('devices.revoke');
     });
+

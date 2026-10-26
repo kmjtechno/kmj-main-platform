@@ -108,7 +108,9 @@
     margin-inline: 0;
 }
 
-.owner-module-shell .kmj-admin-shell :is(.kmj-admin-hero, .kmj-admin-nav, .bg-card, .kmj-admin-metric) {
+.owner-module-shell
+    .kmj-admin-shell
+    :is(.kmj-admin-hero, .kmj-admin-nav, .bg-card, .kmj-admin-metric) {
     border: 1px solid #394451;
     border-radius: 11px;
     background: linear-gradient(130deg, #0b1016, #070c11);
