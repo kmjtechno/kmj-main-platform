@@ -42,14 +42,8 @@ Route::post('v1/codebridge/renew', function (Request $request) {
 // a license, authenticated approval, live agent heartbeat or future uptime.
 // No upstream request, DB query, device registration or secret disclosure.
 Route::get('codebridge/v1/device-enrollments/readiness', function () {
-    $origin = config('services.codebridge_gateway.agent_public_url');
-    $appOrigin = config('app.url');
     $ready = config('codebridge.enabled', false) === true
-        && is_string($origin)
-        && is_string($appOrigin)
-        && preg_match('/\Ahttps:\/\/[a-z0-9.-]+(?::443)?\z/Di', $origin) === 1
-        && preg_match('/\Ahttps:\/\/[a-z0-9.-]+(?::443)?\z/Di', $appOrigin) === 1
-        && hash_equals(rtrim($appOrigin, '/'), rtrim($origin, '/'));
+        && CodeBridgeDevicePairingService::verifiedPublicAgentOrigin() !== null;
 
     return response()->json(
         $ready

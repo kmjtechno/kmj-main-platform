@@ -29,6 +29,7 @@ final class CodeBridgeDevicePairingHttpTest extends TestCase
     {
         config()->set('codebridge.enabled', true);
         config()->set('services.codebridge_gateway.url', 'http://127.0.0.1:18787');
+        config()->set('app.url', 'https://gateway.example');
         config()->set('services.codebridge_gateway.agent_public_url', 'https://gateway.example');
         $user = User::factory()->create();
         [$tenant] = $this->fixture($user);
@@ -72,6 +73,18 @@ final class CodeBridgeDevicePairingHttpTest extends TestCase
         self::assertSame('approved_unredeemed', $approvedDirectory[0]['pairing_state']);
         self::assertNull($approvedDirectory[0]['registered_at']);
         self::assertSame('not_verified', $approvedDirectory[0]['connection_status']);
+
+        // A changed origin must fail closed without consuming the one-time
+        // credential. Restoring the audited first-party origin allows retry.
+        config()->set('services.codebridge_gateway.agent_public_url', 'https://wrong.example');
+        $this->postJson('/api/codebridge/v1/device-enrollments/token', [
+            'product' => 'KMJ_CODEBRIDGE',
+            'device_code' => $created['device_code'],
+            'code_verifier' => $verifier,
+            'device_id' => 'vps1',
+        ])->assertStatus(400)->assertJson(['error' => 'CODEBRIDGE_GATEWAY_UNAVAILABLE']);
+        self::assertSame('approved', DB::table('codebridge_device_pairings')->value('status'));
+        config()->set('services.codebridge_gateway.agent_public_url', 'https://gateway.example');
 
         $redeemed = $this->postJson('/api/codebridge/v1/device-enrollments/token', [
             'product' => 'KMJ_CODEBRIDGE',
@@ -122,6 +135,45 @@ final class CodeBridgeDevicePairingHttpTest extends TestCase
         ])->assertStatus(410);
     }
 
+    public function test_first_party_origin_mismatch_and_userinfo_never_issues_device_grant(): void
+    {
+        config()->set('codebridge.enabled', true);
+        config()->set('app.url', 'https://kmjtechno.com');
+        $user = User::factory()->create();
+        [$tenant] = $this->fixture($user);
+
+        foreach ([
+            'https://gateway.example',
+            'https://user:password@kmjtechno.com',
+            'https://kmjtechno.com:444',
+            'http://kmjtechno.com',
+        ] as $candidate) {
+            config()->set('services.codebridge_gateway.agent_public_url', $candidate);
+            $verifier = rtrim(strtr(base64_encode(random_bytes(32)), '+/', '-_'), '=');
+            $challenge = rtrim(strtr(base64_encode(hash('sha256', $verifier, true)), '+/', '-_'), '=');
+            $created = $this->postJson('/api/codebridge/v1/device-enrollments', [
+                'product' => 'KMJ_CODEBRIDGE',
+                'device' => ['id' => 'home-office', 'name' => 'Home Office', 'platform' => 'win32', 'arch' => 'x64'],
+                'project' => ['id' => 'calibration', 'name' => 'Calibration Pro'],
+                'requested_permissions' => ['read', 'write', 'execute'],
+                'code_challenge' => $challenge,
+                'code_challenge_method' => 'S256',
+            ])->assertCreated()->json();
+
+            $this->actingAs($user)->post('/codebridge/pair', [
+                'code' => $created['user_code'],
+                'tenant_id' => $tenant,
+            ])->assertRedirect()->assertSessionHasErrors([
+                'code' => 'CODEBRIDGE_GATEWAY_UNAVAILABLE',
+            ]);
+        }
+
+        self::assertDatabaseCount('codebridge_device_credentials', 0);
+        self::assertDatabaseCount('kslp_activations', 0);
+        self::assertDatabaseCount('codebridge_device_pairings', 4);
+        self::assertSame(4, DB::table('codebridge_device_pairings')->where('status', 'pending')->count());
+    }
+
     public function test_gateway_origin_missing_fails_before_device_registration(): void
     {
         config()->set('codebridge.enabled', true);
@@ -153,6 +205,7 @@ final class CodeBridgeDevicePairingHttpTest extends TestCase
     public function test_existing_device_error_shows_recovery_without_repeat_approval(): void
     {
         config()->set('codebridge.enabled', true);
+        config()->set('app.url', 'https://gateway.example');
         config()->set('services.codebridge_gateway.agent_public_url', 'https://gateway.example');
         $user = User::factory()->create();
         [$tenant] = $this->fixture($user);
@@ -202,6 +255,7 @@ final class CodeBridgeDevicePairingHttpTest extends TestCase
     public function test_pairing_rejects_wrong_verifier_and_expired_code(): void
     {
         config()->set('codebridge.enabled', true);
+        config()->set('app.url', 'https://gateway.example');
         config()->set('services.codebridge_gateway.agent_public_url', 'https://gateway.example');
         $user = User::factory()->create();
         [$tenant] = $this->fixture($user);
