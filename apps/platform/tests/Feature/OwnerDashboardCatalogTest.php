@@ -24,16 +24,23 @@ final class OwnerDashboardCatalogTest extends TestCase
 
         $expected = Product::query()->count();
 
+        // Login's default dashboard now takes verified owners to Command OS.
         $this->actingAs($owner)
             ->get('/dashboard')
+            ->assertRedirect(route('super-admin.index'));
+
+        // Real owner route still requires fresh password confirmation.
+        $this->actingAs($owner)
+            ->withSession(['auth.password_confirmed_at' => time()])
+            ->get('/super-admin')
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
-                ->component('dashboard')
-                ->has('ownerProducts', $expected)
-                ->where('ownerProducts', fn ($products): bool => collect($products)->pluck('slug')->contains('kmj-owner-view-a')
+                ->component('operator')
+                ->has('catalogProducts', $expected)
+                ->where('catalogProducts', fn ($products): bool => collect($products)->pluck('slug')->contains('kmj-owner-view-a')
                     && collect($products)->pluck('slug')->contains('kmj-owner-view-b'))
-                ->where('ownerProducts', fn ($products): bool => collect($products)
-                    ->every(fn (array $product): bool => $product['active_entitlements'] >= 0
+                ->where('catalogProducts', fn ($products): bool => collect($products)
+                    ->every(fn (array $product): bool => $product['active_entitlement_count'] >= 0
                         && array_key_exists('purchase_enabled', $product)
                         && array_key_exists('licensing_enabled', $product)
                         && array_key_exists('is_public', $product))));
