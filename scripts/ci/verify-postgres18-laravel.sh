@@ -72,7 +72,7 @@ docker run --rm -d --name "$container_name" --network none \
 ready=0
 for _ in $(seq 1 90); do
   if [[ -S "$socket/.s.PGSQL.5432" ]] &&
-    docker exec -u postgres "$container_name" psql -X -qAt \
+    docker exec -u postgres "$container_name" psql -h /kmj-socket -X -qAt \
       -v ON_ERROR_STOP=1 -U kmj_qa -d kmj_release_qa -c 'SELECT 1' \
       >/dev/null 2>&1; then
     ready=1
@@ -91,13 +91,13 @@ if [[ "$ready" != 1 ]]; then
     # Only disposable CI setup: no customer data or production credentials.
     docker logs --tail 60 "$container_name" 2>&1 | tail -n 60 || true
     echo 'PG18_CONTAINER_START_LOG_TAIL_END'
-    docker exec -u postgres "$container_name" psql -X -qAt -v ON_ERROR_STOP=1 -U kmj_qa -d kmj_release_qa -c 'SELECT 1' 2>&1 | tail -n 4 || true
+    docker exec -u postgres "$container_name" psql -h /kmj-socket -X -qAt -v ON_ERROR_STOP=1 -U kmj_qa -d kmj_release_qa -c 'SELECT 1' 2>&1 | tail -n 4 || true
   fi
   [[ -S "$socket/.s.PGSQL.5432" ]] && echo 'PG18_UNIX_SOCKET=PRESENT' || echo 'PG18_UNIX_SOCKET=MISSING'
   exit 1
 fi
 query() {
-  docker exec -u postgres "$container_name" psql -X -qAt \
+  docker exec -u postgres "$container_name" psql -h /kmj-socket -X -qAt \
     -v ON_ERROR_STOP=1 -U kmj_qa -d kmj_release_qa -c "$1"
 }
 server_version="$(query 'SHOW server_version_num')"
