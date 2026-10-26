@@ -359,7 +359,8 @@ export default function DeviceControlCenter({
                                     </div>
                                 </div>
                                 <span className="shrink-0 rounded-lg border px-2 py-1 text-xs font-bold">
-                                    {device.pairing_state === 'approved_unredeemed'
+                                    {device.pairing_state ===
+                                    'approved_unredeemed'
                                         ? 'Approved · Not redeemed'
                                         : 'Registered · Live status unknown'}
                                 </span>
@@ -375,16 +376,19 @@ export default function DeviceControlCenter({
                                         Approval has not reached this computer
                                     </p>
                                     <p className="text-muted-foreground mt-1 leading-5">
-                                        A server credential exists, but the agent never
-                                        redeemed its one-time approval. First check whether
-                                        this PC has a saved private agent enrollment.
-                                        If it was lost, do not keep approving new codes.
-                                        Once the public pairing endpoint is healthy, a
-                                        manager can disconnect only this device (recent
-                                        password confirmation required), then approve one
-                                        new code using the first-party Windows installer.
-                                        No files are deleted and no live connection is
-                                        claimed until a gateway heartbeat is verified.
+                                        A server credential exists, but the
+                                        agent never redeemed its one-time
+                                        approval. First check whether this PC
+                                        has a saved private agent enrollment. If
+                                        it was lost, do not keep approving new
+                                        codes. Once the public pairing endpoint
+                                        is healthy, a manager can disconnect
+                                        only this device (recent password
+                                        confirmation required), then approve one
+                                        new code using the first-party Windows
+                                        installer. No files are deleted and no
+                                        live connection is claimed until a
+                                        gateway heartbeat is verified.
                                     </p>
                                 </div>
                             )}
