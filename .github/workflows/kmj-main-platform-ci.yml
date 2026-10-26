@@ -63,6 +63,41 @@ jobs:
           git diff --             resources/js/components/codebridge/device-policy-display.ts \
             resources/js/components/codebridge/device-control-center.tsx             resources/js/pages/services/codebridge.tsx             scripts/check-codebridge-dashboard-truth.test.mjs
 
+  codebridge-windows-oneclick:
+    name: Windows one-click PowerShell parser
+    runs-on: windows-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - name: Reject invalid Windows CodeBridge installer scripts
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $file = 'apps/platform/resources/codebridge/install-windows-device.ps1'
+          $tokens = $null
+          $errors = $null
+          [void][System.Management.Automation.Language.Parser]::ParseFile(
+            (Resolve-Path -LiteralPath $file).Path, [ref]$tokens, [ref]$errors
+          )
+          if (@($errors).Count -ne 0) {
+            foreach ($problem in $errors) {
+              Write-Output ('KMJ_INSTALLER_PARSE_ERROR=' + $problem.ErrorId)
+            }
+            throw 'KMJ_WINDOWS_ONECLICK_PARSER_FAILED'
+          }
+          $badTokens = $null
+          $badErrors = $null
+          [void][System.Management.Automation.Language.Parser]::ParseInput(
+            "Write-Output 'unterminated", [ref]$badTokens, [ref]$badErrors
+          )
+          if (@($badErrors).Count -eq 0) {
+            throw 'KMJ_WINDOWS_PARSER_NEGATIVE_CONTROL_FAILED'
+          }
+          Write-Output 'KMJ_WINDOWS_ONECLICK_PARSER=PASS'
+
   license-core:
     name: Native Rust license verifier
     runs-on: ubuntu-latest
