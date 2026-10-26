@@ -10,6 +10,14 @@ export type DeliveryMilestone = {
 
 export const deliveryMilestones: DeliveryMilestone[] = [
     {
+        id: 'owner-expanded-dashboard-visual-lock',
+        title: 'Locked theme for expanded dashboard controls',
+        state: 'active',
+        detail: 'The actual owner dashboard now scopes its advanced workspace cards and commercial-order surfaces to the locked Command OS palette, borders and compact cards. Hero, Kristi artwork, payment confirmation and license authorization are preserved.',
+        evidence:
+            'Responsive browser QA now renders the real Operator page rather than only its upper Command OS component. Before the styling fix, expanded-card checks failed at all six widths while other application gates passed. Fresh exact-head verification and private owner acceptance remain required.',
+    },
+    {
         id: 'owner-locked-shell-account-developer-brand-contrast',
         title: 'Locked owner shell across account and developer pages',
         state: 'active',

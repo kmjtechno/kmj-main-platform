@@ -228,7 +228,7 @@ export default function Operator({
     return (
         <>
             <Head title="KMJ Enterprise Command OS · Super Admin" />
-            <div className="kmj-admin-shell kmj-os-page flex h-full min-w-0 flex-1 flex-col gap-6 overflow-x-auto p-0 sm:p-0">
+            <div className="owner-dashboard-page kmj-admin-shell kmj-os-page flex h-full min-w-0 flex-1 flex-col gap-6 overflow-x-auto p-0 sm:p-0">
                 <OperatorCommandOs
                     metrics={metrics}
                     catalogProducts={catalogProducts}
