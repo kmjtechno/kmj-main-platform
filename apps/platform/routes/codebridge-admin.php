@@ -175,4 +175,3 @@ Route::middleware(['auth', 'verified', 'password.confirm'])
             }
         })->name('devices.revoke');
     });
-

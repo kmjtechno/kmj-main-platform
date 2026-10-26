@@ -4,6 +4,7 @@ import Welcome from '../resources/js/pages/welcome';
 import OperatorCommandOs from '../resources/js/components/operator-command-os';
 import OwnerModuleShell from '../resources/js/layouts/owner-module-shell';
 import OperatorOps from '../resources/js/pages/operator-ops';
+import OperatorCodeBridgeOwner from '../resources/js/pages/operator-codebridge-owner';
 import '../resources/css/app.css';
 const catalog = [
     [
@@ -182,19 +183,63 @@ function OwnerOpsPreview() {
         </OwnerModuleShell>
     );
 }
+function OwnerDevicesPreview() {
+    return (
+        <OwnerModuleShell>
+            <OperatorCodeBridgeOwner
+                endpoint="http://127.0.0.1:4173/mcp"
+                licenses={[]}
+                limits={{ devices: 2147483647, concurrent_jobs: 16 }}
+                organizations={[
+                    {
+                        id: 'qa-preview-organization',
+                        name: 'Synthetic preview organization',
+                        plan: null,
+                        deviceLimit: null,
+                        managedCount: 1,
+                        canManage: false,
+                        devices: [
+                            {
+                                id: 'qa-preview-desktop',
+                                name: 'Synthetic preview desktop',
+                                platform: 'windows',
+                                arch: 'x64',
+                                projects: [
+                                    {
+                                        id: 'qa-preview-project',
+                                        name: 'Synthetic preview project',
+                                    },
+                                ],
+                                registration: 'registered',
+                                connection_status: 'not_verified',
+                            },
+                        ],
+                    },
+                ]}
+            />
+        </OwnerModuleShell>
+    );
+}
+const ownerDevices = location.pathname === '/operator/codebridge/owner-plan';
 const ownerOps = location.pathname === '/operator/ops';
 
 const owner = ['/operator', '/super-admin'].includes(location.pathname);
 void createInertiaApp({
     page: {
-        component: ownerOps ? 'operator-ops' : owner ? 'operator' : 'welcome',
+        component: ownerOps
+            ? 'operator-ops'
+            : ownerDevices
+              ? 'operator-codebridge-owner'
+              : owner
+                ? 'operator'
+                : 'welcome',
         props: {
             errors: {},
             // Landing is a signed-out customer preview; owner routes use
             // synthetic session data. Never authenticate or persist a user.
             auth: {
                 user:
-                    owner || ownerOps
+                    owner || ownerOps || ownerDevices
                         ? {
                               id: 1,
                               name: 'KMJ QA Owner',
@@ -205,7 +250,7 @@ void createInertiaApp({
                           }
                         : null,
             },
-            operator: { enabled: owner || ownerOps },
+            operator: { enabled: owner || ownerOps || ownerDevices },
             publicSite: {
                 base_url: 'http://127.0.0.1:4173',
                 indexable: false,
@@ -230,5 +275,11 @@ void createInertiaApp({
         encryptHistory: false,
     },
     resolve: () =>
-        ownerOps ? OwnerOpsPreview : owner ? OperatorCommandOs : Welcome,
+        ownerOps
+            ? OwnerOpsPreview
+            : ownerDevices
+              ? OwnerDevicesPreview
+              : owner
+                ? OperatorCommandOs
+                : Welcome,
 });

@@ -10,7 +10,7 @@ if (!['127.0.0.1', 'localhost', '[::1]'].includes(base.hostname))
     );
 const out = path.resolve(process.env.KMJ_SCREENSHOT_DIR || 'visual-results');
 await mkdir(out, { recursive: true });
-let args = ['--no-sandbox'];
+let args = [];
 let executablePath = process.env.KMJ_CHROMIUM_EXECUTABLE;
 if (process.env.KMJ_CHROMIUM_MODULE) {
     const loaded = require(process.env.KMJ_CHROMIUM_MODULE);
@@ -18,7 +18,20 @@ if (process.env.KMJ_CHROMIUM_MODULE) {
     executablePath = await binary.executablePath();
     args = binary.args;
 }
-const browser = await chromium.launch({ headless: true, args, executablePath });
+if (
+    args.some((arg) =>
+        /^--(?:no-sandbox|disable-(?:setuid|namespace|seccomp-filter|gpu)-sandbox)(?:=|$)/.test(
+            arg,
+        ),
+    )
+)
+    throw new Error('Sandbox-disabled Chromium arguments are not permitted');
+const browser = await chromium.launch({
+    headless: true,
+    args,
+    executablePath,
+    chromiumSandbox: true,
+});
 const results = [];
 try {
     // Covers the smallest supported mobile layout through full desktop.
@@ -27,6 +40,7 @@ try {
             ['landing', '/'],
             ['super-admin', '/super-admin'],
             ['owner-ops', '/operator/ops'],
+            ['owner-devices', '/operator/codebridge/owner-plan'],
         ]) {
             const page = await browser.newPage({
                 viewport: { width, height: 1024 },
@@ -245,6 +259,54 @@ try {
                         .waitFor({ state: 'visible' });
                     await page.keyboard.press('Escape');
                 }
+            }
+            if (name === 'owner-devices') {
+                if (
+                    (await page
+                        .getByRole('heading', {
+                            name: 'CodeBridge Control Center',
+                            exact: true,
+                        })
+                        .count()) !== 1
+                )
+                    errors.push('Owner CodeBridge controls missing');
+                if (
+                    (await page
+                        .getByRole('heading', {
+                            name: 'Device Control Center',
+                            exact: true,
+                        })
+                        .count()) !== 1
+                )
+                    errors.push('Real device control component missing');
+                const search = page.getByRole('textbox', {
+                    name: 'Search devices and projects',
+                });
+                await search.fill('no-such-preview-device');
+                if (
+                    !(await page
+                        .getByText('No devices match these filters.', {
+                            exact: true,
+                        })
+                        .isVisible())
+                )
+                    errors.push('Device search failed');
+                await search.fill('');
+                await page
+                    .getByRole('button', {
+                        name: 'Details & diagnose',
+                        exact: true,
+                    })
+                    .click();
+                if (
+                    (await page
+                        .getByRole('button', {
+                            name: 'Hide details',
+                            exact: true,
+                        })
+                        .getAttribute('aria-expanded')) !== 'true'
+                )
+                    errors.push('Device details did not open');
             }
             if (name === 'owner-ops') {
                 if (
