@@ -27,7 +27,16 @@ if [[ "$mode" == --prepare ]]; then
 fi
 prod="$(readlink -f /home/kmjprod/current)" || blocked PRODUCTION_BASELINE_MISSING
 [[ -d "$prod" && -d "$SOURCE/.git" && ! -L "$SOURCE" ]] || blocked PRODUCTION_OR_SOURCE_MISSING
-[[ -f "$VHOST" && ! -L "$VHOST" ]] || blocked DEDICATED_VHOST_FILE_MISSING
+# Ubuntu convention: sites-enabled is often a symlink to sites-available.
+# Follow only an exact staging config within /etc/nginx/sites-available;
+# no scripts or mutable production vhosts are written through this path.
+if [[ -L "$VHOST" ]]; then
+  vhost_target="$(readlink -f -- "$VHOST")" || blocked STAGING_VHOST_SYMLINK_UNRESOLVED
+  [[ "$vhost_target" == /etc/nginx/sites-available/staging.kmjtechno.com.conf &&
+     -f "$vhost_target" && ! -L "$vhost_target" ]] || blocked STAGING_VHOST_SYMLINK_OUTSIDE_APPROVED_PATH
+else
+  [[ -f "$VHOST" ]] || blocked DEDICATED_VHOST_FILE_MISSING
+fi
 vhost_hash="$(sha256sum "$VHOST" | cut -d' ' -f1)"
 [[ ! -e "$SITE_LINK" && ! -L "$SITE_LINK" ]] || blocked STAGING_SITE_ALREADY_PRESENT
 [[ ! -e "$BASE" && ! -L "$BASE" ]] || blocked STAGING_RELEASE_ALREADY_PRESENT
