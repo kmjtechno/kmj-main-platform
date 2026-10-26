@@ -492,7 +492,6 @@ final class CodeBridgeAdminHttpTest extends TestCase
             ->where('action', 'codebridge_device_credential_revoked')->count());
     }
 
-
     public function test_owner_controls_show_only_owned_devices_without_credentials_or_invented_heartbeat(): void
     {
         $this->withoutVite();

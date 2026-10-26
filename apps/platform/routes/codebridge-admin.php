@@ -1,6 +1,8 @@
 <?php
 
 use App\Models\User;
+use App\Services\CodeBridge\OAuth\OAuthServer;
+use App\Services\Licensing\CodeBridge\CodeBridgeCustomerDeviceDirectory;
 use App\Services\Licensing\CodeBridge\CodeBridgeDeviceCredentialService;
 use App\Services\Licensing\CodeBridge\CodeBridgeDeviceEnrollmentService;
 use App\Services\Licensing\CodeBridge\CodeBridgeOwnerTierService;
@@ -16,15 +18,15 @@ Route::middleware(['auth', 'verified', 'password.confirm'])
     ->prefix('operator/codebridge')
     ->name('operator.codebridge.')
     ->group(function (): void {
-        Route::get('owner-plan', function (Request $request, PlatformOwnerAccess $access, OrganizationDirectory $organizations) {
+        Route::get('owner-plan', function (Request $request, PlatformOwnerAccess $access, OrganizationDirectory $organizations, CodeBridgeCustomerDeviceDirectory $deviceDirectory, OAuthServer $oauth) {
             $user = $request->user();
             abort_unless($user instanceof User, 401);
             $access->require($user);
 
-            $ownedTenants = collect($organizations->forUser((int) $user->id))
+            $ownedOrganizations = collect($organizations->forUser((int) $user->id))
                 ->filter(fn (array $org): bool => $organizations->userCanManage((int) $user->id, $org['id']))
-                ->pluck('id')
-                ->all();
+                ->values();
+            $ownedTenants = $ownedOrganizations->pluck('id')->all();
 
             $licenses = $ownedTenants === [] ? collect() : DB::table('kslp_licenses')
                 ->whereIn('customer_id', $ownedTenants)
@@ -32,10 +34,46 @@ Route::middleware(['auth', 'verified', 'password.confirm'])
                 ->orderByDesc('created_at')
                 ->get(['id', 'customer_id', 'plan', 'status', 'expires_at', 'revoked_at']);
 
+            $controls = $ownedOrganizations->map(function (array $organization) use ($deviceDirectory): array {
+                $tenant = (string) $organization['id'];
+                $license = DB::table('kslp_licenses')
+                    ->where('customer_id', $tenant)
+                    ->where('product', 'KMJ_CODEBRIDGE')
+                    ->where('status', 'active')
+                    ->whereNull('revoked_at')
+                    ->where('starts_at', '<=', now())
+                    ->where('expires_at', '>', now())
+                    ->oldest('created_at')
+                    ->first(['plan']);
+                $plan = $license === null ? null : DB::table('plans')
+                    ->where('code', 'codebridge.'.$license->plan)
+                    ->where('status', 'active')
+                    ->first(['limits']);
+                $limits = $plan && is_string($plan->limits) ? json_decode($plan->limits, true) : null;
+
+                return [
+                    'id' => $tenant,
+                    'name' => (string) $organization['name'],
+                    'plan' => $license?->plan,
+                    'canManage' => $license !== null,
+                    'deviceLimit' => is_array($limits) && is_int($limits['devices'] ?? null) ? $limits['devices'] : null,
+                    'managedCount' => DB::table('codebridge_device_credentials')
+                        ->where('tenant_id', $tenant)
+                        ->whereNull('revoked_at')
+                        ->where('expires_at_epoch', '>', time())
+                        ->count(),
+                    // This existing directory returns safe metadata only and
+                    // deliberately reports heartbeat as not_verified.
+                    'devices' => $deviceDirectory->forTenant($tenant, time()),
+                ];
+            })->all();
+
             return Inertia::render('operator-codebridge-owner', [
+                'organizations' => $controls,
+                'endpoint' => $oauth->resource(),
                 'licenses' => $licenses,
                 'limits' => ['devices' => PlanCatalog::CODEBRIDGE_OWNER_DEVICES, 'concurrent_jobs' => PlanCatalog::CODEBRIDGE_OWNER_CONCURRENCY],
-            ]);
+            ])->toResponse($request)->header('Cache-Control', 'no-store, private');
         })->name('owner-plan');
 
         Route::post('licenses/owner-tier', function (Request $request, PlatformOwnerAccess $access, OrganizationDirectory $organizations, CodeBridgeOwnerTierService $service) {

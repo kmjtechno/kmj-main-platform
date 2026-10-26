@@ -1,5 +1,6 @@
+import DeviceControlCenter, { type CodeBridgeDevice } from '@/components/codebridge/device-control-center';
 import OperatorModuleNavigation from '@/components/operator-module-navigation';
-import { Head, router, usePage } from '@inertiajs/react';
+import { Head, Link, router, usePage } from '@inertiajs/react';
 import { useState } from 'react';
 import { ShieldCheck, Server, LockKeyhole } from 'lucide-react';
 
@@ -12,7 +13,19 @@ type License = {
     revoked_at: string | null;
 };
 
+type ManagedOrganization = {
+    id: string;
+    name: string;
+    plan: string | null;
+    deviceLimit: number | null;
+    managedCount: number;
+    canManage: boolean;
+    devices: CodeBridgeDevice[];
+};
+
 type Props = {
+    organizations: ManagedOrganization[];
+    endpoint: string;
     licenses: License[];
     limits: { devices: number; concurrent_jobs: number };
     errors?: Record<string, string>;
@@ -20,7 +33,7 @@ type Props = {
 
 const CONFIRM = 'UPGRADE_CODEBRIDGE_OWNER';
 
-export default function OperatorCodeBridgeOwner({ licenses, limits }: Props) {
+export default function OperatorCodeBridgeOwner({ licenses, limits, organizations, endpoint }: Props) {
     const [confirmation, setConfirmation] = useState('');
     const [processing, setProcessing] = useState<string | null>(null);
     const { errors } = usePage<{ errors?: Record<string, string> }>().props;
@@ -45,9 +58,50 @@ export default function OperatorCodeBridgeOwner({ licenses, limits }: Props) {
 
     return (
         <>
-            <Head title="KMJ CodeBridge — Internal Owner Plan" />
+            <Head title="KMJ CodeBridge Control Center" />
             <main className="kmj-admin-shell flex min-w-0 flex-1 flex-col gap-6 p-4 sm:p-6 lg:p-8">
                 <OperatorModuleNavigation active="codebridge" />
+                <section className="kmj-admin-hero rounded-xl p-4">
+                    <h1 className="text-2xl font-bold">CodeBridge Control Center</h1>
+                    <p className="text-muted-foreground mt-2 text-sm">
+                        Connect a computer, approve pairing, manage registered devices and assign projects.
+                    </p>
+                    <div className="mt-4 flex flex-wrap gap-2">
+                        <a href="/install-codebridge-windows.cmd" download className="rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white">Connect Windows PC</a>
+                        <a href="/install" download="KMJ-CodeBridge-Connect-Linux.sh" className="rounded-lg border px-4 py-2 text-sm">Connect Linux / VPS</a>
+                        <Link href="/codebridge/pair" className="rounded-lg border px-4 py-2 text-sm">Approve pairing code</Link>
+                        <Link href="/services/kmj-codebridge" className="rounded-lg border px-4 py-2 text-sm">Clients &amp; connection setup</Link>
+                        <button type="button" onClick={() => router.reload({ only: ['organizations'] })} className="rounded-lg border px-4 py-2 text-sm">Refresh devices</button>
+                    </div>
+                </section>
+                {organizations.length === 0 && (
+                    <section className="bg-card rounded-xl border p-4">
+                        <h2 className="font-bold">No managed organization yet</h2>
+                        <p className="text-muted-foreground mt-2 text-sm">
+                            This account has no organization it can manage. Device controls appear here after an authorized organization and CodeBridge license are associated with the account. Pairing does not create a license automatically.
+                        </p>
+                    </section>
+                )}
+                {organizations.map((organization) => (
+                    <section key={organization.id} className="min-w-0 space-y-3">
+                        <h2 className="text-lg font-bold">{organization.name}</h2>
+                        {!organization.canManage && (
+                            <p role="status" className="text-sm text-amber-300">An active CodeBridge license is required to manage devices in this organization.</p>
+                        )}
+                        <DeviceControlCenter
+                            tenantId={organization.id}
+                            plan={organization.plan}
+                            devices={organization.devices}
+                            managedCount={organization.managedCount}
+                            deviceLimit={organization.deviceLimit}
+                            canManage={organization.canManage}
+                            endpoint={endpoint}
+                        />
+                    </section>
+                ))}
+                <details className="bg-card rounded-xl border p-4">
+                    <summary className="cursor-pointer font-bold">Owner license settings</summary>
+                    <div className="mt-4 space-y-4">
                 <section className="kmj-admin-hero rounded-[1.65rem] p-6 sm:p-8">
                     <div className="flex items-center gap-3">
                         <ShieldCheck className="h-8 w-8 text-red-500" />
@@ -65,7 +119,7 @@ export default function OperatorCodeBridgeOwner({ licenses, limits }: Props) {
                     <div className="mt-5 flex flex-wrap gap-3 text-sm">
                         <span className="rounded-lg border px-3 py-2">
                             <Server className="mr-2 inline h-4 w-4" />
-                            Up to {limits.devices} devices
+                            Owner-tier device policy
                         </span>
                         <span className="rounded-lg border px-3 py-2">
                             Up to {limits.concurrent_jobs} concurrent jobs
@@ -187,6 +241,8 @@ export default function OperatorCodeBridgeOwner({ licenses, limits }: Props) {
                         </div>
                     )}
                 </section>
+                    </div>
+                </details>
             </main>
         </>
     );
