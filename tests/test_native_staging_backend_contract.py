@@ -24,6 +24,9 @@ class StageBackendSafety(unittest.TestCase):
                      "STAGING_DB_OR_ROLE_ALREADY_PRESENT","STAGING_DOMAIN_NOT_ISOLATED",
                      "STAGING_PLACEHOLDER_NOT_PRESENT","PRODUCTION_OR_NGINX_CHANGED"):
             self.assertIn(text, SCRIPT)
+        self.assertIn("STAGING_VHOST_SYMLINK_OUTSIDE_APPROVED_PATH", SCRIPT)
+        self.assertIn("/etc/nginx/sites-available/staging.kmjtechno.com.conf", SCRIPT)
+        self.assertIn('! -L "$vhost_target"', SCRIPT)
         self.assertIn('readlink -f /home/kmjprod/current', SCRIPT)
         self.assertIn("sha256sum \"$VHOST\"", SCRIPT)
         for forbidden in ("git reset --hard", "git clean", "rm -rf", "DROP DATABASE",
