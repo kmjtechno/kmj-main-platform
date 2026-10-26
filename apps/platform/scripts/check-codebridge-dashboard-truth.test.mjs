@@ -33,6 +33,17 @@ void test('dashboard never invents online device presence from registration', ()
     assert.doesNotMatch(deviceUi, />\s*Online\s*</);
 });
 
+void test('approved-but-unredeemed device cannot masquerade as a successfully paired agent', () => {
+    assert.match(directory, /'pairing_state' =>/);
+    assert.match(directory, /'approved_unredeemed'/);
+    assert.match(directory, /'redeemed'/);
+    assert.match(deviceCenter, /Approved · Not redeemed/);
+    assert.match(deviceCenter, /Approval has not reached this computer/);
+    assert.match(deviceCenter, /recent\s+password confirmation required/);
+    assert.match(deviceCenter, /gateway heartbeat is verified/);
+    assert.match(deviceCenter, /connection_status: 'not_verified'/);
+});
+
 void test('permissions must be backed by actual server-authorized scope', () => {
     assert.match(ui, /service\.permissions\.map\(\(permission\)/);
     assert.match(ui, /No permissions reported/);

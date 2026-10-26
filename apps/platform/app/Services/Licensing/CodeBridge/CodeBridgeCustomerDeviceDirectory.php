@@ -36,6 +36,7 @@ final class CodeBridgeCustomerDeviceDirectory
                 'p.project_id',
                 'p.project_name',
                 'p.consumed_at',
+                'p.status as pairing_status',
             ]);
 
         // Assignment requests are distinct from active/pairing grants. They
@@ -77,6 +78,12 @@ final class CodeBridgeCustomerDeviceDirectory
                     })->values()->all(),
                 'registered_at' => $row->consumed_at,
                 'registration' => 'registered',
+                // Approval writes a server credential before the agent proves
+                // possession of its pairing verifier. This is NOT a live agent.
+                'pairing_state' => $row->pairing_status === 'approved' && $row->consumed_at === null
+                    ? 'approved_unredeemed'
+                    : ($row->pairing_status === 'consumed' && $row->consumed_at !== null
+                        ? 'redeemed' : 'unknown'),
                 'connection_status' => 'not_verified',
             ];
         })->all();
