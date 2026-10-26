@@ -492,6 +492,80 @@ final class CodeBridgeAdminHttpTest extends TestCase
             ->where('action', 'codebridge_device_credential_revoked')->count());
     }
 
+
+    public function test_owner_controls_show_only_owned_devices_without_credentials_or_invented_heartbeat(): void
+    {
+        $this->withoutVite();
+        $tenant = (string) Str::uuid();
+        $otherTenant = (string) Str::uuid();
+        [$license, $activation] = $this->fixture($tenant);
+        $this->fixture($otherTenant);
+        $owner = $this->platformOwner();
+        $this->ownTenant($owner, $tenant);
+        $otherOwner = $this->platformOwner();
+        $this->ownTenant($otherOwner, $otherTenant);
+        $session = ['auth.password_confirmed_at' => time()];
+
+        $enrolled = $this->actingAs($owner)->withSession($session)
+            ->postJson('/operator/codebridge/devices/enroll', [
+                'license_id' => $license,
+                'activation_id' => $activation,
+                'tenant_id' => $tenant,
+                'device_id' => 'owner-device',
+            ])->assertCreated();
+
+        $response = $this->actingAs($owner)->withSession($session)
+            ->get('/operator/codebridge/owner-plan');
+        $response->assertOk()
+            ->assertHeader('Cache-Control', 'no-store, private')
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->component('operator-codebridge-owner')
+                ->has('organizations', 1)
+                ->where('organizations.0.id', $tenant)
+                ->where('organizations.0.canManage', true)
+                ->where('organizations.0.managedCount', 1)
+                ->where('organizations.0.deviceLimit', 2)
+                ->where('organizations.0.devices.0.id', 'owner-device')
+                ->where('organizations.0.devices.0.connection_status', 'not_verified')
+                ->missing('organizations.0.devices.0.credential')
+                ->missing('organizations.1')
+                ->etc());
+        self::assertStringNotContainsString($enrolled->json('credential'), $response->getContent());
+    }
+
+    public function test_owner_controls_empty_state_never_provisions_an_organization_or_license(): void
+    {
+        $this->withoutVite();
+        $owner = $this->platformOwner();
+        $this->actingAs($owner)->withSession(['auth.password_confirmed_at' => time()])
+            ->get('/operator/codebridge/owner-plan')
+            ->assertOk()
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->has('organizations', 0)
+                ->has('licenses', 0)
+                ->etc());
+        self::assertSame(0, DB::table('organizations')->count());
+        self::assertSame(0, DB::table('kslp_licenses')->count());
+    }
+
+    public function test_expired_license_cannot_enable_owner_device_controls(): void
+    {
+        $this->withoutVite();
+        $tenant = (string) Str::uuid();
+        [$license] = $this->fixture($tenant);
+        $owner = $this->platformOwner();
+        $this->ownTenant($owner, $tenant);
+        DB::table('kslp_licenses')->where('id', $license)->update(['expires_at' => now()->subMinute()]);
+
+        $this->actingAs($owner)->withSession(['auth.password_confirmed_at' => time()])
+            ->get('/operator/codebridge/owner-plan')
+            ->assertOk()
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->where('organizations.0.canManage', false)
+                ->where('organizations.0.plan', null)
+                ->etc());
+    }
+
     /** @return array{string, string} */
     private function fixture(string $tenant): array
     {
