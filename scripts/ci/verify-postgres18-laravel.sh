@@ -46,6 +46,12 @@ cleanup() {
     grep -qx '# KMJ disposable PG18 CI only' "$repo/apps/platform/.env"; then
     rm -- "$repo/apps/platform/.env"
   fi
+  # PostgreSQL owns socket files. Reclaim ONLY our private generated socket
+  # directory (never arbitrary host files) after container shutdown.
+  if [[ -d "$socket" && ! -L "$socket" && "$socket" == "$tmp/socket" ]]; then
+    sudo chown "$(id -u):$(id -g)" "$socket"
+    chmod 0700 "$socket"
+  fi
   rm -rf -- "$tmp"
 }
 trap cleanup EXIT
