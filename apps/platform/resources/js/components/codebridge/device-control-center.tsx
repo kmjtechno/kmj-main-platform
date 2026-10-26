@@ -31,6 +31,7 @@ export type CodeBridgeDevice = {
         status: 'pending_local_setup';
     }>;
     registration: 'registered';
+    pairing_state?: 'approved_unredeemed' | 'redeemed' | 'unknown';
     connection_status: 'not_verified';
     registered_at?: string | null;
 };
@@ -358,7 +359,9 @@ export default function DeviceControlCenter({
                                     </div>
                                 </div>
                                 <span className="shrink-0 rounded-lg border px-2 py-1 text-xs font-bold">
-                                    Registered · Live status unknown
+                                    {device.pairing_state === 'approved_unredeemed'
+                                        ? 'Approved · Not redeemed'
+                                        : 'Registered · Live status unknown'}
                                 </span>
                             </div>
 
@@ -366,6 +369,25 @@ export default function DeviceControlCenter({
                                 <ShieldAlert className="h-4 w-4 text-amber-500" />
                                 Live connection has not been verified
                             </div>
+                            {device.pairing_state === 'approved_unredeemed' && (
+                                <div className="mt-3 rounded-lg border border-amber-500/30 p-3 text-xs">
+                                    <p className="font-black text-amber-600 dark:text-amber-400">
+                                        Approval has not reached this computer
+                                    </p>
+                                    <p className="text-muted-foreground mt-1 leading-5">
+                                        A server credential exists, but the agent never
+                                        redeemed its one-time approval. First check whether
+                                        this PC has a saved private agent enrollment.
+                                        If it was lost, do not keep approving new codes.
+                                        Once the public pairing endpoint is healthy, a
+                                        manager can disconnect only this device (recent
+                                        password confirmation required), then approve one
+                                        new code using the first-party Windows installer.
+                                        No files are deleted and no live connection is
+                                        claimed until a gateway heartbeat is verified.
+                                    </p>
+                                </div>
+                            )}
                             {device.registered_at && (
                                 <p className="text-muted-foreground mt-1 text-xs">
                                     Registered{' '}
