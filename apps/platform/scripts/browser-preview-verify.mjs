@@ -208,14 +208,16 @@ try {
                 const ownerShell = await page
                     .locator('.owner-lock')
                     .boundingBox();
+                const availableWidth = await page.evaluate(
+                    () => document.documentElement.clientWidth,
+                );
                 if (
                     !ownerShell ||
-                    ownerShell.width > Math.min(1520, width) + 1 ||
-                    ownerShell.x < -1 ||
-                    ownerShell.x + ownerShell.width > width + 1
+                    Math.abs(ownerShell.x) > 1 ||
+                    Math.abs(ownerShell.width - availableWidth) > 1
                 )
                     errors.push(
-                        'Owner Command OS exceeds 1520px bounded canvas',
+                        'Owner Command OS must fill the viewport width',
                     );
                 await page.keyboard.press('Control+k');
                 await page.getByRole('dialog').waitFor();
