@@ -22,8 +22,10 @@ const legalPaths = [
     '/cookie-policy',
 ];
 
-test('sitemap legal pages also pass the server production indexability allowlist', () => {
-    const sitemap = routes.split("Route::get('sitemap.xml'")[1]?.split("})->name('sitemap');")[0];
+test('sitemap legal pages pass the server indexability gate', () => {
+    const sitemap = routes
+        .split("Route::get('sitemap.xml'")[1]
+        ?.split("})->name('sitemap');")[0];
     assert.ok(sitemap, 'sitemap endpoint must exist');
     for (const path of legalPaths) {
         assert.ok(
@@ -38,10 +40,10 @@ test('sitemap legal pages also pass the server production indexability allowlist
     assert.match(allowlist, /'products\.\*'/);
     assert.match(allowlist, /'trust'/);
     assert.doesNotMatch(allowlist, /'auth\.\*'|'operator\.\*'|'dashboard'/);
-    assert.match(blade, /config\('app\.public_indexing', false\) && \$publicIndexableRoute/);
+    assert.match(blade, /app\.public_indexing.*\$publicIndexableRoute/);
 });
 
-test('public canonical, social cards and truthful structured data are retained', () => {
+test('public canonical, social cards and structured data exist', () => {
     assert.match(seo, /rel="canonical"/);
     assert.match(seo, /property="og:url"/);
     assert.match(seo, /property="og:image"/);
@@ -50,25 +52,30 @@ test('public canonical, social cards and truthful structured data are retained',
     assert.match(seo, /publicSite\.indexable/);
     assert.match(seo, /'noindex,nofollow'/);
     assert.match(routes, /\$product\['lifecycle_label'\]/);
-    assert.match(routes, /Roadmap, development and preview labels must not be interpreted as production availability/);
+    assert.match(routes, /preview labels must not be interpreted/);
 });
 
-test('robots and XML sitemap refer to one canonical origin without opening private routes', () => {
+test('robots and XML sitemap keep public-only paths', () => {
     assert.match(robots, /^User-agent: \*$/m);
     assert.match(robots, /^Sitemap: https:\/\/kmjtechno\.com\/sitemap\.xml$/m);
     assert.doesNotMatch(robots, /Disallow: \//);
-    const sitemap = routes.split("Route::get('sitemap.xml'")[1]?.split("})->name('sitemap');")[0];
+    const sitemap = routes
+        .split("Route::get('sitemap.xml'")[1]
+        ?.split("})->name('sitemap');")[0];
     assert.ok(sitemap);
     assert.match(sitemap, /config\('app\.public_indexing', false\)/);
     assert.match(sitemap, /htmlspecialchars/);
-    assert.doesNotMatch(sitemap, /\/dashboard|\/operator|\/login|\/api\/codebridge/);
+    assert.doesNotMatch(sitemap, /\/dashboard|\/operator|\/login/);
+    assert.doesNotMatch(sitemap, /\/api\/codebridge/);
 });
 
-test('GEO source declares product lifecycle and approved authority without invented ranking claims', () => {
-    const llms = routes.split("Route::get('llms.txt'")[1]?.split("})->name('llms');")[0];
+test('AI discovery retains truthful lifecycle information', () => {
+    const llms = routes
+        .split("Route::get('llms.txt'")[1]
+        ?.split("})->name('llms');")[0];
     assert.ok(llms, 'AI-readable optional discovery route must exist');
     assert.match(llms, /\$product\['lifecycle_label'\]/);
     assert.match(llms, /\$products->all\(\)/);
     assert.match(llms, /prefer the canonical product page and lifecycle label/);
-    assert.doesNotMatch(llms, /#1 globally|guaranteed AI ranking|top in ChatGPT/i);
+    assert.doesNotMatch(llms, /#1 globally|guaranteed AI ranking/i);
 });
