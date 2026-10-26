@@ -58,8 +58,8 @@ pg_uid="$(docker run --rm --network none --entrypoint id "$image" -u postgres)"
 }
 # Host runner accesses socket through its private group. Container may write
 # as its PostgreSQL UID. No network port and no public host socket directory.
-sudo chown "$pg_uid:$(id -g)" "$socket"
 chmod 0770 "$socket"
+sudo chown "$pg_uid:$(id -g)" "$socket"
 docker run --rm -d --name "$container_name" --network none \
   -e POSTGRES_USER=kmj_qa \
   -e POSTGRES_DB=kmj_release_qa \
