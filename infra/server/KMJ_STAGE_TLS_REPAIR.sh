@@ -52,10 +52,23 @@ else
     echo "STAGING_TLS_REPAIR=BLOCKED CERTBOT_UNAVAILABLE" >&2
     exit 7
   fi
-  if ! nginx -T 2>/dev/null | grep -Eq '^[[:space:]]*server_name[[:space:]]+staging[.]kmjtechno[.]com[[:space:]]*;'; then
-    echo "STAGING_TLS_REPAIR=BLOCKED DEDICATED_STAGING_VHOST_MISSING" >&2
+  # Avoid nginx -T | grep -q under pipefail: early grep exit may give
+  # nginx SIGPIPE (141), falsely reporting an existing vhost as missing.
+  # Capture the validated effective configuration privately in memory.
+  if ! nginx_vhosts="$(nginx -T 2>/dev/null)"; then
+    echo "STAGING_TLS_REPAIR=BLOCKED NGINX_EFFECTIVE_CONFIG_UNREADABLE" >&2
     exit 7
   fi
+  if ! grep -Eq '^[[:space:]]*server_name[[:space:]]+staging[.]kmjtechno[.]com[[:space:]]*;' <<< "$nginx_vhosts"; then
+    if grep -Eq '^[[:space:]]*server_name[[:space:]]+[^;]*staging[.]kmjtechno[.]com' <<< "$nginx_vhosts"; then
+      echo "STAGING_TLS_REPAIR=BLOCKED STAGING_VHOST_NOT_ISOLATED" >&2
+    else
+      echo "STAGING_TLS_REPAIR=BLOCKED DEDICATED_STAGING_VHOST_MISSING" >&2
+    fi
+    exit 7
+  fi
+  unset nginx_vhosts
+  echo "STAGING_VHOST_ISOLATED=PASS"
   if ! certbot plugins --text 2>/dev/null | grep -Eq 'nginx|Nginx'; then
     echo "STAGING_TLS_REPAIR=BLOCKED CERTBOT_NGINX_PLUGIN_MISSING" >&2
     exit 7
