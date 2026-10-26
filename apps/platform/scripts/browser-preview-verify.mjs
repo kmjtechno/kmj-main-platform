@@ -78,7 +78,7 @@ try {
             }
             if (name === 'super-admin') {
                 const advanced = page.locator('.kmj-os-advanced');
-                await advanced.locator('summary').click();
+                await advanced.locator(':scope > summary').click();
                 if (!(await advanced.evaluate((node) => node.open)))
                     errors.push(
                         'Real dashboard advanced controls did not open',
@@ -113,7 +113,7 @@ try {
                         ),
                         fullPage: true,
                     });
-                await advanced.locator('summary').click();
+                await advanced.locator(':scope > summary').click();
             }
             if (name === 'owner-devices') {
                 await page
