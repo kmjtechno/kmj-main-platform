@@ -18,10 +18,10 @@ TEXT_EXTENSIONS = frozenset({
 SKIP_BASENAMES = frozenset({"package-lock.json", "composer.lock"})
 CREDENTIAL_PATTERNS = (
     ("private key", re.compile(r"-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----")),
-    ("GitHub token", re.compile(r"\\b(?:gh[pousr]_[A-Za-z0-9]{30,}|github_pat_[A-Za-z0-9_]{40,})\\b")),
-    ("OpenAI/Anthropic key", re.compile(r"\\bsk-(?:proj-|ant-)?[A-Za-z0-9_-]{24,}\\b")),
-    ("AWS access key", re.compile(r"\\bAKIA[A-Z0-9]{16}\\b")),
-    ("Slack token", re.compile(r"\\bxox[abprs]-[A-Za-z0-9-]{20,}\\b")),
+    ("GitHub token", re.compile(r"\b(?:gh[pousr]_[A-Za-z0-9]{30,}|github_pat_[A-Za-z0-9_]{40,})\b")),
+    ("OpenAI/Anthropic key", re.compile(r"\bsk-(?:proj-|ant-)?[A-Za-z0-9_-]{24,}\b")),
+    ("AWS access key", re.compile(r"\bAKIA[A-Z0-9]{16}\b")),
+    ("Slack token", re.compile(r"\bxox[abprs]-[A-Za-z0-9-]{20,}\b")),
 )
 
 
@@ -47,7 +47,7 @@ def scan_tracked_tree(root: Path) -> tuple[list[str], int]:
     result = subprocess.run(
         ["git", "ls-files", "-z"], cwd=root, check=True, capture_output=True
     )
-    paths = [p.decode("utf-8") for p in result.stdout.split(b"\\0") if p]
+    paths = [p.decode("utf-8") for p in result.stdout.split(b"\0") if p]
     findings: list[str] = []
     scanned = 0
     for relative in paths:
@@ -67,7 +67,7 @@ def scan_tracked_tree(root: Path) -> tuple[list[str], int]:
             findings.append(f"{relative}: oversized text cannot be security-scanned")
             continue
         raw = path.read_bytes()
-        if b"\\x00" in raw:
+        if b"\x00" in raw:
             findings.append(f"{relative}: unexpected binary content in text file")
             continue
         try:
@@ -87,7 +87,7 @@ def validate_production_env(text: str) -> list[str]:
         if not line or line.startswith("#") or "=" not in line:
             continue
         name, value = line.split("=", 1)
-        values[name.strip()] = value.strip().strip('"'')
+        values[name.strip()] = value.strip().strip('"').strip(chr(39))
     required = {
         "APP_ENV": lambda value: value == "production",
         "APP_DEBUG": lambda value: value.lower() in {"false", "0"},
