@@ -59,15 +59,23 @@ try {
                 scrollTo(0, 0);
                 await document.fonts.ready;
             });
-            await page
-                .locator(
-                    name === 'landing'
-                        ? 'h1'
-                        : name === 'owner-ops'
-                          ? '.owner-module-main h1'
-                          : '.owner-main h1',
-                )
-                .waitFor();
+            if (name === 'owner-devices') {
+                await page
+                    .getByRole('heading', {
+                        name: 'CodeBridge Control Center',
+                        exact: true,
+                    })
+                    .waitFor();
+            } else
+                await page
+                    .locator(
+                        name === 'landing'
+                            ? 'h1'
+                            : name === 'owner-ops'
+                              ? '.owner-module-main h1'
+                              : '.owner-main h1',
+                    )
+                    .waitFor();
             // Horizontal carousels can keep valid lazy images outside the
             // viewport. Decode every asset before checking failures so that
             // off-screen, unrequested images are not counted as broken.

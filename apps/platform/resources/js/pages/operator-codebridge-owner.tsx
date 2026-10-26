@@ -163,9 +163,9 @@ export default function OperatorCodeBridgeOwner({
                             <div className="flex items-center gap-3">
                                 <ShieldCheck className="h-8 w-8 text-red-500" />
                                 <div>
-                                    <h1 className="text-2xl font-bold">
+                                    <h2 className="text-2xl font-bold">
                                         KMJ CodeBridge — Internal Owner Plan
-                                    </h1>
+                                    </h2>
                                     <p className="text-muted-foreground mt-1 text-sm">
                                         Verified KMJ Platform Owner only. This
                                         is an internal, non-billable license
