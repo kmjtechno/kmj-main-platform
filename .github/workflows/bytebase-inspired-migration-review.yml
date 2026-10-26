@@ -5,6 +5,9 @@ on:
       - 'apps/platform/database/migrations/**'
       - 'scripts/ci/review_migration_changes.py'
       - 'tests/test_review_migration_changes.py'
+      - 'scripts/ci/postgres_schema_metadata.sql'
+      - 'scripts/ci/compare_postgres_schema_metadata.py'
+      - 'tests/test_postgres_schema_metadata.py'
       - '.github/workflows/bytebase-inspired-migration-review.yml'
   workflow_dispatch:
 permissions:
@@ -25,6 +28,8 @@ jobs:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
       - name: Deterministic no-DB regression suite
         run: python3 -B -m unittest discover -s tests -p test_review_migration_changes.py -v
+      - name: PostgreSQL schema-drift offline regression tests
+        run: python3 -B -m unittest discover -s tests -p test_postgres_schema_metadata.py -v
       - name: Review new migrations and enforce immutability on PR
         if: github.event_name == 'pull_request'
         env:

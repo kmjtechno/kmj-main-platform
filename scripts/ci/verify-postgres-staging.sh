@@ -83,6 +83,43 @@ php artisan migrate --force --no-interaction --no-ansi || { echo 'FAIL: PostgreS
 check_sql="select (to_regclass('public.payment_gateway_settings') is not null and to_regclass('public.kslp_license_keys') is not null)::int"
 [[ "$(query "$check_sql")" == 1 ]] || { echo 'FAIL: required product/payment schema absent' >&2; exit 1; }
 echo 'PASS: fresh PostgreSQL migration apply and both new schema tables'
+# Bytebase-inspired drift guard, isolated PostgreSQL metadata only.
+# The CI schema may run on PG16 even though production target is PG18:
+# report the ACTUAL server major, never claim cross-version parity.
+schema_sql="$tmp/tree/scripts/ci/postgres_schema_metadata.sql"
+schema_compare="$tmp/tree/scripts/ci/compare_postgres_schema_metadata.py"
+test -f "$schema_sql" && test -f "$schema_compare" || {
+  echo 'BLOCKED: immutable schema review scripts absent'; exit 3;
+}
+schema_snapshot() {
+  "$pgbin/psql" -X -q -A -t -v ON_ERROR_STOP=1 \
+    -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USERNAME" -d "$DB_DATABASE" \
+    -f "$schema_sql" > "$1"
+  test -s "$1" || { echo 'BLOCKED: empty PostgreSQL metadata'; exit 3; }
+}
+schema_before="$tmp/schema-before.json"
+schema_same="$tmp/schema-same.json"
+schema_changed="$tmp/schema-changed.json"
+schema_restored="$tmp/schema-restored.json"
+schema_snapshot "$schema_before"
+schema_snapshot "$schema_same"
+python3 -B "$schema_compare" --expected "$schema_before" --actual "$schema_same" \
+  || { echo 'FAIL: read-only PostgreSQL metadata stable replay'; exit 1; }
+# Controlled negative test: the only DB is the temporary private Unix socket.
+query 'CREATE TABLE public.kmj_schema_drift_probe_ci (id bigint)' >/dev/null
+schema_snapshot "$schema_changed"
+set +e
+python3 -B "$schema_compare" --expected "$schema_before" --actual "$schema_changed"
+schema_drift_rc=$?
+set -e
+[[ "$schema_drift_rc" -eq 1 ]] || {
+  echo "FAIL: injected PostgreSQL schema drift was not detected ($schema_drift_rc)"; exit 1;
+}
+query 'DROP TABLE public.kmj_schema_drift_probe_ci' >/dev/null
+schema_snapshot "$schema_restored"
+python3 -B "$schema_compare" --expected "$schema_before" --actual "$schema_restored" \
+  || { echo 'FAIL: PostgreSQL schema not restored after negative control'; exit 1; }
+echo 'KMJ_PG_SCHEMA_DRIFT_FAULT_INJECTION=PASS; PRIVATE_SOCKET_ONLY=YES'
 failures=0
 # An explicit regression test must prove PHPUnit did not fall back to SQLite
 # from its default phpunit.xml configuration.
