@@ -22,7 +22,7 @@ const legalPaths = [
     '/cookie-policy',
 ];
 
-test('sitemap legal pages pass the server indexability gate', () => {
+void test('sitemap legal pages pass the server indexability gate', () => {
     const sitemap = routes
         .split("Route::get('sitemap.xml'")[1]
         ?.split("})->name('sitemap');")[0];
@@ -43,7 +43,7 @@ test('sitemap legal pages pass the server indexability gate', () => {
     assert.match(blade, /app\.public_indexing.*\$publicIndexableRoute/);
 });
 
-test('public canonical, social cards and structured data exist', () => {
+void test('public canonical, social cards and structured data exist', () => {
     assert.match(seo, /rel="canonical"/);
     assert.match(seo, /property="og:url"/);
     assert.match(seo, /property="og:image"/);
@@ -55,7 +55,7 @@ test('public canonical, social cards and structured data exist', () => {
     assert.match(routes, /preview labels must not be interpreted/);
 });
 
-test('robots and XML sitemap keep public-only paths', () => {
+void test('robots and XML sitemap keep public-only paths', () => {
     assert.match(robots, /^User-agent: \*$/m);
     assert.match(robots, /^Sitemap: https:\/\/kmjtechno\.com\/sitemap\.xml$/m);
     assert.doesNotMatch(robots, /Disallow: \//);
@@ -69,7 +69,7 @@ test('robots and XML sitemap keep public-only paths', () => {
     assert.doesNotMatch(sitemap, /\/api\/codebridge/);
 });
 
-test('AI discovery retains truthful lifecycle information', () => {
+void test('AI discovery retains truthful lifecycle information', () => {
     const llms = routes
         .split("Route::get('llms.txt'")[1]
         ?.split("})->name('llms');")[0];
