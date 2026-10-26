@@ -78,6 +78,10 @@ for _ in $(seq 1 90); do
     ready=1
     break
   fi
+  if [[ "$(docker inspect --format '{{.State.Running}}' "$container_name" 2>/dev/null || echo false)" != true ]]; then
+    echo 'PG18_CONTAINER_STOPPED_DURING_STARTUP'
+    break
+  fi
   sleep 1
 done
 if [[ "$ready" != 1 ]]; then
