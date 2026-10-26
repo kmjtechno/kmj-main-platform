@@ -41,15 +41,15 @@ jobs:
           trap cleanup EXIT
           # Version-specific test image ONLY. Never used as production DB.
           # The container has no Docker network or host-mapped ports.
-          docker pull postgres:18.6-alpine3.24
+          docker pull postgres:18.6-alpine3.24@sha256:10a5c69a83035ab5239f5620d708520e8b28f5aa1f2b20143e6024532edadfb5
           docker run --rm -d --name "$name" --network none \
             -e POSTGRES_PASSWORD=ephemeral-ci-only \
             -e POSTGRES_DB=kmj_catalog_ci \
             --mount "type=bind,src=$PWD/scripts/ci/postgres_schema_metadata.sql,dst=/opt/kmj/schema.sql,readonly" \
-            postgres:18.6-alpine3.24 -c listen_addresses='' >/dev/null
+            postgres:18.6-alpine3.24@sha256:10a5c69a83035ab5239f5620d708520e8b28f5aa1f2b20143e6024532edadfb5 -c listen_addresses='' >/dev/null
           ready=0
           for _ in $(seq 1 60); do
-            if docker exec -u postgres "$name" pg_isready -q -h /var/run/postgresql -U postgres -d kmj_catalog_ci; then
+            if docker exec -u postgres "$name" psql -X -qAt -v ON_ERROR_STOP=1 -d kmj_catalog_ci -c 'SELECT 1' >/dev/null 2>&1; then
               ready=1
               break
             fi
