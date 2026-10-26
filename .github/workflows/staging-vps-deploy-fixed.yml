@@ -103,16 +103,19 @@ jobs:
 
           for attempt in $(seq 1 60); do
             : > "$headers"
-            if curl --fail --silent --show-error --location --max-time 30               --dump-header "$headers" --output /dev/null "$origin/"; then
-              deployed_sha="$(
-                awk -F': *' 'tolower($1) == "x-kmj-deploy-sha" {gsub("\r", "", $2); value=$2} END {print value}' "$headers"
-              )"
-              if [ "$deployed_sha" = "$DEPLOY_SHA" ]; then
-                echo "actual_sha=$deployed_sha" >> "$GITHUB_OUTPUT"
-                echo "Staging auto-deploy verified exact commit: $deployed_sha"
+            # Never follow an origin redirect into production or another host.
+            # X-KMJ-Deploy-SHA: source-pinned parser rejects non-200, duplicate/missing or drifted identity.
+            if http_status="$(curl --fail --silent --show-error --max-time 30 \
+              --dump-header "$headers" --output /dev/null \
+              --write-out '%{http_code}' "$origin/")"; then
+              if readback="$(python3 scripts/operations/check-staging-readback.py \
+                --expected "$DEPLOY_SHA" --headers "$headers" --status "$http_status")"; then
+                echo "$readback"
+                echo "actual_sha=$DEPLOY_SHA" >> "$GITHUB_OUTPUT"
+                echo "Staging auto-deploy verified exact commit: $DEPLOY_SHA"
                 exit 0
               fi
-              echo "Attempt $attempt: staging reports ${deployed_sha:-no deployment header}; waiting for $DEPLOY_SHA"
+              echo "Attempt $attempt: staging SHA readback not yet valid; retrying."
             else
               curl_status=$?
               if [ "$curl_status" -eq 60 ]; then
