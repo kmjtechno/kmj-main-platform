@@ -66,6 +66,13 @@ final class CodeBridgeDevicePairingHttpTest extends TestCase
             ->post('/codebridge/pair', ['code' => $created['user_code'], 'tenant_id' => $tenant])
             ->assertRedirect();
 
+        // An issued but not yet redeemed approval is not a connected device.
+        $approvedDirectory = app(CodeBridgeCustomerDeviceDirectory::class)->forTenant($tenant, time());
+        self::assertCount(1, $approvedDirectory);
+        self::assertSame('approved_unredeemed', $approvedDirectory[0]['pairing_state']);
+        self::assertNull($approvedDirectory[0]['registered_at']);
+        self::assertSame('not_verified', $approvedDirectory[0]['connection_status']);
+
         $redeemed = $this->postJson('/api/codebridge/v1/device-enrollments/token', [
             'product' => 'KMJ_CODEBRIDGE',
             'device_code' => $created['device_code'],
@@ -91,6 +98,7 @@ final class CodeBridgeDevicePairingHttpTest extends TestCase
         self::assertSame('VPS 1', $devices[0]['name']);
         self::assertSame([['id' => 'project1', 'name' => 'App']], $devices[0]['projects']);
         self::assertSame('registered', $devices[0]['registration']);
+        self::assertSame('redeemed', $devices[0]['pairing_state']);
         self::assertSame('not_verified', $devices[0]['connection_status']);
         self::assertArrayNotHasKey('token', $devices[0]);
         self::assertArrayNotHasKey('token_hash', $devices[0]);
