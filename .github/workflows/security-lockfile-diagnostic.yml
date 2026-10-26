@@ -1,0 +1,40 @@
+name: Security lockfile remediation diagnostic (temporary)
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  generate-lock-patches:
+    if: github.head_ref == 'security/20261026-vibe-security-gate'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: shivammathur/setup-php@87d00bde2555f25eb54fedf940384e99cbdc55ef
+        with:
+          php-version: '8.4'
+          coverage: none
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '22'
+      - name: Resolve stable patched lockfiles in isolated CI checkout
+        working-directory: apps/platform
+        shell: bash
+        run: |
+          set -u
+          composer update symfony/http-foundation --with-all-dependencies --minimal-changes --no-install --no-scripts --no-interaction > /tmp/kmj-composer-remediation.log 2>&1
+          echo "COMPOSER_UPDATE_EXIT=$?"
+          npm audit fix --package-lock-only --ignore-scripts --no-fund > /tmp/kmj-npm-remediation.log 2>&1
+          echo "NPM_UPDATE_EXIT=$?"
+          echo '=== LOCKFILE_PATCH_BEGIN ==='
+          git --no-pager diff -- composer.lock package-lock.json | head -c 65000
+          echo
+          echo '=== LOCKFILE_PATCH_END ==='
+          echo '=== COMPOSER_LAST_LINES ==='
+          tail -n 12 /tmp/kmj-composer-remediation.log || true
+          echo '=== NPM_LAST_LINES ==='
+          tail -n 12 /tmp/kmj-npm-remediation.log || true
