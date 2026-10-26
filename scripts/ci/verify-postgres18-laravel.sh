@@ -60,7 +60,7 @@ pg_uid="$(docker run --rm --network none --entrypoint id "$image" -u postgres)"
 # as its PostgreSQL UID. No network port and no public host socket directory.
 chmod 0770 "$socket"
 sudo chown "$pg_uid:$(id -g)" "$socket"
-docker run --rm -d --name "$container_name" --network none \
+docker run -d --name "$container_name" --network none \
   -e POSTGRES_USER=kmj_qa \
   -e POSTGRES_DB=kmj_release_qa \
   -e POSTGRES_PASSWORD=ephemeral-ci-only \
