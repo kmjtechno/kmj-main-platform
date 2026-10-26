@@ -1,8 +1,9 @@
 .owner-lock {
     --owner-red: #f20b35;
     width: 100%;
-    max-width: 1520px;
-    margin-inline: auto;
+    max-width: none;
+    margin-inline: 0;
+    position: relative;
     background: #070c11;
     color: #eef2f7;
     font-family: Arial, Helvetica, sans-serif;
