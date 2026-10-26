@@ -76,6 +76,45 @@ try {
                 if (!appearance.background.includes('rgb(11, 16, 22)'))
                     errors.push('Owner developer card theme drifted');
             }
+            if (name === 'super-admin') {
+                const advanced = page.locator('.kmj-os-advanced');
+                await advanced.locator(':scope > summary').click();
+                if (!(await advanced.evaluate((node) => node.open)))
+                    errors.push(
+                        'Real dashboard advanced controls did not open',
+                    );
+                const card = await advanced
+                    .locator('.kmj-admin-category')
+                    .first()
+                    .evaluate((node) => ({
+                        background: getComputedStyle(node).backgroundImage,
+                        radius: getComputedStyle(node).borderRadius,
+                    }));
+                if (
+                    !card.background.includes('rgb(11, 16, 22)') ||
+                    card.radius !== '11px'
+                )
+                    errors.push(
+                        'Expanded dashboard controls drifted from the locked owner theme',
+                    );
+                if (
+                    await page.evaluate(
+                        () =>
+                            document.documentElement.scrollWidth >
+                            innerWidth + 1,
+                    )
+                )
+                    errors.push('Expanded dashboard controls overflow');
+                if (width === 390 || width === 1440)
+                    await page.screenshot({
+                        path: path.join(
+                            out,
+                            name + '-advanced-' + width + '.png',
+                        ),
+                        fullPage: true,
+                    });
+                await advanced.locator(':scope > summary').click();
+            }
             if (name === 'owner-devices') {
                 await page
                     .getByRole('heading', {

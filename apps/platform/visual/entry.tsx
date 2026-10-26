@@ -3,7 +3,7 @@ import DeveloperApps from '../resources/js/pages/developer-apps';
 // Development-only renderer. Never registered as a Laravel route or authentication bypass.
 import { createInertiaApp } from '@inertiajs/react';
 import Welcome from '../resources/js/pages/welcome';
-import OperatorCommandOs from '../resources/js/components/operator-command-os';
+import Operator from '../resources/js/pages/operator';
 import OwnerModuleShell from '../resources/js/layouts/owner-module-shell';
 import OperatorOps from '../resources/js/pages/operator-ops';
 import OperatorCodeBridgeOwner from '../resources/js/pages/operator-codebridge-owner';
@@ -222,6 +222,28 @@ function OwnerDevicesPreview() {
         </OwnerModuleShell>
     );
 }
+function OwnerDashboardPreview() {
+    return (
+        <Operator
+            metrics={{
+                users: 0,
+                organizations: 0,
+                entitlements: 0,
+                orders: 0,
+                confirmed_orders: 0,
+                confirmed_inr_revenue_minor: 0,
+            }}
+            catalogProducts={catalog.map((product) => ({
+                ...product,
+                active_policy_count: 0,
+                active_entitlement_count: 0,
+            }))}
+            canonicalProductCount={catalog.length}
+            missingCanonicalSlugs={[]}
+            recentOrders={[]}
+        />
+    );
+}
 function OwnerDeveloperPreview() {
     return (
         <AppLayout>
@@ -302,6 +324,6 @@ void createInertiaApp({
               : ownerDevices
                 ? OwnerDevicesPreview
                 : owner
-                  ? OperatorCommandOs
+                  ? OwnerDashboardPreview
                   : Welcome,
 });

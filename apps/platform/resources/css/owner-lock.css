@@ -1084,3 +1084,55 @@
     height: 100%;
     display: block;
 }
+
+/* The actual dashboard also contains governed controls below Command OS.
+ * Keep those expanded surfaces in the same lock without altering the hero. */
+.owner-dashboard-page.kmj-admin-shell.kmj-os-page {
+    --background: #070c11;
+    --foreground: #eef2f7;
+    --card: #0b1016;
+    --card-foreground: #eef2f7;
+    --muted: #171e26;
+    --muted-foreground: #a3afbc;
+    --border: #394451;
+    --input: #394451;
+    --accent: #171e26;
+    --accent-foreground: #eef2f7;
+    --kmj-workspace-border: #394451;
+    --kmj-workspace-highlight: transparent;
+    --kmj-workspace-shadow: none;
+    background: #070c11 !important;
+    color: #eef2f7;
+    color-scheme: dark;
+    font-family: Arial, Helvetica, sans-serif;
+}
+.owner-dashboard-page > :is(.kmj-os-advanced, #commercial-orders),
+.owner-dashboard-page
+    .kmj-os-advanced
+    :is(
+        .kmj-admin-hero,
+        .kmj-admin-category,
+        .kmj-admin-metric,
+        .kmj-admin-module-card,
+        .bg-card
+    ) {
+    border: 1px solid #394451;
+    border-radius: 11px;
+    background: linear-gradient(130deg, #0b1016, #070c11);
+    box-shadow: none;
+}
+.owner-dashboard-page
+    .kmj-os-advanced
+    :is(.kmj-admin-hero, .kmj-admin-category, .kmj-admin-metric) {
+    padding: 16px;
+}
+.owner-dashboard-page .kmj-os-advanced .kmj-admin-hero::after {
+    display: none;
+}
+.owner-dashboard-page .kmj-os-advanced .kmj-admin-metric::before {
+    background: #f20b35;
+}
+.owner-dashboard-page .kmj-os-advanced .kmj-admin-hero h2 {
+    font-size: 22px;
+    line-height: 1.3;
+}
