@@ -80,7 +80,18 @@ for _ in $(seq 1 90); do
   fi
   sleep 1
 done
-[[ "$ready" == 1 ]] || { echo 'PG18_CI_START=FAIL'; exit 1; }
+if [[ "$ready" != 1 ]]; then
+  echo 'PG18_CI_START=FAIL'
+  if docker inspect "$container_name" >/dev/null 2>&1; then
+    echo 'PG18_CONTAINER_START_LOG_TAIL_BEGIN'
+    # Only disposable CI setup: no customer data or production credentials.
+    docker logs --tail 60 "$container_name" 2>&1 | tail -n 60 || true
+    echo 'PG18_CONTAINER_START_LOG_TAIL_END'
+    docker exec -u postgres "$container_name" psql -X -qAt -v ON_ERROR_STOP=1 -U kmj_qa -d kmj_release_qa -c 'SELECT 1' 2>&1 | tail -n 4 || true
+  fi
+  [[ -S "$socket/.s.PGSQL.5432" ]] && echo 'PG18_UNIX_SOCKET=PRESENT' || echo 'PG18_UNIX_SOCKET=MISSING'
+  exit 1
+fi
 query() {
   docker exec -u postgres "$container_name" psql -X -qAt \
     -v ON_ERROR_STOP=1 -U kmj_qa -d kmj_release_qa -c "$1"
