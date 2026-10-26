@@ -17,6 +17,25 @@ final class CodeBridgeDevicePairingService
         private readonly OrganizationDirectory $organizations,
     ) {}
 
+    /**
+     * Pairing and first-party readiness must use the same fail-closed
+     * public HTTPS origin. Never issue a license/device grant for a private
+     * upstream, userinfo URL, third-party domain or arbitrary port.
+     */
+    public static function verifiedPublicAgentOrigin(): ?string
+    {
+        $origin = config('services.codebridge_gateway.agent_public_url');
+        $appOrigin = config('app.url');
+        if (! is_string($origin) || ! is_string($appOrigin)
+            || preg_match('/\Ahttps:\/\/[a-z0-9.-]+(?::443)?\z/Di', $origin) !== 1
+            || preg_match('/\Ahttps:\/\/[a-z0-9.-]+(?::443)?\z/Di', $appOrigin) !== 1
+            || ! hash_equals(rtrim($appOrigin, '/'), rtrim($origin, '/'))) {
+            return null;
+        }
+
+        return rtrim($origin, '/');
+    }
+
     /** @param array<string,mixed> $input
      * @return array<string,mixed>
      */
@@ -136,8 +155,7 @@ final class CodeBridgeDevicePairingService
             // Validate the public agent origin BEFORE creating a device credential.
             // Otherwise browser approval registers the device while redemption
             // fails and the owner cannot recover the one-time bearer locally.
-            $publicAgentOrigin = rtrim((string) config('services.codebridge_gateway.agent_public_url'), '/');
-            if (! preg_match('/\\Ahttps:\\/\\/[^\\/?#]+(?::[0-9]{1,5})?\\z/D', $publicAgentOrigin)) {
+            if (self::verifiedPublicAgentOrigin() === null) {
                 throw new DomainException('CODEBRIDGE_GATEWAY_UNAVAILABLE');
             }
 
@@ -201,6 +219,14 @@ final class CodeBridgeDevicePairingService
                 throw new DomainException('CODEBRIDGE_PAIRING_INVALID');
             }
 
+            // The effective public gateway must still match the first-party
+            // readiness contract at redemption, not merely at approval time.
+            // An outage/config mismatch preserves the approved one-time grant
+            // for a safe verifier-bound retry after the operator fixes config.
+            $gateway = self::verifiedPublicAgentOrigin();
+            if ($gateway === null) {
+                throw new DomainException('CODEBRIDGE_GATEWAY_UNAVAILABLE');
+            }
             $credential = Crypt::decryptString($row->credential_ciphertext);
             $permissions = json_decode($row->requested_permissions, true, flags: JSON_THROW_ON_ERROR);
             DB::table('codebridge_device_pairings')->where('id', $row->id)->update([
@@ -209,11 +235,6 @@ final class CodeBridgeDevicePairingService
                 'consumed_at' => now(),
                 'updated_at' => now(),
             ]);
-
-            $gateway = rtrim((string) config('services.codebridge_gateway.agent_public_url'), '/');
-            if (! preg_match('/\Ahttps:\/\/[^\/?#]+(?::[0-9]{1,5})?\z/D', $gateway)) {
-                throw new DomainException('CODEBRIDGE_GATEWAY_UNAVAILABLE');
-            }
 
             return [
                 'gateway' => $gateway,
