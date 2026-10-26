@@ -2,6 +2,17 @@
 set -Eeuo pipefail
 umask 027
 
+# This installer provisions an entire *new* Ubuntu VPS (CloudPanel, PHP,
+# PostgreSQL, firewall and systemd). Never run it on an existing KMJ
+# production host, even when the staging DNS A record points to that host.
+# Keep this guard BEFORE tee/logging, timezone, apt, firewall or any writes.
+if [[ "$(hostname -s)" == 'KMJ-elite' ]] ||
+   [[ -e /home/kmjprod/current || -L /home/kmjprod/current ]]; then
+  echo 'KMJ_FRESH_SERVER_BOOTSTRAP=BLOCKED_EXISTING_PRODUCTION_HOST' >&2
+  echo 'Use the separate read-only KMJ_NATIVE_STAGE_PREFLIGHT.sh on this host.' >&2
+  exit 90
+fi
+
 # KMJ TECHNO Main Platform - Reproducible Staging Server Bootstrap
 # Stable entrypoint. Safe to rerun. Do not fork this into V2/V3 files.
 #
