@@ -1,0 +1,37 @@
+name: KMJ PostgreSQL Migration Change Safety
+on:
+  pull_request:
+    paths:
+      - 'apps/platform/database/migrations/**'
+      - 'scripts/ci/review_migration_changes.py'
+      - 'tests/test_review_migration_changes.py'
+      - '.github/workflows/bytebase-inspired-migration-review.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: kmj-pg-risk-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  migration-static-safety:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Checkout exact PR head and history without persistent credentials
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - name: Deterministic no-DB regression suite
+        run: python3 -B -m unittest discover -s tests -p test_review_migration_changes.py -v
+      - name: Review new migrations and enforce immutability on PR
+        if: github.event_name == 'pull_request'
+        env:
+          BASE: ${{ github.event.pull_request.base.sha }}
+          HEAD: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$HEAD"
+          python3 -B scripts/ci/review_migration_changes.py --base "$BASE" --head "$HEAD"
+          echo 'DATABASE_EXECUTION=NONE MIGRATION_APPLY=NONE PRODUCTION_ACCESS=NONE'
