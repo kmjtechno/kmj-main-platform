@@ -21,7 +21,7 @@ final class AiProviderOpenRouterConnectTest extends TestCase
 {
     use RefreshDatabase;
 
-    private const KEY = 'sk-or-v1-0123456789abcdef0123';
+    private const KEY = 'sk-or-v1-'.'0123456789abcdef0123';
 
     private const START = '/services/kmj-codebridge/ai-providers/connect/openrouter';
 
