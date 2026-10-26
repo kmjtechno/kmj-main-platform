@@ -33,8 +33,14 @@ jobs:
         run: npm --prefix apps/platform ci --ignore-scripts --no-audit --no-fund
       - name: Verify six-width source contract without backend credentials
         run: node --test apps/platform/scripts/check-visual-qa-coverage.test.mjs
-      - name: Install headless Chromium
-        run: cd apps/platform && npx playwright install --with-deps chromium
+      - name: Select runner Chrome for real six-width visual QA
+        run: |
+          set -euo pipefail
+          chrome="$(command -v google-chrome)"
+          test "$chrome" = "/usr/bin/google-chrome"
+          test -x "$chrome"
+          "$chrome" --version
+          printf 'KMJ_CHROMIUM_EXECUTABLE=%s\n' "$chrome" >> "$GITHUB_ENV"
       - name: Verify public landing and synthetic Super Admin at six viewports
         run: cd apps/platform && npm run visual:verify
       - name: Retain screenshots and verification result for owner review

@@ -10,6 +10,14 @@ export type DeliveryMilestone = {
 
 export const deliveryMilestones: DeliveryMilestone[] = [
     {
+        id: 'p0-owner-default-dashboard-command-os-route',
+        title: 'Owner default dashboard to protected Enterprise Command OS',
+        state: 'active',
+        detail: 'PR #570 changes only the default authenticated /dashboard response for users verified by PlatformOwnerAccess to redirect to the existing named /super-admin Command OS. Customer users and owner-flag accounts without a valid passkey still receive the customer dashboard. The destination retains password confirmation, server-side owner policy, real catalog data and locked styling. This is source integration, not an approved or deployed production change.',
+        evidence:
+            'PR #570 includes scoped dashboard routing, owner/customer/no-passkey regression assertions and a staging smoke that validates the exact owner redirect then directly exercises the protected /super-admin Inertia surface. Exact-head CI, real authenticated owner visual QA, immutable candidate rebuild, protected release approval and post-cutover verification remain pending.',
+    },
+    {
         id: 'codebridge-first-party-windows-dashboard-connection',
         title: 'CodeBridge first-party Windows one-click dashboard connector',
         state: 'active',
