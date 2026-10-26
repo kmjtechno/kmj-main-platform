@@ -4,6 +4,7 @@ namespace App\Console\Commands;
 
 use App\Models\User;
 use Illuminate\Console\Command;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Router;
 use Illuminate\Support\Facades\Auth;
@@ -111,6 +112,18 @@ final class StagingAuthenticatedSmokeCommand extends Command
         } finally {
             app()->instance('request', $previousRequest);
             app()->instance(Request::class, $previousTypedRequest);
+        }
+
+        // The verified owner default entry must redirect to the same protected
+        // Command OS that is separately exercised below. A wrong, external or
+        // generic dashboard redirect must fail this authenticated smoke.
+        if ($uri === '/dashboard') {
+            if (! $result instanceof RedirectResponse
+                || $result->getTargetUrl() !== route('super-admin.index')) {
+                throw new RuntimeException('Owner dashboard did not redirect to the canonical protected Super Admin route.');
+            }
+
+            return;
         }
 
         if (! $result instanceof InertiaResponse) {
