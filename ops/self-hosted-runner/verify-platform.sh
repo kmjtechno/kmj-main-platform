@@ -82,6 +82,13 @@ start_task npm-install install_frontend
 wait_tasks
 echo "Dependency installation elapsed: $((SECONDS - started)) seconds"
 
+# The PDF-inspired release gate uses only the repository lockfiles and the
+# official advisory services. No paid scanning service or application secrets.
+# Production dependencies with known vulnerabilities block the candidate.
+start_task composer-production-audit composer audit --locked --no-dev --no-interaction
+start_task npm-production-audit npm audit --omit=dev --audit-level=high
+wait_tasks
+
 if [ -n "${KMJ_FORMAT_PATHS:-}" ]; then
   mapfile -t format_paths <<< "$KMJ_FORMAT_PATHS"
   ./node_modules/.bin/vp fmt "${format_paths[@]}"
