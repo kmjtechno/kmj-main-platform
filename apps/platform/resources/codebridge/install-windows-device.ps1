@@ -5,7 +5,7 @@
 param()
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
-$pin = '368877d56ad07fe1fe96774505a8772697a3b62d'
+$pin = '664edea40654026f091b553f0f88a20694fc277c'
 $origin = 'https://github.com/kmjtechno/kmj-codebridge.git'
 $root = Join-Path $env:LOCALAPPDATA 'KMJ-CodeBridge\runtime'
 $dest = Join-Path $root ('codebridge-' + $pin.Substring(0,12))
