@@ -39,13 +39,24 @@ final class CodeBridgeInstallerBootstrapTest extends TestCase
         $script = $scriptResponse->getContent();
         self::assertIsString($script);
         self::assertStringContainsString(
-            '$pin = \'9dc0ae25648c33a62631fdd35068e6b60820637d\'',
+            '$pin = \'664edea40654026f091b553f0f88a20694fc277c\'',
             $script,
         );
         self::assertStringContainsString('git clone', $script);
         self::assertStringContainsString('checkout --detach $pin', $script);
         self::assertStringContainsString('npm ci --omit=dev --ignore-scripts', $script);
         self::assertStringContainsString('ONE-CLICK-ANY-DEVICE.ps1', $script);
+        // P520 reconnect must not ask the owner to choose a second device ID.
+        self::assertStringContainsString('DESKTOP-5FVJMET', $script);
+        self::assertStringContainsString('ONE-CLICK-AGENT-AUTOCONNECT.ps1', $script);
+        self::assertStringContainsString('& $connector -Device HomeOffice', $script);
+        self::assertStringContainsString('KMJ_DEVICE_SCOPE=P520_HOME_OFFICE_CALIBRATION_PRO', $script);
+        self::assertStringContainsString('KMJ-CaliPro\\toolchains', $script);
+        self::assertStringContainsString('KMJ_NODE24=EXISTING_VERIFIED', $script);
+        self::assertStringContainsString('KMJ_GLOBAL_PATH_CHANGED=NO', $script);
+        self::assertStringNotContainsString('Set-ExecutionPolicy', $script);
+        self::assertStringNotContainsString('git reset', $script);
+        self::assertStringNotContainsString('git clean', $script);
         self::assertStringContainsString('KMJ_RUNTIME_UNTRUSTED_OR_MODIFIED', $script);
         self::assertStringContainsString('ACCOUNT_READY=CHECK_AUTHENTICATED_GATEWAY_STATUS', $script);
         self::assertStringNotContainsString('CODEBRIDGE_AGENT_TOKEN=', $script);

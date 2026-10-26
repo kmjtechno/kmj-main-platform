@@ -4,10 +4,10 @@ User workflow, from the authenticated `/services/kmj-codebridge` dashboard:
 
 1. In **Devices & projects** or **Setup & integrations**, select **Connect Windows PC**. The download is served by **kmjtechno.com** at `/install-codebridge-windows.cmd`; users need not open GitHub or type a PowerShell command.
 2. On that Windows PC, double-click the downloaded file and approve normal OS download warnings after verifying it came from the KMJ domain. Its script is fetched from the same KMJ origin and **verified by a SHA-256 hash embedded in the downloaded CMD** before execution.
-3. Git and Node.js 24+ are required. The bootstrap **does not silently install system prerequisites**; it checks them and stops with a clear local error when missing.
-4. The bootstrap fetches a **pinned exact CodeBridge Git commit**, checks source origin, HEAD, tracked cleanliness, and installs frozen npm dependencies without lifecycle hooks in an isolated per-user application-data directory. It never updates or cleans an existing owner checkout.
-5. In the local CodeBridge wizard, choose **YES** for an existing same-PC private agent enrollment; if there are several, select its existing private `agent.json`. Choose **NO** for a new local Git project and approve the short-lived code on the **same KMJ website** at `/codebridge/pair`. This browser approval is always required for a new grant and cannot be automatically bypassed.
-6. After a locally authenticated reconnect, current-user login auto-connect can be enabled by the bundled agent. Refresh the dashboard for registrations. Registration is **not** a live online claim.
+3. Git and Node.js 24+ with npm are required. The bootstrap first reuses an **already installed Node 24+** on PATH, then checks bounded known `%LOCALAPPDATA%\\KMJ-CaliPro\\toolchains\\node*` locations for the existing Home Office portable LTS. It modifies its **own process PATH only**, never the machine/user PATH or PowerShell policy. It does not silently install prerequisites.
+4. The bootstrap fetches reviewed CodeBridge commit `664edea40654026f091b553f0f88a20694fc277c` (**CodeBridge CI PASS**), checks source origin, HEAD, tracked cleanliness, and installs frozen npm dependencies without lifecycle hooks in an isolated per-user application-data directory. It never updates or cleans an existing owner checkout.
+5. **Home Office P520** (`DESKTOP-5FVJMET`) is recognized automatically; it launches the exact audited `ONE-CLICK-AGENT-AUTOCONNECT.ps1 -Device HomeOffice` for **`kmj-homeoffice-desktop-5fvjmet / kmj-calibration-pro`**, reusing its existing private enrollment when present. It never opens a generic project picker on that PC, chooses a P720 ID, copies device tokens or registers a second project. First-time pairing still requires explicit browser approval on the **same KMJ website** at `/codebridge/pair`. **Other Windows computers** continue through the generic authorized-device picker and short-lived owner consent.
+6. Once the P520 approved agent starts successfully, its audited current-user Startup shortcut provides automatic reconnect on the next Windows sign-in, without admin rights. Other supported devices may enable the same current-user behavior. Refresh the dashboard for registrations, but independently verify a **real authenticated gateway heartbeat**; registration is **not** a live online claim.
 
 ## Platform/agent limits
 
@@ -20,3 +20,9 @@ User workflow, from the authenticated `/services/kmj-codebridge` dashboard:
 ## Release maintenance
 
 The static agent commit SHA lives in `resources/codebridge/install-windows-device.ps1`. Update the pin by audited PR only, after matching CodeBridge exact-head CI. The first-party CMD embeds the current script's SHA-256 at download time; never return an unpinned script with a mutable main-branch executable URL.
+
+## Production pairing gate (2026-10-26)
+
+This dashboard/installer improvement is **merged source only after CI**, not a live production deployment. The actual P520 installation already succeeded using the dedicated reviewed ZIP; its first-pairing attempt failed with `PAIRING_SERVER_FIX_NOT_LIVE` because production `GET /api/codebridge/v1/device-enrollments/readiness` was HTTP 404. The Main Platform supervisor independently reports `currentRelease=platform-8070dad72c55`, stale approval expected pointer `platform-54142f844c0b`, `readyToActivate=false`. **Do not pair repeatedly, bypass compatibility checks, overwrite release approval, change DNS or claim P520 online.** Resolve the existing isolated exact-SHA release/backup/rollback/authenticated owner QA gates first, deploy safely and verify readiness returns protocol 2 + protected `/agent/health` 401 before one new owner-approved P520 pairing.
+
+The first-party Windows connector is deliberately available only after the Main Platform candidate is deployed: a GitHub merge alone does not update the website or its download route. P720 remains offline by owner choice.
