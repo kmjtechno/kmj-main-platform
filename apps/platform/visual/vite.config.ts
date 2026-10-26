@@ -7,6 +7,12 @@ export default defineConfig({
     publicDir: '../public',
     resolve: {
         alias: {
+            // This owner-only fixture never renders the customer fallback.
+            // Its generated Laravel route imports are unavailable in this
+            // static preview; fail loudly if owner selection regresses.
+            '@/layouts/app/app-sidebar-layout': fileURLToPath(
+                new URL('./customer-layout-unavailable.tsx', import.meta.url),
+            ),
             '@': fileURLToPath(new URL('../resources/js', import.meta.url)),
         },
     },
