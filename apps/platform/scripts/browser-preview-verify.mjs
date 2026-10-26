@@ -40,6 +40,7 @@ try {
             ['landing', '/'],
             ['super-admin', '/super-admin'],
             ['owner-ops', '/operator/ops'],
+            ['owner-developer', '/developer/apps'],
             ['owner-devices', '/operator/codebridge/owner-plan'],
         ]) {
             const page = await browser.newPage({
@@ -59,6 +60,22 @@ try {
                 scrollTo(0, 0);
                 await document.fonts.ready;
             });
+            if (name === 'owner-developer') {
+                const shell = page.locator('.owner-module-shell');
+                if ((await shell.count()) !== 1)
+                    errors.push(
+                        'Verified owner developer page lost its locked shell',
+                    );
+                const appearance = await page
+                    .locator('.owner-shared-page > section')
+                    .first()
+                    .evaluate((el) => ({
+                        background: getComputedStyle(el).backgroundImage,
+                        color: getComputedStyle(el).color,
+                    }));
+                if (!appearance.background.includes('rgb(11, 16, 22)'))
+                    errors.push('Owner developer card theme drifted');
+            }
             if (name === 'owner-devices') {
                 await page
                     .getByRole('heading', {
