@@ -23,6 +23,10 @@ jobs:
           fetch-depth: 0
       - name: Prepare resilient Python runtime
         run: bash ops/self-hosted-runner/prepare-python-runtime.sh
+      - name: Secure AI coding source and regression gate
+        run: |
+          python3 -m unittest tests.test_security_release_gate
+          python3 scripts/security_release_gate.py --repository
       - name: Compile controller
         run: python3 -m compileall controller
       - name: Verify persistent worker safety
