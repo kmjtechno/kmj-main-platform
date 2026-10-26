@@ -38,7 +38,7 @@ class PG18Contract(unittest.TestCase):
 
     def test_strict_network_and_actual_pg18_are_checked(self):
         for marker in ("--network none", "listen_addresses=''",
-                       "unix_socket_directories=/kmj-socket",
+                       "unix_socket_directories=/var/run/postgresql",
                        "PG18_PDO_PRIVATE_SOCKET=PASS",
                        "server_version", "server_version_num",
                        "pg_uid=", "sudo chown"):
@@ -59,7 +59,7 @@ class PG18Contract(unittest.TestCase):
                            "POSTGRES_HOST_AUTH_METHOD=trust"):
             self.assertNotIn(prohibited, self.script)
         self.assertIn("PRODUCTION_DATABASE_TOUCHED=NO", self.script)
-        self.assertEqual(self.script.count("psql -h /kmj-socket"), 3)
+        self.assertEqual(self.script.count("psql -h /var/run/postgresql"), 3)
         self.assertNotIn("psql -h 127.0.0.1", self.script)
 
     def test_workflow_is_read_only_and_exact_head(self):
