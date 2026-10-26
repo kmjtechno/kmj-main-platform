@@ -1,0 +1,60 @@
+name: PostgreSQL 18 Laravel Release Rehearsal
+on:
+  pull_request:
+    paths:
+      - 'apps/platform/app/**'
+      - 'apps/platform/database/**'
+      - 'apps/platform/routes/**'
+      - 'apps/platform/tests/**'
+      - 'apps/platform/composer.json'
+      - 'apps/platform/composer.lock'
+      - 'scripts/ci/verify-postgres18-laravel.sh'
+      - 'tests/test_postgres18_laravel_contract.py'
+      - '.github/workflows/disposable-postgres18-laravel.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: pg18-laravel-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  postgres18-laravel:
+    name: Laravel migrations, Feature tests and rollback on PostgreSQL 18
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - name: Checkout exact source HEAD without persisted credentials
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - name: PHP 8.4 PostgreSQL extensions
+        uses: shivammathur/setup-php@87d00bde2555f25eb54fedf940384e99cbdc55ef
+        with:
+          php-version: '8.4'
+          extensions: pdo_pgsql, pgsql, pdo_sqlite, sqlite3, sodium
+          coverage: none
+      - name: Node 22 Vite build
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: apps/platform/package-lock.json
+      - name: Verify script syntax and isolation contract
+        run: |
+          set -euo pipefail
+          bash -n scripts/ci/verify-postgres18-laravel.sh
+          python3 -B -m unittest discover -s tests -p test_postgres18_laravel_contract.py -v
+      - name: Install locked Composer test dependencies
+        working-directory: apps/platform
+        run: |
+          set -euo pipefail
+          composer install --no-interaction --prefer-dist --no-progress --optimize-autoloader
+      - name: Real PostgreSQL 18 application migration and full Feature rehearsal
+        env:
+          SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$SOURCE_SHA"
+          bash scripts/ci/verify-postgres18-laravel.sh "$SOURCE_SHA"
+          echo 'APP_PG18_REHEARSAL=PASS; CUSTOMER_PRODUCTION=UNTOUCHED'
