@@ -30,6 +30,8 @@ jobs:
           bash -n infra/server/KMJ_SERVER_VERIFY.sh
           bash -n infra/server/KMJ_SERVER_EXPORT.sh
           bash -n infra/server/KMJ_STAGE_TLS_REPAIR.sh
+          bash -n infra/server/KMJ_NATIVE_STAGE_ACME_VHOST.sh
+          python3 -B -m unittest tests.test_native_stage_acme_vhost_contract
 
       - name: Locked server invariants
         run: |
