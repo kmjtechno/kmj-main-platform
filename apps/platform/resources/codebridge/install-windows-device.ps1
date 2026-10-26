@@ -5,7 +5,7 @@
 param()
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
-$pin = '9dc0ae25648c33a62631fdd35068e6b60820637d'
+$pin = '368877d56ad07fe1fe96774505a8772697a3b62d'
 $origin = 'https://github.com/kmjtechno/kmj-codebridge.git'
 $root = Join-Path $env:LOCALAPPDATA 'KMJ-CodeBridge\runtime'
 $dest = Join-Path $root ('codebridge-' + $pin.Substring(0,12))
@@ -25,12 +25,48 @@ try {
     if ($env:OS -cne 'Windows_NT') { throw 'KMJ_WINDOWS_REQUIRED' }
     if ([string]::IsNullOrWhiteSpace($env:LOCALAPPDATA)) { throw 'KMJ_USER_PROFILE_REQUIRED' }
     $git = (Get-Command git.exe -ErrorAction Stop).Source
-    $node = (Get-Command node.exe -ErrorAction Stop).Source
-    $npm = (Get-Command npm.cmd -ErrorAction Stop).Source
-    $nodeVersion = [string](& $node --version)
-    if ($LASTEXITCODE -ne 0 -or $nodeVersion -notmatch '^v([0-9]+)\.' -or [int]$Matches[1] -lt 24) {
-        throw 'KMJ_NODE24_REQUIRED'
+    # Reuse an installed Node.js 24+ WITH its own npm; never change a global
+    # Windows PATH or ask an owner to reinstall the already present portable LTS.
+    $nodeCandidates = New-Object 'System.Collections.Generic.List[string]'
+    $pathNode = Get-Command node.exe -ErrorAction SilentlyContinue
+    if ($pathNode) { $nodeCandidates.Add([string]$pathNode.Source) }
+    $toolchains = Join-Path $env:LOCALAPPDATA 'KMJ-CaliPro\toolchains'
+    if (Test-Path -LiteralPath $toolchains -PathType Container) {
+        SafeDirectory $toolchains
+        $nodeCandidates.Add((Join-Path $toolchains 'node.exe'))
+        foreach ($folder in @(Get-ChildItem -LiteralPath $toolchains -Directory -ErrorAction Stop |
+            Where-Object { $_.Name -match '^node(?:[-._].+)?$' } |
+            Select-Object -First 12)) {
+            $nodeCandidates.Add((Join-Path $folder.FullName 'node.exe'))
+            $nodeCandidates.Add((Join-Path $folder.FullName 'bin\node.exe'))
+        }
     }
+    $node = $null
+    $npm = $null
+    foreach ($candidate in @($nodeCandidates | Select-Object -Unique)) {
+        if (!(Test-Path -LiteralPath $candidate -PathType Leaf)) { continue }
+        $folder = Split-Path -Parent $candidate
+        try {
+            SafeDirectory $folder
+            $nodeItem = Get-Item -LiteralPath $candidate -ErrorAction Stop
+            if ($nodeItem.Attributes -band [IO.FileAttributes]::ReparsePoint) { continue }
+            $npmCandidate = Join-Path $folder 'npm.cmd'
+            if (!(Test-Path -LiteralPath $npmCandidate -PathType Leaf)) { continue }
+            $npmItem = Get-Item -LiteralPath $npmCandidate -ErrorAction Stop
+            if ($npmItem.Attributes -band [IO.FileAttributes]::ReparsePoint) { continue }
+            $nodeVersion = [string](& $candidate --version 2>$null)
+            if ($LASTEXITCODE -ne 0 -or $nodeVersion -notmatch '^v([0-9]+)\.' -or
+                [int]$Matches[1] -lt 24) { continue }
+            $node = $candidate
+            $npm = $npmCandidate
+            # Inherited by child connector only; persistent PATH is untouched.
+            $env:PATH = $folder + [IO.Path]::PathSeparator + $env:PATH
+            break
+        } catch { continue }
+    }
+    if (!$node -or !$npm) { throw 'KMJ_NODE24_NPM_REQUIRED' }
+    Write-Host 'KMJ_NODE24=EXISTING_VERIFIED'
+    Write-Host 'KMJ_GLOBAL_PATH_CHANGED=NO'
 
     if (!(Test-Path -LiteralPath $root)) {
         New-Item -ItemType Directory -Path $root -ErrorAction Stop | Out-Null
@@ -65,8 +101,19 @@ try {
     if ($actualOrigin -cne $origin -or $actualHead -cne $pin -or $changes.Count -ne 0 -or $LASTEXITCODE -ne 0) {
         throw 'KMJ_RUNTIME_UNTRUSTED_OR_MODIFIED'
     }
-    $connector = Join-Path $dest 'scripts\windows\ONE-CLICK-ANY-DEVICE.ps1'
+    # The P520 has an explicit, already approved Calibration Pro device ID,
+    # so never steer it through the generic wizard (which could create a
+    # different identity or select another project).
+    $homeOffice = [string]$env:COMPUTERNAME -ieq 'DESKTOP-5FVJMET'
+    $connectorRelative = if ($homeOffice) {
+        'scripts\windows\ONE-CLICK-AGENT-AUTOCONNECT.ps1'
+    } else { 'scripts\windows\ONE-CLICK-ANY-DEVICE.ps1' }
+    $connector = Join-Path $dest $connectorRelative
     if (!(Test-Path -LiteralPath $connector -PathType Leaf)) { throw 'KMJ_CONNECTOR_MISSING' }
+    $connectorItem = Get-Item -LiteralPath $connector -ErrorAction Stop
+    if ($connectorItem.Attributes -band [IO.FileAttributes]::ReparsePoint) {
+        throw 'KMJ_CONNECTOR_REPARSE_DENIED'
+    }
     $deps = Join-Path $dest 'node_modules\zod\package.json'
     if (!(Test-Path -LiteralPath $deps -PathType Leaf)) {
         Write-Host 'KMJ_SETUP=INSTALLING_LOCKED_DEPENDENCIES'
@@ -78,8 +125,14 @@ try {
         if (!(Test-Path -LiteralPath $deps -PathType Leaf)) { throw 'KMJ_DEPENDENCIES_MISSING' }
     }
     Write-Host 'KMJ_SETUP=STARTING_APPROVED_DEVICE_CONNECT'
-    Write-Host 'Existing device: choose YES. New device: choose NO, then approve in your KMJ browser.'
-    & $connector
+    if ($homeOffice) {
+        Write-Host 'KMJ_DEVICE_SCOPE=P520_HOME_OFFICE_CALIBRATION_PRO'
+        Write-Host 'First connection requires official KMJ browser approval; returning devices reconnect automatically at user sign-in.'
+        & $connector -Device HomeOffice
+    } else {
+        Write-Host 'Existing device: choose YES. New device: choose NO, then approve in your KMJ browser.'
+        & $connector
+    }
     if (!$?) { throw 'KMJ_DEVICE_CONNECTION_NOT_VERIFIED' }
     Write-Host 'KMJ_SETUP=LOCAL_CONNECT_COMPLETED'
     Write-Host 'ACCOUNT_READY=CHECK_AUTHENTICATED_GATEWAY_STATUS'
