@@ -61,6 +61,30 @@ class StagingMonitorContractTests(unittest.TestCase):
         self.assertIn('if [ "$curl_status" -eq 60 ]', step)
         self.assertIn('echo "actual_sha=$DEPLOY_SHA"', step)
 
+    def test_external_staging_tls_sha_diagnosis_is_read_only_and_fail_closed(self):
+        workflow = (
+            ROOT / ".github" / "workflows" / "staging-external-tls-sha-evidence.yml"
+        ).read_text(encoding="utf-8")
+        self.assertIn("workflows: ['Staging Promotion Gate']", workflow)
+        self.assertIn("github.event.workflow_run.conclusion == 'success'", workflow)
+        self.assertIn("persist-credentials: false", workflow)
+        self.assertIn("ref: staging-approved", workflow)
+        self.assertIn("APPROVED_SHA_DRIFT", workflow)
+        self.assertIn("103.212.136.154", workflow)
+        self.assertIn("TLS_SAN_MISMATCH", workflow)
+        self.assertIn("TLS_CHAIN_OR_HOST_INVALID", workflow)
+        self.assertIn("check-staging-readback.py", workflow)
+        self.assertIn('--expected "$EXPECTED_STAGING_SHA"', workflow)
+        self.assertIn("--proto '=https'", workflow)
+        self.assertIn("--write-out '%{http_code}'", workflow)
+        self.assertIn("PRODUCTION_DEPLOYMENT=NOT_ATTEMPTED", workflow)
+        self.assertNotIn("environment: staging", workflow)
+        self.assertNotIn("secrets.", workflow)
+        self.assertNotIn("--location", workflow)
+        self.assertNotIn("curl -k", workflow)
+        self.assertNotIn("sudo ", workflow)
+        self.assertNotIn("git push", workflow)
+
     def test_server_bootstrap_remains_the_staging_deploy_authority(self):
         bootstrap = SERVER_BOOTSTRAP.read_text(encoding="utf-8")
 
