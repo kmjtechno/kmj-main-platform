@@ -43,6 +43,24 @@ class StagingMonitorContractTests(unittest.TestCase):
         self.assertNotIn("ops/staging/verify-monitor.py", workflow)
         self.assertNotIn("https://staging.kmjtechno.com/info", workflow)
 
+    def test_staging_readback_requires_strict_same_origin_sha_and_http_200(self):
+        workflow = DEPLOY_WORKFLOW.read_text(encoding="utf-8")
+        step = workflow.split(
+            "      - name: Wait for VPS auto-deploy exact commit", 1
+        )[1].split("      - name: Verify staging HTTP health", 1)[0]
+
+        # All decisions must be made on the exact final staging response,
+        # never on a redirected production host or the last of two SHA headers.
+        self.assertIn("scripts/operations/check-staging-readback.py", step)
+        self.assertIn("--expected \"$DEPLOY_SHA\"", step)
+        self.assertIn("--headers \"$headers\"", step)
+        self.assertIn("--status \"$http_status\"", step)
+        self.assertIn("--write-out '%{http_code}'", step)
+        self.assertNotIn("--location", step)
+        self.assertNotIn("awk -F", step)
+        self.assertIn('if [ "$curl_status" -eq 60 ]', step)
+        self.assertIn('echo "actual_sha=$DEPLOY_SHA"', step)
+
     def test_server_bootstrap_remains_the_staging_deploy_authority(self):
         bootstrap = SERVER_BOOTSTRAP.read_text(encoding="utf-8")
 
