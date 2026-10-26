@@ -1,0 +1,87 @@
+name: PostgreSQL 18 Metadata Drift Canary
+on:
+  pull_request:
+    paths:
+      - 'scripts/ci/postgres_schema_metadata.sql'
+      - 'scripts/ci/compare_postgres_schema_metadata.py'
+      - '.github/workflows/postgresql18-schema-canary.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: pg18-catalog-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  pg18-catalog-negative-control:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - name: Exact-head checkout, no persisted credentials
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - name: Postgres 18 real-engine catalog drift probe (disposable)
+        env:
+          EXPECTED_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          umask 077
+          test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
+          test "$(id -u)" -ne 0
+          test -f scripts/ci/postgres_schema_metadata.sql
+          test -f scripts/ci/compare_postgres_schema_metadata.py
+          tmp=$(mktemp -d)
+          name=kmj-pg18-catalog-ci
+          cleanup() {
+            docker rm -f "$name" >/dev/null 2>&1 || true
+            rm -rf -- "$tmp"
+          }
+          trap cleanup EXIT
+          # Version-specific test image ONLY. Never used as production DB.
+          # The container has no Docker network or host-mapped ports.
+          docker pull postgres:18.6-alpine3.24
+          docker run --rm -d --name "$name" --network none \
+            -e POSTGRES_PASSWORD=ephemeral-ci-only \
+            -e POSTGRES_DB=kmj_catalog_ci \
+            --mount "type=bind,src=$PWD/scripts/ci/postgres_schema_metadata.sql,dst=/opt/kmj/schema.sql,readonly" \
+            postgres:18.6-alpine3.24 -c listen_addresses='' >/dev/null
+          ready=0
+          for _ in $(seq 1 60); do
+            if docker exec -u postgres "$name" pg_isready -q -h /var/run/postgresql -U postgres -d kmj_catalog_ci; then
+              ready=1
+              break
+            fi
+            sleep 1
+          done
+          test "$ready" -eq 1 || { echo 'PG18_START=FAIL'; exit 1; }
+          version=$(docker exec -u postgres "$name" \
+            psql -X -qAt -v ON_ERROR_STOP=1 -d kmj_catalog_ci -c "SHOW server_version_num")
+          test "$((version / 10000))" -eq 18 || { echo 'PG18_VERSION=WRONG_MAJOR'; exit 1; }
+          echo 'PG18_SERVER_MAJOR=18 NETWORK=NONE HOST_PORTS=NONE'
+          snapshot() {
+            docker exec -u postgres "$name" psql -X -qAt -v ON_ERROR_STOP=1 \
+              -d kmj_catalog_ci -f /opt/kmj/schema.sql > "$1"
+            test -s "$1"
+          }
+          snapshot "$tmp/before.json"
+          snapshot "$tmp/same.json"
+          python3 -B scripts/ci/compare_postgres_schema_metadata.py \
+            --expected "$tmp/before.json" --actual "$tmp/same.json"
+          docker exec -u postgres "$name" psql -X -qAt -v ON_ERROR_STOP=1 \
+            -d kmj_catalog_ci -c 'CREATE TABLE public.kmj_ci_drift_negative (id bigint)' >/dev/null
+          snapshot "$tmp/modified.json"
+          set +e
+          python3 -B scripts/ci/compare_postgres_schema_metadata.py \
+            --expected "$tmp/before.json" --actual "$tmp/modified.json"
+          rc=$?
+          set -e
+          test "$rc" -eq 1 || { echo "PG18_NEGATIVE_TEST=FAIL rc=$rc"; exit 1; }
+          docker exec -u postgres "$name" psql -X -qAt -v ON_ERROR_STOP=1 \
+            -d kmj_catalog_ci -c 'DROP TABLE public.kmj_ci_drift_negative' >/dev/null
+          snapshot "$tmp/restored.json"
+          python3 -B scripts/ci/compare_postgres_schema_metadata.py \
+            --expected "$tmp/before.json" --actual "$tmp/restored.json"
+          echo 'PG18_CATALOG_DRIFT_NEGATIVE_CONTROL=PASS'
+          echo 'APP_LARAVEL_MIGRATIONS_PG18=NOT_TESTED LIVE_POSTGRES=UNCHANGED'
