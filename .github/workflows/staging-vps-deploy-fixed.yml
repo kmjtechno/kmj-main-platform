@@ -104,7 +104,7 @@ jobs:
           for attempt in $(seq 1 60); do
             : > "$headers"
             # Never follow an origin redirect into production or another host.
-            # The source-pinned parser rejects non-200/duplicate/missing/drift SHA.
+            # X-KMJ-Deploy-SHA: source-pinned parser rejects non-200, duplicate/missing or drifted identity.
             if http_status="$(curl --fail --silent --show-error --max-time 30 \
               --dump-header "$headers" --output /dev/null \
               --write-out '%{http_code}' "$origin/")"; then
