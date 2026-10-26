@@ -54,6 +54,34 @@ final class PublicSeoFoundationTest extends TestCase
             );
     }
 
+    public function test_sitemap_legal_pages_are_indexable_only_when_explicitly_enabled(): void
+    {
+        $legalRoutes = [
+            '/legal',
+            '/terms',
+            '/privacy',
+            '/refund-policy',
+            '/acceptable-use',
+            '/cookie-policy',
+        ];
+
+        config()->set('app.public_indexing', true);
+
+        foreach ($legalRoutes as $route) {
+            $this->get($route)
+                ->assertOk()
+                ->assertDontSee('<meta name="robots" content="noindex,nofollow">', false);
+        }
+
+        config()->set('app.public_indexing', false);
+
+        foreach ($legalRoutes as $route) {
+            $this->get($route)
+                ->assertOk()
+                ->assertSee('<meta name="robots" content="noindex,nofollow">', false);
+        }
+    }
+
     public function test_non_indexable_environment_emits_server_rendered_robots_policy(): void
     {
         config()->set('app.public_indexing', false);
