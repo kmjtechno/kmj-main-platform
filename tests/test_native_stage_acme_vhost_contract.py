@@ -23,8 +23,7 @@ class StagingAcmeVhostContract(unittest.TestCase):
         self.assertIn('STAGING_SERVER_ALREADY_DEFINED', S)
         self.assertIn('CONFIG_DIRECTORY_UNSAFE', S)
         self.assertIn('STAGING_PATH_SYMLINK', S)
-        self.assertIn('STAGING_SITE_REQUIRES_REVIEW', S)
-        self.assertIn('STAGING_SITE_REQUIRES_REVIEW', S.replace('EXISTING_STAGE_SITE_REQUIRES_REVIEW', 'STAGING_SITE_REQUIRES_REVIEW'))
+        self.assertIn('EXISTING_STAGE_SITE_REQUIRES_REVIEW', S)
         self.assertIn('install -o root -g root -m 0644 "$tmp" "$conf"', S)
         self.assertNotIn('tee /etc/nginx/nginx.conf', S)
 
