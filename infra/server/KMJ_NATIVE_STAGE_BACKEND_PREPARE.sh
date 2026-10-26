@@ -130,9 +130,9 @@ unset KMJ_STAGE_DB_PASSWORD KMJ_STAGE_APP_KEY password appkey
 chown "$USER:$USER" "$app/.env"
 # Only run dependency scripts/migrations as restricted stage user and in
 # new stage database. No production .env, DB rows or checkout is reused.
-runuser -u "$USER" -- bash -c 'cd "$1"; COMPOSER_MEMORY_LIMIT=-1 composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader --no-progress --no-ansi' _ "$app"
-runuser -u "$USER" -- bash -c 'cd "$1"; npm ci --no-audit --no-fund && npm run build' _ "$app"
-runuser -u "$USER" -- bash -c 'cd "$1"; php8.4 artisan migrate --force --no-interaction && php8.4 artisan about --no-ansi >/dev/null && php8.4 artisan optimize:clear' _ "$app"
+runuser -u "$USER" -- bash -c 'set -Eeuo pipefail; cd "$1"; COMPOSER_MEMORY_LIMIT=-1 composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader --no-progress --no-ansi' _ "$app"
+runuser -u "$USER" -- bash -c 'set -Eeuo pipefail; cd "$1"; npm ci --no-audit --no-fund && npm run build' _ "$app"
+runuser -u "$USER" -- bash -c 'set -Eeuo pipefail; cd "$1"; php8.4 artisan migrate --force --no-interaction && php8.4 artisan about --no-ansi >/dev/null && php8.4 artisan optimize:clear' _ "$app"
 cat > "$POOL" <<'POOL'
 [kmjstage]
 user = kmjstage
