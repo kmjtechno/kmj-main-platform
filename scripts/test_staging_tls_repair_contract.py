@@ -53,4 +53,15 @@ assert "curl -k" not in workflow
 assert "ssl-no-revoke" not in workflow
 assert "sudo -n bash \"$f\"" in workflow
 assert "kmj-stage-deploy" not in workflow
+assert 'CERTBOT_UNAVAILABLE' in guard, "certbot dependency must fail closed"
+assert 'DEDICATED_STAGING_VHOST_MISSING' in guard, "Nginx staging vhost must be verified"
+assert 'CERTBOT_NGINX_PLUGIN_MISSING' in guard, "certbot-nginx plugin must be verified"
+assert 'certbot --nginx --non-interactive --agree-tos --no-redirect -d "$DOMAIN"' in guard
+assert 'nginx -t' in guard, "Nginx syntax must be verified before reload"
+assert 'production_before="$(readlink -f /home/kmjprod/current)"' in guard
+assert 'STAGING_TLS_REPAIR=FAIL PRODUCTION_RELEASE_POINTER_CHANGED' in guard
+assert 'if command -v clpctl >/dev/null 2>&1; then' in guard, "CloudPanel must remain supported"
+assert 'server_name[[:space:]]+staging' in guard, "Require exact stage hostname"
+assert 'certbot --nginx' in guard and 'certbot --apache' not in guard
+assert 'curl -k' not in guard and '--insecure' not in guard
 print("Guarded staging-only TLS repair contract PASS")
