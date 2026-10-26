@@ -23,7 +23,7 @@ void test('visual preview covers locked pages and real owner Operations shell at
     assert.match(script, /Signed-out Login CTA missing or outside viewport/);
     assert.match(script, /Signed-out Register CTA missing or outside viewport/);
     assert.match(script, /Locked landing exceeds centered 1280px canvas/);
-    assert.match(script, /Owner Command OS exceeds 1520px bounded canvas/);
+    assert.match(script, /Owner Command OS must fill the viewport width/);
 });
 
 void test('preview fails on broken assets or horizontal overflow, never real owner login', () => {
