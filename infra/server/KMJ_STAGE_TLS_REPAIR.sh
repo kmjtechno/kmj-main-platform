@@ -46,13 +46,13 @@ if command -v clpctl >/dev/null 2>&1; then
   clpctl lets-encrypt:install:certificate --domainName="$DOMAIN"
 else
   # Standalone Nginx installations may have no CloudPanel CLI. This path
-  # requires an existing dedicated staging vhost and preinstalled certbot
+  # requires an existing staging-only server_name directive and preinstalled certbot
   # Nginx plugin; it never creates or edits a production vhost directly.
   if ! command -v certbot >/dev/null 2>&1; then
     echo "STAGING_TLS_REPAIR=BLOCKED CERTBOT_UNAVAILABLE" >&2
     exit 7
   fi
-  if ! nginx -T 2>/dev/null | grep -Eq '^[[:space:]]*server_name[[:space:]]+staging[.]kmjtechno[.]com([[:space:];]|$)'; then
+  if ! nginx -T 2>/dev/null | grep -Eq '^[[:space:]]*server_name[[:space:]]+staging[.]kmjtechno[.]com[[:space:]]*;'; then
     echo "STAGING_TLS_REPAIR=BLOCKED DEDICATED_STAGING_VHOST_MISSING" >&2
     exit 7
   fi
