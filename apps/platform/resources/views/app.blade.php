@@ -11,6 +11,9 @@
                 'capabilities',
                 'products.*',
                 'trust',
+                // All legal/policy pages listed in the public sitemap must
+                // follow the same explicit production indexing gate.
+                'legal.*',
             );
         @endphp
         @unless (config('app.public_indexing', false) && $publicIndexableRoute)
