@@ -2,6 +2,23 @@
 .owner-module-shell {
     min-height: 100vh;
     background: #070c11;
+    color-scheme: dark;
+    --background: #070c11;
+    --foreground: #eef2f7;
+    --card: #0b1016;
+    --card-foreground: #eef2f7;
+    --popover: #0b1016;
+    --popover-foreground: #eef2f7;
+    --muted: #171e26;
+    --muted-foreground: #a3afbc;
+    --border: #394451;
+    --input: #394451;
+    --accent: #171e26;
+    --accent-foreground: #eef2f7;
+    --primary: #ef0035;
+    --primary-foreground: #ffffff;
+    --ring: #ef0035;
+    color: #eef2f7;
 }
 
 .owner-module-shell .owner-module-body {
@@ -21,16 +38,7 @@
 .owner-module-shell .owner-module-content {
     min-height: calc(100vh - 90px);
     border-radius: 14px;
-    background: radial-gradient(
-        ellipse at 42% 0%,
-        #182438 0%,
-        #0b1320 30%,
-        #080d15 85%
-    );
-    --background: #080d16;
-    --foreground: #e9effb;
-    --card: #111a29;
-    --muted-foreground: #9eacc1;
+    background: #070c11;
 }
 
 .owner-module-shell .owner-module-content .kmj-admin-shell {
@@ -176,4 +184,30 @@
     .owner-module-shell .kmj-admin-nav > div:first-child {
         flex-basis: 100%;
     }
+}
+
+/* Shared account/developer pages inherit the verified owner's locked shell. */
+.owner-module-shell .owner-module-content > :not(.kmj-admin-shell) {
+    padding: 16px;
+}
+
+.owner-module-shell .owner-module-content :is(input, textarea, select) {
+    color-scheme: dark;
+}
+
+.owner-module-shell .owner-shared-page {
+    gap: 12px;
+}
+
+.owner-module-shell .owner-shared-page > section {
+    border: 1px solid #394451;
+    border-radius: 11px;
+    background: linear-gradient(130deg, #0b1016, #070c11);
+    padding: 16px;
+    box-shadow: none;
+}
+
+.owner-module-shell .owner-shared-page h1 {
+    font-size: 22px;
+    line-height: 1.3;
 }

@@ -1,3 +1,5 @@
+import AppLayout from '../resources/js/layouts/app-layout';
+import DeveloperApps from '../resources/js/pages/developer-apps';
 // Development-only renderer. Never registered as a Laravel route or authentication bypass.
 import { createInertiaApp } from '@inertiajs/react';
 import Welcome from '../resources/js/pages/welcome';
@@ -220,6 +222,20 @@ function OwnerDevicesPreview() {
         </OwnerModuleShell>
     );
 }
+function OwnerDeveloperPreview() {
+    return (
+        <AppLayout>
+            <DeveloperApps
+                organizations={[]}
+                applications={[]}
+                keys={[]}
+                canIssueKeys={false}
+                newKey={null}
+            />
+        </AppLayout>
+    );
+}
+const ownerDeveloper = location.pathname === '/developer/apps';
 const ownerDevices = location.pathname === '/operator/codebridge/owner-plan';
 const ownerOps = location.pathname === '/operator/ops';
 
@@ -230,16 +246,18 @@ void createInertiaApp({
             ? 'operator-ops'
             : ownerDevices
               ? 'operator-codebridge-owner'
-              : owner
-                ? 'operator'
-                : 'welcome',
+              : ownerDeveloper
+                ? 'developer-apps'
+                : owner
+                  ? 'operator'
+                  : 'welcome',
         props: {
             errors: {},
             // Landing is a signed-out customer preview; owner routes use
             // synthetic session data. Never authenticate or persist a user.
             auth: {
                 user:
-                    owner || ownerOps || ownerDevices
+                    owner || ownerOps || ownerDevices || ownerDeveloper
                         ? {
                               id: 1,
                               name: 'KMJ QA Owner',
@@ -250,7 +268,9 @@ void createInertiaApp({
                           }
                         : null,
             },
-            operator: { enabled: owner || ownerOps || ownerDevices },
+            operator: {
+                enabled: owner || ownerOps || ownerDevices || ownerDeveloper,
+            },
             publicSite: {
                 base_url: 'http://127.0.0.1:4173',
                 indexable: false,
@@ -275,11 +295,13 @@ void createInertiaApp({
         encryptHistory: false,
     },
     resolve: () =>
-        ownerOps
-            ? OwnerOpsPreview
-            : ownerDevices
-              ? OwnerDevicesPreview
-              : owner
-                ? OperatorCommandOs
-                : Welcome,
+        ownerDeveloper
+            ? OwnerDeveloperPreview
+            : ownerOps
+              ? OwnerOpsPreview
+              : ownerDevices
+                ? OwnerDevicesPreview
+                : owner
+                  ? OperatorCommandOs
+                  : Welcome,
 });

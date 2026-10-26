@@ -10,6 +10,14 @@ export type DeliveryMilestone = {
 
 export const deliveryMilestones: DeliveryMilestone[] = [
     {
+        id: 'owner-locked-shell-account-developer-brand-contrast',
+        title: 'Locked owner shell across account and developer pages',
+        state: 'active',
+        detail: 'Shared AppLayout selects the locked owner shell only when the server-provided PlatformOwnerAccess result is enabled. Account and developer pages keep their existing forms and authorization. Owner theme tokens are scoped independently of customer appearance. The original KMJ emblem receives a light contrast backplate in a versioned browser favicon without changing its geometry.',
+        evidence:
+            'Source regression checks cover owner-only layout selection, scoped dark tokens and versioned contrast favicon. Exact-head CI and fresh private owner visual acceptance are required before deployment.',
+    },
+    {
         id: 'owner-shared-device-controls-workspace',
         title: 'Shared owner workspace and CodeBridge device controls',
         state: 'active',
