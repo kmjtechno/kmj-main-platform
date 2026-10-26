@@ -21,13 +21,21 @@ final class OperatorCommandOsHttpAccessTest extends TestCase
     public function test_guest_cannot_open_command_os_over_http(): void
     {
         $this->get('/operator')->assertRedirect(route('login'));
+        $this->get('/super-admin')->assertRedirect(route('login'));
     }
 
     public function test_verified_non_owner_cannot_open_command_os_over_http(): void
     {
-        $this->actingAs(User::factory()->create())
+        $nonOwner = User::factory()->create();
+
+        $this->actingAs($nonOwner)
             ->withSession(['auth.password_confirmed_at' => time()])
             ->get('/operator')
+            ->assertForbidden();
+
+        $this->actingAs($nonOwner)
+            ->withSession(['auth.password_confirmed_at' => time()])
+            ->get('/super-admin')
             ->assertForbidden();
     }
 
@@ -42,6 +50,11 @@ final class OperatorCommandOsHttpAccessTest extends TestCase
         $this->actingAs($user)
             ->withSession(['auth.password_confirmed_at' => time()])
             ->get('/operator')
+            ->assertForbidden();
+
+        $this->actingAs($user)
+            ->withSession(['auth.password_confirmed_at' => time()])
+            ->get('/super-admin')
             ->assertForbidden();
     }
 
@@ -67,6 +80,12 @@ final class OperatorCommandOsHttpAccessTest extends TestCase
             ->get('/operator')
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page->component('operator'));
+
+        $this->actingAs($user)
+            ->withSession(['auth.password_confirmed_at' => time()])
+            ->get('/super-admin')
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page->component('operator'));
     }
 
     public function test_verified_passkey_owner_must_confirm_password_before_command_os(): void
@@ -88,6 +107,9 @@ final class OperatorCommandOsHttpAccessTest extends TestCase
 
         $this->actingAs($user)
             ->get('/operator')
+            ->assertRedirect(route('password.confirm'));
+        $this->actingAs($user)
+            ->get('/super-admin')
             ->assertRedirect(route('password.confirm'));
     }
 }
