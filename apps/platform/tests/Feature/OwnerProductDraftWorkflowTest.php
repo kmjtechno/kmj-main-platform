@@ -269,7 +269,11 @@ final class OwnerProductDraftWorkflowTest extends TestCase
         self::assertSame('planned', $product->lifecycle);
         self::assertCount(1, $product->content['features']);
         self::assertNotEmpty($product->content['faqs']);
-        Http::assertSent(fn ($request): bool => str_ends_with($request->url(), '/chat/completions') && in_array('name', $request['response_format']['json_schema']['schema']['required'], true));
+        Http::assertSent(fn ($request): bool => str_ends_with($request->url(), '/chat/completions')
+            && $request['usage']['include'] === true
+            && $request['provider']['max_price']['prompt'] === 0
+            && $request['provider']['max_price']['completion'] === 0
+            && in_array('name', $request['response_format']['json_schema']['schema']['required'], true));
         $payload['brief'] = 'A different service with the same request identifier must not overwrite the saved draft.';
         $this->postJson('/operator/products/from-brief', $payload)->assertStatus(409);
         self::assertSame(1, Product::query()->count());
@@ -283,6 +287,47 @@ final class OwnerProductDraftWorkflowTest extends TestCase
         $this->actingAs($this->owner())->withSession(['auth.password_confirmed_at' => time()]);
         $this->postJson('/operator/products/from-brief', ['brief' => 'tiny', 'request_id' => (string) Str::uuid()])->assertUnprocessable();
         Http::assertNothingSent();
+        self::assertSame(0, Product::query()->count());
+    }
+
+    public function test_short_brief_reports_structured_free_provider_rejection_without_saving(): void
+    {
+        config(['product_studio.text.enabled' => true, 'product_studio.text.api_key' => 'test-only-not-a-key', 'product_studio.text.model' => 'openrouter/free']);
+        Http::fake(['openrouter.ai/api/v1/models' => Http::response(['data' => [['id' => 'openrouter/free', 'pricing' => ['prompt' => '0', 'completion' => '0']]]]),
+            'openrouter.ai/api/v1/chat/completions' => Http::response(['error' => ['message' => 'simulated request rejection with sensitive detail']], 400)]);
+        $this->actingAs($this->owner())->withSession(['auth.password_confirmed_at' => time()]);
+        $this->postJson('/operator/products/from-brief', ['brief' => 'KMJ software for proposed interactive wall projection.', 'request_id' => (string) Str::uuid()])
+            ->assertStatus(503)->assertJsonPath('code', 'FREE_CLOUD_REQUEST_REJECTED')
+            ->assertDontSee('sensitive detail');
+        self::assertSame(0, Product::query()->count());
+        Http::assertSentCount(2);
+    }
+
+    public function test_short_brief_rejects_missing_provider_cost_without_saving(): void
+    {
+        config(['product_studio.text.enabled' => true, 'product_studio.text.api_key' => 'test-only-not-a-key', 'product_studio.text.model' => 'openrouter/free']);
+        Http::fake(['openrouter.ai/api/v1/models' => Http::response(['data' => [['id' => 'openrouter/free', 'pricing' => ['prompt' => '0', 'completion' => '0']]]]),
+            'openrouter.ai/api/v1/chat/completions' => Http::response(['usage' => ['total_tokens' => 100], 'choices' => [['finish_reason' => 'stop', 'message' => ['content' => '{}']]]])]);
+        $this->actingAs($this->owner())->withSession(['auth.password_confirmed_at' => time()]);
+        $this->postJson('/operator/products/from-brief', ['brief' => 'KMJ software for proposed interactive wall projection.', 'request_id' => (string) Str::uuid()])
+            ->assertStatus(503)->assertJsonPath('code', 'RESPONSE_COST_NOT_VERIFIED_ZERO');
+        self::assertSame(0, Product::query()->count());
+    }
+
+    public function test_short_brief_incomplete_fields_are_a_reviewable_422_not_generic_503(): void
+    {
+        config(['product_studio.text.enabled' => true, 'product_studio.text.api_key' => 'test-only-not-a-key', 'product_studio.text.model' => 'openrouter/free']);
+        Http::fake(['openrouter.ai/api/v1/models' => Http::response(['data' => [['id' => 'openrouter/free', 'pricing' => ['prompt' => '0', 'completion' => '0']]]]),
+            'openrouter.ai/api/v1/chat/completions' => Http::response(['usage' => ['cost' => 0], 'choices' => [['finish_reason' => 'stop', 'message' => ['content' => json_encode([
+                'name' => 'Wall Projection', 'category' => 'cinema', 'offering_type' => 'product',
+                'summary' => 'Proposed interactive wall projection.',
+                'headline' => 'Interactive wall projection proposal',
+                // Provider omitted description, features, FAQs and prompts.
+            ], JSON_THROW_ON_ERROR)]]]])]);
+        $this->actingAs($this->owner())->withSession(['auth.password_confirmed_at' => time()]);
+        $this->postJson('/operator/products/from-brief', ['brief' => 'KMJ software for proposed interactive wall projection.', 'request_id' => (string) Str::uuid()])
+            ->assertStatus(422)->assertJsonPath('code', 'FREE_CLOUD_SCHEMA_INVALID')
+            ->assertJsonMissingPath('product');
         self::assertSame(0, Product::query()->count());
     }
 
