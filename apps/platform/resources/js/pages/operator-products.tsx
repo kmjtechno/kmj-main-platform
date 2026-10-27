@@ -1,4 +1,5 @@
-import { Head, Link } from '@inertiajs/react';
+import type { GenerationConfiguration } from '@/components/product-content-editor';
+import { Head, Link, usePage } from '@inertiajs/react';
 import { useMemo, useState } from 'react';
 import {
     ArrowLeft,
@@ -18,13 +19,21 @@ import {
 
 export default function OperatorProducts({
     products,
+    generation,
 }: {
     products: ManagedProduct[];
+    generation?: GenerationConfiguration;
 }) {
+    const usePageUrl = usePage().url;
     const [search, setSearch] = useState('');
     const [category, setCategory] = useState('all');
     const [lifecycle, setLifecycle] = useState('all');
-    const [creating, setCreating] = useState(false);
+    const [creating, setCreating] = useState(
+        () =>
+            new URLSearchParams(usePageUrl.split('?')[1] ?? '').get(
+                'create',
+            ) === '1',
+    );
     const totals = useMemo(
         () => ({
             public: products.filter((p) => p.is_public).length,
@@ -111,7 +120,7 @@ export default function OperatorProducts({
                         <h2 className="mb-4 flex items-center gap-2 text-lg font-bold">
                             <Boxes className="size-5" /> New product
                         </h2>
-                        <CommercialProductForm />
+                        <CommercialProductForm generation={generation} />
                     </section>
                 )}
 
@@ -193,6 +202,7 @@ export default function OperatorProducts({
                     search={search}
                     category={category}
                     lifecycle={lifecycle}
+                    generation={generation}
                 />
             </main>
         </>

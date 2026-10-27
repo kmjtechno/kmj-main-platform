@@ -28,8 +28,29 @@ final class AdminProductManager
             'is_public' => [$presence, 'boolean'],
             'image_path' => ['sometimes', 'nullable', 'string', 'max:255'],
             'summary' => ['sometimes', 'nullable', 'string', 'max:2000'],
+            ...self::contentRules(),
             'purchase_enabled' => [$presence, 'boolean'],
             'licensing_enabled' => [$presence, 'boolean'],
+        ];
+    }
+
+    /** @return array<string, mixed> */
+    public static function contentRules(): array
+    {
+        return [
+            'content' => ['sometimes', 'nullable', 'array:headline,description,features,faqs,photo_prompt,banner_prompt,banner_path,image_alt'],
+            'content.headline' => ['sometimes', 'nullable', 'string', 'max:200'],
+            'content.description' => ['sometimes', 'nullable', 'string', 'max:20000'],
+            'content.features' => ['sometimes', 'array', 'max:12'],
+            'content.features.*' => ['string', 'max:500'],
+            'content.faqs' => ['sometimes', 'array', 'max:8'],
+            'content.faqs.*' => ['array:question,answer'],
+            'content.faqs.*.question' => ['required', 'string', 'max:300'],
+            'content.faqs.*.answer' => ['required', 'string', 'max:2000'],
+            'content.photo_prompt' => ['sometimes', 'nullable', 'string', 'max:2000'],
+            'content.banner_prompt' => ['sometimes', 'nullable', 'string', 'max:2000'],
+            'content.banner_path' => ['sometimes', 'nullable', 'string', 'max:255', 'regex:#^/(?:assets/|product-artwork/)[a-zA-Z0-9_./-]+$#'],
+            'content.image_alt' => ['sometimes', 'nullable', 'string', 'max:300'],
         ];
     }
 
@@ -128,3 +149,4 @@ final class AdminProductManager
         return $attributes;
     }
 }
+

@@ -127,7 +127,7 @@ const groups = [
     },
 ];
 const quick = [
-    ['Add Product', '/operator/products', Plus],
+    ['Add Product', '/operator/products?create=1', Plus],
     ['Add Customer', '/operator/directory', Users],
     ['Manage Orders', '#commercial-orders', ShoppingCart],
     ['Issue License', '/operator/kslp', KeyRound],

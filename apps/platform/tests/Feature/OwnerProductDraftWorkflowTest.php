@@ -3,6 +3,8 @@
 namespace Tests\Feature;
 
 use App\Models\User;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Http\UploadedFile;
 use App\Services\Commerce\AdminProductManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
@@ -23,24 +25,24 @@ final class OwnerProductDraftWorkflowTest extends TestCase
 
     public function test_draft_generation_requires_a_verified_passkey_owner_and_recent_confirmation(): void
     {
-        \Illuminate\Support\Facades\Http::preventStrayRequests();
+        Http::preventStrayRequests();
         $this->postJson('/operator/products/draft', ['name' => 'KMJ Test'])->assertUnauthorized();
         $this->actingAs(User::factory()->create(['email_verified_at' => now()]))
             ->withSession(['auth.password_confirmed_at' => time()])
             ->postJson('/operator/products/draft', ['name' => 'KMJ Test'])->assertForbidden();
         $this->actingAs($this->owner())->withSession(['auth.password_confirmed_at' => 0])
             ->postJson('/operator/products/draft', ['name' => 'KMJ Test'])->assertStatus(423);
-        \Illuminate\Support\Facades\Http::assertNothingSent();
+        Http::assertNothingSent();
     }
 
     public function test_unconfigured_generation_never_returns_template_content_as_ai(): void
     {
-        \Illuminate\Support\Facades\Http::preventStrayRequests();
+        Http::preventStrayRequests();
         config(['product_studio.text.enabled' => false]);
         $this->actingAs($this->owner())->withSession(['auth.password_confirmed_at' => time()])
             ->postJson('/operator/products/draft', ['name' => 'KMJ Test', 'category' => 'developer'])
             ->assertStatus(503)->assertJsonPath('code', 'GENERATION_UNAVAILABLE');
-        \Illuminate\Support\Facades\Http::assertNothingSent();
+        Http::assertNothingSent();
         self::assertSame(0, Product::query()->count());
     }
 
@@ -48,7 +50,7 @@ final class OwnerProductDraftWorkflowTest extends TestCase
     {
         config(['product_studio.text.enabled' => true, 'product_studio.text.url' => 'http://127.0.0.1:11434',
             'product_studio.text.model' => 'qwen2.5-coder:7b']);
-        \Illuminate\Support\Facades\Http::fake(['127.0.0.1:11434/*' => \Illuminate\Support\Facades\Http::response([
+        Http::fake(['127.0.0.1:11434/*' => Http::response([
             'response' => json_encode([
                 'summary' => 'A proposed engineering workspace.',
                 'headline' => 'KMJ Draft Workspace',
@@ -70,12 +72,12 @@ final class OwnerProductDraftWorkflowTest extends TestCase
 
     public function test_remote_or_redirecting_provider_does_not_receive_product_data(): void
     {
-        \Illuminate\Support\Facades\Http::preventStrayRequests();
+        Http::preventStrayRequests();
         config(['product_studio.text.enabled' => true, 'product_studio.text.url' => 'https://example.com',
             'product_studio.text.model' => 'test']);
         $this->actingAs($this->owner())->withSession(['auth.password_confirmed_at' => time()])
             ->postJson('/operator/products/draft', ['name' => 'KMJ Test'])->assertStatus(503);
-        \Illuminate\Support\Facades\Http::assertNothingSent();
+        Http::assertNothingSent();
     }
 
     public function test_full_product_copy_persists_and_uses_existing_public_metadata(): void
@@ -103,7 +105,7 @@ final class OwnerProductDraftWorkflowTest extends TestCase
     {
         $this->actingAs($this->owner())->withSession(['auth.password_confirmed_at' => time()]);
         $this->postJson('/operator/products/media', [
-            'image' => \Illuminate\Http\UploadedFile::fake()->createWithContent('unsafe.svg', '<svg onload="alert(1)"/>'),
+            'image' => UploadedFile::fake()->createWithContent('unsafe.svg', '<svg onload="alert(1)"/>'),
         ])->assertUnprocessable();
         $this->post('/operator/products', [
             'name' => 'KMJ Bad Content', 'slug' => 'kmj-bad-content', 'lifecycle' => 'planned',
@@ -132,3 +134,4 @@ final class OwnerProductDraftWorkflowTest extends TestCase
         return $owner;
     }
 }
+

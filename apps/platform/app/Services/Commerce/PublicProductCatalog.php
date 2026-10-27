@@ -201,6 +201,12 @@ final class PublicProductCatalog
 
         $presented['lifecycle'] = $lifecycle !== '' ? $lifecycle : $presented['lifecycle'];
         $presented['lifecycle_label'] = $lifecycleLabel;
+        $content = (array) ($product->getAttribute('content') ?? []);
+        $presented['name'] = (string) $product->getAttribute('name');
+        if (trim((string) ($content['headline'] ?? '')) !== '') {
+            $presented['headline'] = $content['headline'];
+        }
+        $presented['content'] = array_intersect_key($content, array_flip(['description', 'features', 'faqs', 'banner_path', 'image_alt']));
         $presented['summary'] = $summary !== '' ? $summary : $presented['summary'];
         $presented['image_path'] = $imagePath !== '' ? $imagePath : null;
         $presented['sort_order'] = (int) $product->getAttribute('sort_order');
@@ -679,3 +685,4 @@ final class PublicProductCatalog
         ];
     }
 }
+
