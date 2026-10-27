@@ -166,7 +166,9 @@ final class OwnerProductDraftWorkflowTest extends TestCase
             && $request['model'] === 'openrouter/free'
             && $request['provider']['max_price']['prompt'] === 0
             && $request['provider']['max_price']['completion'] === 0
-            && $request['provider']['allow_fallbacks'] === false);
+            && $request['provider']['allow_fallbacks'] === true
+            && $request['provider']['data_collection'] === 'deny'
+            && $request['provider']['require_parameters'] === true);
     }
 
     public function test_length_stopped_response_is_rejected_even_if_its_json_is_valid(): void
@@ -301,6 +303,29 @@ final class OwnerProductDraftWorkflowTest extends TestCase
             ->assertDontSee('sensitive detail');
         self::assertSame(0, Product::query()->count());
         Http::assertSentCount(2);
+    }
+
+    public function test_short_brief_reports_no_compatible_free_endpoint_on_404_without_paid_or_unsafe_fallback(): void
+    {
+        config(['product_studio.text.enabled' => true, 'product_studio.text.api_key' => 'test-only-not-a-key', 'product_studio.text.model' => 'openrouter/free']);
+        Http::fake(['openrouter.ai/api/v1/models' => Http::response(['data' => [['id' => 'openrouter/free', 'pricing' => ['prompt' => '0', 'completion' => '0']]]]),
+            'openrouter.ai/api/v1/chat/completions' => Http::response(['error' => ['message' => 'provider detail never exposed']], 404)]);
+        $this->actingAs($this->owner())->withSession(['auth.password_confirmed_at' => time()]);
+        $this->postJson('/operator/products/from-brief', ['brief' => 'inteactive wall projetion SOFTWARE', 'request_id' => (string) Str::uuid()])
+            ->assertStatus(503)->assertJsonPath('code', 'FREE_CLOUD_NO_COMPATIBLE_ENDPOINT')
+            ->assertDontSee('provider detail never exposed');
+        self::assertSame(0, Product::query()->count());
+        Http::assertSentCount(2);
+        Http::assertSent(fn ($request): bool => str_ends_with($request->url(), '/chat/completions')
+            && $request['model'] === 'openrouter/free'
+            && $request['usage']['include'] === true
+            && $request['provider']['allow_fallbacks'] === true
+            && $request['provider']['data_collection'] === 'deny'
+            && $request['provider']['require_parameters'] === true
+            && $request['provider']['max_price']['prompt'] === 0
+            && $request['provider']['max_price']['completion'] === 0
+            && $request['provider']['max_price']['request'] === 0
+            && $request['provider']['max_price']['image'] === 0);
     }
 
     public function test_short_brief_rejects_missing_provider_cost_without_saving(): void
