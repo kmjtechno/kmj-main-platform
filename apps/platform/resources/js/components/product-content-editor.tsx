@@ -168,7 +168,7 @@ export default function ProductContentEditor({
     return (
         <section
             aria-label="Product content and artwork"
-            className="grid gap-5 rounded-xl border border-white/10 bg-black/10 p-4"
+            className="grid min-w-0 gap-5 rounded-xl border border-white/10 bg-black/10 p-4"
         >
             <div>
                 <h3 className="flex items-center gap-2 text-base font-bold">
@@ -429,7 +429,7 @@ export default function ProductContentEditor({
                                     }
                                 />
                             </label>
-                            <label className="flex min-h-11 cursor-pointer items-center gap-2 rounded-lg border px-3 text-xs">
+                            <label className="flex min-h-11 min-w-0 cursor-pointer flex-wrap items-center gap-2 rounded-lg border px-3 text-xs">
                                 <Upload className="size-4" />
                                 Upload PNG, JPEG or WebP
                                 <input

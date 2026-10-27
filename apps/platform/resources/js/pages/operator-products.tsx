@@ -24,15 +24,14 @@ export default function OperatorProducts({
     products: ManagedProduct[];
     generation?: GenerationConfiguration;
 }) {
-    const usePageUrl = usePage().url;
+    const pageUrl = usePage().url;
     const [search, setSearch] = useState('');
     const [category, setCategory] = useState('all');
     const [lifecycle, setLifecycle] = useState('all');
     const [creating, setCreating] = useState(
         () =>
-            new URLSearchParams(usePageUrl.split('?')[1] ?? '').get(
-                'create',
-            ) === '1',
+            new URLSearchParams(pageUrl.split('?')[1] ?? '').get('create') ===
+            '1',
     );
     const totals = useMemo(
         () => ({
@@ -132,7 +131,7 @@ export default function OperatorProducts({
                         <ListFilter className="size-4 text-red-500" /> Catalog
                         filters
                     </div>
-                    <div className="mt-4 grid gap-3 md:grid-cols-[minmax(180px,1fr)_minmax(160px,.6fr)_minmax(160px,.6fr)]">
+                    <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-[minmax(0,1fr)_minmax(0,.6fr)_minmax(0,.6fr)]">
                         <label className="relative">
                             <span className="sr-only">Search products</span>
                             <Search className="text-muted-foreground absolute top-3.5 left-3 size-4" />

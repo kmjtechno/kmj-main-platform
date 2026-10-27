@@ -1,10 +1,10 @@
 <?php
 
 use App\Http\Controllers\OwnerProductStudioController;
-use App\Services\ProductStudio\LocalProductDraftGenerator;
 use App\Models\User;
 use App\Services\Commerce\AdminProductManager;
 use App\Services\PlatformOwnerAccess;
+use App\Services\ProductStudio\LocalProductDraftGenerator;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Validation\ValidationException;
@@ -78,4 +78,3 @@ Route::middleware(['auth', 'verified', 'password.confirm'])
             return back()->with('success', 'Product order updated.');
         })->name('reorder');
     });
-

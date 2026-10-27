@@ -270,7 +270,7 @@ function OwnerProductsPreview() {
                     category: 'developer',
                     lifecycle: 'planned',
                     sort_order: (index + 1) * 10,
-                    image_path: '/assets/products/kmj-codebridge.webp',
+                    image_path: '/assets/locked/landing-hero.webp',
                     content: null,
                 }))}
                 generation={{ text_configured: false, image_configured: true }}

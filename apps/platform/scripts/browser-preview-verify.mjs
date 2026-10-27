@@ -122,7 +122,7 @@ try {
                             status: 200,
                             contentType: 'application/json',
                             body: JSON.stringify({
-                                path: '/assets/products/kmj-codebridge.webp',
+                                path: '/assets/locked/landing-hero.webp',
                                 provider: 'local-stable-diffusion',
                                 product_saved: false,
                             }),

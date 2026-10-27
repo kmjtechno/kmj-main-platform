@@ -685,4 +685,3 @@ final class PublicProductCatalog
         ];
     }
 }
-

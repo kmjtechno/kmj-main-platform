@@ -3,11 +3,11 @@
 namespace Tests\Feature;
 
 use App\Models\User;
-use Illuminate\Support\Facades\Http;
-use Illuminate\Http\UploadedFile;
-use App\Services\Commerce\AdminProductManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Inertia\Testing\AssertableInertia as Assert;
 use KMJ\MainPlatform\Catalog\Models\Product;
@@ -115,6 +115,32 @@ final class OwnerProductDraftWorkflowTest extends TestCase
         self::assertSame(0, Product::query()->count());
     }
 
+    public function test_uploaded_artwork_is_private_until_attached_to_a_public_product(): void
+    {
+        Storage::fake('local');
+        $this->actingAs($this->owner())->withSession(['auth.password_confirmed_at' => time()]);
+        $binary = base64_decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jRZkAAAAASUVORK5CYII=', true);
+        $response = $this->postJson('/operator/products/media', [
+            'image' => UploadedFile::fake()->createWithContent('product.png', $binary),
+            'variant' => 'photo',
+        ])->assertOk()->assertJsonPath('provider', 'owner-upload')->assertJsonPath('product_saved', false);
+        $path = $response->json('path');
+        $this->get($path)->assertOk()->assertHeader('Content-Type', 'image/png');
+        $this->actingAs(User::factory()->create(['email_verified_at' => now()]));
+        $this->get($path)->assertForbidden();
+        Product::query()->create(['slug' => 'kmj-media-test', 'name' => 'Media test', 'status' => 'sandbox', 'lifecycle' => 'planned', 'is_public' => true, 'image_path' => $path]);
+        $this->get($path)->assertOk()->assertHeader('X-Content-Type-Options', 'nosniff');
+    }
+
+    public function test_malformed_local_generation_keeps_existing_product_unchanged(): void
+    {
+        config(['product_studio.text.enabled' => true, 'product_studio.text.url' => 'http://127.0.0.1:11434', 'product_studio.text.model' => 'local']);
+        Http::fake(['127.0.0.1:11434/*' => Http::response(['response' => 'not json'])]);
+        $this->actingAs($this->owner())->withSession(['auth.password_confirmed_at' => time()])
+            ->postJson('/operator/products/draft', ['name' => 'KMJ Invalid Draft'])->assertStatus(503);
+        self::assertSame(0, Product::query()->count());
+    }
+
     private function owner(): User
     {
         $owner = User::factory()->create([
@@ -134,4 +160,3 @@ final class OwnerProductDraftWorkflowTest extends TestCase
         return $owner;
     }
 }
-

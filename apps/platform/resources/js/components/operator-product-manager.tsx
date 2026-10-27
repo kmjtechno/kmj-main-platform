@@ -334,7 +334,7 @@ function ManagedProductEditor({
             }}
             className="group grid gap-4 rounded-2xl border border-white/[0.08] bg-white/[0.025] p-4 transition hover:border-red-500/30 hover:bg-white/[0.04] xl:grid-cols-[1.1fr_.75fr_.85fr_auto]"
         >
-            <div className="flex items-center gap-2 xl:col-span-4">
+            <div className="flex min-w-0 flex-wrap items-center gap-2 xl:col-span-4">
                 <button
                     type="button"
                     draggable={allowReorder}
@@ -670,7 +670,7 @@ export function ProductManager({
                         landing-page and portfolio order.
                     </p>
                 </div>
-                <div className="grid grid-cols-2 gap-2 text-[10px] font-black sm:grid-cols-5">
+                <div className="grid grid-cols-2 gap-2 text-[10px] font-black 2xl:grid-cols-5">
                     <span className="rounded-xl border border-white/10 bg-white/[0.035] px-3 py-2.5">
                         {orderedProducts.length} products
                     </span>
