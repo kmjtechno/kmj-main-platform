@@ -109,7 +109,7 @@ def main():
     remote = subprocess.run(
         ["git", "ls-remote", "--exit-code", "https://github.com/kmjtechno/kmj-main-platform.git", "refs/heads/main"],
         stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True, timeout=25, check=False)
-    if remote.returncode != 0 or remote.stdout.split()[0] != SHA:
+    if remote.returncode != 0 or not remote.stdout.split() or remote.stdout.split()[0] != SHA:
         fail("TARGET_NOT_CURRENT_MAIN")
     if OLD == "platform-" + SHA[:12]:
         fail("TARGET_ALREADY_CURRENT")
@@ -143,7 +143,7 @@ def main():
     confirmed = subprocess.run(
         ["git", "ls-remote", "--exit-code", "https://github.com/kmjtechno/kmj-main-platform.git", "refs/heads/main"],
         stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True, timeout=25, check=False)
-    if confirmed.returncode != 0 or confirmed.stdout.split()[0] != SHA:
+    if confirmed.returncode != 0 or not confirmed.stdout.split() or confirmed.stdout.split()[0] != SHA:
         fail("TARGET_MAIN_MOVED")
     print("CANDIDATE_SHA=PASS", flush=True)
     print("EXACT_BACKUP_WITNESS=PASS", flush=True)
