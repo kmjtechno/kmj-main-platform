@@ -86,7 +86,7 @@ final class OwnerProductStudioController extends Controller
     {
         $this->authorizeOwner($request, $access);
         $data = $request->validate(['brief' => ['required', 'string', 'min:20', 'max:3000'], 'request_id' => ['required', 'uuid'], 'local_only' => ['sometimes', 'boolean']]);
-        $localOnly = ($data['local_only'] ?? false) === true;
+        $localOnly = (bool) ($data['local_only'] ?? false);
         $mode = $localOnly ? 'local-template' : 'verified-free-cloud';
         $key = 'product-studio-brief:'.$request->user()?->getAuthIdentifier().':'.$data['request_id'];
         $fingerprint = hash('sha256', trim($data['brief']).($localOnly ? '|explicit-local-template' : ''));
