@@ -1,0 +1,23 @@
+name: KMJ BABF906 Google Offsite Import Source Safety
+on:
+  pull_request:
+    paths:
+      - 'scripts/operations/*babf906*20261027.sh'
+      - 'scripts/test_babf906_google_offsite_contract.py'
+      - '.github/workflows/babf906-google-offsite-source-safety.yml'
+permissions:
+  contents: read
+jobs:
+  offsite-source-safety:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - name: Verify exact SHA/hash and isolated restore contracts
+        run: |
+          set -Eeuo pipefail
+          python3 -B -m unittest discover -s scripts -p test_babf906_google_offsite_contract.py -v
+          echo 'SOURCE_CONTRACT=PASS'
+          echo 'REAL_REMOTE_TRANSFER_OR_RESTORE=NOT_RUN_BY_CI'
