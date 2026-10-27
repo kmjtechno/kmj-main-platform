@@ -52,7 +52,7 @@ final class OwnerProductDraftWorkflowTest extends TestCase
     {
         config(['product_studio.text.enabled' => true, 'product_studio.text.api_key' => 'test-only-not-a-key', 'product_studio.text.model' => 'openrouter/free']);
         Http::fake(['openrouter.ai/api/v1/models' => Http::response(['data' => [['id' => 'openrouter/free', 'pricing' => ['prompt' => '0', 'completion' => '0']]]]), 'openrouter.ai/api/v1/chat/completions' => Http::response([
-            'usage' => ['cost' => 0], 'choices' => [['message' => ['content' => json_encode([
+            'usage' => ['cost' => 0], 'choices' => [['finish_reason' => 'stop', 'message' => ['content' => json_encode([
                 'summary' => 'A proposed engineering workspace.',
                 'headline' => 'KMJ Draft Workspace',
                 'description' => 'Draft product information to review.',
@@ -68,6 +68,7 @@ final class OwnerProductDraftWorkflowTest extends TestCase
             ->assertOk()->assertJsonPath('provider', 'verified-free-cloud')
             ->assertJsonPath('draft.summary', 'A proposed engineering workspace.')
             ->assertJsonMissingPath('draft.purchase_enabled');
+        Http::assertSent(fn ($request): bool => str_ends_with($request->url(), '/chat/completions') && $request['max_tokens'] === 8000 && $request['response_format']['type'] === 'json_schema');
         self::assertSame(0, Product::query()->count());
     }
 
@@ -165,6 +166,19 @@ final class OwnerProductDraftWorkflowTest extends TestCase
             && $request['provider']['max_price']['prompt'] === 0
             && $request['provider']['max_price']['completion'] === 0
             && $request['provider']['allow_fallbacks'] === false);
+    }
+
+    public function test_length_stopped_response_is_rejected_even_if_its_json_is_valid(): void
+    {
+        config(['product_studio.text.enabled' => true, 'product_studio.text.api_key' => 'test-only-not-a-key', 'product_studio.text.model' => 'openrouter/free']);
+        Http::fake(['openrouter.ai/api/v1/models' => Http::response(['data' => [['id' => 'openrouter/free', 'pricing' => ['prompt' => '0', 'completion' => '0']]]]),
+            'openrouter.ai/api/v1/chat/completions' => Http::response(['usage' => ['cost' => 0], 'choices' => [['finish_reason' => 'length', 'message' => ['content' => json_encode([
+                'summary' => 'Proposed draft', 'headline' => 'Proposed headline', 'description' => 'Proposed description', 'features' => [], 'faqs' => [], 'photo_prompt' => 'Product photo', 'banner_prompt' => 'Product banner',
+            ], JSON_THROW_ON_ERROR)]]]])]);
+        $this->actingAs($this->owner())->withSession(['auth.password_confirmed_at' => time()])
+            ->postJson('/operator/products/draft', ['name' => 'KMJ Truncated Draft'])
+            ->assertStatus(422)->assertJsonPath('code', 'CLOUD_DRAFT_INCOMPLETE')->assertJsonMissingPath('draft');
+        self::assertSame(0, Product::query()->count());
     }
 
     private function owner(): User
