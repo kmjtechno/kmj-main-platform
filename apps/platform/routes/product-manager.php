@@ -4,7 +4,7 @@ use App\Http\Controllers\OwnerProductStudioController;
 use App\Models\User;
 use App\Services\Commerce\AdminProductManager;
 use App\Services\PlatformOwnerAccess;
-use App\Services\ProductStudio\LocalProductDraftGenerator;
+use App\Services\ProductStudio\FreeCloudProductDraftGenerator;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Validation\ValidationException;
@@ -17,7 +17,7 @@ Route::middleware(['auth', 'verified', 'password.confirm'])
     ->prefix('operator/products')
     ->name('operator.products.')
     ->group(function (): void {
-        Route::get('/', function (Request $request, PlatformOwnerAccess $access, LocalProductDraftGenerator $generator) {
+        Route::get('/', function (Request $request, PlatformOwnerAccess $access, FreeCloudProductDraftGenerator $generator) {
             $user = $request->user();
             abort_unless($user instanceof User, 401);
             $access->require($user);

@@ -10,6 +10,14 @@ export type DeliveryMilestone = {
 
 export const deliveryMilestones: DeliveryMilestone[] = [
     {
+        id: 'product-studio-verified-free-cloud-policy',
+        title: 'Cloud-only verified-zero product drafting',
+        state: 'active',
+        detail: 'PR #617 removes the product studio local LLM dependency and follows ADR-004 cloud-only policy. An official OpenRouter free route requires fresh zero-price catalog evidence, hard zero-price provider caps, bounded requests and a verified-zero response. Paid and unknown-price routes fail closed; manual editing and artwork upload remain available. Existing GEO/SEO is preserved.',
+        evidence:
+            'The account connection doctor reports P520 missing its current account grant; P720 is intentionally not a dependency. Cloud inference remains unconfigured until a private server-side key and a real zero-cost request are verified. CI and staging activation are separate gates.',
+    },
+    {
         id: 'owner-product-content-artwork-studio',
         title: 'Owner product content and artwork studio',
         state: 'active',

@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
@@ -21,6 +22,7 @@ final class OwnerProductDraftWorkflowTest extends TestCase
     {
         parent::setUp();
         $this->withoutVite();
+        Cache::forget('product-studio-cloud-cooldown');
     }
 
     public function test_draft_generation_requires_a_verified_passkey_owner_and_recent_confirmation(): void
@@ -138,6 +140,31 @@ final class OwnerProductDraftWorkflowTest extends TestCase
             ->postJson('/operator/products/draft', ['name' => 'KMJ Invalid Draft'])->assertStatus(503);
         Http::assertNotSent(fn ($request): bool => str_ends_with($request->url(), '/chat/completions'));
         self::assertSame(0, Product::query()->count());
+    }
+
+    public function test_free_suffix_with_nonzero_price_never_calls_completion(): void
+    {
+        config(['product_studio.text.enabled' => true, 'product_studio.text.api_key' => 'test-only-not-a-key', 'product_studio.text.model' => 'vendor/model:free']);
+        Http::fake(['openrouter.ai/api/v1/models' => Http::response(['data' => [['id' => 'vendor/model:free', 'pricing' => ['prompt' => '0.001', 'completion' => '0']]]])]);
+        $this->actingAs($this->owner())->withSession(['auth.password_confirmed_at' => time()])
+            ->postJson('/operator/products/draft', ['name' => 'KMJ Price Guard'])->assertStatus(503);
+        Http::assertNotSent(fn ($request): bool => str_ends_with($request->url(), '/chat/completions'));
+    }
+
+    public function test_cloud_quota_error_stops_without_paid_retry_and_cools_down(): void
+    {
+        config(['product_studio.text.enabled' => true, 'product_studio.text.api_key' => 'test-only-not-a-key', 'product_studio.text.model' => 'openrouter/free']);
+        Http::fake(['openrouter.ai/api/v1/models' => Http::response(['data' => [['id' => 'openrouter/free', 'pricing' => ['prompt' => '0', 'completion' => '0']]]]),
+            'openrouter.ai/api/v1/chat/completions' => Http::response(['error' => 'quota'], 429)]);
+        $this->actingAs($this->owner())->withSession(['auth.password_confirmed_at' => time()]);
+        $this->postJson('/operator/products/draft', ['name' => 'KMJ Quota Guard'])->assertStatus(503);
+        $this->postJson('/operator/products/draft', ['name' => 'KMJ Quota Guard'])->assertStatus(503);
+        Http::assertSentCount(2);
+        Http::assertSent(fn ($request): bool => str_ends_with($request->url(), '/chat/completions')
+            && $request['model'] === 'openrouter/free'
+            && $request['provider']['max_price']['prompt'] === 0
+            && $request['provider']['max_price']['completion'] === 0
+            && $request['provider']['allow_fallbacks'] === false);
     }
 
     private function owner(): User

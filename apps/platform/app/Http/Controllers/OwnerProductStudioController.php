@@ -4,7 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\User;
 use App\Services\PlatformOwnerAccess;
-use App\Services\ProductStudio\LocalProductDraftGenerator;
+use App\Services\ProductStudio\FreeCloudProductDraftGenerator;
 use App\Services\ProductStudio\ProductArtworkStorage;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -16,7 +16,7 @@ use Throwable;
 
 final class OwnerProductStudioController extends Controller
 {
-    public function draft(Request $request, PlatformOwnerAccess $access, LocalProductDraftGenerator $generator): JsonResponse
+    public function draft(Request $request, PlatformOwnerAccess $access, FreeCloudProductDraftGenerator $generator): JsonResponse
     {
         $this->authorizeOwner($request, $access);
         $data = $request->validate([
@@ -27,13 +27,13 @@ final class OwnerProductStudioController extends Controller
         try {
             $draft = $generator->draft($data['name'], $data['category'] ?? 'other', $data['context'] ?? '');
         } catch (Throwable) {
-            return response()->json(['code' => 'GENERATION_UNAVAILABLE', 'message' => 'Local text generation is unavailable or returned an invalid draft. Your current fields have not changed.'], 503);
+            return response()->json(['code' => 'GENERATION_UNAVAILABLE', 'message' => 'Verified-free cloud generation is unavailable, quota-limited or returned an invalid draft. Your current fields have not changed.'], 503);
         }
 
-        return response()->json(['draft' => $draft, 'provider' => 'local-ollama', 'saved' => false]);
+        return response()->json(['draft' => $draft, 'provider' => 'verified-free-cloud', 'saved' => false]);
     }
 
-    public function media(Request $request, PlatformOwnerAccess $access, LocalProductDraftGenerator $generator, ProductArtworkStorage $storage): JsonResponse
+    public function media(Request $request, PlatformOwnerAccess $access, FreeCloudProductDraftGenerator $generator, ProductArtworkStorage $storage): JsonResponse
     {
         $this->authorizeOwner($request, $access);
         $data = $request->validate([
@@ -46,10 +46,10 @@ final class OwnerProductStudioController extends Controller
             $binary = $uploaded instanceof UploadedFile ? $uploaded->getContent() : $generator->image($data['prompt'], $data['variant'] ?? 'photo');
             $path = $storage->store($binary);
         } catch (Throwable) {
-            return response()->json(['code' => 'ARTWORK_UNAVAILABLE', 'message' => 'Artwork could not be prepared. Use a valid PNG, JPEG or WebP, or check the configured local image engine. Your product has not changed.'], 503);
+            return response()->json(['code' => 'ARTWORK_UNAVAILABLE', 'message' => 'Artwork could not be prepared. Use a valid PNG, JPEG or WebP, or wait until a verified-free cloud image provider is configured. Your product has not changed.'], 503);
         }
 
-        return response()->json(['path' => $path, 'provider' => $uploaded instanceof UploadedFile ? 'owner-upload' : 'local-stable-diffusion', 'product_saved' => false]);
+        return response()->json(['path' => $path, 'provider' => $uploaded instanceof UploadedFile ? 'owner-upload' : 'verified-free-cloud-image', 'product_saved' => false]);
     }
 
     public function showArtwork(Request $request, string $asset, PlatformOwnerAccess $access): StreamedResponse
