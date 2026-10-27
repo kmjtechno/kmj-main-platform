@@ -148,6 +148,23 @@ if __name__ == "__main__":
         main()
     except (OSError, RuntimeError, ValueError) as e:
         reason = str(e)
-        print("KMJ_ISOLATED_HTTP_ROLLBACK=BLOCKED_" + (
-            reason if re.fullmatch("[A-Z0-9_]{1,100}", reason) else "UNVERIFIED"))
+        safe = reason if re.fullmatch("[A-Z0-9_]{1,100}", reason) else "UNVERIFIED"
+        # Unlike earlier operator scripts, publish an attested failure receipt
+        # whenever the fixed authorized receipt directory is available.
+        if os.geteuid() == 0 and socket.gethostname().split(".")[0] == "KMJ-elite":
+            try:
+                atomic_receipt({
+                    "schema": "kmj-isolated-real-http-rollback-v1",
+                    "observed_utc": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+                    "candidate_sha": SHA, "previous_release": OLD,
+                    "status": "BLOCKED_PRECHECK", "reason_code": safe,
+                    "live_production_rollback": "NOT_PERFORMED",
+                    "protected_approval": "UNCHANGED",
+                    "tests": {},
+                    "limits": "Preflight failed: no rollback completion evidence.",
+                })
+                print("CODEBRIDGE_ROLLBACK_RECEIPT=WRITTEN")
+            except (OSError, RuntimeError):
+                print("CODEBRIDGE_ROLLBACK_RECEIPT=NOT_WRITTEN")
+        print("KMJ_ISOLATED_HTTP_ROLLBACK=BLOCKED_" + safe)
         raise SystemExit(2)
