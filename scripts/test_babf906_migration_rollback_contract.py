@@ -38,6 +38,8 @@ class MigrationRollbackSourceSafety(unittest.TestCase):
                       "PRODUCTION_ROLLBACK NOT_VERIFIED"):
             self.assertIn(token,S)
         self.assertNotIn("CANDIDATE_ENV_MISSING",S)
+        self.assertNotIn("[REDACTED]",S)
+        self.assertIn('DB_PASSWORD= \\\n    PGHOST=',S)
     def test_migration_and_compatibility_contract(self):
         for token in ("2026_10_20_070000_create_customer_profiles_table",
                       "2026_10_21_020500_create_omnidesk_activation_bindings",
