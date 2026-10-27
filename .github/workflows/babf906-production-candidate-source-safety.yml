@@ -1,0 +1,26 @@
+name: KMJ BABF906 Production Candidate Source Safety
+on:
+  pull_request:
+    paths:
+      - 'scripts/operations/stage-babf906-exact-main-no-activation-20261027.sh'
+      - 'scripts/operations/prepare-babf906-p0-local-recovery-20261027.sh'
+      - 'scripts/operations/seal-babf906-offsite-backup-20261027.py'
+      - 'scripts/test_babf906_*'
+      - '.github/workflows/babf906-production-candidate-source-safety.yml'
+permissions:
+  contents: read
+jobs:
+  candidate-source-contract:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - name: Exercise stage, backup and sanitized seal safety tests
+        run: |
+          set -Eeuo pipefail
+          python3 -B -m unittest discover -s scripts -p 'test_babf906_*contract.py' -v
+          echo 'SOURCE_CONTRACT=PASS'
+          echo 'ACTUAL_PRODUCTION_STAGE=NOT_ATTEMPTED'
+          echo 'ACTUAL_OFFSITE_RESTORE=NOT_ATTESTED_BY_CI'
