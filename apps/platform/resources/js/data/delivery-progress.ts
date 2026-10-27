@@ -15,7 +15,7 @@ export const deliveryMilestones: DeliveryMilestone[] = [
         state: 'active',
         detail: 'PR #627 makes one public short description the primary input. A bounded structured cloud response infers name, category and offering type and fills copy, features, FAQs and artwork prompts. The saved draft opens the real editor; a blank duplicate create form is hidden. Request receipts make unchanged retries idempotent.',
         evidence:
-            'PR #627 merged and is on staging, but the owner screenshot on 27 October 2026 shows a genuine 503 free-cloud draft failure without a saved product. Draft PR #630 explicitly requests zero-cost usage receipts, gives safe error classifications and adds regressions; this is source-only until CI, staging provider diagnosis and owner save/reopen acceptance pass. The strict no-paid-fallback gate is unchanged. Real AI image generation is still unconfigured.',
+            'PR #627 is deployed to staging, but the 27 October owner screenshot showed generic 503. Sanitized live staging checks verified one complete $0 unsaved cloud response (HTTP 200) and a reproducible HTTP 404 on the exact brief 'inteactive wall projetion SOFTWARE'; neither test wrote a product. PR #630 adds zero-cost usage receipts, safe HTTP404 endpoint feedback and same-free-model provider failover constrained by strict schema, denied provider data collection and all-zero max prices. This remains source-only until exact-head CI, staging deployment and real owner save/reopen acceptance pass. Actual AI image generation remains unconfigured.',
     },
     {
         id: 'one-click-ai-product-service',
