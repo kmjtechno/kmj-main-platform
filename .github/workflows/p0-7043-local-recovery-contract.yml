@@ -6,6 +6,8 @@ on:
       - 'scripts/test_p0_7043_local_recovery_20261027.py'
       - 'scripts/operations/seal-p0-7043ac-offsite-20261027.py'
       - 'scripts/test_seal_p0_7043_offsite_20261027.py'
+      - 'scripts/operations/verify-p0-7043ac-google-sftp-restore-20261027.sh'
+      - 'scripts/test_p0_7043_google_sftp_restore_20261027.py'
       - '.github/workflows/p0-7043-local-recovery-contract.yml'
   workflow_dispatch:
 permissions:
@@ -29,5 +31,8 @@ jobs:
           bash -n scripts/operations/prepare-p0-7043ac-local-recovery-20261027.sh
           python3 -B -m unittest -v scripts/test_p0_7043_local_recovery_20261027.py
           python3 -B -m unittest -v scripts/test_seal_p0_7043_offsite_20261027.py
+          bash -n scripts/operations/verify-p0-7043ac-google-sftp-restore-20261027.sh
+          python3 -B -m unittest -v scripts/test_p0_7043_google_sftp_restore_20261027.py
           echo '7043AC_RECOVERY_CONTRACT=PASS; REAL_PRODUCTION_BACKUP=NOT_RUN'
           echo '7043AC_OFFSITE_SEAL_CONTRACT=PASS; LIVE_SEAL_AND_TRANSFER=NOT_RUN'
+          echo '7043AC_INDEPENDENT_RESTORE_CONTRACT=PASS; REMOTE_IMPORT=NOT_RUN'
