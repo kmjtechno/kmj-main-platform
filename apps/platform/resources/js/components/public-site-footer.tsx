@@ -10,7 +10,7 @@ export default function PublicSiteFooter() {
     return (
         <>
             <KristiSupport />
-            <footer className="border-t border-white/[0.07] bg-[#05070a]">
+            <footer className="kmj-public-footer border-t border-white/[0.07] bg-[#030b10]">
                 <div className="mx-auto grid max-w-[1440px] gap-12 px-5 py-14 sm:px-8 md:grid-cols-2 lg:grid-cols-[1.4fr_.7fr_.7fr_.8fr] lg:px-12">
                     <div>
                         <LockedBrand />

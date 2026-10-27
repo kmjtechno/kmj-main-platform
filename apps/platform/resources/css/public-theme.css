@@ -1,0 +1,178 @@
+/* Shared public surfaces: fluid page canvas, bounded reading widths. */
+.locked-landing,
+.kmj-public-header,
+.kmj-public-footer,
+body:has(.kmj-public-header) main {
+    font-family: Arial, Helvetica, sans-serif;
+    color: #f4f6fa;
+}
+.locked-landing {
+    width: 100%;
+    max-width: none;
+    border-inline: 0;
+    box-shadow: none;
+}
+.locked-landing .lock-section,
+.locked-landing .lock-footer-main,
+.locked-landing .lock-roadmap-steps {
+    width: 100%;
+    max-width: 1680px;
+    margin-inline: auto;
+}
+.locked-landing .lock-header {
+    padding-inline: clamp(12px, 3vw, 64px);
+}
+.kmj-public-header,
+.kmj-public-footer,
+body:has(.kmj-public-header) main {
+    background-color: #030b10;
+}
+.kmj-public-header > div,
+.kmj-public-footer > div,
+body:has(.kmj-public-header) main > section {
+    max-width: 1680px;
+}
+.kmj-public-header {
+    background-color: #05090d;
+    backdrop-filter: none;
+    padding-inline: 0;
+}
+.kmj-public-header > div {
+    padding-inline: clamp(12px, 3vw, 64px);
+}
+.kmj-public-header nav a {
+    padding-inline: 10px;
+    font-size: 13px;
+    border-radius: 6px;
+}
+.kmj-public-header a,
+.kmj-public-footer a {
+    text-decoration: none;
+}
+.kmj-public-header a:focus-visible,
+.kmj-public-footer a:focus-visible {
+    outline: 2px solid #ff3751;
+    outline-offset: 4px;
+}
+.kmj-brand {
+    max-width: 100%;
+}
+.kmj-brand picture {
+    display: block;
+    width: 100%;
+}
+.locked-landing .kmj-brand-image,
+.kmj-public-header .kmj-brand-image,
+.kmj-public-footer .kmj-brand-image {
+    width: auto;
+    max-width: 100%;
+    height: 48px;
+    object-fit: contain;
+    filter: none;
+    transform: none;
+}
+.kmj-public-header .kmj-brand {
+    width: 220px;
+}
+.kmj-public-footer .kmj-brand {
+    width: 260px;
+}
+.locked-landing .lock-hero {
+    height: auto;
+    min-height: clamp(490px, 34vw, 680px);
+}
+.locked-landing .lock-hero-copy {
+    width: min(64%, 1000px);
+    padding-block: clamp(30px, 3vw, 64px);
+}
+.locked-landing .lock-hero h1 {
+    font-size: clamp(48px, 4.3vw, 82px);
+}
+.locked-landing .lock-hero-copy > p:not(.lock-eyebrow) {
+    max-width: 660px;
+    font-size: 15px;
+    line-height: 1.6;
+}
+.kmj-catalog main > section {
+    padding-top: clamp(24px, 3vw, 48px);
+    padding-bottom: 32px;
+}
+.kmj-catalog main h1 {
+    font-size: clamp(36px, 4vw, 64px);
+    line-height: 1.08;
+    letter-spacing: -0.035em;
+}
+.kmj-catalog-card {
+    min-height: 0;
+    border-radius: 10px;
+    background: #081016;
+    border-color: #344653;
+}
+.kmj-catalog-card .kmj-catalog-body {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    padding: 20px;
+}
+.kmj-catalog-card h2 {
+    margin-top: 16px;
+    font-size: 24px;
+    line-height: 1.2;
+    letter-spacing: -0.025em;
+}
+.kmj-catalog-card p {
+    font-size: 14px;
+    line-height: 1.6;
+}
+.kmj-catalog-card .kmj-catalog-evidence {
+    display: block;
+    margin-top: auto;
+    padding-top: 16px;
+}
+.kmj-catalog-evidence > summary {
+    min-height: 36px;
+    padding-block: 8px;
+    color: #e4eaf0;
+}
+.kmj-catalog-evidence[open] > :not(summary) {
+    margin-top: 12px;
+}
+@media (max-width: 1050px) {
+    .locked-landing .lock-hero-copy {
+        width: 78%;
+    }
+}
+@media (max-width: 560px) {
+    .locked-landing .lock-hero-copy {
+        width: 100%;
+        padding: 28px 5%;
+    }
+    .locked-landing .lock-hero h1 {
+        font-size: clamp(36px, 10vw, 48px);
+    }
+    .locked-landing .lock-hero-copy > p:not(.lock-eyebrow) {
+        font-size: 14px;
+    }
+    .locked-landing .kmj-brand-image,
+    .kmj-public-header .kmj-brand-image {
+        height: 36px;
+    }
+    .kmj-public-header .kmj-brand {
+        width: min(40vw, 180px);
+    }
+}
+
+@media (min-width: 1024px) and (max-width: 1279px) {
+    .kmj-public-header .kmj-brand {
+        width: 180px;
+    }
+    .kmj-public-header nav a {
+        padding-inline: 8px;
+    }
+}
+
+.locked-landing .lock-primary,
+.locked-landing .lock-auth-register {
+    background: linear-gradient(120deg, #d31332, #b80b28);
+    color: #fff;
+}
