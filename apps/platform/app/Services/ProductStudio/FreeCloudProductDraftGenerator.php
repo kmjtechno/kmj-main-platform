@@ -33,8 +33,12 @@ final class FreeCloudProductDraftGenerator
     /** @return array<string, mixed> */
     public function draft(string $name, string $category, string $context): array
     {
-        if (! $this->configured('text') || Cache::has('product-studio-cloud-cooldown')) {
+        if (! $this->configured('text')) {
             throw new RuntimeException('NO_FREE_ROUTE_AVAILABLE');
+        }
+        if (Cache::has('product-studio-cloud-cooldown')) {
+            $until = Cache::get('product-studio-cloud-cooldown');
+            throw new FreeCloudRateLimited(is_int($until) ? max(1, $until - time()) : 60);
         }
         $lock = Cache::lock('product-studio-cloud-request', 120);
         if (! $lock->get()) {
@@ -87,8 +91,11 @@ final class FreeCloudProductDraftGenerator
                     ['role' => 'user', 'content' => json_encode(['title' => $name, 'category' => $category, 'public_product_facts' => $context], JSON_THROW_ON_ERROR)],
                 ],
             ]);
-        if ($response->status() === 429 || $response->status() === 402) {
-            Cache::put('product-studio-cloud-cooldown', true, 60);
+        if ($response->status() === 429) {
+            $header = (string) $response->header('Retry-After');
+            $retryAfter = ctype_digit($header) ? min(86400, max(1, (int) $header)) : 60;
+            Cache::put('product-studio-cloud-cooldown', time() + $retryAfter, $retryAfter);
+            throw new FreeCloudRateLimited($retryAfter);
         }
         if (! $response->successful() || strlen($response->body()) > 200000) {
             throw new RuntimeException('NO_FREE_ROUTE_AVAILABLE');
