@@ -203,7 +203,11 @@ export function CommercialProductForm({
                 onContent={(content) => form.setData('content', content)}
                 onImage={(path) => form.setData('image_path', path)}
                 onDraft={(summary, content) =>
-                    form.setData({ ...form.data, summary, content })
+                    form.setData((current) => ({
+                        ...current,
+                        summary,
+                        content,
+                    }))
                 }
                 onBusy={setStudioBusy}
             />
@@ -521,7 +525,11 @@ function ManagedProductEditor({
                             }
                             onImage={(path) => form.setData('image_path', path)}
                             onDraft={(summary, content) =>
-                                form.setData({ ...form.data, summary, content })
+                                form.setData((current) => ({
+                                    ...current,
+                                    summary,
+                                    content,
+                                }))
                             }
                             onBusy={setStudioBusy}
                         />

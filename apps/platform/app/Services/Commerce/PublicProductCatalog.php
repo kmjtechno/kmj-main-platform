@@ -206,7 +206,7 @@ final class PublicProductCatalog
         if (trim((string) ($content['headline'] ?? '')) !== '') {
             $presented['headline'] = $content['headline'];
         }
-        $presented['content'] = array_intersect_key($content, array_flip(['description', 'features', 'faqs', 'banner_path', 'image_alt']));
+        $presented['content'] = array_intersect_key($content, array_flip(['description', 'features', 'faqs', 'banner_path', 'image_alt', 'offering_type']));
         $presented['summary'] = $summary !== '' ? $summary : $presented['summary'];
         $presented['image_path'] = $imagePath !== '' ? $imagePath : null;
         $presented['sort_order'] = (int) $product->getAttribute('sort_order');
