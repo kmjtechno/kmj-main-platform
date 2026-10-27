@@ -23,7 +23,7 @@ final class LocalProductDraftTemplate
         $identity = $first;
         $hasDelimiter = preg_match('/^(.+?)\s*(?::|[—–])\s+\S/u', $first, $matches) === 1;
         if ($hasDelimiter || preg_match('/^(.+?)\s+(?:is|provides|offers)\s+\S/iu', $first, $matches) === 1) {
-            $candidate = trim($matches[1]);
+            $candidate = trim($matches[1] ?? '');
             $candidateWords = preg_split('/\s+/u', $candidate) ?: [];
             // One-word delimited names can be valid, but generic section labels are not.
             $namedSingleWord = $hasDelimiter && count($candidateWords) === 1
