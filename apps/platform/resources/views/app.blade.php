@@ -71,6 +71,8 @@
             <meta name="twitter:title" content="{{ $initialSeo['title'] }}">
             <meta name="twitter:description" content="{{ $initialSeo['description'] }}">
             <meta name="twitter:image" content="{{ $initialSeo['image'] }}">
+            {{-- Pre-encoded with JSON_HEX_TAG and friends by the trusted service. --}}
+            <script type="application/ld+json">{!! $initialSeo['json_ld'] !!}</script>
         @endif
         <x-inertia::head>
             <title>{{ $initialSeo['title'] ?? config('app.name', 'KMJ TECHNO') }}</title>
