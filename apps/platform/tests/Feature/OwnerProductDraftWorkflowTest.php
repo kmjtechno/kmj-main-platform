@@ -326,8 +326,7 @@ final class OwnerProductDraftWorkflowTest extends TestCase
         ])->assertOk()->assertJsonPath('provider', 'verified-free-cloud-image')
             ->assertJsonPath('product_saved', false);
         $this->get($response->json('path'))->assertOk();
-        Http::assertSent(fn ($request): bool =>
-            str_ends_with($request->url(), '/ai/run/@cf/black-forest-labs/flux-1-schnell')
+        Http::assertSent(fn ($request): bool => str_ends_with($request->url(), '/ai/run/@cf/black-forest-labs/flux-1-schnell')
             && $request['steps'] === 4);
         self::assertSame(0, Product::query()->count());
     }
