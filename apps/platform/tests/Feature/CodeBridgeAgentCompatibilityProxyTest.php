@@ -86,5 +86,3 @@ final class CodeBridgeAgentCompatibilityProxyTest extends TestCase
 
         Http::assertNothingSent();
     }
-
-}
