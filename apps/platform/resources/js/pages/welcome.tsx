@@ -28,6 +28,7 @@ import ProductArtwork from '@/components/product-artwork';
 import PublicSeo from '@/components/public-seo';
 import { productImageForSlug } from '@/lib/product-image-identity';
 import '../../css/locked-landing.css';
+import '../../css/public-theme.css';
 
 type Product = {
     slug: string;

@@ -12,21 +12,16 @@ import PublicSeo from '@/components/public-seo';
 import PublicSiteFooter from '@/components/public-site-footer';
 import PublicSiteHeader from '@/components/public-site-header';
 import ProductVisual from '@/components/public/product-visual';
-
-const categoryOrder = [
-    'Platform & Infrastructure',
-    'Engineering & Automation',
-    'Calibration & Vision Systems',
-    'Secure Access & Connectivity',
-    'Commerce & Licensing',
-    'Media & Immersive Experience',
-] as const;
-
-const categoryRank = new Map<string, number>(
-    categoryOrder.map((category, index) => [category, index]),
-);
+import { compareProductCategories } from '@/lib/product-category-order.mjs';
 
 const categoryDescriptions: Record<string, string> = {
+    'Cloud & Infrastructure': 'Cloud platforms and connected infrastructure.',
+    'Industrial & Calibration':
+        'Calibration and visualization tools for immersive environments.',
+    'Cinema & Immersive': 'Cinema, playback and immersive experience systems.',
+    'Business & Platform':
+        'Secure access, licensing and connected business products.',
+    'Developer & AI': 'Developer tooling and governed AI engineering systems.',
     'Platform & Infrastructure':
         'Governed cloud and platform foundations for KMJ products and operations.',
     'Engineering & Automation':
@@ -97,12 +92,8 @@ export default function ProductsIndex({ products }: { products: Product[] }) {
                         haystack.includes(normalizedQuery))
                 );
             })
-            .sort(
-                (left, right) =>
-                    (categoryRank.get(left.category) ??
-                        Number.MAX_SAFE_INTEGER) -
-                    (categoryRank.get(right.category) ??
-                        Number.MAX_SAFE_INTEGER),
+            .sort((left, right) =>
+                compareProductCategories(left.category, right.category),
             );
     }, [lifecycle, products, query]);
 
@@ -139,7 +130,7 @@ export default function ProductsIndex({ products }: { products: Product[] }) {
                 ]}
             />
 
-            <div className="min-h-screen overflow-hidden bg-[#06080b] text-white selection:bg-[#ef2632] selection:text-white">
+            <div className="kmj-public-page kmj-catalog min-h-screen overflow-hidden bg-[#06080b] text-white selection:bg-[#ef2632] selection:text-white">
                 <div className="pointer-events-none fixed inset-0">
                     <div className="absolute -top-64 right-[4%] h-[42rem] w-[42rem] rounded-full bg-[#a30f18]/12 blur-[150px]" />
                     <div className="absolute top-[55rem] -left-64 h-[34rem] w-[34rem] rounded-full bg-[#ef2632]/7 blur-[140px]" />
@@ -238,7 +229,7 @@ export default function ProductsIndex({ products }: { products: Product[] }) {
                             </div>
                         </div>
 
-                        <div className="grid gap-5 lg:grid-cols-2">
+                        <div className="kmj-catalog-grid grid gap-5 lg:grid-cols-2 xl:grid-cols-3">
                             {filteredProducts.map((product, index) => {
                                 const ProductIcon =
                                     product.demo.kind === 'cloudos'
@@ -246,7 +237,7 @@ export default function ProductsIndex({ products }: { products: Product[] }) {
                                         : product.demo.kind === 'calibration'
                                           ? FlaskConical
                                           : ShieldCheck;
-                                const featured = index === 0;
+                                const featured = filteredProducts.length === 1;
                                 const startsCategory =
                                     index === 0 ||
                                     filteredProducts[index - 1]?.category !==
@@ -255,7 +246,7 @@ export default function ProductsIndex({ products }: { products: Product[] }) {
                                 return (
                                     <Fragment key={product.slug}>
                                         {startsCategory && (
-                                            <div className="mt-10 border-t border-white/[0.07] pt-10 first:mt-0 first:border-t-0 first:pt-0 lg:col-span-2">
+                                            <div className="mt-10 border-t border-white/[0.07] pt-10 first:mt-0 first:border-t-0 first:pt-0 lg:col-span-2 xl:col-span-3">
                                                 <div className="text-[10px] font-black tracking-[0.18em] text-[#ff5962] uppercase">
                                                     KMJ TECHNO · Product family
                                                 </div>
@@ -274,7 +265,7 @@ export default function ProductsIndex({ products }: { products: Product[] }) {
                                         )}
                                         <article
                                             className={
-                                                'group relative flex min-h-[31rem] flex-col overflow-hidden rounded-[2rem] border border-white/[0.09] bg-[#090c10] transition duration-300 hover:-translate-y-1 hover:border-white/[0.16] ' +
+                                                'kmj-catalog-card group relative flex min-h-[31rem] flex-col overflow-hidden rounded-[2rem] border border-white/[0.09] bg-[#090c10] transition duration-300 hover:-translate-y-1 hover:border-white/[0.16] ' +
                                                 (featured
                                                     ? 'lg:col-span-2 lg:min-h-[28rem]'
                                                     : '')
@@ -282,7 +273,7 @@ export default function ProductsIndex({ products }: { products: Product[] }) {
                                         >
                                             <div
                                                 className={
-                                                    'grid flex-1 gap-8 p-6 sm:p-8 ' +
+                                                    'kmj-catalog-body grid flex-1 gap-8 p-6 sm:p-8 ' +
                                                     (featured
                                                         ? 'lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]'
                                                         : '')
@@ -296,7 +287,7 @@ export default function ProductsIndex({ products }: { products: Product[] }) {
                                                             imagePath={
                                                                 product.image_path
                                                             }
-                                                            className="aspect-[4/3] w-full object-cover"
+                                                            className="aspect-[16/9] w-full object-contain"
                                                         />
                                                     </div>
                                                     <div className="flex flex-wrap items-start justify-between gap-3">
@@ -354,9 +345,6 @@ export default function ProductsIndex({ products }: { products: Product[] }) {
                                                     <p className="mt-5 max-w-2xl text-base leading-7 font-medium text-white/62">
                                                         {product.headline}
                                                     </p>
-                                                    <p className="mt-3 max-w-2xl text-sm leading-7 text-white/65">
-                                                        {product.summary}
-                                                    </p>
 
                                                     {product.variants &&
                                                         product.variants
@@ -393,7 +381,7 @@ export default function ProductsIndex({ products }: { products: Product[] }) {
                                                                 '/products/' +
                                                                 product.slug
                                                             }
-                                                            className="inline-flex h-11 items-center gap-2 rounded-xl bg-white px-5 text-sm font-black text-[#07090c] transition hover:bg-white/90"
+                                                            className="inline-flex h-11 items-center gap-2 rounded-xl bg-[#ef2632] px-5 text-sm font-bold text-white transition hover:bg-[#ce1729]"
                                                         >
                                                             Explore product
                                                             <ArrowRight className="h-4 w-4" />
@@ -401,17 +389,21 @@ export default function ProductsIndex({ products }: { products: Product[] }) {
                                                     </div>
                                                 </div>
 
-                                                <div
+                                                <details
                                                     className={
-                                                        'mt-8 grid gap-3 border-t border-white/[0.07] pt-7 ' +
+                                                        'kmj-catalog-evidence mt-8 grid gap-3 border-t border-white/[0.07] pt-7 ' +
                                                         (featured
                                                             ? 'lg:mt-0 lg:border-t-0 lg:border-l lg:pt-0 lg:pl-10'
                                                             : '')
                                                     }
                                                 >
-                                                    <div className="text-[9px] font-black tracking-[0.16em] text-white/65 uppercase">
-                                                        Evidence-led foundation
-                                                    </div>
+                                                    <summary className="cursor-pointer text-sm font-bold text-white/80">
+                                                        Evidence and product
+                                                        details
+                                                    </summary>
+                                                    <p className="mt-3 max-w-2xl text-sm leading-7 text-white/65">
+                                                        {product.summary}
+                                                    </p>
                                                     {product.proof
                                                         .slice(0, 3)
                                                         .map((item) => (
@@ -456,7 +448,7 @@ export default function ProductsIndex({ products }: { products: Product[] }) {
                                                                 : 'GATED'}
                                                         </span>
                                                     </div>
-                                                </div>
+                                                </details>
                                             </div>
                                         </article>
                                     </Fragment>

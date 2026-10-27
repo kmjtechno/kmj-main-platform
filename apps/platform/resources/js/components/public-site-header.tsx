@@ -4,6 +4,7 @@ import { useState } from 'react';
 import LockedBrand from '@/components/locked-brand';
 import PublicLanguageSwitch from '@/components/public-language-switch';
 import { dashboard, login, register } from '@/routes';
+import '../../css/public-theme.css';
 
 export default function PublicSiteHeader() {
     const { auth, publicSite, operator } = usePage().props;
@@ -12,7 +13,7 @@ export default function PublicSiteHeader() {
     const [open, setOpen] = useState(false);
 
     return (
-        <header className="sticky top-0 z-50 border-b border-white/[0.07] bg-[#06080b]/88 backdrop-blur-2xl">
+        <header className="kmj-public-header sticky top-0 z-50 border-b border-white/[0.07] bg-[#06080b]/88 backdrop-blur-2xl">
             <a
                 href="#main-content"
                 className="absolute top-3 left-4 z-[70] -translate-y-20 rounded-lg bg-white px-4 py-2 text-sm font-black text-black shadow-xl transition focus:translate-y-0"
@@ -87,7 +88,7 @@ export default function PublicSiteHeader() {
                             {registrationAvailable ? (
                                 <Link
                                     href={register()}
-                                    className="inline-flex h-10 items-center gap-2 rounded-lg bg-white px-4 text-sm font-black text-[#07090c] transition hover:bg-white/90"
+                                    className="inline-flex h-10 items-center gap-2 rounded-lg bg-[#ef2632] px-4 text-sm font-bold text-white transition hover:bg-[#ce1729]"
                                 >
                                     Create account
                                     <ArrowUpRight className="h-3.5 w-3.5" />
@@ -173,7 +174,7 @@ export default function PublicSiteHeader() {
                                             ? '/super-admin'
                                             : dashboard()
                                     }
-                                    className="inline-flex h-11 w-full items-center justify-center rounded-xl bg-white text-sm font-black text-black"
+                                    className="inline-flex h-11 w-full items-center justify-center rounded-xl bg-[#ef2632] text-sm font-bold text-white"
                                 >
                                     Open dashboard
                                 </Link>
