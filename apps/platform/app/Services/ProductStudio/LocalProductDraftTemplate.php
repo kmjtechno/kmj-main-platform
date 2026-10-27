@@ -17,11 +17,12 @@ final class LocalProductDraftTemplate
         $clean = trim((string) preg_replace('/[\x00-\x1f\x7f]+/u', ' ', strip_tags($brief)));
         $clean = trim((string) preg_replace('/\s+/u', ' ', $clean));
         $first = preg_split('/[.!?\n]/u', $clean, 2)[0] ?? $clean;
-        // A short explicit identity such as "KMJ Calibration Studio is proposed..."
-        // should not become "KMJ Calibration Studio is proposed projector...".
-        // This is only a conservative name hint, never an AI or factual claim.
+        // Conservative identity hints before a description, never AI or factual claims.
+        // Support "KMJ Calibration Studio is ...", "KMJ CineCore: ..." and
+        // "KMJ CineCore — ..." without promoting the description into the title.
         $identity = $first;
-        if (preg_match('/^(.+?)\s+(?:is|provides|offers)\s+\S/iu', $first, $matches) === 1) {
+        if (preg_match('/^(.+?)\s*(?::|[—–])\s+\S/u', $first, $matches) === 1
+            || preg_match('/^(.+?)\s+(?:is|provides|offers)\s+\S/iu', $first, $matches) === 1) {
             $candidate = trim($matches[1]);
             $candidateWords = preg_split('/\s+/u', $candidate) ?: [];
             if (count($candidateWords) >= 2 && count($candidateWords) <= 8
