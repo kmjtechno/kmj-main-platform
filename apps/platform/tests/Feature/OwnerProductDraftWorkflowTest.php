@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\User;
+use App\Services\Seo\PublicInitialMetadata;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Cache;
@@ -221,7 +222,7 @@ final class OwnerProductDraftWorkflowTest extends TestCase
 
     public function test_existing_metadata_uses_service_schema_and_only_visible_faqs(): void
     {
-        $metadata = app(\App\Services\Seo\PublicInitialMetadata::class)->forPage(['component' => 'products/show', 'props' => ['product' => [
+        $metadata = app(PublicInitialMetadata::class)->forPage(['component' => 'products/show', 'props' => ['product' => [
             'slug' => 'kmj-engineering', 'name' => 'KMJ Engineering', 'summary' => 'Proposed engineering service.', 'lifecycle_label' => 'Planned',
             'image_path' => '/assets/brand/kmj-social-card.webp', 'content' => ['offering_type' => 'service', 'faqs' => [['question' => 'What is it?', 'answer' => 'A proposed service.']]],
         ]]], 'https://kmjtechno.com');
