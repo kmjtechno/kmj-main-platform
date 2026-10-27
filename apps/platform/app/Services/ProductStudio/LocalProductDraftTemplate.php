@@ -21,11 +21,15 @@ final class LocalProductDraftTemplate
         // Support "KMJ Calibration Studio is ...", "KMJ CineCore: ..." and
         // "KMJ CineCore — ..." without promoting the description into the title.
         $identity = $first;
-        if (preg_match('/^(.+?)\s*(?::|[—–])\s+\S/u', $first, $matches) === 1
-            || preg_match('/^(.+?)\s+(?:is|provides|offers)\s+\S/iu', $first, $matches) === 1) {
+        $hasDelimiter = preg_match('/^(.+?)\s*(?::|[—–])\s+\S/u', $first, $matches) === 1;
+        if ($hasDelimiter || preg_match('/^(.+?)\s+(?:is|provides|offers)\s+\S/iu', $first, $matches) === 1) {
             $candidate = trim($matches[1]);
             $candidateWords = preg_split('/\s+/u', $candidate) ?: [];
-            if (count($candidateWords) >= 2 && count($candidateWords) <= 8
+            // One-word delimited names can be valid, but generic section labels are not.
+            $namedSingleWord = $hasDelimiter && count($candidateWords) === 1
+                && preg_match('/^[\p{L}\p{N}][\p{L}\p{N}-]{2,39}$/u', $candidate) === 1
+                && preg_match('/^(?:product|service|software|app|application|solution|platform|concept|idea|project|description|overview|features|summary|title|name)\z/iu', $candidate) !== 1;
+            if (($namedSingleWord || (count($candidateWords) >= 2 && count($candidateWords) <= 8))
                 && preg_match('/^(?:this|that|our|the|a|an)\b/iu', $candidate) !== 1) {
                 $identity = $candidate;
             }
