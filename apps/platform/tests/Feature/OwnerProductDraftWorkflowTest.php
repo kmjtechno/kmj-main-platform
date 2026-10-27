@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\User;
 use App\Services\Seo\PublicInitialMetadata;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\Client\Factory;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
@@ -380,6 +381,99 @@ final class OwnerProductDraftWorkflowTest extends TestCase
         $this->actingAs($this->owner())->withSession(['auth.password_confirmed_at' => time()]);
         $this->postJson('/operator/products/from-brief', ['brief' => 'KMJ software for proposed interactive wall projection.', 'request_id' => (string) Str::uuid()])
             ->assertStatus(503)->assertJsonPath('code', 'RESPONSE_COST_NOT_VERIFIED_ZERO');
+        self::assertSame(0, Product::query()->count());
+    }
+
+    public function test_missing_inline_cost_is_accepted_only_after_authenticated_matching_zero_cost_generation_receipt(): void
+    {
+        config(['product_studio.text.enabled' => true, 'product_studio.text.api_key' => 'test-only-not-a-key', 'product_studio.text.model' => 'openrouter/free']);
+        $id = 'gen-1234567890abcdefghijklmnopqrst';
+        Http::fake([
+            'openrouter.ai/api/v1/models' => Http::response(['data' => [['id' => 'openrouter/free', 'pricing' => ['prompt' => '0', 'completion' => '0']]]]),
+            'openrouter.ai/api/v1/chat/completions' => Http::response([
+                'id' => $id, 'usage' => ['prompt_tokens' => 10, 'completion_tokens' => 100],
+                'choices' => [['finish_reason' => 'stop', 'message' => ['content' => json_encode([
+                    'name' => 'Interactive Wall Projection Software', 'category' => 'industrial', 'offering_type' => 'product',
+                    'summary' => 'Proposed software for interactive projected wall experiences.',
+                    'headline' => 'Plan interactive experiences on projected wall surfaces',
+                    'description' => 'A proposed software product for interactive experiences on projected wall surfaces. Its specific hardware compatibility, interactive capabilities, deployment requirements and availability remain to be verified before publication.',
+                    'features' => ['Intended projected-wall interactivity'], 'faqs' => [['question' => 'Is hardware support confirmed?', 'answer' => 'No hardware support has been verified.']],
+                    'photo_prompt' => 'Illustrative interactive projection studio without fabricated UI.',
+                    'banner_prompt' => 'Wide illustration of projected wall interaction without text.',
+                ], JSON_THROW_ON_ERROR)]]],
+            ]),
+            'openrouter.ai/api/v1/generation*' => Http::response([
+                'data' => ['id' => $id, 'total_cost' => 0, 'usage' => 0, 'is_byok' => false],
+            ]),
+        ]);
+        $this->actingAs($this->owner())->withSession(['auth.password_confirmed_at' => time()]);
+        $this->postJson('/operator/products/from-brief', ['brief' => 'inteactive wall projetion SOFTWARE', 'request_id' => (string) Str::uuid()])
+            ->assertCreated()->assertJsonPath('saved', true)->assertJsonPath('product.name', 'Interactive Wall Projection Software');
+
+        $product = Product::query()->sole();
+        self::assertFalse($product->is_public);
+        self::assertFalse($product->purchase_enabled);
+        self::assertFalse($product->licensing_enabled);
+        self::assertSame('planned', $product->lifecycle);
+        Http::assertSentCount(3);
+        Http::assertSent(fn ($request): bool => $request->method() === 'GET'
+            && str_contains($request->url(), '/api/v1/generation?id='.$id));
+    }
+
+    public function test_nonzero_or_mismatched_generation_receipt_cannot_save_a_draft(): void
+    {
+        config(['product_studio.text.enabled' => true, 'product_studio.text.api_key' => 'test-only-not-a-key', 'product_studio.text.model' => 'openrouter/free']);
+        $id = 'gen-1234567890abcdefghijklmnopqrst';
+        foreach ([
+            ['id' => $id, 'total_cost' => 0.001, 'usage' => 0.001, 'is_byok' => false],
+            ['id' => 'gen-wrong12345678901234567890', 'total_cost' => 0, 'usage' => 0, 'is_byok' => false],
+            ['id' => $id, 'total_cost' => 0, 'usage' => 0, 'is_byok' => true],
+        ] as $receipt) {
+            // Laravel accumulates Http::fake callbacks; replace the factory
+            // so each simulated provider bill is independently evaluated.
+            Http::swap(new Factory);
+            Http::fake([
+                'openrouter.ai/api/v1/models' => Http::response(['data' => [['id' => 'openrouter/free', 'pricing' => ['prompt' => '0', 'completion' => '0']]]]),
+                'openrouter.ai/api/v1/chat/completions' => Http::response(['id' => $id, 'usage' => ['total_tokens' => 42], 'choices' => [['finish_reason' => 'stop', 'message' => ['content' => '{}']]]]),
+                'openrouter.ai/api/v1/generation*' => Http::response(['data' => $receipt]),
+            ]);
+            $this->actingAs($this->owner())->withSession(['auth.password_confirmed_at' => time()]);
+            $this->postJson('/operator/products/from-brief', ['brief' => 'inteactive wall projetion SOFTWARE', 'request_id' => (string) Str::uuid()])
+                ->assertStatus(503)->assertJsonPath('code', ($receipt['id'] === $id && $receipt['total_cost'] != 0)
+                    ? 'RESPONSE_COST_REPORTED_NONZERO' : 'RESPONSE_COST_NOT_VERIFIED_ZERO');
+            self::assertSame(0, Product::query()->count());
+        }
+    }
+
+    public function test_provider_reported_nonzero_inline_cost_is_rejected_without_metadata_lookup(): void
+    {
+        config(['product_studio.text.enabled' => true, 'product_studio.text.api_key' => 'test-only-not-a-key', 'product_studio.text.model' => 'openrouter/free']);
+        Http::fake([
+            'openrouter.ai/api/v1/models' => Http::response(['data' => [['id' => 'openrouter/free', 'pricing' => ['prompt' => '0', 'completion' => '0']]]]),
+            'openrouter.ai/api/v1/chat/completions' => Http::response([
+                'id' => 'gen-1234567890abcdefghijklmnopqrst',
+                'usage' => ['cost' => 0.0001],
+                'choices' => [['finish_reason' => 'stop', 'message' => ['content' => '{}']]],
+            ]),
+        ]);
+        $this->actingAs($this->owner())->withSession(['auth.password_confirmed_at' => time()]);
+        $this->postJson('/operator/products/from-brief', ['brief' => 'inteactive wall projetion SOFTWARE', 'request_id' => (string) Str::uuid()])
+            ->assertStatus(503)->assertJsonPath('code', 'RESPONSE_COST_REPORTED_NONZERO');
+        Http::assertSentCount(2);
+        self::assertSame(0, Product::query()->count());
+    }
+
+    public function test_missing_generation_id_fails_closed_without_metadata_request(): void
+    {
+        config(['product_studio.text.enabled' => true, 'product_studio.text.api_key' => 'test-only-not-a-key', 'product_studio.text.model' => 'openrouter/free']);
+        Http::fake([
+            'openrouter.ai/api/v1/models' => Http::response(['data' => [['id' => 'openrouter/free', 'pricing' => ['prompt' => '0', 'completion' => '0']]]]),
+            'openrouter.ai/api/v1/chat/completions' => Http::response(['usage' => ['total_tokens' => 42], 'choices' => [['finish_reason' => 'stop', 'message' => ['content' => '{}']]]]),
+        ]);
+        $this->actingAs($this->owner())->withSession(['auth.password_confirmed_at' => time()]);
+        $this->postJson('/operator/products/from-brief', ['brief' => 'inteactive wall projetion SOFTWARE', 'request_id' => (string) Str::uuid()])
+            ->assertStatus(503)->assertJsonPath('code', 'RESPONSE_COST_NOT_VERIFIED_ZERO');
+        Http::assertSentCount(2);
         self::assertSame(0, Product::query()->count());
     }
 
