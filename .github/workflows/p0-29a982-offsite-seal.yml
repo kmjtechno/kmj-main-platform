@@ -1,0 +1,34 @@
+name: KMJ 29a982 Offsite Seal Safety
+
+on:
+  pull_request:
+    paths:
+      - 'scripts/operations/seal-29a982-offsite-backup-20261027.py'
+      - 'scripts/test_seal_29a982_offsite_backup_20261027.py'
+      - '.github/workflows/p0-29a982-offsite-seal.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/operations/seal-29a982-offsite-backup-20261027.py'
+      - 'scripts/test_seal_29a982_offsite_backup_20261027.py'
+      - '.github/workflows/p0-29a982-offsite-seal.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  sanitized-encryption-contract:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - name: Verify source-only encryption and environment removal contract
+        run: |
+          set -euo pipefail
+          python3 -B scripts/test_seal_29a982_offsite_backup_20261027.py -v
+          echo 'OFFSITE_SEAL_SOURCE_CONTRACT=PASS'
+          echo 'PRODUCTION_BACKUP_COPIED_TO_CI=NO'
+          echo 'OFFSITE_ENCRYPTION_ON_CI=NOT_ATTEMPTED'
+          echo 'OFFSITE_REMOTE_RESTORE=NOT_ATTESTED'
