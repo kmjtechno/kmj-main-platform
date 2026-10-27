@@ -311,10 +311,10 @@ export default function ProductContentEditor({
                         className="rounded-lg border border-red-500/40 px-3 py-2 font-bold"
                         onClick={() => {
                             if (
-                                identity.current.name !== suggestionFor.name ||
+                                identity.current.name !== suggestionFor?.name ||
                                 identity.current.category !==
-                                    suggestionFor.category ||
-                                latestFacts.current !== suggestionFor.facts
+                                    suggestionFor?.category ||
+                                latestFacts.current !== suggestionFor?.facts
                             ) {
                                 setSuggestedName('');
                                 setNotice(
@@ -476,10 +476,18 @@ export default function ProductContentEditor({
                                 <img
                                     src={path}
                                     alt={
-                                        content.image_alt ||
-                                        `${name} ${variant} preview`
+                                        usingBrandFallback
+                                            ? `KMJ TECHNO placeholder artwork for ${name}`
+                                            : variant === 'photo'
+                                              ? content.image_alt ||
+                                                `${name} product photo preview`
+                                              : `${name} wide banner preview`
                                     }
-                                    className="aspect-video w-full rounded-lg border object-contain"
+                                    className={
+                                        variant === 'banner'
+                                            ? 'aspect-video w-full rounded-lg border object-cover'
+                                            : 'aspect-video w-full rounded-lg border object-contain'
+                                    }
                                 />
                             )}
                             {usingBrandFallback && (
