@@ -19,6 +19,7 @@ use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use KMJ\MainPlatform\Catalog\Models\Product;
+use RuntimeException;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 use Throwable;
 
@@ -110,8 +111,28 @@ final class OwnerProductStudioController extends Controller
                 return response()->json(['code' => $error->getMessage(), 'message' => 'The cloud draft was incomplete. Your description is preserved and no product was saved.'], 422);
             } catch (FreeCloudRateLimited $error) {
                 return response()->json(['code' => 'FREE_CLOUD_RATE_LIMITED', 'message' => 'The free provider is rate-limited. Your description is preserved; wait before retrying.', 'retry_after' => $error->retryAfter], 429)->header('Retry-After', (string) $error->retryAfter);
+            } catch (ValidationException) {
+                return response()->json(['code' => 'FREE_CLOUD_SCHEMA_INVALID', 'message' => 'The cloud draft omitted required product fields. No product was saved. Please keep your description for another attempt or use the manual editor.'], 422);
+            } catch (RuntimeException $error) {
+                // Only known, non-sensitive failure categories reach the owner UI.
+                // Never return provider body, URL, credentials, exception text or user prompt.
+                $reasons = [
+                    'NO_FREE_ROUTE_AVAILABLE' => 'A verified-zero-cost cloud model is not available. No draft was saved.',
+                    'PRICE_NOT_VERIFIED_ZERO' => 'The provider price could not be verified as zero. Your description was not sent for generation.',
+                    'RESPONSE_COST_NOT_VERIFIED_ZERO' => 'The provider did not confirm zero-cost usage. Its draft was discarded and nothing was saved.',
+                    'FREE_CLOUD_NO_COMPATIBLE_ENDPOINT' => 'No compatible zero-cost provider is currently available for the required structured draft and privacy settings. Your description is preserved; try again later or use the manual editor. No product was saved.',
+                    'FREE_CLOUD_REQUEST_REJECTED' => 'The free provider rejected the structured draft request. No product was saved.',
+                    'FREE_CLOUD_AUTH_REJECTED' => 'The free provider rejected the server API credentials. No product was saved.',
+                    'FREE_CLOUD_QUOTA_UNAVAILABLE' => 'The free provider quota is unavailable. No product was saved.',
+                    'FREE_CLOUD_UPSTREAM_UNAVAILABLE' => 'The free provider is temporarily unavailable. No product was saved.',
+                    'FREE_CLOUD_RESPONSE_TOO_LARGE' => 'The cloud response exceeded the safety limit. No product was saved.',
+                    'FREE_ROUTE_BUSY' => 'Another free generation is already running. Your description is preserved.',
+                ];
+                $code = array_key_exists($error->getMessage(), $reasons) ? $error->getMessage() : 'GENERATION_UNAVAILABLE';
+
+                return response()->json(['code' => $code, 'message' => $reasons[$code] ?? 'A verified-free draft could not be prepared. Your description is preserved; no product was saved.'], $code === 'FREE_ROUTE_BUSY' ? 409 : 503);
             } catch (Throwable) {
-                return response()->json(['code' => 'GENERATION_UNAVAILABLE', 'message' => 'A complete verified-free draft could not be prepared. Your description is preserved and no product was saved.'], 503);
+                return response()->json(['code' => 'GENERATION_UNAVAILABLE', 'message' => 'A verified-free draft could not be prepared. Your description is preserved; no product was saved.'], 503);
             }
             $slug = Str::slug($draft['name']);
             $slugLock = Cache::lock('product-studio-create:'.$slug, 120);
