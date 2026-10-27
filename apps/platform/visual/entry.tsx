@@ -1,7 +1,8 @@
 import AppLayout from '../resources/js/layouts/app-layout';
 import DeveloperApps from '../resources/js/pages/developer-apps';
 // Development-only renderer. Never registered as a Laravel route or authentication bypass.
-import { createInertiaApp } from '@inertiajs/react';
+import { createInertiaApp, usePage } from '@inertiajs/react';
+import type { ManagedProduct } from '../resources/js/components/operator-product-manager';
 import Welcome from '../resources/js/pages/welcome';
 import Operator from '../resources/js/pages/operator';
 import OperatorProducts from '../resources/js/pages/operator-products';
@@ -259,20 +260,26 @@ function OwnerDeveloperPreview() {
     );
 }
 function OwnerProductsPreview() {
+    const previewProducts = usePage().props.previewProducts as
+        | ManagedProduct[]
+        | undefined;
     return (
         <OwnerModuleShell>
             <OperatorProducts
-                products={catalog.map((product, index) => ({
-                    ...product,
-                    id:
-                        '00000000-0000-4000-8000-' +
-                        String(index + 1).padStart(12, '0'),
-                    category: 'developer',
-                    lifecycle: 'planned',
-                    sort_order: (index + 1) * 10,
-                    image_path: '/assets/locked/landing-hero.webp',
-                    content: null,
-                }))}
+                products={
+                    previewProducts ??
+                    catalog.map((product, index) => ({
+                        ...product,
+                        id:
+                            '00000000-0000-4000-8000-' +
+                            String(index + 1).padStart(12, '0'),
+                        category: 'developer',
+                        lifecycle: 'planned',
+                        sort_order: (index + 1) * 10,
+                        image_path: '/assets/locked/landing-hero.webp',
+                        content: null,
+                    }))
+                }
                 generation={{
                     text_configured:
                         new URLSearchParams(location.search).get(

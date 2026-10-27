@@ -343,6 +343,35 @@ try {
                         'Prompt creator lost input after provider failure',
                     );
                 await page.unroute('**/operator/products/from-brief');
+                let savedProduct = {
+                    id: '00000000-0000-4000-8000-999999999999',
+                    name: 'KMJ Synthetic Service',
+                    slug: 'kmj-synthetic-service',
+                    status: 'sandbox',
+                    lifecycle: 'planned',
+                    category: 'industrial',
+                    sort_order: 999,
+                    is_public: false,
+                    purchase_enabled: false,
+                    licensing_enabled: false,
+                    image_path: '/assets/brand/kmj-social-card.webp',
+                    summary: 'Synthetic service summary',
+                    content: {
+                        offering_type: 'service',
+                        headline: 'Synthetic service headline',
+                        description: 'Synthetic complete service description',
+                        features: ['Synthetic consultation'],
+                        faqs: [
+                            {
+                                question: 'What is it?',
+                                answer: 'Proposed consultation.',
+                            },
+                        ],
+                        photo_prompt: 'Synthetic illustrative photo',
+                        banner_prompt: 'Synthetic illustrative banner',
+                        image_alt: 'KMJ brand artwork',
+                    },
+                };
                 await page.route(
                     '**/operator/products/from-brief',
                     async (route) => {
@@ -355,39 +384,7 @@ try {
                             body: JSON.stringify({
                                 saved: true,
                                 artwork: 'existing-brand-fallback',
-                                product: {
-                                    id: '00000000-0000-4000-8000-999999999999',
-                                    name: 'KMJ Synthetic Service',
-                                    slug: 'kmj-synthetic-service',
-                                    status: 'sandbox',
-                                    lifecycle: 'planned',
-                                    category: 'industrial',
-                                    sort_order: 999,
-                                    is_public: false,
-                                    purchase_enabled: false,
-                                    licensing_enabled: false,
-                                    image_path:
-                                        '/assets/brand/kmj-social-card.webp',
-                                    summary: 'Synthetic service summary',
-                                    content: {
-                                        offering_type: 'service',
-                                        headline: 'Synthetic service headline',
-                                        description:
-                                            'Synthetic complete service description',
-                                        features: ['Synthetic consultation'],
-                                        faqs: [
-                                            {
-                                                question: 'What is it?',
-                                                answer: 'Proposed consultation.',
-                                            },
-                                        ],
-                                        photo_prompt:
-                                            'Synthetic illustrative photo',
-                                        banner_prompt:
-                                            'Synthetic illustrative banner',
-                                        image_alt: 'KMJ brand artwork',
-                                    },
-                                },
+                                product: savedProduct,
                             }),
                         });
                     },
@@ -401,7 +398,7 @@ try {
                         headers: { 'X-Inertia': 'true' },
                         body: JSON.stringify({
                             component: 'operator-products',
-                            props: {},
+                            props: { previewProducts: [savedProduct] },
                             url: '/operator/products?create=1&syntheticCloud=1',
                             version: 'locked-ui-visual-fixture',
                             clearHistory: false,
@@ -448,6 +445,79 @@ try {
                 )
                     errors.push(
                         'A blank duplicate manual form remained after generation',
+                    );
+                await page.waitForFunction(() =>
+                    Array.isArray(history.state?.page?.props?.previewProducts),
+                );
+                if (
+                    (await page
+                        .locator('form')
+                        .filter({ hasText: 'KMJ Synthetic Service' })
+                        .count()) !== 1
+                )
+                    errors.push(
+                        'Two independent forms own the generated product',
+                    );
+                const currentPage = await page.evaluate(
+                    () => history.state.page,
+                );
+                await page.route(
+                    '**/operator/products/00000000-0000-4000-8000-999999999999',
+                    async (route) => {
+                        const payload = route.request().postDataJSON();
+                        savedProduct = {
+                            ...savedProduct,
+                            summary: payload.summary,
+                        };
+                        await route.fulfill({
+                            status: 200,
+                            contentType: 'application/json',
+                            headers: { 'X-Inertia': 'true' },
+                            body: JSON.stringify({
+                                ...currentPage,
+                                props: {
+                                    ...currentPage.props,
+                                    previewProducts: [savedProduct],
+                                    errors: {},
+                                },
+                            }),
+                        });
+                    },
+                );
+                await quick
+                    .getByRole('textbox', {
+                        name: 'Summary for KMJ Synthetic Service',
+                        exact: true,
+                    })
+                    .fill('Owner edited summary');
+                await quick
+                    .getByRole('button', { name: 'Save', exact: true })
+                    .click();
+                await quick
+                    .getByRole('button', { name: 'Save', exact: true })
+                    .waitFor({ state: 'hidden' });
+                await quick
+                    .getByRole('button', {
+                        name: 'Create another',
+                        exact: true,
+                    })
+                    .click();
+                const inventoryEntry = page
+                    .locator('#product-manager form')
+                    .filter({ hasText: 'KMJ Synthetic Service' });
+                await inventoryEntry
+                    .getByRole('button', { name: 'Edit', exact: true })
+                    .click();
+                if (
+                    (await inventoryEntry
+                        .getByRole('textbox', {
+                            name: 'Summary for KMJ Synthetic Service',
+                            exact: true,
+                        })
+                        .inputValue()) !== 'Owner edited summary'
+                )
+                    errors.push(
+                        'Reopening the saved product restored stale generated fields',
                     );
             }
             if (name === 'owner-developer') {
