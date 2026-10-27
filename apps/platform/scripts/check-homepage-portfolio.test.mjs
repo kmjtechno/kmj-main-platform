@@ -254,7 +254,7 @@ void test('locked and owner product galleries never borrow adjacent product artw
 
 void test('official header/footer logo preserves lossless pixels without an opaque backplate', () => {
     const svg = readFileSync(
-        'public/assets/brand/kmj-logo-horizontal-transparent.svg',
+        'public/assets/brand/kmj-logo-horizontal-readable.svg',
         'utf8',
     );
     assert.doesNotMatch(svg, /<rect\b/);
@@ -264,7 +264,7 @@ void test('official header/footer logo preserves lossless pixels without an opaq
         Buffer.from(encoded, 'base64'),
         readFileSync('public/assets/brand/kmj-email-lockup-dark.png'),
     );
-    assert.match(brand, /kmj-logo-horizontal-transparent\.svg/);
+    assert.match(brand, /kmj-logo-horizontal-readable\.svg/);
 });
 
 void test('landing uses the same public header/footer components as inner pages', () => {
@@ -274,4 +274,26 @@ void test('landing uses the same public header/footer components as inner pages'
         source,
         /<header className="lock-header">|<footer className="lock-footer">/,
     );
+});
+
+void test('shared logo has a readable vector tagline at desktop and compact sizes', () => {
+    for (const [variant, fontSize, width] of [
+        ['readable', 56, 1060],
+        ['readable-compact', 80, 1060],
+    ]) {
+        const svg = readFileSync(
+            `public/assets/brand/kmj-logo-horizontal-${variant}.svg`,
+            'utf8',
+        );
+        assert.match(svg, /<text[^>]+>INNOVATE \| BUILD \| SCALE<\/text>/);
+        assert.ok(svg.includes(`font-size="${fontSize}"`));
+        assert.match(svg, /clip-path="url\(#official-wordmark\)"/);
+        assert.doesNotMatch(svg, /<rect\b/);
+        const minimumRenderedWidth = variant === 'readable-compact' ? 108 : 180;
+        assert.ok(
+            (fontSize * minimumRenderedWidth) / width >= 8,
+            'tagline must stay at least eight CSS pixels high at the smallest supported logo width',
+        );
+    }
+    assert.match(brand, /media="\(max-width: 560px\)"/);
 });

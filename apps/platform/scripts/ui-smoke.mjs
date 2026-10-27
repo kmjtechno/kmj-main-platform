@@ -105,6 +105,18 @@ async function inspectPage(page, path, viewport, { requireIcon = false } = {}) {
             const rect = element.getBoundingClientRect();
             return { width: rect.width, left: rect.left };
         })(),
+        landingBands: [
+            ...document.querySelectorAll(
+                '.lock-hero, .lock-ecosystem, .lock-roadmap',
+            ),
+        ].map((element) => {
+            const rect = element.getBoundingClientRect();
+            return {
+                name: element.className,
+                width: rect.width,
+                left: rect.left,
+            };
+        }),
         brokenImages: [...document.images]
             .filter((img) => !(img.complete && img.naturalWidth > 0))
             .map((img) => img.currentSrc || img.src),
@@ -145,6 +157,18 @@ async function inspectPage(page, path, viewport, { requireIcon = false } = {}) {
                 Math.abs(metrics.landing.left) <= 1,
             `${tag}: deployed landing fills viewport after production CSS chunks load`,
             JSON.stringify(metrics.landing),
+        );
+    }
+    if (on('layout') && path === '/') {
+        check(
+            metrics.landingBands.length === 3 &&
+                metrics.landingBands.every(
+                    (band) =>
+                        Math.abs(band.width - metrics.clientWidth) <= 1 &&
+                        Math.abs(band.left) <= 1,
+                ),
+            `${tag}: hero, ecosystem and roadmap fill the same viewport`,
+            JSON.stringify(metrics.landingBands),
         );
     }
     if (on('images')) {
