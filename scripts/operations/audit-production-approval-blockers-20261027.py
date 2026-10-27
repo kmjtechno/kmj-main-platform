@@ -36,7 +36,7 @@ def run_read(*args: str, timeout: int = 15) -> tuple[int, str]:
         proc = subprocess.run(
             list(args), stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
             text=True, check=False, timeout=timeout,
-            env={"PATH": "/usr/local/bin:/usr/bin:/bin",
+            env={"PATH": "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
                  "HOME": "/root", "GIT_TERMINAL_PROMPT": "0",
                  "GIT_OPTIONAL_LOCKS": "0"},
         )
@@ -66,8 +66,12 @@ def read_json(path: Path) -> dict | None:
 
 
 def git_sha(release: Path) -> str | None:
+    # The release builder validates Git as kmjprod. Use the same identity and
+    # include system sbin paths for runuser; never fall back to a guessed SHA.
+    if not (release / ".git").is_dir() or (release / ".git").is_symlink():
+        return None
     rc, value = run_read(
-        "runuser", "-u", "kmjprod", "--", "git", "-C",
+        "/usr/sbin/runuser", "-u", "kmjprod", "--", "git", "-C",
         str(release), "rev-parse", "--verify", "HEAD",
     )
     return value if rc == 0 and SHA_RE.fullmatch(value) else None
@@ -101,7 +105,8 @@ def assess():
 
     out("CURRENT_RELEASE", current_name)
     old_sha = git_sha(current)
-    out("CURRENT_SOURCE_GIT", "VALID" if old_sha else "UNVERIFIED")
+    out("CURRENT_SOURCE_GIT", "VALID" if old_sha else
+        "NO_GIT_METADATA" if not (current / ".git").is_dir() else "UNVERIFIED")
     if old_sha:
         out("CURRENT_SOURCE_SHA", old_sha)
 
@@ -151,7 +156,12 @@ def assess():
             artifacts = all((app / path).is_file() and (app / path).stat().st_size > 0
                 for path in ("artisan", "vendor/autoload.php",
                              "public/build/manifest.json", "public/assets/kmj-codebridge-icon.png"))
-            out("CURRENT_MAIN_CANDIDATE", "ARTIFACTS_AND_SHA_PASS" if sha == target and artifacts else "BLOCKED_INCOMPLETE_OR_WRONG_SHA")
+            if sha != target:
+                out("CURRENT_MAIN_CANDIDATE", "BLOCKED_GIT_SHA_UNVERIFIED")
+            elif not artifacts:
+                out("CURRENT_MAIN_CANDIDATE", "BLOCKED_ARTIFACT_MISSING")
+            else:
+                out("CURRENT_MAIN_CANDIDATE", "ARTIFACTS_AND_SHA_PASS")
             env = app / ".env"
             out("CANDIDATE_RUNTIME_ENV", "PRESENT_NEEDS_OPERATOR_REVIEW" if env.is_file() and not env.is_symlink() else "MISSING")
             # Candidate backup witness is exact target + actual current pointer.
