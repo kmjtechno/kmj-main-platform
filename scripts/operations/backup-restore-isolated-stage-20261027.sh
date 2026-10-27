@@ -56,6 +56,7 @@ PY
 # Bound temporary disk load; limit only staging DB, not production.
 size="$(runuser -u postgres -- psql -XAtq -d "$dbname" -c 'SELECT pg_database_size(current_database())' 2>/dev/null)" || block DB_SIZE_UNAVAILABLE
 [[ "$size" =~ ^[0-9]+$ && "$size" -lt 1073741824 ]] || block DB_TOO_LARGE_FOR_LOCAL_REHEARSAL
+df -Pk /root | awk 'END {exit !($4 >= 3145728)}' || block INSUFFICIENT_BACKUP_SPACE
 [[ "$(readlink -f "$site")" == "$old" && "$(readlink -f "$prod")" == "$prod_before" ]] || block POINTER_DRIFT
 exec 9>/run/lock/kmj-stage-recovery.lock
 flock -n 9 || block LOCK_BUSY
@@ -92,6 +93,9 @@ runuser -u postgres -- pg_restore --exit-on-error --no-owner --no-privileges --d
 source_tables="$(runuser -u postgres -- psql -XAtq -d "$dbname" -c "SELECT count(*) FROM information_schema.tables WHERE table_schema='public' AND table_type='BASE TABLE'" 2>/dev/null)" || block SOURCE_TABLE_COUNT
 restored_tables="$(runuser -u postgres -- psql -XAtq -d "$scratch" -c "SELECT count(*) FROM information_schema.tables WHERE table_schema='public' AND table_type='BASE TABLE'" 2>/dev/null)" || block RESTORED_TABLE_COUNT
 [[ "$source_tables" =~ ^[0-9]+$ && "$source_tables" -gt 0 && "$source_tables" == "$restored_tables" ]] || block TABLE_COUNT_MISMATCH
+runuser -u postgres -- dropdb --if-exists -- "$scratch" || block SCRATCH_CLEANUP
+created=0
+[[ "$(git ls-remote --exit-code https://github.com/kmjtechno/kmj-main-platform.git refs/heads/staging-approved 2>/dev/null | awk '{print $1}')" == "$sha" ]] || block APPROVAL_MOVED_DURING_BACKUP
 sha256sum "$dbdump" "$archive" > "$receipt_dir/sha256sums.txt"
 chmod 0600 "$dbdump" "$archive" "$receipt_dir/sha256sums.txt"
 [[ "$(readlink -f "$site")" == "$old" && "$(readlink -f "$prod")" == "$prod_before" ]] || block POINTER_DRIFT
