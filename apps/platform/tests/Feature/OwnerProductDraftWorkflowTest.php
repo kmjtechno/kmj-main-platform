@@ -435,9 +435,28 @@ final class OwnerProductDraftWorkflowTest extends TestCase
             ]);
             $this->actingAs($this->owner())->withSession(['auth.password_confirmed_at' => time()]);
             $this->postJson('/operator/products/from-brief', ['brief' => 'inteactive wall projetion SOFTWARE', 'request_id' => (string) Str::uuid()])
-                ->assertStatus(503)->assertJsonPath('code', 'RESPONSE_COST_NOT_VERIFIED_ZERO');
+                ->assertStatus(503)->assertJsonPath('code', ($receipt['id'] === $id && $receipt['total_cost'] != 0)
+                    ? 'RESPONSE_COST_REPORTED_NONZERO' : 'RESPONSE_COST_NOT_VERIFIED_ZERO');
             self::assertSame(0, Product::query()->count());
         }
+    }
+
+    public function test_provider_reported_nonzero_inline_cost_is_rejected_without_metadata_lookup(): void
+    {
+        config(['product_studio.text.enabled' => true, 'product_studio.text.api_key' => 'test-only-not-a-key', 'product_studio.text.model' => 'openrouter/free']);
+        Http::fake([
+            'openrouter.ai/api/v1/models' => Http::response(['data' => [['id' => 'openrouter/free', 'pricing' => ['prompt' => '0', 'completion' => '0']]]]),
+            'openrouter.ai/api/v1/chat/completions' => Http::response([
+                'id' => 'gen-1234567890abcdefghijklmnopqrst',
+                'usage' => ['cost' => 0.0001],
+                'choices' => [['finish_reason' => 'stop', 'message' => ['content' => '{}']]],
+            ]),
+        ]);
+        $this->actingAs($this->owner())->withSession(['auth.password_confirmed_at' => time()]);
+        $this->postJson('/operator/products/from-brief', ['brief' => 'inteactive wall projetion SOFTWARE', 'request_id' => (string) Str::uuid()])
+            ->assertStatus(503)->assertJsonPath('code', 'RESPONSE_COST_REPORTED_NONZERO');
+        Http::assertSentCount(2);
+        self::assertSame(0, Product::query()->count());
     }
 
     public function test_missing_generation_id_fails_closed_without_metadata_request(): void
