@@ -48,6 +48,21 @@ export const productCategoryOptions = [
     ['other', 'Other'],
 ] as const;
 
+// Fully blank FAQ rows are editor placeholders, not public product content.
+// Partial answers are intentionally preserved so server validation can flag them.
+export function normalizedProductContent(content: ProductContent): ProductContent {
+    return {
+        ...content,
+        features: content.features.map((feature) => feature.trim()).filter(Boolean),
+        faqs: content.faqs
+            .map((faq) => ({
+                question: faq.question.trim(),
+                answer: faq.answer.trim(),
+            }))
+            .filter((faq) => faq.question !== '' || faq.answer !== ''),
+    };
+}
+
 export function CommercialProductForm({
     generation,
 }: {
@@ -72,12 +87,7 @@ export function CommercialProductForm({
         event.preventDefault();
         form.transform((data) => ({
             ...data,
-            content: {
-                ...data.content,
-                features: data.content.features
-                    .map((feature) => feature.trim())
-                    .filter(Boolean),
-            },
+            content: normalizedProductContent(data.content),
         }));
         form.post('/operator/products', {
             preserveScroll: true,
@@ -341,12 +351,7 @@ export function ManagedProductEditor({
         event.preventDefault();
         form.transform((data) => ({
             ...data,
-            content: {
-                ...data.content,
-                features: data.content.features
-                    .map((feature) => feature.trim())
-                    .filter(Boolean),
-            },
+            content: normalizedProductContent(data.content),
         }));
         form.put(`/operator/products/${product.id}`, {
             preserveScroll: true,
@@ -621,6 +626,12 @@ export function ManagedProductEditor({
                         </div>
                     </div>
 
+                    {form.isDirty && !form.processing && (
+                        <p className="text-muted-foreground text-xs xl:col-span-4" role="status">
+                            Unsaved editor changes — review product details and
+                            save before closing this entry.
+                        </p>
+                    )}
                     {Object.keys(form.errors).length > 0 && (
                         <div className="text-xs text-red-500 xl:col-span-4">
                             {Object.values(form.errors)[0]}
