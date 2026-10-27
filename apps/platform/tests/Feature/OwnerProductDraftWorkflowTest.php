@@ -157,8 +157,8 @@ final class OwnerProductDraftWorkflowTest extends TestCase
         Http::fake(['openrouter.ai/api/v1/models' => Http::response(['data' => [['id' => 'openrouter/free', 'pricing' => ['prompt' => '0', 'completion' => '0']]]]),
             'openrouter.ai/api/v1/chat/completions' => Http::response(['error' => 'quota'], 429)]);
         $this->actingAs($this->owner())->withSession(['auth.password_confirmed_at' => time()]);
-        $this->postJson('/operator/products/draft', ['name' => 'KMJ Quota Guard'])->assertStatus(503);
-        $this->postJson('/operator/products/draft', ['name' => 'KMJ Quota Guard'])->assertStatus(503);
+        $this->postJson('/operator/products/draft', ['name' => 'KMJ Quota Guard'])->assertStatus(429)->assertJsonPath('code', 'FREE_CLOUD_RATE_LIMITED')->assertHeader('Retry-After', '60');
+        $this->postJson('/operator/products/draft', ['name' => 'KMJ Quota Guard'])->assertStatus(429)->assertJsonPath('code', 'FREE_CLOUD_RATE_LIMITED')->assertHeader('Retry-After');
         Http::assertSentCount(2);
         Http::assertSent(fn ($request): bool => str_ends_with($request->url(), '/chat/completions')
             && $request['model'] === 'openrouter/free'

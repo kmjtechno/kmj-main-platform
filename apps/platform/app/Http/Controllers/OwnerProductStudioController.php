@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\User;
 use App\Services\PlatformOwnerAccess;
 use App\Services\ProductStudio\FreeCloudProductDraftGenerator;
+use App\Services\ProductStudio\FreeCloudRateLimited;
 use App\Services\ProductStudio\ProductArtworkStorage;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -26,6 +27,8 @@ final class OwnerProductStudioController extends Controller
         ]);
         try {
             $draft = $generator->draft($data['name'], $data['category'] ?? 'other', $data['context'] ?? '');
+        } catch (FreeCloudRateLimited $error) {
+            return response()->json(['code' => 'FREE_CLOUD_RATE_LIMITED', 'message' => 'The free cloud provider is rate-limited or its free quota is exhausted. Wait before retrying and check the provider quota reset. Your fields remain unchanged; manual editing is available.', 'retry_after' => $error->retryAfter], 429)->header('Retry-After', (string) $error->retryAfter);
         } catch (Throwable) {
             return response()->json(['code' => 'GENERATION_UNAVAILABLE', 'message' => 'Verified-free cloud generation is unavailable, quota-limited or returned an invalid draft. Your current fields have not changed.'], 503);
         }
