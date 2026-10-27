@@ -14,7 +14,8 @@ export const deliveryMilestones: DeliveryMilestone[] = [
         title: 'Free cloud quota and explicit owner feedback',
         state: 'blocked',
         detail: 'Staging completed one validated zero-cost unsaved cloud draft, then a real generation request returned HTTP 429 while catalog discovery returned 200. PR #619 preserves the strict free-only gate and reports an explicit rate-limit response with bounded Retry-After instead of a generic unavailable error. It never retries automatically or enables paid fallback.',
-        evidence: 'Owner-provided sanitized diagnostics confirm CLOUD_KEY_PRESENT=YES, CLOUD_CONFIG_ENABLED=YES and provider completion HTTP429. Current account daily-quota versus upstream capacity needs provider metadata confirmation. P520 owner grant exists but gateway registration is still missing; production redemption configuration remains a separate blocker.',
+        evidence:
+            'Owner-provided sanitized diagnostics confirm CLOUD_KEY_PRESENT=YES, CLOUD_CONFIG_ENABLED=YES and provider completion HTTP429. Current account daily-quota versus upstream capacity needs provider metadata confirmation. P520 owner grant exists but gateway registration is still missing; production redemption configuration remains a separate blocker.',
     },
     {
         id: 'product-studio-verified-free-cloud-policy',
