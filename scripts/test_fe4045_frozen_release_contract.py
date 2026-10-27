@@ -50,11 +50,13 @@ class FrozenRelease(unittest.TestCase):
  def test_cloud_safety_and_no_mutation(self):
   gen=(ROOT/"apps/platform/app/Services/ProductStudio/FreeCloudProductDraftGenerator.php").read_text()
   for token in ("PRICE_NOT_VERIFIED_ZERO", "RESPONSE_COST_NOT_VERIFIED_ZERO",
-                "FREE_CLOUD_RATE_LIMITED", "CLOUD_DRAFT_INCOMPLETE",
+                "CLOUD_DRAFT_INCOMPLETE",
                 "'allow_fallbacks' => false",
                 "'max_price' => ['prompt' => 0, 'completion' => 0, 'request' => 0, 'image' => 0]",
                 "'max_tokens' => 8000", "'finish_reason'"):
    self.assertIn(token,gen)
+  rate=(ROOT/"apps/platform/app/Services/ProductStudio/FreeCloudRateLimited.php").read_text()
+  self.assertIn("FREE_CLOUD_RATE_LIMITED",rate)
   for n in PATHS:
    for bad in ("git reset --hard","ln -sfn","systemctl restart",
                "/etc/kmj-codebridge/main-platform-production-release.json",
