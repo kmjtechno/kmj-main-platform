@@ -91,6 +91,7 @@ class ProductionReleaseReadOnlyAuditTest(unittest.TestCase):
         self.assertIn('report("PRODUCTION_ACTIVATION", "NOT_ATTEMPTED")', source)
         self.assertIn("CURRENT.resolve(strict=True)", source)
         self.assertIn("runuser", source)
+        self.assertIn('"GIT_OPTIONAL_LOCKS": "0"', source)
         self.assertIn("witness_matches", source)
         self.assertIn("stat.S_ISREG", source)
         for forbidden in (
