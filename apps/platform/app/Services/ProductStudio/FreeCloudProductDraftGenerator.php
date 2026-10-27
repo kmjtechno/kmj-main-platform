@@ -97,7 +97,9 @@ final class FreeCloudProductDraftGenerator
                 'temperature' => 0.3,
                 'response_format' => ['type' => 'json_schema', 'json_schema' => ['name' => 'kmj_product_draft', 'strict' => true, 'schema' => self::draftSchema($fromBrief)]],
                 'provider' => [
-                    'allow_fallbacks' => false,
+                    // Alternate providers for the SAME free route are allowed only if
+                    // they satisfy every strict parameter, privacy and $0 price cap.
+                    'allow_fallbacks' => true,
                     'require_parameters' => true,
                     'data_collection' => 'deny',
                     'sort' => 'latency',
@@ -113,6 +115,11 @@ final class FreeCloudProductDraftGenerator
             $retryAfter = ctype_digit($header) ? min(86400, max(1, (int) $header)) : 60;
             Cache::put('product-studio-cloud-cooldown', time() + $retryAfter, $retryAfter);
             throw new FreeCloudRateLimited($retryAfter);
+        }
+        if ($response->status() === 404) {
+            // With strict JSON-schema and privacy filters, even the free router
+            // can have no compatible eligible endpoint for this request.
+            throw new RuntimeException('FREE_CLOUD_NO_COMPATIBLE_ENDPOINT');
         }
         if (in_array($response->status(), [400, 422], true)) {
             throw new RuntimeException('FREE_CLOUD_REQUEST_REJECTED');
