@@ -120,6 +120,7 @@ final class OwnerProductStudioController extends Controller
                     'NO_FREE_ROUTE_AVAILABLE' => 'A verified-zero-cost cloud model is not available. No draft was saved.',
                     'PRICE_NOT_VERIFIED_ZERO' => 'The provider price could not be verified as zero. Your description was not sent for generation.',
                     'RESPONSE_COST_NOT_VERIFIED_ZERO' => 'The provider did not confirm zero-cost usage. Its draft was discarded and nothing was saved.',
+                    'FREE_CLOUD_NO_COMPATIBLE_ENDPOINT' => 'No compatible zero-cost provider is currently available for the required structured draft and privacy settings. Your description is preserved; try again later or use the manual editor. No product was saved.',
                     'FREE_CLOUD_REQUEST_REJECTED' => 'The free provider rejected the structured draft request. No product was saved.',
                     'FREE_CLOUD_AUTH_REJECTED' => 'The free provider rejected the server API credentials. No product was saved.',
                     'FREE_CLOUD_QUOTA_UNAVAILABLE' => 'The free provider quota is unavailable. No product was saved.',
