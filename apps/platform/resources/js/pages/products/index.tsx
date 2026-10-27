@@ -130,10 +130,10 @@ export default function ProductsIndex({ products }: { products: Product[] }) {
                 ]}
             />
 
-            <div className="kmj-public-page kmj-catalog min-h-screen overflow-hidden bg-[#06080b] text-white selection:bg-[#ef2632] selection:text-white">
+            <div className="kmj-public-page kmj-catalog min-h-screen overflow-hidden bg-[#06080b] text-white selection:bg-[#c8102e] selection:text-white">
                 <div className="pointer-events-none fixed inset-0">
                     <div className="absolute -top-64 right-[4%] h-[42rem] w-[42rem] rounded-full bg-[#a30f18]/12 blur-[150px]" />
-                    <div className="absolute top-[55rem] -left-64 h-[34rem] w-[34rem] rounded-full bg-[#ef2632]/7 blur-[140px]" />
+                    <div className="absolute top-[55rem] -left-64 h-[34rem] w-[34rem] rounded-full bg-[#c8102e]/7 blur-[140px]" />
                 </div>
 
                 <PublicSiteHeader />
@@ -363,7 +363,7 @@ export default function ProductsIndex({ products }: { products: Product[] }) {
                                                                                 key={
                                                                                     variant
                                                                                 }
-                                                                                className="rounded-full border border-[#ef2632]/20 bg-[#ef2632]/[0.06] px-3 py-1.5 text-[10px] font-black tracking-[0.08em] text-[#ff737b]"
+                                                                                className="rounded-full border border-[#ef2632]/20 bg-[#c8102e]/[0.06] px-3 py-1.5 text-[10px] font-black tracking-[0.08em] text-[#ff737b]"
                                                                             >
                                                                                 {
                                                                                     variant
@@ -381,7 +381,7 @@ export default function ProductsIndex({ products }: { products: Product[] }) {
                                                                 '/products/' +
                                                                 product.slug
                                                             }
-                                                            className="inline-flex h-11 items-center gap-2 rounded-xl bg-[#ef2632] px-5 text-sm font-bold text-white transition hover:bg-[#ce1729]"
+                                                            className="inline-flex h-11 items-center gap-2 rounded-xl bg-[#c8102e] px-5 text-sm font-bold text-white transition hover:bg-[#ce1729]"
                                                         >
                                                             Explore product
                                                             <ArrowRight className="h-4 w-4" />

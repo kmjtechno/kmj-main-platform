@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { compareProductCategories } from '../resources/js/lib/product-category-order.mjs';
 
-test('interleaved backend categories render one contiguous group each', () => {
+void test('interleaved backend categories render one contiguous group each', () => {
     const categories = [
         'Cloud & Infrastructure',
         'Industrial & Calibration',
@@ -21,7 +21,7 @@ test('interleaved backend categories render one contiguous group each', () => {
     assert.equal(sorted.length, categories.length);
 });
 
-test('unknown categories stay contiguous without dropping products', () => {
+void test('unknown categories stay contiguous without dropping products', () => {
     const sorted = [
         'Zeta',
         'Other',

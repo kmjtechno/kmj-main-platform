@@ -170,3 +170,9 @@ body:has(.kmj-public-header) main > section {
         padding-inline: 8px;
     }
 }
+
+.locked-landing .lock-primary,
+.locked-landing .lock-auth-register {
+    background: linear-gradient(120deg, #d31332, #b80b28);
+    color: #fff;
+}

@@ -7,10 +7,10 @@ const script = readFileSync(
     'utf8',
 );
 
-void test('visual preview covers locked pages and real owner Operations shell at six responsive widths', () => {
+void test('visual preview covers locked pages and real owner Operations shell through ultrawide responsive widths', () => {
     assert.match(
         script,
-        /for \(const width of \[320, 390, 768, 1170, 1440, 1536\]\)/,
+        /for \(const width of \[320, 390, 768, 1170, 1440, 1536, 1920, 2560\]\)/,
     );
     assert.match(script, /\['landing', '\/'\]/);
     assert.match(script, /\['super-admin', '\/super-admin'\]/);
@@ -25,7 +25,7 @@ void test('visual preview covers locked pages and real owner Operations shell at
     assert.match(script, /name: 'Toggle owner navigation'/);
     assert.match(script, /Signed-out Login CTA missing or outside viewport/);
     assert.match(script, /Signed-out Register CTA missing or outside viewport/);
-    assert.match(script, /Locked landing exceeds centered 1280px canvas/);
+    assert.match(script, /Landing canvas must fill the viewport width/);
     assert.match(script, /Owner Command OS must fill the viewport width/);
 });
 

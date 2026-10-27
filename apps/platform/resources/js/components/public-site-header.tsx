@@ -88,7 +88,7 @@ export default function PublicSiteHeader() {
                             {registrationAvailable ? (
                                 <Link
                                     href={register()}
-                                    className="inline-flex h-10 items-center gap-2 rounded-lg bg-[#ef2632] px-4 text-sm font-bold text-white transition hover:bg-[#ce1729]"
+                                    className="inline-flex h-10 items-center gap-2 rounded-lg bg-[#c8102e] px-4 text-sm font-bold text-white transition hover:bg-[#ce1729]"
                                 >
                                     Create account
                                     <ArrowUpRight className="h-3.5 w-3.5" />
@@ -174,7 +174,7 @@ export default function PublicSiteHeader() {
                                             ? '/super-admin'
                                             : dashboard()
                                     }
-                                    className="inline-flex h-11 w-full items-center justify-center rounded-xl bg-[#ef2632] text-sm font-bold text-white"
+                                    className="inline-flex h-11 w-full items-center justify-center rounded-xl bg-[#c8102e] text-sm font-bold text-white"
                                 >
                                     Open dashboard
                                 </Link>

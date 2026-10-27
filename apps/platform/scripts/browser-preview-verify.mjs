@@ -35,7 +35,7 @@ const browser = await chromium.launch({
 const results = [];
 try {
     // Covers the smallest supported mobile layout through full desktop.
-    for (const width of [320, 390, 768, 1170, 1440, 1536])
+    for (const width of [320, 390, 768, 1170, 1440, 1536, 1920, 2560])
         for (const [name, route] of [
             ['landing', '/'],
             ['super-admin', '/super-admin'],
@@ -183,6 +183,7 @@ try {
                     };
                     return {
                         shell: rect(shell),
+                        viewportWidth: document.documentElement.clientWidth,
                         login: rect(login),
                         register: rect(register),
                         loginHref: login?.getAttribute('href'),
@@ -213,18 +214,10 @@ try {
                     errors.push('Paused-registration label was not disclosed');
                 if (
                     !withinViewport(account.shell) ||
-                    account.shell.width > Math.min(1280, width) + 1
+                    Math.abs(account.shell.width - account.viewportWidth) > 1 ||
+                    Math.abs(account.shell.left) > 1
                 )
-                    errors.push(
-                        'Locked landing exceeds centered 1280px canvas',
-                    );
-                if (
-                    width > 1280 &&
-                    Math.abs(
-                        account.shell.left - (width - account.shell.width) / 2,
-                    ) > 2
-                )
-                    errors.push('Landing canvas is not centered');
+                    errors.push('Landing canvas must fill the viewport width');
                 const expected = [
                     'Our Flagship Products',
                     'What We Build',
