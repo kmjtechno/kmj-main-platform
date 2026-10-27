@@ -24,7 +24,14 @@ new="$base/$sha/apps/platform"
 [[ "$(runuser -u kmjstage -- git -C "$old" rev-parse HEAD 2>/dev/null)" == "$(basename "$old")" ]] || block OLD_SHA
 [[ -s "$new/public/build/manifest.json" && -f "$new/vendor/autoload.php" ]] || block BUILD
 approved="$(git ls-remote --exit-code https://github.com/kmjtechno/kmj-main-platform.git refs/heads/staging-approved 2>/dev/null | awk '{print $1}')" || block APPROVAL_UNAVAILABLE
-[[ "$approved" == "$sha" ]] || block APPROVED_SHA_MOVED
+[[ "$approved" =~ ^[a-f0-9]{40}$ ]] || block APPROVED_HEAD_INVALID
+# This is a read-only review of an already prepared candidate. Promotion may
+# advance while the audit PR is reviewed; do not rewrite or reject old evidence.
+if [[ "$approved" == "$sha" ]]; then
+  echo STAGING_APPROVED_HEAD_MATCH=PASS
+else
+  echo STAGING_APPROVED_HEAD_MATCH=DRIFT_REQUIRES_NEW_CANDIDATE_FOR_CUTOVER
+fi
 echo "STAGING_AUDITED_SHA=$sha"
 
 python3 - "$s_before" "$new" <<'PY'
