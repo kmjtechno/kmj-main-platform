@@ -1,5 +1,5 @@
 import * as DialogPrimitive from '@radix-ui/react-dialog';
-import { Head, Link, usePage } from '@inertiajs/react';
+import { Head, Link } from '@inertiajs/react';
 import { useState } from 'react';
 import {
     ArrowRight,
@@ -17,13 +17,13 @@ import {
     FileCheck,
     Star,
     PlayCircle,
-    Menu,
     X,
-    Search,
     Send,
     ChevronRight,
 } from 'lucide-react';
 import LockedBrand from '@/components/locked-brand';
+import PublicSiteHeader from '@/components/public-site-header';
+import PublicSiteFooter from '@/components/public-site-footer';
 import ProductArtwork from '@/components/product-artwork';
 import PublicSeo from '@/components/public-seo';
 import { productImageForSlug } from '@/lib/product-image-identity';
@@ -118,15 +118,6 @@ const industries = [
     ['architecture', 'Architecture & Visualization'],
     ['healthcare', 'Healthcare & Life Sciences'],
     ['corporate', 'Corporate Enterprises'],
-];
-const publicNav = [
-    ['Home', '/'],
-    ['Company', '/company'],
-    ['Products', '/products'],
-    ['Solutions', '/capabilities'],
-    ['Industries', '#industries'],
-    ['Resources', '/products'],
-    ['Support', '#contact'],
 ];
 const guidance = [
     [
@@ -282,11 +273,7 @@ export default function Welcome({
     products: Product[];
     portfolioCount: number;
 }) {
-    const [menu, setMenu] = useState(false);
     const [tour, setTour] = useState(false);
-    const { auth, publicSite, operator } = usePage().props;
-    const ownerEnabled = (operator as { enabled?: boolean })?.enabled === true;
-    const registrationAvailable = publicSite?.registration_available === true;
     // Catalog ordering and visibility remain controlled by the backend.
     const ecosystemProducts = products.filter(
         (p) => p.slug !== 'kmj-immersive-cinema-suite',
@@ -324,113 +311,7 @@ export default function Welcome({
                 />
             </Head>
             <div className="locked-landing">
-                <a className="lock-skip" href="#main-content">
-                    Skip to main content
-                </a>
-                <header className="lock-header">
-                    <Link href="/" aria-label="KMJ TECHNO home">
-                        <LockedBrand compact />
-                    </Link>
-                    <nav
-                        aria-label="Primary navigation"
-                        className={menu ? 'is-open' : ''}
-                    >
-                        {publicNav.map(([label, href]) => (
-                            <Link
-                                key={label}
-                                href={href}
-                                className={label === 'Home' ? 'active' : ''}
-                                onClick={() => setMenu(false)}
-                            >
-                                {label}
-                            </Link>
-                        ))}
-                        <div className="lock-mobile-account">
-                            {auth.user ? (
-                                <Link
-                                    href={
-                                        ownerEnabled
-                                            ? '/super-admin'
-                                            : '/dashboard'
-                                    }
-                                    onClick={() => setMenu(false)}
-                                >
-                                    My dashboard
-                                </Link>
-                            ) : (
-                                <>
-                                    <Link
-                                        href="/login"
-                                        onClick={() => setMenu(false)}
-                                    >
-                                        Sign in
-                                    </Link>
-                                    <Link
-                                        href="/register"
-                                        onClick={() => setMenu(false)}
-                                    >
-                                        {registrationAvailable
-                                            ? 'Create account'
-                                            : 'Registration paused — details'}
-                                    </Link>
-                                </>
-                            )}
-                        </div>
-                    </nav>
-                    <Link
-                        className="lock-search"
-                        aria-label="Search products and solutions"
-                        href="/products#product-search"
-                    >
-                        <Search size={15} />
-                        <span>Search products, solutions…</span>
-                    </Link>
-                    <span className="lock-language">
-                        <Globe2 size={16} /> EN
-                    </span>
-                    <Link href="#contact" className="lock-primary lock-contact">
-                        Contact Us <ArrowRight size={13} />
-                    </Link>
-                    <div className="lock-auth" aria-label="Account access">
-                        {auth.user ? (
-                            <Link
-                                href={
-                                    ownerEnabled ? '/super-admin' : '/dashboard'
-                                }
-                                className="lock-auth-login"
-                            >
-                                Dashboard
-                            </Link>
-                        ) : (
-                            <>
-                                <Link href="/login" className="lock-auth-login">
-                                    Sign in
-                                </Link>
-                                <Link
-                                    href="/register"
-                                    className="lock-auth-register"
-                                    aria-label={
-                                        registrationAvailable
-                                            ? 'Create KMJ TECHNO account'
-                                            : 'Register account — registration currently paused'
-                                    }
-                                >
-                                    {registrationAvailable
-                                        ? 'Create account'
-                                        : 'Register'}
-                                </Link>
-                            </>
-                        )}
-                    </div>
-                    <button
-                        className="lock-menu"
-                        aria-label="Toggle navigation"
-                        aria-expanded={menu}
-                        onClick={() => setMenu(!menu)}
-                    >
-                        {menu ? <X /> : <Menu />}
-                    </button>
-                </header>
+                <PublicSiteHeader />
                 <main id="main-content">
                     <section className="lock-hero">
                         <img
@@ -781,7 +662,7 @@ export default function Welcome({
                             ))}
                         </div>
                     </section>
-                    <section className="lock-roadmap">
+                    <section id="roadmap" className="lock-roadmap">
                         <SectionHeading
                             title="Our Roadmap"
                             subtitle="Building a future-ready ecosystem."
@@ -823,103 +704,10 @@ export default function Welcome({
                         </div>
                     </section>
                 </main>
-                <footer className="lock-footer">
-                    <div className="lock-footer-main">
-                        <div>
-                            <LockedBrand compact />
-                            <p>
-                                AI-powered platforms, immersive systems and
-                                intelligent solutions for a connected world.
-                            </p>
-                            <Link href="#contact">
-                                Connect with KMJ TECHNO <ArrowRight size={12} />
-                            </Link>
-                        </div>
-                        {[
-                            [
-                                'Products',
-                                ...ecosystemProducts
-                                    .slice(0, 10)
-                                    .map((p) => p.name.replace('KMJ ', '')),
-                            ],
-                            [
-                                'Company',
-                                'About Us',
-                                'Our Capabilities',
-                                'Industries',
-                                'Trust & Security',
-                                'Careers',
-                            ],
-                            [
-                                'Resources',
-                                'Documentation',
-                                'Product Tutorials',
-                                'Roadmap',
-                                'News & Updates',
-                                'Support',
-                            ],
-                            [
-                                'Legal',
-                                'Terms & Conditions',
-                                'Privacy Policy',
-                                'Refund Policy',
-                                'Acceptable Use',
-                                'Cookie Policy',
-                            ],
-                        ].map((group, i) => (
-                            <div key={group[0]}>
-                                <h3>{group[0]}</h3>
-                                {group.slice(1).map((label, j) => (
-                                    <Link
-                                        key={label}
-                                        href={
-                                            i === 0
-                                                ? '/products/' +
-                                                  ecosystemProducts[j].slug
-                                                : i === 1
-                                                  ? '/company'
-                                                  : i === 2
-                                                    ? '/products'
-                                                    : [
-                                                          '/terms',
-                                                          '/privacy',
-                                                          '/refund-policy',
-                                                          '/acceptable-use',
-                                                          '/cookie-policy',
-                                                      ][j]
-                                        }
-                                    >
-                                        {label}
-                                    </Link>
-                                ))}
-                            </div>
-                        ))}
-                        <div>
-                            <h3 id="contact">Stay Connected</h3>
-                            <p>Get product updates and news.</p>
-                            <a
-                                href="mailto:kmjtechnonet@gmail.com"
-                                className="lock-outline"
-                            >
-                                Contact our team <ArrowRight size={14} />
-                            </a>
-                            <a
-                                href="https://www.linkedin.com/company/kmj-techno/"
-                                target="_blank"
-                                rel="noopener noreferrer"
-                            >
-                                Connect on LinkedIn <ArrowRight size={14} />
-                            </a>
-                        </div>
-                    </div>
-                    <div className="lock-copyright">
-                        <span>
-                            © {new Date().getFullYear()} KMJ TECHNO. All rights
-                            reserved.
-                        </span>
-                        <span>Engineered for a connected world.</span>
-                    </div>
-                </footer>
+                <PublicSiteFooter
+                    products={ecosystemProducts}
+                    support={false}
+                />
                 <PublicKristi />
             </div>
         </>

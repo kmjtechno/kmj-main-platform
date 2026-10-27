@@ -28,10 +28,14 @@ void test('navigation guards accept the actual header after the locked formatter
 });
 
 for (const [name, before, after] of [
-    ['desktop breakpoint', 'lg:flex', 'md:flex'],
-    ['mobile breakpoint', 'lg:hidden', 'md:hidden'],
+    ['shared header theme', 'lock-header kmj-public-header', 'other-header'],
+    ['menu expansion state', "open ? 'is-open' : ''", "open ? 'closed' : ''"],
     ['desktop label', 'Primary navigation', 'Unlabelled navigation'],
-    ['mobile navigation landmark', 'role="navigation"', 'role="group"'],
+    [
+        'controlled navigation landmark',
+        'id="public-mobile-nav"',
+        'id="missing-nav"',
+    ],
     [
         'menu controls',
         "aria-controls={open ? 'public-mobile-nav' : undefined}",

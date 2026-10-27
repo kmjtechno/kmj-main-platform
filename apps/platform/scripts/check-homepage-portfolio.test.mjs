@@ -115,24 +115,27 @@ void test('public Kristi guidance routes support, mobile and licensing honestly'
 
 void test('public homepage exposes accessible account entry without bypassing verification readiness', () => {
     const styles = readFileSync('resources/css/locked-landing.css', 'utf8');
-    assert.match(source, /usePage\(\)\.props/);
+    assert.match(header, /usePage\(\)\.props/);
     assert.match(
-        source,
+        header,
         /registrationAvailable = publicSite\?\.registration_available === true/,
     );
-    assert.match(source, /href="\/login"/);
-    assert.match(source, /href="\/register"/);
-    assert.match(source, /className="lock-auth-login"/);
-    assert.match(source, /className="lock-auth-register"/);
-    assert.match(source, /lock-mobile-account/);
-    assert.match(source, /Registration paused — details/);
+    assert.match(header, /href="\/login"/);
+    assert.match(header, /href="\/register"/);
+    assert.match(header, /className="lock-auth-login"/);
+    assert.match(header, /className="lock-auth-register"/);
+    assert.match(header, /lock-mobile-account/);
+    assert.match(header, /Registration paused — details/);
     assert.match(styles, /\.lock-auth-login/);
     assert.match(styles, /\.lock-mobile-account/);
-    assert.match(styles, /max-width: 1280px/);
+    assert.match(
+        readFileSync('resources/css/public-theme.css', 'utf8'),
+        /max-width: none/,
+    );
     assert.match(styles, /@media \(max-width: 1050px\)/);
     assert.match(styles, /@media \(max-width: 560px\)/);
     assert.doesNotMatch(
-        source,
+        header,
         /autoSubmitRegistration|bypassEmailVerification/,
     );
 });
@@ -144,7 +147,10 @@ void test('locked canvas keeps both account buttons visible on mobile and owner 
         'resources/js/components/operator-command-os.tsx',
         'utf8',
     );
-    assert.match(styles, /max-width: 1280px/);
+    assert.match(
+        readFileSync('resources/css/public-theme.css', 'utf8'),
+        /max-width: none/,
+    );
     assert.match(
         styles,
         /\.lock-auth-register,\s*\.lock-auth-login\s*\{\s*display: inline-flex/,
@@ -153,11 +159,11 @@ void test('locked canvas keeps both account buttons visible on mobile and owner 
     assert.match(ownerStyles, /max-width: 1520px/);
     assert.match(owner, /href="\/super-admin"/);
     assert.match(
-        source,
+        header,
         /ownerEnabled\s*\?\s*'\/super-admin'\s*:\s*'\/dashboard'/,
     );
-    assert.match(source, /href="\/login"/);
-    assert.match(source, /href="\/register"/);
+    assert.match(header, /href="\/login"/);
+    assert.match(header, /href="\/register"/);
 });
 
 void test('owner-configured product imagery never displays an unrelated product visual', async () => {
@@ -244,4 +250,28 @@ void test('locked and owner product galleries never borrow adjacent product artw
         /top: calc\(\(100vw - (?:8vw|12vw)\) \/(?:5|3|2)\/2\.12/,
     );
     assert.match(css, /\.lock-product-category \{[\s\S]*?top: 12px;/);
+});
+
+void test('official header/footer logo preserves lossless pixels without an opaque backplate', () => {
+    const svg = readFileSync(
+        'public/assets/brand/kmj-logo-horizontal-transparent.svg',
+        'utf8',
+    );
+    assert.doesNotMatch(svg, /<rect\b/);
+    const encoded = svg.match(/data:image\/png;base64,([^"]+)/)?.[1];
+    assert.ok(encoded);
+    assert.deepEqual(
+        Buffer.from(encoded, 'base64'),
+        readFileSync('public/assets/brand/kmj-email-lockup-dark.png'),
+    );
+    assert.match(brand, /kmj-logo-horizontal-transparent\.svg/);
+});
+
+void test('landing uses the same public header/footer components as inner pages', () => {
+    assert.match(source, /<PublicSiteHeader \/>/);
+    assert.match(source, /<PublicSiteFooter products=\{ecosystemProducts\}/);
+    assert.doesNotMatch(
+        source,
+        /<header className="lock-header">|<footer className="lock-footer">/,
+    );
 });

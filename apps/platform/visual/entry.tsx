@@ -293,6 +293,11 @@ void createInertiaApp({
             operator: {
                 enabled: owner || ownerOps || ownerDevices || ownerDeveloper,
             },
+            localization: {
+                locale: 'en',
+                switch_url: '/?lang=hi',
+                switch_label: 'हिंदी',
+            },
             publicSite: {
                 base_url: 'http://127.0.0.1:4173',
                 indexable: false,
