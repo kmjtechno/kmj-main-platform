@@ -148,8 +148,11 @@ export default function ProductContentEditor({
                 throw new Error(
                     'The title or category changed. Generate again for the current item.',
                 );
-            const { summary: nextSummary, suggested_name: candidate, ...next } =
-                result.draft as Draft;
+            const {
+                summary: nextSummary,
+                suggested_name: candidate,
+                ...next
+            } = result.draft as Draft;
             setSuggestedName(
                 candidate.trim() !== name.trim() ? candidate.trim() : '',
             );
@@ -252,7 +255,7 @@ export default function ProductContentEditor({
                             onSuggestedName?.(suggestedName);
                             setSuggestedName('');
                             setNotice(
-                                'Suggested name applied to your form. Review the unchanged product URL before saving.',
+                                'Suggested name applied to your form. Review the catalog URL before saving.',
                             );
                         }}
                         disabled={!onSuggestedName || busy}
@@ -385,6 +388,7 @@ export default function ProductContentEditor({
                         variant === 'photo'
                             ? content.photo_prompt
                             : content.banner_prompt;
+                    const usingBrandFallback = path?.startsWith('/assets/brand/');
                     return (
                         <section
                             key={variant}
@@ -406,6 +410,13 @@ export default function ProductContentEditor({
                                     }
                                     className="aspect-video w-full rounded-lg border object-contain"
                                 />
+                            )}
+                            {usingBrandFallback && (
+                                <p className="text-muted-foreground text-xs">
+                                    KMJ brand fallback — not generated product
+                                    artwork. Use an original upload or a
+                                    verified-free image route.
+                                </p>
                             )}
                             <label className="grid gap-1 text-xs">
                                 {variant} prompt
@@ -476,7 +487,9 @@ export default function ProductContentEditor({
             </div>
             {!generation?.image_configured && (
                 <p className="text-muted-foreground text-xs">
-                    Cloud image generation requires an independently verified Workers Free account and spare quota. It stays off until then; original image upload is available without paid calls.
+                    Cloud image generation requires an independently verified
+                    Workers Free account and spare quota. It stays off until
+                    then; original image upload is available without paid calls.
                 </p>
             )}
             <label className="grid gap-2 text-xs font-semibold">
