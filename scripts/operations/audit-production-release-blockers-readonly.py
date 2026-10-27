@@ -83,7 +83,7 @@ def fixed_read(argv: list[str], *, timeout: int = 20) -> str | None:
         done = subprocess.run(
             argv, check=False, capture_output=True, text=True, timeout=timeout,
             env={"PATH": "/usr/sbin:/usr/bin:/sbin:/bin", "HOME": "/root",
-                 "GIT_TERMINAL_PROMPT": "0"},
+                 "GIT_TERMINAL_PROMPT": "0", "GIT_OPTIONAL_LOCKS": "0"},
         )
     except (OSError, subprocess.TimeoutExpired):
         return None
