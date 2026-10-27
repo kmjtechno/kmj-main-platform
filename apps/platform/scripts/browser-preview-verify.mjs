@@ -311,6 +311,83 @@ try {
                         .inputValue()) !== 'KMJ Delayed Draft Pro'
                 )
                     errors.push('Reviewed AI name was not applied');
+                // A response arriving after a manual content edit must never
+                // overwrite that edit or apply an older AI name suggestion.
+                await page.unroute('**/operator/products/draft');
+                let releaseStaleDraft;
+                let acknowledgeStaleDraft;
+                const staleStarted = new Promise((resolve) => {
+                    acknowledgeStaleDraft = resolve;
+                });
+                const staleHeld = new Promise((resolve) => {
+                    releaseStaleDraft = resolve;
+                });
+                await page.route(
+                    '**/operator/products/draft',
+                    async (route) => {
+                        acknowledgeStaleDraft();
+                        await staleHeld;
+                        await route.fulfill({
+                            status: 200,
+                            contentType: 'application/json',
+                            body: JSON.stringify({
+                                draft: {
+                                    suggested_name: 'Outdated Product Name',
+                                    summary: 'Outdated summary',
+                                    headline: 'Outdated headline',
+                                    description: 'Outdated description',
+                                    features: ['Outdated feature'],
+                                    faqs: [],
+                                    photo_prompt:
+                                        'Outdated product photo prompt',
+                                    banner_prompt:
+                                        'Outdated product banner prompt',
+                                },
+                                saved: false,
+                            }),
+                        });
+                    },
+                );
+                await section
+                    .getByRole('button', {
+                        name: 'AI fill all content fields',
+                        exact: true,
+                    })
+                    .click();
+                await staleStarted;
+                await section
+                    .getByRole('textbox', {
+                        name: 'Full product description',
+                        exact: true,
+                    })
+                    .fill('Owner-edited content during cloud request');
+                releaseStaleDraft();
+                await section
+                    .getByRole('status')
+                    .filter({ hasText: 'older response was discarded' })
+                    .waitFor();
+                if (
+                    (await section
+                        .getByRole('textbox', {
+                            name: 'Full product description',
+                            exact: true,
+                        })
+                        .inputValue()) !==
+                    'Owner-edited content during cloud request'
+                )
+                    errors.push(
+                        'Stale AI draft overwrote concurrent manual edits',
+                    );
+                if (
+                    (await section
+                        .getByRole('button', {
+                            name: 'Use suggested name',
+                            exact: true,
+                        })
+                        .count()) !== 0
+                )
+                    errors.push('Stale AI name suggestion remained available');
+                await page.unroute('**/operator/products/draft');
                 const quick = section.getByRole('region', {
                     name: 'One-click AI product or service',
                     exact: true,
