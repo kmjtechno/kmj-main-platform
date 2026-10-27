@@ -210,11 +210,7 @@ export default function ProductContentEditor({
             const data = new FormData();
             data.append('variant', variant);
             if (file) data.append('image', file);
-            else
-                data.append(
-                    'prompt',
-                    requestedPrompt,
-                );
+            else data.append('prompt', requestedPrompt);
             const result = await studioRequest(
                 '/operator/products/media',
                 data,
@@ -302,45 +298,47 @@ export default function ProductContentEditor({
                 suggestionFor?.name === name &&
                 suggestionFor?.category === category &&
                 suggestionFor?.facts === facts && (
-                <div className="flex flex-wrap items-center gap-3 rounded-lg border border-red-500/30 p-3 text-xs">
-                    <span>
-                        Suggested product name: <strong>{suggestedName}</strong>
-                    </span>
-                    <button
-                        type="button"
-                        className="rounded-lg border border-red-500/40 px-3 py-2 font-bold"
-                        onClick={() => {
-                            if (
-                                identity.current.name !== suggestionFor?.name ||
-                                identity.current.category !==
-                                    suggestionFor?.category ||
-                                latestFacts.current !== suggestionFor?.facts
-                            ) {
+                    <div className="flex flex-wrap items-center gap-3 rounded-lg border border-red-500/30 p-3 text-xs">
+                        <span>
+                            Suggested product name:{' '}
+                            <strong>{suggestedName}</strong>
+                        </span>
+                        <button
+                            type="button"
+                            className="rounded-lg border border-red-500/40 px-3 py-2 font-bold"
+                            onClick={() => {
+                                if (
+                                    identity.current.name !==
+                                        suggestionFor?.name ||
+                                    identity.current.category !==
+                                        suggestionFor?.category ||
+                                    latestFacts.current !== suggestionFor?.facts
+                                ) {
+                                    setSuggestedName('');
+                                    setNotice(
+                                        'The product facts changed. Generate a new name suggestion.',
+                                    );
+                                    return;
+                                }
+                                onSuggestedName?.(suggestedName);
                                 setSuggestedName('');
                                 setNotice(
-                                    'The product facts changed. Generate a new name suggestion.',
+                                    'Suggested name applied to your form. Review the catalog URL before saving.',
                                 );
-                                return;
-                            }
-                            onSuggestedName?.(suggestedName);
-                            setSuggestedName('');
-                            setNotice(
-                                'Suggested name applied to your form. Review the catalog URL before saving.',
-                            );
-                        }}
-                        disabled={!onSuggestedName || busy}
-                    >
-                        Use suggested name
-                    </button>
-                    <button
-                        type="button"
-                        className="text-muted-foreground underline"
-                        onClick={() => setSuggestedName('')}
-                    >
-                        Keep current name
-                    </button>
-                </div>
-            )}
+                            }}
+                            disabled={!onSuggestedName || busy}
+                        >
+                            Use suggested name
+                        </button>
+                        <button
+                            type="button"
+                            className="text-muted-foreground underline"
+                            onClick={() => setSuggestedName('')}
+                        >
+                            Keep current name
+                        </button>
+                    </div>
+                )}
             <label className="grid gap-2 text-xs font-semibold">
                 Product headline
                 <input
@@ -566,11 +564,14 @@ export default function ProductContentEditor({
             </div>
             {(imagePath?.startsWith('/assets/brand/') ||
                 content.banner_path?.startsWith('/assets/brand/')) && (
-                <p className="rounded-lg border border-amber-500/25 p-3 text-xs text-amber-200" role="status">
+                <p
+                    className="rounded-lg border border-amber-500/25 p-3 text-xs text-amber-200"
+                    role="status"
+                >
                     Artwork incomplete: the shared KMJ brand card is a
-                    placeholder, not a product-specific photo or banner.
-                    Review an original product image (photo) and a separate
-                    wide 16:9 composition (banner) before publication.
+                    placeholder, not a product-specific photo or banner. Review
+                    an original product image (photo) and a separate wide 16:9
+                    composition (banner) before publication.
                 </p>
             )}
             {!generation?.image_configured && (
