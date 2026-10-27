@@ -108,15 +108,30 @@ export default function ProductContentEditor({
     identity.current = { name, category };
     const latestContent = useRef(content);
     latestContent.current = content;
+    const latestImagePath = useRef(imagePath);
+    latestImagePath.current = imagePath;
+    const latestSummary = useRef(summary);
+    latestSummary.current = summary;
+    const manualEditRevision = useRef(0);
     const [facts, setFacts] = useState('');
+    const latestFacts = useRef(facts);
+    latestFacts.current = facts;
     const [busy, setBusy] = useState(false);
     const [notice, setNotice] = useState('');
     const [suggestedName, setSuggestedName] = useState('');
+    const [suggestionFor, setSuggestionFor] = useState<{
+        name: string;
+        category: string;
+        facts: string;
+    } | null>(null);
     const field = 'bg-background w-full rounded-lg border px-3 py-2 text-sm';
     const set = <K extends keyof ProductContent>(
         key: K,
         value: ProductContent[K],
-    ) => onContent({ ...latestContent.current, [key]: value });
+    ) => {
+        manualEditRevision.current += 1;
+        onContent({ ...latestContent.current, [key]: value });
+    };
     const run = async (action: () => Promise<void>) => {
         if (busy) return;
         setBusy(true);
@@ -136,6 +151,9 @@ export default function ProductContentEditor({
     const generate = () =>
         run(async () => {
             const requested = { name, category };
+            const originalRevision = manualEditRevision.current;
+            const originalFacts = facts;
+            const originalSummary = summary;
             const result = await studioRequest('/operator/products/draft', {
                 name,
                 category,
@@ -148,6 +166,14 @@ export default function ProductContentEditor({
                 throw new Error(
                     'The title or category changed. Generate again for the current item.',
                 );
+            if (
+                manualEditRevision.current !== originalRevision ||
+                latestFacts.current !== originalFacts ||
+                latestSummary.current !== originalSummary
+            )
+                throw new Error(
+                    'You edited the product while AI was generating. The older response was discarded to protect your work. Generate again for the current facts.',
+                );
             const {
                 summary: nextSummary,
                 suggested_name: candidate,
@@ -156,6 +182,10 @@ export default function ProductContentEditor({
             setSuggestedName(
                 candidate.trim() !== name.trim() ? candidate.trim() : '',
             );
+            setSuggestionFor({
+                ...requested,
+                facts: originalFacts,
+            });
             onDraft(nextSummary, {
                 ...latestContent.current,
                 ...next,
@@ -167,20 +197,45 @@ export default function ProductContentEditor({
         });
     const media = (variant: 'photo' | 'banner', file?: File) =>
         run(async () => {
+            const requested = { ...identity.current };
+            const requestedContent = latestContent.current;
+            const requestedPrompt =
+                variant === 'photo'
+                    ? requestedContent.photo_prompt
+                    : requestedContent.banner_prompt;
+            const requestedPath =
+                variant === 'photo'
+                    ? latestImagePath.current
+                    : requestedContent.banner_path;
             const data = new FormData();
             data.append('variant', variant);
             if (file) data.append('image', file);
             else
                 data.append(
                     'prompt',
-                    variant === 'photo'
-                        ? content.photo_prompt
-                        : content.banner_prompt,
+                    requestedPrompt,
                 );
             const result = await studioRequest(
                 '/operator/products/media',
                 data,
             );
+            const currentPath =
+                variant === 'photo'
+                    ? latestImagePath.current
+                    : latestContent.current.banner_path;
+            const currentPrompt =
+                variant === 'photo'
+                    ? latestContent.current.photo_prompt
+                    : latestContent.current.banner_prompt;
+            if (
+                identity.current.name !== requested.name ||
+                identity.current.category !== requested.category ||
+                currentPath !== requestedPath ||
+                (!file && currentPrompt !== requestedPrompt)
+            )
+                throw new Error(
+                    'The product or artwork prompt changed while preparing this image. The older result was not attached; your current form is unchanged.',
+                );
             if (variant === 'photo') onImage(result.path);
             else set('banner_path', result.path);
             setNotice(
@@ -243,7 +298,10 @@ export default function ProductContentEditor({
                     {notice}
                 </p>
             )}
-            {suggestedName && (
+            {suggestedName &&
+                suggestionFor?.name === name &&
+                suggestionFor?.category === category &&
+                suggestionFor?.facts === facts && (
                 <div className="flex flex-wrap items-center gap-3 rounded-lg border border-red-500/30 p-3 text-xs">
                     <span>
                         Suggested product name: <strong>{suggestedName}</strong>
@@ -252,6 +310,18 @@ export default function ProductContentEditor({
                         type="button"
                         className="rounded-lg border border-red-500/40 px-3 py-2 font-bold"
                         onClick={() => {
+                            if (
+                                identity.current.name !== suggestionFor.name ||
+                                identity.current.category !==
+                                    suggestionFor.category ||
+                                latestFacts.current !== suggestionFor.facts
+                            ) {
+                                setSuggestedName('');
+                                setNotice(
+                                    'The product facts changed. Generate a new name suggestion.',
+                                );
+                                return;
+                            }
                             onSuggestedName?.(suggestedName);
                             setSuggestedName('');
                             setNotice(
@@ -486,6 +556,15 @@ export default function ProductContentEditor({
                     );
                 })}
             </div>
+            {(imagePath?.startsWith('/assets/brand/') ||
+                content.banner_path?.startsWith('/assets/brand/')) && (
+                <p className="rounded-lg border border-amber-500/25 p-3 text-xs text-amber-200" role="status">
+                    Artwork incomplete: the shared KMJ brand card is a
+                    placeholder, not a product-specific photo or banner.
+                    Review an original product image (photo) and a separate
+                    wide 16:9 composition (banner) before publication.
+                </p>
+            )}
             {!generation?.image_configured && (
                 <p className="text-muted-foreground text-xs">
                     Cloud image generation requires an independently verified
