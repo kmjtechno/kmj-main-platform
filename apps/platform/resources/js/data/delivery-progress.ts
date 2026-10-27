@@ -15,7 +15,7 @@ export const deliveryMilestones: DeliveryMilestone[] = [
         state: 'active',
         detail: 'PR #627 makes one public short description the primary input. A bounded structured cloud response infers name, category and offering type and fills copy, features, FAQs and artwork prompts. The saved draft opens the real editor; a blank duplicate create form is hidden. Request receipts make unchanged retries idempotent.',
         evidence:
-            'Test-first hosted PostgreSQL CI reproduced the absent brief route. Full CI and staging owner review remain required. Existing strict zero-cost guards and GEO/SEO are retained. Actual AI image generation remains unconfigured and is explicitly distinguished from brand-artwork fallback.',
+            'PR #627 exact-head CI was green and the owner verified the deployed 58c783 staging pointer. Screenshot review found generic existing-product headlines and shared brand fallback imagery. Draft PR #629 adds explicit suggested-name review, product-specific visual prompts and a default-disabled Workers Free image adapter; its exact-head CI, account plan verification, real image generation and owner visual acceptance remain pending. Existing zero-cost guards and GEO/SEO are preserved.',
     },
     {
         id: 'one-click-ai-product-service',
