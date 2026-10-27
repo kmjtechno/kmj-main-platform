@@ -15,7 +15,7 @@ export const deliveryMilestones: DeliveryMilestone[] = [
         state: 'active',
         detail: 'PR #627 makes one public short description the primary input. A bounded structured cloud response infers name, category and offering type and fills copy, features, FAQs and artwork prompts. The saved draft opens the real editor; a blank duplicate create form is hidden. Request receipts make unchanged retries idempotent.',
         evidence:
-            'PR #627 exact-head CI was green and the owner verified the deployed 58c783 staging pointer. Screenshot review found generic existing-product headlines and shared brand fallback imagery. Draft PR #629 adds explicit suggested-name review, product-specific visual prompts and a default-disabled Workers Free image adapter; its exact-head CI, account plan verification, real image generation and owner visual acceptance remain pending. Existing zero-cost guards and GEO/SEO are preserved.',
+            'PR #629 is merged as main 524d8a47: suggested-name review, product-specific prompts and the optional default-disabled free-tier artwork adapter are in source, not verified live images. Owner staging reproductions on 27 October show free OpenRouter HTTP200 / verified zero-cost complete unsaved draft for a longer brief and HTTP404 for the exact short brief; neither wrote a product. Follow-up free routing fix requests usage receipts, permits same-free-model compatible provider fallback only under required JSON/schema, data-collection denial and all-zero max-price settings, and reports safe 404 classification. It remains source-only pending exact-head CI, staging rollout and owner editor save/reopen acceptance. Production is unchanged.',
     },
     {
         id: 'one-click-ai-product-service',
