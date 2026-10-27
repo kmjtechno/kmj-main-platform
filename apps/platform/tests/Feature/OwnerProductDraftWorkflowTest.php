@@ -181,6 +181,58 @@ final class OwnerProductDraftWorkflowTest extends TestCase
         self::assertSame(0, Product::query()->count());
     }
 
+    public function test_one_click_ai_creation_saves_complete_private_draft_and_blocks_duplicate(): void
+    {
+        config(['product_studio.text.enabled' => true, 'product_studio.text.api_key' => 'test-only-not-a-key', 'product_studio.text.model' => 'openrouter/free']);
+        Http::fake(['openrouter.ai/api/v1/models' => Http::response(['data' => [['id' => 'openrouter/free', 'pricing' => ['prompt' => '0', 'completion' => '0']]]]),
+            'openrouter.ai/api/v1/chat/completions' => Http::response(['usage' => ['cost' => 0], 'choices' => [['finish_reason' => 'stop', 'message' => ['content' => json_encode([
+                'summary' => 'Proposed engineering service.', 'headline' => 'Engineering support', 'description' => 'Proposed service scope for owner review.', 'features' => ['Proposed consultation'], 'faqs' => [['question' => 'Is it available?', 'answer' => 'Availability is not verified.']], 'photo_prompt' => 'Engineering workspace', 'banner_prompt' => 'Wide engineering workspace',
+            ], JSON_THROW_ON_ERROR)]]]])]);
+        $this->actingAs($this->owner())->withSession(['auth.password_confirmed_at' => time()]);
+        $payload = ['name' => 'KMJ Engineering Service', 'category' => 'industrial', 'offering_type' => 'service', 'context' => 'Proposed engineering service.', 'is_public' => true, 'purchase_enabled' => true, 'licensing_enabled' => true, 'lifecycle' => 'available'];
+        $this->postJson('/operator/products/ai-create', $payload)->assertCreated()->assertJsonPath('saved', true)->assertJsonPath('product.slug', 'kmj-engineering-service');
+        $product = Product::query()->sole();
+        self::assertFalse($product->is_public);
+        self::assertFalse($product->purchase_enabled);
+        self::assertFalse($product->licensing_enabled);
+        self::assertSame('planned', $product->lifecycle);
+        self::assertSame('service', $product->content['offering_type']);
+        self::assertSame('Engineering support', $product->content['headline']);
+        self::assertNotEmpty($product->content['image_alt']);
+        self::assertSame('Proposed engineering service.', $product->summary);
+        $this->get('/products/'.$product->slug)->assertNotFound();
+        $this->postJson('/operator/products/ai-create', $payload)->assertUnprocessable();
+        self::assertSame(1, Product::query()->count());
+        Http::assertSentCount(2);
+    }
+
+    public function test_one_click_ai_creation_requires_owner_and_never_saves_failed_generation(): void
+    {
+        Http::preventStrayRequests();
+        $this->postJson('/operator/products/ai-create', ['name' => 'KMJ Test'])->assertUnauthorized();
+        $this->actingAs(User::factory()->create(['email_verified_at' => now()]))->withSession(['auth.password_confirmed_at' => time()])
+            ->postJson('/operator/products/ai-create', ['name' => 'KMJ Test'])->assertForbidden();
+        $this->actingAs($this->owner())->withSession(['auth.password_confirmed_at' => time()]);
+        config(['product_studio.text.enabled' => false]);
+        $this->postJson('/operator/products/ai-create', ['name' => 'KMJ Test', 'category' => 'other', 'offering_type' => 'product'])->assertStatus(503);
+        self::assertSame(0, Product::query()->count());
+        Http::assertNothingSent();
+    }
+
+    public function test_existing_metadata_uses_service_schema_and_only_visible_faqs(): void
+    {
+        $metadata = app(\App\Services\Seo\PublicInitialMetadata::class)->forPage(['component' => 'products/show', 'props' => ['product' => [
+            'slug' => 'kmj-engineering', 'name' => 'KMJ Engineering', 'summary' => 'Proposed engineering service.', 'lifecycle_label' => 'Planned',
+            'image_path' => '/assets/brand/kmj-social-card.webp', 'content' => ['offering_type' => 'service', 'faqs' => [['question' => 'What is it?', 'answer' => 'A proposed service.']]],
+        ]]], 'https://kmjtechno.com');
+        $schema = json_decode($metadata['json_ld'], true, 32, JSON_THROW_ON_ERROR);
+        self::assertSame('Service', $schema[0]['@type']);
+        self::assertSame('FAQPage', $schema[1]['@type']);
+        self::assertSame('A proposed service.', $schema[1]['mainEntity'][0]['acceptedAnswer']['text']);
+        self::assertStringNotContainsString('aggregateRating', $metadata['json_ld']);
+        self::assertSame('https://kmjtechno.com/products/kmj-engineering', $metadata['canonical']);
+    }
+
     private function owner(): User
     {
         $owner = User::factory()->create([
