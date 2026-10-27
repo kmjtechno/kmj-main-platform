@@ -123,7 +123,7 @@ try {
                             contentType: 'application/json',
                             body: JSON.stringify({
                                 path: '/assets/locked/landing-hero.webp',
-                                provider: 'local-stable-diffusion',
+                                provider: 'verified-free-cloud-image',
                                 product_saved: false,
                             }),
                         });
@@ -131,7 +131,7 @@ try {
                 );
                 await banner
                     .getByRole('button', {
-                        name: 'Generate banner with local AI',
+                        name: 'Generate banner with cloud AI',
                         exact: true,
                     })
                     .click();
@@ -142,7 +142,7 @@ try {
                 releaseMedia();
                 await section
                     .getByRole('status')
-                    .filter({ hasText: 'Local AI artwork is ready' })
+                    .filter({ hasText: 'Cloud AI artwork is ready' })
                     .waitFor();
                 if (
                     (await description.inputValue()) !==
