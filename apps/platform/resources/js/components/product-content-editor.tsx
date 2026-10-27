@@ -35,7 +35,7 @@ type Draft = Pick<
     | 'faqs'
     | 'photo_prompt'
     | 'banner_prompt'
-> & { summary: string };
+> & { summary: string; suggested_name: string };
 
 export async function studioRequest(
     path: string,
@@ -89,6 +89,7 @@ export default function ProductContentEditor({
     onContent,
     onImage,
     onDraft,
+    onSuggestedName,
     onBusy,
 }: {
     name: string;
@@ -100,6 +101,7 @@ export default function ProductContentEditor({
     onContent: (content: ProductContent) => void;
     onImage: (path: string) => void;
     onDraft: (summary: string, content: ProductContent) => void;
+    onSuggestedName?: (name: string) => void;
     onBusy: (busy: boolean) => void;
 }) {
     const identity = useRef({ name, category });
@@ -109,6 +111,7 @@ export default function ProductContentEditor({
     const [facts, setFacts] = useState('');
     const [busy, setBusy] = useState(false);
     const [notice, setNotice] = useState('');
+    const [suggestedName, setSuggestedName] = useState('');
     const field = 'bg-background w-full rounded-lg border px-3 py-2 text-sm';
     const set = <K extends keyof ProductContent>(
         key: K,
@@ -145,14 +148,15 @@ export default function ProductContentEditor({
                 throw new Error(
                     'The title or category changed. Generate again for the current item.',
                 );
-            const { summary: nextSummary, ...next } = result.draft as Draft;
+            const { summary: nextSummary, suggested_name: candidate, ...next } = result.draft as Draft;
+            setSuggestedName(candidate.trim() !== name.trim() ? candidate.trim() : '');
             onDraft(nextSummary, {
                 ...latestContent.current,
                 ...next,
                 image_alt: latestContent.current.image_alt || name,
             });
             setNotice(
-                'AI content filled into the form. Review the fields, then save. Nothing is saved yet.',
+                'AI content is ready to review. Your product name is unchanged unless you accept the suggestion. Nothing is saved yet.',
             );
         });
     const media = (variant: 'photo' | 'banner', file?: File) =>
@@ -232,6 +236,17 @@ export default function ProductContentEditor({
                 >
                     {notice}
                 </p>
+            )}
+            {suggestedName && (
+                <div className="flex flex-wrap items-center gap-3 rounded-lg border border-red-500/30 p-3 text-xs">
+                    <span>Suggested product name: <strong>{suggestedName}</strong></span>
+                    <button type="button" className="rounded-lg border border-red-500/40 px-3 py-2 font-bold" onClick={() => {
+                        onSuggestedName?.(suggestedName);
+                        setSuggestedName('');
+                        setNotice('Suggested name applied to your form. Review the unchanged product URL before saving.');
+                    }} disabled={!onSuggestedName || busy}>Use suggested name</button>
+                    <button type="button" className="text-muted-foreground underline" onClick={() => setSuggestedName('')}>Keep current name</button>
+                </div>
             )}
             <label className="grid gap-2 text-xs font-semibold">
                 Product headline
@@ -441,8 +456,7 @@ export default function ProductContentEditor({
             </div>
             {!generation?.image_configured && (
                 <p className="text-muted-foreground text-xs">
-                    Verified-free cloud image generation is not configured.
-                    Upload original artwork now; no paid service is called.
+                    Cloud image generation requires an independently verified Workers Free account and spare quota. It stays off until then; original image upload is available without paid calls.
                 </p>
             )}
             <label className="grid gap-2 text-xs font-semibold">
