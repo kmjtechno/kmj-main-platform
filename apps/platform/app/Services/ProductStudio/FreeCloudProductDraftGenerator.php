@@ -3,6 +3,7 @@
 namespace App\Services\ProductStudio;
 
 use App\Services\Commerce\AdminProductManager;
+use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Validator;
@@ -190,7 +191,7 @@ final class FreeCloudProductDraftGenerator
      * authenticated, request-ID-scoped second source for its actual billed cost.
      * Metadata GETs never initiate a second inference or paid fallback.
      */
-    private function assertVerifiedZeroCost(\Illuminate\Http\Client\Response $response): void
+    private function assertVerifiedZeroCost(Response $response): void
     {
         $inlineCost = $response->json('usage.cost');
         if (is_numeric($inlineCost)) {
