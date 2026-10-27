@@ -77,8 +77,49 @@ final class PublicInitialMetadata
         }
 
         $base = rtrim($origin, '/');
+        $canonical = $base.$path;
+
+        // This describes only visible, verified public facts. No fake ratings,
+        // reviews, offers or release availability are ever published here.
+        if ($component === 'welcome') {
+            $schema = [
+                ['@context' => 'https://schema.org', '@type' => 'Organization', 'name' => 'KMJ TECHNO', 'url' => $canonical],
+                ['@context' => 'https://schema.org', '@type' => 'WebSite', 'name' => 'KMJ TECHNO', 'url' => $canonical],
+            ];
+        } elseif ($component === 'products/show') {
+            $schema = [
+                '@context' => 'https://schema.org',
+                '@type' => 'SoftwareApplication',
+                'name' => $name,
+                'description' => $description,
+                'url' => $canonical,
+                'brand' => ['@type' => 'Brand', 'name' => 'KMJ TECHNO'],
+                'additionalProperty' => [
+                    '@type' => 'PropertyValue',
+                    'name' => 'Lifecycle',
+                    'value' => (string) ($product['lifecycle_label'] ?? ''),
+                ],
+            ];
+        } else {
+            $schema = [
+                '@context' => 'https://schema.org',
+                '@type' => $component === 'company' ? 'AboutPage' : 'WebPage',
+                'name' => $title,
+                'url' => $canonical,
+            ];
+        }
+
+        $json = json_encode(
+            $schema,
+            JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT
+                | JSON_INVALID_UTF8_SUBSTITUTE | JSON_UNESCAPED_SLASHES
+        );
+        if (! is_string($json)) {
+            return null;
+        }
 
         return [
+            'json_ld' => $json,
             'title' => $title,
             'description' => $description,
             'canonical' => $base.$path,
