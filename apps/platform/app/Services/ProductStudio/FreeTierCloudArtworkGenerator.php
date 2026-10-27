@@ -14,6 +14,7 @@ use RuntimeException;
 final class FreeTierCloudArtworkGenerator
 {
     private const ORIGIN = 'https://api.cloudflare.com/client/v4/accounts/';
+
     private const MODEL = '/ai/run/@cf/black-forest-labs/flux-1-schnell';
 
     public function generate(string $prompt, string $variant): string
