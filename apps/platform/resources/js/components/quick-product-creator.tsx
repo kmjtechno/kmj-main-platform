@@ -104,7 +104,8 @@ export default function QuickProductCreator({
                     <p className="text-muted-foreground text-xs">
                         Public facts only. The AI button sends your description
                         to the cloud; the offline button does not. Never enter
-                        secrets or customer data. Unknown details stay unverified.
+                        secrets or customer data. Unknown details stay
+                        unverified.
                     </p>
                     <button
                         type="button"
@@ -150,11 +151,10 @@ export default function QuickProductCreator({
             )}
             <p className="text-muted-foreground text-xs leading-5">
                 Cloud generation keeps the zero-cost verification gate. The
-                offline button uses a deterministic facts-only template, not
-                AI, and sends no description to an AI provider. Existing KMJ
-                artwork is a labeled fallback; AI images remain separately
-                gated. Publishing, licensing and pricing remain
-                owner-controlled.
+                offline button uses a deterministic facts-only template, not AI,
+                and sends no description to an AI provider. Existing KMJ artwork
+                is a labeled fallback; AI images remain separately gated.
+                Publishing, licensing and pricing remain owner-controlled.
             </p>
             {created && (
                 <div className="grid min-w-0 gap-4">
