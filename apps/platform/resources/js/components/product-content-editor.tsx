@@ -156,7 +156,7 @@ export default function ProductContentEditor({
                 image_alt: latestContent.current.image_alt || name,
             });
             setNotice(
-                'AI content is ready to review. Your product name is unchanged unless you accept the suggestion. Nothing is saved yet.',
+                'AI content filled into the form. Review any suggested name separately; nothing is saved yet.',
             );
         });
     const media = (variant: 'photo' | 'banner', file?: File) =>
