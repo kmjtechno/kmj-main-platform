@@ -176,8 +176,8 @@ export default function ProductContentEditor({
                     studio
                 </h3>
                 <p className="text-muted-foreground mt-1 text-xs leading-5">
-                    Write and upload manually, or use an explicitly configured
-                    local AI engine. Generated content stays unsaved until you
+                    Write and upload manually, or use a configured verified-free
+                    cloud AI route. Generated content stays unsaved until you
                     review and save it.
                 </p>
             </div>
@@ -481,8 +481,8 @@ export default function ProductContentEditor({
             </div>
             {!generation?.image_configured && (
                 <p className="text-muted-foreground text-xs">
-                    Local image engine not configured. Upload original artwork
-                    now; no paid service is called.
+                    Verified-free cloud image generation is not configured.
+                    Upload original artwork now; no paid service is called.
                 </p>
             )}
             <label className="grid gap-2 text-xs font-semibold">
