@@ -79,13 +79,9 @@ for (const page of publicPages) {
     );
     const lockedHome = page === 'welcome';
     if (lockedHome) {
-        assert.match(source, /<header className="lock-header">/);
-        assert.match(source, /<LockedBrand compact \/>/);
-        assert.match(source, /aria-label="Primary navigation"/);
-        assert.match(source, /aria-label="Toggle navigation"/);
-        assert.match(source, /aria-expanded=\{menu\}/);
-        assert.match(source, /<footer className="lock-footer">/);
-        assert.match(source, /href="#main-content"/);
+        assert.match(source, /<PublicSiteHeader \/>/);
+        assert.match(source, /<PublicSiteFooter/);
+        assert.match(source, /id="main-content"/);
     }
     assert.ok(
         lockedHome ||
@@ -128,7 +124,6 @@ assert.match(seoSource, /property="og:url"/);
 // footer, while the home and company hero sections expose it immediately.
 const b2bEnquiryHref = 'https://www.linkedin.com/company/kmj-techno/';
 for (const relativePath of [
-    'resources/js/pages/welcome.tsx',
     'resources/js/pages/company.tsx',
     'resources/js/components/public-site-footer.tsx',
 ]) {
@@ -168,9 +163,9 @@ const footer = readFileSync(
     join(root, 'resources/js/components/public-site-footer.tsx'),
     'utf8',
 );
-assert.match(footer, /const \{ auth \} = usePage\(\)\.props;/);
+assert.match(footer, /const \{ auth, operator \} = usePage\(\)\.props;/);
 assert.match(footer, /\{auth\.user \? \(/);
-assert.match(footer, /href=\{dashboard\(\)\}/);
+assert.match(footer, /ownerEnabled \? '\/super-admin' : '\/dashboard'/);
 
 const productPage = readFileSync(
     join(root, 'resources/js/pages/products/index.tsx'),

@@ -1,141 +1,126 @@
 import { Link, usePage } from '@inertiajs/react';
-import { dashboard } from '@/routes';
-import { ArrowUpRight } from 'lucide-react';
+import { ArrowRight } from 'lucide-react';
 import LockedBrand from '@/components/locked-brand';
 import KristiSupport from '@/components/public/kristi-support';
+import '../../css/locked-landing.css';
+import '../../css/public-theme.css';
 
-export default function PublicSiteFooter() {
-    const { auth } = usePage().props;
+type FooterProduct = { slug: string; name: string };
+const sections = [
+    [
+        'Company',
+        [
+            ['About Us', '/company'],
+            ['Our Capabilities', '/capabilities'],
+            ['Industries', '/#industries'],
+            ['Trust & Security', '/trust'],
+        ],
+    ],
+    [
+        'Resources',
+        [
+            ['Product catalogue', '/products'],
+            ['Roadmap', '/#roadmap'],
+            ['Support', '/#contact'],
+        ],
+    ],
+    [
+        'Legal',
+        [
+            ['Terms & Conditions', '/terms'],
+            ['Privacy Policy', '/privacy'],
+            ['Refund Policy', '/refund-policy'],
+            ['Acceptable Use', '/acceptable-use'],
+            ['Cookie Policy', '/cookie-policy'],
+        ],
+    ],
+] as const;
 
+export default function PublicSiteFooter({
+    products = [],
+    support = true,
+}: {
+    products?: FooterProduct[];
+    support?: boolean;
+}) {
+    const { auth, operator } = usePage().props;
+    const ownerEnabled = (operator as { enabled?: boolean })?.enabled === true;
     return (
         <>
-            <KristiSupport />
-            <footer className="kmj-public-footer border-t border-white/[0.07] bg-[#030b10]">
-                <div className="mx-auto grid max-w-[1440px] gap-12 px-5 py-14 sm:px-8 md:grid-cols-2 lg:grid-cols-[1.4fr_.7fr_.7fr_.8fr] lg:px-12">
+            {support && <KristiSupport />}
+            <footer className="lock-footer kmj-public-footer">
+                <div className="lock-footer-main">
                     <div>
-                        <LockedBrand />
-                        <p className="mt-5 max-w-md text-sm leading-7 text-white/65">
-                            Software, cloud systems and intelligent products
-                            designed around clear product boundaries, governed
-                            access and verifiable delivery.
+                        <LockedBrand compact />
+                        <p>
+                            AI-powered platforms, immersive systems and
+                            intelligent solutions for a connected world.
                         </p>
+                        <Link href="/#contact">
+                            Connect with KMJ TECHNO <ArrowRight size={12} />
+                        </Link>
                     </div>
-
                     <div>
-                        <div className="text-[11px] font-black tracking-[0.18em] text-white/65 uppercase">
-                            Explore
-                        </div>
-                        <div className="mt-4 grid gap-3">
+                        <h3>Products</h3>
+                        {products.slice(0, 10).map((product) => (
                             <Link
-                                href="/company"
-                                className="text-sm font-semibold text-white/78 transition hover:text-white"
+                                key={product.slug}
+                                href={'/products/' + product.slug}
                             >
-                                Company
+                                {product.name.replace('KMJ ', '')}
                             </Link>
-                            <Link
-                                href="/capabilities"
-                                className="text-sm font-semibold text-white/78 transition hover:text-white"
-                            >
-                                Capabilities
-                            </Link>
-                            <Link
-                                href="/products"
-                                className="text-sm font-semibold text-white/78 transition hover:text-white"
-                            >
-                                Products
-                            </Link>
-                            <Link
-                                href="/trust"
-                                className="text-sm font-semibold text-white/78 transition hover:text-white"
-                            >
-                                Trust center
-                            </Link>
-                            <a
-                                href="https://www.linkedin.com/company/kmj-techno/"
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="inline-flex items-center gap-2 text-sm font-semibold text-white/78 transition hover:text-white"
-                            >
-                                International B2B enquiries
-                                <ArrowUpRight className="h-3.5 w-3.5" />
-                            </a>
-                        </div>
+                        ))}
+                        <Link href="/products">
+                            Explore all products <ArrowRight size={12} />
+                        </Link>
                     </div>
-
-                    <div>
-                        <div className="text-[11px] font-black tracking-[0.18em] text-white/65 uppercase">
-                            Legal
-                        </div>
-                        <div className="mt-4 grid gap-3">
-                            {[
-                                ['/legal', 'Legal center'],
-                                ['/terms', 'Terms & Conditions'],
-                                ['/privacy', 'Privacy Policy'],
-                                ['/refund-policy', 'Refund Policy'],
-                                ['/acceptable-use', 'Acceptable Use'],
-                                ['/cookie-policy', 'Cookie Policy'],
-                            ].map(([href, label]) => (
-                                <Link
-                                    key={href}
-                                    href={href}
-                                    className="text-sm font-semibold text-white/78 transition hover:text-white"
-                                >
+                    {sections.map(([title, links]) => (
+                        <div key={title}>
+                            <h3>{title}</h3>
+                            {links.map(([label, href]) => (
+                                <Link key={label} href={href}>
                                     {label}
                                 </Link>
                             ))}
                         </div>
-                    </div>
-
+                    ))}
                     <div>
-                        <div className="text-[11px] font-black tracking-[0.18em] text-white/65 uppercase">
-                            Customer access
-                        </div>
-                        <div className="mt-4 grid gap-3">
-                            {auth.user ? (
-                                <Link
-                                    href={dashboard()}
-                                    className="inline-flex items-center gap-2 text-sm font-semibold text-white/80 transition hover:text-white"
-                                >
-                                    Open dashboard
-                                    <ArrowUpRight className="h-3.5 w-3.5" />
-                                </Link>
-                            ) : (
-                                <>
-                                    <Link
-                                        href="/login"
-                                        className="inline-flex items-center gap-2 text-sm font-semibold text-white/72 transition hover:text-white"
-                                    >
-                                        Sign in
-                                        <ArrowUpRight className="h-3.5 w-3.5" />
-                                    </Link>
-                                    <Link
-                                        href="/register"
-                                        className="inline-flex items-center gap-2 text-sm font-semibold text-white/72 transition hover:text-white"
-                                    >
-                                        Create account
-                                        <ArrowUpRight className="h-3.5 w-3.5" />
-                                    </Link>
-                                </>
-                            )}
-                        </div>
+                        <h3 id="contact">Stay Connected</h3>
+                        <p>Discuss your project with KMJ TECHNO.</p>
+                        <a
+                            className="lock-outline"
+                            href="https://www.linkedin.com/company/kmj-techno/"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                        >
+                            Contact our team <ArrowRight size={12} />
+                        </a>
+                        <a
+                            href="https://www.linkedin.com/company/kmj-techno/"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                        >
+                            International B2B enquiries <ArrowRight size={12} />
+                        </a>
+                        {auth.user ? (
+                            <Link
+                                href={
+                                    ownerEnabled ? '/super-admin' : '/dashboard'
+                                }
+                            >
+                                Dashboard
+                            </Link>
+                        ) : (
+                            <Link href="/login">Sign in</Link>
+                        )}
                     </div>
                 </div>
-                <div className="border-t border-white/[0.06]">
-                    <div className="mx-auto flex max-w-[1440px] flex-col gap-2 px-5 py-5 text-[11px] text-white/58 sm:px-8 md:flex-row md:items-center md:justify-between lg:px-12">
-                        <span>
-                            © {new Date().getFullYear()} KMJ TECHNO. All rights
-                            reserved.
-                        </span>
-                        <span className="flex flex-wrap items-center gap-x-4 gap-y-1">
-                            <span>
-                                Public product claims remain bound to verified
-                                platform authority.
-                            </span>
-                            <span className="font-semibold text-white/70">
-                                Build &amp; Design by KMJ TECHNO
-                            </span>
-                        </span>
-                    </div>
+                <div className="lock-copyright">
+                    <span>
+                        © {new Date().getFullYear()} KMJ TECHNO. All rights
+                        reserved.
+                    </span>
+                    <span>Engineered for a connected world.</span>
                 </div>
             </footer>
         </>

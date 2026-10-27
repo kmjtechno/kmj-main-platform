@@ -19,7 +19,8 @@ body:has(.kmj-public-header) main {
     max-width: 1680px;
     margin-inline: auto;
 }
-.locked-landing .lock-header {
+.locked-landing .lock-header,
+.kmj-public-header {
     padding-inline: clamp(12px, 3vw, 64px);
 }
 .kmj-public-header,
@@ -35,13 +36,8 @@ body:has(.kmj-public-header) main > section {
 .kmj-public-header {
     background-color: #05090d;
     backdrop-filter: none;
-    padding-inline: 0;
-}
-.kmj-public-header > div {
-    padding-inline: clamp(12px, 3vw, 64px);
 }
 .kmj-public-header nav a {
-    padding-inline: 10px;
     font-size: 13px;
     border-radius: 6px;
 }
@@ -167,7 +163,7 @@ body:has(.kmj-public-header) main > section {
         width: 180px;
     }
     .kmj-public-header nav a {
-        padding-inline: 8px;
+        padding-inline: 0;
     }
 }
 
@@ -175,4 +171,31 @@ body:has(.kmj-public-header) main > section {
 .locked-landing .lock-auth-register {
     background: linear-gradient(120deg, #d31332, #b80b28);
     color: #fff;
+}
+
+.kmj-public-header .lock-auth {
+    padding-inline: 0;
+}
+.kmj-public-footer .lock-footer-main {
+    max-width: 1680px;
+}
+
+/* Public inner pages share the locked typography and primary action palette. */
+body:has(.kmj-public-header) main h1 {
+    font-family: Arial, Helvetica, sans-serif;
+    font-size: clamp(36px, 4vw, 64px);
+    line-height: 1.08;
+    letter-spacing: -0.035em;
+}
+body:has(.kmj-public-header) main a[class~='bg-white'] {
+    background-color: #c8102e;
+    color: #fff;
+    border-radius: 6px;
+}
+body:has(.kmj-public-header) main a[class~='bg-white']:hover {
+    background-color: #a80b26;
+}
+.kmj-public-footer .lock-copyright {
+    width: 100%;
+    margin-inline: auto;
 }
