@@ -233,6 +233,11 @@ try {
                         errors.push('Missing or reordered section: ' + heading);
                     previous = index;
                 }
+                if (await page.locator('.lock-kristi-box').count())
+                    errors.push('Kristi must start collapsed');
+                await page
+                    .getByRole('button', { name: 'Ask Kristi', exact: true })
+                    .click();
                 await page
                     .getByRole('button', {
                         name: 'Licensing & pricing',
@@ -245,8 +250,22 @@ try {
                     )
                 )
                     errors.push('Kristi guidance failed');
+                await page
+                    .getByRole('textbox', { name: 'Ask Kristi', exact: true })
+                    .fill('technical support');
+                await page
+                    .getByRole('button', { name: 'Send message', exact: true })
+                    .click();
+                if (
+                    !(await page.getByRole('status').innerText()).includes(
+                        'Visit support',
+                    )
+                )
+                    errors.push(
+                        'Typed technical support selected the wrong topic',
+                    );
                 const overview = page.getByRole('button', {
-                    name: 'Watch Company Video',
+                    name: 'Company overview',
                 });
                 await overview.click();
                 await page
@@ -269,9 +288,12 @@ try {
                     .click();
                 await page
                     .getByRole('button', {
-                        name: "Hi, I'm Kristi",
+                        name: 'Ask Kristi',
                         exact: true,
                     })
+                    .click();
+                await page
+                    .getByRole('button', { name: 'Close Kristi', exact: true })
                     .click();
             } else if (name === 'super-admin') {
                 // Canonical URL is required; a preview silently serving the
