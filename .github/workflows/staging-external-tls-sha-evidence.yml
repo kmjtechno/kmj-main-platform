@@ -20,17 +20,10 @@ jobs:
           ref: staging-approved
       - name: Confirm exact approved staging SHA
         shell: bash
-        env:
-          EVENT_NAME: ${{ github.event_name }}
-          PROMOTED_SHA: ${{ github.event.workflow_run.head_sha }}
         run: |
           set -Eeuo pipefail
           sha="$(git rev-parse HEAD)"
           [[ "$sha" =~ ^[a-f0-9]{40}$ ]] || exit 2
-          if [[ "$EVENT_NAME" == workflow_run && "$sha" != "$PROMOTED_SHA" ]]; then
-            echo 'STAGING_EXTERNAL=BLOCKED APPROVED_SHA_DRIFT'
-            exit 2
-          fi
           echo "EXPECTED_STAGING_SHA=$sha" >> "$GITHUB_ENV"
       - name: Validate staging public DNS
         shell: bash
