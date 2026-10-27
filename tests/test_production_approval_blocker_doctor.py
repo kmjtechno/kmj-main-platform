@@ -29,6 +29,14 @@ class ProductionApprovalDoctorContract(unittest.TestCase):
         self.assertEqual(proc.returncode, 2)
         self.assertIn("BLOCKED_ARGUMENTS", proc.stdout)
 
+    def test_git_inspection_uses_system_sbin_paths(self):
+        source = SCRIPT.read_text(encoding="utf-8")
+        self.assertIn("/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin", source)
+        self.assertIn('"/usr/sbin/runuser", "-u", "kmjprod"', source)
+        self.assertIn("NO_GIT_METADATA", source)
+        self.assertIn("BLOCKED_GIT_SHA_UNVERIFIED", source)
+        self.assertIn("BLOCKED_ARTIFACT_MISSING", source)
+
     def test_checks_all_current_protected_dependencies(self):
         source = SCRIPT.read_text(encoding="utf-8")
         for term in (
