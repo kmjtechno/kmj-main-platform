@@ -4,6 +4,4 @@ namespace App\Services\ProductStudio;
 
 use RuntimeException;
 
-final class IncompleteCloudDraft extends RuntimeException
-{
-}
+final class IncompleteCloudDraft extends RuntimeException {}
