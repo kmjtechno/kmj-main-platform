@@ -53,7 +53,7 @@ class FrozenRelease(unittest.TestCase):
                 "CLOUD_DRAFT_INCOMPLETE",
                 "'allow_fallbacks' => false",
                 "'max_price' => ['prompt' => 0, 'completion' => 0, 'request' => 0, 'image' => 0]",
-                "'max_tokens' => 8000", "'finish_reason'"):
+                "'max_tokens' => 8000", "choices.0.finish_reason"):
    self.assertIn(token,gen)
   rate=(ROOT/"apps/platform/app/Services/ProductStudio/FreeCloudRateLimited.php").read_text()
   self.assertIn("FREE_CLOUD_RATE_LIMITED",rate)
