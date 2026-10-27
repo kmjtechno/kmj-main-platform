@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\User;
 use App\Services\Seo\PublicInitialMetadata;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\Client\Factory;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
@@ -430,7 +431,7 @@ final class OwnerProductDraftWorkflowTest extends TestCase
         ] as $receipt) {
             // Laravel accumulates Http::fake callbacks; replace the factory
             // so each simulated provider bill is independently evaluated.
-            Http::swap(new \Illuminate\Http\Client\Factory);
+            Http::swap(new Factory);
             Http::fake([
                 'openrouter.ai/api/v1/models' => Http::response(['data' => [['id' => 'openrouter/free', 'pricing' => ['prompt' => '0', 'completion' => '0']]]]),
                 'openrouter.ai/api/v1/chat/completions' => Http::response(['id' => $id, 'usage' => ['total_tokens' => 42], 'choices' => [['finish_reason' => 'stop', 'message' => ['content' => '{}']]]]),
