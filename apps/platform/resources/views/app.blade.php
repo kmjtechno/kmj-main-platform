@@ -15,6 +15,10 @@
                 // follow the same explicit production indexing gate.
                 'legal.*',
             );
+            // Public-only source metadata: used on the initial document response
+            // without spinning up a second Node/SSR process or querying secrets.
+            $initialSeo = app(\App\Services\Seo\PublicInitialMetadata::class)
+                ->forPage($page, (string) config('app.url'));
         @endphp
         @unless (config('app.public_indexing', false) && $publicIndexableRoute)
             <meta name="robots" content="noindex,nofollow">
@@ -53,8 +57,25 @@
 
         @viteReactRefresh
         @vite(['resources/css/app.css', 'resources/js/app.tsx', "resources/js/pages/{$page['component']}.tsx"])
+        {{-- Fallback metadata is crawlable before React hydrates; PublicSeo owns
+             subsequent Inertia navigation using the same canonical facts. --}}
+        @if ($initialSeo)
+            <meta name="description" content="{{ $initialSeo['description'] }}">
+            <link rel="canonical" href="{{ $initialSeo['canonical'] }}">
+            <meta property="og:title" content="{{ $initialSeo['title'] }}">
+            <meta property="og:description" content="{{ $initialSeo['description'] }}">
+            <meta property="og:type" content="{{ $initialSeo['type'] }}">
+            <meta property="og:url" content="{{ $initialSeo['canonical'] }}">
+            <meta property="og:image" content="{{ $initialSeo['image'] }}">
+            <meta name="twitter:card" content="summary_large_image">
+            <meta name="twitter:title" content="{{ $initialSeo['title'] }}">
+            <meta name="twitter:description" content="{{ $initialSeo['description'] }}">
+            <meta name="twitter:image" content="{{ $initialSeo['image'] }}">
+            {{-- Pre-encoded with JSON_HEX_TAG and friends by the trusted service. --}}
+            <script type="application/ld+json">{!! $initialSeo['json_ld'] !!}</script>
+        @endif
         <x-inertia::head>
-            <title>{{ config('app.name', 'KMJ TECHNO') }}</title>
+            <title>{{ $initialSeo['title'] ?? config('app.name', 'KMJ TECHNO') }}</title>
         </x-inertia::head>
     </head>
     <body class="font-sans antialiased">

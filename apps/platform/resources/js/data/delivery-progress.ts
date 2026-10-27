@@ -222,9 +222,9 @@ export const deliveryMilestones: DeliveryMilestone[] = [
         id: 'public-seo-foundation',
         title: 'Public SEO metadata foundation',
         state: 'active',
-        detail: 'Canonical metadata, truthful JSON-LD, public Company/Capabilities surfaces, canonical sitemap, and fail-closed indexing controls are implemented while hreflang remains gated on real translated URLs',
+        detail: 'Canonical metadata, truthful JSON-LD, public Company/Capabilities surfaces, canonical sitemap, and fail-closed indexing are implemented. This candidate adds initial Blade HTML title, description, canonical and social metadata sourced from public Inertia page props without a separate SSR server. It preserves the locked UI, private noindex and staging indexing gate. Hreflang remains gated on real translated URLs. This is source-only, not proof of live crawler visibility or production deployment.',
         evidence:
-            'PR #203 SEO foundation + PR #211 corporate surfaces, sitemap and fail-closed indexing verification',
+            'PR #203 SEO foundation + PR #211 corporate surfaces + merged PR #593 public sitemap/robots parity. Candidate PR #597 adds public initial HTML metadata and isolated feature tests; exact-head CI, raw HTML and social crawler QA, guarded release approval and post-deploy verification remain required.',
     },
     {
         id: 'transactional-outbox-foundation',
