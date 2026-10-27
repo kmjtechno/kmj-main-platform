@@ -32,6 +32,14 @@ const productSocialImages: Record<string, string> = {
 };
 
 type Product = {
+    image_path?: string | null;
+    content?: {
+        description?: string;
+        features?: string[];
+        faqs?: { question: string; answer: string }[];
+        banner_path?: string;
+        image_alt?: string;
+    };
     slug: string;
     name: string;
     lifecycle: string;
@@ -93,11 +101,19 @@ function ProductVisual({ product }: { product: Product }) {
                 </div>
 
                 <div className="grid gap-4 p-5 sm:p-6">
-                    <ProductBrandVisual
-                        slug={product.slug}
-                        name={product.name}
-                        kind={product.demo.kind}
-                    />
+                    {product.image_path ? (
+                        <img
+                            src={product.image_path}
+                            alt={product.content?.image_alt || product.name}
+                            className="aspect-video w-full rounded-xl object-contain"
+                        />
+                    ) : (
+                        <ProductBrandVisual
+                            slug={product.slug}
+                            name={product.name}
+                            kind={product.demo.kind}
+                        />
+                    )}
 
                     <div className="flex items-start justify-between gap-6 rounded-2xl border border-white/[0.07] bg-white/[0.025] p-5">
                         <div>
@@ -206,8 +222,10 @@ export default function ProductShow({ product }: { product: Product }) {
                 title={product.name + ' — KMJ TECHNO'}
                 description={product.summary}
                 path={'/products/' + product.slug}
-                image={productSocialImages[product.slug]}
-                imageAlt={product.name + ' — KMJ TECHNO'}
+                image={product.image_path || productSocialImages[product.slug]}
+                imageAlt={
+                    product.content?.image_alt || product.name + ' — KMJ TECHNO'
+                }
                 structuredData={[
                     {
                         '@context': 'https://schema.org',
@@ -400,6 +418,77 @@ export default function ProductShow({ product }: { product: Product }) {
 
                         <ProductVisual product={product} />
                     </section>
+
+                    {product.content?.description ||
+                    product.content?.features?.length ||
+                    product.content?.faqs?.length ||
+                    product.content?.banner_path ? (
+                        <section
+                            aria-label="Product details"
+                            className="mx-auto grid max-w-[1440px] gap-8 px-5 py-12 sm:px-8 lg:px-12"
+                        >
+                            {product.content.banner_path && (
+                                <img
+                                    src={product.content.banner_path}
+                                    alt={
+                                        product.content.image_alt ||
+                                        product.name
+                                    }
+                                    className="aspect-video w-full rounded-2xl object-cover"
+                                />
+                            )}
+                            {product.content.description && (
+                                <div>
+                                    <h2 className="text-2xl font-bold">
+                                        About {product.name}
+                                    </h2>
+                                    <p className="mt-4 max-w-4xl text-base leading-8 whitespace-pre-wrap text-white/75">
+                                        {product.content.description}
+                                    </p>
+                                </div>
+                            )}
+                            {product.content.features &&
+                                product.content.features.length > 0 && (
+                                    <div>
+                                        <h2 className="text-2xl font-bold">
+                                            Product features
+                                        </h2>
+                                        <ul className="mt-4 grid list-disc gap-3 pl-5 text-white/75 sm:grid-cols-2">
+                                            {product.content.features.map(
+                                                (feature, index) => (
+                                                    <li key={index}>
+                                                        {feature}
+                                                    </li>
+                                                ),
+                                            )}
+                                        </ul>
+                                    </div>
+                                )}
+                            {product.content.faqs &&
+                                product.content.faqs.length > 0 && (
+                                    <div>
+                                        <h2 className="mb-4 text-2xl font-bold">
+                                            Product questions
+                                        </h2>
+                                        {product.content.faqs.map(
+                                            (faq, index) => (
+                                                <details
+                                                    key={index}
+                                                    className="border-b border-white/10 py-4"
+                                                >
+                                                    <summary className="cursor-pointer font-semibold">
+                                                        {faq.question}
+                                                    </summary>
+                                                    <p className="mt-3 max-w-4xl leading-7 whitespace-pre-wrap text-white/75">
+                                                        {faq.answer}
+                                                    </p>
+                                                </details>
+                                            ),
+                                        )}
+                                    </div>
+                                )}
+                        </section>
+                    ) : null}
 
                     <section className="border-y border-white/[0.07] bg-[#090c10]/72">
                         <div className="mx-auto max-w-[1440px] px-5 py-20 sm:px-8 lg:px-12 lg:py-24">

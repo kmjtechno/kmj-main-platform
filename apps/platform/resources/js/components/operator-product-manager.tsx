@@ -1,3 +1,8 @@
+import ProductContentEditor, {
+    emptyProductContent,
+    type ProductContent,
+    type GenerationConfiguration,
+} from '@/components/product-content-editor';
 import type { DragEvent, FormEvent } from 'react';
 import { useEffect, useState } from 'react';
 import { Link, router, useForm } from '@inertiajs/react';
@@ -20,6 +25,7 @@ export type ManagedProduct = {
     sort_order: number;
     image_path: string | null;
     summary: string | null;
+    content?: Partial<ProductContent> | null;
     purchase_enabled: boolean;
     licensing_enabled: boolean;
 };
@@ -42,7 +48,13 @@ export const productCategoryOptions = [
     ['other', 'Other'],
 ] as const;
 
-export function CommercialProductForm() {
+export function CommercialProductForm({
+    generation,
+}: {
+    generation?: GenerationConfiguration;
+}) {
+    const [studioBusy, setStudioBusy] = useState(false);
+    const [slugEdited, setSlugEdited] = useState(false);
     const form = useForm({
         name: '',
         slug: '',
@@ -51,15 +63,28 @@ export function CommercialProductForm() {
         is_public: false,
         image_path: '',
         summary: '',
+        content: emptyProductContent(),
         purchase_enabled: false,
         licensing_enabled: false,
     });
 
     const submit = (event: FormEvent<HTMLFormElement>) => {
         event.preventDefault();
+        form.transform((data) => ({
+            ...data,
+            content: {
+                ...data.content,
+                features: data.content.features
+                    .map((feature) => feature.trim())
+                    .filter(Boolean),
+            },
+        }));
         form.post('/operator/products', {
             preserveScroll: true,
-            onSuccess: () => form.reset(),
+            onSuccess: () => {
+                form.reset();
+                setSlugEdited(false);
+            },
         });
     };
 
@@ -70,9 +95,21 @@ export function CommercialProductForm() {
                     <span>Product name</span>
                     <input
                         value={form.data.name}
-                        onChange={(event) =>
-                            form.setData('name', event.target.value)
-                        }
+                        onChange={(event) => {
+                            const name = event.target.value;
+                            form.setData('name', name);
+                            if (!slugEdited)
+                                form.setData(
+                                    'slug',
+                                    name
+                                        .toLowerCase()
+                                        .normalize('NFKD')
+                                        .replace(/[\u0300-\u036f]/g, '')
+                                        .replace(/[^a-z0-9]+/g, '-')
+                                        .replace(/^-|-$/g, '')
+                                        .slice(0, 96),
+                                );
+                        }}
                         placeholder="KMJ Product"
                         className="bg-background h-10 w-full rounded-lg border px-3 text-sm"
                         required
@@ -82,9 +119,10 @@ export function CommercialProductForm() {
                     <span>Product slug</span>
                     <input
                         value={form.data.slug}
-                        onChange={(event) =>
-                            form.setData('slug', event.target.value)
-                        }
+                        onChange={(event) => {
+                            setSlugEdited(true);
+                            form.setData('slug', event.target.value);
+                        }}
                         placeholder="kmj-product"
                         className="bg-background h-10 w-full rounded-lg border px-3 text-sm"
                         pattern="[a-z0-9]+(?:-[a-z0-9]+)*"
@@ -155,6 +193,20 @@ export function CommercialProductForm() {
                 />
             </label>
 
+            <ProductContentEditor
+                name={form.data.name}
+                category={form.data.category}
+                summary={form.data.summary}
+                imagePath={form.data.image_path}
+                content={form.data.content}
+                generation={generation}
+                onContent={(content) => form.setData('content', content)}
+                onImage={(path) => form.setData('image_path', path)}
+                onDraft={(summary, content) =>
+                    form.setData({ ...form.data, summary, content })
+                }
+                onBusy={setStudioBusy}
+            />
             <div className="flex flex-wrap items-center gap-4 text-xs font-semibold">
                 <label className="flex items-center gap-2">
                     <input
@@ -195,7 +247,7 @@ export function CommercialProductForm() {
                 </label>
                 <button
                     type="submit"
-                    disabled={form.processing}
+                    disabled={form.processing || studioBusy}
                     className="ml-auto inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-red-600 px-4 text-xs font-bold text-white transition hover:bg-red-500 disabled:opacity-50"
                 >
                     <PackagePlus className="h-4 w-4" />
@@ -218,14 +270,17 @@ function ManagedProductEditor({
     onDragStart,
     onDrop,
     allowReorder,
+    generation,
 }: {
     product: ManagedProduct;
     products: ManagedProduct[];
     onDragStart: (productId: string) => void;
     onDrop: (productId: string) => void;
     allowReorder: boolean;
+    generation?: GenerationConfiguration;
 }) {
     const [editing, setEditing] = useState(false);
+    const [studioBusy, setStudioBusy] = useState(false);
     const form = useForm({
         name: product.name,
         lifecycle: product.lifecycle,
@@ -233,12 +288,22 @@ function ManagedProductEditor({
         is_public: product.is_public,
         image_path: product.image_path ?? '',
         summary: product.summary ?? '',
+        content: { ...emptyProductContent(), ...product.content },
         purchase_enabled: product.purchase_enabled,
         licensing_enabled: product.licensing_enabled,
     });
 
     const save = (event: FormEvent<HTMLFormElement>) => {
         event.preventDefault();
+        form.transform((data) => ({
+            ...data,
+            content: {
+                ...data.content,
+                features: data.content.features
+                    .map((feature) => feature.trim())
+                    .filter(Boolean),
+            },
+        }));
         form.put(`/operator/products/${product.id}`, {
             preserveScroll: true,
             onSuccess: () => setEditing(false),
@@ -269,7 +334,7 @@ function ManagedProductEditor({
             }}
             className="group grid gap-4 rounded-2xl border border-white/[0.08] bg-white/[0.025] p-4 transition hover:border-red-500/30 hover:bg-white/[0.04] xl:grid-cols-[1.1fr_.75fr_.85fr_auto]"
         >
-            <div className="flex items-center gap-2 xl:col-span-4">
+            <div className="flex min-w-0 flex-wrap items-center gap-2 xl:col-span-4">
                 <button
                     type="button"
                     draggable={allowReorder}
@@ -438,10 +503,28 @@ function ManagedProductEditor({
                         </label>
                     </div>
 
+                    <div className="xl:col-span-4">
+                        <ProductContentEditor
+                            name={form.data.name}
+                            category={form.data.category}
+                            summary={form.data.summary}
+                            imagePath={form.data.image_path}
+                            content={form.data.content}
+                            generation={generation}
+                            onContent={(content) =>
+                                form.setData('content', content)
+                            }
+                            onImage={(path) => form.setData('image_path', path)}
+                            onDraft={(summary, content) =>
+                                form.setData({ ...form.data, summary, content })
+                            }
+                            onBusy={setStudioBusy}
+                        />
+                    </div>
                     <div className="flex flex-col gap-2">
                         <button
                             type="submit"
-                            disabled={form.processing}
+                            disabled={form.processing || studioBusy}
                             className="rounded-lg bg-red-600 px-3 py-2 text-xs font-bold text-white disabled:opacity-50"
                         >
                             Save
@@ -491,11 +574,13 @@ export function ProductManager({
     search = '',
     category = 'all',
     lifecycle = 'all',
+    generation,
 }: {
     products: ManagedProduct[];
     search?: string;
     category?: string;
     lifecycle?: string;
+    generation?: GenerationConfiguration;
 }) {
     const [orderedProducts, setOrderedProducts] = useState(products);
     const [draggedId, setDraggedId] = useState<string | null>(null);
@@ -585,7 +670,7 @@ export function ProductManager({
                         landing-page and portfolio order.
                     </p>
                 </div>
-                <div className="grid grid-cols-2 gap-2 text-[10px] font-black sm:grid-cols-5">
+                <div className="grid grid-cols-2 gap-2 text-[10px] font-black 2xl:grid-cols-5">
                     <span className="rounded-xl border border-white/10 bg-white/[0.035] px-3 py-2.5">
                         {orderedProducts.length} products
                     </span>
@@ -625,6 +710,7 @@ export function ProductManager({
                         onDragStart={setDraggedId}
                         onDrop={drop}
                         allowReorder={allowReorder}
+                        generation={generation}
                     />
                 ))}
                 {shown.length === 0 && (

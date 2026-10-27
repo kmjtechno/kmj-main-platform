@@ -10,6 +10,14 @@ export type DeliveryMilestone = {
 
 export const deliveryMilestones: DeliveryMilestone[] = [
     {
+        id: 'owner-product-content-artwork-studio',
+        title: 'Owner product content and artwork studio',
+        state: 'active',
+        detail: 'PR #612 extends the guarded product manager with full descriptions, features, FAQs, photo and banner upload, editable generation prompts, explicit unsaved local AI drafts and an Add Product deep link. Existing Main Platform PublicSeo, canonical URLs, sitemap and llms.txt consume the reviewed public catalog; no legacy SEO engine or paid AI fallback is imported.',
+        evidence:
+            'Acceptance tests first failed for the missing draft/media routes and content persistence. The implementation passed the full PostgreSQL 18 feature suite. Exact-head quality checks, schema-aware staging deployment, local-engine configuration and real owner acceptance remain required. Configured local engines are never presented as verified live connections.',
+    },
+    {
         id: 'owner-expanded-dashboard-visual-lock',
         title: 'Locked theme for expanded dashboard controls',
         state: 'active',

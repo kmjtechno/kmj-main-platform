@@ -1,4 +1,6 @@
-import { Head, Link } from '@inertiajs/react';
+import '../../css/product-studio.css';
+import type { GenerationConfiguration } from '@/components/product-content-editor';
+import { Head, Link, usePage } from '@inertiajs/react';
 import { useMemo, useState } from 'react';
 import {
     ArrowLeft,
@@ -18,13 +20,20 @@ import {
 
 export default function OperatorProducts({
     products,
+    generation,
 }: {
     products: ManagedProduct[];
+    generation?: GenerationConfiguration;
 }) {
+    const pageUrl = usePage().url;
     const [search, setSearch] = useState('');
     const [category, setCategory] = useState('all');
     const [lifecycle, setLifecycle] = useState('all');
-    const [creating, setCreating] = useState(false);
+    const [creating, setCreating] = useState(
+        () =>
+            new URLSearchParams(pageUrl.split('?')[1] ?? '').get('create') ===
+            '1',
+    );
     const totals = useMemo(
         () => ({
             public: products.filter((p) => p.is_public).length,
@@ -45,7 +54,7 @@ export default function OperatorProducts({
     return (
         <>
             <Head title="Product Management · Super Admin" />
-            <main className="kmj-admin-shell flex min-w-0 flex-1 flex-col gap-6 p-4 sm:p-6 lg:p-8">
+            <main className="owner-product-workspace kmj-admin-shell flex min-w-0 flex-1 flex-col gap-6 p-4 sm:p-6 lg:p-8">
                 <OperatorModuleNavigation active="products" />
                 <header className="kmj-admin-hero rounded-[1.65rem] p-6 sm:p-8">
                     <Link
@@ -111,7 +120,7 @@ export default function OperatorProducts({
                         <h2 className="mb-4 flex items-center gap-2 text-lg font-bold">
                             <Boxes className="size-5" /> New product
                         </h2>
-                        <CommercialProductForm />
+                        <CommercialProductForm generation={generation} />
                     </section>
                 )}
 
@@ -123,7 +132,7 @@ export default function OperatorProducts({
                         <ListFilter className="size-4 text-red-500" /> Catalog
                         filters
                     </div>
-                    <div className="mt-4 grid gap-3 md:grid-cols-[minmax(180px,1fr)_minmax(160px,.6fr)_minmax(160px,.6fr)]">
+                    <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-[minmax(0,1fr)_minmax(0,.6fr)_minmax(0,.6fr)]">
                         <label className="relative">
                             <span className="sr-only">Search products</span>
                             <Search className="text-muted-foreground absolute top-3.5 left-3 size-4" />
@@ -193,6 +202,7 @@ export default function OperatorProducts({
                     search={search}
                     category={category}
                     lifecycle={lifecycle}
+                    generation={generation}
                 />
             </main>
         </>

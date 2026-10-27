@@ -4,6 +4,7 @@ import DeveloperApps from '../resources/js/pages/developer-apps';
 import { createInertiaApp } from '@inertiajs/react';
 import Welcome from '../resources/js/pages/welcome';
 import Operator from '../resources/js/pages/operator';
+import OperatorProducts from '../resources/js/pages/operator-products';
 import OwnerModuleShell from '../resources/js/layouts/owner-module-shell';
 import OperatorOps from '../resources/js/pages/operator-ops';
 import OperatorCodeBridgeOwner from '../resources/js/pages/operator-codebridge-owner';
@@ -257,6 +258,27 @@ function OwnerDeveloperPreview() {
         </AppLayout>
     );
 }
+function OwnerProductsPreview() {
+    return (
+        <OwnerModuleShell>
+            <OperatorProducts
+                products={catalog.map((product, index) => ({
+                    ...product,
+                    id:
+                        '00000000-0000-4000-8000-' +
+                        String(index + 1).padStart(12, '0'),
+                    category: 'developer',
+                    lifecycle: 'planned',
+                    sort_order: (index + 1) * 10,
+                    image_path: '/assets/locked/landing-hero.webp',
+                    content: null,
+                }))}
+                generation={{ text_configured: false, image_configured: true }}
+            />
+        </OwnerModuleShell>
+    );
+}
+const ownerProducts = location.pathname === '/operator/products';
 const ownerDeveloper = location.pathname === '/developer/apps';
 const ownerDevices = location.pathname === '/operator/codebridge/owner-plan';
 const ownerOps = location.pathname === '/operator/ops';
@@ -264,22 +286,28 @@ const ownerOps = location.pathname === '/operator/ops';
 const owner = ['/operator', '/super-admin'].includes(location.pathname);
 void createInertiaApp({
     page: {
-        component: ownerOps
-            ? 'operator-ops'
-            : ownerDevices
-              ? 'operator-codebridge-owner'
-              : ownerDeveloper
-                ? 'developer-apps'
-                : owner
-                  ? 'operator'
-                  : 'welcome',
+        component: ownerProducts
+            ? 'operator-products'
+            : ownerOps
+              ? 'operator-ops'
+              : ownerDevices
+                ? 'operator-codebridge-owner'
+                : ownerDeveloper
+                  ? 'developer-apps'
+                  : owner
+                    ? 'operator'
+                    : 'welcome',
         props: {
             errors: {},
             // Landing is a signed-out customer preview; owner routes use
             // synthetic session data. Never authenticate or persist a user.
             auth: {
                 user:
-                    owner || ownerOps || ownerDevices || ownerDeveloper
+                    owner ||
+                    ownerOps ||
+                    ownerDevices ||
+                    ownerDeveloper ||
+                    ownerProducts
                         ? {
                               id: 1,
                               name: 'KMJ QA Owner',
@@ -291,7 +319,12 @@ void createInertiaApp({
                         : null,
             },
             operator: {
-                enabled: owner || ownerOps || ownerDevices || ownerDeveloper,
+                enabled:
+                    owner ||
+                    ownerOps ||
+                    ownerDevices ||
+                    ownerDeveloper ||
+                    ownerProducts,
             },
             localization: {
                 locale: 'en',
@@ -316,19 +349,21 @@ void createInertiaApp({
             recentOrders: [],
             missingCanonicalSlugs: [],
         },
-        url: location.pathname,
+        url: location.pathname + location.search,
         version: 'locked-ui-visual-fixture',
         clearHistory: false,
         encryptHistory: false,
     },
     resolve: () =>
-        ownerDeveloper
-            ? OwnerDeveloperPreview
-            : ownerOps
-              ? OwnerOpsPreview
-              : ownerDevices
-                ? OwnerDevicesPreview
-                : owner
-                  ? OwnerDashboardPreview
-                  : Welcome,
+        ownerProducts
+            ? OwnerProductsPreview
+            : ownerDeveloper
+              ? OwnerDeveloperPreview
+              : ownerOps
+                ? OwnerOpsPreview
+                : ownerDevices
+                  ? OwnerDevicesPreview
+                  : owner
+                    ? OwnerDashboardPreview
+                    : Welcome,
 });

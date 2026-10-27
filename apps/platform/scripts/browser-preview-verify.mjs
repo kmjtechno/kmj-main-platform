@@ -40,6 +40,7 @@ try {
             ['landing', '/'],
             ['super-admin', '/super-admin'],
             ['owner-ops', '/operator/ops'],
+            ['owner-products', '/operator/products?create=1'],
             ['owner-developer', '/developer/apps'],
             ['owner-devices', '/operator/codebridge/owner-plan'],
         ]) {
@@ -60,6 +61,124 @@ try {
                 scrollTo(0, 0);
                 await document.fonts.ready;
             });
+            if (name === 'owner-products') {
+                const section = page.getByRole('region', {
+                    name: 'New product',
+                    exact: true,
+                });
+                await section.waitFor({ state: 'visible' });
+                if ((await page.locator('.owner-module-shell').count()) !== 1)
+                    errors.push('Product manager lost locked owner shell');
+                await section
+                    .getByRole('textbox', { name: 'Product name', exact: true })
+                    .fill('KMJ Acceptance Product');
+                if (
+                    (await section
+                        .getByRole('textbox', {
+                            name: 'Product slug',
+                            exact: true,
+                        })
+                        .inputValue()) !== 'kmj-acceptance-product'
+                )
+                    errors.push('New product slug did not follow title');
+                const description = section.getByRole('textbox', {
+                    name: 'Full product description',
+                    exact: true,
+                });
+                await description.fill('Original unsaved description');
+                if (
+                    !(await section
+                        .getByRole('button', {
+                            name: 'Generate content from title',
+                            exact: true,
+                        })
+                        .isDisabled())
+                )
+                    errors.push('Unconfigured text engine appeared ready');
+                const banner = section.getByRole('region', {
+                    name: 'Product banner',
+                    exact: true,
+                });
+                await banner
+                    .getByRole('textbox', {
+                        name: 'banner prompt',
+                        exact: true,
+                    })
+                    .fill('Wide engineering product scene');
+                let releaseMedia;
+                const heldMedia = new Promise((resolve) => {
+                    releaseMedia = resolve;
+                });
+                let acknowledgeRequest;
+                const requestStarted = new Promise((resolve) => {
+                    acknowledgeRequest = resolve;
+                });
+                await page.route(
+                    '**/operator/products/media',
+                    async (route) => {
+                        acknowledgeRequest();
+                        await heldMedia;
+                        await route.fulfill({
+                            status: 200,
+                            contentType: 'application/json',
+                            body: JSON.stringify({
+                                path: '/assets/locked/landing-hero.webp',
+                                provider: 'local-stable-diffusion',
+                                product_saved: false,
+                            }),
+                        });
+                    },
+                );
+                await banner
+                    .getByRole('button', {
+                        name: 'Generate banner with local AI',
+                        exact: true,
+                    })
+                    .click();
+                await requestStarted;
+                await description.fill(
+                    'Edited while artwork request was pending',
+                );
+                releaseMedia();
+                await section
+                    .getByRole('status')
+                    .filter({ hasText: 'Local AI artwork is ready' })
+                    .waitFor();
+                if (
+                    (await description.inputValue()) !==
+                    'Edited while artwork request was pending'
+                )
+                    errors.push(
+                        'Artwork response discarded concurrent content edits',
+                    );
+                await section
+                    .getByRole('button', { name: 'Add FAQ', exact: true })
+                    .click();
+                await section
+                    .getByRole('textbox', { name: 'Question 1', exact: true })
+                    .fill('Is this released?');
+                await section
+                    .getByRole('textbox', { name: 'Answer 1', exact: true })
+                    .fill('This is an unsaved test draft.');
+                if (
+                    await section
+                        .getByRole('checkbox', {
+                            name: 'Publicly visible',
+                            exact: true,
+                        })
+                        .isChecked()
+                )
+                    errors.push('Drafting enabled public visibility');
+                if (
+                    !(await section
+                        .getByRole('checkbox', {
+                            name: 'Purchase enabled',
+                            exact: true,
+                        })
+                        .isDisabled())
+                )
+                    errors.push('Planned product purchase gate lost');
+            }
             if (name === 'owner-developer') {
                 const shell = page.locator('.owner-module-shell');
                 if ((await shell.count()) !== 1)
@@ -448,6 +567,31 @@ try {
                         () => document.documentElement.scrollHeight,
                     ),
                 });
+            }
+            if (overflow && name === 'owner-products') {
+                errors.push(
+                    'Overflow elements: ' +
+                        JSON.stringify(
+                            await page.evaluate(() =>
+                                [...document.querySelectorAll('main *')]
+                                    .filter(
+                                        (element) =>
+                                            element.getBoundingClientRect()
+                                                .right >
+                                            innerWidth + 1,
+                                    )
+                                    .slice(0, 8)
+                                    .map((element) => ({
+                                        tag: element.tagName,
+                                        class: element.className,
+                                        right: Math.round(
+                                            element.getBoundingClientRect()
+                                                .right,
+                                        ),
+                                    })),
+                            ),
+                        ),
+                );
             }
             const screenshot = path.join(out, `${name}-${width}.png`);
             await page.screenshot({ path: screenshot, fullPage: true });

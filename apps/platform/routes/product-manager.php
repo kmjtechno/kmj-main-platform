@@ -1,34 +1,42 @@
 <?php
 
+use App\Http\Controllers\OwnerProductStudioController;
 use App\Models\User;
 use App\Services\Commerce\AdminProductManager;
 use App\Services\PlatformOwnerAccess;
+use App\Services\ProductStudio\LocalProductDraftGenerator;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use KMJ\MainPlatform\Catalog\Models\Product;
 
+Route::get('product-artwork/{asset}', [OwnerProductStudioController::class, 'showArtwork'])->name('product-artwork.show');
+
 Route::middleware(['auth', 'verified', 'password.confirm'])
     ->prefix('operator/products')
     ->name('operator.products.')
     ->group(function (): void {
-        Route::get('/', function (Request $request, PlatformOwnerAccess $access) {
+        Route::get('/', function (Request $request, PlatformOwnerAccess $access, LocalProductDraftGenerator $generator) {
             $user = $request->user();
             abort_unless($user instanceof User, 401);
             $access->require($user);
 
             return Inertia::render('operator-products', [
+                'generation' => $generator->configuration(),
                 'products' => Product::query()
                     ->orderBy('sort_order')
                     ->orderBy('name')
                     ->get([
                         'id', 'slug', 'name', 'status', 'lifecycle', 'category',
                         'is_public', 'sort_order', 'image_path', 'summary',
-                        'purchase_enabled', 'licensing_enabled',
+                        'purchase_enabled', 'licensing_enabled', 'content',
                     ]),
             ]);
         })->name('index');
+
+        Route::post('draft', [OwnerProductStudioController::class, 'draft'])->middleware('throttle:6,1')->name('draft');
+        Route::post('media', [OwnerProductStudioController::class, 'media'])->middleware('throttle:6,1')->name('media');
 
         Route::post('/', function (Request $request, PlatformOwnerAccess $access, AdminProductManager $manager) {
             $user = $request->user();

@@ -21,6 +21,7 @@ final class Product extends Model
         'sort_order',
         'image_path',
         'summary',
+        'content',
         'purchase_enabled',
         'licensing_enabled',
     ];
@@ -28,6 +29,7 @@ final class Product extends Model
     protected function casts(): array
     {
         return [
+            'content' => 'array',
             'is_public' => 'boolean',
             'purchase_enabled' => 'boolean',
             'licensing_enabled' => 'boolean',
