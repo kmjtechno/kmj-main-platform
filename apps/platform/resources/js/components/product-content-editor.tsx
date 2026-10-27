@@ -388,7 +388,8 @@ export default function ProductContentEditor({
                         variant === 'photo'
                             ? content.photo_prompt
                             : content.banner_prompt;
-                    const usingBrandFallback = path?.startsWith('/assets/brand/');
+                    const usingBrandFallback =
+                        path?.startsWith('/assets/brand/');
                     return (
                         <section
                             key={variant}
