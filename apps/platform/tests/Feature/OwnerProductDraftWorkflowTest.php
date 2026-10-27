@@ -282,6 +282,54 @@ final class OwnerProductDraftWorkflowTest extends TestCase
         self::assertSame(1, Product::query()->count());
     }
 
+    public function test_explicit_local_template_from_short_brief_saves_only_one_private_review_draft_without_provider_call(): void
+    {
+        Http::preventStrayRequests();
+        config(['product_studio.text.enabled' => false]);
+        $this->actingAs($this->owner())->withSession(['auth.password_confirmed_at' => time()]);
+        $request = ['brief' => 'inteactive wall projetion SOFTWARE', 'request_id' => (string) Str::uuid(), 'local_only' => true, 'is_public' => true, 'purchase_enabled' => true, 'licensing_enabled' => true];
+
+        $result = $this->postJson('/operator/products/from-brief', $request)
+            ->assertCreated()->assertJsonPath('saved', true)->assertJsonPath('generation_mode', 'local-template')
+            ->assertJsonPath('product.lifecycle', 'planned')->assertJsonPath('product.category', 'other');
+        $id = $result->json('product.id');
+        $this->postJson('/operator/products/from-brief', $request)
+            ->assertOk()->assertJsonPath('product.id', $id)->assertJsonPath('generation_mode', 'local-template');
+        self::assertSame(1, Product::query()->count());
+
+        $product = Product::query()->sole();
+        self::assertFalse($product->is_public);
+        self::assertFalse($product->purchase_enabled);
+        self::assertFalse($product->licensing_enabled);
+        self::assertSame('planned', $product->lifecycle);
+        self::assertStringContainsString('not AI-generated copy', $product->content['description']);
+        self::assertStringContainsString('not independently verified', $product->content['description']);
+        self::assertNotEmpty($product->content['features']);
+        self::assertNotEmpty($product->content['faqs']);
+        self::assertStringContainsString('Not yet generated', $product->content['photo_prompt']);
+        Http::assertNothingSent();
+
+        // Same request UUID may never switch the persisted draft's origin.
+        unset($request['local_only']);
+        $this->postJson('/operator/products/from-brief', $request)->assertStatus(409);
+        self::assertSame(1, Product::query()->count());
+        Http::assertNothingSent();
+    }
+
+    public function test_offline_fallback_still_requires_owner_and_valid_brief_without_cloud_calls(): void
+    {
+        Http::preventStrayRequests();
+        $payload = ['brief' => 'Proposed offline calibration concept for owner review.', 'request_id' => (string) Str::uuid(), 'local_only' => true];
+        $this->postJson('/operator/products/from-brief', $payload)->assertUnauthorized();
+        $this->actingAs(User::factory()->create(['email_verified_at' => now()]))
+            ->withSession(['auth.password_confirmed_at' => time()])
+            ->postJson('/operator/products/from-brief', $payload)->assertForbidden();
+        $this->actingAs($this->owner())->withSession(['auth.password_confirmed_at' => time()]);
+        $this->postJson('/operator/products/from-brief', [...$payload, 'brief' => 'tiny'])->assertUnprocessable();
+        self::assertSame(0, Product::query()->count());
+        Http::assertNothingSent();
+    }
+
     public function test_prompt_creation_rejects_unauthorized_and_insufficient_input_without_inference(): void
     {
         Http::preventStrayRequests();
