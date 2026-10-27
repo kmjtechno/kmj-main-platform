@@ -6,6 +6,7 @@ use App\Models\User;
 use App\Services\PlatformOwnerAccess;
 use App\Services\ProductStudio\FreeCloudProductDraftGenerator;
 use App\Services\ProductStudio\FreeCloudRateLimited;
+use App\Services\ProductStudio\IncompleteCloudDraft;
 use App\Services\ProductStudio\ProductArtworkStorage;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -27,6 +28,8 @@ final class OwnerProductStudioController extends Controller
         ]);
         try {
             $draft = $generator->draft($data['name'], $data['category'] ?? 'other', $data['context'] ?? '');
+        } catch (IncompleteCloudDraft $error) {
+            return response()->json(['code' => $error->getMessage(), 'message' => 'The cloud model returned an incomplete or invalid draft. Nothing was applied or saved. Keep your current fields and try a shorter set of public facts later.'], 422);
         } catch (FreeCloudRateLimited $error) {
             return response()->json(['code' => 'FREE_CLOUD_RATE_LIMITED', 'message' => 'The free cloud provider is rate-limited or its free quota is exhausted. Wait before retrying and check the provider quota reset. Your fields remain unchanged; manual editing is available.', 'retry_after' => $error->retryAfter], 429)->header('Retry-After', (string) $error->retryAfter);
         } catch (Throwable) {
