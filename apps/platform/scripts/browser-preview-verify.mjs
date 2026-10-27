@@ -230,6 +230,7 @@ try {
                             contentType: 'application/json',
                             body: JSON.stringify({
                                 draft: {
+                                    suggested_name: 'KMJ Delayed Draft Pro',
                                     summary: 'Synthetic reviewed summary',
                                     headline: 'Synthetic headline',
                                     description:
@@ -286,6 +287,30 @@ try {
                         .inputValue()) !== 'preview'
                 )
                     errors.push('AI draft reverted concurrent lifecycle edit');
+                if (
+                    (await section
+                        .getByRole('textbox', {
+                            name: 'Product name',
+                            exact: true,
+                        })
+                        .inputValue()) !== 'KMJ Delayed Draft'
+                )
+                    errors.push('AI silently overwrote owner product name');
+                await section
+                    .getByRole('button', {
+                        name: 'Use suggested name',
+                        exact: true,
+                    })
+                    .click();
+                if (
+                    (await section
+                        .getByRole('textbox', {
+                            name: 'Product name',
+                            exact: true,
+                        })
+                        .inputValue()) !== 'KMJ Delayed Draft Pro'
+                )
+                    errors.push('Reviewed AI name was not applied');
                 const quick = section.getByRole('region', {
                     name: 'One-click AI product or service',
                     exact: true,
