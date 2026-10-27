@@ -29,6 +29,7 @@ final class PublicInitialMetadataTest extends TestCase
             ->assertSee('<link rel="canonical" href="https://kmjtechno.example/">', false)
             ->assertSee('<meta property="og:url" content="https://kmjtechno.example/">', false)
             ->assertSee('<meta name="twitter:card" content="summary_large_image">', false)
+            ->assertSee('<script type="application/ld+json">', false)
             ->assertDontSee('<meta name="robots" content="noindex,nofollow">', false);
     }
 
@@ -82,5 +83,22 @@ final class PublicInitialMetadataTest extends TestCase
             'component' => 'products/show',
             'props' => ['product' => ['slug' => 'kmj-test', 'name' => '', 'summary' => 'Test']],
         ], 'https://kmjtechno.example'));
+
+        $safe = $seo->forPage([
+            'component' => 'products/show',
+            'props' => [
+                'product' => [
+                    'slug' => 'kmj-test',
+                    'name' => '</script><img src=x onerror=alert(1)>',
+                    'summary' => 'A public product description.',
+                    'lifecycle_label' => 'Research',
+                ],
+            ],
+        ], 'https://kmjtechno.example');
+
+        $this->assertIsArray($safe);
+        $this->assertStringNotContainsString('</script>', $safe['json_ld']);
+        $this->assertStringContainsString('\\u003C', $safe['json_ld']);
+        $this->assertStringNotContainsString('aggregateRating', $safe['json_ld']);
     }
 }
