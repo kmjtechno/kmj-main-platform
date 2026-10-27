@@ -15,10 +15,11 @@ export default function QuickProductCreator({
     onCreated,
 }: {
     generation?: GenerationConfiguration;
-    onCreated?: (created: boolean) => void;
+    onCreated?: (productId: string | null) => void;
 }) {
     const [brief, setBrief] = useState('');
     const [busy, setBusy] = useState(false);
+    const [editorBusy, setEditorBusy] = useState(false);
     const inFlight = useRef(false);
     const requestId = useRef<string | null>(null);
     const [notice, setNotice] = useState('');
@@ -35,7 +36,7 @@ export default function QuickProductCreator({
                 { brief, request_id: requestId.current },
             );
             setCreated(result.product);
-            onCreated?.(true);
+            onCreated?.(result.product.id);
             setNotice(
                 'Your description has become a saved catalog draft. The real editor below is populated; review it before publishing.',
             );
@@ -140,12 +141,13 @@ export default function QuickProductCreator({
                         <button
                             type="button"
                             className="rounded-lg border px-3 py-2 text-xs font-semibold"
+                            disabled={editorBusy}
                             onClick={() => {
                                 setCreated(null);
                                 setBrief('');
                                 requestId.current = null;
                                 setNotice('');
-                                onCreated?.(false);
+                                onCreated?.(null);
                             }}
                         >
                             Create another
@@ -159,6 +161,7 @@ export default function QuickProductCreator({
                         onDrop={() => {}}
                         allowReorder={false}
                         initiallyEditing
+                        onActivityChange={setEditorBusy}
                         generation={generation}
                     />
                 </div>

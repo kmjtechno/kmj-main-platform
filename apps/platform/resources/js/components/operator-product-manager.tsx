@@ -277,6 +277,7 @@ export function ManagedProductEditor({
     allowReorder,
     generation,
     initiallyEditing = false,
+    onActivityChange,
 }: {
     product: ManagedProduct;
     products: ManagedProduct[];
@@ -285,6 +286,7 @@ export function ManagedProductEditor({
     allowReorder: boolean;
     generation?: GenerationConfiguration;
     initiallyEditing?: boolean;
+    onActivityChange?: (busy: boolean) => void;
 }) {
     const pageUrl = usePage().url;
     const [editing, setEditing] = useState(
@@ -305,6 +307,10 @@ export function ManagedProductEditor({
         purchase_enabled: product.purchase_enabled,
         licensing_enabled: product.licensing_enabled,
     });
+
+    useEffect(() => {
+        onActivityChange?.(form.processing || studioBusy);
+    }, [form.processing, studioBusy, onActivityChange]);
 
     const save = (event: FormEvent<HTMLFormElement>) => {
         event.preventDefault();
@@ -592,12 +598,14 @@ export function ProductManager({
     category = 'all',
     lifecycle = 'all',
     generation,
+    excludedProductId = null,
 }: {
     products: ManagedProduct[];
     search?: string;
     category?: string;
     lifecycle?: string;
     generation?: GenerationConfiguration;
+    excludedProductId?: string | null;
 }) {
     const [orderedProducts, setOrderedProducts] = useState(products);
     const [draggedId, setDraggedId] = useState<string | null>(null);
@@ -659,9 +667,13 @@ export function ProductManager({
     ).length;
     const hiddenCount = orderedProducts.length - publicCount;
     const allowReorder =
-        search.trim() === '' && category === 'all' && lifecycle === 'all';
+        !excludedProductId &&
+        search.trim() === '' &&
+        category === 'all' &&
+        lifecycle === 'all';
     const shown = orderedProducts.filter(
         (product) =>
+            product.id !== excludedProductId &&
             (category === 'all' || product.category === category) &&
             (lifecycle === 'all' || product.lifecycle === lifecycle) &&
             `${product.name} ${product.slug} ${product.summary ?? ''}`

@@ -27,7 +27,7 @@ export default function OperatorProducts({
     generation?: GenerationConfiguration;
 }) {
     const pageUrl = usePage().url;
-    const [promptCreated, setPromptCreated] = useState(false);
+    const [promptProductId, setPromptProductId] = useState<string | null>(null);
     const [search, setSearch] = useState('');
     const [category, setCategory] = useState('all');
     const [lifecycle, setLifecycle] = useState('all');
@@ -124,9 +124,9 @@ export default function OperatorProducts({
                         </h2>
                         <QuickProductCreator
                             generation={generation}
-                            onCreated={setPromptCreated}
+                            onCreated={setPromptProductId}
                         />
-                        {!promptCreated && (
+                        {!promptProductId && (
                             <details className="mt-5 rounded-xl border p-4">
                                 <summary className="cursor-pointer text-sm font-semibold">
                                     Manual form & artwork upload
@@ -216,6 +216,7 @@ export default function OperatorProducts({
                 </section>
                 <ProductManager
                     products={products}
+                    excludedProductId={promptProductId}
                     search={search}
                     category={category}
                     lifecycle={lifecycle}
