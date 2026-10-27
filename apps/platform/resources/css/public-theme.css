@@ -199,3 +199,18 @@ body:has(.kmj-public-header) main a[class~='bg-white']:hover {
     width: 100%;
     margin-inline: auto;
 }
+
+/* Full-width image bands must not inherit the inner-page reading cap. */
+.locked-landing .lock-hero,
+.locked-landing .lock-ecosystem,
+.locked-landing .lock-roadmap {
+    width: 100%;
+    max-width: none;
+}
+.locked-landing .lock-ecosystem > .lock-heading,
+.locked-landing .lock-roadmap > .lock-heading,
+.kmj-public-footer .lock-footer-main {
+    width: 100%;
+    max-width: 1680px;
+    margin-inline: auto;
+}

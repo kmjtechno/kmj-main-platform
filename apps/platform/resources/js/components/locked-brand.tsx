@@ -12,7 +12,12 @@ export default function LockedBrand({
         >
             <picture className="block w-full">
                 <source
-                    srcSet="/assets/brand/kmj-logo-horizontal-transparent.svg"
+                    media="(max-width: 560px)"
+                    srcSet="/assets/brand/kmj-logo-horizontal-readable-compact.svg"
+                    type="image/svg+xml"
+                />
+                <source
+                    srcSet="/assets/brand/kmj-logo-horizontal-readable.svg"
                     type="image/svg+xml"
                 />
                 <img
