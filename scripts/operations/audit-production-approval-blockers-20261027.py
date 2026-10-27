@@ -77,6 +77,54 @@ def git_sha(release: Path) -> str | None:
     return value if rc == 0 and SHA_RE.fullmatch(value) else None
 
 
+def storage_snapshot(app: Path) -> dict[str, str]:
+    """Summarize bounded local storage shape; never list paths or read records."""
+    result: dict[str, str] = {}
+    root = app / "storage"
+    if not root.exists():
+        return {"ROOT": "MISSING", "PUBLIC_FILES": "UNKNOWN", "PRIVATE_FILES": "UNKNOWN"}
+    try:
+        resolved = root.resolve(strict=True)
+        result["ROOT"] = "WITHIN_PRODUCTION" if resolved.is_relative_to(ROOT) else "OUTSIDE_PRODUCTION"
+        result["ROOT_LINK"] = "YES" if root.is_symlink() else "NO"
+    except (OSError, RuntimeError):
+        return {"ROOT": "UNVERIFIED", "PUBLIC_FILES": "UNKNOWN", "PRIVATE_FILES": "UNKNOWN"}
+    for label, name in (("PUBLIC", "app/public"), ("PRIVATE", "app/private")):
+        directory = root / name
+        if not directory.is_dir():
+            result[label + "_FILES"] = "DIRECTORY_ABSENT"
+            continue
+        count = 0
+        links = 0
+        for parent, folders, files in os.walk(directory, followlinks=False):
+            for entry in list(folders):
+                if (Path(parent) / entry).is_symlink():
+                    folders.remove(entry)
+                    links += 1
+            for entry in files:
+                item = Path(parent) / entry
+                if item.is_symlink():
+                    links += 1
+                elif item.is_file():
+                    count += 1
+            if count > 10000:
+                break
+        result[label + "_FILES"] = str(count) if count <= 10000 else "MORE_THAN_10000"
+        result[label + "_LINKS"] = str(links)
+    public = app / "public/storage"
+    if public.is_symlink():
+        try:
+            target = public.resolve(strict=True)
+            result["WEB_STORAGE_LINK"] = (
+                "TARGETS_APP_PUBLIC" if target == (root / "app/public").resolve(strict=True)
+                else "OTHER_TARGET")
+        except (OSError, RuntimeError):
+            result["WEB_STORAGE_LINK"] = "BROKEN_OR_UNVERIFIED"
+    else:
+        result["WEB_STORAGE_LINK"] = "MISSING" if not public.exists() else "NOT_SYMLINK"
+    return result
+
+
 def assess():
     if len(sys.argv) != 1:
         out("RESULT", "BLOCKED_ARGUMENTS")
@@ -109,6 +157,9 @@ def assess():
         "NO_GIT_METADATA" if not (current / ".git").is_dir() else "UNVERIFIED")
     if old_sha:
         out("CURRENT_SOURCE_SHA", old_sha)
+    old_storage = storage_snapshot(current / "apps/platform")
+    for key, value in old_storage.items():
+        out("LIVE_STORAGE_" + key, value)
 
     approval = read_json(APPROVAL)
     allowed_keys = {"approvedSha", "expectedCurrentRelease", "backupVerified", "rollbackVerified"}
@@ -162,6 +213,14 @@ def assess():
                 out("CURRENT_MAIN_CANDIDATE", "BLOCKED_ARTIFACT_MISSING")
             else:
                 out("CURRENT_MAIN_CANDIDATE", "ARTIFACTS_AND_SHA_PASS")
+            candidate_storage = storage_snapshot(app)
+            for key, value in candidate_storage.items():
+                out("CANDIDATE_STORAGE_" + key, value)
+            try:
+                same_root = (current / "apps/platform/storage").resolve(strict=True) == (app / "storage").resolve(strict=True)
+            except (OSError, RuntimeError):
+                same_root = False
+            out("STORAGE_CONTINUITY", "SHARED" if same_root else "SEPARATE_NEEDS_RELEASE_REVIEW")
             env = app / ".env"
             out("CANDIDATE_RUNTIME_ENV", "PRESENT_NEEDS_OPERATOR_REVIEW" if env.is_file() and not env.is_symlink() else "MISSING")
             # Candidate backup witness is exact target + actual current pointer.
