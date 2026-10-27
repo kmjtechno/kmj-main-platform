@@ -304,6 +304,13 @@ try {
                     async (route) => {
                         const payload = route.request().postDataJSON();
                         firstRequestId = payload.request_id;
+                        await page.waitForFunction(() =>
+                            [...document.querySelectorAll('button')].some(
+                                (button) =>
+                                    button.textContent.includes('Close form') &&
+                                    button.disabled,
+                            ),
+                        );
                         if (
                             payload.brief !== syntheticBrief ||
                             !payload.request_id
@@ -412,7 +419,10 @@ try {
                         exact: true,
                     })
                     .click();
-                const populatedName = quick.getByRole('textbox', {
+                const generatedEntry = page
+                    .locator('#product-manager form')
+                    .filter({ hasText: 'KMJ Synthetic Service' });
+                const populatedName = generatedEntry.getByRole('textbox', {
                     name: 'Name for KMJ Synthetic Service',
                     exact: true,
                 });
@@ -425,7 +435,7 @@ try {
                         'Saved identity did not populate the real editor',
                     );
                 if (
-                    (await quick
+                    (await generatedEntry
                         .getByRole('textbox', {
                             name: 'Full product description',
                             exact: true,
@@ -484,24 +494,18 @@ try {
                         });
                     },
                 );
-                await quick
+                await generatedEntry
                     .getByRole('textbox', {
                         name: 'Summary for KMJ Synthetic Service',
                         exact: true,
                     })
                     .fill('Owner edited summary');
-                await quick
+                await generatedEntry
                     .getByRole('button', { name: 'Save', exact: true })
                     .click();
-                await quick
+                await generatedEntry
                     .getByRole('button', { name: 'Save', exact: true })
                     .waitFor({ state: 'hidden' });
-                await quick
-                    .getByRole('button', {
-                        name: 'Create another',
-                        exact: true,
-                    })
-                    .click();
                 const inventoryEntry = page
                     .locator('#product-manager form')
                     .filter({ hasText: 'KMJ Synthetic Service' });
@@ -518,6 +522,39 @@ try {
                 )
                     errors.push(
                         'Reopening the saved product restored stale generated fields',
+                    );
+                await page
+                    .getByRole('button', { name: 'Close form', exact: true })
+                    .click();
+                if (
+                    (await inventoryEntry
+                        .getByRole('textbox', {
+                            name: 'Summary for KMJ Synthetic Service',
+                            exact: true,
+                        })
+                        .inputValue()) !== 'Owner edited summary'
+                )
+                    errors.push(
+                        'Closing the prompt unmounted the saved product editor',
+                    );
+                await page
+                    .getByRole('button', { name: 'New product', exact: true })
+                    .click();
+                await page
+                    .getByRole('textbox', {
+                        name: 'Product or service description',
+                        exact: true,
+                    })
+                    .waitFor();
+                if (
+                    (await page
+                        .getByText('Manual form & artwork upload', {
+                            exact: true,
+                        })
+                        .count()) !== 1
+                )
+                    errors.push(
+                        'Reopening the prompt left stale ownership state',
                     );
             }
             if (name === 'owner-developer') {

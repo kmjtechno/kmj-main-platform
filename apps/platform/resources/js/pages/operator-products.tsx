@@ -28,6 +28,7 @@ export default function OperatorProducts({
 }) {
     const pageUrl = usePage().url;
     const [promptProductId, setPromptProductId] = useState<string | null>(null);
+    const [promptBusy, setPromptBusy] = useState(false);
     const [search, setSearch] = useState('');
     const [category, setCategory] = useState('all');
     const [lifecycle, setLifecycle] = useState('all');
@@ -82,7 +83,11 @@ export default function OperatorProducts({
                         </div>
                         <button
                             type="button"
-                            onClick={() => setCreating((value) => !value)}
+                            disabled={creating && promptBusy}
+                            onClick={() => {
+                                if (creating) setPromptProductId(null);
+                                setCreating((value) => !value);
+                            }}
                             aria-expanded={creating}
                             aria-controls="new-product"
                             className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-red-600 px-5 text-sm font-semibold text-white hover:bg-red-500"
@@ -124,7 +129,15 @@ export default function OperatorProducts({
                         </h2>
                         <QuickProductCreator
                             generation={generation}
-                            onCreated={setPromptProductId}
+                            onBusy={setPromptBusy}
+                            onCreated={(id) => {
+                                setPromptProductId(id);
+                                if (id) {
+                                    setSearch('');
+                                    setCategory('all');
+                                    setLifecycle('all');
+                                }
+                            }}
                         />
                         {!promptProductId && (
                             <details className="mt-5 rounded-xl border p-4">
@@ -216,7 +229,7 @@ export default function OperatorProducts({
                 </section>
                 <ProductManager
                     products={products}
-                    excludedProductId={promptProductId}
+                    activeProductId={promptProductId}
                     search={search}
                     category={category}
                     lifecycle={lifecycle}

@@ -1,29 +1,30 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { router } from '@inertiajs/react';
 import { Sparkles } from 'lucide-react';
 import {
     studioRequest,
     type GenerationConfiguration,
 } from '@/components/product-content-editor';
-import {
-    ManagedProductEditor,
-    type ManagedProduct,
-} from '@/components/operator-product-manager';
+import { type ManagedProduct } from '@/components/operator-product-manager';
 
 export default function QuickProductCreator({
     generation,
     onCreated,
+    onBusy,
 }: {
     generation?: GenerationConfiguration;
     onCreated?: (productId: string | null) => void;
+    onBusy?: (busy: boolean) => void;
 }) {
     const [brief, setBrief] = useState('');
     const [busy, setBusy] = useState(false);
-    const [editorBusy, setEditorBusy] = useState(false);
     const inFlight = useRef(false);
     const requestId = useRef<string | null>(null);
     const [notice, setNotice] = useState('');
     const [created, setCreated] = useState<ManagedProduct | null>(null);
+    useEffect(() => {
+        onBusy?.(busy);
+    }, [busy, onBusy]);
     const create = async () => {
         if (inFlight.current) return;
         inFlight.current = true;
@@ -141,7 +142,6 @@ export default function QuickProductCreator({
                         <button
                             type="button"
                             className="rounded-lg border px-3 py-2 text-xs font-semibold"
-                            disabled={editorBusy}
                             onClick={() => {
                                 setCreated(null);
                                 setBrief('');
@@ -153,17 +153,12 @@ export default function QuickProductCreator({
                             Create another
                         </button>
                     </div>
-                    <ManagedProductEditor
-                        key={created.id}
-                        product={created}
-                        products={[created]}
-                        onDragStart={() => {}}
-                        onDrop={() => {}}
-                        allowReorder={false}
-                        initiallyEditing
-                        onActivityChange={setEditorBusy}
-                        generation={generation}
-                    />
+                    <a
+                        href={`#catalog-product-${created.id}`}
+                        className="text-sm font-bold text-red-400 underline"
+                    >
+                        Review the populated product editor below
+                    </a>
                 </div>
             )}
         </section>

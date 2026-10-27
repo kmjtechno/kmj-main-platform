@@ -277,7 +277,6 @@ export function ManagedProductEditor({
     allowReorder,
     generation,
     initiallyEditing = false,
-    onActivityChange,
 }: {
     product: ManagedProduct;
     products: ManagedProduct[];
@@ -286,7 +285,6 @@ export function ManagedProductEditor({
     allowReorder: boolean;
     generation?: GenerationConfiguration;
     initiallyEditing?: boolean;
-    onActivityChange?: (busy: boolean) => void;
 }) {
     const pageUrl = usePage().url;
     const [editing, setEditing] = useState(
@@ -309,8 +307,13 @@ export function ManagedProductEditor({
     });
 
     useEffect(() => {
-        onActivityChange?.(form.processing || studioBusy);
-    }, [form.processing, studioBusy, onActivityChange]);
+        if (initiallyEditing) {
+            setEditing(true);
+            document
+                .getElementById(`catalog-product-${product.id}`)
+                ?.scrollIntoView({ block: 'start' });
+        }
+    }, [initiallyEditing, product.id]);
 
     const save = (event: FormEvent<HTMLFormElement>) => {
         event.preventDefault();
@@ -345,6 +348,7 @@ export function ManagedProductEditor({
 
     return (
         <form
+            id={`catalog-product-${product.id}`}
             onSubmit={save}
             onDragOver={(event) => event.preventDefault()}
             onDrop={(event: DragEvent<HTMLFormElement>) => {
@@ -598,14 +602,14 @@ export function ProductManager({
     category = 'all',
     lifecycle = 'all',
     generation,
-    excludedProductId = null,
+    activeProductId = null,
 }: {
     products: ManagedProduct[];
     search?: string;
     category?: string;
     lifecycle?: string;
     generation?: GenerationConfiguration;
-    excludedProductId?: string | null;
+    activeProductId?: string | null;
 }) {
     const [orderedProducts, setOrderedProducts] = useState(products);
     const [draggedId, setDraggedId] = useState<string | null>(null);
@@ -667,13 +671,9 @@ export function ProductManager({
     ).length;
     const hiddenCount = orderedProducts.length - publicCount;
     const allowReorder =
-        !excludedProductId &&
-        search.trim() === '' &&
-        category === 'all' &&
-        lifecycle === 'all';
+        search.trim() === '' && category === 'all' && lifecycle === 'all';
     const shown = orderedProducts.filter(
         (product) =>
-            product.id !== excludedProductId &&
             (category === 'all' || product.category === category) &&
             (lifecycle === 'all' || product.lifecycle === lifecycle) &&
             `${product.name} ${product.slug} ${product.summary ?? ''}`
@@ -735,6 +735,7 @@ export function ProductManager({
                     <ManagedProductEditor
                         key={product.id}
                         product={product}
+                        initiallyEditing={product.id === activeProductId}
                         products={orderedProducts}
                         onDragStart={setDraggedId}
                         onDrop={drop}
