@@ -28,6 +28,7 @@ const VIEWPORTS = [
     { name: 'mobile-390', width: 390, height: 844 },
     { name: 'tablet-768', width: 768, height: 1024 },
     { name: 'desktop-1280', width: 1280, height: 800 },
+    { name: 'desktop-1920', width: 1920, height: 1080 },
 ];
 
 // UI_CHECKS selects check groups (comma separated, default "all"):
@@ -98,6 +99,12 @@ async function inspectPage(page, path, viewport, { requireIcon = false } = {}) {
         title: document.title,
         scrollWidth: document.documentElement.scrollWidth,
         clientWidth: document.documentElement.clientWidth,
+        landing: (() => {
+            const element = document.querySelector('.locked-landing');
+            if (!element) return null;
+            const rect = element.getBoundingClientRect();
+            return { width: rect.width, left: rect.left };
+        })(),
         brokenImages: [...document.images]
             .filter((img) => !(img.complete && img.naturalWidth > 0))
             .map((img) => img.currentSrc || img.src),
@@ -129,6 +136,15 @@ async function inspectPage(page, path, viewport, { requireIcon = false } = {}) {
             metrics.icons.length >= 2,
             `${tag}: favicon and touch icon declared`,
             metrics.icons.join(', '),
+        );
+    }
+    if (on('layout') && path === '/') {
+        check(
+            metrics.landing !== null &&
+                Math.abs(metrics.landing.width - metrics.clientWidth) <= 1 &&
+                Math.abs(metrics.landing.left) <= 1,
+            `${tag}: deployed landing fills viewport after production CSS chunks load`,
+            JSON.stringify(metrics.landing),
         );
     }
     if (on('images')) {
