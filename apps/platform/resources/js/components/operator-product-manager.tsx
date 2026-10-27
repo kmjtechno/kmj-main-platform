@@ -50,10 +50,14 @@ export const productCategoryOptions = [
 
 // Fully blank FAQ rows are editor placeholders, not public product content.
 // Partial answers are intentionally preserved so server validation can flag them.
-export function normalizedProductContent(content: ProductContent): ProductContent {
+export function normalizedProductContent(
+    content: ProductContent,
+): ProductContent {
     return {
         ...content,
-        features: content.features.map((feature) => feature.trim()).filter(Boolean),
+        features: content.features
+            .map((feature) => feature.trim())
+            .filter(Boolean),
         faqs: content.faqs
             .map((faq) => ({
                 question: faq.question.trim(),
@@ -627,7 +631,10 @@ export function ManagedProductEditor({
                     </div>
 
                     {form.isDirty && !form.processing && (
-                        <p className="text-muted-foreground text-xs xl:col-span-4" role="status">
+                        <p
+                            className="text-muted-foreground text-xs xl:col-span-4"
+                            role="status"
+                        >
                             Unsaved editor changes — review product details and
                             save before closing this entry.
                         </p>
