@@ -8,6 +8,7 @@ use App\Services\PlatformOwnerAccess;
 use App\Services\ProductStudio\FreeCloudProductDraftGenerator;
 use App\Services\ProductStudio\FreeCloudRateLimited;
 use App\Services\ProductStudio\IncompleteCloudDraft;
+use App\Services\ProductStudio\LocalProductDraftTemplate;
 use App\Services\ProductStudio\ProductArtworkStorage;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -81,12 +82,14 @@ final class OwnerProductStudioController extends Controller
         }
     }
 
-    public function fromBrief(Request $request, PlatformOwnerAccess $access, FreeCloudProductDraftGenerator $generator, AdminProductManager $manager): JsonResponse
+    public function fromBrief(Request $request, PlatformOwnerAccess $access, FreeCloudProductDraftGenerator $generator, LocalProductDraftTemplate $local, AdminProductManager $manager): JsonResponse
     {
         $this->authorizeOwner($request, $access);
-        $data = $request->validate(['brief' => ['required', 'string', 'min:20', 'max:3000'], 'request_id' => ['required', 'uuid']]);
+        $data = $request->validate(['brief' => ['required', 'string', 'min:20', 'max:3000'], 'request_id' => ['required', 'uuid'], 'local_only' => ['sometimes', 'boolean']]);
+        $localOnly = ($data['local_only'] ?? false) === true;
+        $mode = $localOnly ? 'local-template' : 'verified-free-cloud';
         $key = 'product-studio-brief:'.$request->user()?->getAuthIdentifier().':'.$data['request_id'];
-        $fingerprint = hash('sha256', trim($data['brief']));
+        $fingerprint = hash('sha256', trim($data['brief']).($localOnly ? '|explicit-local-template' : ''));
         $lock = Cache::lock($key.':lock', 120);
         if (! $lock->get()) {
             return response()->json(['message' => 'This description is already being prepared. Wait before retrying.'], 409);
@@ -103,10 +106,10 @@ final class OwnerProductStudioController extends Controller
                     return response()->json(['message' => 'The saved draft is no longer available. Start a new generation action.'], 409);
                 }
 
-                return response()->json(['saved' => true, 'product' => $existing, 'artwork' => 'existing-brand-fallback']);
+                return response()->json(['saved' => true, 'product' => $existing, 'artwork' => 'existing-brand-fallback', 'generation_mode' => $receipt['generation_mode'] ?? 'verified-free-cloud']);
             }
             try {
-                $draft = $generator->fromBrief(trim($data['brief']));
+                $draft = $localOnly ? $local->fromBrief(trim($data['brief'])) : $generator->fromBrief(trim($data['brief']));
             } catch (IncompleteCloudDraft $error) {
                 return response()->json(['code' => $error->getMessage(), 'message' => 'The cloud draft was incomplete. Your description is preserved and no product was saved.'], 422);
             } catch (FreeCloudRateLimited $error) {
@@ -143,12 +146,12 @@ final class OwnerProductStudioController extends Controller
             try {
                 $identity = ['name' => $draft['name'], 'category' => $draft['category'], 'offering_type' => $draft['offering_type']];
                 $product = $this->saveGeneratedDraft($draft, $identity, $manager);
-                Cache::put($key, ['fingerprint' => $fingerprint, 'product_id' => (string) $product->getKey()], 3600);
+                Cache::put($key, ['fingerprint' => $fingerprint, 'product_id' => (string) $product->getKey(), 'generation_mode' => $mode], 3600);
             } finally {
                 $slugLock->release();
             }
 
-            return response()->json(['saved' => true, 'product' => $product, 'artwork' => 'existing-brand-fallback'], 201);
+            return response()->json(['saved' => true, 'product' => $product, 'artwork' => 'existing-brand-fallback', 'generation_mode' => $mode], 201);
         } finally {
             $lock->release();
         }
