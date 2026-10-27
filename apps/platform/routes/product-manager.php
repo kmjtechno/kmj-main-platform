@@ -35,6 +35,7 @@ Route::middleware(['auth', 'verified', 'password.confirm'])
             ]);
         })->name('index');
 
+        Route::post('from-brief', [OwnerProductStudioController::class, 'fromBrief'])->middleware('throttle:6,1')->name('from-brief');
         Route::post('ai-create', [OwnerProductStudioController::class, 'createDraft'])->middleware('throttle:6,1')->name('ai-create');
         Route::post('draft', [OwnerProductStudioController::class, 'draft'])->middleware('throttle:6,1')->name('draft');
         Route::post('media', [OwnerProductStudioController::class, 'media'])->middleware('throttle:6,1')->name('media');

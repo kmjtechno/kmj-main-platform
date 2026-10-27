@@ -72,7 +72,7 @@ try {
                 if (
                     !(await section
                         .getByRole('button', {
-                            name: 'AI fill & add private draft',
+                            name: 'Generate & add from description',
                             exact: true,
                         })
                         .isDisabled())
@@ -290,25 +290,33 @@ try {
                     name: 'One-click AI product or service',
                     exact: true,
                 });
+                const syntheticBrief =
+                    'KMJ Synthetic Service provides proposed engineering consultation for integrators.';
                 await quick
                     .getByRole('textbox', {
-                        name: 'Product or service title',
+                        name: 'Product or service description',
                         exact: true,
                     })
-                    .fill('KMJ Synthetic Service');
-                await quick
-                    .getByLabel('Offering type', { exact: true })
-                    .selectOption('service');
+                    .fill(syntheticBrief);
+                let firstRequestId;
                 await page.route(
-                    '**/operator/products/ai-create',
+                    '**/operator/products/from-brief',
                     async (route) => {
                         const payload = route.request().postDataJSON();
+                        firstRequestId = payload.request_id;
+                        await page.waitForFunction(() =>
+                            [...document.querySelectorAll('button')].some(
+                                (button) =>
+                                    button.textContent.includes('Close form') &&
+                                    button.disabled,
+                            ),
+                        );
                         if (
-                            payload.name !== 'KMJ Synthetic Service' ||
-                            payload.offering_type !== 'service'
+                            payload.brief !== syntheticBrief ||
+                            !payload.request_id
                         )
                             errors.push(
-                                'Quick creator lost title or service type',
+                                'Prompt creator lost description or request identifier',
                             );
                         await route.fulfill({
                             status: 503,
@@ -322,7 +330,7 @@ try {
                 );
                 await quick
                     .getByRole('button', {
-                        name: 'AI fill & add private draft',
+                        name: 'Generate & add from description',
                         exact: true,
                     })
                     .click();
@@ -333,13 +341,220 @@ try {
                 if (
                     (await quick
                         .getByRole('textbox', {
-                            name: 'Product or service title',
+                            name: 'Product or service description',
                             exact: true,
                         })
-                        .inputValue()) !== 'KMJ Synthetic Service'
+                        .inputValue()) !== syntheticBrief
                 )
                     errors.push(
-                        'Quick creator lost input after provider failure',
+                        'Prompt creator lost input after provider failure',
+                    );
+                await page.unroute('**/operator/products/from-brief');
+                let savedProduct = {
+                    id: '00000000-0000-4000-8000-999999999999',
+                    name: 'KMJ Synthetic Service',
+                    slug: 'kmj-synthetic-service',
+                    status: 'sandbox',
+                    lifecycle: 'planned',
+                    category: 'industrial',
+                    sort_order: 999,
+                    is_public: false,
+                    purchase_enabled: false,
+                    licensing_enabled: false,
+                    image_path: '/assets/brand/kmj-social-card.webp',
+                    summary: 'Synthetic service summary',
+                    content: {
+                        offering_type: 'service',
+                        headline: 'Synthetic service headline',
+                        description: 'Synthetic complete service description',
+                        features: ['Synthetic consultation'],
+                        faqs: [
+                            {
+                                question: 'What is it?',
+                                answer: 'Proposed consultation.',
+                            },
+                        ],
+                        photo_prompt: 'Synthetic illustrative photo',
+                        banner_prompt: 'Synthetic illustrative banner',
+                        image_alt: 'KMJ brand artwork',
+                    },
+                };
+                await page.route(
+                    '**/operator/products/from-brief',
+                    async (route) => {
+                        const payload = route.request().postDataJSON();
+                        if (payload.request_id !== firstRequestId)
+                            errors.push('Prompt retry lost idempotency key');
+                        await route.fulfill({
+                            status: 201,
+                            contentType: 'application/json',
+                            body: JSON.stringify({
+                                saved: true,
+                                artwork: 'existing-brand-fallback',
+                                product: savedProduct,
+                            }),
+                        });
+                    },
+                );
+                await page.route('**/operator/products?*', async (route) => {
+                    if (!route.request().headers()['x-inertia'])
+                        return route.continue();
+                    await route.fulfill({
+                        status: 200,
+                        contentType: 'application/json',
+                        headers: { 'X-Inertia': 'true' },
+                        body: JSON.stringify({
+                            component: 'operator-products',
+                            props: { previewProducts: [savedProduct] },
+                            url: '/operator/products?create=1&syntheticCloud=1',
+                            version: 'locked-ui-visual-fixture',
+                            clearHistory: false,
+                            encryptHistory: false,
+                        }),
+                    });
+                });
+                await quick
+                    .getByRole('button', {
+                        name: 'Generate & add from description',
+                        exact: true,
+                    })
+                    .click();
+                const generatedEntry = page
+                    .locator('#product-manager form')
+                    .filter({ hasText: 'KMJ Synthetic Service' });
+                const populatedName = generatedEntry.getByRole('textbox', {
+                    name: 'Name for KMJ Synthetic Service',
+                    exact: true,
+                });
+                await populatedName.waitFor();
+                if (
+                    (await populatedName.inputValue()) !==
+                    'KMJ Synthetic Service'
+                )
+                    errors.push(
+                        'Saved identity did not populate the real editor',
+                    );
+                if (
+                    (await generatedEntry
+                        .getByRole('textbox', {
+                            name: 'Full product description',
+                            exact: true,
+                        })
+                        .inputValue()) !==
+                    'Synthetic complete service description'
+                )
+                    errors.push(
+                        'Saved content did not populate the real editor',
+                    );
+                if (
+                    await section
+                        .getByText('Manual form & artwork upload', {
+                            exact: true,
+                        })
+                        .count()
+                )
+                    errors.push(
+                        'A blank duplicate manual form remained after generation',
+                    );
+                await page.waitForFunction(() =>
+                    Array.isArray(history.state?.page?.props?.previewProducts),
+                );
+                if (
+                    (await page
+                        .locator('form')
+                        .filter({ hasText: 'KMJ Synthetic Service' })
+                        .count()) !== 1
+                )
+                    errors.push(
+                        'Two independent forms own the generated product',
+                    );
+                const currentPage = await page.evaluate(
+                    () => history.state.page,
+                );
+                await page.route(
+                    '**/operator/products/00000000-0000-4000-8000-999999999999',
+                    async (route) => {
+                        const payload = route.request().postDataJSON();
+                        savedProduct = {
+                            ...savedProduct,
+                            summary: payload.summary,
+                        };
+                        await route.fulfill({
+                            status: 200,
+                            contentType: 'application/json',
+                            headers: { 'X-Inertia': 'true' },
+                            body: JSON.stringify({
+                                ...currentPage,
+                                props: {
+                                    ...currentPage.props,
+                                    previewProducts: [savedProduct],
+                                    errors: {},
+                                },
+                            }),
+                        });
+                    },
+                );
+                await generatedEntry
+                    .getByRole('textbox', {
+                        name: 'Summary for KMJ Synthetic Service',
+                        exact: true,
+                    })
+                    .fill('Owner edited summary');
+                await generatedEntry
+                    .getByRole('button', { name: 'Save', exact: true })
+                    .click();
+                await generatedEntry
+                    .getByRole('button', { name: 'Save', exact: true })
+                    .waitFor({ state: 'hidden' });
+                const inventoryEntry = page
+                    .locator('#product-manager form')
+                    .filter({ hasText: 'KMJ Synthetic Service' });
+                await inventoryEntry
+                    .getByRole('button', { name: 'Edit', exact: true })
+                    .click();
+                if (
+                    (await inventoryEntry
+                        .getByRole('textbox', {
+                            name: 'Summary for KMJ Synthetic Service',
+                            exact: true,
+                        })
+                        .inputValue()) !== 'Owner edited summary'
+                )
+                    errors.push(
+                        'Reopening the saved product restored stale generated fields',
+                    );
+                await page
+                    .getByRole('button', { name: 'Close form', exact: true })
+                    .click();
+                if (
+                    (await inventoryEntry
+                        .getByRole('textbox', {
+                            name: 'Summary for KMJ Synthetic Service',
+                            exact: true,
+                        })
+                        .inputValue()) !== 'Owner edited summary'
+                )
+                    errors.push(
+                        'Closing the prompt unmounted the saved product editor',
+                    );
+                await page
+                    .getByRole('button', { name: 'New product', exact: true })
+                    .click();
+                await page
+                    .getByRole('textbox', {
+                        name: 'Product or service description',
+                        exact: true,
+                    })
+                    .waitFor();
+                if (
+                    (await page
+                        .getByText('Manual form & artwork upload', {
+                            exact: true,
+                        })
+                        .count()) !== 1
+                )
+                    errors.push(
+                        'Reopening the prompt left stale ownership state',
                     );
             }
             if (name === 'owner-developer') {

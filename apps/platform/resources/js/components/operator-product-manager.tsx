@@ -269,13 +269,14 @@ export function CommercialProductForm({
     );
 }
 
-function ManagedProductEditor({
+export function ManagedProductEditor({
     product,
     products,
     onDragStart,
     onDrop,
     allowReorder,
     generation,
+    initiallyEditing = false,
 }: {
     product: ManagedProduct;
     products: ManagedProduct[];
@@ -283,12 +284,14 @@ function ManagedProductEditor({
     onDrop: (productId: string) => void;
     allowReorder: boolean;
     generation?: GenerationConfiguration;
+    initiallyEditing?: boolean;
 }) {
     const pageUrl = usePage().url;
     const [editing, setEditing] = useState(
         () =>
+            initiallyEditing ||
             new URLSearchParams(pageUrl.split('?')[1] ?? '').get('edit') ===
-            product.id,
+                product.id,
     );
     const [studioBusy, setStudioBusy] = useState(false);
     const form = useForm({
@@ -302,6 +305,15 @@ function ManagedProductEditor({
         purchase_enabled: product.purchase_enabled,
         licensing_enabled: product.licensing_enabled,
     });
+
+    useEffect(() => {
+        if (initiallyEditing) {
+            setEditing(true);
+            document
+                .getElementById(`catalog-product-${product.id}`)
+                ?.scrollIntoView({ block: 'start' });
+        }
+    }, [initiallyEditing, product.id]);
 
     const save = (event: FormEvent<HTMLFormElement>) => {
         event.preventDefault();
@@ -336,6 +348,7 @@ function ManagedProductEditor({
 
     return (
         <form
+            id={`catalog-product-${product.id}`}
             onSubmit={save}
             onDragOver={(event) => event.preventDefault()}
             onDrop={(event: DragEvent<HTMLFormElement>) => {
@@ -589,12 +602,14 @@ export function ProductManager({
     category = 'all',
     lifecycle = 'all',
     generation,
+    activeProductId = null,
 }: {
     products: ManagedProduct[];
     search?: string;
     category?: string;
     lifecycle?: string;
     generation?: GenerationConfiguration;
+    activeProductId?: string | null;
 }) {
     const [orderedProducts, setOrderedProducts] = useState(products);
     const [draggedId, setDraggedId] = useState<string | null>(null);
@@ -720,6 +735,7 @@ export function ProductManager({
                     <ManagedProductEditor
                         key={product.id}
                         product={product}
+                        initiallyEditing={product.id === activeProductId}
                         products={orderedProducts}
                         onDragStart={setDraggedId}
                         onDrop={drop}

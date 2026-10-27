@@ -247,6 +247,45 @@ final class OwnerProductDraftWorkflowTest extends TestCase
             ->assertSee('"@type":"Service"', false)->assertSee('"@type":"FAQPage"', false);
     }
 
+    public function test_short_brief_generates_identity_and_saves_one_complete_private_record_idempotently(): void
+    {
+        config(['product_studio.text.enabled' => true, 'product_studio.text.api_key' => 'test-only-not-a-key', 'product_studio.text.model' => 'openrouter/free']);
+        Http::fake(['openrouter.ai/api/v1/models' => Http::response(['data' => [['id' => 'openrouter/free', 'pricing' => ['prompt' => '0', 'completion' => '0']]]]),
+            'openrouter.ai/api/v1/chat/completions' => Http::response(['usage' => ['cost' => 0], 'choices' => [['finish_reason' => 'stop', 'message' => ['content' => json_encode([
+                'name' => 'KMJ Calibration Studio', 'category' => 'industrial', 'offering_type' => 'product',
+                'summary' => 'Proposed projector calibration software.', 'headline' => 'Projector alignment workspace',
+                'description' => 'A proposed projector calibration workspace for camera-assisted alignment. The supplied brief describes intended scope; supported hardware and release availability remain to be verified.',
+                'features' => ['Proposed camera-assisted alignment'], 'faqs' => [['question' => 'What is the intended purpose?', 'answer' => 'Projector alignment using a camera-assisted workflow.']],
+                'photo_prompt' => 'Illustrative projector alignment workspace, no performance claims.', 'banner_prompt' => 'Wide abstract projector alignment illustration.',
+            ], JSON_THROW_ON_ERROR)]]]])]);
+        $this->actingAs($this->owner())->withSession(['auth.password_confirmed_at' => time()]);
+        $payload = ['brief' => 'KMJ Calibration Studio is proposed projector calibration software with camera-assisted alignment.', 'request_id' => (string) Str::uuid(), 'is_public' => true, 'purchase_enabled' => true];
+        $first = $this->postJson('/operator/products/from-brief', $payload)->assertCreated()->assertJsonPath('product.category', 'industrial')->assertJsonPath('product.name', 'KMJ Calibration Studio');
+        $this->postJson('/operator/products/from-brief', $payload)->assertOk()->assertJsonPath('product.id', $first->json('product.id'));
+        Http::assertSentCount(2);
+        $product = Product::query()->sole();
+        self::assertFalse($product->is_public);
+        self::assertFalse($product->purchase_enabled);
+        self::assertSame('planned', $product->lifecycle);
+        self::assertCount(1, $product->content['features']);
+        self::assertNotEmpty($product->content['faqs']);
+        Http::assertSent(fn ($request): bool => str_ends_with($request->url(), '/chat/completions') && in_array('name', $request['response_format']['json_schema']['schema']['required'], true));
+        $payload['brief'] = 'A different service with the same request identifier must not overwrite the saved draft.';
+        $this->postJson('/operator/products/from-brief', $payload)->assertStatus(409);
+        self::assertSame(1, Product::query()->count());
+    }
+
+    public function test_prompt_creation_rejects_unauthorized_and_insufficient_input_without_inference(): void
+    {
+        Http::preventStrayRequests();
+        $this->postJson('/operator/products/from-brief', [])->assertUnauthorized();
+        $this->actingAs(User::factory()->create(['email_verified_at' => now()]))->withSession(['auth.password_confirmed_at' => time()])->postJson('/operator/products/from-brief', [])->assertForbidden();
+        $this->actingAs($this->owner())->withSession(['auth.password_confirmed_at' => time()]);
+        $this->postJson('/operator/products/from-brief', ['brief' => 'tiny', 'request_id' => (string) Str::uuid()])->assertUnprocessable();
+        Http::assertNothingSent();
+        self::assertSame(0, Product::query()->count());
+    }
+
     private function owner(): User
     {
         $owner = User::factory()->create([
