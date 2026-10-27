@@ -1,4 +1,4 @@
-name: CodeBridge Production Probe
+name: CodeBridge Production VPS Probe
 
 on:
   push:
@@ -11,176 +11,83 @@ permissions:
   contents: read
 
 jobs:
-  probe:
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
+  public_vps:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
     steps:
-      - name: Probe production layout and CodeBridge endpoints
-        shell: bash
-        run: |
-          set -euo pipefail
-          PROD=/home/kmjprod/current
-          echo "host=$(hostname)"
-          echo "user=$(id -un)"
-          echo "prod_path=$PROD"
-          if [ -e "$PROD" ]; then
-            echo "prod_exists=yes"
-            ls -ld "$PROD"
-            readlink -f "$PROD" || true
-          else
-            echo "prod_exists=no"
-          fi
-          if [ -d "$PROD/.git" ] || git -C "$PROD" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
-            echo "git=yes"
-            echo "sha=$(git -C "$PROD" rev-parse HEAD)"
-            echo "branch=$(git -C "$PROD" branch --show-current || true)"
-            echo "origin=$(git -C "$PROD" remote get-url origin || true)"
-            echo "status_begin"
-            git -C "$PROD" status --porcelain=v1 || true
-            echo "status_end"
-          else
-            echo "git=no"
-          fi
-          for svc in php8.4-fpm php8.3-fpm nginx; do
-            systemctl is-active "$svc" 2>/dev/null && echo "service:$svc=active" || true
-          done
-          python3 - <<'PY'
-          import urllib.request, urllib.error
-          urls = [
-            "https://kmj-codebridge-gateway.onrender.com/healthz",
-            "https://kmjtechno.com/.well-known/oauth-authorization-server",
-            "https://kmjtechno.com/.well-known/oauth-protected-resource",
-            "https://kmjtechno.com/.well-known/oauth-protected-resource/mcp",
-            "https://kmjtechno.com/oauth/jwks.json",
-          ]
-          import json, time
-          for u in urls:
-              is_gateway_health = u.endswith("/healthz")
-              attempts = 6 if is_gateway_health else 1
-              last_error = None
-              for attempt in range(1, attempts + 1):
-                  try:
-                      with urllib.request.urlopen(u, timeout=20) as r:
-                          body=r.read(800).decode("utf-8","replace")
-                          print("http", r.status, u, body.replace("\n"," ")[:800])
-                          if is_gateway_health:
-                              payload=json.loads(body)
-                              if payload.get("status") != "ok":
-                                  raise RuntimeError("gateway health is not ok")
-                              version = str(payload.get("version", ""))
-                              try:
-                                  parts = tuple(int(part) for part in version.split("."))
-                              except ValueError as exc:
-                                  raise RuntimeError(f"invalid gateway version: {version!r}") from exc
-                              if parts < (0, 2, 1):
-                                  raise RuntimeError(f"gateway version is too old: {version!r}")
-                              if payload.get("capabilities", {}).get("github") is not True:
-                                  raise RuntimeError("hosted GitHub capability is not enabled")
-                          last_error = None
-                          break
-                  except urllib.error.HTTPError as e:
-                      body=e.read(800).decode("utf-8","replace")
-                      print("http", e.code, u, body.replace("\n"," ")[:800])
-                      last_error = RuntimeError(f"HTTP {e.code}")
-                  except Exception as e:
-                      print("http_error", u, type(e).__name__, str(e)[:200])
-                      last_error = e
-                  if attempt < attempts:
-                      time.sleep(attempt * 5)
-              if is_gateway_health and last_error is not None:
-                  raise RuntimeError(f"gateway health/version verification failed after {attempts} attempts: {last_error}")
-          req=urllib.request.Request(
-              "https://kmjtechno.com/mcp",
-              method="POST",
-              data=b'{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{}}',
-              headers={"Content-Type":"application/json","Accept":"application/json, text/event-stream"},
-          )
-          try:
-              with urllib.request.urlopen(req, timeout=15) as r:
-                  body=r.read(4000).decode("utf-8","replace")
-                  print("mcp", r.status, body.replace("\n"," ")[:4000])
-          except urllib.error.HTTPError as e:
-              body=e.read(4000).decode("utf-8","replace")
-              print("mcp", e.code, body.replace("\n"," ")[:4000])
-          except Exception as e:
-              print("mcp_error", type(e).__name__, str(e)[:300])
-          PY
-
-      - name: Register fresh Claude recovery OAuth client
+      - name: Check first-party OAuth discovery and public MCP gateway
         shell: bash
         run: |
           set -euo pipefail
           python3 - <<'PY'
-          import json, urllib.request, urllib.error, urllib.parse, hashlib, base64
+          import json
+          import urllib.error
+          import urllib.request
 
-          issuer = "https://kmjtechno.com"
-          callbacks = [
-              "https://claude.ai/api/mcp/auth_callback",
-              "https://claude.com/api/mcp/auth_callback",
-              "http://127.0.0.1/callback",
-              "http://localhost/callback",
-              "http://[::1]/callback",
-          ]
-          callback = callbacks[0]
-
-          with urllib.request.urlopen(issuer + "/.well-known/oauth-authorization-server", timeout=20) as r:
-              meta = json.load(r)
-          if meta.get("issuer") != issuer:
-              raise SystemExit("issuer mismatch")
-          register_url = meta.get("registration_endpoint")
-          if register_url != issuer + "/oauth/register":
-              raise SystemExit("unexpected registration endpoint")
-
-          payload = json.dumps({
-              "client_name": "KMJ Claude recovery",
-              "redirect_uris": callbacks,
-              "token_endpoint_auth_method": "none",
-              "grant_types": ["authorization_code", "refresh_token"],
-              "response_types": ["code"],
-          }).encode()
-
-          req = urllib.request.Request(
-              register_url,
-              data=payload,
-              method="POST",
-              headers={"Content-Type": "application/json", "Accept": "application/json"},
+          base = "https://kmjtechno.com"
+          paths = (
+              "/.well-known/oauth-authorization-server",
+              "/.well-known/oauth-protected-resource/mcp",
+              "/oauth/jwks.json",
           )
-          with urllib.request.urlopen(req, timeout=20) as r:
-              if r.status != 201:
-                  raise SystemExit(f"registration status {r.status}")
-              client = json.load(r)
+          for path in paths:
+              with urllib.request.urlopen(base + path, timeout=20) as response:
+                  if response.status != 200 or response.geturl() != base + path:
+                      raise SystemExit("VPS_OAUTH_DISCOVERY=FAIL " + path)
+                  data = response.read(131072)
+                  if not data:
+                      raise SystemExit("VPS_OAUTH_DISCOVERY=EMPTY " + path)
+              print("VPS_OAUTH_DISCOVERY=PASS " + path)
 
-          client_id = client.get("client_id")
-          if not isinstance(client_id, str) or not client_id.startswith("cb_"):
-              raise SystemExit("invalid client_id")
-          if client.get("token_endpoint_auth_method") != "none":
-              raise SystemExit("unexpected auth method")
-          if client.get("redirect_uris") != callbacks:
-              raise SystemExit("callback mismatch")
+          def rpc(method, params, id):
+              body = json.dumps({
+                  "jsonrpc": "2.0", "id": id,
+                  "method": method, "params": params,
+              }).encode()
+              return urllib.request.Request(
+                  base + "/mcp",
+                  data=body,
+                  method="POST",
+                  headers={
+                      "Content-Type": "application/json",
+                      "Accept": "application/json, text/event-stream",
+                  },
+              )
 
-          verifier = "v" * 64
-          challenge = base64.urlsafe_b64encode(hashlib.sha256(verifier.encode()).digest()).rstrip(b"=").decode()
-          params = urllib.parse.urlencode({
-              "response_type": "code",
-              "client_id": client_id,
-              "redirect_uri": "http://127.0.0.1:33418/callback",
-              "code_challenge": challenge,
-              "code_challenge_method": "S256",
-              "scope": "codebridge:read",
-              "state": "probe",
-              "resource": issuer + "/mcp",
-          })
-          opener = urllib.request.build_opener(urllib.request.HTTPRedirectHandler())
+          with urllib.request.urlopen(rpc("tools/list", {}, 1), timeout=25) as response:
+              if response.status != 200 or response.geturl() != base + "/mcp":
+                  raise SystemExit("VPS_MCP_DISCOVERY=HTTP_ERROR")
+              raw = response.read(1048577)
+              if len(raw) > 1048576:
+                  raise SystemExit("VPS_MCP_DISCOVERY=OVERSIZE")
+          body = raw.decode("utf-8", "replace")
+          values = [body] + [
+              line[5:].strip() for line in body.splitlines()
+              if line.startswith("data:")
+          ]
+          names = set()
+          for value in values:
+              try:
+                  parsed = json.loads(value)
+              except (json.JSONDecodeError, ValueError):
+                  continue
+              tools = parsed.get("result", {}).get("tools", [])
+              if isinstance(tools, list):
+                  names = {tool.get("name") for tool in tools if isinstance(tool, dict)}
+                  if names:
+                      break
+          if len(names) < 100 or not {
+              "list_devices", "chat_workspace_open", "coordination_post",
+          }.issubset(names):
+              raise SystemExit("VPS_MCP_DISCOVERY=CATALOG_INCOMPLETE")
+          print("VPS_MCP_DISCOVERY=PASS tools=" + str(len(names)))
+
           try:
-              with opener.open(issuer + "/oauth/authorize?" + params, timeout=20) as r:
-                  final = r.geturl()
-                  if "/login" not in final:
-                      raise SystemExit(f"authorize did not reach login: {final}")
-          except urllib.error.HTTPError as e:
-              body = e.read(1000).decode("utf-8", "replace")
-              raise SystemExit(f"authorize failed HTTP {e.code}: {body[:500]}")
-
-          print("RECOVERY_CLIENT_ID=" + client_id)
-          print("RECOVERY_REDIRECTS=" + ",".join(callbacks))
-          print("RECOVERY_CLIENT_VALID=1")
+              urllib.request.urlopen(rpc("resources/list", {}, 2), timeout=20)
+              raise SystemExit("VPS_MCP_AUTH=FAIL_UNPROTECTED")
+          except urllib.error.HTTPError as error:
+              challenge = error.headers.get("WWW-Authenticate", "")
+              if error.code != 401 or "resource_metadata" not in challenge:
+                  raise SystemExit("VPS_MCP_AUTH=FAIL_CHALLENGE")
+          print("VPS_MCP_AUTH=PASS")
           PY

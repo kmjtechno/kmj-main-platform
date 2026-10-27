@@ -63,4 +63,27 @@ final class CodeBridgeAgentCompatibilityProxyTest extends TestCase
             ->assertStatus(503)
             ->assertJson(['error' => 'CODEBRIDGE_GATEWAY_UNAVAILABLE']);
     }
+
+    public function test_empty_upstream_never_forwards_mcp_or_agent_credentials(): void
+    {
+        $source = file_get_contents(config_path('services.php'));
+        self::assertIsString($source);
+        self::assertStringNotContainsString('onrender.com', $source);
+
+        config()->set('services.codebridge_gateway.url', '');
+        Http::fake();
+
+        $this->withHeader('Authorization', 'Bearer should-never-be-forwarded')
+            ->postJson('/agent/health', [])
+            ->assertStatus(503);
+
+        $this->postJson('/mcp', [
+            'jsonrpc' => '2.0',
+            'id' => 1,
+            'method' => 'tools/list',
+            'params' => [],
+        ])->assertStatus(503);
+
+        Http::assertNothingSent();
+    }
 }
