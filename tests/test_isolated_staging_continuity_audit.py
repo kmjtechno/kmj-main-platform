@@ -26,7 +26,8 @@ class StageContinuityAuditSafety(unittest.TestCase):
         for clause in (
             "/home/kmjstage/releases", "/home/kmjstage/htdocs/staging.kmjtechno.com",
             "/home/kmjprod/current", "STAGING_ENV_PARITY",
-            "STAGING_STORAGE_CONTINUITY", "STAGING_PUBLIC_STORAGE_CONTINUITY",
+            "for name in ('storage', 'public/storage')",
+            "name.upper().replace('/', '_') + '_CONTINUITY='",
             "STAGING_DB_SCOPE", "STAGING_PENDING_MIGRATIONS",
             "STAGING_APPROVED_HEAD_MATCH", "migrate:status",
             "PRODUCTION_POINTER=UNCHANGED", "STAGING_POINTER=UNCHANGED",
