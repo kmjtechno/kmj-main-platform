@@ -33,6 +33,48 @@ final class LocalProductDraftTemplateTest extends TestCase
         self::assertStringContainsString('not AI-generated copy', $draft['description']);
     }
 
+    public function test_colon_separates_product_name_from_proposed_description(): void
+    {
+        $draft = (new LocalProductDraftTemplate)->fromBrief(
+            'KMJ CineCore: proposed stereoscopic projection software for dual projectors.'
+        );
+
+        self::assertSame('KMJ CineCore', $draft['name']);
+        self::assertStringContainsString('stereoscopic projection software', $draft['description']);
+        self::assertStringContainsString('Not yet generated', $draft['banner_prompt']);
+    }
+
+    public function test_em_dash_separates_service_name_without_inventing_capabilities(): void
+    {
+        $draft = (new LocalProductDraftTemplate)->fromBrief(
+            'KMJ Cinema Support — proposed installation service for venue operators.'
+        );
+
+        self::assertSame('KMJ Cinema Support', $draft['name']);
+        self::assertSame('service', $draft['offering_type']);
+        self::assertStringContainsString('not independently verified', $draft['description']);
+    }
+
+    public function test_explicit_single_word_product_name_is_not_contaminated(): void
+    {
+        $draft = (new LocalProductDraftTemplate)->fromBrief(
+            'CineCore: proposed stereo playback'
+        );
+
+        self::assertSame('CineCore', $draft['name']);
+        self::assertStringContainsString('proposed stereo playback', $draft['description']);
+    }
+
+    public function test_generic_colon_heading_is_not_treated_as_product_identity(): void
+    {
+        $draft = (new LocalProductDraftTemplate)->fromBrief(
+            'Software: proposed stereo playback'
+        );
+
+        self::assertSame('Software proposed stereo playback', $draft['name']);
+        self::assertStringContainsString('not independently verified', $draft['description']);
+    }
+
     public function test_brief_without_explicit_identity_keeps_existing_typo_correction(): void
     {
         $draft = (new LocalProductDraftTemplate)->fromBrief('inteactive wall projetion SOFTWARE');

@@ -17,14 +17,19 @@ final class LocalProductDraftTemplate
         $clean = trim((string) preg_replace('/[\x00-\x1f\x7f]+/u', ' ', strip_tags($brief)));
         $clean = trim((string) preg_replace('/\s+/u', ' ', $clean));
         $first = preg_split('/[.!?\n]/u', $clean, 2)[0] ?? $clean;
-        // A short explicit identity such as "KMJ Calibration Studio is proposed..."
-        // should not become "KMJ Calibration Studio is proposed projector...".
-        // This is only a conservative name hint, never an AI or factual claim.
+        // Conservative identity hints before a description, never AI or factual claims.
+        // Support "KMJ Calibration Studio is ...", "KMJ CineCore: ..." and
+        // "KMJ CineCore — ..." without promoting the description into the title.
         $identity = $first;
-        if (preg_match('/^(.+?)\s+(?:is|provides|offers)\s+\S/iu', $first, $matches) === 1) {
-            $candidate = trim($matches[1]);
+        $hasDelimiter = preg_match('/^(.+?)\s*(?::|[—–])\s+\S/u', $first, $matches) === 1;
+        if ($hasDelimiter || preg_match('/^(.+?)\s+(?:is|provides|offers)\s+\S/iu', $first, $matches) === 1) {
+            $candidate = trim($matches[1] ?? '');
             $candidateWords = preg_split('/\s+/u', $candidate) ?: [];
-            if (count($candidateWords) >= 2 && count($candidateWords) <= 8
+            // One-word delimited names can be valid, but generic section labels are not.
+            $namedSingleWord = $hasDelimiter && count($candidateWords) === 1
+                && preg_match('/^[\p{L}\p{N}][\p{L}\p{N}-]{2,39}$/u', $candidate) === 1
+                && preg_match('/^(?:product|service|software|app|application|solution|platform|concept|idea|project|description|overview|features|summary|title|name)\z/iu', $candidate) !== 1;
+            if (($namedSingleWord || (count($candidateWords) >= 2 && count($candidateWords) <= 8))
                 && preg_match('/^(?:this|that|our|the|a|an)\b/iu', $candidate) !== 1) {
                 $identity = $candidate;
             }
@@ -32,6 +37,8 @@ final class LocalProductDraftTemplate
         $words = preg_split('/\s+/u', trim($identity)) ?: [];
         $name = implode(' ', array_slice($words, 0, 9));
         $name = trim((string) preg_replace('/[^\p{L}\p{N}\- ]/u', ' ', $name));
+        // Removing a colon/dash can leave double spaces in a fallback name.
+        $name = trim((string) preg_replace('/\s+/u', ' ', $name));
         $name = (string) preg_replace('/\binteactive\b/iu', 'Interactive', $name);
         $name = (string) preg_replace('/\bprojetion\b/iu', 'Projection', $name);
         $name = trim((string) Str::limit($name, 90, ''));
