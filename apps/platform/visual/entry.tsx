@@ -273,7 +273,13 @@ function OwnerProductsPreview() {
                     image_path: '/assets/locked/landing-hero.webp',
                     content: null,
                 }))}
-                generation={{ text_configured: false, image_configured: true }}
+                generation={{
+                    text_configured:
+                        new URLSearchParams(location.search).get(
+                            'syntheticCloud',
+                        ) === '1',
+                    image_configured: true,
+                }}
             />
         </OwnerModuleShell>
     );

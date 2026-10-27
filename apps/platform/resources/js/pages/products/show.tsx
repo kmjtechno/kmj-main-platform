@@ -34,6 +34,7 @@ const productSocialImages: Record<string, string> = {
 type Product = {
     image_path?: string | null;
     content?: {
+        offering_type?: 'product' | 'service';
         description?: string;
         features?: string[];
         faqs?: { question: string; answer: string }[];
@@ -227,20 +228,50 @@ export default function ProductShow({ product }: { product: Product }) {
                     product.content?.image_alt || product.name + ' — KMJ TECHNO'
                 }
                 structuredData={[
+                    ...(product.content?.faqs?.length
+                        ? [
+                              {
+                                  '@context': 'https://schema.org',
+                                  '@type': 'FAQPage',
+                                  mainEntity: product.content.faqs.map(
+                                      (faq) => ({
+                                          '@type': 'Question',
+                                          name: faq.question,
+                                          acceptedAnswer: {
+                                              '@type': 'Answer',
+                                              text: faq.answer,
+                                          },
+                                      }),
+                                  ),
+                              },
+                          ]
+                        : []),
                     {
                         '@context': 'https://schema.org',
-                        '@type': 'SoftwareApplication',
+                        '@type':
+                            product.content?.offering_type === 'service'
+                                ? 'Service'
+                                : 'SoftwareApplication',
                         name: product.name,
                         description: product.summary,
-                        brand: {
-                            '@type': 'Brand',
-                            name: 'KMJ TECHNO',
-                        },
-                        additionalProperty: {
-                            '@type': 'PropertyValue',
-                            name: 'Lifecycle',
-                            value: product.lifecycle_label,
-                        },
+                        ...(product.content?.offering_type === 'service'
+                            ? {
+                                  provider: {
+                                      '@type': 'Organization',
+                                      name: 'KMJ TECHNO',
+                                  },
+                              }
+                            : {
+                                  brand: {
+                                      '@type': 'Brand',
+                                      name: 'KMJ TECHNO',
+                                  },
+                                  additionalProperty: {
+                                      '@type': 'PropertyValue',
+                                      name: 'Lifecycle',
+                                      value: product.lifecycle_label,
+                                  },
+                              }),
                     },
                     {
                         '@context': 'https://schema.org',

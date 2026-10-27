@@ -5,7 +5,7 @@ import ProductContentEditor, {
 } from '@/components/product-content-editor';
 import type { DragEvent, FormEvent } from 'react';
 import { useEffect, useState } from 'react';
-import { Link, router, useForm } from '@inertiajs/react';
+import { Link, router, useForm, usePage } from '@inertiajs/react';
 import {
     ExternalLink,
     Eye,
@@ -132,6 +132,7 @@ export function CommercialProductForm({
                 <label className="space-y-1.5 text-xs font-semibold">
                     <span>Lifecycle</span>
                     <select
+                        aria-label="Lifecycle"
                         value={form.data.lifecycle}
                         onChange={(event) => {
                             const lifecycle = event.target.value;
@@ -203,7 +204,11 @@ export function CommercialProductForm({
                 onContent={(content) => form.setData('content', content)}
                 onImage={(path) => form.setData('image_path', path)}
                 onDraft={(summary, content) =>
-                    form.setData({ ...form.data, summary, content })
+                    form.setData((current) => ({
+                        ...current,
+                        summary,
+                        content,
+                    }))
                 }
                 onBusy={setStudioBusy}
             />
@@ -279,7 +284,12 @@ function ManagedProductEditor({
     allowReorder: boolean;
     generation?: GenerationConfiguration;
 }) {
-    const [editing, setEditing] = useState(false);
+    const pageUrl = usePage().url;
+    const [editing, setEditing] = useState(
+        () =>
+            new URLSearchParams(pageUrl.split('?')[1] ?? '').get('edit') ===
+            product.id,
+    );
     const [studioBusy, setStudioBusy] = useState(false);
     const form = useForm({
         name: product.name,
@@ -516,7 +526,11 @@ function ManagedProductEditor({
                             }
                             onImage={(path) => form.setData('image_path', path)}
                             onDraft={(summary, content) =>
-                                form.setData({ ...form.data, summary, content })
+                                form.setData((current) => ({
+                                    ...current,
+                                    summary,
+                                    content,
+                                }))
                             }
                             onBusy={setStudioBusy}
                         />

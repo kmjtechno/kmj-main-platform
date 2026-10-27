@@ -1,4 +1,5 @@
 import '../../css/product-studio.css';
+import QuickProductCreator from '@/components/quick-product-creator';
 import type { GenerationConfiguration } from '@/components/product-content-editor';
 import { Head, Link, usePage } from '@inertiajs/react';
 import { useMemo, useState } from 'react';
@@ -120,7 +121,17 @@ export default function OperatorProducts({
                         <h2 className="mb-4 flex items-center gap-2 text-lg font-bold">
                             <Boxes className="size-5" /> New product
                         </h2>
-                        <CommercialProductForm generation={generation} />
+                        <QuickProductCreator generation={generation} />
+                        <details className="mt-5 rounded-xl border p-4">
+                            <summary className="cursor-pointer text-sm font-semibold">
+                                Manual form & artwork upload
+                            </summary>
+                            <div className="mt-4">
+                                <CommercialProductForm
+                                    generation={generation}
+                                />
+                            </div>
+                        </details>
                     </section>
                 )}
 

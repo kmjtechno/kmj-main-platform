@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
+use App\Services\Commerce\AdminProductManager;
 use App\Services\PlatformOwnerAccess;
 use App\Services\ProductStudio\FreeCloudProductDraftGenerator;
 use App\Services\ProductStudio\FreeCloudRateLimited;
@@ -11,7 +12,12 @@ use App\Services\ProductStudio\ProductArtworkStorage;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use KMJ\MainPlatform\Catalog\Models\Product;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 use Throwable;
@@ -37,6 +43,52 @@ final class OwnerProductStudioController extends Controller
         }
 
         return response()->json(['draft' => $draft, 'provider' => 'verified-free-cloud', 'saved' => false]);
+    }
+
+    public function createDraft(Request $request, PlatformOwnerAccess $access, FreeCloudProductDraftGenerator $generator, AdminProductManager $manager): JsonResponse
+    {
+        $this->authorizeOwner($request, $access);
+        $data = $request->validate([
+            'name' => ['required', 'string', 'min:2', 'max:160'],
+            'category' => ['required', Rule::in(AdminProductManager::CATEGORIES)],
+            'offering_type' => ['required', 'in:product,service'],
+            'context' => ['nullable', 'string', 'max:7900'],
+        ]);
+        $slug = Str::slug($data['name']);
+        if ($slug === '' || strlen($slug) > 96) {
+            throw ValidationException::withMessages(['name' => 'Use a shorter title with letters or numbers for its public URL.']);
+        }
+        $lock = Cache::lock('product-studio-create:'.$slug, 120);
+        if (! $lock->get()) {
+            return response()->json(['message' => 'This title is already being prepared. Wait before trying again.'], 409);
+        }
+        try {
+            if (Product::query()->where('slug', $slug)->exists()) {
+                throw ValidationException::withMessages(['name' => 'This product or service already exists. Edit its existing catalog entry.']);
+            }
+            $request->merge(['context' => 'Offering type: '.$data['offering_type']."\n".($data['context'] ?? '')]);
+            $response = $this->draft($request, $access, $generator);
+            if ($response->getStatusCode() !== 200) {
+                return $response;
+            }
+            $draft = $response->getData(true)['draft'];
+            $content = array_intersect_key($draft, array_flip(['headline', 'description', 'features', 'faqs', 'photo_prompt', 'banner_prompt']));
+            $content['offering_type'] = $data['offering_type'];
+            $content['image_alt'] = 'KMJ TECHNO brand artwork for '.$data['name'];
+            $content['banner_path'] = '/assets/brand/kmj-social-card.webp';
+            $attributes = [
+                'name' => $data['name'], 'slug' => $slug, 'category' => $data['category'],
+                'summary' => $draft['summary'], 'content' => $content,
+                'image_path' => '/assets/brand/kmj-social-card.webp',
+                'lifecycle' => 'planned', 'is_public' => false, 'purchase_enabled' => false, 'licensing_enabled' => false,
+            ];
+            $validated = Validator::make($attributes, AdminProductManager::rules())->validate();
+            $product = $manager->create($validated);
+
+            return response()->json(['saved' => true, 'product' => $product, 'artwork' => 'existing-brand-fallback'], 201);
+        } finally {
+            $lock->release();
+        }
     }
 
     public function media(Request $request, PlatformOwnerAccess $access, FreeCloudProductDraftGenerator $generator, ProductArtworkStorage $storage): JsonResponse

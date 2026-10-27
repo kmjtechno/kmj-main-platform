@@ -69,6 +69,20 @@ try {
                 await section.waitFor({ state: 'visible' });
                 if ((await page.locator('.owner-module-shell').count()) !== 1)
                     errors.push('Product manager lost locked owner shell');
+                if (
+                    !(await section
+                        .getByRole('button', {
+                            name: 'AI fill & add private draft',
+                            exact: true,
+                        })
+                        .isDisabled())
+                )
+                    errors.push(
+                        'Unconfigured one-click creator appeared ready',
+                    );
+                await section
+                    .getByText('Manual form & artwork upload', { exact: true })
+                    .click();
                 await section
                     .getByRole('textbox', { name: 'Product name', exact: true })
                     .fill('KMJ Acceptance Product');
@@ -89,7 +103,7 @@ try {
                 if (
                     !(await section
                         .getByRole('button', {
-                            name: 'Generate content from title',
+                            name: 'AI fill all content fields',
                             exact: true,
                         })
                         .isDisabled())
@@ -178,6 +192,155 @@ try {
                         .isDisabled())
                 )
                     errors.push('Planned product purchase gate lost');
+            }
+            if (name === 'owner-products' && width === 1440) {
+                // Synthetic provider responses only. This verifies UI state, not live AI or owner acceptance.
+                await page.goto(
+                    new URL(
+                        '/operator/products?create=1&syntheticCloud=1',
+                        base,
+                    ).href,
+                    { waitUntil: 'networkidle' },
+                );
+                const section = page.getByRole('region', {
+                    name: 'New product',
+                    exact: true,
+                });
+                await section
+                    .getByText('Manual form & artwork upload', { exact: true })
+                    .click();
+                await section
+                    .getByRole('textbox', { name: 'Product name', exact: true })
+                    .fill('KMJ Delayed Draft');
+                let releaseDraft;
+                const heldDraft = new Promise((resolve) => {
+                    releaseDraft = resolve;
+                });
+                let acknowledgeDraft;
+                const draftStarted = new Promise((resolve) => {
+                    acknowledgeDraft = resolve;
+                });
+                await page.route(
+                    '**/operator/products/draft',
+                    async (route) => {
+                        acknowledgeDraft();
+                        await heldDraft;
+                        await route.fulfill({
+                            status: 200,
+                            contentType: 'application/json',
+                            body: JSON.stringify({
+                                draft: {
+                                    summary: 'Synthetic reviewed summary',
+                                    headline: 'Synthetic headline',
+                                    description:
+                                        'Synthetic generated description',
+                                    features: ['Synthetic feature'],
+                                    faqs: [],
+                                    photo_prompt: 'Synthetic photo prompt',
+                                    banner_prompt: 'Synthetic banner prompt',
+                                },
+                                saved: false,
+                            }),
+                        });
+                    },
+                );
+                await section
+                    .getByRole('button', {
+                        name: 'AI fill all content fields',
+                        exact: true,
+                    })
+                    .click();
+                await draftStarted;
+                await section
+                    .getByRole('textbox', { name: 'Image path', exact: true })
+                    .fill('/assets/locked/owner-earth.webp');
+                await section
+                    .getByLabel('Lifecycle', { exact: true })
+                    .selectOption('preview');
+                releaseDraft();
+                await section
+                    .getByRole('status')
+                    .filter({ hasText: 'AI content filled into the form' })
+                    .waitFor();
+                if (
+                    (await section
+                        .getByRole('textbox', {
+                            name: 'Full product description',
+                            exact: true,
+                        })
+                        .inputValue()) !== 'Synthetic generated description'
+                )
+                    errors.push('AI draft did not fill the description');
+                if (
+                    (await section
+                        .getByRole('textbox', {
+                            name: 'Image path',
+                            exact: true,
+                        })
+                        .inputValue()) !== '/assets/locked/owner-earth.webp'
+                )
+                    errors.push('AI draft reverted concurrent artwork edit');
+                if (
+                    (await section
+                        .getByLabel('Lifecycle', { exact: true })
+                        .inputValue()) !== 'preview'
+                )
+                    errors.push('AI draft reverted concurrent lifecycle edit');
+                const quick = section.getByRole('region', {
+                    name: 'One-click AI product or service',
+                    exact: true,
+                });
+                await quick
+                    .getByRole('textbox', {
+                        name: 'Product or service title',
+                        exact: true,
+                    })
+                    .fill('KMJ Synthetic Service');
+                await quick
+                    .getByLabel('Offering type', { exact: true })
+                    .selectOption('service');
+                await page.route(
+                    '**/operator/products/ai-create',
+                    async (route) => {
+                        const payload = route.request().postDataJSON();
+                        if (
+                            payload.name !== 'KMJ Synthetic Service' ||
+                            payload.offering_type !== 'service'
+                        )
+                            errors.push(
+                                'Quick creator lost title or service type',
+                            );
+                        await route.fulfill({
+                            status: 503,
+                            contentType: 'application/json',
+                            body: JSON.stringify({
+                                message:
+                                    'Synthetic provider unavailable. Nothing saved.',
+                            }),
+                        });
+                    },
+                );
+                await quick
+                    .getByRole('button', {
+                        name: 'AI fill & add private draft',
+                        exact: true,
+                    })
+                    .click();
+                await quick
+                    .getByRole('status')
+                    .filter({ hasText: 'Synthetic provider unavailable' })
+                    .waitFor();
+                if (
+                    (await quick
+                        .getByRole('textbox', {
+                            name: 'Product or service title',
+                            exact: true,
+                        })
+                        .inputValue()) !== 'KMJ Synthetic Service'
+                )
+                    errors.push(
+                        'Quick creator lost input after provider failure',
+                    );
             }
             if (name === 'owner-developer') {
                 const shell = page.locator('.owner-module-shell');

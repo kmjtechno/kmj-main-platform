@@ -38,7 +38,8 @@ final class AdminProductManager
     public static function contentRules(): array
     {
         return [
-            'content' => ['sometimes', 'nullable', 'array:headline,description,features,faqs,photo_prompt,banner_prompt,banner_path,image_alt'],
+            'content' => ['sometimes', 'nullable', 'array:headline,description,features,faqs,photo_prompt,banner_prompt,banner_path,image_alt,offering_type'],
+            'content.offering_type' => ['sometimes', 'in:product,service'],
             'content.headline' => ['sometimes', 'nullable', 'string', 'max:200'],
             'content.description' => ['sometimes', 'nullable', 'string', 'max:20000'],
             'content.features' => ['sometimes', 'array', 'max:12'],

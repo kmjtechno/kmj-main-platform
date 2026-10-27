@@ -70,6 +70,10 @@ final class PublicInitialMetadata
                 'kmj-cinema-player' => '/assets/products/kmj-cinema-player.webp',
                 'kmj-licensing-hub' => '/assets/products/kmj-licensing-hub.webp',
             ][$slug] ?? $image;
+            $customImage = $product['image_path'] ?? null;
+            if (is_string($customImage) && preg_match('#^/(?:assets|product-artwork)/[a-zA-Z0-9_./-]+$#D', $customImage) === 1 && ! str_contains($customImage, '..')) {
+                $image = $customImage;
+            }
         } elseif (array_key_exists($component, $known)) {
             [$path, $title, $description] = $known[$component];
         } else {
@@ -89,7 +93,7 @@ final class PublicInitialMetadata
         } elseif ($component === 'products/show') {
             $schema = [
                 '@context' => 'https://schema.org',
-                '@type' => 'SoftwareApplication',
+                '@type' => ($product['content']['offering_type'] ?? 'product') === 'service' ? 'Service' : 'SoftwareApplication',
                 'name' => $name,
                 'description' => $description,
                 'url' => $canonical,
@@ -107,6 +111,26 @@ final class PublicInitialMetadata
                 'name' => $title,
                 'url' => $canonical,
             ];
+        }
+
+        if ($component === 'products/show') {
+            if (($product['content']['offering_type'] ?? 'product') === 'service') {
+                unset($schema['brand'], $schema['additionalProperty']);
+                $schema['provider'] = ['@type' => 'Organization', 'name' => 'KMJ TECHNO'];
+            }
+            $questions = [];
+            $faqs = $product['content']['faqs'] ?? [];
+            if (is_array($faqs)) {
+                foreach (array_slice($faqs, 0, 8) as $faq) {
+                    if (is_array($faq) && is_string($faq['question'] ?? null) && is_string($faq['answer'] ?? null)
+                        && trim($faq['question']) !== '' && trim($faq['answer']) !== '') {
+                        $questions[] = ['@type' => 'Question', 'name' => $faq['question'], 'acceptedAnswer' => ['@type' => 'Answer', 'text' => $faq['answer']]];
+                    }
+                }
+            }
+            if ($questions !== []) {
+                $schema = [$schema, ['@context' => 'https://schema.org', '@type' => 'FAQPage', 'url' => $canonical, 'mainEntity' => $questions]];
+            }
         }
 
         $json = json_encode(
