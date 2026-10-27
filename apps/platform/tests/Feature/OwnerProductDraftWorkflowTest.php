@@ -54,6 +54,7 @@ final class OwnerProductDraftWorkflowTest extends TestCase
         config(['product_studio.text.enabled' => true, 'product_studio.text.api_key' => 'test-only-not-a-key', 'product_studio.text.model' => 'openrouter/free']);
         Http::fake(['openrouter.ai/api/v1/models' => Http::response(['data' => [['id' => 'openrouter/free', 'pricing' => ['prompt' => '0', 'completion' => '0']]]]), 'openrouter.ai/api/v1/chat/completions' => Http::response([
             'usage' => ['cost' => 0], 'choices' => [['finish_reason' => 'stop', 'message' => ['content' => json_encode([
+                'suggested_name' => 'KMJ Draft Workspace',
                 'summary' => 'A proposed engineering workspace.',
                 'headline' => 'KMJ Draft Workspace',
                 'description' => 'Draft product information to review.',
@@ -66,7 +67,7 @@ final class OwnerProductDraftWorkflowTest extends TestCase
         ])]);
         $this->actingAs($this->owner())->withSession(['auth.password_confirmed_at' => time()])
             ->postJson('/operator/products/draft', ['name' => 'KMJ Draft Workspace', 'category' => 'developer'])
-            ->assertOk()->assertJsonPath('provider', 'verified-free-cloud')
+            ->assertOk()->assertJsonPath('draft.suggested_name', 'KMJ Draft Workspace')->assertJsonPath('provider', 'verified-free-cloud')
             ->assertJsonPath('draft.summary', 'A proposed engineering workspace.')
             ->assertJsonMissingPath('draft.purchase_enabled');
         Http::assertSent(fn ($request): bool => str_ends_with($request->url(), '/chat/completions') && $request['max_tokens'] === 8000 && $request['response_format']['type'] === 'json_schema');
@@ -187,7 +188,7 @@ final class OwnerProductDraftWorkflowTest extends TestCase
         config(['product_studio.text.enabled' => true, 'product_studio.text.api_key' => 'test-only-not-a-key', 'product_studio.text.model' => 'openrouter/free']);
         Http::fake(['openrouter.ai/api/v1/models' => Http::response(['data' => [['id' => 'openrouter/free', 'pricing' => ['prompt' => '0', 'completion' => '0']]]]),
             'openrouter.ai/api/v1/chat/completions' => Http::response(['usage' => ['cost' => 0], 'choices' => [['finish_reason' => 'stop', 'message' => ['content' => json_encode([
-                'summary' => 'Proposed engineering service.', 'headline' => 'Engineering support', 'description' => 'Proposed service scope for owner review.', 'features' => ['Proposed consultation'], 'faqs' => [['question' => 'Is it available?', 'answer' => 'Availability is not verified.']], 'photo_prompt' => 'Engineering workspace', 'banner_prompt' => 'Wide engineering workspace',
+                'suggested_name' => 'KMJ Engineering Service', 'summary' => 'Proposed engineering service.', 'headline' => 'Engineering support', 'description' => 'Proposed service scope for owner review.', 'features' => ['Proposed consultation'], 'faqs' => [['question' => 'Is it available?', 'answer' => 'Availability is not verified.']], 'photo_prompt' => 'Engineering workspace', 'banner_prompt' => 'Wide engineering workspace',
             ], JSON_THROW_ON_ERROR)]]]])]);
         $this->actingAs($this->owner())->withSession(['auth.password_confirmed_at' => time()]);
         $payload = ['name' => 'KMJ Engineering Service', 'category' => 'industrial', 'offering_type' => 'service', 'context' => 'Proposed engineering service.', 'is_public' => true, 'purchase_enabled' => true, 'licensing_enabled' => true, 'lifecycle' => 'available'];
@@ -283,6 +284,51 @@ final class OwnerProductDraftWorkflowTest extends TestCase
         $this->actingAs($this->owner())->withSession(['auth.password_confirmed_at' => time()]);
         $this->postJson('/operator/products/from-brief', ['brief' => 'tiny', 'request_id' => (string) Str::uuid()])->assertUnprocessable();
         Http::assertNothingSent();
+        self::assertSame(0, Product::query()->count());
+    }
+
+    public function test_cloud_image_does_not_call_provider_without_independent_workers_free_attestation(): void
+    {
+        Http::preventStrayRequests();
+        config([
+            'product_studio.image.enabled' => true,
+            'product_studio.image.free_account_attested' => false,
+            'product_studio.image.account_id' => str_repeat('a', 32),
+            'product_studio.image.api_token' => 'test-only-not-a-key',
+        ]);
+        $this->actingAs($this->owner())->withSession(['auth.password_confirmed_at' => time()]);
+        $this->get('/operator/products')->assertOk()->assertInertia(fn (Assert $page) => $page
+            ->where('generation.image_configured', false));
+        $this->postJson('/operator/products/media', [
+            'variant' => 'banner', 'prompt' => 'A distinct projection calibration artwork in a dark engineering lab.',
+        ])->assertStatus(503)->assertJsonPath('code', 'ARTWORK_UNAVAILABLE');
+        Http::assertNothingSent();
+    }
+
+    public function test_free_plan_attested_cloud_image_is_saved_as_private_unsaved_artwork(): void
+    {
+        Storage::fake('local');
+        Cache::forget('kmj-product-free-image-attempts:'.gmdate('Ymd'));
+        config([
+            'product_studio.image.enabled' => true,
+            'product_studio.image.free_account_attested' => true,
+            'product_studio.image.account_id' => str_repeat('a', 32),
+            'product_studio.image.api_token' => 'test-only-not-a-key',
+            'product_studio.image.max_daily_requests' => 2,
+        ]);
+        $binary = base64_decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jRZkAAAAASUVORK5CYII=', true);
+        Http::fake(['api.cloudflare.com/client/v4/accounts/*' => Http::response([
+            'success' => true, 'result' => ['image' => base64_encode($binary)],
+        ], 200)]);
+        $this->actingAs($this->owner())->withSession(['auth.password_confirmed_at' => time()]);
+        $response = $this->postJson('/operator/products/media', [
+            'variant' => 'photo', 'prompt' => 'An illustrative projector calibration tool on a workbench, detailed, no text.',
+        ])->assertOk()->assertJsonPath('provider', 'verified-free-cloud-image')
+            ->assertJsonPath('product_saved', false);
+        $this->get($response->json('path'))->assertOk();
+        Http::assertSent(fn ($request): bool =>
+            str_ends_with($request->url(), '/ai/run/@cf/black-forest-labs/flux-1-schnell')
+            && $request['steps'] === 4);
         self::assertSame(0, Product::query()->count());
     }
 
