@@ -91,6 +91,8 @@ final class FreeCloudProductDraftGenerator
             ->post(self::ORIGIN.'/chat/completions', [
                 'model' => $model,
                 'stream' => false,
+                // Ask OpenRouter to include a verifiable zero-cost usage receipt.
+                'usage' => ['include' => true],
                 'max_tokens' => 8000,
                 'temperature' => 0.3,
                 'response_format' => ['type' => 'json_schema', 'json_schema' => ['name' => 'kmj_product_draft', 'strict' => true, 'schema' => self::draftSchema($fromBrief)]],
@@ -112,8 +114,20 @@ final class FreeCloudProductDraftGenerator
             Cache::put('product-studio-cloud-cooldown', time() + $retryAfter, $retryAfter);
             throw new FreeCloudRateLimited($retryAfter);
         }
-        if (! $response->successful() || strlen($response->body()) > 200000) {
-            throw new RuntimeException('NO_FREE_ROUTE_AVAILABLE');
+        if (in_array($response->status(), [400, 422], true)) {
+            throw new RuntimeException('FREE_CLOUD_REQUEST_REJECTED');
+        }
+        if (in_array($response->status(), [401, 403], true)) {
+            throw new RuntimeException('FREE_CLOUD_AUTH_REJECTED');
+        }
+        if ($response->status() === 402) {
+            throw new RuntimeException('FREE_CLOUD_QUOTA_UNAVAILABLE');
+        }
+        if (! $response->successful()) {
+            throw new RuntimeException('FREE_CLOUD_UPSTREAM_UNAVAILABLE');
+        }
+        if (strlen($response->body()) > 200000) {
+            throw new RuntimeException('FREE_CLOUD_RESPONSE_TOO_LARGE');
         }
         $cost = $response->json('usage.cost');
         if (! is_numeric($cost) || (float) $cost !== 0.0) {
