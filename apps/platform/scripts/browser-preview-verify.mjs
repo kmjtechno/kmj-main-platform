@@ -568,6 +568,31 @@ try {
                     ),
                 });
             }
+            if (overflow && name === 'owner-products') {
+                errors.push(
+                    'Overflow elements: ' +
+                        JSON.stringify(
+                            await page.evaluate(() =>
+                                [...document.querySelectorAll('main *')]
+                                    .filter(
+                                        (element) =>
+                                            element.getBoundingClientRect()
+                                                .right >
+                                            innerWidth + 1,
+                                    )
+                                    .slice(0, 8)
+                                    .map((element) => ({
+                                        tag: element.tagName,
+                                        class: element.className,
+                                        right: Math.round(
+                                            element.getBoundingClientRect()
+                                                .right,
+                                        ),
+                                    })),
+                            ),
+                        ),
+                );
+            }
             const screenshot = path.join(out, `${name}-${width}.png`);
             await page.screenshot({ path: screenshot, fullPage: true });
             results.push({

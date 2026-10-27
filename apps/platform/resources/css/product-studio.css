@@ -1,0 +1,21 @@
+/* Keep the locked owner palette and bound intrinsic form controls on narrow screens. */
+.owner-product-workspace {
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    overflow-wrap: anywhere;
+}
+.owner-product-workspace :is(form, section, label, .grid) {
+    min-width: 0;
+    max-width: 100%;
+    grid-auto-columns: minmax(0, 1fr);
+}
+.owner-product-workspace :is(input:not([type='checkbox']), select, textarea) {
+    min-width: 0;
+    max-width: 100%;
+    box-sizing: border-box;
+}
+.owner-product-workspace input[type='file'] {
+    width: 100%;
+    flex-basis: 100%;
+}
