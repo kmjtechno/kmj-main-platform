@@ -183,7 +183,7 @@ readonly ISOLATED_CONFIG_CACHE="$scratch/restore/kmj-isolated-config-cache.php"
 readonly DISPOSABLE_APP_KEY="base64:$(php8.4 -r 'echo base64_encode(random_bytes(32));')"
 [[ ! -e "$ISOLATED_CONFIG_CACHE" && ! -L "$ISOLATED_CONFIG_CACHE" ]] || block ISOLATED_CONFIG_CACHE_EXISTS
 app() {
-  # Candidate .env is production; force a NON-PRODUCTION Laravel environment only
+  # Candidate has no .env; use an ephemeral NON-PRODUCTION Laravel environment only
   # for this disposable Unix-socket database. Retain AppServiceProvider's real
   # production destructive-command prohibition for all production workloads.
   runuser -u kmjprod -- env -i PATH=/usr/local/bin:/usr/bin:/bin HOME=/home/kmjprod \
@@ -191,7 +191,7 @@ app() {
     APP_ENV=testing APP_DEBUG=false LOG_CHANNEL=stderr MAIL_MAILER=array QUEUE_CONNECTION=sync \
     CACHE_STORE=array SESSION_DRIVER=array APP_URL=http://localhost \
     DB_CONNECTION=pgsql DB_URL= DB_HOST="$SOCKET" DB_PORT="$PORT" \
-    DB_DATABASE="$DATABASE" DB_USERNAME="$ROLE" DB_PASSWORD= [REDACTED]
+    DB_DATABASE="$DATABASE" DB_USERNAME="$ROLE" DB_PASSWORD= \
     PGHOST="$SOCKET" PGPORT="$PORT" PGUSER="$ROLE" PGDATABASE="$DATABASE" \
     "$@"
 }
