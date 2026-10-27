@@ -1362,6 +1362,11 @@
 }
 @media (min-width: 901px) {
     .lock-hero:after {
-        background: linear-gradient(90deg, #02070bbd, #02070b35 58%, transparent 78%);
+        background: linear-gradient(
+            90deg,
+            #02070bbd,
+            #02070b35 58%,
+            transparent 78%
+        );
     }
 }
