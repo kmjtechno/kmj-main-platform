@@ -378,6 +378,7 @@ export default function Welcome({
                     </nav>
                     <Link
                         className="lock-search"
+                        aria-label="Search products and solutions"
                         href="/products#product-search"
                     >
                         <Search size={15} />

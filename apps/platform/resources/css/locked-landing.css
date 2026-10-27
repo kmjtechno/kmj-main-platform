@@ -1332,3 +1332,41 @@
         min-height: 34px;
     }
 }
+
+/* The approved page canvas stays 1280px wide even on ultrawide screens.
+   Keep search reachable without spending a full input width in its header. */
+.lock-header .lock-search {
+    flex: 0 0 auto;
+    padding: 10px;
+}
+.lock-header .lock-search span {
+    display: none;
+}
+.lock-footer-main h3,
+.lock-footer-main a,
+.lock-footer-main p,
+.lock-roadmap-steps strong,
+.lock-roadmap-steps p {
+    font-size: 12px;
+    line-height: 1.5;
+}
+.lock-capabilities p {
+    font-size: 13px;
+    line-height: 1.5;
+}
+.lock-ecosystem-left,
+.lock-ecosystem-right {
+    padding: 8px 10px;
+    border-radius: 6px;
+    background: #030b10dc;
+}
+@media (min-width: 901px) {
+    .lock-hero:after {
+        background: linear-gradient(
+            90deg,
+            #02070bbd,
+            #02070b35 58%,
+            transparent 78%
+        );
+    }
+}
