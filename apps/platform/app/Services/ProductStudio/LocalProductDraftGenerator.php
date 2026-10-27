@@ -105,7 +105,7 @@ final class LocalProductDraftGenerator
             || isset($parts['user']) || isset($parts['pass'])
             || isset($parts['query']) || isset($parts['fragment'])
             || ! in_array($parts['path'] ?? '', ['', '/'], true)
-            || ($parts['port'] ?? 0) < 1024 || ($parts['port'] ?? 0) > 65535) {
+            || ($parts['port'] ?? 0) < 1024) {
             return null;
         }
 

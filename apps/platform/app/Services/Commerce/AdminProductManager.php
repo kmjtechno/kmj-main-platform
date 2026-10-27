@@ -140,6 +140,13 @@ final class AdminProductManager
         if (isset($attributes['category']) && ! in_array($attributes['category'], self::CATEGORIES, true)) {
             throw new DomainException('Unsupported product category.');
         }
+        if (isset($attributes['content']) && is_array($attributes['content'])) {
+            foreach (['headline', 'description', 'photo_prompt', 'banner_prompt', 'banner_path', 'image_alt'] as $field) {
+                if (array_key_exists($field, $attributes['content']) && $attributes['content'][$field] === null) {
+                    $attributes['content'][$field] = '';
+                }
+            }
+        }
         foreach (['is_public', 'purchase_enabled', 'licensing_enabled'] as $key) {
             if (array_key_exists($key, $attributes)) {
                 $attributes[$key] = (bool) $attributes[$key];
