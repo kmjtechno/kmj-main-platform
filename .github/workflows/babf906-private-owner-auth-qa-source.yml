@@ -1,0 +1,23 @@
+name: KMJ BABF906 Owner Auth QA Source Safety
+on:
+  pull_request:
+    paths:
+      - 'scripts/operations/qa-babf906-private-authenticated-owner-pg18-20261027.sh'
+      - 'scripts/test_babf906_private_owner_auth_qa_contract.py'
+      - '.github/workflows/babf906-private-owner-auth-qa-source.yml'
+permissions:
+  contents: read
+jobs:
+  owner-qa-source:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - name: Static PG18 owner auth source safety
+        run: |
+          set -Eeuo pipefail
+          python3 -B -m unittest discover -s scripts -p test_babf906_private_owner_auth_qa_contract.py -v
+          echo 'OWNER_AUTH_SOURCE_CONTRACT=PASS'
+          echo 'REAL_OWNER_BROWSER_QA=NOT_EXECUTED_BY_CI'
