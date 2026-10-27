@@ -55,13 +55,24 @@ final class LocalProductDraftTemplateTest extends TestCase
         self::assertStringContainsString('not independently verified', $draft['description']);
     }
 
-    public function test_one_word_prefix_before_colon_keeps_conservative_fallback(): void
+    public function test_explicit_single_word_product_name_is_not_contaminated(): void
     {
         $draft = (new LocalProductDraftTemplate)->fromBrief(
             'CineCore: proposed stereo playback'
         );
 
-        self::assertSame('CineCore proposed stereo playback', $draft['name']);
+        self::assertSame('CineCore', $draft['name']);
+        self::assertStringContainsString('proposed stereo playback', $draft['description']);
+    }
+
+    public function test_generic_colon_heading_is_not_treated_as_product_identity(): void
+    {
+        $draft = (new LocalProductDraftTemplate)->fromBrief(
+            'Software: proposed stereo playback'
+        );
+
+        self::assertSame('Software proposed stereo playback', $draft['name']);
+        self::assertStringContainsString('not independently verified', $draft['description']);
     }
 
     public function test_brief_without_explicit_identity_keeps_existing_typo_correction(): void
