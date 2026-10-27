@@ -1,0 +1,24 @@
+name: KMJ BABF906 Isolated Migration Rollback Safety
+on:
+  pull_request:
+    paths:
+      - 'scripts/operations/drill-babf906-isolated-migrations-rollback-20261027.sh'
+      - 'scripts/test_babf906_migration_rollback_contract.py'
+      - '.github/workflows/babf906-isolated-migration-rollback-safety.yml'
+permissions:
+  contents: read
+jobs:
+  isolated-rehearsal-source:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - name: Verify rooted source pin and isolated rollback shell safety
+        run: |
+          set -Eeuo pipefail
+          python3 -B -m unittest discover -s scripts -p test_babf906_migration_rollback_contract.py -v
+          echo 'SOURCE_CONTRACT=PASS'
+          echo 'ACTUAL_MIGRATION_ROLLBACK=NOT_RUN_BY_CI'
+          echo 'PRODUCTION_ROLLBACK=NOT_ATTEMPTED'
