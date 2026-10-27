@@ -39,6 +39,17 @@ class StageReadbackTests(unittest.TestCase):
                 with self.assertRaises(ValueError):
                     readback.check_readback(candidate, GOOD, status)
 
+    def test_external_tls_probe_does_not_conflate_source_promotion_with_real_deploy(self):
+        workflows = Path(__file__).resolve().parents[1] / ".github" / "workflows"
+        auxiliary = (workflows / "staging-external-tls-sha-evidence.yml").read_text(encoding="utf-8")
+        canonical = (workflows / "staging-exact-sha-readback.yml").read_text(encoding="utf-8")
+        self.assertIn("  workflow_dispatch:", auxiliary)
+        self.assertNotIn("  workflow_run:", auxiliary)
+        self.assertNotIn("workflows: ['Staging Promotion Gate']", auxiliary)
+        self.assertIn("workflows: ['Staging VPS Deploy']", canonical)
+        self.assertIn("printf -- '- Approved SHA: `%s`\\n'", auxiliary)
+        self.assertNotIn('echo "- Approved SHA: `', auxiliary)
+
     def test_live_readback_not_a_skipped_pr_required_check(self):
         workflows = Path(__file__).resolve().parents[1] / ".github" / "workflows"
         live = (workflows / "staging-exact-sha-readback.yml").read_text(encoding="utf-8")
