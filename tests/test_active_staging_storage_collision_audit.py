@@ -41,8 +41,10 @@ class ActiveStageStorageAuditTests(unittest.TestCase):
                 active.mkdir()
                 (old / "log.txt").write_text("private text never log", encoding="utf-8")
                 (active / "log.txt").write_text("other private text", encoding="utf-8")
-                old_files, old_total = module.scan_storage(old)
-                active_files, active_total = module.scan_storage(active)
+                old_files, old_total, old_links = module.scan_storage(old)
+                active_files, active_total, active_links = module.scan_storage(active)
+                self.assertEqual(old_links, {})
+                self.assertEqual(active_links, {})
                 self.assertEqual(old_total, len("private text never log"))
                 self.assertEqual(active_total, len("other private text"))
                 self.assertNotEqual(old_files["log.txt"], active_files["log.txt"])
@@ -50,7 +52,7 @@ class ActiveStageStorageAuditTests(unittest.TestCase):
             finally:
                 module.STAGE_HOME = original
 
-    def test_refuses_nested_symlinks_not_following_other_trees(self):
+    def test_nested_symlinks_classified_not_followed(self):
         with tempfile.TemporaryDirectory() as temp:
             base = Path(temp)
             original = module.STAGE_HOME
@@ -58,9 +60,35 @@ class ActiveStageStorageAuditTests(unittest.TestCase):
                 module.STAGE_HOME = base
                 root = base / "files"
                 root.mkdir()
-                (root / "escape").symlink_to("/etc")
-                with self.assertRaisesRegex(module.AuditBlocked, "STORAGE_TREE_HAS_SYMLINKS"):
-                    module.scan_storage(root)
+                (root / "ordinary.txt").write_text("local content")
+                (root / "escape").symlink_to("/etc", target_is_directory=True)
+                (root / "in_scope").symlink_to(root / "ordinary.txt")
+                (root / "broken").symlink_to(root / "absent")
+                files, size, links = module.scan_storage(root)
+                self.assertEqual(len(files), 1)
+                self.assertEqual(size, len("local content"))
+                self.assertEqual(links["escape"][0], "OUTSIDE_STAGE")
+                self.assertEqual(links["in_scope"][0], "IN_STAGE")
+                self.assertEqual(links["broken"][0], "IN_STAGE")
+                self.assertNotIn("escape", files)
+                self.assertNotIn("in_scope", files)
+            finally:
+                module.STAGE_HOME = original
+
+    def test_symlink_only_child_does_not_expose_outside_files(self):
+        with tempfile.TemporaryDirectory() as temp:
+            base = Path(temp)
+            original = module.STAGE_HOME
+            try:
+                module.STAGE_HOME = base
+                root = base / "files"
+                root.mkdir()
+                out = base.parent
+                (root / "linked_parent").symlink_to(out, target_is_directory=True)
+                files, size, links = module.scan_storage(root)
+                self.assertEqual(files, {})
+                self.assertEqual(size, 0)
+                self.assertEqual(links["linked_parent"][0], "OUTSIDE_STAGE")
             finally:
                 module.STAGE_HOME = original
 
