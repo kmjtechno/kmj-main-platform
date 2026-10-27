@@ -139,10 +139,7 @@ final class FreeCloudProductDraftGenerator
         if (strlen($response->body()) > 200000) {
             throw new RuntimeException('FREE_CLOUD_RESPONSE_TOO_LARGE');
         }
-        $cost = $response->json('usage.cost');
-        if (! is_numeric($cost) || (float) $cost !== 0.0) {
-            throw new RuntimeException('RESPONSE_COST_NOT_VERIFIED_ZERO');
-        }
+        $this->assertVerifiedZeroCost($response);
         if ($response->json('choices.0.finish_reason') !== 'stop') {
             throw new IncompleteCloudDraft('CLOUD_DRAFT_INCOMPLETE');
         }
@@ -186,6 +183,63 @@ final class FreeCloudProductDraftGenerator
         }
 
         return Validator::make($allowed, $rules)->validate();
+    }
+
+    /**
+     * Do not treat missing usage as free. OpenRouter generation metadata is an
+     * authenticated, request-ID-scoped second source for its actual billed cost.
+     * Metadata GETs never initiate a second inference or paid fallback.
+     */
+    private function assertVerifiedZeroCost(\Illuminate\Http\Client\Response $response): void
+    {
+        $inlineCost = $response->json('usage.cost');
+        if (is_numeric($inlineCost)) {
+            if ((float) $inlineCost !== 0.0) {
+                throw new RuntimeException('RESPONSE_COST_NOT_VERIFIED_ZERO');
+            }
+
+            return;
+        }
+
+        $generationId = $response->json('id');
+        if (! is_string($generationId)
+            || preg_match('/^gen-[A-Za-z0-9_-]{8,120}$/D', $generationId) !== 1) {
+            throw new RuntimeException('RESPONSE_COST_NOT_VERIFIED_ZERO');
+        }
+
+        // A newly completed generation can briefly be absent from metadata.
+        // Two bounded, GET-only checks; no repeated chat completion.
+        for ($attempt = 0; $attempt < 2; $attempt++) {
+            try {
+                $receipt = Http::timeout(10)->connectTimeout(3)->withoutRedirecting()
+                    ->withToken((string) config('product_studio.text.api_key'))
+                    ->get(self::ORIGIN.'/generation', ['id' => $generationId]);
+            } catch (\Throwable) {
+                throw new RuntimeException('RESPONSE_COST_NOT_VERIFIED_ZERO');
+            }
+
+            if ($receipt->status() === 404 && $attempt === 0) {
+                usleep(250000);
+
+                continue;
+            }
+            if (! $receipt->successful() || strlen($receipt->body()) > 50000
+                || $receipt->json('data.id') !== $generationId
+                || $receipt->json('data.is_byok') === true) {
+                throw new RuntimeException('RESPONSE_COST_NOT_VERIFIED_ZERO');
+            }
+
+            $cost = $receipt->json('data.total_cost');
+            $usage = $receipt->json('data.usage');
+            if (! is_numeric($cost) || (float) $cost !== 0.0
+                || ($usage !== null && (! is_numeric($usage) || (float) $usage !== 0.0))) {
+                throw new RuntimeException('RESPONSE_COST_NOT_VERIFIED_ZERO');
+            }
+
+            return;
+        }
+
+        throw new RuntimeException('RESPONSE_COST_NOT_VERIFIED_ZERO');
     }
 
     /** @return array<string, mixed> */
