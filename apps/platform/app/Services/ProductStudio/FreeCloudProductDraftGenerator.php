@@ -195,7 +195,7 @@ final class FreeCloudProductDraftGenerator
         $inlineCost = $response->json('usage.cost');
         if (is_numeric($inlineCost)) {
             if ((float) $inlineCost !== 0.0) {
-                throw new RuntimeException('RESPONSE_COST_NOT_VERIFIED_ZERO');
+                throw new RuntimeException('RESPONSE_COST_REPORTED_NONZERO');
             }
 
             return;
@@ -231,9 +231,11 @@ final class FreeCloudProductDraftGenerator
 
             $cost = $receipt->json('data.total_cost');
             $usage = $receipt->json('data.usage');
-            if (! is_numeric($cost) || (float) $cost !== 0.0
-                || ($usage !== null && (! is_numeric($usage) || (float) $usage !== 0.0))) {
+            if (! is_numeric($cost) || ($usage !== null && ! is_numeric($usage))) {
                 throw new RuntimeException('RESPONSE_COST_NOT_VERIFIED_ZERO');
+            }
+            if ((float) $cost !== 0.0 || ($usage !== null && (float) $usage !== 0.0)) {
+                throw new RuntimeException('RESPONSE_COST_REPORTED_NONZERO');
             }
 
             return;
