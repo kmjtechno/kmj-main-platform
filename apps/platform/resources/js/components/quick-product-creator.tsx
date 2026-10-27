@@ -36,7 +36,13 @@ export default function QuickProductCreator({
         try {
             const result = await studioRequest(
                 '/operator/products/from-brief',
-                { brief, request_id: (localOnly ? localRequestId.current : requestId.current)!, local_only: localOnly ? '1' : '0' },
+                {
+                    brief,
+                    request_id: (localOnly
+                        ? localRequestId.current
+                        : requestId.current)!,
+                    local_only: localOnly ? '1' : '0',
+                },
             );
             setCreated(result.product);
             onCreated?.(result.product.id);
@@ -68,7 +74,10 @@ export default function QuickProductCreator({
                     Build your product page.
                 </h3>
                 <p className="text-muted-foreground mt-2 text-sm">
-                    Enter a short public description. Verified-free AI can prepare a reviewable product draft. If the provider is unavailable, choose an explicit offline template instead. Both stay private and require owner review.
+                    Enter a short public description. Verified-free AI can
+                    prepare a reviewable product draft. If the provider is
+                    unavailable, choose an explicit offline template instead.
+                    Both stay private and require owner review.
                 </p>
             </div>
             {!created && (
@@ -93,9 +102,9 @@ export default function QuickProductCreator({
                         />
                     </label>
                     <p className="text-muted-foreground text-xs">
-                        Public facts only; this description is sent to the cloud
-                        provider. Do not enter secrets or customer data. Unknown
-                        capabilities and availability stay unverified.
+                        Public facts only. The AI button sends your description
+                        to the cloud; the offline button does not. Never enter
+                        secrets or customer data. Unknown details stay unverified.
                     </p>
                     <button
                         type="button"
@@ -118,13 +127,17 @@ export default function QuickProductCreator({
                         disabled={busy || brief.trim().length < 20}
                         className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-white/20 px-4 text-sm font-bold hover:border-red-500/50 disabled:opacity-50"
                     >
-                        {busy ? 'Preparing draft…' : 'Create offline review draft · no cloud AI'}
+                        {busy
+                            ? 'Preparing draft…'
+                            : 'Create offline review draft · no cloud AI'}
                     </button>
                 </>
             )}
             {!generation?.text_configured && (
                 <p role="status" className="text-sm">
-                    Free cloud text is not configured. You can still create a private offline review draft without contacting an AI provider.
+                    Free cloud text is not configured. You can still create a
+                    private offline review draft without contacting an AI
+                    provider.
                 </p>
             )}
             {notice && (
@@ -136,7 +149,12 @@ export default function QuickProductCreator({
                 </p>
             )}
             <p className="text-muted-foreground text-xs leading-5">
-                Cloud generation keeps the zero-cost verification gate. The offline button uses a deterministic facts-only template, not AI, and sends no description to an AI provider. Existing KMJ artwork is a labeled fallback; AI images remain separately gated. Publishing, licensing and pricing remain owner-controlled.
+                Cloud generation keeps the zero-cost verification gate. The
+                offline button uses a deterministic facts-only template, not
+                AI, and sends no description to an AI provider. Existing KMJ
+                artwork is a labeled fallback; AI images remain separately
+                gated. Publishing, licensing and pricing remain
+                owner-controlled.
             </p>
             {created && (
                 <div className="grid min-w-0 gap-4">
