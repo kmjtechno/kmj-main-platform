@@ -20,26 +20,30 @@ export default function QuickProductCreator({
     const [busy, setBusy] = useState(false);
     const inFlight = useRef(false);
     const requestId = useRef<string | null>(null);
+    const localRequestId = useRef<string | null>(null);
     const [notice, setNotice] = useState('');
     const [created, setCreated] = useState<ManagedProduct | null>(null);
     useEffect(() => {
         onBusy?.(busy);
     }, [busy, onBusy]);
-    const create = async () => {
+    const create = async (localOnly: boolean) => {
         if (inFlight.current) return;
         inFlight.current = true;
-        requestId.current ??= crypto.randomUUID();
+        if (localOnly) localRequestId.current ??= crypto.randomUUID();
+        else requestId.current ??= crypto.randomUUID();
         setBusy(true);
         setNotice('');
         try {
             const result = await studioRequest(
                 '/operator/products/from-brief',
-                { brief, request_id: requestId.current },
+                { brief, request_id: (localOnly ? localRequestId.current : requestId.current)!, local_only: localOnly ? '1' : '0' },
             );
             setCreated(result.product);
             onCreated?.(result.product.id);
             setNotice(
-                'Your description has become a saved catalog draft. The real editor below is populated; review it before publishing.',
+                result.generation_mode === 'local-template'
+                    ? 'Offline template saved as a PRIVATE planned draft. This is not AI-generated content. Verify every fact and artwork prompt before publishing.'
+                    : 'Verified-free AI draft saved privately. Review every claim in the editor before publishing.',
             );
             router.reload({ only: ['products'] });
         } catch (error) {
@@ -64,10 +68,7 @@ export default function QuickProductCreator({
                     Build your product page.
                 </h3>
                 <p className="text-muted-foreground mt-2 text-sm">
-                    Give a short public description. AI prepares the name,
-                    category, product/service type, summary, full description,
-                    features, FAQs and photo/banner prompts. Slug, image alt and
-                    existing GEO/SEO metadata follow automatically.
+                    Enter a short public description. Verified-free AI can prepare a reviewable product draft. If the provider is unavailable, choose an explicit offline template instead. Both stay private and require owner review.
                 </p>
             </div>
             {!created && (
@@ -85,6 +86,7 @@ export default function QuickProductCreator({
                             onChange={(e) => {
                                 setBrief(e.target.value);
                                 requestId.current = null;
+                                localRequestId.current = null;
                                 setNotice('');
                             }}
                             placeholder="Example: KMJ Calibration Studio is proposed projector-calibration software for integrators. Its intended workflow uses a camera for alignment. Describe the actual features, audience and limitations you know."
@@ -97,7 +99,7 @@ export default function QuickProductCreator({
                     </p>
                     <button
                         type="button"
-                        onClick={create}
+                        onClick={() => create(false)}
                         disabled={
                             busy ||
                             brief.trim().length < 20 ||
@@ -110,12 +112,19 @@ export default function QuickProductCreator({
                             ? 'Preparing content & saving draft…'
                             : 'Generate & add from description'}
                     </button>
+                    <button
+                        type="button"
+                        onClick={() => create(true)}
+                        disabled={busy || brief.trim().length < 20}
+                        className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-white/20 px-4 text-sm font-bold hover:border-red-500/50 disabled:opacity-50"
+                    >
+                        {busy ? 'Preparing draft…' : 'Create offline review draft · no cloud AI'}
+                    </button>
                 </>
             )}
             {!generation?.text_configured && (
                 <p role="status" className="text-sm">
-                    Free cloud text is not configured. Manual editing is
-                    available.
+                    Free cloud text is not configured. You can still create a private offline review draft without contacting an AI provider.
                 </p>
             )}
             {notice && (
@@ -127,11 +136,7 @@ export default function QuickProductCreator({
                 </p>
             )}
             <p className="text-muted-foreground text-xs leading-5">
-                Text generation uses the verified-free cloud route. Actual AI
-                image generation is not configured: existing KMJ brand artwork
-                is a labeled fallback, and original photo/banner upload is
-                available in the editor. Pricing, public visibility, licensing
-                and release readiness remain owner-controlled.
+                Cloud generation keeps the zero-cost verification gate. The offline button uses a deterministic facts-only template, not AI, and sends no description to an AI provider. Existing KMJ artwork is a labeled fallback; AI images remain separately gated. Publishing, licensing and pricing remain owner-controlled.
             </p>
             {created && (
                 <div className="grid min-w-0 gap-4">
@@ -146,6 +151,7 @@ export default function QuickProductCreator({
                                 setCreated(null);
                                 setBrief('');
                                 requestId.current = null;
+                                localRequestId.current = null;
                                 setNotice('');
                                 onCreated?.(null);
                             }}
