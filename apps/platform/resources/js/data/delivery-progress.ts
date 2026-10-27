@@ -10,6 +10,14 @@ export type DeliveryMilestone = {
 
 export const deliveryMilestones: DeliveryMilestone[] = [
     {
+        id: 'product-cloud-complete-structured-draft',
+        title: 'Complete structured product drafts',
+        state: 'active',
+        detail: 'A real zero-cost cloud response stopped at the token limit and produced invalid JSON. PR #622 aligns a concise bounded product schema with an 8000-token budget, requests strict structured output, and refuses any non-stop completion before parsing or applying it. Generated content remains reviewable and unsaved; manual editing limits are preserved.',
+        evidence:
+            'Owner diagnostics report HTTP200, usage cost zero, finish_reason=length and invalid draft JSON. Regression tests reject even valid JSON when the provider says length, preserving all product records. Fresh CI, staging deployment and a new live zero-cost generation check remain required.',
+    },
+    {
         id: 'product-free-cloud-quota-feedback',
         title: 'Free cloud quota and explicit owner feedback',
         state: 'blocked',
