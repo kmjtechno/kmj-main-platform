@@ -58,10 +58,9 @@ jobs:
             echo 'Frontend dependencies unavailable; no format preview.'
             exit 0
           fi
-          node_modules/.bin/vp fmt             resources/js/components/codebridge/device-policy-display.ts \
-            resources/js/components/codebridge/device-control-center.tsx             resources/js/pages/services/codebridge.tsx             scripts/check-codebridge-dashboard-truth.test.mjs || true
-          git diff --             resources/js/components/codebridge/device-policy-display.ts \
-            resources/js/components/codebridge/device-control-center.tsx             resources/js/pages/services/codebridge.tsx             scripts/check-codebridge-dashboard-truth.test.mjs
+          # Temporary formatter receipt for screenshot-driven Product Studio PR.
+          node_modules/.bin/vp fmt resources/js/components/product-content-editor.tsx resources/js/components/operator-product-manager.tsx scripts/browser-preview-verify.mjs || true
+          git diff -- resources/js/components/product-content-editor.tsx resources/js/components/operator-product-manager.tsx scripts/browser-preview-verify.mjs
 
   codebridge-windows-oneclick:
     name: Windows one-click PowerShell parser
