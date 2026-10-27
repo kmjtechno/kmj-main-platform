@@ -1,0 +1,23 @@
+name: KMJ FE4045 Legacy Gateway Inspector V2 Safety
+on:
+  pull_request:
+    paths:
+      - 'scripts/operations/inspect-fe4045-legacy-main-platform-gateway-v2-20261027.py'
+      - 'scripts/test_fe4045_legacy_gateway_inspector_v2.py'
+      - '.github/workflows/fe4045-legacy-gateway-v2-safety.yml'
+permissions:
+  contents: read
+jobs:
+  readonly-inspector:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - name: Parse and test legacy support with no access to live environment
+        run: |
+          set -Eeuo pipefail
+          python3 -B -m unittest discover -s scripts -p test_fe4045_legacy_gateway_inspector_v2.py -v
+          echo 'LEGACY_INSPECT_SOURCE=PASS'
+          echo 'LIVE_GATEWAY_ENV=NOT_TOUCHED'
