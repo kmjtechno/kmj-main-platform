@@ -33,6 +33,8 @@ final class LocalProductDraftTemplate
         $words = preg_split('/\s+/u', trim($identity)) ?: [];
         $name = implode(' ', array_slice($words, 0, 9));
         $name = trim((string) preg_replace('/[^\p{L}\p{N}\- ]/u', ' ', $name));
+        // Removing a colon/dash can leave double spaces in a fallback name.
+        $name = trim((string) preg_replace('/\s+/u', ' ', $name));
         $name = (string) preg_replace('/\binteactive\b/iu', 'Interactive', $name);
         $name = (string) preg_replace('/\bprojetion\b/iu', 'Projection', $name);
         $name = trim((string) Str::limit($name, 90, ''));
