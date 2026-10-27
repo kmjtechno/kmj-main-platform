@@ -338,8 +338,10 @@ try {
                                     description: 'Outdated description',
                                     features: ['Outdated feature'],
                                     faqs: [],
-                                    photo_prompt: 'Outdated product photo prompt',
-                                    banner_prompt: 'Outdated product banner prompt',
+                                    photo_prompt:
+                                        'Outdated product photo prompt',
+                                    banner_prompt:
+                                        'Outdated product banner prompt',
                                 },
                                 saved: false,
                             }),
@@ -373,7 +375,9 @@ try {
                         .inputValue()) !==
                     'Owner-edited content during cloud request'
                 )
-                    errors.push('Stale AI draft overwrote concurrent manual edits');
+                    errors.push(
+                        'Stale AI draft overwrote concurrent manual edits',
+                    );
                 if (
                     (await section
                         .getByRole('button', {
