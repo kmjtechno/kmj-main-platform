@@ -203,6 +203,7 @@ export function CommercialProductForm({
                 generation={generation}
                 onContent={(content) => form.setData('content', content)}
                 onImage={(path) => form.setData('image_path', path)}
+                onSuggestedName={(name) => form.setData('name', name)}
                 onDraft={(summary, content) =>
                     form.setData((current) => ({
                         ...current,
@@ -538,6 +539,7 @@ export function ManagedProductEditor({
                                 form.setData('content', content)
                             }
                             onImage={(path) => form.setData('image_path', path)}
+                            onSuggestedName={(name) => form.setData('name', name)}
                             onDraft={(summary, content) =>
                                 form.setData((current) => ({
                                     ...current,
