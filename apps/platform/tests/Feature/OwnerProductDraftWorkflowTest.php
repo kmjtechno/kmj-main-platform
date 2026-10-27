@@ -46,12 +46,11 @@ final class OwnerProductDraftWorkflowTest extends TestCase
         self::assertSame(0, Product::query()->count());
     }
 
-    public function test_local_generation_returns_reviewable_unsaved_content_without_commercial_fields(): void
+    public function test_verified_free_cloud_returns_reviewable_unsaved_content_without_commercial_fields(): void
     {
-        config(['product_studio.text.enabled' => true, 'product_studio.text.url' => 'http://127.0.0.1:11434',
-            'product_studio.text.model' => 'qwen2.5-coder:7b']);
-        Http::fake(['127.0.0.1:11434/*' => Http::response([
-            'response' => json_encode([
+        config(['product_studio.text.enabled' => true, 'product_studio.text.api_key' => 'test-only-not-a-key', 'product_studio.text.model' => 'openrouter/free']);
+        Http::fake(['openrouter.ai/api/v1/models' => Http::response(['data' => [['id' => 'openrouter/free', 'pricing' => ['prompt' => '0', 'completion' => '0']]]]), 'openrouter.ai/api/v1/chat/completions' => Http::response([
+            'usage' => ['cost' => 0], 'choices' => [['message' => ['content' => json_encode([
                 'summary' => 'A proposed engineering workspace.',
                 'headline' => 'KMJ Draft Workspace',
                 'description' => 'Draft product information to review.',
@@ -60,21 +59,20 @@ final class OwnerProductDraftWorkflowTest extends TestCase
                 'photo_prompt' => 'Engineering workspace, no text.',
                 'banner_prompt' => 'Wide engineering workspace, no text.',
                 'purchase_enabled' => true,
-            ], JSON_THROW_ON_ERROR),
+            ], JSON_THROW_ON_ERROR)]]],
         ])]);
         $this->actingAs($this->owner())->withSession(['auth.password_confirmed_at' => time()])
             ->postJson('/operator/products/draft', ['name' => 'KMJ Draft Workspace', 'category' => 'developer'])
-            ->assertOk()->assertJsonPath('provider', 'local-ollama')
+            ->assertOk()->assertJsonPath('provider', 'verified-free-cloud')
             ->assertJsonPath('draft.summary', 'A proposed engineering workspace.')
             ->assertJsonMissingPath('draft.purchase_enabled');
         self::assertSame(0, Product::query()->count());
     }
 
-    public function test_remote_or_redirecting_provider_does_not_receive_product_data(): void
+    public function test_paid_model_configuration_never_receives_product_data(): void
     {
         Http::preventStrayRequests();
-        config(['product_studio.text.enabled' => true, 'product_studio.text.url' => 'https://example.com',
-            'product_studio.text.model' => 'test']);
+        config(['product_studio.text.enabled' => true, 'product_studio.text.api_key' => 'test-only-not-a-key', 'product_studio.text.model' => 'paid-model']);
         $this->actingAs($this->owner())->withSession(['auth.password_confirmed_at' => time()])
             ->postJson('/operator/products/draft', ['name' => 'KMJ Test'])->assertStatus(503);
         Http::assertNothingSent();
@@ -132,12 +130,13 @@ final class OwnerProductDraftWorkflowTest extends TestCase
         $this->get($path)->assertOk()->assertHeader('X-Content-Type-Options', 'nosniff');
     }
 
-    public function test_malformed_local_generation_keeps_existing_product_unchanged(): void
+    public function test_unknown_price_never_reaches_cloud_completion(): void
     {
-        config(['product_studio.text.enabled' => true, 'product_studio.text.url' => 'http://127.0.0.1:11434', 'product_studio.text.model' => 'local']);
-        Http::fake(['127.0.0.1:11434/*' => Http::response(['response' => 'not json'])]);
+        config(['product_studio.text.enabled' => true, 'product_studio.text.api_key' => 'test-only-not-a-key', 'product_studio.text.model' => 'openrouter/free']);
+        Http::fake(['openrouter.ai/api/v1/models' => Http::response(['data' => [['id' => 'openrouter/free', 'pricing' => ['prompt' => '0']]]])]);
         $this->actingAs($this->owner())->withSession(['auth.password_confirmed_at' => time()])
             ->postJson('/operator/products/draft', ['name' => 'KMJ Invalid Draft'])->assertStatus(503);
+        Http::assertNotSent(fn ($request): bool => str_ends_with($request->url(), '/chat/completions'));
         self::assertSame(0, Product::query()->count());
     }
 
