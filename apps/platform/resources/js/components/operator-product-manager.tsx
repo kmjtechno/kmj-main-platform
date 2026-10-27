@@ -5,7 +5,7 @@ import ProductContentEditor, {
 } from '@/components/product-content-editor';
 import type { DragEvent, FormEvent } from 'react';
 import { useEffect, useState } from 'react';
-import { Link, router, useForm } from '@inertiajs/react';
+import { Link, router, useForm, usePage } from '@inertiajs/react';
 import {
     ExternalLink,
     Eye,
@@ -279,7 +279,12 @@ function ManagedProductEditor({
     allowReorder: boolean;
     generation?: GenerationConfiguration;
 }) {
-    const [editing, setEditing] = useState(false);
+    const pageUrl = usePage().url;
+    const [editing, setEditing] = useState(
+        () =>
+            new URLSearchParams(pageUrl.split('?')[1] ?? '').get('edit') ===
+            product.id,
+    );
     const [studioBusy, setStudioBusy] = useState(false);
     const form = useForm({
         name: product.name,
