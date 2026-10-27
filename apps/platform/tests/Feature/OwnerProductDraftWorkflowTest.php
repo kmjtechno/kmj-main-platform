@@ -428,6 +428,9 @@ final class OwnerProductDraftWorkflowTest extends TestCase
             ['id' => 'gen-wrong12345678901234567890', 'total_cost' => 0, 'usage' => 0, 'is_byok' => false],
             ['id' => $id, 'total_cost' => 0, 'usage' => 0, 'is_byok' => true],
         ] as $receipt) {
+            // Laravel accumulates Http::fake callbacks; replace the factory
+            // so each simulated provider bill is independently evaluated.
+            Http::swap(new \Illuminate\Http\Client\Factory);
             Http::fake([
                 'openrouter.ai/api/v1/models' => Http::response(['data' => [['id' => 'openrouter/free', 'pricing' => ['prompt' => '0', 'completion' => '0']]]]),
                 'openrouter.ai/api/v1/chat/completions' => Http::response(['id' => $id, 'usage' => ['total_tokens' => 42], 'choices' => [['finish_reason' => 'stop', 'message' => ['content' => '{}']]]]),
