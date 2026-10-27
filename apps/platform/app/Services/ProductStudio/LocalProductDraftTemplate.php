@@ -17,7 +17,19 @@ final class LocalProductDraftTemplate
         $clean = trim((string) preg_replace('/[\x00-\x1f\x7f]+/u', ' ', strip_tags($brief)));
         $clean = trim((string) preg_replace('/\s+/u', ' ', $clean));
         $first = preg_split('/[.!?\n]/u', $clean, 2)[0] ?? $clean;
-        $words = preg_split('/\s+/u', trim($first)) ?: [];
+        // A short explicit identity such as "KMJ Calibration Studio is proposed..."
+        // should not become "KMJ Calibration Studio is proposed projector...".
+        // This is only a conservative name hint, never an AI or factual claim.
+        $identity = $first;
+        if (preg_match('/^(.+?)\s+(?:is|provides|offers)\s+\S/iu', $first, $matches) === 1) {
+            $candidate = trim($matches[1]);
+            $candidateWords = preg_split('/\s+/u', $candidate) ?: [];
+            if (count($candidateWords) >= 2 && count($candidateWords) <= 8
+                && preg_match('/^(?:this|that|our|the|a|an)\b/iu', $candidate) !== 1) {
+                $identity = $candidate;
+            }
+        }
+        $words = preg_split('/\s+/u', trim($identity)) ?: [];
         $name = implode(' ', array_slice($words, 0, 9));
         $name = trim((string) preg_replace('/[^\p{L}\p{N}\- ]/u', ' ', $name));
         $name = (string) preg_replace('/\binteactive\b/iu', 'Interactive', $name);
