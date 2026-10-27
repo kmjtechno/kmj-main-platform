@@ -14,4 +14,8 @@ export function assertPublicNavigation(header) {
     assert.match(header, /aria-label="Primary navigation"/);
     assert.match(header, /className=\{open \? ['"]is-open['"] : ['"]['"]\}/);
     assert.match(header, /lock-header kmj-public-header/);
+    assert.match(
+        header,
+        /PublicLanguageSwitch className="lock-mobile-language"/,
+    );
 }

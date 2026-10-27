@@ -53,6 +53,7 @@ export default function PublicSiteHeader() {
                         </Link>
                     ))}
                     <div className="lock-mobile-account">
+                        <PublicLanguageSwitch className="lock-mobile-language" />
                         {auth.user ? (
                             <Link
                                 href={dashboardHref}
