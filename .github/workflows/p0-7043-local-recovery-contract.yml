@@ -1,0 +1,38 @@
+name: P0 7043ac Production Recovery Contract (source-only)
+on:
+  pull_request:
+    paths:
+      - 'scripts/operations/prepare-p0-7043ac-local-recovery-20261027.sh'
+      - 'scripts/test_p0_7043_local_recovery_20261027.py'
+      - 'scripts/operations/seal-p0-7043ac-offsite-20261027.py'
+      - 'scripts/test_seal_p0_7043_offsite_20261027.py'
+      - 'scripts/operations/verify-p0-7043ac-google-sftp-restore-20261027.sh'
+      - 'scripts/test_p0_7043_google_sftp_restore_20261027.py'
+      - '.github/workflows/p0-7043-local-recovery-contract.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  verify-pinned-recovery-tool:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Exact PR commit checkout without persisted credentials
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - name: Verify exact head, syntax and irreversible-operations denial
+        env:
+          SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          set -Eeuo pipefail
+          test "$(git rev-parse HEAD)" = "$SOURCE_SHA"
+          bash -n scripts/operations/prepare-p0-7043ac-local-recovery-20261027.sh
+          python3 -B -m unittest -v scripts/test_p0_7043_local_recovery_20261027.py
+          python3 -B -m unittest -v scripts/test_seal_p0_7043_offsite_20261027.py
+          bash -n scripts/operations/verify-p0-7043ac-google-sftp-restore-20261027.sh
+          python3 -B -m unittest -v scripts/test_p0_7043_google_sftp_restore_20261027.py
+          echo '7043AC_RECOVERY_CONTRACT=PASS; REAL_PRODUCTION_BACKUP=NOT_RUN'
+          echo '7043AC_OFFSITE_SEAL_CONTRACT=PASS; LIVE_SEAL_AND_TRANSFER=NOT_RUN'
+          echo '7043AC_INDEPENDENT_RESTORE_CONTRACT=PASS; REMOTE_IMPORT=NOT_RUN'
