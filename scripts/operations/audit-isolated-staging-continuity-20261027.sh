@@ -72,6 +72,11 @@ for name in ('storage', 'public/storage'):
     scoped = str(first).startswith('/home/kmjstage/') and str(second).startswith('/home/kmjstage/')
     if not scoped:
         status = 'BLOCKED_OUTSIDE_STAGE'
+    elif name == 'public/storage' and not x.exists() and y.exists() and second == (old / 'storage/app/public').resolve(strict=False):
+        # Older staging may not have a public/storage symlink. New candidate
+        # can still preserve all uploads if it targets old private storage's
+        # app/public directory, which itself remains under stage scope.
+        status = 'PASS_CANDIDATE_USES_OLD_PUBLIC_UPLOADS'
     elif not x.exists() or not y.exists():
         status = 'BLOCKED_MISSING'
     elif first == second:
