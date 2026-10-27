@@ -65,11 +65,14 @@ class StagingMonitorContractTests(unittest.TestCase):
         workflow = (
             ROOT / ".github" / "workflows" / "staging-external-tls-sha-evidence.yml"
         ).read_text(encoding="utf-8")
-        self.assertIn("workflows: ['Staging Promotion Gate']", workflow)
-        self.assertIn("github.event.workflow_run.conclusion == 'success'", workflow)
+        self.assertIn("  workflow_dispatch:", workflow)
+        self.assertNotIn("  workflow_run:", workflow)
+        self.assertNotIn("workflows: ['Staging Promotion Gate']", workflow)
+        self.assertNotIn("github.event.workflow_run", workflow)
+        self.assertIn("printf -- '- Approved SHA:", workflow)
         self.assertIn("persist-credentials: false", workflow)
         self.assertIn("ref: staging-approved", workflow)
-        self.assertIn("APPROVED_SHA_DRIFT", workflow)
+        self.assertNotIn("APPROVED_SHA_DRIFT", workflow)
         self.assertIn("103.212.136.154", workflow)
         self.assertIn("TLS_SAN_MISMATCH", workflow)
         self.assertIn("TLS_CHAIN_OR_HOST_INVALID", workflow)
