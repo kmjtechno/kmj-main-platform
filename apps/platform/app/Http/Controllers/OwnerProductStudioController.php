@@ -72,18 +72,59 @@ final class OwnerProductStudioController extends Controller
                 return $response;
             }
             $draft = $response->getData(true)['draft'];
-            $content = array_intersect_key($draft, array_flip(['headline', 'description', 'features', 'faqs', 'photo_prompt', 'banner_prompt']));
-            $content['offering_type'] = $data['offering_type'];
-            $content['image_alt'] = 'KMJ TECHNO brand artwork for '.$data['name'];
-            $content['banner_path'] = '/assets/brand/kmj-social-card.webp';
-            $attributes = [
-                'name' => $data['name'], 'slug' => $slug, 'category' => $data['category'],
-                'summary' => $draft['summary'], 'content' => $content,
-                'image_path' => '/assets/brand/kmj-social-card.webp',
-                'lifecycle' => 'planned', 'is_public' => false, 'purchase_enabled' => false, 'licensing_enabled' => false,
-            ];
-            $validated = Validator::make($attributes, AdminProductManager::rules())->validate();
-            $product = $manager->create($validated);
+            $product = $this->saveGeneratedDraft($draft, $data, $manager);
+
+            return response()->json(['saved' => true, 'product' => $product, 'artwork' => 'existing-brand-fallback'], 201);
+        } finally {
+            $lock->release();
+        }
+    }
+
+    public function fromBrief(Request $request, PlatformOwnerAccess $access, FreeCloudProductDraftGenerator $generator, AdminProductManager $manager): JsonResponse
+    {
+        $this->authorizeOwner($request, $access);
+        $data = $request->validate(['brief' => ['required', 'string', 'min:20', 'max:3000'], 'request_id' => ['required', 'uuid']]);
+        $key = 'product-studio-brief:'.$request->user()?->getAuthIdentifier().':'.$data['request_id'];
+        $fingerprint = hash('sha256', trim($data['brief']));
+        $lock = Cache::lock($key.':lock', 120);
+        if (! $lock->get()) {
+            return response()->json(['message' => 'This description is already being prepared. Wait before retrying.'], 409);
+        }
+        try {
+            $receipt = Cache::get($key);
+            if (is_array($receipt)) {
+                if (($receipt['fingerprint'] ?? null) !== $fingerprint) {
+                    return response()->json(['message' => 'The description changed. Start a new generation action.'], 409);
+                }
+                $productId = $receipt['product_id'] ?? null;
+                $existing = is_string($productId) ? Product::query()->find($productId) : null;
+                if (! $existing) {
+                    return response()->json(['message' => 'The saved draft is no longer available. Start a new generation action.'], 409);
+                }
+
+                return response()->json(['saved' => true, 'product' => $existing, 'artwork' => 'existing-brand-fallback']);
+            }
+            try {
+                $draft = $generator->fromBrief(trim($data['brief']));
+            } catch (IncompleteCloudDraft $error) {
+                return response()->json(['code' => $error->getMessage(), 'message' => 'The cloud draft was incomplete. Your description is preserved and no product was saved.'], 422);
+            } catch (FreeCloudRateLimited $error) {
+                return response()->json(['code' => 'FREE_CLOUD_RATE_LIMITED', 'message' => 'The free provider is rate-limited. Your description is preserved; wait before retrying.', 'retry_after' => $error->retryAfter], 429)->header('Retry-After', (string) $error->retryAfter);
+            } catch (Throwable) {
+                return response()->json(['code' => 'GENERATION_UNAVAILABLE', 'message' => 'A complete verified-free draft could not be prepared. Your description is preserved and no product was saved.'], 503);
+            }
+            $slug = Str::slug($draft['name']);
+            $slugLock = Cache::lock('product-studio-create:'.$slug, 120);
+            if (! $slugLock->get()) {
+                return response()->json(['message' => 'This product title is already being prepared. Wait before retrying.'], 409);
+            }
+            try {
+                $identity = ['name' => $draft['name'], 'category' => $draft['category'], 'offering_type' => $draft['offering_type']];
+                $product = $this->saveGeneratedDraft($draft, $identity, $manager);
+                Cache::put($key, ['fingerprint' => $fingerprint, 'product_id' => (string) $product->getKey()], 3600);
+            } finally {
+                $slugLock->release();
+            }
 
             return response()->json(['saved' => true, 'product' => $product, 'artwork' => 'existing-brand-fallback'], 201);
         } finally {
@@ -132,6 +173,28 @@ final class OwnerProductStudioController extends Controller
             'Cache-Control' => $public ? 'public, max-age=3600' : 'private, no-store',
             'Content-Security-Policy' => "default-src 'none'; sandbox",
         ]);
+    }
+
+    /**
+     * @param  array<string, mixed>  $draft
+     * @param  array<string, mixed>  $data
+     */
+    private function saveGeneratedDraft(array $draft, array $data, AdminProductManager $manager): Product
+    {
+        $slug = Str::slug($data['name']);
+        $content = array_intersect_key($draft, array_flip(['headline', 'description', 'features', 'faqs', 'photo_prompt', 'banner_prompt']));
+        $content['offering_type'] = $data['offering_type'];
+        $content['image_alt'] = 'KMJ TECHNO brand artwork for '.$data['name'];
+        $content['banner_path'] = '/assets/brand/kmj-social-card.webp';
+        $attributes = [
+            'name' => $data['name'], 'slug' => $slug, 'category' => $data['category'],
+            'summary' => $draft['summary'], 'content' => $content,
+            'image_path' => '/assets/brand/kmj-social-card.webp',
+            'lifecycle' => 'planned', 'is_public' => false, 'purchase_enabled' => false, 'licensing_enabled' => false,
+        ];
+        $validated = Validator::make($attributes, AdminProductManager::rules())->validate();
+
+        return $manager->create($validated);
     }
 
     private function authorizeOwner(Request $request, PlatformOwnerAccess $access): void

@@ -10,6 +10,14 @@ export type DeliveryMilestone = {
 
 export const deliveryMilestones: DeliveryMilestone[] = [
     {
+        id: 'prompt-first-catalog-editor',
+        title: 'Short description to populated product/service editor',
+        state: 'active',
+        detail: 'PR #627 makes one public short description the primary input. A bounded structured cloud response infers name, category and offering type and fills copy, features, FAQs and artwork prompts. The saved draft opens the real editor; a blank duplicate create form is hidden. Request receipts make unchanged retries idempotent.',
+        evidence:
+            'Test-first hosted PostgreSQL CI reproduced the absent brief route. Full CI and staging owner review remain required. Existing strict zero-cost guards and GEO/SEO are retained. Actual AI image generation remains unconfigured and is explicitly distinguished from brand-artwork fallback.',
+    },
+    {
         id: 'one-click-ai-product-service',
         title: 'One-click AI product and service drafts',
         state: 'active',

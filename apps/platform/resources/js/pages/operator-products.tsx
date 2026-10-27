@@ -27,6 +27,7 @@ export default function OperatorProducts({
     generation?: GenerationConfiguration;
 }) {
     const pageUrl = usePage().url;
+    const [promptCreated, setPromptCreated] = useState(false);
     const [search, setSearch] = useState('');
     const [category, setCategory] = useState('all');
     const [lifecycle, setLifecycle] = useState('all');
@@ -121,17 +122,22 @@ export default function OperatorProducts({
                         <h2 className="mb-4 flex items-center gap-2 text-lg font-bold">
                             <Boxes className="size-5" /> New product
                         </h2>
-                        <QuickProductCreator generation={generation} />
-                        <details className="mt-5 rounded-xl border p-4">
-                            <summary className="cursor-pointer text-sm font-semibold">
-                                Manual form & artwork upload
-                            </summary>
-                            <div className="mt-4">
-                                <CommercialProductForm
-                                    generation={generation}
-                                />
-                            </div>
-                        </details>
+                        <QuickProductCreator
+                            generation={generation}
+                            onCreated={setPromptCreated}
+                        />
+                        {!promptCreated && (
+                            <details className="mt-5 rounded-xl border p-4">
+                                <summary className="cursor-pointer text-sm font-semibold">
+                                    Manual form & artwork upload
+                                </summary>
+                                <div className="mt-4">
+                                    <CommercialProductForm
+                                        generation={generation}
+                                    />
+                                </div>
+                            </details>
+                        )}
                     </section>
                 )}
 
