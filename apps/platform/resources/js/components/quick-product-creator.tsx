@@ -92,6 +92,7 @@ export default function QuickProductCreator({
                         Offering type
                         <select
                             className={field}
+                            aria-label="Offering type"
                             value={kind}
                             onChange={(e) => {
                                 setKind(e.target.value);

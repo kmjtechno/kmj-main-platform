@@ -132,6 +132,7 @@ export function CommercialProductForm({
                 <label className="space-y-1.5 text-xs font-semibold">
                     <span>Lifecycle</span>
                     <select
+                        aria-label="Lifecycle"
                         value={form.data.lifecycle}
                         onChange={(event) => {
                             const lifecycle = event.target.value;
