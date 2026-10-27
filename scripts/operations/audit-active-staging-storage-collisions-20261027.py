@@ -64,27 +64,51 @@ def category(relative: str) -> str:
     return "OTHER"
 
 
-def scan_storage(root: Path) -> tuple[dict[str, tuple[int, str]], int]:
+def scan_storage(root: Path) -> tuple[dict[str, tuple[int, str]], int, dict[str, tuple[str, str]]]:
+    """Hash regular files only. Inventory links as metadata, NEVER walk links."""
     require(root.is_dir(), "STORAGE_DIRECTORY_MISSING")
+    require(not root.is_symlink(), "STORAGE_ROOT_SYMLINK")
     require(safe_inside_stage(root.resolve(strict=True)), "STORAGE_OUT_OF_SCOPE")
     files: dict[str, tuple[int, str]] = {}
+    links: dict[str, tuple[str, str]] = {}
     total = 0
     for parent, directories, filenames in os.walk(root, topdown=True, followlinks=False):
         parent_path = Path(parent)
-        for entry in directories + filenames:
-            info = (parent_path / entry).lstat()
-            require(not stat.S_ISLNK(info.st_mode), "STORAGE_TREE_HAS_SYMLINKS")
+        require(safe_inside_stage(parent_path.resolve(strict=True)), "STORAGE_PARENT_OUT_OF_SCOPE")
+        # os.walk with followlinks=False does not recurse through directory links.
+        # Pruning here also makes this property explicit for security review.
+        for entry in list(directories) + list(filenames):
+            path = parent_path / entry
+            info = path.lstat()
+            relative = path.relative_to(root).as_posix()
+            if stat.S_ISLNK(info.st_mode):
+                require(len(links) + len(files) < MAX_FILES, "STORAGE_TOO_MANY_ENTRIES")
+                # Resolve link metadata only, never open/traverse the destination.
+                # Target is used for in-memory comparison; never printed or logged.
+                try:
+                    resolved = path.resolve(strict=False)
+                except (RuntimeError, OSError):
+                    links[relative] = ("UNRESOLVED", "")
+                else:
+                    scope = "IN_STAGE" if safe_inside_stage(resolved) else "OUTSIDE_STAGE"
+                    links[relative] = (scope, str(resolved))
+                if entry in directories:
+                    directories.remove(entry)
+                continue
             require(stat.S_ISDIR(info.st_mode) or stat.S_ISREG(info.st_mode),
                     "STORAGE_TREE_NONREGULAR_ENTRY")
         for name in filenames:
             path = parent_path / name
-            relative = path.relative_to(root).as_posix()
-            require(relative not in files, "STORAGE_DUPLICATE_PATH")
             before = path.lstat()
+            if stat.S_ISLNK(before.st_mode):
+                continue
             require(stat.S_ISREG(before.st_mode), "STORAGE_NONREGULAR_FILE")
+            relative = path.relative_to(root).as_posix()
+            require(relative not in files and relative not in links,
+                    "STORAGE_DUPLICATE_PATH")
             total += before.st_size
             require(total <= MAX_TOTAL_HASH_BYTES, "STORAGE_EXCEEDS_READ_BUDGET")
-            require(len(files) < MAX_FILES, "STORAGE_TOO_MANY_FILES")
+            require(len(files) + len(links) < MAX_FILES, "STORAGE_TOO_MANY_ENTRIES")
             digest = hashlib.sha256()
             flags = os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0) | getattr(os, "O_CLOEXEC", 0)
             fd = os.open(path, flags)
@@ -102,7 +126,7 @@ def scan_storage(root: Path) -> tuple[dict[str, tuple[int, str]], int]:
             finally:
                 os.close(fd)
             files[relative] = (before.st_size, digest.hexdigest())
-    return files, total
+    return files, total, links
 
 
 def public_storage_status(app: Path) -> str:
@@ -144,8 +168,8 @@ def main() -> None:
     require(safe_inside_stage(old_real) and safe_inside_stage(current_real),
             "STORAGE_OUT_OF_SCOPE")
 
-    old_files, old_bytes = scan_storage(old_real)
-    current_files, current_bytes = scan_storage(current_real)
+    old_files, old_bytes, old_links = scan_storage(old_real)
+    current_files, current_bytes, current_links = scan_storage(current_real)
     old_keys, current_keys = set(old_files), set(current_files)
     common = old_keys & current_keys
     unchanged = sum(old_files[k] == current_files[k] for k in common)
@@ -160,6 +184,18 @@ def main() -> None:
     print("STORAGE_ACTIVE_FILES=" + str(len(current_files)))
     print("STORAGE_OLD_BYTES=" + str(old_bytes))
     print("STORAGE_ACTIVE_BYTES=" + str(current_bytes))
+    print("STORAGE_OLD_SYMLINKS=" + str(len(old_links)))
+    print("STORAGE_ACTIVE_SYMLINKS=" + str(len(current_links)))
+    print("STORAGE_OLD_SYMLINKS_OUTSIDE_STAGE=" +
+          str(sum(v[0] != "IN_STAGE" for v in old_links.values())))
+    print("STORAGE_ACTIVE_SYMLINKS_OUTSIDE_STAGE=" +
+          str(sum(v[0] != "IN_STAGE" for v in current_links.values())))
+    shared_links = set(old_links) & set(current_links)
+    print("STORAGE_SYMLINKS_OLD_ONLY=" + str(len(set(old_links) - set(current_links))))
+    print("STORAGE_SYMLINKS_ACTIVE_ONLY=" + str(len(set(current_links) - set(old_links))))
+    print("STORAGE_SYMLINK_TARGETS_DIFFERENT=" +
+          str(sum(old_links[k] != current_links[k] for k in shared_links)))
+    print("STORAGE_SCAN_SCOPE=REGULAR_FILES_ONLY_SYMLINKS_NOT_FOLLOWED")
     print("STORAGE_SAME_PATH_SAME_CONTENT=" + str(unchanged))
     print("STORAGE_SAME_PATH_DIFFERENT_CONTENT=" + str(conflicts))
     print("STORAGE_OLD_ONLY=" + str(len(old_only)))
@@ -176,6 +212,7 @@ def main() -> None:
     print("STAGING_ACTIVE_PUBLIC_STORAGE=" + public_storage_status(current))
     require(ACTIVE_LINK.resolve(strict=True) == actual and
             PROD_LINK.resolve(strict=True) == production, "LINKS_CHANGED_DURING_AUDIT")
+    print("STORAGE_REPAIR_GATE=BLOCKED_BACKUP_AND_CONFLICT_REVIEW_REQUIRED")
     print("STORAGE_CROSS_RELEASE_COPY=NOT_PERFORMED")
     print("STORAGE_CONSISTENCY=READ_ONLY_NONTRANSACTIONAL_SNAPSHOT")
     print("STAGING_POINTER=UNCHANGED")
