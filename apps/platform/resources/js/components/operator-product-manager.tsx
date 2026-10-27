@@ -216,6 +216,13 @@ export function CommercialProductForm({
                                   .replace(/[^a-z0-9]+/g, '-')
                                   .replace(/^-|-$/g, '')
                                   .slice(0, 96),
+                        content: {
+                            ...current.content,
+                            image_alt:
+                                current.content.image_alt === current.name
+                                    ? name
+                                    : current.content.image_alt,
+                        },
                     }));
                 }}
                 onDraft={(summary, content) =>
@@ -553,7 +560,20 @@ export function ManagedProductEditor({
                                 form.setData('content', content)
                             }
                             onImage={(path) => form.setData('image_path', path)}
-                            onSuggestedName={(name) => form.setData('name', name)}
+                            onSuggestedName={(name) =>
+                                form.setData((current) => ({
+                                    ...current,
+                                    name,
+                                    content: {
+                                        ...current.content,
+                                        image_alt:
+                                            current.content.image_alt ===
+                                            current.name
+                                                ? name
+                                                : current.content.image_alt,
+                                    },
+                                }))
+                            }
                             onDraft={(summary, content) =>
                                 form.setData((current) => ({
                                     ...current,
