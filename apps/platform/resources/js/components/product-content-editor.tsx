@@ -148,8 +148,11 @@ export default function ProductContentEditor({
                 throw new Error(
                     'The title or category changed. Generate again for the current item.',
                 );
-            const { summary: nextSummary, suggested_name: candidate, ...next } = result.draft as Draft;
-            setSuggestedName(candidate.trim() !== name.trim() ? candidate.trim() : '');
+            const { summary: nextSummary, suggested_name: candidate, ...next } =
+                result.draft as Draft;
+            setSuggestedName(
+                candidate.trim() !== name.trim() ? candidate.trim() : '',
+            );
             onDraft(nextSummary, {
                 ...latestContent.current,
                 ...next,
@@ -239,13 +242,30 @@ export default function ProductContentEditor({
             )}
             {suggestedName && (
                 <div className="flex flex-wrap items-center gap-3 rounded-lg border border-red-500/30 p-3 text-xs">
-                    <span>Suggested product name: <strong>{suggestedName}</strong></span>
-                    <button type="button" className="rounded-lg border border-red-500/40 px-3 py-2 font-bold" onClick={() => {
-                        onSuggestedName?.(suggestedName);
-                        setSuggestedName('');
-                        setNotice('Suggested name applied to your form. Review the unchanged product URL before saving.');
-                    }} disabled={!onSuggestedName || busy}>Use suggested name</button>
-                    <button type="button" className="text-muted-foreground underline" onClick={() => setSuggestedName('')}>Keep current name</button>
+                    <span>
+                        Suggested product name: <strong>{suggestedName}</strong>
+                    </span>
+                    <button
+                        type="button"
+                        className="rounded-lg border border-red-500/40 px-3 py-2 font-bold"
+                        onClick={() => {
+                            onSuggestedName?.(suggestedName);
+                            setSuggestedName('');
+                            setNotice(
+                                'Suggested name applied to your form. Review the unchanged product URL before saving.',
+                            );
+                        }}
+                        disabled={!onSuggestedName || busy}
+                    >
+                        Use suggested name
+                    </button>
+                    <button
+                        type="button"
+                        className="text-muted-foreground underline"
+                        onClick={() => setSuggestedName('')}
+                    >
+                        Keep current name
+                    </button>
                 </div>
             )}
             <label className="grid gap-2 text-xs font-semibold">
