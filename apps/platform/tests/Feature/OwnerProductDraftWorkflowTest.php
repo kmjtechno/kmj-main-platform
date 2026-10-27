@@ -234,6 +234,19 @@ final class OwnerProductDraftWorkflowTest extends TestCase
         self::assertSame('https://kmjtechno.com/products/kmj-engineering', $metadata['canonical']);
     }
 
+    public function test_published_service_keeps_its_type_through_the_real_catalog_route(): void
+    {
+        Product::query()->create([
+            'name' => 'KMJ Reviewed Service', 'slug' => 'kmj-reviewed-service', 'status' => 'sandbox', 'lifecycle' => 'planned',
+            'category' => 'industrial', 'is_public' => true, 'purchase_enabled' => false, 'licensing_enabled' => false,
+            'summary' => 'Reviewed service scope.', 'image_path' => '/assets/brand/kmj-social-card.webp',
+            'content' => ['offering_type' => 'service', 'description' => 'Reviewed service description.', 'faqs' => [['question' => 'What is the scope?', 'answer' => 'Reviewed service scope.']]],
+        ]);
+        $this->get('/products/kmj-reviewed-service')->assertOk()
+            ->assertInertia(fn (Assert $page) => $page->component('products/show')->where('product.content.offering_type', 'service'))
+            ->assertSee('"@type":"Service"', false)->assertSee('"@type":"FAQPage"', false);
+    }
+
     private function owner(): User
     {
         $owner = User::factory()->create([

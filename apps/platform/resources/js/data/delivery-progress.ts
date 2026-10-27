@@ -10,12 +10,20 @@ export type DeliveryMilestone = {
 
 export const deliveryMilestones: DeliveryMilestone[] = [
     {
+        id: 'one-click-ai-product-service',
+        title: 'One-click AI product and service drafts',
+        state: 'active',
+        detail: 'PR #624 adds owner-only AI fill and add: title and public facts become a complete private planned catalog draft. Slug, generated copy, FAQs, artwork prompts and alt text are filled automatically. Existing GEO/SEO gains service identity, visible FAQ structured data and custom-artwork metadata. Publishing and commercial controls stay with the owner.',
+        evidence:
+            'Test-first PostgreSQL CI reproduced the missing creation route and service metadata. Implementation CI and staging activation remain pending. Image AI is not configured: existing brand artwork is explicitly labeled as a fallback, and original artwork upload is available.',
+    },
+    {
         id: 'product-cloud-complete-structured-draft',
         title: 'Complete structured product drafts',
-        state: 'active',
+        state: 'verified',
         detail: 'A real zero-cost cloud response stopped at the token limit and produced invalid JSON. PR #622 aligns a concise bounded product schema with an 8000-token budget, requests strict structured output, and refuses any non-stop completion before parsing or applying it. Generated content remains reviewable and unsaved; manual editing limits are preserved.',
         evidence:
-            'Owner diagnostics report HTTP200, usage cost zero, finish_reason=length and invalid draft JSON. Regression tests reject even valid JSON when the provider says length, preserving all product records. Fresh CI, staging deployment and a new live zero-cost generation check remain required.',
+            'Owner execution on exact staging source fe4045acd08d50a7438dbfc6fee0610b02e1df50 confirms both HTTP200, usage cost ZERO, finish_reason=stop and PASS_COMPLETE_VALIDATED_ZERO_COST_UNSAVED. All 10 PR checks and staging promotion passed. No product write or production change occurred.',
     },
     {
         id: 'product-free-cloud-quota-feedback',
@@ -31,7 +39,7 @@ export const deliveryMilestones: DeliveryMilestone[] = [
         state: 'active',
         detail: 'PR #617 removes the product studio local LLM dependency and follows ADR-004 cloud-only policy. An official OpenRouter free route requires fresh zero-price catalog evidence, hard zero-price provider caps, bounded requests and a verified-zero response. Paid and unknown-price routes fail closed; manual editing and artwork upload remain available. Existing GEO/SEO is preserved.',
         evidence:
-            'The account connection doctor reports P520 missing its current account grant; P720 is intentionally not a dependency. Cloud inference remains unconfigured until a private server-side key and a real zero-cost request are verified. CI and staging activation are separate gates.',
+            'The account connection doctor reports P520 missing its current account grant; P720 is intentionally not a dependency. The owner configured a private staging-only cloud key; the fe4045 staging execution verified a complete zero-cost unsaved draft. Production AI configuration remains unchanged.',
     },
     {
         id: 'owner-product-content-artwork-studio',
