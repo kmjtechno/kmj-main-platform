@@ -117,6 +117,7 @@ async function inspectPage(page, path, viewport, { requireIcon = false } = {}) {
                 left: rect.left,
             };
         }),
+        kristiPanels: document.querySelectorAll('.lock-kristi-box').length,
         brokenImages: [...document.images]
             .filter((img) => !(img.complete && img.naturalWidth > 0))
             .map((img) => img.currentSrc || img.src),
@@ -169,6 +170,13 @@ async function inspectPage(page, path, viewport, { requireIcon = false } = {}) {
                 ),
             `${tag}: hero, ecosystem and roadmap fill the same viewport`,
             JSON.stringify(metrics.landingBands),
+        );
+    }
+    if (on('layout') && path === '/') {
+        check(
+            metrics.kristiPanels === 0,
+            `${tag}: support panel starts collapsed without covering products`,
+            String(metrics.kristiPanels),
         );
     }
     if (on('images')) {

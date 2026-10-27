@@ -102,15 +102,55 @@ void test('loaded KMJ artwork keeps original geometry while missing assets fail 
     assert.doesNotMatch(image, /(?:cinema|cloudos)\.webp/);
 });
 
-void test('public Kristi guidance routes support, mobile and licensing honestly', () => {
-    assert.match(
-        source,
-        /function publicGuidanceIndex\(input: string\): number/,
+void test('public Kristi guidance selects the actual topic and destination', async () => {
+    const functionSource = source.match(
+        /function publicGuidanceIndex[\s\S]*?\n}/,
+    )?.[0];
+    const topicsSource = source.match(/const guidance = \[[\s\S]*?\n\];/)?.[0];
+    assert.ok(functionSource && topicsSource);
+    const compiled = ts.transpileModule(
+        topicsSource +
+            '\n' +
+            functionSource +
+            '\nexport { guidance, publicGuidanceIndex };',
+        {
+            compilerOptions: {
+                module: ts.ModuleKind.ESNext,
+                target: ts.ScriptTarget.ES2022,
+            },
+        },
+    ).outputText;
+    const { guidance, publicGuidanceIndex } = await import(
+        'data:text/javascript;charset=utf-8,' + encodeURIComponent(compiled)
     );
-    assert.match(source, /if \(\/support\|help/);
-    assert.match(source, /if \(\/android\|ios\|mobile/);
-    assert.match(source, /setAnswer\(publicGuidanceIndex\(query\)\)/);
-    assert.doesNotMatch(source, /\/licens\|price\/i\.test\(query\)/);
+    for (const [query, label, href] of [
+        ['technical support', 'Technical support', '#contact'],
+        ['ANDROID mobile app', 'Mobile apps & development', '#contact'],
+        ['enterprise inquiry', 'General inquiries', '#contact'],
+        [
+            'pricing and license',
+            'Licensing & pricing',
+            '/products/kmj-licensing-hub',
+        ],
+        ['cloud development', 'Software solutions', '/capabilities'],
+        ['show products', 'Product information', '/products'],
+    ]) {
+        const topic = guidance[publicGuidanceIndex(query)];
+        assert.equal(topic[0], label, query);
+        assert.equal(topic[2], href, query);
+    }
+});
+
+void test('landing guidance starts collapsed and overview does not promise a missing video', () => {
+    const widget =
+        source
+            .split('function PublicKristi()')[1]
+            ?.split('export default')[0] ?? '';
+    assert.match(widget, /useState\(false\)/);
+    assert.doesNotMatch(widget, /useState\(true\)/);
+    assert.match(widget, /Ask Kristi/);
+    assert.doesNotMatch(source, /Watch\s+Company Video/);
+    assert.match(source, /Engineering IDE/);
 });
 
 void test('public homepage exposes accessible account entry without bypassing verification readiness', () => {

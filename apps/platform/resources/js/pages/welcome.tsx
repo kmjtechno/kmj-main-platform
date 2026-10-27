@@ -16,7 +16,6 @@ import {
     Cloud,
     FileCheck,
     Star,
-    PlayCircle,
     X,
     Send,
     ChevronRight,
@@ -181,17 +180,18 @@ function SectionHeading({
 function publicGuidanceIndex(input: string): number {
     const query = input.trim().toLowerCase();
     if (/support|help|problem|issue|error|troubleshoot|refund/.test(query))
-        return 3;
-    if (/android|ios|mobile|smartphone/.test(query)) return 2;
-    if (/contact|quote|consult|project inquiry|enterprise inquiry/.test(query))
         return 4;
+    if (/android|ios|mobile|smartphone/.test(query)) return 3;
+    if (/contact|quote|consult|project inquiry|enterprise inquiry/.test(query))
+        return 5;
+    if (/licens|price|pricing|cost|subscription/.test(query)) return 1;
     if (/software|website|desktop|cloud|automation|development/.test(query))
-        return 1;
-    // Pricing and licensing requests point to factual catalog information.
+        return 2;
     return 0;
 }
+
 function PublicKristi() {
-    const [open, setOpen] = useState(true);
+    const [open, setOpen] = useState(false);
     const [answer, setAnswer] = useState<number | null>(null);
     const [query, setQuery] = useState('');
     return (
@@ -260,8 +260,12 @@ function PublicKristi() {
                     </div>
                 </>
             ) : (
-                <button className="lock-primary" onClick={() => setOpen(true)}>
-                    Hi, I'm Kristi
+                <button
+                    className="lock-primary"
+                    aria-expanded={false}
+                    onClick={() => setOpen(true)}
+                >
+                    Ask Kristi
                 </button>
             )}
         </aside>
@@ -355,8 +359,8 @@ export default function Welcome({
                                 >
                                     <DialogPrimitive.Trigger asChild>
                                         <button className="lock-outline">
-                                            <PlayCircle size={22} /> Watch
-                                            Company Video
+                                            <Building2 size={20} /> Company
+                                            overview
                                         </button>
                                     </DialogPrimitive.Trigger>
                                     <DialogPrimitive.Portal>
@@ -556,7 +560,7 @@ export default function Welcome({
                                     ],
                                     [
                                         'Cloud Nexus',
-                                        'Global Cloud',
+                                        'Engineering IDE',
                                         '/products/kmj-cloud-nexus',
                                     ],
                                     [
