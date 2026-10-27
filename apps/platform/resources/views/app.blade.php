@@ -17,7 +17,7 @@
             );
             // Public-only source metadata: used on the initial document response
             // without spinning up a second Node/SSR process or querying secrets.
-            $initialSeo = app(\\App\\Services\\Seo\\PublicInitialMetadata::class)
+            $initialSeo = app(\App\Services\Seo\PublicInitialMetadata::class)
                 ->forPage($page, (string) config('app.url'));
         @endphp
         @unless (config('app.public_indexing', false) && $publicIndexableRoute)
