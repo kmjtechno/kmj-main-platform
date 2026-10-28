@@ -97,7 +97,7 @@ def evaluate_v3(raw: str) -> dict[str, object]:
         # Existing stage-owned parents are also accepted only with safe modes.
         root_owned = (
             f["SHARED_UID"] == "0" and f["SHARED_GID"] == "0"
-            and f["SHARED_MODE"] in ("755", "750", "700")
+            and f["SHARED_MODE"] == "755"
         )
         stage_owned = (
             f["SHARED_UID"] == uid
