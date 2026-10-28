@@ -1,5 +1,5 @@
 import { Link, usePage } from '@inertiajs/react';
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import {
     Activity,
     Bell,
@@ -159,14 +159,19 @@ export default function OwnerModuleShell({
         (parts[0]?.[0] ?? '') + (parts.at(-1)?.[0] ?? '')
     ).toLocaleUpperCase();
     const [navOpen, setNavOpen] = useState(false);
+    const menuButton = useRef<HTMLButtonElement>(null);
 
     useEffect(() => {
+        if (!navOpen) return;
+
         const closeOnEscape = (event: KeyboardEvent) => {
-            if (event.key === 'Escape') setNavOpen(false);
+            if (event.key !== 'Escape') return;
+            setNavOpen(false);
+            menuButton.current?.focus();
         };
         window.addEventListener('keydown', closeOnEscape);
         return () => window.removeEventListener('keydown', closeOnEscape);
-    }, []);
+    }, [navOpen]);
 
     return (
         <div className="owner-lock owner-module-shell">
@@ -182,9 +187,14 @@ export default function OwnerModuleShell({
                     <LockedBrand compact />
                 </Link>
                 <button
+                    ref={menuButton}
                     type="button"
                     className="owner-mobile-nav"
-                    aria-label="Toggle owner navigation"
+                    aria-label={
+                        navOpen
+                            ? 'Close owner navigation'
+                            : 'Open owner navigation'
+                    }
                     aria-controls="owner-module-navigation"
                     aria-expanded={navOpen}
                     onClick={() => setNavOpen((open) => !open)}

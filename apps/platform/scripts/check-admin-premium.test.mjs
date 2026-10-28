@@ -133,3 +133,24 @@ void test('payment and license security flows survive the visual redesign', () =
         /display:\s*none\s*!important/,
     );
 });
+
+const ownerShell = read('resources/js/layouts/owner-module-shell.tsx');
+
+void test('owner mobile menu closes on Escape and restores trigger focus', () => {
+    assert.match(ownerShell, /useRef<HTMLButtonElement>\(null\)/);
+    assert.match(ownerShell, /ref=\{menuButton\}/);
+    assert.match(ownerShell, /if \(event\.key !== 'Escape'\) return;/);
+    assert.match(
+        ownerShell,
+        /setNavOpen\(false\);\s*menuButton\.current\?\.focus\(\)/,
+    );
+    assert.match(ownerShell, /\}, \[navOpen\]\);/);
+});
+
+void test('owner mobile menu preserves locked toggle contract', () => {
+    assert.match(ownerShell, /aria-expanded=\{navOpen\}/);
+    assert.match(ownerShell, /aria-label=\{/);
+    assert.match(ownerShell, /navOpen\s*\?\s*'Close owner navigation'/);
+    assert.match(ownerShell, /:\s*'Open owner navigation'/);
+    assert.match(ownerShell, /aria-controls="owner-module-navigation"/);
+});
