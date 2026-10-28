@@ -15,7 +15,7 @@ const profile = read(
     'app/Services/Licensing/ProductLicenseProfileRegistry.php',
 );
 
-test('KMJ Licensing Hub owns consistent project identity without new authority', () => {
+void test('KMJ Licensing Hub owns consistent project identity without new authority', () => {
     assert.match(ownerUi, /KMJ Licensing Hub · Owner Authority/);
     assert.match(ownerUi, /KMJ Licensing Hub · Super Admin/);
     assert.match(dashboard, /KMJ Licensing Hub · Customer access/);
@@ -25,7 +25,7 @@ test('KMJ Licensing Hub owns consistent project identity without new authority',
     assert.match(profile, /LICENSING_HUB_SLUG/);
 });
 
-test('all owner licensing read/write endpoints require platform owner and recent password', () => {
+void test('all owner licensing read/write endpoints require platform owner and recent password', () => {
     assert.equal(
         (ownerRoutes.match(/\$access->require\(\$user\);/g) || []).length,
         3,
@@ -42,7 +42,7 @@ test('all owner licensing read/write endpoints require platform owner and recent
     );
 });
 
-test('customers see only actual organization entitlements, never catalog-inferred purchases', () => {
+void test('customers see only actual organization entitlements, never catalog-inferred purchases', () => {
     assert.match(dashboard, /organizations\.flatMap/);
     assert.match(dashboard, /organization\.entitlements\.map/);
     assert.match(dashboard, /entitlement\.status === 'active'/);
@@ -61,7 +61,7 @@ test('customers see only actual organization entitlements, never catalog-inferre
     );
 });
 
-test('developer license management retains tenant and paid-license gates', () => {
+void test('developer license management retains tenant and paid-license gates', () => {
     assert.match(developerRoutes, /'license\.manage'/);
     assert.match(
         developerRoutes,
@@ -75,7 +75,7 @@ test('developer license management retains tenant and paid-license gates', () =>
     assert.match(developerUi, /Super Admin-only/);
 });
 
-test('customer navigation does not advertise owner licensing control', () => {
+void test('customer navigation does not advertise owner licensing control', () => {
     const ownerStart = sidebar.indexOf('const ownerCommerce: NavItem[]');
     const ownerEnd = sidebar.indexOf('const ownerSystems: NavItem[]');
     assert.ok(ownerStart > 0 && ownerEnd > ownerStart);
