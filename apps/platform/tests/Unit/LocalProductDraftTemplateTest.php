@@ -140,5 +140,4 @@ final class LocalProductDraftTemplateTest extends TestCase
 
         self::assertSame('KMJ CineCore 2.0', $draft['name']);
     }
-
 }
