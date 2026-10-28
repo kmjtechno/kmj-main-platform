@@ -15,8 +15,8 @@ HOST = "staging.kmjtechno.com"
 EXPECTED_SHA = "ad4cfa68291ec6a05e88f30ed0a93b2d15af40fe"
 LIVE_LINK = Path("/home/kmjprod/current")
 ROOT = Path("/srv/kmj-codebridge-projects/kmj-main-platform")
-RECEIPTS = ROOT / "work/qa/operator-receipts"
-FILE_NAME = "main-platform-release-preflight-20261028.json"
+RECEIPTS = ROOT / "work/qa"
+FILE_NAME = "KMJ_MAIN_PLATFORM_STAGE_PREFLIGHT_V3_20261028.json"
 
 def limited_run(argv, timeout=8):
     try:
