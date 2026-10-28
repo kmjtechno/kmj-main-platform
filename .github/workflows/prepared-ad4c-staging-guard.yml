@@ -1,0 +1,26 @@
+name: Prepared AD4C Staging Guard
+on:
+  pull_request:
+    paths:
+      - 'scripts/operations/activate-prepared-ad4c-staging-only-20261028.sh'
+      - 'scripts/test_prepared_ad4c_staging_guard.py'
+      - '.github/workflows/prepared-ad4c-staging-guard.yml'
+
+permissions:
+  contents: read
+jobs:
+  contract:
+    name: Staging-only activation syntax and rollback contract
+    runs-on: ubuntu-24.04
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - name: Validate pinned staging operator script offline
+        run: |
+          set -Eeuo pipefail
+          bash -n scripts/operations/activate-prepared-ad4c-staging-only-20261028.sh
+          python3 -B -m unittest discover -s scripts -p test_prepared_ad4c_staging_guard.py -v
+          echo 'STAGING_OPERATOR_SCRIPT=SOURCE_TEST_PASS'
+          echo 'STAGING_DEPLOYMENT=NOT_PERFORMED'
