@@ -14,7 +14,7 @@ class PreparedStageContract(unittest.TestCase):
         self.assertIn("sha="+SHA,raw)
         self.assertIn("old="+OLD,raw)
         self.assertIn("DEPLOY_APPROVED_STAGING_ONLY",raw)
-        self.assertIn("STAGING_APPROVED",raw.upper())
+        self.assertIn("STAGING-APPROVED",raw.upper())
         self.assertIn("PROD_POINTER",raw)
         self.assertIn("CONCURRENT_NGINX_CHANGE",raw)
 
