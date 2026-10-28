@@ -1,0 +1,58 @@
+"""Offline negative tests for fail-closed staging parent-chain V6 evidence."""
+import importlib.util
+from pathlib import Path
+import tempfile
+import unittest
+from unittest.mock import patch
+
+SOURCE = Path(__file__).parent / "operations/audit-stage-parent-chain-v6.py"
+spec = importlib.util.spec_from_file_location("parent_v6", SOURCE)
+module = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(module)
+
+
+class ParentChainV6(unittest.TestCase):
+    def test_stage_owned_parent_is_renameable_even_when_child_root_owned(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            home = Path(tmp) / "stage"
+            shared = home / "shared"
+            shared.mkdir(parents=True)
+            home.chmod(0o755)
+            shared.chmod(0o755)
+            result = module.collect_chain(home, shared)
+            self.assertEqual(result["parent_rename_risk"], "YES")
+            self.assertFalse(result["staging_switch_authorized"])
+            self.assertFalse(result["backup_restore_verified"])
+            self.assertFalse(result["owner_release_approved"])
+            self.assertEqual(result["status"], "BLOCKED_PARENT_CHAIN_AND_RELEASE_GATES")
+            self.assertEqual(result["parent_mode"], "0755")
+
+    def test_symlink_parent_and_child_rejected(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            base = Path(tmp)
+            actual = base / "real"
+            (actual / "shared").mkdir(parents=True)
+            link = base / "link"
+            link.symlink_to(actual, target_is_directory=True)
+            with self.assertRaisesRegex(module.UnsafeEvidence, "UNTRUSTED_DIRECTORY_CHAIN"):
+                module.collect_chain(link, link / "shared")
+            (actual / "other").symlink_to(actual / "shared", target_is_directory=True)
+            with self.assertRaisesRegex(module.UnsafeEvidence, "UNTRUSTED_DIRECTORY_CHAIN"):
+                module.collect_chain(actual, actual / "other")
+
+    def test_unknown_acl_does_not_become_absent(self):
+        with patch.object(module.os, "getxattr", side_effect=OSError(13, "denied")):
+            self.assertEqual(module.acl_status(Path("/not-read")), "UNKNOWN")
+
+    def test_receipt_source_never_mutates_customer_tree_or_authorizes(self):
+        source = SOURCE.read_text()
+        self.assertIn("os.O_EXCL | os.O_NOFOLLOW", source)
+        self.assertIn("os.fchmod(stream.fileno(), 0o640)", source)
+        self.assertIn('"production_activation_authorized": False', source)
+        self.assertIn('"staging_switch_authorized": False', source)
+        self.assertNotIn("shutil.move", source)
+        self.assertNotIn("os.rename(", source)
+
+
+if __name__ == "__main__":
+    unittest.main()
