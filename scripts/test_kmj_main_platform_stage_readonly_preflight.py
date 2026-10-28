@@ -62,6 +62,8 @@ class ReadonlyReleasePreflight(unittest.TestCase):
             '"approval_issued":False',
             '"production_mutated":False',
             '"RECEIPT_ALREADY_EXISTS"',
+            '"KMJ_MAIN_PLATFORM_STAGE_PREFLIGHT_V3_20261028.json"',
+            'RECEIPTS = ROOT / "work/qa"',
             'os.link(temp,dest)',
         ):
             self.assertIn(marker, TEXT)
