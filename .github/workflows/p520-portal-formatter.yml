@@ -1,0 +1,30 @@
+name: P520 first-party portal format artifact
+on:
+  pull_request:
+    paths:
+      - apps/platform/public/codebridge-connect.html
+      - .github/workflows/p520-portal-formatter.yml
+  workflow_dispatch:
+jobs:
+  format-portal:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: apps/platform/package-lock.json
+      - name: Install pinned source dependencies
+        run: cd apps/platform && npm ci --ignore-scripts --no-audit --no-fund
+      - name: Produce exact Oxfmt portal format
+        run: cd apps/platform && node_modules/.bin/vp fmt public/codebridge-connect.html --write
+      - name: Upload format-only file
+        uses: actions/upload-artifact@v4
+        with:
+          name: p520-oxfmt-portal
+          path: apps/platform/public/codebridge-connect.html
+          if-no-files-found: error
+          retention-days: 1
