@@ -160,6 +160,10 @@ browser test exercises the equivalent task and the backend state transition.
 
 | Repo | Use | Decision |
 |---|---|---|
+| [quteam/license-manager](https://github.com/quteam/license-manager) (MIT) | **Closest workflow model:** application onboarding, bulk keys, status filters, self-service device unbind/cooldown, audit, SDK examples | Study business rules and tests; its Cloudflare Workers/D1 architecture must **not** become a second KMJ licensing authority |
+| [alvarorg14/openlicensd](https://github.com/alvarorg14/openlicensd) (Apache 2.0) | Single-binary license admin, machine release, activation caps and hashed keys | Useful interface/API reference; narrower than offline signed leases, reseller billing and customer portal; avoid another server |
+| [tabloy/keygate](https://github.com/tabloy/keygate) (AGPL-3.0 plus additional terms) | License lifecycle, floating seats, customer portal, offline verification and auditing | **Reference only**; AGPL obligations and required UI attribution conflict with blindly embedding it in proprietary white-labelled KMJ UI |
+| [keyzori/keyzori](https://github.com/keyzori/keyzori) (Apache 2.0) | Device/IP caps, expiry and metering | Reference only; major V2 incompatibility and extra Bun/Redis process; not a KMJ drop-in |
 | [keygen-sh/keygen-api](https://github.com/keygen-sh/keygen-api) | Device activation, key policies, signed offline examples | **Architecture reference only**; CE free self-host but Fair Core License has competing-use restrictions; do not vendor code or add a second authority |
 | [keygen-sh/example-csharp-hybrid-online-offline-licensing](https://github.com/keygen-sh/example-csharp-hybrid-online-offline-licensing) | Ed25519/AEAD client testing patterns | Learn protocol/test concepts; check component licenses before copying |
 | [spatie/laravel-permission](https://github.com/spatie/laravel-permission) (MIT) | Team/account roles | Evaluate against existing KMJ policies; not a licensing engine |
@@ -169,7 +173,10 @@ browser test exercises the equivalent task and the backend state transition.
 | [openfga/openfga](https://github.com/openfga/openfga) (Apache 2.0) | Fine-grained global access graph | **Do not deploy a new service now**; avoid resource cost and competing authority |
 
 No external repo is equivalent to copying the old AuthSP workflow. Use
-reference code only after compatible licensing/security review.
+reference code only after compatible licensing/security review. These
+upstream projects' README feature claims are not independent production
+security audits; never install them directly on the customer VPS or
+replace existing KSLP/payment authority without isolated benchmarking.
 
 ## Implement/validate in this order
 
