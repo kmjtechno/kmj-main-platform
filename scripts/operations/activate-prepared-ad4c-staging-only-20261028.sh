@@ -55,13 +55,23 @@ esac
 if find "$app/storage/app" -mindepth 1 -type f ! -name .gitignore -print -quit | grep -q .; then
   fail NEW_UPLOAD_DATA
 fi
-[[ -L "$oldapp/public/storage" ]] || fail OLD_PUBLIC_STORAGE_ABSENT
-old_public="$(readlink -f "$oldapp/public/storage")"
-case "$old_public" in
-  /home/kmjstage/releases/*/apps/platform/storage/app/public|/home/kmjstage/shared/*) ;;
-  *) fail PUBLIC_UPLOAD_TARGET ;;
-esac
-[[ -d "$old_public" ]] || fail OLD_PUBLIC_UPLOAD_MISSING
+# public/storage is optional: Laravel can serve a healthy staging site with
+# no public upload symlink. If old public/storage is a real directory, refuse
+# to silently replace it with a link (manual data-continuity review needed).
+public_action=absent
+old_public=""
+if [[ -L "$oldapp/public/storage" ]]; then
+  public_action=link
+  old_public="$(readlink -f "$oldapp/public/storage")"
+  case "$old_public" in
+    /home/kmjstage/releases/*/apps/platform/storage/app/public|/home/kmjstage/shared/*) ;;
+    *) fail PUBLIC_UPLOAD_TARGET ;;
+  esac
+  [[ -d "$old_public" ]] || fail OLD_PUBLIC_UPLOAD_MISSING
+elif [[ -e "$oldapp/public/storage" ]]; then
+  fail OLD_PUBLIC_STORAGE_DIRECTORY_REQUIRES_REVIEW
+fi
+echo "KMJ_AD4C_OLD_PUBLIC_STORAGE=$public_action"
 # Prevent a future staging-approved promotion from silently replacing this target.
 remote="$(runuser -u kmjcode -- env GIT_TERMINAL_PROMPT=0 git -C /srv/kmj-codebridge-projects/kmj-main-platform ls-remote origin refs/heads/staging-approved 2>/dev/null | awk '{print $1}')"
 [[ "$remote" == "$sha" ]] || fail APPROVED_SHA_CHANGED
@@ -83,18 +93,42 @@ Path(after).write_text(text.replace(old,new))
 PY
 
 activated=0
+candidate_scaffold_moved=0
+candidate_storage_link_created=0
+candidate_public_link_created=0
+completed=0
 rollback() {
   rc=$?
   trap - EXIT
   if [[ "$activated" == 1 ]]; then
     install -m 0644 "$work/original.conf" "$target"
-    rb="$link.rollback-ad4c-$$"
+    rb="$link.rollback-ad4c-$"
     ln -s "$oldapp" "$rb"
     mv -Tf "$rb" "$link"
     if nginx -t >/dev/null 2>&1 && systemctl reload nginx >/dev/null 2>&1; then
       echo KMJ_AD4C_STAGING_ROLLBACK=RESTORED_PREVIOUS
     else
       echo KMJ_AD4C_STAGING_ROLLBACK=OPERATOR_ATTENTION_REQUIRED
+    fi
+  fi
+  # A failed attempt never leaves hidden candidate storage scaffolding.
+  # Only undo links CREATED by this run with the exact expected targets.
+  if [[ "$completed" != 1 ]]; then
+    if [[ "$candidate_public_link_created" == 1 ]] &&
+       [[ -L "$app/public/storage" ]] &&
+       [[ "$(readlink -f "$app/public/storage")" == "$old_public" ]]; then
+      unlink -- "$app/public/storage"
+    fi
+    if [[ "$candidate_storage_link_created" == 1 ]] &&
+       [[ -L "$app/storage/app" ]] &&
+       [[ "$(readlink -f "$app/storage/app")" == "$old_upload" ]]; then
+      unlink -- "$app/storage/app"
+    fi
+    if [[ "$candidate_scaffold_moved" == 1 ]] &&
+       [[ ! -e "$app/storage/app" && ! -L "$app/storage/app" ]] &&
+       [[ -d "$app/storage/app.pre-stage-ad4c" ]]; then
+      mv -- "$app/storage/app.pre-stage-ad4c" "$app/storage/app"
+      echo KMJ_AD4C_CANDIDATE_SCAFFOLD=RESTORED
     fi
   fi
   echo KMJ_AD4C_PRODUCTION_POINTER=UNCHANGED_EXPECTED
@@ -104,10 +138,15 @@ trap rollback EXIT
 
 # Keep the prepared candidate's scaffold intact for forensic recovery.
 mv "$app/storage/app" "$app/storage/app.pre-stage-ad4c"
+candidate_scaffold_moved=1
 ln -s "$old_upload" "$app/storage/app"
+candidate_storage_link_created=1
 chown -h kmjstage:www-data "$app/storage/app"
-ln -s "$old_public" "$app/public/storage"
-chown -h kmjstage:www-data "$app/public/storage"
+if [[ "$public_action" == link ]]; then
+  ln -s "$old_public" "$app/public/storage"
+  candidate_public_link_created=1
+  chown -h kmjstage:www-data "$app/public/storage"
+fi
 [[ "$(readlink -f "$app/storage/app/private/product-artwork")" == /home/kmjstage/shared/product-artwork ]] || fail NEW_ARTWORK_CONTINUITY
 runuser -u www-data -- test -r "$app/public/build/manifest.json" || fail ASSET_ACCESS
 [[ "$(sha256sum "$target" | cut -d' ' -f1)" == "$cfg_hash" ]] || fail CONCURRENT_NGINX_CHANGE
@@ -137,6 +176,7 @@ PY
 done
 [[ "$(readlink -f "$link")" == "$app" && "$(readlink -f "$prod")" == "$expected_prod" ]] || fail FINAL_POINTER
 activated=0
+completed=1
 echo KMJ_AD4C_STAGE_ACTIVATION=PASS_EXACT_SHA_HTTPS
 echo "KMJ_AD4C_STAGE_SHA=$sha"
 echo KMJ_AD4C_PRODUCTION=UNCHANGED
