@@ -25,6 +25,16 @@ def limited_run(argv, timeout=8):
     except (OSError, subprocess.TimeoutExpired):
         return 124, ""
 
+def safe_staging_vhost(conf, canonical):
+    """Accept a plain file or only the canonical Ubuntu sites-enabled symlink."""
+    try:
+        if conf.is_symlink():
+            return (conf.resolve(strict=True) == canonical
+                    and canonical.is_file() and not canonical.is_symlink())
+        return conf.is_file()
+    except (OSError, RuntimeError):
+        return False
+
 def status():
     checks = {}
     checks["hostname_guard"] = socket.gethostname().split(".")[0] == "KMJ-elite"
@@ -36,7 +46,8 @@ def status():
     checks["live_release"] = current if re.fullmatch(r"platform-[a-f0-9]{12}",current) else "UNKNOWN"
     checks["live_release_expected"] = current == "platform-8070dad72c55"
     conf = Path("/etc/nginx/sites-enabled/staging.kmjtechno.com.conf")
-    checks["staging_site_config_present"] = conf.is_file() and not conf.is_symlink()
+    checks["staging_site_config_present"] = safe_staging_vhost(
+        conf, Path("/etc/nginx/sites-available/staging.kmjtechno.com.conf"))
     if checks["staging_site_config_present"]:
         try:
             source=conf.read_text(encoding="utf-8")
