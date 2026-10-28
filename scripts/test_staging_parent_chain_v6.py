@@ -50,6 +50,20 @@ class ParentChainV6Contract(unittest.TestCase):
         self.assertIn("SHARED_ROOT_POLICY", result["blockers"])
         self.assertIn("MOUNT_BOUNDARY_REVIEW", result["blockers"])
 
+    def test_explicit_same_device_mountpoint_requires_review(self):
+        mount = {"mountinfo_checked": True,
+                 "stage_parent_explicit_mount": False,
+                 "shared_explicit_mount": True}
+        result = module.assess(rows(stage_mode=0o555), 995, mount)
+        self.assertTrue(result["shared_parent_same_device"])
+        self.assertIn("EXPLICIT_MOUNTPOINT_REVIEW", result["blockers"])
+        self.assertFalse(result["migration_authorized"])
+
+    def test_unavailable_mountinfo_is_not_treated_as_safe(self):
+        result = module.assess(rows(stage_mode=0o555), 995)
+        self.assertIn("MOUNTINFO_UNVERIFIED", result["blockers"])
+        self.assertFalse(result["mountinfo_checked"])
+
     def test_even_ideal_chain_is_not_release_approval(self):
         result = module.assess(rows(stage_mode=0o555), 995)
         self.assertFalse(result["migration_authorized"])
