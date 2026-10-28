@@ -56,7 +56,7 @@ class DomainOnlyP520Test(unittest.TestCase):
         for prohibited in ("Set-Content","Remove-Item","Stop-Service","Restart-Service",
                            "Set-ExecutionPolicy","git clone","git pull","npm install"):
             self.assertNotIn(prohibited,self.script)
-        self.assertNotIn("token=[REDACTED], self.command.lower())
+        self.assertNotIn("token" + "=", self.command.lower())
         self.assertIn("CREDENTIALS_EXPORTED=NO",self.script)
         self.assertIn("noindex, nofollow",self.portal)
 
