@@ -1,7 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { deliverProductLink } from '../resources/js/lib/product-share-actions.mjs';
+import {
+    deliverProductLink,
+} from '../resources/js/lib/product-share-actions.mjs';
 
 const title = 'KMJ CineCore — KMJ TECHNO';
 const url = 'https://kmjtechno.com/products/kmj-cinecore';
@@ -49,7 +51,9 @@ void test('native share rejection falls back to a verified copy', async () => {
         title,
         url,
         nativeShare: async () => {
-            throw Object.assign(new Error('blocked'), { name: 'NotAllowedError' });
+            throw Object.assign(new Error('blocked'), {
+                name: 'NotAllowedError',
+            });
         },
         copyText: async (value) => {
             copied.push(value);
