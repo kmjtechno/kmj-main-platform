@@ -1,0 +1,32 @@
+name: Staging Parent Chain V6 Read Only Contract
+on:
+  pull_request:
+    paths:
+      - 'scripts/operations/audit-staging-parent-chain-v6-20261029.py'
+      - 'scripts/test_staging_parent_chain_v6.py'
+      - '.github/workflows/staging-parent-chain-v6.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/operations/audit-staging-parent-chain-v6-20261029.py'
+      - 'scripts/test_staging_parent_chain_v6.py'
+      - '.github/workflows/staging-parent-chain-v6.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  offline-fail-closed:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - name: Verify V6 offline negative cases and untrusted-host refusal
+        run: |
+          set -Eeuo pipefail
+          python3 -B -m py_compile scripts/operations/audit-staging-parent-chain-v6-20261029.py
+          python3 -B -m unittest discover -s scripts -p test_staging_parent_chain_v6.py -v
+          echo 'SOURCE_ONLY_NO_CUSTOMER_MUTATION=PASS'
