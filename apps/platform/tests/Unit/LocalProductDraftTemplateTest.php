@@ -140,4 +140,25 @@ final class LocalProductDraftTemplateTest extends TestCase
 
         self::assertSame('KMJ CineCore 2.0', $draft['name']);
     }
+
+    public function test_multiline_labeled_name_does_not_absorb_description_field(): void
+    {
+        $draft = (new LocalProductDraftTemplate)->fromBrief(
+            "Product name: KMJ CineCore 2.1\nDescription: proposed stereo playback software."
+        );
+
+        self::assertSame('KMJ CineCore 2.1', $draft['name']);
+        self::assertStringContainsString('Description: proposed stereo playback', $draft['description']);
+    }
+
+    public function test_windows_multiline_name_stops_before_features_field(): void
+    {
+        $draft = (new LocalProductDraftTemplate)->fromBrief(
+            "Name: CineCore v2.0\r\nFeatures: proposed camera-assisted calibration."
+        );
+
+        self::assertSame('CineCore v2.0', $draft['name']);
+        self::assertStringContainsString('Features: proposed camera-assisted', $draft['description']);
+    }
+
 }
