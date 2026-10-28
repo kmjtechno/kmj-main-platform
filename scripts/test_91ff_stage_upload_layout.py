@@ -85,6 +85,8 @@ class StageStorageLayoutSafety(unittest.TestCase):
     def test_v3_rejects_world_writable_and_untrusted_root_parent(self):
         self.assert_blocked(v3_receipt(SHARED_MODE="777"),
                             "SHARED_ROOT_POLICY_UNSAFE")
+        self.assert_blocked(v3_receipt(SHARED_MODE="750"),
+                            "SHARED_ROOT_POLICY_UNSAFE")
         self.assert_blocked(v3_receipt(SHARED_UID="123", SHARED_MODE="755"),
                             "SHARED_ROOT_POLICY_UNSAFE")
 
