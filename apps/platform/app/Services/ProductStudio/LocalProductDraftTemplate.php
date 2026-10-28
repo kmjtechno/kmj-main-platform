@@ -17,6 +17,13 @@ final class LocalProductDraftTemplate
         $clean = trim((string) preg_replace('/[\x00-\x1f\x7f]+/u', ' ', strip_tags($brief)));
         $clean = trim((string) preg_replace('/\s+/u', ' ', $clean));
         $first = preg_split('/[.!?\n]/u', $clean, 2)[0] ?? $clean;
+        // Common form field labels are not official names.
+        // "Product name: CineCore" must yield "CineCore", never "Product name".
+        // Generic category headings should not pollute a descriptive fallback.
+        if (preg_match('/^(?:product\s+(?:name|title)|name|title)\s*:\s*(.+)$/iu', $first, $label) === 1
+            || preg_match('/^(?:product|service|software|app|application|solution|platform|concept|idea|project|description|overview|features|summary)\s*:\s*(.+)$/iu', $first, $label) === 1) {
+            $first = trim($label[1]);
+        }
         // Conservative identity hints before a description, never AI or factual claims.
         // Support "KMJ Calibration Studio is ...", "KMJ CineCore: ..." and
         // "KMJ CineCore — ..." without promoting the description into the title.
