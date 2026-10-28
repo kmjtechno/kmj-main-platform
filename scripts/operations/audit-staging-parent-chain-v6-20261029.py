@@ -93,7 +93,39 @@ def snapshot_chain() -> list[dict[str, object]]:
             os.close(fd)
 
 
-def assess(rows: list[dict[str, object]], stage_uid: int) -> dict[str, object]:
+def mount_context() -> dict[str, object]:
+    """Check explicit parent/shared mountpoints, including same-device bind mounts.
+
+    Mountinfo is only a read-only diagnostic. It does not authorize copying.
+    """
+    try:
+        with open("/proc/self/mountinfo", "r", encoding="utf-8") as stream:
+            data = stream.read(1_048_577)
+        if len(data) > 1_048_576:
+            raise AuditBlocked("MOUNTINFO_OVERSIZED")
+        points = set()
+        for line in data.splitlines():
+            if " - " not in line:
+                raise AuditBlocked("MOUNTINFO_MALFORMED")
+            left = line.split(" - ", 1)[0].split()
+            if len(left) < 5:
+                raise AuditBlocked("MOUNTINFO_MALFORMED")
+            points.add(left[4])
+        return {
+            "mountinfo_checked": True,
+            "stage_parent_explicit_mount": "/home/kmjstage" in points,
+            "shared_explicit_mount": "/home/kmjstage/shared" in points,
+        }
+    except (OSError, UnicodeError, AuditBlocked):
+        return {
+            "mountinfo_checked": False,
+            "stage_parent_explicit_mount": None,
+            "shared_explicit_mount": None,
+        }
+
+
+def assess(rows: list[dict[str, object]], stage_uid: int,
+           mount: dict[str, object] | None = None) -> dict[str, object]:
     """Pure fail-closed interpretation, suitable for offline negative tests."""
     if len(rows) != 3:
         raise AuditBlocked("INCOMPLETE_CHAIN")
@@ -109,7 +141,16 @@ def assess(rows: list[dict[str, object]], stage_uid: int) -> dict[str, object]:
     acl_status = [str(row["acl"]) for row in rows]
     all_acls_absent = all(value == "ABSENT" for value in acl_status)
     same_device = stage["dev"] == shared["dev"]
+    if mount is None:
+        mount = {"mountinfo_checked": False,
+                 "stage_parent_explicit_mount": None,
+                 "shared_explicit_mount": None}
     reasons = []
+    if not mount["mountinfo_checked"]:
+        reasons.append("MOUNTINFO_UNVERIFIED")
+    elif mount["stage_parent_explicit_mount"] or mount["shared_explicit_mount"]:
+        reasons.append("EXPLICIT_MOUNTPOINT_REVIEW")
+
     if parent_write_execute:
         reasons.append("STAGE_PARENT_WRITE_EXEC")
     if not shared_root_owned:
@@ -131,6 +172,10 @@ def assess(rows: list[dict[str, object]], stage_uid: int) -> dict[str, object]:
         "stage_parent_write_execute": parent_write_execute,
         "shared_root_owned_0755": shared_root_owned,
         "shared_parent_same_device": same_device,
+        "mountinfo_checked": mount["mountinfo_checked"],
+        "stage_parent_explicit_mount": mount["stage_parent_explicit_mount"],
+        "shared_explicit_mount": mount["shared_explicit_mount"],
+
         "acl_states": acl_status,
         "blockers": reasons,
         "migration_authorized": False,
@@ -177,7 +222,7 @@ def main() -> int:
     try:
         stage_uid = pwd.getpwnam("kmjstage").pw_uid
         rows = snapshot_chain()
-        result = assess(rows, stage_uid)
+        result = assess(rows, stage_uid, mount_context())
         result["production_pointer_exact"] = pointer_matches(PROD_LINK, EXPECTED_PROD)
         result["staging_pointer_exact"] = pointer_matches(STAGE_LINK, EXPECTED_STAGE)
         if not result["production_pointer_exact"] or not result["staging_pointer_exact"]:
