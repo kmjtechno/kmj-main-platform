@@ -136,8 +136,8 @@ export default function Dashboard({
                                 Your licensed products and features depend on
                                 your actual organization entitlements and
                                 subscription status. The public product catalog
-                                never grants access, and customers cannot
-                                change Super Admin licensing policies.
+                                never grants access, and customers cannot change
+                                Super Admin licensing policies.
                             </p>
                         </div>
 
@@ -168,9 +168,10 @@ export default function Dashboard({
                                 </h2>
                             </div>
                             <p className="text-muted-foreground mt-1 text-xs">
-                                Only licenses and features granted to your account
-                                or organizations appear here. All-product
-                                licensing controls stay with the Super Admin.
+                                Only licenses and features granted to your
+                                account or organizations appear here.
+                                All-product licensing controls stay with the
+                                Super Admin.
                             </p>
                         </div>
                     </div>
@@ -541,7 +542,9 @@ function GenericServiceCard({
                         <StatusBadge status={service.status} />
                     </div>
                     <div className="mt-3 rounded-lg border border-red-500/10 bg-red-500/5 px-3 py-2 text-xs">
-                        <div className="font-bold">Subscription feature access</div>
+                        <div className="font-bold">
+                            Subscription feature access
+                        </div>
                         <div className="text-muted-foreground mt-1 break-all">
                             {service.capability}
                         </div>
