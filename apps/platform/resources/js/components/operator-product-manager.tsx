@@ -7,6 +7,10 @@ import type { DragEvent, FormEvent } from 'react';
 import { useEffect, useState } from 'react';
 import { Link, router, useForm, usePage } from '@inertiajs/react';
 import {
+    withNewProductName,
+    withProductLifecycle,
+} from '@/lib/product-editor-state.mjs';
+import {
     ExternalLink,
     Eye,
     EyeOff,
@@ -111,18 +115,9 @@ export function CommercialProductForm({
                         value={form.data.name}
                         onChange={(event) => {
                             const name = event.target.value;
-                            form.setData('name', name);
-                            if (!slugEdited)
-                                form.setData(
-                                    'slug',
-                                    name
-                                        .toLowerCase()
-                                        .normalize('NFKD')
-                                        .replace(/[\u0300-\u036f]/g, '')
-                                        .replace(/[^a-z0-9]+/g, '-')
-                                        .replace(/^-|-$/g, '')
-                                        .slice(0, 96),
-                                );
+                            form.setData((current) =>
+                                withNewProductName(current, name, slugEdited),
+                            );
                         }}
                         placeholder="KMJ Product"
                         className="bg-background h-10 w-full rounded-lg border px-3 text-sm"
@@ -150,10 +145,9 @@ export function CommercialProductForm({
                         value={form.data.lifecycle}
                         onChange={(event) => {
                             const lifecycle = event.target.value;
-                            form.setData('lifecycle', lifecycle);
-                            if (lifecycle !== 'available') {
-                                form.setData('purchase_enabled', false);
-                            }
+                            form.setData((current) =>
+                                withProductLifecycle(current, lifecycle),
+                            );
                         }}
                         className="bg-background h-10 w-full rounded-lg border px-3 text-sm"
                     >
@@ -475,10 +469,9 @@ export function ManagedProductEditor({
                             value={form.data.lifecycle}
                             onChange={(event) => {
                                 const lifecycle = event.target.value;
-                                form.setData('lifecycle', lifecycle);
-                                if (lifecycle !== 'available') {
-                                    form.setData('purchase_enabled', false);
-                                }
+                                form.setData((current) =>
+                                    withProductLifecycle(current, lifecycle),
+                                );
                             }}
                             aria-label={`Lifecycle for ${product.name}`}
                             className="h-9 rounded-lg border border-white/10 bg-black/20 px-2 text-xs text-white"
