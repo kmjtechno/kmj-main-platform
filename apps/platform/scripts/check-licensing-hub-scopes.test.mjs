@@ -43,7 +43,7 @@ test('customers see only actual organization entitlements, never catalog-inferre
 test('developer license management retains tenant and paid-license gates', () => {
     assert.match(developerRoutes, /'license\.manage'/);
     assert.match(developerRoutes, /->whereIn\('k\.organization_id', \$tenantIds\)/);
-    assert.match(developerRoutes, /->middleware\('password\.confirm'\)/);
+    assert.match(developerRoutes, /->middleware\(\['password\.confirm', 'throttle:/);
     assert.match(developerUi, /global customer\/license policy remains/);
     assert.match(developerUi, /Super Admin-only/);
 });
