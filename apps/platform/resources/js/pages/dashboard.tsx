@@ -540,9 +540,17 @@ function GenericServiceCard({
                         </div>
                         <StatusBadge status={service.status} />
                     </div>
-                    <p className="text-muted-foreground mt-3 text-xs">
-                        {service.capability}
-                    </p>
+                    <div className="mt-3 rounded-lg border border-red-500/10 bg-red-500/5 px-3 py-2 text-xs">
+                        <div className="font-bold">Subscription feature access</div>
+                        <div className="text-muted-foreground mt-1 break-all">
+                            {service.capability}
+                        </div>
+                        <p className="text-muted-foreground mt-1">
+                            {service.status === 'active'
+                                ? 'Assigned entitlement. Product-side checks still apply.'
+                                : 'Not active: this entitlement does not grant feature access.'}
+                        </p>
+                    </div>
                     <div className="mt-4 flex flex-wrap gap-3">
                         <Link
                             href={'/products/' + service.product_slug}
