@@ -30,71 +30,99 @@ class UnsafeTree(ValueError):
     pass
 
 
-def sha256_file(path: Path) -> str:
-    before = path.lstat()
-    if not stat.S_ISREG(before.st_mode) or before.st_nlink != 1:
-        raise UnsafeTree("UNSAFE_FILE")
-    digest = hashlib.sha256()
-    with path.open("rb") as stream:
+def sha256_file(dirfd: int, name: str, expected: os.stat_result) -> str:
+    """Open by anchored directory FD, never following a mutable symlink."""
+    fd = os.open(name, os.O_RDONLY | os.O_NOFOLLOW | os.O_CLOEXEC, dir_fd=dirfd)
+    try:
+        before = os.fstat(fd)
+        if (not stat.S_ISREG(before.st_mode) or before.st_nlink != 1
+            or (before.st_dev, before.st_ino) != (expected.st_dev, expected.st_ino)):
+            raise UnsafeTree("UNSAFE_FILE")
+        digest = hashlib.sha256()
         while True:
-            part = stream.read(1024 * 1024)
+            part = os.read(fd, 1024 * 1024)
             if not part:
                 break
             digest.update(part)
-    after = path.lstat()
-    if (before.st_dev, before.st_ino, before.st_size,
-        before.st_mtime_ns, before.st_ctime_ns) != (
-        after.st_dev, after.st_ino, after.st_size,
-        after.st_mtime_ns, after.st_ctime_ns
-    ):
-        raise UnsafeTree("SOURCE_CHANGED_DURING_SCAN")
-    return digest.hexdigest()
+        after = os.fstat(fd)
+        if (before.st_dev, before.st_ino, before.st_size,
+            before.st_mtime_ns, before.st_ctime_ns) != (
+            after.st_dev, after.st_ino, after.st_size,
+            after.st_mtime_ns, after.st_ctime_ns
+        ):
+            raise UnsafeTree("SOURCE_CHANGED_DURING_SCAN")
+        return digest.hexdigest()
+    finally:
+        os.close(fd)
 
 
 def inspect_tree(base: Path, artwork: Path = ARTWORK) -> dict[str, object]:
-    """Hash relative names/content internally. Output only digest and counts."""
+    """Hash relative names/content internally; use anchored no-follow directory FDs."""
     if not base.is_dir() or base.is_symlink():
         raise UnsafeTree("TREE_ROOT_UNSAFE")
     records: list[tuple[str, str, str, int]] = []
     counts = {"files": 0, "symlinks": 0, "dirs": 0, "bytes": 0}
     visited: set[tuple[int, int]] = set()
+    directory_flags = os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW | os.O_CLOEXEC
 
-    def visit(root: Path, rel: Path) -> None:
-        root_st = root.lstat()
-        if not stat.S_ISDIR(root_st.st_mode) or root_st.st_nlink < 1:
+    def visit(dirfd: int, rel: Path) -> None:
+        current = os.fstat(dirfd)
+        if not stat.S_ISDIR(current.st_mode):
             raise UnsafeTree("DIRECTORY_UNSAFE")
-        identity = (root_st.st_dev, root_st.st_ino)
+        identity = (current.st_dev, current.st_ino)
         if identity in visited:
             raise UnsafeTree("DIRECTORY_LOOP")
         visited.add(identity)
-        for child in sorted(root.iterdir(), key=lambda p: p.name):
-            child_rel = rel / child.name
-            name = child_rel.as_posix()
-            st = child.lstat()
+        with os.scandir(dirfd) as iterator:
+            names = sorted(entry.name for entry in iterator)
+        for name in names:
+            child_rel = rel / name
+            relative_name = child_rel.as_posix()
+            st = os.stat(name, dir_fd=dirfd, follow_symlinks=False)
             mode = stat.S_IMODE(st.st_mode)
             if stat.S_ISDIR(st.st_mode):
-                counts["dirs"] += 1
-                records.append(("dir", name, "", mode))
-                visit(child, child_rel)
+                subfd = os.open(name, directory_flags, dir_fd=dirfd)
+                try:
+                    opened = os.fstat(subfd)
+                    if (opened.st_dev, opened.st_ino) != (st.st_dev, st.st_ino):
+                        raise UnsafeTree("DIRECTORY_CHANGED_DURING_SCAN")
+                    counts["dirs"] += 1
+                    records.append(("dir", relative_name, "", mode))
+                    visit(subfd, child_rel)
+                finally:
+                    os.close(subfd)
             elif stat.S_ISREG(st.st_mode):
                 counts["files"] += 1
                 counts["bytes"] += st.st_size
-                records.append(("file", name, sha256_file(child), mode))
+                records.append(("file", relative_name, sha256_file(dirfd, name, st), mode))
             elif stat.S_ISLNK(st.st_mode):
-                # Only this known artwork link may escape the isolated tree.
-                if name != "private/product-artwork":
+                # Only the exact canonical artwork link is permitted.
+                if relative_name != "private/product-artwork":
                     raise UnsafeTree("UNREVIEWED_SYMLINK")
-                if child.resolve(strict=True) != artwork.resolve(strict=True):
-                    raise UnsafeTree("ARTWORK_LINK_ESCAPE")
+                link_value = os.readlink(name, dir_fd=dirfd)
                 if not artwork.is_dir() or artwork.is_symlink():
                     raise UnsafeTree("ARTWORK_TARGET_UNSAFE")
+                # Re-resolve relative to the original parent; no data is read
+                # through this symlink and the inode is rechecked below.
+                link_path = base / child_rel
+                if (link_path.parent / link_value).resolve(strict=True) != artwork.resolve(strict=True):
+                    raise UnsafeTree("ARTWORK_LINK_ESCAPE")
+                after_link = os.stat(name, dir_fd=dirfd, follow_symlinks=False)
+                if (after_link.st_dev, after_link.st_ino,
+                    after_link.st_mtime_ns, after_link.st_ctime_ns) != (
+                    st.st_dev, st.st_ino, st.st_mtime_ns, st.st_ctime_ns
+                ):
+                    raise UnsafeTree("ARTWORK_LINK_CHANGED_DURING_SCAN")
                 counts["symlinks"] += 1
-                # Do not encode raw source-dependent symlink text. Both links
-                # must independently resolve to the same canonical artwork.
-                records.append(("link", name, "canonical-shared-artwork", mode))
+                records.append(("link", relative_name, "canonical-shared-artwork", mode))
             else:
                 raise UnsafeTree("SPECIAL_NODE")
-    visit(base, Path("."))
+
+    fd = os.open(base, directory_flags)
+    try:
+        visit(fd, Path("."))
+    finally:
+        os.close(fd)
     canonical = json.dumps(records, separators=(",", ":"), ensure_ascii=True)
     result: dict[str, object] = dict(counts)
     result["tree_sha256"] = hashlib.sha256(canonical.encode("utf-8")).hexdigest()
