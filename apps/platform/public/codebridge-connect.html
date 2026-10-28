@@ -1,0 +1,239 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex, nofollow" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'none'; connect-src 'self'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; base-uri 'none'; object-src 'none'; form-action 'none'"
+    />
+    <title>Connect your device | KMJ TECHNO CodeBridge</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        font-family: Inter, ui-sans-serif, system-ui, -apple-system, sans-serif;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        min-height: 100vh;
+        background: radial-gradient(ellipse at 65% 0%, #192e4b, #090d17 52%, #080b12);
+        color: #f3f7ff;
+      }
+      .wrap {
+        width: min(100% - 36px, 940px);
+        margin: auto;
+        padding: 38px 0 90px;
+      }
+      .head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 20px;
+        flex-wrap: wrap;
+      }
+      .brand {
+        font-weight: 800;
+        letter-spacing: 0.15em;
+      }
+      .brand strong {
+        color: #7ee6ff;
+      }
+      .subtle {
+        color: #93a8c5;
+        font-size: 12px;
+      }
+      .hero {
+        padding: 70px 0 38px;
+      }
+      .eyebrow {
+        color: #7bc9f6;
+        font-size: 12px;
+        font-weight: 700;
+        letter-spacing: 0.16em;
+        text-transform: uppercase;
+      }
+      h1 {
+        max-width: 780px;
+        margin: 14px 0;
+        font-size: clamp(36px, 6vw, 62px);
+        letter-spacing: -0.045em;
+        line-height: 1.08;
+      }
+      p {
+        max-width: 720px;
+        color: #b1c0d6;
+        line-height: 1.7;
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 16px;
+      }
+      .panel {
+        padding: 28px;
+        border: 1px solid #293a54;
+        border-radius: 20px;
+        background: rgba(19, 28, 44, 0.85);
+      }
+      .pill {
+        display: inline-block;
+        padding: 7px 11px;
+        border: 1px solid #425c77;
+        border-radius: 99px;
+        color: #c7d9ef;
+        font-size: 12px;
+      }
+      h2 {
+        margin: 20px 0 8px;
+        font-size: 21px;
+      }
+      .download {
+        display: inline-block;
+        margin-top: 17px;
+        padding: 14px 18px;
+        border-radius: 10px;
+        background: #85d2fb;
+        color: #081724;
+        font-size: 14px;
+        font-weight: 750;
+        text-decoration: none;
+      }
+      .download:hover {
+        background: #b0e5ff;
+      }
+      .status {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-size: 14px;
+        font-weight: 700;
+      }
+      .dot {
+        width: 10px;
+        height: 10px;
+        flex-shrink: 0;
+        border-radius: 50%;
+        background: #e7af69;
+      }
+      .note,
+      footer {
+        color: #8da3bf;
+        font-size: 13px;
+        line-height: 1.7;
+      }
+      ol {
+        padding-left: 19px;
+        color: #c3d1e3;
+        line-height: 2.1;
+      }
+      footer {
+        margin-top: 30px;
+      }
+    </style>
+  </head>
+  <body>
+    <main class="wrap">
+      <header class="head">
+        <div class="brand">KMJ <strong>TECHNO</strong> / CODEBRIDGE</div>
+        <div class="subtle">First-party HTTPS · No external installer download</div>
+      </header>
+      <section class="hero">
+        <div class="eyebrow">Connected development · Windows P520</div>
+        <h1>One click. Your device. Your projects.</h1>
+        <p>
+          Connect your approved workstation through the official KMJ domain.
+          Installer delivery, browser pairing and agent gateway use
+          <strong>kmjtechno.com</strong>. Existing local runtime is reused.
+        </p>
+      </section>
+      <div class="grid">
+        <section class="panel">
+          <div class="pill">P520 workstation</div>
+          <h2>Connect your Windows PC</h2>
+          <p>
+            This installer is pinned to the approved P520 workstation. It will
+            not enroll another computer, reuse another device's credentials or
+            operate calibration hardware.
+          </p>
+          <a class="download" href="/KMJ-CodeBridge-P520-Connect.cmd" download>
+            Download one-click connector
+          </a>
+          <p class="note">
+            Run as your normal Windows user. Approve the device and project
+            through your authenticated KMJ account when prompted.
+          </p>
+        </section>
+        <section class="panel">
+          <div class="pill">Public pairing compatibility</div>
+          <h2>Live pairing service</h2>
+          <div id="status" class="status" role="status" aria-live="polite">
+            <span class="dot"></span>
+            <span id="status-label">Checking pairing configuration…</span>
+          </div>
+          <p id="status-detail" class="note">
+            This checks server compatibility only, not access to your device.
+          </p>
+          <h2>Connection steps</h2>
+          <ol>
+            <li>Download and run the official connector</li>
+            <li>Approve the device and project on KMJ's secure website</li>
+            <li>Confirm an authenticated CodeBridge READY heartbeat</li>
+          </ol>
+        </section>
+      </div>
+      <footer>
+        If the server requires an update, do not repeatedly attempt pairing.
+        Your credentials, local project files and hardware remain unchanged.
+      </footer>
+    </main>
+    <script>
+      (async () => {
+        const label = document.getElementById("status-label");
+        const detail = document.getElementById("status-detail");
+        const dot = document.querySelector(".dot");
+        const show = (heading, message, ready) => {
+          label.textContent = heading;
+          detail.textContent = message;
+          dot.style.background = ready ? "#7be2b4" : "#e7af69";
+        };
+        try {
+          const response = await fetch("/api/codebridge/v1/device-enrollments/readiness", {
+            method: "GET",
+            cache: "no-store",
+            credentials: "omit",
+            redirect: "error",
+            headers: { Accept: "application/json" },
+          });
+          if (response.status === 404) {
+            show("Server update required", "The current website has not deployed the compatible pairing route.", false);
+            return;
+          }
+          if (response.status === 503) {
+            show("Pairing unavailable", "Server configuration is not ready for new devices.", false);
+            return;
+          }
+          if (response.status !== 200) {
+            show("Pairing service unavailable", "A safe connection cannot begin. HTTP " + response.status, false);
+            return;
+          }
+          const data = await response.json();
+          if (data.protocol !== 2 || data.pairing_config !== "ready") {
+            show("Compatibility check failed", "The readiness response did not match the required protocol.", false);
+            return;
+          }
+          show(
+            "Server configuration ready",
+            "Owner approval and an authenticated agent heartbeat are still required.",
+            true,
+          );
+        } catch {
+          show("Cannot verify server", "Check the KMJ HTTPS service before starting pairing.", false);
+        }
+      })();
+    </script>
+  </body>
+</html>
