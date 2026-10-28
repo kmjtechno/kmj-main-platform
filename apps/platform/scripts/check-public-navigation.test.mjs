@@ -38,8 +38,28 @@ for (const [name, before, after] of [
     ],
     [
         'menu controls',
-        "aria-controls={open ? 'public-mobile-nav' : undefined}",
         'aria-controls="public-mobile-nav"',
+        'aria-controls="unrelated-nav"',
+    ],
+    [
+        'static menu controls',
+        'aria-controls="public-mobile-nav"',
+        'aria-controls="not-mobile-nav"',
+    ],
+    [
+        'Escape focus restoration',
+        'menuButton.current?.focus()',
+        '/* focus not restored */',
+    ],
+    [
+        'menu button type',
+        'type="button"',
+        'type="submit"',
+    ],
+    [
+        'active navigation page semantics',
+        'aria-current={',
+        'aria-invalid={',
     ],
 ]) {
     void test('navigation guards reject a missing ' + name, () => {
