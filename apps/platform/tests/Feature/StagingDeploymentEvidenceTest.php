@@ -47,7 +47,7 @@ final class StagingDeploymentEvidenceTest extends TestCase
         }
 
         self::assertNull($method->invoke(null, str_repeat('z', 40)."\n", $valid));
-        self::assertNull($method->invoke(null, $sha."\\nEXTRA", $valid));
+        self::assertNull($method->invoke(null, $sha.'\\nEXTRA', $valid));
     }
 
     public function test_production_host_does_not_receive_deployment_sha_header(): void
