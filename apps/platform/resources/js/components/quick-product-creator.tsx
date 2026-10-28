@@ -29,11 +29,13 @@ export default function QuickProductCreator({
     const create = async (localOnly: boolean) => {
         if (inFlight.current) return;
         inFlight.current = true;
-        if (localOnly) localRequestId.current ??= crypto.randomUUID();
-        else requestId.current ??= crypto.randomUUID();
         setBusy(true);
         setNotice('');
         try {
+            // UUID generation can fail in restricted webviews. Never leave
+            // the single-flight lock stuck outside the guaranteed finally.
+            if (localOnly) localRequestId.current ??= crypto.randomUUID();
+            else requestId.current ??= crypto.randomUUID();
             const result = await studioRequest(
                 '/operator/products/from-brief',
                 {
