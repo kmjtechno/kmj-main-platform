@@ -27,6 +27,35 @@ final class StagingDeploymentEvidence
 
     private function currentRepositorySha(): ?string
     {
+        // Production/customer origins never expose this header. For staging,
+        // a root-owned immutable release attestation is the preferred source.
+        // Reading a git HEAD as www-data requires opening repository metadata
+        // to the web-server account and fails with restricted candidate builds.
+        $attestation = base_path('public/build/.kmj-deploy-sha');
+
+        if (is_file($attestation) || is_link($attestation)) {
+            if (is_link($attestation) || ! is_file($attestation) || ! is_readable($attestation)) {
+                return null;
+            }
+
+            $stat = @stat($attestation);
+            if (! is_array($stat) || (int) ($stat['uid'] ?? -1) !== 0
+                || (int) ($stat['nlink'] ?? -1) !== 1
+                || ((int) ($stat['mode'] ?? 0) & 0022) !== 0
+                || (int) ($stat['size'] ?? 0) < 40
+                || (int) ($stat['size'] ?? 0) > 41) {
+                return null;
+            }
+
+            $data = @file_get_contents($attestation);
+
+            return is_string($data) && preg_match('/\\A[0-9a-f]{40}\\n?\\z/D', $data) === 1
+                ? trim($data)
+                : null;
+        }
+
+        // Only local/uninstalled staging fall back to legacy .git detection;
+        // no privileged file permissions are modified to support fallback.
         $gitPath = dirname(base_path(), 2).'/.git';
         $gitDir = $gitPath;
 
