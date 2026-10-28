@@ -80,16 +80,16 @@ class AutoPublishSafetyTest(unittest.TestCase):
         self.assertEqual(verdict(evidence=copy_), "BLOCKED_ACCEPTANCE_SCHEMA")
 
     def test_postactivation_requires_exact_https_deploy_sha(self):
-        good = "HTTP/2 200\\r\\nx-kmj-deploy-sha: " + SHA + (
-            "\\r\\ncontent-type: text/html\\r\\n\\r\\nKMJ_HTTP_STATUS=200")
+        good = "HTTP/2 200\r\nx-kmj-deploy-sha: " + SHA + (
+            "\r\ncontent-type: text/html\r\n\r\nKMJ_HTTP_STATUS=200")
         self.assertTrue(mod.exact_https_sha_ok(good, SHA))
         for bad in (
             good.replace(SHA, "c" * 40),
             good.replace("HTTP/2 200", "HTTP/2 302"),
             good.replace("KMJ_HTTP_STATUS=200", "KMJ_HTTP_STATUS=404"),
             good.replace("x-kmj-deploy-sha:", "x-other-header:"),
-            good.replace("content-type:", "x-kmj-deploy-sha: " + SHA + "\\r\\ncontent-type:"),
-            "HTTP/1.1 200\\r\\n\\r\\n" + good,
+            good.replace("content-type:", "x-kmj-deploy-sha: " + SHA + "\r\ncontent-type:"),
+            "HTTP/1.1 200\r\n\r\n" + good,
             "",
         ):
             self.assertFalse(mod.exact_https_sha_ok(bad, SHA))
