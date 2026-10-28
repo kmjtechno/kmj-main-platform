@@ -24,6 +24,29 @@ class P520DomainConnectionTest(unittest.TestCase):
         self.assertIn("0a1fcd6804a70e915ecf66df0d4a7786f5270f02",self.ps)
         self.assertLess(self.cmd.index("Get-FileHash"),self.cmd.index("Unblock-File"))
 
+    def test_staged_local_runtime_discovery_is_precise(self):
+        import re
+        pattern = r"^CodeBridge-HomeOffice(?:-[a-fA-F0-9-]+|-stage-[a-fA-F0-9]{32})?$"
+        self.assertIn(pattern, self.ps)
+        for folder in (
+            "CodeBridge-HomeOffice",
+            "CodeBridge-HomeOffice-0a1fcd6804a70e915ecf66df0d4a7786f5270f02",
+            "CodeBridge-HomeOffice-stage-81b63009c6f74e9dae97ac15fd9515ca",
+        ):
+            self.assertIsNotNone(re.fullmatch(pattern, folder))
+        for folder in (
+            "CodeBridge-HomeOffice-stage",
+            "CodeBridge-HomeOffice-stage-other",
+            "CodeBridge-HomeOffice-stage-" + "a" * 31,
+            "CodeBridge-HomeOffice-stage-" + "a" * 33,
+            "CodeBridge-HomeOffice-stage-" + "z" * 32,
+            "CodeBridge-HomeOffice-stage-" + "a" * 32 + "-extra",
+        ):
+            self.assertIsNone(re.fullmatch(pattern, folder))
+        self.assertIn("MULTIPLE_PINNED_RUNTIMES_NEED_REVIEW", self.ps)
+        self.assertIn("REPARSE_POINT_DENIED", self.ps)
+        self.assertIn("PINNED_LOCAL_RUNTIME_NOT_FOUND", self.ps)
+
     def test_only_official_domain_delivery(self):
         self.assertIn("https://kmjtechno.com/KMJ-CodeBridge-P520-Connect.ps1",self.cmd)
         self.assertIn("/KMJ-CodeBridge-P520-Connect.cmd",self.html)
