@@ -44,8 +44,11 @@ target="$(readlink -f "$conf")"
 nginx -t >/dev/null 2>&1 || fail NGINX_CONFIG
 
 old_upload="$(readlink -f "$oldapp/storage/app")"
+# A previous release directory is disposable: never make new uploads depend on
+# its lifetime. Require an independently provisioned, persistent shared target.
 case "$old_upload" in
-  /home/kmjstage/releases/*/apps/platform/storage/app|/home/kmjstage/shared/*) ;;
+  /home/kmjstage/shared/*) ;;
+  /home/kmjstage/releases/*) fail UPLOAD_RELEASE_BOUND ;;
   *) fail UPLOAD_TARGET ;;
 esac
 [[ -d "$old_upload" ]] || fail UPLOAD_MISSING
@@ -64,7 +67,8 @@ if [[ -L "$oldapp/public/storage" ]]; then
   public_action=link
   old_public="$(readlink -f "$oldapp/public/storage")"
   case "$old_public" in
-    /home/kmjstage/releases/*/apps/platform/storage/app/public|/home/kmjstage/shared/*) ;;
+    /home/kmjstage/shared/*) ;;
+    /home/kmjstage/releases/*) fail PUBLIC_UPLOAD_RELEASE_BOUND ;;
     *) fail PUBLIC_UPLOAD_TARGET ;;
   esac
   [[ -d "$old_public" ]] || fail OLD_PUBLIC_UPLOAD_MISSING
