@@ -1046,7 +1046,9 @@ try {
                                 (button) => button === document.activeElement,
                             ))
                     )
-                        errors.push('Owner mobile menu Escape focus not restored');
+                        errors.push(
+                            'Owner mobile menu Escape focus not restored',
+                        );
                 }
             }
             if (name === 'landing') {
