@@ -115,7 +115,7 @@ void test('unavailable browser APIs fail closed', async () => {
     }
 });
 
-void test('product page has accessible status and synchronous click guard', () => {
+void test('product share has accessible status and click guard', () => {
     const source = readFileSync(
         'resources/js/components/public/product-share.tsx',
         'utf8',
