@@ -22,6 +22,20 @@ def rows(stage_mode=0o755, stage_uid=995, shared_uid=0, acl="ABSENT", shared_dev
 
 
 class ParentChainV6Contract(unittest.TestCase):
+    def test_untrusted_home_parent_owner_is_explicitly_blocked(self):
+        chain = rows(stage_mode=0o555)
+        chain[0]["uid"] = 995
+        result = module.assess(chain, 995)
+        self.assertIn("HOME_PARENT_NOT_ROOT_OWNED", result["blockers"])
+        self.assertFalse(result["migration_authorized"])
+
+    def test_unexpected_stage_parent_owner_is_explicitly_blocked(self):
+        chain = rows(stage_mode=0o555, stage_uid=996)
+        result = module.assess(chain, 995)
+        self.assertFalse(result["stage_parent_uid_matches"])
+        self.assertIn("STAGE_PARENT_OWNER_MISMATCH", result["blockers"])
+        self.assertFalse(result["staging_switch_authorized"])
+
     def test_stage_owned_parent_can_replace_root_owned_child(self):
         result = module.assess(rows(stage_mode=0o755), 995)
         self.assertTrue(result["stage_parent_write_execute"])
