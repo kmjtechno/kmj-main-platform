@@ -16,8 +16,13 @@ final class LocalProductDraftTemplate
         // The submitted brief is data, not a command or evidence of real features.
         $clean = trim((string) preg_replace('/[\x00-\x1f\x7f]+/u', ' ', strip_tags($brief)));
         $clean = trim((string) preg_replace('/\s+/u', ' ', $clean));
+        // Keep the first owner-entered line separate from following form fields.
+        // $clean is single-line for copy, but cannot identify a multiline name.
+        $firstLine = preg_split('/\R/u', trim(strip_tags($brief)), 2)[0] ?? $clean;
+        $firstLine = trim((string) preg_replace('/[\x00-\x1f\x7f]+/u', ' ', $firstLine));
+        $firstLine = trim((string) preg_replace('/\s+/u', ' ', $firstLine));
         // Preserve numeric version dots (e.g. CineCore 2.1) inside the name.
-        $first = preg_split('/(?<!\p{N})\.|\.(?!\p{N})|[!?\n]/u', $clean, 2)[0] ?? $clean;
+        $first = preg_split('/(?<!\p{N})\.|\.(?!\p{N})|[!?\n]/u', $firstLine, 2)[0] ?? $firstLine;
         // Common form field labels are not official names.
         // "Product name: CineCore" must yield "CineCore", never "Product name".
         // Generic category headings should not pollute a descriptive fallback.
