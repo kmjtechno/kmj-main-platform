@@ -16,7 +16,8 @@ final class LocalProductDraftTemplate
         // The submitted brief is data, not a command or evidence of real features.
         $clean = trim((string) preg_replace('/[\x00-\x1f\x7f]+/u', ' ', strip_tags($brief)));
         $clean = trim((string) preg_replace('/\s+/u', ' ', $clean));
-        $first = preg_split('/[.!?\n]/u', $clean, 2)[0] ?? $clean;
+        // Preserve numeric version dots (e.g. CineCore 2.1) inside the name.
+        $first = preg_split('/(?<!\p{N})\.|\.(?!\p{N})|[!?\n]/u', $clean, 2)[0] ?? $clean;
         // Common form field labels are not official names.
         // "Product name: CineCore" must yield "CineCore", never "Product name".
         // Generic category headings should not pollute a descriptive fallback.
@@ -43,7 +44,9 @@ final class LocalProductDraftTemplate
         }
         $words = preg_split('/\s+/u', trim($identity)) ?: [];
         $name = implode(' ', array_slice($words, 0, 9));
-        $name = trim((string) preg_replace('/[^\p{L}\p{N}\- ]/u', ' ', $name));
+        // Preserve dots only between digits, not trailing sentence punctuation.
+        $name = (string) preg_replace('/(?<!\p{N})\.|\.(?!\p{N})/u', ' ', $name);
+        $name = trim((string) preg_replace('/[^\p{L}\p{N}\-. ]/u', ' ', $name));
         // Removing a colon/dash can leave double spaces in a fallback name.
         $name = trim((string) preg_replace('/\s+/u', ' ', $name));
         $name = (string) preg_replace('/\binteactive\b/iu', 'Interactive', $name);
