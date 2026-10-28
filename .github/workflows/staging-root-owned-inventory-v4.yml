@@ -1,0 +1,39 @@
+name: Staging Root Owned Read Only Inventory Contract
+on:
+  pull_request:
+    paths:
+      - 'scripts/operations/audit-staging-shared-root-v4-20261028.sh'
+      - 'scripts/test_staging_root_owned_inventory_v4.py'
+      - '.github/workflows/staging-root-owned-inventory-v4.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/operations/audit-staging-shared-root-v4-20261028.sh'
+      - 'scripts/test_staging_root_owned_inventory_v4.py'
+      - '.github/workflows/staging-root-owned-inventory-v4.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  safety:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 4
+    steps:
+      - name: Checkout exact reviewed source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - name: Validate pure inventory and host-root fail-closed behavior
+        run: |
+          set -Eeuo pipefail
+          bash -n scripts/operations/audit-staging-shared-root-v4-20261028.sh
+          python3 -B -m unittest discover -s scripts -p test_staging_root_owned_inventory_v4.py -v
+          if bash scripts/operations/audit-staging-shared-root-v4-20261028.sh > /tmp/kmj-v4-negative.txt 2>&1; then
+            echo 'BLOCKED: untrusted runner executed root-only inventory'
+            exit 1
+          fi
+          grep -Fq 'KMJ_STAGE_INVENTORY_V4=BLOCKED_HOST_OR_ARGS' /tmp/kmj-v4-negative.txt
+          echo 'V4_INVENTORY_SOURCE_CONTRACT=PASS'
+          echo 'LIVE_STAGE_OR_PRODUCTION=UNCHANGED'
