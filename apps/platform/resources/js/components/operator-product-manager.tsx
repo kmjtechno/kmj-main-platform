@@ -146,8 +146,8 @@ export function CommercialProductForm({
                         onChange={(event) => {
                             const lifecycle = event.target.value;
                             form.setData((current) =>
-                                    withProductLifecycle(current, lifecycle),
-                                );
+                                withProductLifecycle(current, lifecycle),
+                            );
                         }}
                         className="bg-background h-10 w-full rounded-lg border px-3 text-sm"
                     >
