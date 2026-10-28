@@ -5,11 +5,14 @@ export function assertPublicNavigation(header) {
         header,
         /aria-label=\{open \? ["']Close navigation["'] : ["']Open navigation["']\}/,
     );
-    assert.match(
-        header,
-        /aria-controls=\{open \? ["']public-mobile-nav["'] : undefined\}/,
-    );
+    assert.match(header, /aria-controls="public-mobile-nav"/);
     assert.match(header, /aria-expanded=\{open\}/);
+    assert.match(header, /type="button"/);
+    assert.match(header, /ref=\{menuButton\}/);
+    assert.match(header, /onKeyDown=\{\(event\) => \{/);
+    assert.match(header, /event\.key === 'Escape'/);
+    assert.match(header, /menuButton\.current\?\.focus\(\)/);
+    assert.match(header, /aria-current=\{/);
     assert.match(header, /id="public-mobile-nav"/);
     assert.match(header, /aria-label="Primary navigation"/);
     assert.match(header, /className=\{open \? ['"]is-open['"] : ['"]['"]\}/);
