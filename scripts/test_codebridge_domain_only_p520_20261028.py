@@ -6,7 +6,7 @@ import unittest
 
 ROOT=Path(__file__).resolve().parents[1]
 PUBLIC=ROOT/"apps/platform/public"
-PIN="07a9478695172587f01bc28076880a845cd7b7917ec6025a13c9316abe0a3e11"
+PIN="ebe4a049b107a6cde710ffd65f5f32140c4bf8763e9535be4d1cfb63512f2495"
 
 class P520DomainConnectionTest(unittest.TestCase):
     @classmethod
