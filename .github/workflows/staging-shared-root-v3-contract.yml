@@ -1,0 +1,31 @@
+name: Staging Shared Root V3 Safety Contract
+on:
+  pull_request:
+    paths:
+      - 'scripts/operations/assess_stage_shared_root_v3.py'
+      - 'scripts/test_stage_shared_root_v3.py'
+      - 'docs/operations/STAGING_SHARED_ROOT_V3_ADMISSION_20261028.md'
+      - '.github/workflows/staging-shared-root-v3-contract.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  fail-closed:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - name: Offline classified receipt negative tests
+        run: |
+          set -Eeuo pipefail
+          python3 -B -m py_compile scripts/operations/assess_stage_shared_root_v3.py
+          python3 -B -m unittest discover -s scripts -p test_stage_shared_root_v3.py -v
+          if python3 -B scripts/operations/assess_stage_shared_root_v3.py /nonexistent/receipt; then
+            echo 'ERROR: absent receipt accepted'
+            exit 1
+          fi
+          echo 'SOURCE_ONLY_NO_HOST_MUTATION=PASS'
