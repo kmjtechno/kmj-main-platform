@@ -26,6 +26,17 @@ EXPECTED = {
 }
 CANONICAL = "/home/kmjstage/shared/kmj-platform-uploads"
 
+V3_SCHEMA = "KMJ_STAGE_SHARED_ROOT_V3"
+V3_EXPECTED = {
+    "SCHEMA", "ROOT_CHECK", "KMJSTAGE_UID", "SHARED_KIND",
+    "SHARED_IS_SYMLINK", "SHARED_IS_DIRECTORY", "SHARED_UID", "SHARED_GID",
+    "SHARED_MODE", "SHARED_OWNER_IS_KMJSTAGE", "SHARED_RESOLVED_SCOPE",
+    "SHARED_PARENT_KIND", "SHARED_PARENT_UID", "OLD_UPLOAD_SCOPE",
+    "OLD_UPLOAD_KIND", "PRODUCTION_POINTER", "CUSTOMER_FILES_MODIFIED",
+    "STAGING_POINTER_MODIFIED", "PRODUCTION_MODIFIED",
+    "OWNERSHIP_OR_PERMISSIONS_MODIFIED",
+}
+
 
 def blocked(reason: str) -> dict[str, object]:
     return {
@@ -37,25 +48,86 @@ def blocked(reason: str) -> dict[str, object]:
     }
 
 
-def parse_receipt(raw: str) -> dict[str, str]:
-    if len(raw.encode("utf-8")) > 8192 or "\x00" in raw:
+def parse_fields(raw: str, expected: set[str]) -> dict[str, str]:
+    """Require one bounded, unambiguous, sanitized exact-field receipt."""
+    if len(raw.encode("utf-8")) > 8192 or "\\x00" in raw:
         raise ValueError("RECEIPT_SIZE_OR_CONTROL")
     fields: dict[str, str] = {}
     for line in raw.splitlines():
         if not line or "=" not in line:
             raise ValueError("MALFORMED_LINE")
         key, value = line.split("=", 1)
-        if key not in EXPECTED or key in fields or not value or any(
+        if key not in expected or key in fields or not value or any(
             ord(char) < 32 or ord(char) == 127 for char in value
         ):
             raise ValueError("UNKNOWN_DUPLICATE_OR_CONTROL_FIELD")
         fields[key] = value
-    if fields.keys() != EXPECTED:
+    if fields.keys() != expected:
         raise ValueError("INCOMPLETE_FIELDS")
     return fields
 
 
+def parse_receipt(raw: str) -> dict[str, str]:
+    return parse_fields(raw, EXPECTED)
+
+
+def evaluate_v3(raw: str) -> dict[str, object]:
+    """Recognize a secured root-owned parent WITHOUT authorizing migration."""
+    try:
+        f = parse_fields(raw, V3_EXPECTED)
+        if (
+            f["SCHEMA"] != V3_SCHEMA
+            or f["PRODUCTION_POINTER"] != "UNCHANGED"
+            or any(f[key] != "NO" for key in (
+                "CUSTOMER_FILES_MODIFIED", "STAGING_POINTER_MODIFIED",
+                "PRODUCTION_MODIFIED", "OWNERSHIP_OR_PERMISSIONS_MODIFIED",
+            ))
+            or f["ROOT_CHECK"] not in ("PASS", "BLOCKED")
+        ):
+            return blocked("IDENTITY_OR_READ_ONLY_INVARIANT")
+        uid = f["KMJSTAGE_UID"]
+        if not re.fullmatch(r"[0-9]{1,10}", uid) or uid == "0":
+            return blocked("UNTRUSTED_STAGE_UID")
+        if not (
+            f["SHARED_KIND"] == "directory"
+            and f["SHARED_IS_SYMLINK"] == "NO"
+            and f["SHARED_IS_DIRECTORY"] == "YES"
+            and f["SHARED_RESOLVED_SCOPE"] == "EXACT"
+            and f["SHARED_PARENT_KIND"] == "directory"
+            and f["SHARED_PARENT_UID"] == uid
+        ):
+            return blocked("SHARED_ROOT_TOPOLOGY_UNSAFE")
+        # A secure root:root 0755 shared parent is acceptable; do NOT chown it.
+        # Existing stage-owned parents are also accepted only with safe modes.
+        root_owned = (
+            f["SHARED_UID"] == "0" and f["SHARED_GID"] == "0"
+            and f["SHARED_MODE"] in ("755", "750", "700")
+        )
+        stage_owned = (
+            f["SHARED_UID"] == uid
+            and f["SHARED_OWNER_IS_KMJSTAGE"] == "YES"
+            and f["SHARED_MODE"] in ("755", "750", "700")
+        )
+        if not (root_owned or stage_owned):
+            return blocked("SHARED_ROOT_POLICY_UNSAFE")
+        if f["OLD_UPLOAD_KIND"] not in ("directory", "symlink"):
+            return blocked("UNTRUSTED_OLD_UPLOAD_KIND")
+        if f["OLD_UPLOAD_SCOPE"] == "RELEASE_BOUND":
+            return blocked("RELEASE_BOUND_UPLOADS_REQUIRE_LOSSLESS_MIGRATION")
+        if f["OLD_UPLOAD_SCOPE"] == "PERSISTENT_SHARED":
+            return blocked("OWNER_APPROVED_STAGE_AND_RECOVERY_GATES_PENDING")
+        return blocked("UNVERIFIED_UPLOAD_SCOPE")
+    except (ValueError, UnicodeError):
+        return blocked("INVALID_OR_MISSING_RECEIPT")
+
+
+def parse_receipt(raw: str) -> dict[str, str]:
+    return parse_fields(raw, EXPECTED)
+
+
 def evaluate(raw: str) -> dict[str, object]:
+    if raw.startswith("SCHEMA=" + V3_SCHEMA + "\\n"):
+        return evaluate_v3(raw)
     try:
         f = parse_receipt(raw)
         if (
