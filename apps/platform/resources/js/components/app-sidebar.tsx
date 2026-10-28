@@ -103,7 +103,7 @@ export function AppSidebar() {
                   icon: CreditCard,
               },
               {
-                  title: 'Entitlements & Licensing',
+                  title: 'KMJ Licensing Hub · Owner',
                   href: '/operator/kslp',
                   icon: KeyRound,
               },

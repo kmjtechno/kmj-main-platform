@@ -127,16 +127,17 @@ export default function Dashboard({
                         <div className="max-w-2xl">
                             <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-red-500/15 bg-red-500/5 px-3 py-1 text-xs font-semibold text-red-500">
                                 <span className="h-1.5 w-1.5 rounded-full bg-red-500" />
-                                KMJ TECHNO · Secure customer access
+                                KMJ Licensing Hub · Customer access
                             </div>
                             <h1 className="text-3xl font-black tracking-tight sm:text-4xl">
                                 My KMJ Services
                             </h1>
                             <p className="text-muted-foreground mt-3 max-w-xl text-sm leading-6">
-                                Your licensed services appear separately from
-                                the KMJ product catalog. Products you can
-                                explore are not automatically activated on your
-                                account.
+                                Your licensed products and features depend on
+                                your actual organization entitlements and
+                                subscription status. The public product catalog
+                                never grants access, and customers cannot change
+                                Super Admin licensing policies.
                             </p>
                         </div>
 
@@ -167,8 +168,10 @@ export default function Dashboard({
                                 </h2>
                             </div>
                             <p className="text-muted-foreground mt-1 text-xs">
-                                Service data is isolated to access granted to
-                                your account.
+                                Only licenses and features granted to your
+                                account or organizations appear here.
+                                All-product licensing controls stay with the
+                                Super Admin.
                             </p>
                         </div>
                     </div>
@@ -214,7 +217,7 @@ export default function Dashboard({
                             </span>
                             <div>
                                 <h2 className="font-bold">
-                                    Developer Apps &amp; Licensing
+                                    KMJ Licensing Hub · Developer Apps
                                 </h2>
                                 <p className="text-muted-foreground mt-1 max-w-2xl text-xs leading-5">
                                     Register apps, review tenant-scoped customer
@@ -538,9 +541,19 @@ function GenericServiceCard({
                         </div>
                         <StatusBadge status={service.status} />
                     </div>
-                    <p className="text-muted-foreground mt-3 text-xs">
-                        {service.capability}
-                    </p>
+                    <div className="mt-3 rounded-lg border border-red-500/10 bg-red-500/5 px-3 py-2 text-xs">
+                        <div className="font-bold">
+                            Subscription feature access
+                        </div>
+                        <div className="text-muted-foreground mt-1 break-all">
+                            {service.capability}
+                        </div>
+                        <p className="text-muted-foreground mt-1">
+                            {service.status === 'active'
+                                ? 'Assigned entitlement. Product-side checks still apply.'
+                                : 'Not active: this entitlement does not grant feature access.'}
+                        </p>
+                    </div>
                     <div className="mt-4 flex flex-wrap gap-3">
                         <Link
                             href={'/products/' + service.product_slug}
@@ -652,7 +665,7 @@ function OwnerProductsPanel({ products }: { products: OwnerProduct[] }) {
                         href="/operator/kslp"
                         className="hover:bg-accent border-border/80 bg-card/60 inline-flex min-h-11 items-center gap-2 rounded-xl border px-5 text-sm font-semibold transition"
                     >
-                        Licensing Center <KeyRound className="size-4" />
+                        Licensing Hub · Owner <KeyRound className="size-4" />
                     </Link>
                 </div>
             </div>

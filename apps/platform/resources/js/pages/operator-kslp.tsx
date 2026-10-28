@@ -126,11 +126,11 @@ export default function OperatorKslp({
     };
     return (
         <>
-            <Head title="Licensing Center · Super Admin" />
+            <Head title="KMJ Licensing Hub · Super Admin" />
             <div className="kmj-admin-shell flex h-full min-w-0 flex-1 flex-col gap-6 overflow-x-auto p-4 sm:p-6 lg:p-8">
                 <OperatorModuleNavigation active="licensing" />
                 <nav
-                    aria-label="Licensing Center sections"
+                    aria-label="KMJ Licensing Hub Super Admin sections"
                     className="bg-card flex flex-wrap gap-2 rounded-xl border p-3 text-xs font-semibold"
                 >
                     {[
@@ -160,18 +160,18 @@ export default function OperatorKslp({
                         </span>
                         <div>
                             <div className="text-xs font-bold tracking-wider text-red-500 uppercase">
-                                KMJ Main Platform authority
+                                KMJ Licensing Hub · Owner Authority
                             </div>
                             <h1 className="mt-1 text-2xl font-black">
-                                KMJ Licensing Center
+                                KMJ Licensing Hub
                             </h1>
                             <p className="text-muted-foreground mt-2 max-w-3xl text-sm">
-                                Main Platform is the common commercial
-                                authority. Search customers and manage existing
-                                KSLP license plans, renewals, activations and
-                                audit. Other product license protocols remain
-                                gated until their signed interoperability tests
-                                pass.
+                                Super Admin exclusively controls platform-wide
+                                product licensing, subscriptions, entitlements,
+                                device activations and audit. Customer accounts
+                                only see their own subscribed capabilities;
+                                unreleased product protocols remain gated until
+                                their signed interoperability tests pass.
                             </p>
                         </div>
                     </div>
