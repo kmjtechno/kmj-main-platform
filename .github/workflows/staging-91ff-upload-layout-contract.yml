@@ -1,0 +1,32 @@
+name: 91FF Staging Upload Layout Admission Contract
+on:
+  pull_request:
+    paths:
+      - 'scripts/operations/assess_91ff_stage_upload_layout.py'
+      - 'scripts/test_91ff_stage_upload_layout.py'
+      - 'docs/operations/STAGING_91FF_UPLOAD_STORAGE_RECOVERY_20261028.md'
+      - '.github/workflows/staging-91ff-upload-layout-contract.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  fail-closed:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - name: Compile and exercise offline negative cases
+        run: |
+          set -Eeuo pipefail
+          python3 -B -m py_compile scripts/operations/assess_91ff_stage_upload_layout.py
+          python3 -B -m unittest discover -s scripts -p test_91ff_stage_upload_layout.py -v
+          if python3 -B scripts/operations/assess_91ff_stage_upload_layout.py /nonexistent/owner-receipt.txt; then
+            echo 'FAIL: missing receipt was accepted'
+            exit 1
+          fi
+          echo 'SOURCE_ADVISORY_ONLY=PASS'
+          echo 'STAGING_OR_PRODUCTION_DEPLOYMENT=NOT_ATTEMPTED'
