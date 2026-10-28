@@ -15,6 +15,7 @@ const mailConfig = read('config/mail.php');
 const forgotUi = read('resources/js/pages/auth/forgot-password.tsx');
 const publicShared = read('app/Http/Middleware/HandleInertiaRequests.php');
 const publicHeader = read('resources/js/components/public-site-header.tsx');
+const loginUi = read('resources/js/pages/auth/login.tsx');
 
 void test('production registration is blocked before creating an unverifiable account', () => {
     assert.match(registration, /app\(\)->isProduction\(\)/);
@@ -65,6 +66,19 @@ void test('public desktop and mobile registration CTAs respect production mail r
     );
     assert.equal((publicHeader.match(/Registration paused/g) ?? []).length, 2);
     assert.doesNotMatch(publicHeader, /href=\{register\(\)\}[\s\S]*?disabled=/);
+});
+
+void test('login signup CTA is fail-closed while production mail registration is paused', () => {
+    assert.match(loginUi, /publicSite\?\.registration_available === true/);
+    assert.match(loginUi, /registrationAvailable \? \(/);
+    assert.match(loginUi, /href=\{register\(\)\}/);
+    assert.match(loginUi, /Registration is temporarily paused/);
+    assert.match(loginUi, /mailto:info@kmjtechno\.com/);
+    assert.match(loginUi, /role="status"/);
+    assert.doesNotMatch(
+        loginUi,
+        /Don't have an account\?[\s\S]*?registrationAvailable \?/,
+    );
 });
 
 void test('mail doctor never prints credentials or verification URLs', () => {

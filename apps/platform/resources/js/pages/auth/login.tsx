@@ -1,4 +1,4 @@
-import { Form, Head } from '@inertiajs/react';
+import { Form, Head, usePage } from '@inertiajs/react';
 import InputError from '@/components/input-error';
 import PasswordInput from '@/components/password-input';
 import TextLink from '@/components/text-link';
@@ -22,6 +22,9 @@ type Props = {
 };
 
 export default function Login({ status, canResetPassword }: Props) {
+    const { publicSite } = usePage().props;
+    const registrationAvailable = publicSite?.registration_available === true;
+
     return (
         <>
             <Head title="Log in" />
@@ -94,10 +97,23 @@ export default function Login({ status, canResetPassword }: Props) {
                         </div>
 
                         {/* @chisel-registration */}
-                        <div className="text-muted-foreground text-center text-sm">
-                            Don't have an account?{' '}
-                            <TextLink href={register()}>Sign up</TextLink>
-                        </div>
+                        {registrationAvailable ? (
+                            <div className="text-muted-foreground text-center text-sm">
+                                Don't have an account?{' '}
+                                <TextLink href={register()}>Sign up</TextLink>
+                            </div>
+                        ) : (
+                            <p
+                                role="status"
+                                className="text-muted-foreground text-center text-sm"
+                            >
+                                Registration is temporarily paused while
+                                verification email delivery is restored.{' '}
+                                <TextLink href="mailto:info@kmjtechno.com">
+                                    Contact KMJ TECHNO
+                                </TextLink>
+                            </p>
+                        )}
                         {/* @end-chisel-registration */}
                     </>
                 )}
