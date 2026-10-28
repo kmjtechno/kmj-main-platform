@@ -2,7 +2,8 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 
-const read = (path) => readFileSync(new URL('../' + path, import.meta.url), 'utf8');
+const read = (path) =>
+    readFileSync(new URL('../' + path, import.meta.url), 'utf8');
 const ownerRoutes = read('routes/kslp-admin.php');
 const developerRoutes = read('routes/developer-licenses.php');
 const ownerUi = read('resources/js/pages/operator-kslp.tsx');
@@ -10,7 +11,9 @@ const dashboard = read('resources/js/pages/dashboard.tsx');
 const developerUi = read('resources/js/pages/developer-apps.tsx');
 const sidebar = read('resources/js/components/app-sidebar.tsx');
 const nav = read('resources/js/components/operator-module-navigation.tsx');
-const profile = read('app/Services/Licensing/ProductLicenseProfileRegistry.php');
+const profile = read(
+    'app/Services/Licensing/ProductLicenseProfileRegistry.php',
+);
 
 test('KMJ Licensing Hub owns consistent project identity without new authority', () => {
     assert.match(ownerUi, /KMJ Licensing Hub · Owner Authority/);
@@ -23,11 +26,20 @@ test('KMJ Licensing Hub owns consistent project identity without new authority',
 });
 
 test('all owner licensing read/write endpoints require platform owner and recent password', () => {
-    assert.equal((ownerRoutes.match(/\$access->require\(\$user\);/g) || []).length, 3);
-    assert.equal((ownerRoutes.match(/middleware\('password\.confirm'\)/g) || []).length, 3);
+    assert.equal(
+        (ownerRoutes.match(/\$access->require\(\$user\);/g) || []).length,
+        3,
+    );
+    assert.equal(
+        (ownerRoutes.match(/middleware\('password\.confirm'\)/g) || []).length,
+        3,
+    );
     assert.match(ownerRoutes, /Route::get\('operator\/kslp'/);
     assert.match(ownerRoutes, /Route::post\('operator\/kslp\/licenses'/);
-    assert.match(ownerRoutes, /Route::post\('operator\/kslp\/licenses\/\{license\}\/action'/);
+    assert.match(
+        ownerRoutes,
+        /Route::post\('operator\/kslp\/licenses\/\{license\}\/action'/,
+    );
 });
 
 test('customers see only actual organization entitlements, never catalog-inferred purchases', () => {
@@ -39,14 +51,26 @@ test('customers see only actual organization entitlements, never catalog-inferre
     assert.match(dashboard, /service\.product_slug === 'kmj-codebridge'/);
     assert.match(dashboard, /detail\?\.plan/);
     assert.match(dashboard, /Subscription feature access/);
-    assert.match(dashboard, /Assigned entitlement. Product-side checks still apply/);
-    assert.match(dashboard, /Not active: this entitlement does not grant feature access/);
+    assert.match(
+        dashboard,
+        /Assigned entitlement. Product-side checks still apply/,
+    );
+    assert.match(
+        dashboard,
+        /Not active: this entitlement does not grant feature access/,
+    );
 });
 
 test('developer license management retains tenant and paid-license gates', () => {
     assert.match(developerRoutes, /'license\.manage'/);
-    assert.match(developerRoutes, /->whereIn\('k\.organization_id', \$tenantIds\)/);
-    assert.match(developerRoutes, /->middleware\(\['password\.confirm', 'throttle:/);
+    assert.match(
+        developerRoutes,
+        /->whereIn\('k\.organization_id', \$tenantIds\)/,
+    );
+    assert.match(
+        developerRoutes,
+        /->middleware\(\['password\.confirm', 'throttle:/,
+    );
     assert.match(developerUi, /global customer\/license policy remains/);
     assert.match(developerUi, /Super Admin-only/);
 });
@@ -56,6 +80,16 @@ test('customer navigation does not advertise owner licensing control', () => {
     const ownerEnd = sidebar.indexOf('const ownerSystems: NavItem[]');
     assert.ok(ownerStart > 0 && ownerEnd > ownerStart);
     assert.match(sidebar.slice(ownerStart, ownerEnd), /operator\?\.enabled/);
-    assert.match(sidebar.slice(ownerStart, ownerEnd), /KMJ Licensing Hub · Owner/);
-    assert.ok(!sidebar.slice(sidebar.indexOf('const baseNavItems:'), sidebar.indexOf('const footerNavItems:')).includes('/operator/kslp'));
+    assert.match(
+        sidebar.slice(ownerStart, ownerEnd),
+        /KMJ Licensing Hub · Owner/,
+    );
+    assert.ok(
+        !sidebar
+            .slice(
+                sidebar.indexOf('const baseNavItems:'),
+                sidebar.indexOf('const footerNavItems:'),
+            )
+            .includes('/operator/kslp'),
+    );
 });
