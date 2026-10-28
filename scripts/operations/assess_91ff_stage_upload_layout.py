@@ -50,7 +50,7 @@ def blocked(reason: str) -> dict[str, object]:
 
 def parse_fields(raw: str, expected: set[str]) -> dict[str, str]:
     """Require one bounded, unambiguous, sanitized exact-field receipt."""
-    if len(raw.encode("utf-8")) > 8192 or "\\x00" in raw:
+    if len(raw.encode("utf-8")) > 8192 or "\x00" in raw:
         raise ValueError("RECEIPT_SIZE_OR_CONTROL")
     fields: dict[str, str] = {}
     for line in raw.splitlines():
@@ -65,10 +65,6 @@ def parse_fields(raw: str, expected: set[str]) -> dict[str, str]:
     if fields.keys() != expected:
         raise ValueError("INCOMPLETE_FIELDS")
     return fields
-
-
-def parse_receipt(raw: str) -> dict[str, str]:
-    return parse_fields(raw, EXPECTED)
 
 
 def evaluate_v3(raw: str) -> dict[str, object]:
@@ -126,7 +122,7 @@ def parse_receipt(raw: str) -> dict[str, str]:
 
 
 def evaluate(raw: str) -> dict[str, object]:
-    if raw.startswith("SCHEMA=" + V3_SCHEMA + "\\n"):
+    if raw.startswith("SCHEMA=" + V3_SCHEMA + "\n"):
         return evaluate_v3(raw)
     try:
         f = parse_receipt(raw)
