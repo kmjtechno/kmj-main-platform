@@ -37,11 +37,6 @@ for (const [name, before, after] of [
         'id="missing-nav"',
     ],
     [
-        'menu controls',
-        'aria-controls="public-mobile-nav"',
-        'aria-controls="unrelated-nav"',
-    ],
-    [
         'static menu controls',
         'aria-controls="public-mobile-nav"',
         'aria-controls="not-mobile-nav"',
