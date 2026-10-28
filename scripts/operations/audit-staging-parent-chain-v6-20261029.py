@@ -159,6 +159,10 @@ def assess(rows: list[dict[str, object]], stage_uid: int,
         reasons.append("ACL_UNVERIFIED_OR_PRESENT")
     if not same_device:
         reasons.append("MOUNT_BOUNDARY_REVIEW")
+    if home["uid"] != 0:
+        reasons.append("HOME_PARENT_NOT_ROOT_OWNED")
+    if stage["uid"] != stage_uid:
+        reasons.append("STAGE_PARENT_OWNER_MISMATCH")
     if home["mode"] & 0o022:
         reasons.append("HOME_PARENT_GROUP_OR_WORLD_WRITABLE")
     if not reasons:
