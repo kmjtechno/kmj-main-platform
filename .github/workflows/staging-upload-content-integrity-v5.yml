@@ -1,0 +1,37 @@
+name: Staging Upload Content Integrity V5
+on:
+  pull_request:
+    paths:
+      - 'scripts/operations/verify-staging-upload-tree-v5.py'
+      - 'scripts/test_staging_upload_tree_v5.py'
+      - '.github/workflows/staging-upload-content-integrity-v5.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/operations/verify-staging-upload-tree-v5.py'
+      - 'scripts/test_staging_upload_tree_v5.py'
+      - '.github/workflows/staging-upload-content-integrity-v5.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - name: Verify syntax and private integrity regression cases
+        run: |
+          set -Eeuo pipefail
+          python3 -B -m py_compile scripts/operations/verify-staging-upload-tree-v5.py
+          python3 -B -m unittest discover -s scripts -p test_staging_upload_tree_v5.py -v
+          if python3 -B scripts/operations/verify-staging-upload-tree-v5.py --inspect; then
+            echo 'Unexpected permission to inspect live host from GitHub CI'
+            exit 1
+          fi
+          echo 'READ_ONLY_INTEGRITY_CONTRACT=PASS'
+          echo 'PRODUCTION_OR_STAGING_CHANGED=NO'
