@@ -62,11 +62,6 @@ jobs:
             resources/js/components/codebridge/device-control-center.tsx             resources/js/pages/services/codebridge.tsx             scripts/check-codebridge-dashboard-truth.test.mjs || true
           git diff --             resources/js/components/codebridge/device-policy-display.ts \
             resources/js/components/codebridge/device-control-center.tsx             resources/js/pages/services/codebridge.tsx             scripts/check-codebridge-dashboard-truth.test.mjs
-          # CI-only formatter preview for public portal source (never deploys).
-          node_modules/.bin/vp fmt public/codebridge-connect.html || true
-          printf 'KMJ_FORMATTED_PORTAL_BASE64_BEGIN\n'
-          base64 -w0 public/codebridge-connect.html
-          printf '\nKMJ_FORMATTED_PORTAL_BASE64_END\n'
 
   codebridge-windows-oneclick:
     name: Windows one-click PowerShell parser
