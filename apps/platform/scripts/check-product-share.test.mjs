@@ -1,9 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import {
-    deliverProductLink,
-} from '../resources/js/lib/product-share-actions.mjs';
+import { deliverProductLink } from '../resources/js/lib/product-share-actions.mjs';
 
 const title = 'KMJ CineCore — KMJ TECHNO';
 const url = 'https://kmjtechno.com/products/kmj-cinecore';

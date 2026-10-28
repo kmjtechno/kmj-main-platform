@@ -58,9 +58,10 @@ jobs:
             echo 'Frontend dependencies unavailable; no format preview.'
             exit 0
           fi
-          # Temporary source-only format readback for PR #644; remove after diagnosis.
-          node_modules/.bin/vp fmt scripts/check-product-share.test.mjs || true
-          git diff -- scripts/check-product-share.test.mjs
+          node_modules/.bin/vp fmt             resources/js/components/codebridge/device-policy-display.ts \
+            resources/js/components/codebridge/device-control-center.tsx             resources/js/pages/services/codebridge.tsx             scripts/check-codebridge-dashboard-truth.test.mjs || true
+          git diff --             resources/js/components/codebridge/device-policy-display.ts \
+            resources/js/components/codebridge/device-control-center.tsx             resources/js/pages/services/codebridge.tsx             scripts/check-codebridge-dashboard-truth.test.mjs
 
   codebridge-windows-oneclick:
     name: Windows one-click PowerShell parser
