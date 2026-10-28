@@ -1,6 +1,6 @@
 import { Link, usePage } from '@inertiajs/react';
 import { Menu, Search, X, ArrowRight } from 'lucide-react';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import LockedBrand from '@/components/locked-brand';
 import PublicLanguageSwitch from '@/components/public-language-switch';
 import '../../css/locked-landing.css';
@@ -20,6 +20,7 @@ export default function PublicSiteHeader() {
     const { auth, publicSite, operator } = usePage().props;
     const { url } = usePage();
     const [open, setOpen] = useState(false);
+    const menuButton = useRef<HTMLButtonElement>(null);
     const ownerEnabled = (operator as { enabled?: boolean })?.enabled === true;
     const registrationAvailable = publicSite?.registration_available === true;
     const dashboardHref = ownerEnabled ? '/super-admin' : '/dashboard';
@@ -29,7 +30,15 @@ export default function PublicSiteHeader() {
             <a className="lock-skip" href="#main-content">
                 Skip to main content
             </a>
-            <header className="lock-header kmj-public-header">
+            <header
+                className="lock-header kmj-public-header"
+                onKeyDown={(event) => {
+                    if (open && event.key === 'Escape') {
+                        setOpen(false);
+                        menuButton.current?.focus();
+                    }
+                }}
+            >
                 <Link href="/" aria-label="KMJ TECHNO home">
                     <LockedBrand compact />
                 </Link>
@@ -43,6 +52,11 @@ export default function PublicSiteHeader() {
                             key={label}
                             href={href}
                             onClick={() => setOpen(false)}
+                            aria-current={
+                                currentPath === href && label !== 'Resources'
+                                    ? 'page'
+                                    : undefined
+                            }
                             className={
                                 currentPath === href && label !== 'Resources'
                                     ? 'active'
@@ -119,9 +133,11 @@ export default function PublicSiteHeader() {
                     )}
                 </div>
                 <button
+                    ref={menuButton}
+                    type="button"
                     className="lock-menu"
                     aria-label={open ? 'Close navigation' : 'Open navigation'}
-                    aria-controls={open ? 'public-mobile-nav' : undefined}
+                    aria-controls="public-mobile-nav"
                     aria-expanded={open}
                     onClick={() => setOpen(!open)}
                 >
