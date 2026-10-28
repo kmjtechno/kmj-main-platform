@@ -111,5 +111,4 @@ final class LocalProductDraftTemplateTest extends TestCase
 
         self::assertSame('KMJ Cinema Suite', $draft['name']);
     }
-
 }
