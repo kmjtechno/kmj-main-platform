@@ -1037,6 +1037,16 @@ try {
                     await page
                         .getByRole('navigation', { name: 'OPERATIONS' })
                         .waitFor({ state: 'hidden' });
+                    if (
+                        !(await page
+                            .getByRole('button', {
+                                name: 'Toggle owner navigation',
+                            })
+                            .evaluate(
+                                (button) => button === document.activeElement,
+                            ))
+                    )
+                        errors.push('Owner mobile menu Escape focus not restored');
                 }
             }
             if (name === 'landing') {
