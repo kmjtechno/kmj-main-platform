@@ -41,37 +41,10 @@ class PreparedStageContract(unittest.TestCase):
             ("old_upload", "/home/kmjstage/shared/app", "/home/kmjstage/releases/old/apps/platform/storage/app"),
             ("old_public", "/home/kmjstage/shared/public", "/home/kmjstage/releases/old/apps/platform/storage/app/public"),
         ):
-            # Execute the script's actual case block without any root or filesystem mutation.
-            match = re.search(r'(?ms)^\\s*case "\\
-        raw=SCRIPT.read_text()
-        self.assertIn("flock -n 9",raw)
-        self.assertIn("trap rollback EXIT",raw)
-        self.assertIn('install -m 0644 "$work/original.conf" "$target"',raw)
-        self.assertIn('mv -Tf "$tmp_link" "$link"',raw)
-        self.assertIn("nginx -t",raw)
-        self.assertIn("STAGING_HTTPS",raw)
-        self.assertIn("HEADER_SHA_MISMATCH",raw)
-        self.assertIn("127.0.0.1",raw)
-        self.assertNotIn("curl -k",raw)
-        self.assertNotIn("systemctl stop nginx",raw)
-
-    def test_only_stage_site_is_mutable(self):
-        raw=SCRIPT.read_text()
-        self.assertIn("link=/home/kmjstage/htdocs/staging.kmjtechno.com",raw)
-        self.assertIn("conf=/etc/nginx/sites-enabled/staging.kmjtechno.com.conf",raw)
-        self.assertIn("prod=/home/kmjprod/current",raw)
-        for token in (
-            "ln -s ", "mv -Tf ", "install -m 0644 ", "systemctl reload nginx",
-        ):
-            self.assertIn(token,raw)
-        self.assertNotIn("APP_ENV=production",raw)
-        self.assertNotIn("artisan migrate",raw)
-
-if __name__=="__main__":
-    unittest.main()
- + var + r'" in\\n.*?^\\s*esac', raw)
+            # Execute the script's actual case block without root or filesystem mutation.
+            match = re.search(r'(?ms)^\s*case "\$' + var + r'" in\n.*?^\s*esac', raw)
             self.assertIsNotNone(match, var)
-            snippet = 'set -eu\\nfail() { exit 42; }\\n' + var + '="$1"\\n' + match.group(0) + '\\n'
+            snippet = 'set -eu\nfail() { exit 42; }\n' + var + '="$1"\n' + match.group(0) + '\n'
             for value, expected in ((shared, 0), (release, 42), ("/tmp/untrusted", 42)):
                 with self.subTest(variable=var, target=value):
                     result = subprocess.run(
