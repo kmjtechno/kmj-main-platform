@@ -161,7 +161,11 @@ def assess(rows: list[dict[str, object]], stage_uid: int,
         reasons.append("MOUNT_BOUNDARY_REVIEW")
     if home["uid"] != 0:
         reasons.append("HOME_PARENT_NOT_ROOT_OWNED")
-    if stage["uid"] != stage_uid:
+    # A directory owner can chmod its own 0555 parent back to writable,
+    # then rename a root-owned child. Current mode alone is not protection.
+    if stage["uid"] == stage_uid:
+        reasons.append("STAGE_PARENT_OWNER_CAN_CHMOD")
+    else:
         reasons.append("STAGE_PARENT_OWNER_MISMATCH")
     if home["mode"] & 0o022:
         reasons.append("HOME_PARENT_GROUP_OR_WORLD_WRITABLE")
