@@ -94,6 +94,33 @@ class AutoPublishSafetyTest(unittest.TestCase):
         ):
             self.assertFalse(mod.exact_https_sha_ok(bad, SHA))
 
+    def test_protected_manifest_parent_and_same_fd_required(self):
+        import tempfile
+        from unittest.mock import patch
+        with tempfile.TemporaryDirectory() as folder:
+            path = Path(folder) / "approval.json"
+            path.write_text("{}")
+            with patch.object(mod.os, "open", side_effect=AssertionError(
+                    "untrusted parent must be rejected before opening")):
+                self.assertIsNone(mod.protected_json(path))
+        source = SOURCE.read_text()
+        self.assertIn("os.O_NOFOLLOW", source)
+        self.assertIn("os.fstat(fd)", source)
+        self.assertIn("os.read(fd, 4097)", source)
+        self.assertNotIn("path.read_bytes()", source)
+
+    def test_systemctl_exit_code_cannot_be_ignored(self):
+        from types import SimpleNamespace
+        from unittest.mock import patch
+        with patch.object(mod.subprocess, "run", return_value=SimpleNamespace(
+                returncode=1, stdout="")):
+            self.assertFalse(mod.fixed_run(["/usr/bin/systemctl", "start",
+                                            mod.UNIT], return_success=True))
+        with patch.object(mod.subprocess, "run", return_value=SimpleNamespace(
+                returncode=0, stdout="")):
+            self.assertTrue(mod.fixed_run(["/usr/bin/systemctl", "start",
+                                           mod.UNIT], return_success=True))
+
     def test_fixed_unit_no_arbitrary_commands_or_bypass(self):
         source = SOURCE.read_text()
         self.assertIn("kmj-main-platform-production-release.service", source)

@@ -72,18 +72,32 @@ def decision(approval, admission, current_release, approved_remote_sha, candidat
     return "READY_APPROVED_RELEASE"
 
 def protected_json(path):
+    """Read one root-protected inode, never a re-resolved path after lstat."""
     try:
-        info = path.lstat()
-        if (not stat.S_ISREG(info.st_mode) or info.st_uid != 0
-                or info.st_nlink != 1 or (stat.S_IMODE(info.st_mode) & 0o077)):
+        parent = path.parent.lstat()
+        if (not stat.S_ISDIR(parent.st_mode) or parent.st_uid != 0
+                or (stat.S_IMODE(parent.st_mode) & 0o022)):
             return None
-        if info.st_size < 2 or info.st_size > 4096:
-            return None
-        return json.loads(path.read_bytes())
+        fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_CLOEXEC)
+        try:
+            info = os.fstat(fd)
+            if (not stat.S_ISREG(info.st_mode) or info.st_uid != 0
+                    or info.st_nlink != 1
+                    or (stat.S_IMODE(info.st_mode) & 0o077)
+                    or not 2 <= info.st_size <= 4096):
+                return None
+            data = os.read(fd, 4097)
+            after = os.fstat(fd)
+            if (len(data) != info.st_size or after.st_size != info.st_size
+                    or after.st_mtime_ns != info.st_mtime_ns):
+                return None
+            return json.loads(data)
+        finally:
+            os.close(fd)
     except (OSError, ValueError, UnicodeError):
         return None
 
-def fixed_run(argv, timeout=15):
+def fixed_run(argv, timeout=15, return_success=False):
     try:
         p = subprocess.run(
             argv, cwd="/", env={
@@ -93,9 +107,11 @@ def fixed_run(argv, timeout=15):
             stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
             text=True, check=False, timeout=timeout,
         )
+        if return_success:
+            return p.returncode == 0
         return p.stdout.strip() if p.returncode == 0 else ""
     except (OSError, subprocess.TimeoutExpired):
-        return ""
+        return False if return_success else ""
 
 def live_release():
     if not LIVE.is_symlink():
@@ -180,7 +196,10 @@ def run(mode):
         # Only the already-installed privileged owner-reviewed unit may mutate
         # production. That unit independently rechecks backup digest, pointers,
         # identity, nginx health and rollback; this launcher cannot override it.
-        fixed_run(["/usr/bin/systemctl", "start", UNIT], timeout=150)
+        if not fixed_run(["/usr/bin/systemctl", "start", UNIT],
+                         timeout=150, return_success=True):
+            print("KMJ_AUTOPUBLISH=BLOCKED_RELEASE_UNIT_FAILED")
+            return 2
         if live_release() != "platform-" + target[:12]:
             print("KMJ_AUTOPUBLISH=BLOCKED_RELEASE_NOT_LIVE")
             return 2
