@@ -1,12 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import {
-    createSingleFlightGate,
-} from '../resources/js/lib/single-flight-gate.mjs';
+import * as flight from '../resources/js/lib/single-flight-gate.mjs';
 
-void test('request gate admits the first action only until it finishes', () => {
-    const gate = createSingleFlightGate();
+void test('a request gate blocks a second click', () => {
+    const gate = flight.createSingleFlightGate();
     assert.equal(gate.isBusy(), false);
     assert.equal(gate.enter(), true);
     assert.equal(gate.enter(), false);
@@ -16,9 +14,9 @@ void test('request gate admits the first action only until it finishes', () => {
     assert.equal(gate.enter(), true);
 });
 
-void test('separate editors have independent request gates', () => {
-    const first = createSingleFlightGate();
-    const second = createSingleFlightGate();
+void test('separate editors use independent request gates', () => {
+    const first = flight.createSingleFlightGate();
+    const second = flight.createSingleFlightGate();
     assert.equal(first.enter(), true);
     assert.equal(first.enter(), false);
     assert.equal(second.enter(), true);
@@ -26,12 +24,9 @@ void test('separate editors have independent request gates', () => {
     assert.equal(second.isBusy(), true);
 });
 
-void test('content and artwork use one request gate', () => {
+void test('content and artwork share a synchronous gate', () => {
     const source = readFileSync(
-        new URL(
-            '../resources/js/components/product-content-editor.tsx',
-            import.meta.url,
-        ),
+        'resources/js/components/product-content-editor.tsx',
         'utf8',
     );
     assert.match(source, /useRef\(createSingleFlightGate\(\)\)/);
@@ -41,12 +36,9 @@ void test('content and artwork use one request gate', () => {
     assert.doesNotMatch(source, /if \(busy\) return;/);
 });
 
-void test('quick-create UUID errors release its gate', () => {
+void test('quick creator releases its guard on UUID errors', () => {
     const source = readFileSync(
-        new URL(
-            '../resources/js/components/quick-product-creator.tsx',
-            import.meta.url,
-        ),
+        'resources/js/components/quick-product-creator.tsx',
         'utf8',
     );
     const tryStart = source.indexOf('        try {');
