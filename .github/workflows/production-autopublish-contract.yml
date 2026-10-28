@@ -1,0 +1,41 @@
+name: Production Autopublish Guard Contract
+on:
+  pull_request:
+    paths:
+      - 'scripts/operations/main_platform_autopublish_gate.py'
+      - 'scripts/test_main_platform_autopublish_gate.py'
+      - 'infra/server/systemd/kmj-main-platform-autopublish.*'
+      - 'docs/operations/CONTINUOUS_PRODUCTION_DELIVERY_20261028.md'
+      - '.github/workflows/production-autopublish-contract.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/operations/main_platform_autopublish_gate.py'
+      - 'scripts/test_main_platform_autopublish_gate.py'
+      - 'infra/server/systemd/kmj-main-platform-autopublish.*'
+      - 'docs/operations/CONTINUOUS_PRODUCTION_DELIVERY_20261028.md'
+      - '.github/workflows/production-autopublish-contract.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  safety:
+    name: No bypass, exact SHA, owner acceptance, backup and rollback gates
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Checkout exact reviewed source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - name: Compile and run offline safety tests
+        run: |
+          set -Eeuo pipefail
+          python3 -B -m py_compile scripts/operations/main_platform_autopublish_gate.py
+          python3 -B -m unittest discover -s scripts -p test_main_platform_autopublish_gate.py -v
+          grep -Fq 'ExecStart=/usr/bin/python3 -B /opt/kmj-main-platform-autopublish/main_platform_autopublish_gate.py --activate' infra/server/systemd/kmj-main-platform-autopublish.service
+          grep -Fq 'Unit=kmj-main-platform-autopublish.service' infra/server/systemd/kmj-main-platform-autopublish.timer
+          echo 'AUTOPUBLISH_SOURCE_CONTRACT=PASS'
+          echo 'LIVE_DEPLOYMENT=NOT_ATTEMPTED'
