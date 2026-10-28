@@ -46,11 +46,7 @@ for (const [name, before, after] of [
         'menuButton.current?.focus()',
         '/* focus not restored */',
     ],
-    [
-        'menu button type',
-        'type="button"',
-        'type="submit"',
-    ],
+    ['menu button type', 'type="button"', 'type="submit"'],
     [
         'active navigation page semantics',
         'aria-current={',
