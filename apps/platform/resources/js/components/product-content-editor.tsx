@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react';
 import { ImagePlus, Sparkles, Upload } from 'lucide-react';
+import { createSingleFlightGate } from '@/lib/single-flight-gate.mjs';
 
 export type ProductContent = {
     offering_type?: 'product' | 'service';
@@ -117,6 +118,7 @@ export default function ProductContentEditor({
     const latestFacts = useRef(facts);
     latestFacts.current = facts;
     const [busy, setBusy] = useState(false);
+    const requestGate = useRef(createSingleFlightGate());
     const [notice, setNotice] = useState('');
     const [suggestedName, setSuggestedName] = useState('');
     const [suggestionFor, setSuggestionFor] = useState<{
@@ -133,7 +135,9 @@ export default function ProductContentEditor({
         onContent({ ...latestContent.current, [key]: value });
     };
     const run = async (action: () => Promise<void>) => {
-        if (busy) return;
+        // React state updates are async: a ref-backed gate prevents two
+        // clicks from starting overlapping AI/media requests in one frame.
+        if (!requestGate.current.enter()) return;
         setBusy(true);
         onBusy(true);
         setNotice('');
@@ -144,6 +148,7 @@ export default function ProductContentEditor({
                 error instanceof Error ? error.message : 'Request failed.',
             );
         } finally {
+            requestGate.current.leave();
             setBusy(false);
             onBusy(false);
         }
