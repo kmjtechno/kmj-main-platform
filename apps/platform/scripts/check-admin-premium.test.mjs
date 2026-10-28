@@ -149,6 +149,8 @@ void test('owner mobile menu closes on Escape and restores trigger focus', () =>
 
 void test('owner mobile menu preserves locked toggle contract', () => {
     assert.match(ownerShell, /aria-expanded=\{navOpen\}/);
-    assert.match(ownerShell, /aria-label="Toggle owner navigation"/);
+    assert.match(ownerShell, /aria-label=\{/);
+    assert.match(ownerShell, /navOpen\s*\?\s*'Close owner navigation'/);
+    assert.match(ownerShell, /:\s*'Open owner navigation'/);
     assert.match(ownerShell, /aria-controls="owner-module-navigation"/);
 });

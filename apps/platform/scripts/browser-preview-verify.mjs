@@ -1027,9 +1027,14 @@ try {
                 if (width <= 390) {
                     await page
                         .getByRole('button', {
-                            name: 'Toggle owner navigation',
+                            name: 'Open owner navigation',
                         })
                         .click();
+                    await page
+                        .getByRole('button', {
+                            name: 'Close owner navigation',
+                        })
+                        .waitFor({ state: 'visible' });
                     await page
                         .getByRole('navigation', { name: 'OPERATIONS' })
                         .waitFor({ state: 'visible' });
@@ -1040,7 +1045,7 @@ try {
                     if (
                         !(await page
                             .getByRole('button', {
-                                name: 'Toggle owner navigation',
+                                name: 'Open owner navigation',
                             })
                             .evaluate(
                                 (button) => button === document.activeElement,
