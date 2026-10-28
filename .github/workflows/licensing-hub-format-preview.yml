@@ -1,0 +1,33 @@
+name: Licensing Hub Formatter Preview
+on:
+  pull_request:
+    paths:
+      - 'apps/platform/resources/js/pages/dashboard.tsx'
+      - 'apps/platform/resources/js/pages/developer-apps.tsx'
+      - 'apps/platform/scripts/check-licensing-hub-scopes.test.mjs'
+      - '.github/workflows/licensing-hub-format-preview.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  preview:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: apps/platform/package-lock.json
+      - name: Format only impacted files in ephemeral CI and report patch, never commit
+        working-directory: apps/platform
+        run: |
+          set -Eeuo pipefail
+          npm ci --ignore-scripts --no-audit --no-fund >/dev/null
+          node_modules/.bin/vp fmt resources/js/pages/dashboard.tsx resources/js/pages/developer-apps.tsx scripts/check-licensing-hub-scopes.test.mjs
+          git diff -- resources/js/pages/dashboard.tsx resources/js/pages/developer-apps.tsx scripts/check-licensing-hub-scopes.test.mjs
+          echo 'FORMAT_PREVIEW=GENERATED_NOT_COMMITTED'
