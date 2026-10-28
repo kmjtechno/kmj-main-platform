@@ -1,5 +1,7 @@
 """Source safety tests for the owner-only, read-only staging inspector."""
 import ast
+import runpy
+import tempfile
 from pathlib import Path
 import subprocess
 import unittest
@@ -9,6 +11,41 @@ SOURCE = ROOT / "scripts/operations/kmj_main_platform_stage_readonly_preflight_2
 TEXT = SOURCE.read_text(encoding="utf-8")
 
 class ReadonlyReleasePreflight(unittest.TestCase):
+    def test_staging_vhost_canonical_symlink_and_guards(self):
+        check = runpy.run_path(str(SOURCE), run_name="staging_preflight_test")[
+            "safe_staging_vhost"
+        ]
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            allowed = root / "sites-available" / "staging.kmjtechno.com.conf"
+            enabled = root / "sites-enabled" / "staging.kmjtechno.com.conf"
+            allowed.parent.mkdir()
+            enabled.parent.mkdir()
+            allowed.write_text("server { listen 443 ssl; }", encoding="utf-8")
+            # The canonical Ubuntu layout must not become a false blocker.
+            enabled.symlink_to(allowed)
+            self.assertTrue(check(enabled, allowed))
+            # Only the precise approved sites-available target is accepted.
+            impostor = root / "wrong.conf"
+            impostor.write_text("server {}", encoding="utf-8")
+            enabled.unlink()
+            enabled.symlink_to(impostor)
+            self.assertFalse(check(enabled, allowed))
+            enabled.unlink()
+            enabled.symlink_to(root / "missing.conf")
+            self.assertFalse(check(enabled, allowed))
+            enabled.unlink()
+            self.assertFalse(check(enabled, allowed))
+            # Plain regular staging configuration remains supported.
+            enabled.write_text("server { listen 443 ssl; }", encoding="utf-8")
+            self.assertTrue(check(enabled, allowed))
+            # A symlink-hop under sites-available is not a safe target.
+            enabled.unlink()
+            allowed.unlink()
+            allowed.symlink_to(impostor)
+            enabled.symlink_to(allowed)
+            self.assertFalse(check(enabled, allowed))
+
     def test_source_is_valid_python(self):
         ast.parse(TEXT)
 
