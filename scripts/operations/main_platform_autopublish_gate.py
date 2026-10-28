@@ -122,6 +122,21 @@ def candidate_sha(target):
                         "/usr/bin/git", "-C", str(folder), "rev-parse", "--verify", "HEAD"])
     return result if SHA_RE.fullmatch(result) else ""
 
+def exact_https_sha_ok(response, target):
+    """Require one HTTP 200 response and one matching public deploy SHA."""
+    if not SHA_RE.fullmatch(target) or not isinstance(response, str):
+        return False
+    lines = response.splitlines()
+    if not lines or lines[-1] != "KMJ_HTTP_STATUS=200":
+        return False
+    statuses = [line for line in lines if line.startswith("HTTP/")]
+    if len(statuses) != 1 or not re.fullmatch(
+            r"HTTP/(?:1[.]0|1[.]1|2|3) 200(?: .*)?", statuses[0]):
+        return False
+    values = [line.split(":", 1)[1].strip() for line in lines
+              if line.lower().startswith("x-kmj-deploy-sha:")]
+    return values == [target]
+
 def run(mode):
     if os.geteuid() != 0 or socket.gethostname().split(".")[0] != "KMJ-elite":
         print("KMJ_AUTOPUBLISH=BLOCKED_OPERATOR_HOST")
@@ -169,12 +184,15 @@ def run(mode):
         if live_release() != "platform-" + target[:12]:
             print("KMJ_AUTOPUBLISH=BLOCKED_RELEASE_NOT_LIVE")
             return 2
-        code = fixed_run(["/usr/bin/curl", "--proto", "=https", "--silent",
-                          "--show-error", "--connect-timeout", "5", "--max-time", "18",
-                          "--output", "/dev/null", "--write-out", "%{http_code}", URL],
-                         timeout=23)
-        if code != "200":
-            print("KMJ_AUTOPUBLISH=BLOCKED_POST_ACTIVATION_HTTP")
+        response = fixed_run([
+            "/usr/bin/curl", "--proto", "=https", "--silent",
+            "--show-error", "--connect-timeout", "5", "--max-time", "18",
+            "--max-redirs", "0", "--dump-header", "-",
+            "--output", "/dev/null", "--write-out",
+            "KMJ_HTTP_STATUS=%{http_code}", URL,
+        ], timeout=23)
+        if not exact_https_sha_ok(response, target):
+            print("KMJ_AUTOPUBLISH=BLOCKED_POST_ACTIVATION_SHA_HTTP")
             return 2
         print("KMJ_AUTOPUBLISH=LIVE_SHA_VERIFIED")
         print("KMJ_AUTOPUBLISH_SHA=" + target)
