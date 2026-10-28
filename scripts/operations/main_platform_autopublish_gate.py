@@ -126,8 +126,20 @@ def run(mode):
     if os.geteuid() != 0 or socket.gethostname().split(".")[0] != "KMJ-elite":
         print("KMJ_AUTOPUBLISH=BLOCKED_OPERATOR_HOST")
         return 2
-    LOCK.parent.mkdir(parents=True, exist_ok=True)
-    with open(LOCK, "a+", encoding="ascii") as lock:
+    # /run/lock can be writable to less-privileged users: never follow links.
+    flags = os.O_RDWR | os.O_CREAT | os.O_NOFOLLOW | os.O_CLOEXEC
+    try:
+        fd = os.open(LOCK, flags, 0o600)
+        info = os.fstat(fd)
+        if (not stat.S_ISREG(info.st_mode) or info.st_uid != 0
+                or info.st_nlink != 1 or stat.S_IMODE(info.st_mode) != 0o600):
+            os.close(fd)
+            print("KMJ_AUTOPUBLISH=BLOCKED_LOCK_IDENTITY")
+            return 2
+    except OSError:
+        print("KMJ_AUTOPUBLISH=BLOCKED_LOCK_SAFETY")
+        return 2
+    with os.fdopen(fd, "r+", encoding="ascii") as lock:
         try:
             fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
         except BlockingIOError:
@@ -153,7 +165,7 @@ def run(mode):
         # Only the already-installed privileged owner-reviewed unit may mutate
         # production. That unit independently rechecks backup digest, pointers,
         # identity, nginx health and rollback; this launcher cannot override it.
-        rc = fixed_run(["/usr/bin/systemctl", "start", UNIT], timeout=150)
+        fixed_run(["/usr/bin/systemctl", "start", UNIT], timeout=150)
         if live_release() != "platform-" + target[:12]:
             print("KMJ_AUTOPUBLISH=BLOCKED_RELEASE_NOT_LIVE")
             return 2
