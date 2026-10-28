@@ -5,10 +5,7 @@ export function assertPublicNavigation(header) {
         header,
         /aria-label=\{open \? ["']Close navigation["'] : ["']Open navigation["']\}/,
     );
-    assert.match(
-        header,
-        /aria-controls="public-mobile-nav"/,
-    );
+    assert.match(header, /aria-controls="public-mobile-nav"/);
     assert.match(header, /aria-expanded=\{open\}/);
     assert.match(header, /type="button"/);
     assert.match(header, /ref=\{menuButton\}/);
