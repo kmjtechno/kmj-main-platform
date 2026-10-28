@@ -8,4 +8,4 @@ The owner/operator runs the independently SHA-256 verified source on **KMJ-elite
 
 The origin probe uses `staging.kmjtechno.com:443` pinned to loopback, performs normal CA and hostname verification and checks `X-KMJ-Deploy-SHA` exactly. It does **not** proxy staging through Cloudflare or disable certificate verification. This is an inspect-only QA receipt and is not itself proof of an independent offsite restore or an authenticated owner browser acceptance.
 
-Do not alter the protected release manifest or call the activation supervisor until actual staging, owner acceptance, independent backup/rollback and exact fresh owner approval all pass. The repo source and currently staged CodeBridge script must have identical SHA-256. 
+Do not alter the protected release manifest or call the activation supervisor until actual staging, owner acceptance, independent backup/rollback and exact fresh owner approval all pass. The repo source and currently staged CodeBridge script must have identical SHA-256 (staged source: `1c83f279d520390871db078434ea83d2fb4cd4cd64fab671e4e29216ed1675c9`). 

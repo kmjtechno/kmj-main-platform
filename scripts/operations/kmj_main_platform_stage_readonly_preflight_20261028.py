@@ -117,4 +117,4 @@ if __name__ == "__main__":
         raise SystemExit(2) from error
     print("KMJ_RELEASE_PREFLIGHT_RECEIPT=work/qa/operator-receipts/"+FILE_NAME)
     print("KMJ_RELEASE_PREFLIGHT_PRODUCTION_MUTATION=NONE")
-    print("KMJ_RELEASE_PREFLIGHT_STAGING_READY="+("YES" if all(result.get(k) for k in ("nginx_config_valid","staging_tls_valid","staging_http_200","staging_exact_sha","customer_storage_present")) else "NO"))
+    print("KMJ_RELEASE_PREFLIGHT_STAGING_READY="+("YES" if all(result.get(k) for k in ("live_release_expected","staging_site_config_present","staging_hostname_in_config","staging_tls_listen_configured","nginx_config_valid","staging_tls_valid","staging_http_200","staging_exact_sha","customer_storage_present")) else "NO"))
