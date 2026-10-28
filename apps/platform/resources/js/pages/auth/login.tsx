@@ -103,7 +103,10 @@ export default function Login({ status, canResetPassword }: Props) {
                                 <TextLink href={register()}>Sign up</TextLink>
                             </div>
                         ) : (
-                            <p role="status" className="text-muted-foreground text-center text-sm">
+                            <p
+                                role="status"
+                                className="text-muted-foreground text-center text-sm"
+                            >
                                 Registration is temporarily paused while
                                 verification email delivery is restored.{' '}
                                 <TextLink href="mailto:info@kmjtechno.com">
