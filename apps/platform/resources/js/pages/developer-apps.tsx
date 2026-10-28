@@ -263,8 +263,8 @@ export default function DeveloperApps({
                     <div className="flex flex-col justify-between gap-6 lg:flex-row lg:items-center">
                         <div className="max-w-2xl">
                             <div className="mb-3 flex items-center gap-2 text-xs font-bold tracking-[0.14em] text-amber-300 uppercase">
-                                <Layers3 className="size-4" /> KMJ Licensing Hub · Developer
-                                Console
+                                <Layers3 className="size-4" /> KMJ Licensing Hub
+                                · Developer Console
                             </div>
                             <h1 className="text-3xl font-black tracking-tight sm:text-4xl">
                                 Your apps. Your license keys.
