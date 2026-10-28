@@ -50,8 +50,6 @@ def decision(approval, admission, current_release, approved_remote_sha, candidat
             or approval.get("backupVerified") is not True
             or approval.get("rollbackVerified") is not True):
         return "BLOCKED_PROTECTED_APPROVAL"
-    if current_release == "platform-" + sha[:12]:
-        return "ALREADY_LIVE"
     if current_release != expected:
         return "BLOCKED_CURRENT_RELEASE_DRIFT"
     if approved_remote_sha != sha:
@@ -69,6 +67,8 @@ def decision(approval, admission, current_release, approved_remote_sha, candidat
         return "BLOCKED_OWNER_AUTHORIZATION"
     if any(admission.get(key) is not True for key in ACCEPTANCE_KEYS):
         return "BLOCKED_ACCEPTANCE_EVIDENCE"
+    if current_release == "platform-" + sha[:12]:
+        return "ALREADY_LIVE"
     return "READY_APPROVED_RELEASE"
 
 def protected_json(path):
@@ -153,6 +153,16 @@ def exact_https_sha_ok(response, target):
               if line.lower().startswith("x-kmj-deploy-sha:")]
     return values == [target]
 
+def public_https_response():
+    """Read only the canonical public origin, with no redirects or shell."""
+    return fixed_run([
+        "/usr/bin/curl", "--proto", "=https", "--silent",
+        "--show-error", "--connect-timeout", "5", "--max-time", "18",
+        "--max-redirs", "0", "--dump-header", "-",
+        "--output", "/dev/null", "--write-out",
+        "KMJ_HTTP_STATUS=%{http_code}", URL,
+    ], timeout=23)
+
 def run(mode):
     if os.geteuid() != 0 or socket.gethostname().split(".")[0] != "KMJ-elite":
         print("KMJ_AUTOPUBLISH=BLOCKED_OPERATOR_HOST")
@@ -188,6 +198,10 @@ def run(mode):
         result = decision(approval, admission, current, remote, candidate)
         print("KMJ_AUTOPUBLISH=" + result)
         if result == "ALREADY_LIVE":
+            if not exact_https_sha_ok(public_https_response(), target):
+                print("KMJ_AUTOPUBLISH=BLOCKED_ALREADY_LIVE_HEALTH")
+                return 2
+            print("KMJ_AUTOPUBLISH=ALREADY_LIVE_SHA_VERIFIED")
             return 0
         if result != "READY_APPROVED_RELEASE":
             return 2
@@ -203,13 +217,7 @@ def run(mode):
         if live_release() != "platform-" + target[:12]:
             print("KMJ_AUTOPUBLISH=BLOCKED_RELEASE_NOT_LIVE")
             return 2
-        response = fixed_run([
-            "/usr/bin/curl", "--proto", "=https", "--silent",
-            "--show-error", "--connect-timeout", "5", "--max-time", "18",
-            "--max-redirs", "0", "--dump-header", "-",
-            "--output", "/dev/null", "--write-out",
-            "KMJ_HTTP_STATUS=%{http_code}", URL,
-        ], timeout=23)
+        response = public_https_response()
         if not exact_https_sha_ok(response, target):
             print("KMJ_AUTOPUBLISH=BLOCKED_POST_ACTIVATION_SHA_HTTP")
             return 2
