@@ -11,6 +11,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import grp
 import os
 from pathlib import Path
 import re
@@ -175,10 +176,18 @@ def write_receipt(result: dict[str, object], *, compare: bool) -> None:
     data = (json.dumps(result, sort_keys=True, separators=(",", ":")) + "\n").encode()
     if len(data) > 4096:
         raise UnsafeTree("RECEIPT_TOO_LARGE")
-    fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o644)
+    # Root's umask 077 masks O_CREAT(0644) to mode 0600. That silently
+    # prevents the existing unprivileged CodeBridge agent from reading a
+    # sanitized receipt even though the file exists. Pin only the trusted
+    # CodeBridge group, never expose bytes to other local users.
+    recipient_gid = grp.getgrnam("kmjcode").gr_gid
+    fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600)
     with os.fdopen(fd, "wb") as stream:
         stream.write(data)
         stream.flush()
+        os.fsync(stream.fileno())
+        os.fchown(stream.fileno(), 0, recipient_gid)
+        os.fchmod(stream.fileno(), 0o640)
         os.fsync(stream.fileno())
 
 
