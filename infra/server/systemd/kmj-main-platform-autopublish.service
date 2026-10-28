@@ -1,0 +1,27 @@
+[Unit]
+Description=KMJ Main Platform owner-approved zero-cost automatic production release
+Documentation=https://github.com/kmjtechno/kmj-main-platform
+After=network-online.target nginx.service php8.4-fpm.service
+Wants=network-online.target
+ConditionPathExists=/etc/kmj-codebridge/main-platform-production-release.json
+
+[Service]
+Type=oneshot
+User=root
+Group=root
+ExecStart=/usr/bin/python3 -B /opt/kmj-main-platform-autopublish/main_platform_autopublish_gate.py --activate
+TimeoutStartSec=200
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=/run/lock
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+LockPersonality=true
+RestrictSUIDSGID=true
+
+[Install]
+WantedBy=multi-user.target

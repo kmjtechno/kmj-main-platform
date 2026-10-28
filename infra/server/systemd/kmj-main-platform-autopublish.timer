@@ -1,0 +1,12 @@
+[Unit]
+Description=Evaluate exact owner-approved KMJ production release every 10 minutes
+
+[Timer]
+OnBootSec=2min
+OnUnitInactiveSec=10min
+AccuracySec=1min
+Persistent=false
+Unit=kmj-main-platform-autopublish.service
+
+[Install]
+WantedBy=timers.target
