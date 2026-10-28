@@ -33,7 +33,7 @@ final class StagingDeploymentEvidenceTest extends TestCase
         $sha = str_repeat('a', 40);
         $valid = ['uid' => 0, 'nlink' => 1, 'mode' => 0100644, 'size' => 41];
 
-        self::assertSame($sha, $method->invoke(null, $sha."\\n", $valid));
+        self::assertSame($sha, $method->invoke(null, $sha."\n", $valid));
         self::assertSame($sha, $method->invoke(null, $sha, array_replace($valid, ['size' => 40])));
 
         foreach ([
@@ -43,10 +43,10 @@ final class StagingDeploymentEvidenceTest extends TestCase
             ['size' => 42],
             ['size' => 39],
         ] as $invalid) {
-            self::assertNull($method->invoke(null, $sha."\\n", array_replace($valid, $invalid)));
+            self::assertNull($method->invoke(null, $sha."\n", array_replace($valid, $invalid)));
         }
 
-        self::assertNull($method->invoke(null, str_repeat('z', 40)."\\n", $valid));
+        self::assertNull($method->invoke(null, str_repeat('z', 40)."\n", $valid));
         self::assertNull($method->invoke(null, $sha."\\nEXTRA", $valid));
     }
 
