@@ -64,8 +64,8 @@ class AutoPublishSafetyTest(unittest.TestCase):
         self.assertIn("KMJ_AUTOPUBLISH=BLOCKED_ALREADY_LIVE_HEALTH", source)
         self.assertIn("KMJ_AUTOPUBLISH=ALREADY_LIVE_SHA_VERIFIED", source)
         from unittest.mock import patch
-        good = ("HTTP/2 200\\r\\nx-kmj-deploy-sha: " + SHA +
-                "\\r\\n\\r\\nKMJ_HTTP_STATUS=200")
+        good = ("HTTP/2 200\r\nx-kmj-deploy-sha: " + SHA +
+                "\r\n\r\nKMJ_HTTP_STATUS=200")
         with patch.object(mod, "fixed_run", return_value=good) as fixed:
             self.assertEqual(mod.public_https_response(), good)
         argv = fixed.call_args.args[0]
