@@ -190,7 +190,7 @@ export default function OwnerModuleShell({
                     ref={menuButton}
                     type="button"
                     className="owner-mobile-nav"
-                    aria-label={navOpen ? 'Close owner navigation' : 'Open owner navigation'}
+                    aria-label="Toggle owner navigation"
                     aria-controls="owner-module-navigation"
                     aria-expanded={navOpen}
                     onClick={() => setNavOpen((open) => !open)}
