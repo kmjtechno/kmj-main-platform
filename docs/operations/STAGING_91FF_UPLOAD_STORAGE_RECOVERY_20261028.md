@@ -80,3 +80,35 @@ Cloudflare paid inference during this operation.
 
 This source-only PR deliberately does not modify the 91FF staging activation
 script, protected approval, staging timer, Nginx, DB, storage, or production.
+
+
+## Follow-up: verified V3 ownership root cause, 28 October 2026
+
+Root read-only V3 receipt `KMJ_STAGE_SHARED_ROOT_V3_20261028.txt`
+(SHA-256 `a5113ce9235b23dee5499fa359904b106215f19b9ed76cc7673bdf0609294403`)
+confirmed the older V2 probe's `BLOCKED_SHARED_ROOT` was an
+**ownership-policy mismatch**, not a missing directory:
+`/home/kmjstage/shared` is a **real, non-symlink, root:root 0755** directory,
+and `/home/kmjstage` is owned by the `kmjstage` UID 995. A stage-accessible
+root-owned 0755 shared parent is acceptable; never recursively chown it just
+to bypass an outdated check. Root-owned 0700/0750 are not accepted as staging
+access would be obstructed.
+
+The independent data-integrity blocker remains: staging `storage/app`
+resolves via symlink to
+`/home/kmjstage/releases/29c2e1421aa3fdd6f4ed32d0edff766469cf9a98/apps/platform/storage/app`.
+That target is **release-bound**, not a persistent shared upload directory.
+The V3 receipt does not contain an inventory or checksum and does not prove
+backup or safe writer quiescence. A secure parent is **not** migration
+authorization. Do not delete or migrate this data, create new links, or update
+production pending exact preserved backup, an independently verified encrypted
+offsite restore, full path/ownership/symlink inventory, protected owner approval,
+a lossless staging-only transaction and tested rollback.
+
+The updated offline evaluator `scripts/operations/assess_91ff_stage_upload_layout.py`
+can interpret the source-only V3 receipt and distinguish `SHARED_ROOT_POLICY_UNSAFE`
+from `RELEASE_BOUND_UPLOADS_REQUIRE_LOSSLESS_MIGRATION`, while **always
+returning blocked** with nonzero exit status. No privileged execution or
+source checkout reset is performed by it. Customer production still points to
+`platform-8070dad72c55` at the time of this receipt.
+
