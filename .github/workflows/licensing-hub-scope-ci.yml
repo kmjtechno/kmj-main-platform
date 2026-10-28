@@ -1,0 +1,42 @@
+name: KMJ Licensing Hub Scope Contract
+on:
+  pull_request:
+    paths:
+      - 'apps/platform/resources/js/pages/operator-kslp.tsx'
+      - 'apps/platform/resources/js/pages/dashboard.tsx'
+      - 'apps/platform/resources/js/pages/developer-apps.tsx'
+      - 'apps/platform/resources/js/components/app-sidebar.tsx'
+      - 'apps/platform/resources/js/components/operator-module-navigation.tsx'
+      - 'apps/platform/scripts/check-licensing-hub-scopes.test.mjs'
+      - 'apps/platform/routes/kslp-admin.php'
+      - 'apps/platform/routes/developer-licenses.php'
+      - '.github/workflows/licensing-hub-scope-ci.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'apps/platform/resources/js/pages/operator-kslp.tsx'
+      - 'apps/platform/resources/js/pages/dashboard.tsx'
+      - 'apps/platform/resources/js/pages/developer-apps.tsx'
+      - 'apps/platform/resources/js/components/app-sidebar.tsx'
+      - 'apps/platform/resources/js/components/operator-module-navigation.tsx'
+      - 'apps/platform/scripts/check-licensing-hub-scopes.test.mjs'
+      - '.github/workflows/licensing-hub-scope-ci.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  scope:
+    name: Owner-only controls and subscription-scoped customer features
+    runs-on: ubuntu-24.04
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - name: Guard licensing scope and honest UI
+        run: |
+          set -Eeuo pipefail
+          node --test apps/platform/scripts/check-licensing-hub-scopes.test.mjs
+          echo 'KMJ_LICENSING_HUB_SCOPE=PASS'
+          echo 'PRODUCTION_DEPLOYMENT=NOT_ATTEMPTED'
