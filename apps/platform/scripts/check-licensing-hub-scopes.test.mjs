@@ -38,6 +38,9 @@ test('customers see only actual organization entitlements, never catalog-inferre
     assert.match(dashboard, /Super Admin licensing policies/);
     assert.match(dashboard, /service\.product_slug === 'kmj-codebridge'/);
     assert.match(dashboard, /detail\?\.plan/);
+    assert.match(dashboard, /Subscription feature access/);
+    assert.match(dashboard, /Assigned entitlement. Product-side checks still apply/);
+    assert.match(dashboard, /Not active: this entitlement does not grant feature access/);
 });
 
 test('developer license management retains tenant and paid-license gates', () => {
