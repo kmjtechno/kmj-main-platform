@@ -50,7 +50,7 @@ def decision(approval, admission, current_release, approved_remote_sha, candidat
             or approval.get("backupVerified") is not True
             or approval.get("rollbackVerified") is not True):
         return "BLOCKED_PROTECTED_APPROVAL"
-    if current_release != expected:
+    if current_release != expected and current_release != "platform-" + sha[:12]:
         return "BLOCKED_CURRENT_RELEASE_DRIFT"
     if approved_remote_sha != sha:
         return "BLOCKED_STAGING_APPROVAL_DRIFT"
