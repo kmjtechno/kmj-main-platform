@@ -5,7 +5,7 @@ import importlib.util
 from pathlib import Path
 import unittest
 
-SOURCE = Path(__file__).with_name("main_platform_autopublish_gate.py")
+SOURCE = Path(__file__).parent / "operations" / "main_platform_autopublish_gate.py"
 spec = importlib.util.spec_from_file_location("kmj_auto_gate", SOURCE)
 mod = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(mod)
