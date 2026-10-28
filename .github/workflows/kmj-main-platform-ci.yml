@@ -97,6 +97,25 @@ jobs:
             throw 'KMJ_WINDOWS_PARSER_NEGATIVE_CONTROL_FAILED'
           }
           Write-Output 'KMJ_WINDOWS_ONECLICK_PARSER=PASS'
+      - name: Verify P520 PowerShell parse and domain-only source regression
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $file = 'apps/platform/public/KMJ-CodeBridge-P520-Connect.ps1'
+          $tokens = $null
+          $errors = $null
+          [void][System.Management.Automation.Language.Parser]::ParseFile(
+            (Resolve-Path -LiteralPath $file).Path, [ref]$tokens, [ref]$errors
+          )
+          if (@($errors).Count -ne 0) {
+            foreach ($problem in $errors) {
+              Write-Output ('KMJ_P520_PARSE_ERROR=' + $problem.ErrorId)
+            }
+            throw 'KMJ_P520_POWERSHELL_PARSER_FAILED'
+          }
+          python -B -m unittest scripts/test_codebridge_domain_only_p520_20261028.py
+          if ($LASTEXITCODE -ne 0) { throw 'KMJ_P520_SOURCE_REGRESSION_FAILED' }
+          Write-Output 'KMJ_P520_SOURCE_AND_WINDOWS_PARSER=PASS'
 
   license-core:
     name: Native Rust license verifier
