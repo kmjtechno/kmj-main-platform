@@ -43,6 +43,19 @@ class ParentChainV6Contract(unittest.TestCase):
         self.assertIn("STAGE_PARENT_WRITE_EXEC", result["blockers"])
         self.assertFalse(result["migration_authorized"])
 
+    def test_owner_can_chmod_0555_parent_then_rename_root_owned_child(self):
+        mount = {"mountinfo_checked": True,
+                 "stage_parent_explicit_mount": False,
+                 "shared_explicit_mount": False}
+        result = module.assess(rows(stage_mode=0o555), 995, mount)
+        self.assertFalse(result["stage_parent_write_execute"])
+        self.assertTrue(result["shared_root_owned_0755"])
+        self.assertIn("STAGE_PARENT_OWNER_CAN_CHMOD", result["blockers"])
+        self.assertNotIn("OWNER_REVIEW_AND_BACKUP_STILL_REQUIRED", result["blockers"])
+        self.assertFalse(result["migration_authorized"])
+        self.assertFalse(result["staging_switch_authorized"])
+        self.assertFalse(result["production_activation_authorized"])
+
     def test_group_writable_parent_is_blocked(self):
         result = module.assess(rows(stage_mode=0o775, stage_uid=0), 995)
         self.assertTrue(result["stage_parent_write_execute"])
