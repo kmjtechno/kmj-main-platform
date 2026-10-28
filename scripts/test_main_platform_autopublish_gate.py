@@ -36,6 +36,47 @@ class AutoPublishSafetyTest(unittest.TestCase):
     def test_noop_when_already_live(self):
         self.assertEqual(verdict(live="platform-" + SHA[:12]), "ALREADY_LIVE")
 
+    def test_already_live_requires_real_owner_evidence(self):
+        live = "platform-" + SHA[:12]
+        self.assertEqual(verdict(live=live), "ALREADY_LIVE")
+        self.assertEqual(verdict(approval={}, live=live),
+                         "BLOCKED_APPROVAL_SCHEMA")
+        self.assertEqual(verdict(approval=dict(BASE_APPROVAL, backupVerified=False),
+                                 live=live), "BLOCKED_PROTECTED_APPROVAL")
+        self.assertEqual(verdict(evidence={}, live=live),
+                         "BLOCKED_ACCEPTANCE_SCHEMA")
+        self.assertEqual(verdict(evidence=dict(BASE_EVIDENCE,
+                                             ownerAuthenticatedQaPass=False),
+                                 live=live), "BLOCKED_ACCEPTANCE_EVIDENCE")
+        self.assertEqual(verdict(evidence=dict(BASE_EVIDENCE,
+                                             standingOwnerAuthorization=False),
+                                 live=live), "BLOCKED_OWNER_AUTHORIZATION")
+        self.assertEqual(verdict(remote="c" * 40, live=live),
+                         "BLOCKED_STAGING_APPROVAL_DRIFT")
+        self.assertEqual(verdict(candidate="c" * 40, live=live),
+                         "BLOCKED_CANDIDATE_IDENTITY")
+
+    def test_already_live_requires_fresh_exact_public_https(self):
+        source = SOURCE.read_text()
+        self.assertIn("if result == \"ALREADY_LIVE\":", source)
+        self.assertIn("exact_https_sha_ok(public_https_response(), target)",
+                      source)
+        self.assertIn("KMJ_AUTOPUBLISH=BLOCKED_ALREADY_LIVE_HEALTH", source)
+        self.assertIn("KMJ_AUTOPUBLISH=ALREADY_LIVE_SHA_VERIFIED", source)
+        from unittest.mock import patch
+        good = ("HTTP/2 200\\r\\nx-kmj-deploy-sha: " + SHA +
+                "\\r\\n\\r\\nKMJ_HTTP_STATUS=200")
+        with patch.object(mod, "fixed_run", return_value=good) as fixed:
+            self.assertEqual(mod.public_https_response(), good)
+        argv = fixed.call_args.args[0]
+        self.assertIn("--max-redirs", argv)
+        self.assertIn("0", argv)
+        self.assertIn("--proto", argv)
+        self.assertIn("=https", argv)
+        self.assertEqual(argv[-1], mod.URL)
+        self.assertTrue(mod.exact_https_sha_ok(good, SHA))
+        self.assertFalse(mod.exact_https_sha_ok(good.replace(SHA, "c" * 40), SHA))
+
     def test_never_publish_without_approval(self):
         self.assertEqual(verdict(approval={}), "BLOCKED_APPROVAL_SCHEMA")
         for key in ("backupVerified", "rollbackVerified"):
