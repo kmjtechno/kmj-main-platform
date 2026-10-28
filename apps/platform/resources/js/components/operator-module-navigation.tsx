@@ -51,10 +51,10 @@ const modules = [
     },
     {
         key: 'licensing',
-        label: 'Licensing',
+        label: 'Licensing Hub',
         href: '/operator/kslp',
         icon: KeyRound,
-        help: 'Plans, entitlements and audit',
+        help: 'Owner-only product licensing control',
     },
     {
         key: 'codebridge',
