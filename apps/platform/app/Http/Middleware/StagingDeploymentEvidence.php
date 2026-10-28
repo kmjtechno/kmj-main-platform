@@ -26,7 +26,7 @@ final class StagingDeploymentEvidence
     }
 
     /**
-     * @param  array<string, int>  $stat
+     * @param  array<int|string, int>  $stat
      */
     private static function parseRootAttestation(string $data, array $stat): ?string
     {
