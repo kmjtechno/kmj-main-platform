@@ -160,5 +160,4 @@ final class LocalProductDraftTemplateTest extends TestCase
         self::assertSame('CineCore v2.0', $draft['name']);
         self::assertStringContainsString('Features: proposed camera-assisted', $draft['description']);
     }
-
 }
