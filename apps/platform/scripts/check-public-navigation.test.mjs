@@ -47,11 +47,7 @@ for (const [name, before, after] of [
         '/* focus not restored */',
     ],
     ['menu button type', 'type="button"', 'type="submit"'],
-    [
-        'active navigation page semantics',
-        'aria-current={',
-        'aria-invalid={',
-    ],
+    ['active navigation page semantics', 'aria-current={', 'aria-invalid={'],
 ]) {
     void test('navigation guards reject a missing ' + name, () => {
         assert.ok(
