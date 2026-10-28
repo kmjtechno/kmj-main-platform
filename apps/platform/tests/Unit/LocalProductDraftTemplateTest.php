@@ -111,4 +111,34 @@ final class LocalProductDraftTemplateTest extends TestCase
 
         self::assertSame('KMJ Cinema Suite', $draft['name']);
     }
+
+    public function test_labeled_versioned_name_keeps_decimal_without_description_pollution(): void
+    {
+        $draft = (new LocalProductDraftTemplate)->fromBrief(
+            'Product name: KMJ CineCore 2.1 — proposed stereo playback software.'
+        );
+
+        self::assertSame('KMJ CineCore 2.1', $draft['name']);
+        self::assertStringContainsString('proposed stereo playback', $draft['description']);
+    }
+
+    public function test_versioned_name_field_stops_at_following_sentence(): void
+    {
+        $draft = (new LocalProductDraftTemplate)->fromBrief(
+            'Name: CineCore v2.0. Proposed cinema playback technology.'
+        );
+
+        self::assertSame('CineCore v2.0', $draft['name']);
+        self::assertStringContainsString('Proposed cinema', $draft['description']);
+    }
+
+    public function test_unlabeled_versioned_name_before_colon_is_preserved(): void
+    {
+        $draft = (new LocalProductDraftTemplate)->fromBrief(
+            'KMJ CineCore 2.0: proposed stereo playback.'
+        );
+
+        self::assertSame('KMJ CineCore 2.0', $draft['name']);
+    }
+
 }
