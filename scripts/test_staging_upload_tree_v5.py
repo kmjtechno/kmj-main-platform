@@ -1,4 +1,5 @@
 import importlib.util
+import os
 import tempfile
 from pathlib import Path
 import shutil
@@ -30,6 +31,38 @@ class UploadIntegrityV5Test(unittest.TestCase):
             self.assertEqual(before["bytes"], 11)
             (dest / "sample0").write_bytes(b"changed")
             self.assertNotEqual(before, module.inspect_tree(dest, artwork))
+
+    def test_identical_bytes_with_changed_mode_or_mtime_blocks(self):
+        with tempfile.TemporaryDirectory() as t:
+            root = Path(t)
+            source = root / "source"
+            source.mkdir()
+            original = source / "payload"
+            original.write_bytes(b"same bytes")
+            dest = root / "dest"
+            shutil.copytree(source, dest)
+            baseline = module.inspect_tree(source)
+            self.assertEqual(baseline, module.inspect_tree(dest))
+            copy = dest / "payload"
+            copy.chmod(0o600 if (copy.stat().st_mode & 0o777) != 0o600 else 0o644)
+            self.assertNotEqual(baseline, module.inspect_tree(dest))
+            shutil.copymode(original, copy)
+            self.assertEqual(baseline, module.inspect_tree(dest))
+            mtime = original.stat().st_mtime_ns
+            os.utime(copy, ns=(mtime, mtime + 1_000_000_000))
+            self.assertNotEqual(baseline, module.inspect_tree(dest))
+
+    def test_directory_metadata_drift_blocks(self):
+        with tempfile.TemporaryDirectory() as t:
+            root = Path(t)
+            source = root / "source"
+            (source / "nested").mkdir(parents=True)
+            (source / "nested/payload").write_bytes(b"same")
+            dest = root / "dest"
+            shutil.copytree(source, dest)
+            self.assertEqual(module.inspect_tree(source), module.inspect_tree(dest))
+            (dest / "nested").chmod(0o700)
+            self.assertNotEqual(module.inspect_tree(source), module.inspect_tree(dest))
 
     def test_unreviewed_symlink_blocks(self):
         with tempfile.TemporaryDirectory() as t:
