@@ -1,0 +1,27 @@
+name: Guarded 91FF Staging Activation Source Contract
+on:
+  pull_request:
+    paths:
+      - 'scripts/operations/activate-prepared-91ff-staging-only-20261028.sh'
+      - 'scripts/test_prepared_91ff_staging_guard.py'
+      - '.github/workflows/guarded-91ff-staging-activation-contract.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - name: Validate pinned guarded root operator source offline
+        run: |
+          set -Eeuo pipefail
+          bash -n scripts/operations/activate-prepared-91ff-staging-only-20261028.sh
+          python3 -B -m unittest discover -s scripts -p test_prepared_91ff_staging_guard.py -v
+          echo 'KMJ_STAGE_GUARD=SOURCE_TEST_PASS'
+          echo 'LIVE_STAGE_OR_PRODUCTION=NOT_CHANGED'
