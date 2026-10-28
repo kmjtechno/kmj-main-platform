@@ -1,7 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { createSingleFlightGate } from '../resources/js/lib/single-flight-gate.mjs';
+import {
+    createSingleFlightGate,
+} from '../resources/js/lib/single-flight-gate.mjs';
 
 void test('request gate admits the first action only until it finishes', () => {
     const gate = createSingleFlightGate();
@@ -24,9 +26,12 @@ void test('separate editors have independent request gates', () => {
     assert.equal(second.isBusy(), true);
 });
 
-void test('content and artwork share one ref-backed gate and release in finally', () => {
+void test('content and artwork use one request gate', () => {
     const source = readFileSync(
-        new URL('../resources/js/components/product-content-editor.tsx', import.meta.url),
+        new URL(
+            '../resources/js/components/product-content-editor.tsx',
+            import.meta.url,
+        ),
         'utf8',
     );
     assert.match(source, /useRef\(createSingleFlightGate\(\)\)/);
@@ -36,15 +41,21 @@ void test('content and artwork share one ref-backed gate and release in finally'
     assert.doesNotMatch(source, /if \(busy\) return;/);
 });
 
-void test('quick-create ID errors release its existing gate without locking up UI', () => {
+void test('quick-create UUID errors release its gate', () => {
     const source = readFileSync(
-        new URL('../resources/js/components/quick-product-creator.tsx', import.meta.url),
+        new URL(
+            '../resources/js/components/quick-product-creator.tsx',
+            import.meta.url,
+        ),
         'utf8',
     );
     const tryStart = source.indexOf('        try {');
     const newId = source.indexOf('crypto.randomUUID()');
     const finallyStart = source.indexOf('        } finally {');
-    const gateRelease = source.indexOf('inFlight.current = false;', finallyStart);
+    const gateRelease = source.indexOf(
+        'inFlight.current = false;',
+        finallyStart,
+    );
     assert.ok(tryStart > -1 && newId > tryStart && newId < finallyStart);
     assert.ok(gateRelease > finallyStart);
 });
