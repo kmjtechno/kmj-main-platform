@@ -11,7 +11,7 @@ if /I not "%COMPUTERNAME%"=="DESKTOP-5FVJMET" goto :wronghost
 where powershell.exe >nul 2>&1
 if errorlevel 1 goto :blocked
 set "KMJ_SCRIPT_URL=https://kmjtechno.com/KMJ-CodeBridge-P520-Connect.ps1"
-set "KMJ_SCRIPT_SHA256=07a9478695172587f01bc28076880a845cd7b7917ec6025a13c9316abe0a3e11"
+set "KMJ_SCRIPT_SHA256=ebe4a049b107a6cde710ffd65f5f32140c4bf8763e9535be4d1cfb63512f2495"
 set "KMJ_TMP_FILE=%TEMP%\KMJ-P520-DomainConnect-%RANDOM%-%RANDOM%.ps1"
 if exist "%KMJ_TMP_FILE%" goto :blocked
 

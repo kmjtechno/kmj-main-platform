@@ -6,7 +6,7 @@ import unittest
 
 ROOT=Path(__file__).resolve().parents[1]
 PUBLIC=ROOT/"apps/platform/public"
-PIN="07a9478695172587f01bc28076880a845cd7b7917ec6025a13c9316abe0a3e11"
+PIN="ebe4a049b107a6cde710ffd65f5f32140c4bf8763e9535be4d1cfb63512f2495"
 
 class P520DomainConnectionTest(unittest.TestCase):
     @classmethod
@@ -23,6 +23,29 @@ class P520DomainConnectionTest(unittest.TestCase):
         self.assertIn("kmj-calibration-pro",self.ps)
         self.assertIn("0a1fcd6804a70e915ecf66df0d4a7786f5270f02",self.ps)
         self.assertLess(self.cmd.index("Get-FileHash"),self.cmd.index("Unblock-File"))
+
+    def test_staged_local_runtime_discovery_is_precise(self):
+        import re
+        pattern = r"^CodeBridge-HomeOffice(?:-[a-fA-F0-9-]+|-stage-[a-fA-F0-9]{32})?$"
+        self.assertIn(pattern, self.ps)
+        for folder in (
+            "CodeBridge-HomeOffice",
+            "CodeBridge-HomeOffice-0a1fcd6804a70e915ecf66df0d4a7786f5270f02",
+            "CodeBridge-HomeOffice-stage-81b63009c6f74e9dae97ac15fd9515ca",
+        ):
+            self.assertIsNotNone(re.fullmatch(pattern, folder))
+        for folder in (
+            "CodeBridge-HomeOffice-stage",
+            "CodeBridge-HomeOffice-stage-other",
+            "CodeBridge-HomeOffice-stage-" + "a" * 31,
+            "CodeBridge-HomeOffice-stage-" + "a" * 33,
+            "CodeBridge-HomeOffice-stage-" + "z" * 32,
+            "CodeBridge-HomeOffice-stage-" + "a" * 32 + "-extra",
+        ):
+            self.assertIsNone(re.fullmatch(pattern, folder))
+        self.assertIn("MULTIPLE_PINNED_RUNTIMES_NEED_REVIEW", self.ps)
+        self.assertIn("REPARSE_POINT_DENIED", self.ps)
+        self.assertIn("PINNED_LOCAL_RUNTIME_NOT_FOUND", self.ps)
 
     def test_only_official_domain_delivery(self):
         self.assertIn("https://kmjtechno.com/KMJ-CodeBridge-P520-Connect.ps1",self.cmd)

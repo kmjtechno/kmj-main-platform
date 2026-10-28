@@ -65,7 +65,7 @@ try {
         if (!(Test-Path -LiteralPath $parent -PathType Container)) { continue }
         Normal $parent $true
         $dirs = @(Get-ChildItem -LiteralPath $parent -Directory -ErrorAction Stop | Where-Object {
-            $_.Name -match '^CodeBridge-HomeOffice(?:-[a-fA-F0-9-]+)?$' -and
+            $_.Name -match '^CodeBridge-HomeOffice(?:-[a-fA-F0-9-]+|-stage-[a-fA-F0-9]{32})?$' -and
             -not ($_.Attributes -band [IO.FileAttributes]::ReparsePoint)
         } | Select-Object -First 20)
         foreach ($candidate in $dirs) {
