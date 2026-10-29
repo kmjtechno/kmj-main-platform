@@ -147,6 +147,53 @@ class ReadinessDoctorTest(unittest.TestCase):
         _, blockers = self.run_doctor()
         self.assertEqual(blockers, ["APPROVAL_GROUP_OR_WORLD_WRITABLE"])
 
+    def test_duplicate_protected_backup_witness_fails_closed(self) -> None:
+        self.materialize()
+        self.write_backup()
+        self.write_approval()
+        witness = self.paths.backups / f"pre-deploy-{self.sha[:12]}.json"
+        data = witness.read_text()
+        witness.write_text(data.replace('"approvedSha":', '"approvedSha": "forged", "approvedSha":', 1))
+        witness.chmod(0o600)
+        lines, blockers = self.run_doctor()
+        self.assertIn("BACKUP_WITNESS_MISMATCH", blockers)
+        self.assertNotIn("RELEASE_READINESS=READY_TO_ACTIVATE", lines)
+
+    def test_duplicate_or_nonfinite_approval_fails_closed(self) -> None:
+        self.materialize()
+        self.write_backup()
+        self.write_approval()
+        valid = self.paths.approval.read_text()
+        cases = (
+            valid.replace('"backupVerified":', '"backupVerified": false, "backupVerified":', 1),
+            valid.replace('"rollbackVerified": true', '"rollbackVerified": NaN'),
+            valid.replace('"rollbackVerified": true', '"rollbackVerified": Infinity'),
+        )
+        for payload in cases:
+            with self.subTest(payload=payload):
+                self.paths.approval.write_text(payload)
+                self.paths.approval.chmod(0o600)
+                lines, blockers = self.run_doctor()
+                self.assertIn("APPROVAL_SCHEMA_INVALID", blockers)
+                self.assertNotIn("RELEASE_READINESS=READY_TO_ACTIVATE", lines)
+
+    def test_protected_json_symlink_swap_after_precheck_is_denied(self) -> None:
+        from unittest.mock import patch
+
+        self.write_approval()
+        self.assertIsNone(doctor._protected(self.paths.approval, False))
+        replacement = self.paths.approval.with_name("swapped.json")
+        original_open = os.open
+
+        def swap_at_open(path, *args, **kwargs):
+            if Path(path) == self.paths.approval:
+                os.rename(self.paths.approval, replacement)
+                os.symlink(replacement, self.paths.approval)
+            return original_open(path, *args, **kwargs)
+
+        with patch.object(doctor.os, "open", side_effect=swap_at_open):
+            self.assertIsNone(doctor._load_protected_json(self.paths.approval, False))
+
     def test_nginx_unreadable_public_blocks_like_live_rollback(self) -> None:
         self.materialize()
         self.write_backup()
