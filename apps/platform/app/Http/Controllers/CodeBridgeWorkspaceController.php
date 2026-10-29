@@ -76,9 +76,6 @@ final class CodeBridgeWorkspaceController extends Controller
     {
         $admitted = [];
         foreach ($provider->models_cache ?? [] as $model) {
-            if (! is_string($model)) {
-                continue;
-            }
             try {
                 $this->manager->assertInferenceAllowed($provider, $model);
                 $admitted[] = $model;
