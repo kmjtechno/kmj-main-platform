@@ -1,0 +1,33 @@
+name: Fresh-39 Rollback Rehearsal Safety
+
+on:
+  pull_request:
+    paths:
+      - 'scripts/operations/rehearse-isolated-rollback-39b88b36d071-20261029.py'
+      - 'scripts/test_rehearse_isolated_rollback_20261029.py'
+      - '.github/workflows/fresh39-rollback-rehearsal-safety.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/operations/rehearse-isolated-rollback-39b88b36d071-20261029.py'
+      - 'scripts/test_rehearse_isolated_rollback_20261029.py'
+      - '.github/workflows/fresh39-rollback-rehearsal-safety.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  source-contract:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - name: Fixture-only pointer rollback rehearsal contract
+        run: |
+          set -euo pipefail
+          python3 -B scripts/test_rehearse_isolated_rollback_20261029.py -v
+          echo 'ROLLBACK_REHEARSAL_SOURCE_CONTRACT=PASS'
+          echo 'LIVE_PATHS_TOUCHED_ON_CI=NO'
+          echo 'APP_LEVEL_ROLLBACK_VERIFIED=NO'
