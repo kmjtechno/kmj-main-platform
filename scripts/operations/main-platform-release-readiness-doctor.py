@@ -90,13 +90,16 @@ def _load_protected_json(path: Path, require_root: bool) -> object | None:
             data = os.read(fd, 4097)
             after = os.fstat(fd)
             now = os.lstat(path)
+            # Include the final path metadata: a same-inode write or chmod
+            # between fstat(fd) and lstat(path) must not be trusted.
+            def fingerprint(info):
+                return (info.st_dev, info.st_ino, info.st_mode,
+                        info.st_uid, info.st_gid, info.st_nlink,
+                        info.st_size, info.st_mtime_ns, info.st_ctime_ns)
+
             if (len(data) != before.st_size
-                    or (before.st_dev, before.st_ino, before.st_size,
-                        before.st_mtime_ns, before.st_ctime_ns)
-                    != (after.st_dev, after.st_ino, after.st_size,
-                        after.st_mtime_ns, after.st_ctime_ns)
-                    or (after.st_dev, after.st_ino) != (now.st_dev, now.st_ino)
-                    or not stat.S_ISREG(now.st_mode)):
+                    or fingerprint(before) != fingerprint(after)
+                    or fingerprint(after) != fingerprint(now)):
                 return None
             return json.loads(data, object_pairs_hook=unique_pairs,
                               parse_constant=reject_nonfinite)
