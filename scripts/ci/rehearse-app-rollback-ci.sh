@@ -16,6 +16,7 @@ repo="$(git rev-parse --show-toplevel)"
 for tool in docker php python3 composer psql git; do
   command -v "$tool" >/dev/null || { echo "BLOCKED: missing $tool"; exit 3; }
 done
+command -v npm >/dev/null || { echo 'BLOCKED: missing npm'; exit 3; }
 php -r 'exit(extension_loaded("pdo_pgsql") ? 0 : 1);' || { echo 'BLOCKED: pdo_pgsql missing'; exit 3; }
 
 image='postgres:18.6-alpine3.24@sha256:10a5c69a83035ab5239f5620d708520e8b28f5aa1f2b20143e6024532edadfb5'
@@ -39,7 +40,9 @@ git -C "$repo" cat-file -e "$base^{commit}" || { echo 'BLOCKED: base commit unav
 git -C "$repo" worktree add --detach "$tmp/previous" "$base" >/dev/null
 for tree in "$tmp/previous/apps/platform" "$repo/apps/platform"; do
   test ! -e "$tree/.env" && test ! -L "$tree/.env" || { echo 'BLOCKED: .env present'; exit 2; }
-  ( cd "$tree" && composer install --no-interaction --prefer-dist --no-progress --optimize-autoloader >/dev/null )
+  ( cd "$tree" && composer install --no-interaction --prefer-dist --no-progress --optimize-autoloader >/dev/null \
+      && npm ci --no-audit --no-fund >/dev/null 2>&1 && npm run build >/dev/null 2>&1 \
+      && test -s public/build/manifest.json ) || { echo 'BLOCKED: tree dependencies/frontend build failed'; exit 3; }
 done
 
 docker pull "$image" >/dev/null

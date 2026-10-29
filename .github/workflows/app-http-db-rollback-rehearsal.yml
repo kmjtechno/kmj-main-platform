@@ -35,6 +35,10 @@ jobs:
           php-version: '8.4'
           extensions: pdo_pgsql, pgsql, pdo_sqlite, sqlite3, sodium
           coverage: none
+      - name: Node 22 for per-tree Vite builds
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
       - name: Script contract tests
         run: |
           set -euo pipefail

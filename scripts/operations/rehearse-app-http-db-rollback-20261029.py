@@ -281,8 +281,13 @@ def run_checks(label: str, tree: Path, env: dict[str, str], scratch: Path, *, wo
 
 def tail(path: Path, lines: int = 25) -> None:
     if os.environ.get("KMJ_REHEARSAL_VERBOSE") == "1" and path.is_file():
-        print(f"--- {path.name} (last {lines} lines; disposable run only) ---")
-        print("\n".join(path.read_text("utf-8", "replace").splitlines()[-lines:]))
+        # Disposable run only: exception lines first (they carry the 500 cause).
+        rows = path.read_text("utf-8", "replace").splitlines()
+        hits = [r[:300] for r in rows if "Exception" in r or "ERROR" in r][:6]
+        print(f"--- {path.name} exceptions ---")
+        print("\n".join(hits))
+        print(f"--- {path.name} (last {lines} lines) ---")
+        print("\n".join(r[:300] for r in rows[-lines:]))
 
 
 def main() -> int:
@@ -343,7 +348,9 @@ def main() -> int:
             status("CANDIDATE_HAS_NO_NEW_MIGRATIONS", "NOTE")
 
         # 3. Candidate serves HTTP on the migrated schema.
-        if not run_checks("CANDIDATE", candidate, env, scratch, workspace=True):
+        has_workspace = (candidate / "routes" / "codebridge-workspace.php").is_file()
+        status("CANDIDATE_HAS_WORKSPACE_ROUTES", "YES" if has_workspace else "NO")
+        if not run_checks("CANDIDATE", candidate, env, scratch, workspace=has_workspace):
             failures.append("CANDIDATE_HTTP")
 
         # 4. Code rollback: previous release against the migrated database.
