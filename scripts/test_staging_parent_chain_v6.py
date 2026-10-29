@@ -159,6 +159,44 @@ class ParentChainV6Contract(unittest.TestCase):
                         module.write_receipt({"schema": "test"})
             self.assertFalse((qa / module.RECEIPT).exists())
 
+    def test_root_receipt_rejects_group_writable_qa_even_if_trusted_owner(self):
+        # A group-writable directory lets group members replace the
+        # receipt's directory entry despite a root-owned 0640 leaf.
+        with tempfile.TemporaryDirectory() as root:
+            qa = Path(root) / "qa"
+            qa.mkdir()
+            qa.chmod(0o775)
+            owner_uid = qa.stat().st_uid
+
+            def user_lookup(name):
+                user = mock.Mock()
+                user.pw_uid = -1 if name == "kmjstage" else owner_uid
+                return user
+
+            with mock.patch.object(module, "QA", qa):
+                with mock.patch.object(module.pwd, "getpwnam",
+                                       side_effect=user_lookup):
+                    with self.assertRaisesRegex(module.AuditBlocked, "QA_DIRECTORY_UNTRUSTED"):
+                        module.write_receipt({"schema": "test"})
+            self.assertFalse((qa / module.RECEIPT).exists())
+
+    def test_root_receipt_rejects_arbitrary_qa_owner(self):
+        with tempfile.TemporaryDirectory() as root:
+            qa = Path(root) / "qa"
+            qa.mkdir()
+            qa.chmod(0o755)
+            with mock.patch.object(module, "QA", qa):
+                with mock.patch.object(module.pwd, "getpwnam") as user_lookup:
+                    user_lookup.return_value.pw_uid = -1
+                    # On a root test runner, the QA owner is root, which is
+                    # explicitly trusted. Skip that case rather than weaken
+                    # the production root-or-kmjcode policy.
+                    if qa.stat().st_uid == 0:
+                        self.skipTest("arbitrary-owner test needs non-root runner")
+                    with self.assertRaisesRegex(module.AuditBlocked, "QA_DIRECTORY_UNTRUSTED"):
+                        module.write_receipt({"schema": "test"})
+            self.assertFalse((qa / module.RECEIPT).exists())
+
     def test_untrusted_runner_does_not_create_receipt(self):
         if sys.platform != "linux":
             self.skipTest("Linux-only host guard")
