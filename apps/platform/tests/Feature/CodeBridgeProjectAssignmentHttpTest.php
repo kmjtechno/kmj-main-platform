@@ -80,6 +80,55 @@ final class CodeBridgeProjectAssignmentHttpTest extends TestCase
         self::assertSame(1, DB::table('codebridge_project_assignments')->count());
     }
 
+    public function test_local_project_without_repository_is_idempotent_and_does_not_grant_access(): void
+    {
+        [$owner, $tenant, $device] = $this->fixture('local-desktop');
+        $payload = $this->payload();
+        unset($payload['repository_url']);
+        $url = $this->url($tenant, $device);
+        $credential = DB::table('codebridge_device_credentials')->first();
+
+        foreach ([$payload, array_merge($payload, ['repository_url' => '']), array_merge($payload, ['repository_url' => null])] as $request) {
+            $this->actingAs($owner)->post($url, $request)
+                ->assertRedirect()->assertSessionHasNoErrors();
+        }
+
+        $this->assertDatabaseHas('codebridge_project_assignments', [
+            'tenant_id' => $tenant, 'device_id' => $device,
+            'project_id' => 'kmj-calibration-studio',
+            'repository_url' => '', 'status' => 'pending_local_setup',
+            'requested_by' => $owner->id,
+        ]);
+        self::assertSame(1, DB::table('codebridge_project_assignments')->count());
+        self::assertSame(1, DB::table('codebridge_device_pairings')->count());
+        self::assertEquals($credential, DB::table('codebridge_device_credentials')->first());
+        $devices = app(CodeBridgeCustomerDeviceDirectory::class)->forTenant($tenant, time());
+        self::assertSame([['id' => 'existing-project', 'name' => 'Existing']], $devices[0]['projects']);
+        self::assertSame('', $devices[0]['pending_projects'][0]['repository']);
+        self::assertSame('not_verified', $devices[0]['connection_status']);
+
+        $this->actingAs($owner)->post($url, $this->payload())->assertStatus(409);
+        self::assertSame(1, DB::table('codebridge_project_assignments')->count());
+    }
+
+    public function test_local_project_still_requires_tenant_authority_and_active_device_license(): void
+    {
+        [$owner, $tenant, $device] = $this->fixture('local-desktop');
+        [$other] = $this->fixture('other-desktop');
+        $payload = $this->payload();
+        unset($payload['repository_url']);
+        $url = $this->url($tenant, $device);
+
+        $this->post($url, $payload)->assertRedirect('/login');
+        $this->actingAs($other)->post($url, $payload)->assertForbidden();
+        DB::table('kslp_licenses')->where('customer_id', $tenant)->update(['status' => 'suspended']);
+        $this->actingAs($owner)->post($url, $payload)->assertNotFound();
+        DB::table('kslp_licenses')->where('customer_id', $tenant)->update(['status' => 'active']);
+        DB::table('codebridge_device_credentials')->where('tenant_id', $tenant)->update(['revoked_at' => now()]);
+        $this->actingAs($owner)->post($url, $payload)->assertNotFound();
+        self::assertSame(0, DB::table('codebridge_project_assignments')->count());
+    }
+
     private function url(string $tenant, string $device): string
     {
         return '/services/kmj-codebridge/organizations/'.$tenant.'/devices/'.$device.'/projects/assign';

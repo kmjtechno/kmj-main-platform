@@ -75,10 +75,13 @@ Route::post('services/kmj-codebridge/organizations/{tenantId}/devices/{deviceId}
         'project_id' => ['required', 'string', 'regex:/\A[a-z0-9][a-z0-9_-]{0,63}\z/D'],
         'project_name' => ['required', 'string', 'min:2', 'max:100'],
         'repository_url' => [
-            'required', 'string', 'max:255',
+            'nullable', 'string', 'max:255',
             'regex:/\Ahttps:\/\/github\.com\/[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+\z/D',
         ],
     ]);
+    // Optional repository metadata is not device or project authorization.
+    // Keep the existing non-null storage contract for local-only requests.
+    $input['repository_url'] = $input['repository_url'] ?? '';
     $projectId = $input['project_id'];
 
     // Bind to this tenant's active credential and live CodeBridge license.
