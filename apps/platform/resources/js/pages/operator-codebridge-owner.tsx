@@ -73,37 +73,19 @@ export default function OperatorCodeBridgeOwner({
                         CodeBridge Control Center
                     </h1>
                     <p className="text-muted-foreground mt-2 text-sm">
-                        Connect a computer, approve pairing, manage registered
-                        devices and assign projects.
+                        Owner view of every organization you manage: registered
+                        devices, project assignment and Owner Plan. Connecting a
+                        computer, approving a pairing code, AI providers and
+                        client setup live in one place — the main CodeBridge
+                        Control Center.
                     </p>
                     <div className="mt-4 flex flex-wrap gap-2">
-                        <a
-                            href="/install-codebridge-windows.cmd"
-                            download
+                        <Link
+                            href="/services/kmj-codebridge"
                             className="rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white"
                         >
-                            Connect Windows PC
-                        </a>
-                        <a
-                            href="/install"
-                            download="KMJ-CodeBridge-Connect-Linux.sh"
-                            className="rounded-lg border px-4 py-2 text-sm"
-                        >
-                            Connect Linux / VPS
-                        </a>
-                        <Link
-                            href="/codebridge/pair"
-                            className="rounded-lg border px-4 py-2 text-sm"
-                        >
-                            Approve pairing code
+                            Open CodeBridge setup &amp; pairing
                         </Link>
-                        <a
-                            href="/install-chatgpt-desktop.ps1"
-                            download
-                            className="rounded-lg border px-4 py-2 text-sm"
-                        >
-                            Set up ChatGPT Desktop
-                        </a>
                         <button
                             type="button"
                             onClick={() =>

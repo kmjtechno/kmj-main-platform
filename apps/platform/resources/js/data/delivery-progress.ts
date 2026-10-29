@@ -10,6 +10,14 @@ export type DeliveryMilestone = {
 
 export const deliveryMilestones: DeliveryMilestone[] = [
     {
+        id: 'codebridge-single-control-center',
+        title: 'One canonical CodeBridge Control Center',
+        state: 'active',
+        detail: 'The customer Control Center at /services/kmj-codebridge is the only place that offers computer connection, pairing approval and client setup. The owner fleet page now links to it instead of repeating install and pairing actions (its Linux download name had drifted). The header link pointed at a non-existent /services/codebridge route; that legacy path now redirects to the canonical page behind the same sign-in. Deep links such as #codebridge-device-control previously opened the Overview section, where no device controls exist; they now open and scroll to the matching section from a fixed allow-list.',
+        evidence:
+            'Source-only on a separate UI branch. A new node contract test passes, vp check is clean and a real Chromium run against a synthetic fixture confirmed the device deep link at 390 and 1280 px with no console errors or horizontal overflow. The new HTTP redirect test, exact-head CI, deployment and logged-in owner QA remain pending; production still serves an older release and nothing here changes runtime, Supervisor or device authorization.',
+    },
+    {
         id: 'codebridge-github-authority-proxy',
         title: 'Main Platform authorizes CodeBridge GitHub operations',
         state: 'active',
