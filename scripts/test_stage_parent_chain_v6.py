@@ -1,5 +1,7 @@
 """Offline negative tests for fail-closed staging parent-chain V6 evidence."""
 import importlib.util
+import os
+from types import SimpleNamespace
 from pathlib import Path
 import tempfile
 import unittest
@@ -76,6 +78,39 @@ class ParentChainV6(unittest.TestCase):
             evidence = writer.call_args.args[0]
             self.assertEqual(evidence["live_pointer_identity"], "MATCHED_OLD_BASELINE")
             self.assertFalse(evidence["staging_switch_authorized"])
+
+    def test_group_or_world_writable_qa_cannot_hold_root_receipt(self):
+        for mode in (0o775, 0o757, 0o777):
+            with self.subTest(mode=oct(mode)), tempfile.TemporaryDirectory() as tmp:
+                qa = Path(tmp) / "qa"
+                qa.mkdir(mode=0o700)
+                qa.chmod(mode)
+                with patch.object(module, "QA", qa):
+                    with self.assertRaisesRegex(module.UnsafeEvidence, "UNTRUSTED_RECEIPT_DIRECTORY"):
+                        module.write_receipt({"status": "BLOCKED"})
+                self.assertFalse((qa / module.RECEIPT).exists())
+
+    def test_symlink_qa_directory_rejected_before_receipt_creation(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            actual = Path(tmp) / "real"
+            actual.mkdir()
+            qa = Path(tmp) / "qa"
+            qa.symlink_to(actual, target_is_directory=True)
+            with patch.object(module, "QA", qa):
+                with self.assertRaisesRegex(module.UnsafeEvidence, "UNTRUSTED_DIRECTORY_CHAIN"):
+                    module.write_receipt({"status": "BLOCKED"})
+            self.assertFalse((actual / module.RECEIPT).exists())
+
+    def test_staging_owned_qa_is_rejected_even_if_not_group_writable(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            qa = Path(tmp) / "qa"
+            qa.mkdir(mode=0o700)
+            qa.chmod(0o700)
+            with patch.object(module, "QA", qa):
+                with patch.object(module.pwd, "getpwnam", return_value=SimpleNamespace(pw_uid=os.getuid())):
+                    with self.assertRaisesRegex(module.UnsafeEvidence, "UNTRUSTED_RECEIPT_DIRECTORY"):
+                        module.write_receipt({"status": "BLOCKED"})
+            self.assertFalse((qa / module.RECEIPT).exists())
 
     def test_receipt_source_never_mutates_customer_tree_or_authorizes(self):
         source = SOURCE.read_text()
