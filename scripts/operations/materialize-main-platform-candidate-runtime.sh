@@ -8,7 +8,7 @@
 # It COPIES (never moves or edits) from the live release into the candidate:
 #   * apps/platform/.env (0600 kmjprod), pinning only the owner-approved
 #     CODEBRIDGE_AGENT_PUBLIC_URL=https://kmjtechno.com when it is absent;
-#   * apps/platform/storage/app uploads (byte-for-byte, verified by count+size);
+#   * apps/platform/storage/app uploads (verified by file bytes, metadata and raw link text);
 #   * the public/storage link, only when the live release has one.
 # It reports pending migrations by file diff. It NEVER touches the live
 # release, database, approval file, symlinks current/previous, services or DNS.
@@ -28,7 +28,7 @@ readonly ORIGIN_LINE='CODEBRIDGE_AGENT_PUBLIC_URL=https://kmjtechno.com'
 [[ "$(id -u)" == 0 && "$(hostname -s)" == KMJ-elite ]] || fail WRONG_HOST
 id kmjprod >/dev/null 2>&1 || fail SERVICE_USER_MISSING
 id www-data >/dev/null 2>&1 || fail WEB_USER_MISSING
-for cmd in git runuser install cp find awk sha256sum flock setfacl; do
+for cmd in git runuser install cp find awk sha256sum flock python3 systemd-run setfacl; do
   command -v "$cmd" >/dev/null 2>&1 || fail "MISSING_$cmd"
 done
 [[ -L "$ROOT/current" ]] || fail CURRENT_NOT_SYMLINK
@@ -52,6 +52,26 @@ done
 exec 9>/run/lock/kmj-main-platform-production-release.lock
 flock -n 9 || fail PRODUCTION_RELEASE_IN_PROGRESS
 
+# Root holds the release lock while a private mount namespace pins writable
+# candidate storage. Live runtime and all other host paths stay read-only even
+# if kmjprod replaces a candidate parent with a symlink during the copy.
+systemd-run --quiet --wait --pipe --collect \
+  --unit="kmj-materialize-$SHORT" \
+  -p User=kmjprod -p Group=kmjprod -p UMask=0077 \
+  -p ProtectSystem=strict -p ProtectHome=read-only \
+  -p PrivateTmp=yes -p NoNewPrivileges=yes \
+  -p "ReadWritePaths=$CAND" -p "ReadOnlyPaths=$LIVE_APP" \
+  /bin/bash -s -- "$SHA" "$EXPECTED_CURRENT" "$ROOT" "$LIVE" "$CAND" "$ORIGIN_LINE" <<'KMJ_UNPRIVILEGED_MATERIALIZE'
+set -Eeuo pipefail
+umask 077
+readonly SHA="$1" EXPECTED_CURRENT="$2" ROOT="$3" LIVE="$4" CAND="$5" ORIGIN_LINE="$6"
+readonly LIVE_APP="$LIVE/apps/platform" CAND_APP="$CAND/apps/platform"
+fail() { echo "KMJ_MATERIALIZE=BLOCKED $1"; exit 2; }
+status() { printf '%s=%s\n' "$1" "$2"; }
+[[ "$(id -u)" == "$(id -u kmjprod)" && "$(id -u)" != 0 ]] || fail SANDBOX_USER_MISMATCH
+export GIT_OPTIONAL_LOCKS=0
+git_as() { git -c core.fsmonitor=false -C "$CAND" "$@"; }
+
 # 1. Runtime environment: exact live bytes, plus the owner-approved public
 #    agent origin only when absent. A different existing value needs review.
 if grep -Eq '^[[:space:]]*CODEBRIDGE_AGENT_PUBLIC_URL[[:space:]]*=' "$LIVE_APP/.env"; then
@@ -68,15 +88,132 @@ fi
 status RUNTIME_ENV COPIED
 status AGENT_PUBLIC_ORIGIN "$origin_state"
 
-# 2. Uploads: copy without clobbering tracked placeholders, then prove parity.
-cp -a --no-clobber -- "$LIVE_APP/storage/app/." "$CAND_APP/storage/app/"
-inventory() {
-  (cd "$1" && find . -type f ! -name .gitignore -printf '%s %p\n' | LC_ALL=C sort | sha256sum | awk '{print $1}')
+# 2. Uploads: copy without clobbering tracked placeholders. A size+path
+# inventory is NOT content equality (equal-length different bytes can pass).
+# Inlined verify-main-platform-storage-manifest.py.
+# Embedded in the independently pinned operator script; never execute candidate code as root.
+storage_manifest() {
+  /usr/bin/python3 -I -S - "$1" <<'KMJ_STORAGE_MANIFEST_PY'
+#!/usr/bin/env python3
+"""Descriptor-relative, no-follow storage inventory with access metadata."""
+from __future__ import annotations
+import hashlib
+import json
+import os
+import stat
+import sys
+from pathlib import Path
+
+def _directory(path):
+    flags = os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW
+    fd = os.open("/", flags)
+    try:
+        for name in Path(os.path.abspath(path)).parts[1:]:
+            child = os.open(name, flags, dir_fd=fd)
+            os.close(fd)
+            fd = child
+        return fd
+    except OSError as error:
+        os.close(fd)
+        raise ValueError("STORAGE_ROOT_NOT_REAL_DIRECTORY") from error
+
+def _stamp(info):
+    return (info.st_dev, info.st_ino, info.st_mode, info.st_uid,
+            info.st_gid, info.st_size, info.st_mtime_ns, info.st_ctime_ns)
+
+def inventory(root: Path) -> dict[str, object]:
+    root_fd = _directory(root)
+    entries = []
+    counts = {"regular": 0, "symlinks": 0, "directories": 0}
+    def visit(fd, prefix):
+        before = os.fstat(fd)
+        entries.append(["d", prefix, stat.S_IMODE(before.st_mode), before.st_uid, before.st_gid])
+        for name in sorted(os.listdir(fd)):
+            relative = prefix + "/" + name if prefix else name
+            info = os.stat(name, dir_fd=fd, follow_symlinks=False)
+            if stat.S_ISDIR(info.st_mode):
+                child = os.open(name, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW, dir_fd=fd)
+                try:
+                    if _stamp(os.fstat(child)) != _stamp(info):
+                        raise ValueError("DIRECTORY_REPLACED")
+                    counts["directories"] += 1
+                    visit(child, relative)
+                finally:
+                    os.close(child)
+            elif stat.S_ISREG(info.st_mode):
+                if name == ".gitignore":
+                    continue
+                child = os.open(name, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK, dir_fd=fd)
+                try:
+                    opened = os.fstat(child)
+                    if not stat.S_ISREG(opened.st_mode) or _stamp(opened) != _stamp(info):
+                        raise ValueError("FILE_REPLACED_DURING_SCAN")
+                    digest = hashlib.sha256()
+                    while chunk := os.read(child, 1024 * 1024):
+                        digest.update(chunk)
+                    if _stamp(os.fstat(child)) != _stamp(opened):
+                        raise ValueError("FILE_CHANGED_DURING_SCAN")
+                finally:
+                    os.close(child)
+                entries.append(["f", relative, opened.st_size, digest.hexdigest(),
+                    stat.S_IMODE(opened.st_mode), opened.st_uid, opened.st_gid, opened.st_mtime_ns])
+                counts["regular"] += 1
+            elif stat.S_ISLNK(info.st_mode):
+                target = os.readlink(name, dir_fd=fd)
+                entries.append(["l", relative, target, info.st_uid, info.st_gid, info.st_mtime_ns])
+                counts["symlinks"] += 1
+            else:
+                raise ValueError("UNSUPPORTED_STORAGE_ENTRY")
+            if _stamp(os.stat(name, dir_fd=fd, follow_symlinks=False)) != _stamp(info):
+                raise ValueError("ENTRY_CHANGED_DURING_SCAN")
+        if _stamp(os.fstat(fd)) != _stamp(before):
+            raise ValueError("DIRECTORY_CHANGED_DURING_SCAN")
+    try:
+        visit(root_fd, "")
+        current = _directory(root)
+        try:
+            if _stamp(os.fstat(current)) != _stamp(os.fstat(root_fd)):
+                raise ValueError("STORAGE_ROOT_REPLACED")
+        finally:
+            os.close(current)
+    finally:
+        os.close(root_fd)
+    payload = json.dumps(entries, ensure_ascii=True, separators=(",", ":")).encode()
+    return {"sha256": hashlib.sha256(payload).hexdigest(), **counts}
+
+def main(argv: list[str]) -> int:
+    if len(argv) != 2:
+        print("STORAGE_MANIFEST=BLOCKED_USAGE", file=sys.stderr)
+        return 2
+    try:
+        result = inventory(Path(argv[1]))
+    except (OSError, ValueError) as exc:
+        print(f"STORAGE_MANIFEST=BLOCKED_{type(exc).__name__}", file=sys.stderr)
+        return 2
+    print(json.dumps(result, sort_keys=True, separators=(",", ":")))
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv))
+
+KMJ_STORAGE_MANIFEST_PY
 }
-[[ "$(inventory "$LIVE_APP/storage/app")" == "$(inventory "$CAND_APP/storage/app")" ]] ||
-  fail STORAGE_PARITY_MISMATCH
-count="$(find "$CAND_APP/storage/app" -type f ! -name .gitignore | wc -l)"
+[[ -d "$CAND_APP/storage/app" && ! -L "$CAND_APP/storage/app" ]] || fail CANDIDATE_STORAGE_UNSAFE
+source_before="$(storage_manifest "$LIVE_APP/storage/app")" || fail SOURCE_STORAGE_SCAN_FAILED
+cp -a --no-clobber -- "$LIVE_APP/storage/app/." "$CAND_APP/storage/app/"
+source_after="$(storage_manifest "$LIVE_APP/storage/app")" || fail SOURCE_STORAGE_RESCAN_FAILED
+candidate_after="$(storage_manifest "$CAND_APP/storage/app")" || fail CANDIDATE_STORAGE_SCAN_FAILED
+[[ "$source_before" == "$source_after" ]] || fail SOURCE_STORAGE_CHANGED_DURING_COPY
+[[ "$source_after" == "$candidate_after" ]] || fail STORAGE_PARITY_MISMATCH
+count="$(/usr/bin/python3 -I -S -c 'import json,sys; print(json.loads(sys.argv[1])["regular"])' "$candidate_after")"
+links="$(/usr/bin/python3 -I -S -c 'import json,sys; print(json.loads(sys.argv[1])["symlinks"])' "$candidate_after")"
+digest="$(/usr/bin/python3 -I -S -c 'import json,sys; print(json.loads(sys.argv[1])["sha256"])' "$candidate_after")"
 status STORAGE_APP_PARITY "PASS_FILES_$count"
+status STORAGE_SYMLINKS_PRESERVED "$links"
+status STORAGE_MANIFEST_SHA256 "$digest"
+status STORAGE_SYMLINK_TARGET_CONTENT NOT_DEREFERENCED
+status STORAGE_WRITER_QUIESCENCE NOT_ATTESTED
 
 # 3. public/storage link: mirror the live release only.
 if [[ -L "$LIVE_APP/public/storage" ]]; then
@@ -84,7 +221,7 @@ if [[ -L "$LIVE_APP/public/storage" ]]; then
      "$(readlink -f "$LIVE_APP/public/storage")" == "$LIVE_APP/storage/app/public" ]] ||
     fail LIVE_PUBLIC_STORAGE_LINK_UNEXPECTED
   [[ ! -e "$CAND_APP/public/storage" ]] || fail CANDIDATE_PUBLIC_STORAGE_EXISTS
-  runuser -u kmjprod -- ln -s ../storage/app/public "$CAND_APP/public/storage"
+  ln -s ../storage/app/public "$CAND_APP/public/storage"
   status PUBLIC_STORAGE_LINK MIRRORED
 else
   status PUBLIC_STORAGE_LINK NOT_PRESENT_LIVE
@@ -99,11 +236,6 @@ for dir in "$CAND" "$CAND/apps" "$CAND_APP"; do
   setfacl -m 'u:www-data:--x' "$dir" || fail ANCESTOR_ACL_FAILED
 done
 setfacl -R -m 'u:www-data:rX' "$CAND_APP/public" || fail PUBLIC_TREE_ACL_FAILED
-runuser -u www-data -- test -r "$CAND_APP/public/index.php" || fail NGINX_PUBLIC_UNREADABLE
-runuser -u www-data -- test -r "$CAND_APP/public/assets/kmj-codebridge-icon.png" || fail NGINX_ICON_UNREADABLE
-runuser -u www-data -- test ! -r "$CAND_APP/.env" || fail NGINX_PRIVATE_ENV_EXPOSED
-status NGINX_PUBLIC_ACL PASS
-status NGINX_PRIVATE_ENV DENIED
 
 # Candidate must still be a clean exact checkout for the activation controller.
 [[ -z "$(git_as status --porcelain --untracked-files=normal)" ]] || fail CANDIDATE_DIRTY_AFTER
@@ -124,4 +256,13 @@ status LIVE_RELEASE UNCHANGED
 status DATABASE NOT_TOUCHED
 status APPROVAL_UPDATED NO
 status PRODUCTION_SWITCH NOT_ATTEMPTED
-echo 'KMJ_MATERIALIZE=PASS'
+echo 'KMJ_MATERIALIZE_COPY=PASS'
+
+KMJ_UNPRIVILEGED_MATERIALIZE
+
+runuser -u www-data -- test -r "$CAND_APP/public/index.php" || fail NGINX_PUBLIC_UNREADABLE
+runuser -u www-data -- test -r "$CAND_APP/public/assets/kmj-codebridge-icon.png" || fail NGINX_ICON_UNREADABLE
+runuser -u www-data -- test ! -r "$CAND_APP/.env" || fail NGINX_PRIVATE_ENV_EXPOSED
+status NGINX_PUBLIC_ACL PASS
+status NGINX_PRIVATE_ENV DENIED
+echo "KMJ_MATERIALIZE=PASS"
