@@ -100,67 +100,216 @@ def require_codebridge_github_proxy_token(authorization: str | None) -> None:
         raise HTTPException(403, "CODEBRIDGE_GITHUB_PROXY_AUTH_INVALID")
 
 
+NUMBER = r"[1-9][0-9]{0,9}"
+SHA40 = r"[a-fA-F0-9]{40}"
+GIT_REF = r"[A-Za-z0-9._/-]{1,255}"
+# Main Platform holds the GitHub credential and is the authority on which
+# GitHub operations CodeBridge may perform. CodeBridge user permission
+# (read/write) is already enforced by the gateway from Main Platform user
+# introspection; this allowlist is the second, credential-side boundary.
+CODEBRIDGE_GITHUB_RESPONSE_MAX_BYTES = 4 * 1024 * 1024
+
+
+def _safe_ref(value: object) -> bool:
+    return (
+        isinstance(value, str)
+        and re.fullmatch(GIT_REF, value) is not None
+        and ".." not in value
+        and "//" not in value
+        and not value.startswith("/")
+        and not value.endswith(("/", ".lock"))
+        and "@{" not in value
+    )
+
+
+def _per_page(query: dict[str, str], maximum: int) -> bool:
+    value = query.get("per_page")
+    return value is None or (
+        re.fullmatch(r"[1-9][0-9]{0,2}", value) is not None and int(value) <= maximum
+    )
+
+
+def _safe_content_path(path: str) -> bool:
+    if not path or len(path) > 1024 or path.startswith("/") or "\\" in path:
+        return False
+    if re.search(r"[\x00-\x1f\x7f]", path):
+        return False
+    parts = path.split("/")
+    if any(part in ("", ".", "..") for part in parts):
+        return False
+    # Workflow files can exfiltrate repository secrets; never write them
+    # through the shared CodeBridge credential.
+    return not path.lower().startswith(".github/workflows/")
+
+
 def codebridge_github_route_allowed(method: str, suffix: str, query: dict[str, str]) -> bool:
+    keys = set(query)
     if method == "GET":
         if suffix == "":
             return not query
-        if re.fullmatch(r"pulls/[1-9][0-9]*", suffix):
+        if suffix == "pulls":
+            return (
+                keys <= {"state", "per_page"}
+                and query.get("state", "open") in {"open", "closed", "all"}
+                and _per_page(query, 30)
+            )
+        if re.fullmatch(rf"pulls/{NUMBER}", suffix):
             return not query
-        if re.fullmatch(r"pulls/[1-9][0-9]*/files", suffix):
-            return set(query) <= {"per_page"} and query.get("per_page", "100") == "100"
+        if re.fullmatch(rf"pulls/{NUMBER}/files", suffix):
+            return keys <= {"per_page"} and query.get("per_page", "100") == "100"
+        if re.fullmatch(rf"pulls/{NUMBER}/(reviews|comments)", suffix):
+            return keys <= {"per_page"} and _per_page(query, 100)
+        if re.fullmatch(rf"issues/{NUMBER}", suffix):
+            return not query
+        if re.fullmatch(rf"issues/{NUMBER}/comments", suffix):
+            return keys <= {"per_page"} and _per_page(query, 100)
+        if suffix == "commits":
+            return (
+                keys <= {"per_page", "sha"}
+                and _per_page(query, 50)
+                and ("sha" not in query or _safe_ref(query["sha"]))
+            )
+        if re.fullmatch(rf"commits/{SHA40}/check-runs", suffix):
+            return keys <= {"per_page"} and query.get("per_page", "100") == "100"
         if suffix == "actions/runs":
-            return set(query) <= {"per_page", "branch"}
-        if re.fullmatch(r"actions/runs/[1-9][0-9]*/jobs", suffix):
-            return set(query) <= {"per_page"} and query.get("per_page", "100") == "100"
-        if re.fullmatch(r"actions/jobs/[1-9][0-9]*/logs", suffix):
+            return (
+                keys <= {"per_page", "branch", "head_sha"}
+                and _per_page(query, 100)
+                and ("branch" not in query or _safe_ref(query["branch"]))
+                and (
+                    "head_sha" not in query
+                    or re.fullmatch(SHA40, query["head_sha"]) is not None
+                )
+            )
+        if re.fullmatch(rf"actions/runs/{NUMBER}", suffix):
+            return not query
+        if re.fullmatch(rf"actions/runs/{NUMBER}/jobs", suffix):
+            return keys <= {"per_page"} and query.get("per_page", "100") == "100"
+        if re.fullmatch(rf"actions/jobs/{NUMBER}(/logs)?", suffix):
             return not query
         return False
+    if query:
+        return False
     if method == "POST":
-        return suffix in {"git/refs", "pulls"} and not query
+        return (
+            suffix in {"git/refs", "pulls", "issues"}
+            or re.fullmatch(rf"issues/{NUMBER}/comments", suffix) is not None
+            or re.fullmatch(rf"pulls/{NUMBER}/reviews", suffix) is not None
+            or re.fullmatch(rf"pulls/{NUMBER}/comments/{NUMBER}/replies", suffix)
+            is not None
+        )
+    if method == "PUT":
+        if re.fullmatch(rf"pulls/{NUMBER}/merge", suffix):
+            return True
+        return suffix.startswith("contents/") and _safe_content_path(
+            suffix.removeprefix("contents/")
+        )
+    if method == "PATCH":
+        return re.fullmatch(rf"pulls/{NUMBER}", suffix) is not None
     return False
 
 
-def validate_codebridge_github_write(suffix: str, payload: object) -> None:
+def _bounded_text(value: object, minimum: int, maximum: int) -> bool:
+    return isinstance(value, str) and minimum <= len(value) <= maximum
+
+
+def _invalid() -> HTTPException:
+    return HTTPException(400, "CODEBRIDGE_GITHUB_BODY_INVALID")
+
+
+def validate_codebridge_github_write(suffix: str, payload: object, method: str = "POST") -> None:
     if not isinstance(payload, dict):
-        raise HTTPException(400, "CODEBRIDGE_GITHUB_BODY_INVALID")
-    if suffix == "git/refs":
+        raise _invalid()
+    if method == "POST" and suffix == "git/refs":
         if set(payload) != {"ref", "sha"}:
-            raise HTTPException(400, "CODEBRIDGE_GITHUB_BODY_INVALID")
+            raise _invalid()
         ref = payload.get("ref")
         sha = payload.get("sha")
-        if (
-            not isinstance(ref, str)
-            or not re.fullmatch(r"refs/heads/[A-Za-z0-9._/-]{1,255}", ref)
-            or ".." in ref
-            or "//" in ref
-            or ref.endswith(("/", ".lock"))
-            or "@{" in ref
-        ):
-            raise HTTPException(400, "CODEBRIDGE_GITHUB_BODY_INVALID")
-        if not isinstance(sha, str) or not re.fullmatch(r"[a-fA-F0-9]{40}", sha):
-            raise HTTPException(400, "CODEBRIDGE_GITHUB_BODY_INVALID")
+        if not isinstance(ref, str) or not ref.startswith("refs/heads/"):
+            raise _invalid()
+        if not _safe_ref(ref.removeprefix("refs/heads/")):
+            raise _invalid()
+        if not isinstance(sha, str) or not re.fullmatch(SHA40, sha):
+            raise _invalid()
         return
-    if suffix == "pulls":
+    if method == "POST" and suffix == "pulls":
         if set(payload) - {"title", "body", "head", "base", "draft"}:
-            raise HTTPException(400, "CODEBRIDGE_GITHUB_BODY_INVALID")
-        if not isinstance(payload.get("title"), str) or not 1 <= len(payload["title"]) <= 256:
-            raise HTTPException(400, "CODEBRIDGE_GITHUB_BODY_INVALID")
-        if not isinstance(payload.get("body", ""), str) or len(payload.get("body", "")) > 20000:
-            raise HTTPException(400, "CODEBRIDGE_GITHUB_BODY_INVALID")
+            raise _invalid()
+        if not _bounded_text(payload.get("title"), 1, 256):
+            raise _invalid()
+        if not _bounded_text(payload.get("body", ""), 0, 20000):
+            raise _invalid()
         for field in ("head", "base"):
-            value = payload.get(field)
-            if (
-                not isinstance(value, str)
-                or not re.fullmatch(r"[A-Za-z0-9._/-]{1,255}", value)
-                or ".." in value
-                or "//" in value
-                or value.startswith("/")
-                or value.endswith(("/", ".lock"))
-                or "@{" in value
-            ):
-                raise HTTPException(400, "CODEBRIDGE_GITHUB_BODY_INVALID")
+            if not _safe_ref(payload.get(field)):
+                raise _invalid()
         if "draft" in payload and not isinstance(payload["draft"], bool):
-            raise HTTPException(400, "CODEBRIDGE_GITHUB_BODY_INVALID")
+            raise _invalid()
+        return
+    if method == "POST" and suffix == "issues":
+        if set(payload) - {"title", "body"} or not _bounded_text(payload.get("title"), 1, 256):
+            raise _invalid()
+        if not _bounded_text(payload.get("body", ""), 0, 20000):
+            raise _invalid()
+        return
+    if method == "POST" and (
+        re.fullmatch(rf"issues/{NUMBER}/comments", suffix)
+        or re.fullmatch(rf"pulls/{NUMBER}/comments/{NUMBER}/replies", suffix)
+    ):
+        if set(payload) != {"body"} or not _bounded_text(payload["body"], 1, 20000):
+            raise _invalid()
+        return
+    if method == "POST" and re.fullmatch(rf"pulls/{NUMBER}/reviews", suffix):
+        if set(payload) - {"body", "event", "commit_id"}:
+            raise _invalid()
+        # Approval remains a human decision; never through the shared credential.
+        if payload.get("event") not in {"COMMENT", "REQUEST_CHANGES"}:
+            raise _invalid()
+        if not _bounded_text(payload.get("body"), 1, 20000):
+            raise _invalid()
+        if "commit_id" in payload and not (
+            isinstance(payload["commit_id"], str)
+            and re.fullmatch(SHA40, payload["commit_id"])
+        ):
+            raise _invalid()
+        return
+    if method == "PUT" and re.fullmatch(rf"pulls/{NUMBER}/merge", suffix):
+        if set(payload) != {"sha", "merge_method"}:
+            raise _invalid()
+        if not isinstance(payload["sha"], str) or not re.fullmatch(SHA40, payload["sha"]):
+            raise _invalid()
+        if payload["merge_method"] not in {"squash", "merge", "rebase"}:
+            raise _invalid()
+        return
+    if method == "PUT" and suffix.startswith("contents/"):
+        if not _safe_content_path(suffix.removeprefix("contents/")):
+            raise HTTPException(405, "CODEBRIDGE_GITHUB_ROUTE_DENIED")
+        allowed = {"message", "content", "branch", "sha"}
+        if set(payload) - allowed or not {"message", "content", "branch"} <= set(payload):
+            raise _invalid()
+        if not _bounded_text(payload["message"], 1, 256):
+            raise _invalid()
+        if not _bounded_text(payload["content"], 0, 360000):
+            raise _invalid()
+        if not re.fullmatch(r"[A-Za-z0-9+/]*={0,2}", payload["content"]):
+            raise _invalid()
+        if not _safe_ref(payload["branch"]):
+            raise _invalid()
+        if "sha" in payload and not (
+            isinstance(payload["sha"], str) and re.fullmatch(SHA40, payload["sha"])
+        ):
+            raise _invalid()
+        return
+    if method == "PATCH" and re.fullmatch(rf"pulls/{NUMBER}", suffix):
+        if not payload or set(payload) - {"title", "body", "base", "state"}:
+            raise _invalid()
+        if "title" in payload and not _bounded_text(payload["title"], 1, 256):
+            raise _invalid()
+        if "body" in payload and not _bounded_text(payload["body"], 0, 20000):
+            raise _invalid()
+        if "base" in payload and not _safe_ref(payload["base"]):
+            raise _invalid()
+        if "state" in payload and payload["state"] not in {"open", "closed"}:
+            raise _invalid()
         return
     raise HTTPException(405, "CODEBRIDGE_GITHUB_ROUTE_DENIED")
 
@@ -209,11 +358,11 @@ def health():
 
 @app.api_route(
     "/codebridge/github/repos/{owner}/{repo}",
-    methods=["GET", "POST"],
+    methods=["GET"],
 )
 @app.api_route(
     "/codebridge/github/repos/{owner}/{repo}/{suffix:path}",
-    methods=["GET", "POST"],
+    methods=["GET", "POST", "PUT", "PATCH"],
 )
 async def codebridge_github_proxy(
     owner: str,
@@ -236,17 +385,17 @@ async def codebridge_github_proxy(
         raise HTTPException(503, "GITHUB_TOKEN_NOT_CONFIGURED")
 
     body: bytes | None = None
-    if request.method == "POST":
+    if request.method in {"POST", "PUT", "PATCH"}:
         try:
             payload = await request.json()
         except ValueError as exc:
             raise HTTPException(400, "CODEBRIDGE_GITHUB_BODY_INVALID") from exc
-        validate_codebridge_github_write(suffix, payload)
+        validate_codebridge_github_write(suffix, payload, request.method)
         body = json.dumps(payload, separators=(",", ":")).encode("utf-8")
 
     path = f"/repos/{quote(owner, safe='')}/{quote(repo, safe='')}"
     if suffix:
-        path += "/" + suffix
+        path += "/" + quote(suffix, safe="/")
     url = "https://api.github.com" + path
     if request.url.query:
         url += "?" + request.url.query
@@ -268,7 +417,7 @@ async def codebridge_github_proxy(
             content=body,
         )
 
-    if len(upstream.content) > 524288:
+    if len(upstream.content) > CODEBRIDGE_GITHUB_RESPONSE_MAX_BYTES:
         raise HTTPException(413, "CODEBRIDGE_GITHUB_RESPONSE_TOO_LARGE")
     return Response(
         content=upstream.content,
