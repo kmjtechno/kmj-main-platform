@@ -113,16 +113,19 @@ final class CodeBridgeUserAccessIntrospectionTest extends TestCase
 
         $credential()->update(['revoked_at' => now()]);
         $this->withToken($token)->postJson(self::URL)->assertOk()
-            ->assertJson(['memberships' => [['tenant_id' => $tenant, 'devices' => []]]]);
+            ->assertJson(['memberships' => [['tenant_id' => $tenant, 'devices' => []]]])
+            ->assertJsonPath('memberships.0.devices', []);
 
         $credential()->update(['revoked_at' => null, 'expires_at_epoch' => time() - 1]);
         $this->withToken($token)->postJson(self::URL)->assertOk()
-            ->assertJson(['memberships' => [['devices' => []]]]);
+            ->assertJson(['memberships' => [['devices' => []]]])
+            ->assertJsonPath('memberships.0.devices', []);
 
         $credential()->update(['expires_at_epoch' => time() + 3600]);
         DB::table('codebridge_device_pairings')->where('tenant_id', $tenant)->delete();
         $this->withToken($token)->postJson(self::URL)->assertOk()
-            ->assertJson(['memberships' => [['devices' => []]]]);
+            ->assertJson(['memberships' => [['devices' => []]]])
+            ->assertJsonPath('memberships.0.devices', []);
     }
 
     public function test_api_disabled_fails_closed(): void
