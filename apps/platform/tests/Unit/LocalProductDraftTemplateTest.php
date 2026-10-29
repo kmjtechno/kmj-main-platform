@@ -71,7 +71,7 @@ final class LocalProductDraftTemplateTest extends TestCase
             'Software: proposed stereo playback'
         );
 
-        self::assertSame('Software proposed stereo playback', $draft['name']);
+        self::assertSame('proposed stereo playback', $draft['name']);
         self::assertStringContainsString('not independently verified', $draft['description']);
     }
 
@@ -81,5 +81,83 @@ final class LocalProductDraftTemplateTest extends TestCase
 
         self::assertSame('Interactive wall Projection SOFTWARE', $draft['name']);
         self::assertSame('other', $draft['category']);
+    }
+
+    public function test_product_name_label_uses_its_value_not_label(): void
+    {
+        $draft = (new LocalProductDraftTemplate)->fromBrief(
+            'Product name: KMJ CineCore — proposed dual projector stereo playback software.'
+        );
+
+        self::assertSame('KMJ CineCore', $draft['name']);
+        self::assertStringContainsString('dual projector stereo playback', $draft['description']);
+    }
+
+    public function test_single_word_name_field_preserves_identity(): void
+    {
+        $draft = (new LocalProductDraftTemplate)->fromBrief(
+            'Name: CineCore. Proposed cinema playback technology.'
+        );
+
+        self::assertSame('CineCore', $draft['name']);
+        self::assertStringContainsString('Proposed cinema', $draft['description']);
+    }
+
+    public function test_generic_product_heading_is_not_used_as_name(): void
+    {
+        $draft = (new LocalProductDraftTemplate)->fromBrief(
+            'Product: KMJ Cinema Suite — proposed stereo playback workflow.'
+        );
+
+        self::assertSame('KMJ Cinema Suite', $draft['name']);
+    }
+
+    public function test_labeled_versioned_name_keeps_decimal_without_description_pollution(): void
+    {
+        $draft = (new LocalProductDraftTemplate)->fromBrief(
+            'Product name: KMJ CineCore 2.1 — proposed stereo playback software.'
+        );
+
+        self::assertSame('KMJ CineCore 2.1', $draft['name']);
+        self::assertStringContainsString('proposed stereo playback', $draft['description']);
+    }
+
+    public function test_versioned_name_field_stops_at_following_sentence(): void
+    {
+        $draft = (new LocalProductDraftTemplate)->fromBrief(
+            'Name: CineCore v2.0. Proposed cinema playback technology.'
+        );
+
+        self::assertSame('CineCore v2.0', $draft['name']);
+        self::assertStringContainsString('Proposed cinema', $draft['description']);
+    }
+
+    public function test_unlabeled_versioned_name_before_colon_is_preserved(): void
+    {
+        $draft = (new LocalProductDraftTemplate)->fromBrief(
+            'KMJ CineCore 2.0: proposed stereo playback.'
+        );
+
+        self::assertSame('KMJ CineCore 2.0', $draft['name']);
+    }
+
+    public function test_multiline_labeled_name_does_not_absorb_description_field(): void
+    {
+        $draft = (new LocalProductDraftTemplate)->fromBrief(
+            "Product name: KMJ CineCore 2.1\nDescription: proposed stereo playback software."
+        );
+
+        self::assertSame('KMJ CineCore 2.1', $draft['name']);
+        self::assertStringContainsString('Description: proposed stereo playback', $draft['description']);
+    }
+
+    public function test_windows_multiline_name_stops_before_features_field(): void
+    {
+        $draft = (new LocalProductDraftTemplate)->fromBrief(
+            "Name: CineCore v2.0\r\nFeatures: proposed camera-assisted calibration."
+        );
+
+        self::assertSame('CineCore v2.0', $draft['name']);
+        self::assertStringContainsString('Features: proposed camera-assisted', $draft['description']);
     }
 }
