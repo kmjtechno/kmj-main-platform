@@ -135,6 +135,30 @@ class ParentChainV6Contract(unittest.TestCase):
         self.assertIn("os.fchmod(out.fileno(), 0o640)", text)
         self.assertIn('"migration_authorized": False', text)
 
+    def test_root_receipt_rejects_world_writable_qa_without_creating_file(self):
+        with tempfile.TemporaryDirectory() as root:
+            qa = Path(root) / "qa"
+            qa.mkdir()
+            qa.chmod(0o777)
+            with mock.patch.object(module, "QA", qa):
+                with mock.patch.object(module.pwd, "getpwnam") as stage_user:
+                    stage_user.return_value.pw_uid = -1
+                    with self.assertRaisesRegex(module.AuditBlocked, "QA_DIRECTORY_UNTRUSTED"):
+                        module.write_receipt({"schema": "test"})
+            self.assertFalse((qa / module.RECEIPT).exists())
+
+    def test_root_receipt_rejects_staging_owned_qa_even_if_not_writable(self):
+        with tempfile.TemporaryDirectory() as root:
+            qa = Path(root) / "qa"
+            qa.mkdir()
+            qa.chmod(0o555)
+            with mock.patch.object(module, "QA", qa):
+                with mock.patch.object(module.pwd, "getpwnam") as stage_user:
+                    stage_user.return_value.pw_uid = qa.stat().st_uid
+                    with self.assertRaisesRegex(module.AuditBlocked, "QA_DIRECTORY_UNTRUSTED"):
+                        module.write_receipt({"schema": "test"})
+            self.assertFalse((qa / module.RECEIPT).exists())
+
     def test_untrusted_runner_does_not_create_receipt(self):
         if sys.platform != "linux":
             self.skipTest("Linux-only host guard")
