@@ -343,5 +343,18 @@ class MaterializeWriteBoundaryTest(unittest.TestCase):
         self.assertNotIn("--system", source)
         self.assertNotIn("sudo", source)
 
+
+class MaterializePublicLinkTest(unittest.TestCase):
+    def test_public_link_creation_works_without_nested_privilege_switch(self):
+        source = MATERIALIZE.read_text()
+        self.assertNotIn("runuser -u kmjprod -- ln", source)
+        command = next(line.strip() for line in source.splitlines() if line.strip().startswith("ln -s "))
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "public").mkdir()
+            run = subprocess.run(["/bin/bash", "-c", command], env={**os.environ, "CAND_APP": directory}, capture_output=True, text=True)
+            self.assertEqual(run.returncode, 0, run.stderr)
+            self.assertEqual(os.readlink(root / "public/storage"), "../storage/app/public")
+
 if __name__ == "__main__":
     unittest.main()
