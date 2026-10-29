@@ -1,0 +1,38 @@
+name: Owner CircleCI UI parity diagnostic (temporary)
+on:
+  push:
+    branches:
+      - fix/owner-dashboard-vs-command-center-20261029
+    paths:
+      - .github/workflows/owner-circle-ui-diagnostic.yml
+permissions:
+  contents: read
+jobs:
+  ui:
+    runs-on: ubuntu-latest
+    container:
+      image: cimg/php:8.4-node
+    timeout-minutes: 20
+    env:
+      APP_ENV: testing
+      DB_CONNECTION: sqlite
+      DB_DATABASE: ":memory:"
+    steps:
+      - name: Checkout exact feature HEAD
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - name: Execute unchanged CircleCI UI commands
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd apps/platform
+          composer install --no-interaction --prefer-dist --no-progress
+          npm ci --ignore-scripts --no-audit --no-fund
+          npm run check
+          export APP_KEY="base64:$(php -r 'echo base64_encode(random_bytes(32));')"
+          php artisan wayfinder:generate --with-form --no-ansi
+          npm run types:check
+          npm run build
+          test -s public/build/manifest.json
+          echo SUPER_ADMIN_COMMAND_CENTER_UI_PARITY_PASS
