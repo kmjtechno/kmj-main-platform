@@ -85,12 +85,12 @@ final class WorkspaceChatService
     /** @return list<array<string, mixed>> */
     public function conversations(string $tenantId, int $userId, string $deviceId, string $projectId): array
     {
-        return DB::table('codebridge_workspace_conversations')
+        return array_values(DB::table('codebridge_workspace_conversations')
             ->where('tenant_id', $tenantId)->where('user_id', $userId)
             ->where('device_id', $deviceId)->where('project_id', $projectId)
             ->orderByDesc('updated_at')->limit(50)
             ->get(['id', 'title', 'updated_at'])
-            ->map(fn (object $row): array => (array) $row)->all();
+            ->map(fn (object $row): array => (array) $row)->all());
     }
 
     /** @return array{messages: list<array<string, mixed>>, events: list<array<string, mixed>>} */
@@ -100,7 +100,7 @@ final class WorkspaceChatService
         $iso = static fn (mixed $value): ?string => $value === null ? null : Carbon::parse((string) $value)->toIso8601String();
 
         return [
-            'messages' => DB::table('codebridge_workspace_messages')
+            'messages' => array_values(DB::table('codebridge_workspace_messages')
                 ->where('conversation_id', $conversation->id)->orderBy('id')->limit(200)
                 ->get(['id', 'role', 'content', 'status', 'provider_id', 'model', 'error_code', 'retry_of', 'started_at', 'finished_at', 'created_at'])
                 ->map(function (object $record) use ($iso): array {
@@ -116,8 +116,8 @@ final class WorkspaceChatService
                         'started_at' => $iso($row['started_at']), 'finished_at' => $iso($row['finished_at']),
                         'elapsed_seconds' => $elapsed === null ? null : (int) floor($elapsed),
                     ];
-                })->values()->all(),
-            'events' => DB::table('codebridge_workspace_events')
+                })->all()),
+            'events' => array_values(DB::table('codebridge_workspace_events')
                 ->where('conversation_id', $conversation->id)->orderByDesc('id')->limit(100)
                 ->get(['id', 'message_id', 'kind', 'status', 'detail', 'created_at'])
                 ->reverse()->values()
@@ -128,7 +128,7 @@ final class WorkspaceChatService
                         'id' => $row['id'], 'message_id' => $row['message_id'], 'kind' => $row['kind'],
                         'status' => $row['status'], 'detail' => $row['detail'], 'at' => $iso($row['created_at']),
                     ];
-                })->values()->all(),
+                })->all()),
         ];
     }
 
