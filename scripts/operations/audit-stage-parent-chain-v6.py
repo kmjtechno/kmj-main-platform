@@ -10,6 +10,7 @@ import errno
 import grp
 import json
 import os
+import pwd
 from pathlib import Path
 import socket
 import stat
@@ -80,21 +81,36 @@ def collect_chain(home: Path = HOME, shared: Path = SHARED) -> dict[str, object]
 
 
 def write_receipt(data: dict[str, object]) -> None:
-    qa = directory(QA)
-    if qa.st_mode & 0o002:
-        raise UnsafeEvidence("WORLD_WRITABLE_RECEIPT_PARENT")
     raw = (json.dumps(data, sort_keys=True, separators=(",", ":")) + "\n").encode()
     if len(raw) > 2048:
         raise UnsafeEvidence("RECEIPT_TOO_LARGE")
-    gid = grp.getgrnam("kmjcode").gr_gid
-    fd = os.open(QA / RECEIPT, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600)
-    with os.fdopen(fd, "wb") as stream:
-        stream.write(raw)
-        stream.flush()
-        os.fsync(stream.fileno())
-        os.fchown(stream.fileno(), 0, gid)
-        os.fchmod(stream.fileno(), 0o640)
-        os.fsync(stream.fileno())
+    # A root-owned 0640 leaf is not trustworthy if a group-writable or
+    # stage-owned QA directory lets another actor unlink/replace the leaf.
+    # This receipt is diagnostic evidence, never a cryptographic approval.
+    named = directory(QA)
+    dirfd = os.open(QA, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW | os.O_CLOEXEC)
+    try:
+        opened = os.fstat(dirfd)
+        if ((opened.st_dev, opened.st_ino) != (named.st_dev, named.st_ino)
+                or not stat.S_ISDIR(opened.st_mode)
+                or opened.st_mode & 0o022):
+            raise UnsafeEvidence("UNTRUSTED_RECEIPT_DIRECTORY")
+        kmjcode_uid = pwd.getpwnam("kmjcode").pw_uid
+        stage_uid = pwd.getpwnam("kmjstage").pw_uid
+        if opened.st_uid not in (0, kmjcode_uid) or opened.st_uid == stage_uid:
+            raise UnsafeEvidence("UNTRUSTED_RECEIPT_DIRECTORY")
+        gid = grp.getgrnam("kmjcode").gr_gid
+        fd = os.open(RECEIPT, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW,
+                     0o600, dir_fd=dirfd)
+        with os.fdopen(fd, "wb") as stream:
+            stream.write(raw)
+            stream.flush()
+            os.fsync(stream.fileno())
+            os.fchown(stream.fileno(), 0, gid)
+            os.fchmod(stream.fileno(), 0o640)
+            os.fsync(stream.fileno())
+    finally:
+        os.close(dirfd)
 
 
 def main() -> int:
@@ -119,7 +135,7 @@ def main() -> int:
     except (OSError, UnsafeEvidence, KeyError) as exc:
         label = str(exc)
         if label not in {"LIVE_POINTER_DRIFT", "UNTRUSTED_DIRECTORY_CHAIN",
-                         "WORLD_WRITABLE_RECEIPT_PARENT", "RECEIPT_TOO_LARGE"}:
+                         "UNTRUSTED_RECEIPT_DIRECTORY", "RECEIPT_TOO_LARGE"}:
             label = "UNVERIFIED_HOST_STATE"
         print("KMJ_STAGE_PARENT_CHAIN_V6=BLOCKED_" + label)
         return 2
