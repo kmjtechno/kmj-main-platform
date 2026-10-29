@@ -83,7 +83,7 @@ final class CodeBridgeWorkspaceConcurrencyTest extends TestCase
     }
 
     /**
-     * @return array{codes: list<int>, calls: int}  codes: 0 reserved, 3 busy, 4 other refusal, 5/9 error
+     * @return array{codes: list<int>, calls: int} codes: 0 reserved, 3 busy, 4 other refusal, 5/9 error
      */
     private function overlap(WorkspaceConversation $conversation, string $providerId, ?string $retryOf): array
     {
