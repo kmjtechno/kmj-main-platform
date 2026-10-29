@@ -73,7 +73,18 @@ def _git(tree: Path, *args: str) -> str | None:
     return result.stdout.strip() if result.returncode == 0 else None
 
 
-def evaluate(target: str, paths: Paths = Paths(), require_root: bool = True) -> tuple[list[str], list[str]]:
+def _web_user_can_read(path: Path) -> bool | None:
+    """Read-only check that nginx's www-data can read a candidate file."""
+    try:
+        result = subprocess.run(["runuser", "-u", "www-data", "--", "test", "-r", str(path)],
+                                check=False, capture_output=True, timeout=20)
+    except (OSError, subprocess.TimeoutExpired):
+        return None
+    return result.returncode == 0
+
+
+def evaluate(target: str, paths: Paths = Paths(), require_root: bool = True,
+             web_read=None) -> tuple[list[str], list[str]]:
     """Return (report lines, blocking reasons)."""
     if not SHA.fullmatch(target):
         return ["TARGET_SHA=INVALID"], ["TARGET_SHA_INVALID"]
@@ -125,6 +136,15 @@ def evaluate(target: str, paths: Paths = Paths(), require_root: bool = True) -> 
         lines.append("CANDIDATE_RUNTIME_ENV=" + ("PRESENT" if env_ok else "MISSING_RUN_MATERIALIZE"))
         if not env_ok:
             blockers.append("CANDIDATE_RUNTIME_ENV_MISSING")
+        # The activation health check fetches a static asset through nginx.
+        if web_read is not None:
+            icon = candidate / "apps/platform/public/assets/kmj-codebridge-icon.png"
+            readable, env_private = web_read(icon), web_read(env) is False
+            state = ("PASS" if readable and env_private else
+                     "ENV_EXPOSED" if readable else "UNREADABLE_RUN_MATERIALIZE")
+            lines.append("CANDIDATE_NGINX_ACCESS=" + state)
+            if state != "PASS":
+                blockers.append("CANDIDATE_NGINX_" + ("ENV_EXPOSED" if state == "ENV_EXPOSED" else "UNREADABLE"))
 
     # Backup witness + archive digest.
     witness = paths.backups / f"pre-deploy-{short}.json"
@@ -201,7 +221,7 @@ def main(argv: list[str]) -> int:
     if os.geteuid() != 0:
         print("RELEASE_READINESS=BLOCKED\nBLOCKER=ROOT_REQUIRED")
         return 2
-    lines, blockers = evaluate(argv[1])
+    lines, blockers = evaluate(argv[1], web_read=_web_user_can_read)
     print("\n".join(lines))
     return 0 if not blockers else 1
 
