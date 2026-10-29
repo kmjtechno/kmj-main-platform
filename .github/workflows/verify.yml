@@ -30,7 +30,7 @@ jobs:
       - name: Compile controller
         run: python3 -m compileall controller
       - name: Verify persistent worker safety
-        run: PYTHONPATH=. python3 -m unittest tests.test_persistent_worker tests.test_worker_retry_recovery tests.test_delivery_control_bridge tests.test_staging_monitor_contract tests.test_live_public_surface_contract tests.test_opencode_free tests.test_router_official_client tests.test_codebridge_github_proxy
+        run: PYTHONPATH=. python3 -m unittest tests.test_persistent_worker tests.test_worker_retry_recovery tests.test_delivery_control_bridge tests.test_staging_monitor_contract tests.test_live_public_surface_contract tests.test_opencode_free tests.test_router_official_client tests.test_codebridge_github_proxy tests.test_codebridge_github_proxy_http
       - name: Verify zero-extra-spend CodeBridge workflow contracts
         run: python3 -m unittest tests.test_codebridge_free_first_workflow_contract
       - name: Verify staging QA failure classification
