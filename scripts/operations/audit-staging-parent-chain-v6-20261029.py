@@ -216,9 +216,20 @@ def write_receipt(data: dict[str, object]) -> None:
         raise AuditBlocked("RECEIPT_TOO_LARGE")
     if QA.is_symlink() or not QA.is_dir():
         raise AuditBlocked("QA_DIRECTORY_UNSAFE")
-    gid = grp.getgrnam("kmjcode").gr_gid
-    dirfd = os.open(QA, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
+    dirfd = os.open(QA, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW | os.O_CLOEXEC)
     try:
+        opened = os.fstat(dirfd)
+        named = os.stat(QA, follow_symlinks=False)
+        # A root diagnostic must not place a purported root receipt in a
+        # staging-owned or world-writable directory. Pin the named inode
+        # before opening the O_EXCL leaf; never treat this as a signature.
+        if (not stat.S_ISDIR(opened.st_mode) or
+                opened.st_mode & 0o002 or
+                opened.st_uid == pwd.getpwnam("kmjstage").pw_uid):
+            raise AuditBlocked("QA_DIRECTORY_UNTRUSTED")
+        if (opened.st_dev, opened.st_ino) != (named.st_dev, named.st_ino):
+            raise AuditBlocked("QA_DIRECTORY_CHANGED")
+        gid = grp.getgrnam("kmjcode").gr_gid
         fd = os.open(RECEIPT, os.O_WRONLY | os.O_CREAT | os.O_EXCL |
                      os.O_NOFOLLOW | os.O_CLOEXEC, 0o600, dir_fd=dirfd)
         with os.fdopen(fd, "wb") as out:
