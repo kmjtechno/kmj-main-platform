@@ -233,13 +233,20 @@ export default function CodeBridgeWorkspace(props: Props) {
         ) {
             return;
         }
+        const submittedDraft = draft;
         setSending(true);
         router.post(
             `${conversationUrl(activeConversation.id)}/messages`,
             { content: draft, ...selection() },
             {
                 preserveScroll: true,
-                onSuccess: () => setDraft(''),
+                onSuccess: (page) => {
+                    if (!page.props.chatError) {
+                        setDraft((current) =>
+                            current === submittedDraft ? '' : current,
+                        );
+                    }
+                },
                 onFinish: () => setSending(false),
             },
         );
