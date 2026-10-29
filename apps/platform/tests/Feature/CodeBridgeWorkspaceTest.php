@@ -46,7 +46,7 @@ final class CodeBridgeWorkspaceTest extends TestCase
                 ->where('providers.0.name', 'Mine')
                 ->missing('providers.0.api_key')
                 ->where('capabilities.chat_executor.available', false)
-                ->where('capabilities.conversations.available', false)
+                ->where('capabilities.conversations.available', true)
                 ->where('capabilities.job_events.available', false)
                 ->where('devices', []));
     }

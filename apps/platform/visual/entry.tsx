@@ -9,6 +9,7 @@ import OperatorProducts from '../resources/js/pages/operator-products';
 import OwnerModuleShell from '../resources/js/layouts/owner-module-shell';
 import OperatorOps from '../resources/js/pages/operator-ops';
 import CodeBridgeService from '../resources/js/pages/services/codebridge';
+import { workspaceProps } from './workspace-fixture';
 import CodeBridgeWorkspace from '../resources/js/pages/services/codebridge-workspace';
 import OperatorCodeBridgeOwner from '../resources/js/pages/operator-codebridge-owner';
 import '../resources/css/app.css';
@@ -227,60 +228,12 @@ function OwnerDevicesPreview() {
     );
 }
 function WorkspacePreview() {
-    // Synthetic props only: one registered device, one project, one admitted free model.
+    // Synthetic props only (visual/workspace-fixture.ts); they follow Inertia page updates.
     return (
         <CodeBridgeWorkspace
-            canManage={true}
-            devices={[
-                {
-                    id: 'qa-preview-desktop',
-                    name: 'Synthetic preview desktop',
-                    platform: 'windows',
-                    arch: 'x64',
-                    projects: [
-                        { id: 'qa-project', name: 'Synthetic preview project' },
-                    ],
-                    pending_projects: [],
-                    registered_at: '2026-01-01',
-                    registration: 'registered',
-                    pairing_state: 'redeemed',
-                    connection_status: 'not_verified',
-                },
-            ]}
-            providers={[
-                {
-                    id: 'qa-provider',
-                    name: 'Synthetic free provider',
-                    host: 'api.example.invalid',
-                    enabled: true,
-                    health: 'ok',
-                    free_tier: 'allowlist',
-                    default_model: 'qa-free-model',
-                    free_admitted_models: ['qa-free-model'],
-                },
-            ]}
-            capabilities={{
-                conversations: {
-                    available: false,
-                    reason: 'Chats run in your connected AI client; Main Platform stores no conversations.',
-                },
-                chat_executor: {
-                    available: false,
-                    reason: 'No Main Platform inference endpoint exists. Free providers are listed for readiness only.',
-                },
-                job_events: {
-                    available: false,
-                    reason: 'Job status lives on the paired device and is read through CodeBridge in your AI client.',
-                },
-                device_pairing: {
-                    available: true,
-                    reason: 'Pairing stays in the Main Platform Control Center.',
-                },
-            }}
-            links={{
-                control_center: '/services/kmj-codebridge',
-                ai_providers: '/services/kmj-codebridge/ai-providers',
-            }}
+            {...(usePage().props as unknown as React.ComponentProps<
+                typeof CodeBridgeWorkspace
+            >)}
         />
     );
 }
@@ -428,6 +381,7 @@ void createInertiaApp({
                         : 'welcome',
         props: {
             errors: {},
+            ...(workspace ? workspaceProps() : {}),
             // Landing is a signed-out customer preview; owner routes use
             // synthetic session data. Never authenticate or persist a user.
             auth: {

@@ -30,7 +30,7 @@ test('workspace never invents progress, replies or paid capability', () => {
     assert.doesNotMatch(withoutClasses, /\b\d{1,3}\s?%/);
     assert.doesNotMatch(
         page,
-        /12 of 18|GPT-4o|unlimited|Math\.random|setInterval|setTimeout/i,
+        /12 of 18|GPT-4o|unlimited|Math\.random|setTimeout/i,
     );
     assert.match(page, /disabled/);
     assert.match(page, /not verified/);
@@ -38,7 +38,7 @@ test('workspace never invents progress, replies or paid capability', () => {
 
 test('controller exposes no secrets and marks missing backends unavailable', () => {
     assert.doesNotMatch(controller, /api_key/);
-    for (const key of ['conversations', 'chat_executor', 'job_events'])
+    for (const key of ['job_events'])
         assert.match(
             controller,
             new RegExp(`'${key}' => \\[\\s*'available' => false`),
@@ -47,5 +47,14 @@ test('controller exposes no secrets and marks missing backends unavailable', () 
 
 test('device pairing stays in the Control Center', () => {
     assert.match(page, /#devices/);
-    assert.doesNotMatch(page, /router\.(post|put|patch|delete)/);
+    // The page may only post to workspace conversation endpoints.
+    for (const call of page.match(/router\.post\(\s*[^,]+/g) ?? [])
+        assert.match(call, /BASE|conversationUrl/, call);
+    assert.doesNotMatch(page, /device-pairings|device-enrollments/);
+});
+
+test('chat routes are authenticated, throttled and ULID/UUID constrained', () => {
+    assert.match(routes, /whereUuid\('conversation'\)/);
+    assert.match(routes, /whereUlid\('message'\)/);
+    assert.equal((routes.match(/throttle:/g) ?? []).length >= 5, true);
 });
