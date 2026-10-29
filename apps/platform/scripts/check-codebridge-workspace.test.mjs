@@ -13,7 +13,7 @@ const controller = readFileSync(
 const routes = readFileSync('routes/codebridge-workspace.php', 'utf8');
 const web = readFileSync('routes/web.php', 'utf8');
 
-test('workspace route is registered inside the authenticated group', () => {
+void test('workspace route is registered inside the authenticated group', () => {
     assert.match(routes, /services\/kmj-codebridge\/workspace/);
     const auth = web.indexOf("Route::middleware(['auth', 'verified'])");
     assert.ok(
@@ -22,7 +22,7 @@ test('workspace route is registered inside the authenticated group', () => {
     );
 });
 
-test('workspace never invents progress, replies or paid capability', () => {
+void test('workspace never invents progress, replies or paid capability', () => {
     const withoutClasses = page.replace(
         /className=\{?("[^"]*"|`[^`]*`)\}?/g,
         '',
@@ -36,7 +36,7 @@ test('workspace never invents progress, replies or paid capability', () => {
     assert.match(page, /not verified/);
 });
 
-test('controller exposes no secrets and marks missing backends unavailable', () => {
+void test('controller exposes no secrets and marks missing backends unavailable', () => {
     assert.doesNotMatch(controller, /api_key/);
     for (const key of ['job_events'])
         assert.match(
@@ -45,7 +45,7 @@ test('controller exposes no secrets and marks missing backends unavailable', () 
         );
 });
 
-test('device pairing stays in the Control Center', () => {
+void test('device pairing stays in the Control Center', () => {
     assert.match(page, /#devices/);
     // The page may only post to workspace conversation endpoints.
     for (const call of page.match(/router\.post\(\s*[^,]+/g) ?? [])
@@ -53,7 +53,7 @@ test('device pairing stays in the Control Center', () => {
     assert.doesNotMatch(page, /device-pairings|device-enrollments/);
 });
 
-test('chat routes are authenticated, throttled and ULID/UUID constrained', () => {
+void test('chat routes are authenticated, throttled and ULID/UUID constrained', () => {
     assert.match(routes, /whereUuid\('conversation'\)/);
     assert.match(routes, /whereUlid\('message'\)/);
     assert.equal((routes.match(/throttle:/g) ?? []).length >= 5, true);
