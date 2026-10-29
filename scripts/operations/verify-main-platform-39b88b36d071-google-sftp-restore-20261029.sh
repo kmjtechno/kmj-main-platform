@@ -21,7 +21,12 @@ BACKUP_AGE_IDENTITY="$HOME/.local/share/kmj-recovery/google-vps-20261019.agekey"
 [[ -f "$BACKUP_AGE_IDENTITY" && ! -L "$BACKUP_AGE_IDENTITY" ]] || block AGE_IDENTITY
 [[ "$(stat -c '%u' -- "$BACKUP_AGE_IDENTITY")" == "$(id -u)" ]] || block AGE_IDENTITY_OWNER
 [[ "$(stat -c '%a' -- "$BACKUP_AGE_IDENTITY")" == 600 ]] || block AGE_IDENTITY_MODE
-for tool in age python3 tar df mktemp sha256sum; do
+# pg_restore/SQL from a dump can run programs and open files as this user (the
+# disposable role is a superuser), and a disabled TCP listener is not OS
+# isolation. The whole database phase therefore runs inside a bubblewrap
+# sandbox: no network namespace access, read-only filesystem, home hidden,
+# only this run's scratch directory writable. No sandbox => BLOCKED.
+for tool in age python3 tar df mktemp sha256sum bwrap; do
   command -v "$tool" >/dev/null 2>&1 || block "MISSING_$tool"
 done
 # Never inherit connection settings that could reference a production DB.
@@ -59,11 +64,7 @@ repo="$(cd -- "$(dirname -- "$0")/../.." && pwd)"
 [[ -f "$repo/scripts/verify_backup_bundle.sh" ]] || block ARCHIVE_VERIFIER
 tmp="$(mktemp -d "$scratch/kmj-real-offsite-restore.XXXXXXXX")"
 chmod 700 "$tmp"
-pg_started=0
 cleanup() {
-  if (( pg_started )); then
-    "$pgbin/pg_ctl" -D "$tmp/pgdata" -m immediate -w stop >/dev/null 2>&1 || :
-  fi
   rm -rf -- "$tmp"
 }
 trap cleanup EXIT
@@ -116,35 +117,70 @@ PY
 then
   status BUNDLE_EXTRACTION FAIL; exit 1
 fi
-if ! "$pgbin/initdb" -D "$tmp/pgdata" -U kmj_restore_drill \
-    --auth-local=trust --auth-host=reject --no-instructions \
-    >"$tmp/initdb.log" 2>&1; then
-  status DISPOSABLE_POSTGRES_INIT FAIL; exit 1
-fi
-port=55479
-if ! "$pgbin/pg_ctl" -D "$tmp/pgdata" -l "$tmp/postgres.log" \
-    -o "-c listen_addresses='' -c unix_socket_directories='$tmp/socket' -c unix_socket_permissions=0700 -c port=$port" \
-    -w start >/dev/null 2>&1; then
-  status DISPOSABLE_POSTGRES_START FAIL; exit 1
-fi
-pg_started=1
-[[ -S "$tmp/socket/.s.PGSQL.$port" ]] || { status PRIVATE_SOCKET FAIL; exit 1; }
-if ! "$pgbin/createdb" -h "$tmp/socket" -p "$port" -U kmj_restore_drill kmj_recovered >/dev/null 2>&1; then
-  status DISPOSABLE_DATABASE_CREATION FAIL; exit 1
-fi
-if ! "$pgbin/pg_restore" --exit-on-error --no-owner --no-acl \
-    -h "$tmp/socket" -p "$port" -U kmj_restore_drill -d kmj_recovered \
-    "$tmp/extracted/database.dump" >"$tmp/restore.log" 2>&1; then
-  status DISPOSABLE_POSTGRES_RESTORE FAIL; exit 1
-fi
-tables="$("$pgbin/psql" -X -A -t -h "$tmp/socket" -p "$port" \
-  -U kmj_restore_drill -d kmj_recovered -v ON_ERROR_STOP=1 \
-  -c "select (to_regclass('public.users') is not null and to_regclass('public.organizations') is not null and to_regclass('public.entitlements') is not null)::int" 2>/dev/null)" || {
-  status RECOVERED_APP_SCHEMA FAIL; exit 1;
+# Bind the decrypted bundle to THIS candidate before trusting its contents:
+# exact metadata keys, target/current release, env exclusion and the digest of
+# the root-witnessed local source archive (from the sealing receipt).
+expected_source_sha=bbf95ca55df0b031f8e875540a476973c5a58bad1ec89fea8e9e2a5a7cc45cdd
+if ! python3 - "$tmp/extracted/metadata.txt" "$expected_source_sha" <<'PY'
+import sys
+lines = open(sys.argv[1], encoding="ascii").read().splitlines()
+want = {
+    "backup_kind": "offsite_sanitized_local_witness",
+    "source_local_sha256": sys.argv[2],
+    "target_sha": "39b88b36d071d3f78f2392d609d3febc2c530165",
+    "current_release": "platform-574e443a2c75",
+    "production_env_excluded": "YES",
 }
-[[ "$tables" == 1 ]] || { status RECOVERED_APP_SCHEMA FAIL; exit 1; }
+got = {}
+for line in lines:
+    key, sep, value = line.partition("=")
+    if not sep or key in got:
+        raise SystemExit(1)
+    got[key] = value
+raise SystemExit(0 if got == want else 1)
+PY
+then
+  status BUNDLE_METADATA_BINDING FAIL; exit 1
+fi
+status BUNDLE_METADATA_BINDING PASS
+
+cat >"$tmp/db-phase.sh" <<'INNER'
+#!/usr/bin/env bash
+set -Eeuo pipefail
+pgbin=$1; work=$2; port=$3
+stage() { printf 'STAGE=%s\n' "$1" >"$work/db.stage"; }
+trap '"$pgbin/pg_ctl" -D "$work/pgdata" -m immediate -w stop >/dev/null 2>&1 || :' EXIT
+stage DISPOSABLE_POSTGRES_INIT
+"$pgbin/initdb" -D "$work/pgdata" -U kmj_restore_drill --auth-local=trust --auth-host=reject --no-instructions >"$work/initdb.log" 2>&1
+stage DISPOSABLE_POSTGRES_START
+"$pgbin/pg_ctl" -D "$work/pgdata" -l "$work/postgres.log" \
+  -o "-c listen_addresses='' -c unix_socket_directories='$work/socket' -c unix_socket_permissions=0700 -c port=$port" \
+  -w start >/dev/null 2>&1
+[[ -S "$work/socket/.s.PGSQL.$port" ]]
+stage DISPOSABLE_DATABASE_CREATION
+"$pgbin/createdb" -h "$work/socket" -p "$port" -U kmj_restore_drill kmj_recovered >/dev/null 2>&1
+stage DISPOSABLE_POSTGRES_RESTORE
+"$pgbin/pg_restore" --exit-on-error --no-owner --no-acl -h "$work/socket" -p "$port" \
+  -U kmj_restore_drill -d kmj_recovered "$work/extracted/database.dump" >"$work/restore.log" 2>&1
+stage RECOVERED_APP_SCHEMA
+tables=$("$pgbin/psql" -X -A -t -h "$work/socket" -p "$port" -U kmj_restore_drill -d kmj_recovered -v ON_ERROR_STOP=1 \
+  -c "select (to_regclass('public.users') is not null and to_regclass('public.organizations') is not null and to_regclass('public.entitlements') is not null)::int" 2>/dev/null)
+[[ "$tables" == 1 ]]
+stage DONE
+INNER
+chmod 700 "$tmp/db-phase.sh"
+sandbox=(bwrap --unshare-all --die-with-parent --new-session --cap-drop ALL
+  --ro-bind / / --proc /proc --dev /dev --tmpfs "$HOME" --bind "$tmp" "$tmp")
+if ! "${sandbox[@]}" bash "$tmp/db-phase.sh" "$pgbin" "$tmp" 55479 >/dev/null 2>&1; then
+  stage_name="$(sed -n 's/^STAGE=//p' "$tmp/db.stage" 2>/dev/null | tail -1)"
+  [[ "$stage_name" =~ ^[A-Z_]+$ ]] || stage_name=DISPOSABLE_POSTGRES_SANDBOX
+  status "$stage_name" FAIL; exit 1
+fi
+[[ "$(sed -n 's/^STAGE=//p' "$tmp/db.stage" 2>/dev/null | tail -1)" == DONE ]] ||
+  { status DISPOSABLE_POSTGRES_SANDBOX FAIL; exit 1; }
+status DATABASE_PHASE_OS_SANDBOX PASS
 # Storage extraction occurs only after archive integrity and bounded-member verification.
-if ! tar -xzf "$tmp/extracted/storage.tar.gz" -C "$tmp/restored-storage" >/dev/null 2>&1; then
+if ! tar -xzf "$tmp/extracted/storage.tar.gz" --no-same-owner --no-same-permissions -C "$tmp/restored-storage" >/dev/null 2>&1; then
   status RECOVERED_STORAGE FAIL; exit 1
 fi
 [[ -d "$tmp/restored-storage/storage/app" ]] || { status RECOVERED_STORAGE FAIL; exit 1; }
@@ -152,15 +188,21 @@ fi
 # exists on disk with the same size, and nothing else (no symlinks/specials,
 # no extra or missing entries). Counts only; no file names or contents printed.
 if ! parity="$(python3 - "$tmp/extracted/storage.tar.gz" "$tmp/restored-storage" <<'PY'
-import os, stat, sys, tarfile
+import hashlib, os, stat, sys, tarfile
 archive, root = sys.argv[1], sys.argv[2]
+def sha(stream):
+    h = hashlib.sha256()
+    for chunk in iter(lambda: stream.read(1024 * 1024), b""):
+        h.update(chunk)
+    return h.hexdigest()
 expected = {}
 with tarfile.open(archive, "r:gz") as tar:
     for m in tar:
         if m.isdir():
             expected[m.name.rstrip("/")] = ("d", 0)
         elif m.isfile():
-            expected[m.name] = ("f", m.size)
+            with tar.extractfile(m) as stream:
+                expected[m.name] = ("f", m.size, sha(stream))
         else:
             raise SystemExit(1)
 # tar -C app storage/app has no "storage" entry; parents are implicit.
@@ -178,18 +220,19 @@ for dirpath, dirnames, filenames in os.walk(root, followlinks=False):
         if stat.S_ISDIR(info.st_mode):
             found[rel] = ("d", 0)
         elif stat.S_ISREG(info.st_mode):
-            found[rel] = ("f", info.st_size)
+            with open(full, "rb") as stream:
+                found[rel] = ("f", info.st_size, sha(stream))
         else:
             raise SystemExit(1)
 if found != expected:
     raise SystemExit(1)
-files = sum(1 for kind, _ in found.values() if kind == "f")
-print(f"{files} {sum(size for _, size in found.values())}")
+files = sum(1 for v in found.values() if v[0] == "f")
+print(f"{files} {sum(v[1] for v in found.values())}")
 PY
 )"; then
-  status STORAGE_EXTRACTION_PARITY FAIL; exit 1
+  status STORAGE_EXTRACTION_PARITY_CONTENT_SHA256 FAIL; exit 1
 fi
-status STORAGE_EXTRACTION_PARITY PASS
+status STORAGE_EXTRACTION_PARITY_CONTENT_SHA256 PASS
 status STORAGE_REGULAR_FILES "${parity% *}"
 status STORAGE_BYTES "${parity#* }"
 status DISPOSABLE_POSTGRES_RESTORE PASS

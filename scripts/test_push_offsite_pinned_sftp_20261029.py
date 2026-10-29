@@ -35,7 +35,7 @@ class Env:
         stubs = {
             "id": "#!/bin/sh\necho 0\n",
             # Pretend every protected file is root:0600:1 link.
-            "stat": "#!/bin/sh\ncase \"$*\" in *'%u:%a:%h'*) echo 0:600:1;; *) exec /usr/bin/stat \"$@\";; esac\n",
+            "stat": "#!/bin/sh\ncase \"$*\" in *'%u:%a:%h'*) echo 0:600:1;; *\"-c %u -- \"*) echo 0;; *) exec /usr/bin/stat \"$@\";; esac\n",
             "ssh-keyscan": "#!/bin/sh\necho 'backup.example ssh-ed25519 AAAAFAKEKEY'\n",
             "ssh-keygen": f"#!/bin/sh\necho '256 {fingerprint} backup.example (ED25519)'\n",
             "sftp": self._sftp(sftp_mode),
@@ -47,8 +47,7 @@ class Env:
         text = SCRIPT.read_text()
         text = text.replace("CONF=/etc/kmj-codebridge/offsite-sftp.conf", f"CONF={conf_path}")
         text = text.replace("LOCAL=/var/backups/kmj-platform/offsite-39b88b36d071.tar.gz.age", f"LOCAL={self.local}")
-        text = text.replace("LOCKFILE=/run/lock/kmj-offsite-push-39b88b36d071.lock", f"LOCKFILE={root}/lock")
-        text = text.replace("/var/backups/kmj-platform/.kmj-offsite-push", f"{root}/backups/.kmj-offsite-push")
+        text = text.replace("BACKUP_DIR=/var/backups/kmj-platform", f"BACKUP_DIR={root}/backups")
         self.script = root / "push.sh"
         self.script.write_text(text)
         conf_path.chmod(0o600)
@@ -71,7 +70,8 @@ while read -r cmd a b; do
   case "$cmd" in
     get) if [ -f "$a" ]; then cp "$a" "$b"; else echo "File \\"$a\\" not found." >&2; exit 1; fi ;;
     put) case "{mode}" in corrupt) echo corrupt > "$b";; quota) echo 'Failure: No space left' >&2; exit 1;; *) cp "$a" "$b";; esac ;;
-    rename) mv "$a" "$b" ;;
+    rename) if [ -e "$b" ]; then echo 'Couldn'"'"'t rename: Failure' >&2; exit 1; fi; mv "$a" "$b" ;;
+    -rm) rm -f "$a" ;;
   esac
 done < "$batch"
 """
@@ -99,7 +99,9 @@ class PinnedSftpPush(unittest.TestCase):
         self.assertIn("OFFSITE_RESTORE=NOT_VERIFIED", r.stdout)
         self.assertEqual(uploaded, b"ENCRYPTED-TEST-BYTES")
         self.assertEqual(left, [])
-        self.assertIn(".part", log)
+        self.assertIn(".incoming-offsite-39b88b36d071.tar.gz.age.", log)
+        self.assertRegex(log, r"rename .*\.incoming-")
+        self.assertNotIn("posix-rename", log)
         for flag in ("BatchMode=yes", "IdentitiesOnly=yes", "StrictHostKeyChecking=yes",
                      "PasswordAuthentication=no", "IdentityAgent=none"):
             self.assertIn(flag, log)
@@ -114,23 +116,47 @@ class PinnedSftpPush(unittest.TestCase):
     def test_auth_failure_is_classified_not_printed(self):
         r, _, _, _ = self.go(sftp_mode="auth")
         self.assertEqual(r.returncode, 1)
-        self.assertIn("SFTP_CONNECT=FAIL:SSH_AUTH_KEY_REJECTED", r.stdout)
+        self.assertIn("SFTP_UPLOAD=FAIL:SSH_AUTH_KEY_REJECTED", r.stdout)
         self.assertNotIn("publickey", r.stdout + r.stderr)
 
     def test_network_failure_classified(self):
         r, *_ = self.go(sftp_mode="net")
         self.assertIn("FAIL:NETWORK_OR_REMOTE_DOWN", r.stdout)
 
-    def test_existing_identical_object_is_idempotent(self):
-        r, uploaded, *_ = self.go(remote=b"ENCRYPTED-TEST-BYTES")
-        self.assertEqual(r.returncode, 0)
-        self.assertIn("REMOTE_OBJECT=ALREADY_PRESENT_IDENTICAL", r.stdout)
+    def test_existing_identical_object_is_accepted_only_after_readback(self):
+        r, uploaded, left, _ = self.go(remote=b"ENCRYPTED-TEST-BYTES")
+        self.assertEqual(r.returncode, 0, r.stdout)
+        self.assertIn("REMOTE_COMMIT_NO_CLOBBER=TARGET_EXISTS_OR_FAILED", r.stdout)
+        self.assertIn("REMOTE_READBACK_SHA256=PASS", r.stdout)
+        self.assertEqual(uploaded, b"ENCRYPTED-TEST-BYTES")
 
     def test_existing_different_object_is_never_overwritten(self):
-        r, uploaded, *_ = self.go(remote=b"OTHER")
-        self.assertEqual(r.returncode, 2)
-        self.assertIn("REMOTE_OBJECT_DIFFERS", r.stdout)
+        r, uploaded, left, _ = self.go(remote=b"OTHER")
+        self.assertEqual(r.returncode, 1)
+        self.assertIn("REMOTE_READBACK=DIGEST_MISMATCH", r.stdout)
+        self.assertNotIn("OFFSITE_PUSH=PASS", r.stdout)
         self.assertEqual(uploaded, b"OTHER")
+
+    def test_incoming_names_are_unique_per_run_and_cleaned_after_losing_the_race(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            env = Env(Path(tmp), remote=b"OTHER")
+            env.run()
+            leftovers = [p.name for p in env.remote.iterdir() if p.name.startswith(".incoming-")]
+            self.assertEqual(leftovers, [])
+            first = env.sftp_log.read_text()
+            env.sftp_log.unlink()
+            env.run()
+            second = env.sftp_log.read_text()
+            names = lambda t: set(re.findall(r"\.incoming-[^ \n]+", t))
+            self.assertTrue(names(first) and names(second))
+            self.assertTrue(names(first).isdisjoint(names(second)))
+
+    def test_lock_does_not_create_or_follow_files_in_shared_lock_dirs(self):
+        text = SCRIPT.read_text()
+        self.assertNotIn("/run/lock", text)
+        self.assertNotRegex(text, r"exec 9>")
+        self.assertIn('exec 9<"$BACKUP_DIR"', text)
+        self.assertIn("protected_chain", text)
 
     def test_readback_digest_mismatch_fails(self):
         r, *_ = self.go(sftp_mode="corrupt")

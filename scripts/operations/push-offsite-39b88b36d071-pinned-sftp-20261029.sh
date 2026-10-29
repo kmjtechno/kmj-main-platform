@@ -18,7 +18,7 @@ umask 077
 CONF=/etc/kmj-codebridge/offsite-sftp.conf
 LOCAL=/var/backups/kmj-platform/offsite-39b88b36d071.tar.gz.age
 REMOTE_NAME=offsite-39b88b36d071.tar.gz.age
-LOCKFILE=/run/lock/kmj-offsite-push-39b88b36d071.lock
+BACKUP_DIR=/var/backups/kmj-platform
 
 status() { printf '%s=%s\n' "$1" "$2"; }
 block() { status OFFSITE_PUSH "BLOCKED:$1"; exit 2; }
@@ -34,6 +34,23 @@ protected_file() { # path -> must be a root-owned, single-link, 0600 regular fil
   [[ -f "$p" && ! -L "$p" ]] || return 1
   [[ "$(stat -c '%u:%a:%h' -- "$p")" == "0:600:1" ]]
 }
+# Every parent directory must be root-owned and not group/world writable, so a
+# non-root user can never swap a component of the path (symlink or rename).
+protected_chain() {
+  local p=$1 d meta
+  d=$(dirname -- "$p")
+  while :; do
+    [[ -d "$d" && ! -L "$d" ]] || return 1
+    meta=$(stat -c '%u:%a:%h' -- "$d") || return 1
+    [[ "${meta%%:*}" == 0 ]] || return 1
+    local mode=${meta#*:}; mode=${mode%%:*}
+    (( (8#$mode & 8#022) == 0 )) || return 1
+    [[ "$d" == / ]] && break
+    d=$(dirname -- "$d")
+  done
+}
+protected_chain "$CONF" || block CONFIG_PATH_CHAIN
+protected_chain "$LOCAL" || block SEALED_OBJECT_PATH_CHAIN
 protected_file "$CONF" || block CONFIG_NOT_ROOT_0600
 protected_file "$LOCAL" || block SEALED_OBJECT_NOT_ROOT_0600
 
@@ -57,12 +74,15 @@ rdir=${cfg[REMOTE_DIR]} ident=${cfg[IDENTITY_FILE]} pin=${cfg[HOSTKEY_SHA256]}
 [[ "$rdir" =~ ^/[A-Za-z0-9._/-]{1,200}$ && "$rdir" != *..* && "$rdir" != */ ]] || block CONFIG_REMOTE_DIR
 [[ "$pin" =~ ^SHA256:[A-Za-z0-9+/]{43}$ ]] || block CONFIG_HOSTKEY_PIN
 [[ "$ident" == /* && "$ident" != *..* ]] || block CONFIG_IDENTITY_PATH
+protected_chain "$ident" || block IDENTITY_PATH_CHAIN
 protected_file "$ident" || block IDENTITY_NOT_ROOT_0600
 
-exec 9>"$LOCKFILE"
+protected_chain "$BACKUP_DIR/x" || block BACKUP_DIR_PATH_CHAIN
+[[ "$(stat -c '%u' -- "$BACKUP_DIR")" == 0 ]] || block BACKUP_DIR_OWNER
+exec 9<"$BACKUP_DIR"
 flock -n 9 || block ALREADY_RUNNING
 
-tmp=$(mktemp -d /var/backups/kmj-platform/.kmj-offsite-push.XXXXXXXX)
+tmp=$(mktemp -d "$BACKUP_DIR/.kmj-offsite-push.XXXXXXXX")
 chmod 700 "$tmp"
 trap 'rm -rf -- "$tmp"' EXIT
 
@@ -100,31 +120,34 @@ run_sftp() { # name, batch-file -> exit status; stderr kept for classification o
 local_sha=$(sha256sum -- "$LOCAL" | cut -d' ' -f1)
 status LOCAL_ENCRYPTED_SHA256 "$local_sha"
 
-# 2) Idempotency: if the object already exists it must be byte-identical.
-printf 'get %s/%s %s/existing\n' "$rdir" "$REMOTE_NAME" "$tmp" >"$tmp/b_existing"
-if run_sftp existing "$tmp/b_existing" && [[ -f "$tmp/existing" ]]; then
-  if [[ "$(sha256sum -- "$tmp/existing" | cut -d' ' -f1)" == "$local_sha" ]]; then
-    status REMOTE_OBJECT ALREADY_PRESENT_IDENTICAL; status OFFSITE_PUSH PASS
-    status OFFSITE_RESTORE NOT_VERIFIED; exit 0
-  fi
-  status REMOTE_OBJECT EXISTS_DIFFERENT; status OFFSITE_PUSH BLOCKED:REMOTE_OBJECT_DIFFERS; exit 2
-fi
-existing_class=$(classify "$tmp/existing.err")
-case "$existing_class" in
-  SSH_AUTH_KEY_REJECTED|SSH_HOSTKEY|NETWORK_OR_REMOTE_DOWN)
-    status SFTP_CONNECT "FAIL:$existing_class"; status OFFSITE_PUSH FAIL; exit 1 ;;
-esac
+# 2) Exclusive publication. Every run uploads to its OWN unique incoming name
+# and commits with sftp `rename`, which OpenSSH implements WITHOUT overwrite
+# (it fails if the target exists; `posix-rename` is deliberately never used).
+# So two runs, or a stale .part, can never clobber the final object.
+uniq=$(od -An -N10 -tx1 /dev/urandom | tr -d ' \n')
+[[ "$uniq" =~ ^[0-9a-f]{20}$ ]] || block RANDOM_UNAVAILABLE
+incoming="$rdir/.incoming-$REMOTE_NAME.$uniq"
+final="$rdir/$REMOTE_NAME"
 
-# 3) Upload to a .part name, atomically rename, never overwrite.
-printf 'put %s %s/%s.part\nrename %s/%s.part %s/%s\n' \
-  "$LOCAL" "$rdir" "$REMOTE_NAME" "$rdir" "$REMOTE_NAME" "$rdir" "$REMOTE_NAME" >"$tmp/b_put"
+printf 'put %s %s\n' "$LOCAL" "$incoming" >"$tmp/b_put"
 if ! run_sftp put "$tmp/b_put"; then
+  printf -- '-rm %s\n' "$incoming" >"$tmp/b_cleanup"; run_sftp cleanup "$tmp/b_cleanup" || true
   status SFTP_UPLOAD "FAIL:$(classify "$tmp/put.err")"; status OFFSITE_PUSH FAIL; exit 1
 fi
 status SFTP_UPLOAD PASS
 
+printf 'rename %s %s\n' "$incoming" "$final" >"$tmp/b_commit"
+if run_sftp commit "$tmp/b_commit"; then
+  status REMOTE_COMMIT_NO_CLOBBER PASS
+else
+  # Target exists (or commit failed). Only an identical existing object is
+  # acceptable; it is verified byte-for-byte below, never assumed.
+  status REMOTE_COMMIT_NO_CLOBBER TARGET_EXISTS_OR_FAILED
+  printf -- '-rm %s\n' "$incoming" >"$tmp/b_cleanup"; run_sftp cleanup "$tmp/b_cleanup" || true
+fi
+
 # 4) Independent verification: download again and compare the digest.
-printf 'get %s/%s %s/verify\n' "$rdir" "$REMOTE_NAME" "$tmp" >"$tmp/b_verify"
+printf 'get %s %s/verify\n' "$final" "$tmp" >"$tmp/b_verify"
 if ! run_sftp verify "$tmp/b_verify" || [[ ! -f "$tmp/verify" ]]; then
   status REMOTE_READBACK "FAIL:$(classify "$tmp/verify.err")"; status OFFSITE_PUSH FAIL; exit 1
 fi
