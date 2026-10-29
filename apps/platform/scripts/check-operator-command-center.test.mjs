@@ -26,8 +26,11 @@ void test('owner command center uses separated, real admin module routes', () =>
     assert.ok(!operator.includes('Product & licensing matrix'));
 });
 
-void test('operator and super-admin are distinct owner views, not duplicated dashboards', () => {
-    assert.match(ownerRules, /'ownerView' => \$request->routeIs\('super-admin\.index'\) \? 'dashboard' : 'command-center'/);
+void test('operator and super-admin route views remain distinct', () => {
+    assert.match(
+        ownerRules,
+        /'ownerView' => \$request->routeIs\('super-admin\.index'\) \? 'dashboard' : 'command-center'/,
+    );
     assert.match(ownerRules, /Route::get\('operator', \$ownerCommandDashboard\)/);
     assert.match(ownerRules, /Route::get\('super-admin', \$ownerCommandDashboard\)/);
     assert.match(operator, /ownerView: 'dashboard' \| 'command-center'/);
