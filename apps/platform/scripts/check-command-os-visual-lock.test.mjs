@@ -13,7 +13,10 @@ void test('locked owner command center is rendered only in the guarded operator 
     assert.match(operator, /<OperatorCommandOs/);
     assert.match(operator, /<OperatorControlOverview/);
     assert.match(operator, /href="\/operator\/products"/);
-    assert.match(operator, /<Head title="KMJ Enterprise Command OS/);
+    assert.match(operator, /KMJ Enterprise Command OS · Super Admin/);
+    assert.match(operator, /ownerView === 'dashboard'/);
+    assert.match(operator, /aria-label="Owner task-first Command Center"/);
+    assert.match(command, /href="\/operator"/);
     assert.match(operator, /id="commercial-orders"/);
     assert.match(operator, /ManualPaymentConfirmation/);
     assert.match(operator, /order\.fulfillment_state ===/);
