@@ -79,13 +79,17 @@ final class OperatorCommandOsHttpAccessTest extends TestCase
             ->withSession(['auth.password_confirmed_at' => time()])
             ->get('/operator')
             ->assertOk()
-            ->assertInertia(fn (Assert $page) => $page->component('operator'));
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('operator')
+                ->where('ownerView', 'command-center'));
 
         $this->actingAs($user)
             ->withSession(['auth.password_confirmed_at' => time()])
             ->get('/super-admin')
             ->assertOk()
-            ->assertInertia(fn (Assert $page) => $page->component('operator'));
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('operator')
+                ->where('ownerView', 'dashboard'));
     }
 
     public function test_verified_passkey_owner_must_confirm_password_before_command_os(): void
