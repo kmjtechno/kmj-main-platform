@@ -18,6 +18,7 @@ const base = new URL(server.resolvedUrls.local[0]);
 const PAGE = '/services/kmj-codebridge/workspace';
 const browser = await chromium.launch({
     headless: true,
+    chromiumSandbox: true,
     executablePath: process.env.KMJ_CHROMIUM_EXECUTABLE,
 });
 const failures = [];
@@ -302,7 +303,35 @@ async function failureAndRetryFlow() {
     await page.close();
 }
 
+async function refusedSendPreservesDraft() {
+    for (const code of ['conversation_busy', 'provider_not_found']) {
+        const page = await browser.newPage({
+            viewport: { width: 1440, height: 900 },
+        });
+        await page.route(
+            '**/services/kmj-codebridge/workspace/conversations/qa-conv/messages',
+            (route) => route.fulfill(inertia(workspaceProps([], [], code))),
+        );
+        await page.goto(new URL(PAGE, base).href, { waitUntil: 'networkidle' });
+        const composer = page.getByTestId('composer');
+        const draft = 'Keep this unaccepted draft: ' + code;
+        await composer.fill(draft);
+        await page.getByTestId('send').click();
+        await page.waitForFunction(
+            () =>
+                document.querySelector('[data-testid="send"]')?.disabled ===
+                false,
+        );
+        expect(
+            (await composer.inputValue()) === draft,
+            'refused send discarded draft: ' + code,
+        );
+        await page.close();
+    }
+}
+
 try {
+    await refusedSendPreservesDraft();
     for (const width of [390, 768, 1440]) await layoutChecks(width);
     await sendFlow();
     await failureAndRetryFlow();
