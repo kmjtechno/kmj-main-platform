@@ -195,6 +195,21 @@ jobs:
             cd apps/platform
             npm run build
 
+  codebridge_unified_source:
+    docker:
+      - image: cimg/php:8.4-node
+    resource_class: small
+    steps:
+      - checkout
+      - run:
+          name: Exact-head source contracts for one CodeBridge device workspace
+          command: |
+            set -euo pipefail
+            test "$(git rev-parse HEAD)" = "$CIRCLE_SHA1"
+            cd apps/platform
+            node --test scripts/check-codebridge-dashboard-truth.test.mjs scripts/check-operator-command-center.test.mjs scripts/check-admin-premium.test.mjs scripts/check-admin-roadmap-navigation.test.mjs
+            echo SOURCE_ONLY_ONE_CODEBRIDGE_DASHBOARD_PASS_NOT_PRODUCTION_RELEASE
+
   php_pint:
     docker:
       - image: cimg/php:8.4-node
@@ -752,6 +767,14 @@ workflows:
             branches:
               only:
                 - release/super-admin-v1-integration-20261014
+
+  review_codebridge_unified_dashboard:
+    jobs:
+      - codebridge_unified_source:
+          filters:
+            branches:
+              only:
+                - fix/codebridge-single-device-dashboard-20261029
 
   review_codebridge_device_control:
     jobs:
