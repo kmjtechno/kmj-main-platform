@@ -96,7 +96,10 @@ void test('many OAuth grants have compact, searchable cards and unique client cl
 void test('offline recovery stays inside the KMJ-hosted device dashboard', () => {
     assert.match(deviceCenter, /\/install-codebridge-windows\.cmd/);
     assert.match(deviceCenter, /Connect this Windows PC/);
-    assert.match(deviceCenter, /Reconnect on Windows/);
+    assert.match(deviceCenter, /deviceRecoveryAction\(device\.platform\)/);
+    assert.match(deviceCenter, /href=\{recovery\.href\}/);
+    assert.match(deviceCenter, /\{recovery\.label\}/);
+    assert.match(deviceCenter, /Registration · \{device\.id\.slice\(-8\)\}/);
     assert.match(deviceCenter, /Registration alone is not an/);
     assert.match(deviceCenter, /Live connection has not been verified/);
     assert.doesNotMatch(deviceCenter, /github\.com\/kmjtechno\/kmj-codebridge/);
