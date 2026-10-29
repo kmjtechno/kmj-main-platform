@@ -101,8 +101,9 @@ final class WorkspaceChatService
 
         return [
             'messages' => array_values(DB::table('codebridge_workspace_messages')
-                ->where('conversation_id', $conversation->id)->orderBy('id')->limit(200)
+                ->where('conversation_id', $conversation->id)->orderByDesc('id')->limit(200)
                 ->get(['id', 'role', 'content', 'status', 'provider_id', 'model', 'error_code', 'retry_of', 'started_at', 'finished_at', 'created_at'])
+                ->reverse()
                 ->map(function (object $record) use ($iso): array {
                     $row = (array) $record;
                     // Elapsed time comes only from real timestamps; a running request is measured up to now.
@@ -134,28 +135,16 @@ final class WorkspaceChatService
 
     public function send(WorkspaceConversation $conversation, string $content, string $providerId, string $model): void
     {
-        $this->assertIdle($conversation);
         $provider = $this->provider($conversation, $providerId);
-        DB::table('codebridge_workspace_messages')->insert([
-            'id' => (string) Str::ulid(), 'conversation_id' => $conversation->id, 'role' => 'user',
-            'content' => $content, 'status' => 'complete', 'created_at' => now(), 'updated_at' => now(),
-        ]);
-        $this->run($conversation, $provider, $model, null);
+        $messageId = $this->reserve($conversation, $provider, $model, $content, null);
+        $this->execute($conversation, $provider, $model, $messageId);
     }
 
     public function retry(WorkspaceConversation $conversation, string $messageId, string $providerId, string $model): void
     {
-        $this->assertIdle($conversation);
         $provider = $this->provider($conversation, $providerId);
-        $last = DB::table('codebridge_workspace_messages')
-            ->where('conversation_id', $conversation->id)->orderByDesc('id')->first();
-        $last = $last === null ? null : (array) $last;
-        // Only the newest attempt, and only if it did not complete, can be retried.
-        if (! ($last !== null && $last['id'] === $messageId && $last['role'] === 'assistant'
-            && in_array($last['status'], ['failed', 'cancelled'], true))) {
-            throw new RuntimeException('retry_not_allowed');
-        }
-        $this->run($conversation, $provider, $model, $messageId);
+        $newId = $this->reserve($conversation, $provider, $model, null, $messageId);
+        $this->execute($conversation, $provider, $model, $newId);
     }
 
     public function cancel(WorkspaceConversation $conversation, string $messageId): void
@@ -177,16 +166,48 @@ final class WorkspaceChatService
             ?? throw new RuntimeException('provider_not_found');
     }
 
-    private function run(WorkspaceConversation $conversation, AiProvider $provider, string $model, ?string $retryOf): void
+    /**
+     * Atomically claims the conversation for ONE provider call. Every send and retry takes the
+     * conversation row lock first, so the idle check, the user message and the running
+     * assistant row commit together: of N overlapping requests exactly one reserves and the
+     * rest see `running` and are refused as busy. The provider is called after the commit.
+     */
+    private function reserve(WorkspaceConversation $conversation, AiProvider $provider, string $model, ?string $content, ?string $retryOf): string
     {
-        $messageId = (string) Str::ulid();
-        DB::table('codebridge_workspace_messages')->insert([
-            'id' => $messageId, 'conversation_id' => $conversation->id, 'role' => 'assistant', 'content' => '',
-            'status' => 'running', 'provider_id' => $provider->id, 'model' => $model, 'retry_of' => $retryOf,
-            'started_at' => now(), 'created_at' => now(), 'updated_at' => now(),
-        ]);
-        $this->event($conversation->id, $messageId, 'inference_started', 'running', $model);
+        return DB::transaction(function () use ($conversation, $provider, $model, $content, $retryOf): string {
+            DB::table('codebridge_workspace_conversations')->where('id', $conversation->id)->lockForUpdate()->first();
+            $this->assertIdle($conversation);
 
+            if ($retryOf !== null) {
+                $last = DB::table('codebridge_workspace_messages')
+                    ->where('conversation_id', $conversation->id)->orderByDesc('id')->first();
+                $last = $last === null ? null : (array) $last;
+                // Only the newest attempt, and only if it did not complete, can be retried.
+                if (! ($last !== null && $last['id'] === $retryOf && $last['role'] === 'assistant'
+                    && in_array($last['status'], ['failed', 'cancelled'], true))) {
+                    throw new RuntimeException('retry_not_allowed');
+                }
+            } else {
+                DB::table('codebridge_workspace_messages')->insert([
+                    'id' => (string) Str::ulid(), 'conversation_id' => $conversation->id, 'role' => 'user',
+                    'content' => (string) $content, 'status' => 'complete', 'created_at' => now(), 'updated_at' => now(),
+                ]);
+            }
+
+            $messageId = (string) Str::ulid();
+            DB::table('codebridge_workspace_messages')->insert([
+                'id' => $messageId, 'conversation_id' => $conversation->id, 'role' => 'assistant', 'content' => '',
+                'status' => 'running', 'provider_id' => $provider->id, 'model' => $model, 'retry_of' => $retryOf,
+                'started_at' => now(), 'created_at' => now(), 'updated_at' => now(),
+            ]);
+            $this->event($conversation->id, $messageId, 'inference_started', 'running', $model);
+
+            return $messageId;
+        });
+    }
+
+    private function execute(WorkspaceConversation $conversation, AiProvider $provider, string $model, string $messageId): void
+    {
         try {
             $result = $this->providers->complete($provider, $model, $this->history($conversation->id, $messageId));
         } catch (Throwable) {

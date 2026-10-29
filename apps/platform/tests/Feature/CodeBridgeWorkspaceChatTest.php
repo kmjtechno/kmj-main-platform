@@ -239,6 +239,28 @@ final class CodeBridgeWorkspaceChatTest extends TestCase
         Http::assertNothingSent();
     }
 
+    public function test_transcript_shows_the_latest_200_messages_in_order_so_new_turns_never_disappear(): void
+    {
+        $id = $this->start($this->alice, 'desk-a', 'proj-a');
+        $rows = [];
+        for ($i = 0; $i < 250; $i++) {
+            $rows[] = [
+                'id' => (string) Str::ulid(), 'conversation_id' => $id, 'role' => 'user', 'content' => 'm'.$i,
+                'status' => 'complete', 'created_at' => now(), 'updated_at' => now(),
+            ];
+        }
+        DB::table('codebridge_workspace_messages')->insert($rows);
+        $running = $this->seedAssistant($id, 'running', now());
+
+        $this->actingAs($this->alice)->get($this->pageUrl('desk-a', 'proj-a', $id))->assertOk()
+            ->assertInertia(fn (AssertableInertia $inertia) => $inertia
+                ->has('transcript.messages', 200)
+                ->where('transcript.messages.0.content', 'm51')
+                ->where('transcript.messages.198.content', 'm249')
+                ->where('transcript.messages.199.id', $running)
+                ->where('transcript.messages.199.status', 'running'));
+    }
+
     private function start(User $user, string $device, string $project): string
     {
         $this->actingAs($user)->post('/services/kmj-codebridge/workspace/conversations', ['device_id' => $device, 'project_id' => $project, 'title' => 'T'])->assertRedirect();
