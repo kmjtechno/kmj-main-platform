@@ -240,31 +240,31 @@ export default function Operator({
                 {ownerView === 'dashboard' ? (
                     <>
                         <OperatorCommandOs
-                    metrics={metrics}
-                    catalogProducts={catalogProducts}
-                    recentOrders={recentOrders}
-                    missingCanonicalSlugs={missingCanonicalSlugs}
-                />
-
-                <details className="kmj-os-advanced rounded-2xl border p-4 sm:p-6">
-                    <summary className="cursor-pointer text-sm font-semibold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-500">
-                        Advanced owner insights and audit-safe legacy controls
-                    </summary>
-                    <Link
-                        href="/operator/products"
-                        className="border-border hover:bg-accent ml-2 inline-flex min-h-10 items-center rounded-lg border px-3 text-xs font-semibold"
-                    >
-                        Product Management
-                    </Link>
-                    <div className="mt-5">
-                        <OperatorControlOverview
-                            products={catalogProducts}
-                            orders={recentOrders}
-                            canonicalProductCount={canonicalProductCount}
+                            metrics={metrics}
+                            catalogProducts={catalogProducts}
+                            recentOrders={recentOrders}
                             missingCanonicalSlugs={missingCanonicalSlugs}
                         />
-                    </div>
-                </details>
+        
+                        <details className="kmj-os-advanced rounded-2xl border p-4 sm:p-6">
+                            <summary className="cursor-pointer text-sm font-semibold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-500">
+                                Advanced owner insights and audit-safe legacy controls
+                            </summary>
+                            <Link
+                                href="/operator/products"
+                                className="border-border hover:bg-accent ml-2 inline-flex min-h-10 items-center rounded-lg border px-3 text-xs font-semibold"
+                            >
+                                Product Management
+                            </Link>
+                            <div className="mt-5">
+                                <OperatorControlOverview
+                                    products={catalogProducts}
+                                    orders={recentOrders}
+                                    canonicalProductCount={canonicalProductCount}
+                                    missingCanonicalSlugs={missingCanonicalSlugs}
+                                />
+                            </div>
+                        </details>
                     </>
                 ) : (
                     <section
