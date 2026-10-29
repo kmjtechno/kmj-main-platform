@@ -10,6 +10,14 @@ export type DeliveryMilestone = {
 
 export const deliveryMilestones: DeliveryMilestone[] = [
     {
+        id: 'codebridge-github-authority-proxy',
+        title: 'Main Platform authorizes CodeBridge GitHub operations',
+        state: 'active',
+        detail: 'PR #675 makes the Main Platform GitHub proxy cover every CodeBridge GitHub tool so the shared GitHub credential lives only in Main Platform. Policy is enforced here: reviews can never approve, merges require an exact head SHA, workflow files cannot be written and content paths reject traversal. User read/write permission still comes from Main Platform user introspection at the CodeBridge gateway.',
+        evidence:
+            'Source-only. 13 controller tests (8 allowlist/validator, 5 HTTP-level with mocked upstream) pass locally. Exact-head CI, guarded production release, controller GITHUB_TOKEN and proxy-token configuration, and gateway CODEBRIDGE_GITHUB_API_BASE cutover remain pending; the live gateway still uses its own read-only GitHub credential.',
+    },
+    {
         id: 'prompt-first-catalog-editor',
         title: 'Short description to populated product/service editor',
         state: 'active',
