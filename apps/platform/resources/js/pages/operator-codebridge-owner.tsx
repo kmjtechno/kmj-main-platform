@@ -1,6 +1,3 @@
-import DeviceControlCenter, {
-    type CodeBridgeDevice,
-} from '@/components/codebridge/device-control-center';
 import OperatorModuleNavigation from '@/components/operator-module-navigation';
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import { useState } from 'react';
@@ -22,7 +19,6 @@ type ManagedOrganization = {
     deviceLimit: number | null;
     managedCount: number;
     canManage: boolean;
-    devices: CodeBridgeDevice[];
 };
 
 type Props = {
@@ -65,54 +61,25 @@ export default function OperatorCodeBridgeOwner({
 
     return (
         <>
-            <Head title="KMJ CodeBridge Control Center" />
+            <Head title="KMJ CodeBridge Owner License Settings" />
             <main className="kmj-admin-shell flex min-w-0 flex-1 flex-col gap-6 p-4 sm:p-6 lg:p-8">
                 <OperatorModuleNavigation active="codebridge" />
                 <section className="kmj-admin-hero rounded-xl p-4">
                     <h1 className="text-2xl font-bold">
-                        CodeBridge Control Center
+                        CodeBridge Owner License Settings
                     </h1>
                     <p className="text-muted-foreground mt-2 text-sm">
-                        Connect a computer, approve pairing, manage registered
-                        devices and assign projects.
+                        Owner-only CodeBridge licensing and entitlement
+                        settings. Manage devices, projects and pairing in the
+                        single CodeBridge workspace.
                     </p>
                     <div className="mt-4 flex flex-wrap gap-2">
-                        <a
-                            href="/install-codebridge-windows.cmd"
-                            download
+                        <Link
+                            href="/services/kmj-codebridge#codebridge-device-control"
                             className="rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white"
                         >
-                            Connect Windows PC
-                        </a>
-                        <a
-                            href="/install"
-                            download="KMJ-CodeBridge-Connect-Linux.sh"
-                            className="rounded-lg border px-4 py-2 text-sm"
-                        >
-                            Connect Linux / VPS
-                        </a>
-                        <Link
-                            href="/codebridge/pair"
-                            className="rounded-lg border px-4 py-2 text-sm"
-                        >
-                            Approve pairing code
+                            Open unified CodeBridge workspace
                         </Link>
-                        <a
-                            href="/install-chatgpt-desktop.ps1"
-                            download
-                            className="rounded-lg border px-4 py-2 text-sm"
-                        >
-                            Set up ChatGPT Desktop
-                        </a>
-                        <button
-                            type="button"
-                            onClick={() =>
-                                router.reload({ only: ['organizations'] })
-                            }
-                            className="rounded-lg border px-4 py-2 text-sm"
-                        >
-                            Refresh devices
-                        </button>
                     </div>
                 </section>
                 {organizations.length === 0 && (
@@ -129,32 +96,24 @@ export default function OperatorCodeBridgeOwner({
                         </p>
                     </section>
                 )}
-                {organizations.map((organization) => (
-                    <section
-                        key={organization.id}
-                        className="min-w-0 space-y-3"
+                <section className="bg-card rounded-xl border p-5">
+                    <h2 className="text-base font-bold">
+                        One CodeBridge device dashboard
+                    </h2>
+                    <p className="text-muted-foreground mt-2 text-sm">
+                        Registered devices, project assignments, disconnect
+                        confirmation and pairing are managed in the unified
+                        CodeBridge workspace. Registration does not prove a
+                        live gateway connection.
+                    </p>
+                    <Link
+                        href="/services/kmj-codebridge#codebridge-device-control"
+                        className="mt-4 inline-flex min-h-10 items-center rounded-lg border border-red-500/40 px-4 text-sm font-semibold text-red-500"
                     >
-                        <h2 className="text-lg font-bold">
-                            {organization.name}
-                        </h2>
-                        {!organization.canManage && (
-                            <p role="status" className="text-sm text-amber-300">
-                                An active CodeBridge license is required to
-                                manage devices in this organization.
-                            </p>
-                        )}
-                        <DeviceControlCenter
-                            tenantId={organization.id}
-                            plan={organization.plan}
-                            devices={organization.devices}
-                            managedCount={organization.managedCount}
-                            deviceLimit={organization.deviceLimit}
-                            canManage={organization.canManage}
-                            endpoint={endpoint}
-                        />
-                    </section>
-                ))}
-                <details className="bg-card rounded-xl border p-4">
+                        Open devices &amp; projects
+                    </Link>
+                </section>
+                <details open className="bg-card rounded-xl border p-4">
                     <summary className="cursor-pointer font-bold">
                         Owner license settings
                     </summary>
