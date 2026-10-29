@@ -35,7 +35,6 @@ export default function OperatorCodeBridgeOwner({
     licenses,
     limits,
     organizations,
-    endpoint,
 }: Props) {
     const [confirmation, setConfirmation] = useState('');
     const [processing, setProcessing] = useState<string | null>(null);
