@@ -5,32 +5,18 @@
 # example 255, which scripts/backup_platform.sh itself can never return; 255 is
 # the classic ssh/sftp failure code or a wrapper's generic failure).
 #
-# Guarantees: no service start/stop/restart, no file writes outside the single
-# optional receipt, no network connection, no key/credential/env VALUE is ever
-# printed (only existence, owner, mode and a sha256 of the executable). Log
-# lines pass through a redactor first. Existing backup receipts are never
-# touched. Usage:
-#   sudo bash diagnose-offsite-backup-unit-20261029.sh [unit] [receipt-path]
+# Guarantees: no service start/stop/restart, no file writes, no network, no
+# arguments (fixed unit, no receipt path: the operator redirects stdout if a
+# receipt is wanted). Output is data-minimised: unit state, owner/mode/sha256
+# of the executable and env/ssh files, free space, and a CLASS NAME derived
+# from the journal. Raw journal lines, executable contents and environment
+# values are never printed, so redaction can never be the only protection.
 set -Eeuo pipefail
 umask 077
-unit="${1:-kmj-elite-offsite-backup.service}"
-receipt="${2:-}"
+[[ $# -eq 0 ]] || { echo 'BLOCKED=NO_ARGUMENTS_ACCEPTED'; exit 2; }
+unit='kmj-elite-offsite-backup.service'
 
 [[ "$(id -u)" == 0 ]] || { echo 'BLOCKED=ROOT_REQUIRED_FOR_JOURNAL'; exit 2; }
-[[ "$unit" =~ ^[A-Za-z0-9@_.-]+\.service$ ]] || { echo 'BLOCKED=UNIT_NAME'; exit 2; }
-if [[ -n "$receipt" ]]; then
-  [[ "$receipt" == /* && ! -e "$receipt" && ! -L "$receipt" ]] ||
-    { echo 'BLOCKED=RECEIPT_PATH_MUST_BE_NEW_ABSOLUTE'; exit 2; }
-  exec > >(tee "$receipt")
-fi
-
-redact() {
-  sed -E \
-    -e 's#(://)[^/@[:space:]]+@#\1<redacted>@#g' \
-    -e 's#(([Tt]oken|[Ss]ecret|[Pp]ass(word|wd)?|[Kk]ey|[Cc]redential|[Aa]uthorization)[A-Za-z_]*[=:][[:space:]]*)[^[:space:]]+#\1<redacted>#g' \
-    -e 's#(AGE-SECRET-KEY-[A-Z0-9]+)#<redacted>#g' \
-    -e 's#(-----BEGIN [A-Z ]+-----).*#\1 <redacted>#g'
-}
 show() { systemctl show "$unit" --property="$1" --value 2>/dev/null || true; }
 kv() { printf '%s=%s\n' "$1" "$2"; }
 
@@ -53,7 +39,6 @@ if [[ -n "$exec_path" && -f "$exec_path" ]]; then
   kv exec_sha256 "$(sha256sum -- "$exec_path" | cut -d' ' -f1)"
   kv exec_is_symlink "$([[ -L "$exec_path" ]] && echo yes || echo no)"
   kv exec_world_writable "$([[ -n "$(find "$exec_path" -maxdepth 0 -perm -0002 2>/dev/null)" ]] && echo YES_UNSAFE || echo no)"
-  kv exec_interpreter "$(head -c 120 -- "$exec_path" | head -1 | tr -cd '[:print:]' | cut -c1-80)"
 else
   kv exec_present NO
 fi
@@ -89,10 +74,8 @@ kv disk_var_free_kib "$(df -Pk /var 2>/dev/null | awk 'END{print $4}')"
 kv disk_var_free_inodes "$(df -Pi /var 2>/dev/null | awk 'END{print $4}')"
 
 # Last invocation log, redacted, then classified by the first matching cause.
-log="$(journalctl -u "$unit" -n 120 --no-pager -o cat 2>/dev/null | redact || true)"
-echo '--- last_log_redacted (max 40 lines) ---'
-printf '%s\n' "$log" | tail -40
-echo '--- end_log ---'
+log="$(journalctl -u "$unit" -n 200 --no-pager -o cat 2>/dev/null || true)"
+kv journal_lines_scanned "$(printf '%s' "$log" | grep -c '' || true)"
 
 class=UNKNOWN_EXIT_255_NEEDS_LOG
 match() { printf '%s\n' "$log" | grep -Eiq "$1"; }
@@ -107,5 +90,6 @@ elif [[ -z "$log" ]]; then class=NO_JOURNAL_ENTRIES_ROTATED_OR_UNREADABLE
 fi
 kv failure_class "$class"
 kv note_exit_255 "backup_platform.sh returns 2/3 or tool exit codes only; 255 means the wrapper or ssh/sftp stage failed"
+kv raw_output_suppressed yes
 kv recentBackupVerified_claim NO_THIS_SCRIPT_PROVES_NOTHING_ABOUT_BACKUP_VALIDITY
 kv mutations NONE

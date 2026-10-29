@@ -8,7 +8,7 @@ from pathlib import Path
 SCRIPT = Path(__file__).parent / "operations" / "diagnose-offsite-backup-unit-20261029.sh"
 
 
-def run(log: str):
+def run(log: str, args=()):
     """Run the diagnostic with stubbed systemctl/journalctl/id as root."""
     with tempfile.TemporaryDirectory() as tmp:
         bin_dir = Path(tmp)
@@ -23,20 +23,35 @@ def run(log: str):
             path.chmod(path.stat().st_mode | stat.S_IEXEC)
         env = dict(os.environ, PATH=f"{bin_dir}:{os.environ['PATH']}")
         return subprocess.run(
-            ["bash", str(SCRIPT)], env=env, capture_output=True, text=True, check=False
+            ["bash", str(SCRIPT), *args], env=env, capture_output=True, text=True, check=False
         )
 
 
 class DiagnoseOffsiteBackupUnit(unittest.TestCase):
-    def test_classifies_ssh_auth_and_redacts_secrets(self):
+    def test_classifies_ssh_auth_and_never_prints_journal_content(self):
         out = run(
             "sftp://user:hunter2@host.example/x\ntoken=abc123SECRET\n"
-            "user@host: Permission denied (publickey)."
+            "AGE-SECRET-KEY-1QQQQ\nuser@host: Permission denied (publickey)."
         )
         self.assertIn("failure_class=SSH_AUTH_KEY_REJECTED", out.stdout)
-        for secret in ("hunter2", "abc123SECRET"):
-            self.assertNotIn(secret, out.stdout)
+        for leaked in ("hunter2", "abc123SECRET", "AGE-SECRET-KEY", "host.example",
+                       "Permission denied"):
+            self.assertNotIn(leaked, out.stdout)
+        self.assertIn("raw_output_suppressed=yes", out.stdout)
         self.assertIn("mutations=NONE", out.stdout)
+
+    def test_rejects_any_argument(self):
+        for args in (("other.service",), ("--unit", "x"), ("/tmp/receipt",)):
+            result = run("x", args)
+            self.assertEqual(result.returncode, 2)
+            self.assertIn("BLOCKED=NO_ARGUMENTS_ACCEPTED", result.stdout)
+            self.assertNotIn("failure_class", result.stdout)
+
+    def test_does_not_read_executable_contents(self):
+        code = SCRIPT.read_text()
+        self.assertNotIn("exec_interpreter", code)
+        self.assertNotRegex(code, r"\bhead\b[^\n]*\"\$exec_path\"")
+        self.assertNotRegex(code, r"\bcat\b[^\n]*\$exec_path")
 
     def test_other_classes(self):
         cases = {
