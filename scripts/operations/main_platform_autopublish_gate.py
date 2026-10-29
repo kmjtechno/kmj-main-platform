@@ -136,7 +136,17 @@ def candidate_sha(target):
         return ""
     result = fixed_run(["/usr/sbin/runuser", "-u", "kmjprod", "--",
                         "/usr/bin/git", "-C", str(folder), "rev-parse", "--verify", "HEAD"])
-    return result if SHA_RE.fullmatch(result) else ""
+    if result != target:
+        return ""
+    # HEAD identity alone cannot attest a candidate whose tracked files were
+    # edited after checkout. Check both index and worktree against exact HEAD.
+    # This is a read-only preflight, not a substitute for the privileged unit's
+    # final artifact/rollback verification or a race-free filesystem seal.
+    clean = fixed_run(["/usr/sbin/runuser", "-u", "kmjprod", "--",
+                       "/usr/bin/git", "-C", str(folder), "diff",
+                       "--no-ext-diff", "--quiet", "HEAD", "--"],
+                      return_success=True)
+    return result if clean else ""
 
 def exact_https_sha_ok(response, target):
     """Require one HTTP 200 response and one matching public deploy SHA."""
