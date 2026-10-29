@@ -99,7 +99,7 @@ class DiagnoseOffsiteBackupUnit(unittest.TestCase):
     def test_systemd_show_properties_fixed_allowlist(self):
         import re
         code = SCRIPT.read_text()
-        queried = set(re.findall(r"\\bshow(?:_enum)?\\s+([A-Za-z]+)", code))
+        queried = set(re.findall(r"\bshow(?:_enum)?\s+([A-Za-z]+)", code))
         self.assertEqual(
             queried,
             {"LoadState", "ActiveState", "SubState", "Result", "ExecMainStatus"},
