@@ -476,7 +476,7 @@ try {
                     })
                     .click();
                 const retryButton = quick.getByRole('button', {
-                    name: /^Retry AI in \\d+s$/,
+                    name: /^Retry AI in \d+s$/,
                 });
                 await retryButton.waitFor();
                 if (!(await retryButton.isDisabled()))
