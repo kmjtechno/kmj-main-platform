@@ -22,6 +22,16 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           persist-credentials: false
+      - name: Compare protected main at exact SHA to distinguish baseline regressions
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd "$GITHUB_WORKSPACE"
+          git fetch --no-tags --depth=1 origin 39a68c1ca352b6db7faa80f08a6fc4320abcc71e
+          git worktree add --detach ../kmj-protected-main-reference 39a68c1ca352b6db7faa80f08a6fc4320abcc71e
+          cd ../kmj-protected-main-reference/apps/platform
+          npm ci --ignore-scripts --no-audit --no-fund
+          npm run check
       - name: Execute unchanged CircleCI UI commands
         shell: bash
         run: |
