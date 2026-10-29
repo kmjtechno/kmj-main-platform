@@ -8,7 +8,7 @@
 # It COPIES (never moves or edits) from the live release into the candidate:
 #   * apps/platform/.env (0600 kmjprod), pinning only the owner-approved
 #     CODEBRIDGE_AGENT_PUBLIC_URL=https://kmjtechno.com when it is absent;
-#   * apps/platform/storage/app uploads (byte-for-byte, verified by count+size);
+#   * apps/platform/storage/app uploads (verified by file bytes, metadata and raw link text);
 #   * the public/storage link, only when the live release has one.
 # It reports pending migrations by file diff. It NEVER touches the live
 # release, database, approval file, symlinks current/previous, services or DNS.
@@ -27,7 +27,7 @@ readonly ROOT=/home/kmjprod
 readonly ORIGIN_LINE='CODEBRIDGE_AGENT_PUBLIC_URL=https://kmjtechno.com'
 [[ "$(id -u)" == 0 && "$(hostname -s)" == KMJ-elite ]] || fail WRONG_HOST
 id kmjprod >/dev/null 2>&1 || fail SERVICE_USER_MISSING
-for cmd in git runuser install cp find awk sha256sum flock; do
+for cmd in git runuser install cp find awk sha256sum flock python3; do
   command -v "$cmd" >/dev/null 2>&1 || fail "MISSING_$cmd"
 done
 [[ -L "$ROOT/current" ]] || fail CURRENT_NOT_SYMLINK
@@ -67,15 +67,26 @@ fi
 status RUNTIME_ENV COPIED
 status AGENT_PUBLIC_ORIGIN "$origin_state"
 
-# 2. Uploads: copy without clobbering tracked placeholders, then prove parity.
+# 2. Uploads: copy without clobbering tracked placeholders. A size+path
+# inventory is NOT content equality (equal-length different bytes can pass).
+# The verifier is tracked by the exact candidate SHA and never follows links.
+readonly STORAGE_VERIFIER="$CAND/scripts/operations/verify-main-platform-storage-manifest.py"
+[[ -f "$STORAGE_VERIFIER" && ! -L "$STORAGE_VERIFIER" ]] || fail STORAGE_VERIFIER_MISSING
+[[ -d "$CAND_APP/storage/app" && ! -L "$CAND_APP/storage/app" ]] || fail CANDIDATE_STORAGE_UNSAFE
+source_before="$(python3 -B "$STORAGE_VERIFIER" "$LIVE_APP/storage/app")" || fail SOURCE_STORAGE_SCAN_FAILED
 cp -a --no-clobber -- "$LIVE_APP/storage/app/." "$CAND_APP/storage/app/"
-inventory() {
-  (cd "$1" && find . -type f ! -name .gitignore -printf '%s %p\n' | LC_ALL=C sort | sha256sum | awk '{print $1}')
-}
-[[ "$(inventory "$LIVE_APP/storage/app")" == "$(inventory "$CAND_APP/storage/app")" ]] ||
-  fail STORAGE_PARITY_MISMATCH
-count="$(find "$CAND_APP/storage/app" -type f ! -name .gitignore | wc -l)"
+source_after="$(python3 -B "$STORAGE_VERIFIER" "$LIVE_APP/storage/app")" || fail SOURCE_STORAGE_RESCAN_FAILED
+candidate_after="$(python3 -B "$STORAGE_VERIFIER" "$CAND_APP/storage/app")" || fail CANDIDATE_STORAGE_SCAN_FAILED
+[[ "$source_before" == "$source_after" ]] || fail SOURCE_STORAGE_CHANGED_DURING_COPY
+[[ "$source_after" == "$candidate_after" ]] || fail STORAGE_PARITY_MISMATCH
+count="$(python3 -c 'import json,sys; print(json.loads(sys.argv[1])["regular"])' "$candidate_after")"
+links="$(python3 -c 'import json,sys; print(json.loads(sys.argv[1])["symlinks"])' "$candidate_after")"
+digest="$(python3 -c 'import json,sys; print(json.loads(sys.argv[1])["sha256"])' "$candidate_after")"
 status STORAGE_APP_PARITY "PASS_FILES_$count"
+status STORAGE_SYMLINKS_PRESERVED "$links"
+status STORAGE_MANIFEST_SHA256 "$digest"
+status STORAGE_SYMLINK_TARGET_CONTENT NOT_DEREFERENCED
+status STORAGE_WRITER_QUIESCENCE NOT_ATTESTED
 
 # 3. public/storage link: mirror the live release only.
 if [[ -L "$LIVE_APP/public/storage" ]]; then
