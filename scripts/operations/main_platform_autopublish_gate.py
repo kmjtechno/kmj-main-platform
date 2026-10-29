@@ -71,6 +71,22 @@ def decision(approval, admission, current_release, approved_remote_sha, candidat
         return "ALREADY_LIVE"
     return "READY_APPROVED_RELEASE"
 
+def parse_protected_json(data):
+    """Reject ambiguous or nonstandard JSON in root-protected release evidence."""
+    def unique_pairs(pairs):
+        result = {}
+        for key, value in pairs:
+            if key in result:
+                raise ValueError("duplicate JSON key")
+            result[key] = value
+        return result
+
+    def reject_constant(_value):
+        raise ValueError("non-finite JSON constant")
+
+    return json.loads(data, object_pairs_hook=unique_pairs,
+                      parse_constant=reject_constant)
+
 def protected_json(path):
     """Read one root-protected inode, never a re-resolved path after lstat."""
     try:
@@ -91,7 +107,7 @@ def protected_json(path):
             if (len(data) != info.st_size or after.st_size != info.st_size
                     or after.st_mtime_ns != info.st_mtime_ns):
                 return None
-            return json.loads(data)
+            return parse_protected_json(data)
         finally:
             os.close(fd)
     except (OSError, ValueError, UnicodeError):
