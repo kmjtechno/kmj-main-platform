@@ -90,7 +90,7 @@ def _load_protected_json(path: Path, require_root: bool) -> object | None:
             data = os.read(fd, 4097)
             after = os.fstat(fd)
             now = os.lstat(path)
-            # Include the final path metadata: a same-inode write or chmod
+            # Include the final path metadata: a same-inode write or mode change
             # between fstat(fd) and lstat(path) must not be trusted.
             def fingerprint(info):
                 return (info.st_dev, info.st_ino, info.st_mode,
