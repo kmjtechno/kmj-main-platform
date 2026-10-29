@@ -3,6 +3,7 @@ import { router } from '@inertiajs/react';
 import { Sparkles } from 'lucide-react';
 import {
     studioRequest,
+    useCloudTextCooldown,
     type GenerationConfiguration,
 } from '@/components/product-content-editor';
 import { type ManagedProduct } from '@/components/operator-product-manager';
@@ -18,6 +19,7 @@ export default function QuickProductCreator({
 }) {
     const [brief, setBrief] = useState('');
     const [busy, setBusy] = useState(false);
+    const retrySeconds = useCloudTextCooldown();
     const inFlight = useRef(false);
     const requestId = useRef<string | null>(null);
     const localRequestId = useRef<string | null>(null);
@@ -114,6 +116,7 @@ export default function QuickProductCreator({
                         onClick={() => create(false)}
                         disabled={
                             busy ||
+                            retrySeconds > 0 ||
                             brief.trim().length < 20 ||
                             !generation?.text_configured
                         }
@@ -122,7 +125,9 @@ export default function QuickProductCreator({
                         <Sparkles className="size-4" />
                         {busy
                             ? 'Preparing content & saving draft…'
-                            : 'Generate & add from description'}
+                            : retrySeconds > 0
+                              ? `Retry AI in ${retrySeconds}s`
+                              : 'Generate & add from description'}
                     </button>
                     <button
                         type="button"

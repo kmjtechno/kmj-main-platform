@@ -148,6 +148,19 @@ class ReadinessDoctorTest(unittest.TestCase):
         _, blockers = self.run_doctor()
         self.assertEqual(blockers, ["APPROVAL_GROUP_OR_WORLD_WRITABLE"])
 
+    def test_nginx_unreadable_public_blocks_like_live_rollback(self) -> None:
+        self.materialize()
+        self.write_backup()
+        self.write_approval()
+        _, blockers = doctor.evaluate(self.sha, self.paths, False, web_read=lambda p: False)
+        self.assertEqual(blockers, ["CANDIDATE_NGINX_UNREADABLE"])
+        _, blockers = doctor.evaluate(self.sha, self.paths, False, web_read=lambda p: True)
+        self.assertEqual(blockers, ["CANDIDATE_NGINX_ENV_EXPOSED"])
+        lines, blockers = doctor.evaluate(
+            self.sha, self.paths, False, web_read=lambda p: not str(p).endswith(".env"))
+        self.assertEqual(blockers, [])
+        self.assertIn("CANDIDATE_NGINX_ACCESS=PASS", lines)
+
     def test_already_live_and_invalid_target(self) -> None:
         os.unlink(self.paths.root / "current")
         os.symlink(f"releases/platform-{self.sha[:12]}", self.paths.root / "current")
@@ -183,7 +196,8 @@ class MaterializeContractTest(unittest.TestCase):
             self.assertIn("KMJ_MATERIALIZE=BLOCKED " + code, result.stdout)
 
     def test_copies_only_into_candidate_and_proves_parity(self) -> None:
-        for token in ("cp -a --no-clobber", 'install -o kmjprod -g kmjprod -m 0600 "$LIVE_APP/.env" "$CAND_APP/.env"',
+        for token in ("setfacl -R -m 'u:www-data:rX'", "u:www-data:--x", "NGINX_PRIVATE_ENV_EXPOSED",
+                      "NGINX_ICON_UNREADABLE", "cp -a --no-clobber", 'install -o kmjprod -g kmjprod -m 0600 "$LIVE_APP/.env" "$CAND_APP/.env"',
                       "STORAGE_PARITY_MISMATCH", "SOURCE_STORAGE_CHANGED_DURING_COPY",
                       "verify-main-platform-storage-manifest.py", "CANDIDATE_DIRTY_AFTER", "LIVE_AGENT_PUBLIC_URL_DIFFERS_REVIEW",
                       "CODEBRIDGE_AGENT_PUBLIC_URL=https://kmjtechno.com", "flock -n 9",
@@ -333,13 +347,13 @@ class MaterializeWriteBoundaryTest(unittest.TestCase):
         boundary = source.index("KMJ_UNPRIVILEGED_MATERIALIZE'")
         self.assertLess(source.index("flock -n 9"), boundary)
         for token in ("-p User=kmjprod", "-p ProtectSystem=strict",
-                      '-p "ReadWritePaths=$CAND_APP"', '-p "ReadOnlyPaths=$LIVE_APP"',
+                      '-p "ReadWritePaths=$CAND"', '-p "ReadOnlyPaths=$LIVE_APP"',
                       "-p NoNewPrivileges=yes", "-p PrivateTmp=yes",
                       "SANDBOX_USER_MISMATCH", "export GIT_OPTIONAL_LOCKS=0"):
             self.assertIn(token, source)
         self.assertGreater(source.index('install -o kmjprod'), boundary)
         self.assertGreater(source.index('cp -a --no-clobber'), boundary)
-        self.assertTrue(source.rstrip().endswith("KMJ_UNPRIVILEGED_MATERIALIZE"))
+        self.assertLess(source.index("KMJ_UNPRIVILEGED_MATERIALIZE\n"), source.index("runuser -u www-data -- test"))
         self.assertNotIn("--system", source)
         self.assertNotIn("sudo", source)
 
@@ -399,3 +413,4 @@ class StorageDirectoryBoundaryTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+

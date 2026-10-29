@@ -452,6 +452,68 @@ try {
                         'Prompt creator lost input after provider failure',
                     );
                 await page.unroute('**/operator/products/from-brief');
+                let limitedAttempts = 0;
+                await page.route(
+                    '**/operator/products/from-brief',
+                    async (route) => {
+                        limitedAttempts++;
+                        await route.fulfill({
+                            status: 429,
+                            contentType: 'application/json',
+                            headers: { 'Retry-After': '2' },
+                            body: JSON.stringify({
+                                code: 'FREE_CLOUD_RATE_LIMITED',
+                                message: 'Synthetic free-provider cooldown.',
+                                retry_after: 2,
+                            }),
+                        });
+                    },
+                );
+                await quick
+                    .getByRole('button', {
+                        name: 'Generate & add from description',
+                        exact: true,
+                    })
+                    .click();
+                const retryButton = quick.getByRole('button', {
+                    name: /^Retry AI in \d+s$/,
+                });
+                await retryButton.waitFor();
+                if (!(await retryButton.isDisabled()))
+                    errors.push('Cloud retry stayed enabled during cooldown');
+                if (
+                    await quick
+                        .getByRole('button', {
+                            name: 'Create offline review draft · no cloud AI',
+                            exact: true,
+                        })
+                        .isDisabled()
+                )
+                    errors.push(
+                        'Provider cooldown blocked explicit offline draft',
+                    );
+                if (
+                    (await quick
+                        .getByRole('textbox', {
+                            name: 'Product or service description',
+                            exact: true,
+                        })
+                        .inputValue()) !== syntheticBrief
+                )
+                    errors.push(
+                        'Rate limit lost the original product description',
+                    );
+                await quick
+                    .getByRole('button', {
+                        name: 'Generate & add from description',
+                        exact: true,
+                    })
+                    .waitFor();
+                if (limitedAttempts !== 1)
+                    errors.push(
+                        'Cooldown automatically repeated cloud inference',
+                    );
+                await page.unroute('**/operator/products/from-brief');
                 let savedProduct = {
                     id: '00000000-0000-4000-8000-999999999999',
                     name: 'KMJ Synthetic Service',

@@ -58,3 +58,4 @@ jobs:
           python3 -B scripts/test_final98cc_local_recovery_contract.py
           echo 'RECOVERY_CONTRACT=PASS'
           echo 'PRODUCTION_ACTIVATION=NOT_ATTEMPTED'
+

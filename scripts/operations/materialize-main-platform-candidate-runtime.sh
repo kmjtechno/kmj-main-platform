@@ -27,7 +27,8 @@ readonly ROOT=/home/kmjprod
 readonly ORIGIN_LINE='CODEBRIDGE_AGENT_PUBLIC_URL=https://kmjtechno.com'
 [[ "$(id -u)" == 0 && "$(hostname -s)" == KMJ-elite ]] || fail WRONG_HOST
 id kmjprod >/dev/null 2>&1 || fail SERVICE_USER_MISSING
-for cmd in git runuser install cp find awk sha256sum flock python3 systemd-run; do
+id www-data >/dev/null 2>&1 || fail WEB_USER_MISSING
+for cmd in git runuser install cp find awk sha256sum flock python3 systemd-run setfacl; do
   command -v "$cmd" >/dev/null 2>&1 || fail "MISSING_$cmd"
 done
 [[ -L "$ROOT/current" ]] || fail CURRENT_NOT_SYMLINK
@@ -59,7 +60,7 @@ systemd-run --quiet --wait --pipe --collect \
   -p User=kmjprod -p Group=kmjprod -p UMask=0077 \
   -p ProtectSystem=strict -p ProtectHome=read-only \
   -p PrivateTmp=yes -p NoNewPrivileges=yes \
-  -p "ReadWritePaths=$CAND_APP" -p "ReadOnlyPaths=$LIVE_APP" \
+  -p "ReadWritePaths=$CAND" -p "ReadOnlyPaths=$LIVE_APP" \
   /bin/bash -s -- "$SHA" "$EXPECTED_CURRENT" "$ROOT" "$LIVE" "$CAND" "$ORIGIN_LINE" <<'KMJ_UNPRIVILEGED_MATERIALIZE'
 set -Eeuo pipefail
 umask 077
@@ -226,12 +227,22 @@ else
   status PUBLIC_STORAGE_LINK NOT_PRESENT_LIVE
 fi
 
+# 4. Nginx (www-data) must read public/ exactly like the live release, via a
+#    minimal ACL: traverse-only on ancestors, read on public/. The candidate is
+#    built with umask 077, so without this the activation health check fails
+#    (403 on static assets) and the controller rolls back. .env stays private.
+for dir in "$CAND" "$CAND/apps" "$CAND_APP"; do
+  [[ -d "$dir" && ! -L "$dir" ]] || fail PUBLIC_ANCESTOR_UNSAFE
+  setfacl -m 'u:www-data:--x' "$dir" || fail ANCESTOR_ACL_FAILED
+done
+setfacl -R -m 'u:www-data:rX' "$CAND_APP/public" || fail PUBLIC_TREE_ACL_FAILED
+
 # Candidate must still be a clean exact checkout for the activation controller.
 [[ -z "$(git_as status --porcelain --untracked-files=normal)" ]] || fail CANDIDATE_DIRTY_AFTER
 [[ "$(git_as rev-parse HEAD)" == "$SHA" ]] || fail CANDIDATE_SHA_CHANGED
 [[ "$(readlink -f "$ROOT/current")" == "$LIVE" ]] || fail CURRENT_RELEASE_CHANGED_DURING_RUN
 
-# 4. Pending migrations (file diff only; no database access).
+# 5. Pending migrations (file diff only; no database access).
 pending=0
 for file in "$CAND_APP"/database/migrations/*.php; do
   name="$(basename "$file")"
@@ -245,6 +256,13 @@ status LIVE_RELEASE UNCHANGED
 status DATABASE NOT_TOUCHED
 status APPROVAL_UPDATED NO
 status PRODUCTION_SWITCH NOT_ATTEMPTED
-echo 'KMJ_MATERIALIZE=PASS'
+echo 'KMJ_MATERIALIZE_COPY=PASS'
 
 KMJ_UNPRIVILEGED_MATERIALIZE
+
+runuser -u www-data -- test -r "$CAND_APP/public/index.php" || fail NGINX_PUBLIC_UNREADABLE
+runuser -u www-data -- test -r "$CAND_APP/public/assets/kmj-codebridge-icon.png" || fail NGINX_ICON_UNREADABLE
+runuser -u www-data -- test ! -r "$CAND_APP/.env" || fail NGINX_PRIVATE_ENV_EXPOSED
+status NGINX_PUBLIC_ACL PASS
+status NGINX_PRIVATE_ENV DENIED
+echo "KMJ_MATERIALIZE=PASS"
