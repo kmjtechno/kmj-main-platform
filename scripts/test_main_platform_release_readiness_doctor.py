@@ -302,5 +302,59 @@ class StorageContentParityTest(unittest.TestCase):
         self.assertNotIn("find . -type f ! -name .gitignore", source)
 
 
+
+class TrustedMaterializeVerifierTest(unittest.TestCase):
+    def test_root_verifier_ignores_candidate_and_python_path_code(self):
+        source = MATERIALIZE.read_text()
+        self.assertNotIn('"$STORAGE_VERIFIER"', source)
+        self.assertIn('/usr/bin/python3 -I -S - "$1"', source)
+        begin = source.index("storage_manifest() {")
+        marker = "KMJ_STORAGE_MANIFEST_PY\n}"
+        end = source.index(marker, begin) + len(marker)
+        function = source[begin:end]
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "data").mkdir()
+            (root / "data/payload").write_bytes(b"actual bytes")
+            (root / "hashlib.py").write_text("raise RuntimeError('UNTRUSTED_IMPORT')")
+            (root / "sitecustomize.py").write_text("raise RuntimeError('UNTRUSTED_SITE')")
+            run = subprocess.run(
+                ["/bin/bash", "-c", function + '\n storage_manifest "$1"', "test", str(root / "data")],
+                cwd=root, env={**os.environ, "PYTHONPATH": directory},
+                capture_output=True, text=True, timeout=15,
+            )
+            self.assertEqual(run.returncode, 0, run.stderr)
+            self.assertEqual(json.loads(run.stdout)["regular"], 1)
+
+
+class MaterializeWriteBoundaryTest(unittest.TestCase):
+    def test_runtime_writes_require_nonroot_private_mount_namespace(self):
+        source = MATERIALIZE.read_text()
+        boundary = source.index("KMJ_UNPRIVILEGED_MATERIALIZE'")
+        self.assertLess(source.index("flock -n 9"), boundary)
+        for token in ("-p User=kmjprod", "-p ProtectSystem=strict",
+                      '-p "ReadWritePaths=$CAND_APP"', '-p "ReadOnlyPaths=$LIVE_APP"',
+                      "-p NoNewPrivileges=yes", "-p PrivateTmp=yes",
+                      "SANDBOX_USER_MISMATCH", "export GIT_OPTIONAL_LOCKS=0"):
+            self.assertIn(token, source)
+        self.assertGreater(source.index('install -o kmjprod'), boundary)
+        self.assertGreater(source.index('cp -a --no-clobber'), boundary)
+        self.assertTrue(source.rstrip().endswith("KMJ_UNPRIVILEGED_MATERIALIZE"))
+        self.assertNotIn("--system", source)
+        self.assertNotIn("sudo", source)
+
+
+class MaterializePublicLinkTest(unittest.TestCase):
+    def test_public_link_creation_works_without_nested_privilege_switch(self):
+        source = MATERIALIZE.read_text()
+        self.assertNotIn("runuser -u kmjprod -- ln", source)
+        command = next(line.strip() for line in source.splitlines() if line.strip().startswith("ln -s "))
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "public").mkdir()
+            run = subprocess.run(["/bin/bash", "-c", command], env={**os.environ, "CAND_APP": directory}, capture_output=True, text=True)
+            self.assertEqual(run.returncode, 0, run.stderr)
+            self.assertEqual(os.readlink(root / "public/storage"), "../storage/app/public")
+
 if __name__ == "__main__":
     unittest.main()
