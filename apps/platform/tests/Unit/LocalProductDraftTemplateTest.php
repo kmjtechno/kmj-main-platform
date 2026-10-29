@@ -193,7 +193,7 @@ final class LocalProductDraftTemplateTest extends TestCase
 
     public function test_empty_name_label_without_value_falls_back_to_review_only_concept(): void
     {
-        $draft = (new LocalProductDraftTemplate)->fromBrief("Title:");
+        $draft = (new LocalProductDraftTemplate)->fromBrief('Title:');
 
         self::assertSame('Proposed Product Concept', $draft['name']);
         self::assertStringContainsString('not independently verified', $draft['description']);
