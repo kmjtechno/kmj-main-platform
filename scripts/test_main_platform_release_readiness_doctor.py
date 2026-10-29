@@ -302,5 +302,29 @@ class StorageContentParityTest(unittest.TestCase):
         self.assertNotIn("find . -type f ! -name .gitignore", source)
 
 
+
+class TrustedMaterializeVerifierTest(unittest.TestCase):
+    def test_root_verifier_ignores_candidate_and_python_path_code(self):
+        source = MATERIALIZE.read_text()
+        self.assertNotIn('"$STORAGE_VERIFIER"', source)
+        self.assertIn('/usr/bin/python3 -I -S - "$1"', source)
+        begin = source.index("storage_manifest() {")
+        marker = "KMJ_STORAGE_MANIFEST_PY\n}"
+        end = source.index(marker, begin) + len(marker)
+        function = source[begin:end]
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "data").mkdir()
+            (root / "data/payload").write_bytes(b"actual bytes")
+            (root / "hashlib.py").write_text("raise RuntimeError('UNTRUSTED_IMPORT')")
+            (root / "sitecustomize.py").write_text("raise RuntimeError('UNTRUSTED_SITE')")
+            run = subprocess.run(
+                ["/bin/bash", "-c", function + '\n storage_manifest "$1"', "test", str(root / "data")],
+                cwd=root, env={**os.environ, "PYTHONPATH": directory},
+                capture_output=True, text=True, timeout=15,
+            )
+            self.assertEqual(run.returncode, 0, run.stderr)
+            self.assertEqual(json.loads(run.stdout)["regular"], 1)
+
 if __name__ == "__main__":
     unittest.main()
