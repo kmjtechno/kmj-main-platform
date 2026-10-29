@@ -238,6 +238,13 @@ export default function CodeBridgeService({
                                 Manage devices
                             </button>
                             <Link
+                                href="/services/kmj-codebridge/workspace"
+                                className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border px-4 text-xs font-bold transition hover:border-red-500/40 hover:text-red-500"
+                            >
+                                <Laptop2 className="h-3.5 w-3.5" />
+                                AI Workspace
+                            </Link>
+                            <Link
                                 href="/services/kmj-codebridge/ai-providers"
                                 className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border px-4 text-xs font-bold transition hover:border-red-500/40 hover:text-red-500"
                             >

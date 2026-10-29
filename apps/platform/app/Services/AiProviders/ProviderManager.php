@@ -7,6 +7,7 @@ namespace App\Services\AiProviders;
 use App\Models\AiProvider;
 use Illuminate\Support\Facades\Config;
 use InvalidArgumentException;
+use RuntimeException;
 
 final class ProviderManager
 {
@@ -146,6 +147,24 @@ final class ProviderManager
             'is_string',
         ));
         FreePolicy::assertInferenceAllowed($tier, $model, $allowlist);
+    }
+
+    /**
+     * Sends one chat completion, but only after the zero-spend admission guard passes.
+     * There is no paid or fallback route: a refusal is returned as an error code.
+     *
+     * @param  list<array{role: string, content: string}>  $messages
+     * @return array{ok: bool, content: ?string, error_code: ?string}
+     */
+    public function complete(AiProvider $provider, string $model, array $messages): array
+    {
+        try {
+            $this->assertInferenceAllowed($provider, $model);
+        } catch (InvalidArgumentException|RuntimeException $exception) {
+            return ['ok' => false, 'content' => null, 'error_code' => $exception->getMessage()];
+        }
+
+        return $this->adapter->complete($provider->base_url, $provider->api_key, $this->approvedHosts(), $model, $messages);
     }
 
     /** @return array<string, mixed> */

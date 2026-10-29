@@ -9,6 +9,8 @@ import OperatorProducts from '../resources/js/pages/operator-products';
 import OwnerModuleShell from '../resources/js/layouts/owner-module-shell';
 import OperatorOps from '../resources/js/pages/operator-ops';
 import CodeBridgeService from '../resources/js/pages/services/codebridge';
+import { workspaceProps } from './workspace-fixture';
+import CodeBridgeWorkspace from '../resources/js/pages/services/codebridge-workspace';
 import OperatorCodeBridgeOwner from '../resources/js/pages/operator-codebridge-owner';
 import '../resources/css/app.css';
 const catalog = [
@@ -225,6 +227,16 @@ function OwnerDevicesPreview() {
         </OwnerModuleShell>
     );
 }
+function WorkspacePreview() {
+    // Synthetic props only (visual/workspace-fixture.ts); they follow Inertia page updates.
+    return (
+        <CodeBridgeWorkspace
+            {...(usePage().props as unknown as React.ComponentProps<
+                typeof CodeBridgeWorkspace
+            >)}
+        />
+    );
+}
 function CanonicalDevicesPreview() {
     return (
         <CodeBridgeService
@@ -342,6 +354,7 @@ function OwnerProductsPreview() {
         </OwnerModuleShell>
     );
 }
+const workspace = location.pathname === '/services/kmj-codebridge/workspace';
 const canonicalDevices = location.pathname === '/services/kmj-codebridge';
 const ownerProducts = location.pathname === '/operator/products';
 const ownerDeveloper = location.pathname === '/developer/apps';
@@ -351,25 +364,29 @@ const ownerOps = location.pathname === '/operator/ops';
 const owner = ['/operator', '/super-admin'].includes(location.pathname);
 void createInertiaApp({
     page: {
-        component: canonicalDevices
-            ? 'services/codebridge'
-            : ownerProducts
-              ? 'operator-products'
-              : ownerOps
-                ? 'operator-ops'
-                : ownerDevices
-                  ? 'operator-codebridge-owner'
-                  : ownerDeveloper
-                    ? 'developer-apps'
-                    : owner
-                      ? 'operator'
-                      : 'welcome',
+        component: workspace
+            ? 'services/codebridge-workspace'
+            : canonicalDevices
+              ? 'services/codebridge'
+              : ownerProducts
+                ? 'operator-products'
+                : ownerOps
+                  ? 'operator-ops'
+                  : ownerDevices
+                    ? 'operator-codebridge-owner'
+                    : ownerDeveloper
+                      ? 'developer-apps'
+                      : owner
+                        ? 'operator'
+                        : 'welcome',
         props: {
             errors: {},
+            ...(workspace ? workspaceProps() : {}),
             // Landing is a signed-out customer preview; owner routes use
             // synthetic session data. Never authenticate or persist a user.
             auth: {
                 user:
+                    workspace ||
                     canonicalDevices ||
                     owner ||
                     ownerOps ||
@@ -423,17 +440,19 @@ void createInertiaApp({
         encryptHistory: false,
     },
     resolve: () =>
-        canonicalDevices
-            ? CanonicalDevicesPreview
-            : ownerProducts
-              ? OwnerProductsPreview
-              : ownerDeveloper
-                ? OwnerDeveloperPreview
-                : ownerOps
-                  ? OwnerOpsPreview
-                  : ownerDevices
-                    ? OwnerDevicesPreview
-                    : owner
-                      ? OwnerDashboardPreview
-                      : Welcome,
+        workspace
+            ? WorkspacePreview
+            : canonicalDevices
+              ? CanonicalDevicesPreview
+              : ownerProducts
+                ? OwnerProductsPreview
+                : ownerDeveloper
+                  ? OwnerDeveloperPreview
+                  : ownerOps
+                    ? OwnerOpsPreview
+                    : ownerDevices
+                      ? OwnerDevicesPreview
+                      : owner
+                        ? OwnerDashboardPreview
+                        : Welcome,
 });
