@@ -172,8 +172,8 @@ def _safe_content_path(path: str) -> bool:
     lower = [part.lower() for part in parts]
     return not (
         any(part in {".git", ".github"} for part in lower)
-        or lower[0] == "scripts"
-        or lower[-1] in {"package.json", "package-lock.json", ".npmrc", "makefile", "dockerfile", "pyproject.toml"}
+        or any(part in {"scripts", ".circleci", ".buildkite"} for part in lower)
+        or lower[-1] in {"package.json", "package-lock.json", ".npmrc", "makefile", "dockerfile", "pyproject.toml", "jenkinsfile", ".gitlab-ci.yml"}
         or lower[-1].startswith("requirements") and lower[-1].endswith(".txt")
     )
 
@@ -354,6 +354,39 @@ def high_risk_reason(task: str) -> str | None:
     return None
 
 
+async def _verify_github_write_target(client, path, headers, branch, creating):
+    # The development namespace is not proof that GitHub considers a ref
+    # non-default or unprotected. Verify both independently before mutation.
+    async def metadata(url):
+        result = await client.request("GET", url, headers=headers, content=None)
+        if len(result.content) > 65536:
+            raise HTTPException(503, "CODEBRIDGE_GITHUB_BRANCH_METADATA_UNAVAILABLE")
+        return result
+
+    repo = await metadata("https://api.github.com" + path)
+    try:
+        info = json.loads(repo.content, object_pairs_hook=_unique_json_object)
+        default = info.get("default_branch") if isinstance(info, dict) else None
+    except (ValueError, TypeError):
+        default = None
+    if repo.status_code != 200 or not isinstance(default, str) or not default:
+        raise HTTPException(503, "CODEBRIDGE_GITHUB_BRANCH_METADATA_UNAVAILABLE")
+    if branch == default:
+        raise HTTPException(403, "CODEBRIDGE_GITHUB_WRITE_BRANCH_DENIED")
+    ref = await metadata("https://api.github.com" + path + "/branches/" + quote(branch, safe=""))
+    if ref.status_code == 404 and creating:
+        return
+    try:
+        info = json.loads(ref.content, object_pairs_hook=_unique_json_object)
+        protected = info.get("protected") if isinstance(info, dict) else None
+    except (ValueError, TypeError):
+        protected = None
+    if ref.status_code != 200 or type(protected) is not bool:
+        raise HTTPException(503, "CODEBRIDGE_GITHUB_BRANCH_METADATA_UNAVAILABLE")
+    if protected:
+        raise HTTPException(403, "CODEBRIDGE_GITHUB_WRITE_BRANCH_DENIED")
+
+
 @app.get("/")
 def root():
     return {
@@ -428,7 +461,8 @@ async def codebridge_github_proxy(
         validate_codebridge_github_write(suffix, payload, request.method, repository)
         body = json.dumps(payload, separators=(",", ":")).encode("utf-8")
 
-    path = f"/repos/{quote(owner, safe='')}/{quote(repo, safe='')}"
+    repository_path = f"/repos/{quote(owner, safe='')}/{quote(repo, safe='')}"
+    path = repository_path
     if suffix:
         path += "/" + quote(suffix, safe="/")
     url = "https://api.github.com" + path
@@ -445,6 +479,10 @@ async def codebridge_github_proxy(
         headers["Content-Type"] = "application/json"
 
     async with httpx.AsyncClient(timeout=30, follow_redirects=True) as client:
+        if request.method == "PUT" and suffix.startswith("contents/"):
+            await _verify_github_write_target(client, repository_path, headers, payload["branch"], False)
+        elif request.method == "POST" and suffix == "git/refs":
+            await _verify_github_write_target(client, repository_path, headers, payload["ref"].removeprefix("refs/heads/"), True)
         upstream = await client.request(
             request.method,
             url,
