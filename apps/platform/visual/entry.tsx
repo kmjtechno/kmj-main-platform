@@ -8,6 +8,7 @@ import Operator from '../resources/js/pages/operator';
 import OperatorProducts from '../resources/js/pages/operator-products';
 import OwnerModuleShell from '../resources/js/layouts/owner-module-shell';
 import OperatorOps from '../resources/js/pages/operator-ops';
+import CodeBridgeService from '../resources/js/pages/services/codebridge';
 import OperatorCodeBridgeOwner from '../resources/js/pages/operator-codebridge-owner';
 import '../resources/css/app.css';
 const catalog = [
@@ -224,6 +225,56 @@ function OwnerDevicesPreview() {
         </OwnerModuleShell>
     );
 }
+function CanonicalDevicesPreview() {
+    return (
+        <CodeBridgeService
+            organization={{
+                id: 'qa-preview-organization',
+                name: 'Synthetic preview organization',
+                role: 'owner',
+            }}
+            entitlement={{
+                id: 'qa-preview-entitlement',
+                capability: 'codebridge',
+                status: 'active',
+                starts_at: '2026-01-01',
+            }}
+            canManageOwnerPlan={true}
+            canManageDevices={false}
+            service={{
+                endpoint: 'http://127.0.0.1:4173/mcp',
+                oauth_ready: false,
+                plan: null,
+                license_status: 'unverified',
+                license_starts_at: null,
+                license_expires_at: null,
+                permissions: [],
+                device_limit: null,
+                managed_devices: 1,
+                pending_pairings: 0,
+                connected_clients: [],
+                access_token_ttl_seconds: 0,
+                devices: [
+                    {
+                        id: 'qa-preview-desktop',
+                        name: 'Synthetic preview desktop',
+                        platform: 'windows',
+                        arch: 'x64',
+                        projects: [
+                            {
+                                id: 'qa-preview-project',
+                                name: 'Synthetic preview project',
+                            },
+                        ],
+                        registration: 'registered',
+                        connection_status: 'not_verified',
+                    },
+                ],
+            }}
+        />
+    );
+}
+
 function OwnerDashboardPreview() {
     return (
         <Operator
@@ -291,6 +342,7 @@ function OwnerProductsPreview() {
         </OwnerModuleShell>
     );
 }
+const canonicalDevices = location.pathname === '/services/kmj-codebridge';
 const ownerProducts = location.pathname === '/operator/products';
 const ownerDeveloper = location.pathname === '/developer/apps';
 const ownerDevices = location.pathname === '/operator/codebridge/owner-plan';
@@ -299,23 +351,26 @@ const ownerOps = location.pathname === '/operator/ops';
 const owner = ['/operator', '/super-admin'].includes(location.pathname);
 void createInertiaApp({
     page: {
-        component: ownerProducts
-            ? 'operator-products'
-            : ownerOps
-              ? 'operator-ops'
-              : ownerDevices
-                ? 'operator-codebridge-owner'
-                : ownerDeveloper
-                  ? 'developer-apps'
-                  : owner
-                    ? 'operator'
-                    : 'welcome',
+        component: canonicalDevices
+            ? 'services/codebridge'
+            : ownerProducts
+              ? 'operator-products'
+              : ownerOps
+                ? 'operator-ops'
+                : ownerDevices
+                  ? 'operator-codebridge-owner'
+                  : ownerDeveloper
+                    ? 'developer-apps'
+                    : owner
+                      ? 'operator'
+                      : 'welcome',
         props: {
             errors: {},
             // Landing is a signed-out customer preview; owner routes use
             // synthetic session data. Never authenticate or persist a user.
             auth: {
                 user:
+                    canonicalDevices ||
                     owner ||
                     ownerOps ||
                     ownerDevices ||
@@ -368,15 +423,17 @@ void createInertiaApp({
         encryptHistory: false,
     },
     resolve: () =>
-        ownerProducts
-            ? OwnerProductsPreview
-            : ownerDeveloper
-              ? OwnerDeveloperPreview
-              : ownerOps
-                ? OwnerOpsPreview
-                : ownerDevices
-                  ? OwnerDevicesPreview
-                  : owner
-                    ? OwnerDashboardPreview
-                    : Welcome,
+        canonicalDevices
+            ? CanonicalDevicesPreview
+            : ownerProducts
+              ? OwnerProductsPreview
+              : ownerDeveloper
+                ? OwnerDeveloperPreview
+                : ownerOps
+                  ? OwnerOpsPreview
+                  : ownerDevices
+                    ? OwnerDevicesPreview
+                    : owner
+                      ? OwnerDashboardPreview
+                      : Welcome,
 });
