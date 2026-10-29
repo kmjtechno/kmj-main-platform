@@ -248,7 +248,8 @@ export default function Operator({
 
                         <details className="kmj-os-advanced rounded-2xl border p-4 sm:p-6">
                             <summary className="cursor-pointer text-sm font-semibold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-500">
-                                Advanced owner insights and audit-safe legacy controls
+                                Advanced owner insights and audit-safe legacy
+                                controls
                             </summary>
                             <Link
                                 href="/operator/products"
@@ -260,8 +261,12 @@ export default function Operator({
                                 <OperatorControlOverview
                                     products={catalogProducts}
                                     orders={recentOrders}
-                                    canonicalProductCount={canonicalProductCount}
-                                    missingCanonicalSlugs={missingCanonicalSlugs}
+                                    canonicalProductCount={
+                                        canonicalProductCount
+                                    }
+                                    missingCanonicalSlugs={
+                                        missingCanonicalSlugs
+                                    }
                                 />
                             </div>
                         </details>
@@ -273,10 +278,12 @@ export default function Operator({
                     >
                         <div className="flex flex-wrap items-center justify-between gap-3">
                             <div>
-                                <p className="text-muted-foreground text-xs font-bold uppercase tracking-wide">
+                                <p className="text-muted-foreground text-xs font-bold tracking-wide uppercase">
                                     KMJ TECHNO · Protected Owner Workspace
                                 </p>
-                                <h1 className="mt-1 text-2xl font-bold">Command Center</h1>
+                                <h1 className="mt-1 text-2xl font-bold">
+                                    Command Center
+                                </h1>
                                 <p className="text-muted-foreground mt-2 max-w-2xl text-sm">
                                     Manage owner workspaces, review real catalog
                                     and order evidence, and open governed tools.
