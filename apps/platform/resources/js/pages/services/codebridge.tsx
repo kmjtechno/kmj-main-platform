@@ -1,5 +1,5 @@
 import { Head, Link, router } from '@inertiajs/react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import CodeBridgeControlCenterHub, {
     type CodeBridgeSection,
 } from '@/components/codebridge/control-center-hub';
@@ -93,6 +93,28 @@ export default function CodeBridgeService({
 }: Props) {
     const [activeSection, setActiveSection] =
         useState<CodeBridgeSection>('overview');
+
+    // Inertia renders the service on the server. Resolve hash-only deep links
+    // after mount so owner navigation and copied links open the visible tab,
+    // rather than leaving the Device Control Center hidden in Overview.
+    useEffect(() => {
+        const selectCodeBridgeHash = () => {
+            const deepLinkSections: Record<string, CodeBridgeSection> = {
+                '#codebridge-device-control': 'devices',
+                '#codebridge-overview': 'overview',
+                '#codebridge-clients': 'clients',
+                '#codebridge-usage': 'usage',
+                '#codebridge-plan-billing': 'billing',
+                '#codebridge-settings': 'settings',
+            };
+            const section = deepLinkSections[window.location.hash];
+            if (section) setActiveSection(section);
+        };
+        selectCodeBridgeHash();
+        window.addEventListener('hashchange', selectCodeBridgeHash);
+        return () =>
+            window.removeEventListener('hashchange', selectCodeBridgeHash);
+    }, []);
     const [clientSearch, setClientSearch] = useState('');
     const [showAllClients, setShowAllClients] = useState(false);
     const [copyStatus, setCopyStatus] = useState('');

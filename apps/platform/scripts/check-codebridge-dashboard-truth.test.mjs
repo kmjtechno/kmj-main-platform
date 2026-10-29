@@ -187,3 +187,21 @@ void test('CodeBridge dashboard uses the existing official product icon', () => 
     assert.doesNotMatch(ui, /laravel\.(?:svg|png)|<Cable className="h-7 w-7"/i);
     assert.match(ui, /setActiveSection\('devices'\)/);
 });
+
+const ownerLicenseSettings = readSourceText(
+    'resources/js/pages/operator-codebridge-owner.tsx',
+);
+
+void test('one canonical device dashboard; owner route is licensing only', () => {
+    assert.match(ownerLicenseSettings, /CodeBridge Owner License Settings/);
+    assert.match(
+        ownerLicenseSettings,
+        /href="\/services\/kmj-codebridge#codebridge-device-control"/,
+    );
+    assert.doesNotMatch(ownerLicenseSettings, /<DeviceControlCenter\b/);
+    assert.match(ownerLicenseSettings, /UPGRADE_CODEBRIDGE_OWNER/);
+    assert.match(ui, /activeSection === 'devices'/);
+    assert.match(ui, /'#codebridge-device-control': 'devices'/);
+    assert.match(ui, /window\.addEventListener\('hashchange', selectCodeBridgeHash\)/);
+    assert.match(ui, /window\.removeEventListener\('hashchange', selectCodeBridgeHash\)/);
+});
