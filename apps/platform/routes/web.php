@@ -341,6 +341,7 @@ Route::get('cookie-policy', fn () => Inertia::render('legal/cookie-policy'))->na
 
 Route::middleware(['auth', 'verified'])->group(function () {
     require __DIR__.'/ai-providers.php';
+    require __DIR__.'/codebridge-workspace.php';
 
     Route::get('codebridge-oauth-link/{uid}', [CodeBridgeOAuthLinkController::class, 'show'])
         ->name('codebridge.oauth.show');

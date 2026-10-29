@@ -10,6 +10,14 @@ export type DeliveryMilestone = {
 
 export const deliveryMilestones: DeliveryMilestone[] = [
     {
+        id: 'codebridge-ai-workspace',
+        title: 'CodeBridge AI workflow workspace',
+        state: 'blocked',
+        detail: 'The workspace shows authorized devices, projects and admitted free models, and stores per-project conversations answered by a zero-spend admitted model, with durable inference events, cancel and retry. Device job and tool events are not recorded by the Main Platform and stay unavailable.',
+        evidence:
+            'Code and tests are under review. Hosted CI, authenticated acceptance against a real free provider and guarded production publication remain required; this entry does not claim a live working chat.',
+    },
+    {
         id: 'codebridge-single-control-center',
         title: 'One canonical CodeBridge Control Center',
         state: 'active',
