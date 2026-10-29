@@ -31,8 +31,14 @@ void test('operator and super-admin route views remain distinct', () => {
         ownerRules,
         /'ownerView' => \$request->routeIs\('super-admin\.index'\) \? 'dashboard' : 'command-center'/,
     );
-    assert.match(ownerRules, /Route::get\('operator', \$ownerCommandDashboard\)/);
-    assert.match(ownerRules, /Route::get\('super-admin', \$ownerCommandDashboard\)/);
+    assert.match(
+        ownerRules,
+        /Route::get\('operator', \$ownerCommandDashboard\)/,
+    );
+    assert.match(
+        ownerRules,
+        /Route::get\('super-admin', \$ownerCommandDashboard\)/,
+    );
     assert.match(operator, /ownerView: 'dashboard' \| 'command-center'/);
     assert.match(operator, /ownerView === 'dashboard' \? \(/);
     assert.match(operator, /aria-label="Owner task-first Command Center"/);
