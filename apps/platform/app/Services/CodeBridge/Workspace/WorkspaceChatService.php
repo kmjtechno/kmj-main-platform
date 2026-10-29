@@ -11,6 +11,7 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use RuntimeException;
+use Throwable;
 
 /**
  * Persistent, tenant/user/project-scoped conversations backed by zero-spend admitted models.
@@ -177,7 +178,7 @@ final class WorkspaceChatService
 
         try {
             $result = $this->providers->complete($provider, $model, $this->history($conversation->id, $messageId));
-        } catch (\Throwable) {
+        } catch (Throwable) {
             $result = ['ok' => false, 'content' => null, 'error_code' => 'internal_error'];
         }
 

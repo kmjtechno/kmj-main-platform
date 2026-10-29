@@ -8,6 +8,7 @@ use App\Models\AiProvider;
 use App\Models\User;
 use App\Services\AiProviders\ResolvesAiProviderScope;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Inertia\Testing\AssertableInertia;
 use Tests\Support\FakeAiProviderScope;
@@ -30,6 +31,9 @@ final class CodeBridgeWorkspaceTest extends TestCase
     {
         $org = (string) Str::uuid();
         $other = (string) Str::uuid();
+        foreach ([$org, $other] as $id) {
+            DB::table('organizations')->insert(['id' => $id, 'name' => 'Org '.$id, 'created_at' => now(), 'updated_at' => now()]);
+        }
         $user = User::factory()->create(['email_verified_at' => now()]);
         $this->app->instance(ResolvesAiProviderScope::class, new FakeAiProviderScope([
             $user->id => ['organization_id' => $org, 'can_manage' => false],

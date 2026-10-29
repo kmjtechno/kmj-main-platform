@@ -8,11 +8,13 @@ use App\Models\AiProvider;
 use App\Models\User;
 use App\Services\AiProviders\EndpointGuard;
 use App\Services\AiProviders\ResolvesAiProviderScope;
+use DateTimeInterface;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
+use Illuminate\Testing\TestResponse;
 use Inertia\Testing\AssertableInertia;
 use Tests\Support\FakeAiProviderScope;
 use Tests\TestCase;
@@ -244,14 +246,14 @@ final class CodeBridgeWorkspaceChatTest extends TestCase
         return (string) DB::table('codebridge_workspace_conversations')->orderByDesc('created_at')->value('id');
     }
 
-    private function send(User $user, string $conversation, string $content, string $model = self::MODEL, ?string $provider = null): \Illuminate\Testing\TestResponse
+    private function send(User $user, string $conversation, string $content, string $model = self::MODEL, ?string $provider = null): TestResponse
     {
         return $this->actingAs($user)->post("/services/kmj-codebridge/workspace/conversations/{$conversation}/messages", [
             'content' => $content, 'provider_id' => $provider ?? $this->providerA, 'model' => $model,
         ]);
     }
 
-    private function retry(User $user, string $conversation, string $message): \Illuminate\Testing\TestResponse
+    private function retry(User $user, string $conversation, string $message): TestResponse
     {
         return $this->actingAs($user)->post("/services/kmj-codebridge/workspace/conversations/{$conversation}/messages/{$message}/retry", [
             'provider_id' => $this->providerA, 'model' => self::MODEL,
@@ -268,7 +270,7 @@ final class CodeBridgeWorkspaceChatTest extends TestCase
         return '/services/kmj-codebridge/workspace?device='.$device.'&project='.$project.($conversation !== null ? '&c='.$conversation : '');
     }
 
-    private function seedAssistant(string $conversation, string $status, \DateTimeInterface $startedAt): string
+    private function seedAssistant(string $conversation, string $status, DateTimeInterface $startedAt): string
     {
         $id = (string) Str::ulid();
         DB::table('codebridge_workspace_messages')->insert([
