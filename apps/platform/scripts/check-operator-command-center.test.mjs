@@ -17,7 +17,7 @@ void test('owner command center uses separated, real admin module routes', () =>
         '/operator/directory',
         '/operator/kslp',
         '/operator/payments',
-        '/operator/codebridge/owner-plan',
+        '/services/kmj-codebridge#codebridge-device-control',
         '/operator/ops',
     ]) {
         assert.ok(modules.includes(`href: '${target}'`), target);

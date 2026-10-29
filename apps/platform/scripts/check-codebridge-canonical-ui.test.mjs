@@ -155,3 +155,34 @@ void test('canonical page applies navigable hashes (including overview) on hashc
     // The old early-return skipped overview, leaving Devices selected.
     assert.doesNotMatch(service, /section === 'overview'\) return/);
 });
+
+void test('owner navigation reaches the canonical CodeBridge workspace, not a second device page', () => {
+    for (const file of [
+        'resources/js/components/app-sidebar.tsx',
+        'resources/js/components/operator-command-os.tsx',
+        'resources/js/components/operator-control-overview.tsx',
+        'resources/js/components/operator-module-navigation.tsx',
+        'resources/js/layouts/owner-module-shell.tsx',
+    ]) {
+        const text = read(file);
+        assert.match(
+            text,
+            /\/services\/kmj-codebridge#codebridge-device-control/,
+            file,
+        );
+        assert.doesNotMatch(text, /\/operator\/codebridge\/owner-plan/, file);
+    }
+    // The workspace map keeps exactly one link to owner-plan, honestly labelled
+    // as licence settings (the read-only fleet + Owner Plan page), not devices.
+    const map = read('resources/js/components/operator-workspace-map.tsx');
+    assert.match(
+        map,
+        /label: 'CodeBridge Owner License Settings'[\s\S]{0,160}href: '\/operator\/codebridge\/owner-plan'/,
+    );
+    assert.equal(
+        (map.match(/\/operator\/codebridge\/owner-plan/g) ?? []).length,
+        1,
+    );
+    // Owner license settings stay reachable from the canonical page itself.
+    assert.match(hub, /href="\/operator\/codebridge\/owner-plan"/);
+});

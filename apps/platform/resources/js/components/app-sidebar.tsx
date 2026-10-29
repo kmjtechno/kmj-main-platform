@@ -117,8 +117,8 @@ export function AppSidebar() {
                   icon: Activity,
               },
               {
-                  title: 'CodeBridge Controls',
-                  href: '/operator/codebridge/owner-plan',
+                  title: 'CodeBridge & Devices',
+                  href: '/services/kmj-codebridge#codebridge-device-control',
                   icon: Boxes,
               },
           ]

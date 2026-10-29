@@ -106,8 +106,9 @@ const workspaceGroups = [
                 icon: Activity,
             },
             {
-                label: 'CodeBridge Owner Controls',
-                description: 'Govern managed devices and plans',
+                label: 'CodeBridge Owner License Settings',
+                description:
+                    'Owner-only CodeBridge license policy and plan controls',
                 href: '/operator/codebridge/owner-plan',
                 icon: Boxes,
             },

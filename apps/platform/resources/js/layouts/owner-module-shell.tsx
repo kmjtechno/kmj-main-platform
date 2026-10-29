@@ -89,7 +89,7 @@ const groups: { title: string; items: Workspace[] }[] = [
             },
             {
                 label: 'CodeBridge & Devices',
-                href: '/operator/codebridge/owner-plan',
+                href: '/services/kmj-codebridge#codebridge-device-control',
                 icon: Boxes,
             },
             { label: 'ModelFabric & AI', href: '/operator/ops', icon: Gauge },
