@@ -207,7 +207,13 @@ def assess(rows: list[dict[str, object]], stage_uid: int,
 
 
 def pointer_matches(link: Path, expected: Path) -> bool:
-    return link.is_symlink() and link.resolve(strict=True) == expected
+    """Report drift even for dangling/looping links; never lose the QA receipt."""
+    try:
+        return link.is_symlink() and link.resolve(strict=True) == expected
+    except (OSError, RuntimeError):
+        # A missing release, symlink loop, or inaccessible target is a
+        # classified mismatch, not a reason to omit all parent-chain evidence.
+        return False
 
 
 def write_receipt(data: dict[str, object]) -> None:
