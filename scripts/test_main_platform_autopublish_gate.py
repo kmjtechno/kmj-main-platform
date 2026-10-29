@@ -187,6 +187,22 @@ class AutoPublishSafetyTest(unittest.TestCase):
         ):
             self.assertFalse(mod.exact_https_sha_ok(bad, SHA))
 
+    def test_protected_release_json_rejects_duplicate_keys_and_nonfinite(self):
+        import json
+        self.assertEqual(mod.parse_protected_json(json.dumps(BASE_APPROVAL)),
+                         BASE_APPROVAL)
+        for payload in (
+            '{"approvedSha":"a","approvedSha":"b"}',
+            '{"nested":{"ownerAuthenticatedQaPass":true,'
+            '"ownerAuthenticatedQaPass":false}}',
+            '{"backupVerified":NaN}',
+            '{"backupVerified":Infinity}',
+            '{"backupVerified":-Infinity}',
+        ):
+            with self.subTest(payload=payload):
+                with self.assertRaises(ValueError):
+                    mod.parse_protected_json(payload)
+
     def test_protected_manifest_parent_and_same_fd_required(self):
         import tempfile
         from unittest.mock import patch
