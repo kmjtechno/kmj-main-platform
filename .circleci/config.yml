@@ -207,8 +207,23 @@ jobs:
             set -euo pipefail
             test "$(git rev-parse HEAD)" = "$CIRCLE_SHA1"
             cd apps/platform
-            node --test scripts/check-codebridge-dashboard-truth.test.mjs scripts/check-operator-command-center.test.mjs scripts/check-admin-premium.test.mjs scripts/check-admin-roadmap-navigation.test.mjs
+            node --test scripts/check-codebridge-dashboard-truth.test.mjs
             echo SOURCE_ONLY_ONE_CODEBRIDGE_DASHBOARD_PASS_NOT_PRODUCTION_RELEASE
+
+  codebridge_unified_owner_navigation:
+    docker:
+      - image: cimg/php:8.4-node
+    resource_class: small
+    steps:
+      - checkout
+      - run:
+          name: Exact-head owner navigation contracts for canonical CodeBridge device page
+          command: |
+            set -euo pipefail
+            test "$(git rev-parse HEAD)" = "$CIRCLE_SHA1"
+            cd apps/platform
+            node --test scripts/check-operator-command-center.test.mjs scripts/check-admin-premium.test.mjs scripts/check-admin-roadmap-navigation.test.mjs
+            echo OWNER_NAVIGATION_SOURCE_ONLY_NOT_RELEASE_CREDIT
 
   php_pint:
     docker:
@@ -771,6 +786,11 @@ workflows:
   review_codebridge_unified_dashboard:
     jobs:
       - codebridge_unified_source:
+          filters:
+            branches:
+              only:
+                - fix/codebridge-single-device-dashboard-20261029
+      - codebridge_unified_owner_navigation:
           filters:
             branches:
               only:
