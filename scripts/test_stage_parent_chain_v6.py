@@ -44,6 +44,39 @@ class ParentChainV6(unittest.TestCase):
         with patch.object(module.os, "getxattr", side_effect=OSError(13, "denied")):
             self.assertEqual(module.acl_status(Path("/not-read")), "UNKNOWN")
 
+    def test_blocked_evidence_receipt_never_exits_success(self):
+        from unittest.mock import MagicMock
+
+        stage = MagicMock()
+        stage.is_symlink.return_value = True
+        stage.resolve.return_value = (
+            Path("/home/kmjstage/releases") / module.STAGE_SHA / "apps/platform"
+        )
+        prod = MagicMock()
+        prod.is_symlink.return_value = True
+        prod.resolve.return_value = (
+            Path("/home/kmjprod/releases") / module.PROD_RELEASE
+        )
+        with (
+            patch.object(module.os, "geteuid", return_value=0),
+            patch.object(module.socket, "gethostname", return_value="KMJ-elite"),
+            patch.object(module, "STAGE", stage),
+            patch.object(module, "PROD", prod),
+            patch.object(module, "directory"),
+            patch.object(module, "collect_chain", return_value={
+                "status": "BLOCKED_PARENT_CHAIN_AND_RELEASE_GATES",
+                "staging_switch_authorized": False,
+                "production_activation_authorized": False,
+            }),
+            patch.object(module, "write_receipt") as writer,
+            patch("builtins.print"),
+        ):
+            self.assertEqual(module.main(), 2)
+            writer.assert_called_once()
+            evidence = writer.call_args.args[0]
+            self.assertEqual(evidence["live_pointer_identity"], "MATCHED_OLD_BASELINE")
+            self.assertFalse(evidence["staging_switch_authorized"])
+
     def test_receipt_source_never_mutates_customer_tree_or_authorizes(self):
         source = SOURCE.read_text()
         self.assertIn("os.O_EXCL | os.O_NOFOLLOW", source)
