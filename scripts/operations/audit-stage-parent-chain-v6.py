@@ -91,13 +91,13 @@ def write_receipt(data: dict[str, object]) -> None:
     dirfd = os.open(QA, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW | os.O_CLOEXEC)
     try:
         opened = os.fstat(dirfd)
-        kmjcode_uid = pwd.getpwnam("kmjcode").pw_uid
-        stage_uid = pwd.getpwnam("kmjstage").pw_uid
         if ((opened.st_dev, opened.st_ino) != (named.st_dev, named.st_ino)
                 or not stat.S_ISDIR(opened.st_mode)
-                or opened.st_mode & 0o022
-                or opened.st_uid not in (0, kmjcode_uid)
-                or opened.st_uid == stage_uid):
+                or opened.st_mode & 0o022):
+            raise UnsafeEvidence("UNTRUSTED_RECEIPT_DIRECTORY")
+        kmjcode_uid = pwd.getpwnam("kmjcode").pw_uid
+        stage_uid = pwd.getpwnam("kmjstage").pw_uid
+        if opened.st_uid not in (0, kmjcode_uid) or opened.st_uid == stage_uid:
             raise UnsafeEvidence("UNTRUSTED_RECEIPT_DIRECTORY")
         gid = grp.getgrnam("kmjcode").gr_gid
         fd = os.open(RECEIPT, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW,
