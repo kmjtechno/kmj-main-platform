@@ -170,7 +170,9 @@ stage DONE
 INNER
 chmod 700 "$tmp/db-phase.sh"
 sandbox=(bwrap --unshare-all --die-with-parent --new-session --cap-drop ALL
-  --ro-bind / / --proc /proc --dev /dev --tmpfs "$HOME" --bind "$tmp" "$tmp")
+  --ro-bind / / --proc /proc --dev /dev
+  --tmpfs /run --tmpfs /tmp --tmpfs /var/tmp
+  --tmpfs "$HOME" --bind "$tmp" "$tmp")
 if ! "${sandbox[@]}" bash "$tmp/db-phase.sh" "$pgbin" "$tmp" 55479 >/dev/null 2>&1; then
   stage_name="$(sed -n 's/^STAGE=//p' "$tmp/db.stage" 2>/dev/null | tail -1)"
   [[ "$stage_name" =~ ^[A-Z_]+$ ]] || stage_name=DISPOSABLE_POSTGRES_SANDBOX
