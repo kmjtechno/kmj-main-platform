@@ -48,7 +48,7 @@ class Google39RestoreContract(unittest.TestCase):
 
     def test_database_phase_runs_in_a_real_os_sandbox(self):
         for flag in ("bwrap", "--unshare-all", "--die-with-parent", "--cap-drop ALL", "--ro-bind / /",
-                     '--tmpfs "$HOME"', '--bind "$tmp" "$tmp"', "DATABASE_PHASE_OS_SANDBOX PASS"):
+                     '--tmpfs /run', '--tmpfs /tmp', '--tmpfs /var/tmp', '--tmpfs "$HOME"', '--bind "$tmp" "$tmp"', "DATABASE_PHASE_OS_SANDBOX PASS"):
             self.assertIn(flag, SOURCE)
         self.assertNotIn("--share-net", SOURCE)
         # No postgres client/server binary is invoked outside the sandboxed phase script.
