@@ -356,5 +356,46 @@ class MaterializePublicLinkTest(unittest.TestCase):
             self.assertEqual(run.returncode, 0, run.stderr)
             self.assertEqual(os.readlink(root / "public/storage"), "../storage/app/public")
 
+
+class StorageDirectoryBoundaryTest(unittest.TestCase):
+    def test_directory_and_root_access_metadata_changes_digest(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            a = root / "a"
+            a.mkdir()
+            (a / "sub").mkdir()
+            b = root / "b"
+            shutil.copytree(a, b, copy_function=shutil.copy2)
+            self.assertEqual(storage_manifest.inventory(a), storage_manifest.inventory(b))
+            original = (a / "sub").stat().st_mode & 0o777
+            (b / "sub").chmod(original ^ 0o077)
+            self.assertNotEqual(storage_manifest.inventory(a), storage_manifest.inventory(b))
+            (b / "sub").chmod(original)
+            b.chmod((a.stat().st_mode & 0o777) ^ 0o077)
+            self.assertNotEqual(storage_manifest.inventory(a), storage_manifest.inventory(b))
+
+    def test_directory_swap_to_symlink_is_rejected(self):
+        from unittest.mock import patch
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            a = root / "a"
+            a.mkdir()
+            (a / "sub").mkdir()
+            outside = root / "outside"
+            outside.mkdir()
+            original_open = os.open
+            swapped = False
+            def racing_open(name, flags, *args, **kwargs):
+                nonlocal swapped
+                if name == "sub" and kwargs.get("dir_fd") is not None and not swapped:
+                    swapped = True
+                    (a / "sub").rename(a / "original-sub")
+                    (a / "sub").symlink_to(outside, target_is_directory=True)
+                return original_open(name, flags, *args, **kwargs)
+            with patch.object(storage_manifest.os, "open", side_effect=racing_open):
+                with self.assertRaises((OSError, ValueError)):
+                    storage_manifest.inventory(a)
+            self.assertTrue(swapped)
+
 if __name__ == "__main__":
     unittest.main()
