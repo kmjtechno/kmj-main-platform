@@ -43,6 +43,7 @@ type CatalogProduct = {
 };
 
 type OperatorProps = {
+    ownerView: 'dashboard' | 'command-center';
     metrics: {
         users: number;
         organizations: number;
@@ -219,6 +220,7 @@ function ManualPaymentConfirmation({ order }: { order: RecentOrder }) {
 }
 
 export default function Operator({
+    ownerView,
     metrics,
     catalogProducts,
     canonicalProductCount,
@@ -227,9 +229,17 @@ export default function Operator({
 }: OperatorProps) {
     return (
         <>
-            <Head title="KMJ Enterprise Command OS · Super Admin" />
+            <Head
+                title={
+                    ownerView === 'dashboard'
+                        ? 'KMJ Enterprise Command OS · Super Admin'
+                        : 'KMJ Command Center · Super Admin'
+                }
+            />
             <div className="owner-dashboard-page kmj-admin-shell kmj-os-page flex h-full min-w-0 flex-1 flex-col gap-6 overflow-x-auto p-0 sm:p-0">
-                <OperatorCommandOs
+                {ownerView === 'dashboard' ? (
+                    <>
+                        <OperatorCommandOs
                     metrics={metrics}
                     catalogProducts={catalogProducts}
                     recentOrders={recentOrders}
@@ -255,6 +265,41 @@ export default function Operator({
                         />
                     </div>
                 </details>
+                    </>
+                ) : (
+                    <section
+                        className="bg-card mx-3 mt-3 rounded-2xl border p-4 sm:mx-6 sm:mt-6 sm:p-6"
+                        aria-label="Owner task-first Command Center"
+                    >
+                        <div className="flex flex-wrap items-center justify-between gap-3">
+                            <div>
+                                <p className="text-muted-foreground text-xs font-bold uppercase tracking-wide">
+                                    KMJ TECHNO · Protected Owner Workspace
+                                </p>
+                                <h1 className="mt-1 text-2xl font-bold">
+                                    Command Center
+                                </h1>
+                                <p className="text-muted-foreground mt-2 max-w-2xl text-sm">
+                                    Manage owner workspaces, review real catalog and order evidence, and open governed tools.
+                                </p>
+                            </div>
+                            <Link
+                                href="/super-admin"
+                                className="border-border hover:bg-accent inline-flex min-h-10 items-center rounded-lg border px-4 py-2 text-sm font-semibold"
+                            >
+                                Back to Enterprise Dashboard
+                            </Link>
+                        </div>
+                        <div className="mt-6">
+                            <OperatorControlOverview
+                                products={catalogProducts}
+                                orders={recentOrders}
+                                canonicalProductCount={canonicalProductCount}
+                                missingCanonicalSlugs={missingCanonicalSlugs}
+                            />
+                        </div>
+                    </section>
+                )}
 
                 <section
                     id="commercial-orders"
