@@ -112,7 +112,8 @@ export default function CodeBridgeService({
         };
         selectCodeBridgeHash();
         window.addEventListener('hashchange', selectCodeBridgeHash);
-        return () => window.removeEventListener('hashchange', selectCodeBridgeHash);
+        return () =>
+            window.removeEventListener('hashchange', selectCodeBridgeHash);
     }, []);
     const [clientSearch, setClientSearch] = useState('');
     const [showAllClients, setShowAllClients] = useState(false);
