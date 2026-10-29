@@ -100,6 +100,26 @@ class ParentChainV6Contract(unittest.TestCase):
         self.assertFalse(result["encrypted_offsite_restore_verified"])
         self.assertFalse(result["owner_approval_attested"])
 
+    def test_dangling_release_pointer_is_classified_without_raising(self):
+        # A stale symlink must produce RELEASE_POINTER_DRIFT evidence instead
+        # of aborting the whole root-only audit before its sanitized receipt.
+        with tempfile.TemporaryDirectory() as root:
+            base = Path(root)
+            link = base / "current"
+            expected = base / "missing-release"
+            link.symlink_to(expected)
+            self.assertFalse(module.pointer_matches(link, expected))
+            self.assertFalse(module.pointer_matches(base / "absent", expected))
+            regular = base / "ordinary"
+            regular.write_text("not a release link")
+            self.assertFalse(module.pointer_matches(regular, expected))
+
+    def test_symlink_loop_is_classified_as_pointer_drift(self):
+        with tempfile.TemporaryDirectory() as root:
+            link = Path(root) / "loop"
+            link.symlink_to("loop")
+            self.assertFalse(module.pointer_matches(link, Path(root) / "release"))
+
     def test_named_directory_swap_after_open_is_rejected(self):
         # Disposable local directory only: simulate a rename between the
         # initial fd open and final anchored name revalidation.
