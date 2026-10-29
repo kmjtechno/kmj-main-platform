@@ -194,6 +194,31 @@ class ReadinessDoctorTest(unittest.TestCase):
         with patch.object(doctor.os, "open", side_effect=swap_at_open):
             self.assertIsNone(doctor._load_protected_json(self.paths.approval, False))
 
+    def test_protected_json_same_inode_change_after_fd_stat_is_denied(self) -> None:
+        from unittest.mock import patch
+
+        self.write_approval()
+        original_lstat = os.lstat
+        calls = 0
+
+        def mutate_before_final_lstat(path, *args, **kwargs):
+            nonlocal calls
+            if Path(path) == self.paths.approval:
+                calls += 1
+                if calls == 2:
+                    # The file remains the same inode but changes after
+                    # fstat(fd); checking only dev/inode at the path misses it.
+                    current = self.paths.approval.read_text()
+                    self.assertIn('"rollbackVerified": true', current)
+                    self.paths.approval.write_text(
+                        current.replace('"rollbackVerified": true',
+                                        '"rollbackVerified": false'))
+            return original_lstat(path, *args, **kwargs)
+
+        with patch.object(doctor.os, "lstat", side_effect=mutate_before_final_lstat):
+            self.assertIsNone(doctor._load_protected_json(self.paths.approval, False))
+        self.assertEqual(calls, 2)
+
     def test_nginx_unreadable_public_blocks_like_live_rollback(self) -> None:
         self.materialize()
         self.write_backup()
