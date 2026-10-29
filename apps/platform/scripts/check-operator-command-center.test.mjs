@@ -26,6 +26,19 @@ void test('owner command center uses separated, real admin module routes', () =>
     assert.ok(!operator.includes('Product & licensing matrix'));
 });
 
+void test('operator and super-admin are distinct owner views, not duplicated dashboards', () => {
+    assert.match(ownerRules, /'ownerView' => \\$request->routeIs\\('super-admin\\.index'\\) \\? 'dashboard' : 'command-center'/);
+    assert.match(ownerRules, /Route::get\\('operator', \\$ownerCommandDashboard\\)/);
+    assert.match(ownerRules, /Route::get\\('super-admin', \\$ownerCommandDashboard\\)/);
+    assert.match(operator, /ownerView: 'dashboard' \\| 'command-center'/);
+    assert.match(operator, /ownerView === 'dashboard' \\? \\(/);
+    assert.match(operator, /aria-label="Owner task-first Command Center"/);
+    assert.match(operator, /Back to Enterprise Dashboard/);
+    assert.match(operator, /<OperatorCommandOs/);
+    assert.match(operator, /<OperatorControlOverview/);
+    assert.match(operator, /id="commercial-orders"/);
+});
+
 void test('catalog readiness is informative, never a payment or license grant', () => {
     assert.ok(modules.includes('product.active_policy_count === 0'));
     assert.ok(modules.includes('product.is_public'));
