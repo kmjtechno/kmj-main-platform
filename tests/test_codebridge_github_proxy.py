@@ -95,6 +95,112 @@ class CodeBridgeGitHubProxyTest(unittest.TestCase):
                 },
             )
 
+    def test_every_codebridge_github_tool_route_is_covered(self) -> None:
+        sha = "a" * 40
+        allowed = [
+            ("GET", "pulls", {"state": "open", "per_page": "30"}),
+            ("GET", "pulls/7", {}),
+            ("GET", "pulls/7/reviews", {"per_page": "20"}),
+            ("GET", "pulls/7/comments", {"per_page": "20"}),
+            ("GET", "issues/7", {}),
+            ("GET", "issues/7/comments", {"per_page": "50"}),
+            ("GET", "commits", {"per_page": "20", "sha": "main"}),
+            ("GET", f"commits/{sha}/check-runs", {"per_page": "100"}),
+            ("GET", "actions/runs", {"head_sha": sha, "per_page": "100"}),
+            ("GET", "actions/runs/99", {}),
+            ("GET", "actions/runs/99/jobs", {"per_page": "100"}),
+            ("GET", "actions/jobs/99", {}),
+            ("GET", "actions/jobs/99/logs", {}),
+            ("POST", "issues", {}),
+            ("POST", "issues/7/comments", {}),
+            ("POST", "pulls/7/reviews", {}),
+            ("POST", "pulls/7/comments/55/replies", {}),
+            ("PUT", "pulls/7/merge", {}),
+            ("PUT", "contents/src/app.js", {}),
+            ("PATCH", "pulls/7", {}),
+        ]
+        for method, suffix, query in allowed:
+            with self.subTest(method=method, suffix=suffix):
+                self.assertTrue(codebridge_github_route_allowed(method, suffix, query))
+
+    def test_unsafe_routes_and_queries_are_denied(self) -> None:
+        denied = [
+            ("GET", "pulls", {"per_page": "31"}),
+            ("GET", "pulls", {"state": "draft"}),
+            ("GET", "commits", {"sha": "../x"}),
+            ("GET", "actions/runs", {"head_sha": "not-a-sha"}),
+            ("GET", "actions/runs", {"actor": "x"}),
+            ("GET", "pulls/0", {}),
+            ("PUT", "contents/../etc/passwd", {}),
+            ("PUT", "contents/.github/workflows/ci.yml", {}),
+            ("PUT", "contents/.GitHub/Workflows/x.yml", {}),
+            ("PUT", "contents/", {}),
+            ("PATCH", "issues/7", {}),
+            ("POST", "pulls/7/merge", {}),
+            ("PUT", "pulls/7/merge", {"x": "1"}),
+            ("DELETE", "pulls/7", {}),
+            ("POST", "actions/runs/9/rerun", {}),
+            ("PUT", "collaborators/someone", {}),
+        ]
+        for method, suffix, query in denied:
+            with self.subTest(method=method, suffix=suffix, query=query):
+                self.assertFalse(codebridge_github_route_allowed(method, suffix, query))
+
+    def test_reviews_can_never_approve_and_merge_requires_exact_sha(self) -> None:
+        validate_codebridge_github_write(
+            "pulls/7/reviews", {"event": "COMMENT", "body": "ok"}, "POST"
+        )
+        for event in ("APPROVE", "approve", None):
+            with self.subTest(event=event):
+                with self.assertRaises(HTTPException):
+                    validate_codebridge_github_write(
+                        "pulls/7/reviews", {"event": event, "body": "x"}, "POST"
+                    )
+        validate_codebridge_github_write(
+            "pulls/7/merge", {"sha": "b" * 40, "merge_method": "squash"}, "PUT"
+        )
+        for body in (
+            {"merge_method": "squash"},
+            {"sha": "short", "merge_method": "squash"},
+            {"sha": "b" * 40, "merge_method": "octopus"},
+            {"sha": "b" * 40, "merge_method": "squash", "commit_title": "x"},
+        ):
+            with self.subTest(body=body):
+                with self.assertRaises(HTTPException):
+                    validate_codebridge_github_write("pulls/7/merge", body, "PUT")
+
+    def test_contents_issue_comment_and_patch_bodies_are_bounded(self) -> None:
+        validate_codebridge_github_write(
+            "contents/src/a.js",
+            {"message": "m", "content": "aGk=", "branch": "feature/x", "sha": "c" * 40},
+            "PUT",
+        )
+        for body in (
+            {"message": "m", "content": "not base64!", "branch": "feature/x"},
+            {"message": "m", "content": "aGk=", "branch": "../main"},
+            {"message": "m", "content": "aGk=", "branch": "x", "committer": {}},
+            {"content": "aGk=", "branch": "x"},
+        ):
+            with self.subTest(body=body):
+                with self.assertRaises(HTTPException):
+                    validate_codebridge_github_write("contents/src/a.js", body, "PUT")
+        with self.assertRaises(HTTPException) as workflow:
+            validate_codebridge_github_write(
+                "contents/.github/workflows/x.yml",
+                {"message": "m", "content": "aGk=", "branch": "x"},
+                "PUT",
+            )
+        self.assertEqual(workflow.exception.status_code, 405)
+        validate_codebridge_github_write("issues", {"title": "t", "body": "b"}, "POST")
+        validate_codebridge_github_write("issues/7/comments", {"body": "b"}, "POST")
+        with self.assertRaises(HTTPException):
+            validate_codebridge_github_write("issues/7/comments", {"body": ""}, "POST")
+        validate_codebridge_github_write("pulls/7", {"state": "closed"}, "PATCH")
+        for body in ({}, {"state": "merged"}, {"draft": True}, {"base": "a..b"}):
+            with self.subTest(body=body):
+                with self.assertRaises(HTTPException):
+                    validate_codebridge_github_write("pulls/7", body, "PATCH")
+
 
 if __name__ == "__main__":
     unittest.main()
