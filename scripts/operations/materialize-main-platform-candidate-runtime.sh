@@ -27,7 +27,7 @@ readonly ROOT=/home/kmjprod
 readonly ORIGIN_LINE='CODEBRIDGE_AGENT_PUBLIC_URL=https://kmjtechno.com'
 [[ "$(id -u)" == 0 && "$(hostname -s)" == KMJ-elite ]] || fail WRONG_HOST
 id kmjprod >/dev/null 2>&1 || fail SERVICE_USER_MISSING
-for cmd in git runuser install cp find awk sha256sum flock python3; do
+for cmd in git runuser install cp find awk sha256sum flock python3 systemd-run; do
   command -v "$cmd" >/dev/null 2>&1 || fail "MISSING_$cmd"
 done
 [[ -L "$ROOT/current" ]] || fail CURRENT_NOT_SYMLINK
@@ -50,6 +50,26 @@ done
 # The release controller lock prevents racing an activation.
 exec 9>/run/lock/kmj-main-platform-production-release.lock
 flock -n 9 || fail PRODUCTION_RELEASE_IN_PROGRESS
+
+# Root holds the release lock while a private mount namespace pins writable
+# candidate storage. Live runtime and all other host paths stay read-only even
+# if kmjprod replaces a candidate parent with a symlink during the copy.
+systemd-run --quiet --wait --pipe --collect \
+  --unit="kmj-materialize-$SHORT" \
+  -p User=kmjprod -p Group=kmjprod -p UMask=0077 \
+  -p ProtectSystem=strict -p ProtectHome=read-only \
+  -p PrivateTmp=yes -p NoNewPrivileges=yes \
+  -p "ReadWritePaths=$CAND_APP" -p "ReadOnlyPaths=$LIVE_APP" \
+  /bin/bash -s -- "$SHA" "$EXPECTED_CURRENT" "$ROOT" "$LIVE" "$CAND" "$ORIGIN_LINE" <<'KMJ_UNPRIVILEGED_MATERIALIZE'
+set -Eeuo pipefail
+umask 077
+readonly SHA="$1" EXPECTED_CURRENT="$2" ROOT="$3" LIVE="$4" CAND="$5" ORIGIN_LINE="$6"
+readonly LIVE_APP="$LIVE/apps/platform" CAND_APP="$CAND/apps/platform"
+fail() { echo "KMJ_MATERIALIZE=BLOCKED $1"; exit 2; }
+status() { printf '%s=%s\n' "$1" "$2"; }
+[[ "$(id -u)" == "$(id -u kmjprod)" && "$(id -u)" != 0 ]] || fail SANDBOX_USER_MISMATCH
+export GIT_OPTIONAL_LOCKS=0
+git_as() { git -c core.fsmonitor=false -C "$CAND" "$@"; }
 
 # 1. Runtime environment: exact live bytes, plus the owner-approved public
 #    agent origin only when absent. A different existing value needs review.
@@ -230,3 +250,5 @@ status DATABASE NOT_TOUCHED
 status APPROVAL_UPDATED NO
 status PRODUCTION_SWITCH NOT_ATTEMPTED
 echo 'KMJ_MATERIALIZE=PASS'
+
+KMJ_UNPRIVILEGED_MATERIALIZE
