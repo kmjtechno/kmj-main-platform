@@ -112,7 +112,10 @@ def main() -> int:
         result["live_pointer_identity"] = "MATCHED_OLD_BASELINE"
         write_receipt(result)
         print("KMJ_STAGE_PARENT_CHAIN_V6=EVIDENCE_ONLY_BLOCKED")
-        return 0
+        # Receipt creation is evidence, never a release admission signal.
+        # Return a nonzero status so shell callers cannot treat the blocked
+        # parent-chain state as an authorized staging or production deploy.
+        return 2
     except (OSError, UnsafeEvidence, KeyError) as exc:
         label = str(exc)
         if label not in {"LIVE_POINTER_DRIFT", "UNTRUSTED_DIRECTORY_CHAIN",
