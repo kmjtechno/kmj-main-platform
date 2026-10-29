@@ -231,7 +231,7 @@ export default function OwnerModuleShell({
                 className={'owner-sidebar ' + (navOpen ? 'is-open' : '')}
                 aria-label="Owner navigation"
             >
-                <Link href="/operator" onClick={() => setNavOpen(false)}>
+                <Link href="/super-admin" onClick={() => setNavOpen(false)}>
                     <Home size={17} aria-hidden="true" />
                     Dashboard
                 </Link>
