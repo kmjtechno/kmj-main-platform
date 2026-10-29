@@ -16,7 +16,20 @@ final class LocalProductDraftTemplate
         // The submitted brief is data, not a command or evidence of real features.
         $clean = trim((string) preg_replace('/[\x00-\x1f\x7f]+/u', ' ', strip_tags($brief)));
         $clean = trim((string) preg_replace('/\s+/u', ' ', $clean));
-        $first = preg_split('/[.!?\n]/u', $clean, 2)[0] ?? $clean;
+        // Keep the first owner-entered line separate from following form fields.
+        // $clean is single-line for copy, but cannot identify a multiline name.
+        $firstLine = preg_split('/\R/u', trim(strip_tags($brief)), 2)[0] ?? $clean;
+        $firstLine = trim((string) preg_replace('/[\x00-\x1f\x7f]+/u', ' ', $firstLine));
+        $firstLine = trim((string) preg_replace('/\s+/u', ' ', $firstLine));
+        // Preserve numeric version dots (e.g. CineCore 2.1) inside the name.
+        $first = preg_split('/(?<!\p{N})\.|\.(?!\p{N})|[!?\n]/u', $firstLine, 2)[0] ?? $firstLine;
+        // Common form field labels are not official names.
+        // "Product name: CineCore" must yield "CineCore", never "Product name".
+        // Generic category headings should not pollute a descriptive fallback.
+        if (preg_match('/^(?:product\s+(?:name|title)|name|title)\s*:\s*(.+)$/iu', $first, $label) === 1
+            || preg_match('/^(?:product|service|software|app|application|solution|platform|concept|idea|project|description|overview|features|summary)\s*:\s*(.+)$/iu', $first, $label) === 1) {
+            $first = trim($label[1]);
+        }
         // Conservative identity hints before a description, never AI or factual claims.
         // Support "KMJ Calibration Studio is ...", "KMJ CineCore: ..." and
         // "KMJ CineCore — ..." without promoting the description into the title.
@@ -36,7 +49,9 @@ final class LocalProductDraftTemplate
         }
         $words = preg_split('/\s+/u', trim($identity)) ?: [];
         $name = implode(' ', array_slice($words, 0, 9));
-        $name = trim((string) preg_replace('/[^\p{L}\p{N}\- ]/u', ' ', $name));
+        // Preserve dots only between digits, not trailing sentence punctuation.
+        $name = (string) preg_replace('/(?<!\p{N})\.|\.(?!\p{N})/u', ' ', $name);
+        $name = trim((string) preg_replace('/[^\p{L}\p{N}\-. ]/u', ' ', $name));
         // Removing a colon/dash can leave double spaces in a fallback name.
         $name = trim((string) preg_replace('/\s+/u', ' ', $name));
         $name = (string) preg_replace('/\binteactive\b/iu', 'Interactive', $name);
