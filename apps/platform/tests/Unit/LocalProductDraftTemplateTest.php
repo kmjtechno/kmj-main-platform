@@ -160,4 +160,42 @@ final class LocalProductDraftTemplateTest extends TestCase
         self::assertSame('CineCore v2.0', $draft['name']);
         self::assertStringContainsString('Features: proposed camera-assisted', $draft['description']);
     }
+
+    public function test_empty_product_name_label_reads_following_line_without_description_pollution(): void
+    {
+        $draft = (new LocalProductDraftTemplate)->fromBrief(
+            "Product name:\nKMJ CineCore 2.1\nDescription: proposed stereo playback."
+        );
+
+        self::assertSame('KMJ CineCore 2.1', $draft['name']);
+        self::assertStringContainsString('Description: proposed stereo playback', $draft['description']);
+    }
+
+    public function test_windows_blank_spacer_after_name_label_keeps_versioned_identity(): void
+    {
+        $draft = (new LocalProductDraftTemplate)->fromBrief(
+            "Name:\r\n\r\nCineCore v2.0\r\nFeatures: proposed camera alignment."
+        );
+
+        self::assertSame('CineCore v2.0', $draft['name']);
+        self::assertStringContainsString('Features: proposed camera alignment', $draft['description']);
+    }
+
+    public function test_empty_name_label_followed_by_another_field_is_not_product_identity(): void
+    {
+        $draft = (new LocalProductDraftTemplate)->fromBrief(
+            "Product name:\nDescription: proposed stereo playback."
+        );
+
+        self::assertSame('Proposed Product Concept', $draft['name']);
+        self::assertStringContainsString('Description: proposed stereo playback', $draft['description']);
+    }
+
+    public function test_empty_name_label_without_value_falls_back_to_review_only_concept(): void
+    {
+        $draft = (new LocalProductDraftTemplate)->fromBrief('Title:');
+
+        self::assertSame('Proposed Product Concept', $draft['name']);
+        self::assertStringContainsString('not independently verified', $draft['description']);
+    }
 }

@@ -18,9 +18,27 @@ final class LocalProductDraftTemplate
         $clean = trim((string) preg_replace('/\s+/u', ' ', $clean));
         // Keep the first owner-entered line separate from following form fields.
         // $clean is single-line for copy, but cannot identify a multiline name.
-        $firstLine = preg_split('/\R/u', trim(strip_tags($brief)), 2)[0] ?? $clean;
+        $rawLines = preg_split('/\R/u', trim(strip_tags($brief))) ?: [];
+        $firstLine = $rawLines[0] ?? $clean;
         $firstLine = trim((string) preg_replace('/[\x00-\x1f\x7f]+/u', ' ', $firstLine));
         $firstLine = trim((string) preg_replace('/\s+/u', ' ', $firstLine));
+        // A pasted form may put "Product name:" on one line and its value
+        // on the next. Never turn an empty label or another field into a name.
+        if (preg_match('/^(?:product\s+(?:name|title)|name|title)\s*:\s*$/iu', $firstLine) === 1) {
+            $firstLine = '';
+            foreach (array_slice($rawLines, 1, 3) as $line) {
+                $line = trim((string) preg_replace('/[\x00-\x1f\x7f]+/u', ' ', $line));
+                $line = trim((string) preg_replace('/\s+/u', ' ', $line));
+                if ($line === '') {
+                    continue;
+                }
+                if (preg_match('/^(?:product\s+(?:name|title)|name|title|description|overview|features|summary|category|type|price)\s*:/iu', $line) === 1) {
+                    break;
+                }
+                $firstLine = $line;
+                break;
+            }
+        }
         // Preserve numeric version dots (e.g. CineCore 2.1) inside the name.
         $first = preg_split('/(?<!\p{N})\.|\.(?!\p{N})|[!?\n]/u', $firstLine, 2)[0] ?? $firstLine;
         // Common form field labels are not official names.
