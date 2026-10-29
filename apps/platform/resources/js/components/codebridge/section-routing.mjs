@@ -31,3 +31,16 @@ export function codeBridgeAnchorFromHash(hash) {
     const name = hash.replace(/^#/, '').trim().toLowerCase();
     return Object.hasOwn(ANCHOR_SECTION, name) ? name : null;
 }
+
+// True when the hash is a navigation instruction (empty hash and #overview
+// return to the overview; whitelisted names/anchors select their section).
+// Unknown hashes are not instructions, so a crafted hash changes nothing.
+export function codeBridgeHashIsNavigable(hash) {
+    if (typeof hash !== 'string') return false;
+    const name = hash.replace(/^#/, '').trim().toLowerCase();
+    return (
+        name === '' ||
+        Object.hasOwn(ANCHOR_SECTION, name) ||
+        CODEBRIDGE_SECTIONS.includes(name)
+    );
+}

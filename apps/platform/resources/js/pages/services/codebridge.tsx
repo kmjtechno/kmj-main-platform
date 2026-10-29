@@ -9,6 +9,7 @@ import DeviceControlCenter, {
 import { codeBridgeDeviceQuotaDisplay } from '@/components/codebridge/device-policy-display';
 import {
     codeBridgeAnchorFromHash,
+    codeBridgeHashIsNavigable,
     codeBridgeSectionFromHash,
 } from '@/components/codebridge/section-routing.mjs';
 import {
@@ -108,8 +109,8 @@ export default function CodeBridgeService({
     // mismatch, then scroll once the target section has rendered.
     useEffect(() => {
         const apply = () => {
+            if (!codeBridgeHashIsNavigable(window.location.hash)) return;
             const section = codeBridgeSectionFromHash(window.location.hash);
-            if (section === 'overview') return;
             const id = codeBridgeAnchorFromHash(window.location.hash);
             pendingAnchor.current = id === null ? null : { section, id };
             setActiveSection(section);

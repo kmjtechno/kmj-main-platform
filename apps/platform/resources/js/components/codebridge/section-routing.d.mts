@@ -13,3 +13,5 @@ export declare function codeBridgeSectionFromHash(
 export declare function codeBridgeAnchorFromHash(
     hash: string | null | undefined,
 ): string | null;
+
+export function codeBridgeHashIsNavigable(hash: unknown): boolean;
