@@ -245,7 +245,7 @@ export default function Operator({
                             recentOrders={recentOrders}
                             missingCanonicalSlugs={missingCanonicalSlugs}
                         />
-        
+
                         <details className="kmj-os-advanced rounded-2xl border p-4 sm:p-6">
                             <summary className="cursor-pointer text-sm font-semibold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-500">
                                 Advanced owner insights and audit-safe legacy controls
@@ -280,7 +280,8 @@ export default function Operator({
                                     Command Center
                                 </h1>
                                 <p className="text-muted-foreground mt-2 max-w-2xl text-sm">
-                                    Manage owner workspaces, review real catalog and order evidence, and open governed tools.
+                                    Manage owner workspaces, review real catalog
+                                    and order evidence, and open governed tools.
                                 </p>
                             </div>
                             <Link
