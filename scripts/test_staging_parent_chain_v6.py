@@ -5,6 +5,9 @@ from pathlib import Path
 import subprocess
 import sys
 import unittest
+import os
+import tempfile
+from unittest import mock
 
 SOURCE = Path(__file__).resolve().parent / "operations/audit-staging-parent-chain-v6-20261029.py"
 spec = importlib.util.spec_from_file_location("stage_parent_v6", SOURCE)
@@ -96,6 +99,31 @@ class ParentChainV6Contract(unittest.TestCase):
         self.assertFalse(result["migration_authorized"])
         self.assertFalse(result["encrypted_offsite_restore_verified"])
         self.assertFalse(result["owner_approval_attested"])
+
+    def test_named_directory_swap_after_open_is_rejected(self):
+        # Disposable local directory only: simulate a rename between the
+        # initial fd open and final anchored name revalidation.
+        with tempfile.TemporaryDirectory(dir="/tmp", prefix="kmj-v6-test-") as root:
+            shared = Path(root) / "shared"
+            shared.mkdir()
+            parts = ("tmp", Path(root).name, "shared")
+            original_stat = os.stat
+            calls = 0
+
+            def swap_on_second_stat(path, *args, **kwargs):
+                nonlocal calls
+                if path == "shared" and kwargs.get("dir_fd") is not None:
+                    calls += 1
+                    if calls == 2:
+                        shared.rename(Path(root) / "shared-old")
+                        shared.mkdir()
+                return original_stat(path, *args, **kwargs)
+
+            with mock.patch.object(module, "PARTS", parts):
+                with mock.patch.object(module.os, "stat", side_effect=swap_on_second_stat):
+                    with self.assertRaisesRegex(module.AuditBlocked, "CHAIN_CHANGED"):
+                        module.snapshot_chain()
+            self.assertEqual(calls, 2)
 
     def test_fixed_scope_no_customer_mutation_calls(self):
         text = SOURCE.read_text()
