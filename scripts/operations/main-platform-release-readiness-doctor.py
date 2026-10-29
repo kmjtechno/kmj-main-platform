@@ -58,6 +58,54 @@ def _protected(path: Path, require_root: bool) -> str | None:
     return None
 
 
+
+def _load_protected_json(path: Path, require_root: bool) -> object | None:
+    """Read the same protected inode, rejecting symlink swaps and ambiguous JSON.
+
+    This is advisory readiness evidence only; the installed activation
+    controller must independently recheck its own protected release gates.
+    """
+    def unique_pairs(pairs):
+        result = {}
+        for key, value in pairs:
+            if key in result:
+                raise ValueError("DUPLICATE_PROTECTED_JSON_KEY")
+            result[key] = value
+        return result
+
+    def reject_nonfinite(value):
+        raise ValueError("NONFINITE_PROTECTED_JSON")
+
+    try:
+        fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_CLOEXEC)
+        try:
+            before = os.fstat(fd)
+            at_path = os.lstat(path)
+            if (not stat.S_ISREG(before.st_mode) or before.st_nlink != 1
+                    or (require_root and before.st_uid != 0)
+                    or before.st_mode & 0o022
+                    or before.st_size > 4096
+                    or (before.st_dev, before.st_ino) != (at_path.st_dev, at_path.st_ino)):
+                return None
+            data = os.read(fd, 4097)
+            after = os.fstat(fd)
+            now = os.lstat(path)
+            if (len(data) != before.st_size
+                    or (before.st_dev, before.st_ino, before.st_size,
+                        before.st_mtime_ns, before.st_ctime_ns)
+                    != (after.st_dev, after.st_ino, after.st_size,
+                        after.st_mtime_ns, after.st_ctime_ns)
+                    or (after.st_dev, after.st_ino) != (now.st_dev, now.st_ino)
+                    or not stat.S_ISREG(now.st_mode)):
+                return None
+            return json.loads(data, object_pairs_hook=unique_pairs,
+                              parse_constant=reject_nonfinite)
+        finally:
+            os.close(fd)
+    except (OSError, ValueError, UnicodeError):
+        return None
+
+
 def _git(tree: Path, *args: str) -> str | None:
     try:
         result = subprocess.run(
@@ -155,7 +203,7 @@ def evaluate(target: str, paths: Paths = Paths(), require_root: bool = True,
         blockers.append("BACKUP_WITNESS_" + problem)
     else:
         try:
-            record = json.loads(witness.read_text(encoding="utf-8"))
+            record = _load_protected_json(witness, require_root)
         except (OSError, ValueError):
             record = None
         if (not isinstance(record, dict)
@@ -182,7 +230,7 @@ def evaluate(target: str, paths: Paths = Paths(), require_root: bool = True,
         blockers.append("APPROVAL_" + problem)
     else:
         try:
-            data = json.loads(paths.approval.read_text(encoding="utf-8"))
+            data = _load_protected_json(paths.approval, require_root)
         except (OSError, ValueError):
             data = None
         keys = {"approvedSha", "expectedCurrentRelease", "backupVerified", "rollbackVerified"}
