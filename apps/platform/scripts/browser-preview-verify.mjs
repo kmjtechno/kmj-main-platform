@@ -754,7 +754,9 @@ try {
                     })
                     .waitFor();
                 if ((await page.locator('.kmj-os-advanced').count()) !== 0)
-                    errors.push('Command Center duplicated dashboard advanced controls');
+                    errors.push(
+                        'Command Center duplicated dashboard advanced controls',
+                    );
             }
             if (name === 'super-admin') {
                 const advanced = page.locator('.kmj-os-advanced');
@@ -812,7 +814,9 @@ try {
                             ? 'h1'
                             : name === 'owner-ops'
                               ? '.owner-module-main h1'
-                              : '.owner-main h1',
+                              : name === 'owner-command'
+                                ? '[aria-label="Owner task-first Command Center"] h1'
+                                : '.owner-main h1',
                     )
                     .waitFor();
             // Horizontal carousels can keep valid lazy images outside the
