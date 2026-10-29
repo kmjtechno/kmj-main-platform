@@ -2,6 +2,9 @@ import importlib.util
 import os
 import tempfile
 import unittest
+from contextlib import ExitStack, redirect_stdout
+from io import StringIO
+from unittest.mock import patch
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -99,6 +102,42 @@ class Schema(unittest.TestCase):
         for forbidden in ("shell=True", "os.system(", "migrate:fresh", "db:wipe", "DROP DATABASE"):
             self.assertNotIn(forbidden, text)
 
+
+
+class FailureEvidence(unittest.TestCase):
+    def test_cached_runtime_config_is_rejected_even_when_env_is_absent(self):
+        with tempfile.TemporaryDirectory() as d:
+            app = tree(Path(d), "cached")
+            cache = app / "bootstrap/cache"
+            cache.mkdir(parents=True)
+            config = cache / "config.php"
+            for broken_link in (False, True):
+                if broken_link:
+                    config.unlink()
+                    config.symlink_to(cache / "absent.php")
+                else:
+                    config.write_text("production cached settings")
+                with self.assertRaisesRegex(mod.Blocked, "TREE_HAS_CACHED_CONFIG"):
+                    mod.validate_tree(str(app), "X")
+
+    def test_schema_query_error_never_reports_pass(self):
+        with tempfile.TemporaryDirectory() as d, ExitStack() as stack:
+            previous, candidate = Path(d) / "previous", Path(d) / "candidate"
+            stack.enter_context(patch.object(mod.os, "geteuid", return_value=1000))
+            stack.enter_context(patch.object(mod.sys, "argv", ["rehearsal.py"]))
+            stack.enter_context(patch.object(mod.shutil, "which", return_value="/usr/bin/tool"))
+            stack.enter_context(patch.object(mod, "validate_database", return_value={"DB_DATABASE": "kmj_rehearsal"}))
+            stack.enter_context(patch.object(mod, "validate_tree", side_effect=[previous, candidate]))
+            stack.enter_context(patch.object(mod, "psql_rows", return_value=[("kmj_rehearsal",)]))
+            stack.enter_context(patch.object(mod, "clean_env", return_value={}))
+            stack.enter_context(patch.object(mod, "artisan", return_value=True))
+            stack.enter_context(patch.object(mod, "schema_snapshot", side_effect=RuntimeError("PSQL_FAILED")))
+            output = StringIO()
+            with redirect_stdout(output):
+                result = mod.main()
+            self.assertEqual(result, 1)
+            self.assertIn("APP_HTTP_DB_ROLLBACK_REHEARSAL=FAIL", output.getvalue())
+            self.assertNotIn("APP_HTTP_DB_ROLLBACK_REHEARSAL=PASS", output.getvalue())
 
 if __name__ == "__main__":
     unittest.main()
