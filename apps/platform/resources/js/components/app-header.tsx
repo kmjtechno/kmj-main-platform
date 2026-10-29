@@ -55,7 +55,7 @@ const rightNavItems: NavItem[] = [
     },
     {
         title: 'KMJ CodeBridge',
-        href: '/services/codebridge',
+        href: '/services/kmj-codebridge',
         icon: BookOpen,
     },
 ];

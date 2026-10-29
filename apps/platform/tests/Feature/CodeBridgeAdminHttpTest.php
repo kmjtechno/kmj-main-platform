@@ -236,6 +236,20 @@ final class CodeBridgeAdminHttpTest extends TestCase
         self::assertNotSame($license, $otherLicense);
     }
 
+    public function test_legacy_codebridge_service_path_redirects_to_the_single_canonical_control_center(): void
+    {
+        $this->withoutVite();
+
+        // The alias lives behind the same authentication as the real page.
+        $this->get('/services/codebridge')->assertRedirect('/login');
+
+        $owner = $this->platformOwner();
+        $this->actingAs($owner)->get('/services/codebridge')
+            ->assertRedirect('/services/kmj-codebridge');
+        $this->actingAs($owner)->get('/services/codebridge?section=devices')
+            ->assertRedirect('/services/kmj-codebridge?section=devices');
+    }
+
     public function test_verified_owner_sees_owner_plan_navigation_on_codebridge_service(): void
     {
         $this->withoutVite();

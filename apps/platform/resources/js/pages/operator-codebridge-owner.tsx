@@ -1,6 +1,4 @@
-import DeviceControlCenter, {
-    type CodeBridgeDevice,
-} from '@/components/codebridge/device-control-center';
+import { type CodeBridgeDevice } from '@/components/codebridge/device-control-center';
 import OperatorModuleNavigation from '@/components/operator-module-navigation';
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import { useState } from 'react';
@@ -39,7 +37,6 @@ export default function OperatorCodeBridgeOwner({
     licenses,
     limits,
     organizations,
-    endpoint,
 }: Props) {
     const [confirmation, setConfirmation] = useState('');
     const [processing, setProcessing] = useState<string | null>(null);
@@ -73,37 +70,19 @@ export default function OperatorCodeBridgeOwner({
                         CodeBridge Control Center
                     </h1>
                     <p className="text-muted-foreground mt-2 text-sm">
-                        Connect a computer, approve pairing, manage registered
-                        devices and assign projects.
+                        Read-only owner view of every organization you manage,
+                        plus Owner Plan settings. Connecting a computer,
+                        approving a pairing code, disconnecting devices,
+                        assigning projects, AI providers and client setup live
+                        in one place — the main CodeBridge Control Center.
                     </p>
                     <div className="mt-4 flex flex-wrap gap-2">
-                        <a
-                            href="/install-codebridge-windows.cmd"
-                            download
+                        <Link
+                            href="/services/kmj-codebridge"
                             className="rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white"
                         >
-                            Connect Windows PC
-                        </a>
-                        <a
-                            href="/install"
-                            download="KMJ-CodeBridge-Connect-Linux.sh"
-                            className="rounded-lg border px-4 py-2 text-sm"
-                        >
-                            Connect Linux / VPS
-                        </a>
-                        <Link
-                            href="/codebridge/pair"
-                            className="rounded-lg border px-4 py-2 text-sm"
-                        >
-                            Approve pairing code
+                            Open CodeBridge setup &amp; pairing
                         </Link>
-                        <a
-                            href="/install-chatgpt-desktop.ps1"
-                            download
-                            className="rounded-lg border px-4 py-2 text-sm"
-                        >
-                            Set up ChatGPT Desktop
-                        </a>
                         <button
                             type="button"
                             onClick={() =>
@@ -132,28 +111,61 @@ export default function OperatorCodeBridgeOwner({
                 {organizations.map((organization) => (
                     <section
                         key={organization.id}
-                        className="min-w-0 space-y-3"
+                        className="bg-card min-w-0 space-y-3 rounded-xl border p-4"
+                        aria-label={`${organization.name} device summary`}
                     >
                         <h2 className="text-lg font-bold">
                             {organization.name}
                         </h2>
+                        <p className="text-muted-foreground text-sm">
+                            Read-only summary:{' '}
+                            {organization.plan ?? 'no active plan'},{' '}
+                            {organization.managedCount} registered
+                            {organization.deviceLimit === null
+                                ? ' device(s)'
+                                : ` of ${organization.deviceLimit} device(s)`}
+                            . Registration does not prove a live gateway
+                            connection.
+                        </p>
                         {!organization.canManage && (
                             <p role="status" className="text-sm text-amber-300">
                                 An active CodeBridge license is required to
                                 manage devices in this organization.
                             </p>
                         )}
-                        <DeviceControlCenter
-                            tenantId={organization.id}
-                            plan={organization.plan}
-                            devices={organization.devices}
-                            managedCount={organization.managedCount}
-                            deviceLimit={organization.deviceLimit}
-                            canManage={organization.canManage}
-                            endpoint={endpoint}
-                        />
+                        {organization.devices.length > 0 && (
+                            <ul className="divide-y rounded-lg border text-sm">
+                                {organization.devices.map((device) => (
+                                    <li
+                                        key={device.id}
+                                        className="flex flex-wrap justify-between gap-2 p-3"
+                                    >
+                                        <span className="font-semibold">
+                                            {device.name}
+                                        </span>
+                                        <span className="text-muted-foreground">
+                                            {device.projects.length} project(s)
+                                            · connection not verified
+                                        </span>
+                                    </li>
+                                ))}
+                            </ul>
+                        )}
                     </section>
                 ))}
+                {organizations.length > 0 && (
+                    <p className="text-muted-foreground text-sm">
+                        Pairing, device disconnect and project assignment are
+                        available only in the{' '}
+                        <Link
+                            href="/services/kmj-codebridge#codebridge-device-control"
+                            className="font-semibold underline"
+                        >
+                            CodeBridge Control Center
+                        </Link>
+                        .
+                    </p>
+                )}
                 <details className="bg-card rounded-xl border p-4">
                     <summary className="cursor-pointer font-bold">
                         Owner license settings

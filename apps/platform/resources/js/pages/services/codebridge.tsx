@@ -1,5 +1,5 @@
 import { Head, Link, router } from '@inertiajs/react';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import CodeBridgeControlCenterHub, {
     type CodeBridgeSection,
 } from '@/components/codebridge/control-center-hub';
@@ -7,6 +7,11 @@ import DeviceControlCenter, {
     type CodeBridgeDevice,
 } from '@/components/codebridge/device-control-center';
 import { codeBridgeDeviceQuotaDisplay } from '@/components/codebridge/device-policy-display';
+import {
+    codeBridgeAnchorFromHash,
+    codeBridgeHashIsNavigable,
+    codeBridgeSectionFromHash,
+} from '@/components/codebridge/section-routing.mjs';
 import {
     ArrowLeft,
     CheckCircle2,
@@ -93,6 +98,36 @@ export default function CodeBridgeService({
 }: Props) {
     const [activeSection, setActiveSection] =
         useState<CodeBridgeSection>('overview');
+    const pendingAnchor = useRef<{
+        section: CodeBridgeSection;
+        id: string;
+    } | null>(null);
+
+    // Other KMJ pages deep-link here (for example
+    // /services/kmj-codebridge#codebridge-device-control). The hash is not
+    // sent to the server, so apply it after mount to avoid a hydration
+    // mismatch, then scroll once the target section has rendered.
+    useEffect(() => {
+        const apply = () => {
+            if (!codeBridgeHashIsNavigable(window.location.hash)) return;
+            const section = codeBridgeSectionFromHash(window.location.hash);
+            const id = codeBridgeAnchorFromHash(window.location.hash);
+            pendingAnchor.current = id === null ? null : { section, id };
+            setActiveSection(section);
+        };
+        apply();
+        window.addEventListener('hashchange', apply);
+        return () => window.removeEventListener('hashchange', apply);
+    }, []);
+
+    useEffect(() => {
+        const pending = pendingAnchor.current;
+        // The first effect pass still shows the overview; wait until the
+        // section that owns the anchor is the one on screen.
+        if (pending === null || pending.section !== activeSection) return;
+        pendingAnchor.current = null;
+        document.getElementById(pending.id)?.scrollIntoView({ block: 'start' });
+    }, [activeSection]);
     const [clientSearch, setClientSearch] = useState('');
     const [showAllClients, setShowAllClients] = useState(false);
     const [copyStatus, setCopyStatus] = useState('');

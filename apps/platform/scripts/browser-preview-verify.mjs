@@ -43,6 +43,10 @@ try {
             ['owner-products', '/operator/products?create=1'],
             ['owner-developer', '/developer/apps'],
             ['owner-devices', '/operator/codebridge/owner-plan'],
+            [
+                'canonical-devices',
+                '/services/kmj-codebridge#codebridge-device-control',
+            ],
         ]) {
             const page = await browser.newPage({
                 viewport: { width, height: 1024 },
@@ -776,10 +780,13 @@ try {
                     });
                 await advanced.locator(':scope > summary').click();
             }
-            if (name === 'owner-devices') {
+            if (name === 'owner-devices' || name === 'canonical-devices') {
                 await page
                     .getByRole('heading', {
-                        name: 'CodeBridge Control Center',
+                        name:
+                            name === 'canonical-devices'
+                                ? 'KMJ CodeBridge'
+                                : 'CodeBridge Control Center',
                         exact: true,
                     })
                     .waitFor();
@@ -1011,6 +1018,36 @@ try {
                 )
                     errors.push('Owner CodeBridge controls missing');
                 if (
+                    await page
+                        .getByRole('textbox', {
+                            name: 'Search devices and projects',
+                        })
+                        .count()
+                )
+                    errors.push(
+                        'Owner summary duplicated interactive device search',
+                    );
+                await page
+                    .getByRole('region', {
+                        name: 'Synthetic preview organization device summary',
+                    })
+                    .waitFor();
+                await page
+                    .getByText('Synthetic preview desktop', { exact: true })
+                    .waitFor();
+                if (
+                    (await page
+                        .getByRole('link', {
+                            name: 'CodeBridge Control Center',
+                            exact: true,
+                        })
+                        .getAttribute('href')) !==
+                    '/services/kmj-codebridge#codebridge-device-control'
+                )
+                    errors.push('Owner summary lost canonical device link');
+            }
+            if (name === 'canonical-devices') {
+                if (
                     (await page
                         .getByRole('heading', {
                             name: 'Device Control Center',
@@ -1047,6 +1084,38 @@ try {
                         .getAttribute('aria-expanded')) !== 'true'
                 )
                     errors.push('Device details did not open');
+                await page.evaluate(() => {
+                    window.location.hash = 'overview';
+                });
+                await page
+                    .getByRole('textbox', {
+                        name: 'Search devices and projects',
+                    })
+                    .waitFor({ state: 'hidden' });
+                await page.evaluate(() => {
+                    window.location.hash = 'codebridge-device-control';
+                });
+                await page
+                    .getByRole('textbox', {
+                        name: 'Search devices and projects',
+                    })
+                    .waitFor({ state: 'visible' });
+                await page.evaluate(() => {
+                    window.location.hash = '';
+                });
+                await page
+                    .getByRole('textbox', {
+                        name: 'Search devices and projects',
+                    })
+                    .waitFor({ state: 'hidden' });
+                await page.evaluate(() => {
+                    window.location.hash = 'codebridge-device-control';
+                });
+                await page
+                    .getByRole('textbox', {
+                        name: 'Search devices and projects',
+                    })
+                    .waitFor({ state: 'visible' });
             }
             if (name === 'owner-ops') {
                 if (

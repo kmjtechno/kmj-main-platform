@@ -503,6 +503,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ]);
     })->name('dashboard');
 
+    // Legacy/mistyped entry point. One canonical CodeBridge Control Center
+    // exists; keep old links working without a second page or a 404. The query
+    // string and hash (browser-side) are preserved.
+    Route::get('services/codebridge', fn () => redirect()->route('services.codebridge', request()->query()));
+
     Route::get('services/kmj-codebridge', function (
         Request $request,
         OrganizationDirectory $organizations,
