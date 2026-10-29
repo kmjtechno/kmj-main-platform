@@ -28,6 +28,10 @@ class _Upstream:
 class _Client:
     calls: list[tuple[str, str, bytes | None, dict]] = []
     response = _Upstream()
+    default_branch = 'main'
+    protected = False
+    metadata_status = 200
+    branch_status = 200
 
     def __init__(self, *args, **kwargs) -> None:
         pass
@@ -40,6 +44,10 @@ class _Client:
 
     async def request(self, method, url, headers=None, content=None):
         _Client.calls.append((method, url, content, dict(headers or {})))
+        if method == 'GET' and '/branches/' in url:
+            return _Upstream(_Client.branch_status, json.dumps({'protected': _Client.protected}).encode())
+        if method == 'GET' and url == 'https://api.github.com/repos/kmjtechno/kmj-codebridge':
+            return _Upstream(_Client.metadata_status, json.dumps({'default_branch': _Client.default_branch}).encode())
         return _Client.response
 
 
@@ -74,8 +82,8 @@ class CodeBridgeGitHubProxyHttpTest(unittest.TestCase):
     def test_exact_granted_development_branch_can_be_created(self) -> None:
         res = self.http.post('/codebridge/github/repos/kmjtechno/kmj-codebridge/git/refs', json={'ref': 'refs/heads/codebridge/test', 'sha': 'a' * 40}, headers=self.auth)
         self.assertEqual(res.status_code, 200)
-        self.assertEqual(len(_Client.calls), 1)
-        self.assertEqual(_Client.calls[0][3]['Authorization'], 'Bearer ' + 'g' * 40)
+        self.assertEqual(len(_Client.calls), 3)
+        self.assertEqual(_Client.calls[-1][3]['Authorization'], 'Bearer ' + 'g' * 40)
 
     def test_ungranted_branch_creation_is_denied(self) -> None:
         for branch in ('main', 'codebridge/test-more', 'codebridge/other'):
@@ -92,7 +100,7 @@ class CodeBridgeGitHubProxyHttpTest(unittest.TestCase):
         self.assertEqual(_Client.calls, [])
 
     def test_ci_entry_point_writes_are_denied_on_granted_branch(self) -> None:
-        for path in ('.github/actions/build/action.yml', 'scripts/build.py', 'package.json', 'apps/platform/package.json', '.npmrc', 'requirements.txt'):
+        for path in ('.github/actions/build/action.yml', 'scripts/build.py', 'apps/foo/scripts/build.py', 'Jenkinsfile', '.gitlab-ci.yml', '.circleci/config.yml', '.buildkite/pipeline.yml', 'package.json', 'apps/platform/package.json', '.npmrc', 'requirements.txt'):
             with self.subTest(path=path):
                 res = self.http.put('/codebridge/github/repos/kmjtechno/kmj-codebridge/contents/' + path, json={'message': 'm', 'content': 'aGk=', 'branch': 'codebridge/test'}, headers=self.auth)
                 self.assertEqual(res.status_code, 405)
@@ -111,6 +119,10 @@ class CodeBridgeGitHubProxyHttpTest(unittest.TestCase):
     def setUp(self) -> None:
         _Client.calls = []
         _Client.response = _Upstream()
+        _Client.default_branch = 'main'
+        _Client.protected = False
+        _Client.metadata_status = 200
+        _Client.branch_status = 200
         self.env = patch.dict(os.environ, ENV, clear=False)
         self.env.start()
         self.client_patch = patch.object(main.httpx, "AsyncClient", _Client)
@@ -167,7 +179,35 @@ class CodeBridgeGitHubProxyHttpTest(unittest.TestCase):
             json={"message": "m", "content": "aGk=", "branch": "codebridge/test"},
             headers=self.auth,
         )
-        self.assertTrue(_Client.calls[0][1].endswith("/contents/docs/a%20b.md"))
+        self.assertTrue(_Client.calls[-1][1].endswith("/contents/docs/a%20b.md"))
+
+    def test_default_or_protected_development_branch_cannot_be_written(self) -> None:
+        for default, protected in [('codebridge/test', False), ('main', True)]:
+            with self.subTest(default=default, protected=protected):
+                _Client.calls = []
+                _Client.default_branch = default
+                _Client.protected = protected
+                res = self.http.put('/codebridge/github/repos/kmjtechno/kmj-codebridge/contents/src/a.py', json={'message': 'm', 'content': 'aGk=', 'branch': 'codebridge/test'}, headers=self.auth)
+                self.assertEqual(res.status_code, 403)
+                self.assertTrue(all(call[0] == 'GET' for call in _Client.calls))
+
+    def test_unavailable_branch_metadata_blocks_mutation(self) -> None:
+        for status in (403, 429, 500):
+            with self.subTest(status=status):
+                _Client.calls = []
+                _Client.metadata_status = status
+                res = self.http.put('/codebridge/github/repos/kmjtechno/kmj-codebridge/contents/src/a.py', json={'message': 'm', 'content': 'aGk=', 'branch': 'codebridge/test'}, headers=self.auth)
+                self.assertEqual(res.status_code, 503)
+                self.assertTrue(all(call[0] == 'GET' for call in _Client.calls))
+
+    def test_missing_branch_is_allowed_only_for_explicit_creation(self) -> None:
+        _Client.branch_status = 404
+        res = self.http.post('/codebridge/github/repos/kmjtechno/kmj-codebridge/git/refs', json={'ref': 'refs/heads/codebridge/test', 'sha': 'a' * 40}, headers=self.auth)
+        self.assertEqual(res.status_code, 200)
+        _Client.calls = []
+        res = self.http.put('/codebridge/github/repos/kmjtechno/kmj-codebridge/contents/src/a.py', json={'message': 'm', 'content': 'aGk=', 'branch': 'codebridge/test'}, headers=self.auth)
+        self.assertEqual(res.status_code, 503)
+        self.assertTrue(all(call[0] == 'GET' for call in _Client.calls))
 
     def test_large_list_responses_up_to_limit_are_returned(self) -> None:
         _Client.response = _Upstream(content=b"[" + b'"x",' * 200000 + b'"x"]')
