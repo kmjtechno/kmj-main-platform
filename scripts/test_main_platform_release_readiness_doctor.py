@@ -326,5 +326,22 @@ class TrustedMaterializeVerifierTest(unittest.TestCase):
             self.assertEqual(run.returncode, 0, run.stderr)
             self.assertEqual(json.loads(run.stdout)["regular"], 1)
 
+
+class MaterializeWriteBoundaryTest(unittest.TestCase):
+    def test_runtime_writes_require_nonroot_private_mount_namespace(self):
+        source = MATERIALIZE.read_text()
+        boundary = source.index("KMJ_UNPRIVILEGED_MATERIALIZE'")
+        self.assertLess(source.index("flock -n 9"), boundary)
+        for token in ("-p User=kmjprod", "-p ProtectSystem=strict",
+                      '-p "ReadWritePaths=$CAND_APP"', '-p "ReadOnlyPaths=$LIVE_APP"',
+                      "-p NoNewPrivileges=yes", "-p PrivateTmp=yes",
+                      "SANDBOX_USER_MISMATCH", "export GIT_OPTIONAL_LOCKS=0"):
+            self.assertIn(token, source)
+        self.assertGreater(source.index('install -o kmjprod'), boundary)
+        self.assertGreater(source.index('cp -a --no-clobber'), boundary)
+        self.assertTrue(source.rstrip().endswith("KMJ_UNPRIVILEGED_MATERIALIZE"))
+        self.assertNotIn("--system", source)
+        self.assertNotIn("sudo", source)
+
 if __name__ == "__main__":
     unittest.main()
