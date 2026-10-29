@@ -434,7 +434,10 @@ export default function DeviceControlCenter({
                                             (project) => (
                                                 <span
                                                     key={project.id}
-                                                    title={project.repository || 'Local project'}
+                                                    title={
+                                                        project.repository ||
+                                                        'Local project'
+                                                    }
                                                     className="rounded-lg border border-amber-500/30 px-2.5 py-1 text-xs"
                                                 >
                                                     {project.name} · Pending
