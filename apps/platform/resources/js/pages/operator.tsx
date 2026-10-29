@@ -276,9 +276,7 @@ export default function Operator({
                                 <p className="text-muted-foreground text-xs font-bold uppercase tracking-wide">
                                     KMJ TECHNO · Protected Owner Workspace
                                 </p>
-                                <h1 className="mt-1 text-2xl font-bold">
-                                    Command Center
-                                </h1>
+                                <h1 className="mt-1 text-2xl font-bold">Command Center</h1>
                                 <p className="text-muted-foreground mt-2 max-w-2xl text-sm">
                                     Manage owner workspaces, review real catalog
                                     and order evidence, and open governed tools.
