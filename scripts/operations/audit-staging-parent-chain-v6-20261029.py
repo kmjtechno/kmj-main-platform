@@ -79,14 +79,24 @@ def snapshot_chain() -> list[dict[str, object]]:
                 "mode": stat.S_IMODE(opened.st_mode),
                 "dev": opened.st_dev,
                 "ino": opened.st_ino,
+                "mtime_ns": opened.st_mtime_ns,
+                "ctime_ns": opened.st_ctime_ns,
                 "acl": acl_state(fd),
             })
-        for fd, row in zip(fds[1:], rows):
+        # An open fd stays valid after a rename. Re-stat the *named* entry
+        # under its pinned parent as well as the fd, or an attacker could
+        # replace /home/kmjstage/shared while this audit is in flight.
+        for i, (part, fd, row) in enumerate(zip(PARTS, fds[1:], rows)):
             now = os.fstat(fd)
-            if (now.st_dev != row["dev"] or now.st_ino != row["ino"] or
-                    now.st_uid != row["uid"] or now.st_gid != row["gid"] or
-                    stat.S_IMODE(now.st_mode) != row["mode"]):
+            named = os.stat(part, dir_fd=fds[i], follow_symlinks=False)
+            expected = (row["dev"], row["ino"], row["uid"], row["gid"],
+                        stat.S_IFDIR | row["mode"], row["mtime_ns"],
+                        row["ctime_ns"])
+            if (stat_identity(now) != expected or
+                    stat_identity(named) != expected):
                 raise AuditBlocked("CHAIN_CHANGED")
+            if acl_state(fd) != row["acl"]:
+                raise AuditBlocked("CHAIN_ACL_CHANGED")
         return rows
     finally:
         for fd in reversed(fds):
