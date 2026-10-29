@@ -51,6 +51,7 @@ class ReadinessDoctorTest(unittest.TestCase):
             file = work / item
             file.parent.mkdir(parents=True, exist_ok=True)
             file.write_text("x")
+        (work / ".gitignore").write_text("apps/platform/.env\n")
         git(work, "add", "-A")
         git(work, "commit", "-q", "-m", "c")
         self.sha = git(work, "rev-parse", "HEAD")
@@ -60,6 +61,7 @@ class ReadinessDoctorTest(unittest.TestCase):
             path.parent.mkdir(parents=True, exist_ok=True)
         self.paths.backups.mkdir()
         self.paths.controller.write_text("#")
+        self.env = self.candidate / "apps/platform/.env"
         self.paths.unit.write_text("[Unit]")
 
     def tearDown(self) -> None:
@@ -80,10 +82,15 @@ class ReadinessDoctorTest(unittest.TestCase):
         self.paths.approval.write_text(json.dumps(data))
         self.paths.approval.chmod(0o600)
 
+    def materialize(self) -> None:
+        self.env.write_text("APP_KEY=test")
+        self.env.chmod(0o600)
+
     def run_doctor(self):
         return doctor.evaluate(self.sha, self.paths, require_root=False)
 
     def test_fully_prepared_release_is_ready(self) -> None:
+        self.materialize()
         self.write_backup()
         self.write_approval()
         lines, blockers = self.run_doctor()
@@ -92,6 +99,7 @@ class ReadinessDoctorTest(unittest.TestCase):
         self.assertIn("PRODUCTION_CHANGED=NO", lines)
 
     def test_stale_approval_like_live_kmj_elite_is_reported(self) -> None:
+        self.materialize()
         self.write_backup()
         self.write_approval(expectedCurrentRelease="platform-bbbbbbbbbbbb")
         _, blockers = self.run_doctor()
@@ -103,6 +111,7 @@ class ReadinessDoctorTest(unittest.TestCase):
         self.assertIn("APPROVAL_MISSING", blockers)
 
     def test_flags_false_and_checksum_mismatch_block(self) -> None:
+        self.materialize()
         self.write_backup(corrupt=True)
         self.write_approval(rollbackVerified=False)
         _, blockers = self.run_doctor()
@@ -110,19 +119,28 @@ class ReadinessDoctorTest(unittest.TestCase):
         self.assertIn("APPROVAL_FLAGS_NOT_TRUE", blockers)
 
     def test_witness_for_other_current_release_blocks(self) -> None:
+        self.materialize()
         self.write_backup(current="platform-cccccccccccc")
         self.write_approval()
         _, blockers = self.run_doctor()
         self.assertEqual(blockers, ["BACKUP_WITNESS_MISMATCH"])
 
     def test_dirty_candidate_blocks(self) -> None:
+        self.materialize()
         self.write_backup()
         self.write_approval()
-        (self.candidate / "apps/platform/.env").write_text("SECRET=x")
+        (self.candidate / "apps/platform/untracked.txt").write_text("x")
         _, blockers = self.run_doctor()
         self.assertEqual(blockers, ["CANDIDATE_DIRTY"])
 
+    def test_unmaterialized_candidate_blocks_before_health_rollback(self) -> None:
+        self.write_backup()
+        self.write_approval()
+        _, blockers = self.run_doctor()
+        self.assertEqual(blockers, ["CANDIDATE_RUNTIME_ENV_MISSING"])
+
     def test_writable_approval_blocks(self) -> None:
+        self.materialize()
         self.write_backup()
         self.write_approval()
         self.paths.approval.chmod(0o666)
@@ -142,6 +160,37 @@ class ReadinessDoctorTest(unittest.TestCase):
         for forbidden in ("os.replace", "os.symlink", "systemctl", ".write_text", "open(\"w",
                           "unlink", "rmtree", "chmod", "chown"):
             self.assertNotIn(forbidden, source, forbidden)
+
+
+MATERIALIZE = REPO / "scripts/operations/materialize-main-platform-candidate-runtime.sh"
+
+
+class MaterializeContractTest(unittest.TestCase):
+    source = MATERIALIZE.read_text()
+
+    def test_argument_guards_run_before_host_access(self) -> None:
+        sha = "8e1a4973204e58050c794eec1ec3b8178b15dd33"
+        for args, code in {
+            (): "EXACT_SHA_AND_CURRENT_RELEASE_REQUIRED",
+            ("x", "platform-8070dad72c55"): "EXACT_SHA_REQUIRED",
+            (sha, "live"): "EXPECTED_CURRENT_RELEASE_INVALID",
+            (sha, "platform-8e1a4973204e"): "TARGET_ALREADY_CURRENT",
+            (sha, "platform-8070dad72c55"): "WRONG_HOST",
+        }.items():
+            result = subprocess.run(["bash", str(MATERIALIZE), *args], capture_output=True, text=True)
+            self.assertEqual(result.returncode, 2)
+            self.assertIn("KMJ_MATERIALIZE=BLOCKED " + code, result.stdout)
+
+    def test_copies_only_into_candidate_and_proves_parity(self) -> None:
+        for token in ("cp -a --no-clobber", 'install -o kmjprod -g kmjprod -m 0600 "$LIVE_APP/.env" "$CAND_APP/.env"',
+                      "STORAGE_PARITY_MISMATCH", "CANDIDATE_DIRTY_AFTER", "LIVE_AGENT_PUBLIC_URL_DIFFERS_REVIEW",
+                      "CODEBRIDGE_AGENT_PUBLIC_URL=https://kmjtechno.com", "flock -n 9",
+                      "DATABASE NOT_TOUCHED", "PRODUCTION_SWITCH NOT_ATTEMPTED"):
+            self.assertIn(token, self.source)
+        for forbidden in ("artisan migrate", "systemctl", "mv ", "rm -", "ln -sfn", '>>"$LIVE_APP',
+                          '> "$LIVE_APP', "main-platform-production-release.json", "backupVerified",
+                          "psql", "pg_dump", "sed -i"):
+            self.assertNotIn(forbidden, self.source)
 
 
 class ExactRecoveryContractTest(unittest.TestCase):

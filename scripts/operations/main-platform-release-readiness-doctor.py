@@ -118,6 +118,13 @@ def evaluate(target: str, paths: Paths = Paths(), require_root: bool = True) -> 
         lines.append(f"CANDIDATE={state}")
         if state != "PASS":
             blockers.append("CANDIDATE_" + state)
+        # The activation controller does not provide runtime state; the
+        # candidate must already carry the live .env (materialize step).
+        env = candidate / "apps/platform/.env"
+        env_ok = env.is_file() and not env.is_symlink() and not env.stat().st_mode & 0o077
+        lines.append("CANDIDATE_RUNTIME_ENV=" + ("PRESENT" if env_ok else "MISSING_RUN_MATERIALIZE"))
+        if not env_ok:
+            blockers.append("CANDIDATE_RUNTIME_ENV_MISSING")
 
     # Backup witness + archive digest.
     witness = paths.backups / f"pre-deploy-{short}.json"
