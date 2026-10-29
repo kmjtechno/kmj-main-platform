@@ -27,11 +27,11 @@ void test('owner command center uses separated, real admin module routes', () =>
 });
 
 void test('operator and super-admin are distinct owner views, not duplicated dashboards', () => {
-    assert.match(ownerRules, /'ownerView' => \\$request->routeIs\\('super-admin\\.index'\\) \\? 'dashboard' : 'command-center'/);
-    assert.match(ownerRules, /Route::get\\('operator', \\$ownerCommandDashboard\\)/);
-    assert.match(ownerRules, /Route::get\\('super-admin', \\$ownerCommandDashboard\\)/);
-    assert.match(operator, /ownerView: 'dashboard' \\| 'command-center'/);
-    assert.match(operator, /ownerView === 'dashboard' \\? \\(/);
+    assert.match(ownerRules, /'ownerView' => \$request->routeIs\('super-admin\.index'\) \? 'dashboard' : 'command-center'/);
+    assert.match(ownerRules, /Route::get\('operator', \$ownerCommandDashboard\)/);
+    assert.match(ownerRules, /Route::get\('super-admin', \$ownerCommandDashboard\)/);
+    assert.match(operator, /ownerView: 'dashboard' \| 'command-center'/);
+    assert.match(operator, /ownerView === 'dashboard' \? \(/);
     assert.match(operator, /aria-label="Owner task-first Command Center"/);
     assert.match(operator, /Back to Enterprise Dashboard/);
     assert.match(operator, /<OperatorCommandOs/);
