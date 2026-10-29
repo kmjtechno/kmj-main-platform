@@ -67,19 +67,29 @@ void test('owner-only entry is above customer services, never public listing', (
     assert.ok(dashboard.includes('{ownerProducts !== null && ('));
     assert.ok(dashboard.includes('href="/operator"'));
     assert.ok(dashboard.includes('{ownerProducts === null && ('));
-    const guarded = ownerRules.indexOf(
-        '$isPlatformOwner = app(PlatformOwnerAccess::class)->allows($user);',
+    const dashboardRoute = ownerRules.indexOf("Route::get('dashboard', function (");
+    const ownerGuard = ownerRules.indexOf(
+        'if (app(PlatformOwnerAccess::class)->allows($user)) {',
+        dashboardRoute,
     );
-    const ownerProducts = ownerRules.indexOf(
-        'if ($isPlatformOwner) {',
-        guarded,
+    const redirected = ownerRules.indexOf(
+        "return redirect()->route('super-admin.index');",
+        ownerGuard,
+    );
+    const customerOnly = ownerRules.indexOf(
+        '$ownerProducts = null;',
+        redirected,
     );
     const exposed = ownerRules.indexOf(
         "'ownerProducts' => $ownerProducts",
-        ownerProducts,
+        customerOnly,
     );
     assert.ok(
-        guarded > 0 && ownerProducts > guarded && exposed > ownerProducts,
+        dashboardRoute > 0 &&
+            ownerGuard > dashboardRoute &&
+            redirected > ownerGuard &&
+            customerOnly > redirected &&
+            exposed > customerOnly,
     );
 });
 
