@@ -136,7 +136,7 @@ if ! run_sftp put "$tmp/b_put"; then
 fi
 status SFTP_UPLOAD PASS
 
-printf 'rename %s %s\n' "$incoming" "$final" >"$tmp/b_commit"
+printf 'rename -l %s %s\n' "$incoming" "$final" >"$tmp/b_commit"
 if run_sftp commit "$tmp/b_commit"; then
   status REMOTE_COMMIT_NO_CLOBBER PASS
 else
