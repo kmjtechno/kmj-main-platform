@@ -65,7 +65,11 @@ case "{mode}" in
   net) echo 'ssh: connect to host x port 22: Connection timed out' >&2; exit 255;;
 esac
 map() {{ case "$1" in /incoming/*) echo "{r}/${{1#/incoming/}}";; *) echo "$1";; esac; }}
-while read -r cmd a b; do
+while read -r cmd a b c; do
+  if [ "$cmd" = rename ]; then
+    [ "$a" = -l ] || exit 99
+    a=$b; b=$c
+  fi
   a=$(map "$a"); b=$(map "$b")
   case "$cmd" in
     get) if [ -f "$a" ]; then cp "$a" "$b"; else echo "File \\"$a\\" not found." >&2; exit 1; fi ;;
@@ -100,7 +104,7 @@ class PinnedSftpPush(unittest.TestCase):
         self.assertEqual(uploaded, b"ENCRYPTED-TEST-BYTES")
         self.assertEqual(left, [])
         self.assertIn(".incoming-offsite-39b88b36d071.tar.gz.age.", log)
-        self.assertRegex(log, r"rename .*\.incoming-")
+        self.assertRegex(log, r"rename -l .*\.incoming-")
         self.assertNotIn("posix-rename", log)
         for flag in ("BatchMode=yes", "IdentitiesOnly=yes", "StrictHostKeyChecking=yes",
                      "PasswordAuthentication=no", "IdentityAgent=none"):
@@ -187,6 +191,29 @@ class PinnedSftpPush(unittest.TestCase):
             r = subprocess.run(["bash", str(env.script), "x"], env=e, capture_output=True, text=True)
             self.assertIn("NO_ARGUMENTS_ACCEPTED", r.stdout)
 
+
+    def test_real_openssh_legacy_rename_never_replaces_existing_object(self):
+        import shutil
+        server = Path("/usr/lib/openssh/sftp-server")
+        if not shutil.which("sftp") or not server.is_file():
+            self.skipTest("Real OpenSSH sftp client/server not installed")
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            incoming, final = root / "incoming", root / "final"
+            incoming.write_bytes(b"NEW")
+            final.write_bytes(b"EXISTING")
+            batch = root / "batch"
+            batch.write_text(f'rename -l "{incoming}" "{final}"\n')
+            result = subprocess.run(["sftp", "-D", str(server), "-b", str(batch)],
+                                    capture_output=True, timeout=15)
+            self.assertNotEqual(result.returncode, 0)
+            self.assertEqual(final.read_bytes(), b"EXISTING")
+            self.assertEqual(incoming.read_bytes(), b"NEW")
+            final.unlink()
+            result = subprocess.run(["sftp", "-D", str(server), "-b", str(batch)],
+                                    capture_output=True, timeout=15)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual(final.read_bytes(), b"NEW")
 
 if __name__ == "__main__":
     unittest.main()
