@@ -89,6 +89,8 @@ def validate_tree(path_text: str, label: str) -> Path:
     # A production .env would make a rehearsal read real secrets and endpoints.
     if any(p.name.startswith(".env") and p.name != ".env.example" for p in resolved.iterdir()):
         raise Blocked(f"{label}_TREE_HAS_ENV_FILE")
+    if os.path.lexists(resolved / "bootstrap/cache/config.php"):
+        raise Blocked(f"{label}_TREE_HAS_CACHED_CONFIG")
     return resolved
 
 
@@ -374,7 +376,7 @@ def main() -> int:
             else:
                 fail("SCHEMA_REAPPLY_MATCHES_FORWARD_EXACTLY")
     except RuntimeError:
-        pass
+        failures.append("REHEARSAL_STEP_FAILED")
     except subprocess.TimeoutExpired:
         failures.append("COMMAND_TIMEOUT")
     finally:
