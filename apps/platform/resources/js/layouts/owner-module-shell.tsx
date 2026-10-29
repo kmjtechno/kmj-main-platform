@@ -269,7 +269,7 @@ export default function OwnerModuleShell({
                     </nav>
                 ))}
                 <Link
-                    href="/operator#owner-kristi"
+                    href="/super-admin#owner-kristi"
                     className="owner-sidebar-kristi"
                     onClick={() => setNavOpen(false)}
                 >
