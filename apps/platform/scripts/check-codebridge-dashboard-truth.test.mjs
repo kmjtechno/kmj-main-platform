@@ -194,7 +194,10 @@ const ownerLicenseSettings = readSourceText(
 
 void test('one canonical device dashboard; owner route is licensing only', () => {
     assert.match(ownerLicenseSettings, /CodeBridge Owner License Settings/);
-    assert.match(ownerLicenseSettings, /href="\/services\/kmj-codebridge#codebridge-device-control"/);
+    assert.match(
+        ownerLicenseSettings,
+        /href="\/services\/kmj-codebridge#codebridge-device-control"/,
+    );
     assert.doesNotMatch(ownerLicenseSettings, /<DeviceControlCenter\b/);
     assert.match(ownerLicenseSettings, /UPGRADE_CODEBRIDGE_OWNER/);
     assert.match(ui, /activeSection === 'devices'/);
