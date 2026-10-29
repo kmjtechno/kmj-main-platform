@@ -9,7 +9,7 @@ export declare function normalizeRetryAfter(
     fallback?: number,
 ): number;
 export declare function createCloudCooldown(now?: () => number): {
-    remaining(): number;
-    defer(seconds: unknown): void;
-    subscribe(listener: () => void): () => void;
+    remaining(this: void): number;
+    defer(this: void, seconds: unknown): void;
+    subscribe(this: void, listener: () => void): () => void;
 };
