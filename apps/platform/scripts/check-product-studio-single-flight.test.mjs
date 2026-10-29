@@ -3,6 +3,57 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import * as flight from '../resources/js/lib/single-flight-gate.mjs';
 
+void test('provider cooldown honors Retry-After without sending retries', () => {
+    let now = 1000;
+    const cooldown = flight.createCloudCooldown(() => now);
+    cooldown.defer(90);
+    assert.equal(cooldown.remaining(), 90);
+    now += 1500;
+    assert.equal(cooldown.remaining(), 89);
+    cooldown.defer(1);
+    assert.equal(cooldown.remaining(), 89);
+    now += 90000;
+    assert.equal(cooldown.remaining(), 0);
+});
+
+void test('retry intervals are bounded and malformed values use a safe fallback', () => {
+    for (const value of [
+        undefined,
+        null,
+        '',
+        0,
+        -1,
+        NaN,
+        Infinity,
+        true,
+        'junk',
+    ]) {
+        assert.equal(flight.normalizeRetryAfter(value), 60);
+    }
+    assert.equal(flight.normalizeRetryAfter('120'), 120);
+    assert.equal(flight.normalizeRetryAfter(999999), 86400);
+});
+
+void test('cooldown observers update together and can unsubscribe', () => {
+    const cooldown = flight.createCloudCooldown();
+    let first = 0;
+    let second = 0;
+    const stopFirst = cooldown.subscribe(() => first++);
+    const stopSecond = cooldown.subscribe(() => second++);
+    try {
+        cooldown.defer(60);
+        assert.equal(first, 1);
+        assert.equal(second, 1);
+        stopFirst();
+        cooldown.defer(120);
+        assert.equal(first, 1);
+        assert.equal(second, 2);
+    } finally {
+        stopFirst();
+        stopSecond();
+    }
+});
+
 void test('a request gate blocks a second click', () => {
     const gate = flight.createSingleFlightGate();
     assert.equal(gate.isBusy(), false);
