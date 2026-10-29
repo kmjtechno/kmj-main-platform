@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import json
 import unittest
 from unittest.mock import patch
 
@@ -15,6 +16,11 @@ from controller.main import (
 
 
 class CodeBridgeGitHubProxyTest(unittest.TestCase):
+    def setUp(self) -> None:
+        env = patch.dict(os.environ, {'KMJ_CODEBRIDGE_GITHUB_WRITE_BRANCHES': json.dumps({'kmjtechno/kmj-codebridge': ['codebridge/test', 'codebridge/x']})})
+        env.start()
+        self.addCleanup(env.stop)
+
     def test_repository_allowlist_is_explicit_and_sanitized(self) -> None:
         with patch.dict(
             os.environ,
@@ -66,6 +72,7 @@ class CodeBridgeGitHubProxyTest(unittest.TestCase):
         validate_codebridge_github_write(
             "git/refs",
             {"ref": "refs/heads/codebridge/test", "sha": "a" * 40},
+            repository="kmjtechno/kmj-codebridge",
         )
         validate_codebridge_github_write(
             "pulls",
@@ -115,7 +122,6 @@ class CodeBridgeGitHubProxyTest(unittest.TestCase):
             ("POST", "issues/7/comments", {}),
             ("POST", "pulls/7/reviews", {}),
             ("POST", "pulls/7/comments/55/replies", {}),
-            ("PUT", "pulls/7/merge", {}),
             ("PUT", "contents/src/app.js", {}),
             ("PATCH", "pulls/7", {}),
         ]
@@ -156,9 +162,11 @@ class CodeBridgeGitHubProxyTest(unittest.TestCase):
                     validate_codebridge_github_write(
                         "pulls/7/reviews", {"event": event, "body": "x"}, "POST"
                     )
-        validate_codebridge_github_write(
-            "pulls/7/merge", {"sha": "b" * 40, "merge_method": "squash"}, "PUT"
-        )
+        self.assertFalse(codebridge_github_route_allowed("PUT", "pulls/7/merge", {}))
+        with self.assertRaises(HTTPException):
+            validate_codebridge_github_write(
+                "pulls/7/merge", {"sha": "b" * 40, "merge_method": "squash"}, "PUT"
+            )
         for body in (
             {"merge_method": "squash"},
             {"sha": "short", "merge_method": "squash"},
@@ -172,8 +180,9 @@ class CodeBridgeGitHubProxyTest(unittest.TestCase):
     def test_contents_issue_comment_and_patch_bodies_are_bounded(self) -> None:
         validate_codebridge_github_write(
             "contents/src/a.js",
-            {"message": "m", "content": "aGk=", "branch": "feature/x", "sha": "c" * 40},
+            {"message": "m", "content": "aGk=", "branch": "codebridge/x", "sha": "c" * 40},
             "PUT",
+            repository="kmjtechno/kmj-codebridge",
         )
         for body in (
             {"message": "m", "content": "not base64!", "branch": "feature/x"},
