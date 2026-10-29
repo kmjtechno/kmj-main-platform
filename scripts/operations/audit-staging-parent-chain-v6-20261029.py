@@ -223,8 +223,14 @@ def write_receipt(data: dict[str, object]) -> None:
         # A root diagnostic must not place a purported root receipt in a
         # staging-owned or world-writable directory. Pin the named inode
         # before opening the O_EXCL leaf; never treat this as a signature.
+        # The directory entry, not the receipt's 0640 mode, controls
+        # whether a group member can unlink or replace the evidence.
+        # Accept only the dedicated CodeBridge user or root as directory
+        # owner; reject group/world write even if O_EXCL protects creation.
+        trusted_uids = (0, pwd.getpwnam("kmjcode").pw_uid)
         if (not stat.S_ISDIR(opened.st_mode) or
-                opened.st_mode & 0o002 or
+                opened.st_mode & 0o022 or
+                opened.st_uid not in trusted_uids or
                 opened.st_uid == pwd.getpwnam("kmjstage").pw_uid):
             raise AuditBlocked("QA_DIRECTORY_UNTRUSTED")
         if (opened.st_dev, opened.st_ino) != (named.st_dev, named.st_ino):
