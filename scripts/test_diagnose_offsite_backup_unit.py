@@ -13,7 +13,7 @@ def run(log: str, args=()):
     with tempfile.TemporaryDirectory() as tmp:
         bin_dir = Path(tmp)
         stubs = {
-            "systemctl": "#!/bin/sh\ncase \"$*\" in *ExecMainStatus*) echo 255;; *Result*) echo exit-code;; *) echo ;; esac\n",
+            "systemctl": "#!/bin/sh\ncase \"$*\" in *ExecMainStatus*) echo 255;; *Result*) echo exit-code;; *ActiveState*) echo '/root/private_key.pem';; *) echo ;; esac\n",
             "journalctl": f"#!/bin/sh\ncat <<'LOG'\n{log}\nLOG\n",
             "id": "#!/bin/sh\necho 0\n",
         }
@@ -79,6 +79,31 @@ class DiagnoseOffsiteBackupUnit(unittest.TestCase):
         import re
         for pattern in forbidden:
             self.assertIsNone(re.search(pattern, code), pattern)
+
+
+    def test_sensitive_systemd_metadata_never_read_or_printed(self):
+        code = SCRIPT.read_text()
+        for forbidden in (
+            "kv exec_path", "kv working_directory", "kv run_as_user",
+            "show ExecStart", "show EnvironmentFiles", "show WorkingDirectory",
+            "show User", "ssh_file:", "getent passwd",
+        ):
+            with self.subTest(forbidden=forbidden):
+                self.assertNotIn(forbidden, code)
+        self.assertIn("kv metadata_paths_exposed no", code)
+        result = run("nothing special")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertNotIn("/root/private_key.pem", result.stdout)
+        self.assertIn("active_state=unknown/", result.stdout)
+
+    def test_systemd_show_properties_fixed_allowlist(self):
+        import re
+        code = SCRIPT.read_text()
+        queried = set(re.findall(r"\\bshow(?:_enum)?\\s+([A-Za-z]+)", code))
+        self.assertEqual(
+            queried,
+            {"LoadState", "ActiveState", "SubState", "Result", "ExecMainStatus"},
+        )
 
 
 if __name__ == "__main__":
