@@ -13,9 +13,9 @@ export const deliveryMilestones: DeliveryMilestone[] = [
         id: 'codebridge-github-authority-proxy',
         title: 'Main Platform authorizes CodeBridge GitHub operations',
         state: 'active',
-        detail: 'PR #675 makes the Main Platform GitHub proxy cover every CodeBridge GitHub tool so the shared GitHub credential lives only in Main Platform. Policy is enforced here: reviews can never approve, merges require an exact head SHA, workflow files cannot be written and content paths reject traversal. User read/write permission still comes from Main Platform user introspection at the CodeBridge gateway.',
+        detail: 'PR #677 closes the shared GitHub proxy authority gaps from #675. Merge requests are denied; content writes and branch creation require exact repository-scoped operator grants for codebridge/ development branches. Workflow, local-action and common CI entry-point writes are denied. Duplicate query and body keys are rejected, and only validated query values are forwarded.',
         evidence:
-            'Source-only. 13 controller tests (8 allowlist/validator, 5 HTTP-level with mocked upstream) pass locally. Exact-head CI, guarded production release, controller GITHUB_TOKEN and proxy-token configuration, and gateway CODEBRIDGE_GITHUB_API_BASE cutover remain pending; the live gateway still uses its own read-only GitHub credential.',
+            'Source-only. 23 focused unit/HTTP tests pass locally, including unauthorized write/merge denials and query ambiguity regressions. Exact-head CI and guarded runtime deployment are separate; no production approval or proxy credential configuration is claimed. Claude recovery/readiness work from merged PR #676 is preserved.',
     },
     {
         id: 'prompt-first-catalog-editor',
