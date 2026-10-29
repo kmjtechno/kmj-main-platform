@@ -67,7 +67,9 @@ void test('owner-only entry is above customer services, never public listing', (
     assert.ok(dashboard.includes('{ownerProducts !== null && ('));
     assert.ok(dashboard.includes('href="/operator"'));
     assert.ok(dashboard.includes('{ownerProducts === null && ('));
-    const dashboardRoute = ownerRules.indexOf("Route::get('dashboard', function (");
+    const dashboardRoute = ownerRules.indexOf(
+        "Route::get('dashboard', function (",
+    );
     const ownerGuard = ownerRules.indexOf(
         'if (app(PlatformOwnerAccess::class)->allows($user)) {',
         dashboardRoute,
