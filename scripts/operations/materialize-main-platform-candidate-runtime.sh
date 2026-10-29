@@ -94,14 +94,8 @@ status AGENT_PUBLIC_ORIGIN "$origin_state"
 storage_manifest() {
   /usr/bin/python3 -I -S - "$1" <<'KMJ_STORAGE_MANIFEST_PY'
 #!/usr/bin/env python3
-"""Fail-closed, no-dereference storage inventory for exact release materialization.
-
-Prints a deterministic manifest digest of regular-file bytes, metadata, paths,
-and raw symlink targets. Does NOT attest linked target bytes, writer quiescence,
-or independent offsite restore. Ignores only regular .gitignore placeholders.
-"""
+"""Descriptor-relative, no-follow storage inventory with access metadata."""
 from __future__ import annotations
-
 import hashlib
 import json
 import os
@@ -109,80 +103,82 @@ import stat
 import sys
 from pathlib import Path
 
+def _directory(path):
+    flags = os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW
+    fd = os.open("/", flags)
+    try:
+        for name in Path(os.path.abspath(path)).parts[1:]:
+            child = os.open(name, flags, dir_fd=fd)
+            os.close(fd)
+            fd = child
+        return fd
+    except OSError as error:
+        os.close(fd)
+        raise ValueError("STORAGE_ROOT_NOT_REAL_DIRECTORY") from error
+
+def _stamp(info):
+    return (info.st_dev, info.st_ino, info.st_mode, info.st_uid,
+            info.st_gid, info.st_size, info.st_mtime_ns, info.st_ctime_ns)
 
 def inventory(root: Path) -> dict[str, object]:
-    root = Path(root)
-    root_stat = os.lstat(root)
-    if not stat.S_ISDIR(root_stat.st_mode):
-        raise ValueError("STORAGE_ROOT_NOT_REAL_DIRECTORY")
-
-    entries: list[list[object]] = []
+    root_fd = _directory(root)
+    entries = []
     counts = {"regular": 0, "symlinks": 0, "directories": 0}
-
-    def visit(directory: Path, prefix: str) -> None:
-        before = os.lstat(directory)
-        if not stat.S_ISDIR(before.st_mode):
-            raise ValueError("DIRECTORY_REPLACED")
-        with os.scandir(directory) as scan:
-            children = sorted(scan, key=lambda item: item.name)
-        for child in children:
-            path = directory / child.name
-            relative = f"{prefix}/{child.name}" if prefix else child.name
-            info = os.lstat(path)
+    def visit(fd, prefix):
+        before = os.fstat(fd)
+        entries.append(["d", prefix, stat.S_IMODE(before.st_mode), before.st_uid, before.st_gid])
+        for name in sorted(os.listdir(fd)):
+            relative = prefix + "/" + name if prefix else name
+            info = os.stat(name, dir_fd=fd, follow_symlinks=False)
             if stat.S_ISDIR(info.st_mode):
-                entries.append(["d", relative])
-                counts["directories"] += 1
-                visit(path, relative)
-            elif stat.S_ISREG(info.st_mode):
-                if child.name == ".gitignore":
-                    continue
-                flags = os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0)
-                fd = os.open(path, flags)
+                child = os.open(name, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW, dir_fd=fd)
                 try:
-                    opened = os.fstat(fd)
-                    if not stat.S_ISREG(opened.st_mode) or (
-                        opened.st_dev, opened.st_ino
-                    ) != (info.st_dev, info.st_ino):
+                    if _stamp(os.fstat(child)) != _stamp(info):
+                        raise ValueError("DIRECTORY_REPLACED")
+                    counts["directories"] += 1
+                    visit(child, relative)
+                finally:
+                    os.close(child)
+            elif stat.S_ISREG(info.st_mode):
+                if name == ".gitignore":
+                    continue
+                child = os.open(name, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK, dir_fd=fd)
+                try:
+                    opened = os.fstat(child)
+                    if not stat.S_ISREG(opened.st_mode) or _stamp(opened) != _stamp(info):
                         raise ValueError("FILE_REPLACED_DURING_SCAN")
                     digest = hashlib.sha256()
-                    while chunk := os.read(fd, 1024 * 1024):
+                    while chunk := os.read(child, 1024 * 1024):
                         digest.update(chunk)
-                    after = os.fstat(fd)
-                    now = os.lstat(path)
-                    if (opened.st_dev, opened.st_ino, opened.st_size,
-                        opened.st_mtime_ns, opened.st_ctime_ns) != (
-                        after.st_dev, after.st_ino, after.st_size,
-                        after.st_mtime_ns, after.st_ctime_ns
-                    ) or (now.st_dev, now.st_ino) != (opened.st_dev, opened.st_ino):
+                    if _stamp(os.fstat(child)) != _stamp(opened):
                         raise ValueError("FILE_CHANGED_DURING_SCAN")
                 finally:
-                    os.close(fd)
+                    os.close(child)
                 entries.append(["f", relative, opened.st_size, digest.hexdigest(),
-                                stat.S_IMODE(opened.st_mode), opened.st_uid,
-                                opened.st_gid, opened.st_mtime_ns])
+                    stat.S_IMODE(opened.st_mode), opened.st_uid, opened.st_gid, opened.st_mtime_ns])
                 counts["regular"] += 1
             elif stat.S_ISLNK(info.st_mode):
-                target = os.readlink(path)
-                now = os.lstat(path)
-                if (info.st_dev, info.st_ino, info.st_mtime_ns) != (
-                    now.st_dev, now.st_ino, now.st_mtime_ns
-                ):
-                    raise ValueError("SYMLINK_CHANGED_DURING_SCAN")
-                entries.append(["l", relative, target, info.st_uid, info.st_gid,
-                                info.st_mtime_ns])
+                target = os.readlink(name, dir_fd=fd)
+                entries.append(["l", relative, target, info.st_uid, info.st_gid, info.st_mtime_ns])
                 counts["symlinks"] += 1
             else:
                 raise ValueError("UNSUPPORTED_STORAGE_ENTRY")
-        after = os.lstat(directory)
-        if (before.st_dev, before.st_ino, before.st_mtime_ns) != (
-            after.st_dev, after.st_ino, after.st_mtime_ns
-        ):
+            if _stamp(os.stat(name, dir_fd=fd, follow_symlinks=False)) != _stamp(info):
+                raise ValueError("ENTRY_CHANGED_DURING_SCAN")
+        if _stamp(os.fstat(fd)) != _stamp(before):
             raise ValueError("DIRECTORY_CHANGED_DURING_SCAN")
-
-    visit(root, "")
+    try:
+        visit(root_fd, "")
+        current = _directory(root)
+        try:
+            if _stamp(os.fstat(current)) != _stamp(os.fstat(root_fd)):
+                raise ValueError("STORAGE_ROOT_REPLACED")
+        finally:
+            os.close(current)
+    finally:
+        os.close(root_fd)
     payload = json.dumps(entries, ensure_ascii=True, separators=(",", ":")).encode()
     return {"sha256": hashlib.sha256(payload).hexdigest(), **counts}
-
 
 def main(argv: list[str]) -> int:
     if len(argv) != 2:
