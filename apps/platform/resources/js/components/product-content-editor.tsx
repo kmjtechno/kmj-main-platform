@@ -1,6 +1,20 @@
-import { useRef, useState } from 'react';
+import { useRef, useState, useSyncExternalStore } from 'react';
 import { ImagePlus, Sparkles, Upload } from 'lucide-react';
-import { createSingleFlightGate } from '@/lib/single-flight-gate.mjs';
+import {
+    createSingleFlightGate,
+    createCloudCooldown,
+    normalizeRetryAfter,
+} from '@/lib/single-flight-gate.mjs';
+
+const textCooldown = createCloudCooldown();
+const serverCooldownSnapshot = () => 0;
+export function useCloudTextCooldown() {
+    return useSyncExternalStore(
+        textCooldown.subscribe,
+        textCooldown.remaining,
+        serverCooldownSnapshot,
+    );
+}
 
 export type ProductContent = {
     offering_type?: 'product' | 'service';
@@ -42,6 +56,15 @@ export async function studioRequest(
     path: string,
     body: FormData | Record<string, string>,
 ) {
+    const cloudText =
+        path === '/operator/products/draft' ||
+        (path === '/operator/products/from-brief' &&
+            !(body instanceof FormData) &&
+            body.local_only !== '1');
+    if (cloudText && textCooldown.remaining() > 0)
+        throw new Error(
+            'The free provider is cooling down. Your fields are preserved; wait for the countdown or use the offline draft.',
+        );
     const csrf = document.cookie
         .split('; ')
         .find((item) => item.startsWith('XSRF-TOKEN='))
@@ -64,6 +87,14 @@ export async function studioRequest(
     });
     const result = await response.json().catch(() => null);
     if (!response.ok) {
+        if (response.status === 429 && cloudText) {
+            textCooldown.defer(
+                normalizeRetryAfter(
+                    result?.retry_after,
+                    normalizeRetryAfter(response.headers.get('Retry-After')),
+                ),
+            );
+        }
         if (response.status === 423)
             throw new Error(
                 'Confirm your password again, then retry. Your draft is still here.',
@@ -118,6 +149,7 @@ export default function ProductContentEditor({
     const latestFacts = useRef(facts);
     latestFacts.current = facts;
     const [busy, setBusy] = useState(false);
+    const retrySeconds = useCloudTextCooldown();
     const requestGate = useRef(createSingleFlightGate());
     const [notice, setNotice] = useState('');
     const [suggestedName, setSuggestedName] = useState('');
@@ -277,13 +309,18 @@ export default function ProductContentEditor({
                     onClick={generate}
                     disabled={
                         busy ||
+                        retrySeconds > 0 ||
                         name.trim().length < 2 ||
                         !generation?.text_configured
                     }
                     className="inline-flex min-h-11 items-center gap-2 rounded-lg bg-red-600 px-4 text-xs font-bold text-white disabled:opacity-50"
                 >
                     <Sparkles className="size-4" />
-                    {busy ? 'Preparing…' : 'AI fill all content fields'}
+                    {busy
+                        ? 'Preparing…'
+                        : retrySeconds > 0
+                          ? `Retry AI in ${retrySeconds}s`
+                          : 'AI fill all content fields'}
                 </button>
                 <span className="text-muted-foreground text-xs">
                     {generation?.text_configured
