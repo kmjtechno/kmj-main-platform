@@ -4,6 +4,9 @@ import tempfile
 from pathlib import Path
 import shutil
 import unittest
+import stat
+from unittest.mock import patch
+from types import SimpleNamespace
 
 p = Path(__file__).parent / "operations/verify-staging-upload-tree-v5.py"
 spec = importlib.util.spec_from_file_location("upload_v5", p)
@@ -72,6 +75,40 @@ class UploadIntegrityV5Test(unittest.TestCase):
             (source / "not-approved").symlink_to(root)
             with self.assertRaisesRegex(module.UnsafeTree, "UNREVIEWED_SYMLINK"):
                 module.inspect_tree(source, root)
+
+    def test_sanitized_receipt_readable_despite_root_umask_077(self):
+        with tempfile.TemporaryDirectory() as t:
+            with patch.object(module, "QA", Path(t)):
+                with patch.object(module.grp, "getgrnam", return_value=SimpleNamespace(gr_gid=os.getgid())):
+                    with patch.object(module.os, "fchown"):
+                        former = os.umask(0o077)
+                        try:
+                            module.write_receipt({
+                                "schema": "kmj.stage.upload-integrity.v5",
+                                "source_files": 3,
+                                "source_symlinks": 1,
+                                "source_tree_sha256": "a" * 64,
+                                "offsite_restore_verified": False,
+                                "owner_release_approved": False,
+                                "copy_verified": False,
+                            }, compare=False)
+                        finally:
+                            os.umask(former)
+                receipt = Path(t) / "KMJ_STAGE_UPLOAD_CONTENT_V5_20261028.json"
+                self.assertEqual(stat.S_IMODE(receipt.stat().st_mode), 0o640)
+                self.assertEqual(receipt.stat().st_gid, os.getgid())
+                self.assertIn("kmj.stage.upload-integrity.v5", receipt.read_text())
+                self.assertNotIn("filename", receipt.read_text())
+                with self.assertRaises(FileExistsError):
+                    with patch.object(module.grp, "getgrnam", return_value=SimpleNamespace(gr_gid=os.getgid())):
+                        module.write_receipt({"schema": "second"}, compare=False)
+
+    def test_receipt_source_rejects_world_readability(self):
+        source = p.read_text()
+        self.assertIn('grp.getgrnam("kmjcode")', source)
+        self.assertIn("os.fchmod(stream.fileno(), 0o640)", source)
+        self.assertIn("os.O_EXCL | os.O_NOFOLLOW", source)
+        self.assertNotIn("os.fchmod(stream.fileno(), 0o644)", source)
 
     def test_does_not_create_deployment_permission(self):
         text = p.read_text()
