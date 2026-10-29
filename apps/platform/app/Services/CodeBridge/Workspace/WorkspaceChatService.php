@@ -67,14 +67,19 @@ final class WorkspaceChatService
     }
 
     /** Tenant + user scoped lookup; anything else is a 404, never a 403 that confirms existence. */
-    public function conversation(string $tenantId, int $userId, string $id): object
+    public function conversation(string $tenantId, int $userId, string $id): WorkspaceConversation
     {
-        $row = DB::table('codebridge_workspace_conversations')
+        $found = DB::table('codebridge_workspace_conversations')
             ->where('id', $id)->where('tenant_id', $tenantId)->where('user_id', $userId)->first();
-        abort_if($row === null, 404);
-        abort_unless($this->projectAuthorized($tenantId, (string) $row->device_id, (string) $row->project_id), 404);
+        abort_if($found === null, 404);
+        $row = (array) $found;
+        $conversation = new WorkspaceConversation(
+            (string) $row['id'], (string) $row['tenant_id'], (string) $row['device_id'],
+            (string) $row['project_id'], (int) $row['user_id'], (string) $row['title'],
+        );
+        abort_unless($this->projectAuthorized($tenantId, $conversation->deviceId, $conversation->projectId), 404);
 
-        return $row;
+        return $conversation;
     }
 
     /** @return list<array<string, mixed>> */
@@ -89,7 +94,7 @@ final class WorkspaceChatService
     }
 
     /** @return array{messages: list<array<string, mixed>>, events: list<array<string, mixed>>} */
-    public function transcript(object $conversation): array
+    public function transcript(WorkspaceConversation $conversation): array
     {
         $this->expireStale((string) $conversation->id);
         $iso = static fn (mixed $value): ?string => $value === null ? null : Carbon::parse((string) $value)->toIso8601String();
@@ -98,31 +103,36 @@ final class WorkspaceChatService
             'messages' => DB::table('codebridge_workspace_messages')
                 ->where('conversation_id', $conversation->id)->orderBy('id')->limit(200)
                 ->get(['id', 'role', 'content', 'status', 'provider_id', 'model', 'error_code', 'retry_of', 'started_at', 'finished_at', 'created_at'])
-                ->map(function (object $row) use ($iso): array {
+                ->map(function (object $record) use ($iso): array {
+                    $row = (array) $record;
                     // Elapsed time comes only from real timestamps; a running request is measured up to now.
-                    $elapsed = $row->started_at === null ? null
-                        : max(0, Carbon::parse((string) $row->started_at)->diffInSeconds($row->finished_at === null ? now() : Carbon::parse((string) $row->finished_at), true));
+                    $elapsed = $row['started_at'] === null ? null
+                        : max(0, Carbon::parse((string) $row['started_at'])->diffInSeconds($row['finished_at'] === null ? now() : Carbon::parse((string) $row['finished_at']), true));
 
                     return [
-                        'id' => $row->id, 'role' => $row->role, 'content' => $row->content, 'status' => $row->status,
-                        'provider_id' => $row->provider_id, 'model' => $row->model, 'error_code' => $row->error_code,
-                        'retry_of' => $row->retry_of, 'created_at' => $iso($row->created_at),
-                        'started_at' => $iso($row->started_at), 'finished_at' => $iso($row->finished_at),
+                        'id' => $row['id'], 'role' => $row['role'], 'content' => $row['content'], 'status' => $row['status'],
+                        'provider_id' => $row['provider_id'], 'model' => $row['model'], 'error_code' => $row['error_code'],
+                        'retry_of' => $row['retry_of'], 'created_at' => $iso($row['created_at']),
+                        'started_at' => $iso($row['started_at']), 'finished_at' => $iso($row['finished_at']),
                         'elapsed_seconds' => $elapsed === null ? null : (int) floor($elapsed),
                     ];
-                })->all(),
+                })->values()->all(),
             'events' => DB::table('codebridge_workspace_events')
                 ->where('conversation_id', $conversation->id)->orderByDesc('id')->limit(100)
                 ->get(['id', 'message_id', 'kind', 'status', 'detail', 'created_at'])
                 ->reverse()->values()
-                ->map(fn (object $row): array => [
-                    'id' => $row->id, 'message_id' => $row->message_id, 'kind' => $row->kind,
-                    'status' => $row->status, 'detail' => $row->detail, 'at' => $iso($row->created_at),
-                ])->all(),
+                ->map(function (object $record) use ($iso): array {
+                    $row = (array) $record;
+
+                    return [
+                        'id' => $row['id'], 'message_id' => $row['message_id'], 'kind' => $row['kind'],
+                        'status' => $row['status'], 'detail' => $row['detail'], 'at' => $iso($row['created_at']),
+                    ];
+                })->values()->all(),
         ];
     }
 
-    public function send(object $conversation, string $content, string $providerId, string $model): void
+    public function send(WorkspaceConversation $conversation, string $content, string $providerId, string $model): void
     {
         $this->assertIdle($conversation);
         $provider = $this->provider($conversation, $providerId);
@@ -133,21 +143,22 @@ final class WorkspaceChatService
         $this->run($conversation, $provider, $model, null);
     }
 
-    public function retry(object $conversation, string $messageId, string $providerId, string $model): void
+    public function retry(WorkspaceConversation $conversation, string $messageId, string $providerId, string $model): void
     {
         $this->assertIdle($conversation);
         $provider = $this->provider($conversation, $providerId);
         $last = DB::table('codebridge_workspace_messages')
             ->where('conversation_id', $conversation->id)->orderByDesc('id')->first();
+        $last = $last === null ? null : (array) $last;
         // Only the newest attempt, and only if it did not complete, can be retried.
-        if (! ($last !== null && $last->id === $messageId && $last->role === 'assistant'
-            && in_array($last->status, ['failed', 'cancelled'], true))) {
+        if (! ($last !== null && $last['id'] === $messageId && $last['role'] === 'assistant'
+            && in_array($last['status'], ['failed', 'cancelled'], true))) {
             throw new RuntimeException('retry_not_allowed');
         }
         $this->run($conversation, $provider, $model, $messageId);
     }
 
-    public function cancel(object $conversation, string $messageId): void
+    public function cancel(WorkspaceConversation $conversation, string $messageId): void
     {
         $changed = DB::table('codebridge_workspace_messages')
             ->where('id', $messageId)->where('conversation_id', $conversation->id)
@@ -159,14 +170,14 @@ final class WorkspaceChatService
         $this->event($conversation->id, $messageId, 'cancelled', 'cancelled', 'cancelled_by_user');
     }
 
-    private function provider(object $conversation, string $providerId): AiProvider
+    private function provider(WorkspaceConversation $conversation, string $providerId): AiProvider
     {
         // Same tenant only: another organization's provider id is indistinguishable from a missing one.
-        return AiProvider::query()->where('organization_id', $conversation->tenant_id)->find($providerId)
+        return AiProvider::query()->where('organization_id', $conversation->tenantId)->find($providerId)
             ?? throw new RuntimeException('provider_not_found');
     }
 
-    private function run(object $conversation, AiProvider $provider, string $model, ?string $retryOf): void
+    private function run(WorkspaceConversation $conversation, AiProvider $provider, string $model, ?string $retryOf): void
     {
         $messageId = (string) Str::ulid();
         DB::table('codebridge_workspace_messages')->insert([
@@ -202,18 +213,19 @@ final class WorkspaceChatService
             ->orderByDesc('id')->limit(self::HISTORY_MESSAGES)->get(['role', 'content']);
         $messages = [];
         $chars = 0;
-        foreach ($rows as $row) { // newest first so the size cap drops the oldest
-            $chars += mb_strlen((string) $row->content);
+        foreach ($rows as $record) { // newest first, so the size cap drops the oldest
+            $row = (array) $record;
+            $chars += mb_strlen((string) $row['content']);
             if ($chars > self::HISTORY_CHARS) {
                 break;
             }
-            array_unshift($messages, ['role' => (string) $row->role, 'content' => (string) $row->content]);
+            array_unshift($messages, ['role' => (string) $row['role'], 'content' => (string) $row['content']]);
         }
 
         return [['role' => 'system', 'content' => self::SYSTEM_PROMPT], ...$messages];
     }
 
-    private function assertIdle(object $conversation): void
+    private function assertIdle(WorkspaceConversation $conversation): void
     {
         $this->expireStale((string) $conversation->id);
         $busy = DB::table('codebridge_workspace_messages')

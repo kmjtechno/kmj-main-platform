@@ -9,6 +9,7 @@ use App\Models\User;
 use App\Services\AiProviders\ProviderManager;
 use App\Services\AiProviders\ResolvesAiProviderScope;
 use App\Services\CodeBridge\Workspace\WorkspaceChatService;
+use App\Services\CodeBridge\Workspace\WorkspaceConversation;
 use App\Services\Licensing\CodeBridge\CodeBridgeCustomerDeviceDirectory;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -49,7 +50,7 @@ final class CodeBridgeWorkspaceController extends Controller
         $transcript = ['messages' => [], 'events' => []];
         if ($selected !== null && is_string($request->query('c')) && $request->query('c') !== '') {
             $conversation = $this->chat->conversation($tenant, (int) $user->id, (string) $request->query('c'));
-            if ($conversation->device_id === $deviceId && $conversation->project_id === $projectId) {
+            if ($conversation->deviceId === $deviceId && $conversation->projectId === $projectId) {
                 $active = ['id' => $conversation->id, 'title' => $conversation->title];
                 $transcript = $this->chat->transcript($conversation);
             }
@@ -112,14 +113,14 @@ final class CodeBridgeWorkspaceController extends Controller
 
     public function send(Request $request, string $conversation): RedirectResponse
     {
-        return $this->act($request, $conversation, function (object $row, array $data): void {
+        return $this->act($request, $conversation, function (WorkspaceConversation $row, array $data): void {
             $this->chat->send($row, $data['content'], $data['provider_id'], $data['model']);
         }, true);
     }
 
     public function retry(Request $request, string $conversation, string $message): RedirectResponse
     {
-        return $this->act($request, $conversation, function (object $row, array $data) use ($message): void {
+        return $this->act($request, $conversation, function (WorkspaceConversation $row, array $data) use ($message): void {
             $this->chat->retry($row, $message, $data['provider_id'], $data['model']);
         }, false);
     }
@@ -134,11 +135,11 @@ final class CodeBridgeWorkspaceController extends Controller
             session()->flash('chat_error', $exception->getMessage());
         }
 
-        return $this->to((string) $row->device_id, (string) $row->project_id, (string) $row->id);
+        return $this->to($row->deviceId, $row->projectId, $row->id);
     }
 
     /**
-     * @param  callable(object, array<string, string>): void  $work
+     * @param  callable(WorkspaceConversation, array<string, string>): void  $work
      */
     private function act(Request $request, string $conversation, callable $work, bool $needsContent): RedirectResponse
     {
@@ -155,7 +156,7 @@ final class CodeBridgeWorkspaceController extends Controller
             session()->flash('chat_error', $exception->getMessage());
         }
 
-        return $this->to((string) $row->device_id, (string) $row->project_id, (string) $row->id);
+        return $this->to($row->deviceId, $row->projectId, $row->id);
     }
 
     /** @return array{0: User, 1: string} */
