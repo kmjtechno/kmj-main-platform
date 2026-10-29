@@ -5,6 +5,7 @@ import hashlib
 import importlib.util
 import json
 import os
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -183,7 +184,8 @@ class MaterializeContractTest(unittest.TestCase):
 
     def test_copies_only_into_candidate_and_proves_parity(self) -> None:
         for token in ("cp -a --no-clobber", 'install -o kmjprod -g kmjprod -m 0600 "$LIVE_APP/.env" "$CAND_APP/.env"',
-                      "STORAGE_PARITY_MISMATCH", "CANDIDATE_DIRTY_AFTER", "LIVE_AGENT_PUBLIC_URL_DIFFERS_REVIEW",
+                      "STORAGE_PARITY_MISMATCH", "SOURCE_STORAGE_CHANGED_DURING_COPY",
+                      "verify-main-platform-storage-manifest.py", "CANDIDATE_DIRTY_AFTER", "LIVE_AGENT_PUBLIC_URL_DIFFERS_REVIEW",
                       "CODEBRIDGE_AGENT_PUBLIC_URL=https://kmjtechno.com", "flock -n 9",
                       "DATABASE NOT_TOUCHED", "PRODUCTION_SWITCH NOT_ATTEMPTED"):
             self.assertIn(token, self.source)
@@ -226,6 +228,78 @@ class ExactRecoveryContractTest(unittest.TestCase):
             self.assertNotIn(forbidden, self.source)
         self.assertLess(self.source.index("LOCAL_DISPOSABLE_POSTGRES_RESTORE PASS"),
                         self.source.index("os.O_WRONLY | os.O_CREAT | os.O_EXCL"))
+
+
+
+STORAGE_VERIFIER = REPO / "scripts/operations/verify-main-platform-storage-manifest.py"
+storage_spec = importlib.util.spec_from_file_location("kmj_storage_manifest", STORAGE_VERIFIER)
+storage_manifest = importlib.util.module_from_spec(storage_spec)
+sys.modules["kmj_storage_manifest"] = storage_manifest
+storage_spec.loader.exec_module(storage_manifest)
+
+
+class StorageContentParityTest(unittest.TestCase):
+    def setUp(self) -> None:
+        self.tmp = tempfile.TemporaryDirectory()
+        root = Path(self.tmp.name)
+        self.source = root / "source"
+        self.copy = root / "copy"
+        self.source.mkdir()
+        (self.source / "artwork.bin").write_bytes(b"ABCD")
+        (self.source / "sub").mkdir()
+        (self.source / "sub/data.txt").write_bytes(b"one")
+        (self.source / ".gitignore").write_text("old placeholder")
+        os.symlink("../artwork.bin", self.source / "sub/artwork-link")
+        shutil.copytree(self.source, self.copy, symlinks=True, copy_function=shutil.copy2)
+
+    def tearDown(self) -> None:
+        self.tmp.cleanup()
+
+    def manifests(self):
+        return storage_manifest.inventory(self.source), storage_manifest.inventory(self.copy)
+
+    def test_identical_file_bytes_metadata_and_raw_symlinks_match(self) -> None:
+        left, right = self.manifests()
+        self.assertEqual(left, right)
+        self.assertEqual(left["regular"], 2)
+        self.assertEqual(left["symlinks"], 1)
+        self.assertEqual(len(left["sha256"]), 64)
+
+    def test_equal_size_different_content_is_rejected(self) -> None:
+        (self.copy / "artwork.bin").write_bytes(b"WXYZ")
+        left, right = self.manifests()
+        self.assertNotEqual(left["sha256"], right["sha256"])
+
+    def test_raw_symlink_retarget_is_rejected_without_following_it(self) -> None:
+        link = self.copy / "sub/artwork-link"
+        link.unlink()
+        os.symlink("/etc/passwd", link)
+        left, right = self.manifests()
+        self.assertNotEqual(left["sha256"], right["sha256"])
+
+    def test_metadata_drift_is_rejected(self) -> None:
+        (self.copy / "artwork.bin").chmod(0o600)
+        self.assertNotEqual(*self.manifests())
+
+    def test_regular_gitignore_placeholder_is_excluded(self) -> None:
+        (self.copy / ".gitignore").write_text("new placeholder")
+        self.assertEqual(*self.manifests())
+
+    def test_special_files_and_symlinked_roots_fail_closed(self) -> None:
+        os.mkfifo(self.source / "unexpected.pipe")
+        with self.assertRaisesRegex(ValueError, "UNSUPPORTED_STORAGE_ENTRY"):
+            storage_manifest.inventory(self.source)
+        with self.assertRaisesRegex(ValueError, "STORAGE_ROOT_NOT_REAL_DIRECTORY"):
+            storage_manifest.inventory(self.copy / "sub/artwork-link")
+
+    def test_materialize_uses_three_content_snapshots_and_no_quiescence_claim(self) -> None:
+        source = MATERIALIZE.read_text()
+        for token in ("source_before=", "source_after=", "candidate_after=",
+                      "SOURCE_STORAGE_CHANGED_DURING_COPY", "STORAGE_PARITY_MISMATCH",
+                      "STORAGE_WRITER_QUIESCENCE NOT_ATTESTED",
+                      "STORAGE_SYMLINK_TARGET_CONTENT NOT_DEREFERENCED"):
+            self.assertIn(token, source)
+        self.assertNotIn("find . -type f ! -name .gitignore", source)
 
 
 if __name__ == "__main__":
