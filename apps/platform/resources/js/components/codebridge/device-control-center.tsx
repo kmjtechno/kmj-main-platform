@@ -434,7 +434,7 @@ export default function DeviceControlCenter({
                                             (project) => (
                                                 <span
                                                     key={project.id}
-                                                    title={project.repository}
+                                                    title={project.repository || 'Local project'}
                                                     className="rounded-lg border border-amber-500/30 px-2.5 py-1 text-xs"
                                                 >
                                                     {project.name} · Pending
@@ -555,9 +555,8 @@ export default function DeviceControlCenter({
                                         />
                                     </label>
                                     <label className="text-xs font-semibold">
-                                        GitHub repository URL
+                                        GitHub repository URL (optional)
                                         <input
-                                            required
                                             type="url"
                                             maxLength={255}
                                             value={newRepositoryUrl}
