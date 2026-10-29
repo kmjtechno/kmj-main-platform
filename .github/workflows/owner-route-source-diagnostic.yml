@@ -23,3 +23,14 @@ jobs:
           node --version
           cd apps/platform
           node --test scripts/check-operator-command-center.test.mjs scripts/check-command-os-visual-lock.test.mjs
+      - name: Report pinned formatter diff without committing
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd apps/platform
+          npm ci --ignore-scripts --no-audit --no-fund
+          ./node_modules/.bin/vp fmt scripts/check-operator-command-center.test.mjs --write
+          git diff --check
+          echo KMJ_SOURCE_FMT_BEGIN
+          git diff -- scripts/check-operator-command-center.test.mjs
+          echo KMJ_SOURCE_FMT_END
