@@ -5,6 +5,7 @@ on:
       - fix/owner-dashboard-vs-command-center-20261029
     paths:
       - .github/workflows/owner-route-source-diagnostic.yml
+      - apps/platform/scripts/check-operator-command-center.test.mjs
 permissions:
   contents: read
 jobs:
