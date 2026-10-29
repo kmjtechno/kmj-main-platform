@@ -8,7 +8,7 @@ import re
 import secrets
 import time
 import uuid
-from urllib.parse import quote
+from urllib.parse import quote, urlencode
 
 import httpx
 import yaml
@@ -104,9 +104,9 @@ NUMBER = r"[1-9][0-9]{0,9}"
 SHA40 = r"[a-fA-F0-9]{40}"
 GIT_REF = r"[A-Za-z0-9._/-]{1,255}"
 # Main Platform holds the GitHub credential and is the authority on which
-# GitHub operations CodeBridge may perform. CodeBridge user permission
-# (read/write) is already enforced by the gateway from Main Platform user
-# introspection; this allowlist is the second, credential-side boundary.
+# GitHub operations CodeBridge may perform. A shared gateway credential is
+# not per-user authorization: merges are denied and branch writes require
+# an exact repository-scoped grant configured by the operator here.
 CODEBRIDGE_GITHUB_RESPONSE_MAX_BYTES = 4 * 1024 * 1024
 
 
@@ -129,6 +129,37 @@ def _per_page(query: dict[str, str], maximum: int) -> bool:
     )
 
 
+def _unique_json_object(pairs):
+    result = {}
+    for key, value in pairs:
+        if key in result:
+            raise ValueError("duplicate JSON key")
+        result[key] = value
+    return result
+
+
+def _require_write_branch(repository: str, branch: object) -> None:
+    # No wildcard/prefix grants and no default grant. Only the dedicated
+    # development namespace can be admitted, never default/release refs.
+    # Example operator value: {"owner/repo": ["codebridge/task-123"]}.
+    # This setting admits branch code execution through repository CI; grant
+    # only reviewed development branches. It never grants merge authority.
+    if not _safe_ref(branch) or not branch.startswith("codebridge/"):
+        raise HTTPException(403, "CODEBRIDGE_GITHUB_WRITE_BRANCH_DENIED")
+    try:
+        grants = json.loads(
+            os.getenv("KMJ_CODEBRIDGE_GITHUB_WRITE_BRANCHES", ""),
+            object_pairs_hook=_unique_json_object,
+        )
+    except (ValueError, TypeError):
+        grants = None
+    if not isinstance(grants, dict):
+        raise HTTPException(403, "CODEBRIDGE_GITHUB_WRITE_BRANCH_DENIED")
+    branches = grants.get(repository)
+    if not isinstance(branches, list) or branch not in branches:
+        raise HTTPException(403, "CODEBRIDGE_GITHUB_WRITE_BRANCH_DENIED")
+
+
 def _safe_content_path(path: str) -> bool:
     if not path or len(path) > 1024 or path.startswith("/") or "\\" in path:
         return False
@@ -137,9 +168,14 @@ def _safe_content_path(path: str) -> bool:
     parts = path.split("/")
     if any(part in ("", ".", "..") for part in parts):
         return False
-    # Workflow files can exfiltrate repository secrets; never write them
-    # through the shared CodeBridge credential.
-    return not path.lower().startswith(".github/workflows/")
+    # Local actions and common CI entry points are also executable authority.
+    lower = [part.lower() for part in parts]
+    return not (
+        any(part in {".git", ".github"} for part in lower)
+        or any(part in {"scripts", ".circleci", ".buildkite"} for part in lower)
+        or lower[-1] in {"package.json", "package-lock.json", ".npmrc", "makefile", "dockerfile", "pyproject.toml", "jenkinsfile", ".gitlab-ci.yml"}
+        or lower[-1].startswith("requirements") and lower[-1].endswith(".txt")
+    )
 
 
 def codebridge_github_route_allowed(method: str, suffix: str, query: dict[str, str]) -> bool:
@@ -200,7 +236,7 @@ def codebridge_github_route_allowed(method: str, suffix: str, query: dict[str, s
         )
     if method == "PUT":
         if re.fullmatch(rf"pulls/{NUMBER}/merge", suffix):
-            return True
+            return False
         return suffix.startswith("contents/") and _safe_content_path(
             suffix.removeprefix("contents/")
         )
@@ -217,7 +253,7 @@ def _invalid() -> HTTPException:
     return HTTPException(400, "CODEBRIDGE_GITHUB_BODY_INVALID")
 
 
-def validate_codebridge_github_write(suffix: str, payload: object, method: str = "POST") -> None:
+def validate_codebridge_github_write(suffix: str, payload: object, method: str = "POST", repository: str = "") -> None:
     if not isinstance(payload, dict):
         raise _invalid()
     if method == "POST" and suffix == "git/refs":
@@ -231,6 +267,7 @@ def validate_codebridge_github_write(suffix: str, payload: object, method: str =
             raise _invalid()
         if not isinstance(sha, str) or not re.fullmatch(SHA40, sha):
             raise _invalid()
+        _require_write_branch(repository, ref.removeprefix("refs/heads/"))
         return
     if method == "POST" and suffix == "pulls":
         if set(payload) - {"title", "body", "head", "base", "draft"}:
@@ -273,13 +310,7 @@ def validate_codebridge_github_write(suffix: str, payload: object, method: str =
             raise _invalid()
         return
     if method == "PUT" and re.fullmatch(rf"pulls/{NUMBER}/merge", suffix):
-        if set(payload) != {"sha", "merge_method"}:
-            raise _invalid()
-        if not isinstance(payload["sha"], str) or not re.fullmatch(SHA40, payload["sha"]):
-            raise _invalid()
-        if payload["merge_method"] not in {"squash", "merge", "rebase"}:
-            raise _invalid()
-        return
+        raise HTTPException(405, "CODEBRIDGE_GITHUB_ROUTE_DENIED")
     if method == "PUT" and suffix.startswith("contents/"):
         if not _safe_content_path(suffix.removeprefix("contents/")):
             raise HTTPException(405, "CODEBRIDGE_GITHUB_ROUTE_DENIED")
@@ -294,6 +325,7 @@ def validate_codebridge_github_write(suffix: str, payload: object, method: str =
             raise _invalid()
         if not _safe_ref(payload["branch"]):
             raise _invalid()
+        _require_write_branch(repository, payload["branch"])
         if "sha" in payload and not (
             isinstance(payload["sha"], str) and re.fullmatch(SHA40, payload["sha"])
         ):
@@ -320,6 +352,39 @@ def high_risk_reason(task: str) -> str | None:
         if term in task_l:
             return term
     return None
+
+
+async def _verify_github_write_target(client, path, headers, branch, creating):
+    # The development namespace is not proof that GitHub considers a ref
+    # non-default or unprotected. Verify both independently before mutation.
+    async def metadata(url):
+        result = await client.request("GET", url, headers=headers, content=None)
+        if len(result.content) > 65536:
+            raise HTTPException(503, "CODEBRIDGE_GITHUB_BRANCH_METADATA_UNAVAILABLE")
+        return result
+
+    repo = await metadata("https://api.github.com" + path)
+    try:
+        info = json.loads(repo.content, object_pairs_hook=_unique_json_object)
+        default = info.get("default_branch") if isinstance(info, dict) else None
+    except (ValueError, TypeError):
+        default = None
+    if repo.status_code != 200 or not isinstance(default, str) or not default:
+        raise HTTPException(503, "CODEBRIDGE_GITHUB_BRANCH_METADATA_UNAVAILABLE")
+    if branch == default:
+        raise HTTPException(403, "CODEBRIDGE_GITHUB_WRITE_BRANCH_DENIED")
+    ref = await metadata("https://api.github.com" + path + "/branches/" + quote(branch, safe=""))
+    if ref.status_code == 404 and creating:
+        return
+    try:
+        info = json.loads(ref.content, object_pairs_hook=_unique_json_object)
+        protected = info.get("protected") if isinstance(info, dict) else None
+    except (ValueError, TypeError):
+        protected = None
+    if ref.status_code != 200 or type(protected) is not bool:
+        raise HTTPException(503, "CODEBRIDGE_GITHUB_BRANCH_METADATA_UNAVAILABLE")
+    if protected:
+        raise HTTPException(403, "CODEBRIDGE_GITHUB_WRITE_BRANCH_DENIED")
 
 
 @app.get("/")
@@ -376,7 +441,10 @@ async def codebridge_github_proxy(
     if repository not in codebridge_github_repositories():
         raise HTTPException(404, "CODEBRIDGE_GITHUB_REPOSITORY_DENIED")
 
-    query = {key: value for key, value in request.query_params.items()}
+    pairs = request.query_params.multi_items()
+    if len({key for key, _ in pairs}) != len(pairs):
+        raise HTTPException(400, "CODEBRIDGE_GITHUB_DUPLICATE_QUERY")
+    query = dict(pairs)
     if not codebridge_github_route_allowed(request.method, suffix, query):
         raise HTTPException(405, "CODEBRIDGE_GITHUB_ROUTE_DENIED")
 
@@ -387,18 +455,19 @@ async def codebridge_github_proxy(
     body: bytes | None = None
     if request.method in {"POST", "PUT", "PATCH"}:
         try:
-            payload = await request.json()
+            payload = json.loads(await request.body(), object_pairs_hook=_unique_json_object)
         except ValueError as exc:
             raise HTTPException(400, "CODEBRIDGE_GITHUB_BODY_INVALID") from exc
-        validate_codebridge_github_write(suffix, payload, request.method)
+        validate_codebridge_github_write(suffix, payload, request.method, repository)
         body = json.dumps(payload, separators=(",", ":")).encode("utf-8")
 
-    path = f"/repos/{quote(owner, safe='')}/{quote(repo, safe='')}"
+    repository_path = f"/repos/{quote(owner, safe='')}/{quote(repo, safe='')}"
+    path = repository_path
     if suffix:
         path += "/" + quote(suffix, safe="/")
     url = "https://api.github.com" + path
-    if request.url.query:
-        url += "?" + request.url.query
+    if query:
+        url += "?" + urlencode(query)
 
     headers = {
         "Authorization": f"Bearer {github_token}",
@@ -410,6 +479,10 @@ async def codebridge_github_proxy(
         headers["Content-Type"] = "application/json"
 
     async with httpx.AsyncClient(timeout=30, follow_redirects=True) as client:
+        if request.method == "PUT" and suffix.startswith("contents/"):
+            await _verify_github_write_target(client, repository_path, headers, payload["branch"], False)
+        elif request.method == "POST" and suffix == "git/refs":
+            await _verify_github_write_target(client, repository_path, headers, payload["ref"].removeprefix("refs/heads/"), True)
         upstream = await client.request(
             request.method,
             url,
