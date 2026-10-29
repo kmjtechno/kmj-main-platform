@@ -23,7 +23,10 @@ test('workspace route is registered inside the authenticated group', () => {
 });
 
 test('workspace never invents progress, replies or paid capability', () => {
-    const withoutClasses = page.replace(/className=\{?("[^"]*"|`[^`]*`)\}?/g, '');
+    const withoutClasses = page.replace(
+        /className=\{?("[^"]*"|`[^`]*`)\}?/g,
+        '',
+    );
     assert.doesNotMatch(withoutClasses, /\b\d{1,3}\s?%/);
     assert.doesNotMatch(
         page,
