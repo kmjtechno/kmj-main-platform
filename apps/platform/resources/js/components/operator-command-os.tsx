@@ -104,7 +104,11 @@ const groups = [
         title: 'PLATFORM',
         items: [
             ['Developer Apps & Keys', '/developer/apps', Code2],
-            ['CodeBridge & Devices', '/services/kmj-codebridge#codebridge-device-control', Boxes],
+            [
+                'CodeBridge & Devices',
+                '/services/kmj-codebridge#codebridge-device-control',
+                Boxes,
+            ],
             ['ModelFabric & AI', '/operator/ops', Gauge],
             ['CloudOS & Infrastructure', '/operator/ops', Cloud],
             ['OmniDesk Remote Access', '/operator/products', Globe2],
