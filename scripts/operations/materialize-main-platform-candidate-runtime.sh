@@ -224,7 +224,7 @@ if [[ -L "$LIVE_APP/public/storage" ]]; then
      "$(readlink -f "$LIVE_APP/public/storage")" == "$LIVE_APP/storage/app/public" ]] ||
     fail LIVE_PUBLIC_STORAGE_LINK_UNEXPECTED
   [[ ! -e "$CAND_APP/public/storage" ]] || fail CANDIDATE_PUBLIC_STORAGE_EXISTS
-  runuser -u kmjprod -- ln -s ../storage/app/public "$CAND_APP/public/storage"
+  ln -s ../storage/app/public "$CAND_APP/public/storage"
   status PUBLIC_STORAGE_LINK MIRRORED
 else
   status PUBLIC_STORAGE_LINK NOT_PRESENT_LIVE
