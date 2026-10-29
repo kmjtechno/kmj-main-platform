@@ -120,6 +120,30 @@ class AutoPublishSafetyTest(unittest.TestCase):
         copy_ = dict(BASE_EVIDENCE, extra="true")
         self.assertEqual(verdict(evidence=copy_), "BLOCKED_ACCEPTANCE_SCHEMA")
 
+    def test_candidate_tracked_drift_blocks_even_with_matching_head(self):
+        import tempfile
+        from unittest.mock import patch
+        with tempfile.TemporaryDirectory() as temp:
+            folder = Path(temp) / ("platform-" + SHA[:12])
+            folder.mkdir()
+            with patch.object(mod, "RELEASES", Path(temp)), patch.object(
+                    mod, "fixed_run", side_effect=[SHA, False]) as runner:
+                self.assertEqual(mod.candidate_sha(SHA), "")
+                self.assertEqual(runner.call_count, 2)
+                args = runner.call_args.args[0]
+                self.assertIn("diff", args)
+                self.assertIn("--no-ext-diff", args)
+                self.assertIn("--quiet", args)
+                self.assertIn("HEAD", args)
+                self.assertTrue(runner.call_args.kwargs["return_success"])
+            with patch.object(mod, "RELEASES", Path(temp)), patch.object(
+                    mod, "fixed_run", side_effect=[SHA, True]):
+                self.assertEqual(mod.candidate_sha(SHA), SHA)
+            with patch.object(mod, "RELEASES", Path(temp)), patch.object(
+                    mod, "fixed_run", return_value="c" * 40) as runner:
+                self.assertEqual(mod.candidate_sha(SHA), "")
+                runner.assert_called_once()
+
     def test_postactivation_requires_exact_https_deploy_sha(self):
         good = "HTTP/2 200\r\nx-kmj-deploy-sha: " + SHA + (
             "\r\ncontent-type: text/html\r\n\r\nKMJ_HTTP_STATUS=200")
