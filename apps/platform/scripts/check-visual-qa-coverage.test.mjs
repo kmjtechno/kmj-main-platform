@@ -31,7 +31,10 @@ void test('visual preview covers locked pages and real owner Operations shell th
         script,
         /Registration link exposed while verification mail is unavailable/,
     );
-    assert.match(script, /Paused-registration status missing or outside viewport/);
+    assert.match(
+        script,
+        /Paused-registration status missing or outside viewport/,
+    );
     assert.match(script, /lock-auth \.lock-registration-paused/);
     assert.match(script, /Landing canvas must fill the viewport width/);
     assert.match(script, /Owner Command OS must fill the viewport width/);
