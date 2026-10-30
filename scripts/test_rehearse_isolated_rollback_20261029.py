@@ -113,6 +113,20 @@ class RollbackRehearsal(unittest.TestCase):
             self.assertIs(mod.digest, real)
             self.assertEqual(list(f.scratch.iterdir()), [])  # cleaned even on failure
 
+    def test_cleanup_error_blocks_release_evidence(self):
+        with Fixture() as f:
+            with patch.object(mod, "git_head", fake_head):
+                with patch.object(mod.shutil, "rmtree", side_effect=OSError("injected")):
+                    with self.assertRaisesRegex(mod.Blocked, "SCRATCH_CLEANUP_FAILED"):
+                        mod.rehearse(f.root, f.scratch, PREV, PREV_SHA, CAND, CAND_SHA)
+
+    def test_cleanup_noop_blocks_release_evidence(self):
+        with Fixture() as f:
+            with patch.object(mod, "git_head", fake_head):
+                with patch.object(mod.shutil, "rmtree", return_value=None):
+                    with self.assertRaisesRegex(mod.Blocked, "SCRATCH_CLEANUP_INCOMPLETE"):
+                        mod.rehearse(f.root, f.scratch, PREV, PREV_SHA, CAND, CAND_SHA)
+
     def test_source_never_mutates_production_or_reads_env(self):
         text = FILE.read_text()
         for forbidden in ("systemctl", "os.remove(ROOT", "shutil.rmtree(ROOT", "open(\".env", "'.env')"):
