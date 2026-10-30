@@ -92,7 +92,10 @@ export default function PublicSiteHeader() {
                                         Create account
                                     </Link>
                                 ) : (
-                                    <span role="status" className="lock-registration-paused">
+                                    <span
+                                        role="status"
+                                        className="lock-registration-paused"
+                                    >
                                         Registration paused
                                     </span>
                                 )}
