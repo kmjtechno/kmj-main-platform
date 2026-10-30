@@ -34,7 +34,7 @@ final class CodeBridgeWorkspaceJobConcurrencyTest extends TestCase
             $this->markTestSkipped('Requires pcntl and posix.');
         }
         config()->set('codebridge.workspace_jobs_enabled', true);
-        $tenant = $this->seed('race-desk', 'race-proj');
+        $tenant = $this->seedTenant('race-desk', 'race-proj');
         try {
             // A: eight overlapping enqueues against a limit of five.
             $enq = $this->overlap(fn (int $i) => app(WorkspaceJobService::class)->enqueue($tenant, 1, 'race-desk', 'race-proj', 'git_status', [], 'race-key-0000000'.sprintf('%02d', $i)) ? 0 : 1);
@@ -105,7 +105,7 @@ final class CodeBridgeWorkspaceJobConcurrencyTest extends TestCase
         return $codes;
     }
 
-    private function seed(string $device, string $project, array $permissions = ['read', 'write', 'execute']): string
+    private function seedTenant(string $device, string $project, array $permissions = ['read', 'write', 'execute']): string
     {
         $tenant = (string) Str::uuid();
         $license = (string) Str::uuid();
