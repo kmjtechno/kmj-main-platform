@@ -833,6 +833,9 @@ try {
                     const register = document.querySelector(
                         '.lock-auth .lock-auth-register',
                     );
+                    const paused = document.querySelector(
+                        '.lock-auth .lock-registration-paused',
+                    );
                     const rect = (el) => {
                         if (!el) return null;
                         const r = el.getBoundingClientRect();
@@ -854,9 +857,10 @@ try {
                         viewportWidth: document.documentElement.clientWidth,
                         login: rect(login),
                         register: rect(register),
+                        paused: rect(paused),
                         loginHref: login?.getAttribute('href'),
                         registerHref: register?.getAttribute('href'),
-                        registerText: register?.textContent?.trim(),
+                        pausedText: paused?.textContent?.trim(),
                     };
                 });
                 const withinViewport = (rect) =>
@@ -871,15 +875,17 @@ try {
                     errors.push(
                         'Signed-out Login CTA missing or outside viewport',
                     );
+                if (account.register || account.registerHref)
+                    errors.push(
+                        'Registration link exposed while verification mail is unavailable',
+                    );
                 if (
-                    !withinViewport(account.register) ||
-                    account.registerHref !== '/register'
+                    !withinViewport(account.paused) ||
+                    account.pausedText !== 'Registration paused'
                 )
                     errors.push(
-                        'Signed-out Register CTA missing or outside viewport',
+                        'Paused-registration status missing or outside viewport',
                     );
-                if (account.registerText !== 'Register')
-                    errors.push('Paused-registration label was not disclosed');
                 if (
                     !withinViewport(account.shell) ||
                     Math.abs(account.shell.width - account.viewportWidth) > 1 ||
@@ -913,9 +919,12 @@ try {
                     })
                     .click();
                 if (
-                    !(await page.getByRole('status').innerText()).includes(
-                        'Licensing Hub',
-                    )
+                    !(
+                        await page
+                            .locator('.lock-kristi-box')
+                            .getByRole('status')
+                            .innerText()
+                    ).includes('Licensing Hub')
                 )
                     errors.push('Kristi guidance failed');
                 await page
@@ -925,9 +934,12 @@ try {
                     .getByRole('button', { name: 'Send message', exact: true })
                     .click();
                 if (
-                    !(await page.getByRole('status').innerText()).includes(
-                        'Visit support',
-                    )
+                    !(
+                        await page
+                            .locator('.lock-kristi-box')
+                            .getByRole('status')
+                            .innerText()
+                    ).includes('Visit support')
                 )
                     errors.push(
                         'Typed technical support selected the wrong topic',

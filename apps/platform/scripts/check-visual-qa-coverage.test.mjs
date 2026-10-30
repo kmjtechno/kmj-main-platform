@@ -27,7 +27,15 @@ void test('visual preview covers locked pages and real owner Operations shell th
     assert.match(script, /name: 'Close owner navigation'/);
     assert.match(script, /Owner mobile menu Escape focus not restored/);
     assert.match(script, /Signed-out Login CTA missing or outside viewport/);
-    assert.match(script, /Signed-out Register CTA missing or outside viewport/);
+    assert.match(
+        script,
+        /Registration link exposed while verification mail is unavailable/,
+    );
+    assert.match(
+        script,
+        /Paused-registration status missing or outside viewport/,
+    );
+    assert.match(script, /lock-auth \.lock-registration-paused/);
     assert.match(script, /Landing canvas must fill the viewport width/);
     assert.match(script, /Owner Command OS must fill the viewport width/);
 });
