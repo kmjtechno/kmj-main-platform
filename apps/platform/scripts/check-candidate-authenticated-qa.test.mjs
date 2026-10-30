@@ -74,6 +74,7 @@ void test('judge fails closed on every defect and never passes an unauthenticate
         overflow: false,
         brokenImages: 0,
         redirectedToLogin: false,
+        finalOriginMatches: true,
         problems: [],
     };
     assert.equal(judge(ok).pass, true);
@@ -84,6 +85,8 @@ void test('judge fails closed on every defect and never passes an unauthenticate
         { overflow: true },
         { brokenImages: 2 },
         { redirectedToLogin: true },
+        { finalOriginMatches: false },
+        { finalOriginMatches: undefined },
         { problems: ['X'] },
     ])
         assert.equal(
@@ -91,6 +94,20 @@ void test('judge fails closed on every defect and never passes an unauthenticate
             false,
             JSON.stringify(patch),
         );
+});
+
+void test('origin binding is mandatory even when the page reports HTTP 200', () => {
+    const result = {
+        http: 200,
+        consoleErrors: 0,
+        pageErrors: 0,
+        overflow: false,
+        brokenImages: 0,
+        redirectedToLogin: false,
+        problems: [],
+    };
+    assert.ok(judge({ ...result, finalOriginMatches: false }).problems.includes('CANDIDATE_ORIGIN_MISMATCH'));
+    assert.ok(judge({ ...result, finalOriginMatches: true }).pass);
 });
 
 void test('scope covers owner fleet, canonical center, deep link, product manager at desktop and 390px', () => {
