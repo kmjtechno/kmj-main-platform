@@ -71,7 +71,11 @@ final class CodeBridgeDeviceJobController
             ->join('kslp_licenses as l', 'l.id', '=', 'c.license_id')
             ->where('c.token_hash', hash('sha256', $credential))
             ->whereNull('c.revoked_at')->where('c.expires_at_epoch', '>', time())
-            ->whereNull('a.deactivated_at')->where('l.status', 'active')
+            ->whereColumn('a.license_id', 'l.id')
+            ->whereNull('a.deactivated_at')
+            ->where('l.product', 'KMJ_CODEBRIDGE')->where('l.status', 'active')
+            ->whereNull('l.revoked_at')->where('l.starts_at', '<=', now())
+            ->where('l.expires_at', '>', now())
             ->first(['c.tenant_id', 'c.device_id']);
         if ($row === null) {
             abort(401);
