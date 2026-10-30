@@ -78,6 +78,8 @@ export function judge(result) {
     if (result.overflow) problems.push('HORIZONTAL_OVERFLOW');
     if (result.brokenImages > 0) problems.push('BROKEN_IMAGES');
     if (result.redirectedToLogin) problems.push('NOT_AUTHENTICATED');
+    // A 200 from a redirect target is not proof of the candidate origin.
+    if (result.finalOriginMatches !== true) problems.push('CANDIDATE_ORIGIN_MISMATCH');
     return { ...result, problems, pass: problems.length === 0 };
 }
 
@@ -183,6 +185,7 @@ export async function runPage(browser, state, base, viewport, page) {
         overflow,
         brokenImages,
         redirectedToLogin,
+        finalOriginMatches: url.origin === base.origin,
         problems,
     });
 }
@@ -215,8 +218,9 @@ async function main() {
     });
     try {
         // Bind the served runtime to the candidate build before trusting any page.
-        const served = await fetch(new URL('/build/manifest.json', base));
-        const servedHash = served.ok
+        const manifestUrl = new URL('/build/manifest.json', base);
+        const served = await fetch(manifestUrl, { redirect: 'manual' });
+        const servedHash = served.ok && served.url === manifestUrl.href
             ? sha256(Buffer.from(await served.arrayBuffer()))
             : null;
         receipt.runtimeBoundToCandidateBuild =
