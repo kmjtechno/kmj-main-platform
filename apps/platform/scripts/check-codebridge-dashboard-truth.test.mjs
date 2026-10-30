@@ -99,8 +99,11 @@ void test('offline recovery stays inside the KMJ-hosted device dashboard', () =>
     assert.match(deviceCenter, /deviceRecoveryAction\(device\.platform\)/);
     assert.match(deviceCenter, /href=\{recovery\.href\}/);
     assert.match(deviceCenter, /\{recovery\.label\}/);
-    assert.match(deviceCenter, /Registration · \{device\.id\.slice\(-8\)\}/);
-    assert.match(deviceCenter, /Registration alone is not an/);
+    assert.match(
+        deviceCenter,
+        /Registration ·\{' '\}\s*\{device\.id\.slice\(-8\)\}/,
+    );
+    assert.match(deviceCenter, /Registration\s+alone is not an/);
     assert.match(deviceCenter, /Live connection has not been verified/);
     assert.doesNotMatch(deviceCenter, /github\.com\/kmjtechno\/kmj-codebridge/);
     assert.doesNotMatch(
