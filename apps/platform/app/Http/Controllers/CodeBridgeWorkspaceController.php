@@ -10,9 +10,13 @@ use App\Services\AiProviders\ProviderManager;
 use App\Services\AiProviders\ResolvesAiProviderScope;
 use App\Services\CodeBridge\Workspace\WorkspaceChatService;
 use App\Services\CodeBridge\Workspace\WorkspaceConversation;
+use App\Services\CodeBridge\Workspace\WorkspaceJobService;
+use App\Services\CodeBridge\Workspace\WorkspaceToolCatalog;
 use App\Services\Licensing\CodeBridge\CodeBridgeCustomerDeviceDirectory;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Inertia\Inertia;
 use Inertia\Response;
 use InvalidArgumentException;
@@ -31,6 +35,7 @@ final class CodeBridgeWorkspaceController extends Controller
         private readonly ProviderManager $manager,
         private readonly CodeBridgeCustomerDeviceDirectory $devices,
         private readonly WorkspaceChatService $chat,
+        private readonly WorkspaceJobService $jobs,
     ) {}
 
     public function show(Request $request): Response
@@ -56,6 +61,15 @@ final class CodeBridgeWorkspaceController extends Controller
             }
         }
 
+        $jobList = $selected === null ? [] : $this->jobs->list($tenant, (int) $user->id, $deviceId, $projectId);
+        $jobId = (string) $request->query('j', '');
+        $jobEvents = [];
+        $activeJobId = null;
+        if ($selected !== null && $jobId !== '' && Str::isUlid($jobId) && collect($jobList)->contains('id', $jobId)) {
+            $jobEvents = $this->jobs->events($tenant, (int) $user->id, $jobId);
+            $activeJobId = $jobId;
+        }
+
         $providers = AiProvider::query()
             ->where('organization_id', $tenant)
             ->orderBy('name')->get();
@@ -68,6 +82,10 @@ final class CodeBridgeWorkspaceController extends Controller
             'activeConversation' => $active,
             'transcript' => $transcript,
             'chatError' => session('chat_error'),
+            'jobs' => $jobList,
+            'jobEvents' => $jobEvents,
+            'activeJobId' => $activeJobId,
+            'tools' => WorkspaceToolCatalog::all(),
             'providers' => $providers->map(fn (AiProvider $provider): array => [
                 ...$this->manager->present($provider),
                 'free_admitted_models' => $this->admittedModels($provider),
@@ -83,8 +101,10 @@ final class CodeBridgeWorkspaceController extends Controller
                     'reason' => 'Needs an enabled, healthy free provider with an admitted model. Add one in AI providers.',
                 ],
                 'job_events' => [
-                    'available' => false,
-                    'reason' => 'Job status lives on the paired device and is read through CodeBridge in your AI client.',
+                    'available' => WorkspaceJobService::enabled(),
+                    'reason' => WorkspaceJobService::enabled()
+                        ? 'Approved named tools are queued for the paired device. A request only runs once a device agent claims it; unclaimed requests expire.'
+                        : 'Device tool requests are switched off on this server. Job status stays on the paired device and is read through CodeBridge in your AI client.',
                 ],
                 'device_pairing' => [
                     'available' => true,
@@ -96,6 +116,39 @@ final class CodeBridgeWorkspaceController extends Controller
                 'ai_providers' => '/services/kmj-codebridge/ai-providers',
             ],
         ]);
+    }
+
+    public function runTool(Request $request): RedirectResponse
+    {
+        [$user, $tenant] = $this->actor($request);
+        $data = $request->validate([
+            'device_id' => ['required', 'string', 'max:64'],
+            'project_id' => ['required', 'string', 'max:64'],
+            'tool' => ['required', 'string', 'max:40'],
+            'gate' => ['nullable', 'string', 'max:40'],
+            'idempotency_key' => ['required', 'string', 'max:64'],
+        ]);
+        $arguments = isset($data['gate']) && $data['gate'] !== '' ? ['gate' => $data['gate']] : [];
+        try {
+            $result = $this->jobs->enqueue($tenant, (int) $user->id, $data['device_id'], $data['project_id'], $data['tool'], $arguments, $data['idempotency_key']);
+        } catch (InvalidArgumentException|RuntimeException $exception) {
+            session()->flash('chat_error', $exception->getMessage());
+
+            return $this->toJob($data['device_id'], $data['project_id'], null);
+        }
+
+        return $this->toJob($data['device_id'], $data['project_id'], $result['id']);
+    }
+
+    public function cancelTool(Request $request, string $job): RedirectResponse
+    {
+        [$user, $tenant] = $this->actor($request);
+        $row = DB::table('codebridge_workspace_jobs')->where('id', $job)->where('tenant_id', $tenant)->where('user_id', (int) $user->id)->first(['device_id', 'project_id']);
+        abort_if($row === null, 404);
+        $this->jobs->cancel($tenant, (int) $user->id, $job);
+        $fields = (array) $row;
+
+        return $this->toJob((string) $fields['device_id'], (string) $fields['project_id'], $job);
     }
 
     public function start(Request $request): RedirectResponse
@@ -171,6 +224,11 @@ final class CodeBridgeWorkspaceController extends Controller
     private function to(string $deviceId, string $projectId, string $conversationId): RedirectResponse
     {
         return redirect()->route('codebridge.workspace', ['device' => $deviceId, 'project' => $projectId, 'c' => $conversationId]);
+    }
+
+    private function toJob(string $deviceId, string $projectId, ?string $jobId): RedirectResponse
+    {
+        return redirect()->route('codebridge.workspace', array_filter(['device' => $deviceId, 'project' => $projectId, 'j' => $jobId]));
     }
 
     /** @return list<string> Models that pass the zero-spend admission guard right now. */
