@@ -55,8 +55,9 @@ try {
     await page.getByTestId('queue-tool').click();
     expect(await waitForStatus('succeeded', 1), 'git_status was claimed and completed by the real device worker');
     await page.locator('[data-testid="job-list"] li[data-status="succeeded"] button').first().click();
-    await page.getByTestId('job-events').waitFor({ timeout: 20_000 });
-    const events1 = (await page.getByTestId('job-events').innerText()).toLowerCase();
+    const jobEvents = page.getByTestId('job-list').getByTestId('job-events');
+    await jobEvents.waitFor({ timeout: 20_000 });
+    const events1 = (await jobEvents.innerText()).toLowerCase();
     for (const kind of ['queued', 'claimed', 'started', 'succeeded'])
         expect(events1.includes(kind), `durable event "${kind}" is shown for git_status`);
     const list1 = (await page.getByTestId('job-list').innerText()).toLowerCase();
