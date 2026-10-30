@@ -188,7 +188,14 @@ def rehearse(root: Path, scratch_parent: Path, previous=PREVIOUS, previous_sha=P
             health(current, tree)
             out.append((f"POINTER_{label.upper()}", "PASS"))
     finally:
-        shutil.rmtree(scratch, ignore_errors=True)
+        # Cleanup is a release-safety gate, not a best-effort courtesy.
+        # Never print pointer-mechanics PASS while private scratch remains.
+        try:
+            shutil.rmtree(scratch)
+        except OSError as error:
+            raise Blocked("SCRATCH_CLEANUP_FAILED") from error
+        if scratch.exists():
+            raise Blocked("SCRATCH_CLEANUP_INCOMPLETE")
 
     if os.readlink(live) != before:
         raise Blocked("LIVE_POINTER_CHANGED_DURING_REHEARSAL")
