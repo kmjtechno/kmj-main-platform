@@ -50,7 +50,14 @@ async function queueGate(gate) {
             gate,
         );
         if (ready) {
-            await page.getByTestId('queue-tool').click();
+            const [req] = await Promise.all([
+                page.waitForRequest((r) => r.method() === 'POST' && r.url().endsWith('/workspace/tools'), { timeout: 15_000 }),
+                page.getByTestId('queue-tool').click(),
+            ]);
+            const body = req.postData() || '';
+            if (!body.includes('quality_gate') || !body.includes(gate)) {
+                throw new Error(`queue POST did not carry quality_gate ${gate}: ${body.replace(/idempotency_key.*/, '').slice(0, 200)}`);
+            }
             return;
         }
         await page.waitForTimeout(1000);
