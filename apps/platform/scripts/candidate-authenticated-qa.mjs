@@ -32,6 +32,7 @@ export const PAGES = [
         id: 'codebridge-devices-deeplink',
         path: '/services/kmj-codebridge#codebridge-device-control',
     },
+    { id: 'codebridge-ai-workspace', path: '/services/kmj-codebridge/workspace' },
     { id: 'owner-product-manager', path: '/operator/products' },
 ];
 
@@ -160,6 +161,17 @@ export async function runPage(browser, state, base, viewport, page) {
             1
         )
             problems.push('CANONICAL_LINK_MISSING');
+    }
+    // The merged owner/customer AI workspace must render its actual three-pane UI.
+    // Read-only DOM checks: no chat send, tool request or mutation is attempted.
+    if (!redirectedToLogin && page.id === 'codebridge-ai-workspace') {
+        for (const id of ['ai-workspace', 'pane-left', 'pane-center', 'pane-right'])
+            if ((await tab.getByTestId(id).count()) !== 1)
+                problems.push('WORKSPACE_' + id.toUpperCase().replace(/-/g, '_') + '_MISSING');
+        if (viewport.width <= 390)
+            for (const name of ['Open projects', 'Open tools and context'])
+                if ((await tab.getByRole('button', { name, exact: true }).count()) !== 1)
+                    problems.push('WORKSPACE_MOBILE_DRAWER_TRIGGER_MISSING');
     }
     if (!redirectedToLogin && page.id === 'codebridge-devices-deeplink') {
         if (
