@@ -4,6 +4,7 @@ import {
     chmodSync,
     linkSync,
     mkdtempSync,
+    readFileSync,
     symlinkSync,
     unlinkSync,
     writeFileSync,
@@ -181,4 +182,13 @@ void test('scope covers owner fleet, canonical center, deep link, product manage
             '/operator/products',
         ],
     );
+});
+
+void test('candidate owner QA expects the split owner-only license heading', () => {
+    const source = readFileSync(
+        new URL('./candidate-authenticated-qa.mjs', import.meta.url),
+        'utf8',
+    );
+    assert.match(source, /name: 'CodeBridge Owner License Settings'/);
+    assert.doesNotMatch(source, /name: 'CodeBridge Control Center'/);
 });
