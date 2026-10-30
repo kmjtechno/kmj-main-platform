@@ -28,7 +28,7 @@ git('commit', '-q', '-m', 'init');
 
 const runner = new JobRunner(path.join(tmp, 'jobs'), { archiveMaxEntries: 50 });
 const project = {
-    id: 'ci-roundtrip-proj',
+    id: process.env.WORKER_PROJECT_ID ?? 'ci-roundtrip-proj',
     root,
     writable: true,
     gates: {
@@ -60,8 +60,13 @@ const worker = new WorkspaceJobWorker({
     fetchImpl: countingFetch,
     onStatus: (s) => statuses.push(s),
 });
-const deadline = Date.now() + 90_000;
-while (delivered < 3 && Date.now() < deadline) {
+const expected = Number(process.env.EXPECTED_JOBS ?? 3);
+const deadline = Date.now() + Number(process.env.WORKER_DEADLINE_MS ?? 90_000);
+// STOP_FILE (UI e2e): keep serving until the browser run is over, because the number of requests a
+// real browser queues can vary with render timing; otherwise stop at the expected count.
+const stopFile = process.env.STOP_FILE;
+const finished = () => (stopFile ? fs.existsSync(stopFile) : delivered >= expected);
+while (!finished() && Date.now() < deadline) {
     await worker.tick();
     await new Promise((r) => setTimeout(r, 400));
 }
@@ -70,4 +75,4 @@ await worker.tick();
 await runner.close();
 fs.rmSync(tmp, { recursive: true, force: true });
 console.log(`WORKER_JOBS_DELIVERED=${delivered} STATUSES=${JSON.stringify(statuses)}`);
-process.exit(delivered === 3 ? 0 : 1);
+process.exit(stopFile ? (delivered >= expected ? 0 : 1) : delivered === expected ? 0 : 1);
