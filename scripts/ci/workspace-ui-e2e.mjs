@@ -4,8 +4,8 @@
 import { createRequire } from 'node:module';
 const require = createRequire(import.meta.url);
 const { chromium } = require(process.env.KMJ_PLAYWRIGHT_MODULE || 'playwright');
-const [origin, email, password, device, project] = process.argv.slice(2);
-if (process.env.GITHUB_ACTIONS !== 'true' || !origin || !email || !password) {
+const [origin, email, password, device, project, email2, password2] = process.argv.slice(2);
+if (process.env.GITHUB_ACTIONS !== 'true' || !origin || !email || !password || !email2 || !password2) {
     console.error('BLOCKED: CI-only browser e2e');
     process.exit(2);
 }
@@ -46,6 +46,38 @@ async function waitForRow(text, status, timeoutMs = 75_000) {
         await page.reload({ waitUntil: 'networkidle' });
     }
     return false;
+}
+
+async function login(targetPage, who, secret) {
+    await targetPage.goto(`${origin}/login`, { waitUntil: 'networkidle' });
+    await targetPage.fill('input[name="email"]', who);
+    await targetPage.fill('input[name="password"]', secret);
+    await Promise.all([
+        targetPage.waitForURL((u) => !u.pathname.startsWith('/login'), { timeout: 30_000 }),
+        targetPage.keyboard.press('Enter'),
+    ]);
+}
+
+async function queueReadTool(tool) {
+    for (let attempt = 0; attempt < 6; attempt++) {
+        await page.waitForLoadState('networkidle');
+        await page.selectOption('#ws-tool', tool);
+        const ready = await page.evaluate(
+            (t) => document.querySelector('#ws-tool')?.value === t && !document.querySelector('[data-testid="queue-tool"]')?.disabled,
+            tool,
+        );
+        if (!ready) {
+            await page.waitForTimeout(1000);
+            continue;
+        }
+        const [req] = await Promise.all([
+            page.waitForRequest((r) => r.method() === 'POST' && r.url().endsWith('/workspace/tools'), { timeout: 15_000 }),
+            page.getByTestId('queue-tool').click(),
+        ]);
+        if ((req.postData() || '').includes(tool)) return;
+        await page.waitForTimeout(1500);
+    }
+    throw new Error(`could not stage ${tool}`);
 }
 
 async function queueGate(gate) {
@@ -123,6 +155,35 @@ try {
         (await page.getByTestId('job-list').innerText()).toLowerCase().includes('gate_not_allowed'),
         'the failure is explained in the UI',
     );
+
+    // 4) a device that no worker serves: the request stays honestly queued and the user can cancel it
+    await page.goto(`${origin}/services/kmj-codebridge/workspace?device=ci-ui-idle&project=ci-idle-proj`, { waitUntil: 'networkidle' });
+    expect(await page.getByTestId('jobs-empty').isVisible(), 'the idle device starts with no requests');
+    await queueReadTool('git_status');
+    expect(await waitForRow('git_status', 'queued', 30_000), 'a request for an unserved device stays queued (never faked as running)');
+    const queuedText = (await page.locator('[data-testid="job-list"] li[data-status="queued"]').first().innerText()).toLowerCase();
+    expect(queuedText.includes('waiting for the device agent'), 'the UI says it is waiting for the device agent');
+    await page.locator('[data-testid="job-list"] li[data-status="queued"]').first().getByRole('button', { name: /cancel/i }).click();
+    expect(await waitForRow('git_status', 'cancelled', 30_000), 'the user can cancel a queued request');
+    expect(
+        (await page.getByTestId('job-list').innerText()).toLowerCase().includes('cancelled by you'),
+        'the cancellation is explained in the UI',
+    );
+
+    // 5) another verified customer in a different organization can never see this tenant's requests
+    const otherContext = await browser.newContext({ viewport: { width: 1440, height: 1000 } });
+    const other = await otherContext.newPage();
+    await login(other, email2, password2);
+    for (const [d, pr] of [[device, project], ['ci-ui-idle', 'ci-idle-proj']]) {
+        await other.goto(`${origin}/services/kmj-codebridge/workspace?device=${d}&project=${pr}`, { waitUntil: 'networkidle' });
+        const rows = await other.locator('[data-testid="job-list"] li').count();
+        const body = (await other.locator('body').innerText()).toLowerCase();
+        expect(
+            rows === 0 && !body.includes('device reported success') && !body.includes('cancelled by you'),
+            `another tenant sees none of the requests for ${d}`,
+        );
+    }
+    await otherContext.close();
     await page.screenshot({ path: process.env.KMJ_E2E_SHOT || 'workspace-ui-e2e.png', fullPage: true });
     expect(pageErrors.length === 0, `no uncaught page errors ${JSON.stringify(pageErrors)}`);
 } catch (error) {
