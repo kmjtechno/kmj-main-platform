@@ -232,6 +232,107 @@ final class OmniDeskActivationBindingStoreTest extends TestCase
         );
     }
 
+    public function test_revoked_license_cannot_advance_signed_lease_cursor(): void
+    {
+        $f = $this->boundFixture();
+        DB::table('kslp_licenses')->where('id', $f['license_id'])
+            ->update(['status' => 'revoked', 'revoked_at' => now()]);
+        $this->assertLeaseCursorDenied($f['activation_id'], 'OMNIDESK_LICENSE_INACTIVE');
+    }
+
+    public function test_expired_license_cannot_advance_signed_lease_cursor(): void
+    {
+        $f = $this->boundFixture();
+        DB::table('kslp_licenses')->where('id', $f['license_id'])
+            ->update(['expires_at' => now()->subSecond()]);
+        $this->assertLeaseCursorDenied($f['activation_id'], 'OMNIDESK_LICENSE_INACTIVE');
+    }
+
+    public function test_cross_product_license_cannot_advance_omnidesk_cursor(): void
+    {
+        $f = $this->boundFixture();
+        DB::table('kslp_licenses')->where('id', $f['license_id'])
+            ->update(['product' => 'KMJ_CLOUDOS']);
+        $this->assertLeaseCursorDenied($f['activation_id'], 'OMNIDESK_LICENSE_INACTIVE');
+    }
+
+    public function test_deactivated_device_cannot_advance_signed_lease_cursor(): void
+    {
+        $f = $this->boundFixture();
+        DB::table('kslp_activations')->where('id', $f['activation_id'])
+            ->update(['deactivated_at' => now()]);
+        $this->assertLeaseCursorDenied($f['activation_id'], 'OMNIDESK_ACTIVATION_CONFLICT');
+    }
+
+    public function test_revoked_entitlement_cannot_advance_signed_lease_cursor(): void
+    {
+        $f = $this->boundFixture();
+        DB::table('entitlements')->where('id', $f['entitlement_id'])
+            ->update(['status' => 'revoked']);
+        $this->assertLeaseCursorDenied($f['activation_id'], 'OMNIDESK_ENTITLEMENT_INACTIVE');
+    }
+
+    public function test_expired_entitlement_cannot_advance_signed_lease_cursor(): void
+    {
+        $f = $this->boundFixture();
+        DB::table('entitlements')->where('id', $f['entitlement_id'])
+            ->update(['ends_at' => now()->subSecond()]);
+        $this->assertLeaseCursorDenied($f['activation_id'], 'OMNIDESK_ENTITLEMENT_INACTIVE');
+    }
+
+    public function test_cross_tenant_binding_cannot_advance_signed_lease_cursor(): void
+    {
+        $f = $this->boundFixture();
+        $other = Organization::query()->create(['name' => 'Cross-tenant lease denial']);
+        DB::table('omnidesk_activation_bindings')->where('activation_id', $f['activation_id'])
+            ->update(['organization_id' => (string) $other->getKey()]);
+        $this->assertLeaseCursorDenied($f['activation_id'], 'OMNIDESK_ACTIVATION_CONFLICT');
+    }
+
+    /** @return array<string, string> */
+    private function boundFixture(): array
+    {
+        $f = $this->fixture();
+        app(OmniDeskActivationBindingStore::class)->bind(
+            $f['activation_id'],
+            $f['license_id'],
+            $f['entitlement_id'],
+            $f['organization_id'],
+            $f['device_public_key'],
+            $f['device_fingerprint'],
+            $f['installation_id'],
+            $f['binding_idempotency_key'],
+            'test-actor',
+        );
+
+        return $f;
+    }
+
+    private function assertLeaseCursorDenied(string $activationId, string $reason): void
+    {
+        try {
+            app(OmniDeskActivationBindingStore::class)->advanceLease(
+                $activationId,
+                null,
+                0,
+                null,
+                'jti-new-denied-cursor-0000000000001',
+                1,
+                'nonce-new-denied-cursor-000000000001',
+            );
+            self::fail('A revoked, expired or cross-tenant binding advanced a signed lease cursor.');
+        } catch (DomainException $exception) {
+            self::assertSame($reason, $exception->getMessage());
+        }
+
+        $this->assertDatabaseHas('omnidesk_activation_bindings', [
+            'activation_id' => $activationId,
+            'current_jti' => null,
+            'current_sequence' => 0,
+            'current_nonce' => null,
+        ]);
+    }
+
     /**
      * @return array{
      *   activation_id:string,
