@@ -588,7 +588,7 @@ export const deliveryMilestones: DeliveryMilestone[] = [
         state: 'active',
         detail: 'Main Platform owns the OmniDesk commercial control plane, not the remote-session runtime. Versioned KSLP-v1 identity, Ed25519 activation and renewal device proofs, tenant-scoped activation bindings, signed-entitlement schema, replay cursor, offline grace and API contract are source-defined. Lease cursor lifecycle hardening is proposed to re-check revoked or expired licenses, deactivated devices and inactive or cross-tenant entitlements. Production signing and authenticated activation/renewal issuance remain gated.',
         evidence:
-            'PR #711 merged exact Rust-compatible activation proof and PR #712 merged renewal proof, both with 10/10 exact-head CI. This lifecycle-gate candidate adds independent PostgreSQL tests for revoked/expired/cross-tenant cursor denials; exact-head CI and review are pending. No production signer, issued commercial entitlement, live activation/renewal route or independent owner release proof is claimed.',
+            'PR #711 merged exact Rust-compatible activation proof and PR #712 merged renewal proof, both with 10/10 exact-head CI. PR #713 merged 7 lifecycle regressions denying revoked/expired/cross-tenant cursor advances; the next private renewal-challenge-store candidate adds single-use challenge hash persistence, expiry and signed verification, with CI/review still required. No production signer, issued commercial entitlement, live activation/renewal route or independent owner release proof is claimed.',
     },
     {
         id: 'production-hardening',
