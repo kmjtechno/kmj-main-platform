@@ -6,9 +6,11 @@ set -Eeuo pipefail
 [[ "$(id -u)" == 0 ]] || { echo 'BLOCKED: run through sudo in CI'; exit 2; }
 repo="$(cd "$(dirname "$0")/../.." && pwd)"
 src="$repo/scripts/operations/push-offsite-39b88b36d071-pinned-sftp-20261029.sh"
-base=/opt/kmj-e2e
+base=/var/lib/kmj-e2e
 sftp_server=/usr/lib/openssh/sftp-server
 [[ -x "$sftp_server" && -x /usr/sbin/sshd ]] || { echo 'BLOCKED: openssh-server missing'; exit 3; }
+# The push script demands a root-owned, non-group/world-writable path chain; show it for diagnosis.
+namei -l "$base/x" 2>/dev/null || true
 rm -rf "$base"; install -d -m 0755 -o root -g root "$base" "$base/backups"
 mkdir -p /run/sshd
 id kmjbackup >/dev/null 2>&1 || useradd -m -s /bin/bash kmjbackup
