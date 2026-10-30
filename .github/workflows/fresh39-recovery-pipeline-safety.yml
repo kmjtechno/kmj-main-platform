@@ -9,6 +9,10 @@ on:
       - 'scripts/test_seal_main_platform_39_offsite_20261029.py'
       - 'scripts/test_push_offsite_pinned_sftp_20261029.py'
       - 'scripts/test_main_platform_39_google_sftp_restore_20261029.py'
+      - 'scripts/operations/seal-main-platform-offsite-20261030.py'
+      - 'scripts/operations/push-offsite-pinned-sftp-20261030.sh'
+      - 'scripts/test_seal_main_platform_offsite_release_neutral_20261030.py'
+      - 'scripts/test_push_offsite_pinned_sftp_20261030.py'
       - 'scripts/ci/e2e-offsite-sftp-real-sshd.sh'
       - '.github/workflows/fresh39-recovery-pipeline-safety.yml'
   push:
@@ -20,6 +24,10 @@ on:
       - 'scripts/test_seal_main_platform_39_offsite_20261029.py'
       - 'scripts/test_push_offsite_pinned_sftp_20261029.py'
       - 'scripts/test_main_platform_39_google_sftp_restore_20261029.py'
+      - 'scripts/operations/seal-main-platform-offsite-20261030.py'
+      - 'scripts/operations/push-offsite-pinned-sftp-20261030.sh'
+      - 'scripts/test_seal_main_platform_offsite_release_neutral_20261030.py'
+      - 'scripts/test_push_offsite_pinned_sftp_20261030.py'
       - 'scripts/ci/e2e-offsite-sftp-real-sshd.sh'
       - '.github/workflows/fresh39-recovery-pipeline-safety.yml'
 
@@ -48,7 +56,9 @@ jobs:
       - name: Seal, pinned-SFTP push and independent-restore source contracts
         run: |
           set -euo pipefail
-          for f in scripts/operations/push-offsite-39b88b36d071-pinned-sftp-20261029.sh scripts/operations/verify-main-platform-39b88b36d071-google-sftp-restore-20261029.sh; do bash -n "$f"; done
+          for f in scripts/operations/push-offsite-pinned-sftp-20261030.sh scripts/operations/push-offsite-39b88b36d071-pinned-sftp-20261029.sh scripts/operations/verify-main-platform-39b88b36d071-google-sftp-restore-20261029.sh; do bash -n "$f"; done
+          python3 -B scripts/test_seal_main_platform_offsite_release_neutral_20261030.py -v
+          python3 -B scripts/test_push_offsite_pinned_sftp_20261030.py -v
           python3 -B scripts/test_seal_main_platform_39_offsite_20261029.py -v
           python3 -B scripts/test_push_offsite_pinned_sftp_20261029.py -v
           python3 -B scripts/test_main_platform_39_google_sftp_restore_20261029.py -v

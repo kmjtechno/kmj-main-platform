@@ -5,7 +5,12 @@ set -Eeuo pipefail
 [[ "${GITHUB_ACTIONS:-}" == true && "${RUNNER_ENVIRONMENT:-}" == github-hosted && "${RUNNER_OS:-}" == Linux ]] || { echo 'BLOCKED: isolated GitHub-hosted Linux CI only'; exit 2; }
 [[ "$(id -u)" == 0 ]] || { echo 'BLOCKED: run through sudo in CI'; exit 2; }
 repo="$(cd "$(dirname "$0")/../.." && pwd)"
-src="$repo/scripts/operations/push-offsite-39b88b36d071-pinned-sftp-20261029.sh"
+src="$repo/scripts/operations/push-offsite-pinned-sftp-20261030.sh"
+# Release-neutral: any 40-hex candidate id; the object name is derived from its first 12 characters.
+candidate=c0ffee123456$(od -An -N14 -tx1 /dev/urandom | tr -d '[:space:]')
+[[ "$candidate" =~ ^[0-9a-f]{40}$ ]] || { echo 'BLOCKED: invalid candidate id'; exit 3; }
+short=${candidate:0:12}
+object="offsite-$short.tar.gz.age"
 # Every run owns a new directory; never delete or reuse a fixed root path.
 base="$(mktemp -d /var/lib/kmj-e2e.XXXXXXXX)"
 chmod 0755 "$base"
@@ -64,23 +69,23 @@ start_sshd 2223 "$sftp_server -P hardlink"
 
 # Rewrite only the three fixed root paths; nothing else in the production script changes.
 sed -e "s#^CONF=.*#CONF=$base/offsite-sftp.conf#" \
-    -e "s#^LOCAL=.*#LOCAL=$base/backups/offsite-39b88b36d071.tar.gz.age#" \
+    -e "s#^LOCAL=.*#LOCAL=$base/backups/$object#" \
     -e "s#^BACKUP_DIR=.*#BACKUP_DIR=$base/backups#" "$src" >"$base/push.sh"
 chmod 0755 "$base/push.sh"
-head -c 1048576 /dev/urandom >"$base/backups/offsite-39b88b36d071.tar.gz.age"
-chmod 0600 "$base/backups/offsite-39b88b36d071.tar.gz.age"
-local_sha="$(sha256sum "$base/backups/offsite-39b88b36d071.tar.gz.age" | cut -d' ' -f1)"
+head -c 1048576 /dev/urandom >"$base/backups/$object"
+chmod 0600 "$base/backups/$object"
+local_sha="$(sha256sum "$base/backups/$object" | cut -d' ' -f1)"
 
 conf() { # port remote_dir identity pin
   printf 'HOST=127.0.0.1\nPORT=%s\nUSER=%s\nREMOTE_DIR=%s\nIDENTITY_FILE=%s\nHOSTKEY_SHA256=%s\n' "$1" "$test_user" "$2" "$3" "$4" >"$base/offsite-sftp.conf"
   chmod 0600 "$base/offsite-sftp.conf"
 }
 out=''; rc=0
-push() { set +e; out="$(bash "$base/push.sh" 2>&1)"; rc=$?; set -e; echo "--- rc=$rc"; echo "$out"; }
+push() { set +e; out="$(bash "$base/push.sh" --candidate-sha "$candidate" 2>&1)"; rc=$?; set -e; echo "--- rc=$rc"; echo "$out"; }
 expect() { grep -qF -- "$1" <<<"$out" || { echo "ASSERT_FAIL: missing '$1'"; exit 1; }; }
 refuse() { ! grep -qF -- "$1" <<<"$out" || { echo "ASSERT_FAIL: unexpected '$1'"; exit 1; }; }
 want_rc() { [[ "$rc" == "$1" ]] || { echo "ASSERT_FAIL: rc=$rc want $1"; exit 1; }; }
-remote="$home/incoming/offsite-39b88b36d071.tar.gz.age"
+remote="$home/incoming/$object"
 listing() { ls -A "$1" | tr '\n' ' '; }
 
 echo '== 1 fresh upload, probe, hardlink commit, readback'
@@ -88,18 +93,18 @@ conf 2222 "$home/incoming" "$base/id" "$pin"; push
 want_rc 0; expect REMOTE_CAPABILITY_PROBE=PASS; expect SFTP_UPLOAD=PASS; expect REMOTE_COMMIT_NO_CLOBBER=PASS
 expect REMOTE_READBACK_SHA256=PASS; expect OFFSITE_PUSH=PASS; expect OFFSITE_RESTORE=NOT_VERIFIED
 [[ "$(sha256sum "$remote" | cut -d' ' -f1)" == "$local_sha" ]] || { echo 'ASSERT_FAIL: remote digest'; exit 1; }
-[[ "$(listing "$home/incoming")" == 'offsite-39b88b36d071.tar.gz.age ' ]] || { echo "ASSERT_FAIL: leftovers: $(listing "$home/incoming")"; exit 1; }
+[[ "$(listing "$home/incoming")" == "$object " ]] || { echo "ASSERT_FAIL: leftovers: $(listing "$home/incoming")"; exit 1; }
 [[ "$(stat -c %h "$remote")" == 1 ]] || { echo 'ASSERT_FAIL: final object still hardlinked to incoming'; exit 1; }
 
 echo '== 2 rerun is idempotent (target exists, identical bytes)'
 push; want_rc 0; expect REMOTE_COMMIT_NO_CLOBBER=TARGET_EXISTS_OR_FAILED; expect REMOTE_READBACK_SHA256=PASS
-[[ "$(listing "$home/incoming")" == 'offsite-39b88b36d071.tar.gz.age ' ]] || { echo 'ASSERT_FAIL: leftovers after rerun'; exit 1; }
+[[ "$(listing "$home/incoming")" == "$object " ]] || { echo 'ASSERT_FAIL: leftovers after rerun'; exit 1; }
 
 echo '== 3 a different existing object is never replaced'
 rm -f "$remote"; runuser -u "$test_user" -- sh -c 'printf OTHER > "$1"' sh "$remote"
 push; want_rc 1; expect REMOTE_READBACK=DIGEST_MISMATCH; refuse OFFSITE_PUSH=PASS
 [[ "$(cat "$remote")" == OTHER ]] || { echo 'ASSERT_FAIL: existing object was modified'; exit 1; }
-[[ "$(listing "$home/incoming")" == 'offsite-39b88b36d071.tar.gz.age ' ]] || { echo 'ASSERT_FAIL: leftovers after mismatch'; exit 1; }
+[[ "$(listing "$home/incoming")" == "$object " ]] || { echo 'ASSERT_FAIL: leftovers after mismatch'; exit 1; }
 
 echo '== 4 wrong host-key pin fails before any credential is offered'
 conf 2222 "$home/incoming" "$base/id" "SHA256:$(printf 'A%.0s' $(seq 1 43))"; push
