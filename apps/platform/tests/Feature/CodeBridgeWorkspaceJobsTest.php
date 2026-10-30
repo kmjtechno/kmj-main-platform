@@ -95,6 +95,37 @@ final class CodeBridgeWorkspaceJobsTest extends TestCase
         $this->report($job->id, $claim['claim_token'], ['kind' => 'failed'])->assertStatus(409)->assertJson(['error' => 'job_not_active']);
     }
 
+    public function test_revoked_or_out_of_window_license_cannot_queue_claim_or_report(): void
+    {
+        $this->enqueue($this->alice, 'git_status')->assertRedirect();
+        $id = (string) DB::table('codebridge_workspace_jobs')->value('id');
+        $license = DB::table('kslp_licenses')->where('customer_id', $this->tenantA)->first();
+        self::assertNotNull($license);
+
+        foreach ([
+            ['revoked_at' => now()],
+            ['expires_at' => now()->subMinute()],
+            ['starts_at' => now()->addMinute()],
+        ] as $change) {
+            DB::table('kslp_licenses')->where('id', $license->id)->update($change);
+            $this->enqueue($this->alice, 'git_status')->assertNotFound();
+            $this->device('desk-a')->postJson('/api/codebridge/v1/jobs/claim')->assertUnauthorized();
+            self::assertSame('queued', DB::table('codebridge_workspace_jobs')->where('id', $id)->value('status'));
+            DB::table('kslp_licenses')->where('id', $license->id)->update([
+                'revoked_at' => $license->revoked_at,
+                'starts_at' => $license->starts_at,
+                'expires_at' => $license->expires_at,
+            ]);
+        }
+
+        $claim = $this->device('desk-a')->postJson('/api/codebridge/v1/jobs/claim')
+            ->assertOk()->json('job');
+        self::assertSame($id, $claim['id']);
+        DB::table('kslp_licenses')->where('id', $license->id)->update(['revoked_at' => now()]);
+        $this->report($id, $claim['claim_token'], ['kind' => 'started'])->assertUnauthorized();
+        self::assertSame('claimed', DB::table('codebridge_workspace_jobs')->where('id', $id)->value('status'));
+    }
+
     public function test_only_catalogued_tools_with_closed_arguments_are_accepted(): void
     {
         foreach ([['rm_rf', null], ['git_status', 'fast'], ['quality_gate', null], ['quality_gate', '../../etc'], ['quality_gate', 'Fast;rm'], ['bash', 'ls']] as [$tool, $gate]) {
