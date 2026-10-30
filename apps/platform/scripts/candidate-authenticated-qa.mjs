@@ -69,6 +69,13 @@ export function validateEnv(env) {
 }
 
 export function loadOwnerStorageState(path) {
+    // This owner-session runner is intentionally Linux/POSIX-only unless a
+    // future implementation can prove equivalent no-follow + owner checks.
+    if (
+        typeof constants.O_NOFOLLOW !== 'number' ||
+        typeof process.getuid !== 'function'
+    )
+        return { problem: 'STORAGE_STATE_SECURE_OPEN_UNAVAILABLE' };
     let fd;
     try {
         fd = openSync(
@@ -79,7 +86,7 @@ export function loadOwnerStorageState(path) {
         if (
             !info.isFile() ||
             info.nlink !== 1 ||
-            (typeof process.getuid === 'function' && info.uid !== process.getuid()) ||
+            info.uid !== process.getuid() ||
             (info.mode & 0o077) !== 0 ||
             info.size === 0 ||
             info.size > 2 * 1024 * 1024
