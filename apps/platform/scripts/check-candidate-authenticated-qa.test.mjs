@@ -14,6 +14,7 @@ import path from 'node:path';
 import {
     PAGES,
     VIEWPORTS,
+    auditImagesInPage,
     judge,
     loadOwnerStorageState,
     runPage,
@@ -331,5 +332,25 @@ void test('late SPA navigation must fail closed even after an initial HTTP 200',
             ),
             destination,
         );
+    }
+});
+
+void test('image audit fails on corrupt and stalled decodes, without an unbounded wait', async () => {
+    const previous = globalThis.document;
+    globalThis.document = {
+        images: [
+            { naturalWidth: 8, naturalHeight: 8, decode: () => Promise.resolve() },
+            // A corrupt file can expose dimensions while decode still rejects.
+            { naturalWidth: 8, naturalHeight: 8, decode: () => Promise.reject(new Error('CORRUPT')) },
+            { naturalWidth: 0, naturalHeight: 0, decode: () => new Promise(() => {}) },
+        ],
+    };
+    try {
+        assert.equal(await auditImagesInPage(10), 2);
+        globalThis.document.images = [];
+        assert.equal(await auditImagesInPage(10), 0);
+    } finally {
+        if (previous === undefined) delete globalThis.document;
+        else globalThis.document = previous;
     }
 });
