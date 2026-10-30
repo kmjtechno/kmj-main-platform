@@ -79,7 +79,7 @@ export function loadOwnerStorageState(path) {
         if (
             !info.isFile() ||
             info.nlink !== 1 ||
-            info.uid !== process.getuid() ||
+            (typeof process.getuid === 'function' && info.uid !== process.getuid()) ||
             (info.mode & 0o077) !== 0 ||
             info.size === 0 ||
             info.size > 2 * 1024 * 1024
