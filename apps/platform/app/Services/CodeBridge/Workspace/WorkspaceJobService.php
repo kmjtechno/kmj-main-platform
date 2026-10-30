@@ -81,6 +81,7 @@ final class WorkspaceJobService
         }
 
         return DB::transaction(function () use ($tenantId, $userId, $deviceId, $projectId, $tool, $arguments, $idempotencyKey): array {
+            $this->lockDevice($tenantId, $deviceId);
             $existing = DB::table('codebridge_workspace_jobs')
                 ->where('tenant_id', $tenantId)->where('user_id', $userId)->where('idempotency_key', $idempotencyKey)->lockForUpdate()->first();
             if ($existing !== null) {
@@ -173,6 +174,8 @@ final class WorkspaceJobService
         $this->expireStale($tenantId);
 
         return DB::transaction(function () use ($tenantId, $deviceId): ?array {
+            // Serialize claims per device: two concurrent polls must never hold two jobs.
+            $this->lockDevice($tenantId, $deviceId);
             $busy = DB::table('codebridge_workspace_jobs')->where('tenant_id', $tenantId)->where('device_id', $deviceId)
                 ->whereIn('status', ['claimed', 'running'])->exists();
             if ($busy) {
@@ -295,6 +298,11 @@ final class WorkspaceJobService
                 $this->finish((string) $row['id'], 'failed', 'lease_expired', 'The device stopped reporting; the run is not known to have finished.', (string) $row['status']);
             }
         }
+    }
+
+    private function lockDevice(string $tenantId, string $deviceId): void
+    {
+        DB::table('codebridge_device_credentials')->where('tenant_id', $tenantId)->where('device_id', $deviceId)->lockForUpdate()->first(['id']);
     }
 
     /** @param list<string> $granted */
