@@ -121,9 +121,10 @@ local_sha=$(sha256sum -- "$LOCAL" | cut -d' ' -f1)
 status LOCAL_ENCRYPTED_SHA256 "$local_sha"
 
 # 2) Exclusive publication. Every run uploads to its OWN unique incoming name
-# and commits with sftp `rename`, which OpenSSH implements WITHOUT overwrite
-# (it fails if the target exists; `posix-rename` is deliberately never used).
-# So two runs, or a stale .part, can never clobber the final object.
+# and commits with OpenSSH SFTP `ln` (hardlink@openssh.com): the server
+# atomically creates a new directory entry or returns EEXIST. Unlike rename,
+# this operation cannot replace an existing final object. If unsupported,
+# publication fails closed; no rename fallback is permitted.
 uniq=$(od -An -N10 -tx1 /dev/urandom | tr -d ' \n')
 [[ "$uniq" =~ ^[0-9a-f]{20}$ ]] || block RANDOM_UNAVAILABLE
 incoming="$rdir/.incoming-$REMOTE_NAME.$uniq"
@@ -136,9 +137,15 @@ if ! run_sftp put "$tmp/b_put"; then
 fi
 status SFTP_UPLOAD PASS
 
-printf 'rename -l %s %s\n' "$incoming" "$final" >"$tmp/b_commit"
+printf 'ln %s %s\n' "$incoming" "$final" >"$tmp/b_commit"
 if run_sftp commit "$tmp/b_commit"; then
   status REMOTE_COMMIT_NO_CLOBBER PASS
+  printf 'rm %s\n' "$incoming" >"$tmp/b_cleanup"
+  if ! run_sftp cleanup "$tmp/b_cleanup"; then
+    status REMOTE_INCOMING_CLEANUP FAIL
+    status OFFSITE_PUSH FAIL
+    exit 1
+  fi
 else
   # Target exists (or commit failed). Only an identical existing object is
   # acceptable; it is verified byte-for-byte below, never assumed.
