@@ -40,11 +40,17 @@ final class WorkspaceJobService
     public function grantedPermissions(string $tenantId, string $deviceId, string $projectId): array
     {
         $row = DB::table('codebridge_device_credentials as c')
+            ->join('kslp_activations as a', 'a.id', '=', 'c.activation_id')
+            ->join('kslp_licenses as l', 'l.id', '=', 'c.license_id')
             ->join('codebridge_device_pairings as p', function ($join): void {
                 $join->on('p.activation_id', '=', 'c.activation_id')->on('p.tenant_id', '=', 'c.tenant_id');
             })
             ->where('c.tenant_id', $tenantId)->where('c.device_id', $deviceId)
             ->whereNull('c.revoked_at')->where('c.expires_at_epoch', '>', time())
+            ->whereColumn('a.license_id', 'l.id')->whereNull('a.deactivated_at')
+            ->where('l.product', 'KMJ_CODEBRIDGE')->where('l.status', 'active')
+            ->whereNull('l.revoked_at')->where('l.starts_at', '<=', now())
+            ->where('l.expires_at', '>', now())
             ->where('p.project_id', $projectId)->where('p.status', 'consumed')
             ->first(['p.requested_permissions']);
         if ($row === null) {
