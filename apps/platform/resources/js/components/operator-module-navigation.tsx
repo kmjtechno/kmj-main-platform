@@ -59,9 +59,9 @@ const modules = [
     {
         key: 'codebridge',
         label: 'CodeBridge',
-        href: '/operator/codebridge/owner-plan',
+        href: '/services/kmj-codebridge#codebridge-device-control',
         icon: Boxes,
-        help: 'Managed devices and owner plans',
+        help: 'One device dashboard; owner licensing linked inside',
     },
     {
         key: 'operations',

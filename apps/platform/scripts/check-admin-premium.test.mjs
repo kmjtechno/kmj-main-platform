@@ -43,7 +43,7 @@ void test('every admin section is a real owner route, not an inert card', () => 
         '/operator/directory',
         '/operator/payments',
         '/operator/kslp',
-        '/operator/codebridge/owner-plan',
+        '/services/kmj-codebridge#codebridge-device-control',
         '/operator/ops',
         '/settings/security',
     ]) {

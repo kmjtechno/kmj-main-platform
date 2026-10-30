@@ -62,9 +62,10 @@ const modules = [
     },
     {
         name: 'CodeBridge',
-        description: 'Device permissions and owner plan controls',
+        description:
+            'One CodeBridge workspace for devices, permissions and projects',
         accent: 'text-rose-600 dark:text-rose-300',
-        href: '/operator/codebridge/owner-plan',
+        href: '/services/kmj-codebridge#codebridge-device-control',
         icon: Boxes,
     },
     {
