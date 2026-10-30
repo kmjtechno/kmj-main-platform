@@ -187,6 +187,103 @@ final class OmniDeskPrivateApiTest extends TestCase
             ->assertHeader('Cache-Control', 'no-store, private');
     }
 
+    public function test_challenge_route_fails_closed_without_authorizer(): void
+    {
+        $fixture = $this->fixture();
+        $this->app->forgetInstance(OmniDeskApiAuthorizer::class);
+
+        $response = $this->postJson(
+            '/api/v1/licensing/omnidesk/activations/'.$fixture['activation_id'].'/renewal-challenge',
+            [],
+        );
+
+        $response
+            ->assertStatus(503)
+            ->assertExactJson(['error' => 'SERVER_UNAVAILABLE'])
+            ->assertHeader('Cache-Control', 'no-store, private');
+        $this->assertDatabaseCount('omnidesk_renewal_challenges', 0);
+    }
+
+    public function test_renewal_challenge_endpoint_requires_manager_scope(): void
+    {
+        $fixture = $this->fixture();
+        $this->bindPrincipal($fixture['organization_id'], false);
+
+        $response = $this->postJson(
+            '/api/v1/licensing/omnidesk/activations/'.$fixture['activation_id'].'/renewal-challenge',
+            [],
+        );
+
+        $response->assertStatus(403)->assertExactJson(['error' => 'FORBIDDEN']);
+        $this->assertDatabaseCount('omnidesk_renewal_challenges', 0);
+    }
+
+    public function test_renewal_challenge_route_issues_single_tenant_bound_non_cacheable_response(): void
+    {
+        $fixture = $this->fixture();
+        $this->bindPrincipal($fixture['organization_id'], true);
+        $endpoint = '/api/v1/licensing/omnidesk/activations/'
+            .$fixture['activation_id'].'/renewal-challenge';
+
+        $first = $this->postJson($endpoint, [])
+            ->assertOk()
+            ->assertJsonPath('activation_id', $fixture['activation_id'])
+            ->assertJsonPath('proof_scheme', 'KMJ-OMNIDESK-RENEW-v1')
+            ->assertJsonPath('expires_in', 300)
+            ->assertHeader('Cache-Control', 'no-store, private')
+            ->json();
+
+        self::assertSame(43, strlen($first['server_challenge']));
+        $this->assertDatabaseHas('omnidesk_renewal_challenges', [
+            'activation_id' => $fixture['activation_id'],
+            'challenge_sha256' => hash('sha256', $first['server_challenge']),
+            'consumed_at' => null,
+        ]);
+
+        $next = $this->postJson($endpoint, [])->assertOk()->json();
+        self::assertNotSame($first['server_challenge'], $next['server_challenge']);
+        $this->assertDatabaseCount('omnidesk_renewal_challenges', 1);
+        $this->assertDatabaseMissing('omnidesk_renewal_challenges', [
+            'activation_id' => $fixture['activation_id'],
+            'challenge_sha256' => hash('sha256', $first['server_challenge']),
+        ]);
+    }
+
+    public function test_cross_tenant_challenge_route_does_not_expose_binding(): void
+    {
+        $fixture = $this->fixture();
+        $other = Organization::query()->create(['name' => 'Other challenge tenant']);
+        $this->bindPrincipal((string) $other->getKey(), true);
+
+        $this->postJson(
+            '/api/v1/licensing/omnidesk/activations/'.$fixture['activation_id'].'/renewal-challenge',
+            [],
+        )->assertStatus(404)->assertExactJson(['error' => 'ACTIVATION_REVOKED']);
+
+        $this->assertDatabaseCount('omnidesk_renewal_challenges', 0);
+    }
+
+    public function test_invalid_renewal_challenge_body_and_revocation_fail_closed(): void
+    {
+        $fixture = $this->fixture();
+        $this->bindPrincipal($fixture['organization_id'], true);
+        $endpoint = '/api/v1/licensing/omnidesk/activations/'
+            .$fixture['activation_id'].'/renewal-challenge';
+
+        $this->postJson($endpoint, ['device_public_key' => 'client-supplied'])
+            ->assertStatus(422)
+            ->assertExactJson(['error' => 'INVALID_REQUEST']);
+        $this->assertDatabaseCount('omnidesk_renewal_challenges', 0);
+
+        DB::table('kslp_licenses')->where('id', $fixture['license_id'])
+            ->update(['status' => 'revoked', 'revoked_at' => now()]);
+
+        $this->postJson($endpoint, [])
+            ->assertStatus(404)
+            ->assertExactJson(['error' => 'ACTIVATION_REVOKED']);
+        $this->assertDatabaseCount('omnidesk_renewal_challenges', 0);
+    }
+
     public function test_renewal_server_challenge_is_hashed_and_consumed_only_once_with_device_signature(): void
     {
         [$f, $secret] = $this->renewalFixture();

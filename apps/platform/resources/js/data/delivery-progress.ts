@@ -586,9 +586,9 @@ export const deliveryMilestones: DeliveryMilestone[] = [
         id: 'omnidesk-licensing-contract',
         title: 'KMJ OmniDesk licensing contract',
         state: 'active',
-        detail: 'Main Platform owns the OmniDesk commercial control plane, not the remote-session runtime. Versioned KSLP-v1 identity, Ed25519 activation and renewal device proofs, tenant-scoped activation bindings, signed-entitlement schema, replay cursor, offline grace and API contract are source-defined. Lease cursor lifecycle hardening is proposed to re-check revoked or expired licenses, deactivated devices and inactive or cross-tenant entitlements. Production signing and authenticated activation/renewal issuance remain gated.',
+        detail: 'Main Platform owns the OmniDesk commercial licensing control plane. Ed25519 device activation/renewal proof verifiers, tenant-scoped binding, revocation/expiry-gated lease cursor and PostgreSQL single-use challenge ledger are source-merged. A restricted owner-managed renewal-challenge HTTP adapter is under exact-head QA; public customer lease issuance, device-only authorization and protected production signer remain disabled.',
         evidence:
-            'PR #711 merged exact Rust-compatible activation proof and PR #712 merged renewal proof, both with 10/10 exact-head CI. PR #713 merged 7 lifecycle regressions denying revoked/expired/cross-tenant cursor advances; the next private renewal-challenge-store candidate adds single-use challenge hash persistence, expiry and signed verification, with CI/review still required. No production signer, issued commercial entitlement, live activation/renewal route or independent owner release proof is claimed.',
+            'PR #711 activation proof, #712 renewal proof, #713 tenant/lifecycle cursor and #714 one-time challenge ledger merged with exact-head CI. This candidate tests the unbound-authorizer 503 guard, manager-only access, tenant non-disclosure, nonce rotation, no-store response, invalid payload rejection and revoked-license denial. No issued signed license, live customer activation, production owner QA or commercial release is claimed.',
     },
     {
         id: 'production-hardening',
