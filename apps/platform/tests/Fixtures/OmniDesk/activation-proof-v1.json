@@ -1,20 +1,20 @@
 {
-  "schema_version": 1,
-  "proof_scheme": "KMJ-OMNIDESK-ACTIVATE-v1",
-  "algorithm": "Ed25519",
-  "encoding": "base64url_without_padding",
-  "device_public_key": "0EqyMnQrtKs6E2i9RhXk5tAiSrcaAWuvhSCjMsl3hzc",
-  "device_public_key_fingerprint": "sha256:10ba682c8ad13513971e8b56881aab8bd702bb807796eca81932c735a94d6e6d",
-  "request": {
-    "idempotency_key": "idem-0123456789abcdef",
-    "license_or_entitlement_reference": "entitlement-123",
-    "installation_id": "install-12345678",
-    "client_version": "0.0.1",
-    "protocol_version": "KSLP-v1",
-    "platform": "windows",
-    "architecture": "x86_64",
-    "client_nonce": "nonce-0123456789abcdef"
-  },
-  "canonical_message_base64url": "S01KLU9NTklERVNLLUFDVElWQVRFLXYxAAAAFWlkZW0tMDEyMzQ1Njc4OWFiY2RlZgAAAA9lbnRpdGxlbWVudC0xMjMAAAArMEVxeU1uUXJ0S3M2RTJpOVJoWGs1dEFpU3JjYUFXdXZoU0NqTXNsM2h6YwAAAEdzaGEyNTY6MTBiYTY4MmM4YWQxMzUxMzk3MWU4YjU2ODgxYWFiOGJkNzAyYmI4MDc3OTZlY2E4MTkzMmM3MzVhOTRkNmU2ZAAAABBpbnN0YWxsLTEyMzQ1Njc4AAAABTAuMC4xAAAAB0tTTFAtdjEAAAAHd2luZG93cwAAAAZ4ODZfNjQAAAAWbm9uY2UtMDEyMzQ1Njc4OWFiY2RlZg",
-  "device_signature": "rWbwyRQJupT44i7OcuSWqJnpQ0Ff6rXhZOw_OXSY_y8mAWnwpZq40uDIsHu1aUrvl461jvsuNJQqLhx9n4hYBg"
+    "schema_version": 1,
+    "proof_scheme": "KMJ-OMNIDESK-ACTIVATE-v1",
+    "algorithm": "Ed25519",
+    "encoding": "base64url_without_padding",
+    "device_public_key": "0EqyMnQrtKs6E2i9RhXk5tAiSrcaAWuvhSCjMsl3hzc",
+    "device_public_key_fingerprint": "sha256:10ba682c8ad13513971e8b56881aab8bd702bb807796eca81932c735a94d6e6d",
+    "request": {
+        "idempotency_key": "idem-0123456789abcdef",
+        "license_or_entitlement_reference": "entitlement-123",
+        "installation_id": "install-12345678",
+        "client_version": "0.0.1",
+        "protocol_version": "KSLP-v1",
+        "platform": "windows",
+        "architecture": "x86_64",
+        "client_nonce": "nonce-0123456789abcdef"
+    },
+    "canonical_message_base64url": "S01KLU9NTklERVNLLUFDVElWQVRFLXYxAAAAFWlkZW0tMDEyMzQ1Njc4OWFiY2RlZgAAAA9lbnRpdGxlbWVudC0xMjMAAAArMEVxeU1uUXJ0S3M2RTJpOVJoWGs1dEFpU3JjYUFXdXZoU0NqTXNsM2h6YwAAAEdzaGEyNTY6MTBiYTY4MmM4YWQxMzUxMzk3MWU4YjU2ODgxYWFiOGJkNzAyYmI4MDc3OTZlY2E4MTkzMmM3MzVhOTRkNmU2ZAAAABBpbnN0YWxsLTEyMzQ1Njc4AAAABTAuMC4xAAAAB0tTTFAtdjEAAAAHd2luZG93cwAAAAZ4ODZfNjQAAAAWbm9uY2UtMDEyMzQ1Njc4OWFiY2RlZg",
+    "device_signature": "rWbwyRQJupT44i7OcuSWqJnpQ0Ff6rXhZOw_OXSY_y8mAWnwpZq40uDIsHu1aUrvl461jvsuNJQqLhx9n4hYBg"
 }
