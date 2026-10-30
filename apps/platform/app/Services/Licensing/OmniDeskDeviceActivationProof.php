@@ -110,6 +110,7 @@ final class OmniDeskDeviceActivationProof
         }
     }
 
+    /** @return non-empty-string */
     private function decodeCanonicalBase64Url(string $encoded, int $expectedLength): string
     {
         $encodedLength = $expectedLength === 32 ? 43 : 86;
@@ -122,6 +123,7 @@ final class OmniDeskDeviceActivationProof
         $padding = str_repeat('=', (4 - strlen($encoded) % 4) % 4);
         $raw = base64_decode(strtr($encoded, '-_', '+/').$padding, true);
         if ($raw === false
+            || $raw === ''
             || strlen($raw) !== $expectedLength
             || rtrim(strtr(base64_encode($raw), '+/', '-_'), '=') !== $encoded
         ) {
