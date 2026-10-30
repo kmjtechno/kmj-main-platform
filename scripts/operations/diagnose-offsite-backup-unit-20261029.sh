@@ -50,20 +50,34 @@ kv disk_root_free_kib "$(df -Pk / | awk 'END{print $4}')"
 kv disk_var_free_kib "$(df -Pk /var 2>/dev/null | awk 'END{print $4}')"
 kv disk_var_free_inodes "$(df -Pi /var 2>/dev/null | awk 'END{print $4}')"
 
-# Last invocation log, redacted, then classified by the first matching cause.
-log="$(journalctl -u "$unit" -n 200 --no-pager -o cat 2>/dev/null || true)"
+# Classify only journal entries belonging to the exact failed systemd invocation.
+# A unit-wide tail may include stale errors from previous attempts and is unsafe.
+# Invalid/missing InvocationID, non-255 exit, or journal query failure => UNKNOWN.
+invocation="$(show InvocationID)"
+log=''
+scope=UNAVAILABLE
+if [[ "$(show_status)" == 255 && "$(show_enum Result)" == exit-code &&
+      "$invocation" =~ ^[0-9a-fA-F]{32}$ ]]; then
+  if log="$(journalctl --no-pager -o cat -n 200 "_SYSTEMD_INVOCATION_ID=$invocation" 2>/dev/null)"; then
+    scope=EXACT_INVOCATION
+  else
+    log=''
+  fi
+fi
+kv journal_scope "$scope"
 kv journal_lines_scanned "$(printf '%s' "$log" | grep -c '' || true)"
 
 class=UNKNOWN_EXIT_255_NEEDS_LOG
 match() { printf '%s\n' "$log" | grep -Eiq "$1"; }
-if   match 'Permission denied \(publickey|Too many authentication failures|no mutual signature'; then class=SSH_AUTH_KEY_REJECTED
-elif match 'Host key verification failed|REMOTE HOST IDENTIFICATION HAS CHANGED|No (ED25519|RSA|ECDSA) host key is known'; then class=SSH_HOSTKEY
-elif match 'Connection (timed out|refused|reset)|No route to host|Network is unreachable|Could not resolve host|Temporary failure in name resolution'; then class=NETWORK_OR_REMOTE_DOWN
-elif match 'No space left|Disk quota|storageQuotaExceeded|quota exceeded'; then class=DISK_OR_REMOTE_QUOTA
-elif match 'oauth2|invalid_grant|token (has been )?(expired|revoked)|401|403'; then class=REMOTE_AUTH_TOKEN
-elif match 'No such file or directory|command not found'; then class=MISSING_FILE_OR_TOOL
-elif match 'Permission denied'; then class=LOCAL_PERMISSION
-elif [[ -z "$log" ]]; then class=NO_JOURNAL_ENTRIES_ROTATED_OR_UNREADABLE
+if [[ "$scope" == EXACT_INVOCATION && -n "$log" ]]; then
+  if   match 'Permission denied \(publickey|Too many authentication failures|no mutual signature'; then class=SSH_AUTH_KEY_REJECTED
+  elif match 'Host key verification failed|REMOTE HOST IDENTIFICATION HAS CHANGED|No (ED25519|RSA|ECDSA) host key is known'; then class=SSH_HOSTKEY
+  elif match 'Connection (timed out|refused|reset)|No route to host|Network is unreachable|Could not resolve host|Temporary failure in name resolution'; then class=NETWORK_OR_REMOTE_DOWN
+  elif match 'No space left|Disk quota|storageQuotaExceeded|quota exceeded'; then class=DISK_OR_REMOTE_QUOTA
+  elif match 'oauth2|invalid_grant|token (has been )?(expired|revoked)|401|403'; then class=REMOTE_AUTH_TOKEN
+  elif match 'No such file or directory|command not found'; then class=MISSING_FILE_OR_TOOL
+  elif match 'Permission denied'; then class=LOCAL_PERMISSION
+  fi
 fi
 kv failure_class "$class"
 kv raw_output_suppressed yes
