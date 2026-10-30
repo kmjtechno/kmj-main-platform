@@ -37,9 +37,9 @@ void test('admin visuals remain scoped to authenticated owner workspace', () => 
 
 void test('every admin section is a real owner route, not an inert card', () => {
     for (const url of [
-        '/operator',
+        '/super-admin',
         '/operator/products',
-        '/operator#commercial-orders',
+        '/super-admin#commercial-orders',
         '/operator/directory',
         '/operator/payments',
         '/operator/kslp',
@@ -79,6 +79,8 @@ void test('design accents have semantic variety and reduced-motion accessibility
 });
 
 void test('owner dashboard entry remains authority-gated and leaves customer services separate', () => {
+    // Verified owners are redirected into the protected Super Admin route; the
+    // customer dashboard response never carries owner-only data.
     assert.match(dashboard, /\{ownerProducts !== null && \(/);
     assert.match(dashboard, /\{ownerProducts === null && \(/);
     assert.match(dashboard, /Super Admin Control Center/);
@@ -90,8 +92,11 @@ void test('owner dashboard entry remains authority-gated and leaves customer ser
     );
     assert.match(
         routes,
-        /\$isPlatformOwner = app\(PlatformOwnerAccess::class\)->allows\(\$user\)/,
+        /if \(app\(PlatformOwnerAccess::class\)->allows\(\$user\)\) \{\s*return redirect\(\)->route\('super-admin\.index'\);/,
     );
+    assert.match(routes, /\$ownerProducts = null;/);
+    assert.match(routes, /'ownerProducts' => \$ownerProducts/);
+    assert.doesNotMatch(routes, /\$ownerProducts = Product::query\(\)/);
 });
 
 void test('owner action queue uses only actual catalog and order evidence', () => {
