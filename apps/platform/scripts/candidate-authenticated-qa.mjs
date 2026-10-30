@@ -18,7 +18,7 @@
 // Optional: KMJ_CHROMIUM_EXECUTABLE, KMJ_PLAYWRIGHT_MODULE.
 import { createHash } from 'node:crypto';
 import { createRequire } from 'node:module';
-import { lstatSync } from 'node:fs';
+import { closeSync, constants, fstatSync, openSync, readFileSync } from 'node:fs';
 
 export const VIEWPORTS = [
     { name: 'desktop', width: 1440, height: 900 },
@@ -60,17 +60,51 @@ export function validateEnv(env) {
         problems.push('CANDIDATE_SHA_INVALID');
     if (!/^[a-f0-9]{64}$/.test(env.KMJ_QA_MANIFEST_SHA256 ?? ''))
         problems.push('MANIFEST_SHA256_INVALID');
-    const state = env.KMJ_QA_STORAGE_STATE ?? '';
+    // Read once through a no-follow file descriptor. Checking lstat(path)
+    // then handing the path to Playwright lets a swapped symlink import a
+    // different session after validation (TOCTOU).
+    const loaded = loadOwnerStorageState(env.KMJ_QA_STORAGE_STATE ?? '');
+    if (loaded.problem) problems.push(loaded.problem);
+    return { problems, base, storageState: loaded.storageState };
+}
+
+export function loadOwnerStorageState(path) {
+    let fd;
     try {
-        // lstat, not stat: an attacker-controlled link must never import
-        // an unrelated owner session into this candidate browser context.
-        const info = lstatSync(state);
-        if (!info.isFile() || info.nlink !== 1 || (info.mode & 0o077) !== 0)
-            problems.push('STORAGE_STATE_NOT_PRIVATE_FILE');
-    } catch {
-        problems.push('STORAGE_STATE_MISSING');
+        fd = openSync(
+            path,
+            constants.O_RDONLY | constants.O_NOFOLLOW | constants.O_NONBLOCK,
+        );
+        const info = fstatSync(fd);
+        if (
+            !info.isFile() ||
+            info.nlink !== 1 ||
+            info.uid !== process.getuid() ||
+            (info.mode & 0o077) !== 0 ||
+            info.size === 0 ||
+            info.size > 2 * 1024 * 1024
+        )
+            return { problem: 'STORAGE_STATE_NOT_PRIVATE_FILE' };
+        const storageState = JSON.parse(readFileSync(fd, 'utf8'));
+        if (
+            !storageState ||
+            typeof storageState !== 'object' ||
+            !Array.isArray(storageState.cookies) ||
+            !Array.isArray(storageState.origins)
+        )
+            return { problem: 'STORAGE_STATE_INVALID' };
+        return { storageState };
+    } catch (error) {
+        return {
+            problem: error.code === 'ENOENT'
+                ? 'STORAGE_STATE_MISSING'
+                : error.code === 'ELOOP'
+                    ? 'STORAGE_STATE_NOT_PRIVATE_FILE'
+                    : 'STORAGE_STATE_INVALID',
+        };
+    } finally {
+        if (fd !== undefined) closeSync(fd);
     }
-    return { problems, base };
 }
 
 export function sha256(buffer) {
@@ -229,7 +263,7 @@ async function runPageInContext(context, base, viewport, page) {
 }
 
 async function main() {
-    const { problems, base } = validateEnv(process.env);
+    const { problems, base, storageState } = validateEnv(process.env);
     const receipt = {
         kind: 'candidate-authenticated-qa',
         candidateSha: process.env.KMJ_QA_CANDIDATE_SHA ?? null,
@@ -244,7 +278,6 @@ async function main() {
         );
         process.exit(2);
     }
-    const state = process.env.KMJ_QA_STORAGE_STATE;
     const require = createRequire(import.meta.url);
     const { chromium } = require(
         process.env.KMJ_PLAYWRIGHT_MODULE || 'playwright',
@@ -281,7 +314,7 @@ async function main() {
         for (const viewport of VIEWPORTS)
             for (const page of PAGES)
                 receipt.results.push(
-                    await runPage(browser, state, base, viewport, page),
+                    await runPage(browser, storageState, base, viewport, page),
                 );
     } finally {
         await browser.close();
