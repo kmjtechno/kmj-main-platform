@@ -166,5 +166,49 @@ class FailureEvidence(unittest.TestCase):
             self.assertIn("APP_HTTP_DB_ROLLBACK_REHEARSAL=FAIL", output.getvalue())
             self.assertNotIn("APP_HTTP_DB_ROLLBACK_REHEARSAL=PASS", output.getvalue())
 
+class Attestation(unittest.TestCase):
+    NONCE = "ab" * 24
+
+    def attest(self, rows, nonce=None):
+        original = mod.psql_rows
+        mod.psql_rows = lambda _db, _sql: rows
+        try:
+            mod.attest_disposable({}, self.NONCE if nonce is None else nonce)
+        finally:
+            mod.psql_rows = original
+
+    def test_matching_comment_is_accepted(self):
+        self.attest([(f"kmj-disposable-rehearsal:{self.NONCE}",)])
+
+    def test_unstamped_shared_or_wrong_nonce_database_is_refused(self):
+        for rows in ([("",)], [("kmj-disposable-rehearsal:" + "cd" * 24,)], [("production",)], []):
+            with self.assertRaisesRegex(mod.Blocked, "DB_NOT_ATTESTED_DISPOSABLE"):
+                self.attest(rows)
+
+    def test_missing_or_malformed_nonce_is_refused(self):
+        for nonce in ("x", "ZZ" * 20, "ab" * 8):
+            with self.assertRaisesRegex(mod.Blocked, "DB_ATTESTATION_NONCE_MISSING"):
+                self.attest([("anything",)], nonce)
+
+    def test_requirement_env_is_validated_and_main_enforces_it(self):
+        os.environ["KMJ_X"] = "abc"
+        try:
+            with self.assertRaises(mod.Blocked):
+                mod.env_int("KMJ_X", 0)
+        finally:
+            del os.environ["KMJ_X"]
+        self.assertEqual(mod.env_int("KMJ_NOT_SET_X", 3), 3)
+        text = (ROOT / "scripts/operations/rehearse-app-http-db-rollback-20261029.py").read_text()
+        self.assertIn("MIN_NEW_MIGRATIONS_NOT_MET", text)
+        self.assertIn("WORKSPACE_ROUTES_REQUIRED_BUT_ABSENT", text)
+        self.assertLess(text.index("attest_disposable(db"), text.index("schema_snapshot(db)"))
+        ci = (ROOT / "scripts/ci/rehearse-app-rollback-ci.sh").read_text()
+        self.assertIn("COMMENT ON DATABASE", ci)
+        self.assertIn("merge-base --is-ancestor", ci)
+        wf = (ROOT / ".github/workflows/app-http-db-rollback-rehearsal.yml").read_text()
+        self.assertIn("KMJ_REHEARSAL_MIN_NEW_MIGRATIONS: '1'", wf)
+        self.assertIn("39b88b36d071d3f78f2392d609d3febc2c530165", wf)
+
+
 if __name__ == "__main__":
     unittest.main()

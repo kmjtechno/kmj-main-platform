@@ -80,6 +80,31 @@ def validate_database(env: dict[str, str]) -> dict[str, str]:
     }
 
 
+def attest_disposable(db: dict[str, str], nonce: str) -> None:
+    """Positive proof the database was created for THIS rehearsal.
+
+    A name pattern alone is not isolation. The launcher must stamp the database
+    comment with ``kmj-disposable-rehearsal:<nonce>`` and pass the same random
+    nonce out of band; a pre-existing or shared database cannot satisfy this.
+    """
+    if not re.fullmatch(r"[0-9a-f]{32,64}", nonce):
+        raise Blocked("DB_ATTESTATION_NONCE_MISSING")
+    rows = psql_rows(
+        db,
+        "select coalesce(shobj_description(oid,'pg_database'),'') from pg_database "
+        "where datname=current_database()",
+    )
+    if rows != [(f"kmj-disposable-rehearsal:{nonce}",)]:
+        raise Blocked("DB_NOT_ATTESTED_DISPOSABLE")
+
+
+def env_int(name: str, default: int) -> int:
+    raw = os.environ.get(name, str(default))
+    if not raw.isdigit() or int(raw) > 1000:
+        raise Blocked(f"{name}_INVALID")
+    return int(raw)
+
+
 def validate_tree(path_text: str, label: str) -> Path:
     path = Path(path_text)
     if not path_text or path.is_symlink() or not path.is_dir():
@@ -312,7 +337,10 @@ def main() -> int:
     live = psql_rows(db, "select current_database()")
     if live != [(db["DB_DATABASE"],)]:
         raise Blocked("DB_IDENTITY_MISMATCH")
-    status("REHEARSAL_DATABASE", "DISPOSABLE_CONFIRMED")
+    attest_disposable(db, os.environ.get("KMJ_REHEARSAL_DB_NONCE", ""))
+    min_new = env_int("KMJ_REHEARSAL_MIN_NEW_MIGRATIONS", 0)
+    require_workspace = os.environ.get("KMJ_REHEARSAL_REQUIRE_WORKSPACE_ROUTES") == "1"
+    status("REHEARSAL_DATABASE", "DISPOSABLE_ATTESTED")
 
     scratch = Path(tempfile.mkdtemp(prefix="kmj-app-rehearsal."))
     os.chmod(scratch, 0o700)
@@ -350,12 +378,17 @@ def main() -> int:
         else:
             status("SCHEMA_REMOVED_OR_ALTERED", str(len(s0 - s1)))
             fail("SCHEMA_CHANGE_ADDITIVE_ONLY")
-        if not new_migrations:
+        if len(new_migrations) < min_new:
+            status("REQUIRED_NEW_MIGRATIONS", f"{min_new}")
+            fail("MIN_NEW_MIGRATIONS_NOT_MET")
+        elif not new_migrations:
             status("CANDIDATE_HAS_NO_NEW_MIGRATIONS", "NOTE")
 
         # 3. Candidate serves HTTP on the migrated schema.
         has_workspace = (candidate / "routes" / "codebridge-workspace.php").is_file()
         status("CANDIDATE_HAS_WORKSPACE_ROUTES", "YES" if has_workspace else "NO")
+        if require_workspace and not has_workspace:
+            fail("WORKSPACE_ROUTES_REQUIRED_BUT_ABSENT")
         if not run_checks("CANDIDATE", candidate, env, scratch, workspace=has_workspace):
             failures.append("CANDIDATE_HTTP")
 

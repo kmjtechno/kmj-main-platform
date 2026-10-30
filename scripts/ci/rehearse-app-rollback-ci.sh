@@ -36,6 +36,7 @@ cleanup() {
 trap cleanup EXIT
 
 # Previous release code in its own worktree; candidate is the checked-out HEAD.
+git -C "$repo" merge-base --is-ancestor "$base" "$head" || { echo 'BLOCKED: base is not an ancestor of head'; exit 3; }
 git -C "$repo" cat-file -e "$base^{commit}" || { echo 'BLOCKED: base commit unavailable'; exit 3; }
 git -C "$repo" worktree add --detach "$tmp/previous" "$base" >/dev/null
 for tree in "$tmp/previous/apps/platform" "$repo/apps/platform"; do
@@ -69,6 +70,9 @@ ver="$(psql -h "$socket" -X -qAt -U kmj_qa -d kmj_release_qa -c 'SHOW server_ver
 (( ver / 10000 == 18 )) || { echo 'BLOCKED: not PostgreSQL 18'; exit 3; }
 [[ "$(psql -h "$socket" -X -qAt -U kmj_qa -d kmj_release_qa -c "SELECT count(*) FROM pg_tables WHERE schemaname='public'")" == 0 ]] \
   || { echo 'BLOCKED: database not empty'; exit 3; }
+nonce="$(python3 -c 'import secrets;print(secrets.token_hex(24))')"
+psql -h "$socket" -X -qAt -v ON_ERROR_STOP=1 -U kmj_qa -d kmj_release_qa \
+  -c "COMMENT ON DATABASE kmj_release_qa IS 'kmj-disposable-rehearsal:$nonce'" >/dev/null
 echo "APP_ROLLBACK_BASE_SHA=$base"
 echo "APP_ROLLBACK_HEAD_SHA=$head"
 echo 'APP_ROLLBACK_DATABASE=ISOLATED_PRIVATE_UNIX_SOCKET NETWORK=NONE HOST_PORTS=NONE'
@@ -78,6 +82,8 @@ env -i PATH="$PATH" HOME="$tmp" \
   DB_HOST="$socket" DB_PORT=5432 DB_DATABASE=kmj_release_qa DB_USERNAME=kmj_qa DB_PASSWORD= \
   KMJ_REHEARSAL_PREVIOUS_APP="$tmp/previous/apps/platform" \
   KMJ_REHEARSAL_CANDIDATE_APP="$repo/apps/platform" \
-  KMJ_REHEARSAL_VERBOSE=1 \
+  KMJ_REHEARSAL_VERBOSE=1 KMJ_REHEARSAL_DB_NONCE="$nonce" \
+  KMJ_REHEARSAL_MIN_NEW_MIGRATIONS="${KMJ_REHEARSAL_MIN_NEW_MIGRATIONS:-0}" \
+  KMJ_REHEARSAL_REQUIRE_WORKSPACE_ROUTES="${KMJ_REHEARSAL_REQUIRE_WORKSPACE_ROUTES:-0}" \
   python3 -I "$repo/scripts/operations/rehearse-app-http-db-rollback-20261029.py"
 echo 'PRODUCTION_DATABASE_TOUCHED=NO PRODUCTION_DEPLOYMENT=NONE'

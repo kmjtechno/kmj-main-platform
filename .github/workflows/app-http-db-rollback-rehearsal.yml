@@ -52,3 +52,12 @@ jobs:
           set -euo pipefail
           test "$(git rev-parse HEAD)" = "$HEAD_SHA"
           bash scripts/ci/rehearse-app-rollback-ci.sh "$BASE_SHA" "$HEAD_SHA"
+      - name: Fixed regression pair (pre-workspace main to this head) must exercise a real migration
+        env:
+          HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          KMJ_REHEARSAL_MIN_NEW_MIGRATIONS: '1'
+          KMJ_REHEARSAL_REQUIRE_WORKSPACE_ROUTES: '1'
+        run: |
+          set -euo pipefail
+          # 39b88b36 is main immediately before the AI Workspace merge (#693).
+          bash scripts/ci/rehearse-app-rollback-ci.sh 39b88b36d071d3f78f2392d609d3febc2c530165 "$HEAD_SHA"
