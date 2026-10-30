@@ -60,6 +60,28 @@ return [
             'kmj_activation_confirmed' => env('KMJ_BREVO_ACTIVATED', false),
         ],
 
+        /*
+         * Optional isolated BillionMail SMTP submission. Disabled until the
+         * owner verifies DNS, TLS, authenticated relay and real-inbox delivery.
+         * Never installs BillionMail or changes MX / Cloudflare Email Routing.
+         *
+         * SMTPS/465 uses implicit TLS. Do not send production credentials over
+         * port 25 or an unverified STARTTLS endpoint.
+         */
+        'kmj_billionmail' => [
+            'transport' => 'smtp',
+            'scheme' => 'smtps',
+            'host' => env('KMJ_BILLIONMAIL_SMTP_HOST', '127.0.0.1'),
+            'port' => 465,
+            'username' => env('KMJ_BILLIONMAIL_SMTP_LOGIN'),
+            'password' => env('KMJ_BILLIONMAIL_SMTP_PASSWORD'),
+            'timeout' => 10,
+            'local_domain' => env('MAIL_EHLO_DOMAIN', 'kmjtechno.com'),
+            'kmj_requires_credentials' => true,
+            'kmj_required_sender_domain' => 'kmjtechno.com',
+            'kmj_activation_confirmed' => env('KMJ_BILLIONMAIL_ACTIVATED', false),
+        ],
+
         'smtp' => [
             'transport' => 'smtp',
             'scheme' => env('MAIL_SCHEME'),
