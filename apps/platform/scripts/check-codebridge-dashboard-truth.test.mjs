@@ -202,21 +202,21 @@ void test('owner and customer navigation share one device dashboard without dupl
     assert.match(ownerDeviceSummary, /Read-only summary:/);
     assert.match(ownerDeviceSummary, /connection not verified/);
     assert.match(ownerDeviceSummary, /Owner license settings/);
-    assert.doesNotMatch(ownerDeviceSummary, /<DeviceControlCenter\\b/);
+    assert.doesNotMatch(ownerDeviceSummary, /<DeviceControlCenter\b/);
     assert.match(
         ownerDeviceSummary,
-        /href="\\/services\\/kmj-codebridge#codebridge-device-control"/,
+        /href="\/services\/kmj-codebridge#codebridge-device-control"/,
     );
     assert.match(
         ownerModuleNavigation,
-        /href: '\\/services\\/kmj-codebridge#codebridge-device-control'/,
+        /href: '\/services\/kmj-codebridge#codebridge-device-control'/,
     );
     assert.doesNotMatch(
         ownerModuleNavigation,
-        /href: '\\/operator\\/codebridge\\/owner-plan'/,
+        /href: '\/operator\/codebridge\/owner-plan'/,
     );
-    assert.match(ui, /codeBridgeSectionFromHash\\(window\\.location\\.hash\\)/);
-    assert.match(ui, /window\\.addEventListener\\('hashchange', apply\\)/);
-    assert.match(ui, /window\\.removeEventListener\\('hashchange', apply\\)/);
-    assert.match(ui, /scrollIntoView\\(\\{ block: 'start' \\}\\)/);
+    assert.match(ui, /codeBridgeSectionFromHash\(window\.location\.hash\)/);
+    assert.match(ui, /window\.addEventListener\('hashchange', apply\)/);
+    assert.match(ui, /window\.removeEventListener\('hashchange', apply\)/);
+    assert.match(ui, /scrollIntoView\(\{ block: 'start' \}\)/);
 });
