@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Services\Licensing\OmniDesk\OmniDeskActivationQueryService;
 use App\Services\Licensing\OmniDesk\OmniDeskApiAuthorizer;
 use App\Services\Licensing\OmniDesk\OmniDeskApiPrincipal;
+use App\Services\Licensing\OmniDesk\OmniDeskRenewalChallengeStore;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Validation\ValidationException;
@@ -38,6 +39,7 @@ $omnideskError = static function (Throwable $error) {
         'OMNIDESK_UNAUTHENTICATED' => ['UNAUTHENTICATED', 401],
         'OMNIDESK_FORBIDDEN' => ['FORBIDDEN', 403],
         'OMNIDESK_ACTIVATION_NOT_FOUND' => ['ACTIVATION_REVOKED', 404],
+        'OMNIDESK_RENEWAL_CHALLENGE_DENIED' => ['ACTIVATION_REVOKED', 404],
         'OMNIDESK_REASON_REQUIRED' => ['INVALID_REQUEST', 422],
         'OMNIDESK_PRODUCT_NOT_FOUND' => ['SERVER_UNAVAILABLE', 503],
         default => ['SERVER_UNAVAILABLE', 503],
@@ -81,6 +83,37 @@ Route::prefix('v1/licensing/omnidesk')->group(function () use (
             return $omnideskError($error);
         }
     })->middleware('throttle:60,1');
+
+    // Strictly owner-managed challenge issuance. Device-only authorization is
+    // a separate, unimplemented integration, so never accept an untrusted
+    // client-selected tenant or device identity for this endpoint.
+    Route::post('activations/{activation_id}/renewal-challenge', function (
+        Request $request,
+        string $activation_id,
+        OmniDeskRenewalChallengeStore $store,
+    ) use ($omnideskPrincipal, $omnideskError) {
+        try {
+            $principal = $omnideskPrincipal($request);
+            if (! $principal->canManage) {
+                throw new DomainException('OMNIDESK_FORBIDDEN');
+            }
+            if (strlen($request->getContent()) > 128 || $request->all() !== []) {
+                return response()->json(['error' => 'INVALID_REQUEST'], 422)
+                    ->header('Cache-Control', 'no-store, private');
+            }
+
+            $issued = $store->issue($activation_id, $principal->organizationId);
+
+            return response()->json([
+                'activation_id' => $activation_id,
+                'proof_scheme' => 'KMJ-OMNIDESK-RENEW-v1',
+                'server_challenge' => $issued['server_challenge'],
+                'expires_in' => $issued['expires_in'],
+            ])->header('Cache-Control', 'no-store, private');
+        } catch (Throwable $error) {
+            return $omnideskError($error);
+        }
+    })->whereUuid('activation_id')->middleware('throttle:12,1');
 
     Route::post('activations/{activation_id}/deactivate', function (
         Request $request,
