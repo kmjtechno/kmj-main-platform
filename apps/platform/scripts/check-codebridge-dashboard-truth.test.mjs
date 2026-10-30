@@ -215,17 +215,8 @@ void test('one CodeBridge dashboard with owner-only license settings', () => {
         ownerModuleNavigation,
         /href: '\/operator\/codebridge\/owner-plan'/,
     );
-    assert.match(
-        ui,
-        /codeBridgeSectionFromHash\(window\.location\.hash\)/,
-    );
-    assert.match(
-        ui,
-        /window\.addEventListener\('hashchange', apply\)/,
-    );
-    assert.match(
-        ui,
-        /window\.removeEventListener\('hashchange', apply\)/,
-    );
+    assert.match(ui, /codeBridgeSectionFromHash\(window\.location\.hash\)/);
+    assert.match(ui, /window\.addEventListener\('hashchange', apply\)/);
+    assert.match(ui, /window\.removeEventListener\('hashchange', apply\)/);
     assert.match(ui, /scrollIntoView\(\{ block: 'start' \}\)/);
 });
