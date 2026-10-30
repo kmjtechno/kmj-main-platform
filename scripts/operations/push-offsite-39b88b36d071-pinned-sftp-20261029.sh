@@ -92,6 +92,7 @@ classify() {
   if   grep -Eiq 'Permission denied \(publickey|Too many authentication failures|no mutual signature|Load key|invalid format|incorrect passphrase' "$f"; then echo SSH_AUTH_KEY_REJECTED
   elif grep -Eiq 'Host key verification failed|REMOTE HOST IDENTIFICATION HAS CHANGED' "$f"; then echo SSH_HOSTKEY
   elif grep -Eiq 'timed out|refused|No route|unreachable|Could not resolve|reset by peer|Connection closed' "$f"; then echo NETWORK_OR_REMOTE_DOWN
+  elif grep -Eiq 'Operation unsupported|Unknown extension|not supported|does not support' "$f"; then echo REMOTE_OPERATION_UNSUPPORTED
   elif grep -Eiq 'No space left|quota' "$f"; then echo REMOTE_QUOTA
   elif grep -Eiq 'No such file|not found' "$f"; then echo REMOTE_PATH_MISSING
   elif grep -Eiq 'Permission denied|Failure' "$f"; then echo REMOTE_PERMISSION
@@ -127,6 +128,30 @@ status LOCAL_ENCRYPTED_SHA256 "$local_sha"
 # publication fails closed; no rename fallback is permitted.
 uniq=$(od -An -N10 -tx1 /dev/urandom | tr -d ' \n')
 [[ "$uniq" =~ ^[0-9a-f]{20}$ ]] || block RANDOM_UNAVAILABLE
+
+# 2a) Capability probe BEFORE the large upload: the server must create a hardlink
+# (no rename fallback exists). Uses a tiny unique probe object and removes it.
+probe_a="$rdir/.probe-$REMOTE_NAME.$uniq"
+probe_b="$rdir/.probe-$REMOTE_NAME.$uniq.lnk"
+printf 'kmj-offsite-capability-probe\n' >"$tmp/probe"
+printf 'put %s %s\n' "$tmp/probe" "$probe_a" >"$tmp/b_probe_put"
+printf 'ln %s %s\n' "$probe_a" "$probe_b" >"$tmp/b_probe_ln"
+printf -- '-rm %s\n-rm %s\n' "$probe_b" "$probe_a" >"$tmp/b_probe_rm"
+probe_cleanup() { run_sftp probe_rm "$tmp/b_probe_rm" || true; }
+if ! run_sftp probe_put "$tmp/b_probe_put"; then
+  probe_cleanup
+  status REMOTE_CAPABILITY_PROBE "FAIL:$(classify "$tmp/probe_put.err")"; status OFFSITE_PUSH FAIL; exit 1
+fi
+if ! run_sftp probe_ln "$tmp/b_probe_ln"; then
+  probe_cleanup
+  case "$(classify "$tmp/probe_ln.err")" in
+    SSH_AUTH_KEY_REJECTED|SSH_HOSTKEY|NETWORK_OR_REMOTE_DOWN) status REMOTE_CAPABILITY_PROBE "FAIL:$(classify "$tmp/probe_ln.err")";;
+    *) status REMOTE_CAPABILITY_PROBE FAIL:REMOTE_HARDLINK_UNAVAILABLE;;
+  esac
+  status OFFSITE_PUSH FAIL; exit 1
+fi
+probe_cleanup
+status REMOTE_CAPABILITY_PROBE PASS
 incoming="$rdir/.incoming-$REMOTE_NAME.$uniq"
 final="$rdir/$REMOTE_NAME"
 
@@ -147,7 +172,16 @@ if run_sftp commit "$tmp/b_commit"; then
     exit 1
   fi
 else
-  # Target exists (or commit failed). Only an identical existing object is
+  # A generic SFTP failure from `ln` means the target already exists; anything
+  # that is clearly something else is reported as its own class and stops here.
+  case "$(classify "$tmp/commit.err")" in
+    REMOTE_OPERATION_UNSUPPORTED) status REMOTE_COMMIT_NO_CLOBBER FAIL:REMOTE_HARDLINK_UNAVAILABLE; status OFFSITE_PUSH FAIL
+      printf -- '-rm %s\n' "$incoming" >"$tmp/b_cleanup"; run_sftp cleanup "$tmp/b_cleanup" || true; exit 1;;
+    SSH_AUTH_KEY_REJECTED|SSH_HOSTKEY|NETWORK_OR_REMOTE_DOWN|REMOTE_QUOTA|REMOTE_PATH_MISSING)
+      status REMOTE_COMMIT_NO_CLOBBER "FAIL:$(classify "$tmp/commit.err")"; status OFFSITE_PUSH FAIL
+      printf -- '-rm %s\n' "$incoming" >"$tmp/b_cleanup"; run_sftp cleanup "$tmp/b_cleanup" || true; exit 1;;
+  esac
+  # Target exists (or generic failure). Only an identical existing object is
   # acceptable; it is verified byte-for-byte below, never assumed.
   status REMOTE_COMMIT_NO_CLOBBER TARGET_EXISTS_OR_FAILED
   printf -- '-rm %s\n' "$incoming" >"$tmp/b_cleanup"; run_sftp cleanup "$tmp/b_cleanup" || true

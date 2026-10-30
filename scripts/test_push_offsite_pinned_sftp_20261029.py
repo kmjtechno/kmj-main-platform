@@ -70,7 +70,8 @@ while read -r cmd a b c; do
   case "$cmd" in
     get) if [ -f "$a" ]; then cp "$a" "$b"; else echo "File \\"$a\\" not found." >&2; exit 1; fi ;;
     put) case "{mode}" in corrupt) echo corrupt > "$b";; quota) echo 'Failure: No space left' >&2; exit 1;; *) cp "$a" "$b";; esac ;;
-    ln) if [ -e "$b" ]; then echo 'Couldn'"'"'t link: Failure' >&2; exit 1; fi; ln "$a" "$b" ;;
+    ln) case "{mode}" in nohl) echo 'Couldn'"'"'t link: Operation unsupported' >&2; exit 1;; esac
+        if [ -e "$b" ]; then echo 'Couldn'"'"'t link: Failure' >&2; exit 1; fi; ln "$a" "$b" ;;
     rm) rm -f "$a" ;;
     -rm) rm -f "$a" ;;
   esac
@@ -117,8 +118,26 @@ class PinnedSftpPush(unittest.TestCase):
     def test_auth_failure_is_classified_not_printed(self):
         r, _, _, _ = self.go(sftp_mode="auth")
         self.assertEqual(r.returncode, 1)
-        self.assertIn("SFTP_UPLOAD=FAIL:SSH_AUTH_KEY_REJECTED", r.stdout)
+        self.assertIn("REMOTE_CAPABILITY_PROBE=FAIL:SSH_AUTH_KEY_REJECTED", r.stdout)
         self.assertNotIn("publickey", r.stdout + r.stderr)
+
+    def test_server_without_hardlink_is_detected_before_any_large_upload(self):
+        r, uploaded, left, log = self.go(sftp_mode="nohl")
+        self.assertEqual(r.returncode, 1)
+        self.assertIn("REMOTE_CAPABILITY_PROBE=FAIL:REMOTE_HARDLINK_UNAVAILABLE", r.stdout)
+        self.assertNotIn("SFTP_UPLOAD=PASS", r.stdout)
+        self.assertNotIn("OFFSITE_PUSH=PASS", r.stdout)
+        self.assertIsNone(uploaded)
+        self.assertNotIn(".incoming-", log)
+        self.assertEqual(left, [])
+
+    def test_capability_probe_passes_and_leaves_no_probe_objects(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            env = Env(Path(tmp))
+            r = env.run()
+            self.assertEqual(r.returncode, 0, r.stdout)
+            self.assertIn("REMOTE_CAPABILITY_PROBE=PASS", r.stdout)
+            self.assertEqual([p.name for p in env.remote.iterdir() if p.name.startswith((".probe-", ".incoming-"))], [])
 
     def test_network_failure_classified(self):
         r, *_ = self.go(sftp_mode="net")
