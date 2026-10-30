@@ -37,6 +37,17 @@ async function waitForStatus(status, count, timeoutMs = 75_000) {
     return false;
 }
 
+async function waitForRow(text, status, timeoutMs = 75_000) {
+    const end = Date.now() + timeoutMs;
+    while (Date.now() < end) {
+        const n = await page.locator(`[data-testid="job-list"] li[data-status="${status}"]`, { hasText: text }).count();
+        if (n >= 1) return true;
+        await page.waitForTimeout(1500);
+        await page.reload({ waitUntil: 'networkidle' });
+    }
+    return false;
+}
+
 async function queueGate(gate) {
     // A late reload can remount the panel and reset the controlled select; re-assert the exact
     // state (tool + gate text) immediately before clicking, and retry if it was reset.
@@ -55,17 +66,14 @@ async function queueGate(gate) {
                 page.getByTestId('queue-tool').click(),
             ]);
             const body = req.postData() || '';
-            if (!body.includes('quality_gate') || !body.includes(gate)) {
-                const state = await page.evaluate(() => ({
-                    selects: document.querySelectorAll('#ws-tool').length,
-                    gates: document.querySelectorAll('#ws-gate').length,
-                    buttons: document.querySelectorAll('[data-testid="queue-tool"]').length,
-                    tool: document.querySelector('#ws-tool')?.value,
-                    gate: document.querySelector('#ws-gate')?.value,
-                }));
-                throw new Error(`queue POST did not carry quality_gate ${gate}: ${body.replace(/idempotency_key.*/, '').slice(0, 160)} DOM ${JSON.stringify(state)} POSTS ${JSON.stringify(posts)}`);
+            if (body.includes('quality_gate') && body.includes(gate)) {
+                return;
             }
-            return;
+            // A late render reset the panel between the check and the click: that click only queued a
+            // harmless read-only request. Stage again and retry.
+            console.log('retry: panel reset before click', body.replace(/idempotency_key.*/, '').slice(0, 120));
+            await page.waitForTimeout(1500);
+            continue;
         }
         await page.waitForTimeout(1000);
     }
@@ -102,7 +110,7 @@ try {
 
     // 2) execute tool with a configured gate
     await queueGate('fast');
-    expect(await waitForStatus('succeeded', 2), 'quality_gate "fast" completed on the device');
+    expect(await waitForRow('quality_gate', 'succeeded'), 'quality_gate "fast" completed on the device');
     const gateRow = page.locator('[data-testid="job-list"] li', { hasText: 'quality_gate' }).first();
     const gateText = ((await gateRow.count()) ? await gateRow.innerText() : '').toLowerCase();
     const rows = await page.locator('[data-testid="job-list"] li').evaluateAll((els) => els.map((e) => `${e.getAttribute('data-status')}:${e.textContent.slice(0, 80)}`));
@@ -110,7 +118,7 @@ try {
 
     // 3) an unconfigured gate is refused by the device and reported honestly, never faked as success
     await queueGate('nonexistent');
-    expect(await waitForStatus('failed', 1), 'unconfigured gate is reported as failed by the device');
+    expect(await waitForRow('quality_gate', 'failed'), 'unconfigured gate is reported as failed by the device');
     expect(
         (await page.getByTestId('job-list').innerText()).toLowerCase().includes('gate_not_allowed'),
         'the failure is explained in the UI',
