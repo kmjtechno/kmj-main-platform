@@ -1,0 +1,14 @@
+{
+    "schema_version": 1,
+    "proof_scheme": "KMJ-OMNIDESK-RENEW-v1",
+    "public_key_base64url": "IIKL9cW9ystoSGMzbCAvtVmdpIvlWWYVdCFwcFvsqfc",
+    "device_public_key_fingerprint": "sha256:7300c0ae1429cd153252736a781b78f404f4738f17db195dbef533b74a45ec86",
+    "activation_id": "activation-12345678",
+    "current_jti": "jti-0123456789abcdef",
+    "current_sequence": 7,
+    "server_challenge": "challenge-0123456789abcdef",
+    "client_nonce": "nonce-fedcba9876543210",
+    "client_version": "0.0.1",
+    "canonical_message_base64url": "S01KLU9NTklERVNLLVJFTkVXLXYxAAAAE2FjdGl2YXRpb24tMTIzNDU2NzgAAAAUanRpLTAxMjM0NTY3ODlhYmNkZWYAAAABNwAAABpjaGFsbGVuZ2UtMDEyMzQ1Njc4OWFiY2RlZgAAABZub25jZS1mZWRjYmE5ODc2NTQzMjEwAAAABTAuMC4x",
+    "signature_base64url": "wlnKmf7B4cEBJbctnucygV9z-bz1Is5psWXdVgP5GgE0J6IvjzucJv-2mphxh7ztYj6JuO1N03_HLET1jLt_BQ"
+}
