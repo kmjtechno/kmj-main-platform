@@ -35,6 +35,16 @@ async function waitForStatus(status, count, timeoutMs = 75_000) {
     return false;
 }
 
+async function queueGate(gate) {
+    // Inertia may still be settling after a reload: only act once the gate input really exists.
+    await page.selectOption('#ws-tool', 'quality_gate');
+    await page.locator('#ws-gate').waitFor({ timeout: 20_000 });
+    await page.fill('#ws-gate', gate);
+    const queueButton = page.getByTestId('queue-tool');
+    await page.waitForFunction(() => !document.querySelector('[data-testid="queue-tool"]')?.disabled, null, { timeout: 10_000 });
+    await queueButton.click();
+}
+
 try {
     await page.goto(`${origin}/login`, { waitUntil: 'networkidle' });
     await page.fill('input[name="email"]', email);
@@ -64,17 +74,15 @@ try {
     expect(list1.includes('commit_sha') && list1.includes('pass'), 'evidence shows commit_sha and result=pass');
 
     // 2) execute tool with a configured gate
-    await page.selectOption('#ws-tool', 'quality_gate');
-    await page.fill('#ws-gate', 'fast');
-    await page.getByTestId('queue-tool').click();
+    await queueGate('fast');
     expect(await waitForStatus('succeeded', 2), 'quality_gate "fast" completed on the device');
-    const list2 = (await page.getByTestId('job-list').innerText()).toLowerCase();
-    expect(list2.includes('exit_code') && list2.includes('fast'), `gate evidence shows the gate id and exit_code ${list2.includes('exit_code') ? '' : JSON.stringify(list2.replace(/\n+/g, " | ").slice(0, 3500))}`);
+    const gateRow = page.locator('[data-testid="job-list"] li', { hasText: 'quality_gate' }).first();
+    const gateText = ((await gateRow.count()) ? await gateRow.innerText() : '').toLowerCase();
+    const rows = await page.locator('[data-testid="job-list"] li').evaluateAll((els) => els.map((e) => `${e.getAttribute('data-status')}:${e.textContent.slice(0, 80)}`));
+    expect(gateText.includes('exit_code') && gateText.includes('fast'), `gate evidence shows the gate id and exit_code ${JSON.stringify(rows)}`);
 
     // 3) an unconfigured gate is refused by the device and reported honestly, never faked as success
-    await page.selectOption('#ws-tool', 'quality_gate');
-    await page.fill('#ws-gate', 'nonexistent');
-    await page.getByTestId('queue-tool').click();
+    await queueGate('nonexistent');
     expect(await waitForStatus('failed', 1), 'unconfigured gate is reported as failed by the device');
     expect(
         (await page.getByTestId('job-list').innerText()).toLowerCase().includes('gate_not_allowed'),
