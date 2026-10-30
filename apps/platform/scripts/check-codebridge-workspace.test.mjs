@@ -38,11 +38,19 @@ void test('workspace never invents progress, replies or paid capability', () => 
 
 void test('controller exposes no secrets and marks missing backends unavailable', () => {
     assert.doesNotMatch(controller, /api_key/);
-    for (const key of ['job_events'])
-        assert.match(
-            controller,
-            new RegExp(`'${key}' => \\[\\s*'available' => false`),
-        );
+    // Device tool requests are only offered when an operator enabled them; default is off.
+    assert.match(
+        controller,
+        /'job_events' => \[\s*'available' => WorkspaceJobService::enabled\(\)/,
+    );
+    const config = readFileSync(
+        new URL('../config/codebridge.php', import.meta.url),
+        'utf8',
+    );
+    assert.match(
+        config,
+        /'workspace_jobs_enabled' => \(bool\) env\('CODEBRIDGE_WORKSPACE_JOBS_ENABLED', false\)/,
+    );
 });
 
 void test('device pairing stays in the Control Center', () => {

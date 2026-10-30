@@ -15,6 +15,7 @@ import {
     MessageSquarePlus,
     PanelLeft,
     PanelRight,
+    Play,
     RotateCw,
     SendHorizontal,
     ShieldCheck,
@@ -22,6 +23,15 @@ import {
     X,
 } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
+import {
+    TOOL_ERROR_TEXT,
+    ToolJobsPanel,
+} from '@/components/codebridge/tool-jobs-panel';
+import type {
+    Job,
+    JobEvent,
+    ToolDef,
+} from '@/components/codebridge/tool-jobs-panel';
 
 type DeviceProject = { id: string; name: string };
 type PendingProject = {
@@ -83,6 +93,10 @@ type Props = {
     activeConversation: { id: string; title: string } | null;
     transcript: { messages: Message[]; events: WorkflowEvent[] };
     chatError?: string | null;
+    jobs: Job[];
+    jobEvents: JobEvent[];
+    activeJobId: string | null;
+    tools: ToolDef[];
     capabilities: {
         conversations: Capability;
         chat_executor: Capability;
@@ -154,6 +168,10 @@ export default function CodeBridgeWorkspace(props: Props) {
         activeConversation,
         transcript,
         chatError,
+        jobs,
+        jobEvents,
+        activeJobId,
+        tools,
         capabilities,
         links,
     } = props;
@@ -518,7 +536,9 @@ export default function CodeBridgeWorkspace(props: Props) {
                                 className="flex items-center gap-2 rounded-xl border border-amber-400/40 bg-amber-500/10 p-3 text-xs text-amber-200"
                             >
                                 <AlertTriangle className="h-4 w-4 shrink-0" />
-                                {CHAT_ERROR_TEXT[chatError] ?? chatError}
+                                {CHAT_ERROR_TEXT[chatError] ??
+                                    TOOL_ERROR_TEXT[chatError] ??
+                                    chatError}
                             </p>
                         )}
 
@@ -626,8 +646,8 @@ export default function CodeBridgeWorkspace(props: Props) {
                                     ))}
                                 </ol>
                                 <p className="mt-3 border-t border-slate-700/50 pt-2 text-[11px] text-slate-400">
-                                    Device job and tool events are not recorded
-                                    here. {capabilities.job_events.reason}
+                                    Chat events only. Device tool requests have
+                                    their own timeline in the right pane.
                                 </p>
                             </details>
                         </section>
@@ -740,6 +760,21 @@ export default function CodeBridgeWorkspace(props: Props) {
                             <ShieldCheck className="mr-2 inline h-3.5 w-3.5" />
                             Control Center
                         </Link>
+                    </PaneSection>
+
+                    <PaneSection
+                        icon={<Play className="h-4 w-4" />}
+                        title="Device tool requests"
+                    >
+                        <ToolJobsPanel
+                            available={capabilities.job_events.available}
+                            reason={capabilities.job_events.reason}
+                            selected={selected}
+                            tools={tools}
+                            jobs={jobs}
+                            jobEvents={jobEvents}
+                            activeJobId={activeJobId}
+                        />
                     </PaneSection>
 
                     <PaneSection
