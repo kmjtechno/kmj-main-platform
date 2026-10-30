@@ -2,6 +2,7 @@ import { Link, usePage } from '@inertiajs/react';
 import { Menu, Search, X, ArrowRight } from 'lucide-react';
 import { useRef, useState } from 'react';
 import LockedBrand from '@/components/locked-brand';
+import { register } from '@/routes';
 import PublicLanguageSwitch from '@/components/public-language-switch';
 import '../../css/locked-landing.css';
 import '../../css/public-theme.css';
@@ -83,14 +84,18 @@ export default function PublicSiteHeader() {
                                 >
                                     Sign in
                                 </Link>
-                                <Link
-                                    href="/register"
-                                    onClick={() => setOpen(false)}
-                                >
-                                    {registrationAvailable
-                                        ? 'Create account'
-                                        : 'Registration paused — details'}
-                                </Link>
+                                {registrationAvailable ? (
+                                    <Link
+                                        href={register()}
+                                        onClick={() => setOpen(false)}
+                                    >
+                                        Create account
+                                    </Link>
+                                ) : (
+                                    <span role="status" className="lock-registration-paused">
+                                        Registration paused
+                                    </span>
+                                )}
                             </>
                         )}
                     </div>
@@ -116,19 +121,23 @@ export default function PublicSiteHeader() {
                             <Link href="/login" className="lock-auth-login">
                                 Sign in
                             </Link>
-                            <Link
-                                href="/register"
-                                className="lock-auth-register"
-                                aria-label={
-                                    registrationAvailable
-                                        ? 'Create KMJ TECHNO account'
-                                        : 'Register account — registration currently paused'
-                                }
-                            >
-                                {registrationAvailable
-                                    ? 'Create account'
-                                    : 'Register'}
-                            </Link>
+                            {registrationAvailable ? (
+                                <Link
+                                    href={register()}
+                                    className="lock-auth-register"
+                                    aria-label="Create KMJ TECHNO account"
+                                >
+                                    Create account
+                                </Link>
+                            ) : (
+                                <span
+                                    role="status"
+                                    className="lock-registration-paused"
+                                    title="Verification email delivery is temporarily unavailable"
+                                >
+                                    Registration paused
+                                </span>
+                            )}
                         </>
                     )}
                 </div>
