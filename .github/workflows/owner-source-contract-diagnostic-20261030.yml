@@ -1,0 +1,34 @@
+name: Temporary Owner source contract baseline diagnostic
+on:
+  push:
+    branches: [fix/owner-circleci-baseline-20261030]
+    paths:
+      - .github/workflows/owner-source-contract-diagnostic-20261030.yml
+permissions:
+  contents: read
+jobs:
+  source-contracts:
+    runs-on: ubuntu-latest
+    container: cimg/php:8.4-node
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Verify exact current baseline and report npm check failures
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd apps/platform
+          npm ci --ignore-scripts --no-audit --no-fund
+          set +e
+          npm run check > /tmp/kmj-source-contract-check.log 2>&1
+          status=$?
+          set -e
+          echo "KMJ_BASELINE_CHECK_EXIT=$status"
+          grep -E 'not ok|^# fail|^# pass|FAILED|^Error:|Format issues|error TS' /tmp/kmj-source-contract-check.log | tail -n 140 || true
+          if [ "$status" -ne 0 ]; then
+            echo 'KMJ_SOURCE_CONTRACTS=FAIL_CLOSED'
+            exit "$status"
+          fi
+          echo 'KMJ_SOURCE_CONTRACTS=PASS'
