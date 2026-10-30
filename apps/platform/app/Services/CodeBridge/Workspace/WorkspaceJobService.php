@@ -208,7 +208,8 @@ final class WorkspaceJobService
 
             return [
                 'id' => (string) $row['id'], 'tool' => (string) $row['tool'],
-                'arguments' => is_array($arguments) ? $arguments : [], 'project_id' => (string) $row['project_id'],
+                // An empty PHP array would serialize as a JSON array; the device contract requires an object.
+                'arguments' => is_array($arguments) && $arguments !== [] ? $arguments : (object) [], 'project_id' => (string) $row['project_id'],
                 'lease_expires_at' => $lease->toIso8601String(), 'claim_token' => $token,
             ];
         });

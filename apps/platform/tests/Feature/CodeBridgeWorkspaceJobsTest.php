@@ -126,6 +126,15 @@ final class CodeBridgeWorkspaceJobsTest extends TestCase
         self::assertSame('claimed', DB::table('codebridge_workspace_jobs')->where('id', $id)->value('status'));
     }
 
+    public function test_claim_serializes_empty_arguments_as_a_json_object_for_the_device_contract(): void
+    {
+        $this->enqueue($this->alice, 'git_status');
+        $response = $this->device('desk-a')->postJson('/api/codebridge/v1/jobs/claim');
+        $response->assertOk();
+        self::assertStringContainsString('"arguments":{}', $response->getContent());
+        self::assertStringNotContainsString('"arguments":[]', $response->getContent());
+    }
+
     public function test_only_catalogued_tools_with_closed_arguments_are_accepted(): void
     {
         foreach ([['rm_rf', null], ['git_status', 'fast'], ['quality_gate', null], ['quality_gate', '../../etc'], ['quality_gate', 'Fast;rm'], ['bash', 'ls']] as [$tool, $gate]) {

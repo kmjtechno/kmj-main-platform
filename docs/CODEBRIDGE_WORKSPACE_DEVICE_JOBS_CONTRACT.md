@@ -13,7 +13,7 @@ Status: Main Platform side implemented behind `CODEBRIDGE_WORKSPACE_JOBS_ENABLED
 Base path `/api/codebridge/v1`. Responses are `Cache-Control: no-store, private`. 503 while disabled.
 
 `POST /jobs/claim` -> `{"job": null}` or
-`{"job": {"id", "tool", "arguments", "project_id", "lease_expires_at", "claim_token"}}`.
+`{"job": {"id", "tool", "arguments" (always a JSON object, `{}` when empty), "project_id", "lease_expires_at", "claim_token"}}`.
 One request in flight per device. `claim_token` is returned once and must be sent as header `X-KMJ-Claim` on every report.
 
 `POST /jobs/{id}/events` body (<=16 KiB):
