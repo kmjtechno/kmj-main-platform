@@ -45,20 +45,17 @@ void test('owner-only entry is above customer services, never public listing', (
     assert.ok(dashboard.includes('{ownerProducts !== null && ('));
     assert.ok(dashboard.includes('href="/operator"'));
     assert.ok(dashboard.includes('{ownerProducts === null && ('));
-    const guarded = ownerRules.indexOf(
-        '$isPlatformOwner = app(PlatformOwnerAccess::class)->allows($user);',
+    // Owners are redirected before any catalog query; the customer response
+    // always carries ownerProducts = null.
+    const redirect = ownerRules.indexOf(
+        "return redirect()->route('super-admin.index');",
     );
-    const ownerProducts = ownerRules.indexOf(
-        'if ($isPlatformOwner) {',
-        guarded,
-    );
+    const nulled = ownerRules.indexOf('$ownerProducts = null;', redirect);
     const exposed = ownerRules.indexOf(
         "'ownerProducts' => $ownerProducts",
-        ownerProducts,
+        nulled,
     );
-    assert.ok(
-        guarded > 0 && ownerProducts > guarded && exposed > ownerProducts,
-    );
+    assert.ok(redirect > 0 && nulled > redirect && exposed > nulled);
 });
 
 void test('overview retains governed order confirmation and explicit fulfillment', () => {

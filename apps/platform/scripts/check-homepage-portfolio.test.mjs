@@ -81,7 +81,10 @@ void test('unrecognized public products never inherit unrelated cinema artwork',
     assert.match(source, /artwork\[p\.slug\]/);
     assert.match(source, /p\.image_path/);
     assert.match(source, /lock-product-art-unavailable/);
-    assert.match(source, /artwork not available/);
+    assert.match(
+        readFileSync('resources/js/components/product-artwork.tsx', 'utf8'),
+        /artwork not available/,
+    );
     assert.doesNotMatch(
         source,
         /p\.image_path\s*\|\|\s*['"]\/assets\/locked\/cinema\.webp/,
@@ -161,11 +164,13 @@ void test('public homepage exposes accessible account entry without bypassing ve
         /registrationAvailable = publicSite\?\.registration_available === true/,
     );
     assert.match(header, /href="\/login"/);
-    assert.match(header, /href="\/register"/);
+    assert.match(header, /const register = \(\) => '\/register'/);
+    assert.match(header, /href=\{register\(\)\}/);
     assert.match(header, /className="lock-auth-login"/);
     assert.match(header, /className="lock-auth-register"/);
     assert.match(header, /lock-mobile-account/);
-    assert.match(header, /Registration paused — details/);
+    assert.match(header, /className="lock-registration-paused"/);
+    assert.match(header, /Registration paused/);
     assert.match(styles, /\.lock-auth-login/);
     assert.match(styles, /\.lock-mobile-account/);
     assert.match(
@@ -196,14 +201,15 @@ void test('locked canvas keeps both account buttons visible on mobile and owner 
         /\.lock-auth-register,\s*\.lock-auth-login\s*\{\s*display: inline-flex/,
     );
     assert.doesNotMatch(styles, /\.lock-auth-register\s*\{\s*display: none/);
-    assert.match(ownerStyles, /max-width: 1520px/);
+    assert.match(ownerStyles, /max-width: none/);
     assert.match(owner, /href="\/super-admin"/);
     assert.match(
         header,
-        /ownerEnabled\s*\?\s*'\/super-admin'\s*:\s*'\/dashboard'/,
+        /dashboardHref\s*=\s*ownerEnabled\s*\?\s*'\/super-admin'\s*:\s*'\/dashboard'/,
     );
     assert.match(header, /href="\/login"/);
-    assert.match(header, /href="\/register"/);
+    assert.match(header, /const register = \(\) => '\/register'/);
+    assert.match(header, /href=\{register\(\)\}/);
 });
 
 void test('owner-configured product imagery never displays an unrelated product visual', async () => {
