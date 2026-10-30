@@ -121,9 +121,9 @@ async function runPageInContext(context, base, viewport, page) {
         waitUntil: 'networkidle',
         timeout: 60000,
     });
-    const url = new URL(tab.url());
-    const redirectedToLogin = /^\/(login|register|two-factor)/.test(
-        url.pathname,
+    const initialUrl = new URL(tab.url());
+    const initiallyRedirectedToLogin = /^\/(login|register|two-factor)/.test(
+        initialUrl.pathname,
     );
     await tab.mouse.wheel(0, 4000);
     await tab.waitForTimeout(300);
@@ -139,7 +139,7 @@ async function runPageInContext(context, base, viewport, page) {
             .length;
     });
 
-    if (!redirectedToLogin && page.id === 'owner-codebridge-fleet') {
+    if (!initiallyRedirectedToLogin && page.id === 'owner-codebridge-fleet') {
         const heading = await tab
             .getByRole('heading', {
                 name: 'CodeBridge Owner License Settings',
@@ -173,7 +173,7 @@ async function runPageInContext(context, base, viewport, page) {
     }
     // The merged owner/customer AI workspace must render its actual three-pane UI.
     // Read-only DOM checks: no chat send, tool request or mutation is attempted.
-    if (!redirectedToLogin && page.id === 'codebridge-ai-workspace') {
+    if (!initiallyRedirectedToLogin && page.id === 'codebridge-ai-workspace') {
         for (const id of ['ai-workspace', 'pane-left', 'pane-center', 'pane-right'])
             if ((await tab.getByTestId(id).count()) !== 1)
                 problems.push('WORKSPACE_' + id.toUpperCase().replace(/-/g, '_') + '_MISSING');
@@ -182,7 +182,7 @@ async function runPageInContext(context, base, viewport, page) {
                 if ((await tab.getByRole('button', { name, exact: true }).count()) !== 1)
                     problems.push('WORKSPACE_MOBILE_DRAWER_TRIGGER_MISSING');
     }
-    if (!redirectedToLogin && page.id === 'codebridge-devices-deeplink') {
+    if (!initiallyRedirectedToLogin && page.id === 'codebridge-devices-deeplink') {
         if (
             (await tab
                 .getByRole('heading', {
@@ -206,6 +206,13 @@ async function runPageInContext(context, base, viewport, page) {
         )
             problems.push('OVERVIEW_HASH_DID_NOT_LEAVE_DEVICES');
     }
+    // SPA redirects can occur after goto() or during layout checks. A stale
+    // URL captured immediately after navigation could falsely PASS an owner
+    // page that subsequently moved to login or another origin.
+    const finalUrl = new URL(tab.url());
+    const redirectedToLogin =
+        initiallyRedirectedToLogin ||
+        /^\/(login|register|two-factor)/.test(finalUrl.pathname);
     return judge({
         page: page.id,
         viewport: viewport.name,
@@ -215,8 +222,8 @@ async function runPageInContext(context, base, viewport, page) {
         overflow,
         brokenImages,
         redirectedToLogin,
-        finalOriginMatches: url.origin === base.origin,
-        finalPathMatches: url.pathname === new URL(page.path, base).pathname,
+        finalOriginMatches: finalUrl.origin === base.origin,
+        finalPathMatches: finalUrl.pathname === new URL(page.path, base).pathname,
         problems,
     });
 }
