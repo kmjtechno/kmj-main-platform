@@ -126,6 +126,24 @@ final class CodeBridgeWorkspaceJobsTest extends TestCase
         self::assertSame('claimed', DB::table('codebridge_workspace_jobs')->where('id', $id)->value('status'));
     }
 
+    public function test_a_device_may_refuse_a_claimed_job_before_starting_but_cannot_claim_success_without_starting(): void
+    {
+        $this->enqueue($this->alice, 'git_status');
+        $this->enqueue($this->alice, 'git_status');
+        $first = $this->device('desk-a')->postJson('/api/codebridge/v1/jobs/claim')->json('job');
+        // Success without a start is still refused.
+        $this->report($first['id'], $first['claim_token'], ['kind' => 'succeeded'])->assertStatus(422);
+        // A refusal before running anything is a final, honest failure.
+        $this->report($first['id'], $first['claim_token'], ['kind' => 'failed', 'detail' => 'GATE_NOT_ALLOWED', 'summary' => 'Refused on the device: GATE_NOT_ALLOWED'])
+            ->assertOk()->assertJson(['status' => 'failed']);
+        $row = (array) DB::table('codebridge_workspace_jobs')->where('id', $first['id'])->first();
+        self::assertSame('failed', $row['status']);
+        self::assertStringContainsString('GATE_NOT_ALLOWED', (string) $row['summary']);
+        // The device is free again and a late repeat is not accepted.
+        $this->report($first['id'], $first['claim_token'], ['kind' => 'failed'])->assertStatus(409);
+        $this->device('desk-a')->postJson('/api/codebridge/v1/jobs/claim')->assertOk()->assertJsonPath('job.tool', 'git_status');
+    }
+
     public function test_claim_serializes_empty_arguments_as_a_json_object_for_the_device_contract(): void
     {
         $this->enqueue($this->alice, 'git_status');

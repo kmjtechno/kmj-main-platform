@@ -259,7 +259,9 @@ final class WorkspaceJobService
 
                 return ['status' => 'running'];
             }
-            if ($status !== 'running') {
+            // A device may refuse a claimed job before running anything (unknown gate, project not
+            // enabled locally, dirty checkout): that is a final failure and needs no start.
+            if ($status !== 'running' && ! ($status === 'claimed' && $kind === 'failed')) {
                 throw new InvalidArgumentException('not_started');
             }
             if ($kind === 'progress') {

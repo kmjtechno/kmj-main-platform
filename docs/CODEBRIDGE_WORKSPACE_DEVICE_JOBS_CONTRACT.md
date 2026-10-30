@@ -19,7 +19,7 @@ One request in flight per device. `claim_token` is returned once and must be sen
 `POST /jobs/{id}/events` body (<=16 KiB):
 - `{"kind":"started"}` claimed -> running
 - `{"kind":"progress","progress":0-100,"detail":"<=500 chars"}` (monotonic; extends the 120 s lease)
-- `{"kind":"succeeded"|"failed","summary":"<=2000","evidence":{...}}`
+- `{"kind":"succeeded"|"failed","summary":"<=2000","evidence":{...}}` — `succeeded` requires a prior `started`; `failed` is also accepted directly from `claimed` so a device can refuse a request (unknown gate, project not enabled locally, dirty checkout) without running anything.
 
 Evidence keys allowed: `commit_sha` (40 hex), `gate`, `ci_url` (https://github.com/<o>/<r>/actions/runs/<n> only), `exit_code`, `duration_ms`, `result` (`pass|fail`). Anything else is rejected (422).
 `409 {"error":"job_not_active"}` means cancelled, expired or finished: **stop immediately**. A cancel may arrive while the device is already running; the user is told that a local run may still be finishing.
