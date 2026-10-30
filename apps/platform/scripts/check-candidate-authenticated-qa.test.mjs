@@ -15,13 +15,14 @@ import {
     PAGES,
     VIEWPORTS,
     judge,
+    loadOwnerStorageState,
     runPage,
     validateEnv,
 } from './candidate-authenticated-qa.mjs';
 
 const dir = mkdtempSync(path.join(tmpdir(), 'qa-'));
 const state = path.join(dir, 'state.json');
-writeFileSync(state, '{}');
+writeFileSync(state, JSON.stringify({ cookies: [], origins: [] }));
 chmodSync(state, 0o600);
 const good = {
     KMJ_QA_BASE_URL: 'http://127.0.0.1:8123',
@@ -104,6 +105,64 @@ void test('owner browser state must be a private single-link regular file, never
         unlinkSync(hardlink);
     }
     assert.deepEqual(validateEnv(good).problems, []);
+});
+
+void test('owner session is pinned to a validated file descriptor, not a later path lookup', () => {
+    const privatePath = path.join(dir, 'owner-state-to-swap.json');
+    const replacement = path.join(dir, 'untrusted-owner-state.json');
+    writeFileSync(privatePath, JSON.stringify({ cookies: [], origins: [] }), { mode: 0o600 });
+    writeFileSync(replacement, JSON.stringify({ cookies: [{ name: 'bad' }], origins: [] }));
+    const checked = validateEnv({ ...good, KMJ_QA_STORAGE_STATE: privatePath });
+    assert.deepEqual(checked.problems, []);
+    unlinkSync(privatePath);
+    symlinkSync(replacement, privatePath);
+    try {
+        assert.deepEqual(checked.storageState, { cookies: [], origins: [] });
+        assert.ok(
+            validateEnv({ ...good, KMJ_QA_STORAGE_STATE: privatePath })
+                .problems.includes('STORAGE_STATE_NOT_PRIVATE_FILE'),
+        );
+    } finally {
+        unlinkSync(privatePath);
+        unlinkSync(replacement);
+    }
+});
+
+void test('owner state rejects invalid JSON and invalid Playwright shape without printing secrets', () => {
+    const badPath = path.join(dir, 'bad-owner-state.json');
+    try {
+        for (const value of ['not-json', '{}', '{"cookies":[], "origins":null}']) {
+            writeFileSync(badPath, value, { mode: 0o600 });
+            chmodSync(badPath, 0o600);
+            assert.ok(
+                validateEnv({ ...good, KMJ_QA_STORAGE_STATE: badPath })
+                    .problems.includes('STORAGE_STATE_INVALID'),
+            );
+        }
+    } finally {
+        unlinkSync(badPath);
+    }
+});
+
+void test('validated state object, not its path, is passed to the browser', async () => {
+    const checked = validateEnv(good);
+    assert.deepEqual(checked.problems, []);
+    let observedState;
+    const browser = {
+        async newContext(options) {
+            observedState = options.storageState;
+            return {
+                async newPage() { throw new Error('EXPECTED_STOP'); },
+                async close() {},
+            };
+        },
+    };
+    await assert.rejects(
+        runPage(browser, checked.storageState, checked.base, VIEWPORTS[0], PAGES[0]),
+        /EXPECTED_STOP/,
+    );
+    assert.deepEqual(observedState, { cookies: [], origins: [] });
+    assert.notEqual(observedState, state);
 });
 
 void test('judge fails closed on every defect and never passes an unauthenticated page', () => {
