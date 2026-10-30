@@ -267,7 +267,9 @@ async function main() {
                     2,
                 ),
             );
-            process.exit(2);
+            // A direct process.exit() would bypass finally and leak Chromium.
+            process.exitCode = 2;
+            return;
         }
         for (const viewport of VIEWPORTS)
             for (const page of PAGES)
