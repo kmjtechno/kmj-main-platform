@@ -5,12 +5,16 @@ on:
     paths:
       - 'scripts/operations/rehearse-isolated-rollback-39b88b36d071-20261029.py'
       - 'scripts/test_rehearse_isolated_rollback_20261029.py'
+      - 'apps/platform/scripts/candidate-authenticated-qa.mjs'
+      - 'apps/platform/scripts/check-candidate-authenticated-qa.test.mjs'
       - '.github/workflows/fresh39-rollback-rehearsal-safety.yml'
   push:
     branches: [main]
     paths:
       - 'scripts/operations/rehearse-isolated-rollback-39b88b36d071-20261029.py'
       - 'scripts/test_rehearse_isolated_rollback_20261029.py'
+      - 'apps/platform/scripts/candidate-authenticated-qa.mjs'
+      - 'apps/platform/scripts/check-candidate-authenticated-qa.test.mjs'
       - '.github/workflows/fresh39-rollback-rehearsal-safety.yml'
 
 permissions:
@@ -31,3 +35,17 @@ jobs:
           echo 'ROLLBACK_REHEARSAL_SOURCE_CONTRACT=PASS'
           echo 'LIVE_PATHS_TOUCHED_ON_CI=NO'
           echo 'APP_LEVEL_ROLLBACK_VERIFIED=NO'
+
+  candidate-auth-qa-source-contract:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - name: Fail-closed candidate origin and route regression tests
+        run: |
+          set -euo pipefail
+          node --test apps/platform/scripts/check-candidate-authenticated-qa.test.mjs
+          echo 'CANDIDATE_QA_SOURCE_CONTRACT=PASS'
+          echo 'AUTHENTICATED_OWNER_BROWSER_QA_EXECUTED=NO'
