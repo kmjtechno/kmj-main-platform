@@ -190,3 +190,33 @@ void test('CodeBridge dashboard uses the existing official product icon', () => 
     assert.doesNotMatch(ui, /laravel\.(?:svg|png)|<Cable className="h-7 w-7"/i);
     assert.match(ui, /setActiveSection\('devices'\)/);
 });
+
+const ownerDeviceSummary = readSourceText(
+    'resources/js/pages/operator-codebridge-owner.tsx',
+);
+const ownerModuleNavigation = readSourceText(
+    'resources/js/components/operator-module-navigation.tsx',
+);
+
+void test('owner and customer navigation share one device dashboard without duplicate controls', () => {
+    assert.match(ownerDeviceSummary, /Read-only summary:/);
+    assert.match(ownerDeviceSummary, /connection not verified/);
+    assert.match(ownerDeviceSummary, /Owner license settings/);
+    assert.doesNotMatch(ownerDeviceSummary, /<DeviceControlCenter\\b/);
+    assert.match(
+        ownerDeviceSummary,
+        /href="\\/services\\/kmj-codebridge#codebridge-device-control"/,
+    );
+    assert.match(
+        ownerModuleNavigation,
+        /href: '\\/services\\/kmj-codebridge#codebridge-device-control'/,
+    );
+    assert.doesNotMatch(
+        ownerModuleNavigation,
+        /href: '\\/operator\\/codebridge\\/owner-plan'/,
+    );
+    assert.match(ui, /codeBridgeSectionFromHash\\(window\\.location\\.hash\\)/);
+    assert.match(ui, /window\\.addEventListener\\('hashchange', apply\\)/);
+    assert.match(ui, /window\\.removeEventListener\\('hashchange', apply\\)/);
+    assert.match(ui, /scrollIntoView\\(\\{ block: 'start' \\}\\)/);
+});
