@@ -158,7 +158,7 @@ tenant="$(printf '%s' "$seed_json" | python3 -c 'import json,sys;print(json.load
 [[ "$tenant" =~ ^[0-9a-f-]{36}$ ]] || { echo 'SEED=FAIL'; exit 1; }
 echo 'SEED=PASS JOBS_QUEUED=3'
 
-php -S 127.0.0.1:8099 -t public vendor/laravel/framework/src/Illuminate/Foundation/resources/server.php \
+php -S 127.0.0.1:8099 -t public public/index.php \
   >"$tmp/server.log" 2>&1 &
 server_pid=$!
 up=0
