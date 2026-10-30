@@ -10,6 +10,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
 use RuntimeException;
+use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
 
 /**
  * Device-agent facing queue API. Authenticates with the device's existing bearer credential
@@ -39,6 +40,8 @@ final class CodeBridgeDeviceJobController
         }
         try {
             return $this->json($this->jobs->report($tenant, $device, $job, $claim, $request->json()->all()));
+        } catch (HttpExceptionInterface $exception) {
+            throw $exception;
         } catch (InvalidArgumentException $exception) {
             return $this->json(['error' => $exception->getMessage()], 422);
         } catch (RuntimeException $exception) {

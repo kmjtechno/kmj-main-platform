@@ -21,6 +21,7 @@ use Inertia\Inertia;
 use Inertia\Response;
 use InvalidArgumentException;
 use RuntimeException;
+use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
 
 /**
  * AI workspace. It shows ONLY state the Main Platform really owns: registered devices/projects
@@ -131,6 +132,8 @@ final class CodeBridgeWorkspaceController extends Controller
         $arguments = isset($data['gate']) && $data['gate'] !== '' ? ['gate' => $data['gate']] : [];
         try {
             $result = $this->jobs->enqueue($tenant, (int) $user->id, $data['device_id'], $data['project_id'], $data['tool'], $arguments, $data['idempotency_key']);
+        } catch (HttpExceptionInterface $exception) {
+            throw $exception; // 403/404 are real HTTP answers, not flash messages.
         } catch (InvalidArgumentException|RuntimeException $exception) {
             session()->flash('chat_error', $exception->getMessage());
 

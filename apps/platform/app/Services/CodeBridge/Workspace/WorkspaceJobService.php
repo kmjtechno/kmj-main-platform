@@ -70,7 +70,9 @@ final class WorkspaceJobService
         $arguments = WorkspaceToolCatalog::validate($tool, $arguments);
         $granted = $this->grantedPermissions($tenantId, $deviceId, $projectId);
         abort_if($granted === [], 404);
-        abort_unless(in_array(WorkspaceToolCatalog::permission($tool), $granted, true), 403);
+        if (! $this->permits($granted, $tool)) {
+            abort(403);
+        }
 
         return DB::transaction(function () use ($tenantId, $userId, $deviceId, $projectId, $tool, $arguments, $idempotencyKey): array {
             $existing = DB::table('codebridge_workspace_jobs')
@@ -178,7 +180,7 @@ final class WorkspaceJobService
             $row = (array) $job;
             // The grant may have been revoked or narrowed after the request was queued.
             $granted = $this->grantedPermissions($tenantId, $deviceId, (string) $row['project_id']);
-            if (! in_array(WorkspaceToolCatalog::permission((string) $row['tool']), $granted, true)) {
+            if (! $this->permits($granted, (string) $row['tool'])) {
                 $this->finish((string) $row['id'], 'failed', 'grant_revoked', 'The device grant no longer allows this tool.', 'queued');
 
                 return null;
@@ -229,7 +231,9 @@ final class WorkspaceJobService
                 ->where('device_id', $deviceId)->lockForUpdate()->first();
             abort_if($job === null, 404);
             $row = (array) $job;
-            abort_unless(is_string($row['claim_hash']) && hash_equals($row['claim_hash'], hash('sha256', $claimToken)), 403);
+            if (! $this->claimMatches($row['claim_hash'] ?? null, $claimToken)) {
+                abort(403);
+            }
             $status = (string) $row['status'];
             if (! in_array($status, ['claimed', 'running'], true)) {
                 throw new RuntimeException('job_not_active');
@@ -285,6 +289,17 @@ final class WorkspaceJobService
                 $this->finish((string) $row['id'], 'failed', 'lease_expired', 'The device stopped reporting; the run is not known to have finished.', (string) $row['status']);
             }
         }
+    }
+
+    /** @param list<string> $granted */
+    private function permits(array $granted, string $tool): bool
+    {
+        return in_array(WorkspaceToolCatalog::permission($tool), $granted, true);
+    }
+
+    private function claimMatches(mixed $stored, string $token): bool
+    {
+        return is_string($stored) && hash_equals($stored, hash('sha256', $token));
     }
 
     private function finish(string $jobId, string $status, string $code, string $detail, string $from): void
