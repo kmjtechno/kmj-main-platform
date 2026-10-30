@@ -8,13 +8,27 @@ from pathlib import Path
 SCRIPT = Path(__file__).parent / "operations" / "diagnose-offsite-backup-unit-20261029.sh"
 
 
-def run(log: str, args=()):
-    """Run the diagnostic with stubbed systemctl/journalctl/id as root."""
+def run(log: str, args=(), *, invocation="a" * 32, status="255", stale_log=""):
+    """Run with stubbed systemctl/journalctl/id; stale log must never be classified."""
     with tempfile.TemporaryDirectory() as tmp:
         bin_dir = Path(tmp)
         stubs = {
-            "systemctl": "#!/bin/sh\ncase \"$*\" in *ExecMainStatus*) echo 255;; *Result*) echo exit-code;; *ActiveState*) echo '/root/private_key.pem';; *) echo ;; esac\n",
-            "journalctl": f"#!/bin/sh\ncat <<'LOG'\n{log}\nLOG\n",
+            "systemctl": (
+                '#!/bin/sh\ncase "$*" in '
+                f'*InvocationID*) echo "{invocation}";; '
+                f'*ExecMainStatus*) echo "{status}";; '
+                '*Result*) echo exit-code;; '
+                "*ActiveState*) echo '/root/private_key.pem';; "
+                '*) echo ;; esac\n'
+            ),
+            "journalctl": (
+                '#!/bin/sh\n'
+                f'case " $* " in *"_SYSTEMD_INVOCATION_ID={invocation}"*)\n'
+                f"cat <<'CURRENT'\n{log}\nCURRENT\n"
+                ';; *)\n'
+                f"cat <<'STALE'\n{stale_log}\nSTALE\n"
+                ';; esac\n'
+            ),
             "id": "#!/bin/sh\necho 0\n",
         }
         for name, body in stubs.items():
@@ -65,6 +79,36 @@ class DiagnoseOffsiteBackupUnit(unittest.TestCase):
             with self.subTest(expected=expected):
                 self.assertIn(f"failure_class={expected}", run(line).stdout)
 
+    def test_old_invocation_errors_do_not_contaminate_current_failure(self):
+        result = run(
+            "latest invocation: non-specific failure",
+            stale_log="old invocation: Permission denied (publickey).",
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("journal_scope=EXACT_INVOCATION", result.stdout)
+        self.assertIn("failure_class=UNKNOWN_EXIT_255_NEEDS_LOG", result.stdout)
+        self.assertNotIn("SSH_AUTH_KEY_REJECTED", result.stdout)
+
+    def test_missing_or_invalid_invocation_fails_closed(self):
+        for invocation in ("", "invalid", "0" * 31, "z" * 32):
+            with self.subTest(invocation=invocation):
+                result = run(
+                    "Permission denied (publickey).", invocation=invocation,
+                    stale_log="Permission denied (publickey).",
+                )
+                self.assertEqual(result.returncode, 0, result.stderr)
+                self.assertIn("journal_scope=UNAVAILABLE", result.stdout)
+                self.assertIn("failure_class=UNKNOWN_EXIT_255_NEEDS_LOG", result.stdout)
+
+    def test_non_255_exit_does_not_classify_old_or_current_journal(self):
+        result = run(
+            "Permission denied (publickey).", status="0",
+            stale_log="Permission denied (publickey).",
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("journal_scope=UNAVAILABLE", result.stdout)
+        self.assertIn("failure_class=UNKNOWN_EXIT_255_NEEDS_LOG", result.stdout)
+
     def test_script_is_read_only(self):
         code = "\n".join(
             line for line in SCRIPT.read_text().splitlines()
@@ -102,7 +146,7 @@ class DiagnoseOffsiteBackupUnit(unittest.TestCase):
         queried = set(re.findall(r"\bshow(?:_enum)?\s+([A-Za-z]+)", code))
         self.assertEqual(
             queried,
-            {"LoadState", "ActiveState", "SubState", "Result", "ExecMainStatus"},
+            {"LoadState", "ActiveState", "SubState", "Result", "ExecMainStatus", "InvocationID"},
         )
 
 
