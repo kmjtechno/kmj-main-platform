@@ -177,6 +177,16 @@ class ReadinessDoctorTest(unittest.TestCase):
                 self.assertIn("APPROVAL_SCHEMA_INVALID", blockers)
                 self.assertNotIn("RELEASE_READINESS=READY_TO_ACTIVATE", lines)
 
+    def test_protected_json_overflow_exponents_fail_closed(self) -> None:
+        self.write_approval()
+        for payload in ('{"number":1e999}', '{"number":-1e999}',
+                        '{"nested":{"number":1e999}}'):
+            with self.subTest(payload=payload):
+                self.paths.approval.write_text(payload)
+                self.paths.approval.chmod(0o600)
+                self.assertIsNone(doctor._load_protected_json(
+                    self.paths.approval, False))
+
     def test_protected_json_symlink_swap_after_precheck_is_denied(self) -> None:
         from unittest.mock import patch
 
