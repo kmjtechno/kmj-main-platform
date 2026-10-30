@@ -221,6 +221,37 @@ final class CodeBridgeWorkspaceJobsTest extends TestCase
         self::assertSame('cancelled', DB::table('codebridge_workspace_jobs')->where('id', $id)->value('status'));
     }
 
+    public function test_expired_claim_cannot_be_started_or_report_success_without_an_intervening_poll(): void
+    {
+        // No list(), claim() or expireStale() call is allowed between expiry and
+        // the device's late report: the report endpoint must enforce the lease.
+        foreach ([false, true] as $startBeforeExpiry) {
+            $this->enqueue($this->alice, 'git_status')->assertRedirect();
+            $claim = $this->device('desk-a')->postJson('/api/codebridge/v1/jobs/claim')->assertOk()->json('job');
+            $id = (string) $claim['id'];
+            if ($startBeforeExpiry) {
+                $this->report($id, $claim['claim_token'], ['kind' => 'started'])
+                    ->assertOk()->assertJson(['status' => 'running']);
+            }
+            DB::table('codebridge_workspace_jobs')->where('id', $id)
+                ->update(['lease_expires_at' => now()->subSeconds(5)]);
+
+            $kind = $startBeforeExpiry ? 'succeeded' : 'started';
+            $this->report($id, $claim['claim_token'], ['kind' => $kind])
+                ->assertStatus(409)->assertJson(['error' => 'job_not_active']);
+
+            $row = DB::table('codebridge_workspace_jobs')->where('id', $id)->first();
+            self::assertSame('failed', $row->status);
+            self::assertSame('lease_expired', $row->error_code);
+            self::assertSame(0, DB::table('codebridge_workspace_job_events')
+                ->where('job_id', $id)->where('kind', 'succeeded')->count());
+            self::assertSame(1, DB::table('codebridge_workspace_job_events')
+                ->where('job_id', $id)->where('kind', 'failed')->count());
+            $this->report($id, $claim['claim_token'], ['kind' => 'succeeded'])
+                ->assertStatus(409)->assertJson(['error' => 'job_not_active']);
+        }
+    }
+
     public function test_unclaimed_and_silent_jobs_expire_honestly(): void
     {
         $this->enqueue($this->alice, 'git_status');

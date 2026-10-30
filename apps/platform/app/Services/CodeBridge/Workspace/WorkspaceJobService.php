@@ -236,7 +236,7 @@ final class WorkspaceJobService
         $summary = $this->text($report['summary'] ?? null, 2000);
         $evidence = $this->evidence($report['evidence'] ?? null);
 
-        return DB::transaction(function () use ($tenantId, $deviceId, $jobId, $claimToken, $kind, $detail, $progress, $summary, $evidence): array {
+        $result = DB::transaction(function () use ($tenantId, $deviceId, $jobId, $claimToken, $kind, $detail, $progress, $summary, $evidence): array {
             $job = DB::table('codebridge_workspace_jobs')->where('id', $jobId)->where('tenant_id', $tenantId)
                 ->where('device_id', $deviceId)->lockForUpdate()->first();
             abort_if($job === null, 404);
@@ -247,6 +247,15 @@ final class WorkspaceJobService
             $status = (string) $row['status'];
             if (! in_array($status, ['claimed', 'running'], true)) {
                 throw new RuntimeException('job_not_active');
+            }
+            // A late device report must never turn an expired claim into success.
+            // Commit the expiry first; throwing inside this transaction would roll it back.
+            if ($row['lease_expires_at'] === null
+                || Carbon::parse((string) $row['lease_expires_at'])->lessThanOrEqualTo(now())) {
+                $this->finish($jobId, 'failed', 'lease_expired',
+                    'The device lease expired before this report was received.', $status);
+
+                return ['status' => 'lease_expired'];
             }
             $lease = now()->addSeconds(self::LEASE_SECONDS);
             if ($kind === 'started') {
@@ -284,6 +293,11 @@ final class WorkspaceJobService
 
             return ['status' => $final];
         });
+        if ($result['status'] === 'lease_expired') {
+            throw new RuntimeException('job_not_active');
+        }
+
+        return $result;
     }
 
     public function expireStale(string $tenantId): void
