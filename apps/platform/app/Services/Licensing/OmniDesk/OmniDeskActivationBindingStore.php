@@ -192,11 +192,79 @@ final class OmniDeskActivationBindingStore
             $nextSequence,
             $nextNonce,
         ): array {
+            // Follow the same lock order as bind(): license -> activation ->
+            // entitlement -> binding. Locking the binding first and then
+            // consulting a revoked license would risk a production deadlock.
+            $activationLookup = DB::table('kslp_activations')
+                ->where('id', $activationId)
+                ->first(['license_id']);
+            if ($activationLookup === null) {
+                throw new DomainException('OMNIDESK_ACTIVATION_CONFLICT');
+            }
+
+            $license = DB::table('kslp_licenses')
+                ->where('id', $activationLookup->license_id)
+                ->lockForUpdate()
+                ->first();
+            if ($license === null
+                || (string) $license->product !== OmniDeskLicenseContract::PRODUCT_ID
+                || (string) $license->status !== 'active'
+                || $license->revoked_at !== null
+                || now()->lt($license->starts_at)
+                || now()->gte($license->expires_at)) {
+                throw new DomainException('OMNIDESK_LICENSE_INACTIVE');
+            }
+
+            $activation = DB::table('kslp_activations')
+                ->where('id', $activationId)
+                ->where('license_id', $license->id)
+                ->lockForUpdate()
+                ->first();
+            if ($activation === null || $activation->deactivated_at !== null) {
+                throw new DomainException('OMNIDESK_ACTIVATION_CONFLICT');
+            }
+
+            // This non-locking lookup is only for ordering the locks.
+            // Recheck the same immutable binding fields after acquiring its
+            // row lock before allowing any cursor mutation.
+            $preview = DB::table('omnidesk_activation_bindings')
+                ->where('activation_id', $activationId)
+                ->first(['organization_id', 'entitlement_id']);
+            if ($preview === null
+                || (string) $license->customer_id !== (string) $preview->organization_id) {
+                throw new DomainException('OMNIDESK_ACTIVATION_CONFLICT');
+            }
+
+            $product = Product::query()
+                ->where('slug', OmniDeskLicenseContract::PRODUCT_SLUG)
+                ->first(['id']);
+            if (! $product instanceof Product) {
+                throw new DomainException('OMNIDESK_PRODUCT_NOT_FOUND');
+            }
+
+            $entitlement = Entitlement::query()
+                ->whereKey((string) $preview->entitlement_id)
+                ->where('organization_id', $preview->organization_id)
+                ->where('product_id', $product->getKey())
+                ->where('capability', OmniDeskLicenseContract::CAPABILITY)
+                ->where('status', 'active')
+                ->where('starts_at', '<=', now())
+                ->where(static function ($query): void {
+                    $query->whereNull('ends_at')->orWhere('ends_at', '>', now());
+                })
+                ->lockForUpdate()
+                ->first();
+            if (! $entitlement instanceof Entitlement) {
+                throw new DomainException('OMNIDESK_ENTITLEMENT_INACTIVE');
+            }
+
             $binding = DB::table('omnidesk_activation_bindings')
                 ->where('activation_id', $activationId)
                 ->lockForUpdate()
                 ->first();
-            if ($binding === null) {
+            if ($binding === null
+                || (string) $binding->organization_id !== (string) $preview->organization_id
+                || (string) $binding->entitlement_id !== (string) $preview->entitlement_id) {
                 throw new DomainException('OMNIDESK_ACTIVATION_CONFLICT');
             }
 
