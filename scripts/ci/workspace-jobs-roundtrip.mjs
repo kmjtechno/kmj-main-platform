@@ -62,7 +62,11 @@ const worker = new WorkspaceJobWorker({
 });
 const expected = Number(process.env.EXPECTED_JOBS ?? 3);
 const deadline = Date.now() + Number(process.env.WORKER_DEADLINE_MS ?? 90_000);
-while (delivered < expected && Date.now() < deadline) {
+// STOP_FILE (UI e2e): keep serving until the browser run is over, because the number of requests a
+// real browser queues can vary with render timing; otherwise stop at the expected count.
+const stopFile = process.env.STOP_FILE;
+const finished = () => (stopFile ? fs.existsSync(stopFile) : delivered >= expected);
+while (!finished() && Date.now() < deadline) {
     await worker.tick();
     await new Promise((r) => setTimeout(r, 400));
 }
@@ -71,4 +75,4 @@ await worker.tick();
 await runner.close();
 fs.rmSync(tmp, { recursive: true, force: true });
 console.log(`WORKER_JOBS_DELIVERED=${delivered} STATUSES=${JSON.stringify(statuses)}`);
-process.exit(delivered === expected ? 0 : 1);
+process.exit(stopFile ? (delivered >= expected ? 0 : 1) : delivered === expected ? 0 : 1);

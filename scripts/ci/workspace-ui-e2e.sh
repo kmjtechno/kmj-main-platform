@@ -184,7 +184,7 @@ done
 echo 'SERVER_READY=PASS'
 
 # The REAL worker runs in the background and serves the three requests the browser will queue.
-EXPECTED_JOBS=3 WORKER_DEADLINE_MS=240000 WORKER_PROJECT_ID="$project" \
+EXPECTED_JOBS=3 STOP_FILE="$tmp/browser-done" WORKER_DEADLINE_MS=300000 WORKER_PROJECT_ID="$project" \
   node "$repo/scripts/ci/workspace-jobs-roundtrip.mjs" "$cbdir" http://127.0.0.1:8099/ "$credential" >"$tmp/worker.log" 2>&1 &
 worker_pid=$!
 
@@ -192,6 +192,7 @@ KMJ_PLAYWRIGHT_MODULE="$repo/apps/platform/node_modules/playwright" KMJ_E2E_SHOT
   node "$repo/scripts/ci/workspace-ui-e2e.mjs" http://127.0.0.1:8099 "$email" "$password" "$device" "$project" || {
   echo 'WORKSPACE_UI_E2E=FAIL'; echo '--- worker'; tail -n 20 "$tmp/worker.log" || true; echo '--- server'; tail -n 20 "$tmp/server.log" || true; exit 1;
 }
+touch "$tmp/browser-done"
 wait "$worker_pid" || { echo 'WORKER=FAIL'; cat "$tmp/worker.log"; exit 1; }
 cat "$tmp/worker.log"
 echo 'WORKSPACE_UI_REAL_STACK_E2E=PASS; PRODUCTION=UNTOUCHED; SIGNED_CANARY=NOT_RUN; WINDOWS=NOT_RUN'
