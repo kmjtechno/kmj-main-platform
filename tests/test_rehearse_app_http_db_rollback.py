@@ -156,6 +156,7 @@ class FailureEvidence(unittest.TestCase):
             stack.enter_context(patch.object(mod, "validate_database", return_value={"DB_DATABASE": "kmj_rehearsal"}))
             stack.enter_context(patch.object(mod, "validate_tree", side_effect=[previous, candidate]))
             stack.enter_context(patch.object(mod, "psql_rows", return_value=[("kmj_rehearsal",)]))
+            stack.enter_context(patch.object(mod, "attest_disposable"))
             stack.enter_context(patch.object(mod, "clean_env", return_value={}))
             stack.enter_context(patch.object(mod, "artisan", return_value=True))
             stack.enter_context(patch.object(mod, "schema_snapshot", side_effect=RuntimeError("PSQL_FAILED")))
@@ -165,6 +166,7 @@ class FailureEvidence(unittest.TestCase):
             self.assertEqual(result, 1)
             self.assertIn("APP_HTTP_DB_ROLLBACK_REHEARSAL=FAIL", output.getvalue())
             self.assertNotIn("APP_HTTP_DB_ROLLBACK_REHEARSAL=PASS", output.getvalue())
+
 
 class Attestation(unittest.TestCase):
     NONCE = "ab" * 24
