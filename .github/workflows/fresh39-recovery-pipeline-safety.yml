@@ -1,0 +1,73 @@
+name: Fresh-39 Recovery Pipeline Safety
+
+on:
+  pull_request:
+    paths:
+      - 'scripts/operations/seal-main-platform-39b88b36d071-offsite-20261029.py'
+      - 'scripts/operations/push-offsite-39b88b36d071-pinned-sftp-20261029.sh'
+      - 'scripts/operations/verify-main-platform-39b88b36d071-google-sftp-restore-20261029.sh'
+      - 'scripts/test_seal_main_platform_39_offsite_20261029.py'
+      - 'scripts/test_push_offsite_pinned_sftp_20261029.py'
+      - 'scripts/test_main_platform_39_google_sftp_restore_20261029.py'
+      - 'scripts/operations/seal-main-platform-offsite-20261030.py'
+      - 'scripts/operations/push-offsite-pinned-sftp-20261030.sh'
+      - 'scripts/test_seal_main_platform_offsite_release_neutral_20261030.py'
+      - 'scripts/test_push_offsite_pinned_sftp_20261030.py'
+      - 'scripts/operations/verify-main-platform-google-sftp-restore-20261030.sh'
+      - 'scripts/test_main_platform_google_sftp_restore_release_neutral_20261030.py'
+      - 'scripts/ci/e2e-offsite-sftp-real-sshd.sh'
+      - '.github/workflows/fresh39-recovery-pipeline-safety.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/operations/seal-main-platform-39b88b36d071-offsite-20261029.py'
+      - 'scripts/operations/push-offsite-39b88b36d071-pinned-sftp-20261029.sh'
+      - 'scripts/operations/verify-main-platform-39b88b36d071-google-sftp-restore-20261029.sh'
+      - 'scripts/test_seal_main_platform_39_offsite_20261029.py'
+      - 'scripts/test_push_offsite_pinned_sftp_20261029.py'
+      - 'scripts/test_main_platform_39_google_sftp_restore_20261029.py'
+      - 'scripts/operations/seal-main-platform-offsite-20261030.py'
+      - 'scripts/operations/push-offsite-pinned-sftp-20261030.sh'
+      - 'scripts/test_seal_main_platform_offsite_release_neutral_20261030.py'
+      - 'scripts/test_push_offsite_pinned_sftp_20261030.py'
+      - 'scripts/operations/verify-main-platform-google-sftp-restore-20261030.sh'
+      - 'scripts/test_main_platform_google_sftp_restore_release_neutral_20261030.py'
+      - 'scripts/ci/e2e-offsite-sftp-real-sshd.sh'
+      - '.github/workflows/fresh39-recovery-pipeline-safety.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  source-contracts:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - name: Require real OpenSSH SFTP server for atomic no-clobber integration
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq openssh-server openssh-sftp-server
+          test -x /usr/lib/openssh/sftp-server
+          test -x /usr/sbin/sshd
+      - name: Real sshd end-to-end of the pinned-SFTP push script (loopback, throwaway keys)
+        run: |
+          set -euo pipefail
+          bash -n scripts/ci/e2e-offsite-sftp-real-sshd.sh
+          sudo env GITHUB_ACTIONS=true RUNNER_ENVIRONMENT="${RUNNER_ENVIRONMENT}" RUNNER_OS="${RUNNER_OS}" bash scripts/ci/e2e-offsite-sftp-real-sshd.sh
+      - name: Seal, pinned-SFTP push and independent-restore source contracts
+        run: |
+          set -euo pipefail
+          for f in scripts/operations/verify-main-platform-google-sftp-restore-20261030.sh scripts/operations/push-offsite-pinned-sftp-20261030.sh scripts/operations/push-offsite-39b88b36d071-pinned-sftp-20261029.sh scripts/operations/verify-main-platform-39b88b36d071-google-sftp-restore-20261029.sh; do bash -n "$f"; done
+          python3 -B scripts/test_seal_main_platform_offsite_release_neutral_20261030.py -v
+          python3 -B scripts/test_push_offsite_pinned_sftp_20261030.py -v
+          python3 -B scripts/test_main_platform_google_sftp_restore_release_neutral_20261030.py -v
+          python3 -B scripts/test_seal_main_platform_39_offsite_20261029.py -v
+          python3 -B scripts/test_push_offsite_pinned_sftp_20261029.py -v
+          python3 -B scripts/test_main_platform_39_google_sftp_restore_20261029.py -v
+          echo 'RECOVERY_PIPELINE_SOURCE_CONTRACT=PASS'
+          echo 'PRODUCTION_BACKUP_COPIED_TO_CI=NO'
+          echo 'OFFSITE_TRANSFER_ON_CI=NOT_ATTEMPTED'
+          echo 'OFFSITE_REMOTE_RESTORE=NOT_ATTESTED'
