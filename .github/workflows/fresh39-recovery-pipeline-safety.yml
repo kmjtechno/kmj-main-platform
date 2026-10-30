@@ -9,6 +9,7 @@ on:
       - 'scripts/test_seal_main_platform_39_offsite_20261029.py'
       - 'scripts/test_push_offsite_pinned_sftp_20261029.py'
       - 'scripts/test_main_platform_39_google_sftp_restore_20261029.py'
+      - 'scripts/ci/e2e-offsite-sftp-real-sshd.sh'
       - '.github/workflows/fresh39-recovery-pipeline-safety.yml'
   push:
     branches: [main]
@@ -19,6 +20,7 @@ on:
       - 'scripts/test_seal_main_platform_39_offsite_20261029.py'
       - 'scripts/test_push_offsite_pinned_sftp_20261029.py'
       - 'scripts/test_main_platform_39_google_sftp_restore_20261029.py'
+      - 'scripts/ci/e2e-offsite-sftp-real-sshd.sh'
       - '.github/workflows/fresh39-recovery-pipeline-safety.yml'
 
 permissions:
@@ -35,8 +37,14 @@ jobs:
       - name: Require real OpenSSH SFTP server for atomic no-clobber integration
         run: |
           sudo apt-get update -qq
-          sudo apt-get install -y -qq openssh-sftp-server
+          sudo apt-get install -y -qq openssh-server openssh-sftp-server
           test -x /usr/lib/openssh/sftp-server
+          test -x /usr/sbin/sshd
+      - name: Real sshd end-to-end of the pinned-SFTP push script (loopback, throwaway keys)
+        run: |
+          set -euo pipefail
+          bash -n scripts/ci/e2e-offsite-sftp-real-sshd.sh
+          sudo env GITHUB_ACTIONS=true bash scripts/ci/e2e-offsite-sftp-real-sshd.sh
       - name: Seal, pinned-SFTP push and independent-restore source contracts
         run: |
           set -euo pipefail
