@@ -19,6 +19,8 @@ const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
 const pageErrors = [];
 page.on('pageerror', (e) => pageErrors.push(e.message));
 const diag = [];
+const posts = [];
+page.on('request', (r) => r.method() === 'POST' && r.url().includes('/workspace/tools') && posts.push(`${r.url().split('/workspace')[1]} ${(r.postData() || '').replace(/(idempotency_key":")[0-9a-f]+/, '$1…').slice(0, 200)}`));
 page.on('console', (m) => ['error', 'warning'].includes(m.type()) && diag.push(`console.${m.type()}: ${m.text().slice(0, 200)}`));
 page.on('requestfailed', (r) => diag.push(`requestfailed: ${r.url()} ${r.failure()?.errorText}`));
 page.on('response', (r) => r.status() >= 400 && diag.push(`http ${r.status()}: ${r.url()}`));
@@ -79,7 +81,7 @@ try {
     const gateRow = page.locator('[data-testid="job-list"] li', { hasText: 'quality_gate' }).first();
     const gateText = ((await gateRow.count()) ? await gateRow.innerText() : '').toLowerCase();
     const rows = await page.locator('[data-testid="job-list"] li').evaluateAll((els) => els.map((e) => `${e.getAttribute('data-status')}:${e.textContent.slice(0, 80)}`));
-    expect(gateText.includes('exit_code') && gateText.includes('fast'), `gate evidence shows the gate id and exit_code ${JSON.stringify(rows)}`);
+    expect(gateText.includes('exit_code') && gateText.includes('fast'), `gate evidence shows the gate id and exit_code ${JSON.stringify(rows)} POSTS ${JSON.stringify(posts)}`);
 
     // 3) an unconfigured gate is refused by the device and reported honestly, never faked as success
     await queueGate('nonexistent');
