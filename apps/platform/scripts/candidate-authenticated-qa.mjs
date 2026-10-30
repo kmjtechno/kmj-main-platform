@@ -135,6 +135,26 @@ export function judge(result) {
     return { ...result, problems, pass: problems.length === 0 };
 }
 
+// This function is serialized into the Playwright page; keep it self-contained.
+export async function auditImagesInPage(timeoutMs = 5000) {
+    const images = [...document.images];
+    const results = await Promise.all(images.map(async (img) => {
+        let timer;
+        try {
+            const decoded = await Promise.race([
+                Promise.resolve().then(() => img.decode()).then(() => true, () => false),
+                new Promise((resolve) => {
+                    timer = setTimeout(() => resolve(false), timeoutMs);
+                }),
+            ]);
+            return decoded && img.naturalWidth > 0 && img.naturalHeight > 0;
+        } finally {
+            clearTimeout(timer);
+        }
+    }));
+    return results.filter((ok) => !ok).length;
+}
+
 export async function runPage(browser, state, base, viewport, page) {
     const context = await browser.newContext({
         storageState: state,
@@ -171,14 +191,10 @@ async function runPageInContext(context, base, viewport, page) {
     const overflow = await tab.evaluate(
         () => document.documentElement.scrollWidth > window.innerWidth + 1,
     );
-    const brokenImages = await tab.evaluate(async () => {
-        const images = [...document.images];
-        await Promise.all(
-            images.map((img) => img.decode().catch(() => undefined)),
-        );
-        return images.filter((img) => !img.naturalWidth || !img.naturalHeight)
-            .length;
-    });
+    // Bound image decode time: lazy/offscreen or stalled image requests must not
+    // hang owner QA indefinitely, and decode errors are broken even when an
+    // image has nonzero intrinsic dimensions.
+    const brokenImages = await tab.evaluate(auditImagesInPage);
 
     if (!initiallyRedirectedToLogin && page.id === 'owner-codebridge-fleet') {
         const heading = await tab
