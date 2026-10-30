@@ -66,6 +66,33 @@ class Guards(unittest.TestCase):
             mod.validate_tree("/home/kmjprod/current/apps/platform", "X")
 
 
+    def test_resolved_live_release_and_symlinked_parent_are_rejected(self):
+        # CI cannot rely on a real /home/kmjprod release being present.
+        # Substitute disposable roots and exercise the exact same path guard.
+        self.assertIn(Path("/home/kmjprod"), mod.FORBIDDEN_RUNTIME_ROOTS)
+        self.assertIn(Path("/home/kmjstage"), mod.FORBIDDEN_RUNTIME_ROOTS)
+        with tempfile.TemporaryDirectory() as d:
+            base = Path(d)
+            prod, stage = base / "prod", base / "stage"
+            with patch.object(mod, "FORBIDDEN_RUNTIME_ROOTS", (prod, stage)):
+                for root in (prod, stage):
+                    apps = root / "releases" / "platform-test" / "apps"
+                    apps.mkdir(parents=True)
+                    live = tree(apps, "platform")
+                    with self.assertRaisesRegex(mod.Blocked, "TREE_IS_LIVE_RELEASE_POINTER"):
+                        mod.validate_tree(str(live), "X")
+
+                    # The path itself is not a symlink, but an ancestor is.
+                    alias = base / ("alias-prod" if root == prod else "alias-stage")
+                    alias.symlink_to(apps, target_is_directory=True)
+                    with self.assertRaisesRegex(mod.Blocked, "TREE_IS_LIVE_RELEASE_POINTER"):
+                        mod.validate_tree(str(alias / "platform"), "X")
+
+                # A similarly prefixed sibling is not a forbidden child.
+                sibling = tree(base, "prod-sibling")
+                self.assertEqual(mod.validate_tree(str(sibling), "X"), sibling.resolve())
+
+
 class Env(unittest.TestCase):
     def test_clean_env_does_not_inherit_secrets(self):
         os.environ["STRIPE_SECRET"] = "sk_live_should_not_leak"
