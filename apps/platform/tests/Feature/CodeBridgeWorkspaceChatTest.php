@@ -225,6 +225,53 @@ final class CodeBridgeWorkspaceChatTest extends TestCase
         $this->send($this->alice, $id, 'late')->assertNotFound();
     }
 
+    public function test_every_unfit_provider_state_refuses_with_a_specific_code_and_no_paid_fallback(): void
+    {
+        Http::fake();
+        $id = $this->start($this->alice, 'desk-a', 'proj-a');
+        $good = ['enabled' => true, 'health' => 'ok', 'models_cache' => json_encode([self::MODEL, 'paid-model']), 'models_checked_at' => now(), 'fallback_models' => json_encode(['paid-model'])];
+        $cases = [
+            'provider_disabled' => [['enabled' => false], self::MODEL],
+            'provider_unhealthy' => [['health' => 'error'], self::MODEL],
+            'model_discovery_stale' => [['models_checked_at' => now()->subDays(30)], self::MODEL],
+            'model_discovery_stale ' => [['models_checked_at' => null], self::MODEL],
+            'model_not_discovered' => [[], 'never-listed-model'],
+            'zero_spend_blocked' => [[], 'paid-model'],
+        ];
+        $expected = [];
+        foreach ($cases as $code => [$override, $model]) {
+            DB::table('ai_providers')->where('id', $this->providerA)->update([...$good, ...$override]);
+            $this->send($this->alice, $id, 'try '.$code, $model)->assertRedirect();
+            $expected[] = trim($code);
+        }
+        // A configured fallback model must never be used to rescue a refused request.
+        Http::assertNothingSent();
+        $codes = DB::table('codebridge_workspace_messages')->where('role', 'assistant')->orderBy('id')->pluck('error_code')->all();
+        self::assertSame($expected, $codes);
+        self::assertSame(0, DB::table('codebridge_workspace_messages')->where('role', 'assistant')->where('status', '!=', 'failed')->count());
+    }
+
+    public function test_malformed_conversation_ids_are_a_clean_404_and_never_a_database_error(): void
+    {
+        Http::fake();
+        $valid = $this->start($this->alice, 'desk-a', 'proj-a');
+        $bad = ['not-a-uuid', '12345', "'%20OR%201=1", str_repeat('a', 200), '00000000-0000-0000-0000-00000000000g'];
+
+        foreach ($bad as $id) {
+            $this->actingAs($this->alice)->get($this->pageUrl('desk-a', 'proj-a', rawurlencode($id)))->assertNotFound();
+            $this->actingAs($this->alice)->post('/services/kmj-codebridge/workspace/conversations/'.rawurlencode($id).'/messages', ['content' => 'x'])->assertNotFound();
+        }
+        // Well-formed but unknown id: same answer, and cross-tenant still hides existence.
+        $this->actingAs($this->alice)->get($this->pageUrl('desk-a', 'proj-a', (string) Str::uuid()))->assertNotFound();
+        $this->actingAs($this->mallory)->get($this->pageUrl('desk-a', 'proj-a', $valid))->assertOk()
+            ->assertInertia(fn (AssertableInertia $inertia) => $inertia->where('activeConversation', null));
+        // The page without ?c, and with a valid id, is unchanged.
+        $this->actingAs($this->alice)->get($this->pageUrl('desk-a', 'proj-a'))->assertOk();
+        $this->actingAs($this->alice)->get($this->pageUrl('desk-a', 'proj-a', $valid))->assertOk()
+            ->assertInertia(fn (AssertableInertia $inertia) => $inertia->where('activeConversation.id', $valid));
+        Http::assertNothingSent();
+    }
+
     public function test_another_organizations_provider_and_bad_input_are_rejected_before_any_write(): void
     {
         Http::fake();
