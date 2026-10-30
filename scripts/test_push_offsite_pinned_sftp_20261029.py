@@ -66,15 +66,12 @@ case "{mode}" in
 esac
 map() {{ case "$1" in /incoming/*) echo "{r}/${{1#/incoming/}}";; *) echo "$1";; esac; }}
 while read -r cmd a b c; do
-  if [ "$cmd" = rename ]; then
-    [ "$a" = -l ] || exit 99
-    a=$b; b=$c
-  fi
   a=$(map "$a"); b=$(map "$b")
   case "$cmd" in
     get) if [ -f "$a" ]; then cp "$a" "$b"; else echo "File \\"$a\\" not found." >&2; exit 1; fi ;;
     put) case "{mode}" in corrupt) echo corrupt > "$b";; quota) echo 'Failure: No space left' >&2; exit 1;; *) cp "$a" "$b";; esac ;;
-    rename) if [ -e "$b" ]; then echo 'Couldn'"'"'t rename: Failure' >&2; exit 1; fi; mv "$a" "$b" ;;
+    ln) if [ -e "$b" ]; then echo 'Couldn'"'"'t link: Failure' >&2; exit 1; fi; ln "$a" "$b" ;;
+    rm) rm -f "$a" ;;
     -rm) rm -f "$a" ;;
   esac
 done < "$batch"
@@ -104,8 +101,8 @@ class PinnedSftpPush(unittest.TestCase):
         self.assertEqual(uploaded, b"ENCRYPTED-TEST-BYTES")
         self.assertEqual(left, [])
         self.assertIn(".incoming-offsite-39b88b36d071.tar.gz.age.", log)
-        self.assertRegex(log, r"rename -l .*\.incoming-")
-        self.assertNotIn("posix-rename", log)
+        self.assertRegex(log, r"ln .*\.incoming-")
+        self.assertNotIn("rename ", log)
         for flag in ("BatchMode=yes", "IdentitiesOnly=yes", "StrictHostKeyChecking=yes",
                      "PasswordAuthentication=no", "IdentityAgent=none"):
             self.assertIn(flag, log)
@@ -192,7 +189,7 @@ class PinnedSftpPush(unittest.TestCase):
             self.assertIn("NO_ARGUMENTS_ACCEPTED", r.stdout)
 
 
-    def test_real_openssh_legacy_rename_never_replaces_existing_object(self):
+    def test_real_openssh_hardlink_never_replaces_existing_object(self):
         import shutil
         server = Path("/usr/lib/openssh/sftp-server")
         if not shutil.which("sftp") or not server.is_file():
@@ -203,7 +200,7 @@ class PinnedSftpPush(unittest.TestCase):
             incoming.write_bytes(b"NEW")
             final.write_bytes(b"EXISTING")
             batch = root / "batch"
-            batch.write_text(f'rename -l "{incoming}" "{final}"\n')
+            batch.write_text(f'ln "{incoming}" "{final}"\n')
             result = subprocess.run(["sftp", "-D", str(server), "-b", str(batch)],
                                     capture_output=True, timeout=15)
             self.assertNotEqual(result.returncode, 0)
@@ -214,6 +211,8 @@ class PinnedSftpPush(unittest.TestCase):
                                     capture_output=True, timeout=15)
             self.assertEqual(result.returncode, 0, result.stderr)
             self.assertEqual(final.read_bytes(), b"NEW")
+            self.assertEqual(incoming.read_bytes(), b"NEW")
+            self.assertEqual(final.stat().st_ino, incoming.stat().st_ino)
 
 if __name__ == "__main__":
     unittest.main()
