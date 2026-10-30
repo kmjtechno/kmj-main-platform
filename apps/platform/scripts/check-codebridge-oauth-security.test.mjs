@@ -54,7 +54,14 @@ function audit(source, authority) {
             'IMPLICIT_LOGIN',
         ],
         [
-            /\bRoute::(?:any|match)\s*\(\s*['"]oauth\/(?:authorize|token)['"]/i,
+            /\bRoute::any\s*\(\s*['"]oauth\/(?:authorize|token)['"]/i,
+            'UNRESTRICTED_OAUTH_ROUTE',
+        ],
+        [
+            // Route::match begins with a method array, not a route path.
+            // Check the actual second argument so GET/POST wildcard aliases
+            // cannot bypass the OAuth consent/PKCE source guard.
+            /\bRoute::match\s*\(\s*\[[^\]]*\]\s*,\s*['"]oauth\/(?:authorize|token)['"]/i,
             'UNRESTRICTED_OAUTH_ROUTE',
         ],
         [/\bcb_super_admin\b/i, 'SUPERADMIN_BYPASS_CLIENT'],
@@ -116,6 +123,8 @@ void test('wildcard or duplicate OAuth handlers cannot pass the guard', () => {
     for (const malicious of [
         "Route::any('oauth/token', function () {});",
         "Route::match(['GET'], 'oauth/authorize', function () {});",
+        'Route::match(["POST"], "oauth/token", function () {});',
+        "Route::match(\n ['GET', 'POST'],\n 'oauth/authorize', function () {});",
         "Route::get('oauth/authorize', function () {});",
     ]) {
         assert.notDeepEqual(audit(routes + '\n' + malicious, server), []);
