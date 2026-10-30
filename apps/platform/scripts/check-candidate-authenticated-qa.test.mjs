@@ -90,7 +90,9 @@ void test('owner browser state must be a private single-link regular file, never
     }
     linkSync(state, hardlink);
     try {
-        assert.ok(validateEnv(good).problems.includes('STORAGE_STATE_NOT_PRIVATE_FILE'));
+        assert.ok(
+            validateEnv(good).problems.includes('STORAGE_STATE_NOT_PRIVATE_FILE'),
+        );
         assert.ok(
             validateEnv({ ...good, KMJ_QA_STORAGE_STATE: hardlink }).problems.includes(
                 'STORAGE_STATE_NOT_PRIVATE_FILE',
