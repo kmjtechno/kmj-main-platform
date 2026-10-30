@@ -779,7 +779,7 @@ try {
             if (name === 'owner-devices') {
                 await page
                     .getByRole('heading', {
-                        name: 'CodeBridge Control Center',
+                        name: 'CodeBridge Owner License Settings',
                         exact: true,
                     })
                     .waitFor();
@@ -1001,52 +1001,36 @@ try {
                 }
             }
             if (name === 'owner-devices') {
+                // Owner-only license settings should link to a single device workspace.
                 if (
                     (await page
                         .getByRole('heading', {
-                            name: 'CodeBridge Control Center',
+                            name: 'CodeBridge Owner License Settings',
                             exact: true,
                         })
                         .count()) !== 1
                 )
-                    errors.push('Owner CodeBridge controls missing');
+                    errors.push('Owner CodeBridge license settings missing');
+                const workspace = page.getByRole('link', {
+                    name: 'Open unified CodeBridge workspace',
+                    exact: true,
+                });
+                if ((await workspace.count()) !== 1)
+                    errors.push('Unified CodeBridge workspace link missing');
+                else if (
+                    (await workspace.getAttribute('href')) !==
+                    '/services/kmj-codebridge#codebridge-device-control'
+                )
+                    errors.push('Device link does not open canonical workspace');
                 if (
                     (await page
                         .getByRole('heading', {
                             name: 'Device Control Center',
                             exact: true,
                         })
-                        .count()) !== 1
+                        .count()) !== 0
                 )
-                    errors.push('Real device control component missing');
-                const search = page.getByRole('textbox', {
-                    name: 'Search devices and projects',
-                });
-                await search.fill('no-such-preview-device');
-                if (
-                    !(await page
-                        .getByText('No devices match these filters.', {
-                            exact: true,
-                        })
-                        .isVisible())
-                )
-                    errors.push('Device search failed');
-                await search.fill('');
-                await page
-                    .getByRole('button', {
-                        name: 'Details & diagnose',
-                        exact: true,
-                    })
-                    .click();
-                if (
-                    (await page
-                        .getByRole('button', {
-                            name: 'Hide details',
-                            exact: true,
-                        })
-                        .getAttribute('aria-expanded')) !== 'true'
-                )
-                    errors.push('Device details did not open');
+                    errors.push('Duplicate device controls on owner license page');
             }
             if (name === 'owner-ops') {
                 if (
