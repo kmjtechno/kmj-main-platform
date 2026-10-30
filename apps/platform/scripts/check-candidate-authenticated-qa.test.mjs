@@ -1,6 +1,13 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { chmodSync, mkdtempSync, writeFileSync } from 'node:fs';
+import {
+    chmodSync,
+    linkSync,
+    mkdtempSync,
+    symlinkSync,
+    unlinkSync,
+    writeFileSync,
+} from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import {
@@ -30,6 +37,10 @@ void test('anything but loopback http with a port is refused (never production)'
         'https://kmjtechno.com',
         'http://kmjtechno.com:8080',
         'http://127.0.0.1',
+        'http://user:password@127.0.0.1:8123',
+        'http://127.0.0.1:8123/unexpected',
+        'http://127.0.0.1:8123/?mode=owner',
+        'http://127.0.0.1:8123/#untrusted',
         'ftp://127.0.0.1:1',
         'nope',
         '',
@@ -62,6 +73,33 @@ void test('candidate sha, manifest hash and private storage state are required',
         validateEnv(good).problems.includes('STORAGE_STATE_NOT_PRIVATE_FILE'),
     );
     chmodSync(state, 0o600);
+});
+
+void test('owner browser state must be a private single-link regular file, never a symlink', () => {
+    const alias = path.join(dir, 'state-symlink.json');
+    const hardlink = path.join(dir, 'state-hardlink.json');
+    symlinkSync(state, alias);
+    try {
+        assert.ok(
+            validateEnv({ ...good, KMJ_QA_STORAGE_STATE: alias }).problems.includes(
+                'STORAGE_STATE_NOT_PRIVATE_FILE',
+            ),
+        );
+    } finally {
+        unlinkSync(alias);
+    }
+    linkSync(state, hardlink);
+    try {
+        assert.ok(validateEnv(good).problems.includes('STORAGE_STATE_NOT_PRIVATE_FILE'));
+        assert.ok(
+            validateEnv({ ...good, KMJ_QA_STORAGE_STATE: hardlink }).problems.includes(
+                'STORAGE_STATE_NOT_PRIVATE_FILE',
+            ),
+        );
+    } finally {
+        unlinkSync(hardlink);
+    }
+    assert.deepEqual(validateEnv(good).problems, []);
 });
 
 void test('judge fails closed on every defect and never passes an unauthenticated page', () => {
