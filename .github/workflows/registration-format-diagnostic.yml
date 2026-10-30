@@ -1,0 +1,28 @@
+name: Registration visual QA format diagnostic (temporary)
+on:
+  push:
+    branches:
+      - fix-registration-cta-readiness-20261030
+    paths:
+      - .github/workflows/registration-format-diagnostic.yml
+permissions:
+  contents: read
+jobs:
+  format:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - name: Show exact pinned frontend formatter diff (no commit)
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd apps/platform
+          npm ci --ignore-scripts --no-audit --no-fund
+          ./node_modules/.bin/vp fmt scripts/browser-preview-verify.mjs --write
+          git diff --check
+          echo 'KMJ_REG_FMT_BEGIN'
+          git diff -- scripts/browser-preview-verify.mjs
+          echo 'KMJ_REG_FMT_END'
