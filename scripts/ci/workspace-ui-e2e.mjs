@@ -72,6 +72,7 @@ try {
     expect(list2.includes('exit_code') && list2.includes('fast'), 'gate evidence shows the gate id and exit_code');
 
     // 3) an unconfigured gate is refused by the device and reported honestly, never faked as success
+    await page.selectOption('#ws-tool', 'quality_gate');
     await page.fill('#ws-gate', 'nonexistent');
     await page.getByTestId('queue-tool').click();
     expect(await waitForStatus('failed', 1), 'unconfigured gate is reported as failed by the device');
