@@ -106,7 +106,11 @@ void test('origin binding is mandatory even when the page reports HTTP 200', () 
         redirectedToLogin: false,
         problems: [],
     };
-    assert.ok(judge({ ...result, finalOriginMatches: false }).problems.includes('CANDIDATE_ORIGIN_MISMATCH'));
+    assert.ok(
+        judge({ ...result, finalOriginMatches: false }).problems.includes(
+            'CANDIDATE_ORIGIN_MISMATCH',
+        ),
+    );
     assert.ok(judge({ ...result, finalOriginMatches: true }).pass);
 });
 
