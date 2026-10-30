@@ -132,7 +132,7 @@ export async function runPage(browser, state, base, viewport, page) {
     if (!redirectedToLogin && page.id === 'owner-codebridge-fleet') {
         const heading = await tab
             .getByRole('heading', {
-                name: 'CodeBridge Control Center',
+                name: 'CodeBridge Owner License Settings',
                 exact: true,
             })
             .count();
