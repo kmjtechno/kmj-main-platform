@@ -586,9 +586,9 @@ export const deliveryMilestones: DeliveryMilestone[] = [
         id: 'omnidesk-licensing-contract',
         title: 'KMJ OmniDesk licensing contract',
         state: 'active',
-        detail: 'Dedicated omnidesk.remote_access authority, KSLP-v1 identity, signed-entitlement claims, device activation, renewable lease, offline grace, revocation and versioned API boundaries are contract-locked. PR #711 adds a separate server-side device-signature proof verifier compatible with the OmniDesk Rust client, but does not implement the activation API, customer binding, signer or production licensing. Main Platform stays limited to the commercial control plane; production signing remains KMS/HSM-gated.',
+        detail: 'Main Platform owns the OmniDesk commercial control plane, not the remote-session runtime. Versioned KSLP-v1 identity, Ed25519 activation and renewal device proofs, tenant-scoped activation bindings, signed-entitlement schema, replay cursor, offline grace and API contract are source-defined. Lease cursor lifecycle hardening is proposed to re-check revoked or expired licenses, deactivated devices and inactive or cross-tenant entitlements. Production signing and authenticated activation/renewal issuance remain gated.',
         evidence:
-            'PR #246 locked identity, capability and the licensing contract; PR #711 merged the separate activation Ed25519 verifier; renewal proof follows the Rust KMJ-OMNIDESK-RENEW-v1 golden vector with negative sequence/JTI/nonce tampering tests in this source candidate. Exact-head CI, production signer, owner approval, tenant/replay/seat enforcement, authenticated customer activation and signed lease integration remain separate gates. No customer license or commercial release was issued.',
+            'PR #711 merged exact Rust-compatible activation proof and PR #712 merged renewal proof, both with 10/10 exact-head CI. This lifecycle-gate candidate adds independent PostgreSQL tests for revoked/expired/cross-tenant cursor denials; exact-head CI and review are pending. No production signer, issued commercial entitlement, live activation/renewal route or independent owner release proof is claimed.',
     },
     {
         id: 'production-hardening',
