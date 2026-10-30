@@ -7,9 +7,20 @@ const dashboard = readFileSync('resources/js/pages/dashboard.tsx', 'utf8');
 const access = readFileSync('app/Services/PlatformOwnerAccess.php', 'utf8');
 
 void test('server derives owner controls from the verified role guard', () => {
+    // Owners are redirected to the guarded Super Admin route; the customer
+    // dashboard never grants owner-plan controls.
     assert.ok(
         routes.includes(
-            "'canManageCodeBridgeOwnerPlan' => app(PlatformOwnerAccess::class)->allows($user)",
+            'if (app(PlatformOwnerAccess::class)->allows($user)) {',
+        ),
+    );
+    assert.ok(
+        routes.includes("return redirect()->route('super-admin.index');"),
+    );
+    assert.ok(routes.includes("'canManageCodeBridgeOwnerPlan' => false,"));
+    assert.ok(
+        readFileSync('routes/codebridge-admin.php', 'utf8').includes(
+            "Route::get('owner-plan', function (Request $request, PlatformOwnerAccess $access",
         ),
     );
     assert.ok(access.includes("getAttribute('is_platform_owner')"));
@@ -34,15 +45,17 @@ void test('plan display remains bound to the actual license value', () => {
 });
 
 void test('verified owner product authority is exposed only through the compact admin entry', () => {
-    // The catalog is only queried inside the owner guard and is null for everyone else.
-    const start = routes.indexOf('$ownerProducts = null;');
-    const guard = routes.indexOf('if ($isPlatformOwner) {', start);
-    const query = routes.indexOf('Product::query()', guard);
-    const render = routes.indexOf("'ownerProducts' => $ownerProducts", query);
-    assert.ok(start > 0 && guard > start && query > guard && render > query);
+    // The customer dashboard never queries the catalog for owners: they are
+    // redirected first and ownerProducts is always null on this response.
+    const redirect = routes.indexOf(
+        "return redirect()->route('super-admin.index');",
+    );
+    const nulled = routes.indexOf('$ownerProducts = null;', redirect);
+    const render = routes.indexOf("'ownerProducts' => $ownerProducts", nulled);
+    assert.ok(redirect > 0 && nulled > redirect && render > nulled);
     assert.ok(
         routes.includes(
-            '$isPlatformOwner = app(PlatformOwnerAccess::class)->allows($user);',
+            'if (app(PlatformOwnerAccess::class)->allows($user)) {',
         ),
     );
     assert.ok(dashboard.includes('{ownerProducts !== null && ('));

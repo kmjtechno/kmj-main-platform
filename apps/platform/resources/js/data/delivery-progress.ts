@@ -13,9 +13,9 @@ export const deliveryMilestones: DeliveryMilestone[] = [
         id: 'codebridge-ai-workspace',
         title: 'CodeBridge AI workflow workspace',
         state: 'blocked',
-        detail: 'The workspace shows authorized devices, projects and admitted free models, and stores per-project conversations answered by a zero-spend admitted model, with durable inference events, cancel and retry. Device job and tool events are not recorded by the Main Platform and stay unavailable.',
+        detail: 'The workspace shows authorized devices, projects and admitted free models, and stores per-project conversations answered by a zero-spend admitted model, with durable inference events, cancel and retry. Malformed conversation ids now return a clean 404, and every unfit provider state is refused with a specific code before any request. Approved named device tool requests (git status, inspect, one configured quality gate) have a durable queue with idempotent enqueue, cancel, expiry and event timeline, but are switched off by default. The opt-in device worker now exists in kmj-codebridge and a CI-only round-trip on a disposable PostgreSQL 18 database shows it claiming, running and reporting all three tools (empty arguments are now sent as a JSON object after that test exposed a mismatch). No production device has it enabled, and no signed canary, rollback plan, Windows run or owner-enabled flag exists, so no request runs on a real device today. The device job API and enqueue/claim now also reject revoked, expired, not-yet-active or mismatched product licenses independently of the device credential lease.',
         evidence:
-            'Code and tests are under review. Hosted CI, authenticated acceptance against a real free provider and guarded production publication remain required; this entry does not claim a live working chat.',
+            'Merged source with passing exact-head hosted CI, including a CI-only PostgreSQL 18 round-trip in which the real Linux device worker completed all three named tools. NOT RUN: a live enrolled device, a signed canary, a Windows run, authenticated acceptance against a real free provider, owner QA and guarded production publication. CI evidence is not production readiness, and this entry does not claim a live working chat.',
     },
     {
         id: 'codebridge-single-control-center',

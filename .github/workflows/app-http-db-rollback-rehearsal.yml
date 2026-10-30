@@ -1,0 +1,63 @@
+name: App HTTP and Database Rollback Rehearsal
+on:
+  pull_request:
+    paths:
+      - 'apps/platform/database/migrations/**'
+      - 'scripts/ci/rehearse-app-rollback-ci.sh'
+      - 'scripts/operations/rehearse-app-http-db-rollback-20261029.py'
+      - 'tests/test_rehearse_app_http_db_rollback.py'
+      - '.github/workflows/app-http-db-rollback-rehearsal.yml'
+  workflow_dispatch:
+    inputs:
+      base_sha:
+        description: 'Previous-release commit (40 hex). Candidate is the dispatched ref.'
+        required: true
+permissions:
+  contents: read
+concurrency:
+  group: app-rollback-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  app-rollback:
+    name: Previous vs candidate code on one PG18 database (HTTP, migrate, rollback)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    steps:
+      - name: Checkout exact source HEAD with history, no persisted credentials
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - name: PHP 8.4 PostgreSQL extensions
+        uses: shivammathur/setup-php@87d00bde2555f25eb54fedf940384e99cbdc55ef
+        with:
+          php-version: '8.4'
+          extensions: pdo_pgsql, pgsql, pdo_sqlite, sqlite3, sodium
+          coverage: none
+      - name: Node 22 for per-tree Vite builds
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: '22'
+      - name: Script contract tests
+        run: |
+          set -euo pipefail
+          bash -n scripts/ci/rehearse-app-rollback-ci.sh
+          python3 -B -m unittest discover -s tests -p test_rehearse_app_http_db_rollback.py -v
+      - name: Rehearse previous and candidate code against one disposable database
+        env:
+          HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha || inputs.base_sha }}
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$HEAD_SHA"
+          bash scripts/ci/rehearse-app-rollback-ci.sh "$BASE_SHA" "$HEAD_SHA"
+      - name: Fixed regression pair (pre-workspace main to this head) must exercise a real migration
+        env:
+          HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          KMJ_REHEARSAL_MIN_NEW_MIGRATIONS: '1'
+          KMJ_REHEARSAL_REQUIRE_WORKSPACE_ROUTES: '1'
+        run: |
+          set -euo pipefail
+          # 39b88b36 is main immediately before the AI Workspace merge (#693).
+          bash scripts/ci/rehearse-app-rollback-ci.sh 39b88b36d071d3f78f2392d609d3febc2c530165 "$HEAD_SHA"

@@ -92,6 +92,10 @@ export function workspaceProps(
         activeConversation: { id: 'qa-conv', title: 'Synthetic chat' },
         transcript: { messages, events },
         chatError,
+        jobs: [],
+        jobEvents: [],
+        activeJobId: null,
+        tools: [],
         capabilities: {
             conversations: { available: true, reason: REASONS.conversations },
             chat_executor: { available: true, reason: REASONS.chat_executor },

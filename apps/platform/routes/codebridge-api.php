@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\CodeBridgeDeviceJobController;
 use App\Services\CodeBridge\OAuth\OAuthServer;
 use App\Services\Licensing\CodeBridge\CodeBridgeDevicePairingService;
 use App\Services\Licensing\CodeBridge\CodeBridgeRenewalService;
@@ -247,3 +248,9 @@ Route::post('codebridge/v1/user-access/introspect', function (
 
 require __DIR__.'/developer-activation-api.php';
 require __DIR__.'/omnidesk-api.php';
+
+// Device-agent queue for approved named workspace tools. 503 until an operator enables it.
+Route::post('codebridge/v1/jobs/claim', [CodeBridgeDeviceJobController::class, 'claim'])
+    ->middleware('throttle:60,1');
+Route::post('codebridge/v1/jobs/{job}/events', [CodeBridgeDeviceJobController::class, 'report'])
+    ->whereUlid('job')->middleware('throttle:120,1');
