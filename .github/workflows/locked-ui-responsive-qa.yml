@@ -6,6 +6,7 @@ on:
       - 'apps/platform/resources/css/**'
       - 'apps/platform/visual/**'
       - 'apps/platform/scripts/browser-preview-verify.mjs'
+      - 'apps/platform/scripts/workspace-browser-verify.mjs'
       - 'apps/platform/scripts/check-visual-qa-coverage.test.mjs'
       - 'apps/platform/package-lock.json'
       - '.github/workflows/locked-ui-responsive-qa.yml'
@@ -43,6 +44,8 @@ jobs:
           printf 'KMJ_CHROMIUM_EXECUTABLE=%s\n' "$chrome" >> "$GITHUB_ENV"
       - name: Verify public landing and synthetic Super Admin at six viewports
         run: cd apps/platform && npm run visual:verify
+      - name: Verify workspace layout and chat state flows with synthetic responses
+        run: cd apps/platform && npm run workspace:verify
       - name: Retain screenshots and verification result for owner review
         if: always()
         uses: actions/upload-artifact@v4

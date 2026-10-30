@@ -19,6 +19,8 @@ final class OpenAiCompatibleAdapter
 
     private const MAX_BODY = 2_000_000;
 
+    private const MAX_COMPLETION_TOKENS = 1024;
+
     public function __construct(private readonly EndpointGuard $guard) {}
 
     /**
@@ -75,6 +77,61 @@ final class OpenAiCompatibleAdapter
         sort($models);
 
         return $this->result('ok', $models, $rate, null);
+    }
+
+    /**
+     * One bounded, non-streaming chat completion. The CALLER must have passed the zero-spend
+     * admission guard first. The key goes only to the pinned, validated address; the result
+     * carries a content string or a short error code, never raw provider output.
+     *
+     * @param  list<string>  $approvedHosts
+     * @param  list<array{role: string, content: string}>  $messages
+     * @return array{ok: bool, content: ?string, error_code: ?string}
+     */
+    public function complete(string $baseUrl, string $apiKey, array $approvedHosts, string $model, array $messages): array
+    {
+        try {
+            $target = $this->guard->validate($baseUrl, $approvedHosts);
+        } catch (InvalidArgumentException $exception) {
+            return ['ok' => false, 'content' => null, 'error_code' => $exception->getMessage()];
+        }
+        if (! defined('CURLOPT_RESOLVE')) {
+            return ['ok' => false, 'content' => null, 'error_code' => 'pinning_unavailable'];
+        }
+
+        try {
+            $response = Http::withOptions([
+                'allow_redirects' => false,
+                'curl' => [CURLOPT_RESOLVE => [$target['host'].':443:'.$target['ip']]],
+            ])->withToken($apiKey)->acceptJson()->timeout(45)->connectTimeout(5)->post($target['base'].'/chat/completions', [
+                'model' => $model,
+                'messages' => $messages,
+                'max_tokens' => self::MAX_COMPLETION_TOKENS,
+                'stream' => false,
+            ]);
+        } catch (ConnectionException) {
+            return ['ok' => false, 'content' => null, 'error_code' => 'connection_failed'];
+        }
+
+        $status = $response->status();
+        if ($status === 401 || $status === 403) {
+            return ['ok' => false, 'content' => null, 'error_code' => 'auth_failed'];
+        }
+        if ($status === 429) {
+            return ['ok' => false, 'content' => null, 'error_code' => 'rate_limited'];
+        }
+        if ($status >= 300) {
+            return ['ok' => false, 'content' => null, 'error_code' => $status >= 500 ? 'provider_unavailable' : 'unexpected_status'];
+        }
+        if (strlen($response->body()) > self::MAX_BODY) {
+            return ['ok' => false, 'content' => null, 'error_code' => 'response_too_large'];
+        }
+        $content = $response->json('choices.0.message.content');
+        if (! is_string($content) || trim($content) === '') {
+            return ['ok' => false, 'content' => null, 'error_code' => 'empty_response'];
+        }
+
+        return ['ok' => true, 'content' => mb_substr($content, 0, 8000), 'error_code' => null];
     }
 
     /**

@@ -6,6 +6,10 @@ import PublicLanguageSwitch from '@/components/public-language-switch';
 import '../../css/locked-landing.css';
 import '../../css/public-theme.css';
 
+// This shared header also renders in the standalone visual-preview build,
+// which does not generate Laravel Wayfinder route modules.
+const register = () => '/register';
+
 const navigation = [
     ['Home', '/'],
     ['Company', '/company'],
@@ -83,14 +87,21 @@ export default function PublicSiteHeader() {
                                 >
                                     Sign in
                                 </Link>
-                                <Link
-                                    href="/register"
-                                    onClick={() => setOpen(false)}
-                                >
-                                    {registrationAvailable
-                                        ? 'Create account'
-                                        : 'Registration paused — details'}
-                                </Link>
+                                {registrationAvailable ? (
+                                    <Link
+                                        href={register()}
+                                        onClick={() => setOpen(false)}
+                                    >
+                                        Create account
+                                    </Link>
+                                ) : (
+                                    <span
+                                        role="status"
+                                        className="lock-registration-paused"
+                                    >
+                                        Registration paused
+                                    </span>
+                                )}
                             </>
                         )}
                     </div>
@@ -116,19 +127,23 @@ export default function PublicSiteHeader() {
                             <Link href="/login" className="lock-auth-login">
                                 Sign in
                             </Link>
-                            <Link
-                                href="/register"
-                                className="lock-auth-register"
-                                aria-label={
-                                    registrationAvailable
-                                        ? 'Create KMJ TECHNO account'
-                                        : 'Register account — registration currently paused'
-                                }
-                            >
-                                {registrationAvailable
-                                    ? 'Create account'
-                                    : 'Register'}
-                            </Link>
+                            {registrationAvailable ? (
+                                <Link
+                                    href={register()}
+                                    className="lock-auth-register"
+                                    aria-label="Create KMJ TECHNO account"
+                                >
+                                    Create account
+                                </Link>
+                            ) : (
+                                <span
+                                    role="status"
+                                    className="lock-registration-paused"
+                                    title="Verification email delivery is temporarily unavailable"
+                                >
+                                    Registration paused
+                                </span>
+                            )}
                         </>
                     )}
                 </div>
