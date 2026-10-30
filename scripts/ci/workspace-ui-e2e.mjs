@@ -85,7 +85,10 @@ try {
     console.log('DIAG', JSON.stringify(diag.slice(0, 25)), 'PAGE_ERRORS', JSON.stringify(pageErrors.slice(0, 5)));
     try {
         console.log('URL', page.url());
-        console.log('BODY', (await page.content()).slice(0, 1800));
+        const html = await page.content();
+        console.log('TAGS', JSON.stringify((html.match(/<(link|script)[^>]*(build|vite)[^>]*>/g) ?? []).slice(0, 12)));
+        const res = await fetch(`${origin}/login`);
+        console.log('LINK_HEADER', JSON.stringify(res.headers.get('link')?.slice(0, 600) ?? null));
     } catch {}
 }
 await browser.close();
