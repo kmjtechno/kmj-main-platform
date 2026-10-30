@@ -81,6 +81,8 @@ export function judge(result) {
     // A 200 from a redirect target is not proof of the candidate origin.
     if (result.finalOriginMatches !== true)
         problems.push('CANDIDATE_ORIGIN_MISMATCH');
+    if (result.finalPathMatches !== true)
+        problems.push('CANDIDATE_PATH_MISMATCH');
     return { ...result, problems, pass: problems.length === 0 };
 }
 
@@ -187,6 +189,7 @@ export async function runPage(browser, state, base, viewport, page) {
         brokenImages,
         redirectedToLogin,
         finalOriginMatches: url.origin === base.origin,
+        finalPathMatches: url.pathname === new URL(page.path, base).pathname,
         problems,
     });
 }
