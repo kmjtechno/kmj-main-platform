@@ -167,7 +167,7 @@ final class WorkspaceJobService
     /**
      * Device side. Returns at most one request and only while the device has none in flight.
      *
-     * @return array{id: string, tool: string, arguments: array<string, string>, project_id: string, lease_expires_at: string, claim_token: string}|null
+     * @return array{id: string, tool: string, arguments: array<string, string>|\stdClass, project_id: string, lease_expires_at: string, claim_token: string}|null
      */
     public function claim(string $tenantId, string $deviceId): ?array
     {
