@@ -220,3 +220,10 @@ void test('one CodeBridge dashboard with owner-only license settings', () => {
     assert.match(ui, /window\.removeEventListener\('hashchange', apply\)/);
     assert.match(ui, /scrollIntoView\(\{ block: 'start' \}\)/);
 });
+
+void test('repeated CodeBridge hash links scroll even within the selected section', () => {
+    assert.match(ui, /setHashNavigationRevision\(\(revision\) => revision \+ 1\)/);
+    assert.match(ui, /\[activeSection, hashNavigationRevision\]/);
+    assert.match(ui, /pendingAnchor\.current = null/);
+    assert.match(ui, /scrollIntoView\(\{ block: 'start' \}\)/);
+});
