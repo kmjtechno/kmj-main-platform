@@ -231,3 +231,46 @@ void test('candidate owner browser contexts close after page creation and naviga
         assert.equal(closed, 1, `context must close exactly once after ${failure}`);
     }
 });
+
+
+void test('late SPA navigation must fail closed even after an initial HTTP 200', async () => {
+    for (const destination of [
+        'http://127.0.0.1:8123/login',
+        'http://127.0.0.1:8123/other-page',
+        'http://127.0.0.1:9999/services/kmj-codebridge',
+    ]) {
+        let currentUrl = good.KMJ_QA_BASE_URL + PAGES[1].path;
+        let closed = 0;
+        let evaluateCount = 0;
+        const tab = {
+            on() {},
+            url() { return currentUrl; },
+            async goto() { return { status: () => 200 }; },
+            mouse: {
+                async wheel() { currentUrl = destination; },
+            },
+            async waitForTimeout() {},
+            async evaluate() { return evaluateCount++ === 0 ? false : 0; },
+        };
+        const browser = {
+            async newContext() {
+                return {
+                    async newPage() { return tab; },
+                    async close() { closed++; },
+                };
+            },
+        };
+        const result = await runPage(
+            browser, state, new URL(good.KMJ_QA_BASE_URL),
+            VIEWPORTS[0], PAGES[1],
+        );
+        assert.equal(result.pass, false, destination);
+        assert.equal(closed, 1, 'owner browser context must close');
+        assert.ok(
+            result.problems.some((problem) =>
+                ['NOT_AUTHENTICATED', 'CANDIDATE_ORIGIN_MISMATCH', 'CANDIDATE_PATH_MISMATCH'].includes(problem)
+            ),
+            destination,
+        );
+    }
+});
