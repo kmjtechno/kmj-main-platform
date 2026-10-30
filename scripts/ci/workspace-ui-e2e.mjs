@@ -69,7 +69,7 @@ try {
     await page.getByTestId('queue-tool').click();
     expect(await waitForStatus('succeeded', 2), 'quality_gate "fast" completed on the device');
     const list2 = (await page.getByTestId('job-list').innerText()).toLowerCase();
-    expect(list2.includes('exit_code') && list2.includes('fast'), `gate evidence shows the gate id and exit_code ${list2.includes('exit_code') ? '' : JSON.stringify(list2.slice(0, 700))}`);
+    expect(list2.includes('exit_code') && list2.includes('fast'), `gate evidence shows the gate id and exit_code ${list2.includes('exit_code') ? '' : JSON.stringify(list2.replace(/\n+/g, " | ").slice(0, 3500))}`);
 
     // 3) an unconfigured gate is refused by the device and reported honestly, never faked as success
     await page.selectOption('#ws-tool', 'quality_gate');
