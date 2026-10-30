@@ -99,6 +99,15 @@ export async function runPage(browser, state, base, viewport, page) {
         storageState: state,
         viewport: { width: viewport.width, height: viewport.height },
     });
+    try {
+        return await runPageInContext(context, base, viewport, page);
+    } finally {
+        // Never retain an owner-authenticated candidate context after an error.
+        await context.close();
+    }
+}
+
+async function runPageInContext(context, base, viewport, page) {
     const tab = await context.newPage();
     let consoleErrors = 0;
     let pageErrors = 0;
@@ -197,7 +206,6 @@ export async function runPage(browser, state, base, viewport, page) {
         )
             problems.push('OVERVIEW_HASH_DID_NOT_LEAVE_DEVICES');
     }
-    await context.close();
     return judge({
         page: page.id,
         viewport: viewport.name,
