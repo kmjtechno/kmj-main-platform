@@ -7,6 +7,10 @@ on:
       - 'apps/platform/routes/codebridge-api.php'
       - 'apps/platform/database/migrations/*codebridge_workspace_jobs*'
       - 'scripts/ci/workspace-jobs-roundtrip*'
+      - 'scripts/ci/workspace-ui-e2e*'
+      - 'apps/platform/resources/js/components/codebridge/tool-jobs-panel.tsx'
+      - 'apps/platform/resources/js/pages/services/codebridge-workspace.tsx'
+      - 'apps/platform/app/Http/Controllers/CodeBridgeWorkspaceController.php'
       - '.github/workflows/workspace-jobs-roundtrip.yml'
   workflow_dispatch:
 permissions:
@@ -55,3 +59,44 @@ jobs:
           set -euo pipefail
           test "$(git rev-parse HEAD)" = "$SOURCE_SHA"
           bash scripts/ci/workspace-jobs-roundtrip.sh "$SOURCE_SHA" "$RUNNER_TEMP/kmj-codebridge"
+  ui-e2e:
+    name: Authenticated browser UI queues real tools that the real worker runs (PostgreSQL 18)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - name: Checkout exact source HEAD without persisted credentials
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - name: PHP 8.4 PostgreSQL extensions
+        uses: shivammathur/setup-php@87d00bde2555f25eb54fedf940384e99cbdc55ef
+        with:
+          php-version: '8.4'
+          extensions: pdo_pgsql, pgsql, pdo_sqlite, sqlite3, sodium
+          coverage: none
+      - name: Node 22
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: '22'
+      - name: Install locked Composer and npm dependencies and the browser
+        working-directory: apps/platform
+        run: |
+          set -euo pipefail
+          composer install --no-interaction --prefer-dist --no-progress --optimize-autoloader
+          npm ci --no-audit --no-fund
+          npx playwright install --with-deps chromium
+      - name: Fetch pinned kmj-codebridge worker (public repository, exact SHA)
+        run: |
+          set -euo pipefail
+          git clone --no-checkout https://github.com/kmjtechno/kmj-codebridge.git "$RUNNER_TEMP/kmj-codebridge"
+          git -C "$RUNNER_TEMP/kmj-codebridge" checkout --detach "$CODEBRIDGE_SHA"
+          test "$(git -C "$RUNNER_TEMP/kmj-codebridge" rev-parse HEAD)" = "$CODEBRIDGE_SHA"
+          (cd "$RUNNER_TEMP/kmj-codebridge" && npm ci --no-audit --no-fund)
+      - name: Real login, real UI, real worker, disposable PostgreSQL 18
+        env:
+          SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$SOURCE_SHA"
+          bash scripts/ci/workspace-ui-e2e.sh "$SOURCE_SHA" "$RUNNER_TEMP/kmj-codebridge"
