@@ -98,6 +98,9 @@ export default function CodeBridgeService({
 }: Props) {
     const [activeSection, setActiveSection] =
         useState<CodeBridgeSection>('overview');
+    // A second hashchange can target the same visible section; a revision
+    // forces the post-render anchor effect to run even without a tab change.
+    const [hashNavigationRevision, setHashNavigationRevision] = useState(0);
     const pendingAnchor = useRef<{
         section: CodeBridgeSection;
         id: string;
@@ -114,6 +117,7 @@ export default function CodeBridgeService({
             const id = codeBridgeAnchorFromHash(window.location.hash);
             pendingAnchor.current = id === null ? null : { section, id };
             setActiveSection(section);
+            setHashNavigationRevision((revision) => revision + 1);
         };
         apply();
         window.addEventListener('hashchange', apply);
@@ -127,7 +131,7 @@ export default function CodeBridgeService({
         if (pending === null || pending.section !== activeSection) return;
         pendingAnchor.current = null;
         document.getElementById(pending.id)?.scrollIntoView({ block: 'start' });
-    }, [activeSection]);
+    }, [activeSection, hashNavigationRevision]);
     const [clientSearch, setClientSearch] = useState('');
     const [showAllClients, setShowAllClients] = useState(false);
     const [copyStatus, setCopyStatus] = useState('');
