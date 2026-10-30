@@ -62,7 +62,8 @@ const modules = [
     },
     {
         name: 'CodeBridge',
-        description: 'One CodeBridge workspace for devices, permissions and projects',
+        description:
+            'One CodeBridge workspace for devices, permissions and projects',
         accent: 'text-rose-600 dark:text-rose-300',
         href: '/services/kmj-codebridge#codebridge-device-control',
         icon: Boxes,
