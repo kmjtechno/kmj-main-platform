@@ -913,7 +913,7 @@ try {
                     })
                     .click();
                 if (
-                    !(await page.getByRole('status').innerText()).includes(
+                    !(await page.locator('.lock-kristi-box').getByRole('status').innerText()).includes(
                         'Licensing Hub',
                     )
                 )
@@ -925,7 +925,7 @@ try {
                     .getByRole('button', { name: 'Send message', exact: true })
                     .click();
                 if (
-                    !(await page.getByRole('status').innerText()).includes(
+                    !(await page.locator('.lock-kristi-box').getByRole('status').innerText()).includes(
                         'Visit support',
                     )
                 )
