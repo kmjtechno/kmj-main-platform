@@ -1,0 +1,57 @@
+name: Workspace Jobs Live Round-Trip
+on:
+  pull_request:
+    paths:
+      - 'apps/platform/app/Services/CodeBridge/Workspace/**'
+      - 'apps/platform/app/Http/Controllers/CodeBridgeDeviceJobController.php'
+      - 'apps/platform/routes/codebridge-api.php'
+      - 'apps/platform/database/migrations/*codebridge_workspace_jobs*'
+      - 'scripts/ci/workspace-jobs-roundtrip*'
+      - '.github/workflows/workspace-jobs-roundtrip.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: ws-jobs-roundtrip-${{ github.ref }}
+  cancel-in-progress: true
+env:
+  # Exact public kmj-codebridge commit containing the merged worker (PR #703 and later).
+  CODEBRIDGE_SHA: 2d713aa9aa9a0641f0591ff6c881df62d68bfd22
+jobs:
+  roundtrip:
+    name: Real device worker claims, runs and reports named jobs on PostgreSQL 18
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - name: Checkout exact source HEAD without persisted credentials
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - name: PHP 8.4 PostgreSQL extensions
+        uses: shivammathur/setup-php@87d00bde2555f25eb54fedf940384e99cbdc55ef
+        with:
+          php-version: '8.4'
+          extensions: pdo_pgsql, pgsql, pdo_sqlite, sqlite3, sodium
+          coverage: none
+      - name: Node 22
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: '22'
+      - name: Install locked Composer dependencies
+        working-directory: apps/platform
+        run: composer install --no-interaction --prefer-dist --no-progress --optimize-autoloader
+      - name: Fetch pinned kmj-codebridge worker (public repository, exact SHA)
+        run: |
+          set -euo pipefail
+          git clone --no-checkout https://github.com/kmjtechno/kmj-codebridge.git "$RUNNER_TEMP/kmj-codebridge"
+          git -C "$RUNNER_TEMP/kmj-codebridge" checkout --detach "$CODEBRIDGE_SHA"
+          test "$(git -C "$RUNNER_TEMP/kmj-codebridge" rev-parse HEAD)" = "$CODEBRIDGE_SHA"
+          (cd "$RUNNER_TEMP/kmj-codebridge" && npm ci --no-audit --no-fund)
+      - name: Live round-trip on a disposable PostgreSQL 18 database
+        env:
+          SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$SOURCE_SHA"
+          bash scripts/ci/workspace-jobs-roundtrip.sh "$SOURCE_SHA" "$RUNNER_TEMP/kmj-codebridge"
