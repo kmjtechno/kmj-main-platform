@@ -9,7 +9,7 @@ src="$repo/scripts/operations/push-offsite-39b88b36d071-pinned-sftp-20261029.sh"
 # Every run owns a new directory; never delete or reuse a fixed root path.
 base="$(mktemp -d /var/lib/kmj-e2e.XXXXXXXX)"
 chmod 0755 "$base"
-test_user="kmje2e$(od -An -N4 -tx1 /dev/urandom | tr -d ' \\n')"
+test_user="kmje2e$(od -An -N4 -tx1 /dev/urandom | tr -d '[:space:]')"
 [[ "$test_user" =~ ^kmje2e[0-9a-f]{8}$ ]] || { echo 'BLOCKED: invalid throwaway user'; exit 3; }
 if getent passwd "$test_user" >/dev/null; then echo 'BLOCKED: user collision'; exit 3; fi
 home="$base/home"
