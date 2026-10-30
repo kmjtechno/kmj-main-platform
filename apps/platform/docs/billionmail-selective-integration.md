@@ -1,6 +1,7 @@
 # BillionMail selective integration — KMJ Main Platform
 
-Status: source-only, **disabled by default**. No BillionMail container or SMTP listener has been installed; production DNS, MX, Cloudflare Email Routing, release pointers and mail transport remain unchanged.
+**Status:** Source-only, disabled by default. No container or SMTP listener
+installed. Production DNS, MX, Cloudflare routing and mail remain unchanged.
 
 ## Chosen parts
 
@@ -18,10 +19,10 @@ Do not copy its complete management dashboard, customer identity system, mailbox
 
 1. Confirm current primary SMTP live delivery results, host resources, ports already in use, signed production release/rollback gates, and offsite recoverability **read-only**. Existing nginx 80/443 and mail 25/465/587 may conflict with the upstream Docker defaults.
 2. Stage BillionMail separately with pinned, audited images, private firewall rules, no public admin panel or default passwords, least privilege, reviewed Docker socket exposure, and bounded CPU, RAM and disk. Use a dedicated host if same-host conflicts or resources are unsafe.
-3. Verify protected inbound MX/Cloudflare routing for \`info@kmjtechno.com\` remains unchanged. For outbound: authenticate domain with DKIM/SPF/DMARC, verify accurate EHLO/PTR/rDNS/forward DNS and reputation, and confirm provider allows outbound TCP 25 or verified authenticated relay. The software **cannot** fix a Gmail 550 5.7.1 authorization rejection on its own.
-4. Provision a private SMTPS/465 endpoint with a trusted certificate that matches \`KMJ_BILLIONMAIL_SMTP_HOST\`, authenticated credentials and relay restrictions; refuse insecure fallback. Put credentials only in private deployment secrets, never Git/issue comments/logs.
-5. Keep \`KMJ_BILLIONMAIL_ACTIVATED=false\` and \`MAIL_MAILER=log\` until security review, dry-run, authorized delivery to Gmail/Outlook, bounce/queue checks, backup and rollback PASS. Start with low-volume transactional tests.
-6. Once externally approved, privately set \`KMJ_BILLIONMAIL_SMTP_HOST\`, \`KMJ_BILLIONMAIL_SMTP_LOGIN\`, \`KMJ_BILLIONMAIL_SMTP_PASSWORD\`, \`MAIL_FROM_ADDRESS\`, \`KMJ_BILLIONMAIL_ACTIVATED=true\`, and \`MAIL_MAILER=kmj_billionmail\`. These are operator steps, not instructions to enable automatically.
+3. Verify protected inbound MX/Cloudflare routing for `info@kmjtechno.com` remains unchanged. For outbound: authenticate domain with DKIM/SPF/DMARC, verify accurate EHLO/PTR/rDNS/forward DNS and reputation, and confirm provider allows outbound TCP 25 or verified authenticated relay. The software **cannot** fix a Gmail 550 5.7.1 authorization rejection on its own.
+4. Provision a private SMTPS/465 endpoint with a trusted certificate that matches `KMJ_BILLIONMAIL_SMTP_HOST`, authenticated credentials and relay restrictions; refuse insecure fallback. Put credentials only in private deployment secrets, never Git/issue comments/logs.
+5. Keep `KMJ_BILLIONMAIL_ACTIVATED=false` and `MAIL_MAILER=log` until security review, dry-run, authorized delivery to Gmail/Outlook, bounce/queue checks, backup and rollback PASS. Start with low-volume transactional tests.
+6. Once externally approved, privately set `KMJ_BILLIONMAIL_SMTP_HOST`, `KMJ_BILLIONMAIL_SMTP_LOGIN`, `KMJ_BILLIONMAIL_SMTP_PASSWORD`, `MAIL_FROM_ADDRESS`, `KMJ_BILLIONMAIL_ACTIVATED=true`, and `MAIL_MAILER=kmj_billionmail`. These are operator steps, not instructions to enable automatically.
 7. Confirm a real user can receive and use verification/reset email before enabling registration. Monitor sanitized SMTP accept/reject counts, bounces, queue depth, and abuse/complaint rates. Mailer readiness checks only mean *configured for an attempt*, **not** delivered.
 8. Build marketing integration only after owner-only UI authorization, verified opt-in, suppression/unsubscribe support, rate/recipient caps, retention/privacy compliance, and separate transactional priority.
 
@@ -31,8 +32,8 @@ Upstream: https://github.com/Billionmail/BillionMail (AGPLv3, review current tag
 
 ## Configuration interface
 
-The new named Laravel mailer is \`kmj_billionmail\` in \`config/mail.php\`. The existing \`RegistrationMailReadiness\` checks explicit activation, sender domain, credential shape, implicit TLS and port 465 before permitting a delivery attempt. **No** credentials or service URLs are baked into production configuration.
+The new named Laravel mailer is `kmj_billionmail` in `config/mail.php`. The existing `RegistrationMailReadiness` checks explicit activation, sender domain, credential shape, implicit TLS and port 465 before permitting a delivery attempt. **No** credentials or service URLs are baked into production configuration.
 
 ## Verification
 
-Targeted tests: \`php artisan test --filter=BillionMailTransportTest\` in a disposable, dependency-complete development environment, plus existing \`BrandedAuthMailTest\`, \`RegistrationTest\`, and \`EmailVerificationTest\`. CI and real-inbox delivery must be confirmed independently before merge/cutover.
+Targeted tests: `php artisan test --filter=BillionMailTransportTest` in a disposable, dependency-complete development environment, plus existing `BrandedAuthMailTest`, `RegistrationTest`, and `EmailVerificationTest`. CI and real-inbox delivery must be confirmed independently before merge/cutover.
