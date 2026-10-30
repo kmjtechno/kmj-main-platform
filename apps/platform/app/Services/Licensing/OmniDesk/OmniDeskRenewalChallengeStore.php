@@ -9,13 +9,13 @@ use App\Services\Licensing\OmniDeskLicenseContract;
 use DomainException;
 use Illuminate\Support\Facades\DB;
 
- /**
-  * Private, PostgreSQL-backed one-time challenge for the M9 renewal boundary.
+/**
+ * Private, PostgreSQL-backed one-time challenge for the M9 renewal boundary.
   *
-  * No public routes, signer or entitlement mutation. Caller must use a real,
-  * tenant-authenticated principal and an outer transaction with the future
-  * signed lease issuance and advanceLease() to make those actions atomic.
-  */
+ * No public routes, signer or entitlement mutation. Caller must use a real,
+ * tenant-authenticated principal and an outer transaction with the future
+ * signed lease issuance and advanceLease() to make those actions atomic.
+ */
 final class OmniDeskRenewalChallengeStore
 {
     /**
