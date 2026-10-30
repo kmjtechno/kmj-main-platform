@@ -155,8 +155,8 @@ export PHP_CLI_SERVER_WORKERS=4
 credential="ci-device-credential-$(php -r 'echo bin2hex(random_bytes(24));')"
 password="Ci-$(php -r 'echo bin2hex(random_bytes(16));')-Aa1!"
 seed_json="$(php "$repo/scripts/ci/workspace-ui-e2e-seed.php" "$repo/apps/platform" "$credential" "$password")"
-read -r email device project < <(printf '%s' "$seed_json" | python3 -c 'import json,sys;d=json.load(sys.stdin);print(d["email"],d["device"],d["project"])')
-[[ -n "$email" && -n "$device" && -n "$project" ]] || { echo 'SEED=FAIL'; exit 1; }
+read -r email device project email2 < <(printf '%s' "$seed_json" | python3 -c 'import json,sys;d=json.load(sys.stdin);print(d["email"],d["device"],d["project"],d["email2"])')
+[[ -n "$email" && -n "$device" && -n "$project" && -n "$email2" ]] || { echo 'SEED=FAIL'; exit 1; }
 echo 'SEED=PASS CUSTOMER_AND_DEVICE_CREATED'
 
 test -d node_modules/playwright || { echo 'BLOCKED: npm ci and playwright install are done by the workflow'; exit 3; }
@@ -189,7 +189,7 @@ EXPECTED_JOBS=3 STOP_FILE="$tmp/browser-done" WORKER_DEADLINE_MS=300000 WORKER_P
 worker_pid=$!
 
 KMJ_PLAYWRIGHT_MODULE="$repo/apps/platform/node_modules/playwright" KMJ_E2E_SHOT="$tmp/workspace-ui-e2e.png" \
-  node "$repo/scripts/ci/workspace-ui-e2e.mjs" http://127.0.0.1:8099 "$email" "$password" "$device" "$project" || {
+  node "$repo/scripts/ci/workspace-ui-e2e.mjs" http://127.0.0.1:8099 "$email" "$password" "$device" "$project" "$email2" "${password}x" || {
   echo 'WORKSPACE_UI_E2E=FAIL'; echo '--- worker'; tail -n 20 "$tmp/worker.log" || true; echo '--- server'; tail -n 20 "$tmp/server.log" || true; exit 1;
 }
 touch "$tmp/browser-done"
