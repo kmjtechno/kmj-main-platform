@@ -167,7 +167,7 @@ final class WorkspaceJobService
     /**
      * Device side. Returns at most one request and only while the device has none in flight.
      *
-     * @return array{id: string, tool: string, arguments: array<string, string>, project_id: string, lease_expires_at: string, claim_token: string}|null
+     * @return array{id: string, tool: string, arguments: array<string, string>|\stdClass, project_id: string, lease_expires_at: string, claim_token: string}|null
      */
     public function claim(string $tenantId, string $deviceId): ?array
     {
@@ -208,7 +208,8 @@ final class WorkspaceJobService
 
             return [
                 'id' => (string) $row['id'], 'tool' => (string) $row['tool'],
-                'arguments' => is_array($arguments) ? $arguments : [], 'project_id' => (string) $row['project_id'],
+                // An empty PHP array would serialize as a JSON array; the device contract requires an object.
+                'arguments' => is_array($arguments) && $arguments !== [] ? $arguments : (object) [], 'project_id' => (string) $row['project_id'],
                 'lease_expires_at' => $lease->toIso8601String(), 'claim_token' => $token,
             ];
         });
