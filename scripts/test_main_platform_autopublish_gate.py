@@ -198,6 +198,9 @@ class AutoPublishSafetyTest(unittest.TestCase):
             '{"backupVerified":NaN}',
             '{"backupVerified":Infinity}',
             '{"backupVerified":-Infinity}',
+            '{"backupVerified":1e999}',
+            '{"backupVerified":-1e999}',
+            '{"nested":{"overflow":1e999}}',
         ):
             with self.subTest(payload=payload):
                 with self.assertRaises(ValueError):
