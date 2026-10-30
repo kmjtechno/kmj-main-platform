@@ -41,9 +41,15 @@ void test('browser and home-screen icons are the KMJ brand, not the Laravel defa
 
 void test('page head references the KMJ icon set and no external icon', () => {
     const head = readFileSync('resources/views/app.blade.php', 'utf8');
-    assert.match(head, /href="\/favicon\.ico"/);
-    assert.match(head, /href="\/favicon\.svg"/);
+    // The contrast variant is the reviewed, accessible favicon. Legacy
+    // .ico/.svg resources remain available for browser fallbacks, but the
+    // document must consistently select the high-contrast KMJ emblem.
+    assert.match(
+        head,
+        /<link rel="icon" href="\/favicon-contrast-v1\.svg" type="image\/svg\+xml" sizes="any">/,
+    );
     assert.match(head, /href="\/apple-touch-icon\.png"/);
+    assert.doesNotMatch(head, /href="https?:\/\/[^"]*icon/i);
     assert.doesNotMatch(head, /laravel/i);
 });
 

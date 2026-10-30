@@ -69,6 +69,8 @@ final class WorkspaceChatService
     /** Tenant + user scoped lookup; anything else is a 404, never a 403 that confirms existence. */
     public function conversation(string $tenantId, int $userId, string $id): WorkspaceConversation
     {
+        // A malformed id can never exist; answer 404 before PostgreSQL rejects the uuid cast with a 500.
+        abort_unless(Str::isUuid($id), 404);
         $found = DB::table('codebridge_workspace_conversations')
             ->where('id', $id)->where('tenant_id', $tenantId)->where('user_id', $userId)->first();
         abort_if($found === null, 404);

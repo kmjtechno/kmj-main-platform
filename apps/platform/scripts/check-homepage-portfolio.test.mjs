@@ -309,7 +309,10 @@ void test('official header/footer logo preserves lossless pixels without an opaq
 
 void test('landing uses the same public header/footer components as inner pages', () => {
     assert.match(source, /<PublicSiteHeader \/>/);
-    assert.match(source, /<PublicSiteFooter products=\{ecosystemProducts\}/);
+    // Prettier puts JSX attributes on separate lines. Still insist on the
+    // same shared component and its real product prop, not a duplicate footer.
+    assert.match(source, /<PublicSiteFooter\s+products=\{ecosystemProducts\}/);
+    assert.equal((source.match(/<PublicSiteFooter\b/g) ?? []).length, 1);
     assert.doesNotMatch(
         source,
         /<header className="lock-header">|<footer className="lock-footer">/,
