@@ -63,9 +63,9 @@ final class OmniDeskRenewalChallengeStore
             $this->requireLiveBinding($binding, $organizationId);
 
             if (! is_string($request['current_jti'] ?? null)
-                || ! hash_equals((string) $binding->current_jti, $request['current_jti'])
+                || ! hash_equals((string) $binding['current_jti'], $request['current_jti'])
                 || ! is_int($request['current_sequence'] ?? null)
-                || $request['current_sequence'] !== (int) $binding->current_sequence) {
+                || $request['current_sequence'] !== (int) $binding['current_sequence']) {
                 throw new DomainException('OMNIDESK_REPLAY_DETECTED');
             }
 
@@ -87,7 +87,7 @@ final class OmniDeskRenewalChallengeStore
 
             // The verifier takes the public key from the tenant-bound DB row,
             // never from the request body.
-            $publicKey = $this->decodeDeviceKey((string) $binding->device_public_key);
+            $publicKey = $this->decodeDeviceKey((string) $binding['device_public_key']);
             app(OmniDeskDeviceRenewalProof::class)->verify($request, $publicKey);
 
             $updated = DB::table('omnidesk_renewal_challenges')
@@ -100,26 +100,31 @@ final class OmniDeskRenewalChallengeStore
         }, 3);
     }
 
-    private function lockedBinding(string $activationId, string $organizationId): object
+    /** @return array<string, mixed> */
+    private function lockedBinding(string $activationId, string $organizationId): array
     {
-        $binding = DB::table('omnidesk_activation_bindings')
+        $row = DB::table('omnidesk_activation_bindings')
             ->where('activation_id', $activationId)
             ->where('organization_id', $organizationId)
             ->lockForUpdate()
             ->first();
-        if ($binding === null
-            || $binding->current_jti === null
-            || (int) $binding->current_sequence < 1) {
+        if ($row === null) {
+            throw new DomainException('OMNIDESK_RENEWAL_CHALLENGE_DENIED');
+        }
+
+        $binding = (array) $row;
+        if ($binding['current_jti'] === null || (int) $binding['current_sequence'] < 1) {
             throw new DomainException('OMNIDESK_RENEWAL_CHALLENGE_DENIED');
         }
 
         return $binding;
     }
 
-    private function requireLiveBinding(object $binding, string $organizationId): void
+    /** @param  array<string, mixed>  $binding */
+    private function requireLiveBinding(array $binding, string $organizationId): void
     {
         $activation = DB::table('kslp_activations')
-            ->where('id', $binding->activation_id)
+            ->where('id', $binding['activation_id'])
             ->whereNull('deactivated_at')
             ->first(['license_id']);
         if ($activation === null) {
@@ -144,7 +149,7 @@ final class OmniDeskRenewalChallengeStore
             ->first(['id']);
         if ($product === null
             || ! DB::table('entitlements')
-                ->where('id', $binding->entitlement_id)
+                ->where('id', $binding['entitlement_id'])
                 ->where('organization_id', $organizationId)
                 ->where('product_id', $product->id)
                 ->where('capability', OmniDeskLicenseContract::CAPABILITY)
