@@ -79,7 +79,8 @@ export function judge(result) {
     if (result.brokenImages > 0) problems.push('BROKEN_IMAGES');
     if (result.redirectedToLogin) problems.push('NOT_AUTHENTICATED');
     // A 200 from a redirect target is not proof of the candidate origin.
-    if (result.finalOriginMatches !== true) problems.push('CANDIDATE_ORIGIN_MISMATCH');
+    if (result.finalOriginMatches !== true)
+        problems.push('CANDIDATE_ORIGIN_MISMATCH');
     return { ...result, problems, pass: problems.length === 0 };
 }
 
