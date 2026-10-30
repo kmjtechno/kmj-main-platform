@@ -15,8 +15,8 @@ concurrency:
   group: ws-jobs-roundtrip-${{ github.ref }}
   cancel-in-progress: true
 env:
-  # Exact public kmj-codebridge commit containing the merged worker (PR #703 and later).
-  CODEBRIDGE_SHA: 2d713aa9aa9a0641f0591ff6c881df62d68bfd22
+  # Exact public kmj-codebridge commit containing the merged worker (consumer merged as 5340998a; this is main at time of writing).
+  CODEBRIDGE_SHA: dd2a5480f3f6f7ef452ce23e83236a9fa71130d6
 jobs:
   roundtrip:
     name: Real device worker claims, runs and reports named jobs on PostgreSQL 18
