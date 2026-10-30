@@ -294,11 +294,11 @@ export default function OperatorCommandOs({
                     <Home size={17} />
                     Dashboard
                 </Link>
-                <button onClick={() => setSearchOpen(true)}>
+                <Link href="/operator" onClick={() => setNavOpen(false)}>
                     <Gauge size={17} />
                     Command Center
                     <ChevronRight size={12} />
-                </button>
+                </Link>
                 {groups.map((group) => (
                     <nav key={group.title} aria-label={group.title}>
                         <h2>{group.title}</h2>

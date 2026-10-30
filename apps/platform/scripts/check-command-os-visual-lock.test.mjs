@@ -13,7 +13,10 @@ void test('locked owner command center is rendered only in the guarded operator 
     assert.match(operator, /<OperatorCommandOs/);
     assert.match(operator, /<OperatorControlOverview/);
     assert.match(operator, /href="\/operator\/products"/);
-    assert.match(operator, /<Head title="KMJ Enterprise Command OS/);
+    assert.match(operator, /KMJ Enterprise Command OS · Super Admin/);
+    assert.match(operator, /ownerView === 'dashboard'/);
+    assert.match(operator, /aria-label="Owner task-first Command Center"/);
+    assert.match(command, /href="\/operator"/);
     assert.match(operator, /id="commercial-orders"/);
     assert.match(operator, /ManualPaymentConfirmation/);
     assert.match(operator, /order\.fulfillment_state ===/);
@@ -215,7 +218,7 @@ void test('guarded owner subpages share the locked shell without changing custom
 
     assert.match(shell, /auth\.user\?\.name\?\.trim\(\)/);
     assert.match(shell, /aria-label="Open Command Center search"/);
-    assert.match(shell, /href="\/operator#owner-kristi"/);
+    assert.match(shell, /href="\/super-admin#owner-kristi"/);
     assert.match(styles, /\.owner-module-shell \.owner-module-body/);
     assert.match(styles, /@media \(max-width: 700px\)/);
     assert.match(styles, /prefers-reduced-motion/);

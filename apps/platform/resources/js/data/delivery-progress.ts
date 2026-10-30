@@ -87,7 +87,7 @@ export const deliveryMilestones: DeliveryMilestone[] = [
         state: 'active',
         detail: 'The actual owner dashboard now scopes its advanced workspace cards and commercial-order surfaces to the locked Command OS palette, borders and compact cards. Hero, Kristi artwork, payment confirmation and license authorization are preserved.',
         evidence:
-            'Responsive browser QA now renders the real Operator page rather than only its upper Command OS component. Before the styling fix, expanded-card checks failed at all six widths while other application gates passed. Fresh exact-head verification and private owner acceptance remain required.',
+            'Responsive browser QA now renders the real Operator page rather than only its upper Command OS component. Before the styling fix, expanded-card checks failed at all six widths while other application gates passed. PR #694 introduces a source-only route-name-derived split between the locked /super-admin dashboard and the /operator task-first Command Center, with synthetic browser fixtures and route coverage being repaired. Exact-head CI, deployment and private owner acceptance remain required.',
     },
     {
         id: 'owner-locked-shell-account-developer-brand-contrast',
@@ -611,5 +611,5 @@ export const deliveryProgress = Math.round(
 export const deliveryProgressMeta = {
     label: 'Revenue-capable working phase',
     note: 'Evidence-based delivery milestones, not total product completion.',
-    refreshed: '2026-10-28',
+    refreshed: '2026-10-30',
 } as const;

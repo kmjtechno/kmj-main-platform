@@ -290,6 +290,11 @@ function CanonicalDevicesPreview() {
 function OwnerDashboardPreview() {
     return (
         <Operator
+            ownerView={
+                location.pathname === '/super-admin'
+                    ? 'dashboard'
+                    : 'command-center'
+            }
             metrics={{
                 users: 0,
                 organizations: 0,

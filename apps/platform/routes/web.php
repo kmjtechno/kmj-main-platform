@@ -697,8 +697,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
         return response()->json($policy->describe($user));
     })->name('operator.super-admin.profile')->middleware('password.confirm');
 
-    // One protected controller action for both legacy /operator and readable /super-admin.
-    // Keep the legacy URL and route name for existing integrations.
+    // One owner-authorized data handler serves two distinct protected views:
+    // /super-admin is the Enterprise dashboard; /operator is the task-first Command Center.
+    // Keep both named routes, the same data source and all password/owner gates.
     $ownerCommandDashboard = function (
         Request $request,
         PlatformOwnerAccess $access,
@@ -798,6 +799,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         $missingCanonicalSlugs = array_values(array_diff($publicProducts->slugs(), $registeredSlugs));
 
         return Inertia::render('operator', [
+            'ownerView' => $request->routeIs('super-admin.index') ? 'dashboard' : 'command-center',
             'missingCanonicalSlugs' => $missingCanonicalSlugs,
             'canonicalProductCount' => count($publicProducts->slugs()),
             'metrics' => [

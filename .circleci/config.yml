@@ -610,6 +610,23 @@ jobs:
             php artisan migrate:rollback --step=1 --force --no-ansi
             echo "KMJ_ADMIN_RC_SQLITE_MIGRATION_SMOKE_PASS=1"
 
+  owner_distinct_route_source:
+    docker:
+      - image: cimg/php:8.4-node
+    resource_class: small
+    steps:
+      - checkout
+      - run:
+          name: Exact-head duplicate-route and navigation regression contracts
+          command: |
+            set -euo pipefail
+            test "$(git rev-parse HEAD)" = "$CIRCLE_SHA1"
+            php -l apps/platform/routes/web.php
+            php -l apps/platform/tests/Feature/OperatorCommandOsHttpAccessTest.php
+            cd apps/platform
+            node --test scripts/check-operator-command-center.test.mjs scripts/check-command-os-visual-lock.test.mjs
+            echo OWNER_ROUTE_SOURCE_ONLY_PASS_NOT_RELEASE_CREDIT
+
   super_admin_command_center_ui:
     docker:
       - image: cimg/php:8.4-node
@@ -664,10 +681,18 @@ jobs:
             npm ci --ignore-scripts --no-audit --no-fund
             php artisan wayfinder:generate --with-form --no-ansi
             npm run build
-            php artisan test --filter='OwnerDashboardCatalogTest|PlatformOwnerConsoleTest|OwnerProductManagementWorkspaceTest|OwnerLicensingCenterHttpTest' --no-ansi
+            php artisan test --filter='OperatorCommandOsHttpAccessTest|OwnerDashboardCatalogTest|PlatformOwnerConsoleTest|OwnerProductManagementWorkspaceTest|OwnerLicensingCenterHttpTest' --no-ansi
             echo "SUPER_ADMIN_COMMAND_CENTER_HTTP_PASS=1"
 
 workflows:
+  review_owner_distinct_routes:
+    jobs:
+      - owner_distinct_route_source:
+          filters:
+            branches:
+              only:
+                - fix/owner-dashboard-vs-command-center-20261029
+
   review_super_admin_command_center:
     jobs:
       - super_admin_command_center_ui:
@@ -675,11 +700,13 @@ workflows:
             branches:
               only:
                 - feat/super-admin-command-center-20261014
+                - fix/owner-dashboard-vs-command-center-20261029
       - super_admin_command_center_http:
           filters:
             branches:
               only:
                 - feat/super-admin-command-center-20261014
+                - fix/owner-dashboard-vs-command-center-20261029
 
   review_cross_account_codebridge_oauth:
     jobs:

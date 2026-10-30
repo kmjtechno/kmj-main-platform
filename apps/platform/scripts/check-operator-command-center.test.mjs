@@ -26,6 +26,28 @@ void test('owner command center uses separated, real admin module routes', () =>
     assert.ok(!operator.includes('Product & licensing matrix'));
 });
 
+void test('operator and super-admin route views remain distinct', () => {
+    assert.match(
+        ownerRules,
+        /'ownerView' => \$request->routeIs\('super-admin\.index'\) \? 'dashboard' : 'command-center'/,
+    );
+    assert.match(
+        ownerRules,
+        /Route::get\('operator', \$ownerCommandDashboard\)/,
+    );
+    assert.match(
+        ownerRules,
+        /Route::get\('super-admin', \$ownerCommandDashboard\)/,
+    );
+    assert.match(operator, /ownerView: 'dashboard' \| 'command-center'/);
+    assert.match(operator, /ownerView === 'dashboard' \? \(/);
+    assert.match(operator, /aria-label="Owner task-first Command Center"/);
+    assert.match(operator, /Back to Enterprise Dashboard/);
+    assert.match(operator, /<OperatorCommandOs/);
+    assert.match(operator, /<OperatorControlOverview/);
+    assert.match(operator, /id="commercial-orders"/);
+});
+
 void test('catalog readiness is informative, never a payment or license grant', () => {
     assert.ok(modules.includes('product.active_policy_count === 0'));
     assert.ok(modules.includes('product.is_public'));
@@ -45,17 +67,32 @@ void test('owner-only entry is above customer services, never public listing', (
     assert.ok(dashboard.includes('{ownerProducts !== null && ('));
     assert.ok(dashboard.includes('href="/operator"'));
     assert.ok(dashboard.includes('{ownerProducts === null && ('));
-    // Owners are redirected before any catalog query; the customer response
-    // always carries ownerProducts = null.
-    const redirect = ownerRules.indexOf(
-        "return redirect()->route('super-admin.index');",
+    const dashboardRoute = ownerRules.indexOf(
+        "Route::get('dashboard', function (",
     );
-    const nulled = ownerRules.indexOf('$ownerProducts = null;', redirect);
+    const ownerGuard = ownerRules.indexOf(
+        'if (app(PlatformOwnerAccess::class)->allows($user)) {',
+        dashboardRoute,
+    );
+    const redirected = ownerRules.indexOf(
+        "return redirect()->route('super-admin.index');",
+        ownerGuard,
+    );
+    const customerOnly = ownerRules.indexOf(
+        '$ownerProducts = null;',
+        redirected,
+    );
     const exposed = ownerRules.indexOf(
         "'ownerProducts' => $ownerProducts",
-        nulled,
+        customerOnly,
     );
-    assert.ok(redirect > 0 && nulled > redirect && exposed > nulled);
+    assert.ok(
+        dashboardRoute > 0 &&
+            ownerGuard > dashboardRoute &&
+            redirected > ownerGuard &&
+            customerOnly > redirected &&
+            exposed > customerOnly,
+    );
 });
 
 void test('overview retains governed order confirmation and explicit fulfillment', () => {

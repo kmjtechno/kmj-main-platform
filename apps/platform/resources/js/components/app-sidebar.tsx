@@ -77,7 +77,7 @@ export function AppSidebar() {
         | undefined;
     const ownerBusiness: NavItem[] = operator?.enabled
         ? [
-              { title: 'Command Center', href: '/super-admin', icon: Crown },
+              { title: 'Command Center', href: '/operator', icon: Crown },
               {
                   title: 'Products',
                   href: '/operator/products',

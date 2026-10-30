@@ -39,6 +39,7 @@ try {
         for (const [name, route] of [
             ['landing', '/'],
             ['super-admin', '/super-admin'],
+            ['owner-command', '/operator'],
             ['owner-ops', '/operator/ops'],
             ['owner-products', '/operator/products?create=1'],
             ['owner-developer', '/developer/apps'],
@@ -741,6 +742,22 @@ try {
                 if (!appearance.background.includes('rgb(11, 16, 22)'))
                     errors.push('Owner developer card theme drifted');
             }
+            if (name === 'owner-command') {
+                await page
+                    .getByRole('region', {
+                        name: 'Owner task-first Command Center',
+                    })
+                    .waitFor();
+                await page
+                    .getByRole('link', {
+                        name: 'Back to Enterprise Dashboard',
+                    })
+                    .waitFor();
+                if ((await page.locator('.kmj-os-advanced').count()) !== 0)
+                    errors.push(
+                        'Command Center duplicated dashboard advanced controls',
+                    );
+            }
             if (name === 'super-admin') {
                 const advanced = page.locator('.kmj-os-advanced');
                 await advanced.locator(':scope > summary').click();
@@ -797,7 +814,9 @@ try {
                             ? 'h1'
                             : name === 'owner-ops'
                               ? '.owner-module-main h1'
-                              : '.owner-main h1',
+                              : name === 'owner-command'
+                                ? '[aria-label="Owner task-first Command Center"] h1'
+                                : '.owner-main h1',
                     )
                     .waitFor();
             // Horizontal carousels can keep valid lazy images outside the
