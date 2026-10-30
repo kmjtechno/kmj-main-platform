@@ -18,7 +18,7 @@
 // Optional: KMJ_CHROMIUM_EXECUTABLE, KMJ_PLAYWRIGHT_MODULE.
 import { createHash } from 'node:crypto';
 import { createRequire } from 'node:module';
-import { statSync } from 'node:fs';
+import { lstatSync } from 'node:fs';
 
 export const VIEWPORTS = [
     { name: 'desktop', width: 1440, height: 900 },
@@ -47,7 +47,12 @@ export function validateEnv(env) {
         base &&
         (base.protocol !== 'http:' ||
             !['127.0.0.1', 'localhost', '[::1]'].includes(base.hostname) ||
-            !base.port)
+            !base.port ||
+            base.username ||
+            base.password ||
+            base.pathname !== '/' ||
+            base.search ||
+            base.hash)
     )
         problems.push('BASE_URL_MUST_BE_LOOPBACK_WITH_PORT');
     if (!/^[a-f0-9]{40}$/.test(env.KMJ_QA_CANDIDATE_SHA ?? ''))
@@ -56,8 +61,10 @@ export function validateEnv(env) {
         problems.push('MANIFEST_SHA256_INVALID');
     const state = env.KMJ_QA_STORAGE_STATE ?? '';
     try {
-        const info = statSync(state);
-        if (!info.isFile() || (info.mode & 0o077) !== 0)
+        // lstat, not stat: an attacker-controlled link must never import
+        // an unrelated owner session into this candidate browser context.
+        const info = lstatSync(state);
+        if (!info.isFile() || info.nlink !== 1 || (info.mode & 0o077) !== 0)
             problems.push('STORAGE_STATE_NOT_PRIVATE_FILE');
     } catch {
         problems.push('STORAGE_STATE_MISSING');
