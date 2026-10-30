@@ -6,7 +6,10 @@ namespace Tests\Feature;
 
 use App\Services\Licensing\OmniDesk\OmniDeskApiAuthorizer;
 use App\Services\Licensing\OmniDesk\OmniDeskApiPrincipal;
+use App\Services\Licensing\OmniDesk\OmniDeskRenewalChallengeStore;
+use App\Services\Licensing\OmniDeskDeviceRenewalProof;
 use App\Services\Licensing\OmniDeskLicenseContract;
+use DomainException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -182,6 +185,184 @@ final class OmniDeskPrivateApiTest extends TestCase
             ->assertStatus(422)
             ->assertExactJson(['error' => 'INVALID_REQUEST'])
             ->assertHeader('Cache-Control', 'no-store, private');
+    }
+
+    public function test_renewal_server_challenge_is_hashed_and_consumed_only_once_with_device_signature(): void
+    {
+        [$f, $secret] = $this->renewalFixture();
+        $store = app(OmniDeskRenewalChallengeStore::class);
+        $issued = $store->issue($f['activation_id'], $f['organization_id']);
+
+        self::assertSame(300, $issued['expires_in']);
+        self::assertSame(43, strlen($issued['server_challenge']));
+        $this->assertDatabaseHas('omnidesk_renewal_challenges', [
+            'activation_id' => $f['activation_id'],
+            'challenge_sha256' => hash('sha256', $issued['server_challenge']),
+            'consumed_at' => null,
+        ]);
+
+        $proof = $this->signedRenewalRequest($f, $secret, $issued['server_challenge']);
+        $store->verifyAndConsume($proof, $f['organization_id']);
+        $used = DB::table('omnidesk_renewal_challenges')
+            ->where('activation_id', $f['activation_id'])->first();
+        self::assertNotNull($used->consumed_at);
+
+        try {
+            $store->verifyAndConsume($proof, $f['organization_id']);
+            self::fail('A one-time renewal challenge cannot be consumed twice.');
+        } catch (DomainException $e) {
+            self::assertSame('OMNIDESK_REPLAY_DETECTED', $e->getMessage());
+        }
+    }
+
+    public function test_renewal_challenge_cannot_be_claimed_by_another_tenant(): void
+    {
+        [$f, $secret] = $this->renewalFixture();
+        $store = app(OmniDeskRenewalChallengeStore::class);
+        $other = Organization::query()->create(['name' => 'Renewal attacker tenant']);
+        $otherId = (string) $other->getKey();
+
+        try {
+            $store->issue($f['activation_id'], $otherId);
+            self::fail('Foreign tenant issued challenge.');
+        } catch (DomainException $e) {
+            self::assertSame('OMNIDESK_RENEWAL_CHALLENGE_DENIED', $e->getMessage());
+        }
+
+        $issued = $store->issue($f['activation_id'], $f['organization_id']);
+        try {
+            $store->verifyAndConsume(
+                $this->signedRenewalRequest($f, $secret, $issued['server_challenge']),
+                $otherId,
+            );
+            self::fail('Foreign tenant consumed challenge.');
+        } catch (DomainException $e) {
+            self::assertSame('OMNIDESK_RENEWAL_CHALLENGE_DENIED', $e->getMessage());
+        }
+
+        $this->assertDatabaseHas('omnidesk_renewal_challenges', [
+            'activation_id' => $f['activation_id'],
+            'consumed_at' => null,
+        ]);
+    }
+
+    public function test_invalid_signature_does_not_consume_renewal_challenge(): void
+    {
+        [$f, $secret] = $this->renewalFixture();
+        $store = app(OmniDeskRenewalChallengeStore::class);
+        $issued = $store->issue($f['activation_id'], $f['organization_id']);
+        $proof = $this->signedRenewalRequest($f, $secret, $issued['server_challenge']);
+        $proof['client_nonce'] = 'nonce-wrong-0123456789abcdef';
+
+        try {
+            $store->verifyAndConsume($proof, $f['organization_id']);
+            self::fail('Tampered signed request was accepted.');
+        } catch (DomainException $e) {
+            self::assertSame('FORBIDDEN', $e->getMessage());
+        }
+
+        $this->assertDatabaseHas('omnidesk_renewal_challenges', [
+            'activation_id' => $f['activation_id'],
+            'consumed_at' => null,
+        ]);
+    }
+
+    public function test_expired_server_challenge_and_stale_cursor_fail_closed(): void
+    {
+        [$f, $secret] = $this->renewalFixture();
+        $store = app(OmniDeskRenewalChallengeStore::class);
+        $issued = $store->issue($f['activation_id'], $f['organization_id']);
+        $proof = $this->signedRenewalRequest($f, $secret, $issued['server_challenge']);
+
+        $stale = $proof;
+        $stale['current_sequence'] = 2;
+        try {
+            $store->verifyAndConsume($stale, $f['organization_id']);
+            self::fail('Stale lease cursor accepted.');
+        } catch (DomainException $e) {
+            self::assertSame('OMNIDESK_REPLAY_DETECTED', $e->getMessage());
+        }
+
+        DB::table('omnidesk_renewal_challenges')
+            ->where('activation_id', $f['activation_id'])
+            ->update(['expires_at' => now()->subSecond()]);
+        try {
+            $store->verifyAndConsume($proof, $f['organization_id']);
+            self::fail('Expired renewal challenge accepted.');
+        } catch (DomainException $e) {
+            self::assertSame('OMNIDESK_RENEWAL_CHALLENGE_EXPIRED', $e->getMessage());
+        }
+    }
+
+    public function test_issuing_new_challenge_invalidates_old_one_and_revocation_blocks_new_issue(): void
+    {
+        [$f, $secret] = $this->renewalFixture();
+        $store = app(OmniDeskRenewalChallengeStore::class);
+        $old = $store->issue($f['activation_id'], $f['organization_id']);
+        $fresh = $store->issue($f['activation_id'], $f['organization_id']);
+        self::assertNotSame($old['server_challenge'], $fresh['server_challenge']);
+        $this->assertDatabaseCount('omnidesk_renewal_challenges', 1);
+
+        try {
+            $store->verifyAndConsume(
+                $this->signedRenewalRequest($f, $secret, $old['server_challenge']),
+                $f['organization_id'],
+            );
+            self::fail('Prior server challenge was not rotated away.');
+        } catch (DomainException $e) {
+            self::assertSame('OMNIDESK_REPLAY_DETECTED', $e->getMessage());
+        }
+
+        DB::table('kslp_licenses')->where('id', $f['license_id'])
+            ->update(['status' => 'revoked', 'revoked_at' => now()]);
+        try {
+            $store->issue($f['activation_id'], $f['organization_id']);
+            self::fail('Revoked license issued renewal challenge.');
+        } catch (DomainException $e) {
+            self::assertSame('OMNIDESK_RENEWAL_CHALLENGE_DENIED', $e->getMessage());
+        }
+    }
+
+    /**
+     * @return array{array<string, string>, non-empty-string}
+     */
+    private function renewalFixture(): array
+    {
+        $f = $this->fixture();
+        $pair = sodium_crypto_sign_seed_keypair(hash('sha256', 'omnidesk-renewal-test-only', true));
+        $public = sodium_crypto_sign_publickey($pair);
+        $secret = sodium_crypto_sign_secretkey($pair);
+        DB::table('omnidesk_activation_bindings')
+            ->where('activation_id', $f['activation_id'])
+            ->update([
+                'device_public_key' => rtrim(strtr(base64_encode($public), '+/', '-_'), '='),
+                'device_public_key_fingerprint' => 'sha256:'.hash('sha256', $public),
+            ]);
+
+        return [$f, $secret];
+    }
+
+    /**
+     * @param  array<string, string>  $fixture
+     * @return array<string, mixed>
+     */
+    private function signedRenewalRequest(array $fixture, string $secret, string $challenge): array
+    {
+        $request = [
+            'activation_id' => $fixture['activation_id'],
+            'current_jti' => 'jti-private-api-test',
+            'current_sequence' => 1,
+            'server_challenge' => $challenge,
+            'client_nonce' => 'nonce-0123456789abcdef',
+            'client_version' => '0.0.1',
+            'proof_scheme' => 'KMJ-OMNIDESK-RENEW-v1',
+            'device_signature' => 'unsigned',
+        ];
+        $message = app(OmniDeskDeviceRenewalProof::class)->canonicalMessage($request);
+        $signature = sodium_crypto_sign_detached($message, $secret);
+        $request['device_signature'] = rtrim(strtr(base64_encode($signature), '+/', '-_'), '=');
+
+        return $request;
     }
 
     private function bindPrincipal(string $organizationId, bool $canManage = true): void
