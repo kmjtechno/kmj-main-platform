@@ -7,6 +7,7 @@ evidence. This automation never manufactures approval or releases new code.
 import argparse
 import fcntl
 import json
+import math
 import os
 from pathlib import Path
 import re
@@ -84,8 +85,14 @@ def parse_protected_json(data):
     def reject_constant(_value):
         raise ValueError("non-finite JSON constant")
 
+    def finite_float(value):
+        number = float(value)
+        if not math.isfinite(number):
+            raise ValueError("non-finite JSON number")
+        return number
+
     return json.loads(data, object_pairs_hook=unique_pairs,
-                      parse_constant=reject_constant)
+                      parse_constant=reject_constant, parse_float=finite_float)
 
 def protected_json(path):
     """Read one root-protected inode, never a re-resolved path after lstat."""
