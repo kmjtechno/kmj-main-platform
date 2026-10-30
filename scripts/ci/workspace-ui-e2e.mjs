@@ -38,13 +38,24 @@ async function waitForStatus(status, count, timeoutMs = 75_000) {
 }
 
 async function queueGate(gate) {
-    // Inertia may still be settling after a reload: only act once the gate input really exists.
-    await page.selectOption('#ws-tool', 'quality_gate');
-    await page.locator('#ws-gate').waitFor({ timeout: 20_000 });
-    await page.fill('#ws-gate', gate);
-    const queueButton = page.getByTestId('queue-tool');
-    await page.waitForFunction(() => !document.querySelector('[data-testid="queue-tool"]')?.disabled, null, { timeout: 10_000 });
-    await queueButton.click();
+    // A late reload can remount the panel and reset the controlled select; re-assert the exact
+    // state (tool + gate text) immediately before clicking, and retry if it was reset.
+    for (let attempt = 0; attempt < 6; attempt++) {
+        await page.waitForLoadState('networkidle');
+        await page.selectOption('#ws-tool', 'quality_gate');
+        await page.locator('#ws-gate').waitFor({ timeout: 20_000 });
+        await page.fill('#ws-gate', gate);
+        const ready = await page.evaluate(
+            (g) => document.querySelector('#ws-tool')?.value === 'quality_gate' && document.querySelector('#ws-gate')?.value === g && !document.querySelector('[data-testid="queue-tool"]')?.disabled,
+            gate,
+        );
+        if (ready) {
+            await page.getByTestId('queue-tool').click();
+            return;
+        }
+        await page.waitForTimeout(1000);
+    }
+    throw new Error(`could not stage quality_gate ${gate} in the panel`);
 }
 
 try {
