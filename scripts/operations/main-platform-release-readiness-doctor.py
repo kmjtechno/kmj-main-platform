@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import math
 import os
 import re
 import stat
@@ -76,6 +77,12 @@ def _load_protected_json(path: Path, require_root: bool) -> object | None:
     def reject_nonfinite(value):
         raise ValueError("NONFINITE_PROTECTED_JSON")
 
+    def finite_float(value):
+        number = float(value)
+        if not math.isfinite(number):
+            raise ValueError("NONFINITE_PROTECTED_JSON_NUMBER")
+        return number
+
     try:
         fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_CLOEXEC)
         try:
@@ -102,7 +109,7 @@ def _load_protected_json(path: Path, require_root: bool) -> object | None:
                     or fingerprint(after) != fingerprint(now)):
                 return None
             return json.loads(data, object_pairs_hook=unique_pairs,
-                              parse_constant=reject_nonfinite)
+                              parse_constant=reject_nonfinite, parse_float=finite_float)
         finally:
             os.close(fd)
     except (OSError, ValueError, UnicodeError):
