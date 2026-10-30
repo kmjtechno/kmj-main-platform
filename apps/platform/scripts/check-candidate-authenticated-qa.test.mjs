@@ -15,6 +15,7 @@ import {
     PAGES,
     VIEWPORTS,
     judge,
+    runPage,
     validateEnv,
 } from './candidate-authenticated-qa.mjs';
 
@@ -203,4 +204,30 @@ void test('candidate QA checks real CodeBridge workspace panels without sending 
     for (const id of ['ai-workspace', 'pane-left', 'pane-center', 'pane-right'])
         assert.ok(source.includes("'" + id + "'"), id);
     assert.match(source, /WORKSPACE_MOBILE_DRAWER_TRIGGER_MISSING/);
+});
+
+void test('candidate owner browser contexts close after page creation and navigation errors', async () => {
+    for (const failure of ['newPage', 'goto']) {
+        let closed = 0;
+        const context = {
+            async newPage() {
+                if (failure === 'newPage') throw new Error('SIMULATED_NEW_PAGE');
+                return {
+                    on() {},
+                    async goto() {
+                        throw new Error('SIMULATED_GOTO');
+                    },
+                };
+            },
+            async close() {
+                closed++;
+            },
+        };
+        const browser = { async newContext() { return context; } };
+        await assert.rejects(
+            runPage(browser, state, new URL(good.KMJ_QA_BASE_URL), VIEWPORTS[0], PAGES[0]),
+            /SIMULATED_(NEW_PAGE|GOTO)/,
+        );
+        assert.equal(closed, 1, `context must close exactly once after ${failure}`);
+    }
 });
