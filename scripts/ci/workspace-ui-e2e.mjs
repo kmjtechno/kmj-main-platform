@@ -56,7 +56,14 @@ async function queueGate(gate) {
             ]);
             const body = req.postData() || '';
             if (!body.includes('quality_gate') || !body.includes(gate)) {
-                throw new Error(`queue POST did not carry quality_gate ${gate}: ${body.replace(/idempotency_key.*/, '').slice(0, 200)}`);
+                const state = await page.evaluate(() => ({
+                    selects: document.querySelectorAll('#ws-tool').length,
+                    gates: document.querySelectorAll('#ws-gate').length,
+                    buttons: document.querySelectorAll('[data-testid="queue-tool"]').length,
+                    tool: document.querySelector('#ws-tool')?.value,
+                    gate: document.querySelector('#ws-gate')?.value,
+                }));
+                throw new Error(`queue POST did not carry quality_gate ${gate}: ${body.replace(/idempotency_key.*/, '').slice(0, 160)} DOM ${JSON.stringify(state)} POSTS ${JSON.stringify(posts)}`);
             }
             return;
         }
