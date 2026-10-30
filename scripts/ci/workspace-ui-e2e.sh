@@ -164,7 +164,15 @@ npm run build
 test -s public/build/manifest.json || { echo 'FRONTEND_MANIFEST=FAIL'; exit 1; }
 echo 'FRONTEND_MANIFEST=PASS'
 
-php -S 127.0.0.1:8099 -t public public/index.php >"$tmp/server.log" 2>&1 &
+# Router script: serve real static files (Vite build) directly, everything else through Laravel.
+cat >"$tmp/router.php" <<ROUTER
+<?php
+\$path = parse_url(\$_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/';
+\$file = '$repo/apps/platform/public' . \$path;
+if (\$path !== '/' && is_file(\$file) && !str_ends_with(\$path, '.php')) { return false; }
+require '$repo/apps/platform/public/index.php';
+ROUTER
+php -S 127.0.0.1:8099 -t public "$tmp/router.php" >"$tmp/server.log" 2>&1 &
 server_pid=$!
 up=0
 for _ in $(seq 1 40); do
