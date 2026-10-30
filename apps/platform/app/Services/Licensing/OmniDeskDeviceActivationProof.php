@@ -36,7 +36,7 @@ final class OmniDeskDeviceActivationProof
      * Canonical binary message: domain bytes followed by ten u32be
      * length-prefixed UTF-8 fields, exactly matching OmniDesk Rust.
      *
-     * @param array<string, mixed> $request
+     * @param  array<string, mixed>  $request
      */
     public function canonicalMessage(array $request): string
     {
@@ -52,7 +52,7 @@ final class OmniDeskDeviceActivationProof
     }
 
     /**
-     * @param array<string, mixed> $request
+     * @param  array<string, mixed>  $request
      */
     public function verify(array $request): void
     {
@@ -66,7 +66,7 @@ final class OmniDeskDeviceActivationProof
     }
 
     /**
-     * @param array<string, mixed> $request
+     * @param  array<string, mixed>  $request
      */
     private function validateShape(array $request): void
     {
