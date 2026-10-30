@@ -198,7 +198,7 @@ const ownerModuleNavigation = readSourceText(
     'resources/js/components/operator-module-navigation.tsx',
 );
 
-void test('owner and customer navigation share one device dashboard without duplicate controls', () => {
+void test('one CodeBridge dashboard with owner-only license settings', () => {
     assert.match(ownerDeviceSummary, /Read-only summary:/);
     assert.match(ownerDeviceSummary, /connection not verified/);
     assert.match(ownerDeviceSummary, /Owner license settings/);
@@ -215,8 +215,17 @@ void test('owner and customer navigation share one device dashboard without dupl
         ownerModuleNavigation,
         /href: '\/operator\/codebridge\/owner-plan'/,
     );
-    assert.match(ui, /codeBridgeSectionFromHash\(window\.location\.hash\)/);
-    assert.match(ui, /window\.addEventListener\('hashchange', apply\)/);
-    assert.match(ui, /window\.removeEventListener\('hashchange', apply\)/);
+    assert.match(
+        ui,
+        /codeBridgeSectionFromHash\(window\.location\.hash\)/,
+    );
+    assert.match(
+        ui,
+        /window\.addEventListener\('hashchange', apply\)/,
+    );
+    assert.match(
+        ui,
+        /window\.removeEventListener\('hashchange', apply\)/,
+    );
     assert.match(ui, /scrollIntoView\(\{ block: 'start' \}\)/);
 });
