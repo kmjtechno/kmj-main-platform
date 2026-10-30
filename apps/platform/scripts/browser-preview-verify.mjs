@@ -913,9 +913,12 @@ try {
                     })
                     .click();
                 if (
-                    !(await page.locator('.lock-kristi-box').getByRole('status').innerText()).includes(
-                        'Licensing Hub',
-                    )
+                    !(
+                        await page
+                            .locator('.lock-kristi-box')
+                            .getByRole('status')
+                            .innerText()
+                    ).includes('Licensing Hub')
                 )
                     errors.push('Kristi guidance failed');
                 await page
@@ -925,9 +928,12 @@ try {
                     .getByRole('button', { name: 'Send message', exact: true })
                     .click();
                 if (
-                    !(await page.locator('.lock-kristi-box').getByRole('status').innerText()).includes(
-                        'Visit support',
-                    )
+                    !(
+                        await page
+                            .locator('.lock-kristi-box')
+                            .getByRole('status')
+                            .innerText()
+                    ).includes('Visit support')
                 )
                     errors.push(
                         'Typed technical support selected the wrong topic',
