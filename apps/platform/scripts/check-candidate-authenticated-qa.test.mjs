@@ -179,6 +179,7 @@ void test('scope covers owner fleet, canonical center, deep link, product manage
             '/operator/codebridge/owner-plan',
             '/services/kmj-codebridge',
             '/services/kmj-codebridge#codebridge-device-control',
+            '/services/kmj-codebridge/workspace',
             '/operator/products',
         ],
     );
@@ -191,4 +192,15 @@ void test('candidate owner QA expects the split owner-only license heading', () 
     );
     assert.match(source, /name: 'CodeBridge Owner License Settings'/);
     assert.doesNotMatch(source, /name: 'CodeBridge Control Center'/);
+});
+
+void test('candidate QA checks real CodeBridge workspace panels without sending requests', () => {
+    const source = readFileSync(
+        new URL('./candidate-authenticated-qa.mjs', import.meta.url),
+        'utf8',
+    );
+    assert.match(source, /page\.id === 'codebridge-ai-workspace'/);
+    for (const id of ['ai-workspace', 'pane-left', 'pane-center', 'pane-right'])
+        assert.ok(source.includes("'" + id + "'"), id);
+    assert.match(source, /WORKSPACE_MOBILE_DRAWER_TRIGGER_MISSING/);
 });
