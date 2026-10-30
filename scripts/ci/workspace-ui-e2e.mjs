@@ -18,6 +18,10 @@ const browser = await chromium.launch({ headless: true });
 const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
 const pageErrors = [];
 page.on('pageerror', (e) => pageErrors.push(e.message));
+const diag = [];
+page.on('console', (m) => ['error', 'warning'].includes(m.type()) && diag.push(`console.${m.type()}: ${m.text().slice(0, 200)}`));
+page.on('requestfailed', (r) => diag.push(`requestfailed: ${r.url()} ${r.failure()?.errorText}`));
+page.on('response', (r) => r.status() >= 400 && diag.push(`http ${r.status()}: ${r.url()}`));
 const url = `${origin}/services/kmj-codebridge/workspace?device=${device}&project=${project}`;
 
 async function waitForStatus(status, count, timeoutMs = 75_000) {
@@ -78,8 +82,10 @@ try {
     expect(pageErrors.length === 0, `no uncaught page errors ${JSON.stringify(pageErrors)}`);
 } catch (error) {
     failures.push(`exception: ${String(error).slice(0, 400)}`);
+    console.log('DIAG', JSON.stringify(diag.slice(0, 25)), 'PAGE_ERRORS', JSON.stringify(pageErrors.slice(0, 5)));
     try {
-        console.log((await page.locator('body').innerText()).slice(0, 1500));
+        console.log('URL', page.url());
+        console.log('BODY', (await page.content()).slice(0, 1800));
     } catch {}
 }
 await browser.close();
