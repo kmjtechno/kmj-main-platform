@@ -38,6 +38,10 @@ from pathlib import Path
 DB_NAME = re.compile(r"^kmj_(rehearsal|release_qa)(_[a-z0-9]{1,24})?$")
 DB_USER = re.compile(r"^[a-z_][a-z0-9_]{0,31}$")
 LOOPBACK = {"127.0.0.1", "localhost", "::1"}
+# Resolve all path aliases before accepting a rehearsal tree. Never execute
+# against the live production/staging release roots, including immutable
+# release directories or paths reached through a symlinked parent.
+FORBIDDEN_RUNTIME_ROOTS = (Path("/home/kmjprod"), Path("/home/kmjstage"))
 ARTISAN_TIMEOUT = 600
 SERVER_START_SECONDS = 40
 FORBIDDEN_BODY = ("Whoops", "Stack trace", "vendor/laravel/framework")
@@ -80,8 +84,8 @@ def validate_tree(path_text: str, label: str) -> Path:
     path = Path(path_text)
     if not path_text or path.is_symlink() or not path.is_dir():
         raise Blocked(f"{label}_TREE_MISSING")
-    resolved = path.resolve()
-    if str(resolved).startswith("/home/kmjprod/current"):
+    resolved = path.resolve(strict=True)
+    if any(resolved == root or root in resolved.parents for root in FORBIDDEN_RUNTIME_ROOTS):
         raise Blocked(f"{label}_TREE_IS_LIVE_RELEASE_POINTER")
     for required in ("artisan", "vendor/autoload.php", "public/index.php"):
         if not (resolved / required).is_file():
