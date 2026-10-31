@@ -158,6 +158,8 @@ protected_dir_chain "$(dirname -- "$SITE")" || block SITE_CHAIN
 protected_dir_chain "$RELEASES" || block RELEASES_CHAIN
 [[ -d "$rel_dir" && ! -L "$rel_dir" && -d "$new_target" && ! -L "$new_target" ]] || block CANDIDATE_MISSING
 [[ "$(realpath -e -- "$new_target")" == "$new_target" ]] || block CANDIDATE_PATH_LINKED
+protected_dir_chain "$new_target" || block CANDIDATE_CHAIN
+protected_dir_chain "$new_target/public/build" || block CANDIDATE_CHAIN
 [[ "$(stat -c %u "$rel_dir")" == "$REQUIRE_UID" && "$(stat -c %u "$new_target")" == "$REQUIRE_UID" ]] || block CANDIDATE_OWNER
 for d in "$rel_dir" "$new_target" "$new_target/public" "$new_target/public/build"; do
   [[ -d "$d" && ! -L "$d" ]] || block CANDIDATE_MISSING
