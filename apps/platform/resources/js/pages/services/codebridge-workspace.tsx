@@ -600,8 +600,7 @@ export default function CodeBridgeWorkspace(props: Props) {
                                     <p className="font-bold">
                                         Suggested device tool:{' '}
                                         <code>{proposal.tool}</code>
-                                        {Object.keys(proposal.arguments).length >
-                                            0 && (
+                                        {Object.keys(proposal.arguments).length > 0 && (
                                             <>
                                                 {' '}
                                                 <code>
@@ -629,7 +628,10 @@ export default function CodeBridgeWorkspace(props: Props) {
                                                 data-testid="proposal-confirm"
                                                 onClick={() =>
                                                     router.post(
-                                                        proposalUrl(proposal.id, 'confirm'),
+                                                        proposalUrl(
+                                                            proposal.id,
+                                                            'confirm',
+                                                        ),
                                                         {},
                                                         { preserveScroll: true },
                                                     )
@@ -643,7 +645,10 @@ export default function CodeBridgeWorkspace(props: Props) {
                                                 data-testid="proposal-reject"
                                                 onClick={() =>
                                                     router.post(
-                                                        proposalUrl(proposal.id, 'reject'),
+                                                        proposalUrl(
+                                                            proposal.id,
+                                                            'reject',
+                                                        ),
                                                         {},
                                                         { preserveScroll: true },
                                                     )
