@@ -12,6 +12,7 @@ fingerprint cannot prove the remote side accepts the key.
 """
 from __future__ import annotations
 
+import base64
 import hashlib
 import os
 import pwd
@@ -50,10 +51,23 @@ def pid(path) -> str:
 
 
 def fingerprint(key: Path, run=sh):
+    # "ssh-keygen -l -f -" is not portable stdin handling. Never infer key
+    # failure from that command; derive the public key from the private key,
+    # then independently hash an exact ED25519 public wire blob.
     pub = run(["/usr/bin/ssh-keygen", "-y", "-P", "", "-f", str(key)], b"")
-    out = run(["/usr/bin/ssh-keygen", "-l", "-E", "sha256", "-f", "-"], pub.encode()) if pub else None
-    m = re.match(r"\d+ (SHA256:[A-Za-z0-9+/]{43}) ", out or "")
-    return m.group(1) if m else None
+    if not pub or len(pub) > 8192:
+        return None
+    words = pub.strip().split()
+    if len(words) < 2 or words[0] != "ssh-ed25519":
+        return None
+    try:
+        blob = base64.b64decode(words[1], validate=True)
+    except (ValueError, base64.binascii.Error):
+        return None
+    if len(blob) != 51 or blob[:19] != b"\x00\x00\x00\x0bssh-ed25519\x00\x00\x00\x20":
+        return None
+    result = "SHA256:" + base64.b64encode(hashlib.sha256(blob).digest()).decode("ascii").rstrip("=")
+    return result if FP.fullmatch(result) else None
 
 
 def read_small(path: Path, uid_ok=(0,), limit=MAX_SMALL):
