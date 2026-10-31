@@ -47,7 +47,13 @@ for dir in /usr/lib/postgresql/*/bin; do
   [[ -x "$dir/initdb" && -x "$dir/pg_ctl" && -x "$dir/psql" && -x "$dir/pg_restore" && -x "$dir/createdb" ]] && pgdir="$dir"
 done
 [[ -n "$pgdir" ]] || fail POSTGRES_RESTORE_BINARIES_MISSING
-exec 9>/run/lock/kmj-main-platform-production-release.lock
+# Match the protected main release-lock contract: never truncate or follow a
+# planted symlink in the shared /run/lock directory as root.
+readonly RELEASE_LOCK=/run/lock/kmj-main-platform-production-release.lock
+( set -o noclobber; : >"$RELEASE_LOCK" ) 2>/dev/null || :
+[[ -f "$RELEASE_LOCK" && ! -L "$RELEASE_LOCK" && "$(stat -c '%u:%h' -- "$RELEASE_LOCK")" == "0:1" ]] || fail RELEASE_LOCK_UNSAFE
+chmod 0600 -- "$RELEASE_LOCK"
+exec 9<"$RELEASE_LOCK"
 flock -n 9 || fail PRODUCTION_RELEASE_IN_PROGRESS
 scratch="$(mktemp -d /tmp/kmj-local-recovery.XXXXXXXX)"
 # Root owns the parent and all archival outputs; only a narrow child workdir
