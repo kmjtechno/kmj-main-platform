@@ -12,6 +12,8 @@ Do NOT consider a keypair or a fingerprint proof of remote authorization.
 from __future__ import annotations
 
 import os
+import base64
+import hashlib
 from pathlib import Path
 import re
 import socket
@@ -26,6 +28,21 @@ KEYGEN = "/usr/bin/ssh-keygen"
 ENV = {"PATH": "/usr/bin:/bin", "LANG": "C", "LC_ALL": "C", "HOME": "/root"}
 PUBLIC_RE = re.compile(r"ssh-ed25519 ([A-Za-z0-9+/]{60,120}={0,2})(?: [A-Za-z0-9_.@-]{1,80})?\Z")
 FP_RE = re.compile(r"SHA256:[A-Za-z0-9+/]{43}\Z")
+
+
+def ssh_ed25519_fingerprint(encoded: str) -> str:
+    """OpenSSH SHA256 fingerprint of a *validated* ED25519 public wire blob."""
+    try:
+        blob = base64.b64decode(encoded, validate=True)
+    except (ValueError, base64.binascii.Error):
+        raise Blocked("PUBLIC_KEY_BLOB_INVALID") from None
+    # RFC 4253: string("ssh-ed25519"), string(32-byte public key).
+    if blob[:4] != b"\x00\x00\x00\x0b" or blob[4:15] != b"ssh-ed25519" or blob[15:19] != b"\x00\x00\x00\x20" or len(blob) != 51:
+        raise Blocked("PUBLIC_KEY_BLOB_INVALID")
+    fingerprint = "SHA256:" + base64.b64encode(hashlib.sha256(blob).digest()).decode("ascii").rstrip("=")
+    if not FP_RE.fullmatch(fingerprint):
+        raise Blocked("FINGERPRINT_INVALID")
+    return fingerprint
 
 
 class Blocked(Exception):
@@ -91,11 +108,10 @@ def public_key() -> str:
     words = pub.split()
     if words[:2] != derived_words[:2]:
         raise Blocked("PUBLIC_PRIVATE_KEY_MISMATCH")
-    result = run_keygen(["-l", "-E", "sha256", "-f", "-"], input_bytes=(pub + "\n").encode())
-    tokens = result.decode("ascii", "strict").split()
-    if len(tokens) < 2 or not FP_RE.fullmatch(tokens[1]):
-        raise Blocked("FINGERPRINT_INVALID")
-    print("OFFSITE_PUBLIC_FINGERPRINT=" + tokens[1])
+    # Do not invoke ssh-keygen -l -f -: on some OpenSSH builds the hyphen
+    # is interpreted as a pathname rather than stdin, after successful creation.
+    # The ED25519 wire blob has exactly one canonical SHA256 fingerprint.
+    print("OFFSITE_PUBLIC_FINGERPRINT=" + ssh_ed25519_fingerprint(words[1]))
     # Public key is intentionally emitted only for explicit owner enrollment.
     print("OFFSITE_PUBLIC_KEY=" + pub)
     print("REMOTE_AUTHORIZATION=NOT_VERIFIED")
