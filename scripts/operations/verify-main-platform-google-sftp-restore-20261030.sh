@@ -202,8 +202,8 @@ if ! parity="$(python3 "$repo/scripts/operations/verify-restored-storage-parity.
     "$tmp/extracted/storage.tar.gz" "$tmp/restored-storage")"; then
   status STORAGE_EXTRACTION_PARITY_CONTENT_SHA256 FAIL; exit 1
 fi
-files="$(printf '%s\n' "$parity" | sed -n 's/^RECOVERED_STORAGE_FILES_VERIFIED=\\([0-9]\\+\\)$/\\1/p')"
-bytes="$(printf '%s\n' "$parity" | sed -n 's/^RECOVERED_STORAGE_BYTES_VERIFIED=\\([0-9]\\+\\)$/\\1/p')"
+files="$(printf '%s\n' "$parity" | sed -n 's/^RECOVERED_STORAGE_FILES_VERIFIED=\([0-9]\+\)$/\1/p')"
+bytes="$(printf '%s\n' "$parity" | sed -n 's/^RECOVERED_STORAGE_BYTES_VERIFIED=\([0-9]\+\)$/\1/p')"
 [[ "$files" =~ ^[0-9]+$ && "$bytes" =~ ^[0-9]+$ ]] ||
   block STORAGE_PARITY_OUTPUT_INVALID
 expected_parity="$(printf 'RECOVERED_STORAGE_CONTENT_PARITY=PASS\nRECOVERED_STORAGE_FILES_VERIFIED=%s\nRECOVERED_STORAGE_BYTES_VERIFIED=%s' "$files" "$bytes")"
