@@ -16,7 +16,7 @@ class FakeEnv(pf.Env):
     def hostname(self): return self.o["host"]
     def which(self, n): return "/usr/bin/" + n if self.o["tools"] else None
     def service_active(self, u): return self.o["active"]
-    def free_kib(self, p): return self.o["free"]
+    def free_kib(self, p): self.last_free_path = p; return self.o["free"]
     def candidate_head(self, d): return self.o["head"]
 
 
@@ -57,6 +57,16 @@ class Tests(unittest.TestCase):
         for opts, name in cases:
             with self.subTest(name):
                 self.assertIn(name, run(build(Path(tempfile.mkdtemp()), **opts))["failed"])
+
+    def test_free_space_is_checked_on_backup_filesystem(self):
+        env = build(self.base)
+        run(env)
+        self.assertEqual(env.last_free_path, str(env.backup_dir))
+
+    def test_backup_dir_writable_mode_blocks(self):
+        env = build(self.base)
+        env.backup_dir.chmod(0o777)
+        self.assertIn("backup_dir_real_root_owned", run(env)["failed"])
 
     def test_existing_evidence_blocks(self):
         env = build(self.base)
