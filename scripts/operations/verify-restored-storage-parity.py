@@ -102,6 +102,8 @@ def restored_inventory(root: Path) -> tuple[dict[str, tuple[int, str]], set[str]
     # be replaced after its contents have been hashed. Remember each visited
     # directory's inode so the final pathname walk can detect that swap.
     directory_inodes: dict[str, tuple[int, int]] = {}
+    # Detect byte-identical file replacement after the initial hash pass.
+    file_metadata: dict[str, tuple[int, int, int, int, int, int]] = {}
     total = 0
 
     def onerror(error: OSError) -> None:
@@ -155,6 +157,8 @@ def restored_inventory(root: Path) -> tuple[dict[str, tuple[int, str]], set[str]
                         fail()
                     rel = (rel_parent / name).as_posix()
                     files[rel] = (before.st_size, checksum)
+                    file_metadata[rel] = (after.st_dev, after.st_ino, after.st_size,
+                                          after.st_mtime_ns, after.st_ctime_ns, after.st_nlink)
                     total += before.st_size
                     if len(files) + len(directories) > MAX_ENTRIES or total > MAX_FILE_BYTES:
                         fail()
@@ -164,7 +168,8 @@ def restored_inventory(root: Path) -> tuple[dict[str, tuple[int, str]], set[str]
         # interior directory leaves root_fd unchanged, but must not allow a
         # successful attestation for a different restored pathname.
         seen_dirs: set[str] = set()
-        for parent, _subdirs, _filenames, dirfd in os.fwalk(
+        seen_files: set[str] = set()
+        for parent, _subdirs, filenames, dirfd in os.fwalk(
             ".", dir_fd=root_fd, follow_symlinks=False, onerror=onerror
         ):
             key = Path(parent).as_posix()
@@ -173,6 +178,22 @@ def restored_inventory(root: Path) -> tuple[dict[str, tuple[int, str]], set[str]
                 or directory_inodes.get(key) != (info.st_dev, info.st_ino)):
                 fail()
             seen_dirs.add(key)
+            for name in filenames:
+                rel = (Path(parent) / name).as_posix()
+                if rel in seen_files:
+                    fail()
+                seen_files.add(rel)
+                try:
+                    info = os.stat(name, dir_fd=dirfd, follow_symlinks=False)
+                except OSError:
+                    fail()
+                if (not stat.S_ISREG(info.st_mode) or info.st_nlink != 1
+                    or file_metadata.get(rel) != (
+                        info.st_dev, info.st_ino, info.st_size,
+                        info.st_mtime_ns, info.st_ctime_ns, info.st_nlink)):
+                    fail()
+        if seen_files != set(file_metadata):
+            fail()
         if seen_dirs != set(directory_inodes):
             fail()
         # The walk is descriptor-anchored, but the caller will later use the
