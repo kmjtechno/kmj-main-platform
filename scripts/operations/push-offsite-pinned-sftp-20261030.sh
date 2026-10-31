@@ -113,7 +113,22 @@ fi
 fp=$(ssh-keygen -lf "$tmp/scan" -E sha256 2>/dev/null | awk 'NR==1{print $2}')
 [[ "$fp" == "$pin" ]] || { status HOSTKEY_PIN MISMATCH; status OFFSITE_PUSH FAIL; exit 1; }
 status HOSTKEY_PIN PASS
-printf '[%s]:%s %s\n' "$host" "$port" "$(awk 'NR==1{print $2" "$3}' "$tmp/scan")" >"$tmp/known_hosts"
+# OpenSSH known_hosts lookup uses the bare host for the default port 22.
+# [host]:port is ONLY for a non-default port. Writing [host]:22 caused
+# StrictHostKeyChecking=yes to reject a correctly pinned default-port host.
+known_hosts_host() {
+  local h=$1 p=$2
+  if [[ "$p" == 22 ]]; then
+    printf '%s' "$h"
+  else
+    printf '[%s]:%s' "$h" "$p"
+  fi
+}
+host_alias="$(known_hosts_host "$host" "$port")"
+printf '%s %s\n' "$host_alias" "$(awk 'NR==1{print $2" "$3}' "$tmp/scan")" >"$tmp/known_hosts"
+# Prove the exact lookup key SSH will use is present before credentials.
+ssh-keygen -F "$host_alias" -f "$tmp/known_hosts" >/dev/null 2>&1 ||
+  block HOSTKEY_LOOKUP_MISSING
 
 sftp_opts=(-o LogLevel=ERROR -P "$port" -i "$ident"
   -o BatchMode=yes -o IdentitiesOnly=yes -o IdentityAgent=none
