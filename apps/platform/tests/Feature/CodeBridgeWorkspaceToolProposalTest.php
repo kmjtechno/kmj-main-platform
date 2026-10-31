@@ -162,6 +162,27 @@ final class CodeBridgeWorkspaceToolProposalTest extends TestCase
             ->assertInertia(fn (AssertableInertia $page) => $page->where('transcript.proposals.0.job_status', 'cancelled'));
     }
 
+    public function test_the_device_result_is_shown_in_the_chat_only_to_the_owner_and_never_as_markup(): void
+    {
+        $conversation = $this->chatWith(self::BLOCK);
+        $this->confirm($this->alice, $this->proposalId())->assertRedirect();
+        $job = (string) DB::table('codebridge_workspace_jobs')->value('id');
+        DB::table('codebridge_workspace_jobs')->where('id', $job)->update([
+            'status' => 'succeeded', 'progress' => 100, 'finished_at' => now(),
+            'summary' => '<script>alert(1)</script> clean tree on main',
+        ]);
+
+        $this->actingAs($this->alice)->get($this->page($conversation))->assertInertia(fn (AssertableInertia $page) => $page
+            ->where('transcript.proposals.0.job_status', 'succeeded')
+            ->where('transcript.proposals.0.job_progress', 100)
+            ->where('transcript.proposals.0.job_summary', '<script>alert(1)</script> clean tree on main')
+            ->where('transcript.proposals.0.job_error_code', null)
+            ->has('transcript.proposals.0.job_finished_at'));
+
+        // Another user (even in the same tenant) never receives this conversation's device result in any response body.
+        self::assertStringNotContainsString('clean tree on main', (string) $this->actingAs($this->bob)->get($this->page($conversation))->getContent());
+    }
+
     public function test_reject_blocks_confirm_and_a_confirmed_proposal_cannot_be_rejected(): void
     {
         $this->chatWith(self::BLOCK);

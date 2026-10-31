@@ -109,7 +109,7 @@ final class WorkspaceToolProposalService
             ->where('p.conversation_id', $conversation->id)
             ->where('p.tenant_id', $conversation->tenantId)->where('p.user_id', $conversation->userId)
             ->orderByDesc('p.id')->limit(50)
-            ->get(['p.id', 'p.message_id', 'p.tool', 'p.arguments', 'p.status', 'p.job_id', 'p.decided_at', 'p.created_at', 'j.status as job_status'])
+            ->get(['p.id', 'p.message_id', 'p.tool', 'p.arguments', 'p.status', 'p.job_id', 'p.decided_at', 'p.created_at', 'j.status as job_status', 'j.progress as job_progress', 'j.summary as job_summary', 'j.error_code as job_error_code', 'j.finished_at as job_finished_at'])
             ->reverse()->values()
             ->map(function (object $record): array {
                 $row = (array) $record;
@@ -120,6 +120,11 @@ final class WorkspaceToolProposalService
                     'arguments' => is_array($arguments) ? $arguments : [], 'status' => (string) $row['status'],
                     'job_id' => $row['job_id'] === null ? null : (string) $row['job_id'],
                     'job_status' => $row['job_status'] === null ? null : (string) $row['job_status'],
+                    // The device's own bounded report, shown as a result in the chat. Plain text only, never rendered as markup.
+                    'job_progress' => $row['job_progress'] === null ? null : (int) $row['job_progress'],
+                    'job_summary' => $row['job_summary'] === null ? null : mb_substr((string) $row['job_summary'], 0, 600),
+                    'job_error_code' => $row['job_error_code'] === null ? null : (string) $row['job_error_code'],
+                    'job_finished_at' => $row['job_finished_at'] === null ? null : Carbon::parse((string) $row['job_finished_at'])->toIso8601String(),
                     'expires_in_seconds' => $row['status'] === 'pending'
                         ? max(0, self::TTL_SECONDS - (int) Carbon::parse((string) $row['created_at'])->diffInSeconds(now(), true)) : null,
                 ];
