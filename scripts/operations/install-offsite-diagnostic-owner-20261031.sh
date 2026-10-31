@@ -38,7 +38,17 @@ target_mode="$(stat -c '%a' /usr/local/libexec)"
 # Absolutely no overwrite, including an existing broken symlink.
 [[ ! -e "$target" && ! -L "$target" ]] || block EXISTING_TARGET_REQUIRES_REVIEW
 
-install -o root -g root -m 0750 -T -- "$source" "$target"
+# Stage privately; use atomic hardlink creation so an unexpected concurrent
+# target cannot be overwritten between the precheck and publish.
+tmp="$(mktemp /usr/local/libexec/.kmj-offsite-diagnostic.XXXXXXXX)" || block STAGE_CREATE
+cleanup() { rm -f -- "$tmp"; }
+trap cleanup EXIT
+install -o root -g root -m 0750 -T -- "$source" "$tmp" || block STAGE_COPY
+[[ "$(sha256sum "$tmp" | cut -d' ' -f1)" == "$expected_sha" ]] || block STAGE_HASH
+ln -T -- "$tmp" "$target" || block TARGET_EXISTS_OR_LINK_FAILED
+# Drop the temporary hardlink; the final file must have exactly one link.
+cleanup
+trap - EXIT
 # Do not claim a ready diagnostic unless the installed bytes and metadata match.
 [[ -f "$target" && ! -L "$target" ]] || block TARGET_FILE
 [[ "$(stat -c '%u:%g:%a:%h' -- "$target")" == "0:0:750:1" ]] || block TARGET_METADATA
