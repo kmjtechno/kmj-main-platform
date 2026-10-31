@@ -132,7 +132,7 @@ export async function hashServedManifest(base, fetchImpl = fetch) {
         if (!response.ok || response.url !== manifestUrl.href) return null;
         const length = response.headers?.get('content-length');
         if (length !== null && length !== undefined) {
-            if (!/^\\d+$/.test(length) || Number(length) > MAX_MANIFEST_BYTES)
+            if (!/^\d+$/.test(length) || Number(length) > MAX_MANIFEST_BYTES)
                 return null;
         }
         const reader = response.body?.getReader();
