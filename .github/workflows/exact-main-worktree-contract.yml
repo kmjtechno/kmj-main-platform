@@ -1,0 +1,33 @@
+name: Exact-SHA Fresh Main Worktree Contract
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/exact-main-worktree-contract.yml'
+      - 'scripts/operations/prepare_fresh_main_worktree_20261031.py'
+      - 'tests/test_fresh_main_worktree.py'
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/exact-main-worktree-contract.yml'
+      - 'scripts/operations/prepare_fresh_main_worktree_20261031.py'
+      - 'tests/test_fresh_main_worktree.py'
+
+permissions:
+  contents: read
+
+jobs:
+  isolated-lane:
+    name: Nonroot dirty-checkout isolation negatives
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+          ref: \${{ github.event.pull_request.head.sha || github.sha }}
+      - name: Verify source syntax and offline isolated-lane regression tests
+        run: |
+          set -euo pipefail
+          python3 -B -m py_compile scripts/operations/prepare_fresh_main_worktree_20261031.py
+          python3 -B -m unittest discover -s tests -p 'test_fresh_main_worktree.py' -v
