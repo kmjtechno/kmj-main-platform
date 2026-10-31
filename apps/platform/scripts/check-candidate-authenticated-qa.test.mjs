@@ -15,6 +15,9 @@ import {
     PAGES,
     VIEWPORTS,
     auditImagesInPage,
+    hashServedManifest,
+    MAX_MANIFEST_BYTES,
+    sha256,
     judge,
     loadOwnerStorageState,
     runPage,
@@ -353,4 +356,58 @@ void test('image audit fails on corrupt and stalled decodes, without an unbounde
         if (previous === undefined) delete globalThis.document;
         else globalThis.document = previous;
     }
+});
+
+
+void test('candidate manifest fetch is SHA-bound, bounded and fail-closed', async () => {
+    const base = new URL(good.KMJ_QA_BASE_URL);
+    const expectedUrl = new URL('/build/manifest.json', base).href;
+    const body = '{"assets":true}';
+    let fetchOptions;
+    const response = (value, { url = expectedUrl, status = 200, headers = {} } = {}) => {
+        const result = new Response(value, { status, headers });
+        Object.defineProperty(result, 'url', { value: url });
+        return result;
+    };
+    const valid = await hashServedManifest(base, async (url, options) => {
+        assert.equal(url.href, expectedUrl);
+        fetchOptions = options;
+        return response(body, { headers: { 'content-length': String(Buffer.byteLength(body)) } });
+    });
+    assert.equal(valid, sha256(Buffer.from(body)));
+    assert.equal(fetchOptions.redirect, 'manual');
+    assert.ok(fetchOptions.signal instanceof AbortSignal);
+    assert.equal(
+        await hashServedManifest(base, async () => response(body, { url: 'http://127.0.0.1:9999/build/manifest.json' })),
+        null,
+    );
+    assert.equal(
+        await hashServedManifest(base, async () => response(body, { status: 404 })),
+        null,
+    );
+    for (const length of ['not-a-number', '-1', String(MAX_MANIFEST_BYTES + 1)]) {
+        assert.equal(
+            await hashServedManifest(base, async () => response(body, { headers: { 'content-length': length } })),
+            null,
+            length,
+        );
+    }
+    assert.equal(await hashServedManifest(base, async () => { throw new Error('PRIVATE'); }), null);
+    assert.equal(await hashServedManifest(base, async () => response('')), null);
+});
+
+void test('chunked manifest exceeding byte cap cannot pass even without Content-Length', async () => {
+    const base = new URL(good.KMJ_QA_BASE_URL);
+    const url = new URL('/build/manifest.json', base).href;
+    let cancelled = false;
+    const reader = {
+        async read() { return { done: false, value: new Uint8Array(MAX_MANIFEST_BYTES + 1) }; },
+        async cancel() { cancelled = true; },
+    };
+    const result = await hashServedManifest(base, async () => ({
+        ok: true, url, headers: { get: () => null },
+        body: { getReader: () => reader },
+    }));
+    assert.equal(result, null);
+    assert.equal(cancelled, true);
 });
