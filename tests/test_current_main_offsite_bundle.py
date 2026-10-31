@@ -155,6 +155,34 @@ class ExactMainSealerTests(unittest.TestCase):
                 with self.assertRaisesRegex(RuntimeError, "UNSAFE_STORAGE_ARCHIVE_MEMBER"):
                     mod.repack_verified_local(outer, witness, root / "scratch")
 
+    def test_outer_bundle_expansion_budget_fails_before_extracting(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            outer, witness = fixture(root)
+            with patch.object(mod, "verify_root_only"), patch.object(
+                mod, "MAX_BUNDLE_UNCOMPRESSED", 1
+            ):
+                with self.assertRaisesRegex(
+                    RuntimeError, "SOURCE_BUNDLE_EXPANSION_BUDGET"
+                ):
+                    mod.repack_verified_local(outer, witness, root / "scratch")
+            self.assertEqual(list((root / "scratch").iterdir()), [])
+
+    def test_outer_bundle_insufficient_scratch_space_fails_closed(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            outer, witness = fixture(root)
+            with patch.object(mod, "verify_root_only"), patch.object(
+                mod.shutil, "disk_usage", return_value=type(
+                    "DiskUsage", (), {"free": 0}
+                )()
+            ):
+                with self.assertRaisesRegex(
+                    RuntimeError, "SOURCE_BUNDLE_EXPANSION_BUDGET"
+                ):
+                    mod.repack_verified_local(outer, witness, root / "scratch")
+            self.assertEqual(list((root / "scratch").iterdir()), [])
+
     def test_no_live_or_remote_mutations(self):
         s = FILE.read_text()
         for forbidden in ("rclone copy", "scp ", "ssh ", "systemctl",
