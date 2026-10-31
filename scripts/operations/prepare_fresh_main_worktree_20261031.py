@@ -31,7 +31,8 @@ class Blocked(Exception):
 
 
 def git(repo: Path, *args: str, extra_config=()):
-    cmd = ["git", *extra_config, "-C", str(repo), *args]
+    cmd = ["git", "-c", "core.fsmonitor=false", "-c", "core.hooksPath=/dev/null",
+           "-c", "credential.helper=", *extra_config, "-C", str(repo), *args]
     # Ignore inherited Git overrides (GIT_DIR, config injection, SSH helpers, etc.).
     # Only the authorized repository-local config is consulted.
     env = {key: value for key, value in os.environ.items() if not key.startswith("GIT_")}
@@ -59,6 +60,29 @@ def verify_private_directory(path: Path, *, create: bool):
         raise Blocked("CACHE_DIRECTORY_UNSAFE")
 
 
+def verify_git_config(repo: Path):
+    """Reject local Git settings that can redirect HTTPS or execute hooks/filters.
+
+    A canonical remote.origin.url alone is insufficient: url.*.insteadOf can
+    transparently rewrite it to another HTTPS host. Read local configuration
+    (including local includes) before status/fetch/worktree operations.
+    """
+    config = git(repo, "config", "--local", "--list", "--includes")
+    for item in config.splitlines():
+        key = item.partition("=")[0].lower()
+        unsafe = (
+            (key.startswith("url.") and key.endswith(".insteadof"))
+            or key.startswith(("include.", "includeif."))
+            or key in {"remote.origin.vcs", "remote.origin.uploadpack",
+                       "remote.origin.proxy", "core.fsmonitor",
+                       "credential.helper", "http.extraheader"}
+            or (key.startswith("http.") and key.endswith(".extraheader"))
+            or (key.startswith("filter.") and key.endswith((".smudge", ".process")))
+        )
+        if unsafe:
+            raise Blocked("GIT_LOCAL_CONFIG_UNSAFE")
+
+
 def prepare(repo: Path, expected: str, lane: str, *, fetch: bool):
     if os.geteuid() == 0:
         raise Blocked("ROOT_NOT_ALLOWED")
@@ -74,6 +98,7 @@ def prepare(repo: Path, expected: str, lane: str, *, fetch: bool):
         raise Blocked("GIT_COMMON_DIR_UNSAFE")
     if common.stat().st_uid != os.geteuid():
         raise Blocked("GIT_COMMON_DIR_OWNER")
+    verify_git_config(repo)
     before = git(repo, "status", "--porcelain=v1", "--untracked-files=all")
     cache = common / "kmj-fresh-main-lanes"
     # Trusted repository-operator state, never a root/system directory.
