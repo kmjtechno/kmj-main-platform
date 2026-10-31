@@ -424,6 +424,55 @@ class Sandbox(unittest.TestCase):
         self.assertRegex(out, r"^[a-f0-9]{64}$")
         self.assertEqual(before, sorted(str(p) for p in self.d.rglob("*")))
 
+    # ---- residual seal gaps: deletions, empty dirs, excluded storage, rollback after swap ----
+    def test_deleted_tracked_file_is_refused(self):
+        app = self.rel / self.NEW / "apps/platform"
+        (app / "artisan").unlink()
+        self.assertBlocked(*self.run_runner(), "CANDIDATE_ARTIFACT")
+
+    def test_deleted_sealed_untracked_file_changes_the_seal(self):
+        app = self.rel / self.NEW / "apps/platform"
+        extra = app / "public/extra.css"
+        extra.write_text("a{}")
+        os.chmod(extra, 0o644)
+        self.seal()
+        self.assertEqual(self.run_runner()[0], 0)
+        os.symlink(self.rel / self.OLD / "apps/platform", self.d / "stage/htdocs/site.tmp")
+        os.replace(self.d / "stage/htdocs/site.tmp", self.d / "stage/htdocs/site")  # reset baseline to OLD
+        extra.unlink()
+        self.assertBlocked(*self.run_runner(), "CANDIDATE_SEAL")
+
+    def test_added_empty_directory_changes_the_seal(self):
+        app = self.rel / self.NEW / "apps/platform"
+        (app / "public/hidden").mkdir(mode=0o755)
+        self.assertBlocked(*self.run_runner(), "CANDIDATE_SEAL")
+
+    def test_excluded_storage_is_not_a_way_to_hide_a_symlink_in_the_served_tree(self):
+        app = self.rel / self.NEW / "apps/platform"
+        os.symlink("/etc", app / "public/storage")  # public/ is sealed; only top-level storage/ is excluded
+        self.assertBlocked(*self.run_runner(), "CANDIDATE_SEAL")
+
+    def test_excluded_names_only_apply_at_their_exact_path(self):
+        app = self.rel / self.NEW / "apps/platform"
+        (app / "public/storage").mkdir(mode=0o755)
+        (app / "public/storage/x.php").write_text("<?php evil")
+        self.assertBlocked(*self.run_runner(), "CANDIDATE_SEAL")
+
+    def test_post_swap_candidate_change_rolls_back_to_previous_target(self):
+        # PATH is pinned inside the runner, so simulate a racing writer by injecting one after the swap
+        # into the TEST COPY only (the production script is untouched and covered by the digest tests).
+        marker = 'if [[ "$(readlink -- "$SITE")" != "$new_target" ]]; then rollback; block READBACK; fi'
+        text = self.runner.read_text()
+        self.assertEqual(text.count(marker), 1)
+        evil = f'printf "<?php evil" > "{self.rel / self.NEW}/apps/platform/public/late.php"\n'
+        self.runner.write_text(text.replace(marker, evil + marker))
+        self.write_approval()  # re-bind runnerSha256 to the instrumented copy
+        self.seal()
+        code, out = self.run_runner()
+        self.assertEqual((code, out), (2, "KMJ_STAGE_ACTIVATE=BLOCKED_CANDIDATE_CHANGED"))
+        self.assertEqual(self.site(), str(self.rel / self.OLD / "apps/platform"))
+        self.assertEqual([p.name for p in (self.d / "stage/htdocs").iterdir()], ["site"])  # no temp link left
+
 
 if __name__ == "__main__":
     unittest.main()
