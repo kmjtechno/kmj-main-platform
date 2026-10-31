@@ -96,6 +96,23 @@ class RestoredStorageParityTests(unittest.TestCase):
         with self.assertRaises(module.StorageParityError):
             module.verify(self.tar, alias)
 
+    def test_restored_root_replaced_during_walk_is_rejected(self):
+        # Even if open descriptors still refer to the original scratch tree,
+        # the pathname must not silently point to a different directory.
+        from unittest import mock
+        original_walk = module.os.fwalk
+
+        def swapped_walk(*args, **kwargs):
+            walk = original_walk(*args, **kwargs)
+            first = next(walk)
+            self.output.rename(self.base / "original-restored")
+            self.output.mkdir()
+            yield first
+            yield from walk
+
+        with mock.patch.object(module.os, "fwalk", side_effect=swapped_walk):
+            self.assert_rejected()
+
     def test_hardlink_to_external_file_is_not_an_independent_restore(self):
         # A byte-for-byte match must still fail if the supposed scratch
         # restore is actually another link to a file outside the restore.
