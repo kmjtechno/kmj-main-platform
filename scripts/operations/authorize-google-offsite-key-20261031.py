@@ -172,7 +172,16 @@ def main(argv=None):
         code = str(exc) if isinstance(exc, Blocked) else "LOCAL_ERROR"
         # All error codes are fixed classifications, never raw paths, keys or
         # journal records; do not emit exception tracebacks to console.
-        if not re.fullmatch(r"[A-Z_]{2,60}", code):
+        if code not in {
+            "ROOT_NOT_ALLOWED", "OWNER_IDENTITY_UNKNOWN", "WRONG_HOST_OR_ACCOUNT",
+            "PUBLIC_KEY_INVALID", "PUBLIC_FINGERPRINT_MISMATCH", "OWNER_HOME_UNSAFE",
+            "OWNER_SSH_DIRECTORY_MISSING", "OWNER_SSH_DIRECTORY_UNSAFE",
+            "AUTHORIZED_KEYS_MISSING", "AUTHORIZED_KEYS_UNAVAILABLE",
+            "AUTHORIZED_KEYS_UNSAFE", "AUTHORIZED_KEYS_PATH_CHANGED",
+            "AUTHORIZED_KEYS_CHANGED", "AUTHORIZED_KEYS_ENCODING",
+            "DUPLICATE_OR_UNRESTRICTED_KEY", "AUTHORIZED_KEYS_SIZE_LIMIT",
+            "AUTHORIZED_KEYS_WRITE_INCOMPLETE", "INVALID_MODE",
+        }:
             code = "LOCAL_ERROR"
         print("GOOGLE_OFFSITE_AUTH=BLOCKED_" + code)
         return 3
