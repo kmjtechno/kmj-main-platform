@@ -127,8 +127,8 @@ class UploadCoverageTests(unittest.TestCase):
 
     def test_unreadable_subdirectory_cannot_be_silently_skipped(self):
         from unittest import mock
-        def fail_walk(path, follow_symlinks=False, onerror=None, top_fd=None):
-            self.assertIsNotNone(top_fd)
+        def fail_walk(path, follow_symlinks=False, onerror=None, dir_fd=None):
+            self.assertIsNotNone(dir_fd)
             self.assertIsNotNone(onerror)
             onerror(PermissionError("private subdirectory"))
             yield from ()
