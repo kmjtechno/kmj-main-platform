@@ -96,6 +96,14 @@ class IsolatedWorktreeTests(unittest.TestCase):
             self.call(fetch=True)
         self.assertEqual((self.repo / "dirty-untracked.txt").read_text(), "must remain")
 
+    def test_multiple_origin_urls_refused_without_network(self):
+        git(self.repo, "remote", "add", "origin", "https://untrusted.invalid/other.git")
+        git(self.repo, "config", "--add", "remote.origin.url",
+            "https://github.com/kmjtechno/kmj-main-platform.git")
+        with self.assertRaisesRegex(Blocked, "ORIGIN_NOT_CANONICAL_HTTPS"):
+            self.call(fetch=True)
+        self.assertFalse((self.repo / ".git/kmj-fresh-main-lanes/ci_lane").exists())
+
     def test_inherited_git_config_override_cannot_change_origin(self):
         git(self.repo, "remote", "add", "origin", "https://github.com/kmjtechno/kmj-main-platform.git")
         malicious = {"GIT_CONFIG_COUNT": "1", "GIT_CONFIG_KEY_0": "remote.origin.url",
