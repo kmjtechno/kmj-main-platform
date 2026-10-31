@@ -122,6 +122,31 @@ class IsolatedWorktreeTests(unittest.TestCase):
             self.call(fetch=True)
         self.assertEqual((self.repo / "dirty-untracked.txt").read_text(), "must remain")
 
+    def test_http_tls_downgrade_is_rejected_before_fetch(self):
+        git(self.repo, "remote", "add", "origin",
+            "https://github.com/kmjtechno/kmj-main-platform.git")
+        git(self.repo, "config", "http.sslVerify", "false")
+        with self.assertRaisesRegex(Blocked, "GIT_LOCAL_CONFIG_UNSAFE"):
+            self.call(fetch=True)
+        self.assertEqual((self.repo / "dirty-untracked.txt").read_text(), "must remain")
+
+    def test_url_scoped_http_proxy_is_rejected_before_fetch(self):
+        git(self.repo, "remote", "add", "origin",
+            "https://github.com/kmjtechno/kmj-main-platform.git")
+        git(self.repo, "config", "http.https://github.com/.proxy",
+            "http://untrusted.invalid:8080")
+        with self.assertRaisesRegex(Blocked, "GIT_LOCAL_CONFIG_UNSAFE"):
+            self.call(fetch=True)
+        self.assertFalse((self.repo / ".git/kmj-fresh-main-lanes/ci_lane").exists())
+
+    def test_http_extraheader_is_rejected_before_network(self):
+        git(self.repo, "remote", "add", "origin",
+            "https://github.com/kmjtechno/kmj-main-platform.git")
+        git(self.repo, "config", "http.extraHeader", "Authorization: secret")
+        with self.assertRaisesRegex(Blocked, "GIT_LOCAL_CONFIG_UNSAFE"):
+            self.call(fetch=True)
+        self.assertEqual((self.repo / "dirty-untracked.txt").read_text(), "must remain")
+
     def test_local_fsmonitor_command_is_rejected_before_status(self):
         git(self.repo, "config", "core.fsmonitor", "/tmp/untrusted-fsmonitor")
         with self.assertRaisesRegex(Blocked, "GIT_LOCAL_CONFIG_UNSAFE"):
