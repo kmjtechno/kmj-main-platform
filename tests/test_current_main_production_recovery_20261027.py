@@ -45,6 +45,50 @@ class CurrentMainRecoveryContract(unittest.TestCase):
             with self.subTest(term=term):
                 self.assertIn(term, s)
 
+    def test_release_lock_is_nofollow_and_nontruncating(self):
+        """Execute the actual lock snippet with a disposable unprivileged path."""
+        import os
+        import re
+        import shlex
+        import tempfile
+
+        source = FILE.read_text(encoding="utf-8")
+        self.assertNotIn("exec 9>", source)
+        self.assertIn("set -o noclobber", source)
+        self.assertIn('stat -c \'%u:%h\'', source)
+        match = re.search(
+            r"(?ms)^readonly RELEASE_LOCK=.*?^flock -n 9[^\\n]*$", source
+        )
+        self.assertIsNotNone(match)
+        snippet = match.group(0)
+        with tempfile.TemporaryDirectory() as tmp:
+            directory = Path(tmp)
+            lock = directory / "release.lock"
+            victim = directory / "victim"
+            victim.write_text("PRESERVE_ME", encoding="utf-8")
+            local = snippet.replace(
+                "/run/lock/kmj-main-platform-production-release.lock",
+                str(lock),
+            ).replace('"0:1"', f'"{os.getuid()}:1"')
+            command = "set -Eeuo pipefail\\nfail() { exit 2; }\\n" + local
+            # Existing symlink must be refused without touching its target.
+            lock.symlink_to(victim)
+            blocked = subprocess.run(["bash", "-c", command], capture_output=True, timeout=8)
+            self.assertEqual(blocked.returncode, 2)
+            self.assertEqual(victim.read_text(encoding="utf-8"), "PRESERVE_ME")
+            lock.unlink()
+            # A second hard link must also be refused before chmod/open.
+            os.link(victim, lock)
+            blocked = subprocess.run(["bash", "-c", command], capture_output=True, timeout=8)
+            self.assertEqual(blocked.returncode, 2)
+            self.assertEqual(victim.read_text(encoding="utf-8"), "PRESERVE_ME")
+            lock.unlink()
+            # A clean private lock is created and can be reopened safely.
+            for _ in range(2):
+                allowed = subprocess.run(["bash", "-c", command], capture_output=True, timeout=8)
+                self.assertEqual(allowed.returncode, 0, allowed.stderr)
+                self.assertEqual(lock.stat().st_mode & 0o777, 0o600)
+
     def test_no_production_writes_or_fake_approval(self):
         s = FILE.read_text(encoding="utf-8")
         for forbidden in (
