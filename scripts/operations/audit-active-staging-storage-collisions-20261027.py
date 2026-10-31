@@ -35,8 +35,10 @@ def require(ok: bool, reason: str) -> None:
 
 def git_head(release: Path) -> str:
     p = subprocess.run(
-        ["runuser", "-u", "kmjstage", "--", "git", "-C", str(release),
-         "rev-parse", "--verify", "HEAD"],
+        ["/usr/sbin/runuser", "-u", "kmjstage", "--", "/usr/bin/git",
+         "-C", str(release), "rev-parse", "--verify", "HEAD"],
+        env={"PATH": "/usr/sbin:/usr/bin:/sbin:/bin", "LANG": "C",
+             "GIT_CONFIG_NOSYSTEM": "1", "GIT_CONFIG_GLOBAL": "/dev/null"},
         stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True,
         timeout=12, check=False,
     )
