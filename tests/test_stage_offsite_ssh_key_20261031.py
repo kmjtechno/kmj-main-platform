@@ -121,10 +121,10 @@ class KeyStageTests(unittest.TestCase):
 
     def test_tampered_public_wire_format_and_base64_fail_closed(self):
         import base64
-        valid = base64.b64encode(b"\\x00\\x00\\x00\\x0bssh-ed25519\\x00\\x00\\x00\\x20" + b"A" * 32).decode()
+        valid = base64.b64encode(b"\x00\x00\x00\x0bssh-ed25519\x00\x00\x00\x20" + b"A" * 32).decode()
         self.assertRegex(m.ssh_ed25519_fingerprint(valid), r"^SHA256:[A-Za-z0-9+/]{43}$")
         for corrupt in ["not base64!", base64.b64encode(b"wrong").decode(),
-                        base64.b64encode(b"\\x00\\x00\\x00\\x0bssh-ed25519\\x00\\x00\\x00\\x20" + b"A" * 31).decode(),
+                        base64.b64encode(b"\x00\x00\x00\x0bssh-ed25519\x00\x00\x00\x20" + b"A" * 31).decode(),
                         valid + "!!!"]:
             with self.subTest(corrupt=corrupt), self.assertRaisesRegex(m.Blocked, "PUBLIC_KEY_BLOB_INVALID"):
                 m.ssh_ed25519_fingerprint(corrupt)
