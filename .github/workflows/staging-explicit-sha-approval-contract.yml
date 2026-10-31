@@ -1,0 +1,36 @@
+name: Staging Promotion Explicit SHA Gate Contract
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/staging-promotion-gate.yml'
+      - '.github/workflows/staging-vps-deploy-fixed.yml'
+      - '.github/workflows/staging-explicit-sha-approval-contract.yml'
+      - 'tests/test_staging_promotion_exact_sha_20261031.py'
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/staging-promotion-gate.yml'
+      - '.github/workflows/staging-vps-deploy-fixed.yml'
+      - '.github/workflows/staging-explicit-sha-approval-contract.yml'
+      - 'tests/test_staging_promotion_exact_sha_20261031.py'
+
+permissions:
+  contents: read
+
+jobs:
+  exact-sha-owner-gate:
+    name: Verify no automatic staging promotion without exact owner SHA
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - name: Test guarded workflow source, no network or mutations
+        run: |
+          set -euo pipefail
+          python3 -B -m unittest tests.test_staging_promotion_exact_sha_20261031 -v
+          echo 'EXACT_STAGING_PROMOTION_AUTHORIZATION_CONTRACT=PASS'
+          echo 'ROOT_OR_LIVE_DEPLOYMENT=NOT_ATTEMPTED'
