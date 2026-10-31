@@ -93,6 +93,16 @@ class UploadCoverageTests(unittest.TestCase):
         with self.assertRaises(audit_module.CoverageError):
             self.run_audit()
 
+    def test_unreadable_subdirectory_cannot_be_silently_skipped(self):
+        from unittest import mock
+        def fail_walk(path, followlinks=False, onerror=None):
+            self.assertIsNotNone(onerror)
+            onerror(PermissionError("private subdirectory"))
+            yield from ()
+        with mock.patch.object(audit_module.os, "walk", fail_walk):
+            with self.assertRaises(audit_module.CoverageError):
+                self.run_audit()
+
     def test_archive_digest_mismatch_fails_closed(self):
         self.witness.write_text(json.dumps({
             "approvedSha": SHA, "currentRelease": REL, "backupSha256": "0" * 64
