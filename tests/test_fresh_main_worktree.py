@@ -134,6 +134,17 @@ class IsolatedWorktreeTests(unittest.TestCase):
             self.call()
         self.assertEqual((self.repo / "dirty-untracked.txt").read_text(), "must remain")
 
+    def test_untrusted_path_cannot_substitute_git_executable(self):
+        fakebin = self.temp / "fakebin"
+        fakebin.mkdir()
+        marker = self.temp / "fake-git-executed"
+        fakegit = fakebin / "git"
+        fakegit.write_text("#!/bin/sh\\ntouch " + str(marker) + "\\nexit 99\\n")
+        fakegit.chmod(0o755)
+        with patch.dict(os.environ, {"PATH": str(fakebin)}):
+            self.assertEqual(guarded_git(self.repo, "rev-parse", "HEAD"), self.sha)
+        self.assertFalse(marker.exists())
+
     def test_root_denied_even_in_cached_mode(self):
         with patch("prepare_fresh_main_worktree_20261031.os.geteuid", return_value=0):
             with self.assertRaisesRegex(Blocked, "ROOT_NOT_ALLOWED"):
