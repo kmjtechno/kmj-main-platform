@@ -31,12 +31,12 @@ class Blocked(Exception):
 
 
 def git(repo: Path, *args: str, extra_config=()):
-    cmd = ["git", "-c", "core.fsmonitor=false", "-c", "core.hooksPath=/dev/null",
+    cmd = ["/usr/bin/git", "-c", "core.fsmonitor=false", "-c", "core.hooksPath=/dev/null",
            "-c", "credential.helper=", *extra_config, "-C", str(repo), *args]
     # Ignore inherited Git overrides (GIT_DIR, config injection, SSH helpers, etc.).
     # Only the authorized repository-local config is consulted.
     env = {key: value for key, value in os.environ.items() if not key.startswith("GIT_")}
-    env.update(GIT_TERMINAL_PROMPT="0", GIT_OPTIONAL_LOCKS="0",
+    env.update(PATH="/usr/bin:/bin", GIT_TERMINAL_PROMPT="0", GIT_OPTIONAL_LOCKS="0",
                GIT_CONFIG_NOSYSTEM="1", GIT_CONFIG_GLOBAL="/dev/null")
     result = subprocess.run(cmd, capture_output=True, text=True, env=env, check=False, timeout=180)
     if result.returncode:
