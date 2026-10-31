@@ -11,7 +11,8 @@ APPROVAL=/etc/kmj-codebridge/main-platform-staging-approval.json
 SITE=/home/kmjstage/htdocs/staging.kmjtechno.com
 PROD=/home/kmjprod/current
 RELEASES=/home/kmjstage/releases
-LOCKFILE=/run/lock/kmj-main-platform-staging-deploy.lock
+LOCKFILE=/run/kmj-main-platform-staging/deploy.lock
+SEAL_DIR=/etc/kmj-codebridge
 UNIT_FILE=/etc/systemd/system/kmj-main-platform-staging-deploy.service
 EXEC_LINE="ExecStart=/usr/bin/bash /usr/local/libexec/kmj-codebridge/kmj-main-platform-staging-deploy.sh"
 REQUIRE_UID=0
@@ -45,12 +46,43 @@ protected_file() {  # regular, not a link, required owner, single link, no group
   [[ -s "$f" ]]
 }
 
-# Lock: created atomically (O_EXCL, never follows or truncates), then validated BEFORE it is opened
-# read-only on the same path (no truncation of any planted target is possible).
-( set -o noclobber; : >"$LOCKFILE" ) 2>/dev/null || :
-[[ -f "$LOCKFILE" && ! -L "$LOCKFILE" && "$(stat -c %u:%h "$LOCKFILE")" == "$REQUIRE_UID:1" ]] || block LOCK
-chmod 0600 -- "$LOCKFILE" || block LOCK
-exec 9<"$LOCKFILE" || block LOCK
+# Lock. A tiny fixed Python helper opens the lock with O_NOFOLLOW|O_NONBLOCK|O_CLOEXEC (creating it with O_EXCL
+# when absent; never truncating), then fstat/fchmod/flock on that SAME descriptor and re-executes this runner with
+# the descriptor as fd 9. No pathname chmod, no second open. The lock directory chain is protected first.
+protected_dir_chain "$(dirname -- "$LOCKFILE")" || block LOCK_CHAIN
+if [[ ! -e /proc/self/fd/9 ]]; then
+  exec python3 -I -c '
+import fcntl, os, stat, sys
+path, owner, bash, script = sys.argv[1], int(sys.argv[2]), sys.argv[3], sys.argv[4]
+def die(code):
+    print("KMJ_STAGE_ACTIVATE=BLOCKED_" + code); sys.exit(2)
+flags = os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK | os.O_CLOEXEC
+try:
+    fd = os.open(path, flags | os.O_CREAT | os.O_EXCL, 0o600)
+except FileExistsError:
+    try:
+        fd = os.open(path, flags)
+    except OSError:
+        die("LOCK")
+except OSError:
+    die("LOCK")
+st = os.fstat(fd)
+if not stat.S_ISREG(st.st_mode) or st.st_uid != owner or st.st_nlink != 1:
+    die("LOCK")
+os.fchmod(fd, 0o600)
+try:
+    fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+except OSError:
+    die("LOCK_BUSY")
+os.dup2(fd, 9, inheritable=True)
+os.close(fd)
+os.execv(bash, [bash, script])
+' "$LOCKFILE" "$REQUIRE_UID" "$BASH" "${BASH_SOURCE[0]}" || block LOCK
+fi
+# Re-entered (or invoked with an unexpected fd 9): fd 9 must BE the lock file at the fixed path, same inode.
+fd_id="$(stat -L -c '%d:%i:%u:%h' /proc/self/fd/9)" || block LOCK
+path_id="$(stat -c '%d:%i:%u:%h:%F' -- "$LOCKFILE")" || block LOCK
+[[ "$path_id" == "$fd_id":*regular* ]] || block LOCK
 flock -n 9 || block LOCK_BUSY
 
 # Strict, root-protected approval (same rules as the Supervisor attestation).
@@ -130,6 +162,43 @@ for d in "$rel_dir" "$new_target" "$new_target/public" "$new_target/public/build
   [[ -d "$d" && ! -L "$d" ]] || block CANDIDATE_MISSING
   (( (8#$(stat -c %a "$d") & 8#022) == 0 )) || block CANDIDATE_WRITABLE
 done
+# Digest of the SERVED tree (apps/platform minus .env, storage, bootstrap/cache, node_modules). One algorithm,
+# embedded here so runnerSha256 covers it; the owner seal tool extracts and runs exactly this program.
+tree_digest() {
+  python3 -I - "$1" <<'DIGEST_PY'
+import hashlib, os, stat, sys
+root = sys.argv[1]
+SKIP = {".env", "storage", "bootstrap/cache", "node_modules", ".git"}
+lines, count = [], 0
+def die(code):
+    print("ERR " + code); sys.exit(0)
+for cur, dirs, files in os.walk(root, followlinks=False):
+    rel = os.path.relpath(cur, root).replace(os.sep, "/")
+    rel = "" if rel == "." else rel
+    dirs[:] = sorted(d for d in dirs if (rel + "/" + d).lstrip("/") not in SKIP)
+    for name in sorted(files) + dirs:
+        r = (rel + "/" + name).lstrip("/")
+        if r in SKIP:
+            continue
+        st = os.lstat(os.path.join(cur, name))
+        count += 1
+        if count > 400000: die("TOO_MANY")
+        if st.st_mode & 0o022 and not stat.S_ISLNK(st.st_mode): die("WRITABLE")
+        if stat.S_ISLNK(st.st_mode):
+            lines.append("l:%s:%s" % (r, os.readlink(os.path.join(cur, name))))
+        elif stat.S_ISDIR(st.st_mode):
+            lines.append("d:%s:%o" % (r, st.st_mode & 0o7777))
+        elif stat.S_ISREG(st.st_mode):
+            h = hashlib.sha256()
+            with open(os.path.join(cur, name), "rb") as f:
+                for chunk in iter(lambda: f.read(1 << 20), b""): h.update(chunk)
+            lines.append("f:%s:%o:%s" % (r, st.st_mode & 0o7777, h.hexdigest()))
+        else:
+            die("SPECIAL")
+print("OK " + hashlib.sha256("\n".join(sorted(lines)).encode()).hexdigest())
+DIGEST_PY
+}
+
 candidate_checks() {
   [[ "$(git -c safe.directory="$rel_dir" -C "$rel_dir" rev-parse HEAD 2>/dev/null)" == "$approved" ]] || return 11
   [[ -f "$new_target/artisan" && ! -L "$new_target/artisan" && -s "$new_target/public/build/manifest.json" && ! -L "$new_target/public/build/manifest.json" ]] || return 12
@@ -138,14 +207,23 @@ candidate_checks() {
   case "$(stat -c %a "$env_file")" in 400|600) ;; *) return 14 ;; esac
   grep -Fxq APP_ENV=staging "$env_file" || return 15
   grep -Fxq APP_URL=https://staging.kmjtechno.com "$env_file" || return 16
+  # Tracked files must equal HEAD, and the whole served tree must match the root-protected owner seal.
+  [[ -z "$(git -c safe.directory="$rel_dir" -C "$rel_dir" status --porcelain --untracked-files=no 2>/dev/null)" ]] || return 17
+  local seal="$SEAL_DIR/main-platform-staging-seal-$approved.sha256" got
+  protected_file "$seal" || return 18
+  got="$(tree_digest "$new_target")"
+  case "$got" in "ERR WRITABLE") return 19 ;; OK\ *) ;; *) return 20 ;; esac
+  [[ "${got#OK }" == "$(head -c 64 -- "$seal")" && "$(stat -c %s -- "$seal")" -le 65 ]] || return 20
 }
 verify_candidate() {
   candidate_checks && return 0
   case "$?" in
     11) block CANDIDATE_SHA ;; 12) block CANDIDATE_ARTIFACT ;; 13) block CANDIDATE_ENV ;;
-    14) block CANDIDATE_ENV_MODE ;; 15) block CANDIDATE_NOT_STAGING ;; *) block CANDIDATE_URL ;;
+    14) block CANDIDATE_ENV_MODE ;; 15) block CANDIDATE_NOT_STAGING ;; 16) block CANDIDATE_URL ;;
+    17) block CANDIDATE_DIRTY ;; 18) block CANDIDATE_SEAL_MISSING ;; 19) block CANDIDATE_WRITABLE ;; *) block CANDIDATE_SEAL ;;
   esac
 }
+protected_dir_chain "$SEAL_DIR" || block SEAL_CHAIN
 verify_candidate
 
 if [[ "$cur_target" == "$new_target" ]]; then echo "KMJ_STAGE_ACTIVATE=ALREADY_ACTIVE sha=$approved"; exit 0; fi

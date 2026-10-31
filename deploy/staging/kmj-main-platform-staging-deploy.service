@@ -13,4 +13,6 @@ TimeoutStartSec=300
 NoNewPrivileges=yes
 PrivateTmp=yes
 ProtectSystem=strict
-ReadWritePaths=/home/kmjstage/htdocs /run/lock
+RuntimeDirectory=kmj-main-platform-staging
+RuntimeDirectoryMode=0700
+ReadWritePaths=/home/kmjstage/htdocs

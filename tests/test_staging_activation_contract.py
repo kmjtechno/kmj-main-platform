@@ -4,6 +4,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 RUNNER = ROOT / "deploy/staging/kmj-main-platform-staging-deploy.sh"
 UNIT = ROOT / "deploy/staging/kmj-main-platform-staging-deploy.service"
+SEAL = ROOT / "scripts/operations/seal-staging-candidate-20261031.py"
 PROPOSAL = ROOT / "scripts/operations/build-staging-approval-proposal-20261031.py"
 KEYS = {"schema", "approvedSha", "expectedCurrentSha", "expectedProductionRelease", "runnerSha256",
         "unitSha256", "backupVerified", "rollbackVerified", "storageVerified", "zeroAdditionalCostVerified"}
@@ -29,7 +30,11 @@ class StaticContract(unittest.TestCase):
                     "rm -rf", "$@", "$*", "${1"):
             self.assertNotIn(bad, t, bad)
         self.assertIsNone(re.search(r"^\s*exec\s+\d*>", raw, re.M), "truncating lock open is forbidden")
-        self.assertIn("noclobber", raw)
+        self.assertNotIn("noclobber", raw)
+        self.assertIsNone(re.search(r"chmod[^\n]*LOCKFILE", raw), "no pathname chmod on the lock")
+        self.assertIsNone(re.search(r"exec 9<", raw), "no second pathname open of the lock")
+        for needle in ("O_NOFOLLOW", "O_NONBLOCK", "O_CLOEXEC", "os.fstat(fd)", "os.fchmod(fd", "fcntl.flock(fd"):
+            self.assertIn(needle, raw, needle)
         self.assertNotIn("/home/kmjprod", re.sub(r"^(PROD=|.*\$PROD|.*prod_target|.*kmjprod/releases).*$", "", t, flags=re.M))
 
     def test_proposal_is_bound_but_never_approved(self):
@@ -63,6 +68,7 @@ class Sandbox(unittest.TestCase):
         self.OLD = self.make_release()
         self.NEW = self.make_release()
         os.symlink(self.rel / self.OLD / "apps/platform", self.d / "stage/htdocs/site")
+        (self.d / "lockdir").mkdir(mode=0o755)
         (self.d / "unitdir").mkdir(mode=0o755)
         self.unit = self.d / "unitdir/staging.service"
         shutil.copy(UNIT, self.unit)
@@ -70,6 +76,7 @@ class Sandbox(unittest.TestCase):
         self.runner = self.d / "runner.sh"
         self.build_runner()
         self.write_approval()
+        self.seal()
 
     n = 0
 
@@ -84,11 +91,23 @@ class Sandbox(unittest.TestCase):
         (app / ".env").write_text(env)
         os.chmod(app / ".env", 0o600)
         subprocess.run(["git", "init", "-q"], cwd=tmp, check=True)
+        subprocess.run(["git", "add", "apps/platform/artisan", "apps/platform/public"], cwd=tmp, check=True)
         subprocess.run(["git", "-c", "user.name=t", "-c", "user.email=t@t", "commit", "-q", "--allow-empty",
                         "-m", f"release {Sandbox.n}"], cwd=tmp, check=True)
         sha = subprocess.run(["git", "rev-parse", "HEAD"], cwd=tmp, capture_output=True, text=True).stdout.strip()
         tmp.rename(self.rel / sha)
         return sha
+
+    def seal(self, sha=None, digest=None):
+        sha = sha or self.NEW
+        out = subprocess.run(["python3", "-I", str(SEAL), "--tree", str(self.rel / sha / "apps/platform"),
+                              "--runner", str(self.runner)], capture_output=True, text=True)
+        val = digest or out.stdout.strip()
+        p = self.d / "etc" / f"main-platform-staging-seal-{sha}.sha256"
+        if p.exists():
+            p.unlink()
+        p.write_text(val + "\n")
+        os.chmod(p, 0o644)
 
     def build_runner(self):
         t = RUNNER.read_text()
@@ -97,7 +116,8 @@ class Sandbox(unittest.TestCase):
             "SITE=/home/kmjstage/htdocs/staging.kmjtechno.com": f"SITE={self.d}/stage/htdocs/site",
             "PROD=/home/kmjprod/current": f"PROD={self.d}/prod/current",
             "RELEASES=/home/kmjstage/releases": f"RELEASES={self.rel}",
-            "LOCKFILE=/run/lock/kmj-main-platform-staging-deploy.lock": f"LOCKFILE={self.d}/lock",
+            "LOCKFILE=/run/kmj-main-platform-staging/deploy.lock": f"LOCKFILE={self.d}/lockdir/deploy.lock",
+            "SEAL_DIR=/etc/kmj-codebridge": f"SEAL_DIR={self.d}/etc",
             "REQUIRE_UID=0": f"REQUIRE_UID={os.getuid()}",
             "ANCHOR=/\n": f"ANCHOR={self.d}\n",
             "UNIT_FILE=/etc/systemd/system/kmj-main-platform-staging-deploy.service": f"UNIT_FILE={self.unit}",
@@ -187,6 +207,7 @@ class Sandbox(unittest.TestCase):
     def approve(self, sha):
         self.NEW = sha
         self.write_approval(approvedSha=sha)
+        self.seal(sha)
 
     def test_candidate_must_be_real_prepared_and_staging_configured(self):
         shutil.rmtree(self.rel / self.NEW)
@@ -214,26 +235,58 @@ class Sandbox(unittest.TestCase):
 
     # ---- review 6540683745 ----
     def lock(self):
-        return self.d / "lock"
+        return self.d / "lockdir/deploy.lock"
 
-    def test_lock_symlink_is_never_followed_or_truncated(self):
+    def test_lock_symlink_is_never_followed_truncated_or_chmodded(self):
         victim = self.d / "victim.txt"
         victim.write_text("precious")
+        os.chmod(victim, 0o640)
         os.symlink(victim, self.lock())
         self.assertBlocked(*self.run_runner(), "LOCK")
         self.assertEqual(victim.read_text(), "precious")
+        self.assertEqual(oct(os.stat(victim).st_mode & 0o777), "0o640")
 
-    def test_lock_hardlink_and_loose_existing_lock(self):
+    def test_lock_hardlink_fifo_and_loose_existing_lock(self):
         victim = self.d / "victim2.txt"
         victim.write_text("precious")
+        os.chmod(victim, 0o640)
         os.link(victim, self.lock())
         self.assertBlocked(*self.run_runner(), "LOCK")
-        self.assertEqual(victim.read_text(), "precious")
+        self.assertEqual((victim.read_text(), oct(os.stat(victim).st_mode & 0o777)), ("precious", "0o640"))
+        os.unlink(self.lock())
+        os.mkfifo(self.lock())  # must not hang (O_NONBLOCK) and must be refused
+        self.assertBlocked(*self.run_runner(), "LOCK")
         os.unlink(self.lock())
         self.lock().write_text("")
-        os.chmod(self.lock(), 0o666)  # existing regular lock with loose mode is tightened, run proceeds
+        os.chmod(self.lock(), 0o666)  # existing regular lock: tightened through the SAME fd, run proceeds
         self.assertEqual(self.run_runner()[0], 0)
         self.assertEqual(oct(os.stat(self.lock()).st_mode & 0o777), "0o600")
+
+    def test_substituted_descriptor_nine_cannot_stand_in_for_the_lock(self):
+        # Simulates a path/inode substitution: fd 9 already open on a different (victim) file.
+        victim = self.d / "victim3.txt"
+        victim.write_text("precious")
+        os.chmod(victim, 0o644)
+        self.lock().write_text("")
+        r = subprocess.run(["bash", "-c", f'exec 9<"{victim}"; exec bash "{self.runner}"'], capture_output=True, text=True,
+                           env={"PATH": os.environ["PATH"], "HOME": str(self.d)})
+        self.assertEqual((r.returncode, r.stdout.strip()), (2, "KMJ_STAGE_ACTIVATE=BLOCKED_LOCK"))
+        self.assertEqual((victim.read_text(), oct(os.stat(victim).st_mode & 0o777)), ("precious", "0o644"))
+        self.assertEqual(self.site(), str(self.rel / self.OLD / "apps/platform"))
+
+    def test_lock_directory_must_not_be_writable_by_others(self):
+        os.chmod(self.d / "lockdir", 0o777)
+        self.assertBlocked(*self.run_runner(), "LOCK_CHAIN")
+
+    def test_concurrent_run_is_refused(self):
+        import fcntl
+        self.lock().write_text("")
+        fd = os.open(self.lock(), os.O_RDONLY)
+        try:
+            fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            self.assertBlocked(*self.run_runner(), "LOCK_BUSY")
+        finally:
+            os.close(fd)
 
     @unittest.skipUnless(os.getuid() == 0, "needs root to chown to a foreign uid")
     def test_lock_with_foreign_owner_is_refused(self):
@@ -293,6 +346,52 @@ class Sandbox(unittest.TestCase):
         after = {str(p): p.read_bytes() for p in (self.d / "etc").rglob("*") if p.is_file()}
         self.assertEqual(before, after)
         self.assertEqual(os.readlink(self.d / "prod/current"), str(self.d / "prod/releases" / PROD))
+
+    # ---- review 6540745467: candidate mutability ----
+    def test_missing_wrong_or_loose_seal_blocks(self):
+        seal = self.d / "etc" / f"main-platform-staging-seal-{self.NEW}.sha256"
+        seal.unlink()
+        self.assertBlocked(*self.run_runner(), "CANDIDATE_SEAL_MISSING")
+        self.seal(digest="0" * 64)
+        self.assertBlocked(*self.run_runner(), "CANDIDATE_SEAL")
+        self.seal()
+        os.chmod(seal, 0o666)
+        self.assertBlocked(*self.run_runner(), "CANDIDATE_SEAL_MISSING")  # not a protected file
+
+    def test_post_check_file_substitution_is_detected_by_the_seal(self):
+        for rel, content in (("artisan", "<?php evil"), ("public/build/manifest.json", '{"evil":1}')):
+            app = self.rel / self.NEW / "apps/platform"
+            original = (app / rel).read_text()
+            (app / rel).write_text(content)
+            code, out = self.run_runner()
+            self.assertEqual(code, 2, rel)
+            self.assertIn(out, ("KMJ_STAGE_ACTIVATE=BLOCKED_CANDIDATE_SEAL", "KMJ_STAGE_ACTIVATE=BLOCKED_CANDIDATE_DIRTY"))
+            self.assertEqual(self.site(), str(self.rel / self.OLD / "apps/platform"))
+            (app / rel).write_text(original)
+
+    def test_untracked_added_file_changes_the_seal(self):
+        app = self.rel / self.NEW / "apps/platform"
+        (app / "public/shell.php").write_text("<?php evil")
+        self.assertBlocked(*self.run_runner(), "CANDIDATE_SEAL")
+
+    def test_tracked_modification_is_dirty_even_if_reseal_was_forged(self):
+        app = self.rel / self.NEW / "apps/platform"
+        (app / "artisan").write_text("<?php evil")
+        self.seal()  # an attacker who could also rewrite the seal still cannot beat git HEAD
+        self.assertBlocked(*self.run_runner(), "CANDIDATE_DIRTY")
+
+    def test_group_or_other_writable_file_in_served_tree_blocks(self):
+        app = self.rel / self.NEW / "apps/platform"
+        os.chmod(app / "public/build/manifest.json", 0o666)
+        self.assertBlocked(*self.run_runner(), "CANDIDATE_WRITABLE")
+
+    def test_seal_tool_matches_runner_and_is_read_only(self):
+        app = self.rel / self.NEW / "apps/platform"
+        before = sorted(str(p) for p in self.d.rglob("*"))
+        out = subprocess.run(["python3", "-I", str(SEAL), "--tree", str(app), "--runner", str(self.runner)],
+                             capture_output=True, text=True, check=True).stdout.strip()
+        self.assertRegex(out, r"^[a-f0-9]{64}$")
+        self.assertEqual(before, sorted(str(p) for p in self.d.rglob("*")))
 
 
 if __name__ == "__main__":
