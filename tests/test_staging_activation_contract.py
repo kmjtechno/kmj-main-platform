@@ -416,6 +416,44 @@ class Sandbox(unittest.TestCase):
         os.chown(candidate, 65534, 65534)
         self.assertBlocked(*self.run_runner(), "CANDIDATE_CHAIN")
 
+    def test_root_owned_env_changes_invalidate_seal_without_disclosing_secrets(self):
+        app = self.rel / self.NEW / "apps/platform"
+        env = app / ".env"
+        old = env.read_bytes()
+        env.write_bytes(old + b"STAGE_PRIVATE_SENTINEL=not-a-live-secret\\n")
+        code, out = self.run_runner()
+        self.assertEqual((code, out), (2, "KMJ_STAGE_ACTIVATE=BLOCKED_CANDIDATE_SEAL"))
+        self.assertNotIn("STAGE_PRIVATE_SENTINEL", out)
+        self.assertEqual(self.site(), str(self.rel / self.OLD / "apps/platform"))
+        env.write_bytes(old)
+
+    def test_executable_bootstrap_cache_changes_are_not_skipped(self):
+        app = self.rel / self.NEW / "apps/platform"
+        cache = app / "bootstrap/cache"
+        cache.mkdir(parents=True)
+        compiled = cache / "config.php"
+        compiled.write_text("<?php return ['trusted' => true];")
+        self.assertBlocked(*self.run_runner(), "CANDIDATE_SEAL")
+        self.seal()
+        self.assertEqual(self.run_runner()[0], 0)
+        os.symlink(self.rel / self.OLD / "apps/platform", self.d / "stage/htdocs/site.tmp")
+        os.replace(self.d / "stage/htdocs/site.tmp", self.d / "stage/htdocs/site")
+        compiled.write_text("<?php return ['injected' => true];")
+        self.assertBlocked(*self.run_runner(), "CANDIDATE_SEAL")
+
+    def test_bootstrap_cache_link_or_writable_php_is_rejected(self):
+        app = self.rel / self.NEW / "apps/platform"
+        cache = app / "bootstrap/cache"
+        cache.mkdir(parents=True)
+        compiled = cache / "packages.php"
+        compiled.write_text("<?php return [];")
+        os.chmod(compiled, 0o666)
+        self.assertBlocked(*self.run_runner(), "CANDIDATE_WRITABLE")
+        os.chmod(compiled, 0o644)
+        compiled.unlink()
+        os.symlink("/etc/passwd", compiled)
+        self.assertBlocked(*self.run_runner(), "CANDIDATE_SEAL")
+
     def test_seal_tool_matches_runner_and_is_read_only(self):
         app = self.rel / self.NEW / "apps/platform"
         before = sorted(str(p) for p in self.d.rglob("*"))
