@@ -69,7 +69,13 @@ for d in /usr/lib/postgresql/*/bin; do
 done
 [[ -n "$pgdir" ]] || block RESTORE_BINARIES_MISSING
 
-exec 9>"$LOCK"
+# Root must never create/truncate through a pre-planted symlink: O_EXCL create (noclobber), then require a
+# regular, root-owned, single-link file before opening it read-only for flock (same lock path/inode).
+RELEASE_LOCK="$LOCK"
+( set -o noclobber; : >"$RELEASE_LOCK" ) 2>/dev/null || :
+[[ -f "$RELEASE_LOCK" && ! -L "$RELEASE_LOCK" && "$(stat -c '%u:%h' -- "$RELEASE_LOCK")" == "0:1" ]] || block RELEASE_LOCK_UNSAFE
+chmod 0600 -- "$RELEASE_LOCK"
+exec 9<"$RELEASE_LOCK"
 flock -n 9 || block RELEASE_OPERATION_BUSY
 [[ "$(readlink -f "$LIVE")" == "$EXPECTED_LIVE" ]] || block LIVE_RELEASE_CHANGED
 

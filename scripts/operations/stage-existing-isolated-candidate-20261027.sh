@@ -53,7 +53,13 @@ if [[ "$mode" == --inspect ]]; then echo 'KMJ_STAGE_CANDIDATE=INSPECT_PASS_NO_CH
 [[ "$before_sha" != "$sha" ]] || block ALREADY_LIVE_ON_STAGE
 [[ ! -e "$candidate" ]] || block CANDIDATE_ALREADY_EXISTS
 df -Pk "$base" | awk 'END {exit !($4 >= 2097152)}' || block LOW_DISK
-exec 9>/run/lock/kmj-stage-candidate.lock
+# Root must never create/truncate through a pre-planted symlink: O_EXCL create (noclobber), then require a
+# regular, root-owned, single-link file before opening it read-only for flock (same lock path/inode).
+RELEASE_LOCK=/run/lock/kmj-stage-candidate.lock
+( set -o noclobber; : >"$RELEASE_LOCK" ) 2>/dev/null || :
+[[ -f "$RELEASE_LOCK" && ! -L "$RELEASE_LOCK" && "$(stat -c '%u:%h' -- "$RELEASE_LOCK")" == "0:1" ]] || block RELEASE_LOCK_UNSAFE
+chmod 0600 -- "$RELEASE_LOCK"
+exec 9<"$RELEASE_LOCK"
 flock -n 9 || block LOCK_BUSY
 [[ "$(readlink -f "$prod")" == "$prod_before" && "$(readlink -f "$site")" == "$stage_app" ]] || block LIVE_POINTER_CHANGED
 [[ ! -e "$candidate" ]] || block CANDIDATE_CREATED

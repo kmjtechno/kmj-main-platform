@@ -4,6 +4,7 @@ on:
   pull_request:
     paths:
       - '.github/workflows/local-production-recovery-contract.yml'
+      - 'scripts/operations/*.sh'
       - 'scripts/operations/prepare-main-platform-local-recovery-kmj-elite.sh'
       - 'scripts/test_main_platform_local_recovery_contract.py'
       - 'scripts/operations/prepare-main-platform-local-recovery-exact.sh'
@@ -20,6 +21,7 @@ on:
     branches: [main]
     paths:
       - '.github/workflows/local-production-recovery-contract.yml'
+      - 'scripts/operations/*.sh'
       - 'scripts/operations/prepare-main-platform-local-recovery-kmj-elite.sh'
       - 'scripts/test_main_platform_local_recovery_contract.py'
       - 'scripts/operations/prepare-main-platform-local-recovery-exact.sh'
