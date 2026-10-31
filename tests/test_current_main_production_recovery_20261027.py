@@ -55,6 +55,9 @@ class CurrentMainRecoveryContract(unittest.TestCase):
         self.assertNotIn("exec 9>", source)
         self.assertIn("set -o noclobber", source)
         self.assertIn('stat -c \'%u:%h\'', source)
+        self.assertIn("/proc/self/fd/9", source)
+        self.assertIn("RELEASE_LOCK_FD_MISMATCH", source)
+        self.assertNotIn("chmod 0600 -- \"$RELEASE_LOCK\"", source)
         match = re.search(
             r"(?ms)^readonly RELEASE_LOCK=.*?^flock -n 9[^\n]*$", source
         )
@@ -81,6 +84,15 @@ class CurrentMainRecoveryContract(unittest.TestCase):
             blocked = subprocess.run(["bash", "-c", command], capture_output=True, timeout=8)
             self.assertEqual(blocked.returncode, 2)
             self.assertEqual(victim.read_text(encoding="utf-8"), "PRESERVE_ME")
+            lock.unlink()
+            # A root-owned but incorrectly permissive existing lock must not be
+            # silently chmod'ed (nor have its bytes overwritten).
+            lock.write_text("KEEP_MODE_AND_BYTES", encoding="utf-8")
+            lock.chmod(0o644)
+            blocked = subprocess.run(["bash", "-c", command], capture_output=True, timeout=8)
+            self.assertEqual(blocked.returncode, 2)
+            self.assertEqual(lock.read_text(encoding="utf-8"), "KEEP_MODE_AND_BYTES")
+            self.assertEqual(lock.stat().st_mode & 0o777, 0o644)
             lock.unlink()
             # A clean private lock is created and can be reopened safely.
             for _ in range(2):
