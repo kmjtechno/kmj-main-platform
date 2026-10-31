@@ -72,9 +72,29 @@ def archive_inventory(source: Path) -> tuple[dict[str, tuple[int, str]], set[str
     return files, directories
 
 
-def restored_inventory(root: Path) -> tuple[dict[str, tuple[int, str]], set[str]]:
-    if root.is_symlink() or not root.is_dir():
+def open_restored_root(root: Path) -> int:
+    """Pin every restored-root ancestor, rejecting symlink redirection."""
+    if not root.is_absolute() or ".." in root.parts:
         fail()
+    flags = os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW | os.O_CLOEXEC
+    fd = os.open("/", flags)
+    try:
+        for component in root.parts[1:]:
+            child = os.open(component, flags, dir_fd=fd)
+            os.close(fd)
+            fd = child
+        return fd
+    except OSError:
+        os.close(fd)
+        fail()
+
+
+def restored_inventory(root: Path) -> tuple[dict[str, tuple[int, str]], set[str]]:
+    # os.walk + lstat followed by open(path) is vulnerable to a swapped
+    # intermediate directory. Anchor both enumeration and file reads to
+    # directory descriptors; O_NOFOLLOW on the final filename alone is not
+    # sufficient to prevent an ancestor symlink race.
+    root_fd = open_restored_root(root)
     files: dict[str, tuple[int, str]] = {}
     directories: set[str] = set()
     total = 0
@@ -82,43 +102,49 @@ def restored_inventory(root: Path) -> tuple[dict[str, tuple[int, str]], set[str]
     def onerror(error: OSError) -> None:
         fail()
 
-    for parent, subdirs, filenames in os.walk(root, followlinks=False, onerror=onerror):
-        rel_parent = Path(parent).relative_to(root)
-        for name in subdirs:
-            path = Path(parent) / name
-            info = path.lstat()
-            if not stat.S_ISDIR(info.st_mode):
-                fail()
-            directories.add((rel_parent / name).as_posix())
-        for name in filenames:
-            path = Path(parent) / name
-            before_path = path.lstat()
-            if not stat.S_ISREG(before_path.st_mode):
-                fail()
-            fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
-            try:
-                before = os.fstat(fd)
-                if (not stat.S_ISREG(before.st_mode)
-                    or ((before.st_dev, before.st_ino, before.st_size,
+    try:
+        for parent, subdirs, filenames, dirfd in os.fwalk(
+            ".", dir_fd=root_fd, follow_symlinks=False, onerror=onerror
+        ):
+            rel_parent = Path(parent)
+            for name in subdirs:
+                info = os.stat(name, dir_fd=dirfd, follow_symlinks=False)
+                if not stat.S_ISDIR(info.st_mode):
+                    fail()
+                directories.add((rel_parent / name).as_posix())
+            for name in filenames:
+                before_path = os.stat(name, dir_fd=dirfd, follow_symlinks=False)
+                if not stat.S_ISREG(before_path.st_mode):
+                    fail()
+                fd = os.open(
+                    name, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK | os.O_CLOEXEC,
+                    dir_fd=dirfd,
+                )
+                try:
+                    before = os.fstat(fd)
+                    if (not stat.S_ISREG(before.st_mode)
+                        or ((before.st_dev, before.st_ino, before.st_size,
+                             before.st_mtime_ns, before.st_ctime_ns)
+                            != (before_path.st_dev, before_path.st_ino, before_path.st_size,
+                                before_path.st_mtime_ns, before_path.st_ctime_ns))):
+                        fail()
+                    with os.fdopen(os.dup(fd), "rb") as stream:
+                        checksum = sha256_stream(stream)
+                    after = os.fstat(fd)
+                    if ((before.st_dev, before.st_ino, before.st_size,
                          before.st_mtime_ns, before.st_ctime_ns)
-                        != (before_path.st_dev, before_path.st_ino, before_path.st_size,
-                            before_path.st_mtime_ns, before_path.st_ctime_ns))):
-                    fail()
-                with os.fdopen(os.dup(fd), "rb") as stream:
-                    checksum = sha256_stream(stream)
-                after = os.fstat(fd)
-                if ((before.st_dev, before.st_ino, before.st_size,
-                     before.st_mtime_ns, before.st_ctime_ns)
-                    != (after.st_dev, after.st_ino, after.st_size,
-                        after.st_mtime_ns, after.st_ctime_ns)):
-                    fail()
-                rel = (rel_parent / name).as_posix()
-                files[rel] = (before.st_size, checksum)
-                total += before.st_size
-                if len(files) + len(directories) > MAX_ENTRIES or total > MAX_FILE_BYTES:
-                    fail()
-            finally:
-                os.close(fd)
+                        != (after.st_dev, after.st_ino, after.st_size,
+                            after.st_mtime_ns, after.st_ctime_ns)):
+                        fail()
+                    rel = (rel_parent / name).as_posix()
+                    files[rel] = (before.st_size, checksum)
+                    total += before.st_size
+                    if len(files) + len(directories) > MAX_ENTRIES or total > MAX_FILE_BYTES:
+                        fail()
+                finally:
+                    os.close(fd)
+    finally:
+        os.close(root_fd)
     return files, directories
 
 
