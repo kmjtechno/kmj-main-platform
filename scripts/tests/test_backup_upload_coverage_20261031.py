@@ -88,6 +88,22 @@ class UploadCoverageTests(unittest.TestCase):
         with self.assertRaises(audit_module.CoverageError):
             self.run_audit()
 
+    def test_symlinked_storage_parent_cannot_redirect_root_scan(self):
+        storage = self.release / "apps/platform/storage"
+        outside = self.base / "outside-storage"
+        storage.rename(outside)
+        storage.symlink_to(outside, target_is_directory=True)
+        with self.assertRaises(audit_module.CoverageError):
+            self.run_audit()
+
+    def test_symlinked_public_target_cannot_claim_expected_link(self):
+        target = self.release / "apps/platform/storage/app/public"
+        outside = self.base / "outside-public"
+        target.rename(outside)
+        target.symlink_to(outside, target_is_directory=True)
+        with self.assertRaises(audit_module.CoverageError):
+            self.run_audit()
+
     def test_traversal_in_archived_storage_fails_closed(self):
         self.make_bundle(extra=("../escape", b"x"))
         with self.assertRaises(audit_module.CoverageError):
