@@ -158,6 +158,7 @@ protected_dir_chain "$(dirname -- "$SITE")" || block SITE_CHAIN
 protected_dir_chain "$RELEASES" || block RELEASES_CHAIN
 [[ -d "$rel_dir" && ! -L "$rel_dir" && -d "$new_target" && ! -L "$new_target" ]] || block CANDIDATE_MISSING
 [[ "$(realpath -e -- "$new_target")" == "$new_target" ]] || block CANDIDATE_PATH_LINKED
+[[ -d "$new_target/public/build" && ! -L "$new_target/public/build" ]] || block CANDIDATE_MISSING
 protected_dir_chain "$new_target" || block CANDIDATE_CHAIN
 protected_dir_chain "$new_target/public/build" || block CANDIDATE_CHAIN
 [[ "$(stat -c %u "$rel_dir")" == "$REQUIRE_UID" && "$(stat -c %u "$new_target")" == "$REQUIRE_UID" ]] || block CANDIDATE_OWNER
@@ -186,10 +187,9 @@ for cur, dirs, files in os.walk(root, followlinks=False):
         st = os.lstat(os.path.join(cur, name))
         count += 1
         if count > 400000: die("TOO_MANY")
+        if stat.S_ISLNK(st.st_mode): die("LINK")
         if st.st_uid != os.getuid(): die("OWNER")
         if st.st_mode & 0o022: die("WRITABLE")
-        if stat.S_ISLNK(st.st_mode):
-            die("LINK")
         elif stat.S_ISDIR(st.st_mode):
             lines.append("d:%s:%o" % (r, st.st_mode & 0o7777))
         elif stat.S_ISREG(st.st_mode):
