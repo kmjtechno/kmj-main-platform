@@ -36,6 +36,24 @@ class StageContinuityAuditSafety(unittest.TestCase):
             with self.subTest(clause=clause):
                 self.assertIn(clause, source)
 
+    def test_embedded_python_syntax_and_fail_closed_storage_precheck(self):
+        source = SCRIPT.read_text(encoding="utf-8")
+        marker = "python3 - \"$s_before\" \"$new\" <<'PY'\\n"
+        self.assertIn(marker, source)
+        block = source.split(marker, 1)[1].split("\\nPY\\n", 1)[0]
+        compile(block, str(SCRIPT) + ":embedded", "exec")
+        for requirement in (
+            "storage_ok = True",
+            "if not status.startswith('PASS_'):",
+            "if not storage_ok:",
+            "raise SystemExit(2)",
+            "readiness_blocked=1",
+            "STAGING_READONLY_PRECHECK=BLOCKED",
+            "STAGING_READONLY_PRECHECK=PASS_OWNER_GATES_PENDING",
+        ):
+            with self.subTest(requirement=requirement):
+                self.assertIn(requirement, source)
+
     def test_no_mutating_commands_or_secret_logging(self):
         source = SCRIPT.read_text(encoding="utf-8")
         for forbidden in (
