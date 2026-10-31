@@ -9,7 +9,7 @@ PATH=/usr/sbin:/usr/bin:/sbin:/bin
 export PATH
 builtin umask 077
 
-block() { builtin printf 'KMJ_STAGE_AUDIT=BLOCKED_%s\n' "$1"; exit 2; }
+block() { builtin printf 'KMJ_STAGE_AUDIT=BLOCKED_%s\n' "$1"; builtin exit 2; }
 [[ "$#" -eq 1 && "$1" =~ ^[a-f0-9]{40}$ ]] || block INVALID_SHA
 sha="$1"
 [[ "$(/usr/bin/hostname -s)" == KMJ-elite && "$(/usr/bin/id -u)" -eq 0 ]] || block WRONG_HOST
