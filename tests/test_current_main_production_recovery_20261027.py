@@ -49,7 +49,6 @@ class CurrentMainRecoveryContract(unittest.TestCase):
         """Execute the actual lock snippet with a disposable unprivileged path."""
         import os
         import re
-        import shlex
         import tempfile
 
         source = FILE.read_text(encoding="utf-8")
@@ -57,7 +56,7 @@ class CurrentMainRecoveryContract(unittest.TestCase):
         self.assertIn("set -o noclobber", source)
         self.assertIn('stat -c \'%u:%h\'', source)
         match = re.search(
-            r"(?ms)^readonly RELEASE_LOCK=.*?^flock -n 9[^\\n]*$", source
+            r"(?ms)^readonly RELEASE_LOCK=.*?^flock -n 9[^\n]*$", source
         )
         self.assertIsNotNone(match)
         snippet = match.group(0)
@@ -70,7 +69,7 @@ class CurrentMainRecoveryContract(unittest.TestCase):
                 "/run/lock/kmj-main-platform-production-release.lock",
                 str(lock),
             ).replace('"0:1"', f'"{os.getuid()}:1"')
-            command = "set -Eeuo pipefail\\nfail() { exit 2; }\\n" + local
+            command = "set -Eeuo pipefail\nfail() { exit 2; }\n" + local
             # Existing symlink must be refused without touching its target.
             lock.symlink_to(victim)
             blocked = subprocess.run(["bash", "-c", command], capture_output=True, timeout=8)
