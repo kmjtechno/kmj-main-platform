@@ -27,10 +27,12 @@ approved="$(git ls-remote --exit-code https://github.com/kmjtechno/kmj-main-plat
 [[ "$approved" =~ ^[a-f0-9]{40}$ ]] || block APPROVED_HEAD_INVALID
 # This is a read-only review of an already prepared candidate. Promotion may
 # advance while the audit PR is reviewed; do not rewrite or reject old evidence.
+readiness_blocked=0
 if [[ "$approved" == "$sha" ]]; then
   echo STAGING_APPROVED_HEAD_MATCH=PASS
 else
   echo STAGING_APPROVED_HEAD_MATCH=DRIFT_REQUIRES_NEW_CANDIDATE_FOR_CUTOVER
+  readiness_blocked=1
 fi
 echo "STAGING_AUDITED_SHA=$sha"
 
@@ -66,6 +68,7 @@ print('STAGING_CACHE=' + ('DATABASE' if values.get('CACHE_STORE', 'database') ==
 if not safe:
     raise SystemExit(2)
 
+storage_ok = True
 for name in ('storage', 'public/storage'):
     x, y = old / name, new / name
     first, second = x.resolve(strict=False), y.resolve(strict=False)
@@ -84,6 +87,10 @@ for name in ('storage', 'public/storage'):
     else:
         status = 'BLOCKED_SEPARATE'
     print('STAGING_' + name.upper().replace('/', '_') + '_CONTINUITY=' + status)
+    if not status.startswith('PASS_'):
+        storage_ok = False
+if not storage_ok:
+    raise SystemExit(2)
 PY
 
 for path in "$s_before/storage" "$new/storage"; do
@@ -106,11 +113,18 @@ if runuser -u kmjstage -- bash -c 'cd "$1" && php8.4 artisan migrate:status --no
     echo STAGING_MIGRATION_READBACK=NO_PENDING_REPORTED
   else
     echo STAGING_MIGRATION_READBACK=PENDING_BLOCKS_CUTOVER
+    readiness_blocked=1
   fi
 else
   echo STAGING_MIGRATION_READBACK=UNAVAILABLE_BLOCKS_CUTOVER
+  readiness_blocked=1
 fi
 [[ "$(readlink -f "$prod")" == "$p_before" && "$(readlink -f "$site")" == "$s_before" ]] || block LINK_CHANGED
 echo PRODUCTION_POINTER=UNCHANGED
 echo STAGING_POINTER=UNCHANGED
 echo KMJ_STAGE_AUDIT=READ_ONLY_COMPLETE
+if [[ "$readiness_blocked" -ne 0 ]]; then
+  echo STAGING_READONLY_PRECHECK=BLOCKED
+  exit 2
+fi
+echo STAGING_READONLY_PRECHECK=PASS_OWNER_GATES_PENDING
