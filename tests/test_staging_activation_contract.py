@@ -86,6 +86,10 @@ class Sandbox(unittest.TestCase):
         tmp = self.rel / f".tmp{Sandbox.n}"
         app = tmp / "apps/platform"
         (app / "public/build").mkdir(parents=True)
+        # Compiled Blade PHP is sealed/read-only; other storage stays mutable.
+        views = app / "storage/framework/views"
+        views.mkdir(parents=True)
+        (views / "compiled.php").write_text("<?php echo 'precompiled';")
         (app / "artisan").write_text("x")
         (app / "public/build/manifest.json").write_text(manifest)
         (app / ".env").write_text(env)
@@ -452,6 +456,51 @@ class Sandbox(unittest.TestCase):
         os.chmod(compiled, 0o644)
         compiled.unlink()
         os.symlink("/etc/passwd", compiled)
+        self.assertBlocked(*self.run_runner(), "CANDIDATE_SEAL")
+
+    def test_compiled_blade_php_mutation_invalidates_candidate_seal(self):
+        app = self.rel / self.NEW / "apps/platform"
+        compiled = app / "storage/framework/views/compiled.php"
+        compiled.write_text("<?php echo 'attacker controlled code';")
+        self.assertBlocked(*self.run_runner(), "CANDIDATE_SEAL")
+        self.assertEqual(self.site(), str(self.rel / self.OLD / "apps/platform"))
+
+    def test_mutable_uploads_do_not_invalidate_sealed_compiled_views(self):
+        app = self.rel / self.NEW / "apps/platform"
+        uploads = app / "storage/app/public"
+        uploads.mkdir(parents=True)
+        (uploads / "upload.txt").write_text("customer data")
+        self.assertEqual(self.run_runner()[0], 0)
+
+    def test_compiled_views_directory_link_or_write_access_blocks(self):
+        app = self.rel / self.NEW / "apps/platform"
+        views = app / "storage/framework/views"
+        os.chmod(views, 0o777)
+        self.assertBlocked(*self.run_runner(), "CANDIDATE_SEAL")
+        os.chmod(views, 0o755)
+        file = views / "compiled.php"
+        os.chmod(file, 0o666)
+        self.assertBlocked(*self.run_runner(), "CANDIDATE_SEAL")
+        os.chmod(file, 0o644)
+        file.unlink()
+        os.symlink("/etc/passwd", file)
+        self.assertBlocked(*self.run_runner(), "CANDIDATE_SEAL")
+
+    def test_missing_compiled_views_fail_closed(self):
+        app = self.rel / self.NEW / "apps/platform"
+        (app / "storage/framework/views/compiled.php").unlink()
+        self.assertBlocked(*self.run_runner(), "CANDIDATE_SEAL")
+        (app / "storage/framework/views").rmdir()
+        self.assertBlocked(*self.run_runner(), "CANDIDATE_SEAL")
+
+    def test_compiled_views_hardlink_and_unreadable_parent_fail_closed(self):
+        app = self.rel / self.NEW / "apps/platform"
+        views = app / "storage/framework/views"
+        compiled = views / "compiled.php"
+        os.link(compiled, views / "copy.php")
+        self.assertBlocked(*self.run_runner(), "CANDIDATE_SEAL")
+        (views / "copy.php").unlink()
+        os.chmod(views, 0o700)
         self.assertBlocked(*self.run_runner(), "CANDIDATE_SEAL")
 
     def test_seal_tool_matches_runner_and_is_read_only(self):
