@@ -118,6 +118,17 @@ def archive_storage(bundle: Path) -> dict[str, tuple[int, str]]:
         return found
 
 
+def verify_real_directories(paths: tuple[Path, ...]) -> None:
+    """Reject symlinked ancestors before any root-owned live storage scan."""
+    for path in paths:
+        try:
+            mode = path.lstat().st_mode
+        except OSError:
+            reject("LIVE_LAYOUT_UNVERIFIED")
+        if not stat.S_ISDIR(mode):
+            reject("LIVE_LAYOUT_SYMLINK_OR_SPECIAL")
+
+
 def audit(release: Path, bundle: Path, witness: Path, candidate: str,
           current: str) -> dict[str, str]:
     if not re.fullmatch(r"[0-9a-f]{40}", candidate):
@@ -133,11 +144,20 @@ def audit(release: Path, bundle: Path, witness: Path, candidate: str,
         if digest(stream) != record.get("backupSha256"):
             reject("LOCAL_BUNDLE_SHA_MISMATCH")
     archived = archive_storage(bundle)
-    live = snapshot_storage(release / "apps/platform/storage/app")
-    public = release / "apps/platform/public"
+    app = release / "apps/platform"
+    public = app / "public"
+    expected = app / "storage/app/public"
+    # The storage root and its ancestors must not redirect the root auditor
+    # outside the fixed production release, even if the leaf is a real dir.
+    verify_real_directories((
+        release.parent, release, release / "apps", app,
+        app / "storage", app / "storage/app", public,
+    ))
+    if expected.exists() or expected.is_symlink():
+        verify_real_directories((expected,))
+    live = snapshot_storage(app / "storage/app")
     link = public / "storage"
-    expected = release / "apps/platform/storage/app/public"
-    linked = link.is_symlink() and link.resolve(strict=False) == expected.resolve(strict=False)
+    linked = link.is_symlink() and expected.is_dir() and link.resolve(strict=False) == expected
     alternate = any((public / name).exists() or (public / name).is_symlink()
                     for name in ("uploads", "media", "product-images"))
     parity = archived == live
