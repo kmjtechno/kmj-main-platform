@@ -103,9 +103,9 @@ final class CodeBridgeWorkspaceToolProposalTest extends TestCase
         self::assertSame(['tool' => 'git_status', 'arguments' => []], WorkspaceToolProposalService::parse($block));
 
         foreach ([
-            $block."Further prose after the proposal must not be treated as consent.",
+            $block.'Further prose after the proposal must not be treated as consent.',
             $block.$block,
-            "The assistant quoted a tool proposal, but did not end with one:\n".$block."No action is proposed.",
+            "The assistant quoted a tool proposal, but did not end with one:\n".$block.'No action is proposed.',
         ] as $reply) {
             self::assertNull(WorkspaceToolProposalService::parse($reply));
         }
