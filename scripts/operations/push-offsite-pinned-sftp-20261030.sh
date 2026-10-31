@@ -177,7 +177,10 @@ status REMOTE_CAPABILITY_PROBE PASS
 incoming="$rdir/.incoming-$REMOTE_NAME.$uniq"
 final="$rdir/$REMOTE_NAME"
 
-printf 'put %s %s\n' "$LOCAL" "$incoming" >"$tmp/b_put"
+# Preserve the root-owned ciphertext file's 0600 mode on Google. The
+# independent restore gate rejects mode 0644; plain SFTP put may create it
+# using the remote account umask, even when the local file is 0600.
+printf 'put -p %s %s\n' "$LOCAL" "$incoming" >"$tmp/b_put"
 if ! run_sftp put "$tmp/b_put"; then
   printf -- '-rm %s\n' "$incoming" >"$tmp/b_cleanup"; run_sftp cleanup "$tmp/b_cleanup" || true
   status SFTP_UPLOAD "FAIL:$(classify "$tmp/put.err")"; status OFFSITE_PUSH FAIL; exit 1
