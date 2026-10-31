@@ -67,7 +67,7 @@ class OffsiteDiagnosticInstallerTests(unittest.TestCase):
 
     def test_privileged_shell_and_fixed_binary_path(self):
         source = INSTALLER.read_text()
-        self.assertTrue(source.startswith("#!/bin/bash -p\\n"))
+        self.assertTrue(source.startswith("#!/bin/bash -p\n"))
         self.assertIn("PATH=/usr/sbin:/usr/bin:/sbin:/bin", source)
         self.assertIn("block PRIVILEGED_SHELL_REQUIRED", source)
         for path in ("/usr", "/usr/local", "/usr/local/libexec"):
@@ -87,12 +87,12 @@ class OffsiteDiagnosticInstallerTests(unittest.TestCase):
             for name in ("sha256sum", "dirname", "cut", "hostname", "install"):
                 fake = directory / name
                 fake.write_text(
-                    "#!/bin/sh\\n/bin/printf hacked > " + str(sentinel) + "\\n"
+                    "#!/bin/sh\n/bin/printf hacked > " + str(sentinel) + "\n"
                 )
                 fake.chmod(0o755)
             bashenv = directory / "injected-bashenv"
             bashenv.write_text(
-                "/bin/printf hacked > " + str(sentinel) + "\\n"
+                "/bin/printf hacked > " + str(sentinel) + "\n"
             )
             env = os.environ.copy()
             env["PATH"] = str(directory)
