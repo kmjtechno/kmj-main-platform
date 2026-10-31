@@ -102,6 +102,38 @@ class KeyStageTests(unittest.TestCase):
             self.assertIsNotNone(m.PUBLIC_RE.fullmatch(" ".join(pub)))
             self.assertEqual(os.stat(key).st_mode & 0o077, 0)
 
+    def test_real_ed25519_wire_fingerprint_matches_openssh_without_stdin_dash(self):
+        with tempfile.TemporaryDirectory(prefix="kmj-key-verify-") as tmp:
+            key = Path(tmp) / "fresh"
+            proc = subprocess.run(
+                [m.KEYGEN, "-q", "-t", "ed25519", "-N", "", "-a", "16",
+                 "-f", str(key), "-C", "test-only"],
+                capture_output=True, timeout=12, check=False, env=m.ENV)
+            self.assertEqual(proc.returncode, 0)
+            words = (key.with_suffix(".pub")).read_text().strip().split()
+            self.assertEqual(words[0], "ssh-ed25519")
+            result = subprocess.run([m.KEYGEN, "-l", "-E", "sha256",
+                                     "-f", str(key.with_suffix(".pub"))],
+                capture_output=True, text=True, timeout=12, check=True, env=m.ENV)
+            self.assertEqual(m.ssh_ed25519_fingerprint(words[1]), result.stdout.split()[1])
+            self.assertEqual(os.stat(key).st_mode & 0o077, 0)
+            self.assertEqual(m.stage.__name__, "stage")
+
+    def test_tampered_public_wire_format_and_base64_fail_closed(self):
+        import base64
+        valid = base64.b64encode(b"\\x00\\x00\\x00\\x0bssh-ed25519\\x00\\x00\\x00\\x20" + b"A" * 32).decode()
+        self.assertRegex(m.ssh_ed25519_fingerprint(valid), r"^SHA256:[A-Za-z0-9+/]{43}$")
+        for corrupt in ["not base64!", base64.b64encode(b"wrong").decode(),
+                        base64.b64encode(b"\\x00\\x00\\x00\\x0bssh-ed25519\\x00\\x00\\x00\\x20" + b"A" * 31).decode(),
+                        valid + "!!!"]:
+            with self.subTest(corrupt=corrupt), self.assertRaisesRegex(m.Blocked, "PUBLIC_KEY_BLOB_INVALID"):
+                m.ssh_ed25519_fingerprint(corrupt)
+
+    def test_fingerprint_path_never_invokes_ssh_keygen_stdin_dash(self):
+        source = SRC.read_text()
+        self.assertNotIn('run_keygen(["-l", "-E", "sha256", "-f", "-"]', source)
+        self.assertIn("ssh_ed25519_fingerprint(words[1])", source)
+
     def test_output_never_emits_secret_even_if_keygen_fails(self):
         with patch.object(m.os, "geteuid", return_value=0), \
              patch.object(m.socket, "gethostname", return_value="KMJ-elite"), \
