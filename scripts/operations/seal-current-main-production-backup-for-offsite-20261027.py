@@ -167,6 +167,42 @@ def repack_verified_local(original: Path, witness: Path, scratch: Path) -> tuple
     return outer, source_hash
 
 
+RELEASE_LOCK_NAME = "kmj-main-platform-production-release.lock"
+
+
+def open_release_lock(directory: Path, expected_uid: int = 0) -> int:
+    """Open a trusted root lock without following an attacker-controlled path.
+
+    /run/lock can be sticky/world-writable on Linux. Resolve the directory by
+    descriptor, refuse a symlink at either component, and validate the opened
+    inode before flock. expected_uid is overridden only by unprivileged tests.
+    """
+    dir_fd = os.open(
+        directory, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW | os.O_CLOEXEC,
+    )
+    try:
+        parent = os.fstat(dir_fd)
+        if (not stat.S_ISDIR(parent.st_mode) or parent.st_uid != expected_uid
+                or (parent.st_mode & 0o022 and not parent.st_mode & stat.S_ISVTX)):
+            fail("LOCK_DIRECTORY_UNSAFE")
+        fd = os.open(
+            RELEASE_LOCK_NAME,
+            os.O_CREAT | os.O_WRONLY | os.O_CLOEXEC | os.O_NOFOLLOW | os.O_NONBLOCK,
+            0o600, dir_fd=dir_fd,
+        )
+        try:
+            inode = os.fstat(fd)
+            if (not stat.S_ISREG(inode.st_mode) or inode.st_uid != expected_uid
+                    or inode.st_nlink != 1 or inode.st_mode & 0o077):
+                fail("LOCK_FILE_UNSAFE")
+        except BaseException:
+            os.close(fd)
+            raise
+        return fd
+    finally:
+        os.close(dir_fd)
+
+
 def main() -> None:
     global ORIGINAL, WITNESS, OUTPUT, EXPECTED_RELEASE, TARGET_SHA
     if len(sys.argv) != 3 or re.fullmatch(r"[a-f0-9]{40}", sys.argv[1]) is None or re.fullmatch(r"platform-[a-f0-9]{12}", sys.argv[2]) is None:
@@ -201,10 +237,7 @@ def main() -> None:
     required = max(512 * 1024 * 1024, ORIGINAL.stat().st_size * 4 + 256 * 1024 * 1024)
     if free < required:
         fail("INSUFFICIENT_ENCRYPTION_SCRATCH")
-    lock = os.open(
-        "/run/lock/kmj-main-platform-production-release.lock",
-        os.O_CREAT | os.O_WRONLY | os.O_CLOEXEC, 0o600,
-    )
+    lock = open_release_lock(Path("/run/lock"))
     try:
         fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
         with tempfile.TemporaryDirectory(prefix=".kmj-seal-offsite-", dir=ROOT) as tempdir:
