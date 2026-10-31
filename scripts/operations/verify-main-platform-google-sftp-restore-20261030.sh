@@ -196,57 +196,21 @@ if ! tar -xzf "$tmp/extracted/storage.tar.gz" --no-same-owner --no-same-permissi
   status RECOVERED_STORAGE FAIL; exit 1
 fi
 [[ -d "$tmp/restored-storage/storage/app" ]] || { status RECOVERED_STORAGE FAIL; exit 1; }
-# Extraction parity: every regular file and directory listed in the archive
-# exists on disk with the same size, and nothing else (no symlinks/specials,
-# no extra or missing entries). Counts only; no file names or contents printed.
-if ! parity="$(python3 - "$tmp/extracted/storage.tar.gz" "$tmp/restored-storage" <<'PY'
-import hashlib, os, stat, sys, tarfile
-archive, root = sys.argv[1], sys.argv[2]
-def sha(stream):
-    h = hashlib.sha256()
-    for chunk in iter(lambda: stream.read(1024 * 1024), b""):
-        h.update(chunk)
-    return h.hexdigest()
-expected = {}
-with tarfile.open(archive, "r:gz") as tar:
-    for m in tar:
-        if m.isdir():
-            expected[m.name.rstrip("/")] = ("d", 0)
-        elif m.isfile():
-            with tar.extractfile(m) as stream:
-                expected[m.name] = ("f", m.size, sha(stream))
-        else:
-            raise SystemExit(1)
-# tar -C app storage/app has no "storage" entry; parents are implicit.
-for name in list(expected):
-    parent = os.path.dirname(name)
-    while parent:
-        expected.setdefault(parent, ("d", 0))
-        parent = os.path.dirname(parent)
-found = {}
-for dirpath, dirnames, filenames in os.walk(root, followlinks=False):
-    for name in dirnames + filenames:
-        full = os.path.join(dirpath, name)
-        rel = os.path.relpath(full, root)
-        info = os.lstat(full)
-        if stat.S_ISDIR(info.st_mode):
-            found[rel] = ("d", 0)
-        elif stat.S_ISREG(info.st_mode):
-            with open(full, "rb") as stream:
-                found[rel] = ("f", info.st_size, sha(stream))
-        else:
-            raise SystemExit(1)
-if found != expected:
-    raise SystemExit(1)
-files = sum(1 for v in found.values() if v[0] == "f")
-print(f"{files} {sum(v[1] for v in found.values())}")
-PY
-)"; then
+# Use the descriptor-anchored, double-walk, inode-aware verifier.
+# The old inline os.walk/full-path reader was vulnerable to ancestor swaps.
+if ! parity="$(python3 "$repo/scripts/operations/verify-restored-storage-parity.py" \
+    "$tmp/extracted/storage.tar.gz" "$tmp/restored-storage")"; then
   status STORAGE_EXTRACTION_PARITY_CONTENT_SHA256 FAIL; exit 1
 fi
+files="$(printf '%s\n' "$parity" | sed -n 's/^RECOVERED_STORAGE_FILES_VERIFIED=\\([0-9]\\+\\)$/\\1/p')"
+bytes="$(printf '%s\n' "$parity" | sed -n 's/^RECOVERED_STORAGE_BYTES_VERIFIED=\\([0-9]\\+\\)$/\\1/p')"
+[[ "$files" =~ ^[0-9]+$ && "$bytes" =~ ^[0-9]+$ ]] ||
+  block STORAGE_PARITY_OUTPUT_INVALID
+expected_parity="$(printf 'RECOVERED_STORAGE_CONTENT_PARITY=PASS\nRECOVERED_STORAGE_FILES_VERIFIED=%s\nRECOVERED_STORAGE_BYTES_VERIFIED=%s' "$files" "$bytes")"
+[[ "$parity" == "$expected_parity" ]] || block STORAGE_PARITY_OUTPUT_INVALID
 status STORAGE_EXTRACTION_PARITY_CONTENT_SHA256 PASS
-status STORAGE_REGULAR_FILES "${parity% *}"
-status STORAGE_BYTES "${parity#* }"
+status STORAGE_REGULAR_FILES "$files"
+status STORAGE_BYTES "$bytes"
 status DISPOSABLE_POSTGRES_RESTORE PASS
 status RECOVERED_APP_SCHEMA PASS
 status RECOVERED_STORAGE PASS
