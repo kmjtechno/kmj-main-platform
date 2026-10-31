@@ -42,13 +42,13 @@ class StageContinuityAuditSafety(unittest.TestCase):
             for name in ("hostname", "id", "readlink", "printf", "echo"):
                 fake = directory / name
                 fake.write_text(
-                    "#!/bin/sh\\n/bin/printf attacked > " + str(sentinel) + "\\n",
+                    "#!/bin/sh\n/bin/printf attacked > " + str(sentinel) + "\n",
                     encoding="utf-8",
                 )
                 fake.chmod(0o755)
             bashenv = directory / "bashenv"
             bashenv.write_text(
-                "/bin/printf attacked > " + str(sentinel) + "\\n",
+                "/bin/printf attacked > " + str(sentinel) + "\n",
                 encoding="utf-8",
             )
             env = dict(os.environ, PATH=str(directory), BASH_ENV=str(bashenv))
@@ -61,7 +61,7 @@ class StageContinuityAuditSafety(unittest.TestCase):
 
     def test_fixed_privileged_shell_and_system_binaries(self):
         source = SCRIPT.read_text(encoding="utf-8")
-        self.assertTrue(source.startswith("#!/bin/bash -p\\n"))
+        self.assertTrue(source.startswith("#!/bin/bash -p\n"))
         for required in (
             "PATH=/usr/sbin:/usr/bin:/sbin:/bin",
             "/usr/bin/hostname -s", "/usr/bin/id -u",
