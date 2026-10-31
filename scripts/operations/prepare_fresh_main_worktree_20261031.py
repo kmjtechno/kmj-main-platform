@@ -82,7 +82,7 @@ def prepare(repo: Path, expected: str, lane: str, *, fetch: bool):
     if target.exists() or target.is_symlink():
         raise Blocked("LANE_ALREADY_EXISTS")
     if fetch:
-        origin = git(repo, "config", "--get", "remote.origin.url")
+        origin = git(repo, "config", "--get-all", "remote.origin.url")
         if origin not in ALLOWED_ORIGINS:
             raise Blocked("ORIGIN_NOT_CANONICAL_HTTPS")
         # HTTPS-only, no implicit SSH, tags or submodules.
