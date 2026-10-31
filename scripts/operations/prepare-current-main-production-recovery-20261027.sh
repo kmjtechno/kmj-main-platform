@@ -47,13 +47,14 @@ for dir in /usr/lib/postgresql/*/bin; do
   [[ -x "$dir/initdb" && -x "$dir/pg_ctl" && -x "$dir/psql" && -x "$dir/pg_restore" && -x "$dir/createdb" ]] && pgdir="$dir"
 done
 [[ -n "$pgdir" ]] || fail POSTGRES_RESTORE_BINARIES_MISSING
-# Match the protected main release-lock contract: never truncate or follow a
-# planted symlink in the shared /run/lock directory as root.
+# Never truncate or chmod a pre-existing inode in shared /run/lock.
+# Reopen read-only, then compare the actual descriptor with the named inode.
+# A concurrent pathname swap cannot cause a privileged write to its target.
 readonly RELEASE_LOCK=/run/lock/kmj-main-platform-production-release.lock
 ( set -o noclobber; : >"$RELEASE_LOCK" ) 2>/dev/null || :
-[[ -f "$RELEASE_LOCK" && ! -L "$RELEASE_LOCK" && "$(stat -c '%u:%h' -- "$RELEASE_LOCK")" == "0:1" ]] || fail RELEASE_LOCK_UNSAFE
-chmod 0600 -- "$RELEASE_LOCK"
+[[ -f "$RELEASE_LOCK" && ! -L "$RELEASE_LOCK" && "$(stat -c '%u:%h' -- "$RELEASE_LOCK")" == "0:1" && "$(stat -c '%a' -- "$RELEASE_LOCK")" == "600" ]] || fail RELEASE_LOCK_UNSAFE
 exec 9<"$RELEASE_LOCK"
+[[ "$(stat -Lc '%d:%i:%u:%h:%a:%F' -- /proc/self/fd/9)" == "$(stat -Lc '%d:%i:%u:%h:%a:%F' -- "$RELEASE_LOCK")" ]] || fail RELEASE_LOCK_FD_MISMATCH
 flock -n 9 || fail PRODUCTION_RELEASE_IN_PROGRESS
 scratch="$(mktemp -d /tmp/kmj-local-recovery.XXXXXXXX)"
 # Root owns the parent and all archival outputs; only a narrow child workdir
