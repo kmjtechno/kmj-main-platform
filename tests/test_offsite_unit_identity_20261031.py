@@ -41,15 +41,19 @@ def make(exec_body=b"#!/bin/sh\n. /etc/kmj-codebridge/offsite-sftp.conf\n", prop
 
 
 class Compare(unittest.TestCase):
-    def test_clean_service_with_unauthorized_key_makes_repair_precondition(self):
+    def test_local_identity_mismatch_is_not_remote_repair_authorization(self):
         r = m.compare(**make(fp=FPB))
-        self.assertEqual(r["service_identity_source"], "SFTP_CONFIG_ONLY")
+        self.assertEqual(r["service_identity_source"], "NOT_PROVEN")
+        self.assertEqual(r["local_reference_hint"], "CONFIG_PATH_REFERENCED")
         self.assertEqual(r["authorized_fingerprint_match"], "NO")
-        self.assertEqual(r["repair_precondition_met"], "YES")
+        self.assertEqual(r["remote_authorization_witnessed"], "NO")
+        self.assertEqual(r["repair_precondition_met"], "NO")
 
     def test_authorized_key_means_no_repair_precondition(self):
         r = m.compare(**make())
         self.assertEqual(r["authorized_fingerprint_match"], "YES")
+        self.assertEqual(r["remote_authorization_witnessed"], "NO")
+        self.assertEqual(r["service_identity_source"], "NOT_PROVEN")
         self.assertEqual(r["repair_precondition_met"], "NO")
 
     def test_dropin_embedded_key_or_multiple_execstart_is_not_proven(self):
@@ -61,6 +65,13 @@ class Compare(unittest.TestCase):
                 r = m.compare(**make(**kw))
                 self.assertEqual(r["service_identity_source"], "NOT_PROVEN")
                 self.assertEqual(r["repair_precondition_met"], "NO")
+
+    def test_config_string_in_comment_cannot_prove_effective_ssh_identity(self):
+        fake = b"#!/bin/sh\\n# /etc/kmj-codebridge/offsite-sftp.conf\\nssh -F /tmp/custom host\\n"
+        r = m.compare(**make(exec_body=fake, fp=FPB))
+        self.assertEqual(r["service_identity_source"], "NOT_PROVEN")
+        self.assertEqual(r["remote_authorization_witnessed"], "NO")
+        self.assertEqual(r["repair_precondition_met"], "NO")
 
     def test_missing_allowlist_or_unreadable_key_is_unknown_never_no(self):
         self.assertEqual(m.compare(**make(allowfile=None))["authorized_fingerprint_match"], "UNKNOWN_NO_OWNER_ALLOWLIST")
