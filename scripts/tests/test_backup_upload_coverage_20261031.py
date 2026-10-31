@@ -96,6 +96,22 @@ class UploadCoverageTests(unittest.TestCase):
         with self.assertRaises(audit_module.CoverageError):
             self.run_audit()
 
+    def test_descriptor_scan_rejects_symlinked_parent_without_preflight(self):
+        storage = self.release / "apps/platform/storage"
+        outside = self.base / "outside-descriptor-parent"
+        storage.rename(outside)
+        storage.symlink_to(outside, target_is_directory=True)
+        with self.assertRaises(audit_module.CoverageError):
+            audit_module.snapshot_storage(storage / "app")
+
+    def test_descriptor_scan_rejects_symlinked_leaf_without_preflight(self):
+        app = self.release / "apps/platform/storage/app"
+        outside = self.base / "outside-descriptor-leaf"
+        app.rename(outside)
+        app.symlink_to(outside, target_is_directory=True)
+        with self.assertRaises(audit_module.CoverageError):
+            audit_module.snapshot_storage(app)
+
     def test_symlinked_public_target_cannot_claim_expected_link(self):
         target = self.release / "apps/platform/storage/app/public"
         outside = self.base / "outside-public"
@@ -111,7 +127,8 @@ class UploadCoverageTests(unittest.TestCase):
 
     def test_unreadable_subdirectory_cannot_be_silently_skipped(self):
         from unittest import mock
-        def fail_walk(path, follow_symlinks=False, onerror=None):
+        def fail_walk(path, follow_symlinks=False, onerror=None, top_fd=None):
+            self.assertIsNotNone(top_fd)
             self.assertIsNotNone(onerror)
             onerror(PermissionError("private subdirectory"))
             yield from ()
