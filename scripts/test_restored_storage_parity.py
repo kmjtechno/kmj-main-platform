@@ -214,6 +214,16 @@ class RestoredStorageParityTests(unittest.TestCase):
         self.assertNotIn("os.walk(root", content)
         self.assertIn("STORAGE_EXTRACTION_PARITY_CONTENT_SHA256", content)
         subprocess.run(["bash", "-n", str(script)], check=True)
+        for key, value in (("RECOVERED_STORAGE_FILES_VERIFIED", "17"),
+                           ("RECOVERED_STORAGE_BYTES_VERIFIED", "61")):
+            line = next(line for line in content.splitlines()
+                        if "sed -n '" in line and f"^{key}=" in line)
+            expression = line.split("sed -n '", 1)[1].split("'", 1)[0]
+            result = subprocess.run(
+                ["sed", "-n", expression], input=f"{key}={value}\\n",
+                text=True, capture_output=True, check=True,
+            )
+            self.assertEqual(result.stdout, value + "\\n")
 
     def test_bad_argument_count_rejected(self):
         self.assertEqual(module.main([]), 2)
