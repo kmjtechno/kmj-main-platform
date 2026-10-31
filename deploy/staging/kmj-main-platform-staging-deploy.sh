@@ -151,13 +151,14 @@ new_target="$RELEASES/$approved/apps/platform"
 old_target="$RELEASES/$expected_stage/apps/platform"
 
 # The prepared candidate is verified in EVERY path (including already-active): a real, immutable-enough,
-# staging-configured tree for exactly the approved SHA, reached through root/stage-owned non-linked parents.
+# staging-configured tree for exactly the approved SHA, reached through ROOT-owned non-linked parents.
+# A stage-user-owned directory is writable by its owner even when mode is 0755; never trust it.
 rel_dir="$RELEASES/$approved"
-protected_dir_chain "$(dirname -- "$SITE")" stage || block SITE_CHAIN
-protected_dir_chain "$RELEASES" stage || block RELEASES_CHAIN
+protected_dir_chain "$(dirname -- "$SITE")" || block SITE_CHAIN
+protected_dir_chain "$RELEASES" || block RELEASES_CHAIN
 [[ -d "$rel_dir" && ! -L "$rel_dir" && -d "$new_target" && ! -L "$new_target" ]] || block CANDIDATE_MISSING
 [[ "$(realpath -e -- "$new_target")" == "$new_target" ]] || block CANDIDATE_PATH_LINKED
-[[ "$(stat -c %U "$rel_dir")" == "$STAGE_USER" && "$(stat -c %U "$new_target")" == "$STAGE_USER" ]] || block CANDIDATE_OWNER
+[[ "$(stat -c %u "$rel_dir")" == "$REQUIRE_UID" && "$(stat -c %u "$new_target")" == "$REQUIRE_UID" ]] || block CANDIDATE_OWNER
 for d in "$rel_dir" "$new_target" "$new_target/public" "$new_target/public/build"; do
   [[ -d "$d" && ! -L "$d" ]] || block CANDIDATE_MISSING
   (( (8#$(stat -c %a "$d") & 8#022) == 0 )) || block CANDIDATE_WRITABLE
@@ -183,12 +184,14 @@ for cur, dirs, files in os.walk(root, followlinks=False):
         st = os.lstat(os.path.join(cur, name))
         count += 1
         if count > 400000: die("TOO_MANY")
-        if st.st_mode & 0o022 and not stat.S_ISLNK(st.st_mode): die("WRITABLE")
+        if st.st_uid != os.getuid(): die("OWNER")
+        if st.st_mode & 0o022: die("WRITABLE")
         if stat.S_ISLNK(st.st_mode):
-            lines.append("l:%s:%s" % (r, os.readlink(os.path.join(cur, name))))
+            die("LINK")
         elif stat.S_ISDIR(st.st_mode):
             lines.append("d:%s:%o" % (r, st.st_mode & 0o7777))
         elif stat.S_ISREG(st.st_mode):
+            if st.st_nlink != 1: die("HARDLINK")
             h = hashlib.sha256()
             with open(os.path.join(cur, name), "rb") as f:
                 for chunk in iter(lambda: f.read(1 << 20), b""): h.update(chunk)
@@ -203,8 +206,10 @@ candidate_checks() {
   [[ "$(git -c safe.directory="$rel_dir" -C "$rel_dir" rev-parse HEAD 2>/dev/null)" == "$approved" ]] || return 11
   [[ -f "$new_target/artisan" && ! -L "$new_target/artisan" && -s "$new_target/public/build/manifest.json" && ! -L "$new_target/public/build/manifest.json" ]] || return 12
   local env_file="$new_target/.env"
-  [[ -f "$env_file" && ! -L "$env_file" && "$(stat -c %U "$env_file")" == "$STAGE_USER" && "$(stat -c %h "$env_file")" == 1 ]] || return 13
-  case "$(stat -c %a "$env_file")" in 400|600) ;; *) return 14 ;; esac
+  [[ -f "$env_file" && ! -L "$env_file" && "$(stat -c %u "$env_file")" == "$REQUIRE_UID" && "$(stat -c %h "$env_file")" == 1 ]] || return 13
+  # Owner-sealed configuration: root owns it; the PHP stage group may READ but never write.
+  [[ "$(stat -c %g "$env_file")" == "$(id -g -- "$STAGE_USER")" ]] || return 13
+  [[ "$(stat -c %a "$env_file")" == 640 ]] || return 14
   grep -Fxq APP_ENV=staging "$env_file" || return 15
   grep -Fxq APP_URL=https://staging.kmjtechno.com "$env_file" || return 16
   # Tracked files must equal HEAD, and the whole served tree must match the root-protected owner seal.
@@ -230,9 +235,8 @@ if [[ "$cur_target" == "$new_target" ]]; then echo "KMJ_STAGE_ACTIVATE=ALREADY_A
 [[ "$cur_target" == "$old_target" ]] || block STAGING_BASELINE_DRIFT
 
 tmp="$SITE.new.$$"
-rollback() { ln -sfn "$old_target" "$tmp" && chown -h "$STAGE_USER" "$tmp" && mv -T -- "$tmp" "$SITE" || true; }
+rollback() { ln -sfn "$old_target" "$tmp" && mv -T -- "$tmp" "$SITE" || true; }
 ln -s "$new_target" "$tmp" || block SWAP
-chown -h "$STAGE_USER":"$STAGE_USER" "$tmp" 2>/dev/null || chown -h "$STAGE_USER" "$tmp" || { rm -f -- "$tmp"; block SWAP_OWNER; }
 mv -T -- "$tmp" "$SITE" || { rm -f -- "$tmp"; block SWAP; }
 # Post-swap: pointer, the whole chain it resolves through, the candidate itself and production are re-verified;
 # any failure restores the previous staging target.
