@@ -68,12 +68,12 @@ class OffsiteDiagnosticInstallerTests(unittest.TestCase):
         source = INSTALLER.read_text()
         for term in (
             "ln -T --",
-            "BLOCKED_TARGET_EXISTS_OR_LINK_FAILED",
-            "BLOCKED_EXISTING_TARGET_REQUIRES_REVIEW",
-            "BLOCKED_SOURCE_CHAIN",
-            "BLOCKED_SOURCE_OWNER",
-            "BLOCKED_SOURCE_PERMISSIONS",
-            "BLOCKED_TARGET_HASH",
+            "block TARGET_EXISTS_OR_LINK_FAILED",
+            "block EXISTING_TARGET_REQUIRES_REVIEW",
+            "block SOURCE_CHAIN",
+            "block SOURCE_OWNER",
+            "block SOURCE_PERMISSIONS",
+            "block TARGET_HASH",
             "KMJ_OFFSITE_DIAGNOSTIC_EXECUTION=NOT_ATTEMPTED",
             "KMJ_PRODUCTION=UNCHANGED",
         ):
@@ -84,7 +84,7 @@ class OffsiteDiagnosticInstallerTests(unittest.TestCase):
             "rm -rf", "chmod -R", "chown -R",
         ):
             self.assertNotIn(prohibited, source)
-        self.assertLess(source.index("BLOCKED_OWNER_HOST"), source.index('tmp="$(mktemp'))
+        self.assertLess(source.index("block OWNER_HOST"), source.index('tmp="$(mktemp'))
 
 
 if __name__ == "__main__":
