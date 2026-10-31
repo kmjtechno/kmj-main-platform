@@ -143,6 +143,59 @@ class ActiveStageStorageAuditTests(unittest.TestCase):
             finally:
                 module.STAGE_HOME = original
 
+    def test_file_swap_to_outside_symlink_refused_at_open(self):
+        from unittest import mock
+        with tempfile.TemporaryDirectory() as temp:
+            base = Path(temp)
+            original = module.STAGE_HOME
+            real_open = module.os.open
+            try:
+                module.STAGE_HOME = base
+                root = base / "files"
+                root.mkdir()
+                victim = root / "victim.txt"
+                victim.write_bytes(b"original")
+                swapped = [False]
+
+                def swap_then_open(path, flags, *args, **kwargs):
+                    if path == "victim.txt" and kwargs.get("dir_fd") is not None:
+                        victim.rename(root / "old.txt")
+                        victim.symlink_to("/etc/passwd")
+                        swapped[0] = True
+                    return real_open(path, flags, *args, **kwargs)
+
+                with mock.patch.object(module.os, "open", side_effect=swap_then_open):
+                    with self.assertRaises(OSError):
+                        module.scan_storage(root)
+                self.assertTrue(swapped[0])
+            finally:
+                module.STAGE_HOME = original
+
+    def test_file_growth_during_hash_is_bounded(self):
+        from unittest import mock
+        with tempfile.TemporaryDirectory() as temp:
+            base = Path(temp)
+            original = module.STAGE_HOME
+            real_fdopen = module.os.fdopen
+            try:
+                module.STAGE_HOME = base
+                root = base / "files"
+                root.mkdir()
+                victim = root / "grow.txt"
+                victim.write_bytes(b"1234")
+
+                def grow_then_read(fd, *args, **kwargs):
+                    with victim.open("ab") as out:
+                        out.write(b"unexpected extra bytes")
+                    return real_fdopen(fd, *args, **kwargs)
+
+                with mock.patch.object(module.os, "fdopen", side_effect=grow_then_read):
+                    with self.assertRaisesRegex(
+                            module.AuditBlocked, "STORAGE_STREAM_EXCEEDS_BUDGET"):
+                        module.scan_storage(root)
+            finally:
+                module.STAGE_HOME = original
+
     def test_source_uses_directory_descriptors(self):
         source = SCRIPT.read_text(encoding="utf-8")
         self.assertIn("os.fwalk(", source)
