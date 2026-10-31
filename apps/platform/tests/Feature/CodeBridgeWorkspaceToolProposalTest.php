@@ -97,6 +97,20 @@ final class CodeBridgeWorkspaceToolProposalTest extends TestCase
         self::assertSame(0, DB::table('codebridge_workspace_tool_proposals')->count());
     }
 
+    public function test_only_one_terminal_tool_proposal_block_is_accepted(): void
+    {
+        $block = "Here is a suggested read-only check.\n```kmj-tool-proposal\n{\"tool\":\"git_status\",\"arguments\":{}}\n```\n";
+        self::assertSame(['tool' => 'git_status', 'arguments' => []], WorkspaceToolProposalService::parse($block));
+
+        foreach ([
+            $block."Further prose after the proposal must not be treated as consent.",
+            $block.$block,
+            "The assistant quoted a tool proposal, but did not end with one:\n".$block."No action is proposed.",
+        ] as $reply) {
+            self::assertNull(WorkspaceToolProposalService::parse($reply));
+        }
+    }
+
     public function test_feature_flag_off_stores_nothing_and_the_prompt_never_offers_tools(): void
     {
         config()->set('codebridge.workspace_jobs_enabled', false);
