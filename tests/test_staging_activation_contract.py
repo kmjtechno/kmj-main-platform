@@ -89,7 +89,7 @@ class Sandbox(unittest.TestCase):
         (app / "artisan").write_text("x")
         (app / "public/build/manifest.json").write_text(manifest)
         (app / ".env").write_text(env)
-        os.chmod(app / ".env", 0o600)
+        os.chmod(app / ".env", 0o640)
         subprocess.run(["git", "init", "-q"], cwd=tmp, check=True)
         subprocess.run(["git", "add", "apps/platform/artisan", "apps/platform/public"], cwd=tmp, check=True)
         subprocess.run(["git", "-c", "user.name=t", "-c", "user.email=t@t", "commit", "-q", "--allow-empty",
@@ -384,6 +384,37 @@ class Sandbox(unittest.TestCase):
         app = self.rel / self.NEW / "apps/platform"
         os.chmod(app / "public/build/manifest.json", 0o666)
         self.assertBlocked(*self.run_runner(), "CANDIDATE_WRITABLE")
+
+    # ---- owner immutability regression: no stage-writable ancestors or served artifacts ----
+    def test_stage_parent_and_intermediate_apps_cannot_be_writable(self):
+        apps = self.rel / self.NEW / "apps"
+        os.chmod(apps, 0o777)
+        self.assertBlocked(*self.run_runner(), "CANDIDATE_CHAIN")
+        os.chmod(apps, 0o755)
+        os.chmod(self.d / "stage/htdocs", 0o777)
+        self.assertBlocked(*self.run_runner(), "SITE_CHAIN")
+
+    def test_stage_env_requires_read_only_group_access(self):
+        env = self.rel / self.NEW / "apps/platform/.env"
+        os.chmod(env, 0o600)
+        self.assertBlocked(*self.run_runner(), "CANDIDATE_ENV_MODE")
+        os.chmod(env, 0o660)
+        self.assertBlocked(*self.run_runner(), "CANDIDATE_ENV_MODE")
+
+    def test_served_symlink_and_hardlink_are_not_sealable(self):
+        app = self.rel / self.NEW / "apps/platform"
+        link = app / "public/foreign.php"
+        os.symlink("/etc/passwd", link)
+        self.assertBlocked(*self.run_runner(), "CANDIDATE_SEAL")
+        link.unlink()
+        os.link(app / "artisan", link)
+        self.assertBlocked(*self.run_runner(), "CANDIDATE_SEAL")
+
+    @unittest.skipUnless(os.getuid() == 0, "requires root to simulate a foreign stage writer")
+    def test_foreign_stage_owned_candidate_is_refused(self):
+        candidate = self.rel / self.NEW
+        os.chown(candidate, 65534, 65534)
+        self.assertBlocked(*self.run_runner(), "CANDIDATE_CHAIN")
 
     def test_seal_tool_matches_runner_and_is_read_only(self):
         app = self.rel / self.NEW / "apps/platform"
