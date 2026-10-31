@@ -89,6 +89,40 @@ class RestoredStorageParityTests(unittest.TestCase):
         self.make_tar(extra=("storage/app/../outside", b"x", tarfile.REGTYPE))
         self.assert_rejected()
 
+    def test_symlinked_restored_root_ancestor_rejected(self):
+        alias = self.base / "restored-alias"
+        alias.symlink_to(self.output, target_is_directory=True)
+        with self.assertRaises(module.StorageParityError):
+            module.verify(self.tar, alias)
+
+    def test_file_reads_are_descriptor_anchored(self):
+        from unittest import mock
+        original_open = module.os.open
+        observed = []
+
+        def checked_open(path, flags, *args, **kwargs):
+            if path == "picture.png":
+                observed.append(kwargs.get("dir_fd"))
+                self.assertIsNotNone(kwargs.get("dir_fd"))
+                self.assertTrue(flags & module.os.O_NOFOLLOW)
+            return original_open(path, flags, *args, **kwargs)
+
+        with mock.patch.object(module.os, "open", side_effect=checked_open):
+            self.assertEqual(module.verify(self.tar, self.output), 1)
+        self.assertTrue(observed)
+
+    def test_unreadable_nested_directory_is_not_silently_skipped(self):
+        from unittest import mock
+
+        def broken_walk(*args, **kwargs):
+            self.assertIsNotNone(kwargs.get("dir_fd"))
+            self.assertIsNotNone(kwargs.get("onerror"))
+            kwargs["onerror"](PermissionError("blocked"))
+            yield from ()
+
+        with mock.patch.object(module.os, "fwalk", side_effect=broken_walk):
+            self.assert_rejected()
+
     def test_bad_argument_count_rejected(self):
         self.assertEqual(module.main([]), 2)
 
