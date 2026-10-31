@@ -24,7 +24,7 @@ final class WorkspaceToolProposalService
 {
     public const TTL_SECONDS = 900;
 
-    private const BLOCK = '/```kmj-tool-proposal[ \t]*\r?\n(.{1,600}?)\r?\n```/s';
+    private const BLOCK = '/```kmj-tool-proposal[ \t]*\r?\n(.{1,600}?)\r?\n```[ \t\r\n]*\z/s';
 
     public function __construct(private readonly WorkspaceJobService $jobs) {}
 
@@ -47,7 +47,9 @@ final class WorkspaceToolProposalService
      */
     public static function parse(string $content): ?array
     {
-        if (preg_match(self::BLOCK, $content, $match) !== 1) {
+        // Only ONE explicit proposal at the END of a completed assistant reply is actionable.
+        // Quoted examples, multiple proposals, and trailing prose must not become executable suggestions.
+        if (substr_count($content, '```kmj-tool-proposal') !== 1 || preg_match(self::BLOCK, $content, $match) !== 1) {
             return null;
         }
         try {
