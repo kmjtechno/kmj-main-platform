@@ -29,6 +29,24 @@ class ActiveStageStorageAuditTests(unittest.TestCase):
         self.assertEqual(proc.returncode, 2)
         self.assertIn("BLOCKED_WRONG_HOST_OR_USER", proc.stdout)
 
+    def test_root_git_probe_uses_fixed_binaries_and_sanitized_environment(self):
+        from unittest import mock
+        release = Path("/home/kmjstage/releases/" + "a" * 40)
+        completed = subprocess.CompletedProcess([], 0, "a" * 40 + "\\n", "")
+        with mock.patch.object(module.subprocess, "run", return_value=completed) as run:
+            self.assertEqual(module.git_head(release), "a" * 40)
+        args, kwargs = run.call_args
+        self.assertEqual(args[0], [
+            "/usr/sbin/runuser", "-u", "kmjstage", "--", "/usr/bin/git",
+            "-C", str(release), "rev-parse", "--verify", "HEAD",
+        ])
+        self.assertEqual(kwargs["env"], {
+            "PATH": "/usr/sbin:/usr/bin:/sbin:/bin", "LANG": "C",
+            "GIT_CONFIG_NOSYSTEM": "1", "GIT_CONFIG_GLOBAL": "/dev/null",
+        })
+        self.assertFalse(kwargs["check"])
+        self.assertEqual(kwargs["timeout"], 12)
+
     def test_hashes_no_file_contents_disclosed(self):
         with tempfile.TemporaryDirectory() as temp:
             base = Path(temp)
