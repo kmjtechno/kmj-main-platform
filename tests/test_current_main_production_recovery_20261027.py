@@ -45,7 +45,7 @@ class CurrentMainRecoveryContract(unittest.TestCase):
             with self.subTest(term=term):
                 self.assertIn(term, s)
 
-    def test_release_lock_is_nofollow_and_nontruncating(self):
+    def test_release_lock_is_nonmutating_and_descriptor_verified(self):
         """Execute the actual lock snippet with a disposable unprivileged path."""
         import os
         import re
@@ -79,7 +79,7 @@ class CurrentMainRecoveryContract(unittest.TestCase):
             self.assertEqual(blocked.returncode, 2)
             self.assertEqual(victim.read_text(encoding="utf-8"), "PRESERVE_ME")
             lock.unlink()
-            # A second hard link must also be refused before chmod/open.
+            # A second hard link must also be refused without modifying it.
             os.link(victim, lock)
             blocked = subprocess.run(["bash", "-c", command], capture_output=True, timeout=8)
             self.assertEqual(blocked.returncode, 2)
