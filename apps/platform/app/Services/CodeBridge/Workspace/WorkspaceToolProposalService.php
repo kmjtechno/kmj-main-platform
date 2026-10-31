@@ -144,6 +144,7 @@ final class WorkspaceToolProposalService
             }
             if ($row['status'] === 'expired' || $this->isStale($row)) {
                 $this->mark($proposalId, 'expired'); // committed: an expired proposal stays expired
+
                 return ['error' => 'proposal_expired'];
             }
             $arguments = json_decode((string) $row['arguments'], true);
