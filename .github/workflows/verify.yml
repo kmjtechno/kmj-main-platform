@@ -62,6 +62,8 @@ jobs:
           python3 -B -m unittest discover -s scripts -p 'test_diagnose_offsite_backup_unit.py' -v
           bash -n scripts/operations/verify-real-offsite-recovery.sh
           python3 -B scripts/test_real_offsite_recovery_contract.py
+          python3 -B -m py_compile scripts/operations/verify-restored-storage-parity.py
+          python3 -B scripts/test_restored_storage_parity.py
           bash -n scripts/operations/audit-isolated-staging-continuity-20261027.sh
           python3 -B -m unittest tests.test_isolated_staging_continuity_audit
           bash -n infra/server/KMJ_SERVER_BOOTSTRAP.sh
