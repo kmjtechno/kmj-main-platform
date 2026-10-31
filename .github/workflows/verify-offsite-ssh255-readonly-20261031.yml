@@ -1,0 +1,32 @@
+name: Verify offsite SSH255 readonly doctor
+
+on:
+  pull_request:
+    paths:
+      - 'scripts/operations/inspect-offsite-ssh255-20261031.py'
+      - 'tests/test_offsite_ssh255_readonly_20261031.py'
+      - '.github/workflows/verify-offsite-ssh255-readonly-20261031.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/operations/inspect-offsite-ssh255-20261031.py'
+      - 'tests/test_offsite_ssh255_readonly_20261031.py'
+      - '.github/workflows/verify-offsite-ssh255-readonly-20261031.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  readonly-contract:
+    name: SSH255 no-secret no-root no-network regression
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - name: Python syntax and no-side-effect diagnostic fixtures
+        run: |
+          set -euo pipefail
+          python3 -B -m unittest discover -s tests -p 'test_offsite_ssh255_readonly_20261031.py' -v
