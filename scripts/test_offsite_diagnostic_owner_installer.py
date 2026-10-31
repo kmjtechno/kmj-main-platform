@@ -7,7 +7,7 @@ import subprocess
 import tempfile
 import unittest
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parent
 INSTALLER = ROOT / "operations/install-offsite-diagnostic-owner-20261031.sh"
 DIAGNOSTIC = ROOT / "operations/diagnose-offsite-backup-unit-20261029.sh"
 PIN = "3ac8127f8e66ac4579330ae7671c2a2b31f68f6865c2a7c67e376adb475f6e32"
