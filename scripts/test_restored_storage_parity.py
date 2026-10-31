@@ -101,8 +101,14 @@ class RestoredStorageParityTests(unittest.TestCase):
         # the pathname must not silently point to a different directory.
         from unittest import mock
         original_walk = module.os.fwalk
+        swapped = False
 
         def swapped_walk(*args, **kwargs):
+            nonlocal swapped
+            if swapped:
+                yield from original_walk(*args, **kwargs)
+                return
+            swapped = True
             walk = original_walk(*args, **kwargs)
             first = next(walk)
             self.output.rename(self.base / "original-restored")
