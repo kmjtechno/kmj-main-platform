@@ -139,7 +139,7 @@ class IsolatedWorktreeTests(unittest.TestCase):
         fakebin.mkdir()
         marker = self.temp / "fake-git-executed"
         fakegit = fakebin / "git"
-        fakegit.write_text("#!/bin/sh\\ntouch " + str(marker) + "\\nexit 99\\n")
+        fakegit.write_text("#!/bin/sh\ntouch " + str(marker) + "\nexit 99\n")
         fakegit.chmod(0o755)
         with patch.dict(os.environ, {"PATH": str(fakebin)}):
             self.assertEqual(guarded_git(self.repo, "rev-parse", "HEAD"), self.sha)
