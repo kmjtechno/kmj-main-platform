@@ -118,6 +118,44 @@ export function sha256(buffer) {
     return createHash('sha256').update(buffer).digest('hex');
 }
 
+export const MAX_MANIFEST_BYTES = 8 * 1024 * 1024;
+
+// A stalled or unbounded loopback response must never hang owner QA or exhaust
+// memory before the runtime-to-candidate digest can be checked.
+export async function hashServedManifest(base, fetchImpl = fetch) {
+    const manifestUrl = new URL('/build/manifest.json', base);
+    try {
+        const response = await fetchImpl(manifestUrl, {
+            redirect: 'manual',
+            signal: AbortSignal.timeout(15000),
+        });
+        if (!response.ok || response.url !== manifestUrl.href) return null;
+        const length = response.headers?.get('content-length');
+        if (length !== null && length !== undefined) {
+            if (!/^\\d+$/.test(length) || Number(length) > MAX_MANIFEST_BYTES)
+                return null;
+        }
+        const reader = response.body?.getReader();
+        if (!reader) return null;
+        const hash = createHash('sha256');
+        let bytes = 0;
+        try {
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+                bytes += value.byteLength;
+                if (bytes > MAX_MANIFEST_BYTES) return null;
+                hash.update(value);
+            }
+            return bytes > 0 ? hash.digest('hex') : null;
+        } finally {
+            await reader.cancel().catch(() => {});
+        }
+    } catch {
+        return null; // No exception text, URL, cookie or response body in receipts.
+    }
+}
+
 // Verdict for one page result; any recorded problem fails closed.
 export function judge(result) {
     const problems = [...result.problems];
@@ -312,11 +350,7 @@ async function main() {
     });
     try {
         // Bind the served runtime to the candidate build before trusting any page.
-        const manifestUrl = new URL('/build/manifest.json', base);
-        const served = await fetch(manifestUrl, { redirect: 'manual' });
-        const servedHash = served.ok && served.url === manifestUrl.href
-            ? sha256(Buffer.from(await served.arrayBuffer()))
-            : null;
+        const servedHash = await hashServedManifest(base);
         receipt.runtimeBoundToCandidateBuild =
             servedHash === process.env.KMJ_QA_MANIFEST_SHA256;
         if (!receipt.runtimeBoundToCandidateBuild) {
