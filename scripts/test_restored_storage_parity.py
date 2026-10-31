@@ -3,6 +3,7 @@ from __future__ import annotations
 import importlib.util
 import io
 import os
+import subprocess
 from pathlib import Path
 import tarfile
 import tempfile
@@ -195,6 +196,24 @@ class RestoredStorageParityTests(unittest.TestCase):
 
         with mock.patch.object(module.os, "fwalk", side_effect=broken_walk):
             self.assert_rejected()
+
+    def test_cli_reports_exact_verified_counts(self):
+        from unittest import mock
+        with mock.patch("sys.stdout", new_callable=io.StringIO) as output:
+            self.assertEqual(module.main([str(self.tar), str(self.output)]), 0)
+        self.assertEqual(output.getvalue().splitlines(), [
+            "RECOVERED_STORAGE_CONTENT_PARITY=PASS",
+            "RECOVERED_STORAGE_FILES_VERIFIED=1",
+            f"RECOVERED_STORAGE_BYTES_VERIFIED={len(b'original upload')}",
+        ])
+
+    def test_google_sftp_restore_calls_hardened_parity_verifier(self):
+        script = Path(__file__).parent / "operations/verify-main-platform-google-sftp-restore-20261030.sh"
+        content = script.read_text()
+        self.assertIn('python3 "$repo/scripts/operations/verify-restored-storage-parity.py"', content)
+        self.assertNotIn("os.walk(root", content)
+        self.assertIn("STORAGE_EXTRACTION_PARITY_CONTENT_SHA256", content)
+        subprocess.run(["bash", "-n", str(script)], check=True)
 
     def test_bad_argument_count_rejected(self):
         self.assertEqual(module.main([]), 2)
