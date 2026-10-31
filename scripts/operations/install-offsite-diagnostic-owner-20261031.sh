@@ -1,10 +1,16 @@
-#!/usr/bin/env bash
+#!/bin/bash -p
 # Owner-only, SHA-pinned installer for ONE read-only offsite failure diagnostic.
 # Installing does not read the journal, modify backup data or start any service.
+# Require Bash privileged mode BEFORE reading any filesystem metadata. Bash -p
+# suppresses BASH_ENV, exported shell functions and user startup files. When
+# invoked with an explicit interpreter, use /bin/bash -p, not 'bash script'.
 set -Eeuo pipefail
+PATH=/usr/sbin:/usr/bin:/sbin:/bin
+export PATH
 umask 077
 
 block() { printf 'KMJ_OFFSITE_DIAGNOSTIC_INSTALL=BLOCKED_%s\n' "$1"; exit 2; }
+[[ $- == *p* ]] || block PRIVILEGED_SHELL_REQUIRED
 [[ "$#" -eq 1 && ( "$1" == --inspect || "$1" == --install ) ]] || block ARGUMENTS
 mode="$1"
 script_dir="$(cd -- "$(dirname -- "$0")" && pwd -P)"
@@ -31,10 +37,14 @@ for component in /root /root/kmj-approved "$root" "$root/scripts" "$script_dir" 
   (( (8#$mode_bits & 8#7022) == 0 )) || block SOURCE_PERMISSIONS
 done
 
-[[ -d /usr/local/libexec && ! -L /usr/local/libexec ]] || block TARGET_DIR
-[[ "$(stat -c '%u' /usr/local/libexec)" == 0 ]] || block TARGET_DIR_OWNER
-target_mode="$(stat -c '%a' /usr/local/libexec)"
-(( (8#$target_mode & 8#022) == 0 )) || block TARGET_DIR_PERMISSIONS
+# Root-owned, non-symlink ancestors must also be verified. Otherwise an
+# untrusted replacement of /usr/local could redirect our root-owned staging.
+for target_dir in /usr /usr/local /usr/local/libexec; do
+  [[ -d "$target_dir" && ! -L "$target_dir" ]] || block TARGET_DIR
+  [[ "$(stat -c '%u' -- "$target_dir")" == 0 ]] || block TARGET_DIR_OWNER
+  target_mode="$(stat -c '%a' -- "$target_dir")"
+  (( (8#$target_mode & 8#022) == 0 )) || block TARGET_DIR_PERMISSIONS
+done
 # Absolutely no overwrite, including an existing broken symlink.
 [[ ! -e "$target" && ! -L "$target" ]] || block EXISTING_TARGET_REQUIRES_REVIEW
 
