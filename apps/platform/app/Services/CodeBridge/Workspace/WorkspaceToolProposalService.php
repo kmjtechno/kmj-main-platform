@@ -104,7 +104,11 @@ final class WorkspaceToolProposalService
 
         return array_values(DB::table('codebridge_workspace_tool_proposals as p')
             ->leftJoin('codebridge_workspace_jobs as j', function ($join): void {
-                $join->on('j.id', '=', 'p.job_id')->on('j.tenant_id', '=', 'p.tenant_id');
+                // A proposal may only ever surface ITS OWN user's job on the same device/project/tool: a forged or
+                // corrupted job_id pointing at another user's job (even in the same tenant) joins to nothing.
+                $join->on('j.id', '=', 'p.job_id')->on('j.tenant_id', '=', 'p.tenant_id')
+                    ->on('j.user_id', '=', 'p.user_id')->on('j.device_id', '=', 'p.device_id')
+                    ->on('j.project_id', '=', 'p.project_id')->on('j.tool', '=', 'p.tool');
             })
             ->where('p.conversation_id', $conversation->id)
             ->where('p.tenant_id', $conversation->tenantId)->where('p.user_id', $conversation->userId)
