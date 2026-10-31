@@ -2,8 +2,10 @@
 
 No root access, VPS calls, network, database, or staging mutation.
 """
+import os
 import re
 import subprocess
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -30,6 +32,43 @@ class StageContinuityAuditSafety(unittest.TestCase):
         )
         self.assertEqual(run.returncode, 2)
         self.assertIn("KMJ_STAGE_AUDIT=BLOCKED_WRONG_HOST", run.stdout)
+
+    def test_hostile_path_and_bashenv_cannot_run_before_guard(self):
+        # Simulate an untrusted caller environment; this must never execute
+        # attacker-provided helpers even though the audit runs as a shell.
+        with tempfile.TemporaryDirectory() as folder:
+            directory = Path(folder)
+            sentinel = directory / "executed"
+            for name in ("hostname", "id", "readlink", "printf", "echo"):
+                fake = directory / name
+                fake.write_text(
+                    "#!/bin/sh\\n/bin/printf attacked > " + str(sentinel) + "\\n",
+                    encoding="utf-8",
+                )
+                fake.chmod(0o755)
+            bashenv = directory / "bashenv"
+            bashenv.write_text(
+                "/bin/printf attacked > " + str(sentinel) + "\\n",
+                encoding="utf-8",
+            )
+            env = dict(os.environ, PATH=str(directory), BASH_ENV=str(bashenv))
+            run = subprocess.run(
+                ["/bin/bash", "-p", str(SCRIPT), "f" * 40],
+                env=env, capture_output=True, text=True, timeout=8,
+            )
+            self.assertEqual(run.returncode, 2)
+            self.assertFalse(sentinel.exists(), run.stdout + run.stderr)
+
+    def test_fixed_privileged_shell_and_system_binaries(self):
+        source = SCRIPT.read_text(encoding="utf-8")
+        self.assertTrue(source.startswith("#!/bin/bash -p\\n"))
+        for required in (
+            "PATH=/usr/sbin:/usr/bin:/sbin:/bin",
+            "/usr/bin/hostname -s", "/usr/bin/id -u",
+            "/usr/bin/readlink -f --", "builtin printf",
+            "STAGING_READONLY_PRECHECK=BLOCKED_OWNER_SEAL_REQUIRED",
+        ):
+            self.assertIn(required, source)
 
     def test_advisory_only_and_never_ready(self):
         source = SCRIPT.read_text(encoding="utf-8")
