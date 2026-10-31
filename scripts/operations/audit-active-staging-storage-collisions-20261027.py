@@ -65,68 +65,87 @@ def category(relative: str) -> str:
 
 
 def scan_storage(root: Path) -> tuple[dict[str, tuple[int, str]], int, dict[str, tuple[str, str]]]:
-    """Hash regular files only. Inventory links as metadata, NEVER walk links."""
+    """FD-anchored, bounded, read-only inventory; never follow tree symlinks."""
     require(root.is_dir(), "STORAGE_DIRECTORY_MISSING")
     require(not root.is_symlink(), "STORAGE_ROOT_SYMLINK")
     require(safe_inside_stage(root.resolve(strict=True)), "STORAGE_OUT_OF_SCOPE")
-    files: dict[str, tuple[int, str]] = {}
-    links: dict[str, tuple[str, str]] = {}
-    total = 0
-    for parent, directories, filenames in os.walk(root, topdown=True, followlinks=False):
-        parent_path = Path(parent)
-        require(safe_inside_stage(parent_path.resolve(strict=True)), "STORAGE_PARENT_OUT_OF_SCOPE")
-        # os.walk with followlinks=False does not recurse through directory links.
-        # Pruning here also makes this property explicit for security review.
-        for entry in list(directories) + list(filenames):
-            path = parent_path / entry
-            info = path.lstat()
-            relative = path.relative_to(root).as_posix()
-            if stat.S_ISLNK(info.st_mode):
-                require(len(links) + len(files) < MAX_FILES, "STORAGE_TOO_MANY_ENTRIES")
-                # Resolve link metadata only, never open/traverse the destination.
-                # Target is used for in-memory comparison; never printed or logged.
+    require(hasattr(os, "O_NOFOLLOW") and hasattr(os, "O_DIRECTORY"),
+            "PLATFORM_GUARDS_UNAVAILABLE")
+    flags = os.O_RDONLY | os.O_NOFOLLOW | os.O_DIRECTORY | getattr(os, "O_CLOEXEC", 0)
+    root_fd = os.open(root, flags)
+    try:
+        # Check the inode actually opened, not only a pathname inspected earlier.
+        require(stat.S_ISDIR(os.fstat(root_fd).st_mode), "STORAGE_ROOT_CHANGED")
+        require(safe_inside_stage(Path(f"/proc/self/fd/{root_fd}").resolve(strict=True)),
+                "STORAGE_ROOT_MOVED_OUT_OF_SCOPE")
+        files: dict[str, tuple[int, str]] = {}
+        links: dict[str, tuple[str, str]] = {}
+        total = 0
+        entries = 0
+        # fwalk is anchored at root_fd; nested directory names are opened relative
+        # to verified directory descriptors, not re-resolved through parent paths.
+        for parent, directories, filenames, parent_fd in os.fwalk(
+                ".", topdown=True, follow_symlinks=False, dir_fd=root_fd):
+            for name in list(directories) + list(filenames):
+                relative = (Path(parent) / name).as_posix()
+                info = os.stat(name, dir_fd=parent_fd, follow_symlinks=False)
+                entries += 1
+                require(entries <= MAX_FILES, "STORAGE_TOO_MANY_ENTRIES")
+                if stat.S_ISLNK(info.st_mode):
+                    # Resolve metadata for classification only; never open a target.
+                    path = root / relative
+                    try:
+                        resolved = path.resolve(strict=False)
+                    except (RuntimeError, OSError):
+                        links[relative] = ("UNRESOLVED", "")
+                    else:
+                        scope = "IN_STAGE" if safe_inside_stage(resolved) else "OUTSIDE_STAGE"
+                        links[relative] = (scope, str(resolved))
+                    if name in directories:
+                        directories.remove(name)
+                    continue
+                require(stat.S_ISDIR(info.st_mode) or stat.S_ISREG(info.st_mode),
+                        "STORAGE_TREE_NONREGULAR_ENTRY")
+                if name in directories:
+                    require(stat.S_ISDIR(info.st_mode), "STORAGE_DIRECTORY_CHANGED")
+                    continue
+                require(stat.S_ISREG(info.st_mode), "STORAGE_NONREGULAR_FILE")
+                require(relative not in files and relative not in links,
+                        "STORAGE_DUPLICATE_PATH")
+                require(info.st_nlink == 1, "STORAGE_HARDLINK_UNVERIFIED")
+                total += info.st_size
+                require(total <= MAX_TOTAL_HASH_BYTES, "STORAGE_EXCEEDS_READ_BUDGET")
+                fd = os.open(name, os.O_RDONLY | os.O_NOFOLLOW |
+                             getattr(os, "O_CLOEXEC", 0), dir_fd=parent_fd)
                 try:
-                    resolved = path.resolve(strict=False)
-                except (RuntimeError, OSError):
-                    links[relative] = ("UNRESOLVED", "")
-                else:
-                    scope = "IN_STAGE" if safe_inside_stage(resolved) else "OUTSIDE_STAGE"
-                    links[relative] = (scope, str(resolved))
-                if entry in directories:
-                    directories.remove(entry)
-                continue
-            require(stat.S_ISDIR(info.st_mode) or stat.S_ISREG(info.st_mode),
-                    "STORAGE_TREE_NONREGULAR_ENTRY")
-        for name in filenames:
-            path = parent_path / name
-            before = path.lstat()
-            if stat.S_ISLNK(before.st_mode):
-                continue
-            require(stat.S_ISREG(before.st_mode), "STORAGE_NONREGULAR_FILE")
-            relative = path.relative_to(root).as_posix()
-            require(relative not in files and relative not in links,
-                    "STORAGE_DUPLICATE_PATH")
-            total += before.st_size
-            require(total <= MAX_TOTAL_HASH_BYTES, "STORAGE_EXCEEDS_READ_BUDGET")
-            require(len(files) + len(links) < MAX_FILES, "STORAGE_TOO_MANY_ENTRIES")
-            digest = hashlib.sha256()
-            flags = os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0) | getattr(os, "O_CLOEXEC", 0)
-            fd = os.open(path, flags)
-            try:
-                opened = os.fstat(fd)
-                require(stat.S_ISREG(opened.st_mode), "STORAGE_OPENED_NONREGULAR")
-                require((opened.st_dev, opened.st_ino) == (before.st_dev, before.st_ino),
-                        "STORAGE_FILE_CHANGED")
-                with os.fdopen(fd, "rb", closefd=False) as stream:
-                    for block in iter(lambda: stream.read(1024 * 1024), b""):
-                        digest.update(block)
-                after = os.fstat(fd)
-                require((before.st_size, before.st_mtime_ns) ==
-                        (after.st_size, after.st_mtime_ns), "STORAGE_FILE_CHANGED")
-            finally:
-                os.close(fd)
-            files[relative] = (before.st_size, digest.hexdigest())
-    return files, total, links
+                    opened = os.fstat(fd)
+                    require(stat.S_ISREG(opened.st_mode) and opened.st_nlink == 1,
+                            "STORAGE_OPENED_NONREGULAR")
+                    require((opened.st_dev, opened.st_ino) == (info.st_dev, info.st_ino),
+                            "STORAGE_FILE_CHANGED")
+                    digest = hashlib.sha256()
+                    read_bytes = 0
+                    with os.fdopen(fd, "rb", closefd=False) as stream:
+                        while True:
+                            block = stream.read(min(1024 * 1024, info.st_size - read_bytes + 1))
+                            if not block:
+                                break
+                            read_bytes += len(block)
+                            require(read_bytes <= info.st_size and
+                                    total - info.st_size + read_bytes <= MAX_TOTAL_HASH_BYTES,
+                                    "STORAGE_STREAM_EXCEEDS_BUDGET")
+                            digest.update(block)
+                    after = os.fstat(fd)
+                    require(read_bytes == info.st_size and
+                            (info.st_size, info.st_mtime_ns) ==
+                            (after.st_size, after.st_mtime_ns),
+                            "STORAGE_FILE_CHANGED")
+                finally:
+                    os.close(fd)
+                files[relative] = (info.st_size, digest.hexdigest())
+        return files, total, links
+    finally:
+        os.close(root_fd)
 
 
 def public_storage_status(app: Path) -> str:
