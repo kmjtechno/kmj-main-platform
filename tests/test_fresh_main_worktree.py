@@ -112,6 +112,28 @@ class IsolatedWorktreeTests(unittest.TestCase):
             self.assertEqual(guarded_git(self.repo, "config", "--get", "remote.origin.url"),
                              "https://github.com/kmjtechno/kmj-main-platform.git")
 
+    def test_canonical_origin_with_url_rewrite_is_blocked(self):
+        # remote.origin.url looks safe but Git would fetch from the attacker.
+        git(self.repo, "remote", "add", "origin",
+            "https://github.com/kmjtechno/kmj-main-platform.git")
+        git(self.repo, "config", "url.https://untrusted.invalid/.insteadOf",
+            "https://github.com/")
+        with self.assertRaisesRegex(Blocked, "GIT_LOCAL_CONFIG_UNSAFE"):
+            self.call(fetch=True)
+        self.assertEqual((self.repo / "dirty-untracked.txt").read_text(), "must remain")
+
+    def test_local_fsmonitor_command_is_rejected_before_status(self):
+        git(self.repo, "config", "core.fsmonitor", "/tmp/untrusted-fsmonitor")
+        with self.assertRaisesRegex(Blocked, "GIT_LOCAL_CONFIG_UNSAFE"):
+            self.call()
+        self.assertFalse((self.repo / ".git/kmj-fresh-main-lanes/ci_lane").exists())
+
+    def test_checkout_filter_process_is_rejected(self):
+        git(self.repo, "config", "filter.evil.process", "/tmp/untrusted-filter")
+        with self.assertRaisesRegex(Blocked, "GIT_LOCAL_CONFIG_UNSAFE"):
+            self.call()
+        self.assertEqual((self.repo / "dirty-untracked.txt").read_text(), "must remain")
+
     def test_root_denied_even_in_cached_mode(self):
         with patch("prepare_fresh_main_worktree_20261031.os.geteuid", return_value=0):
             with self.assertRaisesRegex(Blocked, "ROOT_NOT_ALLOWED"):
