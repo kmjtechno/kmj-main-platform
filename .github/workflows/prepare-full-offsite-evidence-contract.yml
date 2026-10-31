@@ -1,0 +1,33 @@
+name: Guarded Full Offsite Evidence Contract
+on:
+  pull_request:
+    paths:
+      - 'scripts/operations/prepare-full-offsite-evidence-20261031.sh'
+      - 'tests/test_full_offsite_evidence_chain_20261031.py'
+      - '.github/workflows/prepare-full-offsite-evidence-contract.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/operations/prepare-full-offsite-evidence-20261031.sh'
+      - 'tests/test_full_offsite_evidence_chain_20261031.py'
+      - '.github/workflows/prepare-full-offsite-evidence-contract.yml'
+permissions:
+  contents: read
+jobs:
+  safe-offsite-chain:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - name: No production mutation and exact pinned source contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -B -m unittest discover -s tests -p 'test_full_offsite_evidence_chain_20261031.py' -v
+          echo 'FULL_OFFSITE_SOURCE_CONTRACT=PASS'
+          echo 'CURRENT_PRODUCTION=NOT_MODIFIED'
+          echo 'ACTUAL_BACKUP=NOT_RUN_IN_CI'
+          echo 'GOOGLE_RESTORE=NOT_VERIFIED'
