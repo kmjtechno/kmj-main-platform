@@ -32,7 +32,7 @@ class ActiveStageStorageAuditTests(unittest.TestCase):
     def test_root_git_probe_uses_fixed_binaries_and_sanitized_environment(self):
         from unittest import mock
         release = Path("/home/kmjstage/releases/" + "a" * 40)
-        completed = subprocess.CompletedProcess([], 0, "a" * 40 + "\\n", "")
+        completed = subprocess.CompletedProcess([], 0, "a" * 40 + "\n", "")
         with mock.patch.object(module.subprocess, "run", return_value=completed) as run:
             self.assertEqual(module.git_head(release), "a" * 40)
         args, kwargs = run.call_args
