@@ -4,6 +4,8 @@ on:
     paths:
       - 'scripts/operations/verify-real-offsite-recovery.sh'
       - 'scripts/test_real_offsite_recovery_contract.py'
+      - 'scripts/test_restored_storage_parity.py'
+      - 'scripts/operations/verify-restored-storage-parity.py'
       - 'docs/operations/REAL_OFFSITE_RECOVERY_DRILL.md'
       - '.github/workflows/kmj-offsite-recovery-scratch-safety.yml'
   push:
@@ -11,6 +13,8 @@ on:
     paths:
       - 'scripts/operations/verify-real-offsite-recovery.sh'
       - 'scripts/test_real_offsite_recovery_contract.py'
+      - 'scripts/test_restored_storage_parity.py'
+      - 'scripts/operations/verify-restored-storage-parity.py'
       - '.github/workflows/kmj-offsite-recovery-scratch-safety.yml'
 permissions:
   contents: read
@@ -28,6 +32,7 @@ jobs:
           set -euo pipefail
           bash -n scripts/operations/verify-real-offsite-recovery.sh
           python3 -B scripts/test_real_offsite_recovery_contract.py
+          python3 -B scripts/test_restored_storage_parity.py
           echo 'PERSISTENT_SCRATCH_AND_NESTED_VERIFIER=PASS'
           echo 'PRODUCTION_MODIFICATION=NOT_ATTEMPTED'
           echo 'REMOTE_DOWNLOAD=NOT_ATTEMPTED'
