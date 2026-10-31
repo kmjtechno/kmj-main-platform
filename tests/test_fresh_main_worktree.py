@@ -170,6 +170,23 @@ class IsolatedWorktreeTests(unittest.TestCase):
             self.assertEqual(guarded_git(self.repo, "rev-parse", "HEAD"), self.sha)
         self.assertFalse(marker.exists())
 
+    def test_git_child_environment_is_fixed_not_inherited(self):
+        hostile = {"LD_PRELOAD": "/tmp/untrusted.so", "CURL_CA_BUNDLE": "/tmp/ca.pem",
+                   "HTTPS_PROXY": "http://untrusted.invalid:8080",
+                   "GIT_CONFIG_COUNT": "1", "GIT_CONFIG_KEY_0": "core.fsmonitor",
+                   "GIT_CONFIG_VALUE_0": "/tmp/untrusted"}
+        real_run = subprocess.run
+        with patch.dict(os.environ, hostile), patch(
+            "prepare_fresh_main_worktree_20261031.subprocess.run",
+            wraps=real_run
+        ) as invoked:
+            self.assertEqual(guarded_git(self.repo, "rev-parse", "HEAD"), self.sha)
+            env = invoked.call_args.kwargs["env"]
+        for key in hostile:
+            self.assertNotIn(key, env)
+        self.assertEqual(env["GIT_CONFIG_NOSYSTEM"], "1")
+        self.assertEqual(env["GIT_CONFIG_GLOBAL"], "/dev/null")
+
     def test_root_denied_even_in_cached_mode(self):
         with patch("prepare_fresh_main_worktree_20261031.os.geteuid", return_value=0):
             with self.assertRaisesRegex(Blocked, "ROOT_NOT_ALLOWED"):
