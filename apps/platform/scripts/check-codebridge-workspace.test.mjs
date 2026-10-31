@@ -57,12 +57,20 @@ void test('device pairing stays in the Control Center', () => {
     assert.match(page, /#devices/);
     // The page may only post to workspace conversation endpoints.
     for (const call of page.match(/router\.post\(\s*[^,]+/g) ?? [])
-        assert.match(call, /BASE|conversationUrl/, call);
+        assert.match(call, /BASE|conversationUrl|proposalUrl/, call);
     assert.doesNotMatch(page, /device-pairings|device-enrollments/);
 });
 
 void test('chat routes are authenticated, throttled and ULID/UUID constrained', () => {
     assert.match(routes, /whereUuid\('conversation'\)/);
     assert.match(routes, /whereUlid\('message'\)/);
+    assert.match(
+        routes,
+        /proposals\/\{proposal\}\/confirm[\s\S]*?whereUlid\('proposal'\)/,
+    );
+    assert.match(
+        routes,
+        /proposals\/\{proposal\}\/reject[\s\S]*?whereUlid\('proposal'\)/,
+    );
     assert.equal((routes.match(/throttle:/g) ?? []).length >= 5, true);
 });

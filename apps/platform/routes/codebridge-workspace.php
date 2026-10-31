@@ -17,6 +17,10 @@ Route::prefix('services/kmj-codebridge/workspace')->name('codebridge.workspace.'
         ->whereUuid('conversation')->whereUlid('message')->middleware('throttle:20,1')->name('retry');
     Route::post('conversations/{conversation}/messages/{message}/cancel', [CodeBridgeWorkspaceController::class, 'cancel'])
         ->whereUuid('conversation')->whereUlid('message')->middleware('throttle:30,1')->name('cancel');
+    Route::post('proposals/{proposal}/confirm', [CodeBridgeWorkspaceController::class, 'confirmProposal'])
+        ->whereUlid('proposal')->middleware('throttle:20,1')->name('proposals.confirm');
+    Route::post('proposals/{proposal}/reject', [CodeBridgeWorkspaceController::class, 'rejectProposal'])
+        ->whereUlid('proposal')->middleware('throttle:30,1')->name('proposals.reject');
     Route::post('tools', [CodeBridgeWorkspaceController::class, 'runTool'])->middleware('throttle:20,1')->name('tools.run');
     Route::post('tools/{job}/cancel', [CodeBridgeWorkspaceController::class, 'cancelTool'])
         ->whereUlid('job')->middleware('throttle:30,1')->name('tools.cancel');
