@@ -1,0 +1,35 @@
+name: Offsite SSH Client Staging Safety
+
+on:
+  pull_request:
+    paths:
+      - "scripts/operations/stage-offsite-ssh-key-20261031.py"
+      - "tests/test_stage_offsite_ssh_key_20261031.py"
+      - ".github/workflows/offsite-key-staging-contract.yml"
+  push:
+    branches: [main]
+    paths:
+      - "scripts/operations/stage-offsite-ssh-key-20261031.py"
+      - "tests/test_stage_offsite_ssh_key_20261031.py"
+      - ".github/workflows/offsite-key-staging-contract.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  key-staging-contract:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - name: No overwrite, no remote install, key-pair tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -B -m unittest discover -s tests -p 'test_stage_offsite_ssh_key_20261031.py' -v
+          echo "OFFSITE_KEY_STAGING_CONTRACT=PASS"
+          echo "REMOTE_AUTHORIZATION=NOT_VERIFIED"
+          echo "BACKUP_CREATED=NO"
