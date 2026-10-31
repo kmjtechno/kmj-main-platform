@@ -221,6 +221,20 @@ class ActiveStageStorageAuditTests(unittest.TestCase):
         self.assertIn("STORAGE_STREAM_EXCEEDS_BUDGET", source)
         self.assertNotIn("os.walk(root", source)
 
+    def test_production_pointer_target_requires_exact_release_directory(self):
+        valid = Path("/home/kmjprod/releases/platform-574e443a2c75")
+        self.assertTrue(module.verified_production_release_path(valid))
+        for unsafe in (
+            "/home/kmjprod/releases/platform-574e443a2c75/nested",
+            "/home/kmjprod/releases/platform-574e443a2c75/malicious",
+            "/home/kmjprod/releases/platform-574e443a2c75-extra",
+            "/home/kmjprod/releases/platform-xyz",
+            "/home/kmjprod/releases-evil/platform-574e443a2c75",
+            "/home/kmjstage/releases/platform-574e443a2c75",
+        ):
+            with self.subTest(unsafe=unsafe):
+                self.assertFalse(module.verified_production_release_path(Path(unsafe)))
+
     def test_logical_buckets_do_not_publish_individual_paths(self):
         self.assertEqual(module.category("app/public/image.png"), "PUBLIC_UPLOADS")
         self.assertEqual(module.category("app/private/token.txt"), "PRIVATE_APP")
