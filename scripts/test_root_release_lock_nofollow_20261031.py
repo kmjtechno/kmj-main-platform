@@ -21,6 +21,10 @@ class RootLockTests(unittest.TestCase):
             self.assertIn("RELEASE_LOCK_UNSAFE", text)
             subprocess.run(["bash", "-n", str(ROOT / name)], check=True)
 
+    def test_no_operations_script_opens_a_lock_with_truncating_redirect(self):
+        offenders = [f.name for f in sorted(ROOT.glob("*.sh")) if re.search(r"^\s*exec 9>", f.read_text(), re.M)]
+        self.assertEqual(offenders, [])
+
     def run_snippet(self, lock, uid_ok=True):
         # Swap the fixed path for a temp one; "0:1" owner check is replaced by current uid so it runs unprivileged.
         text = snippet((ROOT / FILES[0]).read_text()).replace("/run/lock/kmj-main-platform-production-release.lock", str(lock))

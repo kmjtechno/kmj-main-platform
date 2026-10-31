@@ -27,7 +27,13 @@ systemctl is-active --quiet nginx || block NGINX_NOT_ACTIVE
 systemctl is-active --quiet php8.4-fpm || block PHP_FPM_NOT_ACTIVE
 df -Pk "$ROOT" | awk 'END { exit !($4 >= 4194304) }' ||
     block INSUFFICIENT_FREE_DISK_4GB
-exec 9>/run/lock/kmj-main-platform-production-release.lock
+# Root must never create/truncate through a pre-planted symlink: O_EXCL create (noclobber), then require a
+# regular, root-owned, single-link file before opening it read-only for flock (same lock path/inode).
+RELEASE_LOCK=/run/lock/kmj-main-platform-production-release.lock
+( set -o noclobber; : >"$RELEASE_LOCK" ) 2>/dev/null || :
+[[ -f "$RELEASE_LOCK" && ! -L "$RELEASE_LOCK" && "$(stat -c '%u:%h' -- "$RELEASE_LOCK")" == "0:1" ]] || block RELEASE_LOCK_UNSAFE
+chmod 0600 -- "$RELEASE_LOCK"
+exec 9<"$RELEASE_LOCK"
 flock -n 9 || block RELEASE_OPERATION_BUSY
 
 verify_artifacts() {

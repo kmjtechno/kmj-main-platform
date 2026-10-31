@@ -39,7 +39,13 @@ for dir in /usr/lib/postgresql/*/bin; do
   [[ -x "$dir/initdb" && -x "$dir/pg_ctl" && -x "$dir/psql" && -x "$dir/pg_restore" && -x "$dir/createdb" ]] && pgdir="$dir"
 done
 [[ -n "$pgdir" ]] || fail POSTGRES_RESTORE_BINARIES_MISSING
-exec 9>/run/lock/kmj-main-platform-production-release.lock
+# Root must never create/truncate through a pre-planted symlink: O_EXCL create (noclobber), then require a
+# regular, root-owned, single-link file before opening it read-only for flock (same lock path/inode).
+RELEASE_LOCK=/run/lock/kmj-main-platform-production-release.lock
+( set -o noclobber; : >"$RELEASE_LOCK" ) 2>/dev/null || :
+[[ -f "$RELEASE_LOCK" && ! -L "$RELEASE_LOCK" && "$(stat -c '%u:%h' -- "$RELEASE_LOCK")" == "0:1" ]] || fail RELEASE_LOCK_UNSAFE
+chmod 0600 -- "$RELEASE_LOCK"
+exec 9<"$RELEASE_LOCK"
 flock -n 9 || fail PRODUCTION_RELEASE_IN_PROGRESS
 scratch="$(mktemp -d /tmp/kmj-local-recovery.XXXXXXXX)"
 # Root owns the parent and all archival outputs; only a narrow child workdir

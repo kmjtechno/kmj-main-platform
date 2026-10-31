@@ -33,7 +33,13 @@ remote="$(git ls-remote --exit-code "$SOURCE" refs/heads/main 2>/dev/null | awk 
 short="$(printf '%s' "$sha" | cut -c1-12)"
 dest="$ROOT/releases/platform-$short"
 [[ ! -L "$dest" ]] || block CANDIDATE_SYMLINK
-exec 9>"$LOCK"
+# Root must never create/truncate through a pre-planted symlink: O_EXCL create (noclobber), then require a
+# regular, root-owned, single-link file before opening it read-only for flock (same lock path/inode).
+RELEASE_LOCK="$LOCK"
+( set -o noclobber; : >"$RELEASE_LOCK" ) 2>/dev/null || :
+[[ -f "$RELEASE_LOCK" && ! -L "$RELEASE_LOCK" && "$(stat -c '%u:%h' -- "$RELEASE_LOCK")" == "0:1" ]] || block RELEASE_LOCK_UNSAFE
+chmod 0600 -- "$RELEASE_LOCK"
+exec 9<"$RELEASE_LOCK"
 flock -n 9 || block PRODUCTION_RELEASE_BUSY
 [[ "$(readlink -f "$LIVE")" == "$before" ]] || block LIVE_POINTER_CHANGED
 
