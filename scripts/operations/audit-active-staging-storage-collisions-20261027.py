@@ -53,6 +53,12 @@ def safe_inside_stage(path: Path) -> bool:
         return False
 
 
+def verified_production_release_path(production: Path) -> bool:
+    """A single canonical release directory, never a nested/prefix lookalike."""
+    return (production.parent == Path("/home/kmjprod/releases")
+            and re.fullmatch(r"platform-[a-f0-9]{12}", production.name) is not None)
+
+
 def category(relative: str) -> str:
     segments = relative.split("/")
     if segments[:2] == ["app", "public"]:
@@ -173,7 +179,7 @@ def main() -> None:
     actual = ACTIVE_LINK.resolve(strict=True)
     production = PROD_LINK.resolve(strict=True)
     require(actual == RELEASES / sha / "apps/platform", "ACTIVE_STAGE_SHA_DRIFT")
-    require(str(production).startswith("/home/kmjprod/releases/platform-"),
+    require(verified_production_release_path(production),
             "PRODUCTION_SCOPE_CHANGED")
     old_release = RELEASES / OLD_SHA
     current_release = RELEASES / sha
