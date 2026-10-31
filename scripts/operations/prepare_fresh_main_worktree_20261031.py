@@ -31,12 +31,15 @@ class Blocked(Exception):
 
 
 def git(repo: Path, *args: str, extra_config=()):
-    cmd = ["git", *extra_config, "-C", str(repo), *args]
-    # Ignore inherited Git overrides (GIT_DIR, config injection, SSH helpers, etc.).
-    # Only the authorized repository-local config is consulted.
-    env = {key: value for key, value in os.environ.items() if not key.startswith("GIT_")}
-    env.update(GIT_TERMINAL_PROMPT="0", GIT_OPTIONAL_LOCKS="0",
-               GIT_CONFIG_NOSYSTEM="1", GIT_CONFIG_GLOBAL="/dev/null")
+    cmd = ["/usr/bin/git", "-c", "core.fsmonitor=false", "-c", "core.hooksPath=/dev/null",
+           "-c", "credential.helper=", *extra_config, "-C", str(repo), *args]
+    # Fixed subprocess environment: no inherited Git, dynamic-loader, curl CA,
+    # proxy, credential, SSH helper or executable-path overrides. Only local
+    # repository config is considered, and dangerous keys are rejected below.
+    env = {"PATH": "/usr/bin:/bin", "LANG": "C", "LC_ALL": "C",
+           "HOME": "/nonexistent", "GIT_TERMINAL_PROMPT": "0",
+           "GIT_OPTIONAL_LOCKS": "0", "GIT_CONFIG_NOSYSTEM": "1",
+           "GIT_CONFIG_GLOBAL": "/dev/null"}
     result = subprocess.run(cmd, capture_output=True, text=True, env=env, check=False, timeout=180)
     if result.returncode:
         raise Blocked("GIT_COMMAND_FAILED")
@@ -59,6 +62,29 @@ def verify_private_directory(path: Path, *, create: bool):
         raise Blocked("CACHE_DIRECTORY_UNSAFE")
 
 
+def verify_git_config(repo: Path):
+    """Reject local Git settings that can redirect/downgrade HTTPS or execute hooks/filters.
+
+    A canonical remote.origin.url alone is insufficient: url.*.insteadOf can
+    transparently rewrite it to another HTTPS host. Read local configuration
+    (including local includes) before status/fetch/worktree operations.
+    """
+    config = git(repo, "config", "--local", "--list", "--includes")
+    for item in config.splitlines():
+        key = item.partition("=")[0].lower()
+        unsafe = (
+            (key.startswith("url.") and key.endswith(".insteadof"))
+            or key.startswith(("include.", "includeif.", "http.", "https."))
+            or key in {"remote.origin.vcs", "remote.origin.uploadpack",
+                       "remote.origin.proxy", "core.fsmonitor",
+                       "credential.helper", "http.extraheader"}
+            or (key.startswith("http.") and key.endswith(".extraheader"))
+            or (key.startswith("filter.") and key.endswith((".smudge", ".process")))
+        )
+        if unsafe:
+            raise Blocked("GIT_LOCAL_CONFIG_UNSAFE")
+
+
 def prepare(repo: Path, expected: str, lane: str, *, fetch: bool):
     if os.geteuid() == 0:
         raise Blocked("ROOT_NOT_ALLOWED")
@@ -74,6 +100,7 @@ def prepare(repo: Path, expected: str, lane: str, *, fetch: bool):
         raise Blocked("GIT_COMMON_DIR_UNSAFE")
     if common.stat().st_uid != os.geteuid():
         raise Blocked("GIT_COMMON_DIR_OWNER")
+    verify_git_config(repo)
     before = git(repo, "status", "--porcelain=v1", "--untracked-files=all")
     cache = common / "kmj-fresh-main-lanes"
     # Trusted repository-operator state, never a root/system directory.
@@ -89,7 +116,9 @@ def prepare(repo: Path, expected: str, lane: str, *, fetch: bool):
         # --refmap= avoids updating origin/main; only a private cache ref moves.
         git(repo, "fetch", "--no-tags", "--no-recurse-submodules", "--refmap=",
             "origin", f"refs/heads/main:{CACHE_REF}",
-            extra_config=("-c", "protocol.allow=never", "-c", "protocol.https.allow=always"))
+            extra_config=("-c", "protocol.allow=never", "-c", "protocol.https.allow=always",
+                          "-c", "http.sslVerify=true", "-c", "http.followRedirects=false",
+                          "-c", "http.proxy="))
         observed = git(repo, "rev-parse", "--verify", CACHE_REF)
     else:
         # Offline mode: no claim of a fresh remote read.

@@ -112,6 +112,81 @@ class IsolatedWorktreeTests(unittest.TestCase):
             self.assertEqual(guarded_git(self.repo, "config", "--get", "remote.origin.url"),
                              "https://github.com/kmjtechno/kmj-main-platform.git")
 
+    def test_canonical_origin_with_url_rewrite_is_blocked(self):
+        # remote.origin.url looks safe but Git would fetch from the attacker.
+        git(self.repo, "remote", "add", "origin",
+            "https://github.com/kmjtechno/kmj-main-platform.git")
+        git(self.repo, "config", "url.https://untrusted.invalid/.insteadOf",
+            "https://github.com/")
+        with self.assertRaisesRegex(Blocked, "GIT_LOCAL_CONFIG_UNSAFE"):
+            self.call(fetch=True)
+        self.assertEqual((self.repo / "dirty-untracked.txt").read_text(), "must remain")
+
+    def test_http_tls_downgrade_is_rejected_before_fetch(self):
+        git(self.repo, "remote", "add", "origin",
+            "https://github.com/kmjtechno/kmj-main-platform.git")
+        git(self.repo, "config", "http.sslVerify", "false")
+        with self.assertRaisesRegex(Blocked, "GIT_LOCAL_CONFIG_UNSAFE"):
+            self.call(fetch=True)
+        self.assertEqual((self.repo / "dirty-untracked.txt").read_text(), "must remain")
+
+    def test_url_scoped_http_proxy_is_rejected_before_fetch(self):
+        git(self.repo, "remote", "add", "origin",
+            "https://github.com/kmjtechno/kmj-main-platform.git")
+        git(self.repo, "config", "http.https://github.com/.proxy",
+            "http://untrusted.invalid:8080")
+        with self.assertRaisesRegex(Blocked, "GIT_LOCAL_CONFIG_UNSAFE"):
+            self.call(fetch=True)
+        self.assertFalse((self.repo / ".git/kmj-fresh-main-lanes/ci_lane").exists())
+
+    def test_http_extraheader_is_rejected_before_network(self):
+        git(self.repo, "remote", "add", "origin",
+            "https://github.com/kmjtechno/kmj-main-platform.git")
+        git(self.repo, "config", "http.extraHeader", "Authorization: secret")
+        with self.assertRaisesRegex(Blocked, "GIT_LOCAL_CONFIG_UNSAFE"):
+            self.call(fetch=True)
+        self.assertEqual((self.repo / "dirty-untracked.txt").read_text(), "must remain")
+
+    def test_local_fsmonitor_command_is_rejected_before_status(self):
+        git(self.repo, "config", "core.fsmonitor", "/tmp/untrusted-fsmonitor")
+        with self.assertRaisesRegex(Blocked, "GIT_LOCAL_CONFIG_UNSAFE"):
+            self.call()
+        self.assertFalse((self.repo / ".git/kmj-fresh-main-lanes/ci_lane").exists())
+
+    def test_checkout_filter_process_is_rejected(self):
+        git(self.repo, "config", "filter.evil.process", "/tmp/untrusted-filter")
+        with self.assertRaisesRegex(Blocked, "GIT_LOCAL_CONFIG_UNSAFE"):
+            self.call()
+        self.assertEqual((self.repo / "dirty-untracked.txt").read_text(), "must remain")
+
+    def test_untrusted_path_cannot_substitute_git_executable(self):
+        fakebin = self.temp / "fakebin"
+        fakebin.mkdir()
+        marker = self.temp / "fake-git-executed"
+        fakegit = fakebin / "git"
+        fakegit.write_text("#!/bin/sh\ntouch " + str(marker) + "\nexit 99\n")
+        fakegit.chmod(0o755)
+        with patch.dict(os.environ, {"PATH": str(fakebin)}):
+            self.assertEqual(guarded_git(self.repo, "rev-parse", "HEAD"), self.sha)
+        self.assertFalse(marker.exists())
+
+    def test_git_child_environment_is_fixed_not_inherited(self):
+        hostile = {"LD_PRELOAD": "/tmp/untrusted.so", "CURL_CA_BUNDLE": "/tmp/ca.pem",
+                   "HTTPS_PROXY": "http://untrusted.invalid:8080",
+                   "GIT_CONFIG_COUNT": "1", "GIT_CONFIG_KEY_0": "core.fsmonitor",
+                   "GIT_CONFIG_VALUE_0": "/tmp/untrusted"}
+        real_run = subprocess.run
+        with patch.dict(os.environ, hostile), patch(
+            "prepare_fresh_main_worktree_20261031.subprocess.run",
+            wraps=real_run
+        ) as invoked:
+            self.assertEqual(guarded_git(self.repo, "rev-parse", "HEAD"), self.sha)
+            env = invoked.call_args.kwargs["env"]
+        for key in hostile:
+            self.assertNotIn(key, env)
+        self.assertEqual(env["GIT_CONFIG_NOSYSTEM"], "1")
+        self.assertEqual(env["GIT_CONFIG_GLOBAL"], "/dev/null")
+
     def test_root_denied_even_in_cached_mode(self):
         with patch("prepare_fresh_main_worktree_20261031.os.geteuid", return_value=0):
             with self.assertRaisesRegex(Blocked, "ROOT_NOT_ALLOWED"):
