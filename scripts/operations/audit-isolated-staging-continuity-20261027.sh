@@ -1,130 +1,56 @@
 #!/usr/bin/env bash
-# Staging-only, read-only continuity check for an already prepared exact candidate.
-# No symlink, database, runtime or production writes.
+# Advisory ONLY: inspect fixed stage/prod pointer layout without executing
+# stage-controlled Git, PHP, environment files or network helpers.
+# The root-owned immutable stage seal and independent owner approval are
+# mandatory external gates; this script must never certify release readiness.
 set -Eeuo pipefail
 umask 077
-block() { echo "KMJ_STAGE_AUDIT=BLOCKED_$1"; exit 2; }
+
+block() { printf 'KMJ_STAGE_AUDIT=BLOCKED_%s\n' "$1"; exit 2; }
 [[ "$#" -eq 1 && "$1" =~ ^[a-f0-9]{40}$ ]] || block INVALID_SHA
 sha="$1"
 [[ "$(hostname -s)" == KMJ-elite && "$(id -u)" -eq 0 ]] || block WRONG_HOST
+
 prod=/home/kmjprod/current
 site=/home/kmjstage/htdocs/staging.kmjtechno.com
 base=/home/kmjstage/releases
+
+# Only fixed metadata lookups are permitted. Stage-owned ancestors can be
+# replaced concurrently, so even apparently good results are advisory.
 [[ -L "$prod" && -L "$site" && -d "$base" && ! -L "$base" ]] || block LAYOUT
-p_before="$(readlink -f "$prod")"
-s_before="$(readlink -f "$site")"
+p_before="$(readlink -f -- "$prod")" || block PRODUCTION_POINTER
+s_before="$(readlink -f -- "$site")" || block STAGING_POINTER
 [[ "$p_before" == /home/kmjprod/releases/platform-* ]] || block PRODUCTION_PATH
 [[ "$s_before" == /home/kmjstage/releases/*/apps/platform ]] || block STAGING_PATH
-old="$(dirname "$(dirname "$s_before")")"
-new="$base/$sha/apps/platform"
-[[ -d "$base/$sha/.git" && ! -L "$base/$sha" && -f "$new/.env" && -f "$s_before/.env" ]] || block SOURCE_MISSING
-[[ ! -L "$new/.env" && ! -L "$s_before/.env" ]] || block ENV_LINK
-[[ "$(stat -c %U "$new/.env")" == kmjstage && "$(stat -c %U "$s_before/.env")" == kmjstage ]] || block ENV_OWNER
-[[ "$(runuser -u kmjstage -- git -C "$base/$sha" rev-parse HEAD 2>/dev/null)" == "$sha" ]] || block CANDIDATE_SHA
-[[ "$(runuser -u kmjstage -- git -C "$old" rev-parse HEAD 2>/dev/null)" == "$(basename "$old")" ]] || block OLD_SHA
-[[ -s "$new/public/build/manifest.json" && -f "$new/vendor/autoload.php" ]] || block BUILD
-approved="$(git ls-remote --exit-code https://github.com/kmjtechno/kmj-main-platform.git refs/heads/staging-approved 2>/dev/null | awk '{print $1}')" || block APPROVAL_UNAVAILABLE
-[[ "$approved" =~ ^[a-f0-9]{40}$ ]] || block APPROVED_HEAD_INVALID
-# This is a read-only review of an already prepared candidate. Promotion may
-# advance while the audit PR is reviewed; do not rewrite or reject old evidence.
-readiness_blocked=0
-if [[ "$approved" == "$sha" ]]; then
-  echo STAGING_APPROVED_HEAD_MATCH=PASS
+
+candidate="$base/$sha"
+[[ -d "$candidate" && ! -L "$candidate" ]] || block CANDIDATE_LAYOUT
+printf 'STAGING_AUDITED_SHA=%s\n' "$sha"
+
+# Presence is not an immutable owner seal: never open or hash .env here.
+# The candidate could be stage-user writable or replaced after this check.
+if [[ -f "$candidate/apps/platform/.env" && ! -L "$candidate/apps/platform/.env" ]]; then
+  echo STAGING_ENV_PRESENCE=PRESENT_UNATTESTED
 else
-  echo STAGING_APPROVED_HEAD_MATCH=DRIFT_REQUIRES_NEW_CANDIDATE_FOR_CUTOVER
-  readiness_blocked=1
+  echo STAGING_ENV_PRESENCE=MISSING_OR_UNSAFE
 fi
-echo "STAGING_AUDITED_SHA=$sha"
 
-python3 - "$s_before" "$new" <<'PY'
-import hashlib
-from pathlib import Path
-import sys
+# No git ls-remote, no stage-controlled git config, no PHP artisan bootstrap,
+# no database connection, and no parsing of secret-bearing environment files.
+echo STAGING_IMMUTABLE_OWNER_SEAL=NOT_ATTESTED
+echo STAGING_APPROVED_HEAD_MATCH=NOT_QUERIED
+echo STAGING_SOURCE_HEAD=NOT_ATTESTED
+echo STAGING_ENV_PARITY=NOT_READ
+echo STAGING_DB_SCOPE=NOT_VERIFIED
+echo STAGING_STORAGE_CONTINUITY=NOT_ATTESTED
+echo STAGING_MIGRATION_READBACK=NOT_EXECUTED
+echo OWNER_AUTHENTICATED_QA=NOT_VERIFIED
+echo INDEPENDENT_RESTORE=NOT_VERIFIED
 
-old, new = [Path(arg) for arg in sys.argv[1:]]
-a, b = (old / '.env').read_bytes(), (new / '.env').read_bytes()
-same = hashlib.sha256(a).digest() == hashlib.sha256(b).digest()
-print('STAGING_ENV_PARITY=' + ('PASS' if same else 'BLOCKED_DIFFERENT'))
-if not same:
-    raise SystemExit(2)
-values = {}
-for line in a.decode('utf-8').splitlines():
-    if line.lstrip().startswith('#') or '=' not in line:
-        continue
-    key, value = line.split('=', 1)
-    if key in {'APP_ENV', 'APP_URL', 'DB_CONNECTION', 'DB_HOST', 'DB_DATABASE', 'DB_URL', 'SESSION_DRIVER', 'CACHE_STORE'}:
-        values[key] = value.strip().strip('"').strip("'")
-safe = (
-    values.get('APP_ENV') == 'staging'
-    and values.get('APP_URL') == 'https://staging.kmjtechno.com'
-    and values.get('DB_CONNECTION') == 'pgsql'
-    and values.get('DB_HOST') in {'127.0.0.1', 'localhost'}
-    and (values.get('DB_DATABASE', '').startswith('kmj_stage_') or values.get('DB_DATABASE') == 'kmj_platform_staging')
-    and not values.get('DB_URL')
-)
-print('STAGING_DB_SCOPE=' + ('STAGING_ONLY' if safe else 'BLOCKED_UNVERIFIED'))
-print('STAGING_SESSION=' + ('DATABASE' if values.get('SESSION_DRIVER', 'database') == 'database' else 'OTHER'))
-print('STAGING_CACHE=' + ('DATABASE' if values.get('CACHE_STORE', 'database') == 'database' else 'OTHER'))
-if not safe:
-    raise SystemExit(2)
-
-storage_ok = True
-for name in ('storage', 'public/storage'):
-    x, y = old / name, new / name
-    first, second = x.resolve(strict=False), y.resolve(strict=False)
-    scoped = str(first).startswith('/home/kmjstage/') and str(second).startswith('/home/kmjstage/')
-    if not scoped:
-        status = 'BLOCKED_OUTSIDE_STAGE'
-    elif name == 'public/storage' and not x.exists() and y.exists() and second == (old / 'storage/app/public').resolve(strict=False):
-        # Older staging may not have a public/storage symlink. New candidate
-        # can still preserve all uploads if it targets old private storage's
-        # app/public directory, which itself remains under stage scope.
-        status = 'PASS_CANDIDATE_USES_OLD_PUBLIC_UPLOADS'
-    elif not x.exists() or not y.exists():
-        status = 'BLOCKED_MISSING'
-    elif first == second:
-        status = 'PASS_SHARED'
-    else:
-        status = 'BLOCKED_SEPARATE'
-    print('STAGING_' + name.upper().replace('/', '_') + '_CONTINUITY=' + status)
-    if not status.startswith('PASS_'):
-        storage_ok = False
-if not storage_ok:
-    raise SystemExit(2)
-PY
-
-for path in "$s_before/storage" "$new/storage"; do
-  if [[ -d "$path" ]]; then
-    kib="$(du -sk -- "$path" 2>/dev/null | awk '{print $1}' || :)"
-    if [[ "$path" == "$s_before/storage" ]]; then
-      echo "STAGING_OLD_STORAGE_KIB=$kib"
-    else
-      echo "STAGING_NEW_STORAGE_KIB=$kib"
-    fi
-  fi
-done
-
-tmp="$(mktemp)"
-trap 'rm -f -- "$tmp"' EXIT
-if runuser -u kmjstage -- bash -c 'cd "$1" && php8.4 artisan migrate:status --no-interaction --no-ansi' _ "$new" >"$tmp" 2>/dev/null; then
-  pending="$(grep -ic Pending "$tmp" || :)"
-  echo "STAGING_PENDING_MIGRATIONS=$pending"
-  if [[ "$pending" == 0 ]]; then
-    echo STAGING_MIGRATION_READBACK=NO_PENDING_REPORTED
-  else
-    echo STAGING_MIGRATION_READBACK=PENDING_BLOCKS_CUTOVER
-    readiness_blocked=1
-  fi
-else
-  echo STAGING_MIGRATION_READBACK=UNAVAILABLE_BLOCKS_CUTOVER
-  readiness_blocked=1
-fi
-[[ "$(readlink -f "$prod")" == "$p_before" && "$(readlink -f "$site")" == "$s_before" ]] || block LINK_CHANGED
-echo PRODUCTION_POINTER=UNCHANGED
-echo STAGING_POINTER=UNCHANGED
-echo KMJ_STAGE_AUDIT=READ_ONLY_COMPLETE
-if [[ "$readiness_blocked" -ne 0 ]]; then
-  echo STAGING_READONLY_PRECHECK=BLOCKED
-  exit 2
-fi
-echo STAGING_READONLY_PRECHECK=PASS_OWNER_GATES_PENDING
+[[ "$(readlink -f -- "$prod")" == "$p_before" &&
+   "$(readlink -f -- "$site")" == "$s_before" ]] || block LINK_CHANGED
+echo PRODUCTION_POINTER=OBSERVED_UNCHANGED
+echo STAGING_POINTER=OBSERVED_UNCHANGED
+echo KMJ_STAGE_AUDIT=READ_ONLY_ADVISORY_COMPLETE
+echo STAGING_READONLY_PRECHECK=BLOCKED_OWNER_SEAL_REQUIRED
+exit 2
