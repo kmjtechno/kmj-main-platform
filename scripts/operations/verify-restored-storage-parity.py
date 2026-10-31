@@ -211,12 +211,17 @@ def restored_inventory(root: Path) -> tuple[dict[str, tuple[int, str]], set[str]
     return files, directories
 
 
-def verify(source: Path, restored: Path) -> int:
+def verify_details(source: Path, restored: Path) -> tuple[int, int]:
     expected, expected_dirs = archive_inventory(source)
     actual, actual_dirs = restored_inventory(restored)
     if expected != actual or expected_dirs != actual_dirs:
         fail()
-    return len(expected)
+    return len(expected), sum(size for size, _checksum in actual.values())
+
+
+def verify(source: Path, restored: Path) -> int:
+    # Preserve the library API used by existing callers and tests.
+    return verify_details(source, restored)[0]
 
 
 def main(argv: list[str]) -> int:
@@ -224,12 +229,13 @@ def main(argv: list[str]) -> int:
         print("RECOVERED_STORAGE_CONTENT_PARITY=BLOCKED_ARGUMENTS")
         return 2
     try:
-        files = verify(Path(argv[0]), Path(argv[1]))
+        files, bytes_verified = verify_details(Path(argv[0]), Path(argv[1]))
     except (StorageParityError, OSError, ValueError, tarfile.TarError):
         print("RECOVERED_STORAGE_CONTENT_PARITY=FAIL")
         return 2
     print("RECOVERED_STORAGE_CONTENT_PARITY=PASS")
     print(f"RECOVERED_STORAGE_FILES_VERIFIED={files}")
+    print(f"RECOVERED_STORAGE_BYTES_VERIFIED={bytes_verified}")
     return 0
 
 
