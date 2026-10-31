@@ -2,6 +2,7 @@
 from __future__ import annotations
 import importlib.util
 import io
+import os
 from pathlib import Path
 import tarfile
 import tempfile
@@ -94,6 +95,16 @@ class RestoredStorageParityTests(unittest.TestCase):
         alias.symlink_to(self.output, target_is_directory=True)
         with self.assertRaises(module.StorageParityError):
             module.verify(self.tar, alias)
+
+    def test_hardlink_to_external_file_is_not_an_independent_restore(self):
+        # A byte-for-byte match must still fail if the supposed scratch
+        # restore is actually another link to a file outside the restore.
+        original = self.base / "live-picture.png"
+        original.write_bytes(b"original upload")
+        target = self.output / "storage/app/public/picture.png"
+        target.unlink()
+        os.link(original, target)
+        self.assert_rejected()
 
     def test_file_reads_are_descriptor_anchored(self):
         from unittest import mock
