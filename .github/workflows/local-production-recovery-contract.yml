@@ -11,6 +11,7 @@ on:
       - 'scripts/operations/materialize-main-platform-candidate-runtime.sh'
       - 'scripts/operations/verify-main-platform-storage-manifest.py'
       - 'scripts/test_main_platform_release_readiness_doctor.py'
+      - 'scripts/test_root_release_lock_nofollow_20261031.py'
       - 'scripts/operations/prepare-owner-shell-local-recovery-kmj-elite-20261020.sh'
       - 'scripts/test_owner_shell_local_recovery_contract.py'
       - 'scripts/operations/prepare-final-local-recovery-kmj-elite-20261020.sh'
@@ -26,6 +27,7 @@ on:
       - 'scripts/operations/materialize-main-platform-candidate-runtime.sh'
       - 'scripts/operations/verify-main-platform-storage-manifest.py'
       - 'scripts/test_main_platform_release_readiness_doctor.py'
+      - 'scripts/test_root_release_lock_nofollow_20261031.py'
       - 'scripts/operations/prepare-owner-shell-local-recovery-kmj-elite-20261020.sh'
       - 'scripts/test_owner_shell_local_recovery_contract.py'
       - 'scripts/operations/prepare-final-local-recovery-kmj-elite-20261020.sh'
@@ -52,6 +54,7 @@ jobs:
           bash -n scripts/operations/prepare-main-platform-local-recovery-exact.sh
           bash -n scripts/operations/materialize-main-platform-candidate-runtime.sh
           python3 -B -m unittest scripts/test_main_platform_release_readiness_doctor.py
+          python3 -B -m unittest scripts/test_root_release_lock_nofollow_20261031.py
           bash -n scripts/operations/prepare-owner-shell-local-recovery-kmj-elite-20261020.sh
           python3 -B scripts/test_owner_shell_local_recovery_contract.py
           bash -n scripts/operations/prepare-final-local-recovery-kmj-elite-20261020.sh

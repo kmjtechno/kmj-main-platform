@@ -49,7 +49,13 @@ for item in vendor/autoload.php public/build/manifest.json public/assets/kmj-cod
   [[ -s "$CAND_APP/$item" && ! -L "$CAND_APP/$item" ]] || fail CANDIDATE_ARTIFACT_MISSING
 done
 # The release controller lock prevents racing an activation.
-exec 9>/run/lock/kmj-main-platform-production-release.lock
+# Root must never create/truncate through a pre-planted symlink in the sticky /run/lock:
+# O_EXCL create (noclobber) never follows a symlink; then require a root-owned 0600 single-link file.
+readonly RELEASE_LOCK=/run/lock/kmj-main-platform-production-release.lock
+( set -o noclobber; : >"$RELEASE_LOCK" ) 2>/dev/null || :
+[[ -f "$RELEASE_LOCK" && ! -L "$RELEASE_LOCK" && "$(stat -c '%u:%h' -- "$RELEASE_LOCK")" == "0:1" ]] || fail RELEASE_LOCK_UNSAFE
+chmod 0600 -- "$RELEASE_LOCK"
+exec 9<"$RELEASE_LOCK"
 flock -n 9 || fail PRODUCTION_RELEASE_IN_PROGRESS
 
 # Root holds the release lock while a private mount namespace pins writable
