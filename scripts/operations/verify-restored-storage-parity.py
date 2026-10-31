@@ -98,6 +98,10 @@ def restored_inventory(root: Path) -> tuple[dict[str, tuple[int, str]], set[str]
     pinned_root = os.fstat(root_fd)
     files: dict[str, tuple[int, str]] = {}
     directories: set[str] = set()
+    # A pinned root alone is insufficient: a nested restored directory may
+    # be replaced after its contents have been hashed. Remember each visited
+    # directory's inode so the final pathname walk can detect that swap.
+    directory_inodes: dict[str, tuple[int, int]] = {}
     total = 0
 
     def onerror(error: OSError) -> None:
@@ -108,6 +112,11 @@ def restored_inventory(root: Path) -> tuple[dict[str, tuple[int, str]], set[str]
             ".", dir_fd=root_fd, follow_symlinks=False, onerror=onerror
         ):
             rel_parent = Path(parent)
+            rel_key = rel_parent.as_posix()
+            parent_info = os.fstat(dirfd)
+            if not stat.S_ISDIR(parent_info.st_mode) or rel_key in directory_inodes:
+                fail()
+            directory_inodes[rel_key] = (parent_info.st_dev, parent_info.st_ino)
             for name in subdirs:
                 info = os.stat(name, dir_fd=dirfd, follow_symlinks=False)
                 if not stat.S_ISDIR(info.st_mode):
@@ -151,6 +160,21 @@ def restored_inventory(root: Path) -> tuple[dict[str, tuple[int, str]], set[str]
                         fail()
                 finally:
                     os.close(fd)
+        # Reopen the full directory hierarchy after hashing. A swap of an
+        # interior directory leaves root_fd unchanged, but must not allow a
+        # successful attestation for a different restored pathname.
+        seen_dirs: set[str] = set()
+        for parent, _subdirs, _filenames, dirfd in os.fwalk(
+            ".", dir_fd=root_fd, follow_symlinks=False, onerror=onerror
+        ):
+            key = Path(parent).as_posix()
+            info = os.fstat(dirfd)
+            if (key in seen_dirs or not stat.S_ISDIR(info.st_mode)
+                or directory_inodes.get(key) != (info.st_dev, info.st_ino)):
+                fail()
+            seen_dirs.add(key)
+        if seen_dirs != set(directory_inodes):
+            fail()
         # The walk is descriptor-anchored, but the caller will later use the
         # restored pathname. Reject a root that was renamed or redirected
         # while hashing rather than attesting a now-different pathname.
