@@ -3,9 +3,9 @@
 
 Answers one question without changing anything: would the exact-release local backup start, and if not, why.
 No service control, no database access, no network, no files written next to production. The only
-write is one sanitized JSON receipt (root forks, drops to the project owner) and it holds check names/PASS-FAIL only.
+write is one sanitized JSON receipt (root forks, drops to the project owner) and contains only sanitized check results, candidate identity and timestamp.
 
-    preflight-local-backup-witness-20261031.py --candidate-sha <40 lowercase hex> --expected-release platform-<12 hex> [--receipt <path>]
+    preflight-local-backup-witness-20261031.py --candidate-sha <40 lowercase hex> --expected-release platform-<12 hex>
 
 READY does NOT mean a backup exists, restore works or release is approved; it only means the next step is not blocked.
 """
@@ -22,7 +22,6 @@ import socket
 import stat
 import subprocess
 import sys
-import tempfile
 from pathlib import Path
 
 SHA_RE = re.compile(r"[0-9a-f]{40}")
@@ -143,7 +142,53 @@ def build_record(env: Env, sha: str, expected: str) -> dict:
     }
 
 
-def save(record: dict, receipt: Path) -> None:
+def write_receipt_no_clobber(record: dict, directory: Path, owner_uid: int) -> None:
+    """Create one canonical receipt via no-follow directory FDs; never replace an existing file.
+
+    Called ONLY after dropping root privileges. directory is fixed by save(); tests may inject
+    an isolated directory. Every path component is opened with O_NOFOLLOW, closing symlink races.
+    """
+    sha = record.get("candidateSha", "")
+    if not isinstance(sha, str) or SHA_RE.fullmatch(sha) is None:
+        raise ValueError("RECEIPT_CANDIDATE_INVALID")
+    if not directory.is_absolute() or any(p in (".", "..") for p in directory.parts):
+        raise ValueError("RECEIPT_DIRECTORY_INVALID")
+    name = f"KMJ_BACKUP_WITNESS_PREFLIGHT_{sha[:12]}.json"
+    flags = os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW | os.O_CLOEXEC
+    fd = os.open("/", flags)
+    try:
+        parts = directory.parts[1:]
+        if not parts:
+            raise ValueError("RECEIPT_DIRECTORY_INVALID")
+        for part in parts:
+            if part in ("", ".", ".."):
+                raise ValueError("RECEIPT_DIRECTORY_INVALID")
+            child = os.open(part, flags, dir_fd=fd)
+            os.close(fd)
+            fd = child
+            st = os.fstat(fd)
+            if st.st_uid not in (0, owner_uid):
+                raise PermissionError("RECEIPT_ANCESTOR_OWNER_INVALID")
+            # A root-owned sticky directory (e.g. /tmp in tests) cannot replace
+            # another user's private child; ordinary writable ancestors are refused.
+            if st.st_mode & 0o022 and not (st.st_uid == 0 and st.st_mode & stat.S_ISVTX):
+                raise PermissionError("RECEIPT_ANCESTOR_WRITABLE")
+        st = os.fstat(fd)
+        if st.st_uid != owner_uid or st.st_mode & 0o022:
+            raise PermissionError("RECEIPT_PARENT_NOT_PRIVATE_OWNER")
+        out = os.open(name, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW | os.O_CLOEXEC,
+                      0o600, dir_fd=fd)
+        with os.fdopen(out, "w", encoding="utf-8") as stream:
+            json.dump(record, stream, sort_keys=True)
+            stream.write("\n")
+            stream.flush()
+            os.fsync(stream.fileno())
+        os.fsync(fd)
+    finally:
+        os.close(fd)
+
+
+def save(record: dict) -> None:
     owner = pwd.getpwnam("kmjcode")
     pid = os.fork()
     if pid == 0:
@@ -151,12 +196,7 @@ def save(record: dict, receipt: Path) -> None:
             os.setgroups([])
             os.setgid(owner.pw_gid)
             os.setuid(owner.pw_uid)
-            fd, name = tempfile.mkstemp(prefix=".preflight-", dir=receipt.parent)
-            with os.fdopen(fd, "w") as f:
-                json.dump(record, f, sort_keys=True)
-                f.write("\n")
-            os.chmod(name, 0o600)
-            os.replace(name, receipt)
+            write_receipt_no_clobber(record, DEFAULT_RECEIPT_DIR, owner.pw_uid)
             os._exit(0)
         except Exception:
             os._exit(3)
@@ -169,7 +209,6 @@ def main(argv=None, env: Env | None = None) -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--candidate-sha", required=True)
     ap.add_argument("--expected-release", required=True)
-    ap.add_argument("--receipt")
     args = ap.parse_args(argv)
     if not SHA_RE.fullmatch(args.candidate_sha):
         print("PREFLIGHT=BLOCKED CANDIDATE_SHA_INVALID")
@@ -179,10 +218,9 @@ def main(argv=None, env: Env | None = None) -> int:
         return 2
     env = env or Env()
     record = build_record(env, args.candidate_sha, args.expected_release)
-    receipt = Path(args.receipt) if args.receipt else DEFAULT_RECEIPT_DIR / f"KMJ_BACKUP_WITNESS_PREFLIGHT_{args.candidate_sha[:12]}.json"
     if record["checks"]["root_user"] and record["checks"]["host_is_KMJ_elite"]:
         try:
-            save(record, receipt)
+            save(record)
         except Exception:
             print("PREFLIGHT=RECEIPT_WRITE_FAILED")
             return 2
