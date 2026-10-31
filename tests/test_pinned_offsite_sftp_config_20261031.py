@@ -69,7 +69,7 @@ class ConfigTests(unittest.TestCase):
                 self.assertEqual(m.prepare("--install"), "EXACT_MATCH_UNCHANGED")
                 self.assertEqual(target.read_bytes(), m.CONFIG)
                 target.write_bytes(b"changed\n")
-                with self.assertRaisesRegex(m.Blocked, "DIFFERENT"):
+                with self.assertRaisesRegex(m.Blocked, "EXISTING_CONFIG_DIFFERS"):
                     # Replace the injected checker with production equivalent behavior
                     with patch.object(m, "existing_config", side_effect=m.Blocked("EXISTING_CONFIG_DIFFERS")):
                         m.prepare("--install")
