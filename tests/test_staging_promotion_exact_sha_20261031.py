@@ -32,17 +32,32 @@ def job_condition(source: str, name: str) -> str:
 def authorized_promotion(source: str) -> bool:
     try:
         cond = job_condition(source, "promote")
-    except ValueError:
+        block = job_block(source, "promote")
+        write = block.split("      - name: Move staging-approved only after all verification passes\n", 1)[1]
+        write_gate = write.split("        env:\n", 1)[0].strip()
+        skipped = block.split("      - name: Record blocked staging promotion when exact owner SHA is absent\n", 1)[1]
+        no_approval_gate = skipped.split("        run:\n", 1)[0].strip()
+    except (ValueError, IndexError):
         return False
     required = (
         "needs.verify.result == 'success'",
         "needs.owner_auth.result == 'success'",
         "needs.locked_visual.result == 'success'",
         "needs.postgres.result == 'success'",
-        "github.ref == 'refs/heads/main'",
-        "vars." + OWNER_VAR + " == github.sha",
     )
-    return all(cond.count(x) == 1 for x in required) and " || " not in cond and " or " not in cond
+    allowed_write = (
+        "if: ${{ github.ref == 'refs/heads/main' && "
+        "vars." + OWNER_VAR + " == github.sha }}"
+    )
+    blocked_write = (
+        "if: ${{ github.ref != 'refs/heads/main' || "
+        "vars." + OWNER_VAR + " != github.sha }}"
+    )
+    return (all(cond.count(x) == 1 for x in required)
+            and " || " not in cond
+            and write_gate == allowed_write
+            and no_approval_gate.startswith(blocked_write))
+
 
 
 def authorized_workflow_run(source: str) -> bool:
@@ -52,6 +67,7 @@ def authorized_workflow_run(source: str) -> bool:
         return False
     required = (
         "github.event_name == 'workflow_run'",
+        "github.event.workflow_run.head_branch == 'main'",
         "github.event.workflow_run.conclusion == 'success'",
         "vars." + OWNER_VAR + " == github.event.workflow_run.head_sha",
     )
@@ -61,6 +77,7 @@ def authorized_workflow_run(source: str) -> bool:
         "github.event_name == 'workflow_dispatch' || "
         "github.event_name == 'schedule' || "
         "(github.event_name == 'workflow_run' && "
+        "github.event.workflow_run.head_branch == 'main' && "
         "github.event.workflow_run.conclusion == 'success' && "
         "vars." + OWNER_VAR + " == github.event.workflow_run.head_sha)"
     )
