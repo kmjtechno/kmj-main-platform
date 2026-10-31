@@ -203,6 +203,46 @@ for cur, dirs, files in os.walk(root, followlinks=False):
             lines.append("f:%s:%o:%s" % (r, st.st_mode & 0o7777, h.hexdigest()))
         else:
             die("SPECIAL")
+# Blade's compiled views are executable PHP. The mutable upload/session/cache
+# storage subtrees are intentionally outside the release seal, but that exclusion
+# MUST NOT apply to storage/framework/views. Staging should precompile views
+# before root seals the candidate; the live PHP user may READ, never WRITE them.
+views_root = os.path.join(root, "storage", "framework", "views")
+for r in ("storage", "storage/framework", "storage/framework/views"):
+    p = os.path.join(root, r)
+    try: st = os.lstat(p)
+    except OSError: die("VIEWS_MISSING")
+    if not stat.S_ISDIR(st.st_mode) or stat.S_ISLNK(st.st_mode): die("VIEWS_LINK")
+    if st.st_uid != os.getuid() or st.st_mode & 0o022: die("VIEWS_WRITABLE")
+    # PHP service must traverse these immutable parent directories.
+    if not st.st_mode & 0o005 == 0o005: die("VIEWS_UNREADABLE")
+    lines.append("d:%s:%o" % (r, st.st_mode & 0o7777))
+    count += 1
+compiled = 0
+for cur, dirs, files in os.walk(views_root, followlinks=False):
+    dirs.sort()
+    for name in sorted(dirs + files):
+        p = os.path.join(cur, name)
+        rel = os.path.relpath(p, root).replace(os.sep, "/")
+        try: st = os.lstat(p)
+        except OSError: die("VIEWS_DRIFT")
+        count += 1
+        if count > 400000: die("TOO_MANY")
+        if st.st_uid != os.getuid() or st.st_mode & 0o022: die("VIEWS_WRITABLE")
+        if stat.S_ISLNK(st.st_mode): die("VIEWS_LINK")
+        if stat.S_ISDIR(st.st_mode):
+            if not st.st_mode & 0o005 == 0o005: die("VIEWS_UNREADABLE")
+            lines.append("d:%s:%o" % (rel, st.st_mode & 0o7777))
+        elif stat.S_ISREG(st.st_mode):
+            if st.st_nlink != 1: die("VIEWS_HARDLINK")
+            if not st.st_mode & 0o004: die("VIEWS_UNREADABLE")
+            h = hashlib.sha256()
+            with open(p, "rb") as f:
+                for chunk in iter(lambda: f.read(1 << 20), b""): h.update(chunk)
+            lines.append("f:%s:%o:%s" % (rel, st.st_mode & 0o7777, h.hexdigest()))
+            if name.endswith(".php"): compiled += 1
+        else: die("VIEWS_SPECIAL")
+if compiled == 0: die("VIEWS_UNCOMPILED")
 print("OK " + hashlib.sha256("\n".join(sorted(lines)).encode()).hexdigest())
 DIGEST_PY
 }
