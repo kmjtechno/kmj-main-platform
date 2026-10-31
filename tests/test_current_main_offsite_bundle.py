@@ -2,6 +2,8 @@
 import hashlib
 import importlib.util
 import io
+import os
+import stat
 import json
 from pathlib import Path
 import subprocess
@@ -76,6 +78,42 @@ def fixture(root, *, evil=False):
 
 
 class ExactMainSealerTests(unittest.TestCase):
+    def test_root_lock_rejects_symlinks_hardlinks_and_public_modes(self):
+        # Exercise the exact production open flags with our unprivileged uid.
+        # No /run/lock, production paths or privileged files are touched.
+        with tempfile.TemporaryDirectory() as tmp:
+            base = Path(tmp)
+            directory = base / "locks"
+            directory.mkdir(mode=0o700)
+            lock = directory / mod.RELEASE_LOCK_NAME
+            fd = mod.open_release_lock(directory, expected_uid=os.getuid())
+            try:
+                self.assertTrue(stat.S_ISREG(os.fstat(fd).st_mode))
+                self.assertEqual(os.fstat(fd).st_nlink, 1)
+            finally:
+                os.close(fd)
+            lock.unlink()
+            sentinel = base / "sentinel"
+            sentinel.write_text("UNTOUCHED")
+            lock.symlink_to(sentinel)
+            with self.assertRaises(OSError):
+                mod.open_release_lock(directory, expected_uid=os.getuid())
+            self.assertEqual(sentinel.read_text(), "UNTOUCHED")
+            lock.unlink()
+            os.link(sentinel, lock)
+            with self.assertRaisesRegex(RuntimeError, "LOCK_FILE_UNSAFE"):
+                mod.open_release_lock(directory, expected_uid=os.getuid())
+            lock.unlink()
+            lock.write_text("private")
+            os.chmod(lock, 0o644)
+            with self.assertRaisesRegex(RuntimeError, "LOCK_FILE_UNSAFE"):
+                mod.open_release_lock(directory, expected_uid=os.getuid())
+            lock.unlink()
+            alias = base / "symlink-lock-dir"
+            alias.symlink_to(directory, target_is_directory=True)
+            with self.assertRaises(OSError):
+                mod.open_release_lock(alias, expected_uid=os.getuid())
+
     def test_invalid_cli_refused_before_host_or_data(self):
         for args in ([], ["main"], [SHA], [SHA, "wrong"]):
             with self.subTest(args=args):
