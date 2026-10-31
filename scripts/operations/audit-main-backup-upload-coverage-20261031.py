@@ -63,7 +63,7 @@ def snapshot_storage(root: Path) -> dict[str, tuple[int, str]]:
 
     try:
         for parent, dirs, files, dirfd in os.fwalk(
-            ".", top_fd=root_fd, follow_symlinks=False, onerror=fail_walk
+            ".", dir_fd=root_fd, follow_symlinks=False, onerror=fail_walk
         ):
             for name in dirs:
                 info = os.stat(name, dir_fd=dirfd, follow_symlinks=False)
