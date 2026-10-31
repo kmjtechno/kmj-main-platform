@@ -1,0 +1,16 @@
+# Source of truth for the GUARDED staging activation unit. Installing it as root is an OWNER action
+# (never done by CI or an agent). The Supervisor attests this exact file by SHA-256 and requires the
+# fixed ExecStart below; there is deliberately no install/enable section and no drop-in support.
+[Unit]
+Description=KMJ Main Platform guarded staging activation (owner-approved SHA only)
+ConditionPathExists=/etc/kmj-codebridge/main-platform-staging-approval.json
+
+[Service]
+Type=oneshot
+User=root
+ExecStart=/usr/bin/bash /usr/local/libexec/kmj-codebridge/kmj-main-platform-staging-deploy.sh
+TimeoutStartSec=300
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+ReadWritePaths=/home/kmjstage/htdocs /run/lock

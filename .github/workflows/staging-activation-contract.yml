@@ -1,0 +1,35 @@
+name: Staging Activation Contract
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/staging-activation-contract.yml'
+      - 'deploy/staging/**'
+      - 'scripts/operations/build-staging-approval-proposal-20261031.py'
+      - 'tests/test_staging_activation_contract.py'
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/staging-activation-contract.yml'
+      - 'deploy/staging/**'
+      - 'scripts/operations/build-staging-approval-proposal-20261031.py'
+      - 'tests/test_staging_activation_contract.py'
+
+permissions:
+  contents: read
+
+jobs:
+  contract:
+    name: Guarded staging activation runner (sandboxed, no root, no deploy)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - name: Verify exact-head staging activation contract
+        run: |
+          set -euo pipefail
+          bash -n deploy/staging/kmj-main-platform-staging-deploy.sh
+          python3 -B -m unittest tests.test_staging_activation_contract -v
