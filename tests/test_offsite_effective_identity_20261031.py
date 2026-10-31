@@ -97,6 +97,26 @@ class Trace(unittest.TestCase):
         self.assertEqual(m.classify(env, uid)["kind"], "RACE_OR_HARDLINK")
         self.assertEqual(m.classify(d / "nope", uid)["kind"], "MISSING")
 
+    def test_real_ed25519_fingerprint_does_not_use_ssh_keygen_dash_stdin(self):
+        import hashlib
+        import base64
+        with tempfile.TemporaryDirectory(prefix="kmj-a2c-key-") as tmp:
+            key = Path(tmp) / "identity"
+            proc = subprocess.run(["/usr/bin/ssh-keygen", "-q", "-t", "ed25519",
+                                   "-N", "", "-f", str(key)], capture_output=True, timeout=15)
+            self.assertEqual(proc.returncode, 0)
+            result = subprocess.run(["/usr/bin/ssh-keygen", "-lf", str(key) + ".pub", "-E", "sha256"],
+                                    text=True, capture_output=True, timeout=10, check=True)
+            self.assertEqual(m.fingerprint(key), result.stdout.split()[1])
+            self.assertNotIn('"-l", "-E", "sha256", "-f", "-"', SRC.read_text())
+
+    def test_invalid_public_wire_and_failed_key_derivation_yield_no_fingerprint(self):
+        for value in [None, "", "not a key", "ssh-ed25519 not-base64"]:
+            def fake(argv, stdin=None, timeout=8):
+                return value
+            with self.subTest(value=value):
+                self.assertIsNone(m.fingerprint(Path("/not/a/key"), run=fake))
+
     def test_static_read_only_and_no_ssh_G_or_network(self):
         t = SRC.read_text()
         for bad in ("shell=True", "os.system", "urllib", "socket", "ssh\", \"-G", "ssh-keyscan", "restart", "os.write", ".write_text", "chmod", "unlink"):
