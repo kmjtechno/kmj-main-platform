@@ -1,0 +1,20 @@
+name: P0 backup upload coverage audit contract
+on:
+  pull_request:
+    paths:
+      - scripts/operations/audit-main-backup-upload-coverage-20261031.py
+      - scripts/tests/test_backup_upload_coverage_20261031.py
+      - .github/workflows/backup-upload-coverage-contract.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  advisory-coverage-negative-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run offline advisory and negative tests
+        run: python3 -m unittest discover -s scripts/tests -p 'test_backup_upload_coverage_20261031.py' -v
+      - name: Syntax validation
+        run: python3 -m py_compile scripts/operations/audit-main-backup-upload-coverage-20261031.py
