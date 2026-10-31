@@ -122,19 +122,26 @@ def restored_inventory(root: Path) -> tuple[dict[str, tuple[int, str]], set[str]
                 )
                 try:
                     before = os.fstat(fd)
+                    # A byte-identical hardlink to a live file is not an
+                    # independently restored file. The inner archive rejects
+                    # hardlink members, so every restored regular file must
+                    # have exactly one link throughout verification.
                     if (not stat.S_ISREG(before.st_mode)
+                        or before.st_nlink != 1
                         or ((before.st_dev, before.st_ino, before.st_size,
-                             before.st_mtime_ns, before.st_ctime_ns)
+                             before.st_mtime_ns, before.st_ctime_ns, before.st_nlink)
                             != (before_path.st_dev, before_path.st_ino, before_path.st_size,
-                                before_path.st_mtime_ns, before_path.st_ctime_ns))):
+                                before_path.st_mtime_ns, before_path.st_ctime_ns,
+                                before_path.st_nlink))):
                         fail()
                     with os.fdopen(os.dup(fd), "rb") as stream:
                         checksum = sha256_stream(stream)
                     after = os.fstat(fd)
-                    if ((before.st_dev, before.st_ino, before.st_size,
-                         before.st_mtime_ns, before.st_ctime_ns)
+                    if (after.st_nlink != 1 or
+                        (before.st_dev, before.st_ino, before.st_size,
+                         before.st_mtime_ns, before.st_ctime_ns, before.st_nlink)
                         != (after.st_dev, after.st_ino, after.st_size,
-                            after.st_mtime_ns, after.st_ctime_ns)):
+                            after.st_mtime_ns, after.st_ctime_ns, after.st_nlink)):
                         fail()
                     rel = (rel_parent / name).as_posix()
                     files[rel] = (before.st_size, checksum)
