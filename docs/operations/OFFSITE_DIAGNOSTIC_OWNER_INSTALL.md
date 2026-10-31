@@ -1,0 +1,12 @@
+# ELITE offsite failure diagnostic — owner-gated installation
+
+This procedure prepares **one fixed read-only diagnostic** for `kmj-elite-offsite-backup.service`. It never transfers a backup, proves recovery, installs a new CodeBridge agent, starts any service, or activates production. The old unit's exit 255 remains unresolved until actual journal evidence is classified.
+
+The diagnostic source is `scripts/operations/diagnose-offsite-backup-unit-20261029.sh`. CodeBridge's `src/offsite-diagnostic-policy.js` independently pins SHA-256 `3ac8127f8e66ac4579330ae7671c2a2b31f68f6865c2a7c67e376adb475f6e32`.
+
+1. Review this installer and diagnostic from a verified exact commit, and inspect in a nonprivileged checkout with `bash scripts/operations/install-offsite-diagnostic-owner-20261031.sh --inspect`. It must report `INSPECT_ONLY`.
+2. An independent root operator must place the reviewed immutable archive under `/root/kmj-approved/<exact-40-hex-commit>/`, rooted in a fully root-owned, non-writable, non-symlink directory chain. Run `bash scripts/operations/install-offsite-diagnostic-owner-20261031.sh --install` from that archive **only after verifying the archive and installer themselves**. The installer creates only the fixed absent `/usr/local/libexec/kmj-main-platform-diagnose-offsite-backup-unit-20261029.sh` with no-clobber hardlink publication and root:root 0750 metadata. Any existing target or mismatch requires independent investigation, never automatic replacement.
+
+The current CodeBridge agent must separately be upgraded through an authenticated signed canary/rollback. Only after it advertises the fixed `supervisor_main_platform_offsite_diagnostic` action, validates the attested installed script and confirms owner permissions may its exact fixed diagnostic be invoked. That action returns a categorical failure class from the exact failed systemd invocation, never raw logs or secrets. No root shell or generic command option is accepted.
+
+**Still required before production:** fresh PostgreSQL plus all upload locations backup, encrypted remote readback, independent disposable restore, rollback drill, current release-pointer attestation, authenticated owner QA and protected approval. This installer alone satisfies none of those gates.
