@@ -16,6 +16,8 @@ import {
     VIEWPORTS,
     auditImagesInPage,
     hashServedManifest,
+    installCandidateNetworkGuard,
+    isCandidateRequestUrl,
     MAX_MANIFEST_BYTES,
     sha256,
     judge,
@@ -410,4 +412,64 @@ void test('chunked manifest exceeding byte cap cannot pass even without Content-
     }));
     assert.equal(result, null);
     assert.equal(cancelled, true);
+});
+
+void test('owner QA network guard blocks external HTTP and every WebSocket', async () => {
+    const base = new URL(good.KMJ_QA_BASE_URL);
+    for (const allowed of [
+        'http://127.0.0.1:8123/services/kmj-codebridge',
+        'http://127.0.0.1:8123/build/manifest.json',
+    ])
+        assert.equal(isCandidateRequestUrl(allowed, base), true, allowed);
+    for (const blocked of [
+        'https://kmjtechno.com/',
+        'http://127.0.0.1:8124/',
+        'http://localhost:8123/',
+        'http://example.com/',
+        'file:///etc/passwd',
+        'ws://127.0.0.1:8123/',
+        'invalid',
+    ])
+        assert.equal(isCandidateRequestUrl(blocked, base), false, blocked);
+
+    let httpHandler;
+    let socketHandler;
+    const context = {
+        async route(pattern, handler) {
+            assert.equal(pattern, '**/*');
+            httpHandler = handler;
+        },
+        async routeWebSocket(pattern, handler) {
+            assert.equal(pattern, '**/*');
+            socketHandler = handler;
+        },
+    };
+    await installCandidateNetworkGuard(context, base);
+    for (const [url, expected] of [
+        ['http://127.0.0.1:8123/products', 'continue'],
+        ['https://external.example/private', 'abort'],
+        ['http://127.0.0.1:8124/private', 'abort'],
+    ]) {
+        let actual;
+        await httpHandler({
+            request: () => ({ url: () => url }),
+            async continue() { actual = 'continue'; },
+            async abort(reason) {
+                assert.equal(reason, 'blockedbyclient');
+                actual = 'abort';
+            },
+        });
+        assert.equal(actual, expected, url);
+    }
+    let socketClosed = 0;
+    await socketHandler({ close() { socketClosed++; } });
+    assert.equal(socketClosed, 1);
+    await assert.rejects(
+        installCandidateNetworkGuard({ route() {} }, base),
+        /CANDIDATE_NETWORK_ISOLATION_UNAVAILABLE/,
+    );
+    await assert.rejects(
+        installCandidateNetworkGuard({ routeWebSocket() {} }, base),
+        /CANDIDATE_NETWORK_ISOLATION_UNAVAILABLE/,
+    );
 });
