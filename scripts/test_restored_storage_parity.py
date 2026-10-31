@@ -220,10 +220,10 @@ class RestoredStorageParityTests(unittest.TestCase):
                         if "sed -n '" in line and f"^{key}=" in line)
             expression = line.split("sed -n '", 1)[1].split("'", 1)[0]
             result = subprocess.run(
-                ["sed", "-n", expression], input=f"{key}={value}\\n",
+                ["sed", "-n", expression], input=f"{key}={value}\n",
                 text=True, capture_output=True, check=True,
             )
-            self.assertEqual(result.stdout, value + "\\n")
+            self.assertEqual(result.stdout, value + "\n")
 
     def test_bad_argument_count_rejected(self):
         self.assertEqual(module.main([]), 2)
