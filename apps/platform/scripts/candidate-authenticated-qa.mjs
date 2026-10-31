@@ -118,6 +118,34 @@ export function sha256(buffer) {
     return createHash('sha256').update(buffer).digest('hex');
 }
 
+// Owner storage-state may contain cookies for other domains. During QA,
+// no page request or WebSocket may reach a non-candidate origin; service
+// workers are disabled by the caller so they cannot bypass this route guard.
+export function isCandidateRequestUrl(rawUrl, base) {
+    try {
+        const target = new URL(rawUrl);
+        return target.protocol === 'http:' && target.origin === base.origin;
+    } catch {
+        return false;
+    }
+}
+
+export async function installCandidateNetworkGuard(context, base) {
+    // A missing Playwright interception API is a hard block, never a downgrade.
+    if (typeof context.route !== 'function' ||
+        typeof context.routeWebSocket !== 'function')
+        throw new Error('CANDIDATE_NETWORK_ISOLATION_UNAVAILABLE');
+    await context.route('**/*', async (route) => {
+        if (isCandidateRequestUrl(route.request().url(), base))
+            await route.continue();
+        else
+            await route.abort('blockedbyclient');
+    });
+    // Read-only owner QA needs no WebSocket connections. Block all of them,
+    // including loopback, rather than allowing credential-bearing exfiltration.
+    await context.routeWebSocket('**/*', (route) => route.close());
+}
+
 export const MAX_MANIFEST_BYTES = 8 * 1024 * 1024;
 
 // A stalled or unbounded loopback response must never hang owner QA or exhaust
@@ -349,6 +377,23 @@ async function main() {
         chromiumSandbox: true,
     });
     try {
+        // Contexts used for owner QA must not reach third-party hosts, even if
+        // the owner-provided storage state contains cookies for those hosts.
+        const guardedBrowser = {
+            async newContext(options) {
+                const context = await browser.newContext({
+                    ...options,
+                    serviceWorkers: 'block',
+                });
+                try {
+                    await installCandidateNetworkGuard(context, base);
+                    return context;
+                } catch (error) {
+                    await context.close();
+                    throw error;
+                }
+            },
+        };
         // Bind the served runtime to the candidate build before trusting any page.
         const servedHash = await hashServedManifest(base);
         receipt.runtimeBoundToCandidateBuild =
@@ -371,7 +416,7 @@ async function main() {
         for (const viewport of VIEWPORTS)
             for (const page of PAGES)
                 receipt.results.push(
-                    await runPage(browser, storageState, base, viewport, page),
+                    await runPage(guardedBrowser, storageState, base, viewport, page),
                 );
     } finally {
         await browser.close();
