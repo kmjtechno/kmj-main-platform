@@ -28,6 +28,8 @@ class StaticContract(unittest.TestCase):
         for bad in ("eval ", "curl ", "wget ", "systemctl", "composer", "npm ", "git pull", "git fetch",
                     "rm -rf", "$@", "$*", "${1"):
             self.assertNotIn(bad, t, bad)
+        self.assertIsNone(re.search(r"^\s*exec\s+\d*>", raw, re.M), "truncating lock open is forbidden")
+        self.assertIn("noclobber", raw)
         self.assertNotIn("/home/kmjprod", re.sub(r"^(PROD=|.*\$PROD|.*prod_target|.*kmjprod/releases).*$", "", t, flags=re.M))
 
     def test_proposal_is_bound_but_never_approved(self):
@@ -61,6 +63,10 @@ class Sandbox(unittest.TestCase):
         self.OLD = self.make_release()
         self.NEW = self.make_release()
         os.symlink(self.rel / self.OLD / "apps/platform", self.d / "stage/htdocs/site")
+        (self.d / "unitdir").mkdir(mode=0o755)
+        self.unit = self.d / "unitdir/staging.service"
+        shutil.copy(UNIT, self.unit)
+        os.chmod(self.unit, 0o644)
         self.runner = self.d / "runner.sh"
         self.build_runner()
         self.write_approval()
@@ -94,6 +100,7 @@ class Sandbox(unittest.TestCase):
             "LOCKFILE=/run/lock/kmj-main-platform-staging-deploy.lock": f"LOCKFILE={self.d}/lock",
             "REQUIRE_UID=0": f"REQUIRE_UID={os.getuid()}",
             "ANCHOR=/\n": f"ANCHOR={self.d}\n",
+            "UNIT_FILE=/etc/systemd/system/kmj-main-platform-staging-deploy.service": f"UNIT_FILE={self.unit}",
             "STAGE_USER=kmjstage": f"STAGE_USER={self.me}",
             "EXPECTED_HOST=KMJ-elite": f"EXPECTED_HOST={self.host}",
             '"/home/kmjprod/releases/': f'"{self.d}/prod/releases/',
@@ -108,7 +115,7 @@ class Sandbox(unittest.TestCase):
         v = {"schema": "kmj.main-platform.staging-approval.v1", "approvedSha": self.NEW, "expectedCurrentSha": self.OLD,
              "expectedProductionRelease": PROD,
              "runnerSha256": hashlib.sha256(self.runner.read_bytes()).hexdigest(),
-             "unitSha256": "c" * 64, "backupVerified": True, "rollbackVerified": True, "storageVerified": True,
+             "unitSha256": hashlib.sha256(self.unit.read_bytes()).hexdigest(), "backupVerified": True, "rollbackVerified": True, "storageVerified": True,
              "zeroAdditionalCostVerified": True}
         v.update(over)
         p = self.d / "etc/approval.json"
@@ -204,6 +211,88 @@ class Sandbox(unittest.TestCase):
     def test_loose_env_file_mode_is_refused(self):
         os.chmod(self.rel / self.NEW / "apps/platform/.env", 0o644)
         self.assertBlocked(*self.run_runner(), "CANDIDATE_ENV_MODE")
+
+    # ---- review 6540683745 ----
+    def lock(self):
+        return self.d / "lock"
+
+    def test_lock_symlink_is_never_followed_or_truncated(self):
+        victim = self.d / "victim.txt"
+        victim.write_text("precious")
+        os.symlink(victim, self.lock())
+        self.assertBlocked(*self.run_runner(), "LOCK")
+        self.assertEqual(victim.read_text(), "precious")
+
+    def test_lock_hardlink_and_loose_existing_lock(self):
+        victim = self.d / "victim2.txt"
+        victim.write_text("precious")
+        os.link(victim, self.lock())
+        self.assertBlocked(*self.run_runner(), "LOCK")
+        self.assertEqual(victim.read_text(), "precious")
+        os.unlink(self.lock())
+        self.lock().write_text("")
+        os.chmod(self.lock(), 0o666)  # existing regular lock with loose mode is tightened, run proceeds
+        self.assertEqual(self.run_runner()[0], 0)
+        self.assertEqual(oct(os.stat(self.lock()).st_mode & 0o777), "0o600")
+
+    @unittest.skipUnless(os.getuid() == 0, "needs root to chown to a foreign uid")
+    def test_lock_with_foreign_owner_is_refused(self):
+        self.lock().write_text("")
+        os.chown(self.lock(), 54321, 54321)
+        self.assertBlocked(*self.run_runner(), "LOCK")
+
+    def test_installed_unit_bytes_must_match_approved_digest(self):
+        self.unit.write_text(self.unit.read_text() + "# tampered\n")
+        self.assertBlocked(*self.run_runner(), "UNIT_DIGEST")
+
+    def test_unit_dropin_extra_execstart_loose_mode_or_missing(self):
+        (self.d / "unitdir/staging.service.d").mkdir()
+        self.assertBlocked(*self.run_runner(), "UNIT_DROPIN")
+        (self.d / "unitdir/staging.service.d").rmdir()
+        os.chmod(self.unit, 0o666)
+        self.assertBlocked(*self.run_runner(), "UNIT_FILE")
+        os.chmod(self.unit, 0o644)
+        self.unit.write_text(self.unit.read_text().replace("ExecStart=/usr/bin/bash", "ExecStart=/usr/bin/sh"))
+        self.write_approval()  # digest now matches the tampered bytes, ExecStart still must be the fixed line
+        self.assertBlocked(*self.run_runner(), "UNIT_EXEC")
+        self.unit.unlink()
+        self.assertBlocked(*self.run_runner(), "UNIT_FILE")
+
+    def test_already_active_still_validates_the_selected_release(self):
+        self.assertEqual(self.run_runner()[0], 0)  # activate NEW
+        self.assertEqual(self.run_runner(), (0, f"KMJ_STAGE_ACTIVATE=ALREADY_ACTIVE sha={self.NEW}"))
+        (self.rel / self.NEW / "apps/platform/.env").write_text("APP_ENV=production\nAPP_URL=https://staging.kmjtechno.com\n")
+        code, out = self.run_runner()
+        self.assertEqual((code, out), (2, "KMJ_STAGE_ACTIVATE=BLOCKED_CANDIDATE_NOT_STAGING"))
+        (self.rel / self.NEW / "apps/platform/.env").write_text("APP_ENV=staging\nAPP_URL=https://staging.kmjtechno.com\n")
+        shutil.rmtree(self.rel / self.NEW / "apps/platform/public/build")
+        self.assertEqual(self.run_runner(), (2, "KMJ_STAGE_ACTIVATE=BLOCKED_CANDIDATE_MISSING"))
+
+    def test_writable_or_linked_candidate_chain_is_refused(self):
+        app = self.rel / self.NEW / "apps/platform"
+        os.chmod(app, 0o777)
+        self.assertBlocked(*self.run_runner(), "CANDIDATE_WRITABLE")
+        os.chmod(app, 0o755)
+        os.chmod(self.rel, 0o777)
+        self.assertBlocked(*self.run_runner(), "RELEASES_CHAIN")
+        os.chmod(self.rel, 0o755)
+        os.chmod(self.d / "stage/htdocs", 0o777)
+        self.assertBlocked(*self.run_runner(), "SITE_CHAIN")
+        os.chmod(self.d / "stage/htdocs", 0o755)
+
+    def test_symlinked_intermediate_component_is_refused(self):
+        real = self.rel / self.NEW
+        moved = self.d / "moved"
+        real.rename(moved)
+        os.symlink(moved, real)  # release dir is now a symlink to a real tree elsewhere
+        self.assertBlocked(*self.run_runner(), "CANDIDATE_MISSING")
+
+    def test_nothing_is_modified_outside_the_staging_link(self):
+        before = {str(p): p.read_bytes() for p in (self.d / "etc").rglob("*") if p.is_file()}
+        self.run_runner()
+        after = {str(p): p.read_bytes() for p in (self.d / "etc").rglob("*") if p.is_file()}
+        self.assertEqual(before, after)
+        self.assertEqual(os.readlink(self.d / "prod/current"), str(self.d / "prod/releases" / PROD))
 
 
 if __name__ == "__main__":
