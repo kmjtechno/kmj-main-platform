@@ -37,7 +37,12 @@ def snapshot_storage(root: Path) -> dict[str, tuple[int, str]]:
     if root.is_symlink() or not root.is_dir():
         reject("STORAGE_APP_NOT_REAL_DIRECTORY")
     result: dict[str, tuple[int, str]] = {}
-    for parent, dirs, files in os.walk(root, followlinks=False):
+    # os.walk silently skips unreadable subdirectories without onerror.
+    # A partial inventory must NEVER look like successful backup parity.
+    def fail_walk(error: OSError) -> None:
+        reject("LIVE_STORAGE_SCAN_ERROR")
+
+    for parent, dirs, files in os.walk(root, followlinks=False, onerror=fail_walk):
         for name in dirs:
             p = Path(parent) / name
             if p.is_symlink():
