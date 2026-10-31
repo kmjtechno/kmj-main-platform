@@ -55,13 +55,16 @@ def authorized_workflow_run(source: str) -> bool:
         "github.event.workflow_run.conclusion == 'success'",
         "vars." + OWNER_VAR + " == github.event.workflow_run.head_sha",
     )
-    return (
-        all(cond.count(x) == 1 for x in required)
-        and "github.event_name == 'schedule'" in cond
-        and "github.event_name == 'workflow_dispatch'" in cond
-        and " || " not in cond
-        and " or " not in cond
+    # Explicit dispatch and schedule are allowed; the workflow_run OR branch
+    # must be grouped with success AND exact-SHA approval (never free-standing).
+    expected = (
+        "github.event_name == 'workflow_dispatch' || "
+        "github.event_name == 'schedule' || "
+        "(github.event_name == 'workflow_run' && "
+        "github.event.workflow_run.conclusion == 'success' && "
+        "vars." + OWNER_VAR + " == github.event.workflow_run.head_sha)"
     )
+    return all(cond.count(x) == 1 for x in required) and cond == expected
 
 
 class ExactShaStagingApprovalContract(unittest.TestCase):
