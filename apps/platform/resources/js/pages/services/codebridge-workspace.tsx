@@ -600,7 +600,8 @@ export default function CodeBridgeWorkspace(props: Props) {
                                     <p className="font-bold">
                                         Suggested device tool:{' '}
                                         <code>{proposal.tool}</code>
-                                        {Object.keys(proposal.arguments).length > 0 && (
+                                        {Object.keys(proposal.arguments)
+                                            .length > 0 && (
                                             <>
                                                 {' '}
                                                 <code>
@@ -633,7 +634,9 @@ export default function CodeBridgeWorkspace(props: Props) {
                                                             'confirm',
                                                         ),
                                                         {},
-                                                        { preserveScroll: true },
+                                                        {
+                                                            preserveScroll: true,
+                                                        },
                                                     )
                                                 }
                                                 className="rounded-lg bg-red-600 px-3 py-2 text-xs font-bold text-white"
@@ -650,7 +653,9 @@ export default function CodeBridgeWorkspace(props: Props) {
                                                             'reject',
                                                         ),
                                                         {},
-                                                        { preserveScroll: true },
+                                                        {
+                                                            preserveScroll: true,
+                                                        },
                                                     )
                                                 }
                                                 className="rounded-lg border px-3 py-2 text-xs font-bold"
