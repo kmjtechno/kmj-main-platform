@@ -64,7 +64,13 @@ void test('device pairing stays in the Control Center', () => {
 void test('chat routes are authenticated, throttled and ULID/UUID constrained', () => {
     assert.match(routes, /whereUuid\('conversation'\)/);
     assert.match(routes, /whereUlid\('message'\)/);
-    assert.match(routes, /proposals\/\{proposal\}\/confirm[\s\S]*?whereUlid\('proposal'\)/);
-    assert.match(routes, /proposals\/\{proposal\}\/reject[\s\S]*?whereUlid\('proposal'\)/);
+    assert.match(
+        routes,
+        /proposals\/\{proposal\}\/confirm[\s\S]*?whereUlid\('proposal'\)/,
+    );
+    assert.match(
+        routes,
+        /proposals\/\{proposal\}\/reject[\s\S]*?whereUlid\('proposal'\)/,
+    );
     assert.equal((routes.match(/throttle:/g) ?? []).length >= 5, true);
 });
