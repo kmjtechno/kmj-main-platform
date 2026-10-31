@@ -1,0 +1,97 @@
+"""Synthetic-only restore byte-parity tests. No remote, production DB or root."""
+from __future__ import annotations
+import importlib.util
+import io
+from pathlib import Path
+import tarfile
+import tempfile
+import unittest
+
+SOURCE = Path(__file__).parent / "operations/verify-restored-storage-parity.py"
+spec = importlib.util.spec_from_file_location("restored_storage_parity", SOURCE)
+module = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(module)
+
+
+class RestoredStorageParityTests(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        self.base = Path(self.tmp.name)
+        self.output = self.base / "restored"
+        self.output.mkdir()
+        self.tar = self.base / "storage.tar.gz"
+        self.make_tar()
+        (self.output / "storage/app/public").mkdir(parents=True)
+        (self.output / "storage/app/public/picture.png").write_bytes(b"original upload")
+
+    def make_tar(self, extra=None):
+        with tarfile.open(self.tar, "w:gz") as archive:
+            for path in ("storage/app", "storage/app/public"):
+                info = tarfile.TarInfo(path)
+                info.type = tarfile.DIRTYPE
+                archive.addfile(info)
+            info = tarfile.TarInfo("storage/app/public/picture.png")
+            data = b"original upload"
+            info.size = len(data)
+            archive.addfile(info, io.BytesIO(data))
+            if extra:
+                name, data, kind = extra
+                info = tarfile.TarInfo(name)
+                info.type = kind
+                info.size = len(data) if kind == tarfile.REGTYPE else 0
+                archive.addfile(info, io.BytesIO(data) if kind == tarfile.REGTYPE else None)
+
+    def assert_rejected(self):
+        with self.assertRaises(module.StorageParityError):
+            module.verify(self.tar, self.output)
+
+    def test_exact_bytes_pass(self):
+        self.assertEqual(module.verify(self.tar, self.output), 1)
+
+    def test_changed_upload_rejected(self):
+        (self.output / "storage/app/public/picture.png").write_bytes(b"tampered upload")
+        self.assert_rejected()
+
+    def test_missing_upload_rejected(self):
+        (self.output / "storage/app/public/picture.png").unlink()
+        self.assert_rejected()
+
+    def test_extra_upload_rejected(self):
+        (self.output / "storage/app/public/extra.png").write_bytes(b"extra")
+        self.assert_rejected()
+
+    def test_symlink_rejected(self):
+        p = self.output / "storage/app/public/picture.png"
+        p.unlink()
+        p.symlink_to(self.tar)
+        self.assert_rejected()
+
+    def test_symlinked_directory_rejected(self):
+        path = self.output / "storage/app/public"
+        path.rename(self.output / "other")
+        path.symlink_to(self.output / "other", target_is_directory=True)
+        self.assert_rejected()
+
+    def test_extra_directory_rejected(self):
+        (self.output / "storage/app/extra").mkdir()
+        self.assert_rejected()
+
+    def test_duplicate_archive_entry_rejected(self):
+        self.make_tar(extra=("storage/app/public/picture.png", b"x", tarfile.REGTYPE))
+        self.assert_rejected()
+
+    def test_archived_symlink_rejected(self):
+        self.make_tar(extra=("storage/app/danger", b"", tarfile.SYMTYPE))
+        self.assert_rejected()
+
+    def test_archive_traversal_rejected(self):
+        self.make_tar(extra=("storage/app/../outside", b"x", tarfile.REGTYPE))
+        self.assert_rejected()
+
+    def test_bad_argument_count_rejected(self):
+        self.assertEqual(module.main([]), 2)
+
+
+if __name__ == "__main__":
+    unittest.main()

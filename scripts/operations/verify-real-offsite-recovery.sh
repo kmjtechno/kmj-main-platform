@@ -139,8 +139,17 @@ if ! tar -xzf "$tmp/extracted/storage.tar.gz" -C "$tmp/restored-storage" >/dev/n
   status RECOVERED_STORAGE FAIL; exit 1
 fi
 [[ -d "$tmp/restored-storage/storage/app" ]] || { status RECOVERED_STORAGE FAIL; exit 1; }
+# Extraction success and directory presence do NOT prove every restored file
+# survived. Compare exact file paths, SHA-256, sizes and directory layout
+# against the independently downloaded, integrity-checked archive.
+if ! python3 "$repo/scripts/operations/verify-restored-storage-parity.py" \
+  "$tmp/extracted/storage.tar.gz" "$tmp/restored-storage" >/dev/null 2>&1; then
+  status RECOVERED_STORAGE_CONTENT_PARITY FAIL
+  exit 1
+fi
 status DISPOSABLE_POSTGRES_RESTORE PASS
 status RECOVERED_APP_SCHEMA PASS
+status RECOVERED_STORAGE_CONTENT_PARITY PASS
 status RECOVERED_STORAGE PASS
 status POSTGRES_NETWORK_LISTENER DISABLED
 status PRODUCTION_DATABASE_MODIFIED NO
