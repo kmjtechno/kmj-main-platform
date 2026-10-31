@@ -29,6 +29,7 @@ class Env:
             (self.remote / f"offsite-{SHORT}.tar.gz.age").write_bytes(remote)
         self.local = root / f"backups/offsite-{SHORT}.tar.gz.age"
         self.local.write_bytes(b"ENCRYPTED-TEST-BYTES")
+        self.local.chmod(0o600)  # Local root ciphertext is protected: SFTP must keep 0600.
         ident = root / "identity"
         ident.write_text("KEY")
         conf_path = root / "offsite-sftp.conf"
@@ -67,10 +68,14 @@ case "{mode}" in
 esac
 map() {{ case "$1" in /incoming/*) echo "{r}/${{1#/incoming/}}";; *) echo "$1";; esac; }}
 while read -r cmd a b c; do
+  # OpenSSH "put -p" preserves the local mode; normalize the option.
+  if [ "$cmd" = put ] && [ "$a" = -p ]; then
+    a="$b"; b="$c"
+  fi
   a=$(map "$a"); b=$(map "$b")
   case "$cmd" in
     get) if [ -f "$a" ]; then cp "$a" "$b"; else echo "File \\"$a\\" not found." >&2; exit 1; fi ;;
-    put) case "{mode}" in corrupt) echo corrupt > "$b";; quota) echo 'Failure: No space left' >&2; exit 1;; *) cp "$a" "$b";; esac ;;
+    put) case "{mode}" in corrupt) echo corrupt > "$b";; quota) echo 'Failure: No space left' >&2; exit 1;; *) cp -p "$a" "$b";; esac ;;
     ln) case "{mode}" in nohl) echo 'Couldn'"'"'t link: Operation unsupported' >&2; exit 1;; esac
         if [ -e "$b" ]; then echo 'Couldn'"'"'t link: Failure' >&2; exit 1; fi; ln "$a" "$b" ;;
     rm) rm -f "$a" ;;
@@ -108,6 +113,15 @@ class PinnedSftpPush(unittest.TestCase):
         for flag in ("BatchMode=yes", "IdentitiesOnly=yes", "StrictHostKeyChecking=yes",
                      "PasswordAuthentication=no", "IdentityAgent=none"):
             self.assertIn(flag, log)
+
+    def test_remote_ciphertext_keeps_mode_0600(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            env = Env(Path(tmp))
+            result = env.run()
+            self.assertEqual(result.returncode, 0, result.stdout)
+            obj = env.remote / f"offsite-{SHORT}.tar.gz.age"
+            self.assertEqual(stat.S_IMODE(obj.stat().st_mode), 0o600)
+            self.assertIn("put -p ", env.sftp_log.read_text())
 
     def test_wrong_host_key_fails_before_any_sftp(self):
         r, uploaded, _, log = self.go(fingerprint="SHA256:" + "B" * 43)

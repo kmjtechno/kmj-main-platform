@@ -1,0 +1,31 @@
+name: Pinned SFTP OpenSSH Host Alias Contract
+on:
+  pull_request:
+    paths:
+      - 'scripts/operations/push-offsite-pinned-sftp-20261030.sh'
+      - 'tests/test_pinned_sftp_known_hosts_port_20261031.py'
+      - '.github/workflows/pinned-sftp-port22-known-hosts-contract.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/operations/push-offsite-pinned-sftp-20261030.sh'
+      - 'tests/test_pinned_sftp_known_hosts_port_20261031.py'
+      - '.github/workflows/pinned-sftp-port22-known-hosts-contract.yml'
+permissions:
+  contents: read
+jobs:
+  pinned-host-alias:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - name: Verify actual OpenSSH known_hosts lookup for port 22 and alternate port
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -B -m unittest discover -s tests -p 'test_pinned_sftp_known_hosts_port_20261031.py' -v
+          echo 'SFTP_KNOWN_HOSTS_DEFAULT_PORT=FIXED_SOURCE_TEST'
+          echo 'GOOGLE_OFFSITE_TRANSFER=NOT_RUN_IN_CI'
