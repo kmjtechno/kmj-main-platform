@@ -38,9 +38,9 @@ class StageContinuityAuditSafety(unittest.TestCase):
 
     def test_embedded_python_syntax_and_fail_closed_storage_precheck(self):
         source = SCRIPT.read_text(encoding="utf-8")
-        marker = "python3 - \"$s_before\" \"$new\" <<'PY'\\n"
+        marker = "python3 - \"$s_before\" \"$new\" <<'PY'\n"
         self.assertIn(marker, source)
-        block = source.split(marker, 1)[1].split("\\nPY\\n", 1)[0]
+        block = source.split(marker, 1)[1].split("\nPY\n", 1)[0]
         compile(block, str(SCRIPT) + ":embedded", "exec")
         for requirement in (
             "storage_ok = True",
