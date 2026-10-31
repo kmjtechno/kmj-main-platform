@@ -12,7 +12,7 @@ import unittest
 from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts" / "operations"))
-from prepare_fresh_main_worktree_20261031 import prepare, Blocked, main
+from prepare_fresh_main_worktree_20261031 import prepare, Blocked, main, git as guarded_git
 
 
 def git(path, *args):
@@ -95,6 +95,14 @@ class IsolatedWorktreeTests(unittest.TestCase):
         with self.assertRaisesRegex(Blocked, "ORIGIN_NOT_CANONICAL_HTTPS"):
             self.call(fetch=True)
         self.assertEqual((self.repo / "dirty-untracked.txt").read_text(), "must remain")
+
+    def test_inherited_git_config_override_cannot_change_origin(self):
+        git(self.repo, "remote", "add", "origin", "https://github.com/kmjtechno/kmj-main-platform.git")
+        malicious = {"GIT_CONFIG_COUNT": "1", "GIT_CONFIG_KEY_0": "remote.origin.url",
+                     "GIT_CONFIG_VALUE_0": "ssh://untrusted.invalid/other"}
+        with patch.dict(os.environ, malicious):
+            self.assertEqual(guarded_git(self.repo, "config", "--get", "remote.origin.url"),
+                             "https://github.com/kmjtechno/kmj-main-platform.git")
 
     def test_root_denied_even_in_cached_mode(self):
         with patch("prepare_fresh_main_worktree_20261031.os.geteuid", return_value=0):
