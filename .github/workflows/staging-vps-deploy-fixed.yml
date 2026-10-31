@@ -22,7 +22,7 @@ jobs:
     name: Verify approved commit on staging VPS
     # A successful verification workflow whose promote job was SKIPPED must not launch
     # a staging deploy attempt. Explicit owner exact-SHA authorization is required.
-    if: ${{ github.event_name == 'workflow_dispatch' || github.event_name == 'schedule' || (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success' && vars.KMJ_STAGING_PROMOTION_APPROVED_SHA == github.event.workflow_run.head_sha) }}
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event_name == 'schedule' || (github.event_name == 'workflow_run' && github.event.workflow_run.head_branch == 'main' && github.event.workflow_run.conclusion == 'success' && vars.KMJ_STAGING_PROMOTION_APPROVED_SHA == github.event.workflow_run.head_sha) }}
     runs-on: ubuntu-latest
     timeout-minutes: 25
     environment: staging
