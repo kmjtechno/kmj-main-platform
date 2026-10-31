@@ -160,8 +160,16 @@ def compare(*, show=prop, reader=read_protected, fingerprint=public_fingerprint,
     clean = (r["single_execstart"] == "YES" and r["executable_protected"] == "YES"
              and r["executable_reads_sftp_config"] == "YES" and r["executable_embeds_other_identity"] == "NO"
              and r["dropins_present"] == "NO")
-    r["service_identity_source"] = "SFTP_CONFIG_ONLY" if clean else "NOT_PROVEN"
-    r["repair_precondition_met"] = "YES" if clean and r["authorized_fingerprint_match"] == "NO" else "NO"
+    # Merely finding the config path as text in a script is not proof of
+    # its effective ssh argv, effective identity, remote authorized_keys, or
+    # successful pinned-host authentication. Local owner allowlists may be
+    # stale; neither signal authorizes a live repair or offsite key rotation.
+    # Fail closed until an independently witnessed, root-attested remote
+    # authentication receipt is verified by a separate approval gate.
+    r["service_identity_source"] = "NOT_PROVEN"
+    r["local_reference_hint"] = "CONFIG_PATH_REFERENCED" if clean else "UNVERIFIED"
+    r["repair_precondition_met"] = "NO"
+    r["remote_authorization_witnessed"] = "NO"
     r["backup_created"] = "NOT_VERIFIED"
     r["restore_verified"] = "NO"
     r["mutations"] = "NONE"
