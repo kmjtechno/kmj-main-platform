@@ -1,0 +1,25 @@
+name: C1 temporary formatter diff diagnostic
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/temporary-c1-formatter-diff.yml'
+      - 'apps/platform/resources/js/pages/services/codebridge-workspace.tsx'
+permissions:
+  contents: read
+jobs:
+  format-debug:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - name: Print formatter diff for C1 only
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd apps/platform
+          npm ci --ignore-scripts --no-audit --no-fund >/dev/null
+          node_modules/.bin/vp fmt resources/js/pages/services/codebridge-workspace.tsx
+          git diff -- resources/js/pages/services/codebridge-workspace.tsx
