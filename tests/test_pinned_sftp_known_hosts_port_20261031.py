@@ -81,6 +81,10 @@ class KnownHostsPortTests(unittest.TestCase):
         self.assertIn("IdentitiesOnly=yes", SOURCE)
         self.assertIn("IdentityAgent=none", SOURCE)
         self.assertIn("GlobalKnownHostsFile=/dev/null", SOURCE)
+        # The Google independent verifier requires the offsite ciphertext
+        # to be mode 0600; put -p preserves the protected local file mode.
+        self.assertIn("printf 'put -p %s %s\\n'", SOURCE)
+        self.assertIn("protected_file \"$LOCAL\"", SOURCE)
         self.assertIn("REMOTE_COMMIT_NO_CLOBBER PASS", SOURCE)
         self.assertIn("REMOTE_READBACK_SHA256 PASS", SOURCE)
         self.assertNotIn("StrictHostKeyChecking=no", SOURCE)
