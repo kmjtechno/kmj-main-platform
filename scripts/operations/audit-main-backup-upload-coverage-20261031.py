@@ -33,47 +33,69 @@ def digest(stream) -> str:
     return h.hexdigest()
 
 
+def open_directory_chain(root: Path) -> int:
+    """Open every ancestor without following symlinks; return the pinned root FD."""
+    if not root.is_absolute():
+        reject("STORAGE_APP_PATH_NOT_ABSOLUTE")
+    flags = os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW | os.O_CLOEXEC
+    try:
+        fd = os.open("/", flags)
+        for component in root.parts[1:]:
+            try:
+                child = os.open(component, flags, dir_fd=fd)
+            finally:
+                os.close(fd)
+            fd = child
+        return fd
+    except OSError:
+        reject("STORAGE_APP_PATH_UNSAFE")
+
+
 def snapshot_storage(root: Path) -> dict[str, tuple[int, str]]:
-    if root.is_symlink() or not root.is_dir():
-        reject("STORAGE_APP_NOT_REAL_DIRECTORY")
+    # Pin every ancestor and the storage root by descriptor. A symlink
+    # inserted between the advisory layout check and the scan cannot redirect
+    # a root-owned auditor to an unrelated tree.
+    root_fd = open_directory_chain(root)
     result: dict[str, tuple[int, str]] = {}
-    # fwalk carries directory descriptors; relative opens are no-follow and
-    # inode-bound, unlike pathname-based os.walk/root file reads.
+
     def fail_walk(error: OSError) -> None:
         reject("LIVE_STORAGE_SCAN_ERROR")
 
-    for parent, dirs, files, dirfd in os.fwalk(root, follow_symlinks=False,
-                                               onerror=fail_walk):
-        for name in dirs:
-            info = os.stat(name, dir_fd=dirfd, follow_symlinks=False)
-            if not stat.S_ISDIR(info.st_mode):
-                reject("LIVE_STORAGE_SYMLINK_OR_SPECIAL_DIR")
-        for name in files:
-            before_path = os.stat(name, dir_fd=dirfd, follow_symlinks=False)
-            if not stat.S_ISREG(before_path.st_mode):
-                reject("LIVE_STORAGE_NOT_REGULAR")
-            flags = os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK
-            fd = os.open(name, flags, dir_fd=dirfd)
-            try:
-                before = os.fstat(fd)
-                if (not stat.S_ISREG(before.st_mode) or
-                    (before.st_dev, before.st_ino, before.st_size, before.st_mtime_ns,
-                     before.st_ctime_ns) !=
-                    (before_path.st_dev, before_path.st_ino, before_path.st_size,
-                     before_path.st_mtime_ns, before_path.st_ctime_ns)):
-                    reject("LIVE_STORAGE_REPLACED")
-                with os.fdopen(os.dup(fd), "rb") as stream:
-                    checksum = digest(stream)
-                after = os.fstat(fd)
-                if (before.st_dev, before.st_ino, before.st_size, before.st_mtime_ns,
-                    before.st_ctime_ns) != (after.st_dev, after.st_ino, after.st_size,
-                    after.st_mtime_ns, after.st_ctime_ns):
-                    reject("LIVE_STORAGE_CHANGED")
-                relative_parent = Path(parent).relative_to(root)
-                rel = (relative_parent / name).as_posix()
-                result[rel] = (before.st_size, checksum)
-            finally:
-                os.close(fd)
+    try:
+        for parent, dirs, files, dirfd in os.fwalk(
+            ".", top_fd=root_fd, follow_symlinks=False, onerror=fail_walk
+        ):
+            for name in dirs:
+                info = os.stat(name, dir_fd=dirfd, follow_symlinks=False)
+                if not stat.S_ISDIR(info.st_mode):
+                    reject("LIVE_STORAGE_SYMLINK_OR_SPECIAL_DIR")
+            for name in files:
+                before_path = os.stat(name, dir_fd=dirfd, follow_symlinks=False)
+                if not stat.S_ISREG(before_path.st_mode):
+                    reject("LIVE_STORAGE_NOT_REGULAR")
+                flags = os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK
+                fd = os.open(name, flags, dir_fd=dirfd)
+                try:
+                    before = os.fstat(fd)
+                    if (not stat.S_ISREG(before.st_mode) or
+                        (before.st_dev, before.st_ino, before.st_size, before.st_mtime_ns,
+                         before.st_ctime_ns) !=
+                        (before_path.st_dev, before_path.st_ino, before_path.st_size,
+                         before_path.st_mtime_ns, before_path.st_ctime_ns)):
+                        reject("LIVE_STORAGE_REPLACED")
+                    with os.fdopen(os.dup(fd), "rb") as stream:
+                        checksum = digest(stream)
+                    after = os.fstat(fd)
+                    if (before.st_dev, before.st_ino, before.st_size, before.st_mtime_ns,
+                        before.st_ctime_ns) != (after.st_dev, after.st_ino, after.st_size,
+                        after.st_mtime_ns, after.st_ctime_ns):
+                        reject("LIVE_STORAGE_CHANGED")
+                    rel = (Path(parent) / name).as_posix()
+                    result[rel] = (before.st_size, checksum)
+                finally:
+                    os.close(fd)
+    finally:
+        os.close(root_fd)
     return result
 
 
