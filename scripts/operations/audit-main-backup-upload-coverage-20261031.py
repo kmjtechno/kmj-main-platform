@@ -37,26 +37,31 @@ def snapshot_storage(root: Path) -> dict[str, tuple[int, str]]:
     if root.is_symlink() or not root.is_dir():
         reject("STORAGE_APP_NOT_REAL_DIRECTORY")
     result: dict[str, tuple[int, str]] = {}
-    # os.walk silently skips unreadable subdirectories without onerror.
-    # A partial inventory must NEVER look like successful backup parity.
+    # fwalk carries directory descriptors; relative opens are no-follow and
+    # inode-bound, unlike pathname-based os.walk/root file reads.
     def fail_walk(error: OSError) -> None:
         reject("LIVE_STORAGE_SCAN_ERROR")
 
-    for parent, dirs, files in os.walk(root, followlinks=False, onerror=fail_walk):
+    for parent, dirs, files, dirfd in os.fwalk(root, follow_symlinks=False,
+                                               onerror=fail_walk):
         for name in dirs:
-            p = Path(parent) / name
-            if p.is_symlink():
-                reject("LIVE_STORAGE_SYMLINK")
+            info = os.stat(name, dir_fd=dirfd, follow_symlinks=False)
+            if not stat.S_ISDIR(info.st_mode):
+                reject("LIVE_STORAGE_SYMLINK_OR_SPECIAL_DIR")
         for name in files:
-            p = Path(parent) / name
-            if p.is_symlink():
-                reject("LIVE_STORAGE_SYMLINK")
+            before_path = os.stat(name, dir_fd=dirfd, follow_symlinks=False)
+            if not stat.S_ISREG(before_path.st_mode):
+                reject("LIVE_STORAGE_NOT_REGULAR")
             flags = os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK
-            fd = os.open(p, flags)
+            fd = os.open(name, flags, dir_fd=dirfd)
             try:
                 before = os.fstat(fd)
-                if not stat.S_ISREG(before.st_mode):
-                    reject("LIVE_STORAGE_NOT_REGULAR")
+                if (not stat.S_ISREG(before.st_mode) or
+                    (before.st_dev, before.st_ino, before.st_size, before.st_mtime_ns,
+                     before.st_ctime_ns) !=
+                    (before_path.st_dev, before_path.st_ino, before_path.st_size,
+                     before_path.st_mtime_ns, before_path.st_ctime_ns)):
+                    reject("LIVE_STORAGE_REPLACED")
                 with os.fdopen(os.dup(fd), "rb") as stream:
                     checksum = digest(stream)
                 after = os.fstat(fd)
@@ -64,7 +69,8 @@ def snapshot_storage(root: Path) -> dict[str, tuple[int, str]]:
                     before.st_ctime_ns) != (after.st_dev, after.st_ino, after.st_size,
                     after.st_mtime_ns, after.st_ctime_ns):
                     reject("LIVE_STORAGE_CHANGED")
-                rel = p.relative_to(root).as_posix()
+                relative_parent = Path(parent).relative_to(root)
+                rel = (relative_parent / name).as_posix()
                 result[rel] = (before.st_size, checksum)
             finally:
                 os.close(fd)
