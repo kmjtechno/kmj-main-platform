@@ -35,6 +35,7 @@ final class WorkspaceChatService
     public function __construct(
         private readonly ProviderManager $providers,
         private readonly CodeBridgeCustomerDeviceDirectory $devices,
+        private readonly WorkspaceToolProposalService $proposals,
     ) {}
 
     public function projectAuthorized(string $tenantId, string $deviceId, string $projectId): bool
@@ -224,6 +225,17 @@ final class WorkspaceChatService
         if ($changed === 1) {
             $this->event($conversation->id, $messageId, $result['ok'] ? 'inference_completed' : 'inference_failed',
                 $result['ok'] ? 'complete' : 'failed', $result['ok'] ? $model : (string) $result['error_code']);
+            if ($result['ok']) {
+                try {
+                    // Only a COMPLETED reply can carry a proposal, and it stays pending until the user confirms.
+                    $proposalId = $this->proposals->capture($conversation, $messageId, (string) $result['content']);
+                    if ($proposalId !== null) {
+                        $this->event($conversation->id, $messageId, 'tool_proposed', 'pending', $proposalId);
+                    }
+                } catch (Throwable) {
+                    // A proposal problem must never turn a completed answer into a failure.
+                }
+            }
         }
         DB::table('codebridge_workspace_conversations')->where('id', $conversation->id)->update(['updated_at' => now()]);
     }
@@ -245,7 +257,7 @@ final class WorkspaceChatService
             array_unshift($messages, ['role' => (string) $row['role'], 'content' => (string) $row['content']]);
         }
 
-        return [['role' => 'system', 'content' => self::SYSTEM_PROMPT], ...$messages];
+        return [['role' => 'system', 'content' => self::SYSTEM_PROMPT.(WorkspaceJobService::enabled() ? WorkspaceToolProposalService::promptAddendum() : '')], ...$messages];
     }
 
     private function assertIdle(WorkspaceConversation $conversation): void

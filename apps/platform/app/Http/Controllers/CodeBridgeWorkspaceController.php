@@ -12,6 +12,7 @@ use App\Services\CodeBridge\Workspace\WorkspaceChatService;
 use App\Services\CodeBridge\Workspace\WorkspaceConversation;
 use App\Services\CodeBridge\Workspace\WorkspaceJobService;
 use App\Services\CodeBridge\Workspace\WorkspaceToolCatalog;
+use App\Services\CodeBridge\Workspace\WorkspaceToolProposalService;
 use App\Services\Licensing\CodeBridge\CodeBridgeCustomerDeviceDirectory;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -37,6 +38,7 @@ final class CodeBridgeWorkspaceController extends Controller
         private readonly CodeBridgeCustomerDeviceDirectory $devices,
         private readonly WorkspaceChatService $chat,
         private readonly WorkspaceJobService $jobs,
+        private readonly WorkspaceToolProposalService $proposals,
     ) {}
 
     public function show(Request $request): Response
@@ -53,12 +55,13 @@ final class CodeBridgeWorkspaceController extends Controller
         $selected = $this->chat->projectAuthorized($tenant, $deviceId, $projectId)
             ? ['device_id' => $deviceId, 'project_id' => $projectId] : null;
         $active = null;
-        $transcript = ['messages' => [], 'events' => []];
+        $transcript = ['messages' => [], 'events' => [], 'proposals' => []];
         if ($selected !== null && is_string($request->query('c')) && $request->query('c') !== '') {
             $conversation = $this->chat->conversation($tenant, (int) $user->id, (string) $request->query('c'));
             if ($conversation->deviceId === $deviceId && $conversation->projectId === $projectId) {
                 $active = ['id' => $conversation->id, 'title' => $conversation->title];
                 $transcript = $this->chat->transcript($conversation);
+                $transcript['proposals'] = $this->proposals->forConversation($conversation);
             }
         }
 
@@ -152,6 +155,38 @@ final class CodeBridgeWorkspaceController extends Controller
         $fields = (array) $row;
 
         return $this->toJob((string) $fields['device_id'], (string) $fields['project_id'], $job);
+    }
+
+    public function confirmProposal(Request $request, string $proposal): RedirectResponse
+    {
+        return $this->decide($request, $proposal, true);
+    }
+
+    public function rejectProposal(Request $request, string $proposal): RedirectResponse
+    {
+        return $this->decide($request, $proposal, false);
+    }
+
+    private function decide(Request $request, string $proposal, bool $confirm): RedirectResponse
+    {
+        [$user, $tenant] = $this->actor($request);
+        try {
+            $result = $confirm
+                ? $this->proposals->confirm($tenant, (int) $user->id, $proposal)
+                : $this->proposals->reject($tenant, (int) $user->id, $proposal);
+        } catch (HttpExceptionInterface $exception) {
+            throw $exception; // 403/404 are real HTTP answers, never a flash message.
+        } catch (InvalidArgumentException|RuntimeException $exception) {
+            session()->flash('chat_error', $exception->getMessage());
+            $result = null;
+        }
+        // Redirect target comes from the proposal row, but only if it is the caller's own (tenant + user).
+        $row = DB::table('codebridge_workspace_tool_proposals')->where('id', $proposal)
+            ->where('tenant_id', $tenant)->where('user_id', (int) $user->id)->first(['conversation_id', 'device_id', 'project_id']);
+        abort_if($row === null, 404);
+        $fields = (array) $row;
+
+        return $this->to((string) $fields['device_id'], (string) $fields['project_id'], (string) ($result['conversation_id'] ?? $fields['conversation_id']));
     }
 
     public function start(Request $request): RedirectResponse

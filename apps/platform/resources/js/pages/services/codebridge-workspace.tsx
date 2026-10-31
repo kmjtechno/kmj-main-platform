@@ -84,6 +84,16 @@ type WorkflowEvent = {
     detail: string | null;
     at: string;
 };
+type ToolProposal = {
+    id: string;
+    message_id: string;
+    tool: string;
+    arguments: Record<string, string>;
+    status: 'pending' | 'confirmed' | 'rejected' | 'expired';
+    job_id: string | null;
+    job_status: string | null;
+    expires_in_seconds: number | null;
+};
 type Props = {
     canManage: boolean;
     devices: Device[];
@@ -91,7 +101,11 @@ type Props = {
     selected: { device_id: string; project_id: string } | null;
     conversations: { id: string; title: string; updated_at: string }[];
     activeConversation: { id: string; title: string } | null;
-    transcript: { messages: Message[]; events: WorkflowEvent[] };
+    transcript: {
+        messages: Message[];
+        events: WorkflowEvent[];
+        proposals?: ToolProposal[];
+    };
     chatError?: string | null;
     jobs: Job[];
     jobEvents: JobEvent[];
@@ -239,6 +253,8 @@ export default function CodeBridgeWorkspace(props: Props) {
         return { provider_id, model };
     };
     const conversationUrl = (id: string) => `${BASE}/conversations/${id}`;
+    const proposalUrl = (id: string, verb: 'confirm' | 'reject') =>
+        `${BASE}/proposals/${id}/${verb}`;
     const go = (query: Record<string, string>) =>
         router.get(BASE, query, { preserveScroll: true });
 
@@ -572,6 +588,81 @@ export default function CodeBridgeWorkspace(props: Props) {
                                         )
                                     }
                                 />
+                            ))}
+                            {(transcript.proposals ?? []).map((proposal) => (
+                                <div
+                                    key={proposal.id}
+                                    data-testid="tool-proposal"
+                                    role="group"
+                                    aria-label={`Suggested device tool ${proposal.tool}`}
+                                    className="rounded-xl border border-amber-500/40 bg-amber-500/5 p-3 text-xs"
+                                >
+                                    <p className="font-bold">
+                                        Suggested device tool:{' '}
+                                        <code>{proposal.tool}</code>
+                                        {Object.keys(proposal.arguments).length >
+                                            0 && (
+                                            <>
+                                                {' '}
+                                                <code>
+                                                    {JSON.stringify(
+                                                        proposal.arguments,
+                                                    )}
+                                                </code>
+                                            </>
+                                        )}
+                                    </p>
+                                    <p className="text-muted-foreground mt-1">
+                                        {proposal.status === 'pending' &&
+                                            'Nothing has run. Confirm to queue this named tool for your paired device; the device can still refuse.'}
+                                        {proposal.status === 'confirmed' &&
+                                            `Queued by you. Real job status: ${proposal.job_status ?? 'unknown'}.`}
+                                        {proposal.status === 'rejected' &&
+                                            'Rejected. Nothing was queued.'}
+                                        {proposal.status === 'expired' &&
+                                            'Expired. Nothing was queued; ask again if you still want it.'}
+                                    </p>
+                                    {proposal.status === 'pending' && (
+                                        <div className="mt-2 flex gap-2">
+                                            <button
+                                                type="button"
+                                                data-testid="proposal-confirm"
+                                                onClick={() =>
+                                                    router.post(
+                                                        proposalUrl(proposal.id, 'confirm'),
+                                                        {},
+                                                        { preserveScroll: true },
+                                                    )
+                                                }
+                                                className="rounded-lg bg-red-600 px-3 py-2 text-xs font-bold text-white"
+                                            >
+                                                Confirm and queue
+                                            </button>
+                                            <button
+                                                type="button"
+                                                data-testid="proposal-reject"
+                                                onClick={() =>
+                                                    router.post(
+                                                        proposalUrl(proposal.id, 'reject'),
+                                                        {},
+                                                        { preserveScroll: true },
+                                                    )
+                                                }
+                                                className="rounded-lg border px-3 py-2 text-xs font-bold"
+                                            >
+                                                Reject
+                                            </button>
+                                        </div>
+                                    )}
+                                    {proposal.job_id && (
+                                        <a
+                                            className="mt-2 inline-block underline"
+                                            href={`${BASE}?device=${selected?.device_id ?? ''}&project=${selected?.project_id ?? ''}&j=${proposal.job_id}`}
+                                        >
+                                            View job
+                                        </a>
+                                    )}
+                                </div>
                             ))}
                             {retryable && activeConversation && (
                                 <button
