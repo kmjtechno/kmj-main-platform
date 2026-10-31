@@ -1,0 +1,20 @@
+name: Verify staging storage audit
+
+on:
+  pull_request:
+    paths:
+      - 'scripts/operations/audit-active-staging-storage-collisions-20261027.py'
+      - 'tests/test_active_staging_storage_collision_audit.py'
+      - '.github/workflows/verify-stage-storage-audit.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  storage-audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Exercise fd-anchored read-only storage scanner
+        run: python3 -B -m unittest tests.test_active_staging_storage_collision_audit
