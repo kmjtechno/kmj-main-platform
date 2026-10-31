@@ -61,7 +61,7 @@ def verify_private_directory(path: Path, *, create: bool):
 
 
 def verify_git_config(repo: Path):
-    """Reject local Git settings that can redirect HTTPS or execute hooks/filters.
+    """Reject local Git settings that can redirect/downgrade HTTPS or execute hooks/filters.
 
     A canonical remote.origin.url alone is insufficient: url.*.insteadOf can
     transparently rewrite it to another HTTPS host. Read local configuration
@@ -72,7 +72,7 @@ def verify_git_config(repo: Path):
         key = item.partition("=")[0].lower()
         unsafe = (
             (key.startswith("url.") and key.endswith(".insteadof"))
-            or key.startswith(("include.", "includeif."))
+            or key.startswith(("include.", "includeif.", "http.", "https."))
             or key in {"remote.origin.vcs", "remote.origin.uploadpack",
                        "remote.origin.proxy", "core.fsmonitor",
                        "credential.helper", "http.extraheader"}
@@ -114,7 +114,9 @@ def prepare(repo: Path, expected: str, lane: str, *, fetch: bool):
         # --refmap= avoids updating origin/main; only a private cache ref moves.
         git(repo, "fetch", "--no-tags", "--no-recurse-submodules", "--refmap=",
             "origin", f"refs/heads/main:{CACHE_REF}",
-            extra_config=("-c", "protocol.allow=never", "-c", "protocol.https.allow=always"))
+            extra_config=("-c", "protocol.allow=never", "-c", "protocol.https.allow=always",
+                          "-c", "http.sslVerify=true", "-c", "http.followRedirects=false",
+                          "-c", "http.proxy="))
         observed = git(repo, "rev-parse", "--verify", CACHE_REF)
     else:
         # Offline mode: no claim of a fresh remote read.
