@@ -58,6 +58,8 @@ jobs:
           grep -q 'No secret values were printed' scripts/backup_preflight.sh
           python3 scripts/test_backup_contract.py
           python3 scripts/test_restore_verification_contract.py
+          python3 -B -m py_compile scripts/operations/seal-current-main-production-backup-for-offsite-20261027.py
+          python3 -B -m unittest tests.test_current_main_offsite_bundle
           bash -n scripts/operations/verify-real-offsite-recovery.sh
           python3 -B scripts/test_real_offsite_recovery_contract.py
           bash -n infra/server/KMJ_SERVER_BOOTSTRAP.sh
