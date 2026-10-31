@@ -1,0 +1,31 @@
+name: Google Offsite Public Key Authorization Contract
+on:
+  pull_request:
+    paths:
+      - "scripts/operations/authorize-google-offsite-key-20261031.py"
+      - "tests/test_google_offsite_public_authorization_20261031.py"
+      - ".github/workflows/google-offsite-key-authorization-contract.yml"
+  push:
+    branches: [main]
+    paths:
+      - "scripts/operations/authorize-google-offsite-key-20261031.py"
+      - "tests/test_google_offsite_public_authorization_20261031.py"
+      - ".github/workflows/google-offsite-key-authorization-contract.yml"
+permissions:
+  contents: read
+jobs:
+  safe-enrollment:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - name: Additive authorization and negative security regression
+        run: |
+          set -euo pipefail
+          python3 -B -m unittest discover -s tests -p 'test_google_offsite_public_authorization_20261031.py' -v
+          echo "ADD_ONLY_AUTHORIZED_KEYS=PASS"
+          echo "REMOTE_SSH_LOGIN=NOT_VERIFIED"
+          echo "BACKUP_RESTORE=NOT_VERIFIED"
