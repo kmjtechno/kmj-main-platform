@@ -181,6 +181,7 @@ final class CodeBridgeWorkspaceToolProposalTest extends TestCase
     public function test_guests_cannot_decide_proposals(): void
     {
         $this->chatWith(self::BLOCK);
+        auth()->logout(); // chatWith authenticated Alice; the guest request must clear that guard.
         $this->post('/services/kmj-codebridge/workspace/proposals/'.$this->proposalId().'/confirm')->assertRedirect('/login');
         self::assertSame('pending', DB::table('codebridge_workspace_tool_proposals')->value('status'));
     }
