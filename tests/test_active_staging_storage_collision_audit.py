@@ -92,6 +92,64 @@ class ActiveStageStorageAuditTests(unittest.TestCase):
             finally:
                 module.STAGE_HOME = original
 
+    def test_nested_directory_scan_is_fd_anchored(self):
+        with tempfile.TemporaryDirectory() as temp:
+            base = Path(temp)
+            original = module.STAGE_HOME
+            try:
+                module.STAGE_HOME = base
+                root = base / "files"
+                (root / "nested").mkdir(parents=True)
+                (root / "nested" / "ok.txt").write_bytes(b"safe")
+                (root / "nested" / "outside").symlink_to("/etc/passwd")
+                files, size, links = module.scan_storage(root)
+                self.assertEqual(set(files), {"nested/ok.txt"})
+                self.assertEqual(size, 4)
+                self.assertEqual(links["nested/outside"][0], "OUTSIDE_STAGE")
+            finally:
+                module.STAGE_HOME = original
+
+    def test_total_read_budget_fails_closed(self):
+        with tempfile.TemporaryDirectory() as temp:
+            base = Path(temp)
+            original = module.STAGE_HOME
+            original_limit = module.MAX_TOTAL_HASH_BYTES
+            try:
+                module.STAGE_HOME = base
+                module.MAX_TOTAL_HASH_BYTES = 3
+                root = base / "files"
+                root.mkdir()
+                (root / "oversize.txt").write_bytes(b"1234")
+                with self.assertRaisesRegex(module.AuditBlocked, "STORAGE_EXCEEDS_READ_BUDGET"):
+                    module.scan_storage(root)
+            finally:
+                module.STAGE_HOME = original
+                module.MAX_TOTAL_HASH_BYTES = original_limit
+
+    def test_hardlinked_file_fails_closed(self):
+        with tempfile.TemporaryDirectory() as temp:
+            base = Path(temp)
+            original = module.STAGE_HOME
+            try:
+                module.STAGE_HOME = base
+                root = base / "files"
+                root.mkdir()
+                first = root / "first.txt"
+                first.write_bytes(b"private")
+                import os
+                os.link(first, root / "second.txt")
+                with self.assertRaisesRegex(module.AuditBlocked, "STORAGE_HARDLINK_UNVERIFIED"):
+                    module.scan_storage(root)
+            finally:
+                module.STAGE_HOME = original
+
+    def test_source_uses_directory_descriptors(self):
+        source = SCRIPT.read_text(encoding="utf-8")
+        self.assertIn("os.fwalk(", source)
+        self.assertIn("dir_fd=parent_fd", source)
+        self.assertIn("STORAGE_STREAM_EXCEEDS_BUDGET", source)
+        self.assertNotIn("os.walk(root", source)
+
     def test_logical_buckets_do_not_publish_individual_paths(self):
         self.assertEqual(module.category("app/public/image.png"), "PUBLIC_UPLOADS")
         self.assertEqual(module.category("app/private/token.txt"), "PRIVATE_APP")
