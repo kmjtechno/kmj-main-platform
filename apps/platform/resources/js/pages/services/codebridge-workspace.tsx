@@ -92,6 +92,10 @@ type ToolProposal = {
     status: 'pending' | 'confirmed' | 'rejected' | 'expired';
     job_id: string | null;
     job_status: string | null;
+    job_progress: number | null;
+    job_summary: string | null;
+    job_error_code: string | null;
+    job_finished_at: string | null;
     expires_in_seconds: number | null;
 };
 type Props = {
@@ -616,12 +620,35 @@ export default function CodeBridgeWorkspace(props: Props) {
                                         {proposal.status === 'pending' &&
                                             'Nothing has run. Confirm to queue this named tool for your paired device; the device can still refuse.'}
                                         {proposal.status === 'confirmed' &&
-                                            `Queued by you. Real job status: ${proposal.job_status ?? 'unknown'}.`}
+                                            `Queued by you. Real job status: ${proposal.job_status ?? 'unknown'}${
+                                                proposal.job_status ===
+                                                    'running' &&
+                                                proposal.job_progress !== null
+                                                    ? ` (${proposal.job_progress}%)`
+                                                    : ''
+                                            }.`}
                                         {proposal.status === 'rejected' &&
                                             'Rejected. Nothing was queued.'}
                                         {proposal.status === 'expired' &&
                                             'Expired. Nothing was queued; ask again if you still want it.'}
                                     </p>
+                                    {proposal.status === 'confirmed' &&
+                                        (proposal.job_status === 'succeeded' ||
+                                            proposal.job_status ===
+                                                'failed') && (
+                                            <p
+                                                data-testid="proposal-result"
+                                                className="mt-1 whitespace-pre-wrap"
+                                            >
+                                                <strong>
+                                                    Device result (
+                                                    {proposal.job_status}):
+                                                </strong>{' '}
+                                                {proposal.job_summary ??
+                                                    proposal.job_error_code ??
+                                                    'The device reported no details.'}
+                                            </p>
+                                        )}
                                     {proposal.status === 'pending' && (
                                         <div className="mt-2 flex gap-2">
                                             <button
