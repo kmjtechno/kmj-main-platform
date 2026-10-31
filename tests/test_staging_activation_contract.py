@@ -324,7 +324,7 @@ class Sandbox(unittest.TestCase):
     def test_writable_or_linked_candidate_chain_is_refused(self):
         app = self.rel / self.NEW / "apps/platform"
         os.chmod(app, 0o777)
-        self.assertBlocked(*self.run_runner(), "CANDIDATE_WRITABLE")
+        self.assertBlocked(*self.run_runner(), "CANDIDATE_CHAIN")
         os.chmod(app, 0o755)
         os.chmod(self.rel, 0o777)
         self.assertBlocked(*self.run_runner(), "RELEASES_CHAIN")
