@@ -131,16 +131,22 @@ jobs:
     uses: ./.github/workflows/disposable-postgres-release-gate.yml
 
   promote:
-    name: Promote verified commit to staging-approved
+    name: Check owner approval before staging promotion
     needs: [verify, owner_auth, locked_visual, postgres]
-    if: ${{ needs.verify.result == 'success' && needs.owner_auth.result == 'success' && needs.locked_visual.result == 'success' && needs.postgres.result == 'success' && github.ref == 'refs/heads/main' }}
+    # The job is visible and green after completed QA even on pull requests;
+    # only the guarded WRITE STEP may execute for an owner-approved main SHA.
+    if: ${{ needs.verify.result == 'success' && needs.owner_auth.result == 'success' && needs.locked_visual.result == 'success' && needs.postgres.result == 'success' }}
     permissions:
       contents: write
     runs-on: ubuntu-latest
     timeout-minutes: 5
 
     steps:
+      - name: Record blocked staging promotion when exact owner SHA is absent
+        if: ${{ github.ref != 'refs/heads/main' || vars.KMJ_STAGING_PROMOTION_APPROVED_SHA != github.sha }}
+        run: echo 'STAGING_PROMOTION=SKIPPED_NO_EXACT_OWNER_SHA'
       - name: Move staging-approved only after all verification passes
+        if: ${{ github.ref == 'refs/heads/main' && vars.KMJ_STAGING_PROMOTION_APPROVED_SHA == github.sha }}
         env:
           GH_TOKEN: ${{ github.token }}
           REPOSITORY: ${{ github.repository }}
