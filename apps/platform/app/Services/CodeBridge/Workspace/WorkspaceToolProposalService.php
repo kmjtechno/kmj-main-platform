@@ -186,7 +186,11 @@ final class WorkspaceToolProposalService
         });
     }
 
-    /** Tenant AND user scoped, row-locked; anything else is a 404 that never confirms existence. */
+    /**
+     * Tenant AND user scoped, row-locked; anything else is a 404 that never confirms existence.
+     *
+     * @return array<string, mixed>
+     */
     private function locked(string $tenantId, int $userId, string $proposalId): array
     {
         $found = DB::table('codebridge_workspace_tool_proposals')
