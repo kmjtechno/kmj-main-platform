@@ -133,7 +133,11 @@ jobs:
   promote:
     name: Promote verified commit to staging-approved
     needs: [verify, owner_auth, locked_visual, postgres]
-    if: ${{ needs.verify.result == 'success' && needs.owner_auth.result == 'success' && needs.locked_visual.result == 'success' && needs.postgres.result == 'success' && github.ref == 'refs/heads/main' }}
+    # An independently authorized exact SHA is required for main -> staging-approved.
+    # A green code push alone is NOT an owner staging release approval.
+    # Repository owner configures KMJ_STAGING_PROMOTION_APPROVED_SHA for one candidate;
+    # missing/old/blank variable fails closed by skipping this write-capable job.
+    if: ${{ needs.verify.result == 'success' && needs.owner_auth.result == 'success' && needs.locked_visual.result == 'success' && needs.postgres.result == 'success' && github.ref == 'refs/heads/main' && vars.KMJ_STAGING_PROMOTION_APPROVED_SHA == github.sha }}
     permissions:
       contents: write
     runs-on: ubuntu-latest
