@@ -102,7 +102,7 @@ def run_checks(env: Env, sha: str, expected: str) -> dict:
     check("candidate_head_equals_sha", has_git and env.candidate_head(cand) == sha)
 
     bst = lstat_mode(env.backup_dir)
-    check("backup_dir_real_root_owned", bst is not None and stat.S_ISDIR(bst.st_mode) and bst.st_uid == 0)
+    check("backup_dir_real_root_owned", bst is not None and stat.S_ISDIR(bst.st_mode) and bst.st_uid == 0 and not (bst.st_mode & 0o022))
     check("archive_absent", lstat_mode(env.backup_dir / f"pre-deploy-{short}.tar.gz") is None)
     check("witness_absent", lstat_mode(env.backup_dir / f"pre-deploy-{short}.json") is None)
 
@@ -116,7 +116,7 @@ def run_checks(env: Env, sha: str, expected: str) -> dict:
     check("postgres_restore_binaries", pgdir_ok)
     check("nginx_active", env.service_active("nginx"))
     check("php_fpm_active", env.service_active("php8.4-fpm"))
-    check("free_space_over_12GiB", env.free_kib("/tmp") > MIN_FREE_KIB)
+    check("free_space_over_12GiB", env.free_kib(str(env.backup_dir)) > MIN_FREE_KIB)
 
     lst = lstat_mode(env.lock)
     lock_ok = lst is None or (stat.S_ISREG(lst.st_mode) and lst.st_uid == 0 and lst.st_nlink == 1)
