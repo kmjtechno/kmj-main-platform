@@ -95,6 +95,7 @@ def restored_inventory(root: Path) -> tuple[dict[str, tuple[int, str]], set[str]
     # directory descriptors; O_NOFOLLOW on the final filename alone is not
     # sufficient to prevent an ancestor symlink race.
     root_fd = open_restored_root(root)
+    pinned_root = os.fstat(root_fd)
     files: dict[str, tuple[int, str]] = {}
     directories: set[str] = set()
     total = 0
@@ -150,6 +151,16 @@ def restored_inventory(root: Path) -> tuple[dict[str, tuple[int, str]], set[str]
                         fail()
                 finally:
                     os.close(fd)
+        # The walk is descriptor-anchored, but the caller will later use the
+        # restored pathname. Reject a root that was renamed or redirected
+        # while hashing rather than attesting a now-different pathname.
+        check_fd = open_restored_root(root)
+        try:
+            current_root = os.fstat(check_fd)
+            if (pinned_root.st_dev, pinned_root.st_ino) != (current_root.st_dev, current_root.st_ino):
+                fail()
+        finally:
+            os.close(check_fd)
     finally:
         os.close(root_fd)
     return files, directories
