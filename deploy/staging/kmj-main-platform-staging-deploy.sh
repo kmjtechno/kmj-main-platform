@@ -166,13 +166,16 @@ for d in "$rel_dir" "$new_target" "$new_target/public" "$new_target/public/build
   [[ -d "$d" && ! -L "$d" ]] || block CANDIDATE_MISSING
   (( (8#$(stat -c %a "$d") & 8#022) == 0 )) || block CANDIDATE_WRITABLE
 done
-# Digest of the SERVED tree (apps/platform minus .env, storage, bootstrap/cache, node_modules). One algorithm,
-# embedded here so runnerSha256 covers it; the owner seal tool extracts and runs exactly this program.
+# Seal executable framework caches and the root-owned .env as well as served assets.
+# Only mutable storage and dependency trees remain excluded; storage/framework/views
+# needs a separate executable-cache trust gate before production staging activation.
+# A changed .env or bootstrap/cache must invalidate the protected owner seal.
+# The owner seal tool extracts this same program; no secrets are printed.
 tree_digest() {
   python3 -I - "$1" <<'DIGEST_PY'
 import hashlib, os, stat, sys
 root = sys.argv[1]
-SKIP = {".env", "storage", "bootstrap/cache", "node_modules", ".git"}
+SKIP = {"storage", "node_modules", ".git"}
 lines, count = [], 0
 def die(code):
     print("ERR " + code); sys.exit(0)
