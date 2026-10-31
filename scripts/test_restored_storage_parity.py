@@ -113,6 +113,26 @@ class RestoredStorageParityTests(unittest.TestCase):
         with mock.patch.object(module.os, "fwalk", side_effect=swapped_walk):
             self.assert_rejected()
 
+    def test_nested_restored_directory_swapped_after_hashing_is_rejected(self):
+        # A root-only inode recheck misses a replacement below storage/app.
+        # Simulate a swap after the first descriptor-anchored walk completes.
+        from unittest import mock
+        original_walk = module.os.fwalk
+        walks = 0
+
+        def swapped_walk(*args, **kwargs):
+            nonlocal walks
+            walks += 1
+            yield from original_walk(*args, **kwargs)
+            if walks == 1:
+                original = self.output / "storage/app/public"
+                original.rename(self.base / "original-public")
+                original.mkdir()
+                (original / "picture.png").write_bytes(b"replacement bytes")
+
+        with mock.patch.object(module.os, "fwalk", side_effect=swapped_walk):
+            self.assert_rejected()
+
     def test_hardlink_to_external_file_is_not_an_independent_restore(self):
         # A byte-for-byte match must still fail if the supposed scratch
         # restore is actually another link to a file outside the restore.
