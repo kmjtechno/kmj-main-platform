@@ -33,6 +33,8 @@ RECIPIENT = "age1952vsyz25elfzn8slyhuc4k586dhw0er45yy26myhvv3lcp9qeps8mj7f5"
 MEMBERS = {"database.dump", "storage.tar.gz", "metadata.txt", "SHA256SUMS"}
 MAX_FILES = 100_000
 MAX_STORAGE_UNCOMPRESSED = 256 * 1024 * 1024 * 1024
+MAX_BUNDLE_UNCOMPRESSED = 256 * 1024 * 1024 * 1024
+MIN_SCRATCH_FREE = 64 * 1024 * 1024
 
 
 def fail(reason: str) -> None:
@@ -85,6 +87,12 @@ def repack_verified_local(original: Path, witness: Path, scratch: Path) -> tuple
             fail("SOURCE_BUNDLE_NONREGULAR_MEMBER")
         if any(m.size > 16384 for m in members if m.name in {"metadata.txt", "SHA256SUMS"}):
             fail("SOURCE_BUNDLE_METADATA_TOO_LARGE")
+        # tarfile expands members before the inner storage limits apply. Reject
+        # oversized archives or insufficient scratch before writing any member.
+        expanded = sum(m.size for m in members)
+        if (expanded > MAX_BUNDLE_UNCOMPRESSED
+                or expanded + MIN_SCRATCH_FREE > shutil.disk_usage(scratch).free):
+            fail("SOURCE_BUNDLE_EXPANSION_BUDGET")
         for member in members:
             stream = archive.extractfile(member)
             if stream is None:
