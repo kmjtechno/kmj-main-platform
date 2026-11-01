@@ -141,7 +141,12 @@ def emit(created, handle, dir_fd, name, kind):
         sys.stdout.write(created + "\n")
         sys.stdout.flush()
     except BaseException:
-        remove_exact(dir_fd, name, created, kind)
+        try:
+            result = remove_exact(dir_fd, name, created, kind)
+            if result not in ("REMOVED", "ABSENT"):
+                print("FS_OP_ROLLBACK=FAILED_OWNER_REVIEW", file=sys.stderr)
+        except BaseException:
+            print("FS_OP_ROLLBACK=FAILED_OWNER_REVIEW", file=sys.stderr)
         raise
 
 def main(argv):
@@ -158,7 +163,13 @@ def main(argv):
         if len(data) != info.st_size:
             raise ValueError("LIVE_ENV_CHANGED")
         dst = os.open(".env", os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600, dir_fd=cand)
-        created = ident(os.fstat(dst))
+        # The new file exists even if the first fstat fails. Without an
+        # inode receipt, NEVER guess which candidate pathname can be unlinked.
+        try:
+            created = ident(os.fstat(dst))
+        except BaseException:
+            print("FS_OP_POST_CREATE_RECEIPT=UNATTESTED_OWNER_REVIEW", file=sys.stderr)
+            raise
         try:
             view = memoryview(data)
             while view:
@@ -171,7 +182,16 @@ def main(argv):
     elif op == "create-link":
         pub = open_dir(argv[2])
         os.symlink("../storage/app/public", "storage", dir_fd=pub)
-        created = ident(os.stat("storage", dir_fd=pub, follow_symlinks=False))
+        # This name may have been replaced between symlink and lstat; if
+        # attestation fails, leave it for owner review, not a blind unlink.
+        try:
+            info = os.stat("storage", dir_fd=pub, follow_symlinks=False)
+            if not stat.S_ISLNK(info.st_mode):
+                raise ValueError("CREATED_STORAGE_NOT_SYMLINK")
+            created = ident(info)
+        except BaseException:
+            print("FS_OP_POST_CREATE_RECEIPT=UNATTESTED_OWNER_REVIEW", file=sys.stderr)
+            raise
         emit(created, None, pub, "storage", "l")
     elif op == "remove":
         result = remove_exact(open_dir(argv[2]), argv[3], argv[4], argv[5])
@@ -191,11 +211,14 @@ KMJ_FS_OP_PY
 
 env_id="$ROLLBACK_ENV_ID"
 link_id="$ROLLBACK_LINK_ID"
+# A creation helper can fail after O_EXCL/symlink but before its inode receipt.
+# Never claim an empty receipt list proves successful rollback in that case.
+receipt_uncertain=0
 rollback_candidate() {
   local bad=0
   if [[ -n "$link_id" ]]; then fs_op remove "$CAND_APP/public" storage "$link_id" l || bad=1; fi
   if [[ -n "$env_id" ]]; then fs_op remove "$CAND_APP" .env "$env_id" f || bad=1; fi
-  [[ "$bad" == 0 ]] && status CANDIDATE_ROLLBACK DONE || status CANDIDATE_ROLLBACK FAILED_REVIEW
+  [[ "$bad" == 0 && "$receipt_uncertain" == 0 ]] && status CANDIDATE_ROLLBACK DONE || status CANDIDATE_ROLLBACK FAILED_REVIEW
   return "$bad"
 }
 if [[ "$MODE" == rollback ]]; then rollback_candidate; exit $?; fi
@@ -372,14 +395,14 @@ setfacl -R -m 'u:www-data:rX' "$CAND_APP/public" || fail PUBLIC_TREE_ACL_FAILED
 # candidate artifacts last (O_EXCL, inode-recorded) so any failure from here on
 # removes exactly what this run created.
 [[ -z "$(git_as status --porcelain --untracked-files=normal -- . ':(exclude)apps/platform/storage')" ]] || fail CANDIDATE_DIRTY_BEFORE_WRITE
-env_id="$(fs_op create-env "$LIVE_APP" "$CAND_APP")" || fail ENV_CREATE_FAILED
+env_id="$(fs_op create-env "$LIVE_APP" "$CAND_APP")" || { receipt_uncertain=1; fail ENV_CREATE_FAILED; }
 [[ "$env_id" =~ ^[0-9]+:[0-9]+$ ]] || { env_id=""; fail ENV_CREATE_FAILED; }
 echo "MATERIALIZED_ENV_ID=$env_id"
 [[ "$(sha256sum -- "$LIVE_APP/.env" | cut -d' ' -f1)" == "$(sha256sum -- "$CAND_APP/.env" | cut -d' ' -f1)" ]] || fail ENV_SHA_MISMATCH
 status RUNTIME_ENV BYTE_IDENTICAL
 status AGENT_PUBLIC_ORIGIN "$origin_state"
 if [[ "$want_link" == 1 ]]; then
-  link_id="$(fs_op create-link "$CAND_APP/public")" || fail LINK_CREATE_FAILED
+  link_id="$(fs_op create-link "$CAND_APP/public")" || { receipt_uncertain=1; fail LINK_CREATE_FAILED; }
   [[ "$link_id" =~ ^[0-9]+:[0-9]+$ ]] || { link_id=""; fail LINK_CREATE_FAILED; }
   echo "MATERIALIZED_LINK_ID=$link_id"
   status PUBLIC_STORAGE_LINK MIRRORED
