@@ -48,10 +48,14 @@ class Env:
             path.write_text(body)
             path.chmod(0o755)
         text = SCRIPT.read_text()
+        # Test-only stubs replace the production fixed PATH; the shipped script
+        # never accepts a caller-supplied tool directory.
+        text = text.replace("export PATH=/usr/sbin:/usr/bin:/sbin:/bin", f"export PATH={root}/bin:/usr/sbin:/usr/bin:/sbin:/bin")
         text = text.replace("CONF=/etc/kmj-codebridge/offsite-sftp.conf", f"CONF={conf_path}")
         text = text.replace("BACKUP_DIR=/var/backups/kmj-platform", f"BACKUP_DIR={root}/backups")
         self.script = root / "push.sh"
         self.script.write_text(text)
+        self.script.chmod(0o700)
         conf_path.chmod(0o600)
 
     def _sftp(self, mode: str) -> str:
@@ -123,6 +127,27 @@ class PinnedSftpPush(unittest.TestCase):
             obj = env.remote / f"offsite-{SHORT}.tar.gz.age"
             self.assertEqual(stat.S_IMODE(obj.stat().st_mode), 0o600)
             self.assertIn("put -p ", env.sftp_log.read_text())
+
+    def test_root_bootstrap_isolated_from_inherited_path_and_bash_env(self):
+        source = SCRIPT.read_text()
+        self.assertTrue(source.startswith("#!/bin/bash -p\\n"))
+        self.assertIn("export PATH=/usr/sbin:/usr/bin:/sbin:/bin", source)
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            env = Env(root)
+            marker = root / "startup-marker"
+            hook = root / "bash-env-hook"
+            hook.write_text(f"printf 'UNSAFE' > {marker}\\n")
+            # A direct exec must use /bin/bash -p, not an attacker-supplied
+            # bash executable or BASH_ENV startup hook.
+            evil_bash = root / "bin" / "bash"
+            evil_bash.write_text(f"#!/bin/sh\\nprintf 'UNSAFE' > {marker}\\nexit 91\\n")
+            evil_bash.chmod(0o755)
+            variables = dict(os.environ, PATH=f"{root}/bin:/usr/bin:/bin", BASH_ENV=str(hook))
+            result = subprocess.run([str(env.script), "--candidate-sha", SHA],
+                                    env=variables, capture_output=True, text=True)
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            self.assertFalse(marker.exists(), "untrusted Bash startup code executed")
 
     def test_wrong_host_key_fails_before_any_sftp(self):
         r, uploaded, _, log = self.go(fingerprint="SHA256:" + "B" * 43)
