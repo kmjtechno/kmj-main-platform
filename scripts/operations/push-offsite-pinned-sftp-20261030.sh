@@ -130,7 +130,7 @@ printf '%s %s\n' "$host_alias" "$(awk 'NR==1{print $2" "$3}' "$tmp/scan")" >"$tm
 ssh-keygen -F "$host_alias" -f "$tmp/known_hosts" >/dev/null 2>&1 ||
   block HOSTKEY_LOOKUP_MISSING
 
-sftp_opts=(-o LogLevel=ERROR -P "$port" -i "$ident"
+# Ignore both user and system SSH config. A preexisting ProxyCommand,\n# HostKeyAlias, Match or ProxyJump must never redirect this pinned transfer.\nsftp_opts=(-F /dev/null -o LogLevel=ERROR -P "$port" -i "$ident"
   -o BatchMode=yes -o IdentitiesOnly=yes -o IdentityAgent=none
   -o StrictHostKeyChecking=yes -o UserKnownHostsFile="$tmp/known_hosts" -o GlobalKnownHostsFile=/dev/null
   -o PasswordAuthentication=no -o KbdInteractiveAuthentication=no -o PubkeyAuthentication=yes
