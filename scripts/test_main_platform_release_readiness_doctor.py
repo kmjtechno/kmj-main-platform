@@ -277,18 +277,56 @@ class MaterializeContractTest(unittest.TestCase):
             self.assertEqual(result.returncode, 2)
             self.assertIn("KMJ_MATERIALIZE=BLOCKED " + code, result.stdout)
 
-    def test_copies_only_into_candidate_and_proves_parity(self) -> None:
-        for token in ("setfacl -R -m 'u:www-data:rX'", "u:www-data:--x", "NGINX_PRIVATE_ENV_EXPOSED",
-                      "NGINX_ICON_UNREADABLE", "cp -a --no-clobber", 'install -o kmjprod -g kmjprod -m 0600 "$LIVE_APP/.env" "$CAND_APP/.env"',
-                      "STORAGE_PARITY_MISMATCH", "SOURCE_STORAGE_CHANGED_DURING_COPY",
-                      "verify-main-platform-storage-manifest.py", "CANDIDATE_DIRTY_AFTER", "LIVE_AGENT_PUBLIC_URL_DIFFERS_REVIEW",
-                      "CODEBRIDGE_AGENT_PUBLIC_URL=https://kmjtechno.com", "flock -n 9",
-                      "DATABASE NOT_TOUCHED", "PRODUCTION_SWITCH NOT_ATTEMPTED"):
-            self.assertIn(token, self.source)
-        for forbidden in ("artisan migrate", "systemctl", "mv ", "rm -", "ln -sfn", '>>"$LIVE_APP',
-                          '> "$LIVE_APP', "main-platform-production-release.json", "backupVerified",
-                          "psql", "pg_dump", "sed -i"):
-            self.assertNotIn(forbidden, self.source)
+    def test_materializer_requires_real_shared_storage_not_copy(self) -> None:
+        # The CodeBridge production controller accepts only one persistent
+        # storage path OUTSIDE release dirs and byte-identical runtime config.
+        required = (
+            'readonly SHARED="$ROOT/shared/storage"',
+            'fail LIVE_STORAGE_NOT_SHARED',
+            'fail CANDIDATE_STORAGE_NOT_SHARED',
+            'fail SHARED_STORAGE_MOVING_TARGET',
+            'status STORAGE_MODE VERIFIED_SHARED',
+            "KMJ_MATERIALIZE_SHARED=PASS",
+            "STORAGE_WRITER_QUIESCENCE NOT_ATTESTED",
+            'status RUNTIME_ENV BYTE_IDENTICAL',
+            'fail ENV_SHA_MISMATCH',
+            'install -o kmjprod -g kmjprod -m 0600 "$LIVE_APP/.env" "$CAND_APP/.env"',
+            'setfacl -R -m \'u:www-data:rX\'',
+            "NGINX_PRIVATE_ENV_EXPOSED",
+            "PRODUCTION_SWITCH NOT_ATTEMPTED",
+            "CANDIDATE_DIRTY_AFTER",
+            "flock -n 9",
+        )
+        for token in required:
+            self.assertIn(token, self.source, token)
+        forbidden = (
+            'cp -a --no-clobber',
+            'PINNED_IN_CANDIDATE_ONLY',
+            '>>"$CAND_APP/.env"',
+            'STORAGE_PARITY_MISMATCH',
+            'SOURCE_STORAGE_CHANGED_DURING_COPY',
+            "artisan migrate",
+            "systemctl",
+            "mv ",
+            "rm -",
+            "ln -sfn",
+            '>>"$LIVE_APP',
+            'main-platform-production-release.json',
+            "backupVerified",
+            "psql",
+            "pg_dump",
+            "sed -i",
+        )
+        for token in forbidden:
+            self.assertNotIn(token, self.source, token)
+
+    def test_no_upload_copy_and_explicit_preflight_before_sandbox(self) -> None:
+        self.assertLess(self.source.index('fail LIVE_STORAGE_NOT_SHARED'),
+                        self.source.index('systemd-run --quiet'))
+        self.assertLess(self.source.index('fail CANDIDATE_STORAGE_NOT_SHARED'),
+                        self.source.index('systemd-run --quiet'))
+        self.assertNotIn('cp -a --no-clobber', self.source)
+        self.assertIn(":(exclude)apps/platform/storage", self.source)
 
 
 class ExactRecoveryContractTest(unittest.TestCase):
@@ -388,13 +426,16 @@ class StorageContentParityTest(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "STORAGE_ROOT_NOT_REAL_DIRECTORY"):
             storage_manifest.inventory(self.copy / "sub/artwork-link")
 
-    def test_materialize_uses_three_content_snapshots_and_no_quiescence_claim(self) -> None:
+    def test_materialize_uses_stable_shared_storage_with_no_quiescence_claim(self) -> None:
         source = MATERIALIZE.read_text()
-        for token in ("source_before=", "source_after=", "candidate_after=",
-                      "SOURCE_STORAGE_CHANGED_DURING_COPY", "STORAGE_PARITY_MISMATCH",
-                      "STORAGE_WRITER_QUIESCENCE NOT_ATTESTED",
-                      "STORAGE_SYMLINK_TARGET_CONTENT NOT_DEREFERENCED"):
+        for token in ("source_before=", "source_after=",
+                      "SHARED_STORAGE_MOVING_TARGET",
+                      "STORAGE_MODE VERIFIED_SHARED",
+                      "STORAGE_WRITER_QUIESCENCE NOT_ATTESTED"):
             self.assertIn(token, source)
+        self.assertNotIn("candidate_after=", source)
+        self.assertNotIn("STORAGE_PARITY_MISMATCH", source)
+        self.assertNotIn("cp -a --no-clobber", source)
         self.assertNotIn("find . -type f ! -name .gitignore", source)
 
 
@@ -434,7 +475,10 @@ class MaterializeWriteBoundaryTest(unittest.TestCase):
                       "SANDBOX_USER_MISMATCH", "export GIT_OPTIONAL_LOCKS=0"):
             self.assertIn(token, source)
         self.assertGreater(source.index('install -o kmjprod'), boundary)
-        self.assertGreater(source.index('cp -a --no-clobber'), boundary)
+        # Runtime upload copying is forbidden; only byte-identical .env copy and
+        # ACL preparation remain inside the nonroot sandbox.
+        self.assertNotIn('cp -a --no-clobber', source)
+        self.assertGreater(source.index('status STORAGE_MODE VERIFIED_SHARED'), boundary)
         self.assertLess(source.index("KMJ_UNPRIVILEGED_MATERIALIZE\n"), source.index("runuser -u www-data -- test"))
         self.assertNotIn("--system", source)
         self.assertNotIn("sudo", source)

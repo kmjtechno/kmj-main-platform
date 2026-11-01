@@ -5,11 +5,12 @@
 # Usage (root on KMJ-elite, immediately before backup + activation):
 #   materialize-main-platform-candidate-runtime.sh <approved-40-hex-sha> <expected-current-release>
 #
-# It COPIES (never moves or edits) from the live release into the candidate:
-#   * apps/platform/.env (0600 kmjprod), pinning only the owner-approved
-#     CODEBRIDGE_AGENT_PUBLIC_URL=https://kmjtechno.com when it is absent;
-#   * apps/platform/storage/app uploads (verified by file bytes, metadata and raw link text);
-#   * the public/storage link, only when the live release has one.
+# It copies ONLY the exact live .env bytes (0600 kmjprod), without adding
+# or changing values, and verifies a pre-arranged shared storage link in BOTH
+# current and candidate releases. Never copy uploads: live writers may change
+# a copy during cutover. The approved shared directory must already exist
+# outside releases at /home/kmjprod/shared/storage and be owner-prepared.
+# The public/storage link is mirrored only when the live release has one.
 # It reports pending migrations by file diff. It NEVER touches the live
 # release, database, approval file, symlinks current/previous, services or DNS.
 set -Eeuo pipefail
@@ -39,12 +40,20 @@ readonly CAND="$ROOT/releases/platform-$SHORT"
 [[ -d "$CAND/.git" && ! -L "$CAND" ]] || fail CANDIDATE_NOT_STAGED
 readonly LIVE_APP="$LIVE/apps/platform"
 readonly CAND_APP="$CAND/apps/platform"
+readonly SHARED="$ROOT/shared/storage"
 [[ -f "$LIVE_APP/.env" && ! -L "$LIVE_APP/.env" ]] || fail LIVE_ENV_MISSING
-[[ -d "$LIVE_APP/storage/app" && ! -L "$LIVE_APP/storage/app" ]] || fail LIVE_STORAGE_MISSING
+[[ -d "$SHARED/app" && ! -L "$SHARED" && ! -L "$SHARED/app" ]] || fail SHARED_STORAGE_NOT_PREPARED
+# Owner must first migrate uploads to a protected root outside ANY release.
+# Do not create, replace or modify that link on behalf of a root operator.
+[[ -L "$LIVE_APP/storage" && "$(readlink -f -- "$LIVE_APP/storage")" == "$SHARED" ]] || fail LIVE_STORAGE_NOT_SHARED
+[[ -L "$CAND_APP/storage" && "$(readlink -f -- "$CAND_APP/storage")" == "$SHARED" ]] || fail CANDIDATE_STORAGE_NOT_SHARED
+[[ -d "$LIVE_APP/storage/app" && -d "$CAND_APP/storage/app" ]] || fail SHARED_UPLOADS_MISSING
 [[ ! -e "$CAND_APP/.env" && ! -L "$CAND_APP/.env" ]] || fail CANDIDATE_ALREADY_MATERIALIZED_REVIEW
 git_as() { runuser -u kmjprod -- git -c core.fsmonitor=false -C "$CAND" "$@"; }
 [[ "$(git_as rev-parse HEAD)" == "$SHA" ]] || fail CANDIDATE_SHA_MISMATCH
-[[ -z "$(git_as status --porcelain --untracked-files=normal)" ]] || fail CANDIDATE_DIRTY_BEFORE
+# Runtime storage is the one owner-verified external symlink, not source code.
+# All OTHER source paths remain subject to exact clean Git attestation.
+[[ -z "$(git_as status --porcelain --untracked-files=normal -- . ':(exclude)apps/platform/storage')" ]] || fail CANDIDATE_DIRTY_BEFORE
 for item in vendor/autoload.php public/build/manifest.json public/assets/kmj-codebridge-icon.png; do
   [[ -s "$CAND_APP/$item" && ! -L "$CAND_APP/$item" ]] || fail CANDIDATE_ARTIFACT_MISSING
 done
@@ -85,20 +94,17 @@ status() { printf '%s=%s\n' "$1" "$2"; }
 export GIT_OPTIONAL_LOCKS=0
 git_as() { git -c core.fsmonitor=false -C "$CAND" "$@"; }
 
-# 1. Runtime environment: exact live bytes, plus the owner-approved public
-#    agent origin only when absent. A different existing value needs review.
+# 1. Runtime .env must stay byte-identical across the switch.
+# Never add a URL or modify APP_KEY during production runtime materialization.
 if grep -Eq '^[[:space:]]*CODEBRIDGE_AGENT_PUBLIC_URL[[:space:]]*=' "$LIVE_APP/.env"; then
   grep -Fxq "$ORIGIN_LINE" "$LIVE_APP/.env" || fail LIVE_AGENT_PUBLIC_URL_DIFFERS_REVIEW
   origin_state=PRESERVED
 else
-  origin_state=PINNED_IN_CANDIDATE_ONLY
+  origin_state=NOT_SET_IN_LIVE
 fi
 install -o kmjprod -g kmjprod -m 0600 "$LIVE_APP/.env" "$CAND_APP/.env"
-if [[ "$origin_state" == PINNED_IN_CANDIDATE_ONLY ]]; then
-  [[ -z "$(tail -c1 "$CAND_APP/.env")" ]] || printf '\n' >>"$CAND_APP/.env"
-  printf '%s\n' "$ORIGIN_LINE" >>"$CAND_APP/.env"
-fi
-status RUNTIME_ENV COPIED
+[[ "$(sha256sum -- "$LIVE_APP/.env" | cut -d' ' -f1)" == "$(sha256sum -- "$CAND_APP/.env" | cut -d' ' -f1)" ]] || fail ENV_SHA_MISMATCH
+status RUNTIME_ENV BYTE_IDENTICAL
 status AGENT_PUBLIC_ORIGIN "$origin_state"
 
 # 2. Uploads: copy without clobbering tracked placeholders. A size+path
@@ -212,20 +218,22 @@ if __name__ == "__main__":
 
 KMJ_STORAGE_MANIFEST_PY
 }
-[[ -d "$CAND_APP/storage/app" && ! -L "$CAND_APP/storage/app" ]] || fail CANDIDATE_STORAGE_UNSAFE
-source_before="$(storage_manifest "$LIVE_APP/storage/app")" || fail SOURCE_STORAGE_SCAN_FAILED
-cp -a --no-clobber -- "$LIVE_APP/storage/app/." "$CAND_APP/storage/app/"
-source_after="$(storage_manifest "$LIVE_APP/storage/app")" || fail SOURCE_STORAGE_RESCAN_FAILED
-candidate_after="$(storage_manifest "$CAND_APP/storage/app")" || fail CANDIDATE_STORAGE_SCAN_FAILED
-[[ "$source_before" == "$source_after" ]] || fail SOURCE_STORAGE_CHANGED_DURING_COPY
-[[ "$source_after" == "$candidate_after" ]] || fail STORAGE_PARITY_MISMATCH
-count="$(/usr/bin/python3 -I -S -c 'import json,sys; print(json.loads(sys.argv[1])["regular"])' "$candidate_after")"
-links="$(/usr/bin/python3 -I -S -c 'import json,sys; print(json.loads(sys.argv[1])["symlinks"])' "$candidate_after")"
-digest="$(/usr/bin/python3 -I -S -c 'import json,sys; print(json.loads(sys.argv[1])["sha256"])' "$candidate_after")"
-status STORAGE_APP_PARITY "PASS_FILES_$count"
+# 2. Both releases MUST already resolve to the same, owner-prepared
+# persistent shared directory. No copying, changing upload paths or deploying
+# storage symlinks from this script. All writes remain outside source releases.
+[[ -L "$LIVE_APP/storage" && -L "$CAND_APP/storage" ]] || fail STORAGE_SYMLINK_MISSING
+[[ "$(readlink -f -- "$LIVE_APP/storage")" == "$ROOT/shared/storage" ]] || fail LIVE_STORAGE_NOT_SHARED
+[[ "$(readlink -f -- "$CAND_APP/storage")" == "$ROOT/shared/storage" ]] || fail CANDIDATE_STORAGE_NOT_SHARED
+source_before="$(storage_manifest "$ROOT/shared/storage/app")" || fail SHARED_STORAGE_SCAN_FAILED
+source_after="$(storage_manifest "$ROOT/shared/storage/app")" || fail SHARED_STORAGE_RESCAN_FAILED
+[[ "$source_before" == "$source_after" ]] || fail SHARED_STORAGE_MOVING_TARGET
+count="$(/usr/bin/python3 -I -S -c 'import json,sys; print(json.loads(sys.argv[1])["regular"])' "$source_after")"
+links="$(/usr/bin/python3 -I -S -c 'import json,sys; print(json.loads(sys.argv[1])["symlinks"])' "$source_after")"
+digest="$(/usr/bin/python3 -I -S -c 'import json,sys; print(json.loads(sys.argv[1])["sha256"])' "$source_after")"
+status STORAGE_MODE VERIFIED_SHARED
+status STORAGE_APP_PARITY "SHARED_FILES_$count"
 status STORAGE_SYMLINKS_PRESERVED "$links"
 status STORAGE_MANIFEST_SHA256 "$digest"
-status STORAGE_SYMLINK_TARGET_CONTENT NOT_DEREFERENCED
 status STORAGE_WRITER_QUIESCENCE NOT_ATTESTED
 
 # 3. public/storage link: mirror the live release only.
@@ -251,7 +259,7 @@ done
 setfacl -R -m 'u:www-data:rX' "$CAND_APP/public" || fail PUBLIC_TREE_ACL_FAILED
 
 # Candidate must still be a clean exact checkout for the activation controller.
-[[ -z "$(git_as status --porcelain --untracked-files=normal)" ]] || fail CANDIDATE_DIRTY_AFTER
+[[ -z "$(git_as status --porcelain --untracked-files=normal -- . ':(exclude)apps/platform/storage')" ]] || fail CANDIDATE_DIRTY_AFTER
 [[ "$(git_as rev-parse HEAD)" == "$SHA" ]] || fail CANDIDATE_SHA_CHANGED
 [[ "$(readlink -f "$ROOT/current")" == "$LIVE" ]] || fail CURRENT_RELEASE_CHANGED_DURING_RUN
 
@@ -269,7 +277,7 @@ status LIVE_RELEASE UNCHANGED
 status DATABASE NOT_TOUCHED
 status APPROVAL_UPDATED NO
 status PRODUCTION_SWITCH NOT_ATTEMPTED
-echo 'KMJ_MATERIALIZE_COPY=PASS'
+echo 'KMJ_MATERIALIZE_SHARED=PASS'
 
 KMJ_UNPRIVILEGED_MATERIALIZE
 
