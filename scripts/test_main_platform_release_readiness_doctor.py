@@ -528,16 +528,17 @@ class MaterializeRollbackTest(unittest.TestCase):
     def tearDown(self) -> None:
         self.tmp.cleanup()
 
-    def harness(self, tail: str) -> subprocess.CompletedProcess:
-        begin = self.source.index("# Descriptor-anchored")
-        end = self.source.index("trap on_exit EXIT") + len("trap on_exit EXIT")
+    def harness(self, tail: str, source_override: str | None = None) -> subprocess.CompletedProcess:
+        source = self.source if source_override is None else source_override
+        begin = source.index("# Descriptor-anchored")
+        end = source.index("trap on_exit EXIT") + len("trap on_exit EXIT")
         script = (
             "set -Eeuo pipefail\n"
             "status() { printf '%s=%s\\n' \"$1\" \"$2\"; }\n"
             "fail() { echo \"BLOCKED $1\"; exit 2; }\n"
             f"CAND_APP={self.cand}; LIVE_APP={self.live}; MODE=materialize\n"
             "ROLLBACK_ENV_ID=''; ROLLBACK_LINK_ID=''\n"
-            + self.source[begin:end] + "\n" + tail
+            + source[begin:end] + "\n" + tail
         )
         return subprocess.run(["/bin/bash", "-c", script], capture_output=True, text=True,
                               env={"PATH": "/usr/bin:/bin"}, timeout=30)
@@ -608,6 +609,41 @@ class MaterializeRollbackTest(unittest.TestCase):
         run = self.harness('fs_op create-env "$LIVE_APP" "$CAND_APP" >&- || true\n'
                            'fs_op create-link "$CAND_APP/public" >&- || true\n')
         self.assertFalse((self.cand / ".env").exists(), run.stdout + run.stderr)
+        self.assertFalse((self.cand / "public/storage").is_symlink())
+
+    def test_link_created_but_inode_receipt_fails_requires_owner_review(self) -> None:
+        # Inject a failure after symlink(2) succeeds, before lstat returns its
+        # inode id. The link MUST NOT be removed based only on its pathname.
+        needle = '            info = os.stat("storage", dir_fd=pub, follow_symlinks=False)'
+        self.assertEqual(self.source.count(needle), 1)
+        fault = self.source.replace(
+            needle,
+            '            raise OSError("INJECTED_LINK_RECEIPT_FAILURE")\n' + needle,
+        )
+        run = self.harness(self.CREATE, source_override=fault)
+        self.assertNotEqual(run.returncode, 0)
+        self.assertIn("FS_OP_POST_CREATE_RECEIPT=UNATTESTED_OWNER_REVIEW", run.stderr)
+        self.assertIn("CANDIDATE_ROLLBACK=FAILED_REVIEW", run.stdout)
+        self.assertFalse((self.cand / ".env").exists())
+        self.assertTrue((self.cand / "public/storage").is_symlink())
+        self.assertEqual(os.readlink(self.cand / "public/storage"),
+                         "../storage/app/public")
+
+    def test_env_created_but_inode_receipt_fails_requires_owner_review(self) -> None:
+        # Even an O_EXCL-created file cannot be blindly removed when fstat
+        # fails before its inode receipt; keep it for the privileged review.
+        needle = '            created = ident(os.fstat(dst))'
+        self.assertEqual(self.source.count(needle), 1)
+        fault = self.source.replace(
+            needle,
+            '            raise OSError("INJECTED_ENV_RECEIPT_FAILURE")\n' + needle,
+        )
+        run = self.harness(self.CREATE, source_override=fault)
+        self.assertNotEqual(run.returncode, 0)
+        self.assertIn("FS_OP_POST_CREATE_RECEIPT=UNATTESTED_OWNER_REVIEW", run.stderr)
+        self.assertIn("CANDIDATE_ROLLBACK=FAILED_REVIEW", run.stdout)
+        self.assertEqual((self.cand / ".env").read_bytes(),
+                         (self.live / ".env").read_bytes())
         self.assertFalse((self.cand / "public/storage").is_symlink())
 
     def test_sigterm_after_creation_rolls_back(self) -> None:
