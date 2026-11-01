@@ -1,10 +1,12 @@
 import hashlib
 import importlib.util
+import os
 import subprocess
 import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 SCRIPT = Path(__file__).parent / "operations/verify-offsite-restore-witness-20261101.py"
 spec = importlib.util.spec_from_file_location("witness", SCRIPT)
@@ -141,6 +143,59 @@ class WitnessTest(unittest.TestCase):
             self.assertIn("RECEIPT_FILE", bad.stdout)
             usage = subprocess.run([sys.executable, "-I", str(SCRIPT)], capture_output=True, text=True)
             self.assertIn("BLOCKED USAGE", usage.stdout)
+
+    def test_noncanonical_whitespace_never_enters_receipt_chain(self):
+        for altered in (
+            SEAL.replace("SOURCE_WITNESS=PASS", " SOURCE_WITNESS=PASS"),
+            SEAL.replace("SOURCE_WITNESS=PASS", "SOURCE_WITNESS=PASS "),
+            SEAL.replace("SOURCE_WITNESS=PASS", "\tSOURCE_WITNESS=PASS"),
+        ):
+            self.blocked("NONCANONICAL_LINE", seal=altered)
+
+    def test_nonregular_receipt_fifo_rejected_without_read_or_hang(self):
+        with tempfile.TemporaryDirectory() as d:
+            fifo = Path(d, "incoming")
+            os.mkfifo(fifo)
+            with self.assertRaises(w.Block) as error:
+                w.load(str(fifo) + ":" + hashlib.sha256(PUSH.encode()).hexdigest())
+            self.assertEqual(str(error.exception), "RECEIPT_FILE")
+
+    def test_descriptor_read_ignores_raced_symlink_replacement(self):
+        # Swap the pathname only AFTER the safe fd is open. The verified
+        # bytes must come from the originally opened inode, not the link.
+        with tempfile.TemporaryDirectory() as d:
+            original = Path(d, "push")
+            original.write_text(PUSH)
+            secret = Path(d, "secret")
+            secret.write_text("SHOULD_NOT_BE_READ")
+            renamed = Path(d, "previous")
+            expected = hashlib.sha256(PUSH.encode()).hexdigest()
+            real_read = os.read
+            swapped = False
+
+            def swap_just_before_read(fd, amount):
+                nonlocal swapped
+                if not swapped:
+                    original.rename(renamed)
+                    original.symlink_to(secret)
+                    swapped = True
+                return real_read(fd, amount)
+
+            with patch.object(w.os, "read", side_effect=swap_just_before_read):
+                result = w.load(str(original) + ":" + expected)
+            self.assertTrue(swapped)
+            self.assertEqual(result, PUSH)
+            self.assertTrue(original.is_symlink())
+
+    def test_direct_symlink_receipt_is_rejected(self):
+        with tempfile.TemporaryDirectory() as d:
+            original = Path(d, "real")
+            original.write_text(PUSH)
+            link = Path(d, "link")
+            link.symlink_to(original)
+            with self.assertRaises(w.Block) as error:
+                w.load(str(link) + ":" + hashlib.sha256(PUSH.encode()).hexdigest())
+            self.assertEqual(str(error.exception), "RECEIPT_FILE")
 
     def test_source_is_offline_and_readonly(self):
         body = SCRIPT.read_text().split('"""', 2)[2]
