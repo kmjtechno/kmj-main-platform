@@ -703,6 +703,43 @@ class MaterializeRollbackTest(unittest.TestCase):
         self.assertIn("CANDIDATE_ROLLBACK=FAILED_REVIEW", run.stdout)
         self.assertNotIn("CANDIDATE_ROLLBACK=DONE", run.stdout)
 
+    def test_root_post_fail_rejects_duplicate_malformed_missing_receipts(self) -> None:
+        # Execute only the extracted post_fail function with a fake rollback,
+        # never systemd-run or production filesystem changes.
+        source = self.source
+        start = source.index('sandbox_text=""\npost_fail() {')
+        end = source.index('\nsandbox_rc=0', start)
+        excerpt = source[start:end]
+        script = (
+            "set -Eeuo pipefail\n"
+            "status() { printf '%s=%s\\n' \"$1\" \"$2\"; }\n"
+            "fail() { echo \"BLOCKED $1\"; exit 2; }\n"
+            "run_sandbox() { printf 'ROLLBACK_CALLED=%s\\n' \"$3:$4\"; }\n"
+            + excerpt + '\nsandbox_text="$1"\npost_fail INJECTED_FAILURE\n'
+        )
+        cases = [
+            ("", False),
+            ("MATERIALIZED_ENV_ID=12:34\nMATERIALIZED_ENV_ID=45:67", False),
+            ("MATERIALIZED_ENV_ID=12:34\nMATERIALIZED_LINK_ID=45:67\nMATERIALIZED_LINK_ID=78:90", False),
+            ("MATERIALIZED_ENV_ID=invalid", False),
+            ("MATERIALIZED_ENV_ID=12:34\nMATERIALIZED_LINK_ID=../unsafe", False),
+            ("MATERIALIZED_ENV_ID=12:34\nMATERIALIZED_LINK_ID=45:67", True),
+        ]
+        for receipt, allowed in cases:
+            with self.subTest(receipt=receipt):
+                out = subprocess.run(
+                    ["/bin/bash", "-c", script, "--", receipt],
+                    capture_output=True, text=True,
+                    env={"PATH": "/usr/bin:/bin"}, timeout=10,
+                )
+                self.assertEqual(out.returncode, 2)
+                self.assertIn("BLOCKED INJECTED_FAILURE", out.stdout)
+                if allowed:
+                    self.assertIn("ROLLBACK_CALLED=12:34:45:67", out.stdout)
+                else:
+                    self.assertNotIn("ROLLBACK_CALLED", out.stdout)
+                    self.assertIn("CANDIDATE_ROLLBACK=FAILED_REVIEW", out.stdout)
+
     def test_sigterm_after_creation_rolls_back(self) -> None:
         run = self.harness(self.CREATE + "kill -TERM $$\nsleep 5\n")
         self.assertEqual(run.returncode, 143, run.stdout + run.stderr)
