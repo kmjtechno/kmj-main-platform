@@ -66,6 +66,56 @@ final class OmniDeskIssuanceContractFailClosedTest extends TestCase
         }
     }
 
+    public function test_unauthenticated_authorizer_failure_is_401_and_not_cached(): void
+    {
+        app()->instance(
+            OmniDeskApiAuthorizer::class,
+            new class implements OmniDeskApiAuthorizer
+            {
+                public function authorize(Request $request): OmniDeskApiPrincipal
+                {
+                    throw new \DomainException('OMNIDESK_UNAUTHENTICATED');
+                }
+            }
+        );
+
+        foreach (['activations', 'leases/renew'] as $suffix) {
+            $response = $this->postJson('/api/v1/licensing/omnidesk/'.$suffix, []);
+            $response->assertStatus(401)
+                ->assertJsonPath('error', 'UNAUTHENTICATED');
+            self::assertStringContainsString(
+                'no-store',
+                $response->headers->get('Cache-Control', '')
+            );
+        }
+    }
+
+    public function test_oversized_body_is_rejected_without_signer_or_side_effects(): void
+    {
+        app()->instance(
+            OmniDeskApiAuthorizer::class,
+            new class implements OmniDeskApiAuthorizer
+            {
+                public function authorize(Request $request): OmniDeskApiPrincipal
+                {
+                    return new OmniDeskApiPrincipal('test-manager', 'test-org', true);
+                }
+            }
+        );
+
+        foreach (['activations', 'leases/renew'] as $suffix) {
+            $response = $this->postJson('/api/v1/licensing/omnidesk/'.$suffix, [
+                'unexpected' => str_repeat('x', 4096),
+            ]);
+            $response->assertStatus(413)
+                ->assertJsonPath('error', 'INVALID_REQUEST');
+            self::assertStringContainsString(
+                'no-store',
+                $response->headers->get('Cache-Control', '')
+            );
+        }
+    }
+
     public function test_issuance_is_unavailable_without_authorized_signer_integration(): void
     {
         foreach ([
