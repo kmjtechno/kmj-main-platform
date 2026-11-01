@@ -182,9 +182,13 @@ class WitnessTest(unittest.TestCase):
                 return real_read(fd, amount)
 
             with patch.object(w.os, "read", side_effect=swap_just_before_read):
-                result = w.load(str(original) + ":" + expected)
+                # Even the *original* opened inode changed ctime when renamed.
+                # The verifier deliberately fails closed instead of accepting
+                # a receipt whose pathname or inode metadata changed midread.
+                with self.assertRaises(w.Block) as error:
+                    w.load(str(original) + ":" + expected)
             self.assertTrue(swapped)
-            self.assertEqual(result, PUSH)
+            self.assertEqual(str(error.exception), "RECEIPT_FILE_CHANGED")
             self.assertTrue(original.is_symlink())
 
     def test_direct_symlink_receipt_is_rejected(self):
