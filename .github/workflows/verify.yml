@@ -62,6 +62,7 @@ jobs:
           python3 -B -m unittest discover -s scripts -p 'test_diagnose_offsite_backup_unit.py' -v
           bash -n scripts/operations/install-offsite-diagnostic-owner-20261031.sh
           python3 -B scripts/test_offsite_diagnostic_owner_installer.py
+          python3 -B scripts/test_plan_offsite_transport_reconcile_20261101.py
           python3 -B scripts/test_seal_main_platform_offsite_release_neutral_20261030.py
           bash -n scripts/operations/verify-real-offsite-recovery.sh
           python3 -B scripts/test_real_offsite_recovery_contract.py
