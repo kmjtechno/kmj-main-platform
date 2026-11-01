@@ -100,6 +100,13 @@ echo '== 2 rerun is idempotent (target exists, identical bytes)'
 push; want_rc 0; expect REMOTE_COMMIT_NO_CLOBBER=TARGET_EXISTS_OR_FAILED; expect REMOTE_READBACK_SHA256=PASS
 [[ "$(listing "$home/incoming")" == "$object " ]] || { echo 'ASSERT_FAIL: leftovers after rerun'; exit 1; }
 
+echo '== 2b identical but world-readable remote ciphertext must fail closed'
+chmod 0644 "$remote"
+push; want_rc 1; expect REMOTE_READBACK_MODE=NOT_0600; refuse REMOTE_READBACK_SHA256=PASS; refuse OFFSITE_PUSH=PASS
+[[ "$(stat -c %a "$remote")" == 644 ]] || { echo 'ASSERT_FAIL: unsafe remote object was changed'; exit 1; }
+[[ "$(sha256sum "$remote" | cut -d' ' -f1)" == "$local_sha" ]] || { echo 'ASSERT_FAIL: existing ciphertext changed'; exit 1; }
+chmod 0600 "$remote"
+
 echo '== 3 a different existing object is never replaced'
 rm -f "$remote"; runuser -u "$test_user" -- sh -c 'printf OTHER > "$1"' sh "$remote"
 push; want_rc 1; expect REMOTE_READBACK=DIGEST_MISMATCH; refuse OFFSITE_PUSH=PASS
