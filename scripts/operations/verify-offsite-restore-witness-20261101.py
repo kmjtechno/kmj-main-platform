@@ -17,8 +17,11 @@ production approval and remote retention stay NOT_VERIFIED by construction.
 """
 from __future__ import annotations
 
+import errno
 import hashlib
+import os
 import re
+import stat
 import sys
 from pathlib import Path
 
@@ -61,7 +64,9 @@ class Block(Exception):
 def parse(text: str, spec: dict) -> dict[str, str]:
     values: dict[str, str] = {}
     for raw in text.splitlines():
-        line = raw.strip()
+        if raw != raw.strip():
+            raise Block("NONCANONICAL_LINE")
+        line = raw
         if not line:
             continue
         match = LINE.fullmatch(line)
@@ -88,9 +93,28 @@ def load(arg: str) -> str:
     if not name or not HEX64.fullmatch(digest):
         raise Block("RECEIPT_ARGUMENT")
     path = Path(name)
-    if path.is_symlink() or not path.is_file() or path.stat().st_size > MAX_BYTES:
-        raise Block("RECEIPT_FILE")
-    data = path.read_bytes()
+    # Open the exact inode once, with no-follow and nonblocking semantics.
+    # path.is_file()/stat()/read_bytes() has a substitution window and can
+    # open a raced symlink or wait indefinitely on a FIFO.
+    try:
+        fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK | os.O_CLOEXEC)
+    except OSError as exc:
+        if exc.errno in (errno.ELOOP, errno.EISDIR):
+            raise Block("RECEIPT_FILE") from None
+        raise
+    try:
+        before = os.fstat(fd)
+        if not stat.S_ISREG(before.st_mode) or before.st_size > MAX_BYTES:
+            raise Block("RECEIPT_FILE")
+        data = os.read(fd, MAX_BYTES + 1)
+        after = os.fstat(fd)
+        if len(data) > MAX_BYTES or (before.st_dev, before.st_ino, before.st_size,
+                                    before.st_mtime_ns, before.st_ctime_ns) != (
+                                        after.st_dev, after.st_ino, after.st_size,
+                                        after.st_mtime_ns, after.st_ctime_ns):
+            raise Block("RECEIPT_FILE_CHANGED")
+    finally:
+        os.close(fd)
     if hashlib.sha256(data).hexdigest() != digest:
         raise Block("RECEIPT_DIGEST_MISMATCH")
     try:
