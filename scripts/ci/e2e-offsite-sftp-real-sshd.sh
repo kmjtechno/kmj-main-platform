@@ -81,7 +81,7 @@ conf() { # port remote_dir identity pin
   chmod 0600 "$base/offsite-sftp.conf"
 }
 out=''; rc=0
-push() { set +e; out="$(bash "$base/push.sh" --candidate-sha "$candidate" 2>&1)"; rc=$?; set -e; echo "--- rc=$rc"; echo "$out"; }
+push() { set +e; out="$(/bin/bash -p "$base/push.sh" --candidate-sha "$candidate" 2>&1)"; rc=$?; set -e; echo "--- rc=$rc"; echo "$out"; }
 expect() { grep -qF -- "$1" <<<"$out" || { echo "ASSERT_FAIL: missing '$1'"; exit 1; }; }
 refuse() { ! grep -qF -- "$1" <<<"$out" || { echo "ASSERT_FAIL: unexpected '$1'"; exit 1; }; }
 want_rc() { [[ "$rc" == "$1" ]] || { echo "ASSERT_FAIL: rc=$rc want $1"; exit 1; }; }

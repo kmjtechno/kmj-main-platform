@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/bin/bash -p
 # Root-run, fixed-object, host-key-PINNED SFTP upload of the sealed encrypted
 # offsite copy of ONE exact candidate release, with download-and-compare verify.
 #
@@ -18,6 +18,11 @@
 # and never claims a restore: OFFSITE_RESTORE stays NOT_VERIFIED.
 set -Eeuo pipefail
 umask 077
+# Root-only transfer must not resolve tools through caller-controlled PATH.
+# Direct execution uses privileged Bash (-p), which ignores BASH_ENV/ENV
+# startup hooks; operator invocations must use /bin/bash -p as well.
+export PATH=/usr/sbin:/usr/bin:/sbin:/bin
+unset BASH_ENV ENV CDPATH
 CONF=/etc/kmj-codebridge/offsite-sftp.conf
 BACKUP_DIR=/var/backups/kmj-platform
 LOCAL=/var/backups/kmj-platform/offsite-UNSET.tar.gz.age
@@ -25,6 +30,9 @@ REMOTE_NAME=offsite-UNSET.tar.gz.age
 
 status() { printf '%s=%s\n' "$1" "$2"; }
 block() { status OFFSITE_PUSH "BLOCKED:$1"; exit 2; }
+# Reject a non-privileged interpreter. The reviewed operator invocation MUST
+# use /bin/bash -p (or direct execution of this file's -p shebang).
+[[ $- == *p* ]] || block PRIVILEGED_BASH_REQUIRED
 
 [[ $# -eq 2 && "$1" == --candidate-sha ]] || block USAGE_CANDIDATE_SHA_ONLY
 [[ "$2" =~ ^[0-9a-f]{40}$ ]] || block CANDIDATE_SHA_INVALID
