@@ -452,11 +452,27 @@ sandbox_text=""
 post_fail() {
   # A root-side check failed after the sandbox committed: remove only the
   # inode-attested candidate artifacts, then report the original failure.
-  local env_id link_id
-  env_id="$(sed -n 's/^MATERIALIZED_ENV_ID=\([0-9][0-9]*:[0-9][0-9]*\)$/\1/p' <<<"$sandbox_text" | tail -n 1)"
-  link_id="$(sed -n 's/^MATERIALIZED_LINK_ID=\([0-9][0-9]*:[0-9][0-9]*\)$/\1/p' <<<"$sandbox_text" | tail -n 1)"
-  if [[ -n "$env_id$link_id" ]]; then
+  local env_id link_id env_count link_count receipt_invalid=0 line
+  # The sandbox can fail after creating an artifact but before its receipt.
+  # Never select the last of duplicate/malformed stdout receipts or claim the
+  # candidate clean when a receipt is missing or conflicted.
+  env_count="$(grep -c '^MATERIALIZED_ENV_ID=' <<<"$sandbox_text" || true)"
+  link_count="$(grep -c '^MATERIALIZED_LINK_ID=' <<<"$sandbox_text" || true)"
+  env_id="$(sed -n 's/^MATERIALIZED_ENV_ID=\([0-9][0-9]*:[0-9][0-9]*\)$/\1/p' <<<"$sandbox_text")"
+  link_id="$(sed -n 's/^MATERIALIZED_LINK_ID=\([0-9][0-9]*:[0-9][0-9]*\)$/\1/p' <<<"$sandbox_text")"
+  [[ "$env_count" =~ ^[01]$ && "$link_count" =~ ^[01]$ ]] || receipt_invalid=1
+  while IFS= read -r line; do
+    case "$line" in
+      MATERIALIZED_ENV_ID=*) [[ "$line" =~ ^MATERIALIZED_ENV_ID=[0-9]+:[0-9]+$ ]] || receipt_invalid=1 ;;
+      MATERIALIZED_LINK_ID=*) [[ "$line" =~ ^MATERIALIZED_LINK_ID=[0-9]+:[0-9]+$ ]] || receipt_invalid=1 ;;
+    esac
+  done <<<"$sandbox_text"
+  if [[ "$receipt_invalid" != 0 ]]; then
+    status CANDIDATE_ROLLBACK FAILED_REVIEW
+  elif [[ -n "$env_id$link_id" ]]; then
     run_sandbox rollback rollback "$env_id" "$link_id" || status CANDIDATE_ROLLBACK FAILED_REVIEW
+  else
+    status CANDIDATE_ROLLBACK FAILED_REVIEW
   fi
   fail "$1"
 }
