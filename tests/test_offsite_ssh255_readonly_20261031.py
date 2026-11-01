@@ -32,6 +32,35 @@ class A2DoctorTests(unittest.TestCase):
             with self.subTest(expected=expected):
                 self.assertEqual(m.classify(raw), expected)
 
+    def test_auth_subclass_distinguishes_local_load_from_publickey_denial(self):
+        cases = {
+            "Load key /root/SECRET: invalid format": "LOCAL_KEY_LOAD_FAILURE",
+            "WARNING: UNPROTECTED PRIVATE KEY FILE": "LOCAL_KEY_LOAD_FAILURE",
+            "Too many authentication failures": "TOO_MANY_AUTH_FAILURES",
+            "no mutual signature algorithm": "NO_MUTUAL_SIGNATURE",
+            "Permission denied (publickey).": "PUBLICKEY_AUTH_DENIED",
+            "private user=secret": "UNCLASSIFIED",
+        }
+        for raw, expected in cases.items():
+            with self.subTest(expected=expected):
+                self.assertEqual(m.classify_auth_subclass(raw), expected)
+        self.assertEqual(m.classify_auth_subclass(
+            "Load key secret; Permission denied (publickey)"), "LOCAL_KEY_LOAD_FAILURE")
+
+    def test_auth_subclass_only_from_exact_failed_invocation(self):
+        props = {"LoadState": "loaded", "Result": "exit-code", "ExecMainStatus": "255",
+                 "InvocationID": "c" * 32, "ExecStart": "offsite", "User": "root"}
+        vals = m.inspect(lambda k: props[k],
+                         lambda _: "Load key /root/SECRET: invalid format",
+                         lambda: ("PRIVATE_VALID", "PRIVATE", "PIN_FORMAT_VALID"))
+        self.assertEqual(vals["journal_failure_class"], "SSH_AUTH_KEY_REJECTED")
+        self.assertEqual(vals["journal_auth_subclass"], "LOCAL_KEY_LOAD_FAILURE")
+        self.assertNotIn("/root/SECRET", str(vals))
+        props["InvocationID"] = "not-valid"
+        vals = m.inspect(lambda k: props[k], lambda _: "Permission denied (publickey)",
+                         lambda: ("PRIVATE_VALID", "PRIVATE", "PIN_FORMAT_VALID"))
+        self.assertEqual(vals["journal_auth_subclass"], "NOT_APPLICABLE")
+
     def test_real_invocation_only_and_no_raw_secrets(self):
         calls = []
         def show(k):

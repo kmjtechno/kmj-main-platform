@@ -34,6 +34,22 @@ CLASSES = (
 )
 
 
+AUTH_SUBCLASSES = (
+    ("LOCAL_KEY_LOAD_FAILURE", re.compile(r"Load key|invalid format|incorrect passphrase|UNPROTECTED PRIVATE KEY FILE", re.I)),
+    ("TOO_MANY_AUTH_FAILURES", re.compile(r"Too many authentication failures", re.I)),
+    ("NO_MUTUAL_SIGNATURE", re.compile(r"no mutual signature", re.I)),
+    ("PUBLICKEY_AUTH_DENIED", re.compile(r"Permission denied \(publickey", re.I)),
+)
+
+
+def classify_auth_subclass(raw: str) -> str:
+    """Redacted hints ONLY. Not proof which key was offered or rejected by remote."""
+    for name, pattern in AUTH_SUBCLASSES:
+        if pattern.search(raw):
+            return name
+    return "UNCLASSIFIED"
+
+
 def classify(raw: str) -> str:
     for name, pattern in CLASSES:
         if pattern.search(raw):
@@ -159,11 +175,14 @@ def inspect(show=show_property, journal=journal_for_invocation,
     command_kind = "REFERENCE_ONLY" if (command is not None and "offsite" in command.lower()) else "UNKNOWN"
     scope = "UNAVAILABLE"
     category = "UNCLASSIFIED"
+    auth_subclass = "NOT_APPLICABLE"
     if status == "255" and result == "exit-code" and values["InvocationID"] and INVOCATION.fullmatch(values["InvocationID"]):
         log = journal(values["InvocationID"])
         if log is not None:
             scope = "EXACT_INVOCATION"
             category = classify(log)
+            if category == "SSH_AUTH_KEY_REJECTED":
+                auth_subclass = classify_auth_subclass(log)
     try:
         conf, identity, pin = config()
     except (OSError, ValueError):
@@ -179,6 +198,7 @@ def inspect(show=show_property, journal=journal_for_invocation,
         "execstart_hash_attested": "NO",
         "journal_scope": scope,
         "journal_failure_class": category,
+        "journal_auth_subclass": auth_subclass,
         "sftp_config": conf,
         "sftp_identity": identity,
         "hostkey_pin": pin,
