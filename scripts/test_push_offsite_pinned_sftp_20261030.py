@@ -110,6 +110,7 @@ class PinnedSftpPush(unittest.TestCase):
         self.assertIn(f".incoming-offsite-{SHORT}.tar.gz.age.", log)
         self.assertRegex(log, r"ln .*\.incoming-")
         self.assertNotIn("rename ", log)
+        self.assertIn("-F /dev/null", log)  # Ignore inherited SSH ProxyCommand/HostKeyAlias.
         for flag in ("BatchMode=yes", "IdentitiesOnly=yes", "StrictHostKeyChecking=yes",
                      "PasswordAuthentication=no", "IdentityAgent=none"):
             self.assertIn(flag, log)
