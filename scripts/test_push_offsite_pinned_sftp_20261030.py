@@ -148,6 +148,13 @@ class PinnedSftpPush(unittest.TestCase):
                                     env=variables, capture_output=True, text=True)
             self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
             self.assertFalse(marker.exists(), "untrusted Bash startup code executed")
+            # Explicit 'bash script' must be refused even if the operator
+            # omitted -p. No remote upload or synthetic config read occurs.
+            unsafe = subprocess.run(["/bin/bash", str(env.script), "--candidate-sha", SHA],
+                                    env=dict(os.environ, PATH="/usr/bin:/bin", BASH_ENV=""),
+                                    capture_output=True, text=True)
+            self.assertEqual(unsafe.returncode, 2)
+            self.assertIn("BLOCKED:PRIVILEGED_BASH_REQUIRED", unsafe.stdout)
 
     def test_wrong_host_key_fails_before_any_sftp(self):
         r, uploaded, _, log = self.go(fingerprint="SHA256:" + "B" * 43)
