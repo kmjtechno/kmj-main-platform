@@ -652,6 +652,57 @@ class MaterializeRollbackTest(unittest.TestCase):
                          b"APP_KEY=base64:abc\nDB=x\n")
         self.assertFalse((self.cand / "public/storage").is_symlink())
 
+    def test_malformed_env_receipt_never_claims_rollback_done(self) -> None:
+        # A successful O_EXCL write may have created a secret file even if
+        # the emitted receipt is malformed. It cannot be unlinked by pathname.
+        needle = '        sys.stdout.write(created + "\\n")'
+        self.assertEqual(self.source.count(needle), 1)
+        fault = self.source.replace(
+            needle,
+            '        sys.stdout.write("BROKEN_ID\\n")',
+        )
+        tail = (
+            'env_id="$(fs_op create-env "$LIVE_APP" "$CAND_APP")" '
+            '|| { receipt_uncertain=1; fail ENV_CREATE_FAILED; }\n'
+            '[[ "$env_id" =~ ^[0-9]+:[0-9]+$ ]] '
+            '|| { env_id=""; receipt_uncertain=1; fail ENV_CREATE_FAILED; }\n'
+        )
+        run = self.harness(tail, source_override=fault)
+        self.assertNotEqual(run.returncode, 0)
+        self.assertIn("CANDIDATE_ROLLBACK=FAILED_REVIEW", run.stdout)
+        self.assertNotIn("CANDIDATE_ROLLBACK=DONE", run.stdout)
+        self.assertEqual((self.cand / ".env").read_bytes(),
+                         (self.live / ".env").read_bytes())
+        self.assertFalse((self.cand / "public/storage").is_symlink())
+
+    def test_malformed_link_receipt_never_deletes_unattested_link(self) -> None:
+        needle = '        emit(created, None, pub, "storage", "l")'
+        self.assertEqual(self.source.count(needle), 1)
+        fault = self.source.replace(needle, '        print("BROKEN_LINK_ID")')
+        tail = (
+            'env_id="$(fs_op create-env "$LIVE_APP" "$CAND_APP")" '
+            '|| { receipt_uncertain=1; fail ENV_CREATE_FAILED; }\n'
+            '[[ "$env_id" =~ ^[0-9]+:[0-9]+$ ]] '
+            '|| { env_id=""; receipt_uncertain=1; fail ENV_CREATE_FAILED; }\n'
+            'link_id="$(fs_op create-link "$CAND_APP/public")" '
+            '|| { receipt_uncertain=1; fail LINK_CREATE_FAILED; }\n'
+            '[[ "$link_id" =~ ^[0-9]+:[0-9]+$ ]] '
+            '|| { link_id=""; receipt_uncertain=1; fail LINK_CREATE_FAILED; }\n'
+        )
+        run = self.harness(tail, source_override=fault)
+        self.assertNotEqual(run.returncode, 0)
+        self.assertIn("CANDIDATE_ROLLBACK=FAILED_REVIEW", run.stdout)
+        self.assertNotIn("CANDIDATE_ROLLBACK=DONE", run.stdout)
+        self.assertFalse((self.cand / ".env").exists())
+        self.assertEqual(os.readlink(self.cand / "public/storage"),
+                         "../storage/app/public")
+
+    def test_unknown_rollback_receipt_returns_nonzero(self) -> None:
+        run = self.harness('receipt_uncertain=1\nrollback_candidate\n')
+        self.assertNotEqual(run.returncode, 0)
+        self.assertIn("CANDIDATE_ROLLBACK=FAILED_REVIEW", run.stdout)
+        self.assertNotIn("CANDIDATE_ROLLBACK=DONE", run.stdout)
+
     def test_sigterm_after_creation_rolls_back(self) -> None:
         run = self.harness(self.CREATE + "kill -TERM $$\nsleep 5\n")
         self.assertEqual(run.returncode, 143, run.stdout + run.stderr)
