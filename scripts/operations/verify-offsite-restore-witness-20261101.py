@@ -108,7 +108,9 @@ def load(arg: str) -> str:
             raise Block("RECEIPT_FILE")
         data = os.read(fd, MAX_BYTES + 1)
         after = os.fstat(fd)
-        if len(data) > MAX_BYTES or (before.st_dev, before.st_ino, before.st_size,
+        # A regular-file read may return a short prefix without any metadata change.
+        # Never digest-bind a prefix while ignoring unread trailing receipt bytes.
+        if len(data) != before.st_size or len(data) > MAX_BYTES or (before.st_dev, before.st_ino, before.st_size,
                                     before.st_mtime_ns, before.st_ctime_ns) != (
                                         after.st_dev, after.st_ino, after.st_size,
                                         after.st_mtime_ns, after.st_ctime_ns):
