@@ -38,7 +38,7 @@ AUTH_SUBCLASSES = (
     ("LOCAL_KEY_LOAD_FAILURE", re.compile(r"Load key|invalid format|incorrect passphrase|UNPROTECTED PRIVATE KEY FILE", re.I)),
     ("TOO_MANY_AUTH_FAILURES", re.compile(r"Too many authentication failures", re.I)),
     ("NO_MUTUAL_SIGNATURE", re.compile(r"no mutual signature", re.I)),
-    ("PUBLICKEY_AUTH_DENIED", re.compile(r"Permission denied \\(publickey", re.I)),
+    ("PUBLICKEY_AUTH_DENIED", re.compile(r"Permission denied \(publickey", re.I)),
 )
 
 
