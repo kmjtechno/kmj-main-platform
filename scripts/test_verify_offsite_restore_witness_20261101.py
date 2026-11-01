@@ -160,6 +160,19 @@ class WitnessTest(unittest.TestCase):
                 w.load(str(fifo) + ":" + hashlib.sha256(PUSH.encode()).hexdigest())
             self.assertEqual(str(error.exception), "RECEIPT_FILE")
 
+    def test_short_regular_file_read_rejects_digest_matching_prefix(self):
+        # Simulate a short os.read on an otherwise stable regular file.
+        # The prefix digest is valid, but unexamined trailing bytes must block.
+        with tempfile.TemporaryDirectory() as d:
+            receipt = Path(d, "push")
+            prefix = PUSH.encode("ascii")
+            receipt.write_bytes(prefix + b"EXTRA=UNTRUSTED\\n")
+            original_read = os.read
+            with patch.object(w.os, "read", side_effect=lambda fd, amount: original_read(fd, len(prefix))):
+                with self.assertRaises(w.Block) as error:
+                    w.load(str(receipt) + ":" + hashlib.sha256(prefix).hexdigest())
+            self.assertEqual(str(error.exception), "RECEIPT_FILE_CHANGED")
+
     def test_descriptor_read_ignores_raced_symlink_replacement(self):
         # Swap the pathname only AFTER the safe fd is open. The verified
         # bytes must come from the originally opened inode, not the link.
