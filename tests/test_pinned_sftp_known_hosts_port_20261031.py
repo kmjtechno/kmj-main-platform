@@ -23,7 +23,29 @@ def alias(host: str, port: str) -> str:
     return result.stdout
 
 
+def port_is_valid(port: str) -> bool:
+    start = SOURCE.index("valid_port() {")
+    end = SOURCE.index("\\n}", start) + 2
+    fn = SOURCE[start:end]
+    result = subprocess.run(
+        ["bash", "-c", fn + '\\nvalid_port "$1"', "offsite-port-test", port],
+        capture_output=True, text=True, timeout=5, check=False,
+    )
+    return result.returncode == 0
+
+
 class KnownHostsPortTests(unittest.TestCase):
+    def test_config_port_is_canonical_decimal(self):
+        # Noncanonical 00022 used to pass CONFIG_PORT yet be treated as
+        # default port 22 by OpenSSH, recreating the host-key alias bug.
+        for good in ("1", "22", "2222", "65535"):
+            with self.subTest(port=good):
+                self.assertTrue(port_is_valid(good))
+        for bad in ("", "0", "00", "022", "00022", "08", "65536",
+                    "99999", "-22", "+22", "22 ", "22x"):
+            with self.subTest(port=bad):
+                self.assertFalse(port_is_valid(bad))
+
     def test_bash_syntax(self):
         subprocess.run(["bash", "-n", str(SCRIPT)], check=True, timeout=5)
 
