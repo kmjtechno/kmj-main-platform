@@ -264,6 +264,32 @@ MATERIALIZE = REPO / "scripts/operations/materialize-main-platform-candidate-run
 class MaterializeContractTest(unittest.TestCase):
     source = MATERIALIZE.read_text()
 
+    def test_privileged_bootstrap_rejects_inherited_shell_hooks(self) -> None:
+        self.assertTrue(self.source.startswith("#!/bin/bash -p\n"))
+        self.assertIn("export PATH=/usr/sbin:/usr/bin:/sbin:/bin", self.source)
+        self.assertIn("unset BASH_ENV ENV CDPATH", self.source)
+        self.assertIn("fail PRIVILEGED_BASH_REQUIRED", self.source)
+        with tempfile.TemporaryDirectory() as tmp:
+            marker = Path(tmp) / "injected"
+            hook = Path(tmp) / "hook.sh"
+            hook.write_text(f"touch {marker}\n")
+            fake_bash = Path(tmp) / "bash"
+            fake_bash.write_text(f"#!/bin/sh\ntouch {marker}\nexit 99\n")
+            fake_bash.chmod(0o755)
+            env = os.environ.copy()
+            env.update({"PATH": f"{tmp}:/usr/bin:/bin", "BASH_ENV": str(hook)})
+            direct = subprocess.run([str(MATERIALIZE)], env=env,
+                                    capture_output=True, text=True)
+            self.assertEqual(direct.returncode, 2, direct.stderr)
+            self.assertIn("EXACT_SHA_AND_CURRENT_RELEASE_REQUIRED", direct.stdout)
+            self.assertFalse(marker.exists(), "privileged shebang must ignore PATH and BASH_ENV")
+            plain = subprocess.run(["/bin/bash", str(MATERIALIZE)],
+                                   env={"PATH": "/usr/bin:/bin"},
+                                   capture_output=True, text=True)
+            self.assertEqual(plain.returncode, 2)
+            self.assertIn("PRIVILEGED_BASH_REQUIRED", plain.stdout)
+
+
     def test_argument_guards_run_before_host_access(self) -> None:
         sha = "8e1a4973204e58050c794eec1ec3b8178b15dd33"
         for args, code in {
@@ -273,7 +299,7 @@ class MaterializeContractTest(unittest.TestCase):
             (sha, "platform-8e1a4973204e"): "TARGET_ALREADY_CURRENT",
             (sha, "platform-8070dad72c55"): "WRONG_HOST",
         }.items():
-            result = subprocess.run(["bash", str(MATERIALIZE), *args], capture_output=True, text=True)
+            result = subprocess.run(["/bin/bash", "-p", str(MATERIALIZE), *args], capture_output=True, text=True)
             self.assertEqual(result.returncode, 2)
             self.assertIn("KMJ_MATERIALIZE=BLOCKED " + code, result.stdout)
 

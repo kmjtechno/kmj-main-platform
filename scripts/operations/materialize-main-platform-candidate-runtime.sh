@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/bin/bash -p
 # Materialize live runtime state into an already staged, clean Main Platform
 # candidate so the fixed activation controller can switch to it safely.
 #
@@ -15,8 +15,13 @@
 # release, database, approval file, symlinks current/previous, services or DNS.
 set -Eeuo pipefail
 umask 077
+# Root execution must not inherit caller PATH or Bash startup hooks.
+# /bin/bash -p ignores BASH_ENV; plain `bash script` is rejected below.
+export PATH=/usr/sbin:/usr/bin:/sbin:/bin
+unset BASH_ENV ENV CDPATH
 fail() { echo "KMJ_MATERIALIZE=BLOCKED $1"; exit 2; }
 status() { printf '%s=%s\n' "$1" "$2"; }
+[[ $- == *p* ]] || fail PRIVILEGED_BASH_REQUIRED
 [[ "$#" -eq 2 ]] || fail EXACT_SHA_AND_CURRENT_RELEASE_REQUIRED
 [[ "$1" =~ ^[a-f0-9]{40}$ ]] || fail EXACT_SHA_REQUIRED
 [[ "$2" =~ ^platform-[a-f0-9]{12}$ ]] || fail EXPECTED_CURRENT_RELEASE_INVALID
