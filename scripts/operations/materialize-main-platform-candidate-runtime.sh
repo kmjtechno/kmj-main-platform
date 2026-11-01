@@ -34,7 +34,7 @@ readonly ORIGIN_LINE='CODEBRIDGE_AGENT_PUBLIC_URL=https://kmjtechno.com'
 [[ "$(id -u)" == 0 && "$(hostname -s)" == KMJ-elite ]] || fail WRONG_HOST
 id kmjprod >/dev/null 2>&1 || fail SERVICE_USER_MISSING
 id www-data >/dev/null 2>&1 || fail WEB_USER_MISSING
-for cmd in git runuser install cp find awk sha256sum flock python3 systemd-run setfacl; do
+for cmd in git runuser install cp find awk sha256sum flock python3 systemd-run setfacl mktemp tee sed; do
   command -v "$cmd" >/dev/null 2>&1 || fail "MISSING_$cmd"
 done
 [[ -L "$ROOT/current" ]] || fail CURRENT_NOT_SYMLINK
@@ -82,13 +82,9 @@ flock -n 9 || fail PRODUCTION_RELEASE_IN_PROGRESS
 # Root holds the release lock while a private mount namespace pins writable
 # candidate storage. Live runtime and all other host paths stay read-only even
 # if kmjprod replaces a candidate parent with a symlink during the copy.
-systemd-run --quiet --wait --pipe --collect \
-  --unit="kmj-materialize-$SHORT" \
-  -p User=kmjprod -p Group=kmjprod -p UMask=0077 \
-  -p ProtectSystem=strict -p ProtectHome=read-only \
-  -p PrivateTmp=yes -p NoNewPrivileges=yes \
-  -p "ReadWritePaths=$CAND" -p "ReadOnlyPaths=$LIVE_APP" \
-  /bin/bash -s -- "$SHA" "$EXPECTED_CURRENT" "$ROOT" "$LIVE" "$CAND" "$ORIGIN_LINE" <<'KMJ_UNPRIVILEGED_MATERIALIZE'
+# The unprivileged body is kept in a variable so the SAME sandbox definition can
+# also run the candidate-only rollback after a later root-side check fails.
+IFS= read -r -d '' SANDBOX_BODY <<'KMJ_UNPRIVILEGED_MATERIALIZE' || true
 set -Eeuo pipefail
 umask 077
 readonly SHA="$1" EXPECTED_CURRENT="$2" ROOT="$3" LIVE="$4" CAND="$5" ORIGIN_LINE="$6"
@@ -99,18 +95,113 @@ status() { printf '%s=%s\n' "$1" "$2"; }
 export GIT_OPTIONAL_LOCKS=0
 git_as() { git -c core.fsmonitor=false -C "$CAND" "$@"; }
 
+readonly MODE="${7:-materialize}" ROLLBACK_ENV_ID="${8:-}" ROLLBACK_LINK_ID="${9:-}"
+[[ "$MODE" == materialize || "$MODE" == rollback ]] || fail BAD_SANDBOX_MODE
+
+# Descriptor-anchored, no-follow file operations. Creation is O_EXCL (never
+# truncates or follows a raced .env/link); removal only unlinks the exact
+# inode this run created, so a replaced or foreign object is left for review.
+fs_op() {
+  /usr/bin/python3 -I -S - "$@" <<'KMJ_FS_OP_PY'
+import os, stat, sys
+
+def open_dir(path):
+    fd = os.open("/", os.O_RDONLY | os.O_DIRECTORY)
+    try:
+        for part in [p for p in path.split("/") if p]:
+            child = os.open(part, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW, dir_fd=fd)
+            os.close(fd)
+            fd = child
+        return fd
+    except BaseException:
+        os.close(fd)
+        raise
+
+def ident(info):
+    return "%d:%d" % (info.st_dev, info.st_ino)
+
+def remove_exact(dir_fd, name, expected, kind):
+    try:
+        info = os.stat(name, dir_fd=dir_fd, follow_symlinks=False)
+    except FileNotFoundError:
+        return "ABSENT"
+    want = stat.S_ISREG if kind == "f" else stat.S_ISLNK
+    if ident(info) != expected or not want(info.st_mode):
+        return "MISMATCH"
+    os.unlink(name, dir_fd=dir_fd)
+    return "REMOVED"
+
+def main(argv):
+    op = argv[1]
+    if op == "create-env":
+        live, cand = open_dir(argv[2]), open_dir(argv[3])
+        src = os.open(".env", os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK, dir_fd=live)
+        info = os.fstat(src)
+        if not stat.S_ISREG(info.st_mode) or info.st_size > 1048576:
+            raise ValueError("LIVE_ENV_UNSAFE")
+        data = b""
+        while chunk := os.read(src, 65536):
+            data += chunk
+        if len(data) != info.st_size:
+            raise ValueError("LIVE_ENV_CHANGED")
+        dst = os.open(".env", os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600, dir_fd=cand)
+        created = ident(os.fstat(dst))
+        try:
+            view = memoryview(data)
+            while view:
+                view = view[os.write(dst, view):]
+            os.fsync(dst)
+        except BaseException:
+            remove_exact(cand, ".env", created, "f")
+            raise
+        print("MATERIALIZED_ENV_ID=" + created)
+    elif op == "create-link":
+        pub = open_dir(argv[2])
+        os.symlink("../storage/app/public", "storage", dir_fd=pub)
+        print("MATERIALIZED_LINK_ID=" + ident(os.stat("storage", dir_fd=pub, follow_symlinks=False)))
+    elif op == "remove":
+        result = remove_exact(open_dir(argv[2]), argv[3], argv[4], argv[5])
+        print("ROLLBACK_" + argv[3].lstrip(".").upper() + "=" + result)
+        if result == "MISMATCH":
+            sys.exit(3)
+    else:
+        raise ValueError("BAD_OP")
+
+try:
+    main(sys.argv)
+except (OSError, ValueError) as exc:
+    print("FS_OP_FAILED=" + type(exc).__name__, file=sys.stderr)
+    sys.exit(2)
+KMJ_FS_OP_PY
+}
+
+env_id="$ROLLBACK_ENV_ID"
+link_id="$ROLLBACK_LINK_ID"
+rollback_candidate() {
+  local bad=0
+  if [[ -n "$link_id" ]]; then fs_op remove "$CAND_APP/public" storage "$link_id" l || bad=1; fi
+  if [[ -n "$env_id" ]]; then fs_op remove "$CAND_APP" .env "$env_id" f || bad=1; fi
+  [[ "$bad" == 0 ]] && status CANDIDATE_ROLLBACK DONE || status CANDIDATE_ROLLBACK FAILED_REVIEW
+  return "$bad"
+}
+if [[ "$MODE" == rollback ]]; then rollback_candidate; exit $?; fi
+committed=0
+on_exit() {
+  local rc=$?
+  if [[ "$rc" != 0 && "$committed" != 1 ]]; then rollback_candidate || true; fi
+  exit "$rc"
+}
+trap on_exit EXIT
+
 # 1. Runtime .env must stay byte-identical across the switch.
 # Never add a URL or modify APP_KEY during production runtime materialization.
+# It is installed last (step 4) so no later check can strand it in the candidate.
 if grep -Eq '^[[:space:]]*CODEBRIDGE_AGENT_PUBLIC_URL[[:space:]]*=' "$LIVE_APP/.env"; then
   grep -Fxq "$ORIGIN_LINE" "$LIVE_APP/.env" || fail LIVE_AGENT_PUBLIC_URL_DIFFERS_REVIEW
   origin_state=PRESERVED
 else
   origin_state=NOT_SET_IN_LIVE
 fi
-install -o kmjprod -g kmjprod -m 0600 "$LIVE_APP/.env" "$CAND_APP/.env"
-[[ "$(sha256sum -- "$LIVE_APP/.env" | cut -d' ' -f1)" == "$(sha256sum -- "$CAND_APP/.env" | cut -d' ' -f1)" ]] || fail ENV_SHA_MISMATCH
-status RUNTIME_ENV BYTE_IDENTICAL
-status AGENT_PUBLIC_ORIGIN "$origin_state"
 
 # 2. Uploads: copy without clobbering tracked placeholders. A size+path
 # inventory is NOT content equality (equal-length different bytes can pass).
@@ -241,16 +332,15 @@ status STORAGE_SYMLINKS_PRESERVED "$links"
 status STORAGE_MANIFEST_SHA256 "$digest"
 status STORAGE_WRITER_QUIESCENCE NOT_ATTESTED
 
-# 3. public/storage link: mirror the live release only.
+# 3. public/storage link: validate the live link now; create it in step 5.
 if [[ -L "$LIVE_APP/public/storage" ]]; then
   [[ "$(readlink "$LIVE_APP/public/storage")" == ../storage/app/public ||
      "$(readlink -f "$LIVE_APP/public/storage")" == "$LIVE_APP/storage/app/public" ]] ||
     fail LIVE_PUBLIC_STORAGE_LINK_UNEXPECTED
-  [[ ! -e "$CAND_APP/public/storage" ]] || fail CANDIDATE_PUBLIC_STORAGE_EXISTS
-  ln -s ../storage/app/public "$CAND_APP/public/storage"
-  status PUBLIC_STORAGE_LINK MIRRORED
+  [[ ! -e "$CAND_APP/public/storage" && ! -L "$CAND_APP/public/storage" ]] || fail CANDIDATE_PUBLIC_STORAGE_EXISTS
+  want_link=1
 else
-  status PUBLIC_STORAGE_LINK NOT_PRESENT_LIVE
+  want_link=0
 fi
 
 # 4. Nginx (www-data) must read public/ exactly like the live release, via a
@@ -262,6 +352,25 @@ for dir in "$CAND" "$CAND/apps" "$CAND_APP"; do
   setfacl -m 'u:www-data:--x' "$dir" || fail ANCESTOR_ACL_FAILED
 done
 setfacl -R -m 'u:www-data:rX' "$CAND_APP/public" || fail PUBLIC_TREE_ACL_FAILED
+
+# Every fallible read-only check above has passed. Create the only two
+# candidate artifacts last (O_EXCL, inode-recorded) so any failure from here on
+# removes exactly what this run created.
+[[ -z "$(git_as status --porcelain --untracked-files=normal -- . ':(exclude)apps/platform/storage')" ]] || fail CANDIDATE_DIRTY_BEFORE_WRITE
+env_id="$(fs_op create-env "$LIVE_APP" "$CAND_APP" | sed -n 's/^MATERIALIZED_ENV_ID=\([0-9][0-9]*:[0-9][0-9]*\)$/\1/p')" || fail ENV_CREATE_FAILED
+[[ -n "$env_id" ]] || fail ENV_CREATE_FAILED
+echo "MATERIALIZED_ENV_ID=$env_id"
+[[ "$(sha256sum -- "$LIVE_APP/.env" | cut -d' ' -f1)" == "$(sha256sum -- "$CAND_APP/.env" | cut -d' ' -f1)" ]] || fail ENV_SHA_MISMATCH
+status RUNTIME_ENV BYTE_IDENTICAL
+status AGENT_PUBLIC_ORIGIN "$origin_state"
+if [[ "$want_link" == 1 ]]; then
+  link_id="$(fs_op create-link "$CAND_APP/public" | sed -n 's/^MATERIALIZED_LINK_ID=\([0-9][0-9]*:[0-9][0-9]*\)$/\1/p')" || fail LINK_CREATE_FAILED
+  [[ -n "$link_id" ]] || fail LINK_CREATE_FAILED
+  echo "MATERIALIZED_LINK_ID=$link_id"
+  status PUBLIC_STORAGE_LINK MIRRORED
+else
+  status PUBLIC_STORAGE_LINK NOT_PRESENT_LIVE
+fi
 
 # Candidate must still be a clean exact checkout for the activation controller.
 [[ -z "$(git_as status --porcelain --untracked-files=normal -- . ':(exclude)apps/platform/storage')" ]] || fail CANDIDATE_DIRTY_AFTER
@@ -282,13 +391,41 @@ status LIVE_RELEASE UNCHANGED
 status DATABASE NOT_TOUCHED
 status APPROVAL_UPDATED NO
 status PRODUCTION_SWITCH NOT_ATTEMPTED
+committed=1
 echo 'KMJ_MATERIALIZE_SHARED=PASS'
-
 KMJ_UNPRIVILEGED_MATERIALIZE
 
-runuser -u www-data -- test -r "$CAND_APP/public/index.php" || fail NGINX_PUBLIC_UNREADABLE
-runuser -u www-data -- test -r "$CAND_APP/public/assets/kmj-codebridge-icon.png" || fail NGINX_ICON_UNREADABLE
-runuser -u www-data -- test ! -r "$CAND_APP/.env" || fail NGINX_PRIVATE_ENV_EXPOSED
+run_sandbox() {
+  systemd-run --quiet --wait --pipe --collect \
+    --unit="kmj-materialize-$1-$SHORT" \
+    -p User=kmjprod -p Group=kmjprod -p UMask=0077 \
+    -p ProtectSystem=strict -p ProtectHome=read-only \
+    -p PrivateTmp=yes -p NoNewPrivileges=yes \
+    -p "ReadWritePaths=$CAND" -p "ReadOnlyPaths=$LIVE_APP" \
+    /bin/bash -s -- "$SHA" "$EXPECTED_CURRENT" "$ROOT" "$LIVE" "$CAND" "$ORIGIN_LINE" "${@:2}" <<<"$SANDBOX_BODY"
+}
+sandbox_out="$(mktemp)"
+trap ': >"$sandbox_out"' EXIT
+post_fail() {
+  # A root-side check failed after the sandbox committed: remove only the
+  # inode-attested candidate artifacts, then report the original failure.
+  local env_id link_id
+  env_id="$(sed -n 's/^MATERIALIZED_ENV_ID=\([0-9][0-9]*:[0-9][0-9]*\)$/\1/p' "$sandbox_out" | tail -n 1)"
+  link_id="$(sed -n 's/^MATERIALIZED_LINK_ID=\([0-9][0-9]*:[0-9][0-9]*\)$/\1/p' "$sandbox_out" | tail -n 1)"
+  if [[ -n "$env_id$link_id" ]]; then
+    run_sandbox rollback rollback "$env_id" "$link_id" || status CANDIDATE_ROLLBACK FAILED_REVIEW
+  fi
+  fail "$1"
+}
+
+sandbox_rc=0
+run_sandbox materialize materialize | tee -- "$sandbox_out" || sandbox_rc="${PIPESTATUS[0]}"
+[[ "$sandbox_rc" == 0 ]] || post_fail "SANDBOX_FAILED_$sandbox_rc"
+grep -Fxq 'KMJ_MATERIALIZE_SHARED=PASS' "$sandbox_out" || post_fail SANDBOX_PASS_MISSING
+
+runuser -u www-data -- test -r "$CAND_APP/public/index.php" || post_fail NGINX_PUBLIC_UNREADABLE
+runuser -u www-data -- test -r "$CAND_APP/public/assets/kmj-codebridge-icon.png" || post_fail NGINX_ICON_UNREADABLE
+runuser -u www-data -- test ! -r "$CAND_APP/.env" || post_fail NGINX_PRIVATE_ENV_EXPOSED
 status NGINX_PUBLIC_ACL PASS
 status NGINX_PRIVATE_ENV DENIED
 echo "KMJ_MATERIALIZE=PASS"
