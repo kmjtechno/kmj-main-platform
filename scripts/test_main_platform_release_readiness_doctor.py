@@ -277,18 +277,56 @@ class MaterializeContractTest(unittest.TestCase):
             self.assertEqual(result.returncode, 2)
             self.assertIn("KMJ_MATERIALIZE=BLOCKED " + code, result.stdout)
 
-    def test_copies_only_into_candidate_and_proves_parity(self) -> None:
-        for token in ("setfacl -R -m 'u:www-data:rX'", "u:www-data:--x", "NGINX_PRIVATE_ENV_EXPOSED",
-                      "NGINX_ICON_UNREADABLE", "cp -a --no-clobber", 'install -o kmjprod -g kmjprod -m 0600 "$LIVE_APP/.env" "$CAND_APP/.env"',
-                      "STORAGE_PARITY_MISMATCH", "SOURCE_STORAGE_CHANGED_DURING_COPY",
-                      "verify-main-platform-storage-manifest.py", "CANDIDATE_DIRTY_AFTER", "LIVE_AGENT_PUBLIC_URL_DIFFERS_REVIEW",
-                      "CODEBRIDGE_AGENT_PUBLIC_URL=https://kmjtechno.com", "flock -n 9",
-                      "DATABASE NOT_TOUCHED", "PRODUCTION_SWITCH NOT_ATTEMPTED"):
-            self.assertIn(token, self.source)
-        for forbidden in ("artisan migrate", "systemctl", "mv ", "rm -", "ln -sfn", '>>"$LIVE_APP',
-                          '> "$LIVE_APP', "main-platform-production-release.json", "backupVerified",
-                          "psql", "pg_dump", "sed -i"):
-            self.assertNotIn(forbidden, self.source)
+    def test_materializer_requires_real_shared_storage_not_copy(self) -> None:
+        # The CodeBridge production controller accepts only one persistent
+        # storage path OUTSIDE release dirs and byte-identical runtime config.
+        required = (
+            'readonly SHARED="$ROOT/shared/storage"',
+            'fail LIVE_STORAGE_NOT_SHARED',
+            'fail CANDIDATE_STORAGE_NOT_SHARED',
+            'fail SHARED_STORAGE_MOVING_TARGET',
+            'status STORAGE_MODE VERIFIED_SHARED',
+            "KMJ_MATERIALIZE_SHARED=PASS",
+            "STORAGE_WRITER_QUIESCENCE NOT_ATTESTED",
+            'status RUNTIME_ENV BYTE_IDENTICAL',
+            'fail ENV_SHA_MISMATCH',
+            'install -o kmjprod -g kmjprod -m 0600 "$LIVE_APP/.env" "$CAND_APP/.env"',
+            'setfacl -R -m \'u:www-data:rX\'',
+            "NGINX_PRIVATE_ENV_EXPOSED",
+            "PRODUCTION_SWITCH NOT_ATTEMPTED",
+            "CANDIDATE_DIRTY_AFTER",
+            "flock -n 9",
+        )
+        for token in required:
+            self.assertIn(token, self.source, token)
+        forbidden = (
+            'cp -a --no-clobber',
+            'PINNED_IN_CANDIDATE_ONLY',
+            '>>"$CAND_APP/.env"',
+            'STORAGE_PARITY_MISMATCH',
+            'SOURCE_STORAGE_CHANGED_DURING_COPY',
+            "artisan migrate",
+            "systemctl",
+            "mv ",
+            "rm -",
+            "ln -sfn",
+            '>>"$LIVE_APP',
+            'main-platform-production-release.json',
+            "backupVerified",
+            "psql",
+            "pg_dump",
+            "sed -i",
+        )
+        for token in forbidden:
+            self.assertNotIn(token, self.source, token)
+
+    def test_no_upload_copy_and_explicit_preflight_before_sandbox(self) -> None:
+        self.assertLess(self.source.index('fail LIVE_STORAGE_NOT_SHARED'),
+                        self.source.index('systemd-run --quiet'))
+        self.assertLess(self.source.index('fail CANDIDATE_STORAGE_NOT_SHARED'),
+                        self.source.index('systemd-run --quiet'))
+        self.assertNotIn('cp -a --no-clobber', self.source)
+        self.assertIn(":(exclude)apps/platform/storage", self.source)
 
 
 class ExactRecoveryContractTest(unittest.TestCase):
