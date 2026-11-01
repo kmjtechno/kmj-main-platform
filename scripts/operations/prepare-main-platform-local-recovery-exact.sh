@@ -46,11 +46,18 @@ done
 # Root must never create/truncate through a pre-planted symlink in the sticky /run/lock:
 # O_EXCL create (noclobber) never follows a symlink; then require a root-owned 0600 single-link file.
 readonly RELEASE_LOCK=/run/lock/kmj-main-platform-production-release.lock
-( set -o noclobber; : >"$RELEASE_LOCK" ) 2>/dev/null || :
-[[ -f "$RELEASE_LOCK" && ! -L "$RELEASE_LOCK" && "$(stat -c '%u:%h' -- "$RELEASE_LOCK")" == "0:1" ]] || fail RELEASE_LOCK_UNSAFE
-chmod 0600 -- "$RELEASE_LOCK"
+# Only an atomic new 0600 inode is created. Never chmod an existing inode:
+# a hostile hardlink or file replacement must fail instead of being repaired.
+( umask 077; set -o noclobber; : >"$RELEASE_LOCK" ) 2>/dev/null || :
+[[ -f "$RELEASE_LOCK" && ! -L "$RELEASE_LOCK" ]] || fail RELEASE_LOCK_UNSAFE
+[[ "$(stat -c '%u:%h:%a' -- "$RELEASE_LOCK")" == "0:1:600" ]] || fail RELEASE_LOCK_UNSAFE
+# Read-only open cannot truncate any swapped path. Reattest the actual open
+# descriptor and compare its inode with the fixed lock path before/after flock.
 exec 9<"$RELEASE_LOCK"
+release_lock_fingerprint="$(stat -Lc '%u:%h:%a:%d:%i' -- /proc/self/fd/9)" || fail RELEASE_LOCK_FD_UNSAFE
+[[ "$release_lock_fingerprint" == "0:1:600:$(stat -c '%d:%i' -- "$RELEASE_LOCK")" ]] || fail RELEASE_LOCK_FD_UNSAFE
 flock -n 9 || fail PRODUCTION_RELEASE_IN_PROGRESS
+[[ "$release_lock_fingerprint" == "0:1:600:$(stat -c '%d:%i' -- "$RELEASE_LOCK")" ]] || fail RELEASE_LOCK_CHANGED
 scratch="$(mktemp -d /tmp/kmj-local-recovery.XXXXXXXX)"
 # Root owns the parent and all archival outputs; only a narrow child workdir
 # is writable by the app user. Never write root files in app-writable directories.
