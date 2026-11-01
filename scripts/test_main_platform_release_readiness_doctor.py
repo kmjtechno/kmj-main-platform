@@ -704,10 +704,10 @@ class MaterializeRollbackTest(unittest.TestCase):
         self.assertNotIn("CANDIDATE_ROLLBACK=DONE", run.stdout)
 
     def test_root_post_fail_rejects_duplicate_malformed_missing_receipts(self) -> None:
-        # Execute only the extracted post_fail function with a fake rollback,
-        # never systemd-run or production filesystem changes.
+        # Extract the real root-side functions but replace the protected
+        # systemd-run with a harmless echo. Nothing touches root/production.
         source = self.source
-        start = source.index('sandbox_text=""\npost_fail() {')
+        start = source.index('sandbox_text=""\n# A completed materializer')
         end = source.index('\nsandbox_rc=0', start)
         excerpt = source[start:end]
         script = (
@@ -715,30 +715,66 @@ class MaterializeRollbackTest(unittest.TestCase):
             "status() { printf '%s=%s\\n' \"$1\" \"$2\"; }\n"
             "fail() { echo \"BLOCKED $1\"; exit 2; }\n"
             "run_sandbox() { printf 'ROLLBACK_CALLED=%s\\n' \"$3:$4\"; }\n"
-            + excerpt + '\nsandbox_text="$1"\npost_fail INJECTED_FAILURE\n'
+            + excerpt +
+            '\nsandbox_text="$1"\nsandbox_rc="$2"\n'
+            'post_fail INJECTED_FAILURE\n'
         )
+        complete_link = (
+            "MATERIALIZED_ENV_ID=12:34\n"
+            "MATERIALIZED_LINK_ID=45:67\n"
+            "PUBLIC_STORAGE_LINK=MIRRORED\n"
+            "KMJ_MATERIALIZE_SHARED=PASS"
+        )
+        complete_no_link = (
+            "MATERIALIZED_ENV_ID=12:34\n"
+            "PUBLIC_STORAGE_LINK=NOT_PRESENT_LIVE\n"
+            "KMJ_MATERIALIZE_SHARED=PASS"
+        )
+        # tuple: stdout, sandbox exit, complete/verified, known-inode cleanup
         cases = [
-            ("", False),
-            ("MATERIALIZED_ENV_ID=12:34\nMATERIALIZED_ENV_ID=45:67", False),
-            ("MATERIALIZED_ENV_ID=12:34\nMATERIALIZED_LINK_ID=45:67\nMATERIALIZED_LINK_ID=78:90", False),
-            ("MATERIALIZED_ENV_ID=invalid", False),
-            ("MATERIALIZED_ENV_ID=12:34\nMATERIALIZED_LINK_ID=../unsafe", False),
-            ("MATERIALIZED_ENV_ID=12:34\nMATERIALIZED_LINK_ID=45:67", True),
+            ("", "137", False, False),
+            ("MATERIALIZED_ENV_ID=12:34", "137", False, True),
+            ("MATERIALIZED_LINK_ID=45:67", "137", False, True),
+            ("MATERIALIZED_ENV_ID=12:34\nPUBLIC_STORAGE_LINK=MIRRORED", "137", False, True),
+            ("MATERIALIZED_ENV_ID=12:34\nMATERIALIZED_ENV_ID=45:67", "0", False, False),
+            ("MATERIALIZED_ENV_ID=12:34\nMATERIALIZED_LINK_ID=45:67\nMATERIALIZED_LINK_ID=78:90", "0", False, False),
+            ("MATERIALIZED_ENV_ID=invalid", "0", False, False),
+            ("MATERIALIZED_ENV_ID=12:34\nMATERIALIZED_LINK_ID=../unsafe", "0", False, False),
+            (complete_link.replace("MATERIALIZED_LINK_ID=45:67\n", ""), "0", False, True),
+            (complete_link.replace("KMJ_MATERIALIZE_SHARED=PASS", ""), "0", False, True),
+            (complete_link, "137", False, True),
+            (complete_no_link, "0", True, True),
+            (complete_link, "0", True, True),
         ]
-        for receipt, allowed in cases:
-            with self.subTest(receipt=receipt):
+        for receipt, code, verified, attempted in cases:
+            with self.subTest(receipt=receipt, sandbox_exit=code):
                 out = subprocess.run(
-                    ["/bin/bash", "-c", script, "--", receipt],
+                    ["/bin/bash", "-c", script, "--", receipt, code],
                     capture_output=True, text=True,
                     env={"PATH": "/usr/bin:/bin"}, timeout=10,
                 )
-                self.assertEqual(out.returncode, 2)
+                self.assertEqual(out.returncode, 2, out.stdout + out.stderr)
                 self.assertIn("BLOCKED INJECTED_FAILURE", out.stdout)
-                if allowed:
-                    self.assertIn("ROLLBACK_CALLED=12:34:45:67", out.stdout)
+                if verified:
+                    self.assertIn("ROLLBACK_CALLED=", out.stdout)
+                    self.assertNotIn("CANDIDATE_ROLLBACK=FAILED_REVIEW", out.stdout)
                 else:
-                    self.assertNotIn("ROLLBACK_CALLED", out.stdout)
+                    self.assertNotIn("ROLLBACK_CALLED=", out.stdout)
+                    self.assertNotIn("CANDIDATE_ROLLBACK=DONE", out.stdout)
                     self.assertIn("CANDIDATE_ROLLBACK=FAILED_REVIEW", out.stdout)
+                    if attempted:
+                        self.assertIn("CANDIDATE_ROLLBACK_KNOWN_INODES=ATTEMPTED", out.stdout)
+
+    def test_sigkill_leaves_orphans_for_owner_review(self) -> None:
+        # SIGKILL cannot run the sandbox's EXIT trap; the root controller must
+        # therefore treat a nonzero sandbox result as incomplete even if some
+        # inode receipts were printed before the crash.
+        run = self.harness(self.CREATE + "kill -KILL $$\n")
+        self.assertNotEqual(run.returncode, 0, run.stdout + run.stderr)
+        self.assertTrue((self.cand / ".env").is_file())
+        self.assertTrue((self.cand / "public/storage").is_symlink())
+        self.assertEqual((self.live / ".env").read_bytes(),
+                         b"APP_KEY=base64:abc\nDB=x\n")
 
     def test_sigterm_after_creation_rolls_back(self) -> None:
         run = self.harness(self.CREATE + "kill -TERM $$\nsleep 5\n")
