@@ -18,6 +18,10 @@ import tarfile
 MAX_ENTRIES = 100_000
 MAX_FILE_BYTES = 256 * 1024 * 1024 * 1024
 MIN_FREE_RESERVE = 4 * 1024 * 1024 * 1024
+# Legacy witnessed pre-deploy bundles include .env beside storage/app.
+# It is verified byte-for-byte but never parsed, logged or required for
+# newer sanitized bundles. Reject any OTHER top-level content.
+MAX_LEGACY_ENV_BYTES = 128 * 1024
 
 
 class StorageParityError(Exception):
@@ -44,9 +48,11 @@ def archive_inventory(source: Path) -> tuple[dict[str, tuple[int, str]], set[str
         for item in archive:
             raw = item.name.rstrip("/")
             parts = raw.split("/")
+            legacy_env = raw == ".env"
             if (not raw or raw.startswith("/") or "\\" in raw
                 or any(part in ("", ".", "..") for part in parts)
-                or parts[:2] != ["storage", "app"]
+                or (not legacy_env and parts[:2] != ["storage", "app"])
+                or (legacy_env and (not item.isfile() or item.size > MAX_LEGACY_ENV_BYTES))
                 or raw in seen or len(seen) >= MAX_ENTRIES
                 or item.size < 0 or item.sparse is not None
                 or not (item.isdir() or item.isfile())):
