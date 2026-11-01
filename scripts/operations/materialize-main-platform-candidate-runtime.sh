@@ -501,6 +501,9 @@ post_fail() {
   if [[ "$receipt_invalid" == 0 && "$cleanup_rc" == 0 && -n "$rollback_text" ]]; then
     printf '%s\n' "$rollback_text"
   else
+    if [[ "$receipt_invalid" != 0 && "$cleanup_rc" == 0 && -n "$rollback_text" ]]; then
+      status CANDIDATE_ROLLBACK_KNOWN_INODES ATTEMPTED
+    fi
     status CANDIDATE_ROLLBACK FAILED_REVIEW
   fi
   fail "$1"
