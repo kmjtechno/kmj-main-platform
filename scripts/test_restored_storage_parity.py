@@ -140,6 +140,24 @@ class RestoredStorageParityTests(unittest.TestCase):
         with mock.patch.object(module.os, "fwalk", side_effect=swapped_walk):
             self.assert_rejected()
 
+    def test_symlink_directory_added_between_walks_is_rejected(self):
+        # fwalk lists a symlink-to-directory under subdirs without descending.
+        # The second pass must validate subdirs, not only files/inode counts.
+        from unittest import mock
+        original_walk = module.os.fwalk
+        walks = 0
+
+        def inject_symlink(*args, **kwargs):
+            nonlocal walks
+            walks += 1
+            if walks == 2:
+                parent = self.output / "storage/app/public"
+                (parent / "late-alias").symlink_to(parent, target_is_directory=True)
+            yield from original_walk(*args, **kwargs)
+
+        with mock.patch.object(module.os, "fwalk", side_effect=inject_symlink):
+            self.assert_rejected()
+
     def test_byte_identical_file_replaced_after_hashing_is_rejected(self):
         # A second directory-only inode walk misses a file swapped after
         # its bytes were hashed. The new file has identical content.
