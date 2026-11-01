@@ -90,7 +90,7 @@ done < "$batch"
 
     def run(self):
         env = dict(os.environ, PATH=f"{self.root}/bin:{os.environ['PATH']}")
-        return subprocess.run(["bash", str(self.script), "--candidate-sha", SHA], env=env, capture_output=True, text=True)
+        return subprocess.run(["/bin/bash", "-p", str(self.script), "--candidate-sha", SHA], env=env, capture_output=True, text=True)
 
 
 class PinnedSftpPush(unittest.TestCase):
@@ -252,7 +252,7 @@ class PinnedSftpPush(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             env = Env(Path(tmp))
             e = dict(os.environ, PATH=f"{tmp}/bin:{os.environ['PATH']}")
-            r = subprocess.run(["bash", str(env.script), "x"], env=e, capture_output=True, text=True)
+            r = subprocess.run(["/bin/bash", "-p", str(env.script), "x"], env=e, capture_output=True, text=True)
             self.assertIn("USAGE_CANDIDATE_SHA_ONLY", r.stdout)
 
 
@@ -297,7 +297,7 @@ class PinnedSftpPush(unittest.TestCase):
                 ("--candidate-sha", SHA[:39] + "\n"): "CANDIDATE_SHA_INVALID",
             }
             for args, expected in cases.items():
-                r = subprocess.run(["bash", str(env.script), *args], env=e, capture_output=True, text=True)
+                r = subprocess.run(["/bin/bash", "-p", str(env.script), *args], env=e, capture_output=True, text=True)
                 self.assertEqual(r.returncode, 2, args)
                 self.assertIn(expected, r.stdout, args)
                 self.assertNotIn("OFFSITE_PUSH=PASS", r.stdout)
@@ -307,7 +307,7 @@ class PinnedSftpPush(unittest.TestCase):
             env = Env(Path(tmp))
             other = "e" * 40
             r = subprocess.run(
-                ["bash", str(env.script), "--candidate-sha", other],
+                ["/bin/bash", "-p", str(env.script), "--candidate-sha", other],
                 env=dict(os.environ, PATH=f"{tmp}/bin:" + os.environ["PATH"]), capture_output=True, text=True,
             )
             self.assertEqual(r.returncode, 2)
