@@ -75,7 +75,7 @@ final class OmniDeskIssuanceContractFailClosedTest extends TestCase
             $response = $this->postJson($uri, []);
             $response->assertStatus(503);
             $response->assertJsonPath('error', 'SERVER_UNAVAILABLE');
-            $response->assertHeader('Cache-Control', 'no-store');
+            $response->assertHeader('Cache-Control', 'no-store, private');
         }
     }
 }
