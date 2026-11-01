@@ -51,6 +51,38 @@ class RestoredStorageParityTests(unittest.TestCase):
     def test_exact_bytes_pass(self):
         self.assertEqual(module.verify(self.tar, self.output), 1)
 
+    def test_legacy_archive_optional_config_file_parity(self):
+        from unittest import mock
+        sample = b"fixture bytes only"
+        self.make_tar(extra=(".env", sample, tarfile.REGTYPE))
+        (self.output / ".env").write_bytes(sample)
+        self.assertEqual(module.verify(self.tar, self.output), 2)
+        with mock.patch("sys.stdout", new_callable=io.StringIO) as output:
+            self.assertEqual(module.main([str(self.tar), str(self.output)]), 0)
+        self.assertIn("RECOVERED_STORAGE_FILES_VERIFIED=2", output.getvalue())
+        self.assertNotIn("fixture bytes only", output.getvalue())
+        self.assertNotIn(".env", output.getvalue())
+
+    def test_legacy_archive_modified_or_missing_config_fails(self):
+        self.make_tar(extra=(".env", b"original", tarfile.REGTYPE))
+        self.assert_rejected()
+        (self.output / ".env").write_bytes(b"changed!")
+        self.assert_rejected()
+
+    def test_only_one_bounded_regular_config_member_allowed(self):
+        for name, payload, kind in (
+            (".env.bak", b"x", tarfile.REGTYPE),
+            (".env", b"", tarfile.SYMTYPE),
+            (".env", b"x" * (module.MAX_LEGACY_ENV_BYTES + 1), tarfile.REGTYPE),
+        ):
+            with self.subTest(name=name, kind=kind):
+                self.make_tar(extra=(name, payload, kind))
+                self.assert_rejected()
+
+    def test_source_backup_archive_legacy_shape(self):
+        path = Path(__file__).parent / "operations/prepare-main-platform-local-recovery-exact.sh"
+        self.assertIn("storage/app .env", path.read_text())
+
     def test_capacity_preflight_requires_headroom_for_expanded_bytes(self):
         required = len(b"original upload")
         reserve = module.MIN_FREE_RESERVE
