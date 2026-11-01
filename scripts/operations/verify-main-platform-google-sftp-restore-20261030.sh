@@ -191,6 +191,16 @@ fi
 [[ "$(sed -n 's/^STAGE=//p' "$tmp/db.stage" 2>/dev/null | tail -1)" == DONE ]] ||
   { status DISPOSABLE_POSTGRES_SANDBOX FAIL; exit 1; }
 status DATABASE_PHASE_OS_SANDBOX PASS
+# Compressed storage size is not a safe disk budget: a tiny archive may
+# expand to hundreds of GiB. Recheck free space AFTER the database drill,
+# validate every inner member, and retain 4 GiB of scratch headroom.
+free_storage_kib="$(df -Pk "$tmp/restored-storage" | awk 'END {print $4}')"
+[[ "$free_storage_kib" =~ ^[0-9]+$ ]] || block STORAGE_FREE_SPACE_UNKNOWN
+if ! python3 "$repo/scripts/operations/verify-restored-storage-parity.py" \
+    --capacity-check "$tmp/extracted/storage.tar.gz" "$((free_storage_kib * 1024))" >/dev/null; then
+  status STORAGE_EXTRACTION_CAPACITY FAIL; exit 1
+fi
+status STORAGE_EXTRACTION_CAPACITY PASS
 # Storage extraction occurs only after archive integrity and bounded-member verification.
 if ! tar -xzf "$tmp/extracted/storage.tar.gz" --no-same-owner --no-same-permissions -C "$tmp/restored-storage" >/dev/null 2>&1; then
   status RECOVERED_STORAGE FAIL; exit 1
