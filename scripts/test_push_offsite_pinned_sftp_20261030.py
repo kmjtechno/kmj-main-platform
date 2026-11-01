@@ -130,18 +130,18 @@ class PinnedSftpPush(unittest.TestCase):
 
     def test_root_bootstrap_isolated_from_inherited_path_and_bash_env(self):
         source = SCRIPT.read_text()
-        self.assertTrue(source.startswith("#!/bin/bash -p\\n"))
+        self.assertTrue(source.startswith("#!/bin/bash -p\n"))
         self.assertIn("export PATH=/usr/sbin:/usr/bin:/sbin:/bin", source)
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             env = Env(root)
             marker = root / "startup-marker"
             hook = root / "bash-env-hook"
-            hook.write_text(f"printf 'UNSAFE' > {marker}\\n")
+            hook.write_text(f"printf 'UNSAFE' > {marker}\n")
             # A direct exec must use /bin/bash -p, not an attacker-supplied
             # bash executable or BASH_ENV startup hook.
             evil_bash = root / "bin" / "bash"
-            evil_bash.write_text(f"#!/bin/sh\\nprintf 'UNSAFE' > {marker}\\nexit 91\\n")
+            evil_bash.write_text(f"#!/bin/sh\nprintf 'UNSAFE' > {marker}\nexit 91\n")
             evil_bash.chmod(0o755)
             variables = dict(os.environ, PATH=f"{root}/bin:/usr/bin:/bin", BASH_ENV=str(hook))
             result = subprocess.run([str(env.script), "--candidate-sha", SHA],
