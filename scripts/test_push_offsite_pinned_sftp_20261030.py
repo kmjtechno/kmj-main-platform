@@ -19,7 +19,7 @@ CONF = f"HOST=backup.example\nPORT=22\nUSER=kmjbackup\nREMOTE_DIR=/incoming\nIDE
 
 
 class Env:
-    def __init__(self, root: Path, *, fingerprint=PIN, sftp_mode="ok", conf=CONF, remote=None):
+    def __init__(self, root: Path, *, fingerprint=PIN, sftp_mode="ok", conf=CONF, remote=None, remote_mode=0o600):
         self.root = root
         (root / "bin").mkdir()
         (root / "backups").mkdir()
@@ -27,6 +27,7 @@ class Env:
         self.remote.mkdir()
         if remote is not None:
             (self.remote / f"offsite-{SHORT}.tar.gz.age").write_bytes(remote)
+            (self.remote / f"offsite-{SHORT}.tar.gz.age").chmod(remote_mode)
         self.local = root / f"backups/offsite-{SHORT}.tar.gz.age"
         self.local.write_bytes(b"ENCRYPTED-TEST-BYTES")
         self.local.chmod(0o600)  # Local root ciphertext is protected: SFTP must keep 0600.
@@ -78,7 +79,8 @@ while read -r cmd a b c; do
   fi
   a=$(map "$a"); b=$(map "$b")
   case "$cmd" in
-    get) if [ -f "$a" ]; then cp "$a" "$b"; else echo "File \\"$a\\" not found." >&2; exit 1; fi ;;
+    get) if [ "$a" = -p ]; then a="$b"; b="$c"; fi
+         if [ -f "$a" ]; then cp -p "$a" "$b"; else echo "File \\"$a\\" not found." >&2; exit 1; fi ;;
     put) case "{mode}" in corrupt) echo corrupt > "$b";; quota) echo 'Failure: No space left' >&2; exit 1;; *) cp -p "$a" "$b";; esac ;;
     ln) case "{mode}" in nohl) echo 'Couldn'"'"'t link: Operation unsupported' >&2; exit 1;; esac
         if [ -e "$b" ]; then echo 'Couldn'"'"'t link: Failure' >&2; exit 1; fi; ln "$a" "$b" ;;
@@ -107,6 +109,7 @@ class PinnedSftpPush(unittest.TestCase):
         self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
         self.assertIn("HOSTKEY_PIN=PASS", r.stdout)
         self.assertIn("SFTP_UPLOAD=PASS", r.stdout)
+        self.assertIn("REMOTE_READBACK_MODE_0600=PASS", r.stdout)
         self.assertIn("REMOTE_READBACK_SHA256=PASS", r.stdout)
         self.assertIn("OFFSITE_RESTORE=NOT_VERIFIED", r.stdout)
         self.assertEqual(uploaded, b"ENCRYPTED-TEST-BYTES")
@@ -196,6 +199,15 @@ class PinnedSftpPush(unittest.TestCase):
         self.assertEqual(r.returncode, 0, r.stdout)
         self.assertIn("REMOTE_COMMIT_NO_CLOBBER=TARGET_EXISTS_OR_FAILED", r.stdout)
         self.assertIn("REMOTE_READBACK_SHA256=PASS", r.stdout)
+        self.assertEqual(uploaded, b"ENCRYPTED-TEST-BYTES")
+
+    def test_existing_identical_but_world_readable_ciphertext_fails_closed(self):
+        r, uploaded, _, log = self.go(remote=b"ENCRYPTED-TEST-BYTES", remote_mode=0o644)
+        self.assertEqual(r.returncode, 1, r.stdout)
+        self.assertIn("REMOTE_READBACK_MODE=NOT_0600", r.stdout)
+        self.assertNotIn("OFFSITE_PUSH=PASS", r.stdout)
+        self.assertNotIn("REMOTE_READBACK_SHA256=PASS", r.stdout)
+        self.assertIn("get -p ", log)
         self.assertEqual(uploaded, b"ENCRYPTED-TEST-BYTES")
 
     def test_existing_different_object_is_never_overwritten(self):
