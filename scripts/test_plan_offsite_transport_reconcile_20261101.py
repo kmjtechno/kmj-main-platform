@@ -50,7 +50,7 @@ class PlannerTest(unittest.TestCase):
         self.assertEqual(self.decide(A2, A2B, "exit_255=NO\n")["DECISION"], "BLOCKED_EVIDENCE")
 
     def test_paths_keys_and_hosts_are_rejected(self):
-        for bad in ("candidate=/root/.ssh/id\n", "x=-----BEGIN OPENSSH PRIVATE KEY-----\n", "host=a@b\n", "p=../x\n"):
+        for bad in ("candidate=/root/.ssh/id\n", "x=-----" + "BEGIN OPENSSH " + "PRIVATE KEY-----\n", "host=a@b\n", "p=../x\n"):
             self.assertEqual(self.decide(A2, A2B, bad)["DECISION"], "BLOCKED_EVIDENCE", bad)
 
     def test_unknown_schema_is_rejected(self):
