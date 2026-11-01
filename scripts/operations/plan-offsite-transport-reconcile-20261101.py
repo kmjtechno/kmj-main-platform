@@ -1,23 +1,12 @@
 #!/usr/bin/env python3
 """A2 offline decision planner for the legacy offsite SSH exit 255.
 
-Pure and offline: reads sanitized key=value receipts (A2 inspect, A2b compare,
-A2c trace and an optional restore witness) from files named on the command line
-and prints ONE decision plus the owner gates that must be met. It opens no
-network connection, runs no subprocess, writes nothing, reads no key, config or
-journal, and can never authorize a change: APPLY_ALLOWED is always NO. The
-output is a plan for a reviewed, owner-run operator step, not an action.
-
-Decisions (deny by default):
-  BLOCKED_EVIDENCE            receipts missing, duplicated, unknown schema or unsafe values
-  NOT_AUTH_FAILURE            exit 255 is not an exact-invocation publickey denial; use the other class
-  INVESTIGATE_INCONSISTENT    receipts contradict each other; no plan is produced
-  REPOINT_IDENTITY_REVIEW     legacy offered key is a single unauthorized candidate: plan a reviewed
-                              drop-in using the already-authorized pinned identity (no new key, no rotation)
-  RETIRE_LEGACY_REVIEW        legacy identity ambiguous/unproven: plan retiring the legacy unit in favour of
-                              the reviewed pinned SFTP push (never "restart and hope")
-Both review decisions additionally require a fresh independent restore witness; without it the
-decision is downgraded to WAIT_FOR_RESTORE_WITNESS.
+Only accepts fixed, sanitized, schema-bound A2/A2b/A2c diagnostics.
+Diagnostic restore_verified=NO is an observation, not a global release state.
+A separately typed and independently authenticated restore witness is NOT
+implemented here. Arbitrary text claiming PASS can never clear a release gate.
+No shell, SSH, key, systemd, network, writes, or production authority.
+APPLY_ALLOWED=NO and MUTATIONS=NONE for every path.
 """
 from __future__ import annotations
 
@@ -26,9 +15,50 @@ import sys
 from pathlib import Path
 
 MAX_BYTES = 16384
-LINE = re.compile(r"([a-z][a-z0-9_]{0,63})=([A-Za-z0-9_.:,+/=-]{1,400})\Z")
-SCHEMAS = {"kmj.a2.ssh255.readonly.v1", "kmj.a2.unit-identity.readonly.v1"}
-FORBIDDEN_VALUE = re.compile(r"(^/|\.\./|BEGIN [A-Z ]*KEY|@)")
+LINE = re.compile(r"([A-Za-z][A-Za-z0-9_]{0,63})=([^\r\n]{1,400})\Z")
+SAFE_VALUE = re.compile(r"[A-Za-z0-9_.:,+/=-]{1,400}\Z")
+TRACE_CANDIDATE = re.compile(
+    r"id=[a-f0-9]{12} role=PRIVATE_KEY kind=FILE keys=- "
+    r"fps=SHA256:[A-Za-z0-9+/]{43}\Z"
+)
+A2 = "kmj.a2.ssh255.readonly.v1"
+A2B = "kmj.a2.unit-identity.readonly.v1"
+A2C = "kmj.a2c.effective-identity.readonly.v1"
+ALLOWED = {
+    A2: frozenset("""schema unit unit_load exit_255 systemd_user execstart_reference
+        execstart_hash_attested journal_scope journal_failure_class
+        journal_auth_subclass sftp_config sftp_identity hostkey_pin
+        backup_created restore_verified production_changed
+        raw_values_emitted A2_DIAGNOSTIC""".split()),
+    A2B: frozenset("""schema unit unit_loaded dropins_present single_execstart
+        executable_protected executable_sha256 executable_reads_sftp_config
+        executable_embeds_other_identity config_identity_present
+        config_identity_protected config_identity_fingerprint
+        authorized_fingerprint_match service_identity_source
+        local_reference_hint repair_precondition_met
+        remote_authorization_witnessed backup_created restore_verified
+        mutations raw_values_emitted A2B_COMPARE""".split()),
+    A2C: frozenset("""schema unit unit_user dropins_present executable
+        tools_referenced referenced_paths_scanned unit_home_resolved
+        candidate_files candidate_0 candidate_fingerprints
+        authorized_overlap effective_identity remote_auth_witnessed
+        repair_allowed backup_created restore_verified mutations
+        raw_values_emitted A2C_TRACE""".split()),
+}
+REQUIRED = {
+    A2: {"unit", "exit_255", "journal_scope", "journal_failure_class",
+         "journal_auth_subclass", "restore_verified", "raw_values_emitted",
+         "A2_DIAGNOSTIC"},
+    A2B: {"unit", "executable_reads_sftp_config",
+          "authorized_fingerprint_match", "service_identity_source",
+          "repair_precondition_met", "remote_authorization_witnessed",
+          "restore_verified", "mutations", "raw_values_emitted", "A2B_COMPARE"},
+    A2C: {"unit", "effective_identity", "authorized_overlap",
+          "remote_auth_witnessed", "restore_verified", "mutations",
+          "raw_values_emitted", "A2C_TRACE"},
+}
+UNIT = "kmj-elite-offsite-backup.service"
+
 GATES = (
     "fresh encrypted PostgreSQL + ALL customer uploads backup with witnessed source SHA",
     "remote no-clobber upload with 0600 readback of that exact ciphertext",
@@ -39,74 +69,87 @@ GATES = (
 
 
 def parse(text: str) -> dict[str, str] | None:
+    if len(text.encode("utf-8")) > MAX_BYTES:
+        return None
     values: dict[str, str] = {}
     for raw in text.splitlines():
-        line = raw.strip()
-        if not line or line.endswith("READ_ONLY_COMPLETE"):
+        if not raw:
             continue
-        match = LINE.fullmatch(line)
-        if match is None or FORBIDDEN_VALUE.search(match.group(2)):
+        match = LINE.fullmatch(raw)
+        if match is None:
             return None
         key, value = match.groups()
-        if key in values and values[key] != value:
+        if key in values:
+            return None
+        if key == "candidate_0":
+            if not TRACE_CANDIDATE.fullmatch(value):
+                return None
+        elif not SAFE_VALUE.fullmatch(value) or value.startswith("/") or "../" in value:
             return None
         values[key] = value
+    schema = values.get("schema")
+    if schema not in ALLOWED or not REQUIRED[schema] <= values.keys():
+        return None
+    if values.keys() - ALLOWED[schema]:
+        return None
+    if values.get("unit") != UNIT or values.get("raw_values_emitted") != "NO":
+        return None
+    marker = {A2: "A2_DIAGNOSTIC", A2B: "A2B_COMPARE", A2C: "A2C_TRACE"}[schema]
+    if values[marker] != "READ_ONLY_COMPLETE":
+        return None
+    if values.get("restore_verified") != "NO":
+        return None
+    if schema in (A2B, A2C) and values.get("mutations") != "NONE":
+        return None
+    if schema == A2B and (values["repair_precondition_met"] != "NO"
+                         or values["remote_authorization_witnessed"] != "NO"
+                         or values["executable_reads_sftp_config"] not in ("YES", "NO")
+                         or values["authorized_fingerprint_match"] not in
+                         ("YES", "NO", "UNKNOWN_NO_OWNER_ALLOWLIST")):
+        return None
+    if schema == A2C and values["remote_auth_witnessed"] != "NO":
+        return None
     return values
 
 
-def merge(documents: list[str]) -> dict[str, str] | None:
-    merged: dict[str, str] = {}
-    schemas = set()
-    for text in documents:
-        if len(text.encode()) > MAX_BYTES:
+def merge(documents: list[str]) -> dict[str, dict[str, str]] | None:
+    """Keep diagnostic scopes separate; duplicate schemas and fake witnesses fail."""
+    result: dict[str, dict[str, str]] = {}
+    for raw in documents:
+        values = parse(raw)
+        if values is None or values["schema"] in result:
             return None
-        values = parse(text)
-        if values is None:
-            return None
-        if "schema" in values:
-            schemas.add(values["schema"])
-        for key, value in values.items():
-            if key == "schema":
-                continue
-            if key in merged and merged[key] != value:
-                return None
-            merged[key] = value
-    if schemas - SCHEMAS:
-        return None
-    merged["_schemas"] = ",".join(sorted(schemas))
-    return merged
+        result[values["schema"]] = values
+    return result
 
 
 def plan(documents: list[str]) -> dict[str, str]:
     out = {"APPLY_ALLOWED": "NO", "MUTATIONS": "NONE"}
-    r = merge(documents)
-    if r is None or "kmj.a2.ssh255.readonly.v1" not in r["_schemas"].split(","):
+    receipts = merge(documents)
+    if receipts is None or A2 not in receipts or A2B not in receipts:
         return {**out, "DECISION": "BLOCKED_EVIDENCE"}
-    if (r.get("exit_255") != "YES" or r.get("journal_scope") != "EXACT_INVOCATION"
-            or r.get("journal_failure_class") != "SSH_AUTH_KEY_REJECTED"
-            or r.get("journal_auth_subclass") != "PUBLICKEY_AUTH_DENIED"):
+    a, b = receipts[A2], receipts[A2B]
+    if (a.get("exit_255") != "YES"
+            or a.get("journal_scope") != "EXACT_INVOCATION"
+            or a.get("journal_failure_class") != "SSH_AUTH_KEY_REJECTED"
+            or a.get("journal_auth_subclass") != "PUBLICKEY_AUTH_DENIED"):
         return {**out, "DECISION": "NOT_AUTH_FAILURE"}
-    if r.get("raw_values_emitted", "NO") != "NO" or r.get("mutations", "NONE") != "NONE":
-        return {**out, "DECISION": "BLOCKED_EVIDENCE"}
-    reads_cfg = r.get("executable_reads_sftp_config")
-    if reads_cfg is None:
-        return {**out, "DECISION": "BLOCKED_EVIDENCE", "NEEDS": "A2b unit identity receipt"}
-    # A legacy unit that really uses the authorized pinned identity cannot be denied for it.
-    if reads_cfg == "YES" and r.get("authorized_fingerprint_match") == "YES":
+    if (b["executable_reads_sftp_config"] == "YES"
+            and b["authorized_fingerprint_match"] == "YES"):
         return {**out, "DECISION": "INVESTIGATE_INCONSISTENT"}
-    single = (r.get("effective_identity") == "SINGLE_CANDIDATE_UNPROVEN"
-              and r.get("authorized_overlap") == "NO")
-    decision = "REPOINT_IDENTITY_REVIEW" if single else "RETIRE_LEGACY_REVIEW"
-    witness = (r.get("restore_verified") == "PASS" and r.get("restore_scope") == "DB_AND_ALL_UPLOADS"
-               and re.fullmatch(r"[a-f0-9]{64}", r.get("source_local_sha256", "")) is not None)
-    if not witness:
-        out["PLANNED_AFTER_WITNESS"] = decision
-        decision = "WAIT_FOR_RESTORE_WITNESS"
-    out["DECISION"] = decision
+
+    # A key candidate is not evidence of the identity actually offered by SSH.
+    # No receipt from this parser authenticates an independent Google restore.
+    # In particular, a schema-less restore_verified=PASS is refused outright.
+    # Future acceptance requires a separate, cryptographically bound witness
+    # verifier that binds candidate, ciphertext SHA, source and restore scope.
+    out["DECISION"] = "WAIT_FOR_RESTORE_WITNESS"
+    out["PLANNED_AFTER_WITNESS"] = "RETIRE_LEGACY_REVIEW"
+    out["RESTORE_PROVENANCE"] = "UNVERIFIED"
+    out["IDENTITY_SOURCE"] = "UNPROVEN"
     out["OWNER_GATES"] = str(len(GATES))
     for index, gate in enumerate(GATES, 1):
         out[f"GATE_{index}"] = gate.replace(" ", "_").replace("+", "and")
-    out["IDENTITY_SOURCE"] = "UNPROVEN"
     return out
 
 
