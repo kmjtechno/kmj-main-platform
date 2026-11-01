@@ -23,6 +23,46 @@ final class OmniDeskIssuanceContractFailClosedTest extends TestCase
         }
     }
 
+    public function test_nonmanager_cannot_use_protected_issuance_paths(): void
+    {
+        app()->instance(
+            \\App\\Services\\Licensing\\OmniDesk\\OmniDeskApiAuthorizer::class,
+            new class implements \\App\\Services\\Licensing\\OmniDesk\\OmniDeskApiAuthorizer
+            {
+                public function authorize(\\Illuminate\\Http\\Request $request): \\App\\Services\\Licensing\\OmniDesk\\OmniDeskApiPrincipal
+                {
+                    return new \\App\\Services\\Licensing\\OmniDesk\\OmniDeskApiPrincipal('test-actor', 'test-org', false);
+                }
+            }
+        );
+
+        foreach (['activations', 'leases/renew'] as $suffix) {
+            $this->postJson('/api/v1/licensing/omnidesk/'.$suffix, [])
+                ->assertStatus(403)
+                ->assertJsonPath('error', 'FORBIDDEN');
+        }
+    }
+
+    public function test_manager_receives_explicit_unavailable_without_signer(): void
+    {
+        app()->instance(
+            \\App\\Services\\Licensing\\OmniDesk\\OmniDeskApiAuthorizer::class,
+            new class implements \\App\\Services\\Licensing\\OmniDesk\\OmniDeskApiAuthorizer
+            {
+                public function authorize(\\Illuminate\\Http\\Request $request): \\App\\Services\\Licensing\\OmniDesk\\OmniDeskApiPrincipal
+                {
+                    return new \\App\\Services\\Licensing\\OmniDesk\\OmniDeskApiPrincipal('test-manager', 'test-org', true);
+                }
+            }
+        );
+
+        foreach (['activations', 'leases/renew'] as $suffix) {
+            $this->postJson('/api/v1/licensing/omnidesk/'.$suffix, [])
+                ->assertStatus(503)
+                ->assertJsonPath('error', 'ISSUANCE_NOT_CONFIGURED');
+        }
+    }
+
     public function test_issuance_is_unavailable_without_authorized_signer_integration(): void
     {
         foreach ([
