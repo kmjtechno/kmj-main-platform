@@ -223,10 +223,17 @@ else
 fi
 
 # 4) Independent verification: download again and compare the digest.
-printf 'get %s %s/verify\n' "$final" "$tmp" >"$tmp/b_verify"
+printf 'get -p %s %s/verify\n' "$final" "$tmp" >"$tmp/b_verify"
 if ! run_sftp verify "$tmp/b_verify" || [[ ! -f "$tmp/verify" ]]; then
   status REMOTE_READBACK "FAIL:$(classify "$tmp/verify.err")"; status OFFSITE_PUSH FAIL; exit 1
 fi
+# get -p asks OpenSSH SFTP to preserve the remote file mode. Without it,
+# umask 077 makes a world-readable remote ciphertext look like local 0600.
+# A matching digest alone is NOT proof that the Google copy stayed private.
+if [[ "$(stat -c '%a' -- "$tmp/verify")" != 600 ]]; then
+  status REMOTE_READBACK_MODE NOT_0600; status OFFSITE_PUSH FAIL; exit 1
+fi
+status REMOTE_READBACK_MODE_0600 PASS
 if [[ "$(sha256sum -- "$tmp/verify" | cut -d' ' -f1)" != "$local_sha" ]]; then
   status REMOTE_READBACK DIGEST_MISMATCH; status OFFSITE_PUSH FAIL; exit 1
 fi
