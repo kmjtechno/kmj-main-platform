@@ -84,7 +84,15 @@ done
 host=${cfg[HOST]} port=${cfg[PORT]} user=${cfg[USER]}
 rdir=${cfg[REMOTE_DIR]} ident=${cfg[IDENTITY_FILE]} pin=${cfg[HOSTKEY_SHA256]}
 [[ "$host" =~ ^[A-Za-z0-9]([A-Za-z0-9.-]{0,251}[A-Za-z0-9])?$ ]] || block CONFIG_HOST
-[[ "$port" =~ ^[0-9]{1,5}$ && "$port" -ge 1 && "$port" -le 65535 ]] || block CONFIG_PORT
+# Canonical decimal only: SSH treats 00022 as port 22 but a literal
+# comparison would wrongly select [host]:00022 instead of the bare host.
+# Bash numeric comparisons can also interpret a leading zero as octal.
+valid_port() {
+  local p=$1
+  [[ "$p" =~ ^[1-9][0-9]{0,4}$ ]] || return 1
+  (( 10#$p <= 65535 ))
+}
+valid_port "$port" || block CONFIG_PORT
 [[ "$user" =~ ^[a-z_][a-z0-9_-]{0,31}$ ]] || block CONFIG_USER
 [[ "$rdir" =~ ^/[A-Za-z0-9._/-]{1,200}$ && "$rdir" != *..* && "$rdir" != */ ]] || block CONFIG_REMOTE_DIR
 [[ "$pin" =~ ^SHA256:[A-Za-z0-9+/]{43}$ ]] || block CONFIG_HOSTKEY_PIN
