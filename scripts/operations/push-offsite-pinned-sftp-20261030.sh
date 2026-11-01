@@ -30,6 +30,9 @@ REMOTE_NAME=offsite-UNSET.tar.gz.age
 
 status() { printf '%s=%s\n' "$1" "$2"; }
 block() { status OFFSITE_PUSH "BLOCKED:$1"; exit 2; }
+# Reject a non-privileged interpreter. The reviewed operator invocation MUST
+# use /bin/bash -p (or direct execution of this file's -p shebang).
+[[ $- == *p* ]] || block PRIVILEGED_BASH_REQUIRED
 
 [[ $# -eq 2 && "$1" == --candidate-sha ]] || block USAGE_CANDIDATE_SHA_ONLY
 [[ "$2" =~ ^[0-9a-f]{40}$ ]] || block CANDIDATE_SHA_INVALID
