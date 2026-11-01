@@ -511,6 +511,7 @@ sandbox_text="$(run_sandbox materialize materialize)" || sandbox_rc=$?
 printf '%s\n' "$sandbox_text"
 [[ "$sandbox_rc" == 0 ]] || post_fail "SANDBOX_FAILED_$sandbox_rc"
 grep -Fxq 'KMJ_MATERIALIZE_SHARED=PASS' <<<"$sandbox_text" || post_fail SANDBOX_PASS_MISSING
+receipt_contract_ok || post_fail SANDBOX_RECEIPTS_UNVERIFIED
 
 runuser -u www-data -- test -r "$CAND_APP/public/index.php" || post_fail NGINX_PUBLIC_UNREADABLE
 runuser -u www-data -- test -r "$CAND_APP/public/assets/kmj-codebridge-icon.png" || post_fail NGINX_ICON_UNREADABLE
