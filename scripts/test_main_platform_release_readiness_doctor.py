@@ -426,13 +426,16 @@ class StorageContentParityTest(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "STORAGE_ROOT_NOT_REAL_DIRECTORY"):
             storage_manifest.inventory(self.copy / "sub/artwork-link")
 
-    def test_materialize_uses_three_content_snapshots_and_no_quiescence_claim(self) -> None:
+    def test_materialize_uses_stable_shared_storage_with_no_quiescence_claim(self) -> None:
         source = MATERIALIZE.read_text()
-        for token in ("source_before=", "source_after=", "candidate_after=",
-                      "SOURCE_STORAGE_CHANGED_DURING_COPY", "STORAGE_PARITY_MISMATCH",
-                      "STORAGE_WRITER_QUIESCENCE NOT_ATTESTED",
-                      "STORAGE_SYMLINK_TARGET_CONTENT NOT_DEREFERENCED"):
+        for token in ("source_before=", "source_after=",
+                      "SHARED_STORAGE_MOVING_TARGET",
+                      "STORAGE_MODE VERIFIED_SHARED",
+                      "STORAGE_WRITER_QUIESCENCE NOT_ATTESTED"):
             self.assertIn(token, source)
+        self.assertNotIn("candidate_after=", source)
+        self.assertNotIn("STORAGE_PARITY_MISMATCH", source)
+        self.assertNotIn("cp -a --no-clobber", source)
         self.assertNotIn("find . -type f ! -name .gitignore", source)
 
 
@@ -472,7 +475,10 @@ class MaterializeWriteBoundaryTest(unittest.TestCase):
                       "SANDBOX_USER_MISMATCH", "export GIT_OPTIONAL_LOCKS=0"):
             self.assertIn(token, source)
         self.assertGreater(source.index('install -o kmjprod'), boundary)
-        self.assertGreater(source.index('cp -a --no-clobber'), boundary)
+        # Runtime upload copying is forbidden; only byte-identical .env copy and
+        # ACL preparation remain inside the nonroot sandbox.
+        self.assertNotIn('cp -a --no-clobber', source)
+        self.assertGreater(source.index('status STORAGE_MODE VERIFIED_SHARED'), boundary)
         self.assertLess(source.index("KMJ_UNPRIVILEGED_MATERIALIZE\n"), source.index("runuser -u www-data -- test"))
         self.assertNotIn("--system", source)
         self.assertNotIn("sudo", source)
