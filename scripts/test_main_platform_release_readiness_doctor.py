@@ -544,8 +544,10 @@ class MaterializeRollbackTest(unittest.TestCase):
                               env={"PATH": "/usr/bin:/bin"}, timeout=30)
 
     CREATE = (
-        'env_id="$(fs_op create-env "$LIVE_APP" "$CAND_APP")"\n'
-        'link_id="$(fs_op create-link "$CAND_APP/public")"\n'
+        'env_id="$(fs_op create-env "$LIVE_APP" "$CAND_APP")" '
+        '|| { receipt_uncertain=1; fail ENV_CREATE_FAILED; }\n'
+        'link_id="$(fs_op create-link "$CAND_APP/public")" '
+        '|| { receipt_uncertain=1; fail LINK_CREATE_FAILED; }\n'
     )
 
     def test_forced_failure_after_creation_removes_only_candidate_artifacts(self) -> None:
