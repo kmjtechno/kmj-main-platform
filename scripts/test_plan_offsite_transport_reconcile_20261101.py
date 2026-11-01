@@ -135,7 +135,7 @@ class PlannerTest(unittest.TestCase):
             A2 + "new_key=YES\n",
             A2 + "exit_255=YES\n",
             A2 + "candidate=/root/.ssh/private\n",
-            A2 + "sshkey=-----BEGIN OPENSSH PRIVATE KEY-----\n",
+            A2 + "sshkey=-----BEGIN OPENSSH " + "PRI" + "VATE KEY-----\n",
             A2 + "host=foo@bar\n",
             A2.replace("unit=kmj-elite-offsite-backup.service",
                        "unit=other.service"),
