@@ -178,6 +178,17 @@ def restored_inventory(root: Path) -> tuple[dict[str, tuple[int, str]], set[str]
                 or directory_inodes.get(key) != (info.st_dev, info.st_ino)):
                 fail()
             seen_dirs.add(key)
+            # A symlink introduced after the first walk is reported in
+            # fwalk's subdirs but not descended into. Ignoring subdirs here
+            # would let a new unverified symlink survive a successful PASS.
+            for name in _subdirs:
+                try:
+                    child = os.stat(name, dir_fd=dirfd, follow_symlinks=False)
+                except OSError:
+                    fail()
+                if (not stat.S_ISDIR(child.st_mode)
+                    or (Path(parent) / name).as_posix() not in directories):
+                    fail()
             for name in filenames:
                 rel = (Path(parent) / name).as_posix()
                 if rel in seen_files:
