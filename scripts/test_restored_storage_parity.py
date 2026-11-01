@@ -51,6 +51,39 @@ class RestoredStorageParityTests(unittest.TestCase):
     def test_exact_bytes_pass(self):
         self.assertEqual(module.verify(self.tar, self.output), 1)
 
+    def test_capacity_preflight_requires_headroom_for_expanded_bytes(self):
+        required = len(b"original upload")
+        reserve = module.MIN_FREE_RESERVE
+        self.assertEqual(
+            module.storage_capacity_preflight(self.tar, reserve + required), required
+        )
+        with self.assertRaises(module.StorageParityError):
+            module.storage_capacity_preflight(self.tar, reserve + required - 1)
+        with self.assertRaises(module.StorageParityError):
+            module.storage_capacity_preflight(self.tar, reserve - 1)
+
+    def test_capacity_cli_and_extraction_order(self):
+        from unittest import mock
+        required = len(b"original upload")
+        with mock.patch("sys.stdout", new_callable=io.StringIO) as output:
+            self.assertEqual(module.main([
+                "--capacity-check", str(self.tar),
+                str(module.MIN_FREE_RESERVE + required),
+            ]), 0)
+        self.assertEqual(output.getvalue().strip(), "RECOVERED_STORAGE_CAPACITY=PASS")
+        with mock.patch("sys.stdout", new_callable=io.StringIO) as output:
+            self.assertEqual(module.main([
+                "--capacity-check", str(self.tar),
+                str(module.MIN_FREE_RESERVE + required - 1),
+            ]), 2)
+        self.assertEqual(output.getvalue().strip(), "RECOVERED_STORAGE_CAPACITY=FAIL")
+        script = (Path(__file__).parent /
+                  "operations/verify-main-platform-google-sftp-restore-20261030.sh")
+        content = script.read_text()
+        self.assertIn("--capacity-check", content)
+        self.assertLess(content.index("--capacity-check"),
+                        content.index('tar -xzf "$tmp/extracted/storage.tar.gz"'))
+
     def test_changed_upload_rejected(self):
         (self.output / "storage/app/public/picture.png").write_bytes(b"tampered upload")
         self.assert_rejected()
