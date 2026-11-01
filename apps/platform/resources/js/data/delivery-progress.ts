@@ -10,6 +10,13 @@ export type DeliveryMilestone = {
 
 export const deliveryMilestones: DeliveryMilestone[] = [
     {
+        id: 'omnidesk-issuance-contract-fail-closed',
+        title: 'OmniDesk M9 issuance endpoints',
+        state: 'blocked',
+        detail: 'License issuance and renewal remain disabled.',
+        evidence: 'PR #759 tests guarded 503 responses; no signing occurs.',
+    },
+    {
         id: 'codebridge-ai-workspace',
         title: 'CodeBridge AI workflow workspace',
         state: 'blocked',
