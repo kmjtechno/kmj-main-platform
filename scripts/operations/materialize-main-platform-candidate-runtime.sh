@@ -449,28 +449,57 @@ run_sandbox() {
 # No temporary receipt file: output is held in memory, so there is no pathname
 # for a hostile TMPDIR or a swapped symlink to redirect a root write.
 sandbox_text=""
-post_fail() {
-  # A root-side check failed after the sandbox committed: remove only the
-  # inode-attested candidate artifacts, then report the original failure.
-  local env_id link_id env_count link_count receipt_invalid=0 line
-  # The sandbox can fail after creating an artifact but before its receipt.
-  # Never select the last of duplicate/malformed stdout receipts or claim the
-  # candidate clean when a receipt is missing or conflicted.
+# A completed materializer must emit exactly one env inode receipt and either
+# one matching link receipt or an explicit NOT_PRESENT_LIVE link outcome.
+# A partial stdout transcript (e.g. SIGKILL between symlinkat and echo) is not
+# a reliable account of what was created; never infer full cleanup from it.
+receipt_contract_ok() {
+  local env_count link_count mirrored absent env_id link_id line
   env_count="$(grep -c '^MATERIALIZED_ENV_ID=' <<<"$sandbox_text" || true)"
   link_count="$(grep -c '^MATERIALIZED_LINK_ID=' <<<"$sandbox_text" || true)"
-  env_id="$(sed -n 's/^MATERIALIZED_ENV_ID=\([0-9][0-9]*:[0-9][0-9]*\)$/\1/p' <<<"$sandbox_text")"
-  link_id="$(sed -n 's/^MATERIALIZED_LINK_ID=\([0-9][0-9]*:[0-9][0-9]*\)$/\1/p' <<<"$sandbox_text")"
-  [[ "$env_count" =~ ^[01]$ && "$link_count" =~ ^[01]$ ]] || receipt_invalid=1
+  mirrored="$(grep -Fxc 'PUBLIC_STORAGE_LINK=MIRRORED' <<<"$sandbox_text" || true)"
+  absent="$(grep -Fxc 'PUBLIC_STORAGE_LINK=NOT_PRESENT_LIVE' <<<"$sandbox_text" || true)"
+  [[ "$env_count" == 1 && "$link_count" =~ ^[01]$ ]] || return 1
+  [[ "$mirrored" == 1 && "$absent" == 0 && "$link_count" == 1 ||
+     "$mirrored" == 0 && "$absent" == 1 && "$link_count" == 0 ]] || return 1
   while IFS= read -r line; do
     case "$line" in
-      MATERIALIZED_ENV_ID=*) [[ "$line" =~ ^MATERIALIZED_ENV_ID=[0-9]+:[0-9]+$ ]] || receipt_invalid=1 ;;
-      MATERIALIZED_LINK_ID=*) [[ "$line" =~ ^MATERIALIZED_LINK_ID=[0-9]+:[0-9]+$ ]] || receipt_invalid=1 ;;
+      MATERIALIZED_ENV_ID=*) [[ "$line" =~ ^MATERIALIZED_ENV_ID=[0-9]+:[0-9]+$ ]] || return 1 ;;
+      MATERIALIZED_LINK_ID=*) [[ "$line" =~ ^MATERIALIZED_LINK_ID=[0-9]+:[0-9]+$ ]] || return 1 ;;
     esac
   done <<<"$sandbox_text"
-  if [[ "$receipt_invalid" != 0 ]]; then
-    status CANDIDATE_ROLLBACK FAILED_REVIEW
-  elif [[ -n "$env_id$link_id" ]]; then
-    run_sandbox rollback rollback "$env_id" "$link_id" || status CANDIDATE_ROLLBACK FAILED_REVIEW
+  env_id="$(sed -n 's/^MATERIALIZED_ENV_ID=\([0-9][0-9]*:[0-9][0-9]*\)$/\1/p' <<<"$sandbox_text")"
+  link_id="$(sed -n 's/^MATERIALIZED_LINK_ID=\([0-9][0-9]*:[0-9][0-9]*\)$/\1/p' <<<"$sandbox_text")"
+  [[ "$env_id" =~ ^[0-9]+:[0-9]+$ ]] || return 1
+  [[ "$link_count" == 0 || "$link_id" =~ ^[0-9]+:[0-9]+$ ]] || return 1
+  [[ "$sandbox_rc" == 0 ]] || return 1
+  [[ "$(grep -Fxc 'KMJ_MATERIALIZE_SHARED=PASS' <<<"$sandbox_text" || true)" == 1 ]] || return 1
+}
+post_fail() {
+  local env_id="" link_id="" env_count link_count receipt_invalid=0 cleanup_rc=0 rollback_text=""
+  # Count *all* raw receipt declarations; never choose the last of several.
+  env_count="$(grep -c '^MATERIALIZED_ENV_ID=' <<<"$sandbox_text" || true)"
+  link_count="$(grep -c '^MATERIALIZED_LINK_ID=' <<<"$sandbox_text" || true)"
+  [[ "$env_count" =~ ^[01]$ && "$link_count" =~ ^[01]$ ]] || receipt_invalid=1
+  if [[ "$env_count" == 1 ]]; then
+    env_id="$(sed -n 's/^MATERIALIZED_ENV_ID=\([0-9][0-9]*:[0-9][0-9]*\)$/\1/p' <<<"$sandbox_text")"
+    [[ "$env_id" =~ ^[0-9]+:[0-9]+$ ]] || receipt_invalid=1
+  fi
+  if [[ "$link_count" == 1 ]]; then
+    link_id="$(sed -n 's/^MATERIALIZED_LINK_ID=\([0-9][0-9]*:[0-9][0-9]*\)$/\1/p' <<<"$sandbox_text")"
+    [[ "$link_id" =~ ^[0-9]+:[0-9]+$ ]] || receipt_invalid=1
+  fi
+  receipt_contract_ok || receipt_invalid=1
+  # If only one inode was safely reported, still attempt the *known* cleanup.
+  # Capture the child receipt so its DONE cannot falsely certify the unknown
+  # orphan; the top-level result remains FAILED_REVIEW.
+  if [[ "$receipt_invalid" == 0 || "$env_count" =~ ^[01]$ && "$link_count" =~ ^[01]$ ]]; then
+    if [[ -n "$env_id$link_id" ]]; then
+      rollback_text="$(run_sandbox rollback rollback "$env_id" "$link_id")" || cleanup_rc=1
+    fi
+  fi
+  if [[ "$receipt_invalid" == 0 && "$cleanup_rc" == 0 && -n "$rollback_text" ]]; then
+    printf '%s\n' "$rollback_text"
   else
     status CANDIDATE_ROLLBACK FAILED_REVIEW
   fi
