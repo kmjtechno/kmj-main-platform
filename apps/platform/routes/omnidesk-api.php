@@ -59,6 +59,11 @@ Route::prefix('v1/licensing/omnidesk')->group(function () use (
     // Replace these fail-closed adapters only alongside authenticated device
     // proof checks, tenant/seat eligibility, replay cursor and HSM-backed sign.
     Route::post('activations', function (Request $request) use ($omnideskPrincipal, $omnideskError) {
+        if (strlen($request->getContent()) > 2048) {
+            return response()->json(['error' => 'INVALID_REQUEST'], 413)
+                ->header('Cache-Control', 'no-store, private');
+        }
+
         try {
             $principal = $omnideskPrincipal($request);
             if (! $principal->canManage) {
@@ -73,6 +78,11 @@ Route::prefix('v1/licensing/omnidesk')->group(function () use (
     })->middleware('throttle:12,1');
 
     Route::post('leases/renew', function (Request $request) use ($omnideskPrincipal, $omnideskError) {
+        if (strlen($request->getContent()) > 2048) {
+            return response()->json(['error' => 'INVALID_REQUEST'], 413)
+                ->header('Cache-Control', 'no-store, private');
+        }
+
         try {
             $principal = $omnideskPrincipal($request);
             if (! $principal->canManage) {
