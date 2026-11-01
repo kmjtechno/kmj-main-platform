@@ -218,8 +218,12 @@ rollback_candidate() {
   local bad=0
   if [[ -n "$link_id" ]]; then fs_op remove "$CAND_APP/public" storage "$link_id" l || bad=1; fi
   if [[ -n "$env_id" ]]; then fs_op remove "$CAND_APP" .env "$env_id" f || bad=1; fi
-  [[ "$bad" == 0 && "$receipt_uncertain" == 0 ]] && status CANDIDATE_ROLLBACK DONE || status CANDIDATE_ROLLBACK FAILED_REVIEW
-  return "$bad"
+  if [[ "$bad" == 0 && "$receipt_uncertain" == 0 ]]; then
+    status CANDIDATE_ROLLBACK DONE
+    return 0
+  fi
+  status CANDIDATE_ROLLBACK FAILED_REVIEW
+  return 1
 }
 if [[ "$MODE" == rollback ]]; then rollback_candidate; exit $?; fi
 committed=0
@@ -396,14 +400,14 @@ setfacl -R -m 'u:www-data:rX' "$CAND_APP/public" || fail PUBLIC_TREE_ACL_FAILED
 # removes exactly what this run created.
 [[ -z "$(git_as status --porcelain --untracked-files=normal -- . ':(exclude)apps/platform/storage')" ]] || fail CANDIDATE_DIRTY_BEFORE_WRITE
 env_id="$(fs_op create-env "$LIVE_APP" "$CAND_APP")" || { receipt_uncertain=1; fail ENV_CREATE_FAILED; }
-[[ "$env_id" =~ ^[0-9]+:[0-9]+$ ]] || { env_id=""; fail ENV_CREATE_FAILED; }
+[[ "$env_id" =~ ^[0-9]+:[0-9]+$ ]] || { env_id=""; receipt_uncertain=1; fail ENV_CREATE_FAILED; }
 echo "MATERIALIZED_ENV_ID=$env_id"
 [[ "$(sha256sum -- "$LIVE_APP/.env" | cut -d' ' -f1)" == "$(sha256sum -- "$CAND_APP/.env" | cut -d' ' -f1)" ]] || fail ENV_SHA_MISMATCH
 status RUNTIME_ENV BYTE_IDENTICAL
 status AGENT_PUBLIC_ORIGIN "$origin_state"
 if [[ "$want_link" == 1 ]]; then
   link_id="$(fs_op create-link "$CAND_APP/public")" || { receipt_uncertain=1; fail LINK_CREATE_FAILED; }
-  [[ "$link_id" =~ ^[0-9]+:[0-9]+$ ]] || { link_id=""; fail LINK_CREATE_FAILED; }
+  [[ "$link_id" =~ ^[0-9]+:[0-9]+$ ]] || { link_id=""; receipt_uncertain=1; fail LINK_CREATE_FAILED; }
   echo "MATERIALIZED_LINK_ID=$link_id"
   status PUBLIC_STORAGE_LINK MIRRORED
 else
