@@ -40,9 +40,13 @@ final class OmniDeskIssuanceContractFailClosedTest extends TestCase
         );
 
         foreach (['activations', 'leases/renew'] as $suffix) {
-            $this->postJson('/api/v1/licensing/omnidesk/'.$suffix, [])
-                ->assertStatus(403)
+            $response = $this->postJson('/api/v1/licensing/omnidesk/'.$suffix, []);
+            $response->assertStatus(403)
                 ->assertJsonPath('error', 'FORBIDDEN');
+            self::assertStringContainsString(
+                'no-store',
+                $response->headers->get('Cache-Control', '')
+            );
         }
     }
 
