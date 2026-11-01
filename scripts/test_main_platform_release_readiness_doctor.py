@@ -543,10 +543,8 @@ class MaterializeRollbackTest(unittest.TestCase):
                               env={"PATH": "/usr/bin:/bin"}, timeout=30)
 
     CREATE = (
-        'env_id="$(fs_op create-env "$LIVE_APP" "$CAND_APP" | sed -n '
-        "'s/^MATERIALIZED_ENV_ID=\\([0-9][0-9]*:[0-9][0-9]*\\)$/\\1/p')\"\n"
-        'link_id="$(fs_op create-link "$CAND_APP/public" | sed -n '
-        "'s/^MATERIALIZED_LINK_ID=\\([0-9][0-9]*:[0-9][0-9]*\\)$/\\1/p')\"\n"
+        'env_id="$(fs_op create-env "$LIVE_APP" "$CAND_APP")"\n'
+        'link_id="$(fs_op create-link "$CAND_APP/public")"\n'
     )
 
     def test_forced_failure_after_creation_removes_only_candidate_artifacts(self) -> None:
@@ -604,6 +602,27 @@ class MaterializeRollbackTest(unittest.TestCase):
         self.assertNotEqual(run.returncode, 0)
         self.assertEqual(os.readlink(self.cand / "public/storage"), "elsewhere")
         self.assertFalse((self.cand / ".env").exists(), "env created in the same run is rolled back")
+
+    def test_failure_before_receipt_delivery_self_cleans(self) -> None:
+        # Parent closes the pipe before the id can be delivered.
+        run = self.harness('fs_op create-env "$LIVE_APP" "$CAND_APP" >&- || true\n'
+                           'fs_op create-link "$CAND_APP/public" >&- || true\n')
+        self.assertFalse((self.cand / ".env").exists(), run.stdout + run.stderr)
+        self.assertFalse((self.cand / "public/storage").is_symlink())
+
+    def test_sigterm_after_creation_rolls_back(self) -> None:
+        run = self.harness(self.CREATE + "kill -TERM $$\nsleep 5\n")
+        self.assertEqual(run.returncode, 143, run.stdout + run.stderr)
+        self.assertFalse((self.cand / ".env").exists())
+        self.assertFalse((self.cand / "public/storage").is_symlink())
+
+    def test_root_receipt_never_uses_a_temp_pathname(self) -> None:
+        source = self.source
+        for forbidden in ("mktemp", "tee ", "sandbox_out", "TMPDIR=", "/tmp/"):
+            self.assertNotIn(forbidden, source, forbidden)
+        self.assertIn("unset BASH_ENV ENV CDPATH TMPDIR", source)
+        self.assertIn('sandbox_text="$(run_sandbox materialize materialize)"', source)
+        self.assertIn("NOT atomic", source)
 
     def test_artifacts_are_created_after_all_fallible_checks(self) -> None:
         source = self.source

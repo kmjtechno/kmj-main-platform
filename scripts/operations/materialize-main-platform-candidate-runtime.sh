@@ -18,7 +18,7 @@ umask 077
 # Root execution must not inherit caller PATH or Bash startup hooks.
 # /bin/bash -p ignores BASH_ENV; plain `bash script` is rejected below.
 export PATH=/usr/sbin:/usr/bin:/sbin:/bin
-unset BASH_ENV ENV CDPATH
+unset BASH_ENV ENV CDPATH TMPDIR
 fail() { echo "KMJ_MATERIALIZE=BLOCKED $1"; exit 2; }
 status() { printf '%s=%s\n' "$1" "$2"; }
 [[ $- == *p* ]] || fail PRIVILEGED_BASH_REQUIRED
@@ -34,7 +34,7 @@ readonly ORIGIN_LINE='CODEBRIDGE_AGENT_PUBLIC_URL=https://kmjtechno.com'
 [[ "$(id -u)" == 0 && "$(hostname -s)" == KMJ-elite ]] || fail WRONG_HOST
 id kmjprod >/dev/null 2>&1 || fail SERVICE_USER_MISSING
 id www-data >/dev/null 2>&1 || fail WEB_USER_MISSING
-for cmd in git runuser install cp find awk sha256sum flock python3 systemd-run setfacl mktemp tee sed; do
+for cmd in git runuser install cp find awk sha256sum flock python3 systemd-run setfacl sed; do
   command -v "$cmd" >/dev/null 2>&1 || fail "MISSING_$cmd"
 done
 [[ -L "$ROOT/current" ]] || fail CURRENT_NOT_SYMLINK
@@ -121,6 +121,10 @@ def ident(info):
     return "%d:%d" % (info.st_dev, info.st_ino)
 
 def remove_exact(dir_fd, name, expected, kind):
+    # Best effort, NOT atomic: the name is re-resolved by unlink after the
+    # identity check. The only principal able to swap the name is the nonroot
+    # sandbox user inside its own private candidate mount, so no privilege
+    # boundary is crossed; a mismatch is left in place for owner review.
     try:
         info = os.stat(name, dir_fd=dir_fd, follow_symlinks=False)
     except FileNotFoundError:
@@ -130,6 +134,15 @@ def remove_exact(dir_fd, name, expected, kind):
         return "MISMATCH"
     os.unlink(name, dir_fd=dir_fd)
     return "REMOVED"
+
+def emit(created, handle, dir_fd, name, kind):
+    """Deliver the inode id to the parent; if that fails, self-clean right here."""
+    try:
+        sys.stdout.write(created + "\n")
+        sys.stdout.flush()
+    except BaseException:
+        remove_exact(dir_fd, name, created, kind)
+        raise
 
 def main(argv):
     op = argv[1]
@@ -154,11 +167,12 @@ def main(argv):
         except BaseException:
             remove_exact(cand, ".env", created, "f")
             raise
-        print("MATERIALIZED_ENV_ID=" + created)
+        emit(created, dst, cand, ".env", "f")
     elif op == "create-link":
         pub = open_dir(argv[2])
         os.symlink("../storage/app/public", "storage", dir_fd=pub)
-        print("MATERIALIZED_LINK_ID=" + ident(os.stat("storage", dir_fd=pub, follow_symlinks=False)))
+        created = ident(os.stat("storage", dir_fd=pub, follow_symlinks=False))
+        emit(created, None, pub, "storage", "l")
     elif op == "remove":
         result = remove_exact(open_dir(argv[2]), argv[3], argv[4], argv[5])
         print("ROLLBACK_" + argv[3].lstrip(".").upper() + "=" + result)
@@ -191,6 +205,7 @@ on_exit() {
   if [[ "$rc" != 0 && "$committed" != 1 ]]; then rollback_candidate || true; fi
   exit "$rc"
 }
+trap 'exit 143' TERM INT HUP
 trap on_exit EXIT
 
 # 1. Runtime .env must stay byte-identical across the switch.
@@ -357,15 +372,15 @@ setfacl -R -m 'u:www-data:rX' "$CAND_APP/public" || fail PUBLIC_TREE_ACL_FAILED
 # candidate artifacts last (O_EXCL, inode-recorded) so any failure from here on
 # removes exactly what this run created.
 [[ -z "$(git_as status --porcelain --untracked-files=normal -- . ':(exclude)apps/platform/storage')" ]] || fail CANDIDATE_DIRTY_BEFORE_WRITE
-env_id="$(fs_op create-env "$LIVE_APP" "$CAND_APP" | sed -n 's/^MATERIALIZED_ENV_ID=\([0-9][0-9]*:[0-9][0-9]*\)$/\1/p')" || fail ENV_CREATE_FAILED
-[[ -n "$env_id" ]] || fail ENV_CREATE_FAILED
+env_id="$(fs_op create-env "$LIVE_APP" "$CAND_APP")" || fail ENV_CREATE_FAILED
+[[ "$env_id" =~ ^[0-9]+:[0-9]+$ ]] || { env_id=""; fail ENV_CREATE_FAILED; }
 echo "MATERIALIZED_ENV_ID=$env_id"
 [[ "$(sha256sum -- "$LIVE_APP/.env" | cut -d' ' -f1)" == "$(sha256sum -- "$CAND_APP/.env" | cut -d' ' -f1)" ]] || fail ENV_SHA_MISMATCH
 status RUNTIME_ENV BYTE_IDENTICAL
 status AGENT_PUBLIC_ORIGIN "$origin_state"
 if [[ "$want_link" == 1 ]]; then
-  link_id="$(fs_op create-link "$CAND_APP/public" | sed -n 's/^MATERIALIZED_LINK_ID=\([0-9][0-9]*:[0-9][0-9]*\)$/\1/p')" || fail LINK_CREATE_FAILED
-  [[ -n "$link_id" ]] || fail LINK_CREATE_FAILED
+  link_id="$(fs_op create-link "$CAND_APP/public")" || fail LINK_CREATE_FAILED
+  [[ "$link_id" =~ ^[0-9]+:[0-9]+$ ]] || { link_id=""; fail LINK_CREATE_FAILED; }
   echo "MATERIALIZED_LINK_ID=$link_id"
   status PUBLIC_STORAGE_LINK MIRRORED
 else
@@ -404,14 +419,15 @@ run_sandbox() {
     -p "ReadWritePaths=$CAND" -p "ReadOnlyPaths=$LIVE_APP" \
     /bin/bash -s -- "$SHA" "$EXPECTED_CURRENT" "$ROOT" "$LIVE" "$CAND" "$ORIGIN_LINE" "${@:2}" <<<"$SANDBOX_BODY"
 }
-sandbox_out="$(mktemp)"
-trap ': >"$sandbox_out"' EXIT
+# No temporary receipt file: output is held in memory, so there is no pathname
+# for a hostile TMPDIR or a swapped symlink to redirect a root write.
+sandbox_text=""
 post_fail() {
   # A root-side check failed after the sandbox committed: remove only the
   # inode-attested candidate artifacts, then report the original failure.
   local env_id link_id
-  env_id="$(sed -n 's/^MATERIALIZED_ENV_ID=\([0-9][0-9]*:[0-9][0-9]*\)$/\1/p' "$sandbox_out" | tail -n 1)"
-  link_id="$(sed -n 's/^MATERIALIZED_LINK_ID=\([0-9][0-9]*:[0-9][0-9]*\)$/\1/p' "$sandbox_out" | tail -n 1)"
+  env_id="$(sed -n 's/^MATERIALIZED_ENV_ID=\([0-9][0-9]*:[0-9][0-9]*\)$/\1/p' <<<"$sandbox_text" | tail -n 1)"
+  link_id="$(sed -n 's/^MATERIALIZED_LINK_ID=\([0-9][0-9]*:[0-9][0-9]*\)$/\1/p' <<<"$sandbox_text" | tail -n 1)"
   if [[ -n "$env_id$link_id" ]]; then
     run_sandbox rollback rollback "$env_id" "$link_id" || status CANDIDATE_ROLLBACK FAILED_REVIEW
   fi
@@ -419,9 +435,10 @@ post_fail() {
 }
 
 sandbox_rc=0
-run_sandbox materialize materialize | tee -- "$sandbox_out" || sandbox_rc="${PIPESTATUS[0]}"
+sandbox_text="$(run_sandbox materialize materialize)" || sandbox_rc=$?
+printf '%s\n' "$sandbox_text"
 [[ "$sandbox_rc" == 0 ]] || post_fail "SANDBOX_FAILED_$sandbox_rc"
-grep -Fxq 'KMJ_MATERIALIZE_SHARED=PASS' "$sandbox_out" || post_fail SANDBOX_PASS_MISSING
+grep -Fxq 'KMJ_MATERIALIZE_SHARED=PASS' <<<"$sandbox_text" || post_fail SANDBOX_PASS_MISSING
 
 runuser -u www-data -- test -r "$CAND_APP/public/index.php" || post_fail NGINX_PUBLIC_UNREADABLE
 runuser -u www-data -- test -r "$CAND_APP/public/assets/kmj-codebridge-icon.png" || post_fail NGINX_ICON_UNREADABLE
