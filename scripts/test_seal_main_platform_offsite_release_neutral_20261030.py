@@ -3,6 +3,9 @@
 from __future__ import annotations
 
 import hashlib
+import os
+import stat
+from types import SimpleNamespace
 import importlib.util
 import io
 import json
@@ -197,6 +200,69 @@ class ReleaseNeutralSealTest(unittest.TestCase):
         self.assertIn("os.link(sealed, OUTPUT)", source)
         self.assertIn("CURRENT.resolve(strict=True) != EXPECTED_RELEASE", source)
         self.assertIn("OFFSITE_TRANSFER=NOT_ATTEMPTED", source)
+
+    def test_pinned_lock_accepts_only_private_single_link_regular_inode(self):
+        # Only tests a disposable temp tree: no /run/lock and no root actions.
+        with tempfile.TemporaryDirectory() as tmp:
+            parent = Path(tmp)
+            parent.chmod(0o755)
+            lock = parent / "candidate.lock"
+            original = Path.lstat
+
+            def root_owned_parent(path):
+                result = original(path)
+                if path == parent:
+                    return SimpleNamespace(st_uid=0, st_mode=result.st_mode)
+                return result
+
+            with patch.object(Path, "lstat", root_owned_parent):
+                fd = mod.open_pinned_release_lock(lock, expected_uid=os.geteuid())
+                try:
+                    info = os.fstat(fd)
+                    self.assertEqual(stat.S_IMODE(info.st_mode), 0o600)
+                    self.assertEqual(info.st_nlink, 1)
+                finally:
+                    os.close(fd)
+                fd = mod.open_pinned_release_lock(lock, expected_uid=os.geteuid())
+                os.close(fd)
+
+                lock.chmod(0o644)
+                with self.assertRaisesRegex(RuntimeError, "RELEASE_LOCK_IDENTITY_UNSAFE"):
+                    mod.open_pinned_release_lock(lock, expected_uid=os.geteuid())
+                lock.chmod(0o600)
+
+                hardlink = parent / "other-link"
+                os.link(lock, hardlink)
+                with self.assertRaisesRegex(RuntimeError, "RELEASE_LOCK_IDENTITY_UNSAFE"):
+                    mod.open_pinned_release_lock(lock, expected_uid=os.geteuid())
+                hardlink.unlink()
+
+                lock.unlink()
+                lock.symlink_to(parent / "unrelated")
+                with self.assertRaisesRegex(RuntimeError, "RELEASE_LOCK_UNSAFE"):
+                    mod.open_pinned_release_lock(lock, expected_uid=os.geteuid())
+
+    def test_root_lock_rejects_unsafe_parent_and_special_files(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            parent = Path(tmp)
+            parent.chmod(0o777)
+            lock = parent / "candidate.lock"
+            with self.assertRaisesRegex(RuntimeError, "RELEASE_LOCK_PARENT_UNSAFE"):
+                mod.open_pinned_release_lock(lock, expected_uid=os.geteuid())
+
+            parent.chmod(0o755)
+            original = Path.lstat
+
+            def root_owned_parent(path):
+                result = original(path)
+                if path == parent:
+                    return SimpleNamespace(st_uid=0, st_mode=result.st_mode)
+                return result
+
+            os.mkfifo(lock, 0o600)
+            with patch.object(Path, "lstat", root_owned_parent):
+                with self.assertRaisesRegex(RuntimeError, "RELEASE_LOCK_IDENTITY_UNSAFE"):
+                    mod.open_pinned_release_lock(lock, expected_uid=os.geteuid())
 
     def test_main_refuses_without_root_before_any_filesystem_access(self):
         with patch.object(mod.os, "geteuid", return_value=1000), self.assertRaisesRegex(RuntimeError, "WRONG_OPERATOR_OR_HOST"):

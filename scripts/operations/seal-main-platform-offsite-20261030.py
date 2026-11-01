@@ -218,6 +218,41 @@ def repack_verified_local(target: Target, original: Path, witness: Path, scratch
     return outer, source_hash
 
 
+def open_pinned_release_lock(path: Path, *, expected_uid: int = 0) -> int:
+    """Pin the one shared production lock; never follow or rewrite unsafe paths.
+
+    /run/lock may be root-owned sticky 1777. Its sticky bit protects a
+    root-owned file there, but the lock inode itself must be regular,
+    single-link, root-owned and exactly 0600. O_NONBLOCK prevents a planted
+    FIFO or other special device from hanging before verification.
+    """
+    parent = path.parent.lstat()
+    if (not stat.S_ISDIR(parent.st_mode) or parent.st_uid != 0
+            or stat.S_ISLNK(parent.st_mode)
+            or stat.S_IMODE(parent.st_mode) not in (0o755, 0o1777)):
+        fail("RELEASE_LOCK_PARENT_UNSAFE")
+    flags = os.O_RDWR | os.O_NOFOLLOW | os.O_CLOEXEC | os.O_NONBLOCK
+    try:
+        try:
+            fd = os.open(path, flags | os.O_CREAT | os.O_EXCL, 0o600)
+        except FileExistsError:
+            fd = os.open(path, flags)
+        try:
+            opened = os.fstat(fd)
+            linked = path.lstat()
+            if (not stat.S_ISREG(opened.st_mode) or opened.st_uid != expected_uid
+                    or opened.st_nlink != 1 or stat.S_IMODE(opened.st_mode) != 0o600
+                    or not stat.S_ISREG(linked.st_mode)
+                    or (opened.st_dev, opened.st_ino) != (linked.st_dev, linked.st_ino)):
+                fail("RELEASE_LOCK_IDENTITY_UNSAFE")
+            return fd
+        except BaseException:
+            os.close(fd)
+            raise
+    except (OSError, ValueError):
+        fail("RELEASE_LOCK_UNSAFE")
+
+
 def main(argv: list[str]) -> None:
     target = parse_args(argv)
     ORIGINAL, WITNESS, OUTPUT = target.original, target.witness, target.output
@@ -239,12 +274,19 @@ def main(argv: list[str]) -> None:
     required = max(512 * 1024 * 1024, ORIGINAL.stat().st_size * 4 + 256 * 1024 * 1024)
     if free < required:
         fail("INSUFFICIENT_ENCRYPTION_SCRATCH")
-    lock = os.open(
-        "/run/lock/kmj-main-platform-production-release.lock",
-        os.O_CREAT | os.O_WRONLY | os.O_CLOEXEC, 0o600,
+    lock = open_pinned_release_lock(
+        Path("/run/lock/kmj-main-platform-production-release.lock")
     )
     try:
         fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        # Revalidate path identity after acquisition. Never proceed when
+        # a concurrent actor has substituted the path's inode.
+        current = os.fstat(lock)
+        path_info = Path("/run/lock/kmj-main-platform-production-release.lock").lstat()
+        if ((current.st_dev, current.st_ino) != (path_info.st_dev, path_info.st_ino)
+                or current.st_nlink != 1 or current.st_uid != 0
+                or stat.S_IMODE(current.st_mode) != 0o600):
+            fail("RELEASE_LOCK_CHANGED")
         with tempfile.TemporaryDirectory(prefix=".kmj-seal-offsite-", dir=ROOT) as tempdir:
             scratch = Path(tempdir)
             outer, source_hash = repack_verified_local(target, ORIGINAL, WITNESS, scratch)
