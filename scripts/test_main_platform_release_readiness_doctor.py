@@ -644,8 +644,12 @@ class MaterializeRollbackTest(unittest.TestCase):
         self.assertNotEqual(run.returncode, 0)
         self.assertIn("FS_OP_POST_CREATE_RECEIPT=UNATTESTED_OWNER_REVIEW", run.stderr)
         self.assertIn("CANDIDATE_ROLLBACK=FAILED_REVIEW", run.stdout)
-        self.assertEqual((self.cand / ".env").read_bytes(),
-                         (self.live / ".env").read_bytes())
+        # os.open(O_EXCL) created an empty candidate before its fstat failed.
+        # Without a receipt it must be LEFT FOR REVIEW, not mistaken for a
+        # successfully copied or rolled-back runtime secret.
+        self.assertEqual((self.cand / ".env").read_bytes(), b"")
+        self.assertEqual((self.live / ".env").read_bytes(),
+                         b"APP_KEY=base64:abc\nDB=x\n")
         self.assertFalse((self.cand / "public/storage").is_symlink())
 
     def test_sigterm_after_creation_rolls_back(self) -> None:
