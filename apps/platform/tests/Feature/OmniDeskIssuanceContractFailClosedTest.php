@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace Tests\Feature;
 
+use App\Services\Licensing\OmniDesk\OmniDeskApiAuthorizer;
+use App\Services\Licensing\OmniDesk\OmniDeskApiPrincipal;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use Tests\TestCase;
 
@@ -16,7 +19,7 @@ final class OmniDeskIssuanceContractFailClosedTest extends TestCase
             'api/v1/licensing/omnidesk/leases/renew',
         ] as $uri) {
             $route = Route::getRoutes()->match(
-                \Illuminate\Http\Request::create('/'.$uri, 'POST')
+                Request::create('/'.$uri, 'POST')
             );
             self::assertSame($uri, $route->uri());
             self::assertContains('POST', $route->methods());
@@ -26,12 +29,12 @@ final class OmniDeskIssuanceContractFailClosedTest extends TestCase
     public function test_nonmanager_cannot_use_protected_issuance_paths(): void
     {
         app()->instance(
-            \App\Services\Licensing\OmniDesk\OmniDeskApiAuthorizer::class,
-            new class implements \App\Services\Licensing\OmniDesk\OmniDeskApiAuthorizer
+            OmniDeskApiAuthorizer::class,
+            new class implements OmniDeskApiAuthorizer
             {
-                public function authorize(\Illuminate\Http\Request $request): \App\Services\Licensing\OmniDesk\OmniDeskApiPrincipal
+                public function authorize(Request $request): OmniDeskApiPrincipal
                 {
-                    return new \App\Services\Licensing\OmniDesk\OmniDeskApiPrincipal('test-actor', 'test-org', false);
+                    return new OmniDeskApiPrincipal('test-actor', 'test-org', false);
                 }
             }
         );
@@ -46,12 +49,12 @@ final class OmniDeskIssuanceContractFailClosedTest extends TestCase
     public function test_manager_receives_explicit_unavailable_without_signer(): void
     {
         app()->instance(
-            \App\Services\Licensing\OmniDesk\OmniDeskApiAuthorizer::class,
-            new class implements \App\Services\Licensing\OmniDesk\OmniDeskApiAuthorizer
+            OmniDeskApiAuthorizer::class,
+            new class implements OmniDeskApiAuthorizer
             {
-                public function authorize(\Illuminate\Http\Request $request): \App\Services\Licensing\OmniDesk\OmniDeskApiPrincipal
+                public function authorize(Request $request): OmniDeskApiPrincipal
                 {
-                    return new \App\Services\Licensing\OmniDesk\OmniDeskApiPrincipal('test-manager', 'test-org', true);
+                    return new OmniDeskApiPrincipal('test-manager', 'test-org', true);
                 }
             }
         );
