@@ -25,10 +25,10 @@ def alias(host: str, port: str) -> str:
 
 def port_is_valid(port: str) -> bool:
     start = SOURCE.index("valid_port() {")
-    end = SOURCE.index("\\n}", start) + 2
+    end = SOURCE.index("\n}", start) + 2
     fn = SOURCE[start:end]
     result = subprocess.run(
-        ["bash", "-c", fn + '\\nvalid_port "$1"', "offsite-port-test", port],
+        ["bash", "-c", fn + '\nvalid_port "$1"', "offsite-port-test", port],
         capture_output=True, text=True, timeout=5, check=False,
     )
     return result.returncode == 0
