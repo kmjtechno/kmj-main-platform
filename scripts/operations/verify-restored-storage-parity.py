@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import hashlib
 import os
+import re
 from pathlib import Path
 import stat
 import sys
@@ -16,6 +17,7 @@ import tarfile
 
 MAX_ENTRIES = 100_000
 MAX_FILE_BYTES = 256 * 1024 * 1024 * 1024
+MIN_FREE_RESERVE = 4 * 1024 * 1024 * 1024
 
 
 class StorageParityError(Exception):
@@ -70,6 +72,21 @@ def archive_inventory(source: Path) -> tuple[dict[str, tuple[int, str]], set[str
     if any(name in files for name in directories):
         fail()
     return files, directories
+
+
+def storage_capacity_preflight(source: Path, free_bytes: int) -> int:
+    """Fail before tar extraction if declared payload would exhaust scratch disk.
+
+    Reuse strict archive validation and hashing so capacity cannot be inferred
+    from the compressed archive size, which may be arbitrarily misleading.
+    """
+    if free_bytes < MIN_FREE_RESERVE:
+        fail()
+    expected, _directories = archive_inventory(source)
+    required = sum(size for size, _digest in expected.values())
+    if required > free_bytes - MIN_FREE_RESERVE:
+        fail()
+    return required
 
 
 def open_restored_root(root: Path) -> int:
@@ -236,6 +253,16 @@ def verify(source: Path, restored: Path) -> int:
 
 
 def main(argv: list[str]) -> int:
+    if len(argv) == 3 and argv[0] == "--capacity-check":
+        try:
+            if not Path(argv[1]).is_absolute() or re.fullmatch(r"[0-9]+", argv[2]) is None:
+                fail()
+            storage_capacity_preflight(Path(argv[1]), int(argv[2]))
+        except (StorageParityError, OSError, ValueError, tarfile.TarError):
+            print("RECOVERED_STORAGE_CAPACITY=FAIL")
+            return 2
+        print("RECOVERED_STORAGE_CAPACITY=PASS")
+        return 0
     if len(argv) != 2 or any(not Path(p).is_absolute() for p in argv):
         print("RECOVERED_STORAGE_CONTENT_PARITY=BLOCKED_ARGUMENTS")
         return 2
