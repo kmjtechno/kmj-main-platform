@@ -53,6 +53,49 @@ Route::prefix('v1/licensing/omnidesk')->group(function () use (
     $omnideskPrincipal,
     $omnideskError,
 ): void {
+    // The published OmniDesk client contract requires these endpoints. They
+    // must not silently return 404 or issue mock/unsigned entitlements while
+    // the protected, transactional issuer integration is not provisioned.
+    // Replace these fail-closed adapters only alongside authenticated device
+    // proof checks, tenant/seat eligibility, replay cursor and HSM-backed sign.
+    Route::post('activations', function (Request $request) use ($omnideskPrincipal, $omnideskError) {
+        if (strlen($request->getContent()) > 2048) {
+            return response()->json(['error' => 'INVALID_REQUEST'], 413)
+                ->header('Cache-Control', 'no-store, private');
+        }
+
+        try {
+            $principal = $omnideskPrincipal($request);
+            if (! $principal->canManage) {
+                throw new DomainException('OMNIDESK_FORBIDDEN');
+            }
+
+            return response()->json(['error' => 'ISSUANCE_NOT_CONFIGURED'], 503)
+                ->header('Cache-Control', 'no-store, private');
+        } catch (Throwable $error) {
+            return $omnideskError($error);
+        }
+    })->middleware('throttle:12,1');
+
+    Route::post('leases/renew', function (Request $request) use ($omnideskPrincipal, $omnideskError) {
+        if (strlen($request->getContent()) > 2048) {
+            return response()->json(['error' => 'INVALID_REQUEST'], 413)
+                ->header('Cache-Control', 'no-store, private');
+        }
+
+        try {
+            $principal = $omnideskPrincipal($request);
+            if (! $principal->canManage) {
+                throw new DomainException('OMNIDESK_FORBIDDEN');
+            }
+
+            return response()->json(['error' => 'ISSUANCE_NOT_CONFIGURED'], 503)
+                ->header('Cache-Control', 'no-store, private');
+        } catch (Throwable $error) {
+            return $omnideskError($error);
+        }
+    })->middleware('throttle:12,1');
+
     Route::get('activations/{activation_id}/status', function (
         Request $request,
         string $activation_id,
