@@ -13,8 +13,10 @@ export const deliveryMilestones: DeliveryMilestone[] = [
         id: 'omnidesk-issuance-contract-fail-closed',
         title: 'OmniDesk M9 license issuance HTTP contract',
         state: 'blocked',
-        detail: 'Draft PR #759 registers the published activation and lease-renewal POST routes, which previously returned HTTP 404. The routes now check the existing tenant principal and manager permission, but deliberately return HTTP 503 ISSUANCE_NOT_CONFIGURED; no license is issued or signed. Real production issuance still requires a protected KMS/HSM-backed signer, device proof, tenant and seat checks, transactional binding, replay protection, approved deployment, and end-to-end verification.',
-        evidence: 'Draft source-only PR #759 with feature regression tests; authenticated 403 and signer-unavailable 503 behavior are covered by CI tests. No protected signer or production issuance route is configured, and no live signed activation/renewal has passed. Do not interpret registered endpoints as commercial readiness.',
+        detail:
+            'Draft PR #759 registers the published activation and lease-renewal POST routes, which previously returned HTTP 404. The routes now check the existing tenant principal and manager permission, but deliberately return HTTP 503 ISSUANCE_NOT_CONFIGURED; no license is issued or signed. Real production issuance still requires a protected KMS/HSM-backed signer, device proof, tenant and seat checks, transactional binding, replay protection, approved deployment, and end-to-end verification.',
+        evidence:
+            'Draft source-only PR #759 with feature regression tests; authenticated 403 and signer-unavailable 503 behavior are covered by CI tests. No protected signer or production issuance route is configured, and no live signed activation/renewal has passed. Do not interpret registered endpoints as commercial readiness.',
     },
     {
         id: 'codebridge-ai-workspace',
