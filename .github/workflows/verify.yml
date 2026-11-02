@@ -62,6 +62,8 @@ jobs:
           python3 -B -m unittest discover -s scripts -p 'test_diagnose_offsite_backup_unit.py' -v
           bash -n scripts/operations/install-offsite-diagnostic-owner-20261031.sh
           python3 -B scripts/test_offsite_diagnostic_owner_installer.py
+          bash -n scripts/operations/install-main-platform-staging-unit-20261102.sh
+          python3 -B -m unittest tests.test_staging_owner_installer_20261102
           python3 -B scripts/test_verify_offsite_restore_witness_20261101.py
           python3 -B scripts/test_plan_offsite_transport_reconcile_20261101.py
           bash -n scripts/operations/push-existing-dfa55-offsite-only-20261102.sh
