@@ -66,8 +66,8 @@ class ExistingDfa55SftpOnlyTests(unittest.TestCase):
         text = SCRIPT.read_text(encoding="utf-8")
         self.assertEqual(text.count('/bin/bash -p "$work/uploader.sh"'), 1)
         self.assertIsNone(re.search(
-            r"(?m)^\\s*(?:pg_dump|age|systemctl|git reset|ln -sfn|"
-            r"python3.*seal-main-platform|bash.*prepare-full-offsite)\\b", text))
+            r"(?m)^\s*(?:pg_dump|age|systemctl|git reset|ln -sfn|"
+            r"python3.*seal-main-platform|bash.*prepare-full-offsite)\b", text))
         self.assertNotIn("STAGING_ACTIVATION=PASS", text)
         self.assertNotIn("GOOGLE_INDEPENDENT_RESTORE=PASS", text)
 
