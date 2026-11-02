@@ -1,6 +1,7 @@
 """No-production-change preflight contracts for the one-shot offsite evidence chain."""
 from __future__ import annotations
 
+import hashlib
 import re
 import subprocess
 import unittest
@@ -37,6 +38,18 @@ class FullOffsiteEvidenceContract(unittest.TestCase):
         self.assertEqual(TEXT.count('sha256sum -c -'), 1)
         self.assertEqual(TEXT.count('download "$'), 4)
         self.assertIn("--proto '=https' --tlsv1.2", TEXT)
+
+    def test_new_hardened_sftp_uploader_matches_sha256_pin(self):
+        # The pinned uploader commit is this PR's main ancestor; its bytes
+        # must match the exact downloaded script digest, not just a test string.
+        uploader = SRC.parent / "push-offsite-pinned-sftp-20261030.sh"
+        actual = hashlib.sha256(uploader.read_bytes()).hexdigest()
+        self.assertEqual(
+            actual,
+            "c2fbaa2e969ff0fdfcf0ce88b4edb32e3260e59d568ef1411721026a28ef45dc",
+        )
+        self.assertIn("PRIVILEGED_BASH_REQUIRED", uploader.read_text())
+        self.assertIn("REMOTE_READBACK_MODE_0600 PASS", uploader.read_text())
 
     def test_order_of_stages_and_no_unattested_credit(self):
         ordered = [TEXT.index("KMJ_PHASE="+p) for p in (
