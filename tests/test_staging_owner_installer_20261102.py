@@ -152,6 +152,12 @@ stat() {
         self.assertIn('remove_if_ours "$target_unit" "$created_unit_inode" "$unit_sha256"', source)
         self.assertIn('remove_if_ours "$target_runner" "$created_runner_inode" "$runner_sha256"', source)
         self.assertIn("install_committed=YES", source)
+        # The original implementation registered the published inode *after*
+        # ln, leaving an interrupted no-clobber publication untracked.
+        publish = source[source.index("publish() {"):]
+        link = publish.index('if ! /usr/bin/ln -T -- "$tmp" "$dest"')
+        self.assertLess(publish.index('created_runner_inode="$published_inode"'), link)
+        self.assertLess(publish.index('created_unit_inode="$published_inode"'), link)
 
 if __name__ == "__main__":
     unittest.main()
