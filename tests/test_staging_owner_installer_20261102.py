@@ -143,11 +143,71 @@ stat() {
                                  not (inode_valid and digest_valid and not link),
                                  label)
 
+    def test_hardlinked_publish_window_rolls_back_only_attested_files(self):
+        # Force the exact signal window: ln has published a hard link but its
+        # private temporary source has not yet been unlinked (nlink=2).
+        # Execute the real cleanup helpers in a disposable non-root fixture.
+        import hashlib
+        import os
+        source = SCRIPT.read_text(encoding="utf-8")
+        start = source.index("remove_temp_if_ours() {")
+        end = source.index("rollback_partial_install() {", start)
+        helpers = source[start:end]
+        bash = r'''
+set -Eeuo pipefail
+sha_file() { /usr/bin/sha256sum -- "$1" | /usr/bin/cut -d ' ' -f1; }
+stat() {
+  if [[ "$1" == -c && "$2" == '%d:%i:%u:%g:%h' ]]; then
+    local meta
+    meta="$(/usr/bin/stat -c '%d:%i:%h' -- "$4")"
+    printf '%s:0:0:%s\n' "${meta%:*}" "${meta##*:}"
+  else /usr/bin/stat "$@"; fi
+}
+''' + helpers + '''
+remove_temp_if_ours "$1" "$3" "$4"
+remove_if_ours "$2" "$3" "$4"
+'''
+        with tempfile.TemporaryDirectory() as tmp:
+            d = pathlib.Path(tmp)
+            for label, valid_inode, valid_hash in (
+                ("attested", True, True),
+                ("bad_inode", False, True),
+                ("bad_hash", True, False),
+            ):
+                temporary = d / (label + ".tmp")
+                destination = d / (label + ".target")
+                temporary.write_bytes(b"root-owned private temporary")
+                os.link(temporary, destination)
+                self.assertEqual(destination.stat().st_nlink, 2)
+                ino = f"{temporary.stat().st_dev}:{temporary.stat().st_ino}"
+                digest = hashlib.sha256(temporary.read_bytes()).hexdigest()
+                if not valid_inode:
+                    ino = "0:0"
+                if not valid_hash:
+                    digest = "0" * 64
+                result = subprocess.run(
+                    ["/bin/bash", "-p", "-c", bash, "_",
+                     str(temporary), str(destination), ino, digest],
+                    capture_output=True, text=True, timeout=10,
+                )
+                self.assertEqual(result.returncode, 0, (label, result.stderr))
+                if valid_inode and valid_hash:
+                    self.assertFalse(temporary.exists(), label)
+                    self.assertFalse(destination.exists(), label)
+                else:
+                    self.assertTrue(temporary.exists(), label)
+                    self.assertTrue(destination.exists(), label)
+
     def test_failure_rollback_is_inactive_and_tracks_both_created_inodes(self):
         source = SCRIPT.read_text(encoding="utf-8")
         self.assertIn("trap rollback_partial_install EXIT", source)
         self.assertIn("created_runner_inode=", source)
         self.assertIn("created_unit_inode=", source)
+        self.assertIn("created_runner_tmp=", source)
+        self.assertIn("created_unit_tmp=", source)
+        self.assertIn("remove_temp_if_ours", source)
+        for signal in ("HUP", "INT", "TERM"):
+            self.assertIn(signal, source)
         self.assertIn('if [[ "$install_committed" != YES ]]', source)
         self.assertIn('remove_if_ours "$target_unit" "$created_unit_inode" "$unit_sha256"', source)
         self.assertIn('remove_if_ours "$target_runner" "$created_runner_inode" "$runner_sha256"', source)
