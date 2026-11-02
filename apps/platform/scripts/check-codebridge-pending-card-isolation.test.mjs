@@ -75,7 +75,10 @@ void test('dashboard renders separate request-only cards', () => {
     const ui = readFileSync(file, 'utf8');
 
     assert.match(ui, /pendingRequests\.map\(\(request\)/);
-    assert.match(ui, /Pending project setup — separate from registered devices/);
+    assert.match(
+        ui,
+        /Pending project setup — separate from registered devices/,
+    );
     assert.match(ui, /Request project on this existing/);
     assert.match(ui, /this does not grant another project to its/);
     assert.doesNotMatch(ui, /Awaiting local project setup/);
