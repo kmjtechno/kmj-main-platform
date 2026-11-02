@@ -338,7 +338,12 @@ export default function DeviceControlCenter({
             ) : (
                 <div className="mt-5 grid gap-3 lg:grid-cols-2">
                     {visibleDevices.map((device) => {
-                        const recovery = deviceRecoveryAction(device.platform);
+                        const recovery = deviceRecoveryAction(device.platform, {
+                            deviceId: device.id,
+                            pendingProjectIds: (
+                                device.pending_projects ?? []
+                            ).map((project) => project.id),
+                        });
                         return (
                             <article
                                 key={device.id}
