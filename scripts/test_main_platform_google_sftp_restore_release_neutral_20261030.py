@@ -90,6 +90,23 @@ class ReleaseNeutralRestore(unittest.TestCase):
         self.assertIn('if ! "${sandbox[@]}" tar -xzf "$tmp/extracted/storage.tar.gz"', SOURCE)
         self.assertNotIn('if ! tar -xzf "$tmp/extracted/storage.tar.gz"', SOURCE)
 
+    def test_all_untrusted_archive_parsers_are_os_sandboxed(self):
+        # The first archive verifier and outer tarfile parser must be isolated,
+        # not only the final storage tar extraction.
+        self.assertEqual(SOURCE.count("sandbox=(bwrap "), 1)
+        self.assertLess(SOURCE.index("sandbox=(bwrap "), SOURCE.index("status BACKUP_ARCHIVE_INTEGRITY PASS"))
+        self.assertIn('--ro-bind "$BACKUP_AGE_IDENTITY" "$tmp/age-identity"', SOURCE)
+        self.assertIn('BACKUP_AGE_IDENTITY="$tmp/age-identity" TMPDIR="$tmp" \\\n    "${sandbox[@]}" bash "$tmp/verify_backup_bundle.sh"', SOURCE)
+        self.assertIn('if ! "${sandbox[@]}" age -d -i "$tmp/age-identity"', SOURCE)
+        self.assertIn('if ! "${sandbox[@]}" python3 - "$tmp/bundle.tar.gz" "$tmp/extracted"', SOURCE)
+        self.assertIn('if ! "${sandbox[@]}" python3 - "$tmp/extracted/metadata.txt"', SOURCE)
+        self.assertIn('if ! "${sandbox[@]}" python3 "$tmp/parity.py"', SOURCE)
+        self.assertIn('if ! parity="$("${sandbox[@]}" python3 "$tmp/parity.py"', SOURCE)
+        self.assertNotIn('bash "$repo/scripts/verify_backup_bundle.sh" "$tmp/encrypted.age"', SOURCE)
+        self.assertNotIn('if ! age -d -i "$BACKUP_AGE_IDENTITY"', SOURCE)
+        self.assertNotIn('if ! python3 - "$tmp/bundle.tar.gz"', SOURCE)
+        self.assertNotIn('if ! python3 "$repo/scripts/operations/verify-restored-storage-parity.py"', SOURCE)
+
     def test_safety_properties_kept(self):
         for needle in ("bwrap", "NONROOT_INFO_REQUIRED", "OPERATOR_CONSENT", "PRODUCTION_DATABASE_MODIFIED NO",
                        "status OFFSITE_RCLONE_RETRIEVAL NOT_ATTEMPTED", "SAFE_TO_ACTIVATE_PRODUCTION NOT_PROVEN",
