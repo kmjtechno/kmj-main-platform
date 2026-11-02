@@ -107,6 +107,18 @@ class ReleaseNeutralRestore(unittest.TestCase):
         self.assertNotIn('if ! python3 - "$tmp/bundle.tar.gz"', SOURCE)
         self.assertNotIn('if ! python3 "$repo/scripts/operations/verify-restored-storage-parity.py"', SOURCE)
 
+    def test_nonroot_bwrap_mount_preflight_is_fail_closed(self):
+        # Source contract only; real Google info user namespace/mount execution
+        # is still required before this can be accepted as a restore receipt.
+        start = SOURCE.index("GOOGLE_BWRAP_MOUNT_PREFLIGHT")
+        first_archive = SOURCE.index("status SFTP_IMPORTED_ENCRYPTED_SHA256 PASS")
+        self.assertLess(start, first_archive)
+        self.assertIn('if ! "${sandbox[@]}" bash -c', SOURCE)
+        self.assertIn('[[ -f "$key" && -r "$key" && -d "$work" && -w "$work" ]]', SOURCE)
+        self.assertIn('[[ ! -e "$home/.ssh" && ! -e "$home/.config" ]]', SOURCE)
+        self.assertIn('probe="$(mktemp "$work/.bwrap-mount-preflight.XXXXXXXX")"', SOURCE)
+        self.assertIn('block GOOGLE_BWRAP_MOUNT_PREFLIGHT', SOURCE)
+
     def test_safety_properties_kept(self):
         for needle in ("bwrap", "NONROOT_INFO_REQUIRED", "OPERATOR_CONSENT", "PRODUCTION_DATABASE_MODIFIED NO",
                        "status OFFSITE_RCLONE_RETRIEVAL NOT_ATTEMPTED", "SAFE_TO_ACTIVATE_PRODUCTION NOT_PROVEN",
