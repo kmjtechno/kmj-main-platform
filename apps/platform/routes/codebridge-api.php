@@ -42,6 +42,10 @@ Route::post('v1/codebridge/renew', function (Request $request) {
 // A 200 means only the configured origin is compatible; it does not attest to
 // a license, authenticated approval, live agent heartbeat or future uptime.
 // No upstream request, DB query, device registration or secret disclosure.
+// Inline throttle:N,M buckets are keyed by client IP only, so every route that
+// uses them shares one budget per IP. Enrollment routes use distinct prefixes so
+// other agents polling from the same NAT/proxy IP cannot starve a new device's
+// enrollment (HTTP 429 with no owner action). Limits themselves are unchanged.
 Route::get('codebridge/v1/device-enrollments/readiness', function () {
     $ready = config('codebridge.enabled', false) === true
         && CodeBridgeDevicePairingService::verifiedPublicAgentOrigin() !== null;
@@ -52,7 +56,7 @@ Route::get('codebridge/v1/device-enrollments/readiness', function () {
             : ['pairing_config' => 'unavailable'],
         $ready ? 200 : 503,
     )->header('Cache-Control', 'no-store, private');
-})->middleware('throttle:30,1');
+})->middleware('throttle:30,1,codebridge-enrollment-readiness');
 
 Route::post('codebridge/v1/device-enrollments', function (Request $request, CodeBridgeDevicePairingService $pairings) {
     if (! config('codebridge.enabled', false)) {
@@ -76,7 +80,7 @@ Route::post('codebridge/v1/device-enrollments', function (Request $request, Code
     ]);
 
     return response()->json($pairings->create($v, time()), 201)->header('Cache-Control', 'no-store');
-})->middleware('throttle:10,1');
+})->middleware('throttle:10,1,codebridge-enrollment-start');
 
 Route::post('codebridge/v1/device-enrollments/token', function (Request $request, CodeBridgeDevicePairingService $pairings) {
     if (! config('codebridge.enabled', false)) {
@@ -106,7 +110,7 @@ Route::post('codebridge/v1/device-enrollments/token', function (Request $request
 
         return response()->json(['error' => $e->getMessage()], $status)->header('Cache-Control', 'no-store');
     }
-})->middleware('throttle:60,1');
+})->middleware('throttle:60,1,codebridge-enrollment-token');
 
 Route::post('codebridge/v1/device-credentials/introspect', function (Request $request) {
     if (! config('codebridge.enabled', false)) {
