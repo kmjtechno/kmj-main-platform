@@ -631,7 +631,7 @@ class MaterializeRollbackTest(unittest.TestCase):
         self.assertIn("CANDIDATE_ROLLBACK=FAILED_REVIEW", run.stdout)
         self.assertEqual((self.cand / ".env").read_bytes(), b"FOREIGN")
         self.assertEqual((self.live / ".env").read_bytes(),
-                         b"APP_KEY=base64:abc\\nDB=x\\n")
+                         b"APP_KEY=base64:abc\nDB=x\n")
 
     def test_preplanted_env_symlink_is_never_followed_or_truncated(self) -> None:
         victim = Path(self.tmp.name) / "victim"
