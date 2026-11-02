@@ -1,5 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+import path from 'node:path';
 import { pendingProjectCards } from '../resources/js/components/codebridge/pending-project-cards.mjs';
 
 void test('VIOSO pending assignment becomes a separate request card, not an extra Calibration grant', () => {
@@ -47,4 +50,16 @@ void test('malformed or missing requests never become fake device cards', () => 
     assert.deepEqual(pendingProjectCards([{
         id: 'desktop', pending_projects: [{ id: '', status: 'pending_local_setup' }],
     }]), []);
+});
+
+void test('dashboard renders pending requests as separate non-device cards', () => {
+    const root = path.dirname(fileURLToPath(import.meta.url));
+    const ui = readFileSync(path.resolve(root, '../resources/js/components/codebridge/device-control-center.tsx'), 'utf8');
+    assert.match(ui, /pendingRequests\.map\(\(request\)/);
+    assert.match(ui, /Pending project setup — separate from registered devices/);
+    assert.match(ui, /Request project on this existing device/);
+    assert.match(ui, /this does not grant another project to its/);
+    assert.doesNotMatch(ui, /Awaiting local project setup/);
+    assert.doesNotMatch(ui, /Connect this Windows PC/);
+    assert.doesNotMatch(ui, /download="KMJ-CodeBridge-Connect-Windows\.cmd"/);
 });
