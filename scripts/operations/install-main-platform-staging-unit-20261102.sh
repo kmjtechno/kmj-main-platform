@@ -100,7 +100,7 @@ publish() {
     /usr/bin/rm -f -- "$tmp"; block STAGED_HASH
   fi
   local published_inode
-  published_inode="$(stat -c '%d:%i' -- "$tmp")" || block TEMP_INODE
+  published_inode="$(stat -c '%d:%i' -- "$tmp")" || { /usr/bin/rm -f -- "$tmp"; block TEMP_INODE; }
   if ! /usr/bin/ln -T -- "$tmp" "$dest"; then
     /usr/bin/rm -f -- "$tmp"; block NO_CLOBBER_LINK
   fi
