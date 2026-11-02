@@ -121,6 +121,24 @@ class ReleaseNeutralRestore(unittest.TestCase):
         subprocess.run(["bash", "-n", str(SCRIPT)], check=True)
         subprocess.run(["bash", "-n", str(SCRIPT.parent.parent / "verify_backup_bundle.sh")], check=True)
 
+    def test_plaintext_verifier_rejects_identity_and_invalid_arity_before_io(self):
+        verifier = SCRIPT.parent.parent / "verify_backup_bundle.sh"
+        env = dict(os.environ)
+        env["BACKUP_AGE_IDENTITY"] = "/not-a-real-key"
+        forbidden = subprocess.run(
+            ["bash", str(verifier), "--decrypted-bundle", "/not-a-real-bundle"],
+            env=env, capture_output=True, text=True,
+        )
+        self.assertEqual(forbidden.returncode, 2)
+        self.assertIn("plaintext mode requires", forbidden.stderr)
+        env.pop("BACKUP_AGE_IDENTITY", None)
+        missing = subprocess.run(
+            ["bash", str(verifier), "--decrypted-bundle"],
+            env=env, capture_output=True, text=True,
+        )
+        self.assertEqual(missing.returncode, 2)
+        self.assertIn("plaintext mode requires", missing.stderr)
+
     def test_nonroot_bwrap_mount_preflight_is_fail_closed(self):
         # Source contract only; real Google info user namespace/mount execution
         # is still required before this can be accepted as a restore receipt.
