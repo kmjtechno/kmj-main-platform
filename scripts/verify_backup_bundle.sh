@@ -1,9 +1,22 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-: "${BACKUP_AGE_IDENTITY:?BACKUP_AGE_IDENTITY must point to an age identity file}"
-
-BUNDLE_PATH="${1:?usage: verify_backup_bundle.sh <encrypted-backup.age>}"
+# The original encrypted-bundle interface remains unchanged. Google recovery
+# may instead verify an already-decrypted bundle in a key-free sandbox, so
+# untrusted tar/pg_restore parsers cannot read the AGE private identity.
+if [[ "${1:-}" == --decrypted-bundle ]]; then
+  [[ $# -eq 2 && -z "${BACKUP_AGE_IDENTITY:-}" ]] || {
+    echo "ERROR: plaintext mode requires exactly one path and no AGE identity" >&2
+    exit 2
+  }
+  BUNDLE_PATH=$2
+  bundle_mode=plaintext
+else
+  [[ $# -eq 1 ]] || { echo "ERROR: expected one encrypted bundle path" >&2; exit 2; }
+  : "${BACKUP_AGE_IDENTITY:?BACKUP_AGE_IDENTITY must point to an age identity file}"
+  BUNDLE_PATH=$1
+  bundle_mode=encrypted
+fi
 WORKDIR="$(mktemp -d)"
 
 cleanup() {
@@ -24,12 +37,17 @@ test -f "$BUNDLE_PATH" || {
   exit 3
 }
 
-age -d -i "$BACKUP_AGE_IDENTITY" -o "$WORKDIR/bundle.tar.gz" "$BUNDLE_PATH"
+if [[ "$bundle_mode" == plaintext ]]; then
+  bundle_tar=$BUNDLE_PATH
+else
+  bundle_tar="$WORKDIR/bundle.tar.gz"
+  age -d -i "$BACKUP_AGE_IDENTITY" -o "$bundle_tar" "$BUNDLE_PATH"
+fi
 
 # Validate the decrypted outer archive BEFORE any extraction. GNU tar -x
 # can honor traversal, symlinks and hardlinks in a malicious backup. Only
 # files emitted by scripts/backup_platform.sh are part of this contract.
-python3 - "$WORKDIR/bundle.tar.gz" "$WORKDIR" <<'PY'
+python3 - "$bundle_tar" "$WORKDIR" <<'PY'
 import re
 import shutil
 import sys
@@ -129,7 +147,11 @@ tar -tzf "$WORKDIR/storage.tar.gz" >/dev/null
 # restores PostgreSQL, independently downloads the remote object, or validates
 # a recovered application's behavior. Do not promote this result to a release
 # recovery signoff.
-echo 'Backup verification PASS: encrypted archive decrypts, checksums match, and archives are readable.'
+if [[ "$bundle_mode" == plaintext ]]; then
+  echo 'Backup verification PASS: decrypted archive checksums match and archives are readable.'
+else
+  echo 'Backup verification PASS: encrypted archive decrypts, checksums match, and archives are readable.'
+fi
 echo 'BACKUP_ARCHIVE_INTEGRITY=PASS'
 echo 'INDEPENDENT_OFFSITE_RETRIEVAL=NOT_VERIFIED'
 echo 'DATABASE_RESTORE=NOT_RUN'

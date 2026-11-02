@@ -82,6 +82,106 @@ class ReleaseNeutralRestore(unittest.TestCase):
         self.assertIn("KMJ_EXPECTED_ENCRYPTED_SHA256", SOURCE)
         self.assertIn('encrypted="$HOME/kmj-recovery-scratch/offsite-$short_sha.tar.gz.age"', SOURCE)
 
+    def test_storage_tar_extract_uses_same_no_network_bwrap_boundary(self):
+        # Untrusted tar extraction must not run on the host outside bwrap.
+        self.assertIn("--unshare-all --die-with-parent --new-session --cap-drop ALL", SOURCE)
+        self.assertIn("--ro-bind / /", SOURCE)
+        self.assertIn('--tmpfs "$HOME" --bind "$tmp" "$tmp"', SOURCE)
+        self.assertIn('if ! "${sandbox[@]}" tar -xzf "$tmp/extracted/storage.tar.gz"', SOURCE)
+        self.assertNotIn('if ! tar -xzf "$tmp/extracted/storage.tar.gz"', SOURCE)
+
+    def test_all_untrusted_archive_parsers_are_os_sandboxed(self):
+        # The first archive verifier and outer tarfile parser must be isolated,
+        # not only the final storage tar extraction.
+        self.assertEqual(SOURCE.count("sandbox=(bwrap "), 1)
+        self.assertLess(SOURCE.index("sandbox=(bwrap "), SOURCE.index("status BACKUP_ARCHIVE_INTEGRITY PASS"))
+        self.assertIn('--ro-bind "$BACKUP_AGE_IDENTITY" "$tmp/age-identity"', SOURCE)
+        self.assertIn('env -u BACKUP_AGE_IDENTITY TMPDIR="$tmp" \\\n    "${sandbox[@]}" bash "$tmp/verify_backup_bundle.sh" --decrypted-bundle', SOURCE)
+        self.assertNotIn('"${key_sandbox[@]}" bash "$tmp/verify_backup_bundle.sh"', SOURCE)
+        self.assertIn('if ! "${key_sandbox[@]}" age -d -i "$tmp/age-identity"', SOURCE)
+        self.assertIn('if ! "${sandbox[@]}" python3 - "$tmp/bundle.tar.gz" "$tmp/extracted"', SOURCE)
+        self.assertIn('if ! "${sandbox[@]}" python3 - "$tmp/extracted/metadata.txt"', SOURCE)
+        self.assertIn('if ! "${sandbox[@]}" python3 "$tmp/parity.py"', SOURCE)
+        self.assertIn('if ! parity="$("${sandbox[@]}" python3 "$tmp/parity.py"', SOURCE)
+        self.assertNotIn('bash "$repo/scripts/verify_backup_bundle.sh" "$tmp/encrypted.age"', SOURCE)
+        self.assertNotIn('if ! age -d -i "$BACKUP_AGE_IDENTITY"', SOURCE)
+        self.assertNotIn('if ! python3 - "$tmp/bundle.tar.gz"', SOURCE)
+        self.assertNotIn('if ! python3 "$repo/scripts/operations/verify-restored-storage-parity.py"', SOURCE)
+
+    def test_plaintext_archive_verification_never_receives_age_key(self):
+        verifier = (SCRIPT.parent.parent / "verify_backup_bundle.sh").read_text(encoding="utf-8")
+        self.assertIn('if [[ "${1:-}" == --decrypted-bundle ]]; then', verifier)
+        self.assertIn('[[ $# -eq 2 && -z "${BACKUP_AGE_IDENTITY:-}" ]]', verifier)
+        self.assertIn('bundle_tar=$BUNDLE_PATH', verifier)
+        self.assertIn('python3 - "$bundle_tar" "$WORKDIR"', verifier)
+        self.assertIn('if ! "${key_sandbox[@]}" age -d -i "$tmp/age-identity"', SOURCE)
+        self.assertLess(SOURCE.index('rm -- "$tmp/age-identity"'),
+                        SOURCE.index('bash "$tmp/verify_backup_bundle.sh" --decrypted-bundle'))
+        self.assertNotIn('"${key_sandbox[@]}" bash "$tmp/verify_backup_bundle.sh"', SOURCE)
+        subprocess.run(["bash", "-n", str(SCRIPT)], check=True)
+        subprocess.run(["bash", "-n", str(SCRIPT.parent.parent / "verify_backup_bundle.sh")], check=True)
+
+    def test_plaintext_verifier_rejects_identity_and_invalid_arity_before_io(self):
+        verifier = SCRIPT.parent.parent / "verify_backup_bundle.sh"
+        env = dict(os.environ)
+        env["BACKUP_AGE_IDENTITY"] = "/not-a-real-key"
+        forbidden = subprocess.run(
+            ["bash", str(verifier), "--decrypted-bundle", "/not-a-real-bundle"],
+            env=env, capture_output=True, text=True,
+        )
+        self.assertEqual(forbidden.returncode, 2)
+        self.assertIn("plaintext mode requires", forbidden.stderr)
+        env.pop("BACKUP_AGE_IDENTITY", None)
+        missing = subprocess.run(
+            ["bash", str(verifier), "--decrypted-bundle"],
+            env=env, capture_output=True, text=True,
+        )
+        self.assertEqual(missing.returncode, 2)
+        self.assertIn("plaintext mode requires", missing.stderr)
+
+    def test_nonroot_bwrap_mount_preflight_is_fail_closed(self):
+        # Source contract only; real Google info user namespace/mount execution
+        # is still required before this can be accepted as a restore receipt.
+        start = SOURCE.index("GOOGLE_BWRAP_MOUNT_PREFLIGHT")
+        first_archive = SOURCE.index("status SFTP_IMPORTED_ENCRYPTED_SHA256 PASS")
+        self.assertLess(start, first_archive)
+        self.assertIn('if ! "${key_sandbox[@]}" bash -c', SOURCE)
+        self.assertIn('if ! "${sandbox[@]}" bash -c', SOURCE)
+        self.assertIn('[[ -f "$key" && -r "$key" && -d "$work" && -w "$work" ]]', SOURCE)
+        self.assertIn('[[ ! -e "$home/.ssh" && ! -e "$home/.config" ]]', SOURCE)
+        self.assertIn('probe="$(mktemp "$work/.bwrap-mount-preflight.XXXXXXXX")"', SOURCE)
+        self.assertIn('block GOOGLE_BWRAP_MOUNT_PREFLIGHT', SOURCE)
+
+    def test_disposable_sql_sandbox_never_mounts_age_identity(self):
+        # A restored SQL dump executes with a disposable PG superuser. It must
+        # not inherit the AGE private key mount used during decryption.
+        self.assertIn('key_sandbox=("${sandbox[@]}" --ro-bind "$BACKUP_AGE_IDENTITY" "$tmp/age-identity")', SOURCE)
+        self.assertIn('block GOOGLE_BWRAP_KEY_ISOLATION', SOURCE)
+        self.assertIn('status GOOGLE_BWRAP_KEY_ISOLATION PASS', SOURCE)
+        self.assertIn('rm -- "$tmp/age-identity"', SOURCE)
+        self.assertLess(SOURCE.index('rm -- "$tmp/age-identity"'), SOURCE.index('cat >"$tmp/db-phase.sh"'))
+        self.assertIn('if ! "${db_boundary[@]}" bash "$tmp/db-phase.sh"', SOURCE)
+        self.assertNotIn('"${sandbox[@]}" bash "$tmp/db-phase.sh"', SOURCE)
+        self.assertNotIn('"${key_sandbox[@]}" bash "$tmp/db-phase.sh"', SOURCE)
+        self.assertIn('if ! "${sandbox[@]}" python3 "$tmp/parity.py"', SOURCE)
+
+    def test_db_superuser_cannot_rewrite_later_parity_evidence(self):
+        # Source contract: actual Google nonroot bwrap mount preflight is
+        # separately mandatory; this ensures SQL gets a read-only scratch view.
+        self.assertIn('db_boundary=(bwrap --unshare-all --die-with-parent --new-session --cap-drop ALL', SOURCE)
+        self.assertIn('--tmpfs "$HOME" --ro-bind "$tmp" "$tmp"', SOURCE)
+        self.assertIn('--bind "$tmp/dbwork" "$tmp/dbwork"', SOURCE)
+        self.assertIn('block GOOGLE_DB_BOUNDARY_PREFLIGHT', SOURCE)
+        self.assertIn('[[ -r "$1" && ! -w "$1" && -r "$2" && ! -w "$2" ]]', SOURCE)
+        self.assertIn('"$tmp/parity.py" "$tmp/extracted/database.dump" "$tmp/dbwork"', SOURCE)
+        self.assertIn('pgbin=$1; work=$2; port=$3; archive=$4', SOURCE)
+        self.assertIn('"$tmp/dbwork" 55479 "$tmp/extracted/database.dump"', SOURCE)
+        self.assertNotIn('"$work/extracted/database.dump"', SOURCE)
+        self.assertIn('if ! "${sandbox[@]}" python3 "$tmp/parity.py"', SOURCE)
+        self.assertLess(SOURCE.index('status GOOGLE_DB_BOUNDARY_PREFLIGHT PASS'),
+                        SOURCE.index('if ! "${db_boundary[@]}" bash "$tmp/db-phase.sh"'))
+
+
     def test_safety_properties_kept(self):
         for needle in ("bwrap", "NONROOT_INFO_REQUIRED", "OPERATOR_CONSENT", "PRODUCTION_DATABASE_MODIFIED NO",
                        "status OFFSITE_RCLONE_RETRIEVAL NOT_ATTEMPTED", "SAFE_TO_ACTIVATE_PRODUCTION NOT_PROVEN",

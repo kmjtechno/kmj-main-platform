@@ -261,7 +261,10 @@ class RestoredStorageParityTests(unittest.TestCase):
     def test_google_sftp_restore_calls_hardened_parity_verifier(self):
         script = Path(__file__).parent / "operations/verify-main-platform-google-sftp-restore-20261030.sh"
         content = script.read_text()
-        self.assertIn('python3 "$repo/scripts/operations/verify-restored-storage-parity.py"', content)
+        self.assertIn('cp -- "$repo/scripts/operations/verify-restored-storage-parity.py" "$tmp/parity.py"', content)
+        self.assertIn('if ! "${sandbox[@]}" python3 "$tmp/parity.py"', content)
+        self.assertIn('if ! parity="$("${sandbox[@]}" python3 "$tmp/parity.py"', content)
+        self.assertNotIn('python3 "$repo/scripts/operations/verify-restored-storage-parity.py"', content)
         self.assertNotIn("os.walk(root", content)
         self.assertIn("STORAGE_EXTRACTION_PARITY_CONTENT_SHA256", content)
         subprocess.run(["bash", "-n", str(script)], check=True)
