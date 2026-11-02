@@ -133,18 +133,20 @@ fi
   block SFTP_IMPORT_COPY_DIGEST
 status SFTP_IMPORT_COPY PASS
 status OFFSITE_RCLONE_RETRIEVAL NOT_ATTEMPTED
-if ! BACKUP_AGE_IDENTITY="$tmp/age-identity" TMPDIR="$tmp" \
-    "${key_sandbox[@]}" bash "$tmp/verify_backup_bundle.sh" "$tmp/encrypted.age" >/dev/null 2>&1; then
-  status BACKUP_ARCHIVE_INTEGRITY FAIL; exit 1
-fi
-status BACKUP_ARCHIVE_INTEGRITY PASS
+# Only AGE itself receives the identity bind. Archive parsing (including
+# pg_restore --list) must run in the key-free sandbox after decryption.
 if ! "${key_sandbox[@]}" age -d -i "$tmp/age-identity" -o "$tmp/bundle.tar.gz" \
     "$tmp/encrypted.age" >/dev/null 2>&1; then
   status BUNDLE_DECRYPTION FAIL; exit 1
 fi
-# The key mount is no longer needed. Remove the empty placeholder from the
-# writable scratch before any further archive parsing or SQL execution.
+# Remove the placeholder before invoking any untrusted parser.
 rm -- "$tmp/age-identity"
+status BUNDLE_DECRYPTION PASS
+if ! env -u BACKUP_AGE_IDENTITY TMPDIR="$tmp" \
+    "${sandbox[@]}" bash "$tmp/verify_backup_bundle.sh" --decrypted-bundle "$tmp/bundle.tar.gz" >/dev/null 2>&1; then
+  status BACKUP_ARCHIVE_INTEGRITY FAIL; exit 1
+fi
+status BACKUP_ARCHIVE_INTEGRITY PASS
 # A second strict extraction guard limits the decrypted outer archive to
 # four regular files. The verifier additionally checks inner tar safety.
 if ! "${sandbox[@]}" python3 - "$tmp/bundle.tar.gz" "$tmp/extracted" <<'PY'
