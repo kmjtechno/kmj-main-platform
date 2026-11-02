@@ -573,6 +573,33 @@ class MaterializeRollbackTest(unittest.TestCase):
         self.assertTrue((self.cand / ".env").is_file())
         self.assertNotIn("CANDIDATE_ROLLBACK", run.stdout)
 
+    def test_created_public_storage_link_requires_exact_target_and_inode(self) -> None:
+        run = self.harness(
+            self.CREATE
+            + 'fs_op verify-link "$CAND_APP/public" "$link_id"\n'
+            + 'committed=1\n'
+        )
+        self.assertEqual(run.returncode, 0, run.stdout + run.stderr)
+        self.assertIn("STORAGE_LINK_ATTESTED=PASS", run.stdout)
+        self.assertEqual(os.readlink(self.cand / "public/storage"),
+                         "../storage/app/public")
+
+    def test_replaced_public_storage_link_wrong_target_fails_closed(self) -> None:
+        # An inode receipt cannot certify a link after a hostile replacement.
+        run = self.harness(
+            self.CREATE
+            + 'rm -- "$CAND_APP/public/storage"\n'
+            + 'ln -s ../../untrusted "$CAND_APP/public/storage"\n'
+            + 'fs_op verify-link "$CAND_APP/public" "$link_id"\n'
+            + 'committed=1\n'
+        )
+        self.assertNotEqual(run.returncode, 0, run.stdout + run.stderr)
+        self.assertIn("FS_OP_FAILED=ValueError", run.stderr)
+        self.assertIn("CANDIDATE_ROLLBACK=FAILED_REVIEW", run.stdout)
+        self.assertEqual(os.readlink(self.cand / "public/storage"),
+                         "../../untrusted")
+        self.assertFalse((self.cand / ".env").exists())
+
     def test_replaced_artifact_is_left_for_review_not_deleted(self) -> None:
         swap = (
             'rm_env="$CAND_APP/.env"\n'
