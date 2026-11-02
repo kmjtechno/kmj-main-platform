@@ -517,18 +517,19 @@ export default function DeviceControlCenter({
                                         className="mt-3 grid gap-3 rounded-xl border p-4"
                                     >
                                         <h4 className="text-sm font-black">
-                                            Request project on this existing device
+                                            Request project on this existing
+                                            device
                                         </h4>
                                         <p className="text-muted-foreground text-xs leading-5">
                                             This request is bound to{' '}
                                             <code>{device.id}</code>, not a new
-                                            device registration. It will be shown
-                                            as a separate pending project card;
-                                            it cannot install code, grant local
-                                            filesystem access or verify online
-                                            status. For a separate project agent,
-                                            choose Connect device and pair
-                                            that exact project instead.
+                                            device registration. It will be
+                                            shown as a separate pending project
+                                            card; it cannot install code, grant
+                                            local filesystem access or verify
+                                            online status. For a separate
+                                            project agent, choose Connect device
+                                            and pair that exact project instead.
                                         </p>
                                         <label className="text-xs font-semibold">
                                             Project ID
@@ -716,7 +717,10 @@ export default function DeviceControlCenter({
                         {pendingRequests.map((request) => (
                             <article
                                 key={request.key}
-                                aria-label={request.projectName + ' pending project setup'}
+                                aria-label={
+                                    request.projectName +
+                                    ' pending project setup'
+                                }
                                 className="min-w-0 rounded-xl border border-amber-500/30 p-4"
                             >
                                 <div className="flex items-center justify-between gap-2">
