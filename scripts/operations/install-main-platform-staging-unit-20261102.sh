@@ -21,8 +21,8 @@ runner_sha256=9713b608e2cd8c8c9f0ad4f56e475f035b86bf889ef0cc164f9aa9532ad2d7ab
 unit_sha256=21e8566433cfbb7c86864844df68295fb1dd420b87ec21aa541a35a1656c9919
 sha_file() { /usr/bin/sha256sum -- "$1" | /usr/bin/cut -d ' ' -f1; }
 [[ -f "$runner" && ! -L "$runner" && -f "$unit" && ! -L "$unit" ]] || block SOURCE_ABSENT_OR_LINKED
-[[ "$(/usr/bin/git hash-object -- "$runner")" == "$runner_blob" ]] || block RUNNER_SOURCE_BLOB
-[[ "$(/usr/bin/git hash-object -- "$unit")" == "$unit_blob" ]] || block UNIT_SOURCE_BLOB
+[[ "$(/usr/bin/git hash-object --no-filters -- "$runner")" == "$runner_blob" ]] || block RUNNER_SOURCE_BLOB
+[[ "$(/usr/bin/git hash-object --no-filters -- "$unit")" == "$unit_blob" ]] || block UNIT_SOURCE_BLOB
 [[ "$(sha_file "$runner")" == "$runner_sha256" ]] || block RUNNER_SOURCE_SHA256
 [[ "$(sha_file "$unit")" == "$unit_sha256" ]] || block UNIT_SOURCE_SHA256
 /usr/bin/bash -n -- "$runner" || block RUNNER_SYNTAX
@@ -119,7 +119,7 @@ publish() {
   tmp="$(/usr/bin/mktemp "$(dirname -- "$dest")/.kmj-stage-owner.XXXXXXXX")" || block TEMP
   # Temporary file is root-owned and private; clean up only our own temp path.
   /usr/bin/install -o root -g root -m "$perms" -T -- "$src" "$tmp" || { /usr/bin/rm -f -- "$tmp"; block COPY; }
-  if [[ "$(/usr/bin/git hash-object -- "$tmp")" != "$expected" || "$(sha_file "$tmp")" != "$expected256" ]]; then
+  if [[ "$(/usr/bin/git hash-object --no-filters -- "$tmp")" != "$expected" || "$(sha_file "$tmp")" != "$expected256" ]]; then
     /usr/bin/rm -f -- "$tmp"; block STAGED_HASH
   fi
   local published_inode
@@ -141,7 +141,7 @@ publish() {
   fi
   /usr/bin/rm -f -- "$tmp"
   [[ -f "$dest" && ! -L "$dest" && $(stat -c '%u:%g:%a:%h' -- "$dest") == "0:0:$perms:1" ]] || block TARGET_METADATA
-  [[ "$(/usr/bin/git hash-object -- "$dest")" == "$expected" && "$(sha_file "$dest")" == "$expected256" ]] || block TARGET_HASHES
+  [[ "$(/usr/bin/git hash-object --no-filters -- "$dest")" == "$expected" && "$(sha_file "$dest")" == "$expected256" ]] || block TARGET_HASHES
 }
 publish "$runner" "$target_runner" 750 "$runner_blob" "$runner_sha256"
 publish "$unit" "$target_unit" 644 "$unit_blob" "$unit_sha256"
