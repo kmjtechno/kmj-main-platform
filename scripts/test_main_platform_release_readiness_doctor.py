@@ -611,6 +611,28 @@ class MaterializeRollbackTest(unittest.TestCase):
         self.assertIn("CANDIDATE_ROLLBACK=FAILED_REVIEW", run.stdout)
         self.assertEqual((self.cand / ".env").read_text(), "FOREIGN")
 
+    def test_env_inode_reuse_with_foreign_bytes_fails_closed(self) -> None:
+        # Simulate immediate inode reuse deterministically: both old and
+        # replacement file report the same dev:inode receipt. The rollback
+        # must not remove a different .env merely because that receipt matches.
+        needle = 'return "%d:%d" % (info.st_dev, info.st_ino)'
+        self.assertEqual(self.source.count(needle), 1)
+        collision = self.source.replace(needle, 'return "42:42"')
+        swap = (
+            'rm -- "$CAND_APP/.env"\n'
+            "python3 -c \"import os,sys; p=sys.argv[1]; "
+            "fd=os.open(p,os.O_WRONLY|os.O_CREAT|os.O_EXCL,0o600); "
+            "os.write(fd,b'FOREIGN'); os.close(fd)\" \"$CAND_APP/.env\"\n"
+            'fail FORCED_LATE_FAILURE\n'
+        )
+        run = self.harness(self.CREATE + swap, source_override=collision)
+        self.assertEqual(run.returncode, 2, run.stdout + run.stderr)
+        self.assertIn("ROLLBACK_ENV=MISMATCH", run.stdout)
+        self.assertIn("CANDIDATE_ROLLBACK=FAILED_REVIEW", run.stdout)
+        self.assertEqual((self.cand / ".env").read_bytes(), b"FOREIGN")
+        self.assertEqual((self.live / ".env").read_bytes(),
+                         b"APP_KEY=base64:abc\\nDB=x\\n")
+
     def test_preplanted_env_symlink_is_never_followed_or_truncated(self) -> None:
         victim = Path(self.tmp.name) / "victim"
         victim.write_text("precious")
