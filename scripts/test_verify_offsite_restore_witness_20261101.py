@@ -81,6 +81,8 @@ class WitnessTest(unittest.TestCase):
         result = run()
         self.assertEqual(result["WITNESS"], "PARTIAL_PASS")
         self.assertEqual(result["RELEASE_AUTHORITY"], "NO")
+        self.assertEqual(result["CURRENT_RELEASE_ASSERTED"], REL)
+        self.assertEqual(result["CURRENT_RELEASE_BINDING"], "OPERATOR_SUPPLIED_UNVERIFIED")
         self.assertEqual(result["PRODUCTION_SWITCH_ALLOWED"], "NO")
         self.assertIn("APP_QA", result["NOT_VERIFIED"])
 

@@ -148,6 +148,10 @@ def verify(seal: str, push: str, restore: str, *, candidate: str, release: str,
         "CANDIDATE_SHA": candidate, "ENCRYPTED_SHA256": encrypted, "SOURCE_LOCAL_SHA256": source,
         "REMOTE_READBACK_MODE_0600": "PASS", "INDEPENDENT_RESTORE": "PASS",
         "RESTORED_REGULAR_FILES": r["STORAGE_REGULAR_FILES"],
+        # No receipt carries current_release: the restore script only reports that its
+        # metadata binding passed for the --expected-release the operator supplied.
+        # Cross-check that value against the root witness JSON (currentRelease) separately.
+        "CURRENT_RELEASE_ASSERTED": release, "CURRENT_RELEASE_BINDING": "OPERATOR_SUPPLIED_UNVERIFIED",
         "RELEASE_AUTHORITY": "NO", "PRODUCTION_SWITCH_ALLOWED": "NO",
         "NOT_VERIFIED": "APP_QA,SMTP,OWNER_SIGNOFF,PRODUCTION_APPROVAL,REMOTE_RETENTION",
     }
