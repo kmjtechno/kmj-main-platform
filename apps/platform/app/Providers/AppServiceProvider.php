@@ -15,9 +15,12 @@ use App\Services\Licensing\SandboxLicenseLifecycle;
 use App\Services\Licensing\SandboxLicenseValidationEngine;
 use App\Services\Mail\BrandedAuthNotifications;
 use Carbon\CarbonImmutable;
+use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Contracts\Foundation\Application;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\Rules\Password;
 use KMJ\MainPlatform\Commerce\Contracts\DomainEventRecorder as CommerceDomainEventRecorder;
@@ -70,6 +73,7 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->configureDefaults();
+        $this->configureCodeBridgeEnrollmentLimiter();
         BrandedAuthNotifications::register();
     }
 
@@ -93,6 +97,33 @@ class AppServiceProvider extends ServiceProvider
                 ->uncompromised()
             : null,
         );
+    }
+
+    /**
+     * Rate-limit anonymous first-party device enrollment by BOTH remote source
+     * and the requested device ID. IP-only 10/min conflates independent P520
+     * projects behind the same office or reverse-proxy address. Retain an
+     * independent IP-wide abuse ceiling; malformed IDs stay in a strict shared
+     * per-IP bucket and never bypass rate-limiting.
+     */
+    private function configureCodeBridgeEnrollmentLimiter(): void
+    {
+        RateLimiter::for('codebridge-device-enrollment', function (Request $request): array {
+            // Never use untrusted Forwarded headers directly as a limiter key:
+            // rely on Laravel's configured and verified proxy trust boundary.
+            $ipHash = hash('sha256', (string) ($request->ip() ?? 'unknown'));
+            $rawId = $request->input('device.id');
+            $id = is_string($rawId) && preg_match('/\\A[A-Za-z0-9_-]{1,64}\\z/D', $rawId) === 1
+                ? $rawId
+                : null;
+
+            return [
+                Limit::perMinute(120)->by('cb-enroll:ip:'.$ipHash),
+                Limit::perMinute(10)->by($id !== null
+                    ? 'cb-enroll:device:'.$ipHash.':'.hash('sha256', $id)
+                    : 'cb-enroll:invalid:'.$ipHash),
+            ];
+        });
     }
 
     private function sandboxLicenseSecret(): string
