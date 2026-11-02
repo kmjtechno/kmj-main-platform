@@ -91,6 +91,12 @@ rollback_partial_install() {
   return "$prior"
 }
 trap rollback_partial_install EXIT
+# Termination must enter the exact same inode+digest-bound cleanup path.
+# SIGKILL/power loss cannot run shell traps and require independent operator
+# inspection; never claim that a trap guarantees atomic two-file installation.
+trap 'exit 129' HUP
+trap 'exit 130' INT
+trap 'exit 143' TERM
 publish() {
   local src=$1 dest=$2 perms=$3 expected=$4 expected256=$5 tmp
   tmp="$(/usr/bin/mktemp "$(dirname -- "$dest")/.kmj-stage-owner.XXXXXXXX")" || block TEMP
