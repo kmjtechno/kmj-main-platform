@@ -30,7 +30,7 @@ class StagingOwnerInstallerTests(unittest.TestCase):
     def test_original_source_inspects_without_mutation(self):
         result = self.invoke(ROOT)
         self.assertEqual(result.returncode, 0, result.stdout[-500:])
-        self.assertIn("KMJ_STAGING_OWNER_SOURCE=EXACT_GIT_BLOBS_PASS", result.stdout)
+        self.assertIn("KMJ_STAGING_OWNER_SOURCE=EXACT_GIT_BLOBS_AND_SHA256_PASS", result.stdout)
         self.assertIn("KMJ_STAGING_OWNER_INSTALL=INSPECT_ONLY", result.stdout)
         self.assertIn("KMJ_STAGING_ACTIVATION=NOT_ATTEMPTED", result.stdout)
 
@@ -81,6 +81,7 @@ class StagingOwnerInstallerTests(unittest.TestCase):
         text = SCRIPT.read_text(encoding="utf-8")
         for marker in (
             "PRIVILEGED_BASH_REQUIRED", "OWNER_HOST", "SNAPSHOT_PATH",
+            "RUNNER_SOURCE_SHA256", "UNIT_SOURCE_SHA256", "TARGET_HASHES",
             "SOURCE_OR_TARGET_ANCESTOR", "RUNNER_ALREADY_EXISTS",
             "UNIT_ALREADY_EXISTS", "NO_CLOBBER_LINK",
             "INSTALLED_INACTIVE_PENDING_APPROVAL", "STAGING_ACTIVATION=NOT_ATTEMPTED",
