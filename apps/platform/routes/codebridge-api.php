@@ -76,7 +76,7 @@ Route::post('codebridge/v1/device-enrollments', function (Request $request, Code
     ]);
 
     return response()->json($pairings->create($v, time()), 201)->header('Cache-Control', 'no-store');
-})->middleware('throttle:10,1');
+})->middleware('throttle:codebridge-device-enrollment');
 
 Route::post('codebridge/v1/device-enrollments/token', function (Request $request, CodeBridgeDevicePairingService $pairings) {
     if (! config('codebridge.enabled', false)) {
