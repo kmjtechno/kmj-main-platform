@@ -103,7 +103,7 @@ readonly MODE="${7:-materialize}" ROLLBACK_ENV_ID="${8:-}" ROLLBACK_LINK_ID="${9
 # inode this run created, so a replaced or foreign object is left for review.
 fs_op() {
   /usr/bin/python3 -I -S - "$@" <<'KMJ_FS_OP_PY'
-import os, stat, sys
+import hashlib, os, stat, sys
 
 def open_dir(path):
     fd = os.open("/", os.O_RDONLY | os.O_DIRECTORY)
@@ -120,7 +120,7 @@ def open_dir(path):
 def ident(info):
     return "%d:%d" % (info.st_dev, info.st_ino)
 
-def remove_exact(dir_fd, name, expected, kind):
+def remove_exact(dir_fd, name, expected, kind, live_fd=None):
     # Best effort, NOT atomic: the name is re-resolved by unlink after the
     # identity check. The only principal able to swap the name is the nonroot
     # sandbox user inside its own private candidate mount, so no privilege
@@ -132,8 +132,57 @@ def remove_exact(dir_fd, name, expected, kind):
     want = stat.S_ISREG if kind == "f" else stat.S_ISLNK
     if ident(info) != expected or not want(info.st_mode):
         return "MISMATCH"
-    # Unlink/recreate can immediately reuse the SAME dev:inode. For the
-    # public symlink, the expected target is part of the rollback identity.
+    # Unlink/recreate can immediately reuse the SAME dev:inode. A regular
+    # .env replacement must additionally match the live source bytes, type,
+    # mode and link count. This is defensive, not an atomic compare-and-unlink.
+    if kind == "f":
+        if live_fd is None:
+            return "MISMATCH"
+        try:
+            fd = os.open(name, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK, dir_fd=dir_fd)
+            src = os.open(".env", os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK, dir_fd=live_fd)
+            try:
+                before = os.fstat(fd)
+                source_before = os.fstat(src)
+                if (not stat.S_ISREG(before.st_mode) or ident(before) != expected
+                        or before.st_nlink != 1 or stat.S_IMODE(before.st_mode) != 0o600
+                        or before.st_uid != os.geteuid()
+                        or not stat.S_ISREG(source_before.st_mode)
+                        or before.st_size != source_before.st_size
+                        or before.st_size > 1048576):
+                    return "MISMATCH"
+                def digest(handle):
+                    value = hashlib.sha256()
+                    while True:
+                        chunk = os.read(handle, 65536)
+                        if not chunk:
+                            break
+                        value.update(chunk)
+                    return value.digest()
+                if digest(fd) != digest(src):
+                    return "MISMATCH"
+                after = os.fstat(fd)
+                source_after = os.fstat(src)
+                if ((after.st_dev, after.st_ino, after.st_size, after.st_mtime_ns, after.st_ctime_ns)
+                        != (before.st_dev, before.st_ino, before.st_size, before.st_mtime_ns, before.st_ctime_ns)
+                        or (source_after.st_dev, source_after.st_ino, source_after.st_size,
+                            source_after.st_mtime_ns, source_after.st_ctime_ns)
+                        != (source_before.st_dev, source_before.st_ino, source_before.st_size,
+                            source_before.st_mtime_ns, source_before.st_ctime_ns)):
+                    return "MISMATCH"
+                at_name = os.stat(name, dir_fd=dir_fd, follow_symlinks=False)
+                if (not stat.S_ISREG(at_name.st_mode)
+                        or (at_name.st_dev, at_name.st_ino, at_name.st_size,
+                            at_name.st_mtime_ns, at_name.st_ctime_ns)
+                        != (before.st_dev, before.st_ino, before.st_size,
+                            before.st_mtime_ns, before.st_ctime_ns)):
+                    return "MISMATCH"
+            finally:
+                os.close(src)
+                os.close(fd)
+        except OSError:
+            return "MISMATCH"
+    # For the public symlink, the expected target is part of the rollback identity.
     # Never delete a foreign-target replacement even when inode numbers match.
     if kind == "l":
         try:
@@ -147,14 +196,14 @@ def remove_exact(dir_fd, name, expected, kind):
     os.unlink(name, dir_fd=dir_fd)
     return "REMOVED"
 
-def emit(created, handle, dir_fd, name, kind):
+def emit(created, handle, dir_fd, name, kind, live_fd=None):
     """Deliver the inode id to the parent; if that fails, self-clean right here."""
     try:
         sys.stdout.write(created + "\n")
         sys.stdout.flush()
     except BaseException:
         try:
-            result = remove_exact(dir_fd, name, created, kind)
+            result = remove_exact(dir_fd, name, created, kind, live_fd)
             if result not in ("REMOVED", "ABSENT"):
                 print("FS_OP_ROLLBACK=FAILED_OWNER_REVIEW", file=sys.stderr)
         except BaseException:
@@ -188,9 +237,9 @@ def main(argv):
                 view = view[os.write(dst, view):]
             os.fsync(dst)
         except BaseException:
-            remove_exact(cand, ".env", created, "f")
+            remove_exact(cand, ".env", created, "f", live)
             raise
-        emit(created, dst, cand, ".env", "f")
+        emit(created, dst, cand, ".env", "f", live)
     elif op == "create-link":
         pub = open_dir(argv[2])
         os.symlink("../storage/app/public", "storage", dir_fd=pub)
@@ -223,7 +272,8 @@ def main(argv):
             raise ValueError("STORAGE_LINK_TARGET_CHANGED")
         print("STORAGE_LINK_ATTESTED=PASS")
     elif op == "remove":
-        result = remove_exact(open_dir(argv[2]), argv[3], argv[4], argv[5])
+        result = remove_exact(open_dir(argv[2]), argv[3], argv[4], argv[5],
+                              open_dir(argv[6]) if argv[5] == "f" and len(argv) > 6 else None)
         print("ROLLBACK_" + argv[3].lstrip(".").upper() + "=" + result)
         if result == "MISMATCH":
             sys.exit(3)
@@ -246,7 +296,7 @@ receipt_uncertain=0
 rollback_candidate() {
   local bad=0
   if [[ -n "$link_id" ]]; then fs_op remove "$CAND_APP/public" storage "$link_id" l || bad=1; fi
-  if [[ -n "$env_id" ]]; then fs_op remove "$CAND_APP" .env "$env_id" f || bad=1; fi
+  if [[ -n "$env_id" ]]; then fs_op remove "$CAND_APP" .env "$env_id" f "$LIVE_APP" || bad=1; fi
   if [[ "$bad" == 0 && "$receipt_uncertain" == 0 ]]; then
     status CANDIDATE_ROLLBACK DONE
     return 0
