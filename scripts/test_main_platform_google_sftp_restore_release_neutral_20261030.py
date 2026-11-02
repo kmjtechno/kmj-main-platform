@@ -82,6 +82,14 @@ class ReleaseNeutralRestore(unittest.TestCase):
         self.assertIn("KMJ_EXPECTED_ENCRYPTED_SHA256", SOURCE)
         self.assertIn('encrypted="$HOME/kmj-recovery-scratch/offsite-$short_sha.tar.gz.age"', SOURCE)
 
+    def test_storage_tar_extract_uses_same_no_network_bwrap_boundary(self):
+        # Untrusted tar extraction must not run on the host outside bwrap.
+        self.assertIn("--unshare-all --die-with-parent --new-session --cap-drop ALL", SOURCE)
+        self.assertIn("--ro-bind / /", SOURCE)
+        self.assertIn('--tmpfs "$HOME" --bind "$tmp" "$tmp"', SOURCE)
+        self.assertIn('if ! "${sandbox[@]}" tar -xzf "$tmp/extracted/storage.tar.gz"', SOURCE)
+        self.assertNotIn('if ! tar -xzf "$tmp/extracted/storage.tar.gz"', SOURCE)
+
     def test_safety_properties_kept(self):
         for needle in ("bwrap", "NONROOT_INFO_REQUIRED", "OPERATOR_CONSENT", "PRODUCTION_DATABASE_MODIFIED NO",
                        "status OFFSITE_RCLONE_RETRIEVAL NOT_ATTEMPTED", "SAFE_TO_ACTIVATE_PRODUCTION NOT_PROVEN",
