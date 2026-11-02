@@ -63,6 +63,34 @@ target_runner="$dest_dir/kmj-main-platform-staging-deploy.sh"
 target_unit=/etc/systemd/system/kmj-main-platform-staging-deploy.service
 [[ ! -e $target_runner && ! -L $target_runner ]] || block RUNNER_ALREADY_EXISTS
 [[ ! -e $target_unit && ! -L $target_unit ]] || block UNIT_ALREADY_EXISTS
+# Roll back only files this invocation created, bound to the original inode and SHA256.
+# A partial two-file install must never strand a runner or unit that blocks retry.
+created_runner_inode=
+created_unit_inode=
+install_committed=NO
+remove_if_ours() {
+  local dest=$1 inode=$2 digest=$3
+  [[ -n "$inode" && -f "$dest" && ! -L "$dest" ]] || return 0
+  [[ "$(stat -c '%d:%i:%u:%g:%h' -- "$dest" 2>/dev/null)" == "$inode:0:0:1" ]] || return 0
+  [[ "$(sha_file "$dest")" == "$digest" ]] || return 0
+  /usr/bin/rm -f -- "$dest"
+}
+rollback_partial_install() {
+  local prior=$?
+  if [[ "$install_committed" != YES ]]; then
+    remove_if_ours "$target_unit" "$created_unit_inode" "$unit_sha256" || :
+    remove_if_ours "$target_runner" "$created_runner_inode" "$runner_sha256" || :
+    # If manager saw an intermediate unit, clear that state without starting it.
+    if [[ -n "$created_unit_inode" ]]; then
+      /usr/bin/systemctl daemon-reload >/dev/null 2>&1 || :
+    fi
+    if [[ -n "$created_runner_inode" || -n "$created_unit_inode" ]]; then
+      printf 'KMJ_STAGING_OWNER_PARTIAL_ROLLBACK=ATTEMPTED_VERIFY_TARGETS\n'
+    fi
+  fi
+  return "$prior"
+}
+trap rollback_partial_install EXIT
 publish() {
   local src=$1 dest=$2 perms=$3 expected=$4 expected256=$5 tmp
   tmp="$(/usr/bin/mktemp "$(dirname -- "$dest")/.kmj-stage-owner.XXXXXXXX")" || block TEMP
@@ -71,8 +99,17 @@ publish() {
   if [[ "$(/usr/bin/git hash-object -- "$tmp")" != "$expected" || "$(sha_file "$tmp")" != "$expected256" ]]; then
     /usr/bin/rm -f -- "$tmp"; block STAGED_HASH
   fi
+  local published_inode
+  published_inode="$(stat -c '%d:%i' -- "$tmp")" || block TEMP_INODE
   if ! /usr/bin/ln -T -- "$tmp" "$dest"; then
     /usr/bin/rm -f -- "$tmp"; block NO_CLOBBER_LINK
+  fi
+  if [[ "$dest" == "$target_runner" ]]; then
+    created_runner_inode="$published_inode"
+  elif [[ "$dest" == "$target_unit" ]]; then
+    created_unit_inode="$published_inode"
+  else
+    block TARGET_UNRECOGNIZED
   fi
   /usr/bin/rm -f -- "$tmp"
   [[ -f "$dest" && ! -L "$dest" && $(stat -c '%u:%g:%a:%h' -- "$dest") == "0:0:$perms:1" ]] || block TARGET_METADATA
@@ -83,6 +120,7 @@ publish "$unit" "$target_unit" 644 "$unit_blob" "$unit_sha256"
 # A manager reload is not a service start, release switch or approval.
 # Any failure leaves an inactive, reviewed operator-install to investigate.
 if ! /usr/bin/systemctl daemon-reload; then block DAEMON_RELOAD; fi
+install_committed=YES
 printf 'KMJ_STAGING_OWNER_SOURCE=EXACT_GIT_BLOBS_AND_SHA256_PASS\n'
 printf 'KMJ_STAGING_OWNER_INSTALL=INSTALLED_INACTIVE_PENDING_APPROVAL\n'
 printf 'KMJ_STAGING_ACTIVATION=NOT_ATTEMPTED\n'
