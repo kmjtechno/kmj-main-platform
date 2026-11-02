@@ -77,7 +77,7 @@ cleanup() {
   rm -rf -- "$tmp"
 }
 trap cleanup EXIT
-mkdir -m 700 "$tmp/socket" "$tmp/extracted" "$tmp/restored-storage"
+mkdir -m 700 "$tmp/socket" "$tmp/extracted" "$tmp/restored-storage" "$tmp/dbwork" "$tmp/dbwork/socket"
 # Keep the age private key and trusted verifier scripts accessible only through
 # explicit sandbox mounts. The untrusted decrypted archives never reach a
 # host-side parser; no network, host writes or production credentials are visible.
@@ -203,7 +203,7 @@ status BUNDLE_METADATA_BINDING PASS
 cat >"$tmp/db-phase.sh" <<'INNER'
 #!/usr/bin/env bash
 set -Eeuo pipefail
-pgbin=$1; work=$2; port=$3
+pgbin=$1; work=$2; port=$3; archive=$4
 stage() { printf 'STAGE=%s\n' "$1" >"$work/db.stage"; }
 trap '"$pgbin/pg_ctl" -D "$work/pgdata" -m immediate -w stop >/dev/null 2>&1 || :' EXIT
 stage DISPOSABLE_POSTGRES_INIT
@@ -217,7 +217,7 @@ stage DISPOSABLE_DATABASE_CREATION
 "$pgbin/createdb" -h "$work/socket" -p "$port" -U kmj_restore_drill kmj_recovered >/dev/null 2>&1
 stage DISPOSABLE_POSTGRES_RESTORE
 "$pgbin/pg_restore" --exit-on-error --no-owner --no-acl -h "$work/socket" -p "$port" \
-  -U kmj_restore_drill -d kmj_recovered "$work/extracted/database.dump" >"$work/restore.log" 2>&1
+  -U kmj_restore_drill -d kmj_recovered "$archive" >"$work/restore.log" 2>&1
 stage RECOVERED_APP_SCHEMA
 tables=$("$pgbin/psql" -X -A -t -h "$work/socket" -p "$port" -U kmj_restore_drill -d kmj_recovered -v ON_ERROR_STOP=1 \
   -c "select (to_regclass('public.users') is not null and to_regclass('public.organizations') is not null and to_regclass('public.entitlements') is not null)::int" 2>/dev/null)
@@ -225,12 +225,31 @@ tables=$("$pgbin/psql" -X -A -t -h "$work/socket" -p "$port" -U kmj_restore_dril
 stage DONE
 INNER
 chmod 700 "$tmp/db-phase.sh"
-if ! "${sandbox[@]}" bash "$tmp/db-phase.sh" "$pgbin" "$tmp" 55479 >/dev/null 2>&1; then
-  stage_name="$(sed -n 's/^STAGE=//p' "$tmp/db.stage" 2>/dev/null | tail -1)"
+# The untrusted PostgreSQL dump runs with a DB superuser. Unlike the archive
+# verifier namespace, its mount view makes all extracted inputs and verifier
+# executables read-only; ONLY disposable PostgreSQL state is writable.
+# This prevents SQL COPY PROGRAM or untrusted extensions from rewriting the
+# parity checker or storage archive before the final integrity attestation.
+db_boundary=(bwrap --unshare-all --die-with-parent --new-session --cap-drop ALL
+  --ro-bind / / --proc /proc --dev /dev
+  --tmpfs /run --tmpfs /tmp --tmpfs /var/tmp
+  --tmpfs "$HOME" --ro-bind "$tmp" "$tmp"
+  --bind "$tmp/dbwork" "$tmp/dbwork")
+if ! "${db_boundary[@]}" bash -c '
+  set -Eeuo pipefail
+  [[ -r "$1" && ! -w "$1" && -r "$2" && ! -w "$2" ]]
+  [[ -d "$3" && -w "$3" && ! -e "$4" ]]
+  touch "$3/.db-write-probe"; rm -- "$3/.db-write-probe"
+' _ "$tmp/parity.py" "$tmp/extracted/database.dump" "$tmp/dbwork" "$HOME/.local/share/kmj-recovery/google-vps-20261019.agekey" >/dev/null 2>&1; then
+  block GOOGLE_DB_BOUNDARY_PREFLIGHT
+fi
+status GOOGLE_DB_BOUNDARY_PREFLIGHT PASS
+if ! "${db_boundary[@]}" bash "$tmp/db-phase.sh" "$pgbin" "$tmp/dbwork" 55479 "$tmp/extracted/database.dump" >/dev/null 2>&1; then
+  stage_name="$(sed -n 's/^STAGE=//p' "$tmp/dbwork/db.stage" 2>/dev/null | tail -1)"
   [[ "$stage_name" =~ ^[A-Z_]+$ ]] || stage_name=DISPOSABLE_POSTGRES_SANDBOX
   status "$stage_name" FAIL; exit 1
 fi
-[[ "$(sed -n 's/^STAGE=//p' "$tmp/db.stage" 2>/dev/null | tail -1)" == DONE ]] ||
+[[ "$(sed -n 's/^STAGE=//p' "$tmp/dbwork/db.stage" 2>/dev/null | tail -1)" == DONE ]] ||
   { status DISPOSABLE_POSTGRES_SANDBOX FAIL; exit 1; }
 status DATABASE_PHASE_OS_SANDBOX PASS
 # Compressed storage size is not a safe disk budget: a tiny archive may
