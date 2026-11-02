@@ -511,7 +511,17 @@ post_fail() {
 
 sandbox_rc=0
 sandbox_text="$(run_sandbox materialize materialize)" || sandbox_rc=$?
-printf '%s\n' "$sandbox_text"
+# Child rollback messages are not authoritative. A TERM/SIGKILL receipt window
+# can leave an unreported link while the child prints ROLLBACK=DONE for only
+# the known env inode. Never forward that premature success to receipt parsers.
+# Only the root wrapper may publish the final rollback verdict after validating
+# the complete sandbox receipt contract and any best-effort cleanup.
+while IFS= read -r line; do
+  case "$line" in
+    CANDIDATE_ROLLBACK=*) continue ;;
+  esac
+  printf '%s\n' "$line"
+done <<<"$sandbox_text"
 [[ "$sandbox_rc" == 0 ]] || post_fail "SANDBOX_FAILED_$sandbox_rc"
 grep -Fxq 'KMJ_MATERIALIZE_SHARED=PASS' <<<"$sandbox_text" || post_fail SANDBOX_PASS_MISSING
 receipt_contract_ok || post_fail SANDBOX_RECEIPTS_UNVERIFIED
