@@ -160,9 +160,27 @@ class ReleaseNeutralRestore(unittest.TestCase):
         self.assertIn('status GOOGLE_BWRAP_KEY_ISOLATION PASS', SOURCE)
         self.assertIn('rm -- "$tmp/age-identity"', SOURCE)
         self.assertLess(SOURCE.index('rm -- "$tmp/age-identity"'), SOURCE.index('cat >"$tmp/db-phase.sh"'))
-        self.assertIn('if ! "${sandbox[@]}" bash "$tmp/db-phase.sh"', SOURCE)
+        self.assertIn('if ! "${db_boundary[@]}" bash "$tmp/db-phase.sh"', SOURCE)
+        self.assertNotIn('"${sandbox[@]}" bash "$tmp/db-phase.sh"', SOURCE)
         self.assertNotIn('"${key_sandbox[@]}" bash "$tmp/db-phase.sh"', SOURCE)
         self.assertIn('if ! "${sandbox[@]}" python3 "$tmp/parity.py"', SOURCE)
+
+    def test_db_superuser_cannot_rewrite_later_parity_evidence(self):
+        # Source contract: actual Google nonroot bwrap mount preflight is
+        # separately mandatory; this ensures SQL gets a read-only scratch view.
+        self.assertIn('db_boundary=(bwrap --unshare-all --die-with-parent --new-session --cap-drop ALL', SOURCE)
+        self.assertIn('--tmpfs "$HOME" --ro-bind "$tmp" "$tmp"', SOURCE)
+        self.assertIn('--bind "$tmp/dbwork" "$tmp/dbwork"', SOURCE)
+        self.assertIn('block GOOGLE_DB_BOUNDARY_PREFLIGHT', SOURCE)
+        self.assertIn('[[ -r "$1" && ! -w "$1" && -r "$2" && ! -w "$2" ]]', SOURCE)
+        self.assertIn('"$tmp/parity.py" "$tmp/extracted/database.dump" "$tmp/dbwork"', SOURCE)
+        self.assertIn('pgbin=$1; work=$2; port=$3; archive=$4', SOURCE)
+        self.assertIn('"$tmp/dbwork" 55479 "$tmp/extracted/database.dump"', SOURCE)
+        self.assertNotIn('"$work/extracted/database.dump"', SOURCE)
+        self.assertIn('if ! "${sandbox[@]}" python3 "$tmp/parity.py"', SOURCE)
+        self.assertLess(SOURCE.index('status GOOGLE_DB_BOUNDARY_PREFLIGHT PASS'),
+                        SOURCE.index('if ! "${db_boundary[@]}" bash "$tmp/db-phase.sh"'))
+
 
     def test_safety_properties_kept(self):
         for needle in ("bwrap", "NONROOT_INFO_REQUIRED", "OPERATOR_CONSENT", "PRODUCTION_DATABASE_MODIFIED NO",
