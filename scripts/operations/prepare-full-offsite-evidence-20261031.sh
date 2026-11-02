@@ -76,7 +76,7 @@ python3 -I "$work/$SEAL_SCRIPT" --candidate-sha "$CANDIDATE" --expected-release 
   blocked LIVE_CHANGED_AFTER_ENCRYPTION
 printf 'KMJ_PHASE=PINNED_GOOGLE_SFTP_NO_CLOBBER_AND_READBACK\n'
 # Exact owner config, strict host pin, key, no-clobber, remote readback SHA.
-bash "$work/$PUSH_SCRIPT" --candidate-sha "$CANDIDATE"
+bash -p "$work/$PUSH_SCRIPT" --candidate-sha "$CANDIDATE"
 [[ "$(readlink -f "$LIVE")" == "/home/kmjprod/releases/$EXPECTED" ]] ||
   blocked LIVE_CHANGED_AFTER_UPLOAD
 printf 'KMJ_OFFSITE_RECOVERY=LOCAL_BACKUP_ENCRYPTED_OFFSITE_READBACK_COMPLETE\n'
