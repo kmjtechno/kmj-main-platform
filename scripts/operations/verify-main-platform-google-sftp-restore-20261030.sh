@@ -92,6 +92,21 @@ sandbox=(bwrap --unshare-all --die-with-parent --new-session --cap-drop ALL
   --tmpfs /run --tmpfs /tmp --tmpfs /var/tmp
   --tmpfs "$HOME" --bind "$tmp" "$tmp"
   --ro-bind "$BACKUP_AGE_IDENTITY" "$tmp/age-identity")
+# Fail closed before parsing any untrusted archive if the actual Google
+# nonroot user namespace, nested scratch bind or read-only identity bind is
+# unavailable. A source-contract test alone cannot establish mount behavior.
+if ! "${sandbox[@]}" bash -c '
+  set -Eeuo pipefail
+  key=$1; work=$2; home=$3
+  [[ -f "$key" && -r "$key" && -d "$work" && -w "$work" ]]
+  [[ ! -e "$home/.ssh" && ! -e "$home/.config" ]]
+  probe="$(mktemp "$work/.bwrap-mount-preflight.XXXXXXXX")"
+  [[ -f "$probe" ]]
+  rm -- "$probe"
+' _ "$tmp/age-identity" "$tmp" "$HOME" >/dev/null 2>&1; then
+  block GOOGLE_BWRAP_MOUNT_PREFLIGHT
+fi
+status GOOGLE_BWRAP_MOUNT_PREFLIGHT PASS
 # Local SFTP-import mode. Never label a local import a remote rclone retrieval.
 [[ -f "$encrypted" && ! -L "$encrypted" && -s "$encrypted" ]] || block SFTP_IMPORT_MISSING
 [[ "$(stat -c '%u' -- "$encrypted")" == "$(id -u)" ]] || block SFTP_IMPORT_OWNER
