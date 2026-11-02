@@ -17,14 +17,19 @@ runner="$root/deploy/staging/kmj-main-platform-staging-deploy.sh"
 unit="$root/deploy/staging/kmj-main-platform-staging-deploy.service"
 runner_blob=39fd993d4bc2cd4427fc6d460073204a7e1f82e3
 unit_blob=07d77b4e2ec9b2e3cd73d4a8aa4c4786e5927eb1
+runner_sha256=9713b608e2cd8c8c9f0ad4f56e475f035b86bf889ef0cc164f9aa9532ad2d7ab
+unit_sha256=21e8566433cfbb7c86864844df68295fb1dd420b87ec21aa541a35a1656c9919
+sha_file() { /usr/bin/sha256sum -- "$1" | /usr/bin/cut -d ' ' -f1; }
 [[ -f "$runner" && ! -L "$runner" && -f "$unit" && ! -L "$unit" ]] || block SOURCE_ABSENT_OR_LINKED
 [[ "$(/usr/bin/git hash-object -- "$runner")" == "$runner_blob" ]] || block RUNNER_SOURCE_BLOB
 [[ "$(/usr/bin/git hash-object -- "$unit")" == "$unit_blob" ]] || block UNIT_SOURCE_BLOB
+[[ "$(sha_file "$runner")" == "$runner_sha256" ]] || block RUNNER_SOURCE_SHA256
+[[ "$(sha_file "$unit")" == "$unit_sha256" ]] || block UNIT_SOURCE_SHA256
 /usr/bin/bash -n -- "$runner" || block RUNNER_SYNTAX
 [[ "$(/usr/bin/grep -c '^ExecStart=' -- "$unit")" == 1 ]] || block UNIT_MULTIPLE_EXEC
 /usr/bin/grep -Fxq 'ExecStart=/usr/bin/bash /usr/local/libexec/kmj-codebridge/kmj-main-platform-staging-deploy.sh' -- "$unit" || block UNIT_EXEC
 if [[ $mode == --inspect ]]; then
-  printf 'KMJ_STAGING_OWNER_SOURCE=EXACT_GIT_BLOBS_PASS\n'
+  printf 'KMJ_STAGING_OWNER_SOURCE=EXACT_GIT_BLOBS_AND_SHA256_PASS\n'
   printf 'KMJ_STAGING_OWNER_INSTALL=INSPECT_ONLY\n'
   printf 'KMJ_STAGING_ACTIVATION=NOT_ATTEMPTED\n'
   exit 0
@@ -59,11 +64,11 @@ target_unit=/etc/systemd/system/kmj-main-platform-staging-deploy.service
 [[ ! -e $target_runner && ! -L $target_runner ]] || block RUNNER_ALREADY_EXISTS
 [[ ! -e $target_unit && ! -L $target_unit ]] || block UNIT_ALREADY_EXISTS
 publish() {
-  local src=$1 dest=$2 perms=$3 expected=$4 tmp
+  local src=$1 dest=$2 perms=$3 expected=$4 expected256=$5 tmp
   tmp="$(/usr/bin/mktemp "$(dirname -- "$dest")/.kmj-stage-owner.XXXXXXXX")" || block TEMP
   # Temporary file is root-owned and private; clean up only our own temp path.
   /usr/bin/install -o root -g root -m "$perms" -T -- "$src" "$tmp" || { /usr/bin/rm -f -- "$tmp"; block COPY; }
-  if [[ "$(/usr/bin/git hash-object -- "$tmp")" != "$expected" ]]; then
+  if [[ "$(/usr/bin/git hash-object -- "$tmp")" != "$expected" || "$(sha_file "$tmp")" != "$expected256" ]]; then
     /usr/bin/rm -f -- "$tmp"; block STAGED_HASH
   fi
   if ! /usr/bin/ln -T -- "$tmp" "$dest"; then
@@ -71,14 +76,14 @@ publish() {
   fi
   /usr/bin/rm -f -- "$tmp"
   [[ -f "$dest" && ! -L "$dest" && $(stat -c '%u:%g:%a:%h' -- "$dest") == "0:0:$perms:1" ]] || block TARGET_METADATA
-  [[ "$(/usr/bin/git hash-object -- "$dest")" == "$expected" ]] || block TARGET_BLOB
+  [[ "$(/usr/bin/git hash-object -- "$dest")" == "$expected" && "$(sha_file "$dest")" == "$expected256" ]] || block TARGET_HASHES
 }
-publish "$runner" "$target_runner" 750 "$runner_blob"
-publish "$unit" "$target_unit" 644 "$unit_blob"
+publish "$runner" "$target_runner" 750 "$runner_blob" "$runner_sha256"
+publish "$unit" "$target_unit" 644 "$unit_blob" "$unit_sha256"
 # A manager reload is not a service start, release switch or approval.
 # Any failure leaves an inactive, reviewed operator-install to investigate.
 if ! /usr/bin/systemctl daemon-reload; then block DAEMON_RELOAD; fi
-printf 'KMJ_STAGING_OWNER_SOURCE=EXACT_GIT_BLOBS_PASS\n'
+printf 'KMJ_STAGING_OWNER_SOURCE=EXACT_GIT_BLOBS_AND_SHA256_PASS\n'
 printf 'KMJ_STAGING_OWNER_INSTALL=INSTALLED_INACTIVE_PENDING_APPROVAL\n'
 printf 'KMJ_STAGING_ACTIVATION=NOT_ATTEMPTED\n'
 printf 'KMJ_PRODUCTION_CHANGED=NO\n'
