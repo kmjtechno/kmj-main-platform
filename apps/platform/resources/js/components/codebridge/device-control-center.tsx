@@ -1,6 +1,7 @@
 import { Link, router } from '@inertiajs/react';
 import { codeBridgeDeviceQuotaDisplay } from './device-policy-display';
 import { deviceRecoveryAction } from './device-recovery.mjs';
+import { pendingProjectCards } from './pending-project-cards.mjs';
 import {
     ArrowRight,
     Cable,
@@ -89,10 +90,20 @@ export default function DeviceControlCenter({
                     [project.id, project.name].some((value) =>
                         value.toLowerCase().includes(query),
                     ),
+                ) ||
+                (device.pending_projects ?? []).some((project) =>
+                    [project.id, project.name].some((value) =>
+                        value.toLowerCase().includes(query),
+                    ),
                 )
             );
         });
     }, [devices, search, view]);
+
+    const pendingRequests = useMemo(
+        () => pendingProjectCards(visibleDevices),
+        [visibleDevices],
+    );
 
     const startDisconnect = (device: CodeBridgeDevice) => {
         if (!canManage) return;
@@ -437,36 +448,6 @@ export default function DeviceControlCenter({
                                     )}
                                 </div>
 
-                                {(device.pending_projects ?? []).length > 0 && (
-                                    <div className="mt-3 rounded-lg border border-amber-500/30 p-3">
-                                        <p className="text-xs font-black text-amber-600 dark:text-amber-400">
-                                            Awaiting local project setup
-                                        </p>
-                                        <p className="text-muted-foreground mt-1 text-xs">
-                                            Requests are not active agent
-                                            grants. Verify device-side
-                                            enrollment before using them.
-                                        </p>
-                                        <div className="mt-2 flex flex-wrap gap-1.5">
-                                            {(
-                                                device.pending_projects ?? []
-                                            ).map((project) => (
-                                                <span
-                                                    key={project.id}
-                                                    title={
-                                                        project.repository ||
-                                                        'Local project'
-                                                    }
-                                                    className="rounded-lg border border-amber-500/30 px-2.5 py-1 text-xs"
-                                                >
-                                                    {project.name} · Pending
-                                                    setup
-                                                </span>
-                                            ))}
-                                        </div>
-                                    </div>
-                                )}
-
                                 <div className="mt-4 flex flex-wrap gap-2 border-t pt-3">
                                     <button
                                         type="button"
@@ -715,6 +696,56 @@ export default function DeviceControlCenter({
                             </article>
                         );
                     })}
+                </div>
+            )}
+            {pendingRequests.length > 0 && (
+                <div className="mt-6">
+                    <h3 className="text-sm font-black">
+                        Pending project setup — separate from registered devices
+                    </h3>
+                    <p className="text-muted-foreground mt-1 text-xs">
+                        These are requests only, not live device connections or
+                        authorized filesystem access. A project needs its own
+                        approved local agent setup before it can become READY.
+                    </p>
+                    <div className="mt-3 grid gap-3 lg:grid-cols-2">
+                        {pendingRequests.map((request) => (
+                            <article
+                                key={request.key}
+                                aria-label={request.projectName + ' pending project setup'}
+                                className="min-w-0 rounded-xl border border-amber-500/30 p-4"
+                            >
+                                <div className="flex items-center justify-between gap-2">
+                                    <h4 className="truncate text-sm font-black">
+                                        {request.projectName}
+                                    </h4>
+                                    <span className="rounded-lg border border-amber-500/30 px-2 py-1 text-xs font-bold">
+                                        Pending setup
+                                    </span>
+                                </div>
+                                <p className="text-muted-foreground mt-2 text-xs">
+                                    Project ID: <code>{request.projectId}</code>
+                                </p>
+                                <p className="text-muted-foreground mt-2 text-xs">
+                                    Requested from {request.sourceDeviceName};
+                                    this does not grant another project to its
+                                    current agent.
+                                </p>
+                                <p className="text-muted-foreground mt-2 text-xs">
+                                    A separate authorized local project binding,
+                                    owner-approved pairing and authenticated
+                                    heartbeat are required. Do not use another
+                                    project's Windows reconnect installer.
+                                </p>
+                                <Link
+                                    href="/codebridge/pair"
+                                    className="mt-3 inline-flex rounded-lg border px-3 py-2 text-xs font-bold"
+                                >
+                                    Review project pairing
+                                </Link>
+                            </article>
+                        ))}
+                    </div>
                 </div>
             )}
             {managedCount > devices.length && (
