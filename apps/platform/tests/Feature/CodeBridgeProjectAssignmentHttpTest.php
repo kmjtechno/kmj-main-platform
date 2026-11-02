@@ -129,6 +129,47 @@ final class CodeBridgeProjectAssignmentHttpTest extends TestCase
         self::assertSame(0, DB::table('codebridge_project_assignments')->count());
     }
 
+    public function test_previously_paired_vioso_project_cannot_attach_to_calibration_device(): void
+    {
+        [$owner, $tenant, $calibration] = $this->fixture('calibration-desktop');
+        $originalCredential = DB::table('codebridge_device_credentials')->first();
+        $foreign = (array) DB::table('codebridge_device_pairings')
+            ->where('tenant_id', $tenant)->first();
+        $foreign['id'] = (string) Str::uuid();
+        $foreign['device_code_hash'] = hash('sha256', 'foreign-device-code');
+        $foreign['user_code_hash'] = hash('sha256', 'foreign-user-code');
+        $foreign['device_id'] = 'vioso-desktop';
+        $foreign['device_name'] = 'VIOSO P520';
+        $foreign['project_id'] = 'vioso-clone';
+        $foreign['project_name'] = 'VIOSO Clone';
+        $foreign['status'] = 'consumed';
+        // A historical pairing still binds the old project identity; a
+        // revoked credential must never make the wrong-device request valid.
+        DB::table('codebridge_device_pairings')->insert($foreign);
+
+        $request = [
+            'project_id' => 'vioso-clone',
+            'project_name' => 'VIOSO Clone',
+            'repository_url' => 'https://github.com/kmjtechno/vioso-clone',
+        ];
+        $this->actingAs($owner)->post($this->url($tenant, $calibration), $request)
+            ->assertRedirect()->assertSessionHasErrors('project_id');
+        self::assertSame(0, DB::table('codebridge_project_assignments')->count());
+        self::assertSame(2, DB::table('codebridge_device_pairings')->count());
+        self::assertEquals($originalCredential, DB::table('codebridge_device_credentials')->first());
+
+        // A distinct project not paired anywhere else still supports the
+        // original request-only workflow and cannot grant filesystem access.
+        $this->actingAs($owner)->post($this->url($tenant, $calibration), $this->payload())
+            ->assertRedirect()->assertSessionHasNoErrors();
+        $this->assertDatabaseHas('codebridge_project_assignments', [
+            'tenant_id' => $tenant,
+            'device_id' => $calibration,
+            'project_id' => 'kmj-calibration-studio',
+            'status' => 'pending_local_setup',
+        ]);
+    }
+
     private function url(string $tenant, string $device): string
     {
         return '/services/kmj-codebridge/organizations/'.$tenant.'/devices/'.$device.'/projects/assign';
