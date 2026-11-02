@@ -52,7 +52,7 @@ Route::get('codebridge/v1/device-enrollments/readiness', function () {
             : ['pairing_config' => 'unavailable'],
         $ready ? 200 : 503,
     )->header('Cache-Control', 'no-store, private');
-})->middleware('throttle:30,1');
+})->middleware('throttle:30,1,codebridge-enrollment-readiness');
 
 Route::post('codebridge/v1/device-enrollments', function (Request $request, CodeBridgeDevicePairingService $pairings) {
     if (! config('codebridge.enabled', false)) {
@@ -106,7 +106,7 @@ Route::post('codebridge/v1/device-enrollments/token', function (Request $request
 
         return response()->json(['error' => $e->getMessage()], $status)->header('Cache-Control', 'no-store');
     }
-})->middleware('throttle:60,1');
+})->middleware('throttle:60,1,codebridge-enrollment-token');
 
 Route::post('codebridge/v1/device-credentials/introspect', function (Request $request) {
     if (! config('codebridge.enabled', false)) {
