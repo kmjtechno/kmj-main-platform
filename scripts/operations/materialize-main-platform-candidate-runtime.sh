@@ -189,10 +189,27 @@ def main(argv):
             if not stat.S_ISLNK(info.st_mode):
                 raise ValueError("CREATED_STORAGE_NOT_SYMLINK")
             created = ident(info)
+            target = os.readlink("storage", dir_fd=pub)
+            final = os.stat("storage", dir_fd=pub, follow_symlinks=False)
+            if (target != "../storage/app/public" or not stat.S_ISLNK(final.st_mode)
+                    or ident(final) != created):
+                raise ValueError("CREATED_STORAGE_LINK_TARGET_CHANGED")
         except BaseException:
             print("FS_OP_POST_CREATE_RECEIPT=UNATTESTED_OWNER_REVIEW", file=sys.stderr)
             raise
         emit(created, None, pub, "storage", "l")
+    elif op == "verify-link":
+        pub = open_dir(argv[2])
+        expected = argv[3]
+        before = os.stat("storage", dir_fd=pub, follow_symlinks=False)
+        if not stat.S_ISLNK(before.st_mode) or ident(before) != expected:
+            raise ValueError("STORAGE_LINK_ID_CHANGED")
+        target = os.readlink("storage", dir_fd=pub)
+        after = os.stat("storage", dir_fd=pub, follow_symlinks=False)
+        if (target != "../storage/app/public" or not stat.S_ISLNK(after.st_mode)
+                or ident(after) != expected):
+            raise ValueError("STORAGE_LINK_TARGET_CHANGED")
+        print("STORAGE_LINK_ATTESTED=PASS")
     elif op == "remove":
         result = remove_exact(open_dir(argv[2]), argv[3], argv[4], argv[5])
         print("ROLLBACK_" + argv[3].lstrip(".").upper() + "=" + result)
@@ -417,6 +434,12 @@ fi
 # Candidate must still be a clean exact checkout for the activation controller.
 [[ -z "$(git_as status --porcelain --untracked-files=normal -- . ':(exclude)apps/platform/storage')" ]] || fail CANDIDATE_DIRTY_AFTER
 [[ "$(git_as rev-parse HEAD)" == "$SHA" ]] || fail CANDIDATE_SHA_CHANGED
+# A matching inode receipt alone does not attest symlink contents. Re-open
+# through no-follow directory fds and require the exact storage target before
+# reporting success. Activation must independently reattest at cutover.
+if [[ "$want_link" == 1 ]]; then
+  fs_op verify-link "$CAND_APP/public" "$link_id" || fail CANDIDATE_PUBLIC_STORAGE_LINK_CHANGED
+fi
 [[ "$(readlink -f "$ROOT/current")" == "$LIVE" ]] || fail CURRENT_RELEASE_CHANGED_DURING_RUN
 
 # 5. Pending migrations (file diff only; no database access).
