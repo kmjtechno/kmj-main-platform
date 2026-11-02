@@ -67,7 +67,20 @@ target_unit=/etc/systemd/system/kmj-main-platform-staging-deploy.service
 # A partial two-file install must never strand a runner or unit that blocks retry.
 created_runner_inode=
 created_unit_inode=
+created_runner_tmp=
+created_unit_tmp=
 install_committed=NO
+# If interrupted after ln but before unlinking its private source, both
+# names point to one inode (nlink=2). Remove ONLY the registered temp first,
+# then remove the single-link target via the stricter existing helper.
+remove_temp_if_ours() {
+  local tmp=$1 inode=$2 digest=$3 meta
+  [[ -n "$tmp" && -n "$inode" && -f "$tmp" && ! -L "$tmp" ]] || return 0
+  meta="$(stat -c '%d:%i:%u:%g:%h' -- "$tmp" 2>/dev/null)" || return 0
+  [[ "$meta" == "$inode:0:0:1" || "$meta" == "$inode:0:0:2" ]] || return 0
+  [[ "$(sha_file "$tmp")" == "$digest" ]] || return 0
+  /usr/bin/rm -f -- "$tmp"
+}
 remove_if_ours() {
   local dest=$1 inode=$2 digest=$3
   [[ -n "$inode" && -f "$dest" && ! -L "$dest" ]] || return 0
@@ -78,6 +91,10 @@ remove_if_ours() {
 rollback_partial_install() {
   local prior=$?
   if [[ "$install_committed" != YES ]]; then
+    # Order matters: a hardlinked temp at nlink=2 must be removed first,
+    # reducing our published target to nlink=1 for strict inode cleanup.
+    remove_temp_if_ours "$created_unit_tmp" "$created_unit_inode" "$unit_sha256" || :
+    remove_temp_if_ours "$created_runner_tmp" "$created_runner_inode" "$runner_sha256" || :
     remove_if_ours "$target_unit" "$created_unit_inode" "$unit_sha256" || :
     remove_if_ours "$target_runner" "$created_runner_inode" "$runner_sha256" || :
     # If manager saw an intermediate unit, clear that state without starting it.
@@ -112,8 +129,10 @@ publish() {
   # If publication fails, rollback does nothing unless target inode+SHA match.
   if [[ "$dest" == "$target_runner" ]]; then
     created_runner_inode="$published_inode"
+    created_runner_tmp="$tmp"
   elif [[ "$dest" == "$target_unit" ]]; then
     created_unit_inode="$published_inode"
+    created_unit_tmp="$tmp"
   else
     /usr/bin/rm -f -- "$tmp"; block TARGET_UNRECOGNIZED
   fi
