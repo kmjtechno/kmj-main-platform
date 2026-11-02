@@ -14,7 +14,7 @@ w = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(w)
 
 CAND = "dfa55d24b7cc5a0d1e0b0f28832d1f46acc9d031"
-REL = "platform-dfa55d24b7cc"
+REL = "platform-574e443a2c75"
 ENC = "fb333fd5" + "0" * 56
 SRC = "131f6276" + "1" * 56
 
@@ -81,6 +81,8 @@ class WitnessTest(unittest.TestCase):
         result = run()
         self.assertEqual(result["WITNESS"], "PARTIAL_PASS")
         self.assertEqual(result["RELEASE_AUTHORITY"], "NO")
+        self.assertEqual(result["CURRENT_RELEASE_ASSERTED"], REL)
+        self.assertEqual(result["CURRENT_RELEASE_BINDING"], "OPERATOR_SUPPLIED_UNVERIFIED")
         self.assertEqual(result["PRODUCTION_SWITCH_ALLOWED"], "NO")
         self.assertIn("APP_QA", result["NOT_VERIFIED"])
 
@@ -92,8 +94,9 @@ class WitnessTest(unittest.TestCase):
         self.blocked("ENCRYPTED_SHA_UNBOUND", encrypted="a" * 64)
         self.blocked("ENCRYPTED_SHA_UNBOUND", push=PUSH.replace(ENC, "b" * 64))
         self.blocked("SOURCE_SHA_UNBOUND", source="c" * 64)
-        self.blocked("CANDIDATE_UNBOUND", candidate="e" * 40, release="platform-eeeeeeeeeeee")
-        self.blocked("RELEASE_CANDIDATE_MISMATCH", release="platform-000000000000")
+        self.blocked("CANDIDATE_UNBOUND", candidate="e" * 40)
+        self.blocked("RELEASE_EQUALS_CANDIDATE", release="platform-dfa55d24b7cc")
+        self.assertEqual(run(release="platform-8070dad72c55")["WITNESS"], "PARTIAL_PASS")
 
     def test_duplicates_unknown_keys_and_noise_are_blocked(self):
         self.blocked("DUPLICATE_KEY", restore=RESTORE + "RECOVERED_STORAGE=PASS\n")

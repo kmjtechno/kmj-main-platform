@@ -130,8 +130,10 @@ def verify(seal: str, push: str, restore: str, *, candidate: str, release: str,
     if not (HEX40.fullmatch(candidate) and RELEASE.fullmatch(release) and HEX64.fullmatch(encrypted)
             and HEX64.fullmatch(source) and 1 <= min_files <= 10**9):
         raise Block("EXPECTATION_INVALID")
-    if release != "platform-" + candidate[:12]:
-        raise Block("RELEASE_CANDIDATE_MISMATCH")
+    # --expected-release is the CURRENT production release at seal time (metadata
+    # current_release), never the candidate's own release.
+    if release == "platform-" + candidate[:12]:
+        raise Block("RELEASE_EQUALS_CANDIDATE")
     s, p, r = parse(seal, SEAL), parse(push, PUSH), parse(restore, RESTORE)
     if s["ENCRYPTED_SHA256"] != encrypted or p["LOCAL_ENCRYPTED_SHA256"] != encrypted:
         raise Block("ENCRYPTED_SHA_UNBOUND")
@@ -146,6 +148,10 @@ def verify(seal: str, push: str, restore: str, *, candidate: str, release: str,
         "CANDIDATE_SHA": candidate, "ENCRYPTED_SHA256": encrypted, "SOURCE_LOCAL_SHA256": source,
         "REMOTE_READBACK_MODE_0600": "PASS", "INDEPENDENT_RESTORE": "PASS",
         "RESTORED_REGULAR_FILES": r["STORAGE_REGULAR_FILES"],
+        # No receipt carries current_release: the restore script only reports that its
+        # metadata binding passed for the --expected-release the operator supplied.
+        # Cross-check that value against the root witness JSON (currentRelease) separately.
+        "CURRENT_RELEASE_ASSERTED": release, "CURRENT_RELEASE_BINDING": "OPERATOR_SUPPLIED_UNVERIFIED",
         "RELEASE_AUTHORITY": "NO", "PRODUCTION_SWITCH_ALLOWED": "NO",
         "NOT_VERIFIED": "APP_QA,SMTP,OWNER_SIGNOFF,PRODUCTION_APPROVAL,REMOTE_RETENTION",
     }
