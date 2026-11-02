@@ -78,6 +78,20 @@ cleanup() {
 }
 trap cleanup EXIT
 mkdir -m 700 "$tmp/socket" "$tmp/extracted" "$tmp/restored-storage"
+# Keep the age private key and trusted verifier scripts accessible only through
+# explicit sandbox mounts. The untrusted decrypted archives never reach a
+# host-side parser; no network, host writes or production credentials are visible.
+[[ -f "$repo/scripts/operations/verify-restored-storage-parity.py" ]] || block STORAGE_PARITY_VERIFIER
+cp -- "$repo/scripts/verify_backup_bundle.sh" "$tmp/verify_backup_bundle.sh"
+cp -- "$repo/scripts/operations/verify-restored-storage-parity.py" "$tmp/parity.py"
+chmod 700 "$tmp/verify_backup_bundle.sh" "$tmp/parity.py"
+: > "$tmp/age-identity"
+chmod 600 "$tmp/age-identity"
+sandbox=(bwrap --unshare-all --die-with-parent --new-session --cap-drop ALL
+  --ro-bind / / --proc /proc --dev /dev
+  --tmpfs /run --tmpfs /tmp --tmpfs /var/tmp
+  --tmpfs "$HOME" --bind "$tmp" "$tmp"
+  --ro-bind "$BACKUP_AGE_IDENTITY" "$tmp/age-identity")
 # Local SFTP-import mode. Never label a local import a remote rclone retrieval.
 [[ -f "$encrypted" && ! -L "$encrypted" && -s "$encrypted" ]] || block SFTP_IMPORT_MISSING
 [[ "$(stat -c '%u' -- "$encrypted")" == "$(id -u)" ]] || block SFTP_IMPORT_OWNER
@@ -92,18 +106,18 @@ fi
   block SFTP_IMPORT_COPY_DIGEST
 status SFTP_IMPORT_COPY PASS
 status OFFSITE_RCLONE_RETRIEVAL NOT_ATTEMPTED
-if ! BACKUP_AGE_IDENTITY="$BACKUP_AGE_IDENTITY" \
-    bash "$repo/scripts/verify_backup_bundle.sh" "$tmp/encrypted.age" >/dev/null 2>&1; then
+if ! BACKUP_AGE_IDENTITY="$tmp/age-identity" TMPDIR="$tmp" \
+    "${sandbox[@]}" bash "$tmp/verify_backup_bundle.sh" "$tmp/encrypted.age" >/dev/null 2>&1; then
   status BACKUP_ARCHIVE_INTEGRITY FAIL; exit 1
 fi
 status BACKUP_ARCHIVE_INTEGRITY PASS
-if ! age -d -i "$BACKUP_AGE_IDENTITY" -o "$tmp/bundle.tar.gz" \
+if ! "${sandbox[@]}" age -d -i "$tmp/age-identity" -o "$tmp/bundle.tar.gz" \
     "$tmp/encrypted.age" >/dev/null 2>&1; then
   status BUNDLE_DECRYPTION FAIL; exit 1
 fi
 # A second strict extraction guard limits the decrypted outer archive to
 # four regular files. The verifier additionally checks inner tar safety.
-if ! python3 - "$tmp/bundle.tar.gz" "$tmp/extracted" <<'PY'
+if ! "${sandbox[@]}" python3 - "$tmp/bundle.tar.gz" "$tmp/extracted" <<'PY'
 import shutil
 import sys
 import tarfile
@@ -131,7 +145,7 @@ fi
 # the root-witnessed local source archive (from the sealing receipt).
 expected_source_sha="${KMJ_EXPECTED_SOURCE_LOCAL_SHA256:-}"
 [[ "$expected_source_sha" =~ ^[0-9a-f]{64}$ ]] || block EXPECTED_SOURCE_LOCAL_SHA256
-if ! python3 - "$tmp/extracted/metadata.txt" "$expected_source_sha" "$candidate_sha" "$expected_release" <<'PY'
+if ! "${sandbox[@]}" python3 - "$tmp/extracted/metadata.txt" "$expected_source_sha" "$candidate_sha" "$expected_release" <<'PY'
 import sys
 lines = open(sys.argv[1], encoding="ascii").read().splitlines()
 want = {
@@ -179,10 +193,6 @@ tables=$("$pgbin/psql" -X -A -t -h "$work/socket" -p "$port" -U kmj_restore_dril
 stage DONE
 INNER
 chmod 700 "$tmp/db-phase.sh"
-sandbox=(bwrap --unshare-all --die-with-parent --new-session --cap-drop ALL
-  --ro-bind / / --proc /proc --dev /dev
-  --tmpfs /run --tmpfs /tmp --tmpfs /var/tmp
-  --tmpfs "$HOME" --bind "$tmp" "$tmp")
 if ! "${sandbox[@]}" bash "$tmp/db-phase.sh" "$pgbin" "$tmp" 55479 >/dev/null 2>&1; then
   stage_name="$(sed -n 's/^STAGE=//p' "$tmp/db.stage" 2>/dev/null | tail -1)"
   [[ "$stage_name" =~ ^[A-Z_]+$ ]] || stage_name=DISPOSABLE_POSTGRES_SANDBOX
@@ -196,7 +206,7 @@ status DATABASE_PHASE_OS_SANDBOX PASS
 # validate every inner member, and retain 4 GiB of scratch headroom.
 free_storage_kib="$(df -Pk "$tmp/restored-storage" | awk 'END {print $4}')"
 [[ "$free_storage_kib" =~ ^[0-9]+$ ]] || block STORAGE_FREE_SPACE_UNKNOWN
-if ! python3 "$repo/scripts/operations/verify-restored-storage-parity.py" \
+if ! "${sandbox[@]}" python3 "$tmp/parity.py" \
     --capacity-check "$tmp/extracted/storage.tar.gz" "$((free_storage_kib * 1024))" >/dev/null; then
   status STORAGE_EXTRACTION_CAPACITY FAIL; exit 1
 fi
@@ -208,7 +218,7 @@ fi
 [[ -d "$tmp/restored-storage/storage/app" ]] || { status RECOVERED_STORAGE FAIL; exit 1; }
 # Use the descriptor-anchored, double-walk, inode-aware verifier.
 # The old inline os.walk/full-path reader was vulnerable to ancestor swaps.
-if ! parity="$(python3 "$repo/scripts/operations/verify-restored-storage-parity.py" \
+if ! parity="$("${sandbox[@]}" python3 "$tmp/parity.py" \
     "$tmp/extracted/storage.tar.gz" "$tmp/restored-storage")"; then
   status STORAGE_EXTRACTION_PARITY_CONTENT_SHA256 FAIL; exit 1
 fi
