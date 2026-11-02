@@ -109,6 +109,22 @@ Route::post('services/kmj-codebridge/organizations/{tenantId}/devices/{deviceId}
         return back()->withErrors(['project_id' => 'Project already assigned during device pairing.']);
     }
 
+    // An earlier approved/consumed pairing belongs to its exact device ID,
+    // even if that credential has since been revoked. Never silently attach
+    // the project to a different registered device through this request-only
+    // dashboard form. Moving it requires a fresh scoped owner-approved pairing.
+    $pairedElsewhere = DB::table('codebridge_device_pairings')
+        ->where('tenant_id', $tenantId)
+        ->where('project_id', $projectId)
+        ->where('device_id', '!=', $deviceId)
+        ->whereIn('status', ['approved', 'consumed'])
+        ->exists();
+    if ($pairedElsewhere) {
+        return back()->withErrors([
+            'project_id' => 'This project was paired on a different device. Complete a new owner-approved pairing for the intended device.',
+        ]);
+    }
+
     DB::transaction(function () use ($tenantId, $deviceId, $projectId, $input, $user): void {
         $existing = DB::table('codebridge_project_assignments')
             ->where('tenant_id', $tenantId)
