@@ -107,15 +107,18 @@ publish() {
   fi
   local published_inode
   published_inode="$(stat -c '%d:%i' -- "$tmp")" || { /usr/bin/rm -f -- "$tmp"; block TEMP_INODE; }
-  if ! /usr/bin/ln -T -- "$tmp" "$dest"; then
-    /usr/bin/rm -f -- "$tmp"; block NO_CLOBBER_LINK
-  fi
+  # Record the intended inode BEFORE exposing the hard link. A TERM/HUP in
+  # the publication syscall must still let the EXIT handler identify its file.
+  # If publication fails, rollback does nothing unless target inode+SHA match.
   if [[ "$dest" == "$target_runner" ]]; then
     created_runner_inode="$published_inode"
   elif [[ "$dest" == "$target_unit" ]]; then
     created_unit_inode="$published_inode"
   else
-    block TARGET_UNRECOGNIZED
+    /usr/bin/rm -f -- "$tmp"; block TARGET_UNRECOGNIZED
+  fi
+  if ! /usr/bin/ln -T -- "$tmp" "$dest"; then
+    /usr/bin/rm -f -- "$tmp"; block NO_CLOBBER_LINK
   fi
   /usr/bin/rm -f -- "$tmp"
   [[ -f "$dest" && ! -L "$dest" && $(stat -c '%u:%g:%a:%h' -- "$dest") == "0:0:$perms:1" ]] || block TARGET_METADATA
