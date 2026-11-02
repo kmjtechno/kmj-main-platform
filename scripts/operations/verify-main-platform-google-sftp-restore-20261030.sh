@@ -90,12 +90,15 @@ chmod 600 "$tmp/age-identity"
 sandbox=(bwrap --unshare-all --die-with-parent --new-session --cap-drop ALL
   --ro-bind / / --proc /proc --dev /dev
   --tmpfs /run --tmpfs /tmp --tmpfs /var/tmp
-  --tmpfs "$HOME" --bind "$tmp" "$tmp"
-  --ro-bind "$BACKUP_AGE_IDENTITY" "$tmp/age-identity")
+  --tmpfs "$HOME" --bind "$tmp" "$tmp")
+# The AGE private key is mounted ONLY for the two operations that need it.
+# Untrusted SQL in the disposable PostgreSQL superuser restore must never be
+# able to read the private key through the general recovery sandbox.
+key_sandbox=("${sandbox[@]}" --ro-bind "$BACKUP_AGE_IDENTITY" "$tmp/age-identity")
 # Fail closed before parsing any untrusted archive if the actual Google
 # nonroot user namespace, nested scratch bind or read-only identity bind is
 # unavailable. A source-contract test alone cannot establish mount behavior.
-if ! "${sandbox[@]}" bash -c '
+if ! "${key_sandbox[@]}" bash -c '
   set -Eeuo pipefail
   key=$1; work=$2; home=$3
   [[ -f "$key" && -r "$key" && -d "$work" && -w "$work" ]]
@@ -106,7 +109,16 @@ if ! "${sandbox[@]}" bash -c '
 ' _ "$tmp/age-identity" "$tmp" "$HOME" >/dev/null 2>&1; then
   block GOOGLE_BWRAP_MOUNT_PREFLIGHT
 fi
+# The ordinary sandbox must NOT expose the key: it sees only the empty
+# placeholder, never the host identity bytes. Check the real mount view.
+if ! "${sandbox[@]}" bash -c '
+  set -Eeuo pipefail
+  [[ -f "$1" && ! -s "$1" ]]
+' _ "$tmp/age-identity" >/dev/null 2>&1; then
+  block GOOGLE_BWRAP_KEY_ISOLATION
+fi
 status GOOGLE_BWRAP_MOUNT_PREFLIGHT PASS
+status GOOGLE_BWRAP_KEY_ISOLATION PASS
 # Local SFTP-import mode. Never label a local import a remote rclone retrieval.
 [[ -f "$encrypted" && ! -L "$encrypted" && -s "$encrypted" ]] || block SFTP_IMPORT_MISSING
 [[ "$(stat -c '%u' -- "$encrypted")" == "$(id -u)" ]] || block SFTP_IMPORT_OWNER
@@ -122,14 +134,17 @@ fi
 status SFTP_IMPORT_COPY PASS
 status OFFSITE_RCLONE_RETRIEVAL NOT_ATTEMPTED
 if ! BACKUP_AGE_IDENTITY="$tmp/age-identity" TMPDIR="$tmp" \
-    "${sandbox[@]}" bash "$tmp/verify_backup_bundle.sh" "$tmp/encrypted.age" >/dev/null 2>&1; then
+    "${key_sandbox[@]}" bash "$tmp/verify_backup_bundle.sh" "$tmp/encrypted.age" >/dev/null 2>&1; then
   status BACKUP_ARCHIVE_INTEGRITY FAIL; exit 1
 fi
 status BACKUP_ARCHIVE_INTEGRITY PASS
-if ! "${sandbox[@]}" age -d -i "$tmp/age-identity" -o "$tmp/bundle.tar.gz" \
+if ! "${key_sandbox[@]}" age -d -i "$tmp/age-identity" -o "$tmp/bundle.tar.gz" \
     "$tmp/encrypted.age" >/dev/null 2>&1; then
   status BUNDLE_DECRYPTION FAIL; exit 1
 fi
+# The key mount is no longer needed. Remove the empty placeholder from the
+# writable scratch before any further archive parsing or SQL execution.
+rm -- "$tmp/age-identity"
 # A second strict extraction guard limits the decrypted outer archive to
 # four regular files. The verifier additionally checks inner tar safety.
 if ! "${sandbox[@]}" python3 - "$tmp/bundle.tar.gz" "$tmp/extracted" <<'PY'
