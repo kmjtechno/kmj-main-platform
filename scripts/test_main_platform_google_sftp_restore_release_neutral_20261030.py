@@ -96,8 +96,8 @@ class ReleaseNeutralRestore(unittest.TestCase):
         self.assertEqual(SOURCE.count("sandbox=(bwrap "), 1)
         self.assertLess(SOURCE.index("sandbox=(bwrap "), SOURCE.index("status BACKUP_ARCHIVE_INTEGRITY PASS"))
         self.assertIn('--ro-bind "$BACKUP_AGE_IDENTITY" "$tmp/age-identity"', SOURCE)
-        self.assertIn('BACKUP_AGE_IDENTITY="$tmp/age-identity" TMPDIR="$tmp" \\\n    "${sandbox[@]}" bash "$tmp/verify_backup_bundle.sh"', SOURCE)
-        self.assertIn('if ! "${sandbox[@]}" age -d -i "$tmp/age-identity"', SOURCE)
+        self.assertIn('BACKUP_AGE_IDENTITY="$tmp/age-identity" TMPDIR="$tmp" \\\n    "${key_sandbox[@]}" bash "$tmp/verify_backup_bundle.sh"', SOURCE)
+        self.assertIn('if ! "${key_sandbox[@]}" age -d -i "$tmp/age-identity"', SOURCE)
         self.assertIn('if ! "${sandbox[@]}" python3 - "$tmp/bundle.tar.gz" "$tmp/extracted"', SOURCE)
         self.assertIn('if ! "${sandbox[@]}" python3 - "$tmp/extracted/metadata.txt"', SOURCE)
         self.assertIn('if ! "${sandbox[@]}" python3 "$tmp/parity.py"', SOURCE)
@@ -113,11 +113,24 @@ class ReleaseNeutralRestore(unittest.TestCase):
         start = SOURCE.index("GOOGLE_BWRAP_MOUNT_PREFLIGHT")
         first_archive = SOURCE.index("status SFTP_IMPORTED_ENCRYPTED_SHA256 PASS")
         self.assertLess(start, first_archive)
+        self.assertIn('if ! "${key_sandbox[@]}" bash -c', SOURCE)
         self.assertIn('if ! "${sandbox[@]}" bash -c', SOURCE)
         self.assertIn('[[ -f "$key" && -r "$key" && -d "$work" && -w "$work" ]]', SOURCE)
         self.assertIn('[[ ! -e "$home/.ssh" && ! -e "$home/.config" ]]', SOURCE)
         self.assertIn('probe="$(mktemp "$work/.bwrap-mount-preflight.XXXXXXXX")"', SOURCE)
         self.assertIn('block GOOGLE_BWRAP_MOUNT_PREFLIGHT', SOURCE)
+
+    def test_disposable_sql_sandbox_never_mounts_age_identity(self):
+        # A restored SQL dump executes with a disposable PG superuser. It must
+        # not inherit the AGE private key mount used during decryption.
+        self.assertIn('key_sandbox=("${sandbox[@]}" --ro-bind "$BACKUP_AGE_IDENTITY" "$tmp/age-identity")', SOURCE)
+        self.assertIn('block GOOGLE_BWRAP_KEY_ISOLATION', SOURCE)
+        self.assertIn('status GOOGLE_BWRAP_KEY_ISOLATION PASS', SOURCE)
+        self.assertIn('rm -- "$tmp/age-identity"', SOURCE)
+        self.assertLess(SOURCE.index('rm -- "$tmp/age-identity"'), SOURCE.index('cat >"$tmp/db-phase.sh"'))
+        self.assertIn('if ! "${sandbox[@]}" bash "$tmp/db-phase.sh"', SOURCE)
+        self.assertNotIn('"${key_sandbox[@]}" bash "$tmp/db-phase.sh"', SOURCE)
+        self.assertIn('if ! "${sandbox[@]}" python3 "$tmp/parity.py"', SOURCE)
 
     def test_safety_properties_kept(self):
         for needle in ("bwrap", "NONROOT_INFO_REQUIRED", "OPERATOR_CONSENT", "PRODUCTION_DATABASE_MODIFIED NO",
