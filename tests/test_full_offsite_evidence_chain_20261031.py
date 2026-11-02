@@ -63,7 +63,17 @@ class FullOffsiteEvidenceContract(unittest.TestCase):
         self.assertIn('bash "$work/$STAGE_SCRIPT" "$CANDIDATE"', TEXT)
         self.assertIn('bash "$work/$LOCAL_SCRIPT" "$CANDIDATE" "$EXPECTED"', TEXT)
         self.assertIn('python3 -I "$work/$SEAL_SCRIPT" --candidate-sha "$CANDIDATE" --expected-release "$EXPECTED"', TEXT)
-        self.assertIn('bash "$work/$PUSH_SCRIPT" --candidate-sha "$CANDIDATE"', TEXT)
+        # The SHA-pinned SFTP uploader deliberately fails closed unless Bash's
+        # privileged mode (-p) is enabled. A plain `bash script` ignores the
+        # script's '#!/bin/bash -p' shebang and always blocks the upload.
+        self.assertIn('bash -p "$work/$PUSH_SCRIPT" --candidate-sha "$CANDIDATE"', TEXT)
+        self.assertNotIn('bash "$work/$PUSH_SCRIPT" --candidate-sha "$CANDIDATE"', TEXT)
+
+    def test_sftp_privileged_mode_propagation(self):
+        good = subprocess.run(["bash", "-p", "-c", '[[ $- == *p* ]]'], capture_output=True)
+        bad = subprocess.run(["bash", "-c", '[[ $- == *p* ]]'], capture_output=True)
+        self.assertEqual(good.returncode, 0)
+        self.assertNotEqual(bad.returncode, 0)
 
 
 if __name__ == "__main__":
