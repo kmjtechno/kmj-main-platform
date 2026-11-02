@@ -87,6 +87,10 @@ class StagingOwnerInstallerTests(unittest.TestCase):
             "INSTALLED_INACTIVE_PENDING_APPROVAL", "STAGING_ACTIVATION=NOT_ATTEMPTED",
         ):
             self.assertIn(marker, text)
+        # No attribute-filter clean process may execute during privileged
+        # integrity hashing, even if .gitattributes/config are untrusted.
+        self.assertEqual(text.count("git hash-object --no-filters -- "), 4)
+        self.assertNotIn("git hash-object -- ", text)
         self.assertNotIn("systemctl start", text)
         self.assertNotIn("systemctl enable", text)
         self.assertNotIn("ln -sfn", text)
