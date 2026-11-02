@@ -92,5 +92,66 @@ class StagingOwnerInstallerTests(unittest.TestCase):
         self.assertNotIn("ln -sfn", text)
         self.assertNotIn("git reset", text)
 
+
+    def test_rollback_only_removes_exact_created_inode_and_digest(self):
+        # Execute the real cleanup function against disposable test files.
+        # Model root ownership in the stat result because CI runs nonroot.
+        # The production installer/unit/systemctl are never invoked here.
+        import hashlib
+        source = SCRIPT.read_text(encoding="utf-8")
+        start = source.index("remove_if_ours() {")
+        end = source.index("rollback_partial_install() {", start)
+        helper = source[start:end]
+        bash = r'''
+set -Eeuo pipefail
+sha_file() { /usr/bin/sha256sum -- "$1" | /usr/bin/cut -d ' ' -f1; }
+stat() {
+  if [[ "$1" == -c && "$2" == '%d:%i:%u:%g:%h' ]]; then
+    local pair
+    pair="$(/usr/bin/stat -c '%d:%i' -- "$4")"
+    printf '%s:0:0:1\n' "$pair"
+  else /usr/bin/stat "$@"; fi
+}
+''' + helper + '\nremove_if_ours "$1" "$2" "$3"\n'
+        with tempfile.TemporaryDirectory() as tmp:
+            d = pathlib.Path(tmp)
+            for label, inode_valid, digest_valid, link in [
+                ("valid", True, True, False),
+                ("wrong_inode", False, True, False),
+                ("wrong_digest", True, False, False),
+                ("linked", True, True, True),
+            ]:
+                target = d / (label + ".txt")
+                payload = d / (label + ".payload")
+                payload.write_text("owned data", encoding="ascii")
+                if link:
+                    target.symlink_to(payload)
+                else:
+                    target.write_text("owned data", encoding="ascii")
+                stat_info = target.stat()
+                inode = f"{stat_info.st_dev}:{stat_info.st_ino}"
+                if not inode_valid:
+                    inode = "999:999"
+                digest = hashlib.sha256(b"owned data").hexdigest()
+                if not digest_valid:
+                    digest = "0" * 64
+                p = subprocess.run(["/bin/bash", "-p", "-c", bash, "_",
+                                    str(target), inode, digest],
+                                   capture_output=True, text=True, timeout=10)
+                self.assertEqual(p.returncode, 0, (label, p.stderr))
+                self.assertEqual(target.exists() or target.is_symlink(),
+                                 not (inode_valid and digest_valid and not link),
+                                 label)
+
+    def test_failure_rollback_is_inactive_and_tracks_both_created_inodes(self):
+        source = SCRIPT.read_text(encoding="utf-8")
+        self.assertIn("trap rollback_partial_install EXIT", source)
+        self.assertIn("created_runner_inode=", source)
+        self.assertIn("created_unit_inode=", source)
+        self.assertIn('if [[ "$install_committed" != YES ]]', source)
+        self.assertIn('remove_if_ours "$target_unit" "$created_unit_inode" "$unit_sha256"', source)
+        self.assertIn('remove_if_ours "$target_runner" "$created_runner_inode" "$runner_sha256"', source)
+        self.assertIn("install_committed=YES", source)
+
 if __name__ == "__main__":
     unittest.main()
