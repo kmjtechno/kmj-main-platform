@@ -222,13 +222,12 @@ export default function DeviceControlCenter({
                     </p>
                 </div>
                 <div className="flex flex-wrap gap-2">
-                    <a
-                        href="/install-codebridge-windows.cmd"
-                        download="KMJ-CodeBridge-Connect-Windows.cmd"
+                    <Link
+                        href="/codebridge-connect.html"
                         className="inline-flex h-10 items-center gap-2 rounded-xl bg-red-600 px-4 text-xs font-black text-white hover:bg-red-500"
                     >
-                        <Laptop2 className="h-4 w-4" /> Connect this Windows PC
-                    </a>
+                        <Laptop2 className="h-4 w-4" /> Windows setup guide
+                    </Link>
                     <button
                         type="button"
                         onClick={() => router.reload({ only: ['service'] })}
@@ -491,7 +490,7 @@ export default function DeviceControlCenter({
                                             className="inline-flex items-center gap-1.5 rounded-lg border px-3 py-2 text-xs font-bold hover:border-red-500/40 disabled:opacity-50"
                                         >
                                             <FolderPlus className="h-3.5 w-3.5" />{' '}
-                                            Assign project
+                                            Request on this device
                                         </button>
                                     )}
                                     {canManage && (
@@ -518,13 +517,18 @@ export default function DeviceControlCenter({
                                         className="mt-3 grid gap-3 rounded-xl border p-4"
                                     >
                                         <h4 className="text-sm font-black">
-                                            Assign a new project
+                                            Request project on this existing device
                                         </h4>
                                         <p className="text-muted-foreground text-xs leading-5">
-                                            Save a project request for this
-                                            device. This does not install code,
-                                            authorize a local filesystem path or
-                                            confirm the agent is online.
+                                            This request is bound to{' '}
+                                            <code>{device.id}</code>, not a new
+                                            device registration. It will be shown
+                                            as a separate pending project card;
+                                            it cannot install code, grant local
+                                            filesystem access or verify online
+                                            status. For a separate project agent,
+                                            choose Connect device and pair
+                                            that exact project instead.
                                         </p>
                                         <label className="text-xs font-semibold">
                                             Project ID
