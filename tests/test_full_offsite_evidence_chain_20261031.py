@@ -26,11 +26,14 @@ class FullOffsiteEvidenceContract(unittest.TestCase):
             "STAGE_SHA": "ebdb77fa56e8e48c32e21d7d1c53a28c56666dd0cc7c002d200706478e1e9a24",
             "LOCAL_SHA": "9812f831841ede684cc7a62c378ca35f43fb557dbc402c881785e506b508ff6f",
             "SEAL_SHA": "410f4348a4a0bbb7101f36345c1df09162660cb72a7aaf13ed35337951ae18ef",
-            "PUSH_SHA": "547e624cc031045406add6b653d5925a46aa5d1aa6563a12f13dedc3c2aebdff",
+            "PUSH_SHA": "c2fbaa2e969ff0fdfcf0ce88b4edb32e3260e59d568ef1411721026a28ef45dc",
         }
         for name, expected in sources.items():
             self.assertIn(f"{name}={expected}", TEXT)
             self.assertEqual(len(expected), 64)
+        self.assertIn("PUSH_COMMIT=68151bcf135991a610ff7eceac25bacf6114b8d9", TEXT)
+        self.assertIn('download "$PUSH_SCRIPT" "$PUSH_SHA" "$PUSH_BASE"', TEXT)
+        self.assertIn('local name=$1 digest=$2 origin=${3:-$BASE}', TEXT)
         self.assertEqual(TEXT.count('sha256sum -c -'), 1)
         self.assertEqual(TEXT.count('download "$'), 4)
         self.assertIn("--proto '=https' --tlsv1.2", TEXT)
