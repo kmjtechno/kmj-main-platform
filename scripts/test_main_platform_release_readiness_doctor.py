@@ -769,25 +769,25 @@ class MaterializeRollbackTest(unittest.TestCase):
         # Exercise the actual root transcript/receipt dispatcher without
         # systemd, root, or any production/candidate filesystem mutation.
         source = self.source
-        start = source.index('sandbox_text=""\\n# A completed materializer')
-        end = source.index('\\nrunuser -u www-data -- test -r', start)
+        start = source.index('sandbox_text=""\n# A completed materializer')
+        end = source.index('\nrunuser -u www-data -- test -r', start)
         excerpt = source[start:end]
         script = (
-            "set -Eeuo pipefail\\n"
-            "status() { printf '%s=%s\\\\n' \\"$1\\" \\"$2\\"; }\\n"
-            "fail() { echo \\"BLOCKED $1\\"; exit 2; }\\n"
-            "run_sandbox() {\\n"
-            "  if [[ \\"$1\\" == materialize ]]; then\\n"
-            "    printf '%s\\\\n' \\"$MOCK_STDOUT\\"; return \\"$MOCK_EXIT\\"\\n"
-            "  fi\\n"
-            "  printf 'CANDIDATE_ROLLBACK=DONE\\\\n'\\n"
-            "}\\n"
-            + excerpt + "\\n"
+            "set -Eeuo pipefail\n"
+            "status() { printf '%s=%s\\n' \"$1\" \"$2\"; }\n"
+            "fail() { echo \"BLOCKED $1\"; exit 2; }\n"
+            "run_sandbox() {\n"
+            "  if [[ \"$1\" == materialize ]]; then\n"
+            "    printf '%s\\n' \"$MOCK_STDOUT\"; return \"$MOCK_EXIT\"\n"
+            "  fi\n"
+            "  printf 'CANDIDATE_ROLLBACK=DONE\\n'\n"
+            "}\n"
+            + excerpt + "\n"
         )
         cases = (
-            "CANDIDATE_ROLLBACK=DONE\\nMATERIALIZED_ENV_ID=12:34",
-            "MATERIALIZED_ENV_ID=12:34\\nCANDIDATE_ROLLBACK=DONE\\nPUBLIC_STORAGE_LINK=MIRRORED",
-            "MATERIALIZED_LINK_ID=45:67\\nCANDIDATE_ROLLBACK=DONE",
+            "CANDIDATE_ROLLBACK=DONE\nMATERIALIZED_ENV_ID=12:34",
+            "MATERIALIZED_ENV_ID=12:34\nCANDIDATE_ROLLBACK=DONE\nPUBLIC_STORAGE_LINK=MIRRORED",
+            "MATERIALIZED_LINK_ID=45:67\nCANDIDATE_ROLLBACK=DONE",
         )
         for child_receipt in cases:
             with self.subTest(child_receipt=child_receipt):
