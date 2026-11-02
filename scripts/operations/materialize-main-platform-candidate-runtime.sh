@@ -475,6 +475,80 @@ receipt_contract_ok() {
   [[ "$sandbox_rc" == 0 ]] || return 1
   [[ "$(grep -Fxc 'KMJ_MATERIALIZE_SHARED=PASS' <<<"$sandbox_text" || true)" == 1 ]] || return 1
 }
+# The child process is not the authority for rollback success. Even with
+# exit=0, require an exact, bounded receipt for every expected inode before
+# forwarding DONE to root-side consumers. Partial/malformed receipts are no-go.
+rollback_receipt_ok() {
+  local body="$1" expect_link="$2" offset=0
+  local -a lines=()
+  [[ ${#body} -gt 0 && ${#body} -le 512 && "$body" != *  local env_id="" link_id="" env_count link_count receipt_invalid=0 cleanup_rc=0 rollback_text=""
+  # Count *all* raw receipt declarations; never choose the last of several.
+  env_count="$(grep -c '^MATERIALIZED_ENV_ID=' <<<"$sandbox_text" || true)"
+  link_count="$(grep -c '^MATERIALIZED_LINK_ID=' <<<"$sandbox_text" || true)"
+  [[ "$env_count" =~ ^[01]$ && "$link_count" =~ ^[01]$ ]] || receipt_invalid=1
+  if [[ "$env_count" == 1 ]]; then
+    env_id="$(sed -n 's/^MATERIALIZED_ENV_ID=\([0-9][0-9]*:[0-9][0-9]*\)$/\1/p' <<<"$sandbox_text")"
+    [[ "$env_id" =~ ^[0-9]+:[0-9]+$ ]] || receipt_invalid=1
+  fi
+  if [[ "$link_count" == 1 ]]; then
+    link_id="$(sed -n 's/^MATERIALIZED_LINK_ID=\([0-9][0-9]*:[0-9][0-9]*\)$/\1/p' <<<"$sandbox_text")"
+    [[ "$link_id" =~ ^[0-9]+:[0-9]+$ ]] || receipt_invalid=1
+  fi
+  receipt_contract_ok || receipt_invalid=1
+  # If only one inode was safely reported, still attempt the *known* cleanup.
+  # Capture the child receipt so its DONE cannot falsely certify the unknown
+  # orphan; the top-level result remains FAILED_REVIEW.
+  if [[ "$receipt_invalid" == 0 || "$env_count" =~ ^[01]$ && "$link_count" =~ ^[01]$ ]]; then
+    if [[ -n "$env_id$link_id" ]]; then
+      rollback_text="$(run_sandbox rollback rollback "$env_id" "$link_id")" || cleanup_rc=1
+    fi
+  fi
+  if [[ "$receipt_invalid" == 0 && "$cleanup_rc" == 0 ]] && rollback_receipt_ok "$rollback_text" "$link_count"; then
+    printf '%s\n' "$rollback_text"
+  else
+    if [[ "$receipt_invalid" != 0 && "$cleanup_rc" == 0 && -n "$rollback_text" ]]; then
+      status CANDIDATE_ROLLBACK_KNOWN_INODES ATTEMPTED
+    fi
+    status CANDIDATE_ROLLBACK FAILED_REVIEW
+  fi
+  fail "$1"
+}
+
+sandbox_rc=0
+sandbox_text="$(run_sandbox materialize materialize)" || sandbox_rc=$?
+# Child rollback messages are not authoritative. A TERM/SIGKILL receipt window
+# can leave an unreported link while the child prints ROLLBACK=DONE for only
+# the known env inode. Never forward that premature success to receipt parsers.
+# Only the root wrapper may publish the final rollback verdict after validating
+# the complete sandbox receipt contract and any best-effort cleanup.
+while IFS= read -r line; do
+  case "$line" in
+    CANDIDATE_ROLLBACK=*) continue ;;
+  esac
+  printf '%s\n' "$line"
+done <<<"$sandbox_text"
+[[ "$sandbox_rc" == 0 ]] || post_fail "SANDBOX_FAILED_$sandbox_rc"
+grep -Fxq 'KMJ_MATERIALIZE_SHARED=PASS' <<<"$sandbox_text" || post_fail SANDBOX_PASS_MISSING
+receipt_contract_ok || post_fail SANDBOX_RECEIPTS_UNVERIFIED
+
+runuser -u www-data -- test -r "$CAND_APP/public/index.php" || post_fail NGINX_PUBLIC_UNREADABLE
+runuser -u www-data -- test -r "$CAND_APP/public/assets/kmj-codebridge-icon.png" || post_fail NGINX_ICON_UNREADABLE
+runuser -u www-data -- test ! -r "$CAND_APP/.env" || post_fail NGINX_PRIVATE_ENV_EXPOSED
+status NGINX_PUBLIC_ACL PASS
+status NGINX_PRIVATE_ENV DENIED
+echo "KMJ_MATERIALIZE=PASS"
+\r'* ]] || return 1
+  [[ "$expect_link" == 0 || "$expect_link" == 1 ]] || return 1
+  mapfile -t lines <<<"$body"
+  [[ "${#lines[@]}" == "$((2 + expect_link))" ]] || return 1
+  if [[ "$expect_link" == 1 ]]; then
+    [[ "${lines[0]}" =~ ^ROLLBACK_STORAGE=(REMOVED|ABSENT)$ ]] || return 1
+    offset=1
+  fi
+  [[ "${lines[$offset]}" =~ ^ROLLBACK_ENV=(REMOVED|ABSENT)$ ]] || return 1
+  [[ "${lines[$((offset + 1))]}" == CANDIDATE_ROLLBACK=DONE ]] || return 1
+}
+
 post_fail() {
   local env_id="" link_id="" env_count link_count receipt_invalid=0 cleanup_rc=0 rollback_text=""
   # Count *all* raw receipt declarations; never choose the last of several.
