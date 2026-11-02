@@ -132,6 +132,18 @@ def remove_exact(dir_fd, name, expected, kind):
     want = stat.S_ISREG if kind == "f" else stat.S_ISLNK
     if ident(info) != expected or not want(info.st_mode):
         return "MISMATCH"
+    # Unlink/recreate can immediately reuse the SAME dev:inode. For the
+    # public symlink, the expected target is part of the rollback identity.
+    # Never delete a foreign-target replacement even when inode numbers match.
+    if kind == "l":
+        try:
+            if os.readlink(name, dir_fd=dir_fd) != "../storage/app/public":
+                return "MISMATCH"
+            again = os.stat(name, dir_fd=dir_fd, follow_symlinks=False)
+            if not stat.S_ISLNK(again.st_mode) or ident(again) != expected:
+                return "MISMATCH"
+        except OSError:
+            return "MISMATCH"
     os.unlink(name, dir_fd=dir_fd)
     return "REMOVED"
 
