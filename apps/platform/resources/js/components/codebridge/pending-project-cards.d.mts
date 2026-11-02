@@ -1,13 +1,15 @@
-export declare function pendingProjectCards(
-    devices: ReadonlyArray<{
+type PendingProjectInput = {
+    id: string;
+    name?: string | null;
+    pending_projects?: ReadonlyArray<{
         id: string;
-        name?: string | null;
-        pending_projects?: ReadonlyArray<{
-            id: string;
-            name: string;
-            status: 'pending_local_setup';
-        }>;
-    }> | null | undefined,
+        name: string;
+        status: 'pending_local_setup';
+    }>;
+};
+
+export declare function pendingProjectCards(
+    devices: readonly PendingProjectInput[] | null | undefined,
 ): Array<{
     key: string;
     sourceDeviceId: string;
