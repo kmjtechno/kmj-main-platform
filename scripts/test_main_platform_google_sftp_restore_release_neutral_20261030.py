@@ -96,7 +96,8 @@ class ReleaseNeutralRestore(unittest.TestCase):
         self.assertEqual(SOURCE.count("sandbox=(bwrap "), 1)
         self.assertLess(SOURCE.index("sandbox=(bwrap "), SOURCE.index("status BACKUP_ARCHIVE_INTEGRITY PASS"))
         self.assertIn('--ro-bind "$BACKUP_AGE_IDENTITY" "$tmp/age-identity"', SOURCE)
-        self.assertIn('BACKUP_AGE_IDENTITY="$tmp/age-identity" TMPDIR="$tmp" \\\n    "${key_sandbox[@]}" bash "$tmp/verify_backup_bundle.sh"', SOURCE)
+        self.assertIn('env -u BACKUP_AGE_IDENTITY TMPDIR="$tmp" \\\n    "${sandbox[@]}" bash "$tmp/verify_backup_bundle.sh" --decrypted-bundle', SOURCE)
+        self.assertNotIn('"${key_sandbox[@]}" bash "$tmp/verify_backup_bundle.sh"', SOURCE)
         self.assertIn('if ! "${key_sandbox[@]}" age -d -i "$tmp/age-identity"', SOURCE)
         self.assertIn('if ! "${sandbox[@]}" python3 - "$tmp/bundle.tar.gz" "$tmp/extracted"', SOURCE)
         self.assertIn('if ! "${sandbox[@]}" python3 - "$tmp/extracted/metadata.txt"', SOURCE)
@@ -106,6 +107,19 @@ class ReleaseNeutralRestore(unittest.TestCase):
         self.assertNotIn('if ! age -d -i "$BACKUP_AGE_IDENTITY"', SOURCE)
         self.assertNotIn('if ! python3 - "$tmp/bundle.tar.gz"', SOURCE)
         self.assertNotIn('if ! python3 "$repo/scripts/operations/verify-restored-storage-parity.py"', SOURCE)
+
+    def test_plaintext_archive_verification_never_receives_age_key(self):
+        verifier = (SCRIPT.parent.parent / "verify_backup_bundle.sh").read_text(encoding="utf-8")
+        self.assertIn('if [[ "${1:-}" == --decrypted-bundle ]]; then', verifier)
+        self.assertIn('[[ $# -eq 2 && -z "${BACKUP_AGE_IDENTITY:-}" ]]', verifier)
+        self.assertIn('bundle_tar=$BUNDLE_PATH', verifier)
+        self.assertIn('python3 - "$bundle_tar" "$WORKDIR"', verifier)
+        self.assertIn('if ! "${key_sandbox[@]}" age -d -i "$tmp/age-identity"', SOURCE)
+        self.assertLess(SOURCE.index('rm -- "$tmp/age-identity"'),
+                        SOURCE.index('bash "$tmp/verify_backup_bundle.sh" --decrypted-bundle'))
+        self.assertNotIn('"${key_sandbox[@]}" bash "$tmp/verify_backup_bundle.sh"', SOURCE)
+        subprocess.run(["bash", "-n", str(SCRIPT)], check=True)
+        subprocess.run(["bash", "-n", str(SCRIPT.parent.parent / "verify_backup_bundle.sh")], check=True)
 
     def test_nonroot_bwrap_mount_preflight_is_fail_closed(self):
         # Source contract only; real Google info user namespace/mount execution
