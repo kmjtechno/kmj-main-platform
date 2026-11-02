@@ -765,6 +765,43 @@ class MaterializeRollbackTest(unittest.TestCase):
                     if attempted:
                         self.assertIn("CANDIDATE_ROLLBACK_KNOWN_INODES=ATTEMPTED", out.stdout)
 
+    def test_root_never_forwards_child_rollback_done_on_partial_failure(self) -> None:
+        # Exercise the actual root transcript/receipt dispatcher without
+        # systemd, root, or any production/candidate filesystem mutation.
+        source = self.source
+        start = source.index('sandbox_text=""\\n# A completed materializer')
+        end = source.index('\\nrunuser -u www-data -- test -r', start)
+        excerpt = source[start:end]
+        script = (
+            "set -Eeuo pipefail\\n"
+            "status() { printf '%s=%s\\\\n' \\"$1\\" \\"$2\\"; }\\n"
+            "fail() { echo \\"BLOCKED $1\\"; exit 2; }\\n"
+            "run_sandbox() {\\n"
+            "  if [[ \\"$1\\" == materialize ]]; then\\n"
+            "    printf '%s\\\\n' \\"$MOCK_STDOUT\\"; return \\"$MOCK_EXIT\\"\\n"
+            "  fi\\n"
+            "  printf 'CANDIDATE_ROLLBACK=DONE\\\\n'\\n"
+            "}\\n"
+            + excerpt + "\\n"
+        )
+        cases = (
+            "CANDIDATE_ROLLBACK=DONE\\nMATERIALIZED_ENV_ID=12:34",
+            "MATERIALIZED_ENV_ID=12:34\\nCANDIDATE_ROLLBACK=DONE\\nPUBLIC_STORAGE_LINK=MIRRORED",
+            "MATERIALIZED_LINK_ID=45:67\\nCANDIDATE_ROLLBACK=DONE",
+        )
+        for child_receipt in cases:
+            with self.subTest(child_receipt=child_receipt):
+                out = subprocess.run(
+                    ["/bin/bash", "-c", script],
+                    capture_output=True, text=True, timeout=10,
+                    env={"PATH": "/usr/bin:/bin",
+                         "MOCK_STDOUT": child_receipt, "MOCK_EXIT": "143"},
+                )
+                self.assertEqual(out.returncode, 2, out.stdout + out.stderr)
+                self.assertNotIn("CANDIDATE_ROLLBACK=DONE", out.stdout)
+                self.assertEqual(out.stdout.count("CANDIDATE_ROLLBACK=FAILED_REVIEW"), 1)
+                self.assertIn("BLOCKED SANDBOX_FAILED_143", out.stdout)
+
     def test_sigkill_leaves_orphans_for_owner_review(self) -> None:
         # SIGKILL cannot run the sandbox's EXIT trap; the root controller must
         # therefore treat a nonzero sandbox result as incomplete even if some
