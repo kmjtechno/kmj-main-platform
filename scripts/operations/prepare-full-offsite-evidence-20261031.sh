@@ -27,10 +27,14 @@ done
 # Immutable source baseline. Independently SHA256-verified from GitHub contents.
 readonly SOURCE_COMMIT=5da955a03ccf9b98afc62e138325d454a65dca6d
 readonly BASE="https://raw.githubusercontent.com/kmjtechno/kmj-main-platform/$SOURCE_COMMIT/scripts/operations"
+# This newer SHA-pinned uploader rejects non-privileged Bash, ignores SSH config
+# injection and verifies Google ciphertext readback mode 0600 in addition to hash.
+readonly PUSH_COMMIT=68151bcf135991a610ff7eceac25bacf6114b8d9
+readonly PUSH_BASE="https://raw.githubusercontent.com/kmjtechno/kmj-main-platform/$PUSH_COMMIT/scripts/operations"
 readonly STAGE_SHA=ebdb77fa56e8e48c32e21d7d1c53a28c56666dd0cc7c002d200706478e1e9a24
 readonly LOCAL_SHA=9812f831841ede684cc7a62c378ca35f43fb557dbc402c881785e506b508ff6f
 readonly SEAL_SHA=410f4348a4a0bbb7101f36345c1df09162660cb72a7aaf13ed35337951ae18ef
-readonly PUSH_SHA=547e624cc031045406add6b653d5925a46aa5d1aa6563a12f13dedc3c2aebdff
+readonly PUSH_SHA=c2fbaa2e969ff0fdfcf0ce88b4edb32e3260e59d568ef1411721026a28ef45dc
 readonly STAGE_SCRIPT=stage-fast-main-candidate-no-activation.sh
 readonly LOCAL_SCRIPT=prepare-main-platform-local-recovery-exact.sh
 readonly SEAL_SCRIPT=seal-main-platform-offsite-20261030.py
@@ -47,16 +51,16 @@ cleanup(){
 }
 trap cleanup EXIT
 download(){
-  local name=$1 digest=$2
+  local name=$1 digest=$2 origin=${3:-$BASE}
   curl -fsSL --proto '=https' --tlsv1.2 --max-time 45 \
-    "$BASE/$name" -o "$work/$name" || blocked SOURCE_FETCH
+    "$origin/$name" -o "$work/$name" || blocked SOURCE_FETCH
   printf '%s  %s\n' "$digest" "$work/$name" | sha256sum -c - >/dev/null ||
     blocked IMMUTABLE_SOURCE_DIGEST
 }
 download "$STAGE_SCRIPT" "$STAGE_SHA"
 download "$LOCAL_SCRIPT" "$LOCAL_SHA"
 download "$SEAL_SCRIPT" "$SEAL_SHA"
-download "$PUSH_SCRIPT" "$PUSH_SHA"
+download "$PUSH_SCRIPT" "$PUSH_SHA" "$PUSH_BASE"
 printf 'KMJ_PINNED_OPERATOR_SCRIPTS=4_SHA256_VERIFIED\n'
 # First creates only an isolated candidate; verifies exact origin/main itself.
 printf 'KMJ_PHASE=ISOLATED_CANDIDATE_BUILD\n'
@@ -76,7 +80,7 @@ python3 -I "$work/$SEAL_SCRIPT" --candidate-sha "$CANDIDATE" --expected-release 
   blocked LIVE_CHANGED_AFTER_ENCRYPTION
 printf 'KMJ_PHASE=PINNED_GOOGLE_SFTP_NO_CLOBBER_AND_READBACK\n'
 # Exact owner config, strict host pin, key, no-clobber, remote readback SHA.
-bash "$work/$PUSH_SCRIPT" --candidate-sha "$CANDIDATE"
+bash -p "$work/$PUSH_SCRIPT" --candidate-sha "$CANDIDATE"
 [[ "$(readlink -f "$LIVE")" == "/home/kmjprod/releases/$EXPECTED" ]] ||
   blocked LIVE_CHANGED_AFTER_UPLOAD
 printf 'KMJ_OFFSITE_RECOVERY=LOCAL_BACKUP_ENCRYPTED_OFFSITE_READBACK_COMPLETE\n'

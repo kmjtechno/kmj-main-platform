@@ -1,6 +1,7 @@
 """No-production-change preflight contracts for the one-shot offsite evidence chain."""
 from __future__ import annotations
 
+import hashlib
 import re
 import subprocess
 import unittest
@@ -26,14 +27,29 @@ class FullOffsiteEvidenceContract(unittest.TestCase):
             "STAGE_SHA": "ebdb77fa56e8e48c32e21d7d1c53a28c56666dd0cc7c002d200706478e1e9a24",
             "LOCAL_SHA": "9812f831841ede684cc7a62c378ca35f43fb557dbc402c881785e506b508ff6f",
             "SEAL_SHA": "410f4348a4a0bbb7101f36345c1df09162660cb72a7aaf13ed35337951ae18ef",
-            "PUSH_SHA": "547e624cc031045406add6b653d5925a46aa5d1aa6563a12f13dedc3c2aebdff",
+            "PUSH_SHA": "c2fbaa2e969ff0fdfcf0ce88b4edb32e3260e59d568ef1411721026a28ef45dc",
         }
         for name, expected in sources.items():
             self.assertIn(f"{name}={expected}", TEXT)
             self.assertEqual(len(expected), 64)
+        self.assertIn("PUSH_COMMIT=68151bcf135991a610ff7eceac25bacf6114b8d9", TEXT)
+        self.assertIn('download "$PUSH_SCRIPT" "$PUSH_SHA" "$PUSH_BASE"', TEXT)
+        self.assertIn('local name=$1 digest=$2 origin=${3:-$BASE}', TEXT)
         self.assertEqual(TEXT.count('sha256sum -c -'), 1)
         self.assertEqual(TEXT.count('download "$'), 4)
         self.assertIn("--proto '=https' --tlsv1.2", TEXT)
+
+    def test_new_hardened_sftp_uploader_matches_sha256_pin(self):
+        # The pinned uploader commit is this PR's main ancestor; its bytes
+        # must match the exact downloaded script digest, not just a test string.
+        uploader = SRC.parent / "push-offsite-pinned-sftp-20261030.sh"
+        actual = hashlib.sha256(uploader.read_bytes()).hexdigest()
+        self.assertEqual(
+            actual,
+            "c2fbaa2e969ff0fdfcf0ce88b4edb32e3260e59d568ef1411721026a28ef45dc",
+        )
+        self.assertIn("PRIVILEGED_BASH_REQUIRED", uploader.read_text())
+        self.assertIn("REMOTE_READBACK_MODE_0600 PASS", uploader.read_text())
 
     def test_order_of_stages_and_no_unattested_credit(self):
         ordered = [TEXT.index("KMJ_PHASE="+p) for p in (
@@ -63,7 +79,17 @@ class FullOffsiteEvidenceContract(unittest.TestCase):
         self.assertIn('bash "$work/$STAGE_SCRIPT" "$CANDIDATE"', TEXT)
         self.assertIn('bash "$work/$LOCAL_SCRIPT" "$CANDIDATE" "$EXPECTED"', TEXT)
         self.assertIn('python3 -I "$work/$SEAL_SCRIPT" --candidate-sha "$CANDIDATE" --expected-release "$EXPECTED"', TEXT)
-        self.assertIn('bash "$work/$PUSH_SCRIPT" --candidate-sha "$CANDIDATE"', TEXT)
+        # The SHA-pinned SFTP uploader deliberately fails closed unless Bash's
+        # privileged mode (-p) is enabled. A plain `bash script` ignores the
+        # script's '#!/bin/bash -p' shebang and always blocks the upload.
+        self.assertIn('bash -p "$work/$PUSH_SCRIPT" --candidate-sha "$CANDIDATE"', TEXT)
+        self.assertNotIn('bash "$work/$PUSH_SCRIPT" --candidate-sha "$CANDIDATE"', TEXT)
+
+    def test_sftp_privileged_mode_propagation(self):
+        good = subprocess.run(["bash", "-p", "-c", '[[ $- == *p* ]]'], capture_output=True)
+        bad = subprocess.run(["bash", "-c", '[[ $- == *p* ]]'], capture_output=True)
+        self.assertEqual(good.returncode, 0)
+        self.assertNotEqual(bad.returncode, 0)
 
 
 if __name__ == "__main__":
