@@ -202,7 +202,7 @@ if ! python3 "$repo/scripts/operations/verify-restored-storage-parity.py" \
 fi
 status STORAGE_EXTRACTION_CAPACITY PASS
 # Storage extraction occurs only after archive integrity and bounded-member verification.
-if ! tar -xzf "$tmp/extracted/storage.tar.gz" --no-same-owner --no-same-permissions -C "$tmp/restored-storage" >/dev/null 2>&1; then
+if ! "${sandbox[@]}" tar -xzf "$tmp/extracted/storage.tar.gz" --no-same-owner --no-same-permissions -C "$tmp/restored-storage" >/dev/null 2>&1; then
   status RECOVERED_STORAGE FAIL; exit 1
 fi
 [[ -d "$tmp/restored-storage/storage/app" ]] || { status RECOVERED_STORAGE FAIL; exit 1; }
