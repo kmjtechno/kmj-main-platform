@@ -130,8 +130,10 @@ def verify(seal: str, push: str, restore: str, *, candidate: str, release: str,
     if not (HEX40.fullmatch(candidate) and RELEASE.fullmatch(release) and HEX64.fullmatch(encrypted)
             and HEX64.fullmatch(source) and 1 <= min_files <= 10**9):
         raise Block("EXPECTATION_INVALID")
-    if release != "platform-" + candidate[:12]:
-        raise Block("RELEASE_CANDIDATE_MISMATCH")
+    # --expected-release is the CURRENT production release at seal time (metadata
+    # current_release), never the candidate's own release.
+    if release == "platform-" + candidate[:12]:
+        raise Block("RELEASE_EQUALS_CANDIDATE")
     s, p, r = parse(seal, SEAL), parse(push, PUSH), parse(restore, RESTORE)
     if s["ENCRYPTED_SHA256"] != encrypted or p["LOCAL_ENCRYPTED_SHA256"] != encrypted:
         raise Block("ENCRYPTED_SHA_UNBOUND")
