@@ -636,8 +636,8 @@ class MaterializeRollbackTest(unittest.TestCase):
     def test_live_env_exact_size_limit_can_be_copied(self) -> None:
         (self.live / ".env").write_bytes(b"K" * 1048576)
         run = self.harness(
-            'env_id="$(fs_op create-env "$LIVE_APP" "$CAND_APP")"\\n'
-            'committed=1\\n'
+            'env_id="$(fs_op create-env "$LIVE_APP" "$CAND_APP")"\n'
+            'committed=1\n'
         )
         self.assertEqual(run.returncode, 0, run.stdout + run.stderr)
         self.assertEqual((self.cand / ".env").stat().st_size, 1048576)
@@ -647,20 +647,20 @@ class MaterializeRollbackTest(unittest.TestCase):
         # A writer appends beyond 1 MiB after the initial fstat. The copy
         # must read no more than the first 1 MiB + 1 byte and never create
         # a candidate .env from the raced source.
-        needle = '        info = os.fstat(src)\\n        if not stat.S_ISREG(info.st_mode)'
+        needle = '        info = os.fstat(src)\n        if not stat.S_ISREG(info.st_mode)'
         self.assertEqual(self.source.count(needle), 1)
         injected = self.source.replace(
             needle,
-            '        info = os.fstat(src)\\n'
-            '        grow = os.open(".env", os.O_WRONLY | os.O_APPEND, dir_fd=live)\\n'
-            '        try:\\n'
-            '            os.write(grow, b"Z" * (1048576 + 1))\\n'
-            '        finally:\\n'
-            '            os.close(grow)\\n'
+            '        info = os.fstat(src)\n'
+            '        grow = os.open(".env", os.O_WRONLY | os.O_APPEND, dir_fd=live)\n'
+            '        try:\n'
+            '            os.write(grow, b"Z" * (1048576 + 1))\n'
+            '        finally:\n'
+            '            os.close(grow)\n'
             '        if not stat.S_ISREG(info.st_mode)',
         )
         run = self.harness(
-            'fs_op create-env "$LIVE_APP" "$CAND_APP"\\ncommitted=1\\n',
+            'fs_op create-env "$LIVE_APP" "$CAND_APP"\ncommitted=1\n',
             source_override=injected,
         )
         self.assertNotEqual(run.returncode, 0, run.stdout + run.stderr)
@@ -677,14 +677,14 @@ class MaterializeRollbackTest(unittest.TestCase):
         self.assertEqual(self.source.count(needle), 1)
         injected = self.source.replace(
             needle,
-            '                grow = os.open(".env", os.O_WRONLY | os.O_APPEND, dir_fd=live_fd)\\n'
-            '                try:\\n'
-            '                    os.write(grow, b"Z" * (1048576 + 1))\\n'
-            '                finally:\\n'
-            '                    os.close(grow)\\n'
+            '                grow = os.open(".env", os.O_WRONLY | os.O_APPEND, dir_fd=live_fd)\n'
+            '                try:\n'
+            '                    os.write(grow, b"Z" * (1048576 + 1))\n'
+            '                finally:\n'
+            '                    os.close(grow)\n'
             + needle,
         )
-        run = self.harness(self.CREATE + "fail FORCED_LATE_FAILURE\\n", source_override=injected)
+        run = self.harness(self.CREATE + "fail FORCED_LATE_FAILURE\n", source_override=injected)
         self.assertEqual(run.returncode, 2, run.stdout + run.stderr)
         self.assertIn("ROLLBACK_ENV=MISMATCH", run.stdout)
         self.assertIn("CANDIDATE_ROLLBACK=FAILED_REVIEW", run.stdout)
