@@ -105,6 +105,8 @@ fs_op() {
   /usr/bin/python3 -I -S - "$@" <<'KMJ_FS_OP_PY'
 import hashlib, os, stat, sys
 
+MAX_ENV_BYTES = 1048576
+
 def open_dir(path):
     fd = os.open("/", os.O_RDONLY | os.O_DIRECTORY)
     try:
@@ -153,13 +155,22 @@ def remove_exact(dir_fd, name, expected, kind, live_fd=None):
                     return "MISMATCH"
                 def digest(handle):
                     value = hashlib.sha256()
+                    consumed = 0
                     while True:
-                        chunk = os.read(handle, 65536)
+                        # Read at most one byte beyond the approved maximum,
+                        # even if a concurrent writer grows the source.
+                        chunk = os.read(handle, min(65536, MAX_ENV_BYTES + 1 - consumed))
                         if not chunk:
                             break
+                        consumed += len(chunk)
+                        if consumed > MAX_ENV_BYTES:
+                            return None
                         value.update(chunk)
                     return value.digest()
-                if digest(fd) != digest(src):
+                candidate_digest = digest(fd)
+                source_digest = digest(src)
+                if (candidate_digest is None or source_digest is None
+                        or candidate_digest != source_digest):
                     return "MISMATCH"
                 after = os.fstat(fd)
                 source_after = os.fstat(src)
@@ -216,12 +227,22 @@ def main(argv):
         live, cand = open_dir(argv[2]), open_dir(argv[3])
         src = os.open(".env", os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK, dir_fd=live)
         info = os.fstat(src)
-        if not stat.S_ISREG(info.st_mode) or info.st_size > 1048576:
+        if not stat.S_ISREG(info.st_mode) or info.st_size > MAX_ENV_BYTES:
             raise ValueError("LIVE_ENV_UNSAFE")
-        data = b""
-        while chunk := os.read(src, 65536):
-            data += chunk
-        if len(data) != info.st_size:
+        # A pre-read stat is insufficient: the live file can grow mid-copy.
+        # Bound both read volume and memory to MAX_ENV_BYTES + 1.
+        data = bytearray()
+        while len(data) <= MAX_ENV_BYTES:
+            chunk = os.read(src, min(65536, MAX_ENV_BYTES + 1 - len(data)))
+            if not chunk:
+                break
+            data.extend(chunk)
+        if len(data) > MAX_ENV_BYTES:
+            raise ValueError("LIVE_ENV_OVER_LIMIT")
+        after = os.fstat(src)
+        if (len(data) != info.st_size
+                or (after.st_dev, after.st_ino, after.st_size, after.st_mtime_ns, after.st_ctime_ns)
+                != (info.st_dev, info.st_ino, info.st_size, info.st_mtime_ns, info.st_ctime_ns)):
             raise ValueError("LIVE_ENV_CHANGED")
         dst = os.open(".env", os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600, dir_fd=cand)
         # The new file exists even if the first fstat fails. Without an
