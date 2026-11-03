@@ -98,10 +98,9 @@ git_as() { git -c core.fsmonitor=false -C "$CAND" "$@"; }
 readonly MODE="${7:-materialize}" ROLLBACK_ENV_ID="${8:-}" ROLLBACK_LINK_ID="${9:-}"
 [[ "$MODE" == materialize || "$MODE" == rollback ]] || fail BAD_SANDBOX_MODE
 
-# Descriptor-anchored, no-follow file operations. Creation is O_EXCL (never
-# truncates or follows a raced .env/link); removal detaches the name with an
-# atomic rename and unlinks only an object verified to be the exact one this run
-# created. A replaced or foreign object is restored or quarantined, never deleted.
+# Descriptor-anchored no-follow creation. NO unprivileged deletion is
+# allowed: the sandbox has no trusted quarantine directory. The owner-attested
+# root wrapper retires known inodes only under its private same-filesystem dir.
 fs_op() {
   /usr/bin/python3 -I -S - "$@" <<'KMJ_FS_OP_PY'
 import hashlib, os, stat, sys
@@ -132,116 +131,11 @@ def assert_no_detach_leftover(dir_fd):
         if entry.startswith(DETACH_PREFIX):
             raise ValueError("DETACH_LEFTOVER_OWNER_REVIEW")
 
-def verify_detached(dir_fd, q, expected, kind, live_fd):
-    """True only if the object parked at the private name q is exactly ours."""
-    want = stat.S_ISREG if kind == "f" else stat.S_ISLNK
-    try:
-        info = os.stat(q, dir_fd=dir_fd, follow_symlinks=False)
-    except OSError:
-        return False
-    if ident(info) != expected or not want(info.st_mode):
-        return False
-    if kind == "l":
-        # The expected target is part of the identity: never delete a
-        # foreign-target replacement even when inode numbers collide.
-        try:
-            if os.readlink(q, dir_fd=dir_fd) != "../storage/app/public":
-                return False
-            again = os.stat(q, dir_fd=dir_fd, follow_symlinks=False)
-            return stat.S_ISLNK(again.st_mode) and ident(again) == expected
-        except OSError:
-            return False
-    # Unlink/recreate can immediately reuse the SAME dev:inode, so a regular
-    # .env must also match the live source bytes, type, mode, owner and links.
-    if live_fd is None:
-        return False
-    try:
-        fd = os.open(q, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK, dir_fd=dir_fd)
-        src = os.open(".env", os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK, dir_fd=live_fd)
-    except OSError:
-        return False
-    try:
-        before = os.fstat(fd)
-        source_before = os.fstat(src)
-        if (not stat.S_ISREG(before.st_mode) or ident(before) != expected
-                or before.st_nlink != 1 or stat.S_IMODE(before.st_mode) != 0o600
-                or before.st_uid != os.geteuid()
-                or not stat.S_ISREG(source_before.st_mode)
-                or before.st_size != source_before.st_size
-                or before.st_size > MAX_ENV_BYTES):
-            return False
-        def digest(handle):
-            value = hashlib.sha256()
-            consumed = 0
-            while True:
-                # Read at most one byte beyond the approved maximum, even if a
-                # concurrent writer grows the source.
-                chunk = os.read(handle, min(65536, MAX_ENV_BYTES + 1 - consumed))
-                if not chunk:
-                    break
-                consumed += len(chunk)
-                if consumed > MAX_ENV_BYTES:
-                    return None
-                value.update(chunk)
-            return value.digest()
-        candidate_digest = digest(fd)
-        source_digest = digest(src)
-        if (candidate_digest is None or source_digest is None
-                or candidate_digest != source_digest):
-            return False
-        after = os.fstat(fd)
-        source_after = os.fstat(src)
-        key = lambda i: (i.st_dev, i.st_ino, i.st_size, i.st_mtime_ns, i.st_ctime_ns)
-        if key(after) != key(before) or key(source_after) != key(source_before):
-            return False
-        at_name = os.stat(q, dir_fd=dir_fd, follow_symlinks=False)
-        return stat.S_ISREG(at_name.st_mode) and key(at_name) == key(before)
-    except OSError:
-        return False
-    finally:
-        os.close(src)
-        os.close(fd)
-
-def restore_or_quarantine(dir_fd, name, q):
-    # Put a non-matching object back WITHOUT clobbering anything that appeared
-    # at `name` meanwhile (link fails with EEXIST rather than replacing). If it
-    # cannot be restored it stays under the private quarantine name for review.
-    try:
-        os.link(q, name, src_dir_fd=dir_fd, dst_dir_fd=dir_fd, follow_symlinks=False)
-    except OSError:
-        return "QUARANTINED"
-    try:
-        os.unlink(q, dir_fd=dir_fd)
-    except OSError:
-        return "QUARANTINED"
-    return "MISMATCH"
-
 def remove_exact(dir_fd, name, expected, kind, live_fd=None):
-    # Detach-then-verify. unlink(name) would re-resolve the name AFTER any
-    # check, leaving a compare->unlink race. rename() atomically parks whatever
-    # occupies `name` at an unguessable private name; every identity check and
-    # the final unlink then act on that fixed name, so a later swap of `name`
-    # cannot redirect them. A non-matching object is restored no-clobber (it is
-    # briefly absent under its own name) or left quarantined; it is NEVER
-    # deleted. The detach itself is atomic, but restoring a mismatched object
-    # is NOT atomic with it, and a SIGKILL between detach and unlink/restore
-    # leaves a .kmj-detach-* entry that blocks later runs until owner review.
-    want = stat.S_ISREG if kind == "f" else stat.S_ISLNK
-    try:
-        info = os.stat(name, dir_fd=dir_fd, follow_symlinks=False)
-    except FileNotFoundError:
-        return "ABSENT"
-    if ident(info) != expected or not want(info.st_mode):
-        return "MISMATCH"  # cheap prefilter: nothing is touched
-    q = DETACH_PREFIX + os.urandom(16).hex()
-    try:
-        os.rename(name, q, src_dir_fd=dir_fd, dst_dir_fd=dir_fd)
-    except FileNotFoundError:
-        return "ABSENT"
-    if verify_detached(dir_fd, q, expected, kind, live_fd):
-        os.unlink(q, dir_fd=dir_fd)
-        return "REMOVED"
-    return restore_or_quarantine(dir_fd, name, q)
+    # The sandbox cannot delete rollback objects: all removals require the
+    # root-owned same-filesystem quarantine, whose ancestors it cannot write.
+    # The former verify(q)->unlink(q) was unsafe in its writable directory.
+    return "BLOCKED_UNPRIVILEGED"
 
 def emit(created, handle, dir_fd, name, kind, live_fd=None):
     """Deliver the inode id to the parent; if that fails, self-clean right here."""
@@ -334,7 +228,7 @@ def main(argv):
         result = remove_exact(open_dir(argv[2]), argv[3], argv[4], argv[5],
                               open_dir(argv[6]) if argv[5] == "f" and len(argv) > 6 else None)
         print("ROLLBACK_" + argv[3].lstrip(".").upper() + "=" + result)
-        if result in ("MISMATCH", "QUARANTINED"):
+        if result in ("MISMATCH", "QUARANTINED", "BLOCKED_UNPRIVILEGED"):
             sys.exit(3)
     else:
         raise ValueError("BAD_OP")
@@ -353,13 +247,9 @@ link_id="$ROLLBACK_LINK_ID"
 # Never claim an empty receipt list proves successful rollback in that case.
 receipt_uncertain=0
 rollback_candidate() {
-  local bad=0
-  if [[ -n "$link_id" ]]; then fs_op remove "$CAND_APP/public" storage "$link_id" l || bad=1; fi
-  if [[ -n "$env_id" ]]; then fs_op remove "$CAND_APP" .env "$env_id" f "$LIVE_APP" || bad=1; fi
-  if [[ "$bad" == 0 && "$receipt_uncertain" == 0 ]]; then
-    status CANDIDATE_ROLLBACK DONE
-    return 0
-  fi
+  # A sandbox-owned directory is never a safe location for a verified-then-
+  # unlinked name. The parent root wrapper alone handles known inode receipts.
+  # Missing receipts remain owner-review, never a guessed successful cleanup.
   status CANDIDATE_ROLLBACK FAILED_REVIEW
   return 1
 }
@@ -581,6 +471,248 @@ committed=1
 echo 'KMJ_MATERIALIZE_SHARED=PASS'
 KMJ_UNPRIVILEGED_MATERIALIZE
 
+# Root wrapper alone may detach and delete candidate-owned rollback objects.
+# Python is immutable and embedded in this owner-attested Bash script, never
+# loaded from kmjprod-writable candidate checkout.
+root_retire() {
+  /usr/bin/python3 -I -S - "$CAND_APP" "$LIVE_APP" "$1" "$2" <<'KMJ_ROOT_PROTECTED_RETIRE_PY'
+#!/usr/bin/env python3
+"""Fail-closed created-inode retirement via a ROOT-ONLY protected quarantine.
+
+Integration candidate for PR #777. A writable candidate directory cannot host
+the verified-but-not-yet-unlinked temporary pathname: another kmjprod process
+can replace it. Only unlink AFTER atomic rename into a trusted root-only
+directory on the SAME filesystem. Never execute this file as root from a
+writable source tree; owner installation must pin and attest reviewed bytes.
+No network, backup, service, approval, or production-pointer operations.
+"""
+from __future__ import annotations
+
+import hashlib
+import os
+import re
+import stat
+
+MAX_ENV_BYTES = 1 << 20
+INODE = re.compile(r"[1-9][0-9]*:[1-9][0-9]*\Z")
+KINDS = {"env": (".env", "f"), "storage": ("storage", "l")}
+
+
+class Blocked(Exception):
+    pass
+
+
+def _ident(info: os.stat_result) -> str:
+    return f"{info.st_dev}:{info.st_ino}"
+
+
+def _validated_quarantine(qfd: int, source_fd: int, *, trusted_uid: int = 0) -> None:
+    """The calling root wrapper must ALSO attest /root and every ancestor."""
+    q = os.fstat(qfd)
+    source = os.fstat(source_fd)
+    if (not stat.S_ISDIR(q.st_mode) or q.st_uid != trusted_uid
+            or stat.S_IMODE(q.st_mode) != 0o700
+            or q.st_dev != source.st_dev):
+        raise Blocked("PRIVATE_QUARANTINE_NOT_TRUSTED_OR_DIFFERENT_FILESYSTEM")
+
+
+def _source_digest(handle: int) -> tuple[bytes, os.stat_result] | None:
+    before = os.fstat(handle)
+    if (not stat.S_ISREG(before.st_mode) or before.st_size < 1
+            or before.st_size > MAX_ENV_BYTES):
+        return None
+    digest = hashlib.sha256()
+    remaining = MAX_ENV_BYTES + 1
+    while remaining > 0:
+        data = os.read(handle, min(65536, remaining))
+        if not data:
+            break
+        remaining -= len(data)
+        digest.update(data)
+    if remaining == 0:
+        return None
+    after = os.fstat(handle)
+    stamp = lambda item: (
+        item.st_dev, item.st_ino, item.st_size,
+        item.st_mtime_ns, item.st_ctime_ns,
+    )
+    return (digest.digest(), after) if stamp(before) == stamp(after) else None
+
+
+def _parked_is_ours(qfd: int, name: str, expected: str, kind: str,
+                    live_fd: int | None, *, created_uid: int) -> bool:
+    """qfd is protected against unprivileged pathname replacement."""
+    try:
+        observed = os.stat(name, dir_fd=qfd, follow_symlinks=False)
+        if _ident(observed) != expected:
+            return False
+        if kind == "l":
+            if (not stat.S_ISLNK(observed.st_mode)
+                    or observed.st_uid != created_uid
+                    or observed.st_nlink != 1):
+                return False
+            if os.readlink(name, dir_fd=qfd) != "../storage/app/public":
+                return False
+            again = os.stat(name, dir_fd=qfd, follow_symlinks=False)
+            return (stat.S_ISLNK(again.st_mode)
+                    and _ident(again) == expected
+                    and again.st_ctime_ns == observed.st_ctime_ns)
+        if kind != "f" or live_fd is None:
+            return False
+        with_owned = os.open(name, os.O_RDONLY | os.O_NOFOLLOW | os.O_CLOEXEC,
+                             dir_fd=qfd)
+        try:
+            candidate = os.fstat(with_owned)
+            if (not stat.S_ISREG(candidate.st_mode)
+                    or candidate.st_uid != created_uid
+                    or candidate.st_nlink != 1
+                    or stat.S_IMODE(candidate.st_mode) != 0o600
+                    or _ident(candidate) != expected):
+                return False
+            content = _source_digest(with_owned)
+            source = os.open(".env", os.O_RDONLY | os.O_NOFOLLOW | os.O_CLOEXEC,
+                             dir_fd=live_fd)
+            try:
+                baseline = _source_digest(source)
+            finally:
+                os.close(source)
+            if content is None or baseline is None or content[0] != baseline[0]:
+                return False
+            fresh = os.stat(name, dir_fd=qfd, follow_symlinks=False)
+            return (stat.S_ISREG(fresh.st_mode)
+                    and _ident(fresh) == expected
+                    and fresh.st_size == candidate.st_size
+                    and fresh.st_mtime_ns == candidate.st_mtime_ns
+                    and fresh.st_ctime_ns == candidate.st_ctime_ns)
+        finally:
+            os.close(with_owned)
+    except OSError:
+        return False
+
+
+def retire_created(source_fd: int, quarantine_fd: int, *, name: str,
+                   expected_inode: str, kind: str, created_uid: int,
+                   live_fd: int | None = None, trusted_uid: int = 0) -> str:
+    """Root wrapper supplies fixed descriptor-opened candidate and /root qdir.
+
+    The only os.unlink targets the trusted qdir; never the writable candidate.
+    If the candidate name swaps before rename, the foreign inode is parked but
+    never deleted; owner reviews the protected quarantine manually.
+    """
+    if (name, kind) not in KINDS.values() or not INODE.fullmatch(expected_inode):
+        raise Blocked("UNTRUSTED_FIXED_NAME_OR_INODE")
+    _validated_quarantine(quarantine_fd, source_fd, trusted_uid=trusted_uid)
+    try:
+        initial = os.stat(name, dir_fd=source_fd, follow_symlinks=False)
+    except FileNotFoundError:
+        return "ABSENT"
+    if _ident(initial) != expected_inode:
+        return "MISMATCH"
+    if kind == "f" and not stat.S_ISREG(initial.st_mode):
+        return "MISMATCH"
+    if kind == "l" and not stat.S_ISLNK(initial.st_mode):
+        return "MISMATCH"
+    ticket = "kmj-protected-" + os.urandom(20).hex()
+    # O_EXCL semantics: mkdir must create a NEW root-only ticket, and rename
+    # never replaces a preexisting user-owned or previous-review object.
+    os.mkdir(ticket, mode=0o700, dir_fd=quarantine_fd)
+    ticket_fd = os.open(ticket, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW,
+                        dir_fd=quarantine_fd)
+    try:
+        _validated_quarantine(ticket_fd, source_fd, trusted_uid=trusted_uid)
+        try:
+            os.rename(name, "object", src_dir_fd=source_fd, dst_dir_fd=ticket_fd)
+        except FileNotFoundError:
+            os.rmdir(ticket, dir_fd=quarantine_fd)
+            return "ABSENT"
+        if not _parked_is_ours(ticket_fd, "object", expected_inode, kind,
+                              live_fd, created_uid=created_uid):
+            return "QUARANTINED_OWNER_REVIEW"
+        try:
+            # The only unlink targets an inode under a root-owned private dir.
+            os.unlink("object", dir_fd=ticket_fd)
+            os.rmdir(ticket, dir_fd=quarantine_fd)
+        except OSError:
+            return "QUARANTINED_OWNER_REVIEW"
+        return "REMOVED"
+    finally:
+        os.close(ticket_fd)
+
+
+
+import pwd, socket, sys
+
+def open_dir(path, *, root_protected=False):
+    if not path.startswith("/") or ".." in path.split("/"):
+        raise Blocked("BAD_ABSOLUTE_DIRECTORY")
+    flags = os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW | os.O_CLOEXEC
+    fd = os.open("/", flags)
+    try:
+        for part in [part for part in path.split("/") if part]:
+            next_fd = os.open(part, flags, dir_fd=fd)
+            if root_protected:
+                info = os.fstat(next_fd)
+                if (info.st_uid != 0 or not stat.S_ISDIR(info.st_mode)
+                        or (info.st_mode & 0o022)):
+                    os.close(next_fd)
+                    raise Blocked("QUARANTINE_ANCESTOR_UNSAFE")
+            os.close(fd)
+            fd = next_fd
+        return fd
+    except BaseException:
+        os.close(fd)
+        raise
+
+
+def run(argv):
+    if len(argv) != 5 or os.geteuid() != 0 or socket.gethostname().split(".")[0].lower() != "kmj-elite":
+        raise Blocked("ROOT_HOST_OR_ARGS")
+    candidate, live, key, inode = argv[1:]
+    if key not in ("env", "storage") or not INODE.fullmatch(inode):
+        raise Blocked("INVALID_RECEIPT")
+    if (not candidate.startswith("/home/kmjprod/releases/platform-")
+            or not candidate.endswith("/apps/platform")
+            or live == candidate
+            or not live.startswith("/home/kmjprod/releases/platform-")
+            or not live.endswith("/apps/platform")):
+        raise Blocked("RELEASE_PATH_INVALID")
+    source_path = candidate if key == "env" else candidate + "/public"
+    source = open_dir(source_path)
+    live_fd = open_dir(live) if key == "env" else None
+    parent = open_dir("/var/lib", root_protected=True)
+    try:
+        label = "kmj-main-platform-rollback-quarantine"
+        try:
+            os.mkdir(label, mode=0o700, dir_fd=parent)
+        except FileExistsError:
+            pass
+        qfd = os.open(label, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW,
+                      dir_fd=parent)
+        try:
+            name, kind = KINDS[key]
+            state = retire_created(source, qfd, name=name, expected_inode=inode,
+                                   kind=kind, created_uid=pwd.getpwnam("kmjprod").pw_uid,
+                                   live_fd=live_fd, trusted_uid=0)
+            print(state)
+            return 0 if state == "REMOVED" else 3
+        finally:
+            os.close(qfd)
+    finally:
+        os.close(parent)
+        if live_fd is not None:
+            os.close(live_fd)
+        os.close(source)
+
+
+try:
+    raise SystemExit(run(sys.argv))
+except (OSError, Blocked, KeyError, ValueError):
+    print("BLOCKED_ROOT_OWNER_REVIEW")
+    raise SystemExit(3)
+
+KMJ_ROOT_PROTECTED_RETIRE_PY
+}
+
 run_sandbox() {
   systemd-run --quiet --wait --pipe --collect \
     --unit="kmj-materialize-$1-$SHORT" \
@@ -619,22 +751,8 @@ receipt_contract_ok() {
   [[ "$sandbox_rc" == 0 ]] || return 1
   [[ "$(grep -Fxc 'KMJ_MATERIALIZE_SHARED=PASS' <<<"$sandbox_text" || true)" == 1 ]] || return 1
 }
-# A child exit code alone does not prove that its rollback removed every
-# expected object. Require a minimal, exact receipt before forwarding DONE.
-rollback_receipt_ok() {
-  local body="$1" expect_link="$2" offset=0
-  local -a lines=()
-  [[ ${#body} -gt 0 && ${#body} -le 512 ]] || return 1
-  [[ "$expect_link" == 0 || "$expect_link" == 1 ]] || return 1
-  mapfile -t lines <<<"$body"
-  [[ "${#lines[@]}" == "$((2 + expect_link))" ]] || return 1
-  if [[ "$expect_link" == 1 ]]; then
-    [[ "${lines[0]}" =~ ^ROLLBACK_STORAGE=(REMOVED|ABSENT)$ ]] || return 1
-    offset=1
-  fi
-  [[ "${lines[$offset]}" =~ ^ROLLBACK_ENV=(REMOVED|ABSENT)$ ]] || return 1
-  [[ "${lines[$((offset + 1))]}" == CANDIDATE_ROLLBACK=DONE ]] || return 1
-}
+# The unprivileged sandbox can never certify cleanup. Only the actual
+# protected root helper receipt may be used, with no ABSENT success credit.
 
 post_fail() {
   local env_id="" link_id="" env_count link_count receipt_invalid=0 cleanup_rc=0 rollback_text=""
@@ -651,20 +769,24 @@ post_fail() {
     [[ "$link_id" =~ ^[0-9]+:[0-9]+$ ]] || receipt_invalid=1
   fi
   receipt_contract_ok || receipt_invalid=1
-  # If only one inode was safely reported, still attempt the *known* cleanup.
-  # Capture the child receipt so its DONE cannot falsely certify the unknown
-  # orphan; the top-level result remains FAILED_REVIEW.
-  if [[ "$receipt_invalid" == 0 || "$env_count" =~ ^[01]$ && "$link_count" =~ ^[01]$ ]]; then
-    if [[ -n "$env_id$link_id" ]]; then
-      rollback_text="$(run_sandbox rollback rollback "$env_id" "$link_id")" || cleanup_rc=1
+  # Only root may retire the known inodes. A failed sandbox can no longer
+  # unlink through its writable candidate directory. If a receipt is absent,
+  # clean only proven inodes and retain FAILED_REVIEW for owner inspection.
+  if [[ "$env_count" =~ ^[01]$ && "$link_count" =~ ^[01]$ ]]; then
+    if [[ -n "$link_id" ]]; then
+      link_state="$(root_retire storage "$link_id")" || cleanup_rc=1
+      status ROLLBACK_STORAGE "$link_state"
     fi
-  fi
-  if [[ "$receipt_invalid" == 0 && "$cleanup_rc" == 0 ]] && rollback_receipt_ok "$rollback_text" "$link_count"; then
-    printf '%s\n' "$rollback_text"
+    if [[ -n "$env_id" ]]; then
+      env_state="$(root_retire env "$env_id")" || cleanup_rc=1
+      status ROLLBACK_ENV "$env_state"
+    fi
   else
-    if [[ "$receipt_invalid" != 0 && "$cleanup_rc" == 0 && -n "$rollback_text" ]]; then
-      status CANDIDATE_ROLLBACK_KNOWN_INODES ATTEMPTED
-    fi
+    cleanup_rc=1
+  fi
+  if [[ "$receipt_invalid" == 0 && "$cleanup_rc" == 0 ]]; then
+    status CANDIDATE_ROLLBACK DONE
+  else
     status CANDIDATE_ROLLBACK FAILED_REVIEW
   fi
   fail "$1"
