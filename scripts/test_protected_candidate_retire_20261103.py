@@ -76,6 +76,25 @@ class RootQuarantineRollbackTests(unittest.TestCase):
         self.assertFalse(link.is_symlink())
         self.assertEqual(list(self.private.iterdir()), [])
 
+    def test_storage_link_wrong_target_is_quarantined_not_deleted(self):
+        link = self.candidate / "storage"
+        link.symlink_to("../someone-elses-private-storage")
+        receipt = self.inode(link, follow=False)
+        self.assertEqual(self.run_retire("storage", "l", receipt),
+                         "QUARANTINED_OWNER_REVIEW")
+        tickets = list(self.private.iterdir())
+        self.assertEqual(len(tickets), 1)
+        self.assertEqual(os.readlink(tickets[0] / "object"),
+                         "../someone-elses-private-storage")
+
+    def test_env_with_unexpected_permissions_is_not_deleted(self):
+        created = self.env()
+        created.chmod(0o644)
+        receipt = self.inode(created)
+        self.assertEqual(self.run_retire(".env", "f", receipt),
+                         "QUARANTINED_OWNER_REVIEW")
+        self.assertEqual(len(list(self.private.iterdir())), 1)
+
     def test_wrong_receipt_never_moves_or_deletes_candidate(self):
         created = self.env()
         self.assertEqual(
