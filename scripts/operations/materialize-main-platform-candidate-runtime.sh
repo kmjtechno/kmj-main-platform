@@ -135,7 +135,7 @@ def remove_exact(dir_fd, name, expected, kind, live_fd=None):
     # The sandbox cannot delete rollback objects: all removals require the
     # root-owned same-filesystem quarantine, whose ancestors it cannot write.
     # The former verify(q)->unlink(q) was unsafe in its writable directory.
-    return "QUARANTINED"
+    return "BLOCKED_UNPRIVILEGED"
 
 def emit(created, handle, dir_fd, name, kind, live_fd=None):
     """Deliver the inode id to the parent; if that fails, self-clean right here."""
@@ -228,7 +228,7 @@ def main(argv):
         result = remove_exact(open_dir(argv[2]), argv[3], argv[4], argv[5],
                               open_dir(argv[6]) if argv[5] == "f" and len(argv) > 6 else None)
         print("ROLLBACK_" + argv[3].lstrip(".").upper() + "=" + result)
-        if result in ("MISMATCH", "QUARANTINED"):
+        if result in ("MISMATCH", "QUARANTINED", "BLOCKED_UNPRIVILEGED"):
             sys.exit(3)
     else:
         raise ValueError("BAD_OP")
@@ -694,7 +694,7 @@ def run(argv):
                                    kind=kind, created_uid=pwd.getpwnam("kmjprod").pw_uid,
                                    live_fd=live_fd, trusted_uid=0)
             print(state)
-            return 0 if state in ("REMOVED", "ABSENT") else 3
+            return 0 if state == "REMOVED" else 3
         finally:
             os.close(qfd)
     finally:
@@ -751,22 +751,8 @@ receipt_contract_ok() {
   [[ "$sandbox_rc" == 0 ]] || return 1
   [[ "$(grep -Fxc 'KMJ_MATERIALIZE_SHARED=PASS' <<<"$sandbox_text" || true)" == 1 ]] || return 1
 }
-# A child exit code alone does not prove that its rollback removed every
-# expected object. Require a minimal, exact receipt before forwarding DONE.
-rollback_receipt_ok() {
-  local body="$1" expect_link="$2" offset=0
-  local -a lines=()
-  [[ ${#body} -gt 0 && ${#body} -le 512 ]] || return 1
-  [[ "$expect_link" == 0 || "$expect_link" == 1 ]] || return 1
-  mapfile -t lines <<<"$body"
-  [[ "${#lines[@]}" == "$((2 + expect_link))" ]] || return 1
-  if [[ "$expect_link" == 1 ]]; then
-    [[ "${lines[0]}" =~ ^ROLLBACK_STORAGE=(REMOVED|ABSENT)$ ]] || return 1
-    offset=1
-  fi
-  [[ "${lines[$offset]}" =~ ^ROLLBACK_ENV=(REMOVED|ABSENT)$ ]] || return 1
-  [[ "${lines[$((offset + 1))]}" == CANDIDATE_ROLLBACK=DONE ]] || return 1
-}
+# The unprivileged sandbox can never certify cleanup. Only the actual
+# protected root helper receipt may be used, with no ABSENT success credit.
 
 post_fail() {
   local env_id="" link_id="" env_count link_count receipt_invalid=0 cleanup_rc=0 rollback_text=""
