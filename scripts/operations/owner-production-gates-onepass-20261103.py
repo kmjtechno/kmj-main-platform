@@ -237,8 +237,10 @@ def report() -> dict[str, str]:
     result["PRODUCTION_APPROVAL"] = approval_status(pa, "production", prod)
     result["STAGING_POINTER"] = stage
     result["STAGING_APPROVAL"] = approval_status(sa, "staging", prod)
-    result["STAGING_RUNNER"] = installed_digest_state(RUNNER, sa, "runnerSha256")
-    result["STAGING_UNIT_FILE"] = installed_digest_state(UNIT_FILE, sa, "unitSha256")
+    # Never credit a checksum from an invalid/missing owner approval.
+    trusted = sa if result["STAGING_APPROVAL"] == "PASS" else None
+    result["STAGING_RUNNER"] = installed_digest_state(RUNNER, trusted, "runnerSha256")
+    result["STAGING_UNIT_FILE"] = installed_digest_state(UNIT_FILE, trusted, "unitSha256")
     result["STAGING_UNIT_LOAD"] = property(STAGE_UNIT, "LoadState") or "UNKNOWN"
     result["STAGING_UNIT_RELOAD"] = property(STAGE_UNIT, "NeedDaemonReload") or "UNKNOWN"
     result["STAGING_UNIT_ACTIVE"] = property(STAGE_UNIT, "ActiveState") or "UNKNOWN"
