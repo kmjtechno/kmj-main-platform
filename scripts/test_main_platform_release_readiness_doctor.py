@@ -880,7 +880,7 @@ class MaterializeRollbackTest(unittest.TestCase):
             "set -Eeuo pipefail\n"
             "status() { printf '%s=%s\\n' \"$1\" \"$2\"; }\n"
             "fail() { echo \"BLOCKED $1\"; exit 2; }\n"
-            "run_sandbox() { [[ -z \"$4\" ]] || echo ROLLBACK_STORAGE=REMOVED; [[ -z \"$3\" ]] || echo ROLLBACK_ENV=REMOVED; echo CANDIDATE_ROLLBACK=DONE; }\n"
+            "root_retire() { printf REMOVED\\n; }\n"
             + excerpt +
             '\nsandbox_text="$1"\nsandbox_rc="$2"\n'
             'post_fail INJECTED_FAILURE\n'
@@ -929,12 +929,12 @@ class MaterializeRollbackTest(unittest.TestCase):
                     self.assertNotIn("CANDIDATE_ROLLBACK=DONE", out.stdout)
                     self.assertIn("CANDIDATE_ROLLBACK=FAILED_REVIEW", out.stdout)
                     if attempted:
-                        self.assertIn("CANDIDATE_ROLLBACK_KNOWN_INODES=ATTEMPTED", out.stdout)
+                        self.assertTrue("ROLLBACK_STORAGE=REMOVED" in out.stdout or
+                                        "ROLLBACK_ENV=REMOVED" in out.stdout, out.stdout)
 
     def test_root_rejects_malformed_successful_rollback_transcript(self) -> None:
-        # A nonroot rollback subprocess can exit zero but emit incomplete,
-        # duplicate, or contradictory receipts. Root must never forward DONE
-        # unless the ordered receipts attest all required inode removals.
+        # A claimed child rollback success is untrusted. Only the root-only
+        # protected helper's actual result can authorize a DONE receipt.
         source = self.source
         start = source.index('sandbox_text=""\n# A completed materializer')
         end = source.index('\nsandbox_rc=0', start)
@@ -943,7 +943,10 @@ class MaterializeRollbackTest(unittest.TestCase):
             "set -Eeuo pipefail\n"
             "status() { printf '%s=%s\\n' \"$1\" \"$2\"; }\n"
             "fail() { echo \"BLOCKED $1\"; exit 2; }\n"
-            "run_sandbox() { printf '%s\\n' \"$MOCK_ROLLBACK\"; }\n"
+            "root_retire() {\n"
+            "  if [[ \"$ROOT_RESULT\" == REMOVED ]]; then echo REMOVED; return 0; fi\n"
+            "  echo QUARANTINED_OWNER_REVIEW; return 3\n"
+            "}\n"
             + excerpt +
             '\nsandbox_text="$1"\nsandbox_rc=0\n'
             'post_fail INJECTED_ROOT_CHECK\n'
@@ -954,28 +957,22 @@ class MaterializeRollbackTest(unittest.TestCase):
             "PUBLIC_STORAGE_LINK=MIRRORED\n"
             "KMJ_MATERIALIZE_SHARED=PASS"
         )
-        cases = [
-            ("CANDIDATE_ROLLBACK=DONE", False),
-            ("ROLLBACK_ENV=REMOVED\nCANDIDATE_ROLLBACK=DONE", False),
-            ("ROLLBACK_STORAGE=REMOVED\nCANDIDATE_ROLLBACK=DONE", False),
-            ("ROLLBACK_STORAGE=REMOVED\nROLLBACK_ENV=REMOVED", False),
-            ("ROLLBACK_STORAGE=REMOVED\nROLLBACK_ENV=REMOVED\nCANDIDATE_ROLLBACK=FAILED_REVIEW", False),
-            ("ROLLBACK_STORAGE=REMOVED\nROLLBACK_ENV=REMOVED\nCANDIDATE_ROLLBACK=DONE\nCANDIDATE_ROLLBACK=DONE", False),
-            ("ROLLBACK_STORAGE=REMOVED\nROLLBACK_ENV=REMOVED\nCANDIDATE_ROLLBACK=DONE\nUNTRUSTED=YES", False),
-            ("ROLLBACK_STORAGE=REMOVED\nROLLBACK_ENV=REMOVED\nCANDIDATE_ROLLBACK=DONE", True),
-            ("ROLLBACK_STORAGE=ABSENT\nROLLBACK_ENV=ABSENT\nCANDIDATE_ROLLBACK=DONE", True),
-        ]
-        for child_receipt, verified in cases:
-            with self.subTest(receipt=child_receipt):
+        for root_result, done in (("REMOVED", True),
+                                  ("QUARANTINED_OWNER_REVIEW", False)):
+            with self.subTest(root_result=root_result):
                 out = subprocess.run(
                     ["/bin/bash", "-c", script, "--", complete],
                     capture_output=True, text=True, timeout=10,
-                    env={"PATH": "/usr/bin:/bin", "MOCK_ROLLBACK": child_receipt},
+                    env={"PATH": "/usr/bin:/bin", "ROOT_RESULT": root_result,
+                         "MOCK_ROLLBACK": "CANDIDATE_ROLLBACK=DONE"},
                 )
                 self.assertEqual(out.returncode, 2, out.stdout + out.stderr)
                 self.assertIn("BLOCKED INJECTED_ROOT_CHECK", out.stdout)
-                self.assertEqual("CANDIDATE_ROLLBACK=DONE" in out.stdout, verified)
-                self.assertEqual("CANDIDATE_ROLLBACK=FAILED_REVIEW" in out.stdout, not verified)
+                self.assertEqual("CANDIDATE_ROLLBACK=DONE" in out.stdout, done)
+                self.assertEqual("CANDIDATE_ROLLBACK=FAILED_REVIEW" in out.stdout,
+                                 not done)
+                self.assertIn("ROLLBACK_STORAGE=" + root_result, out.stdout)
+                self.assertIn("ROLLBACK_ENV=" + root_result, out.stdout)
 
     def test_root_never_forwards_child_rollback_done_on_partial_failure(self) -> None:
         # Exercise the actual root transcript/receipt dispatcher without
