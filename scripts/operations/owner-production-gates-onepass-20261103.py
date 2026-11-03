@@ -182,7 +182,7 @@ def installed_digest_state(path: Path, approved: dict | None, key: str) -> str:
 def property(unit: str, key: str) -> str | None:
     if unit not in {OFFSITE_UNIT, STAGE_UNIT, PROD_UNIT} or key not in {
         "LoadState", "ActiveState", "Result", "ExecMainStatus", "InvocationID",
-        "NeedDaemonReload", "FragmentPath", "DropInPaths",
+        "NeedDaemonReload", "FragmentPath", "DropInPaths", "ExecStart",
     }:
         return None
     try:
@@ -207,6 +207,28 @@ def classify_ssh_failure(raw: str) -> str:
     if re.search(r"timed out|No route to host|Connection refused|Network is unreachable", raw, re.I):
         return "NETWORK_OR_REMOTE"
     return "UNCLASSIFIED"
+
+
+# A matching path string is only a hint, never an attestation that ssh
+# actually offered that identity or that Google accepted it.
+PINNED_SFTP_CONFIG = b"/etc/kmj-codebridge/offsite-sftp.conf"
+EXECSTART_PATH = re.compile(r"(?:^|\\s)path=(/[A-Za-z0-9._/@+-]{1,240})(?=[\\s;]|$)")
+
+
+def offsite_unit_source_hint() -> str:
+    """Inspect the effective unit executable without printing raw argv/paths."""
+    effective = property(OFFSITE_UNIT, "ExecStart")
+    if not effective or effective.count("path=") != 1 or len(effective) > 4096:
+        return "EXECSTART_NOT_PROVEN"
+    matches = EXECSTART_PATH.findall(effective)
+    if len(matches) != 1 or ".." in Path(matches[0]).parts:
+        return "EXECSTART_NOT_PROVEN"
+    content = protected_bytes(Path(matches[0]), 1 << 20)
+    if content is None:
+        return "EXECUTABLE_NOT_ATTESTED"
+    return ("CONFIG_PATH_REFERENCED_ONLY"
+            if PINNED_SFTP_CONFIG in content else
+            "PINNED_CONFIG_NOT_REFERENCED")
 
 
 def offsite_status() -> tuple[str, str]:
@@ -251,6 +273,9 @@ def report() -> dict[str, str]:
     else:
         result["STAGING_POINTER_MATCH"] = "UNVERIFIABLE_APPROVAL"
     result["OFFSITE_EXIT"], result["OFFSITE_FAILURE_CLASS"] = offsite_status()
+    result["OFFSITE_EXEC_SOURCE_HINT"] = offsite_unit_source_hint()
+    result["OFFSITE_EFFECTIVE_SSH_IDENTITY"] = "NOT_PROVEN"
+    result["REMOTE_AUTHORIZATION"] = "NOT_PROVEN"
     result["BACKUP_RESTORE"] = "NOT_ATTESTED_BY_READONLY_AUDIT"
     result["PRODUCTION_MUTATION"] = "NONE"
     result["AUDIT_MODE"] = "READ_ONLY"
