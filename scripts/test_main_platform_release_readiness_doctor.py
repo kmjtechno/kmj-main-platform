@@ -924,7 +924,7 @@ class MaterializeRollbackTest(unittest.TestCase):
         source = self.source
         start = source.index('sandbox_text=""\n# A completed materializer')
         script = (
-            "set -Eeuo pipefail\n"
+            "set -Eeuo pipefail\n"            "CAND_APP=/dev/null\n"\n
             "status() { printf '%s=%s\\n' \"$1\" \"$2\"; }\n"
             "fail() { echo \"BLOCKED $1\"; exit 2; }\n"
             "runuser() { [[ \"$MOCK_ACL\" == pass ]]; }\n"
