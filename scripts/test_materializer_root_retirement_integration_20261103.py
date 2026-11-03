@@ -163,6 +163,21 @@ class RootRetireIntegrationTests(unittest.TestCase):
     def test_embedded_root_preserves_foreign_concurrent_swap(self):
         self._run_simulated_root(swap_foreign=True)
 
+    def test_private_quarantine_fs_and_permissions_checked_before_candidate_writes(self):
+        s = self.source
+        for gate in (
+            "PROTECTED_QUARANTINE_PARENT_UNSAFE",
+            "PROTECTED_QUARANTINE_PARENT_NOT_ROOT",
+            "PROTECTED_QUARANTINE_PARENT_WRITABLE",
+            "PROTECTED_QUARANTINE_CROSS_FILESYSTEM",
+            "PROTECTED_QUARANTINE_DIR_ATTESTATION",
+        ):
+            self.assertIn(gate, s)
+            self.assertLess(s.index(gate), s.index('fs_op create-env "$LIVE_APP"'))
+        self.assertIn("8#$quarantine_mode", s)
+        self.assertIn('! -L "$QUARANTINE_PARENT"', s)
+        self.assertIn("PRIVATE_QUARANTINE_NOT_TRUSTED_OR_DIFFERENT_FILESYSTEM", s)
+
     def test_bash_parser_and_root_heredoc_syntax(self):
         r = subprocess.run(["bash", "-n", str(SCRIPT)],
                            capture_output=True, text=True, timeout=10)
