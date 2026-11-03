@@ -98,10 +98,9 @@ git_as() { git -c core.fsmonitor=false -C "$CAND" "$@"; }
 readonly MODE="${7:-materialize}" ROLLBACK_ENV_ID="${8:-}" ROLLBACK_LINK_ID="${9:-}"
 [[ "$MODE" == materialize || "$MODE" == rollback ]] || fail BAD_SANDBOX_MODE
 
-# Descriptor-anchored, no-follow file operations. Creation is O_EXCL (never
-# truncates or follows a raced .env/link); removal detaches the name with an
-# atomic rename and unlinks only an object verified to be the exact one this run
-# created. A replaced or foreign object is restored or quarantined, never deleted.
+# Descriptor-anchored no-follow creation. NO unprivileged deletion is
+# allowed: the sandbox has no trusted quarantine directory. The owner-attested
+# root wrapper retires known inodes only under its private same-filesystem dir.
 fs_op() {
   /usr/bin/python3 -I -S - "$@" <<'KMJ_FS_OP_PY'
 import hashlib, os, stat, sys
@@ -248,13 +247,9 @@ link_id="$ROLLBACK_LINK_ID"
 # Never claim an empty receipt list proves successful rollback in that case.
 receipt_uncertain=0
 rollback_candidate() {
-  local bad=0
-  if [[ -n "$link_id" ]]; then fs_op remove "$CAND_APP/public" storage "$link_id" l || bad=1; fi
-  if [[ -n "$env_id" ]]; then fs_op remove "$CAND_APP" .env "$env_id" f "$LIVE_APP" || bad=1; fi
-  if [[ "$bad" == 0 && "$receipt_uncertain" == 0 ]]; then
-    status CANDIDATE_ROLLBACK DONE
-    return 0
-  fi
+  # A sandbox-owned directory is never a safe location for a verified-then-
+  # unlinked name. The parent root wrapper alone handles known inode receipts.
+  # Missing receipts remain owner-review, never a guessed successful cleanup.
   status CANDIDATE_ROLLBACK FAILED_REVIEW
   return 1
 }
