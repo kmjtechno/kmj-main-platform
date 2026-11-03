@@ -120,6 +120,21 @@ class ReadinessDoctorTest(unittest.TestCase):
         (self.candidate / doctor.UI_BUNDLE_FILES[2]).unlink()
         self.assertNotEqual(doctor._ui_bundle_state(self.candidate), "PASS")
 
+    def test_symlinked_compilation_directory_fails_closed(self) -> None:
+        public = self.candidate / "apps/platform/public"
+        build = public / "build"
+        real = public / "outside-build"
+        build.rename(real)
+        build.symlink_to(real, target_is_directory=True)
+        self.assertEqual(doctor._ui_bundle_state(self.candidate), "BUILD_PATH_UNSAFE")
+
+    def test_symlinked_ui_source_parent_fails_closed(self) -> None:
+        services = self.candidate / "apps/platform/resources/js/pages/services"
+        saved = services.with_name("services-real")
+        services.rename(saved)
+        services.symlink_to(saved, target_is_directory=True)
+        self.assertEqual(doctor._ui_bundle_state(self.candidate), "SOURCE_UNSAFE")
+
     def test_fully_prepared_release_is_ready(self) -> None:
         self.materialize()
         self.write_backup()
