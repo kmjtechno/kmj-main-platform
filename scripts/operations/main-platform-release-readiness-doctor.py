@@ -148,6 +148,11 @@ def _ui_bundle_state(candidate: Path) -> str:
     """Fail closed if a purported new-UI release contains only old/static assets."""
     try:
         for name in UI_BUNDLE_FILES:
+            parent = candidate
+            for component in Path(name).parts[:-1]:
+                parent = parent / component
+                if not stat.S_ISDIR(os.lstat(parent).st_mode):
+                    return "SOURCE_UNSAFE"
             info = os.lstat(candidate / name)
             if not stat.S_ISREG(info.st_mode) or info.st_size == 0:
                 return "SOURCE_UNSAFE"
@@ -155,6 +160,8 @@ def _ui_bundle_state(candidate: Path) -> str:
         return "SOURCE_MISSING"
 
     build = candidate / "apps/platform/public/build"
+    if build.is_symlink() or not build.is_dir():
+        return "BUILD_PATH_UNSAFE"
     manifest = build / "manifest.json"
     try:
         info = os.lstat(manifest)
@@ -181,6 +188,11 @@ def _ui_bundle_state(candidate: Path) -> str:
         return "CHUNK_PATH_UNSAFE"
     output = build / relative
     try:
+        parent = build
+        for component in relative.parts[:-1]:
+            parent = parent / component
+            if not stat.S_ISDIR(os.lstat(parent).st_mode):
+                return "CHUNK_PATH_UNSAFE"
         info = os.lstat(output)
         if not stat.S_ISREG(info.st_mode) or info.st_size == 0:
             return "CHUNK_MISSING"
