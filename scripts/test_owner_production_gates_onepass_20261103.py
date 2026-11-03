@@ -115,6 +115,44 @@ class OnepassOwnerAuditTests(unittest.TestCase):
         })()):
             self.assertEqual(audit.offsite_status(), ("EXIT_255", "PUBLICKEY_AUTH_DENIED"))
 
+    def test_effective_unit_source_hint_distinguishes_reference_not_identity(self):
+        fixtures = [
+            ("{ path=/usr/local/libexec/kmj-offsite.sh ; argv[]=/usr/local/libexec/kmj-offsite.sh ; }",
+             b"#!/bin/sh\n# /etc/kmj-codebridge/offsite-sftp.conf\n",
+             "CONFIG_PATH_REFERENCED_ONLY"),
+            ("{ path=/usr/local/libexec/kmj-offsite.sh ; argv[]=/usr/local/libexec/kmj-offsite.sh ; }",
+             b"#!/bin/sh\nexec rsync remote:backup\n",
+             "PINNED_CONFIG_NOT_REFERENCED"),
+            ("{ path=/usr/local/libexec/kmj-offsite.sh ; argv[]=/usr/local/libexec/kmj-offsite.sh ; }",
+             None, "EXECUTABLE_NOT_ATTESTED"),
+        ]
+        for raw, content, expected in fixtures:
+            with self.subTest(expected=expected), \\
+                 patch.object(audit, "property", return_value=raw), \\
+                 patch.object(audit, "protected_bytes", return_value=content) as reader:
+                self.assertEqual(audit.offsite_unit_source_hint(), expected)
+                reader.assert_called_once_with(
+                    Path("/usr/local/libexec/kmj-offsite.sh"), 1 << 20
+                )
+
+    def test_effective_unit_source_rejects_ambiguous_or_traversal(self):
+        for bad in (
+            None,
+            "foo",
+            "{ path=/usr/bin/bash ; path=/usr/bin/env ; }",
+            "{ path=/usr/bin/../tmp/malicious.sh ; }",
+            "{ path=/tmp/a\\nLEAK=SECRET ; }",
+        ):
+            with self.subTest(raw=bad), \\
+                 patch.object(audit, "property", return_value=bad), \\
+                 patch.object(audit, "protected_bytes",
+                              side_effect=AssertionError("must not read arbitrary path")):
+                self.assertEqual(audit.offsite_unit_source_hint(),
+                                 "EXECSTART_NOT_PROVEN")
+        self.assertNotIn("SSH_AUTHENTICATED", audit.offsite_unit_source_hint.__doc__ or "")
+        self.assertIn("OFFSITE_EFFECTIVE_SSH_IDENTITY", SOURCE.read_text())
+        self.assertIn('"NOT_PROVEN"', SOURCE.read_text())
+
     def test_onepass_does_not_perform_mutations_or_claim_restore(self):
         source = SOURCE.read_text()
         self.assertIn("BACKUP_RESTORE", source)
