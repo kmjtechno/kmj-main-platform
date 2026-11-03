@@ -45,6 +45,20 @@ readonly CAND="$ROOT/releases/platform-$SHORT"
 [[ -d "$CAND/.git" && ! -L "$CAND" ]] || fail CANDIDATE_NOT_STAGED
 readonly LIVE_APP="$LIVE/apps/platform"
 readonly CAND_APP="$CAND/apps/platform"
+# Fail before generating candidate secrets when the protected rollback parent
+# cannot support same-filesystem atomic retirement. The final root helper
+# independently reattests all ancestor FDs and destination owner/mode.
+readonly QUARANTINE_PARENT=/var/lib
+[[ -d "$QUARANTINE_PARENT" && ! -L "$QUARANTINE_PARENT" ]] || fail PROTECTED_QUARANTINE_PARENT_UNSAFE
+[[ "$(stat -c '%u' -- "$QUARANTINE_PARENT")" == 0 ]] || fail PROTECTED_QUARANTINE_PARENT_NOT_ROOT
+quarantine_mode="$(stat -c '%a' -- "$QUARANTINE_PARENT")" || fail PROTECTED_QUARANTINE_PARENT_STAT
+[[ "$quarantine_mode" =~ ^[0-7]{3,4}$ ]] || fail PROTECTED_QUARANTINE_PARENT_MODE
+(( (8#$quarantine_mode & 8#022) == 0 )) || fail PROTECTED_QUARANTINE_PARENT_WRITABLE
+[[ "$(stat -c '%d' -- "$QUARANTINE_PARENT")" == "$(stat -c '%d' -- "$CAND_APP")" ]] || fail PROTECTED_QUARANTINE_CROSS_FILESYSTEM
+if [[ -e "$QUARANTINE_PARENT/kmj-main-platform-rollback-quarantine" || -L "$QUARANTINE_PARENT/kmj-main-platform-rollback-quarantine" ]]; then
+  [[ -d "$QUARANTINE_PARENT/kmj-main-platform-rollback-quarantine" && ! -L "$QUARANTINE_PARENT/kmj-main-platform-rollback-quarantine" ]] || fail PROTECTED_QUARANTINE_DIR_UNSAFE
+  [[ "$(stat -c '%u:%a:%d' -- "$QUARANTINE_PARENT/kmj-main-platform-rollback-quarantine")" == "0:700:$(stat -c '%d' -- "$CAND_APP")" ]] || fail PROTECTED_QUARANTINE_DIR_ATTESTATION
+fi
 readonly SHARED="$ROOT/shared/storage"
 [[ -f "$LIVE_APP/.env" && ! -L "$LIVE_APP/.env" ]] || fail LIVE_ENV_MISSING
 [[ -d "$SHARED/app" && ! -L "$SHARED" && ! -L "$SHARED/app" ]] || fail SHARED_STORAGE_NOT_PREPARED
