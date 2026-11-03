@@ -99,8 +99,9 @@ readonly MODE="${7:-materialize}" ROLLBACK_ENV_ID="${8:-}" ROLLBACK_LINK_ID="${9
 [[ "$MODE" == materialize || "$MODE" == rollback ]] || fail BAD_SANDBOX_MODE
 
 # Descriptor-anchored, no-follow file operations. Creation is O_EXCL (never
-# truncates or follows a raced .env/link); removal only unlinks the exact
-# inode this run created, so a replaced or foreign object is left for review.
+# truncates or follows a raced .env/link); removal detaches the name with an
+# atomic rename and unlinks only an object verified to be the exact one this run
+# created. A replaced or foreign object is restored or quarantined, never deleted.
 fs_op() {
   /usr/bin/python3 -I -S - "$@" <<'KMJ_FS_OP_PY'
 import hashlib, os, stat, sys
@@ -122,90 +123,125 @@ def open_dir(path):
 def ident(info):
     return "%d:%d" % (info.st_dev, info.st_ino)
 
+DETACH_PREFIX = ".kmj-detach-"
+
+def assert_no_detach_leftover(dir_fd):
+    # A SIGKILL between detach and unlink/restore can strand a quarantined
+    # object. Never create new artifacts beside an unreviewed one.
+    for entry in os.listdir(dir_fd):
+        if entry.startswith(DETACH_PREFIX):
+            raise ValueError("DETACH_LEFTOVER_OWNER_REVIEW")
+
+def verify_detached(dir_fd, q, expected, kind, live_fd):
+    """True only if the object parked at the private name q is exactly ours."""
+    want = stat.S_ISREG if kind == "f" else stat.S_ISLNK
+    try:
+        info = os.stat(q, dir_fd=dir_fd, follow_symlinks=False)
+    except OSError:
+        return False
+    if ident(info) != expected or not want(info.st_mode):
+        return False
+    if kind == "l":
+        # The expected target is part of the identity: never delete a
+        # foreign-target replacement even when inode numbers collide.
+        try:
+            if os.readlink(q, dir_fd=dir_fd) != "../storage/app/public":
+                return False
+            again = os.stat(q, dir_fd=dir_fd, follow_symlinks=False)
+            return stat.S_ISLNK(again.st_mode) and ident(again) == expected
+        except OSError:
+            return False
+    # Unlink/recreate can immediately reuse the SAME dev:inode, so a regular
+    # .env must also match the live source bytes, type, mode, owner and links.
+    if live_fd is None:
+        return False
+    try:
+        fd = os.open(q, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK, dir_fd=dir_fd)
+        src = os.open(".env", os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK, dir_fd=live_fd)
+    except OSError:
+        return False
+    try:
+        before = os.fstat(fd)
+        source_before = os.fstat(src)
+        if (not stat.S_ISREG(before.st_mode) or ident(before) != expected
+                or before.st_nlink != 1 or stat.S_IMODE(before.st_mode) != 0o600
+                or before.st_uid != os.geteuid()
+                or not stat.S_ISREG(source_before.st_mode)
+                or before.st_size != source_before.st_size
+                or before.st_size > MAX_ENV_BYTES):
+            return False
+        def digest(handle):
+            value = hashlib.sha256()
+            consumed = 0
+            while True:
+                # Read at most one byte beyond the approved maximum, even if a
+                # concurrent writer grows the source.
+                chunk = os.read(handle, min(65536, MAX_ENV_BYTES + 1 - consumed))
+                if not chunk:
+                    break
+                consumed += len(chunk)
+                if consumed > MAX_ENV_BYTES:
+                    return None
+                value.update(chunk)
+            return value.digest()
+        candidate_digest = digest(fd)
+        source_digest = digest(src)
+        if (candidate_digest is None or source_digest is None
+                or candidate_digest != source_digest):
+            return False
+        after = os.fstat(fd)
+        source_after = os.fstat(src)
+        key = lambda i: (i.st_dev, i.st_ino, i.st_size, i.st_mtime_ns, i.st_ctime_ns)
+        if key(after) != key(before) or key(source_after) != key(source_before):
+            return False
+        at_name = os.stat(q, dir_fd=dir_fd, follow_symlinks=False)
+        return stat.S_ISREG(at_name.st_mode) and key(at_name) == key(before)
+    except OSError:
+        return False
+    finally:
+        os.close(src)
+        os.close(fd)
+
+def restore_or_quarantine(dir_fd, name, q):
+    # Put a non-matching object back WITHOUT clobbering anything that appeared
+    # at `name` meanwhile (link fails with EEXIST rather than replacing). If it
+    # cannot be restored it stays under the private quarantine name for review.
+    try:
+        os.link(q, name, src_dir_fd=dir_fd, dst_dir_fd=dir_fd, follow_symlinks=False)
+    except OSError:
+        return "QUARANTINED"
+    try:
+        os.unlink(q, dir_fd=dir_fd)
+    except OSError:
+        return "QUARANTINED"
+    return "MISMATCH"
+
 def remove_exact(dir_fd, name, expected, kind, live_fd=None):
-    # Best effort, NOT atomic: the name is re-resolved by unlink after the
-    # identity check. The only principal able to swap the name is the nonroot
-    # sandbox user inside its own private candidate mount, so no privilege
-    # boundary is crossed; a mismatch is left in place for owner review.
+    # Detach-then-verify. unlink(name) would re-resolve the name AFTER any
+    # check, leaving a compare->unlink race. rename() atomically parks whatever
+    # occupies `name` at an unguessable private name; every identity check and
+    # the final unlink then act on that fixed name, so a later swap of `name`
+    # cannot redirect them. A non-matching object is restored no-clobber (it is
+    # briefly absent under its own name) or left quarantined; it is NEVER
+    # deleted. The detach itself is atomic, but restoring a mismatched object
+    # is NOT atomic with it, and a SIGKILL between detach and unlink/restore
+    # leaves a .kmj-detach-* entry that blocks later runs until owner review.
+    want = stat.S_ISREG if kind == "f" else stat.S_ISLNK
     try:
         info = os.stat(name, dir_fd=dir_fd, follow_symlinks=False)
     except FileNotFoundError:
         return "ABSENT"
-    want = stat.S_ISREG if kind == "f" else stat.S_ISLNK
     if ident(info) != expected or not want(info.st_mode):
-        return "MISMATCH"
-    # Unlink/recreate can immediately reuse the SAME dev:inode. A regular
-    # .env replacement must additionally match the live source bytes, type,
-    # mode and link count. This is defensive, not an atomic compare-and-unlink.
-    if kind == "f":
-        if live_fd is None:
-            return "MISMATCH"
-        try:
-            fd = os.open(name, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK, dir_fd=dir_fd)
-            src = os.open(".env", os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK, dir_fd=live_fd)
-            try:
-                before = os.fstat(fd)
-                source_before = os.fstat(src)
-                if (not stat.S_ISREG(before.st_mode) or ident(before) != expected
-                        or before.st_nlink != 1 or stat.S_IMODE(before.st_mode) != 0o600
-                        or before.st_uid != os.geteuid()
-                        or not stat.S_ISREG(source_before.st_mode)
-                        or before.st_size != source_before.st_size
-                        or before.st_size > 1048576):
-                    return "MISMATCH"
-                def digest(handle):
-                    value = hashlib.sha256()
-                    consumed = 0
-                    while True:
-                        # Read at most one byte beyond the approved maximum,
-                        # even if a concurrent writer grows the source.
-                        chunk = os.read(handle, min(65536, MAX_ENV_BYTES + 1 - consumed))
-                        if not chunk:
-                            break
-                        consumed += len(chunk)
-                        if consumed > MAX_ENV_BYTES:
-                            return None
-                        value.update(chunk)
-                    return value.digest()
-                candidate_digest = digest(fd)
-                source_digest = digest(src)
-                if (candidate_digest is None or source_digest is None
-                        or candidate_digest != source_digest):
-                    return "MISMATCH"
-                after = os.fstat(fd)
-                source_after = os.fstat(src)
-                if ((after.st_dev, after.st_ino, after.st_size, after.st_mtime_ns, after.st_ctime_ns)
-                        != (before.st_dev, before.st_ino, before.st_size, before.st_mtime_ns, before.st_ctime_ns)
-                        or (source_after.st_dev, source_after.st_ino, source_after.st_size,
-                            source_after.st_mtime_ns, source_after.st_ctime_ns)
-                        != (source_before.st_dev, source_before.st_ino, source_before.st_size,
-                            source_before.st_mtime_ns, source_before.st_ctime_ns)):
-                    return "MISMATCH"
-                at_name = os.stat(name, dir_fd=dir_fd, follow_symlinks=False)
-                if (not stat.S_ISREG(at_name.st_mode)
-                        or (at_name.st_dev, at_name.st_ino, at_name.st_size,
-                            at_name.st_mtime_ns, at_name.st_ctime_ns)
-                        != (before.st_dev, before.st_ino, before.st_size,
-                            before.st_mtime_ns, before.st_ctime_ns)):
-                    return "MISMATCH"
-            finally:
-                os.close(src)
-                os.close(fd)
-        except OSError:
-            return "MISMATCH"
-    # For the public symlink, the expected target is part of the rollback identity.
-    # Never delete a foreign-target replacement even when inode numbers match.
-    if kind == "l":
-        try:
-            if os.readlink(name, dir_fd=dir_fd) != "../storage/app/public":
-                return "MISMATCH"
-            again = os.stat(name, dir_fd=dir_fd, follow_symlinks=False)
-            if not stat.S_ISLNK(again.st_mode) or ident(again) != expected:
-                return "MISMATCH"
-        except OSError:
-            return "MISMATCH"
-    os.unlink(name, dir_fd=dir_fd)
-    return "REMOVED"
+        return "MISMATCH"  # cheap prefilter: nothing is touched
+    q = DETACH_PREFIX + os.urandom(16).hex()
+    try:
+        os.rename(name, q, src_dir_fd=dir_fd, dst_dir_fd=dir_fd)
+    except FileNotFoundError:
+        return "ABSENT"
+    if verify_detached(dir_fd, q, expected, kind, live_fd):
+        os.unlink(q, dir_fd=dir_fd)
+        return "REMOVED"
+    return restore_or_quarantine(dir_fd, name, q)
 
 def emit(created, handle, dir_fd, name, kind, live_fd=None):
     """Deliver the inode id to the parent; if that fails, self-clean right here."""
@@ -225,6 +261,7 @@ def main(argv):
     op = argv[1]
     if op == "create-env":
         live, cand = open_dir(argv[2]), open_dir(argv[3])
+        assert_no_detach_leftover(cand)
         src = os.open(".env", os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK, dir_fd=live)
         info = os.fstat(src)
         if not stat.S_ISREG(info.st_mode) or info.st_size > MAX_ENV_BYTES:
@@ -263,6 +300,7 @@ def main(argv):
         emit(created, dst, cand, ".env", "f", live)
     elif op == "create-link":
         pub = open_dir(argv[2])
+        assert_no_detach_leftover(pub)
         os.symlink("../storage/app/public", "storage", dir_fd=pub)
         # This name may have been replaced between symlink and lstat; if
         # attestation fails, leave it for owner review, not a blind unlink.
@@ -296,7 +334,7 @@ def main(argv):
         result = remove_exact(open_dir(argv[2]), argv[3], argv[4], argv[5],
                               open_dir(argv[6]) if argv[5] == "f" and len(argv) > 6 else None)
         print("ROLLBACK_" + argv[3].lstrip(".").upper() + "=" + result)
-        if result == "MISMATCH":
+        if result in ("MISMATCH", "QUARANTINED"):
             sys.exit(3)
     else:
         raise ValueError("BAD_OP")
@@ -648,6 +686,11 @@ done <<<"$sandbox_text"
 [[ "$sandbox_rc" == 0 ]] || post_fail "SANDBOX_FAILED_$sandbox_rc"
 grep -Fxq 'KMJ_MATERIALIZE_SHARED=PASS' <<<"$sandbox_text" || post_fail SANDBOX_PASS_MISSING
 receipt_contract_ok || post_fail SANDBOX_RECEIPTS_UNVERIFIED
+# A SIGKILL between detach and unlink/restore strands a quarantined object.
+shopt -s nullglob
+detach_leftovers=("$CAND_APP"/.kmj-detach-* "$CAND_APP/public"/.kmj-detach-*)
+shopt -u nullglob
+[[ ${#detach_leftovers[@]} -eq 0 ]] || post_fail DETACH_LEFTOVER_REVIEW
 
 runuser -u www-data -- test -r "$CAND_APP/public/index.php" || post_fail NGINX_PUBLIC_UNREADABLE
 runuser -u www-data -- test -r "$CAND_APP/public/assets/kmj-codebridge-icon.png" || post_fail NGINX_ICON_UNREADABLE
