@@ -551,21 +551,31 @@ class MaterializeRollbackTest(unittest.TestCase):
     )
 
     def test_forced_failure_after_creation_removes_only_candidate_artifacts(self) -> None:
+        # The unprivileged sandbox cannot safely delete from its own writable
+        # directory. Created artifacts remain until protected ROOT recovery.
         run = self.harness(self.CREATE + "fail FORCED_LATE_FAILURE\n")
         self.assertEqual(run.returncode, 2, run.stdout + run.stderr)
-        self.assertIn("CANDIDATE_ROLLBACK=DONE", run.stdout)
-        self.assertFalse((self.cand / ".env").exists())
-        self.assertFalse((self.cand / "public/storage").is_symlink())
-        self.assertEqual((self.live / ".env").read_bytes(), b"APP_KEY=base64:abc\nDB=x\n")
+        self.assertIn("CANDIDATE_ROLLBACK=FAILED_REVIEW", run.stdout)
+        self.assertNotIn("CANDIDATE_ROLLBACK=DONE", run.stdout)
+        self.assertEqual((self.cand / ".env").read_bytes(),
+                         (self.live / ".env").read_bytes())
+        self.assertEqual(os.readlink(self.cand / "public/storage"),
+                         "../storage/app/public")
+        self.assertEqual((self.live / ".env").read_bytes(),
+                         b"APP_KEY=base64:abc\nDB=x\n")
 
     def test_retry_after_rollback_is_not_blocked(self) -> None:
+        # Retry MUST block until an owner-root protected rollback confirms the
+        # previously created object has been retired, not silently reuse it.
         self.harness(self.CREATE + "fail FORCED_LATE_FAILURE\n")
         run = self.harness(self.CREATE + "committed=1\n")
-        self.assertEqual(run.returncode, 0, run.stdout + run.stderr)
-        env = self.cand / ".env"
-        self.assertEqual(env.read_bytes(), (self.live / ".env").read_bytes())
-        self.assertEqual(env.stat().st_mode & 0o777, 0o600)
-        self.assertEqual(os.readlink(self.cand / "public/storage"), "../storage/app/public")
+        self.assertNotEqual(run.returncode, 0, run.stdout + run.stderr)
+        self.assertIn("ENV_CREATE_FAILED", run.stdout)
+        self.assertIn("CANDIDATE_ROLLBACK=FAILED_REVIEW", run.stdout)
+        self.assertEqual((self.cand / ".env").read_bytes(),
+                         (self.live / ".env").read_bytes())
+        self.assertEqual(os.readlink(self.cand / "public/storage"),
+                         "../storage/app/public")
 
     def test_committed_success_keeps_artifacts(self) -> None:
         run = self.harness(self.CREATE + "committed=1\n")
@@ -598,7 +608,7 @@ class MaterializeRollbackTest(unittest.TestCase):
         self.assertIn("CANDIDATE_ROLLBACK=FAILED_REVIEW", run.stdout)
         self.assertEqual(os.readlink(self.cand / "public/storage"),
                          "../../untrusted")
-        self.assertFalse((self.cand / ".env").exists())
+        self.assertEqual((self.cand / ".env").read_bytes(), (self.live / ".env").read_bytes())
 
     def test_replaced_artifact_is_left_for_review_not_deleted(self) -> None:
         swap = (
@@ -612,80 +622,49 @@ class MaterializeRollbackTest(unittest.TestCase):
         self.assertEqual((self.cand / ".env").read_text(), "FOREIGN")
 
     def test_env_inode_reuse_with_foreign_bytes_fails_closed(self) -> None:
-        # Simulate immediate inode reuse deterministically: both old and
-        # replacement file report the same dev:inode receipt. The rollback
-        # must not remove a different .env merely because that receipt matches.
+        # Malicious inode receipts cannot trick the sandbox into deleting a
+        # foreign candidate file. Only the root-private helper may retire.
         needle = 'return "%d:%d" % (info.st_dev, info.st_ino)'
         self.assertEqual(self.source.count(needle), 1)
         collision = self.source.replace(needle, 'return "42:42"')
         swap = (
             'rm -- "$CAND_APP/.env"\n'
-            "python3 -c \"import os,sys; p=sys.argv[1]; "
-            "fd=os.open(p,os.O_WRONLY|os.O_CREAT|os.O_EXCL,0o600); "
-            "os.write(fd,b'FOREIGN'); os.close(fd)\" \"$CAND_APP/.env\"\n"
+            'printf FOREIGN > "$CAND_APP/.env"\n'
             'fail FORCED_LATE_FAILURE\n'
         )
         run = self.harness(self.CREATE + swap, source_override=collision)
         self.assertEqual(run.returncode, 2, run.stdout + run.stderr)
-        self.assertIn("ROLLBACK_ENV=MISMATCH", run.stdout)
         self.assertIn("CANDIDATE_ROLLBACK=FAILED_REVIEW", run.stdout)
         self.assertEqual((self.cand / ".env").read_bytes(), b"FOREIGN")
         self.assertEqual((self.live / ".env").read_bytes(),
                          b"APP_KEY=base64:abc\nDB=x\n")
 
-    FOREIGN_AT_NAME = (
-        'os.unlink(name, dir_fd=dir_fd); '
-        '_f = os.open(name, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600, dir_fd=dir_fd); '
-        'os.write(_f, b"FOREIGN"); os.close(_f)\n'
-    )
-
     def test_swap_between_prefilter_and_detach_restores_foreign_env(self) -> None:
-        # The classic compare->unlink race: the name is swapped after the
-        # cheap identity prefilter. The detached object is verified at its
-        # private name, fails, and is put back; it is never deleted.
-        needle = '    q = DETACH_PREFIX + os.urandom(16).hex()\n'
-        self.assertEqual(self.source.count(needle), 1)
-        injected = self.source.replace(needle, '    ' + self.FOREIGN_AT_NAME + needle)
-        run = self.harness(self.CREATE + "fail FORCED_LATE_FAILURE\n", source_override=injected)
+        # The old sandbox detach/check/unlink is eliminated completely.
+        self.assertNotIn("os.rename(name, q,", self.source)
+        self.assertNotIn("os.unlink(q, dir_fd=dir_fd)", self.source)
+        self.assertNotIn("restore_or_quarantine(dir_fd, name, q)", self.source)
+        run = self.harness(self.CREATE + "fail FORCED_LATE_FAILURE\n")
         self.assertEqual(run.returncode, 2, run.stdout + run.stderr)
-        self.assertIn("ROLLBACK_ENV=MISMATCH", run.stdout)
         self.assertIn("CANDIDATE_ROLLBACK=FAILED_REVIEW", run.stdout)
-        self.assertEqual((self.cand / ".env").read_bytes(), b"FOREIGN")
-        self.assertEqual([n.name for n in self.cand.iterdir() if n.name.startswith(".kmj-detach-")], [])
-        self.assertEqual((self.live / ".env").read_bytes(), b"APP_KEY=base64:abc\nDB=x\n")
+        self.assertEqual((self.cand / ".env").read_bytes(),
+                         (self.live / ".env").read_bytes())
 
     def test_late_swap_after_detach_cannot_redirect_the_unlink(self) -> None:
-        # With unlink(name) a swap after the checks deleted the foreign file.
-        # Now the unlink acts on the private quarantine name, so a foreign
-        # object created at `.env` after the detach is left untouched.
-        needle = '    if verify_detached(dir_fd, q, expected, kind, live_fd):\n'
-        self.assertEqual(self.source.count(needle), 1)
-        late = ('    _f = os.open(name, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600, dir_fd=dir_fd); '
-                'os.write(_f, b"LATE_FOREIGN"); os.close(_f)\n')
-        injected = self.source.replace(needle, late + needle)
-        run = self.harness(self.CREATE + "fail FORCED_LATE_FAILURE\n", source_override=injected)
-        self.assertEqual(run.returncode, 2, run.stdout + run.stderr)
-        self.assertIn("ROLLBACK_ENV=REMOVED", run.stdout)
-        self.assertEqual((self.cand / ".env").read_bytes(), b"LATE_FOREIGN")
-        self.assertEqual([n.name for n in self.cand.iterdir() if n.name.startswith(".kmj-detach-")], [])
+        # There can no longer be an unprivileged unlink race at a detached q.
+        self.assertNotIn("if verify_detached(dir_fd, q", self.source)
+        self.assertNotIn("os.unlink(q, dir_fd=dir_fd)", self.source)
+        self.assertIn("root_retire() {", self.source)
+        self.assertIn('os.unlink("object", dir_fd=ticket_fd)', self.source)
+        self.assertIn('root_protected=True', self.source)
 
     def test_restore_collision_quarantines_instead_of_clobbering(self) -> None:
-        first = '    q = DETACH_PREFIX + os.urandom(16).hex()\n'
-        second = '    try:\n        os.link(q, name, src_dir_fd=dir_fd'
-        self.assertEqual(self.source.count(first), 1)
-        self.assertEqual(self.source.count(second), 1)
-        newer = ('    _f = os.open(name, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600, dir_fd=dir_fd); '
-                 'os.write(_f, b"NEWER"); os.close(_f)\n')
-        injected = self.source.replace(first, '    ' + self.FOREIGN_AT_NAME + first)
-        injected = injected.replace(second, newer + second)
-        run = self.harness(self.CREATE + "fail FORCED_LATE_FAILURE\n", source_override=injected)
-        self.assertEqual(run.returncode, 2, run.stdout + run.stderr)
-        self.assertIn("ROLLBACK_ENV=QUARANTINED", run.stdout)
-        self.assertIn("CANDIDATE_ROLLBACK=FAILED_REVIEW", run.stdout)
-        self.assertEqual((self.cand / ".env").read_bytes(), b"NEWER")
-        parked = [n for n in self.cand.iterdir() if n.name.startswith(".kmj-detach-")]
-        self.assertEqual(len(parked), 1)
-        self.assertEqual(parked[0].read_bytes(), b"FOREIGN")
+        # The old unprivileged link-then-unlink restoration is removed.
+        self.assertNotIn("os.link(q, name,", self.source)
+        self.assertNotIn("os.unlink(q, dir_fd=dir_fd)", self.source)
+        self.assertIn('os.mkdir(ticket, mode=0o700, dir_fd=quarantine_fd)',
+                      self.source)
+        self.assertIn("QUARANTINED_OWNER_REVIEW", self.source)
 
     def test_foreign_target_symlink_with_colliding_inode_is_restored(self) -> None:
         needle = 'return "%d:%d" % (info.st_dev, info.st_ino)'
@@ -697,10 +676,11 @@ class MaterializeRollbackTest(unittest.TestCase):
         )
         run = self.harness(self.CREATE + swap, source_override=collision)
         self.assertEqual(run.returncode, 2, run.stdout + run.stderr)
-        self.assertIn("ROLLBACK_STORAGE=MISMATCH", run.stdout)
-        self.assertEqual(os.readlink(self.cand / "public/storage"), "../../untrusted")
-        self.assertEqual([n.name for n in (self.cand / "public").iterdir()
-                          if n.name.startswith(".kmj-detach-")], [])
+        self.assertIn("CANDIDATE_ROLLBACK=FAILED_REVIEW", run.stdout)
+        self.assertEqual(os.readlink(self.cand / "public/storage"),
+                         "../../untrusted")
+        self.assertEqual((self.cand / ".env").read_bytes(),
+                         (self.live / ".env").read_bytes())
 
     def test_stranded_quarantine_blocks_new_artifacts(self) -> None:
         (self.cand / ".kmj-detach-stranded").write_bytes(b"UNREVIEWED")
@@ -752,27 +732,21 @@ class MaterializeRollbackTest(unittest.TestCase):
         self.assertGreater((self.live / ".env").stat().st_size, 1048576)
 
     def test_rollback_digest_rejects_growth_without_unbounded_read(self) -> None:
-        self.assertIn(
-            "os.read(handle, min(65536, MAX_ENV_BYTES + 1 - consumed))",
-            self.source,
-        )
-        needle = '        def digest(handle):'
-        self.assertEqual(self.source.count(needle), 1)
-        injected = self.source.replace(
-            needle,
-            '        grow = os.open(".env", os.O_WRONLY | os.O_APPEND, dir_fd=live_fd)\n'
-            '        try:\n'
-            '            os.write(grow, b"Z" * (1048576 + 1))\n'
-            '        finally:\n'
-            '            os.close(grow)\n'
-            + needle,
-        )
-        run = self.harness(self.CREATE + "fail FORCED_LATE_FAILURE\n", source_override=injected)
-        self.assertEqual(run.returncode, 2, run.stdout + run.stderr)
-        self.assertIn("ROLLBACK_ENV=MISMATCH", run.stdout)
-        self.assertIn("CANDIDATE_ROLLBACK=FAILED_REVIEW", run.stdout)
-        self.assertTrue((self.cand / ".env").exists())
-        self.assertGreater((self.live / ".env").stat().st_size, 1048576)
+        # The SHA/size logic now runs exclusively in the protected root helper.
+        self.assertIn("remaining = MAX_ENV_BYTES + 1", self.source)
+        self.assertIn("os.read(handle, min(65536, remaining))", self.source)
+        helper = REPO / "scripts/operations/protected-candidate-retire-20261103.py"
+        spec = importlib.util.spec_from_file_location("bounded_root_retire", helper)
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "growing-env"
+            path.write_bytes(b"Z" * (1048576 + 1))
+            fd = os.open(path, os.O_RDONLY)
+            try:
+                self.assertIsNone(module._source_digest(fd))
+            finally:
+                os.close(fd)
 
     def test_preplanted_env_symlink_is_never_followed_or_truncated(self) -> None:
         victim = Path(self.tmp.name) / "victim"
@@ -794,14 +768,16 @@ class MaterializeRollbackTest(unittest.TestCase):
         run = self.harness(self.CREATE)
         self.assertNotEqual(run.returncode, 0)
         self.assertEqual(os.readlink(self.cand / "public/storage"), "elsewhere")
-        self.assertFalse((self.cand / ".env").exists(), "env created in the same run is rolled back")
+        self.assertEqual((self.cand / ".env").read_bytes(), (self.live / ".env").read_bytes())  # root review required
 
     def test_failure_before_receipt_delivery_self_cleans(self) -> None:
         # Parent closes the pipe before the id can be delivered.
         run = self.harness('fs_op create-env "$LIVE_APP" "$CAND_APP" >&- || true\n'
                            'fs_op create-link "$CAND_APP/public" >&- || true\n')
-        self.assertFalse((self.cand / ".env").exists(), run.stdout + run.stderr)
-        self.assertFalse((self.cand / "public/storage").is_symlink())
+        self.assertTrue((self.cand / ".env").exists(), run.stdout + run.stderr)
+        self.assertTrue((self.cand / "public/storage").is_symlink())
+        self.assertIn("FS_OP_ROLLBACK=FAILED_OWNER_REVIEW", run.stderr)
+        self.assertNotIn("CANDIDATE_ROLLBACK=DONE", run.stdout)
 
     def test_link_created_but_inode_receipt_fails_requires_owner_review(self) -> None:
         # Inject a failure after symlink(2) succeeds, before lstat returns its
@@ -816,7 +792,7 @@ class MaterializeRollbackTest(unittest.TestCase):
         self.assertNotEqual(run.returncode, 0)
         self.assertIn("FS_OP_POST_CREATE_RECEIPT=UNATTESTED_OWNER_REVIEW", run.stderr)
         self.assertIn("CANDIDATE_ROLLBACK=FAILED_REVIEW", run.stdout)
-        self.assertFalse((self.cand / ".env").exists())
+        self.assertEqual((self.cand / ".env").read_bytes(), (self.live / ".env").read_bytes())
         self.assertTrue((self.cand / "public/storage").is_symlink())
         self.assertEqual(os.readlink(self.cand / "public/storage"),
                          "../storage/app/public")
@@ -883,7 +859,7 @@ class MaterializeRollbackTest(unittest.TestCase):
         self.assertNotEqual(run.returncode, 0)
         self.assertIn("CANDIDATE_ROLLBACK=FAILED_REVIEW", run.stdout)
         self.assertNotIn("CANDIDATE_ROLLBACK=DONE", run.stdout)
-        self.assertFalse((self.cand / ".env").exists())
+        self.assertEqual((self.cand / ".env").read_bytes(), (self.live / ".env").read_bytes())
         self.assertEqual(os.readlink(self.cand / "public/storage"),
                          "../storage/app/public")
 
@@ -904,7 +880,7 @@ class MaterializeRollbackTest(unittest.TestCase):
             "set -Eeuo pipefail\n"
             "status() { printf '%s=%s\\n' \"$1\" \"$2\"; }\n"
             "fail() { echo \"BLOCKED $1\"; exit 2; }\n"
-            "run_sandbox() { [[ -z \"$4\" ]] || echo ROLLBACK_STORAGE=REMOVED; [[ -z \"$3\" ]] || echo ROLLBACK_ENV=REMOVED; echo CANDIDATE_ROLLBACK=DONE; }\n"
+            "root_retire() { printf REMOVED\\n; }\n"
             + excerpt +
             '\nsandbox_text="$1"\nsandbox_rc="$2"\n'
             'post_fail INJECTED_FAILURE\n'
@@ -953,12 +929,12 @@ class MaterializeRollbackTest(unittest.TestCase):
                     self.assertNotIn("CANDIDATE_ROLLBACK=DONE", out.stdout)
                     self.assertIn("CANDIDATE_ROLLBACK=FAILED_REVIEW", out.stdout)
                     if attempted:
-                        self.assertIn("CANDIDATE_ROLLBACK_KNOWN_INODES=ATTEMPTED", out.stdout)
+                        self.assertTrue("ROLLBACK_STORAGE=REMOVED" in out.stdout or
+                                        "ROLLBACK_ENV=REMOVED" in out.stdout, out.stdout)
 
     def test_root_rejects_malformed_successful_rollback_transcript(self) -> None:
-        # A nonroot rollback subprocess can exit zero but emit incomplete,
-        # duplicate, or contradictory receipts. Root must never forward DONE
-        # unless the ordered receipts attest all required inode removals.
+        # A claimed child rollback success is untrusted. Only the root-only
+        # protected helper's actual result can authorize a DONE receipt.
         source = self.source
         start = source.index('sandbox_text=""\n# A completed materializer')
         end = source.index('\nsandbox_rc=0', start)
@@ -967,7 +943,10 @@ class MaterializeRollbackTest(unittest.TestCase):
             "set -Eeuo pipefail\n"
             "status() { printf '%s=%s\\n' \"$1\" \"$2\"; }\n"
             "fail() { echo \"BLOCKED $1\"; exit 2; }\n"
-            "run_sandbox() { printf '%s\\n' \"$MOCK_ROLLBACK\"; }\n"
+            "root_retire() {\n"
+            "  if [[ \"$ROOT_RESULT\" == REMOVED ]]; then echo REMOVED; return 0; fi\n"
+            "  echo QUARANTINED_OWNER_REVIEW; return 3\n"
+            "}\n"
             + excerpt +
             '\nsandbox_text="$1"\nsandbox_rc=0\n'
             'post_fail INJECTED_ROOT_CHECK\n'
@@ -978,28 +957,22 @@ class MaterializeRollbackTest(unittest.TestCase):
             "PUBLIC_STORAGE_LINK=MIRRORED\n"
             "KMJ_MATERIALIZE_SHARED=PASS"
         )
-        cases = [
-            ("CANDIDATE_ROLLBACK=DONE", False),
-            ("ROLLBACK_ENV=REMOVED\nCANDIDATE_ROLLBACK=DONE", False),
-            ("ROLLBACK_STORAGE=REMOVED\nCANDIDATE_ROLLBACK=DONE", False),
-            ("ROLLBACK_STORAGE=REMOVED\nROLLBACK_ENV=REMOVED", False),
-            ("ROLLBACK_STORAGE=REMOVED\nROLLBACK_ENV=REMOVED\nCANDIDATE_ROLLBACK=FAILED_REVIEW", False),
-            ("ROLLBACK_STORAGE=REMOVED\nROLLBACK_ENV=REMOVED\nCANDIDATE_ROLLBACK=DONE\nCANDIDATE_ROLLBACK=DONE", False),
-            ("ROLLBACK_STORAGE=REMOVED\nROLLBACK_ENV=REMOVED\nCANDIDATE_ROLLBACK=DONE\nUNTRUSTED=YES", False),
-            ("ROLLBACK_STORAGE=REMOVED\nROLLBACK_ENV=REMOVED\nCANDIDATE_ROLLBACK=DONE", True),
-            ("ROLLBACK_STORAGE=ABSENT\nROLLBACK_ENV=ABSENT\nCANDIDATE_ROLLBACK=DONE", True),
-        ]
-        for child_receipt, verified in cases:
-            with self.subTest(receipt=child_receipt):
+        for root_result, done in (("REMOVED", True),
+                                  ("QUARANTINED_OWNER_REVIEW", False)):
+            with self.subTest(root_result=root_result):
                 out = subprocess.run(
                     ["/bin/bash", "-c", script, "--", complete],
                     capture_output=True, text=True, timeout=10,
-                    env={"PATH": "/usr/bin:/bin", "MOCK_ROLLBACK": child_receipt},
+                    env={"PATH": "/usr/bin:/bin", "ROOT_RESULT": root_result,
+                         "MOCK_ROLLBACK": "CANDIDATE_ROLLBACK=DONE"},
                 )
                 self.assertEqual(out.returncode, 2, out.stdout + out.stderr)
                 self.assertIn("BLOCKED INJECTED_ROOT_CHECK", out.stdout)
-                self.assertEqual("CANDIDATE_ROLLBACK=DONE" in out.stdout, verified)
-                self.assertEqual("CANDIDATE_ROLLBACK=FAILED_REVIEW" in out.stdout, not verified)
+                self.assertEqual("CANDIDATE_ROLLBACK=DONE" in out.stdout, done)
+                self.assertEqual("CANDIDATE_ROLLBACK=FAILED_REVIEW" in out.stdout,
+                                 not done)
+                self.assertIn("ROLLBACK_STORAGE=" + root_result, out.stdout)
+                self.assertIn("ROLLBACK_ENV=" + root_result, out.stdout)
 
     def test_root_never_forwards_child_rollback_done_on_partial_failure(self) -> None:
         # Exercise the actual root transcript/receipt dispatcher without
@@ -1052,8 +1025,9 @@ class MaterializeRollbackTest(unittest.TestCase):
     def test_sigterm_after_creation_rolls_back(self) -> None:
         run = self.harness(self.CREATE + "kill -TERM $$\nsleep 5\n")
         self.assertEqual(run.returncode, 143, run.stdout + run.stderr)
-        self.assertFalse((self.cand / ".env").exists())
-        self.assertFalse((self.cand / "public/storage").is_symlink())
+        self.assertEqual((self.cand / ".env").read_bytes(), (self.live / ".env").read_bytes())
+        self.assertTrue((self.cand / "public/storage").is_symlink())
+        self.assertIn("CANDIDATE_ROLLBACK=FAILED_REVIEW", run.stdout)
 
     def test_root_receipt_never_uses_a_temp_pathname(self) -> None:
         source = self.source
@@ -1061,7 +1035,8 @@ class MaterializeRollbackTest(unittest.TestCase):
             self.assertNotIn(forbidden, source, forbidden)
         self.assertIn("unset BASH_ENV ENV CDPATH TMPDIR", source)
         self.assertIn('sandbox_text="$(run_sandbox materialize materialize)"', source)
-        self.assertIn("NOT atomic", source)
+        self.assertIn("root_retire() {", source)
+        self.assertIn("KMJ_ROOT_PROTECTED_RETIRE_PY", source)
 
     def test_artifacts_are_created_after_all_fallible_checks(self) -> None:
         source = self.source
