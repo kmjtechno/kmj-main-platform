@@ -127,8 +127,8 @@ class OnepassOwnerAuditTests(unittest.TestCase):
              None, "EXECUTABLE_NOT_ATTESTED"),
         ]
         for raw, content, expected in fixtures:
-            with self.subTest(expected=expected), \\
-                 patch.object(audit, "property", return_value=raw), \\
+            with self.subTest(expected=expected), \
+                 patch.object(audit, "property", return_value=raw), \
                  patch.object(audit, "protected_bytes", return_value=content) as reader:
                 self.assertEqual(audit.offsite_unit_source_hint(), expected)
                 reader.assert_called_once_with(
@@ -143,8 +143,8 @@ class OnepassOwnerAuditTests(unittest.TestCase):
             "{ path=/usr/bin/../tmp/malicious.sh ; }",
             "{ path=/tmp/a\\nLEAK=SECRET ; }",
         ):
-            with self.subTest(raw=bad), \\
-                 patch.object(audit, "property", return_value=bad), \\
+            with self.subTest(raw=bad), \
+                 patch.object(audit, "property", return_value=bad), \
                  patch.object(audit, "protected_bytes",
                               side_effect=AssertionError("must not read arbitrary path")):
                 self.assertEqual(audit.offsite_unit_source_hint(),
