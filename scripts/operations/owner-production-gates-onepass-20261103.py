@@ -249,6 +249,62 @@ def offsite_status() -> tuple[str, str]:
         return "EXIT_255", "JOURNAL_UNAVAILABLE"
 
 
+# Advisory ONLY. Exact candidate may be a separate bind mount even if the
+# releases parent is on the same st_dev; the root materializer MUST recheck it.
+QUARANTINE_PARENT = Path("/var/lib")
+QUARANTINE_DIR = QUARANTINE_PARENT / "kmj-main-platform-rollback-quarantine"
+RELEASES_PARENT = Path("/home/kmjprod/releases")
+
+
+def _fixed_dir(path: Path):
+    """lstat every fixed component, rejecting symlinks (read-only snapshot)."""
+    if not path.is_absolute() or ".." in path.parts:
+        return None
+    current = Path("/")
+    try:
+        record = os.lstat(current)
+        if not stat.S_ISDIR(record.st_mode):
+            return None
+        for part in path.parts[1:]:
+            current = current / part
+            record = os.lstat(current)
+            if not stat.S_ISDIR(record.st_mode):
+                return None
+        return record
+    except OSError:
+        return None
+
+
+def quarantine_root_readonly_hints() -> tuple[str, str]:
+    """No mount/FS or ownership claim for the actual candidate release."""
+    for root_path in (Path("/"), Path("/var"), QUARANTINE_PARENT):
+        info = _fixed_dir(root_path)
+        if (info is None or info.st_uid != 0
+                or (info.st_mode & 0o022)):
+            return "ROOT_PARENT_UNTRUSTED", "UNVERIFIED"
+    q_parent = _fixed_dir(QUARANTINE_PARENT)
+    try:
+        q = os.lstat(QUARANTINE_DIR)
+    except FileNotFoundError:
+        q = None
+    except OSError:
+        return "QUARANTINE_UNVERIFIED", "UNVERIFIED"
+    if q is None:
+        q_state = "PRIVATE_DIRECTORY_NOT_INSTALLED"
+    elif (not stat.S_ISDIR(q.st_mode) or q.st_uid != 0
+          or stat.S_IMODE(q.st_mode) != 0o700
+          or q.st_dev != q_parent.st_dev):
+        return "QUARANTINE_UNTRUSTED", "UNVERIFIED"
+    else:
+        q_state = "EXISTING_PRIVATE_0700"
+    releases = _fixed_dir(RELEASES_PARENT)
+    if releases is None:
+        return q_state, "RELEASES_PARENT_UNVERIFIED"
+    if releases.st_dev != q_parent.st_dev:
+        return q_state, "DIFFERENT_FILESYSTEM_PARENT"
+    return q_state, "SAME_FILESYSTEM_PARENT_HINT_ONLY"
+
+
 def report() -> dict[str, str]:
     result = {}
     prod = pointer(PROD_LINK, "production")
@@ -276,6 +332,8 @@ def report() -> dict[str, str]:
     result["OFFSITE_EXEC_SOURCE_HINT"] = offsite_unit_source_hint()
     result["OFFSITE_EFFECTIVE_SSH_IDENTITY"] = "NOT_PROVEN"
     result["REMOTE_AUTHORIZATION"] = "NOT_PROVEN"
+    (result["ROOT_QUARANTINE_DIRECTORY"],
+     result["ROOT_QUARANTINE_FS_HINT"]) = quarantine_root_readonly_hints()
     result["BACKUP_RESTORE"] = "NOT_ATTESTED_BY_READONLY_AUDIT"
     result["PRODUCTION_MUTATION"] = "NONE"
     result["AUDIT_MODE"] = "READ_ONLY"
