@@ -633,6 +633,89 @@ class MaterializeRollbackTest(unittest.TestCase):
         self.assertEqual((self.live / ".env").read_bytes(),
                          b"APP_KEY=base64:abc\nDB=x\n")
 
+    FOREIGN_AT_NAME = (
+        'os.unlink(name, dir_fd=dir_fd); '
+        '_f = os.open(name, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600, dir_fd=dir_fd); '
+        'os.write(_f, b"FOREIGN"); os.close(_f)\n'
+    )
+
+    def test_swap_between_prefilter_and_detach_restores_foreign_env(self) -> None:
+        # The classic compare->unlink race: the name is swapped after the
+        # cheap identity prefilter. The detached object is verified at its
+        # private name, fails, and is put back; it is never deleted.
+        needle = '    q = DETACH_PREFIX + os.urandom(16).hex()\n'
+        self.assertEqual(self.source.count(needle), 1)
+        injected = self.source.replace(needle, '    ' + self.FOREIGN_AT_NAME + needle)
+        run = self.harness(self.CREATE + "fail FORCED_LATE_FAILURE\n", source_override=injected)
+        self.assertEqual(run.returncode, 2, run.stdout + run.stderr)
+        self.assertIn("ROLLBACK_ENV=MISMATCH", run.stdout)
+        self.assertIn("CANDIDATE_ROLLBACK=FAILED_REVIEW", run.stdout)
+        self.assertEqual((self.cand / ".env").read_bytes(), b"FOREIGN")
+        self.assertEqual([n.name for n in self.cand.iterdir() if n.name.startswith(".kmj-detach-")], [])
+        self.assertEqual((self.live / ".env").read_bytes(), b"APP_KEY=base64:abc\nDB=x\n")
+
+    def test_late_swap_after_detach_cannot_redirect_the_unlink(self) -> None:
+        # With unlink(name) a swap after the checks deleted the foreign file.
+        # Now the unlink acts on the private quarantine name, so a foreign
+        # object created at `.env` after the detach is left untouched.
+        needle = '    if verify_detached(dir_fd, q, expected, kind, live_fd):\n'
+        self.assertEqual(self.source.count(needle), 1)
+        late = ('    _f = os.open(name, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600, dir_fd=dir_fd); '
+                'os.write(_f, b"LATE_FOREIGN"); os.close(_f)\n')
+        injected = self.source.replace(needle, late + needle)
+        run = self.harness(self.CREATE + "fail FORCED_LATE_FAILURE\n", source_override=injected)
+        self.assertEqual(run.returncode, 2, run.stdout + run.stderr)
+        self.assertIn("ROLLBACK_ENV=REMOVED", run.stdout)
+        self.assertEqual((self.cand / ".env").read_bytes(), b"LATE_FOREIGN")
+        self.assertEqual([n.name for n in self.cand.iterdir() if n.name.startswith(".kmj-detach-")], [])
+
+    def test_restore_collision_quarantines_instead_of_clobbering(self) -> None:
+        first = '    q = DETACH_PREFIX + os.urandom(16).hex()\n'
+        second = '    try:\n        os.link(q, name, src_dir_fd=dir_fd'
+        self.assertEqual(self.source.count(first), 1)
+        self.assertEqual(self.source.count(second), 1)
+        newer = ('    _f = os.open(name, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600, dir_fd=dir_fd); '
+                 'os.write(_f, b"NEWER"); os.close(_f)\n')
+        injected = self.source.replace(first, '    ' + self.FOREIGN_AT_NAME + first)
+        injected = injected.replace(second, newer + second)
+        run = self.harness(self.CREATE + "fail FORCED_LATE_FAILURE\n", source_override=injected)
+        self.assertEqual(run.returncode, 2, run.stdout + run.stderr)
+        self.assertIn("ROLLBACK_ENV=QUARANTINED", run.stdout)
+        self.assertIn("CANDIDATE_ROLLBACK=FAILED_REVIEW", run.stdout)
+        self.assertEqual((self.cand / ".env").read_bytes(), b"NEWER")
+        parked = [n for n in self.cand.iterdir() if n.name.startswith(".kmj-detach-")]
+        self.assertEqual(len(parked), 1)
+        self.assertEqual(parked[0].read_bytes(), b"FOREIGN")
+
+    def test_foreign_target_symlink_with_colliding_inode_is_restored(self) -> None:
+        needle = 'return "%d:%d" % (info.st_dev, info.st_ino)'
+        collision = self.source.replace(needle, 'return "42:42"')
+        swap = (
+            'rm -- "$CAND_APP/public/storage"\n'
+            'ln -s ../../untrusted "$CAND_APP/public/storage"\n'
+            'fail FORCED_LATE_FAILURE\n'
+        )
+        run = self.harness(self.CREATE + swap, source_override=collision)
+        self.assertEqual(run.returncode, 2, run.stdout + run.stderr)
+        self.assertIn("ROLLBACK_STORAGE=MISMATCH", run.stdout)
+        self.assertEqual(os.readlink(self.cand / "public/storage"), "../../untrusted")
+        self.assertEqual([n.name for n in (self.cand / "public").iterdir()
+                          if n.name.startswith(".kmj-detach-")], [])
+
+    def test_stranded_quarantine_blocks_new_artifacts(self) -> None:
+        (self.cand / ".kmj-detach-stranded").write_bytes(b"UNREVIEWED")
+        run = self.harness(self.CREATE)
+        self.assertNotEqual(run.returncode, 0, run.stdout + run.stderr)
+        self.assertIn("FS_OP_FAILED=ValueError", run.stderr)
+        self.assertFalse((self.cand / ".env").exists())
+        self.assertEqual((self.cand / ".kmj-detach-stranded").read_bytes(), b"UNREVIEWED")
+
+    def test_root_wrapper_rejects_stranded_quarantine_before_pass(self) -> None:
+        source = self.source
+        self.assertIn('.kmj-detach-*', source)
+        self.assertLess(source.index('post_fail DETACH_LEFTOVER_REVIEW'),
+                        source.index('echo "KMJ_MATERIALIZE=PASS"'))
+
     def test_live_env_exact_size_limit_can_be_copied(self) -> None:
         (self.live / ".env").write_bytes(b"K" * 1048576)
         run = self.harness(
@@ -673,15 +756,15 @@ class MaterializeRollbackTest(unittest.TestCase):
             "os.read(handle, min(65536, MAX_ENV_BYTES + 1 - consumed))",
             self.source,
         )
-        needle = '                def digest(handle):'
+        needle = '        def digest(handle):'
         self.assertEqual(self.source.count(needle), 1)
         injected = self.source.replace(
             needle,
-            '                grow = os.open(".env", os.O_WRONLY | os.O_APPEND, dir_fd=live_fd)\n'
-            '                try:\n'
-            '                    os.write(grow, b"Z" * (1048576 + 1))\n'
-            '                finally:\n'
-            '                    os.close(grow)\n'
+            '        grow = os.open(".env", os.O_WRONLY | os.O_APPEND, dir_fd=live_fd)\n'
+            '        try:\n'
+            '            os.write(grow, b"Z" * (1048576 + 1))\n'
+            '        finally:\n'
+            '            os.close(grow)\n'
             + needle,
         )
         run = self.harness(self.CREATE + "fail FORCED_LATE_FAILURE\n", source_override=injected)
