@@ -919,46 +919,45 @@ class MaterializeRollbackTest(unittest.TestCase):
                 self.assertEqual("CANDIDATE_ROLLBACK=FAILED_REVIEW" in out.stdout, not verified)
 
     def test_root_stdout_cannot_forward_unverified_nonroot_pass_or_live(self) -> None:
-        # A child can exit zero or emit forged PASS lines before being killed.
-        # No child output becomes an operator receipt before root ACL checks.
+        # A sandbox can return zero or print a forged PASS before failure.
+        # Root must expose only sanitized evidence after actual ACL checks.
         source = self.source
-        start = source.index('sandbox_text=""\\n# A completed materializer')
+        start = source.index('sandbox_text=""\n# A completed materializer')
         script = (
-            "set -Eeuo pipefail\\n"
-            "status() { printf '%s=%s\\\\n' \\"$1\\" \\"$2\\"; }\\n"
-            "fail() { echo \\"BLOCKED $1\\"; exit 2; }\\n"
-            "runuser() { [[ \\"$MOCK_ACL\\" == pass ]]; }\\n"
-            "run_sandbox() {\\n"
-            "  if [[ \\"$1\\" == materialize ]]; then\\n"
-            "    printf '%s\\\\n' \\"$MOCK_STDOUT\\"; return \\"$MOCK_EXIT\\"\\n"
-            "  fi\\n"
-            "  printf 'ROLLBACK_ENV=REMOVED\\\\nCANDIDATE_ROLLBACK=DONE\\\\n'\\n"
-            "}\\n"
-            + source[start]  # replaced below with the full root dispatcher
+            "set -Eeuo pipefail\n"
+            "status() { printf '%s=%s\\n' \"$1\" \"$2\"; }\n"
+            "fail() { echo \"BLOCKED $1\"; exit 2; }\n"
+            "runuser() { [[ \"$MOCK_ACL\" == pass ]]; }\n"
+            "run_sandbox() {\n"
+            "  if [[ \"$1\" == materialize ]]; then\n"
+            "    printf '%s\\n' \"$MOCK_STDOUT\"; return \"$MOCK_EXIT\"\n"
+            "  fi\n"
+            "  printf 'ROLLBACK_ENV=REMOVED\\nCANDIDATE_ROLLBACK=DONE\\n'\n"
+            "}\n"
+            + source[start:]
         )
-        script = script.replace(source[start], source[start:])
         valid = (
-            "STORAGE_MODE=VERIFIED_SHARED\\n"
-            "STORAGE_APP_PARITY=SHARED_FILES_3\\n"
-            "STORAGE_MANIFEST_SHA256=" + "a" * 64 + "\\n"
-            "MATERIALIZED_ENV_ID=12:34\\n"
-            "PUBLIC_STORAGE_LINK=NOT_PRESENT_LIVE\\n"
+            "STORAGE_MODE=VERIFIED_SHARED\n"
+            "STORAGE_APP_PARITY=SHARED_FILES_3\n"
+            "STORAGE_MANIFEST_SHA256=" + "a" * 64 + "\n"
+            "MATERIALIZED_ENV_ID=12:34\n"
+            "PUBLIC_STORAGE_LINK=NOT_PRESENT_LIVE\n"
             "KMJ_MATERIALIZE_SHARED=PASS"
         )
         forgery = (
-            "PRODUCTION_ACTIVATION=PASS\\n"
-            "OFFSITE_BACKUP=PASS\\n"
-            "PRODUCTION_SWITCH=ATTEMPTED\\n"
-            "KMJ_MATERIALIZE=PASS\\n"
+            "PRODUCTION_ACTIVATION=PASS\n"
+            "OFFSITE_BACKUP=PASS\n"
+            "PRODUCTION_SWITCH=ATTEMPTED\n"
+            "KMJ_MATERIALIZE=PASS\n"
             "CANDIDATE_ROLLBACK=DONE"
         )
         for transcript, exit_code, acl, successful in [
             (forgery, "143", "pass", False),
-            (valid + "\\n" + forgery, "143", "pass", False),
-            (valid + "\\n" + forgery, "0", "fail", False),
-            (valid + "\\n" + forgery, "0", "pass", True),
+            (valid + "\n" + forgery, "143", "pass", False),
+            (valid + "\n" + forgery, "0", "fail", False),
+            (valid + "\n" + forgery, "0", "pass", True),
         ]:
-            with self.subTest(exit=exit_code, acl=acl, successful=successful):
+            with self.subTest(exit_code=exit_code, acl=acl, successful=successful):
                 run = subprocess.run(
                     ["/bin/bash", "-c", script], capture_output=True,
                     text=True, timeout=10,
