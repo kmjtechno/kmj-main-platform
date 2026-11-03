@@ -608,7 +608,7 @@ class MaterializeRollbackTest(unittest.TestCase):
         self.assertIn("CANDIDATE_ROLLBACK=FAILED_REVIEW", run.stdout)
         self.assertEqual(os.readlink(self.cand / "public/storage"),
                          "../../untrusted")
-        self.assertFalse((self.cand / ".env").exists())
+        self.assertEqual((self.cand / ".env").read_bytes(), (self.live / ".env").read_bytes())
 
     def test_replaced_artifact_is_left_for_review_not_deleted(self) -> None:
         swap = (
@@ -768,14 +768,16 @@ class MaterializeRollbackTest(unittest.TestCase):
         run = self.harness(self.CREATE)
         self.assertNotEqual(run.returncode, 0)
         self.assertEqual(os.readlink(self.cand / "public/storage"), "elsewhere")
-        self.assertFalse((self.cand / ".env").exists(), "env created in the same run is rolled back")
+        self.assertEqual((self.cand / ".env").read_bytes(), (self.live / ".env").read_bytes())  # root review required
 
     def test_failure_before_receipt_delivery_self_cleans(self) -> None:
         # Parent closes the pipe before the id can be delivered.
         run = self.harness('fs_op create-env "$LIVE_APP" "$CAND_APP" >&- || true\n'
                            'fs_op create-link "$CAND_APP/public" >&- || true\n')
-        self.assertFalse((self.cand / ".env").exists(), run.stdout + run.stderr)
-        self.assertFalse((self.cand / "public/storage").is_symlink())
+        self.assertTrue((self.cand / ".env").exists(), run.stdout + run.stderr)
+        self.assertTrue((self.cand / "public/storage").is_symlink())
+        self.assertIn("FS_OP_ROLLBACK=FAILED_OWNER_REVIEW", run.stderr)
+        self.assertNotIn("CANDIDATE_ROLLBACK=DONE", run.stdout)
 
     def test_link_created_but_inode_receipt_fails_requires_owner_review(self) -> None:
         # Inject a failure after symlink(2) succeeds, before lstat returns its
@@ -790,7 +792,7 @@ class MaterializeRollbackTest(unittest.TestCase):
         self.assertNotEqual(run.returncode, 0)
         self.assertIn("FS_OP_POST_CREATE_RECEIPT=UNATTESTED_OWNER_REVIEW", run.stderr)
         self.assertIn("CANDIDATE_ROLLBACK=FAILED_REVIEW", run.stdout)
-        self.assertFalse((self.cand / ".env").exists())
+        self.assertEqual((self.cand / ".env").read_bytes(), (self.live / ".env").read_bytes())
         self.assertTrue((self.cand / "public/storage").is_symlink())
         self.assertEqual(os.readlink(self.cand / "public/storage"),
                          "../storage/app/public")
@@ -857,7 +859,7 @@ class MaterializeRollbackTest(unittest.TestCase):
         self.assertNotEqual(run.returncode, 0)
         self.assertIn("CANDIDATE_ROLLBACK=FAILED_REVIEW", run.stdout)
         self.assertNotIn("CANDIDATE_ROLLBACK=DONE", run.stdout)
-        self.assertFalse((self.cand / ".env").exists())
+        self.assertEqual((self.cand / ".env").read_bytes(), (self.live / ".env").read_bytes())
         self.assertEqual(os.readlink(self.cand / "public/storage"),
                          "../storage/app/public")
 
@@ -1026,8 +1028,9 @@ class MaterializeRollbackTest(unittest.TestCase):
     def test_sigterm_after_creation_rolls_back(self) -> None:
         run = self.harness(self.CREATE + "kill -TERM $$\nsleep 5\n")
         self.assertEqual(run.returncode, 143, run.stdout + run.stderr)
-        self.assertFalse((self.cand / ".env").exists())
-        self.assertFalse((self.cand / "public/storage").is_symlink())
+        self.assertEqual((self.cand / ".env").read_bytes(), (self.live / ".env").read_bytes())
+        self.assertTrue((self.cand / "public/storage").is_symlink())
+        self.assertIn("CANDIDATE_ROLLBACK=FAILED_REVIEW", run.stdout)
 
     def test_root_receipt_never_uses_a_temp_pathname(self) -> None:
         source = self.source
@@ -1035,7 +1038,8 @@ class MaterializeRollbackTest(unittest.TestCase):
             self.assertNotIn(forbidden, source, forbidden)
         self.assertIn("unset BASH_ENV ENV CDPATH TMPDIR", source)
         self.assertIn('sandbox_text="$(run_sandbox materialize materialize)"', source)
-        self.assertIn("NOT atomic", source)
+        self.assertIn("root_retire() {", source)
+        self.assertIn("KMJ_ROOT_PROTECTED_RETIRE_PY", source)
 
     def test_artifacts_are_created_after_all_fallible_checks(self) -> None:
         source = self.source
