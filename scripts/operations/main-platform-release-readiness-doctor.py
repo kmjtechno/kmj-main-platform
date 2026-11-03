@@ -131,6 +131,78 @@ def _git(tree: Path, *args: str) -> str | None:
     return result.stdout.strip() if result.returncode == 0 else None
 
 
+# Minimum *source + built chunk* UI evidence for the owner-requested release.
+# This is advisory and cannot replace staging/production runtime attestations.
+UI_BUNDLE_FILES = (
+    "apps/platform/resources/js/pages/services/codebridge-workspace.tsx",
+    "apps/platform/resources/js/pages/services/codebridge.tsx",
+    "apps/platform/routes/codebridge-workspace.php",
+    "apps/platform/database/migrations/2026_10_29_120000_create_codebridge_workspace_tables.php",
+    "apps/platform/database/migrations/2026_10_30_120000_create_codebridge_workspace_jobs.php",
+    "apps/platform/database/migrations/2026_10_31_120000_create_codebridge_workspace_tool_proposals.php",
+)
+UI_BUNDLE_PAGE = "resources/js/pages/services/codebridge-workspace.tsx"
+
+
+def _ui_bundle_state(candidate: Path) -> str:
+    """Fail closed if a purported new-UI release contains only old/static assets."""
+    try:
+        for name in UI_BUNDLE_FILES:
+            parent = candidate
+            for component in Path(name).parts[:-1]:
+                parent = parent / component
+                if not stat.S_ISDIR(os.lstat(parent).st_mode):
+                    return "SOURCE_UNSAFE"
+            info = os.lstat(candidate / name)
+            if not stat.S_ISREG(info.st_mode) or info.st_size == 0:
+                return "SOURCE_UNSAFE"
+    except OSError:
+        return "SOURCE_MISSING"
+
+    build = candidate / "apps/platform/public/build"
+    if build.is_symlink() or not build.is_dir():
+        return "BUILD_PATH_UNSAFE"
+    manifest = build / "manifest.json"
+    try:
+        info = os.lstat(manifest)
+        if (not stat.S_ISREG(info.st_mode) or info.st_size < 2
+                or info.st_size > 8 * 1024 * 1024):
+            return "MANIFEST_UNSAFE"
+        data = json.loads(manifest.read_text("utf-8"))
+    except (OSError, ValueError, UnicodeError):
+        return "MANIFEST_INVALID"
+    if not isinstance(data, dict):
+        return "MANIFEST_INVALID"
+    item = data.get(UI_BUNDLE_PAGE)
+    if not isinstance(item, dict):
+        return "CHUNK_NOT_IN_MANIFEST"
+    rel = item.get("file")
+    if not isinstance(rel, str):
+        return "CHUNK_PATH_UNSAFE"
+    # A manifest entry alone does not prove that the emitted JavaScript exists.
+    relative = Path(rel)
+    if (relative.is_absolute() or len(relative.parts) < 2
+            or relative.parts[0] != "assets"
+            or any(part in ("..", ".") for part in relative.parts)
+            or relative.suffix != ".js"):
+        return "CHUNK_PATH_UNSAFE"
+    output = build / relative
+    try:
+        parent = build
+        for component in relative.parts[:-1]:
+            parent = parent / component
+            if not stat.S_ISDIR(os.lstat(parent).st_mode):
+                return "CHUNK_PATH_UNSAFE"
+        info = os.lstat(output)
+        if not stat.S_ISREG(info.st_mode) or info.st_size == 0:
+            return "CHUNK_MISSING"
+        if not output.resolve(strict=True).is_relative_to(build.resolve(strict=True)):
+            return "CHUNK_PATH_UNSAFE"
+    except OSError:
+        return "CHUNK_MISSING"
+    return "PASS"
+
+
 def _web_user_can_read(path: Path) -> bool | None:
     """Read-only check that nginx's www-data can read a candidate file."""
     try:
@@ -187,6 +259,11 @@ def evaluate(target: str, paths: Paths = Paths(), require_root: bool = True,
         lines.append(f"CANDIDATE={state}")
         if state != "PASS":
             blockers.append("CANDIDATE_" + state)
+        if state == "PASS":
+            ui_state = _ui_bundle_state(candidate)
+            lines.append("CANDIDATE_UI_BUNDLE=" + ui_state)
+            if ui_state != "PASS":
+                blockers.append("CANDIDATE_UI_BUNDLE_" + ui_state)
         # The activation controller does not provide runtime state; the
         # candidate must already carry the live .env (materialize step).
         env = candidate / "apps/platform/.env"

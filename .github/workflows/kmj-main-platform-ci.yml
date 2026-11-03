@@ -49,6 +49,23 @@ jobs:
           DB_CONNECTION: sqlite
           DB_DATABASE: ${{ github.workspace }}/apps/platform/database/database.sqlite
         run: bash "$GITHUB_WORKSPACE/ops/self-hosted-runner/verify-platform.sh"
+      - name: Verify real Vite output includes the owner AI Workspace
+        run: |
+          set -euo pipefail
+          python3 -I - <<'PY'
+          import importlib.util
+          import pathlib
+          import sys
+          source = pathlib.Path("scripts/operations/main-platform-release-readiness-doctor.py")
+          spec = importlib.util.spec_from_file_location("kmj_ui_release_attest", source)
+          module = importlib.util.module_from_spec(spec)
+          sys.modules[spec.name] = module
+          spec.loader.exec_module(module)
+          state = module._ui_bundle_state(pathlib.Path.cwd())
+          print("BUILT_OWNER_UI_BUNDLE=" + state)
+          if state != "PASS":
+              raise SystemExit(2)
+          PY
       - name: Show frontend format patch when verification fails
         if: failure()
         run: |

@@ -48,10 +48,16 @@ class ReadinessDoctorTest(unittest.TestCase):
         git(work, "init", "-q")
         git(work, "config", "user.email", "t@example.invalid")
         git(work, "config", "user.name", "t")
-        for item in doctor.ARTIFACTS:
+        for item in (*doctor.ARTIFACTS, *doctor.UI_BUNDLE_FILES):
             file = work / item
             file.parent.mkdir(parents=True, exist_ok=True)
             file.write_text("x")
+        build = work / "apps/platform/public/build"
+        (build / "assets").mkdir(parents=True, exist_ok=True)
+        (build / "assets/codebridge-workspace-test.js").write_text("/* built */")
+        (build / "manifest.json").write_text(json.dumps({
+            doctor.UI_BUNDLE_PAGE: {"file": "assets/codebridge-workspace-test.js"}
+        }))
         (work / ".gitignore").write_text("apps/platform/.env\n")
         git(work, "add", "-A")
         git(work, "commit", "-q", "-m", "c")
@@ -89,6 +95,45 @@ class ReadinessDoctorTest(unittest.TestCase):
 
     def run_doctor(self):
         return doctor.evaluate(self.sha, self.paths, require_root=False)
+
+    def test_missing_workspace_source_is_not_ui_release_ready(self) -> None:
+        target = self.candidate / doctor.UI_BUNDLE_FILES[0]
+        target.unlink()
+        self.assertEqual(doctor._ui_bundle_state(self.candidate), "SOURCE_MISSING")
+
+    def test_workspace_chunk_missing_or_untrusted_manifest_fails_closed(self) -> None:
+        build = self.candidate / "apps/platform/public/build"
+        payload = json.loads((build / "manifest.json").read_text())
+        asset = build / payload[doctor.UI_BUNDLE_PAGE]["file"]
+        asset.unlink()
+        self.assertEqual(doctor._ui_bundle_state(self.candidate), "CHUNK_MISSING")
+        asset.write_text("/* built */")
+        (build / "manifest.json").write_text("{}")
+        self.assertEqual(doctor._ui_bundle_state(self.candidate), "CHUNK_NOT_IN_MANIFEST")
+        (build / "manifest.json").write_text(json.dumps({
+            doctor.UI_BUNDLE_PAGE: {"file": "../../etc/passwd"}
+        }))
+        self.assertEqual(doctor._ui_bundle_state(self.candidate), "CHUNK_PATH_UNSAFE")
+
+    def test_bundle_auditor_detects_old_ui_without_crediting_compilation(self) -> None:
+        self.assertEqual(doctor._ui_bundle_state(self.candidate), "PASS")
+        (self.candidate / doctor.UI_BUNDLE_FILES[2]).unlink()
+        self.assertNotEqual(doctor._ui_bundle_state(self.candidate), "PASS")
+
+    def test_symlinked_compilation_directory_fails_closed(self) -> None:
+        public = self.candidate / "apps/platform/public"
+        build = public / "build"
+        real = public / "outside-build"
+        build.rename(real)
+        build.symlink_to(real, target_is_directory=True)
+        self.assertEqual(doctor._ui_bundle_state(self.candidate), "BUILD_PATH_UNSAFE")
+
+    def test_symlinked_ui_source_parent_fails_closed(self) -> None:
+        services = self.candidate / "apps/platform/resources/js/pages/services"
+        saved = services.with_name("services-real")
+        services.rename(saved)
+        services.symlink_to(saved, target_is_directory=True)
+        self.assertEqual(doctor._ui_bundle_state(self.candidate), "SOURCE_UNSAFE")
 
     def test_fully_prepared_release_is_ready(self) -> None:
         self.materialize()
