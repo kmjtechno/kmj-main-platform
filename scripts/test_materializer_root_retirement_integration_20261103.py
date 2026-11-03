@@ -25,7 +25,7 @@ class RootRetireIntegrationTests(unittest.TestCase):
         self.assertNotIn("os.unlink(q, dir_fd=dir_fd)", s)
         self.assertNotIn("restore_or_quarantine(dir_fd, name, q)", s)
         self.assertNotIn("os.rename(name, q,", s)
-        self.assertIn('return "QUARANTINED"', s)
+        self.assertIn('return "BLOCKED_UNPRIVILEGED"', s)
         self.assertIn('status CANDIDATE_ROLLBACK FAILED_REVIEW', s)
 
     def test_root_helper_embedded_and_never_imported_from_candidate(self):
@@ -64,6 +64,7 @@ class RootRetireIntegrationTests(unittest.TestCase):
         self.assertIn('os.mkdir(label, mode=0o700, dir_fd=parent)', s)
         self.assertIn('os.O_NOFOLLOW', s)
         self.assertIn('q.st_dev != source.st_dev', s)
+        self.assertIn('return 0 if state == "REMOVED" else 3', s)
         self.assertNotIn('systemctl restart', s)
         self.assertNotIn('ssh-keygen', s)
         self.assertNotIn('chmod 777', s)
