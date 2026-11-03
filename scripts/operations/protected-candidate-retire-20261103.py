@@ -127,23 +127,31 @@ def retire_created(source_fd: int, quarantine_fd: int, *, name: str,
         return "MISMATCH"
     if kind == "l" and not stat.S_ISLNK(initial.st_mode):
         return "MISMATCH"
-    temporary = "kmj-protected-" + os.urandom(20).hex()
+    ticket = "kmj-protected-" + os.urandom(20).hex()
+    # O_EXCL semantics: mkdir must create a NEW root-only ticket, and rename
+    # never replaces a preexisting user-owned or previous-review object.
+    os.mkdir(ticket, mode=0o700, dir_fd=quarantine_fd)
+    ticket_fd = os.open(ticket, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW,
+                        dir_fd=quarantine_fd)
     try:
-        # No untrusted process can modify this name AFTER the atomic rename.
-        os.rename(name, temporary, src_dir_fd=source_fd,
-                  dst_dir_fd=quarantine_fd)
-    except FileNotFoundError:
-        return "ABSENT"
-    if not _parked_is_ours(quarantine_fd, temporary, expected_inode, kind,
-                          live_fd, created_uid=created_uid):
-        return "QUARANTINED_OWNER_REVIEW"
-    try:
-        # This parent is root-owned 0700 on the SAME filesystem, not the
-        # kmjprod-writable candidate directory. Never unlink by the old name.
-        os.unlink(temporary, dir_fd=quarantine_fd)
-    except OSError:
-        return "QUARANTINED_OWNER_REVIEW"
-    return "REMOVED"
+        _validated_quarantine(ticket_fd, source_fd, trusted_uid=trusted_uid)
+        try:
+            os.rename(name, "object", src_dir_fd=source_fd, dst_dir_fd=ticket_fd)
+        except FileNotFoundError:
+            os.rmdir(ticket, dir_fd=quarantine_fd)
+            return "ABSENT"
+        if not _parked_is_ours(ticket_fd, "object", expected_inode, kind,
+                              live_fd, created_uid=created_uid):
+            return "QUARANTINED_OWNER_REVIEW"
+        try:
+            # The only unlink targets an inode under a root-owned private dir.
+            os.unlink("object", dir_fd=ticket_fd)
+            os.rmdir(ticket, dir_fd=quarantine_fd)
+        except OSError:
+            return "QUARANTINED_OWNER_REVIEW"
+        return "REMOVED"
+    finally:
+        os.close(ticket_fd)
 
 
 if __name__ == "__main__":
