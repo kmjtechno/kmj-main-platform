@@ -212,7 +212,7 @@ def classify_ssh_failure(raw: str) -> str:
 # A matching path string is only a hint, never an attestation that ssh
 # actually offered that identity or that Google accepted it.
 PINNED_SFTP_CONFIG = b"/etc/kmj-codebridge/offsite-sftp.conf"
-EXECSTART_PATH = re.compile(r"(?:^|\\s)path=(/[A-Za-z0-9._/@+-]{1,240})(?=[\\s;]|$)")
+EXECSTART_PATH = re.compile(r"(?:^|\s)path=(/[A-Za-z0-9._/@+-]{1,240})(?=[\s;]|$)")
 
 
 def offsite_unit_source_hint() -> str:
