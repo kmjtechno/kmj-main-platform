@@ -1,0 +1,29 @@
+name: Owner production one-pass read-only blocker audit
+on:
+  pull_request:
+    paths:
+      - scripts/operations/owner-production-gates-onepass-20261103.py
+      - scripts/test_owner_production_gates_onepass_20261103.py
+      - .github/workflows/owner-production-onepass-audit.yml
+  push:
+    branches: [main]
+    paths:
+      - scripts/operations/owner-production-gates-onepass-20261103.py
+      - scripts/test_owner_production_gates_onepass_20261103.py
+      - .github/workflows/owner-production-onepass-audit.yml
+permissions:
+  contents: read
+jobs:
+  source_safety:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - name: Publish exact owner script SHA-256 for manual pinned execution
+        run: |
+          sha256sum scripts/operations/owner-production-gates-onepass-20261103.py
+      - name: One-pass diagnostic behavior and no-mutation regressions
+        run: |
+          python3 -B -m unittest scripts/test_owner_production_gates_onepass_20261103.py -v
