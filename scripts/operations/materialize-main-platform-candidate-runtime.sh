@@ -632,19 +632,35 @@ post_fail() {
   fail "$1"
 }
 
+# The unprivileged worker is not a release authority. Never stream its
+# stdout to operator receipts before root-side validation; a killed or
+# compromised worker could print invented PASS/LIVE/BACKUP lines.
+# Even after success, expose only a narrow bounded evidence vocabulary.
+emit_validated_child_evidence() {
+  local line
+  while IFS= read -r line; do
+    case "$line" in
+      STORAGE_MODE=VERIFIED_SHARED|STORAGE_WRITER_QUIESCENCE=NOT_ATTESTED|\
+      RUNTIME_ENV=BYTE_IDENTICAL|AGENT_PUBLIC_ORIGIN=PRESERVED|\
+      AGENT_PUBLIC_ORIGIN=NOT_SET_IN_LIVE|PUBLIC_STORAGE_LINK=MIRRORED|\
+      PUBLIC_STORAGE_LINK=NOT_PRESENT_LIVE|KMJ_MATERIALIZE_SHARED=PASS)
+        printf '%s\n' "$line" ;;
+      STORAGE_APP_PARITY=SHARED_FILES_*|STORAGE_SYMLINKS_PRESERVED=*|PENDING_MIGRATIONS=*)
+        [[ "$line" =~ ^(STORAGE_APP_PARITY=SHARED_FILES_|STORAGE_SYMLINKS_PRESERVED=|PENDING_MIGRATIONS=)[0-9]+$ ]] &&
+          printf '%s\n' "$line" || true ;;
+      STORAGE_MANIFEST_SHA256=*)
+        [[ "$line" =~ ^STORAGE_MANIFEST_SHA256=[a-f0-9]{64}$ ]] &&
+          printf '%s\n' "$line" || true ;;
+      MATERIALIZED_ENV_ID=*|MATERIALIZED_LINK_ID=*)
+        [[ "$line" =~ ^MATERIALIZED_(ENV|LINK)_ID=[0-9]+:[0-9]+$ ]] &&
+          printf '%s\n' "$line" || true ;;
+      *) : ;; # No arbitrary child statuses, even if they claim LIVE/PASS.
+    esac
+  done <<<"$sandbox_text"
+}
+
 sandbox_rc=0
 sandbox_text="$(run_sandbox materialize materialize)" || sandbox_rc=$?
-# Child rollback messages are not authoritative. A TERM/SIGKILL receipt window
-# can leave an unreported link while the child prints ROLLBACK=DONE for only
-# the known env inode. Never forward that premature success to receipt parsers.
-# Only the root wrapper may publish the final rollback verdict after validating
-# the complete sandbox receipt contract and any best-effort cleanup.
-while IFS= read -r line; do
-  case "$line" in
-    CANDIDATE_ROLLBACK=*) continue ;;
-  esac
-  printf '%s\n' "$line"
-done <<<"$sandbox_text"
 [[ "$sandbox_rc" == 0 ]] || post_fail "SANDBOX_FAILED_$sandbox_rc"
 grep -Fxq 'KMJ_MATERIALIZE_SHARED=PASS' <<<"$sandbox_text" || post_fail SANDBOX_PASS_MISSING
 receipt_contract_ok || post_fail SANDBOX_RECEIPTS_UNVERIFIED
@@ -652,6 +668,8 @@ receipt_contract_ok || post_fail SANDBOX_RECEIPTS_UNVERIFIED
 runuser -u www-data -- test -r "$CAND_APP/public/index.php" || post_fail NGINX_PUBLIC_UNREADABLE
 runuser -u www-data -- test -r "$CAND_APP/public/assets/kmj-codebridge-icon.png" || post_fail NGINX_ICON_UNREADABLE
 runuser -u www-data -- test ! -r "$CAND_APP/.env" || post_fail NGINX_PRIVATE_ENV_EXPOSED
+emit_validated_child_evidence
+status PRODUCTION_SWITCH NOT_ATTEMPTED
 status NGINX_PUBLIC_ACL PASS
 status NGINX_PRIVATE_ENV DENIED
 echo "KMJ_MATERIALIZE=PASS"
