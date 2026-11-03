@@ -647,10 +647,6 @@ child_transcript_contract_ok() {
     field="${line%%=*}"
     value="${line#*=}"
     [[ "$field" != "$line" ]] || return 1
-    if [[ "$field" != PENDING_MIGRATION ]]; then
-      [[ "${seen[$field]-}" != 1 ]] || return 1
-      seen[$field]=1
-    fi
     case "$field" in
       STORAGE_MODE) [[ "$value" == VERIFIED_SHARED ]] || return 1 ;;
       STORAGE_APP_PARITY) [[ "$value" =~ ^SHARED_FILES_[0-9]+$ ]] || return 1 ;;
@@ -678,6 +674,10 @@ child_transcript_contract_ok() {
       KMJ_MATERIALIZE_SHARED) [[ "$value" == PASS ]] || return 1 ;;
       *) return 1 ;;
     esac
+    if [[ "$field" != PENDING_MIGRATION ]]; then
+      [[ "${seen[$field]-}" != 1 ]] || return 1
+      seen[$field]=1
+    fi
   done <<<"$sandbox_text"
   for field in STORAGE_MODE STORAGE_APP_PARITY STORAGE_SYMLINKS_PRESERVED STORAGE_MANIFEST_SHA256 STORAGE_WRITER_QUIESCENCE MATERIALIZED_ENV_ID RUNTIME_ENV AGENT_PUBLIC_ORIGIN PUBLIC_STORAGE_LINK PENDING_MIGRATIONS LIVE_RELEASE DATABASE APPROVAL_UPDATED PRODUCTION_SWITCH KMJ_MATERIALIZE_SHARED; do
     [[ "${seen[$field]-}" == 1 ]] || return 1
