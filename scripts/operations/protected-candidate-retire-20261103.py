@@ -69,9 +69,16 @@ def _parked_is_ours(qfd: int, name: str, expected: str, kind: str,
         if _ident(observed) != expected:
             return False
         if kind == "l":
-            if not stat.S_ISLNK(observed.st_mode):
+            if (not stat.S_ISLNK(observed.st_mode)
+                    or observed.st_uid != created_uid
+                    or observed.st_nlink != 1):
                 return False
-            return os.readlink(name, dir_fd=qfd) == "../storage/app/public"
+            if os.readlink(name, dir_fd=qfd) != "../storage/app/public":
+                return False
+            again = os.stat(name, dir_fd=qfd, follow_symlinks=False)
+            return (stat.S_ISLNK(again.st_mode)
+                    and _ident(again) == expected
+                    and again.st_ctime_ns == observed.st_ctime_ns)
         if kind != "f" or live_fd is None:
             return False
         with_owned = os.open(name, os.O_RDONLY | os.O_NOFOLLOW | os.O_CLOEXEC,
