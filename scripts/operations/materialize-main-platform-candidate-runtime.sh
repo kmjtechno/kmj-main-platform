@@ -196,11 +196,23 @@ def remove_exact(dir_fd, name, expected, kind, live_fd=None):
     # For the public symlink, the expected target is part of the rollback identity.
     # Never delete a foreign-target replacement even when inode numbers match.
     if kind == "l":
+        # A same-target symlink can be swapped after the first lstat. A
+        # dev:inode receipt alone is susceptible to immediate inode reuse.
+        # Attest ownership, link count and the full no-follow metadata both
+        # before and after readlink; a changed link is left for owner review.
+        # This narrows detection but is NOT atomic compare-and-unlink.
+        if info.st_uid != os.geteuid() or info.st_nlink != 1:
+            return "MISMATCH"
         try:
             if os.readlink(name, dir_fd=dir_fd) != "../storage/app/public":
                 return "MISMATCH"
             again = os.stat(name, dir_fd=dir_fd, follow_symlinks=False)
-            if not stat.S_ISLNK(again.st_mode) or ident(again) != expected:
+            stamp = lambda x: (
+                x.st_dev, x.st_ino, x.st_mode, x.st_uid, x.st_gid,
+                x.st_nlink, x.st_size, x.st_mtime_ns, x.st_ctime_ns
+            )
+            if (not stat.S_ISLNK(again.st_mode) or ident(again) != expected
+                    or stamp(again) != stamp(info)):
                 return "MISMATCH"
         except OSError:
             return "MISMATCH"
