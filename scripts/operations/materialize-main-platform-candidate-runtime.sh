@@ -636,6 +636,60 @@ post_fail() {
 # stdout to operator receipts before root-side validation; a killed or
 # compromised worker could print invented PASS/LIVE/BACKUP lines.
 # Even after success, expose only a narrow bounded evidence vocabulary.
+# The child is not the release authority. A successful exit is insufficient:
+# reject every unknown, duplicate, malformed or incomplete child status.
+child_transcript_contract_ok() {
+  local line field value pending=0 expected_pending="" link_state=""
+  local -A seen=()
+  [[ ${#sandbox_text} -le 65536 ]] || return 1
+  while IFS= read -r line; do
+    [[ -n "$line" && ${#line} -le 256 ]] || return 1
+    field="${line%%=*}"
+    value="${line#*=}"
+    [[ "$field" != "$line" ]] || return 1
+    case "$field" in
+      STORAGE_MODE) [[ "$value" == VERIFIED_SHARED ]] || return 1 ;;
+      STORAGE_APP_PARITY) [[ "$value" =~ ^SHARED_FILES_[0-9]+$ ]] || return 1 ;;
+      STORAGE_SYMLINKS_PRESERVED|PENDING_MIGRATIONS)
+        [[ "$value" =~ ^[0-9]+$ ]] || return 1
+        if [[ "$field" == PENDING_MIGRATIONS ]]; then expected_pending="$value"; fi ;;
+      STORAGE_MANIFEST_SHA256) [[ "$value" =~ ^[a-f0-9]{64}$ ]] || return 1 ;;
+      STORAGE_WRITER_QUIESCENCE) [[ "$value" == NOT_ATTESTED ]] || return 1 ;;
+      MATERIALIZED_ENV_ID|MATERIALIZED_LINK_ID)
+        [[ "$value" =~ ^[0-9]+:[0-9]+$ ]] || return 1 ;;
+      RUNTIME_ENV) [[ "$value" == BYTE_IDENTICAL ]] || return 1 ;;
+      AGENT_PUBLIC_ORIGIN)
+        [[ "$value" == PRESERVED || "$value" == NOT_SET_IN_LIVE ]] || return 1 ;;
+      PUBLIC_STORAGE_LINK)
+        [[ "$value" == MIRRORED || "$value" == NOT_PRESENT_LIVE ]] || return 1
+        link_state="$value" ;;
+      PENDING_MIGRATION)
+        [[ "$value" =~ ^[A-Za-z0-9][A-Za-z0-9_.-]{0,127}[.]php$ ]] || return 1
+        pending=$((pending + 1))
+        [[ "$pending" -le 512 ]] || return 1 ;;
+      LIVE_RELEASE) [[ "$value" == UNCHANGED ]] || return 1 ;;
+      DATABASE) [[ "$value" == NOT_TOUCHED ]] || return 1 ;;
+      APPROVAL_UPDATED) [[ "$value" == NO ]] || return 1 ;;
+      PRODUCTION_SWITCH) [[ "$value" == NOT_ATTEMPTED ]] || return 1 ;;
+      KMJ_MATERIALIZE_SHARED) [[ "$value" == PASS ]] || return 1 ;;
+      *) return 1 ;;
+    esac
+    if [[ "$field" != PENDING_MIGRATION ]]; then
+      [[ "${seen[$field]-}" != 1 ]] || return 1
+      seen[$field]=1
+    fi
+  done <<<"$sandbox_text"
+  for field in STORAGE_MODE STORAGE_APP_PARITY STORAGE_SYMLINKS_PRESERVED STORAGE_MANIFEST_SHA256 STORAGE_WRITER_QUIESCENCE MATERIALIZED_ENV_ID RUNTIME_ENV AGENT_PUBLIC_ORIGIN PUBLIC_STORAGE_LINK PENDING_MIGRATIONS LIVE_RELEASE DATABASE APPROVAL_UPDATED PRODUCTION_SWITCH KMJ_MATERIALIZE_SHARED; do
+    [[ "${seen[$field]-}" == 1 ]] || return 1
+  done
+  [[ "$expected_pending" == "$pending" ]] || return 1
+  if [[ "$link_state" == MIRRORED ]]; then
+    [[ "${seen[MATERIALIZED_LINK_ID]-}" == 1 ]] || return 1
+  else
+    [[ "${seen[MATERIALIZED_LINK_ID]-}" != 1 ]] || return 1
+  fi
+}
+
 emit_validated_child_evidence() {
   local line
   while IFS= read -r line; do
@@ -664,6 +718,7 @@ sandbox_text="$(run_sandbox materialize materialize)" || sandbox_rc=$?
 [[ "$sandbox_rc" == 0 ]] || post_fail "SANDBOX_FAILED_$sandbox_rc"
 grep -Fxq 'KMJ_MATERIALIZE_SHARED=PASS' <<<"$sandbox_text" || post_fail SANDBOX_PASS_MISSING
 receipt_contract_ok || post_fail SANDBOX_RECEIPTS_UNVERIFIED
+child_transcript_contract_ok || post_fail SANDBOX_TRANSCRIPT_UNVERIFIED
 
 runuser -u www-data -- test -r "$CAND_APP/public/index.php" || post_fail NGINX_PUBLIC_UNREADABLE
 runuser -u www-data -- test -r "$CAND_APP/public/assets/kmj-codebridge-icon.png" || post_fail NGINX_ICON_UNREADABLE

@@ -940,9 +940,18 @@ class MaterializeRollbackTest(unittest.TestCase):
         valid = (
             "STORAGE_MODE=VERIFIED_SHARED\n"
             "STORAGE_APP_PARITY=SHARED_FILES_3\n"
+            "STORAGE_SYMLINKS_PRESERVED=0\n"
             "STORAGE_MANIFEST_SHA256=" + "a" * 64 + "\n"
+            "STORAGE_WRITER_QUIESCENCE=NOT_ATTESTED\n"
             "MATERIALIZED_ENV_ID=12:34\n"
+            "RUNTIME_ENV=BYTE_IDENTICAL\n"
+            "AGENT_PUBLIC_ORIGIN=NOT_SET_IN_LIVE\n"
             "PUBLIC_STORAGE_LINK=NOT_PRESENT_LIVE\n"
+            "PENDING_MIGRATIONS=0\n"
+            "LIVE_RELEASE=UNCHANGED\n"
+            "DATABASE=NOT_TOUCHED\n"
+            "APPROVAL_UPDATED=NO\n"
+            "PRODUCTION_SWITCH=NOT_ATTEMPTED\n"
             "KMJ_MATERIALIZE_SHARED=PASS"
         )
         forgery = (
@@ -956,7 +965,15 @@ class MaterializeRollbackTest(unittest.TestCase):
             (forgery, "143", "pass", False),
             (valid + "\n" + forgery, "143", "pass", False),
             (valid + "\n" + forgery, "0", "fail", False),
-            (valid + "\n" + forgery, "0", "pass", True),
+            (valid + "\n" + forgery, "0", "pass", False),
+            (valid, "0", "fail", False),
+            (valid, "0", "pass", True),
+            (valid + "\nSTORAGE_MODE=VERIFIED_SHARED", "0", "pass", False),
+            (valid.replace("PENDING_MIGRATIONS=0", "PENDING_MIGRATIONS=1"),
+             "0", "pass", False),
+            (valid + "\nPENDING_MIGRATION=../secret.php", "0", "pass", False),
+            (valid.replace("PRODUCTION_SWITCH=NOT_ATTEMPTED",
+                           "PRODUCTION_SWITCH=ATTEMPTED"), "0", "pass", False),
         ]:
             with self.subTest(exit_code=exit_code, acl=acl, successful=successful):
                 run = subprocess.run(
