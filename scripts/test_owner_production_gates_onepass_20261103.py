@@ -153,6 +153,71 @@ class OnepassOwnerAuditTests(unittest.TestCase):
         self.assertIn("OFFSITE_EFFECTIVE_SSH_IDENTITY", SOURCE.read_text())
         self.assertIn('"NOT_PROVEN"', SOURCE.read_text())
 
+    def test_quarantine_hints_never_credit_release_or_actual_candidate_mount(self):
+        from types import SimpleNamespace
+        import stat
+
+        root = Path("/")
+        var = Path("/var")
+        qparent = audit.QUARANTINE_PARENT
+        releases = audit.RELEASES_PARENT
+
+        def directory(uid=0, mode=0o755, dev=90):
+            return SimpleNamespace(st_uid=uid,
+                                   st_mode=stat.S_IFDIR | mode,
+                                   st_dev=dev)
+
+        fixture = {
+            root: directory(),
+            var: directory(),
+            qparent: directory(),
+            Path("/home"): directory(),
+            Path("/home/kmjprod"): directory(uid=1000, mode=0o750),
+            releases: directory(uid=1000, mode=0o700),
+        }
+
+        def lstat_fixed(path):
+            p = Path(path)
+            if p not in fixture:
+                raise FileNotFoundError(str(p))
+            return fixture[p]
+
+        with patch.object(audit.os, "lstat", side_effect=lstat_fixed):
+            self.assertEqual(audit.quarantine_root_readonly_hints(),
+                             ("PRIVATE_DIRECTORY_NOT_INSTALLED",
+                              "SAME_FILESYSTEM_PARENT_HINT_ONLY"))
+            fixture[audit.QUARANTINE_DIR] = directory(mode=0o700)
+            self.assertEqual(audit.quarantine_root_readonly_hints(),
+                             ("EXISTING_PRIVATE_0700",
+                              "SAME_FILESYSTEM_PARENT_HINT_ONLY"))
+            fixture[releases] = directory(uid=1000, mode=0o700, dev=91)
+            self.assertEqual(audit.quarantine_root_readonly_hints(),
+                             ("EXISTING_PRIVATE_0700",
+                              "DIFFERENT_FILESYSTEM_PARENT"))
+            fixture[releases] = directory(uid=1000, mode=0o700)
+            fixture[audit.QUARANTINE_DIR] = directory(mode=0o777)
+            self.assertEqual(audit.quarantine_root_readonly_hints(),
+                             ("QUARANTINE_UNTRUSTED", "UNVERIFIED"))
+            fixture.pop(audit.QUARANTINE_DIR)
+            fixture[var] = directory(mode=0o777)
+            self.assertEqual(audit.quarantine_root_readonly_hints(),
+                             ("ROOT_PARENT_UNTRUSTED", "UNVERIFIED"))
+            fixture[var] = directory()
+            fixture[releases] = SimpleNamespace(st_uid=1000,
+                                                st_mode=stat.S_IFLNK | 0o777,
+                                                st_dev=90)
+            self.assertEqual(audit.quarantine_root_readonly_hints(),
+                             ("PRIVATE_DIRECTORY_NOT_INSTALLED",
+                              "RELEASES_PARENT_UNVERIFIED"))
+
+        # Even a YES parent filesystem hint cannot prove a per-release mount,
+        # backup or restore. Never set protected approval from diagnostics.
+        source = SOURCE.read_text()
+        self.assertIn("SAME_FILESYSTEM_PARENT_HINT_ONLY", source)
+        self.assertIn("BACKUP_RESTORE", source)
+        self.assertIn("NOT_ATTESTED_BY_READONLY_AUDIT", source)
+        self.assertNotIn("ROOT_QUARANTINE_READY_TO_ACTIVATE", source)
+
     def test_onepass_does_not_perform_mutations_or_claim_restore(self):
         source = SOURCE.read_text()
         self.assertIn("BACKUP_RESTORE", source)
