@@ -600,6 +600,37 @@ class MaterializeRollbackTest(unittest.TestCase):
                          "../../untrusted")
         self.assertFalse((self.cand / ".env").exists())
 
+    def test_symlink_same_target_inode_reuse_mid_rollback_is_left_for_review(self) -> None:
+        # Force a same-target replacement *after* the first no-follow stat.
+        # The test pins ident() to a collision to simulate immediate dev:ino
+        # reuse; a target-only check would unlink the foreign replacement.
+        ident_needle = 'return "%d:%d" % (info.st_dev, info.st_ino)'
+        readlink_needle = (
+            '            if os.readlink(name, dir_fd=dir_fd) '
+            '!= "../storage/app/public":'
+        )
+        self.assertEqual(self.source.count(ident_needle), 1)
+        self.assertEqual(self.source.count(readlink_needle), 1)
+        injected = self.source.replace(ident_needle, 'return "42:42"').replace(
+            readlink_needle,
+            '            os.unlink(name, dir_fd=dir_fd)\n'
+            '            os.symlink("../storage/app/public", name, dir_fd=dir_fd)\n'
+            '            os.utime(name, ns=(info.st_atime_ns,\n'
+            '                                info.st_mtime_ns + 1000000000),\n'
+            '                     dir_fd=dir_fd, follow_symlinks=False)\n'
+            + readlink_needle,
+        )
+        run = self.harness(self.CREATE + "fail FORCED_LATE_FAILURE\n",
+                           source_override=injected)
+        self.assertEqual(run.returncode, 2, run.stdout + run.stderr)
+        self.assertIn("ROLLBACK_STORAGE=MISMATCH", run.stdout)
+        self.assertIn("CANDIDATE_ROLLBACK=FAILED_REVIEW", run.stdout)
+        self.assertEqual(os.readlink(self.cand / "public/storage"),
+                         "../storage/app/public")
+        self.assertFalse((self.cand / ".env").exists())
+        self.assertEqual((self.live / ".env").read_bytes(),
+                         b"APP_KEY=base64:abc\nDB=x\n")
+
     def test_replaced_artifact_is_left_for_review_not_deleted(self) -> None:
         swap = (
             'rm_env="$CAND_APP/.env"\n'
