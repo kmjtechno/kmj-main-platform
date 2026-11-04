@@ -44,7 +44,13 @@ jobs:
           for name in names:
               version=got.get(name,"")
               parts=version.removeprefix("v").split(".")
-              if len(parts)!=3 or tuple(map(int, parts)) < (8,1,11):
+              if len(parts)!=3:
+                  raise SystemExit("BLOCKED_PATCHED_VERSION_"+name.replace("/","_"))
+              version_tuple=tuple(map(int, parts))
+              # Symfony maintained security branches: 7.4.23 and 8.1.11.
+              # Let the Composer security audit be authoritative for CVEs.
+              safe=(version_tuple[:2]==(7,4) and version_tuple[2]>=23) or (version_tuple[:2]==(8,1) and version_tuple[2]>=11)
+              if not safe:
                   raise SystemExit("BLOCKED_PATCHED_VERSION_"+name.replace("/","_"))
               print("SYMFONY_SECURITY_PATCHED_"+name.replace("/","_")+"="+version)
           PY
