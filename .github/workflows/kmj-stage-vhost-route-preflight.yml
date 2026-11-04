@@ -1,0 +1,21 @@
+name: KMJ staging vhost route read-only authority
+on:
+  pull_request:
+    paths:
+      - scripts/operations/KMJ_STAGE_VHOST_ROUTE_PREFLIGHT_20261104.py
+      - scripts/test_stage_vhost_route_preflight_20261104.py
+      - .github/workflows/kmj-stage-vhost-route-preflight.yml
+permissions:
+  contents: read
+jobs:
+  staging_nginx_read_only:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - name: Synthetic no-mutation vhost and root authority tests
+        run: |
+          set -euo pipefail
+          python3 -B -m unittest scripts/test_stage_vhost_route_preflight_20261104.py -v
