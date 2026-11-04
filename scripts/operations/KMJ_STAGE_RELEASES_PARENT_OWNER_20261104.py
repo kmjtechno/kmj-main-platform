@@ -2,7 +2,7 @@
 """One-directory owner-only correction for KMJ staging releases, fail closed.
 
 MAY change ONLY the UID of /home/kmjstage/releases from kmjstage to root.
-Never chown -R, chmod, follow symlinks, touch children, deploy or change a
+Never recursively change ownership, modify permissions, follow links, or change a
 stage/production pointer. Do not use when the stage home ancestry is
 kmjstage-owned/writable: in that case an owning stage user could rename the
 entire releases directory, defeating a root-owned releases inode.
