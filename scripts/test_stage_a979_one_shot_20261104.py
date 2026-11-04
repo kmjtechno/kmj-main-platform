@@ -22,6 +22,16 @@ class OneShotSourceTests(unittest.TestCase):
         ):
             self.assertIn(token, self.src)
 
+    def test_inspect_is_default_and_apply_requires_explicit_opt_in(self):
+        self.assertIn('MODE="${1:---inspect}"', self.src)
+        self.assertIn('"$#" -gt 1', self.src)
+        self.assertIn('if [[ "$MODE" == "--inspect" ]]', self.src)
+        self.assertIn('"$D/migrate.py" --apply', self.src)
+        self.assertLess(
+            self.src.index('KMJ_STAGE_ONE_SHOT=PASS_READ_ONLY_NO_MIGRATION'),
+            self.src.index('"$D/migrate.py" --apply'),
+        )
+
     def test_root_and_host_enforced(self):
         self.assertIn('$(id -u)', self.src)
         self.assertIn('kmj-elite', self.src)
