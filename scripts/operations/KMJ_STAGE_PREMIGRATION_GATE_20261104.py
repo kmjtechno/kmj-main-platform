@@ -9,7 +9,7 @@ network, activation, production env access or raw config/log/secret output.
 """
 from __future__ import annotations
 import grp
-import hashlib
+import hmac
 import os
 from pathlib import Path
 import pwd
@@ -113,7 +113,7 @@ def parse_env(raw: bytes | None, password: bytes | None) -> str:
         db_secret = rows.get("DB_PASSWORD", "")
         if (not re.fullmatch(r"[a-f0-9]{64}", db_secret)
                 or not re.fullmatch(rb"[a-f0-9]{64}\n", password)
-                or not hashlib.compare_digest(db_secret.encode(), password.strip())):
+                or not hmac.compare_digest(db_secret.encode(), password.strip())):
             return "SECRET_MISMATCH"
         if not re.fullmatch(r"base64:[A-Za-z0-9+/]{43}=", rows.get("APP_KEY", "")):
             return "APPKEY_UNVERIFIED"
