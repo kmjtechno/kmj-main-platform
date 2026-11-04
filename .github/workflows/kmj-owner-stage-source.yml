@@ -1,0 +1,22 @@
+name: Owner staging source snapshot safety
+on:
+  pull_request:
+    paths:
+      - scripts/operations/KMJ_ELITE_STAGE_SOURCE_BUILD_20261104.sh
+      - scripts/test_kmj_stage_source_build_20261104.py
+      - .github/workflows/kmj-owner-stage-source.yml
+permissions:
+  contents: read
+jobs:
+  no_activation_source_qa:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - name: Check exact stage source build script and no-deploy invariants
+        run: |
+          set -euo pipefail
+          bash -n scripts/operations/KMJ_ELITE_STAGE_SOURCE_BUILD_20261104.sh
+          python3 -B -m unittest scripts/test_kmj_stage_source_build_20261104.py -v
