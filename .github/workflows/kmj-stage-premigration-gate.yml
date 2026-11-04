@@ -1,0 +1,21 @@
+name: KMJ stage pre-migration early storage binding source gate
+on:
+  pull_request:
+    paths:
+      - scripts/operations/KMJ_STAGE_PREMIGRATION_GATE_20261104.py
+      - scripts/test_stage_premigration_gate_20261104.py
+      - .github/workflows/kmj-stage-premigration-gate.yml
+permissions:
+  contents: read
+jobs:
+  read_only_storage_db_safety:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - name: Synthetic no-write env, Laravel early binding, fresh DB catalog tests
+        run: |
+          set -euo pipefail
+          python3 -B -m unittest scripts/test_stage_premigration_gate_20261104.py -v
