@@ -1,0 +1,21 @@
+name: KMJ staged serving dual-readonly mirror safety
+on:
+  pull_request:
+    paths:
+      - scripts/operations/KMJ_STAGE_SERVING_READONLY_MIRROR_20261104.py
+      - scripts/test_stage_serving_readonly_mirror_20261104.py
+      - .github/workflows/kmj-stage-serving-mirror.yml
+permissions:
+  contents: read
+jobs:
+  fixed_stage_mirror_nonlive:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - name: Synthetic disposable root-only mirror security tests
+        run: |
+          set -euo pipefail
+          sudo -n python3 -B -m unittest scripts/test_stage_serving_readonly_mirror_20261104.py -v
