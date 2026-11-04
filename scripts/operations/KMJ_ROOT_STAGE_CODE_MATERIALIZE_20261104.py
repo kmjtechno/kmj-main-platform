@@ -157,7 +157,12 @@ def copy_file(source_fd: int, entry: str, target: Path, seen: dict) -> None:
                 data = os.read(src_fd, 1 << 20)
                 if not data:
                     break
-                os.write(fd, data)
+                remaining = memoryview(data)
+                while remaining:
+                    written = os.write(fd, remaining)
+                    if written <= 0:
+                        fail("TARGET_WRITE_SHORT")
+                    remaining = remaining[written:]
                 hasher.update(data)
                 size += len(data)
             os.fchmod(fd, 0o500 if st.st_mode & 0o111 else 0o400)
@@ -169,7 +174,9 @@ def copy_file(source_fd: int, entry: str, target: Path, seen: dict) -> None:
                 (st.st_dev, st.st_ino, st.st_size, st.st_mtime_ns, st.st_ctime_ns) !=
                 (later.st_dev, later.st_ino, later.st_size, later.st_mtime_ns, later.st_ctime_ns)):
             fail("SOURCE_FILE_CHANGED")
-        seen["digests"].append((str(target.name), hasher.hexdigest()))
+        # The rooted copy is not a signature: a separately approved owner
+        # SHA/tree seal must attest this code before any activation.
+        seen["digest_checks"] += 1
     finally:
         os.close(src_fd)
 
@@ -266,7 +273,7 @@ def main() -> int:
         try:
             srcinfo = os.fstat(sourcefd)
             temp = Path(tempfile.mkdtemp(prefix=".kmj-copy-" + SHA[:12] + "-", dir=ANCHOR))
-            seen = {"files": 0, "bytes": 0, "digests": []}
+            seen = {"files": 0, "bytes": 0, "digest_checks": 0}
             copy_tree(sourcefd, temp, "", 0, seen, srcinfo.st_dev)
         finally:
             os.close(sourcefd)
