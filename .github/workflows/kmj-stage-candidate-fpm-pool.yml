@@ -1,0 +1,21 @@
+name: KMJ candidate isolated FPM pool preparation safety
+on:
+  pull_request:
+    paths:
+      - scripts/operations/KMJ_STAGE_A979_FPM_POOL_PREP_20261104.py
+      - scripts/test_stage_a979_fpm_pool_prep_20261104.py
+      - .github/workflows/kmj-stage-candidate-fpm-pool.yml
+permissions:
+  contents: read
+jobs:
+  candidate_fpm_pool_prep_safety:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - name: Disposable pool preparation and rollback tests
+        run: |
+          set -euo pipefail
+          sudo -n python3 -B -m unittest scripts/test_stage_a979_fpm_pool_prep_20261104.py -v
