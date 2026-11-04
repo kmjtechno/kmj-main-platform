@@ -1,0 +1,21 @@
+name: Root-only staging source snapshot safety
+on:
+  pull_request:
+    paths:
+      - scripts/operations/KMJ_ROOT_STAGE_CODE_MATERIALIZE_20261104.py
+      - scripts/test_root_stage_code_materialize_20261104.py
+      - .github/workflows/kmj-root-stage-source-only.yml
+permissions:
+  contents: read
+jobs:
+  source_only_fd_safe_copy:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - name: Execute only synthetic non-root tree-copy safety tests
+        run: |
+          set -euo pipefail
+          python3 -B -m unittest scripts/test_root_stage_code_materialize_20261104.py -v
