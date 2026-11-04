@@ -213,6 +213,33 @@ def catalog(stage_gid: int) -> None:
         stop("STORAGE_OWNER_DRIFT")
 
 
+def ensure_private_views(stage_uid: int, stage_gid: int) -> None:
+    # The stage bootstrap intentionally left Blade's compile directory absent.
+    # Create it under the NEW stage-only storage as stage user (never root).
+    framework = STORAGE / "framework"
+    st = os.lstat(framework)
+    if (not stat.S_ISDIR(st.st_mode) or st.st_uid != stage_uid or
+            st.st_gid != stage_gid or stat.S_IMODE(st.st_mode) != 0o700):
+        stop("FRAMEWORK_STORAGE_UNTRUSTED")
+    views = framework / "views"
+    try:
+        st = os.lstat(views)
+    except FileNotFoundError:
+        try:
+            p = subprocess.run(
+                ["/usr/sbin/runuser", "-u", "kmjstage", "--",
+                 "/usr/bin/mkdir", "-m", "0700", "--", str(views)],
+                capture_output=True, timeout=10, check=False, env=PG_ENV)
+        except (OSError, subprocess.TimeoutExpired):
+            stop("VIEWS_CREATE_UNAVAILABLE")
+        if p.returncode != 0:
+            stop("VIEWS_CREATE_FAILED")
+        st = os.lstat(views)
+    if (not stat.S_ISDIR(st.st_mode) or st.st_uid != stage_uid or
+            st.st_gid != stage_gid or stat.S_IMODE(st.st_mode) != 0o700):
+        stop("VIEWS_OWNER_DRIFT")
+
+
 def run_migrate() -> str:
     args = ["/usr/sbin/runuser", "-u", "kmjstage", "--",
             "/usr/bin/env", "-i", "HOME=/home/kmjstage", "LANG=C",
@@ -253,6 +280,7 @@ def main() -> int:
         return 0
     if not pinned_pointers():
         stop("LIVE_POINTER_RECHECK")
+    ensure_private_views(pwd.getpwnam("kmjstage").pw_uid, stage_gid)
     emit("STAGING_MIGRATION_EXECUTION", "STARTED_UNPRIVILEGED")
     outcome = run_migrate()
     if outcome != "COMMAND_SUCCESS":
