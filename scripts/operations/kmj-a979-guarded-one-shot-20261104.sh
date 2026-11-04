@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 umask 077
-MODE="${1:---apply}"
-if [[ "$MODE" != "--inspect" && "$MODE" != "--apply" ]]; then
+MODE="${1:---inspect}"
+if [[ "$#" -gt 1 || ( "$MODE" != "--inspect" && "$MODE" != "--apply" ) ]]; then
   echo "KMJ_STAGE_ONE_SHOT=BLOCKED_ARGUMENTS"; exit 2
 fi
 if [[ "$(id -u)" != "0" || "$(hostname -s | tr '[:upper:]' '[:lower:]')" != "kmj-elite" ]]; then
