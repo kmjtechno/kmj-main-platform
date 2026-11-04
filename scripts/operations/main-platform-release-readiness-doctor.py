@@ -213,6 +213,49 @@ def _web_user_can_read(path: Path) -> bool | None:
     return result.returncode == 0
 
 
+def _attested_shared_storage(candidate: Path, paths: Paths) -> bool:
+    """Exclude only a fixed, owner-controlled runtime storage symlink.
+
+    Git sees the tracked storage/.gitignore placeholders as deleted after the
+    physical directory becomes a symlink. Neither a general dirty-worktree
+    exemption nor an unverified arbitrary symlink is acceptable.
+    """
+    shared = paths.root / "shared" / "storage"
+    candidate_link = candidate / "apps/platform/storage"
+    live_link = paths.root / "current" / "apps/platform/storage"
+    try:
+        owner = os.lstat(candidate).st_uid
+        for folder in (paths.root, paths.root / "shared", shared, shared / "app"):
+            info = os.lstat(folder)
+            if (not stat.S_ISDIR(info.st_mode) or info.st_mode & 0o022
+                    or info.st_uid not in (0, owner)):
+                return False
+        for link in (candidate_link, live_link):
+            info = os.lstat(link)
+            if (not stat.S_ISLNK(info.st_mode) or info.st_uid not in (0, owner)
+                    or os.readlink(link) != str(shared)):
+                return False
+    except OSError:
+        return False
+    return True
+
+
+def _candidate_git_state(candidate: Path, paths: Paths) -> str:
+    storage = candidate / "apps/platform/storage"
+    if storage.is_symlink():
+        if not _attested_shared_storage(candidate, paths):
+            return "STORAGE_LINK_UNVERIFIED"
+        # All non-storage source remains under ordinary exact-HEAD Git status.
+        # The only exempt path has *independent* fixed shared-link attestation.
+        dirty = _git(candidate, "status", "--porcelain", "--untracked-files=normal",
+                     "--", ".", ":(exclude)apps/platform/storage")
+    else:
+        dirty = _git(candidate, "status", "--porcelain")
+    if dirty is None:
+        return "GIT_STATUS_UNVERIFIED"
+    return "DIRTY" if dirty else "PASS"
+
+
 def evaluate(target: str, paths: Paths = Paths(), require_root: bool = True,
              web_read=None) -> tuple[list[str], list[str]]:
     """Return (report lines, blocking reasons)."""
@@ -251,11 +294,11 @@ def evaluate(target: str, paths: Paths = Paths(), require_root: bool = True,
         blockers.append("CANDIDATE_NOT_STAGED")
     else:
         head = _git(candidate, "rev-parse", "HEAD")
-        dirty = _git(candidate, "status", "--porcelain")
+        git_state = _candidate_git_state(candidate, paths)
         missing = [item for item in ARTIFACTS
                    if not (candidate / item).is_file() or (candidate / item).stat().st_size <= 0]
-        state = ("SHA_MISMATCH" if head != target else "DIRTY" if dirty
-                 else "ARTIFACT_MISSING" if missing else "PASS")
+        state = ("SHA_MISMATCH" if head != target else git_state
+                 if git_state != "PASS" else "ARTIFACT_MISSING" if missing else "PASS")
         lines.append(f"CANDIDATE={state}")
         if state != "PASS":
             blockers.append("CANDIDATE_" + state)

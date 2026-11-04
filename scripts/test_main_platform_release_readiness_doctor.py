@@ -179,6 +179,62 @@ class ReadinessDoctorTest(unittest.TestCase):
         _, blockers = self.run_doctor()
         self.assertEqual(blockers, ["CANDIDATE_DIRTY"])
 
+    def prepare_tracked_shared_storage_fixture(self) -> Path:
+        # Reproduce the real KMJ b07 layout: tracked .gitignore files under a
+        # mutable storage directory that must become one exact shared symlink.
+        storage = self.candidate / "apps/platform/storage"
+        tracked = storage / "app/.gitignore"
+        tracked.parent.mkdir(parents=True)
+        tracked.write_text("# tracked placeholder\n")
+        git(self.candidate, "add", "apps/platform/storage/app/.gitignore")
+        git(self.candidate, "commit", "-q", "-m", "tracked storage placeholder")
+        self.sha = git(self.candidate, "rev-parse", "HEAD")
+        target = self.candidate.parent / f"platform-{self.sha[:12]}"
+        self.candidate.rename(target)
+        self.candidate = target
+        self.env = target / "apps/platform/.env"
+        storage = target / "apps/platform/storage"
+        shared = self.paths.root / "shared/storage"
+        shared.parent.mkdir()
+        shutil.copytree(storage, shared)
+        shutil.rmtree(storage)
+        storage.symlink_to(shared, target_is_directory=True)
+        live = self.paths.root / "releases/platform-aaaaaaaaaaaa/apps/platform/storage"
+        live.parent.mkdir(parents=True)
+        live.symlink_to(shared, target_is_directory=True)
+        self.assertIn("D apps/platform/storage/app/.gitignore",
+                      git(self.candidate, "status", "--porcelain"))
+        return live
+
+    def test_exact_attested_storage_symlink_preserves_clean_source(self) -> None:
+        self.prepare_tracked_shared_storage_fixture()
+        self.materialize()
+        self.write_backup()
+        self.write_approval()
+        lines, blockers = self.run_doctor()
+        self.assertEqual(blockers, [], lines)
+        self.assertIn("CANDIDATE=PASS", lines)
+
+    def test_unverified_live_storage_symlink_never_gets_git_exemption(self) -> None:
+        live = self.prepare_tracked_shared_storage_fixture()
+        live.unlink()
+        live.symlink_to(self.paths.root / "releases/platform-aaaaaaaaaaaa")
+        self.materialize()
+        self.write_backup()
+        self.write_approval()
+        lines, blockers = self.run_doctor()
+        self.assertIn("CANDIDATE_STORAGE_LINK_UNVERIFIED", blockers)
+        self.assertNotIn("RELEASE_READINESS=READY_TO_ACTIVATE", lines)
+
+    def test_unrelated_dirty_file_blocks_even_with_attested_storage(self) -> None:
+        self.prepare_tracked_shared_storage_fixture()
+        self.materialize()
+        self.write_backup()
+        self.write_approval()
+        (self.candidate / "apps/platform/extra-source").write_text("untracked")
+        _, blockers = self.run_doctor()
+        self.assertIn("CANDIDATE_DIRTY", blockers)
+
     def test_unmaterialized_candidate_blocks_before_health_rollback(self) -> None:
         self.write_backup()
         self.write_approval()
