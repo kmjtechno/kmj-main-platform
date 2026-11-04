@@ -1,0 +1,59 @@
+name: KMJ Symfony security lock refresh (isolated)
+on:
+  pull_request:
+    paths:
+      - apps/platform/composer.json
+      - apps/platform/composer.lock
+      - .github/workflows/kmj-symfony-security-lock-refresh.yml
+permissions:
+  contents: read
+jobs:
+  patched_lock:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - uses: shivammathur/setup-php@87d00bde2555f25eb54fedf940384e99cbdc55ef
+        with:
+          php-version: '8.4'
+          tools: composer:v2
+          coverage: none
+      - name: Resolve only Symfony security packages and dependencies
+        run: |
+          set -euo pipefail
+          cd apps/platform
+          export COMPOSER_NO_INTERACTION=1
+          export COMPOSER_NO_AUDIT=1
+          composer update \
+            symfony/http-foundation \
+            symfony/http-kernel \
+            symfony/routing \
+            symfony/serializer \
+            --with-all-dependencies --no-scripts --no-plugins --no-progress
+      - name: Require all patched versions and clean production audit
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          data=json.loads(Path("apps/platform/composer.lock").read_text())
+          got={p["name"]:p["version"] for p in data["packages"]}
+          names=("symfony/http-foundation","symfony/http-kernel","symfony/routing","symfony/serializer")
+          for name in names:
+              version=got.get(name,"")
+              parts=version.removeprefix("v").split(".")
+              if len(parts)!=3 or tuple(map(int, parts)) < (8,1,11):
+                  raise SystemExit("BLOCKED_PATCHED_VERSION_"+name.replace("/","_"))
+              print("SYMFONY_SECURITY_PATCHED_"+name.replace("/","_")+"="+version)
+          PY
+          cd apps/platform
+          composer audit --locked --no-dev
+      - name: Publish isolated resolved lock for source review
+        uses: actions/upload-artifact@v4
+        with:
+          name: kmj-symfony-security-lock-patched
+          path: apps/platform/composer.lock
+          if-no-files-found: error
+          retention-days: 1
