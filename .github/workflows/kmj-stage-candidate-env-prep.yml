@@ -1,0 +1,21 @@
+name: KMJ isolated staging candidate env prepare safety
+on:
+  pull_request:
+    paths:
+      - scripts/operations/KMJ_STAGE_CANDIDATE_ENV_PREP_20261104.py
+      - scripts/test_stage_candidate_env_prep_20261104.py
+      - .github/workflows/kmj-stage-candidate-env-prep.yml
+permissions:
+  contents: read
+jobs:
+  create_only_env_security:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - name: Isolated no-clobber and confidential stage config tests
+        run: |
+          set -euo pipefail
+          sudo -n python3 -B -m unittest scripts/test_stage_candidate_env_prep_20261104.py -v
