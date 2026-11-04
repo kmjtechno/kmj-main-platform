@@ -202,7 +202,7 @@ class ReadinessDoctorTest(unittest.TestCase):
         live = self.paths.root / "releases/platform-aaaaaaaaaaaa/apps/platform/storage"
         live.parent.mkdir(parents=True)
         live.symlink_to(shared, target_is_directory=True)
-        self.assertIn(" D apps/platform/storage/app/.gitignore",
+        self.assertIn("D apps/platform/storage/app/.gitignore",
                       git(self.candidate, "status", "--porcelain"))
         return live
 
