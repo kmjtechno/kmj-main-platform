@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { existsSync, readFileSync } from 'node:fs';
 import { readSourceText } from './source-text.mjs';
+import { deviceProjectConnectPlan } from '../resources/js/components/codebridge/device-project-connect.mjs';
 
 const ui = readSourceText('resources/js/pages/services/codebridge.tsx');
 // Device cards are rendered by the Device Control Center component (PR #377);
@@ -229,4 +230,111 @@ void test('repeated hash links scroll within the same CodeBridge tab', () => {
     assert.match(ui, /\[activeSection, hashNavigationRevision\]/);
     assert.match(ui, /pendingAnchor\.current = null/);
     assert.match(ui, /scrollIntoView\(\{ block: 'start' \}\)/);
+});
+
+void test('one-click device/project setup is scoped to an existing exact grant, never a pending request', () => {
+    const linux = {
+        id: 'kmj-elite-main-platform',
+        platform: 'linux',
+        projects: [{ id: 'kmj-main-platform', name: 'Main Platform' }],
+        pending_projects: [
+            {
+                id: 'kmj-cloudos',
+                name: 'CloudOS',
+                status: 'pending_local_setup',
+            },
+        ],
+        pairing_state: 'redeemed',
+    };
+    assert.equal(
+        deviceProjectConnectPlan(linux, 'kmj-main-platform')?.href,
+        '/install',
+    );
+    assert.equal(deviceProjectConnectPlan(linux, 'kmj-cloudos'), null);
+    assert.equal(deviceProjectConnectPlan(linux, 'vioso-clone'), null);
+    assert.equal(
+        deviceProjectConnectPlan(
+            { ...linux, id: '../unknown' },
+            'kmj-main-platform',
+        ),
+        null,
+    );
+    assert.equal(deviceProjectConnectPlan(linux, '../external'), null);
+    assert.equal(deviceProjectConnectPlan(null, 'kmj-main-platform'), null);
+    assert.equal(
+        deviceProjectConnectPlan(
+            { ...linux, projects: [] },
+            'kmj-main-platform',
+        ),
+        null,
+    );
+});
+
+void test('one-click routing never sends normal Linux or project-specific Windows grants to Calibration installer', () => {
+    const windows = {
+        id: 'kmj-kmj-codebridge-desktop-5fvjmet',
+        platform: 'win32',
+        projects: [{ id: 'kmj-codebridge', name: 'CodeBridge' }],
+        pairing_state: 'redeemed',
+    };
+    const plan = deviceProjectConnectPlan(windows, 'kmj-codebridge');
+    assert.equal(plan?.href, '/codebridge/pair');
+    assert.equal(plan?.download, undefined);
+    assert.match(plan?.guidance ?? '', /project-specific|Calibration Pro/i);
+    assert.equal(
+        deviceProjectConnectPlan(
+            { ...windows, platform: 'linux' },
+            'kmj-codebridge',
+        )?.href,
+        '/install',
+    );
+    assert.equal(
+        deviceProjectConnectPlan(
+            { ...windows, platform: 'darwin' },
+            'kmj-codebridge',
+        )?.href,
+        '/codebridge-connect.html',
+    );
+    const calibration = {
+        id: 'kmj-homeoffice-desktop-5fvjmet',
+        platform: 'win32',
+        projects: [{ id: 'kmj-calibration-pro', name: 'Calibration Pro' }],
+        pending_projects: [],
+        pairing_state: 'redeemed',
+    };
+    assert.equal(
+        deviceProjectConnectPlan(calibration, 'kmj-calibration-pro')?.href,
+        '/install-codebridge-windows.cmd',
+    );
+    assert.equal(
+        deviceProjectConnectPlan(
+            { ...calibration, pending_projects: [{ id: 'other' }] },
+            'kmj-calibration-pro',
+        )?.href,
+        '/codebridge/pair',
+    );
+});
+
+void test('unredeemed approval prompts existing enrollment review and never claims online', () => {
+    const plan = deviceProjectConnectPlan(
+        {
+            id: 'kmj-elite-main-platform',
+            platform: 'linux',
+            projects: [{ id: 'kmj-main-platform', name: 'Main Platform' }],
+            pairing_state: 'approved_unredeemed',
+        },
+        'kmj-main-platform',
+    );
+    assert.equal(plan?.label, 'Review existing enrollment');
+    assert.match(plan?.guidance ?? '', /existing private enrollment/);
+    assert.match(plan?.proof ?? '', /No verified gateway heartbeat/);
+    assert.match(deviceCenter, /id="codebridge-device-project-connect"/);
+    assert.match(deviceCenter, /Select authorized CodeBridge device/);
+    assert.match(deviceCenter, /Select authorized CodeBridge project/);
+    assert.match(
+        deviceCenter,
+        /deviceProjectConnectPlan\(connectDevice, connectProject\.id\)/,
+    );
+    assert.match(deviceCenter, /pending project\s+requests cannot be used/i);
+    assert.doesNotMatch(deviceCenter, /connectPlan.*online/);
 });

@@ -1,6 +1,7 @@
 import { Link, router } from '@inertiajs/react';
 import { codeBridgeDeviceQuotaDisplay } from './device-policy-display';
 import { deviceRecoveryAction } from './device-recovery.mjs';
+import { deviceProjectConnectPlan } from './device-project-connect.mjs';
 import { pendingProjectCards } from './pending-project-cards.mjs';
 import {
     ArrowRight,
@@ -70,6 +71,8 @@ export default function DeviceControlCenter({
     const [newProjectName, setNewProjectName] = useState('');
     const [newRepositoryUrl, setNewRepositoryUrl] = useState('');
     const [feedback, setFeedback] = useState('');
+    const [connectDeviceId, setConnectDeviceId] = useState('');
+    const [connectProjectId, setConnectProjectId] = useState('');
 
     const visibleDevices = useMemo(() => {
         const query = search.trim().toLowerCase();
@@ -104,6 +107,18 @@ export default function DeviceControlCenter({
         () => pendingProjectCards(visibleDevices),
         [visibleDevices],
     );
+
+    const connectDevice = devices.find(
+        (device) => device.id === connectDeviceId,
+    );
+    const connectProject =
+        connectDevice?.projects.find(
+            (project) => project.id === connectProjectId,
+        ) ?? connectDevice?.projects[0];
+    const connectPlan =
+        connectDevice && connectProject
+            ? deviceProjectConnectPlan(connectDevice, connectProject.id)
+            : null;
 
     const startDisconnect = (device: CodeBridgeDevice) => {
         if (!canManage) return;
@@ -242,6 +257,95 @@ export default function DeviceControlCenter({
                         <Cable className="h-4 w-4" /> Connect device
                     </Link>
                 </div>
+            </div>
+
+            <div
+                id="codebridge-device-project-connect"
+                className="mt-5 rounded-xl border border-red-500/20 bg-red-500/[0.03] p-4"
+            >
+                <div className="flex items-start gap-2">
+                    <Cable className="mt-0.5 h-4 w-4 shrink-0 text-red-500" />
+                    <div>
+                        <h3 className="text-sm font-black">
+                            Connect a device + project
+                        </h3>
+                        <p className="text-muted-foreground mt-1 text-xs leading-5">
+                            Choose an existing authorized device and its exact
+                            project. Continue to the matching first-party setup
+                            in one click. The local agent must still run on that
+                            device; new enrollment requires owner approval. A
+                            browser click cannot remotely start an offline
+                            computer.
+                        </p>
+                    </div>
+                </div>
+                <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                    <label className="text-xs font-semibold">
+                        Authorized device
+                        <select
+                            aria-label="Select authorized CodeBridge device"
+                            value={connectDeviceId}
+                            onChange={(event) => {
+                                setConnectDeviceId(event.target.value);
+                                setConnectProjectId('');
+                            }}
+                            className="bg-background mt-1 h-10 w-full rounded-lg border px-3 text-xs"
+                        >
+                            <option value="">Select device</option>
+                            {devices.map((device) => (
+                                <option value={device.id} key={device.id}>
+                                    {device.name} ·{' '}
+                                    {device.platform ?? 'unknown OS'} ·{' '}
+                                    {device.id.slice(-8)}
+                                </option>
+                            ))}
+                        </select>
+                    </label>
+                    <label className="text-xs font-semibold">
+                        Authorized project
+                        <select
+                            aria-label="Select authorized CodeBridge project"
+                            value={connectProject?.id ?? ''}
+                            onChange={(event) =>
+                                setConnectProjectId(event.target.value)
+                            }
+                            disabled={
+                                !connectDevice ||
+                                connectDevice.projects.length === 0
+                            }
+                            className="bg-background mt-1 h-10 w-full rounded-lg border px-3 text-xs disabled:opacity-50"
+                        >
+                            {!connectProject && (
+                                <option value="">No existing grant</option>
+                            )}
+                            {connectDevice?.projects.map((project) => (
+                                <option value={project.id} key={project.id}>
+                                    {project.name} ({project.id})
+                                </option>
+                            ))}
+                        </select>
+                    </label>
+                </div>
+                {connectPlan ? (
+                    <div className="mt-3 flex flex-wrap items-center gap-3">
+                        <a
+                            href={connectPlan.href}
+                            download={connectPlan.download}
+                            className="inline-flex min-h-10 items-center gap-2 rounded-lg bg-red-600 px-4 py-2 text-xs font-black text-white hover:bg-red-500"
+                        >
+                            <Cable className="h-4 w-4" />
+                            {connectPlan.label}
+                        </a>
+                        <p className="text-muted-foreground max-w-xl text-xs leading-5">
+                            {connectPlan.guidance} {connectPlan.proof}
+                        </p>
+                    </div>
+                ) : (
+                    <p className="text-muted-foreground mt-3 text-xs">
+                        Select an existing device/project grant. Pending project
+                        requests cannot be used to connect an agent.
+                    </p>
+                )}
             </div>
 
             <div className="mt-5 grid gap-3 sm:grid-cols-3">
