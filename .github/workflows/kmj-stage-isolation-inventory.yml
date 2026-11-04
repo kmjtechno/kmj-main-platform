@@ -1,0 +1,21 @@
+name: KMJ staging mirror isolation inventory safety
+on:
+  pull_request:
+    paths:
+      - scripts/operations/KMJ_STAGE_ISOLATION_INVENTORY_20261104.py
+      - scripts/test_stage_isolation_inventory_20261104.py
+      - .github/workflows/kmj-stage-isolation-inventory.yml
+permissions:
+  contents: read
+jobs:
+  rootless_audit_contract:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - name: Rootless source and adversarial classification tests
+        run: |
+          set -euo pipefail
+          python3 -B -m unittest scripts/test_stage_isolation_inventory_20261104.py -v
