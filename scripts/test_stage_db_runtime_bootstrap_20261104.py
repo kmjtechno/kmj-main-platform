@@ -49,19 +49,22 @@ class IsolatedDbRuntimeTests(unittest.TestCase):
                 m.catalog("role")
 
     def test_rejects_unprivileged_or_wrong_host_before_mutation(self):
-        with patch.object(m.os, "geteuid", return_value=1000), \
+        with patch.object(sys, "argv", ["stage-boot.py"]), \
+             patch.object(m.os, "geteuid", return_value=1000), \
              patch.object(m, "exact_pointers", side_effect=AssertionError("no access")), \
              patch.object(m, "new_dir", side_effect=AssertionError("no write")):
             with self.assertRaises(SystemExit):
                 m.main()
-        with patch.object(m.os, "geteuid", return_value=0), \
+        with patch.object(sys, "argv", ["stage-boot.py"]), \
+             patch.object(m.os, "geteuid", return_value=0), \
              patch.object(m.socket, "gethostname", return_value="wronghost"), \
              patch.object(m, "new_dir", side_effect=AssertionError("no write")):
             with self.assertRaises(SystemExit):
                 m.main()
 
     def test_runtime_missing_role_or_db_gate_aborts_without_create(self):
-        with patch.object(m.os, "geteuid", return_value=0), \
+        with patch.object(sys, "argv", ["stage-boot.py"]), \
+             patch.object(m.os, "geteuid", return_value=0), \
              patch.object(m.socket, "gethostname", return_value="KMJ-elite"), \
              patch.object(m, "exact_pointers", return_value=True), \
              patch.object(m, "mirror_ready"), \
@@ -105,6 +108,7 @@ class IsolatedDbRuntimeTests(unittest.TestCase):
             with patch.multiple(m, RUNTIME_PARENT=base, RUNTIME=candidate,
                                 SECRET_DIR=creds, SECRET_FILE=secret,
                                 STORAGE=storage), \
+                 patch.object(sys, "argv", ["stage-boot.py"]), \
                  patch.object(m.os, "geteuid", return_value=0), \
                  patch.object(m.socket, "gethostname", return_value="KMJ-elite"), \
                  patch.object(m, "exact_pointers", return_value=True), \
@@ -135,7 +139,8 @@ class IsolatedDbRuntimeTests(unittest.TestCase):
             self.assertFalse((storage / "framework/views").exists())
 
     def test_preexisting_runtime_parent_means_no_sql_mutations(self):
-        with patch.object(m.os, "geteuid", return_value=0), \
+        with patch.object(sys, "argv", ["stage-boot.py"]), \
+             patch.object(m.os, "geteuid", return_value=0), \
              patch.object(m.socket, "gethostname", return_value="KMJ-elite"), \
              patch.object(m, "exact_pointers", return_value=True), \
              patch.object(m, "mirror_ready"), \
