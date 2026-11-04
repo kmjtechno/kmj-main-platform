@@ -1,0 +1,21 @@
+name: KMJ exact staging candidate isolated migrations safety
+on:
+  pull_request:
+    paths:
+      - scripts/operations/KMJ_STAGE_A979_ISOLATED_MIGRATIONS_20261104.py
+      - scripts/test_stage_a979_isolated_migrations_20261104.py
+      - .github/workflows/kmj-stage-a979-isolated-migrations.yml
+permissions:
+  contents: read
+jobs:
+  candidate_only_migrations_contract:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - name: Synthetic scope/nonproduction migration tests (no real DB)
+        run: |
+          set -euo pipefail
+          sudo -n python3 -B -m unittest scripts/test_stage_a979_isolated_migrations_20261104.py -v
