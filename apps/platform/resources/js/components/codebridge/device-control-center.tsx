@@ -108,13 +108,17 @@ export default function DeviceControlCenter({
         [visibleDevices],
     );
 
-    const connectDevice = devices.find((device) => device.id === connectDeviceId);
-    const connectProject = connectDevice?.projects.find(
-        (project) => project.id === connectProjectId,
-    ) ?? connectDevice?.projects[0];
-    const connectPlan = connectDevice && connectProject
-        ? deviceProjectConnectPlan(connectDevice, connectProject.id)
-        : null;
+    const connectDevice = devices.find(
+        (device) => device.id === connectDeviceId,
+    );
+    const connectProject =
+        connectDevice?.projects.find(
+            (project) => project.id === connectProjectId,
+        ) ?? connectDevice?.projects[0];
+    const connectPlan =
+        connectDevice && connectProject
+            ? deviceProjectConnectPlan(connectDevice, connectProject.id)
+            : null;
 
     const startDisconnect = (device: CodeBridgeDevice) => {
         if (!canManage) return;
@@ -266,11 +270,12 @@ export default function DeviceControlCenter({
                             Connect a device + project
                         </h3>
                         <p className="text-muted-foreground mt-1 text-xs leading-5">
-                            Choose an existing authorized device and its exact project.
-                            Continue to the matching first-party setup in one click.
-                            The local agent must still run on that device; new
-                            enrollment requires owner approval. A browser click
-                            cannot remotely start an offline computer.
+                            Choose an existing authorized device and its exact
+                            project. Continue to the matching first-party setup
+                            in one click. The local agent must still run on that
+                            device; new enrollment requires owner approval. A
+                            browser click cannot remotely start an offline
+                            computer.
                         </p>
                     </div>
                 </div>
@@ -289,7 +294,9 @@ export default function DeviceControlCenter({
                             <option value="">Select device</option>
                             {devices.map((device) => (
                                 <option value={device.id} key={device.id}>
-                                    {device.name} · {device.platform ?? 'unknown OS'} · {device.id.slice(-8)}
+                                    {device.name} ·{' '}
+                                    {device.platform ?? 'unknown OS'} ·{' '}
+                                    {device.id.slice(-8)}
                                 </option>
                             ))}
                         </select>
@@ -299,11 +306,18 @@ export default function DeviceControlCenter({
                         <select
                             aria-label="Select authorized CodeBridge project"
                             value={connectProject?.id ?? ''}
-                            onChange={(event) => setConnectProjectId(event.target.value)}
-                            disabled={!connectDevice || connectDevice.projects.length === 0}
+                            onChange={(event) =>
+                                setConnectProjectId(event.target.value)
+                            }
+                            disabled={
+                                !connectDevice ||
+                                connectDevice.projects.length === 0
+                            }
                             className="bg-background mt-1 h-10 w-full rounded-lg border px-3 text-xs disabled:opacity-50"
                         >
-                            {!connectProject && <option value="">No existing grant</option>}
+                            {!connectProject && (
+                                <option value="">No existing grant</option>
+                            )}
                             {connectDevice?.projects.map((project) => (
                                 <option value={project.id} key={project.id}>
                                     {project.name} ({project.id})
