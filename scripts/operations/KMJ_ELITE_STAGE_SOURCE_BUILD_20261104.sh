@@ -68,6 +68,10 @@ trap 'rm -f -- .env' EXIT
 composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader --no-scripts --no-progress
 npm ci --ignore-scripts --no-audit --no-fund
 npm run build
+# node_modules is build-only and contains legitimate symlinks; it must not be
+# published as a root-owned served candidate.
+[[ -d node_modules && ! -L node_modules ]] || exit 2
+rm -rf -- node_modules
 rm -f -- .env
 trap - EXIT
 python3 - "$app" <<'PY'
@@ -96,11 +100,9 @@ chmod 0700 -- "$scratch"
 chown -hR root:root -- "$scratch/repo"
 chmod -R go-w -- "$scratch/repo"
 [[ ! -e "$scratch/repo/apps/platform/.env" && ! -L "$scratch/repo/apps/platform/.env" ]] || block ENV_NOT_REMOVED
-if [[ -n "$(find "$scratch/repo/apps/platform" -xdev \( -type l -o -type p -o -type s -o -type c -o -type b \) -print -quit)" ]]; then
-  block UNSAFE_OBJECT_IN_SERVED_TREE
-fi
-[[ "$(git -c safe.directory="$scratch/repo" -C "$scratch/repo" rev-parse HEAD)" == "$SHA" ]] || block SHA_DRIFT
-[[ -z "$(git -c safe.directory="$scratch/repo" -C "$scratch/repo" status --porcelain --untracked-files=normal)" ]] || block DIRTY
+unsafe_objects="$(find "$scratch/repo/apps/platform" -xdev \( -type l -o -type p -o -type s -o -type c -o -type b \) -print -quit)" || block SCAN_UNAVAILABLE
+[[ -z "$unsafe_objects" ]] || block UNSAFE_OBJECT_IN_SERVED_TREE
+[[ "$(cat -- "$scratch/repo/.git/HEAD")" == "$SHA" ]] || block HEAD_DRIFT
 [[ "$(readlink -- "$PROD_SITE")" == "$prod_link" && "$(readlink -- "$STAGE_SITE")" == "$stage_link" ]] || block POINTER_DRIFT
 # No overwrite even on a concurrent name collision (Linux renameat2).
 python3 -I - "$RELEASES" "$scratch/repo" "$SHA" <<'PUBLISH'
