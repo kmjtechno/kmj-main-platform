@@ -4,16 +4,19 @@ import { deviceRecoveryAction } from './device-recovery.mjs';
 // source of selectable registered device/project grants. This helper cannot
 // grant permissions, retrieve enrollment secrets or start remote agents.
 export function deviceProjectConnectPlan(device, projectId) {
-    if (!device || typeof device.id !== 'string' ||
+    if (
+        !device ||
+        typeof device.id !== 'string' ||
         !/^[A-Za-z0-9_-]{1,64}$/.test(device.id) ||
         !Array.isArray(device.projects) ||
         typeof projectId !== 'string' ||
-        !/^[a-z0-9][a-z0-9_-]{0,63}$/.test(projectId)) {
+        !/^[a-z0-9][a-z0-9_-]{0,63}$/.test(projectId)
+    ) {
         return null;
     }
-    const project = device.projects.find((item) =>
-        item && item.id === projectId &&
-        typeof item.name === 'string'
+    const project = device.projects.find(
+        (item) =>
+            item && item.id === projectId && typeof item.name === 'string',
     );
     if (!project) return null; // Pending requests are NOT active grants.
 
@@ -23,9 +26,16 @@ export function deviceProjectConnectPlan(device, projectId) {
             ? device.pending_projects.map((item) => item.id)
             : [],
     });
-    if (!action || !['/install', '/codebridge/pair',
-        '/codebridge-connect.html', '/install-codebridge-windows.cmd'
-    ].includes(action.href)) return null;
+    if (
+        !action ||
+        ![
+            '/install',
+            '/codebridge/pair',
+            '/codebridge-connect.html',
+            '/install-codebridge-windows.cmd',
+        ].includes(action.href)
+    )
+        return null;
 
     const unredeemed = device.pairing_state === 'approved_unredeemed';
     return {
