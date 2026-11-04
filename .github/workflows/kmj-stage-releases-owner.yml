@@ -1,0 +1,21 @@
+name: KMJ staging owner single-directory repair safety
+on:
+  pull_request:
+    paths:
+      - scripts/operations/KMJ_STAGE_RELEASES_PARENT_OWNER_20261104.py
+      - scripts/test_stage_releases_parent_owner_20261104.py
+      - .github/workflows/kmj-stage-releases-owner.yml
+permissions:
+  contents: read
+jobs:
+  protected_parent:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - name: Check fail-closed ownership invariants without privileged side effects
+        run: |
+          set -euo pipefail
+          python3 -B -m unittest scripts/test_stage_releases_parent_owner_20261104.py -v
