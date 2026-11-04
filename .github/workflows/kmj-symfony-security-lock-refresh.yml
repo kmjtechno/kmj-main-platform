@@ -78,7 +78,7 @@ jobs:
           [[ "$(git rev-parse HEAD)" == "$GH_HEAD" ]] || exit 2
           remote_head="$(gh api "repos/$GH_REPO/git/ref/heads/$GH_BRANCH" --jq '.object.sha')"
           [[ "$remote_head" == "$GH_HEAD" ]] || exit 2
-          old_blob="$(git hash-object apps/platform/composer.lock)"
+          old_blob="$(git rev-parse HEAD:apps/platform/composer.lock)"
           export OLD_LOCK_BLOB="$old_blob"
           python3 - <<'PY'
           import base64,json,os,pathlib
