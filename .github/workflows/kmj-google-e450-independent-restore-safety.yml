@@ -1,0 +1,22 @@
+name: KMJ Google e450 restore wrapper source safety
+on:
+  pull_request:
+    paths:
+      - scripts/operations/kmj-google-e450-independent-restore-20261105.sh
+      - scripts/test_kmj_google_e450_restore_20261105.py
+      - .github/workflows/kmj-google-e450-independent-restore-safety.yml
+permissions:
+  contents: read
+jobs:
+  exact_google_e450_restore_source_contract:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - name: Check syntax and immutable independent-restore evidence contract
+        run: |
+          set -euo pipefail
+          bash -n scripts/operations/kmj-google-e450-independent-restore-20261105.sh
+          python3 -B -m unittest scripts/test_kmj_google_e450_restore_20261105.py -v
