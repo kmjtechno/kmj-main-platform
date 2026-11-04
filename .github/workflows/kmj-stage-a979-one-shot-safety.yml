@@ -1,0 +1,22 @@
+name: KMJ a979 staging guarded one-shot source safety
+on:
+  pull_request:
+    paths:
+      - scripts/operations/kmj-a979-guarded-one-shot-20261104.sh
+      - scripts/test_stage_a979_one_shot_20261104.py
+      - .github/workflows/kmj-stage-a979-one-shot-safety.yml
+permissions:
+  contents: read
+jobs:
+  guarded_source_contract:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - name: Offline syntax and fail-closed contract checks
+        run: |
+          set -euo pipefail
+          bash -n scripts/operations/kmj-a979-guarded-one-shot-20261104.sh
+          python3 -B -m unittest scripts/test_stage_a979_one_shot_20261104.py -v
