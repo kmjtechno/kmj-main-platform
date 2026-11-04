@@ -6,15 +6,17 @@ on:
       - apps/platform/composer.lock
       - .github/workflows/kmj-symfony-security-lock-refresh.yml
 permissions:
-  contents: read
+  contents: write
 jobs:
   patched_lock:
+    if: github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.head.ref == 'ops/google-e450-independent-restore-20261105'
     runs-on: ubuntu-24.04
     timeout-minutes: 12
     steps:
       - uses: actions/checkout@v5
         with:
           persist-credentials: false
+          ref: ${{ github.event.pull_request.head.sha }}
       - uses: shivammathur/setup-php@87d00bde2555f25eb54fedf940384e99cbdc55ef
         with:
           php-version: '8.4'
@@ -63,3 +65,34 @@ jobs:
           path: apps/platform/composer.lock
           if-no-files-found: error
           retention-days: 1
+      - name: Commit audited lock to EXACT non-default PR head only
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          GH_HEAD: ${{ github.event.pull_request.head.sha }}
+          GH_BRANCH: ${{ github.head_ref }}
+        run: |
+          set -euo pipefail
+          [[ "$GH_REPO" == "kmjtechno/kmj-main-platform" ]] || exit 2
+          [[ "$GH_BRANCH" == "ops/google-e450-independent-restore-20261105" ]] || exit 2
+          [[ "$(git rev-parse HEAD)" == "$GH_HEAD" ]] || exit 2
+          remote_head="$(gh api "repos/$GH_REPO/git/ref/heads/$GH_BRANCH" --jq '.object.sha')"
+          [[ "$remote_head" == "$GH_HEAD" ]] || exit 2
+          old_blob="$(git hash-object apps/platform/composer.lock)"
+          export OLD_LOCK_BLOB="$old_blob"
+          python3 - <<'PY'
+          import base64,json,os,pathlib
+          lock=pathlib.Path("apps/platform/composer.lock").read_bytes()
+          payload={
+              "message": "fix(security): lock patched Symfony components after full clean Composer audit",
+              "content": base64.b64encode(lock).decode("ascii"),
+              "sha": os.environ["OLD_LOCK_BLOB"],
+              "branch": os.environ["GH_BRANCH"],
+          }
+          out=pathlib.Path(os.environ["RUNNER_TEMP"])/"kmj-private-lock-update.json"
+          out.write_text(json.dumps(payload))
+          out.chmod(0o600)
+          PY
+          gh api "repos/$GH_REPO/contents/apps/platform/composer.lock" \
+            -X PUT --input "$RUNNER_TEMP/kmj-private-lock-update.json" >/dev/null
+          echo "PATCHED_LOCK_PUSH=EXACT_PR_BRANCH_ONLY"
