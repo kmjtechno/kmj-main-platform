@@ -213,9 +213,12 @@ def copy_tree(source_fd: int, output: Path, prefix: str, depth: int, seen: dict,
             copy_file(source_fd, name, dst, seen)
         else:
             fail("SOURCE_SYMLINK_OR_SPECIAL")
-    if prefix == "apps/platform":
-        for name in ("storage", "bootstrap/cache"):
-            (output / name).mkdir(parents=True, exist_ok=True, mode=0o500)
+    # Create each omitted runtime-only placeholder while its OWN parent is
+    # still writable to the copying process; never reopen a sealed ancestor.
+    if prefix == "apps/platform/bootstrap":
+        (output / "cache").mkdir(mode=0o500)
+    elif prefix == "apps/platform":
+        (output / "storage").mkdir(mode=0o500)
 
 
 def inspect_copy(tmp: Path) -> bool:
