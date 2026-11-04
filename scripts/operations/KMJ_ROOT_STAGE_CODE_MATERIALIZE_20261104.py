@@ -45,6 +45,12 @@ SKIP_EXACT = {
     "apps/platform/node_modules",
     "apps/platform/bootstrap/cache",
     "apps/platform/vendor/bin",
+    # Never import user-controlled Git config/hooks into a root-owned candidate.
+    ".git/config",
+    ".git/hooks",
+    ".git/info",
+    ".git/logs",
+    ".git/FETCH_HEAD",
 }
 BLOCK_NAME = {".env", ".ssh", ".aws", ".gnupg"}
 KEY_NAME = re.compile(r"(?i)(?:^id_(?:rsa|ed25519|ecdsa)$|.*\.(?:pem|key|p12|pfx))")
@@ -132,7 +138,9 @@ def allow_entry(name: str, relative: str) -> bool:
         fail("UNSAFE_ENTRY_NAME")
     if relative in SKIP_EXACT:
         return False
-    if name in BLOCK_NAME or KEY_NAME.fullmatch(name):
+    if (name in BLOCK_NAME or
+            (name.startswith(".env.") and name != ".env.example") or
+            KEY_NAME.fullmatch(name)):
         return False
     return True
 
