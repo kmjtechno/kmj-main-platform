@@ -1,0 +1,21 @@
+name: KMJ root staging runtime read-only audit safety
+on:
+  pull_request:
+    paths:
+      - scripts/operations/KMJ_STAGE_ROOT_SNAPSHOT_RUNTIME_PREFLIGHT_20261104.py
+      - scripts/test_stage_root_snapshot_runtime_preflight_20261104.py
+      - .github/workflows/kmj-stage-root-runtime-preflight.yml
+permissions:
+  contents: read
+jobs:
+  no_mutation_runtime_audit:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - name: Run synthetic contract tests without host root or network probes
+        run: |
+          set -euo pipefail
+          python3 -B -m unittest scripts/test_stage_root_snapshot_runtime_preflight_20261104.py -v
