@@ -1,0 +1,21 @@
+name: KMJ staging web and legacy SSH readonly diagnostics
+on:
+  pull_request:
+    paths:
+      - scripts/operations/KMJ_STAGE_WEB_OFFSITE_PREFLIGHT_20261104.py
+      - scripts/test_stage_web_offsite_preflight_20261104.py
+      - .github/workflows/kmj-stage-web-offsite-preflight.yml
+permissions:
+  contents: read
+jobs:
+  bounded_no_secret_diagnostics:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - name: Verify read-only fixed-scope and output contracts
+        run: |
+          set -euo pipefail
+          python3 -B -m unittest scripts/test_stage_web_offsite_preflight_20261104.py -v
