@@ -1,0 +1,21 @@
+name: KMJ candidate staging isolated database/storage bootstrap safety
+on:
+  pull_request:
+    paths:
+      - scripts/operations/KMJ_STAGE_DB_RUNTIME_BOOTSTRAP_20261104.py
+      - scripts/test_stage_db_runtime_bootstrap_20261104.py
+      - .github/workflows/kmj-stage-db-runtime-bootstrap.yml
+permissions:
+  contents: read
+jobs:
+  candidate_isolation_safety:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - name: Simulate root-only private DB/storage preparation without real SQL
+        run: |
+          set -euo pipefail
+          sudo -n python3 -B -m unittest scripts/test_stage_db_runtime_bootstrap_20261104.py -v
