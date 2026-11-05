@@ -503,16 +503,16 @@ export default function DeviceControlCenter({
                                     'approved_unredeemed' && (
                                     <div className="mt-3 rounded-lg border border-amber-500/30 p-3 text-xs">
                                         <p className="font-black text-amber-600 dark:text-amber-400">
-                                            Approval has not reached this
-                                            computer
+                                            Pairing redemption receipt missing
                                         </p>
                                         <p className="text-muted-foreground mt-1 leading-5">
-                                            A server credential exists, but the
-                                            agent has not redeemed its one-time
-                                            approval. {recovery.guidance} If
+                                            This pairing record has no redemption
+                                            receipt. It does not establish whether
+                                            this device is currently connected. {recovery.guidance} If
                                             enrollment was lost, do not keep
                                             approving new codes. Once pairing is
-                                            healthy, a manager can disconnect
+                                            healthy and gateway checks confirm
+                                            recovery is needed, a manager can disconnect
                                             only this device (recent password
                                             confirmation required), then approve
                                             one new code on that device. No
