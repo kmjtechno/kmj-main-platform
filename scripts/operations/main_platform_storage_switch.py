@@ -96,63 +96,120 @@ class Freezer:
         if new != cur:
             fcntl.ioctl(fd, FS_IOC_SETFLAGS, array.array("L", [new]), True)
 
-    def require_ready(self) -> None:
+    def require_ready(self, probe_dir: str | None = None) -> None:
         need(os.geteuid() == 0, "ROOT_REQUIRED_FOR_ENFORCED_FREEZE")
+        need(probe_dir is not None, "PROBE_DIR_REQUIRED")
+        # Root uid alone proves nothing: prove CAP_LINUX_IMMUTABLE + filesystem support
+        # with a throwaway file on the SAME filesystem as the trees.
+        path = os.path.join(probe_dir, f".kmj-probe-{secrets.token_hex(6)}")
+        fd = os.open(path, os.O_RDWR | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW | os.O_CLOEXEC, 0o600)
+        try:
+            self.set_immutable(fd, True)
+            try:
+                os.write(fd, b"x")
+                raise Blocked("FREEZE_NOT_ENFORCED_BY_FILESYSTEM")
+            except PermissionError:
+                pass
+        except OSError as exc:
+            raise Blocked(f"FREEZE_UNSUPPORTED_{exc.errno}") from exc
+        finally:
+            try:
+                self.set_immutable(fd, False)
+            finally:
+                os.close(fd)
+                os.unlink(path)
 
 
 FREEZER: Freezer = Freezer()
 
 
-def _walk_inodes(root_fd: int, include_top: bool):
-    """Yield (fd, is_dir) for every inode; caller must not keep fds. Dirs first."""
-    count = 0
-    stack = [root_fd]
-    order: list[tuple[int, bool]] = []
-    if include_top:
-        order.append((os.dup(root_fd), True))
-    while stack:
-        fd = stack.pop()
-        for name in os.listdir(fd):
-            count += 1
-            need(count <= MAX_ENTRIES, "TOO_MANY_ENTRIES")
-            st = os.stat(name, dir_fd=fd, follow_symlinks=False)
+def _visit_tree(root_fd: int, include_top: bool, action) -> int:
+    """Depth-first, one directory fd per level (bounded by tree depth, closed on every path)."""
+    seen = 0
+    changed = 0
+
+    def inode(fd: int) -> None:
+        nonlocal seen, changed
+        seen += 1
+        need(seen <= MAX_ENTRIES, "TOO_MANY_ENTRIES")
+        changed += 1 if action(fd) else 0
+
+    def descend(dfd: int) -> None:
+        for name in os.listdir(dfd):
+            st = os.stat(name, dir_fd=dfd, follow_symlinks=False)
             if stat.S_ISDIR(st.st_mode):
-                child = os.open(name, DIR_FLAGS, dir_fd=fd)
-                order.append((os.dup(child), True))
-                stack.append(child)
+                child = os.open(name, DIR_FLAGS, dir_fd=dfd)
+                try:
+                    inode(child)  # freeze the directory BEFORE descending: entry creation closes first
+                    descend(child)
+                finally:
+                    os.close(child)
             elif stat.S_ISREG(st.st_mode):
-                order.append((os.open(name, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK | os.O_CLOEXEC, dir_fd=fd), False))
+                f = os.open(name, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK | os.O_CLOEXEC, dir_fd=dfd)
+                try:
+                    inode(f)
+                finally:
+                    os.close(f)
             else:
                 raise Blocked("SYMLINK_OR_SPECIAL_ENTRY")
-    return order
+
+    if include_top:
+        inode(root_fd)
+    descend(root_fd)
+    return changed
+
+
+def _precheck_tree(root_fd: int, include_top: bool) -> None:
+    """Read-only: every inode supports the flag ioctl and carries NO immutable/append flag."""
+    def check(fd: int) -> bool:
+        try:
+            flags = FREEZER.flags(fd)
+        except OSError as exc:
+            raise Blocked(f"FREEZE_UNSUPPORTED_{exc.errno}") from exc
+        need(not (flags & (FS_IMMUTABLE_FL | FS_APPEND_FL)), "ALREADY_IMMUTABLE_OR_APPEND_REVIEW")
+        return False
+
+    _visit_tree(root_fd, include_top, check)
 
 
 def set_tree(root_fd: int, on: bool, include_top: bool) -> int:
-    """Freeze/thaw a tree until a full pass changes nothing (new entries get caught)."""
+    def act(fd: int) -> bool:
+        before = FREEZER.flags(fd)
+        FREEZER.set_immutable(fd, on)
+        return FREEZER.flags(fd) != before
+
     total = 0
-    for npass in range(6):
-        changed = 0
-        for fd, is_dir in sorted(_walk_inodes(root_fd, include_top), key=lambda x: not x[1]):
-            try:
-                before = FREEZER.flags(fd)
-                need(not (before & FS_APPEND_FL), "ALREADY_APPEND_ONLY_REVIEW")
-                if on and npass == 0:
-                    need(not (before & FS_IMMUTABLE_FL), "ALREADY_IMMUTABLE_REVIEW")
-                FREEZER.set_immutable(fd, on)
-                if FREEZER.flags(fd) != before:
-                    changed += 1
-            except OSError as exc:
-                raise Blocked(f"FREEZE_UNSUPPORTED_{exc.errno}") from exc
-            finally:
-                os.close(fd)
+    for _ in range(6):
+        try:
+            changed = _visit_tree(root_fd, include_top, act)
+        except OSError as exc:
+            raise Blocked(f"FREEZE_FAILED_{exc.errno}") from exc
         total += changed
         if changed == 0:
             return total
     raise Blocked("TREE_NOT_STABLE_UNDER_FREEZE")
 
 
+def tree_clean(root_fd: int, include_top: bool) -> bool:
+    """True when no inode in the tree carries the immutable flag."""
+    flagged = []
+
+    def look(fd: int) -> bool:
+        if FREEZER.flags(fd) & FS_IMMUTABLE_FL:
+            flagged.append(1)
+        return False
+
+    _visit_tree(root_fd, include_top, look)
+    return not flagged
+
+
 def freeze(root_fd: int, include_top: bool) -> int:
-    return set_tree(root_fd, True, include_top)
+    _precheck_tree(root_fd, include_top)  # nothing is mutated until the whole tree is known flag-clean
+    try:
+        return set_tree(root_fd, True, include_top)
+    except (Blocked, OSError):
+        thaw(root_fd, include_top)  # all-clean precondition => clearing restores the exact original state
+        raise
 
 
 def thaw(root_fd: int, include_top: bool) -> int:
@@ -392,6 +449,13 @@ class Ctx:
     pass
 
 
+_LOCKS: list[int] = []
+PHASES = {"begin", "live_frozen", "both_frozen", "link_created", "exchanged", "preserved", "complete",
+          "rollback_begin", "rollback_shared_frozen", "rollback_old_thawed", "rollback_exchanged",
+          "rollback_parked"}
+NAME_RE = __import__("re").compile(r"\A(\.kmj-storage-link-[0-9a-f]{16}|storage\.pre-shared-\d{8}T\d{6}Z)\Z")
+
+
 def context(args: argparse.Namespace) -> Ctx:
     allowed = os.path.realpath(args.allowed_root)
     app, shared = Path(args.app_dir), Path(args.shared)
@@ -401,7 +465,7 @@ def context(args: argparse.Namespace) -> Ctx:
     sp, ap = str(shared), str(app)
     need(not (sp == ap or sp.startswith(ap + "/") or ap.startswith(sp + "/")), "NESTED_OR_SAME_TARGET")
     c = Ctx()
-    c.app, c.shared = app, shared
+    c.app, c.shared, c.args = app, shared, args
     c.app_fd, c.shared_fd = open_dir(app), open_dir(shared)
     need(fd_id(c.app_fd)[0] == fd_id(c.shared_fd)[0], "CROSS_FILESYSTEM")
     need(os.fstat(c.shared_fd).st_mode & 0o022 == 0, "SHARED_NOT_PRIVATE")
@@ -412,41 +476,78 @@ def context(args: argparse.Namespace) -> Ctx:
     need((live.st_dev, live.st_ino) != fd_id(c.shared_fd), "SAME_INODE_TARGET")
     fcntl.flock(c.app_fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
     _LOCKS.append(c.app_fd)
-    jdir = shared.parent
-    need(os.stat(jdir).st_mode & 0o022 == 0, "JOURNAL_DIR_NOT_PRIVATE")
-    c.journal = jdir / f".kmj-storage-switch-{hashlib.sha256(ap.encode()).hexdigest()[:12]}.journal"
-    c.args = args
+    c.key = hashlib.sha256(ap.encode()).hexdigest()[:12]
+    c.state_fd = None
     return c
 
 
-_LOCKS: list[int] = []
+def open_state(c: Ctx) -> None:
+    """Protected transaction state: owned by the (root) caller, 0700, no group/other-writable ancestor."""
+    path = Path(c.args.state_dir)
+    need(str(path) == os.path.abspath(path) == os.path.realpath(path), "STATE_DIR_NOT_CANONICAL")
+    need(not str(path).startswith((str(c.app) + "/", str(c.shared) + "/")) and str(path) not in (str(c.app), str(c.shared)),
+         "STATE_DIR_INSIDE_TREES")
+    if not path.exists():
+        need(os.geteuid() == 0, "STATE_DIR_MISSING")
+        os.mkdir(path, 0o700)
+    fd = open_dir(path)
+    st = os.fstat(fd)
+    need(st.st_uid == os.geteuid() and stat.S_IMODE(st.st_mode) & 0o077 == 0, "STATE_DIR_NOT_PROTECTED")
+    cur = Path("/")
+    for part in path.parent.parts[1:]:
+        cur = cur / part
+        ast = os.lstat(cur)
+        need(not (ast.st_mode & 0o022) or (ast.st_mode & stat.S_ISVTX), "STATE_DIR_ANCESTOR_WRITABLE")
+    c.state_fd = fd
+
+
+def _journal_name(c: Ctx) -> str:
+    return f"{c.key}.journal"
+
+
+def _validate(entry) -> dict:
+    need(isinstance(entry, dict) and entry.get("phase") in PHASES and isinstance(entry.get("t"), int), "JOURNAL_INVALID")
+    for k in ("link", "kept"):
+        if k in entry:
+            need(isinstance(entry[k], str) and NAME_RE.match(entry[k]) is not None, "JOURNAL_INVALID")
+    return entry
 
 
 def journal_write(c: Ctx, phase: str, **extra) -> None:
-    flags = os.O_WRONLY | os.O_CREAT | os.O_APPEND | os.O_NOFOLLOW | os.O_CLOEXEC
-    fd = os.open(c.journal, flags, 0o600)
+    fd = os.open(_journal_name(c), os.O_WRONLY | os.O_CREAT | os.O_APPEND | os.O_NOFOLLOW | os.O_CLOEXEC, 0o600,
+                 dir_fd=c.state_fd)
     try:
-        _write_all(fd, (json.dumps({"t": int(time.time()), "phase": phase, **extra}) + "\n").encode())
+        st = os.fstat(fd)
+        need(stat.S_ISREG(st.st_mode) and st.st_nlink == 1 and st.st_uid == os.geteuid()
+             and stat.S_IMODE(st.st_mode) & 0o077 == 0 and st.st_size < 65536, "JOURNAL_FILE_UNSAFE")
+        _write_all(fd, (json.dumps(_validate({"t": int(time.time()), "phase": phase, **extra})) + "\n").encode())
         os.fsync(fd)
     finally:
         os.close(fd)
-    dfd = open_dir(c.journal.parent)
-    try:
-        os.fsync(dfd)
-    finally:
-        os.close(dfd)
+    os.fsync(c.state_fd)
 
 
-def journal_last(c: Ctx) -> dict | None:
+def journal_entries(c: Ctx) -> list[dict]:
     try:
-        lines = c.journal.read_text().strip().splitlines()
+        fd = os.open(_journal_name(c), os.O_RDONLY | os.O_NOFOLLOW | os.O_CLOEXEC, dir_fd=c.state_fd)
     except FileNotFoundError:
-        return None
-    return json.loads(lines[-1]) if lines else None
+        return []
+    try:
+        st = os.fstat(fd)
+        need(stat.S_ISREG(st.st_mode) and st.st_nlink == 1 and st.st_uid == os.geteuid()
+             and stat.S_IMODE(st.st_mode) & 0o077 == 0 and st.st_size <= 65536, "JOURNAL_FILE_UNSAFE")
+        raw = os.read(fd, 65537)
+    finally:
+        os.close(fd)
+    lines = raw.decode("utf-8", "strict").splitlines()
+    need(len(lines) <= 200, "JOURNAL_INVALID")
+    return [_validate(json.loads(line)) for line in lines]
 
 
 def journal_close(c: Ctx) -> None:
-    os.rename(c.journal, str(c.journal) + f".done-{int(time.time())}")
+    os.rename(_journal_name(c), f"{_journal_name(c)}.done-{int(time.time())}", src_dir_fd=c.state_fd,
+              dst_dir_fd=c.state_fd)
+    os.fsync(c.state_fd)
 
 
 def pinned(c: Ctx, live_fd: int | None) -> None:
@@ -455,6 +556,60 @@ def pinned(c: Ctx, live_fd: int | None) -> None:
     if live_fd is not None:
         st = os.stat("storage", dir_fd=c.app_fd, follow_symlinks=False)
         need(stat.S_ISDIR(st.st_mode) and (st.st_dev, st.st_ino) == fd_id(live_fd), "LIVE_STORAGE_REPLACED")
+
+
+def top_meta(fd: int) -> tuple:
+    st = os.fstat(fd)
+    return stat.S_IMODE(st.st_mode), st.st_uid, st.st_gid
+
+
+def top_dir_holders(tree: str | Path, proc_root: str = "/proc") -> list[int]:
+    """Narrow supplement (not the enforcement): processes whose cwd/fd IS the unfrozen top directory."""
+    real = os.path.realpath(tree)
+    out, me = [], str(os.getpid())
+    for pid in os.listdir(proc_root):
+        if not pid.isdigit() or pid == me:
+            continue
+        base = Path(proc_root) / pid
+        try:
+            targets = [os.readlink(base / "cwd")]
+            for fd in os.listdir(base / "fd"):
+                try:
+                    targets.append(os.readlink(base / "fd" / fd))
+                except FileNotFoundError:
+                    continue
+        except FileNotFoundError:
+            continue
+        except OSError:
+            raise Blocked("PROCESS_TABLE_UNREADABLE_CANNOT_CHECK_TOP_DIR_HANDLES")
+        if real in targets:
+            out.append(int(pid))
+    return out
+
+
+def restore_original(c: Ctx, link: str | None, kept: str | None) -> None:
+    """Idempotent: make `storage` the original real directory again and thaw everything we froze.
+    Only valid while both trees are still frozen (so the swap back hides no accepted write)."""
+    if os.path.islink(c.app / "storage"):
+        holder = kept if kept and os.path.isdir(c.app / kept) else link
+        need(holder is not None and os.path.isdir(c.app / holder) and not os.path.islink(c.app / holder), "NO_ORIGINAL_DIR_FOUND")
+        hfd = os.open(holder, DIR_FLAGS, dir_fd=c.app_fd)
+        FREEZER.set_immutable(hfd, False)  # top may be frozen: a frozen dir cannot be renamed
+        if holder != link:
+            link = link or LINK + secrets.token_hex(8)
+            renameat2(c.app_fd, holder, link, RENAME_NOREPLACE)
+        else:
+            link = holder
+        os.fsync(c.app_fd)
+        renameat2(c.app_fd, "storage", link, RENAME_EXCHANGE)
+        os.fsync(c.app_fd)
+        if os.path.islink(c.app / link):
+            os.rename(c.app / link, c.app / (PARKED + "reverted-" + secrets.token_hex(4)))
+            os.fsync(c.app_fd)
+    live_fd = os.open("storage", DIR_FLAGS, dir_fd=c.app_fd)
+    thaw(c.shared_fd, include_top=True)
+    thaw(live_fd, include_top=False)
+    need(tree_clean(c.shared_fd, True) and tree_clean(live_fd, False), "THAW_NOT_VERIFIED")
 
 
 # ------------------------------------------------------------------- commands
@@ -466,23 +621,30 @@ def cmd_plan(args) -> dict:
     ld, sd = {}, {}
     live, sh = scan(live_fd, ld), scan(c.shared_fd, sd)
     copy, block, benign = diff(live, sh)
+    meta_ok = top_meta(live_fd) == top_meta(c.shared_fd)
     return {"command": "plan", "live_files": len(live), "shared_files": len(sh), "to_copy": len(copy),
             "persistent_conflicts": sorted(block), "benign_log_divergence": len(benign),
-            "plan_id": plan_id(live, ld), "persistent_only_plan_id": True, "ready": not block,
-            "enforced_freeze_possible_here": os.geteuid() == 0,
+            "plan_id": plan_id(live, ld), "persistent_only_plan_id": True,
+            "top_dir_meta_live_mode_uid_gid": list(top_meta(live_fd)),
+            "top_dir_meta_shared_mode_uid_gid": list(top_meta(c.shared_fd)),
+            "ready": not block and meta_ok, "enforced_freeze_possible_here": os.geteuid() == 0,
             "inventory_only_not_release_readiness": True, "mutated": False}
 
 
 def cmd_switch(args) -> dict:
     need(args.apply and args.plan_id, "APPLY_AND_PLAN_ID_REQUIRED")
-    FREEZER.require_ready()
     c = context(args)
-    need(journal_last(c) is None, "JOURNAL_PRESENT_RUN_RECOVER")
+    FREEZER.require_ready(str(c.shared))
+    open_state(c)
+    need(not journal_entries(c), "JOURNAL_PRESENT_RUN_RECOVER")
     need(stat.S_ISDIR(os.stat("storage", dir_fd=c.app_fd, follow_symlinks=False).st_mode), "LIVE_STORAGE_NOT_A_DIRECTORY")
     live_fd = os.open("storage", DIR_FLAGS, dir_fd=c.app_fd)
-    journal_write(c, "begin")
-    live_frozen = shared_frozen = exchanged = False
+    need(top_meta(live_fd) == top_meta(c.shared_fd), "TOP_DIR_MODE_OWNER_MISMATCH_LIVE_VS_SHARED")
+    need(not top_dir_holders(c.app / "storage", args.proc_root), "LIVE_TOP_DIR_HELD_OPEN")
     link = LINK + secrets.token_hex(8)
+    kept = PRE + time.strftime("%Y%m%dT%H%M%SZ", time.gmtime())
+    journal_write(c, "begin", link=link, kept=kept)
+    live_frozen = shared_frozen = committed = False
     try:
         fault("begin")
         freeze(live_fd, include_top=False)
@@ -503,70 +665,78 @@ def cmd_switch(args) -> dict:
         fault("both_frozen")
         sd2 = {}
         need(plan_id(scan(c.shared_fd, sd2), sd2) == plan_id(sh, sd), "SHARED_CHANGED_UNDER_FREEZE")
+        ld1 = {}
+        need(plan_id(scan(live_fd, ld1), ld1) == plan_id(live, ld), "LIVE_CHANGED_UNDER_FREEZE")  # late top-level entry
+        need(not top_dir_holders(c.app / "storage", args.proc_root), "LIVE_TOP_DIR_HELD_OPEN")
         pinned(c, live_fd)
+        os.sync()
         os.symlink(str(c.shared), link, dir_fd=c.app_fd)
         os.fsync(c.app_fd)
-        journal_write(c, "link_created", link=link)
+        journal_write(c, "link_created")
         renameat2(c.app_fd, "storage", link, RENAME_EXCHANGE)
         os.fsync(c.app_fd)
-        exchanged = True
-        journal_write(c, "exchanged", link=link)
+        journal_write(c, "exchanged")
         fault("exchanged")
         now = os.open("storage", os.O_RDONLY | os.O_DIRECTORY | os.O_CLOEXEC, dir_fd=c.app_fd)  # follows our symlink
         need(fd_id(now) == fd_id(c.shared_fd), "NEW_STORAGE_NOT_SHARED_IDENTITY")
         d3 = {}
         need(plan_id(scan(now, d3), d3) == plan_id(sh, sd), "NEW_STORAGE_TREE_MISMATCH")
-        old = os.open(link, DIR_FLAGS, dir_fd=c.app_fd)
-        d4 = {}
-        need(plan_id(scan(old, d4), d4) == plan_id(live, ld), "PRESERVED_TREE_CHANGED")
-        kept = PRE + time.strftime("%Y%m%dT%H%M%SZ", time.gmtime())
         renameat2(c.app_fd, link, kept, RENAME_NOREPLACE)
         os.fsync(c.app_fd)
-        journal_write(c, "preserved", kept=kept)
+        journal_write(c, "preserved")
         fault("preserved")
+        old = os.open(kept, DIR_FLAGS, dir_fd=c.app_fd)
+        FREEZER.set_immutable(old, True)  # closes the retained-top-FD window; final compare below sees anything that slipped in
+        d4 = {}
+        need(plan_id(scan(old, d4), d4) == plan_id(live, ld), "PRESERVED_TREE_CHANGED")
+        fault("before_thaw")
+        committed = True  # from here the new tree is the live one: never swap back over accepted writes
         thaw(c.shared_fd, include_top=True)
         shared_frozen = False
-        journal_write(c, "complete", kept=kept)
+        journal_write(c, "complete")
         journal_close(c)
         return {"command": "switch", "status": "OK", "preserved_dir": kept, "sync": synced,
                 "preserved_dir_left_frozen": True, "deleted_anything": False}
     except (Blocked, OSError) as exc:
-        if not isinstance(exc, Blocked):
-            exc = Blocked(f"OS_ERROR_{type(exc).__name__}_{getattr(exc, 'errno', '')}")
-        if exchanged and os.path.islink(c.app / "storage"):
-            target = link if os.path.lexists(c.app / link) else None
-            if target:
-                renameat2(c.app_fd, "storage", link, RENAME_EXCHANGE)  # both trees still frozen: hides nothing
-                os.fsync(c.app_fd)
-        if shared_frozen:
-            thaw(c.shared_fd, include_top=True)
-        if live_frozen:
-            thaw(live_fd, include_top=False)
-        if os.path.islink(c.app / link):
-            os.rename(c.app / link, c.app / (PARKED + "aborted-" + secrets.token_hex(4)))
-        journal_close(c)
-        return {"command": "switch", "status": "BLOCKED_" + str(exc), "reverted": exchanged,
-                "deleted_anything": False}
+        reason = str(exc) if isinstance(exc, Blocked) else f"OS_ERROR_{type(exc).__name__}_{getattr(exc, 'errno', '')}"
+        try:
+            if committed:  # switch already took effect; finish the thaw, never revert
+                thaw(c.shared_fd, include_top=True)
+                need(tree_clean(c.shared_fd, True), "THAW_NOT_VERIFIED")
+                journal_write(c, "complete")
+                journal_close(c)
+                return {"command": "switch", "status": "OK", "preserved_dir": kept, "deleted_anything": False,
+                        "note": "thaw needed a retry: " + reason}
+            restore_original(c, link, kept)
+            journal_close(c)
+            return {"command": "switch", "status": "BLOCKED_" + reason, "reverted": True, "deleted_anything": False}
+        except (Blocked, OSError) as inner:
+            return {"command": "switch", "status": "BLOCKED_RECOVERY_REQUIRED_JOURNAL_OPEN",
+                    "switched": committed, "first_error": reason, "second_error": str(inner),
+                    "deleted_anything": False}
 
 
 def cmd_rollback(args) -> dict:
     need(args.apply, "APPLY_REQUIRED")
-    FREEZER.require_ready()
     c = context(args)
-    need(journal_last(c) is None, "JOURNAL_PRESENT_RUN_RECOVER")
+    FREEZER.require_ready(str(c.shared))
+    open_state(c)
+    need(not journal_entries(c), "JOURNAL_PRESENT_RUN_RECOVER")
     st = os.stat("storage", dir_fd=c.app_fd, follow_symlinks=False)
     need(stat.S_ISLNK(st.st_mode) and os.path.realpath(c.app / "storage") == os.path.realpath(c.shared),
          "STORAGE_NOT_LINKED_TO_SHARED")
-    kept = [n for n in os.listdir(c.app_fd) if n.startswith(PRE)]
-    need(len(kept) == 1, "EXACTLY_ONE_PRESERVED_DIR_REQUIRED")
-    old_fd = os.open(kept[0], DIR_FLAGS, dir_fd=c.app_fd)
-    journal_write(c, "rollback_begin", kept=kept[0])
-    shared_frozen = old_thawed = False
+    names = [n for n in os.listdir(c.app_fd) if n.startswith(PRE)]
+    need(len(names) == 1 and NAME_RE.match(names[0]) is not None, "EXACTLY_ONE_PRESERVED_DIR_REQUIRED")
+    kept = names[0]
+    old_fd = os.open(kept, DIR_FLAGS, dir_fd=c.app_fd)
+    journal_write(c, "rollback_begin", kept=kept)
+    shared_frozen = False
     try:
         freeze(c.shared_fd, include_top=True)
         shared_frozen = True
-        thaw(old_fd, include_top=False)
-        old_thawed = True
+        journal_write(c, "rollback_shared_frozen", kept=kept)
+        thaw(old_fd, include_top=True)
+        journal_write(c, "rollback_old_thawed", kept=kept)
         od, nd = {}, {}
         old, new = scan(old_fd, od), scan(c.shared_fd, nd)
         updated = sorted(r for r in old if r in new and old[r] != new[r] and klass(r) == "persistent")
@@ -576,53 +746,68 @@ def cmd_rollback(args) -> dict:
         back = sync_additive(c.shared_fd, old_fd)
         need(back["status"] == "OK", back["status"])
         pinned(c, None)
-        renameat2(c.app_fd, "storage", kept[0], RENAME_EXCHANGE)
+        os.sync()
+        renameat2(c.app_fd, "storage", kept, RENAME_EXCHANGE)
         os.fsync(c.app_fd)
+        journal_write(c, "rollback_exchanged", kept=kept)
+        fault("rollback_exchanged")
         parked = PARKED + time.strftime("%Y%m%dT%H%M%SZ", time.gmtime())
-        renameat2(c.app_fd, kept[0], parked, RENAME_NOREPLACE)
+        renameat2(c.app_fd, kept, parked, RENAME_NOREPLACE)
         os.fsync(c.app_fd)
+        journal_write(c, "rollback_parked", kept=kept)
         thaw(c.shared_fd, include_top=True)
         journal_close(c)
         return {"command": "rollback", "status": "OK", "reverse_sync": back, "link_parked_as": parked,
                 "deleted_anything": False}
-    except Blocked as exc:
-        if old_thawed:
-            freeze(old_fd, include_top=False)
-        if shared_frozen:
-            thaw(c.shared_fd, include_top=True)
-        journal_close(c)
-        return {"command": "rollback", "status": "BLOCKED_" + str(exc), "deleted_anything": False}
+    except (Blocked, OSError) as exc:
+        reason = str(exc) if isinstance(exc, Blocked) else f"OS_ERROR_{type(exc).__name__}_{getattr(exc, 'errno', '')}"
+        try:
+            if os.path.islink(c.app / "storage"):  # exchange did not happen: put the evidence copy back as it was
+                freeze(old_fd, include_top=True)
+                if shared_frozen:
+                    thaw(c.shared_fd, include_top=True)
+                journal_close(c)
+                return {"command": "rollback", "status": "BLOCKED_" + reason, "deleted_anything": False}
+        except (Blocked, OSError):
+            pass
+        return {"command": "rollback", "status": "BLOCKED_RECOVERY_REQUIRED_JOURNAL_OPEN", "first_error": reason,
+                "deleted_anything": False}
 
 
 def cmd_recover(args) -> dict:
     c = context(args)
-    last = journal_last(c)
+    open_state(c)
+    entries = journal_entries(c)
     names = sorted(n for n in os.listdir(c.app_fd) if n.startswith((LINK, PRE, PARKED)))
     state = "symlink" if os.path.islink(c.app / "storage") else "directory"
-    out = {"command": "recover", "status": "OK", "journal_phase": last and last["phase"], "storage_is": state,
-           "leftover_names": names, "mutated": False}
-    if not args.apply or last is None:
+    out = {"command": "recover", "status": "OK", "journal_phase": entries[-1]["phase"] if entries else None,
+           "storage_is": state, "leftover_names": names, "mutated": False}
+    if not args.apply or not entries:
         return out
-    FREEZER.require_ready()
-    phase = last["phase"]
-    link = next((n for n in names if n.startswith(LINK)), None)
-    live_fd = os.open("storage", DIR_FLAGS, dir_fd=c.app_fd) if state == "directory" else None
-    if phase in ("exchanged", "link_created") and state == "symlink" and link:
-        renameat2(c.app_fd, "storage", link, RENAME_EXCHANGE)  # trees are still frozen: safe to swap back
-        os.fsync(c.app_fd)
-        live_fd = os.open("storage", DIR_FLAGS, dir_fd=c.app_fd)
-        state = "directory"
-    if phase in ("begin", "live_frozen", "both_frozen", "link_created", "exchanged") and state == "directory":
-        thaw(c.shared_fd, include_top=True)
-        thaw(live_fd, include_top=False)
-        if link and os.path.islink(c.app / link):
-            os.rename(c.app / link, c.app / (PARKED + "recovered-" + secrets.token_hex(4)))
-    elif phase == "preserved":
-        thaw(c.shared_fd, include_top=True)
+    FREEZER.require_ready(str(c.shared))
+    rollback = entries[-1]["phase"].startswith("rollback_")
+    link = next((e["link"] for e in reversed(entries) if "link" in e), None)
+    kept = next((e["kept"] for e in reversed(entries) if "kept" in e), None)
+    kept_dir = bool(kept) and os.path.isdir(c.app / kept) and not os.path.islink(c.app / kept)
+    link_dir = bool(link) and os.path.isdir(c.app / link) and not os.path.islink(c.app / link)
+    shared_live = os.path.realpath(c.app / "storage") == os.path.realpath(c.shared)
+    if rollback:
+        if state == "symlink" and shared_live and kept_dir:  # exchange never happened
+            freeze(os.open(kept, DIR_FLAGS, dir_fd=c.app_fd), include_top=True)
+            thaw(c.shared_fd, include_top=True)
+            how = "rollback_not_exchanged"
+        else:  # exchanged: old directory is live again
+            thaw(c.shared_fd, include_top=True)
+            thaw(os.open("storage", DIR_FLAGS, dir_fd=c.app_fd), include_top=False)
+            how = "rollback_exchanged"
+    elif state == "symlink" and shared_live and kept_dir and not link_dir:
+        thaw(c.shared_fd, include_top=True)  # switch completed; only the final thaw/close was missing
+        how = "switch_complete"
     else:
-        return {**out, "status": "BLOCKED_MANUAL_REVIEW_PHASE_" + phase}
+        restore_original(c, link if link_dir else link, kept)
+        how = "switch_reverted"
     journal_close(c)
-    return {**out, "mutated": True, "recovered_from": phase}
+    return {**out, "mutated": True, "recovered": how}
 
 
 def main(argv: list[str]) -> int:
@@ -631,6 +816,8 @@ def main(argv: list[str]) -> int:
     ap.add_argument("--app-dir", required=True, help="release apps/platform directory")
     ap.add_argument("--shared", required=True, help="shared storage directory")
     ap.add_argument("--allowed-root", default="/home/kmjprod")
+    ap.add_argument("--state-dir", default="/var/lib/kmj-main-platform-storage-switch")
+    ap.add_argument("--proc-root", default="/proc", help=argparse.SUPPRESS)
     ap.add_argument("--apply", action="store_true")
     ap.add_argument("--plan-id")
     args = ap.parse_args(argv)

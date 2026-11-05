@@ -31,7 +31,7 @@ class FakeFreezer(sw.Freezer):
         else:
             self.state.pop(self._key(fd), None)
 
-    def require_ready(self):
+    def require_ready(self, probe_dir=None):
         pass
 
     def frozen_count(self):
@@ -43,7 +43,8 @@ def run(root, command, *extra):
     with contextlib.redirect_stdout(buf):
         code = sw.main([command, "--app-dir", str(root / "rel/apps/platform"),
                         "--shared", str(root / "shared/storage"),
-                        "--allowed-root", str(root), *extra])
+                        "--allowed-root", str(root), "--state-dir", str(root / "state"),
+                        "--proc-root", str(root / "proc"), *extra])
     return code, json.loads(buf.getvalue())
 
 
@@ -58,6 +59,9 @@ class Base(unittest.TestCase):
             p.mkdir(parents=True)
         (self.root / "shared").chmod(0o700)
         self.shared.chmod(0o700)
+        self.live.chmod(0o700)
+        (self.root / "state").mkdir(mode=0o700)
+        (self.root / "proc").mkdir()
         (self.live / "app/private/art.png").write_bytes(b"artwork")
         (self.live / "app/private/live-only.json").write_bytes(b"{}")
         (self.shared / "app/private/art.png").write_bytes(b"artwork")
@@ -79,7 +83,7 @@ class Base(unittest.TestCase):
 
     def journals(self):
         """Open journals only; closed ones are kept as .done-* receipts."""
-        return sorted(p.name for p in (self.root / "shared").glob(".kmj-storage-switch-*.journal"))
+        return sorted(p.name for p in (self.root / "state").glob("*.journal"))
 
 
 class PlanTests(Base):
@@ -262,7 +266,7 @@ class SwitchTests(Base):
         self.fz.set_immutable(fd, True)
         plan = self.plan()
         code, out = run(self.root, "switch", "--apply", "--plan-id", plan["plan_id"])
-        self.assertEqual((code, out["status"]), (2, "BLOCKED_ALREADY_IMMUTABLE_REVIEW"))
+        self.assertEqual((code, out["status"]), (2, "BLOCKED_ALREADY_IMMUTABLE_OR_APPEND_REVIEW"))
 
 
 class PathTests(Base):
@@ -313,7 +317,7 @@ class CrashRecoveryTests(Base):
         self.crash("exchanged")
         self.assertTrue(self.live.is_symlink())
         code, out = run(self.root, "recover", "--apply")
-        self.assertEqual((code, out["recovered_from"]), (0, "exchanged"))
+        self.assertEqual((code, out["recovered"]), (0, "switch_reverted"))
         self.assertTrue(self.live.is_dir() and not self.live.is_symlink())
         self.assertEqual((self.live / "app/private/live-only.json").read_bytes(), b"{}")
         self.assertEqual(self.fz.frozen_count(), 0)
@@ -330,7 +334,26 @@ class CrashRecoveryTests(Base):
     def test_crash_after_preserve_keeps_switch_and_thaws_shared(self):
         self.crash("preserved")
         code, out = run(self.root, "recover", "--apply")
-        self.assertEqual((code, out["recovered_from"]), (0, "preserved"))
+        self.assertEqual((code, out["recovered"]), (0, "switch_complete"))
+        self.assertTrue(self.live.is_symlink())
+
+    def test_crash_during_rollback_after_exchange_recovers(self):
+        self.switch()
+        sw.FAULT = "rollback_exchanged"
+        with self.assertRaises(sw.Crash):
+            run(self.root, "rollback", "--apply")
+        sw.FAULT = None
+        self.assertTrue(self.live.is_dir() and not self.live.is_symlink())
+        code, out = run(self.root, "recover", "--apply")
+        self.assertEqual((code, out["recovered"]), (0, "rollback_exchanged"))
+        self.assertEqual(self.journals(), [])
+        shared_ids = {(os.stat(p).st_dev, os.stat(p).st_ino) for p in [self.shared, *self.shared.rglob("*")]}
+        self.assertFalse(shared_ids & set(self.fz.state))
+
+    def test_crash_before_final_thaw_recovers_as_complete(self):
+        self.crash("before_thaw")
+        code, out = run(self.root, "recover", "--apply")
+        self.assertEqual((code, out["recovered"]), (0, "switch_complete"))
         self.assertTrue(self.live.is_symlink())
 
     def test_journal_blocks_a_second_switch(self):
@@ -365,7 +388,174 @@ class RollbackTests(Base):
         self.assertTrue(self.live.is_symlink())
 
 
-@unittest.skipUnless(os.geteuid() == 0, "needs root + CAP_LINUX_IMMUTABLE")
+class HardeningTests(Base):
+    def test_partial_freeze_failure_restores_exact_state_and_journal_stays_clean(self):
+        real = self.fz.set_immutable
+        calls = {"n": 0}
+
+        def flaky(fd, on):
+            if on:
+                calls["n"] += 1
+                if calls["n"] == 2:
+                    raise OSError(5, "EIO")
+            return real(fd, on)
+
+        self.fz.set_immutable = flaky
+        code, out = self.switch()
+        self.fz.set_immutable = real
+        self.assertEqual(code, 2)
+        self.assertEqual(self.fz.frozen_count(), 0)  # nothing stranded
+        self.assertEqual(self.journals(), [])  # closed only because the trees verified clean
+        self.assertTrue(self.live.is_dir() and not self.live.is_symlink())
+
+    def test_failed_thaw_keeps_journal_open_for_recovery(self):
+        real = self.fz.set_immutable
+
+        def stuck(fd, on):
+            if not on:
+                raise OSError(5, "EIO")
+            return real(fd, on)
+
+        plan = self.plan()
+        self.fz.set_immutable = stuck
+        (self.shared / "app/private/art.png").write_bytes(b"DIFFERENT")  # force a revert path
+        code, out = run(self.root, "switch", "--apply", "--plan-id", plan["plan_id"])
+        self.fz.set_immutable = real
+        self.assertEqual(out["status"], "BLOCKED_RECOVERY_REQUIRED_JOURNAL_OPEN")
+        self.assertEqual(len(self.journals()), 1)
+
+    def test_late_top_level_entry_before_exchange_is_detected_and_reverted(self):
+        real = sw.fault
+
+        def hook(name):
+            if name == "both_frozen":
+                (self.live / "late-top-entry.json").write_bytes(b"late")
+            return real(name)
+
+        sw.fault = hook
+        try:
+            code, out = self.switch()
+        finally:
+            sw.fault = real
+        self.assertEqual((code, out["status"]), (2, "BLOCKED_LIVE_CHANGED_UNDER_FREEZE"))
+        self.assertTrue(self.live.is_dir() and (self.live / "late-top-entry.json").exists())
+        self.assertEqual(self.fz.frozen_count(), 0)
+
+    def test_late_entry_via_retained_top_fd_after_exchange_is_detected_and_reverted(self):
+        real = sw.renameat2
+
+        def hook(dfd, old, new, flags):
+            if flags == sw.RENAME_NOREPLACE and old.startswith(sw.LINK):
+                (self.root / "rel/apps/platform" / old / "late-after-exchange.json").write_bytes(b"late")
+            return real(dfd, old, new, flags)
+
+        sw.renameat2 = hook
+        try:
+            code, out = self.switch()
+        finally:
+            sw.renameat2 = real
+        self.assertEqual((code, out["status"]), (2, "BLOCKED_PRESERVED_TREE_CHANGED"))
+        self.assertTrue(out["reverted"])
+        self.assertTrue(self.live.is_dir() and not self.live.is_symlink())
+        self.assertTrue((self.live / "late-after-exchange.json").exists())  # not lost: old dir is live again
+        self.assertEqual(self.fz.frozen_count(), 0)
+
+    def test_failure_after_commit_never_reverts(self):
+        sw.FAULT = None
+        real = self.fz.set_immutable
+        state = {"armed": False}
+
+        def fail_thaw_once(fd, on):
+            if not on and state["armed"]:
+                state["armed"] = False
+                raise OSError(5, "EIO")
+            return real(fd, on)
+
+        orig_fault = sw.fault
+
+        def arm(name):
+            if name == "before_thaw":
+                state["armed"] = True
+            return orig_fault(name)
+
+        self.fz.set_immutable = fail_thaw_once
+        sw.fault = arm
+        try:
+            code, out = self.switch()
+        finally:
+            sw.fault = orig_fault
+            self.fz.set_immutable = real
+        self.assertEqual(out["status"], "OK")
+        self.assertIn("thaw needed a retry", out["note"])
+        self.assertTrue(self.live.is_symlink())
+
+    def test_top_dir_mode_mismatch_blocks(self):
+        self.shared.chmod(0o750)
+        plan = self.plan()
+        self.assertFalse(plan["ready"])
+        code, out = run(self.root, "switch", "--apply", "--plan-id", plan["plan_id"])
+        self.assertEqual(out["status"], "BLOCKED_TOP_DIR_MODE_OWNER_MISMATCH_LIVE_VS_SHARED")
+
+    def test_top_dir_held_open_by_a_process_blocks(self):
+        d = self.root / "proc/77"
+        (d / "fd").mkdir(parents=True)
+        (d / "cwd").symlink_to(str(self.live))
+        plan = self.plan()
+        code, out = run(self.root, "switch", "--apply", "--plan-id", plan["plan_id"])
+        self.assertEqual(out["status"], "BLOCKED_LIVE_TOP_DIR_HELD_OPEN")
+
+    def test_state_dir_must_be_protected_and_outside_trees(self):
+        plan = self.plan()
+        (self.root / "state").chmod(0o755)
+        self.assertEqual(run(self.root, "switch", "--apply", "--plan-id", plan["plan_id"])[1]["status"],
+                         "BLOCKED_STATE_DIR_NOT_PROTECTED")
+        (self.root / "state").chmod(0o700)
+        buf = io.StringIO()
+        with contextlib.redirect_stdout(buf):
+            sw.main(["switch", "--apply", "--plan-id", plan["plan_id"],
+                     "--app-dir", str(self.root / "rel/apps/platform"), "--shared", str(self.shared),
+                     "--allowed-root", str(self.root), "--state-dir", str(self.shared / "state")])
+        self.assertIn("STATE_DIR_INSIDE_TREES", buf.getvalue())
+
+    def test_journal_symlink_wrong_mode_or_garbage_is_rejected(self):
+        self.crash_begin()
+        jfile = next((self.root / "state").glob("*.journal"))
+        jfile.chmod(0o644)
+        self.assertEqual(run(self.root, "recover")[1]["status"], "BLOCKED_JOURNAL_FILE_UNSAFE")
+        jfile.chmod(0o600)
+        jfile.write_text('{"phase":"rm -rf /","t":1}\n')
+        self.assertEqual(run(self.root, "recover")[1]["status"], "BLOCKED_JOURNAL_INVALID")
+        jfile.write_text('{"phase":"begin","t":1,"link":"../../etc"}\n')
+        self.assertEqual(run(self.root, "recover")[1]["status"], "BLOCKED_JOURNAL_INVALID")
+        target = self.root / "elsewhere"
+        target.write_text("{}")
+        jfile.unlink()
+        jfile.symlink_to(target)
+        self.assertNotEqual(run(self.root, "recover")[0], 0)
+
+    def crash_begin(self):
+        sw.FAULT = "begin"
+        plan = self.plan()
+        with self.assertRaises(sw.Crash):
+            run(self.root, "switch", "--apply", "--plan-id", plan["plan_id"])
+        sw.FAULT = None
+
+    def test_traversal_uses_bounded_descriptors(self):
+        import resource
+        deep = self.live / "app/private"
+        for i in range(400):
+            (deep / f"f{i}.bin").write_bytes(b"x")
+        soft, hard = resource.getrlimit(resource.RLIMIT_NOFILE)
+        in_use = len(os.listdir('/proc/self/fd'))
+        resource.setrlimit(resource.RLIMIT_NOFILE, (in_use + 40, hard))
+        try:
+            code, out = self.switch()
+        finally:
+            resource.setrlimit(resource.RLIMIT_NOFILE, (soft, hard))
+        self.assertEqual((code, out["status"]), (0, "OK"))
+
+
+@unittest.skipUnless(os.geteuid() == 0 or os.environ.get("KMJ_REQUIRE_REAL_IMMUTABLE"), "needs root + CAP_LINUX_IMMUTABLE")
 class RealImmutableTests(unittest.TestCase):
     def test_real_freeze_blocks_preopened_writer_rename_unlink_and_create(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -378,6 +568,8 @@ class RealImmutableTests(unittest.TestCase):
                 real = sw.Freezer()
                 real.flags(fd)
             except OSError:
+                if os.environ.get("KMJ_REQUIRE_REAL_IMMUTABLE"):
+                    self.fail("real immutable test required but FS_IOC_GETFLAGS unsupported")
                 self.skipTest("filesystem does not support FS_IOC_GETFLAGS")
             writer = os.open(target, os.O_WRONLY)
             old = sw.FREEZER
@@ -386,6 +578,8 @@ class RealImmutableTests(unittest.TestCase):
                 try:
                     sw.freeze(fd, include_top=True)
                 except sw.Blocked as exc:
+                    if os.environ.get("KMJ_REQUIRE_REAL_IMMUTABLE"):
+                        self.fail("real immutable test required: " + str(exc))
                     self.skipTest(str(exc))
                 for action in (lambda: os.write(writer, b"y"), lambda: os.rename(target, root / "d/g"),
                                lambda: os.unlink(target), lambda: open(root / "d/new", "w")):
@@ -397,6 +591,11 @@ class RealImmutableTests(unittest.TestCase):
                 sw.FREEZER = old
                 os.close(writer)
             os.write(os.open(target, os.O_WRONLY), b"z")  # writable again after thaw
+
+    def test_real_require_ready_probe_proves_capability(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            sw.Freezer().require_ready(tmp)
+            self.assertEqual(os.listdir(tmp), [])
 
 
 if __name__ == "__main__":
