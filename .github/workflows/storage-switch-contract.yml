@@ -4,6 +4,8 @@ on:
     paths:
       - scripts/operations/main_platform_storage_switch.py
       - scripts/test_main_platform_storage_switch.py
+      - scripts/operations/main_platform_storage_snapshot_attestation.py
+      - scripts/test_main_platform_storage_snapshot_attestation.py
       - .github/workflows/storage-switch-contract.yml
 permissions:
   contents: read
@@ -15,3 +17,7 @@ jobs:
       - run: python3 -B -m unittest discover -s scripts -p test_main_platform_storage_switch.py -v
       - name: Real immutable-flag and real transaction/recovery tests (root, must run, not skip)
         run: sudo env KMJ_REQUIRE_REAL_IMMUTABLE=1 python3 -B -m unittest discover -s scripts -p test_main_platform_storage_switch.py -k Real -v
+      - name: Preserved storage snapshot attestation
+        run: python3 -B -m unittest discover -s scripts -p test_main_platform_storage_snapshot_attestation.py -v
+      - name: Real Git credential drop (root, must run)
+        run: sudo env KMJ_REQUIRE_REAL_CREDENTIAL_DROP=1 python3 -B -m unittest discover -s scripts -p test_main_platform_storage_snapshot_attestation.py -k git_filter_never_executes_as_root -v
