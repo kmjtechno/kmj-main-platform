@@ -273,6 +273,31 @@ class DoctorIntegrationTests(Fixture):
             doctor._preserved_storage = real
 
 
+class PlanIdParityVector(Fixture):
+    def test_switch_plan_id_matches_the_independently_spelled_literal_used_by_the_controller(self):
+        import hashlib
+        import stat as st
+        pres = self.app / "storage.pre-shared-20261105T091800Z"
+        (pres / "app/private").mkdir(parents=True)
+        (pres / "app/private/a.txt").write_text("upload")
+        (pres / "app/.gitignore").write_text("x")
+        (pres / "app/private/a.txt").chmod(0o640)
+        for d in (pres, pres / "app", pres / "app/private"):
+            d.chmod(0o750)
+        uid, gid = os.getuid(), os.getgid()
+        digest = hashlib.sha256(b"upload").hexdigest()
+        literal = '[[["app/private/a.txt", ["%s", 6, %d, %d, %d]]], [["app", [%d, %d, %d]], ["app/private", [%d, %d, %d]]]]' % (
+            digest, 0o640, uid, gid, 0o750, uid, gid, 0o750, uid, gid)
+        fd = sw.open_dir(pres)
+        try:
+            dirs = {}
+            files = sw.scan(fd, dirs)
+        finally:
+            os.close(fd)
+        self.assertEqual(sw.plan_id(files, dirs), hashlib.sha256(literal.encode()).hexdigest()[:16])
+        # Same literal is asserted by kmj-codebridge tests/preserved-storage-attestation.test.js.
+
+
 class MaterializerContractTests(unittest.TestCase):
     def test_exemption_is_exact_name_and_helper_gated(self):
         for token in ("main_platform_preserved_storage.py", "resolve_pathspec", "PRESERVED_STORAGE_UNATTESTED",
