@@ -43,7 +43,7 @@ export function deviceProjectConnectPlan(device, projectId) {
         download: action.download ?? undefined,
         label: unredeemed ? 'Review existing enrollment' : action.label,
         guidance: unredeemed
-            ? 'Approval has not been redeemed by this exact agent. Check its existing private enrollment before requesting a fresh code. This action does not make it online.'
+            ? 'This pairing record has no redemption receipt. Check gateway connectivity and the existing private enrollment before disconnecting or requesting a fresh code. This action does not make the device online.'
             : action.guidance,
         deviceId: device.id,
         projectId: project.id,
