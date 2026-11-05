@@ -14,7 +14,8 @@ export const deliveryMilestones: DeliveryMilestone[] = [
         title: 'OmniDesk M9 issuance endpoints',
         state: 'blocked',
         detail: 'License issuance and renewal remain disabled. Source now also holds an unbound membership-based tenant authorizer and an optional caller-supplied device seat limit checked under the license row lock; no plan limit is assumed and nothing is bound or enabled.',
-        evidence: 'PR #759 tests guarded 503 responses; no signing occurs. Adversarial seat, replay and cross-tenant tests are source-only; true concurrent-seat races, a protected signer and owner commercial limits remain unproven.',
+        evidence:
+            'PR #759 tests guarded 503 responses; no signing occurs. Adversarial seat, replay and cross-tenant tests are source-only; true concurrent-seat races, a protected signer and owner commercial limits remain unproven.',
     },
     {
         id: 'codebridge-ai-workspace',

@@ -6,6 +6,8 @@ namespace Tests\Feature;
 
 use App\Models\User;
 use App\Services\Licensing\OmniDesk\OmniDeskActivationBindingStore;
+use App\Services\Licensing\OmniDesk\OmniDeskApiAuthorizer;
+use App\Services\Licensing\OmniDesk\OmniDeskApiPrincipal;
 use App\Services\Licensing\OmniDesk\OmniDeskMembershipApiAuthorizer;
 use App\Services\Licensing\OmniDeskLicenseContract;
 use DomainException;
@@ -190,10 +192,10 @@ final class OmniDeskSeatAndAuthorizerTest extends TestCase
 
     public function test_authorizer_is_not_bound_so_routes_stay_unavailable(): void
     {
-        self::assertFalse($this->app->bound(\App\Services\Licensing\OmniDesk\OmniDeskApiAuthorizer::class));
+        self::assertFalse($this->app->bound(OmniDeskApiAuthorizer::class));
     }
 
-    private function authorize(?User $user, ?string $organizationId): \App\Services\Licensing\OmniDesk\OmniDeskApiPrincipal
+    private function authorize(?User $user, ?string $organizationId): OmniDeskApiPrincipal
     {
         $request = Request::create('/api/omnidesk/v1/activations/x', 'GET');
         if ($organizationId !== null) {
