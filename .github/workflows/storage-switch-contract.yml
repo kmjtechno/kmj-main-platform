@@ -1,0 +1,17 @@
+name: Storage switch contract
+on:
+  pull_request:
+    paths:
+      - scripts/operations/main_platform_storage_switch.py
+      - scripts/test_main_platform_storage_switch.py
+      - .github/workflows/storage-switch-contract.yml
+permissions:
+  contents: read
+jobs:
+  storage-switch:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - run: python3 -B -m unittest discover -s scripts -p test_main_platform_storage_switch.py -v
+      - name: Real immutable-flag and real transaction/recovery tests (root, must run, not skip)
+        run: sudo env KMJ_REQUIRE_REAL_IMMUTABLE=1 python3 -B -m unittest discover -s scripts -p test_main_platform_storage_switch.py -k Real -v
