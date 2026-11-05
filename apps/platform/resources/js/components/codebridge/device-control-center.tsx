@@ -51,6 +51,12 @@ type Props = {
 
 type View = 'all' | 'with-projects' | 'needs-projects';
 
+const missingReceiptHeading = 'Pairing redemption receipt missing';
+const missingReceiptDescription =
+    'This pairing record has no redemption receipt. It does not establish whether this device is currently connected.';
+const pairingRecoveryGuidance =
+    'If enrollment was lost, do not keep approving new codes. Once pairing is healthy and gateway checks confirm recovery is needed, a manager can disconnect only this device (recent password confirmation required), then approve one new code on that device. No files are deleted and no live connection is claimed until a gateway heartbeat is verified.';
+
 export default function DeviceControlCenter({
     tenantId,
     plan,
@@ -503,22 +509,12 @@ export default function DeviceControlCenter({
                                     'approved_unredeemed' && (
                                     <div className="mt-3 rounded-lg border border-amber-500/30 p-3 text-xs">
                                         <p className="font-black text-amber-600 dark:text-amber-400">
-                                            Pairing redemption receipt missing
+                                            {missingReceiptHeading}
                                         </p>
                                         <p className="text-muted-foreground mt-1 leading-5">
-                                            This pairing record has no redemption
-                                            receipt. It does not establish whether
-                                            this device is currently connected. {recovery.guidance} If
-                                            enrollment was lost, do not keep
-                                            approving new codes. Once pairing is
-                                            healthy and gateway checks confirm
-                                            recovery is needed, a manager can disconnect
-                                            only this device (recent password
-                                            confirmation required), then approve
-                                            one new code on that device. No
-                                            files are deleted and no live
-                                            connection is claimed until a
-                                            gateway heartbeat is verified.
+                                            {missingReceiptDescription}{' '}
+                                            {recovery.guidance}{' '}
+                                            {pairingRecoveryGuidance}
                                         </p>
                                     </div>
                                 )}
