@@ -16,8 +16,8 @@ import tempfile
 
 TARGET = 'cd9580701d3cea19d7d4e4c96ebe70c0553fbf37'
 CURRENT = 'platform-574e443a2c75'
-DOCTOR = Path('/srv/kmj-codebridge-projects/kmj-main-platform/scripts/KMJ_CD958_RELEASE_READINESS_DOCTOR_20261105.py')
-DOCTOR_HASH = '7188f24b7dffad47d688495acc47ec0bcdcaa87842b4ce85fff2451cf5b5e096'
+DOCTOR = Path('/srv/kmj-codebridge-projects/kmj-main-platform/scripts/KMJ_CD958_RELEASE_READINESS_DOCTOR_V2_20261105.py')
+DOCTOR_HASH = '2facb3090bcb38a8e8967fbc8d47a6a0a350bc0def1725e88cf0affc4bf9d481'
 UNIT = 'kmj-main-platform-production-release.service'
 ENV = {'PATH': '/usr/sbin:/usr/bin:/sbin:/bin', 'HOME': '/nonexistent', 'LC_ALL': 'C'}
 REQUIRED = {
