@@ -1,0 +1,28 @@
+name: Protected candidate rollback quarantine source QA
+on:
+  pull_request:
+    paths:
+      - scripts/operations/protected-candidate-retire-20261103.py
+      - scripts/test_protected_candidate_retire_20261103.py
+      - .github/workflows/protected-candidate-retire.yml
+  push:
+    branches: [main]
+    paths:
+      - scripts/operations/protected-candidate-retire-20261103.py
+      - scripts/test_protected_candidate_retire_20261103.py
+      - .github/workflows/protected-candidate-retire.yml
+permissions:
+  contents: read
+jobs:
+  protected_quarantine:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - name: Verify root-only quarantine library and hostile-inode tests
+        run: |
+          set -euo pipefail
+          python3 -B -m unittest scripts/test_protected_candidate_retire_20261103.py -v
+          python3 -I -m py_compile scripts/operations/protected-candidate-retire-20261103.py

@@ -417,7 +417,7 @@ class MaterializeContractTest(unittest.TestCase):
             "STORAGE_WRITER_QUIESCENCE NOT_ATTESTED",
             'status RUNTIME_ENV BYTE_IDENTICAL',
             'fail ENV_SHA_MISMATCH',
-            'install -o kmjprod -g kmjprod -m 0600 "$LIVE_APP/.env" "$CAND_APP/.env"',
+            'fs_op create-env "$LIVE_APP" "$CAND_APP"',
             'setfacl -R -m \'u:www-data:rX\'',
             "NGINX_PRIVATE_ENV_EXPOSED",
             "PRODUCTION_SWITCH NOT_ATTEMPTED",
@@ -601,7 +601,8 @@ class MaterializeWriteBoundaryTest(unittest.TestCase):
                       "-p NoNewPrivileges=yes", "-p PrivateTmp=yes",
                       "SANDBOX_USER_MISMATCH", "export GIT_OPTIONAL_LOCKS=0"):
             self.assertIn(token, source)
-        self.assertGreater(source.index('install -o kmjprod'), boundary)
+        self.assertGreater(source.index('fs_op create-env "$LIVE_APP"'), boundary)
+        self.assertNotIn("install -o kmjprod", source)
         # Runtime upload copying is forbidden; only byte-identical .env copy and
         # ACL preparation remain inside the nonroot sandbox.
         self.assertNotIn('cp -a --no-clobber', source)
@@ -611,17 +612,543 @@ class MaterializeWriteBoundaryTest(unittest.TestCase):
         self.assertNotIn("sudo", source)
 
 
-class MaterializePublicLinkTest(unittest.TestCase):
-    def test_public_link_creation_works_without_nested_privilege_switch(self):
-        source = MATERIALIZE.read_text()
-        self.assertNotIn("runuser -u kmjprod -- ln", source)
-        command = next(line.strip() for line in source.splitlines() if line.strip().startswith("ln -s "))
-        with tempfile.TemporaryDirectory() as directory:
-            root = Path(directory)
-            (root / "public").mkdir()
-            run = subprocess.run(["/bin/bash", "-c", command], env={**os.environ, "CAND_APP": directory}, capture_output=True, text=True)
-            self.assertEqual(run.returncode, 0, run.stderr)
-            self.assertEqual(os.readlink(root / "public/storage"), "../storage/app/public")
+class MaterializeRollbackTest(unittest.TestCase):
+    """Candidate-only, inode-attested creation and rollback of .env + public link."""
+    source = MATERIALIZE.read_text()
+
+    def setUp(self) -> None:
+        self.tmp = tempfile.TemporaryDirectory()
+        root = Path(self.tmp.name)
+        self.live = root / "live"
+        self.cand = root / "cand"
+        for d in (self.live, self.cand / "public"):
+            d.mkdir(parents=True)
+        (self.live / ".env").write_bytes(b"APP_KEY=base64:abc\nDB=x\n")
+        (self.live / ".env").chmod(0o640)
+
+    def tearDown(self) -> None:
+        self.tmp.cleanup()
+
+    def harness(self, tail: str, source_override: str | None = None) -> subprocess.CompletedProcess:
+        source = self.source if source_override is None else source_override
+        begin = source.index("# Descriptor-anchored")
+        end = source.index("trap on_exit EXIT") + len("trap on_exit EXIT")
+        script = (
+            "set -Eeuo pipefail\n"
+            "status() { printf '%s=%s\\n' \"$1\" \"$2\"; }\n"
+            "fail() { echo \"BLOCKED $1\"; exit 2; }\n"
+            f"CAND_APP={self.cand}; LIVE_APP={self.live}; MODE=materialize\n"
+            "ROLLBACK_ENV_ID=''; ROLLBACK_LINK_ID=''\n"
+            + source[begin:end] + "\n" + tail
+        )
+        return subprocess.run(["/bin/bash", "-c", script], capture_output=True, text=True,
+                              env={"PATH": "/usr/bin:/bin"}, timeout=30)
+
+    CREATE = (
+        'env_id="$(fs_op create-env "$LIVE_APP" "$CAND_APP")" '
+        '|| { receipt_uncertain=1; fail ENV_CREATE_FAILED; }\n'
+        'link_id="$(fs_op create-link "$CAND_APP/public")" '
+        '|| { receipt_uncertain=1; fail LINK_CREATE_FAILED; }\n'
+    )
+
+    def test_forced_failure_after_creation_removes_only_candidate_artifacts(self) -> None:
+        # The unprivileged sandbox cannot safely delete from its own writable
+        # directory. Created artifacts remain until protected ROOT recovery.
+        run = self.harness(self.CREATE + "fail FORCED_LATE_FAILURE\n")
+        self.assertEqual(run.returncode, 2, run.stdout + run.stderr)
+        self.assertIn("CANDIDATE_ROLLBACK=FAILED_REVIEW", run.stdout)
+        self.assertNotIn("CANDIDATE_ROLLBACK=DONE", run.stdout)
+        self.assertEqual((self.cand / ".env").read_bytes(),
+                         (self.live / ".env").read_bytes())
+        self.assertEqual(os.readlink(self.cand / "public/storage"),
+                         "../storage/app/public")
+        self.assertEqual((self.live / ".env").read_bytes(),
+                         b"APP_KEY=base64:abc\nDB=x\n")
+
+    def test_retry_after_rollback_is_not_blocked(self) -> None:
+        # Retry MUST block until an owner-root protected rollback confirms the
+        # previously created object has been retired, not silently reuse it.
+        self.harness(self.CREATE + "fail FORCED_LATE_FAILURE\n")
+        run = self.harness(self.CREATE + "committed=1\n")
+        self.assertNotEqual(run.returncode, 0, run.stdout + run.stderr)
+        self.assertIn("ENV_CREATE_FAILED", run.stdout)
+        self.assertIn("CANDIDATE_ROLLBACK=FAILED_REVIEW", run.stdout)
+        self.assertEqual((self.cand / ".env").read_bytes(),
+                         (self.live / ".env").read_bytes())
+        self.assertEqual(os.readlink(self.cand / "public/storage"),
+                         "../storage/app/public")
+
+    def test_committed_success_keeps_artifacts(self) -> None:
+        run = self.harness(self.CREATE + "committed=1\n")
+        self.assertEqual(run.returncode, 0, run.stdout + run.stderr)
+        self.assertTrue((self.cand / ".env").is_file())
+        self.assertNotIn("CANDIDATE_ROLLBACK", run.stdout)
+
+    def test_created_public_storage_link_requires_exact_target_and_inode(self) -> None:
+        run = self.harness(
+            self.CREATE
+            + 'fs_op verify-link "$CAND_APP/public" "$link_id"\n'
+            + 'committed=1\n'
+        )
+        self.assertEqual(run.returncode, 0, run.stdout + run.stderr)
+        self.assertIn("STORAGE_LINK_ATTESTED=PASS", run.stdout)
+        self.assertEqual(os.readlink(self.cand / "public/storage"),
+                         "../storage/app/public")
+
+    def test_replaced_public_storage_link_wrong_target_fails_closed(self) -> None:
+        # An inode receipt cannot certify a link after a hostile replacement.
+        run = self.harness(
+            self.CREATE
+            + 'rm -- "$CAND_APP/public/storage"\n'
+            + 'ln -s ../../untrusted "$CAND_APP/public/storage"\n'
+            + 'fs_op verify-link "$CAND_APP/public" "$link_id"\n'
+            + 'committed=1\n'
+        )
+        self.assertNotEqual(run.returncode, 0, run.stdout + run.stderr)
+        self.assertIn("FS_OP_FAILED=ValueError", run.stderr)
+        self.assertIn("CANDIDATE_ROLLBACK=FAILED_REVIEW", run.stdout)
+        self.assertEqual(os.readlink(self.cand / "public/storage"),
+                         "../../untrusted")
+        self.assertEqual((self.cand / ".env").read_bytes(), (self.live / ".env").read_bytes())
+
+    def test_replaced_artifact_is_left_for_review_not_deleted(self) -> None:
+        swap = (
+            'rm_env="$CAND_APP/.env"\n'
+            "python3 -c \"import os,sys; p=sys.argv[1]; os.link(p, p + '.keep'); os.unlink(p); open(p,'w').write('FOREIGN')\" \"$rm_env\"\n"
+            "fail FORCED_LATE_FAILURE\n"
+        )
+        run = self.harness(self.CREATE + swap)
+        self.assertEqual(run.returncode, 2)
+        self.assertIn("CANDIDATE_ROLLBACK=FAILED_REVIEW", run.stdout)
+        self.assertEqual((self.cand / ".env").read_text(), "FOREIGN")
+
+    def test_env_inode_reuse_with_foreign_bytes_fails_closed(self) -> None:
+        # Malicious inode receipts cannot trick the sandbox into deleting a
+        # foreign candidate file. Only the root-private helper may retire.
+        needle = 'return "%d:%d" % (info.st_dev, info.st_ino)'
+        self.assertEqual(self.source.count(needle), 1)
+        collision = self.source.replace(needle, 'return "42:42"')
+        swap = (
+            'rm -- "$CAND_APP/.env"\n'
+            'printf FOREIGN > "$CAND_APP/.env"\n'
+            'fail FORCED_LATE_FAILURE\n'
+        )
+        run = self.harness(self.CREATE + swap, source_override=collision)
+        self.assertEqual(run.returncode, 2, run.stdout + run.stderr)
+        self.assertIn("CANDIDATE_ROLLBACK=FAILED_REVIEW", run.stdout)
+        self.assertEqual((self.cand / ".env").read_bytes(), b"FOREIGN")
+        self.assertEqual((self.live / ".env").read_bytes(),
+                         b"APP_KEY=base64:abc\nDB=x\n")
+
+    def test_swap_between_prefilter_and_detach_restores_foreign_env(self) -> None:
+        # The old sandbox detach/check/unlink is eliminated completely.
+        self.assertNotIn("os.rename(name, q,", self.source)
+        self.assertNotIn("os.unlink(q, dir_fd=dir_fd)", self.source)
+        self.assertNotIn("restore_or_quarantine(dir_fd, name, q)", self.source)
+        run = self.harness(self.CREATE + "fail FORCED_LATE_FAILURE\n")
+        self.assertEqual(run.returncode, 2, run.stdout + run.stderr)
+        self.assertIn("CANDIDATE_ROLLBACK=FAILED_REVIEW", run.stdout)
+        self.assertEqual((self.cand / ".env").read_bytes(),
+                         (self.live / ".env").read_bytes())
+
+    def test_late_swap_after_detach_cannot_redirect_the_unlink(self) -> None:
+        # There can no longer be an unprivileged unlink race at a detached q.
+        self.assertNotIn("if verify_detached(dir_fd, q", self.source)
+        self.assertNotIn("os.unlink(q, dir_fd=dir_fd)", self.source)
+        self.assertIn("root_retire() {", self.source)
+        self.assertIn('os.unlink("object", dir_fd=ticket_fd)', self.source)
+        self.assertIn('root_protected=True', self.source)
+
+    def test_restore_collision_quarantines_instead_of_clobbering(self) -> None:
+        # The old unprivileged link-then-unlink restoration is removed.
+        self.assertNotIn("os.link(q, name,", self.source)
+        self.assertNotIn("os.unlink(q, dir_fd=dir_fd)", self.source)
+        self.assertIn('os.mkdir(ticket, mode=0o700, dir_fd=quarantine_fd)',
+                      self.source)
+        self.assertIn("QUARANTINED_OWNER_REVIEW", self.source)
+
+    def test_foreign_target_symlink_with_colliding_inode_is_restored(self) -> None:
+        needle = 'return "%d:%d" % (info.st_dev, info.st_ino)'
+        collision = self.source.replace(needle, 'return "42:42"')
+        swap = (
+            'rm -- "$CAND_APP/public/storage"\n'
+            'ln -s ../../untrusted "$CAND_APP/public/storage"\n'
+            'fail FORCED_LATE_FAILURE\n'
+        )
+        run = self.harness(self.CREATE + swap, source_override=collision)
+        self.assertEqual(run.returncode, 2, run.stdout + run.stderr)
+        self.assertIn("CANDIDATE_ROLLBACK=FAILED_REVIEW", run.stdout)
+        self.assertEqual(os.readlink(self.cand / "public/storage"),
+                         "../../untrusted")
+        self.assertEqual((self.cand / ".env").read_bytes(),
+                         (self.live / ".env").read_bytes())
+
+    def test_stranded_quarantine_blocks_new_artifacts(self) -> None:
+        (self.cand / ".kmj-detach-stranded").write_bytes(b"UNREVIEWED")
+        run = self.harness(self.CREATE)
+        self.assertNotEqual(run.returncode, 0, run.stdout + run.stderr)
+        self.assertIn("FS_OP_FAILED=ValueError", run.stderr)
+        self.assertFalse((self.cand / ".env").exists())
+        self.assertEqual((self.cand / ".kmj-detach-stranded").read_bytes(), b"UNREVIEWED")
+
+    def test_root_wrapper_rejects_stranded_quarantine_before_pass(self) -> None:
+        source = self.source
+        self.assertIn('.kmj-detach-*', source)
+        self.assertLess(source.index('post_fail DETACH_LEFTOVER_REVIEW'),
+                        source.index('echo "KMJ_MATERIALIZE=PASS"'))
+
+    def test_live_env_exact_size_limit_can_be_copied(self) -> None:
+        (self.live / ".env").write_bytes(b"K" * 1048576)
+        run = self.harness(
+            'env_id="$(fs_op create-env "$LIVE_APP" "$CAND_APP")"\n'
+            'committed=1\n'
+        )
+        self.assertEqual(run.returncode, 0, run.stdout + run.stderr)
+        self.assertEqual((self.cand / ".env").stat().st_size, 1048576)
+        self.assertEqual((self.cand / ".env").read_bytes(), (self.live / ".env").read_bytes())
+
+    def test_live_env_growing_after_initial_stat_is_rejected_before_create(self) -> None:
+        # A writer appends beyond 1 MiB after the initial fstat. The copy
+        # must read no more than the first 1 MiB + 1 byte and never create
+        # a candidate .env from the raced source.
+        needle = '        info = os.fstat(src)\n        if not stat.S_ISREG(info.st_mode)'
+        self.assertEqual(self.source.count(needle), 1)
+        injected = self.source.replace(
+            needle,
+            '        info = os.fstat(src)\n'
+            '        grow = os.open(".env", os.O_WRONLY | os.O_APPEND, dir_fd=live)\n'
+            '        try:\n'
+            '            os.write(grow, b"Z" * (1048576 + 1))\n'
+            '        finally:\n'
+            '            os.close(grow)\n'
+            '        if not stat.S_ISREG(info.st_mode)',
+        )
+        run = self.harness(
+            'fs_op create-env "$LIVE_APP" "$CAND_APP"\ncommitted=1\n',
+            source_override=injected,
+        )
+        self.assertNotEqual(run.returncode, 0, run.stdout + run.stderr)
+        self.assertIn("FS_OP_FAILED=ValueError", run.stderr)
+        self.assertFalse((self.cand / ".env").exists())
+        self.assertGreater((self.live / ".env").stat().st_size, 1048576)
+
+    def test_rollback_digest_rejects_growth_without_unbounded_read(self) -> None:
+        # The SHA/size logic now runs exclusively in the protected root helper.
+        self.assertIn("remaining = MAX_ENV_BYTES + 1", self.source)
+        self.assertIn("os.read(handle, min(65536, remaining))", self.source)
+        helper = REPO / "scripts/operations/protected-candidate-retire-20261103.py"
+        spec = importlib.util.spec_from_file_location("bounded_root_retire", helper)
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "growing-env"
+            path.write_bytes(b"Z" * (1048576 + 1))
+            fd = os.open(path, os.O_RDONLY)
+            try:
+                self.assertIsNone(module._source_digest(fd))
+            finally:
+                os.close(fd)
+
+    def test_preplanted_env_symlink_is_never_followed_or_truncated(self) -> None:
+        victim = Path(self.tmp.name) / "victim"
+        victim.write_text("precious")
+        (self.cand / ".env").symlink_to(victim)
+        run = self.harness(self.CREATE)
+        self.assertNotEqual(run.returncode, 0)
+        self.assertEqual(victim.read_text(), "precious")
+        self.assertTrue((self.cand / ".env").is_symlink())
+
+    def test_raced_existing_env_is_not_overwritten_or_removed(self) -> None:
+        (self.cand / ".env").write_text("RACED")
+        run = self.harness(self.CREATE)
+        self.assertNotEqual(run.returncode, 0)
+        self.assertEqual((self.cand / ".env").read_text(), "RACED")
+
+    def test_existing_public_link_is_not_clobbered(self) -> None:
+        (self.cand / "public/storage").symlink_to("elsewhere")
+        run = self.harness(self.CREATE)
+        self.assertNotEqual(run.returncode, 0)
+        self.assertEqual(os.readlink(self.cand / "public/storage"), "elsewhere")
+        self.assertEqual((self.cand / ".env").read_bytes(), (self.live / ".env").read_bytes())  # root review required
+
+    def test_failure_before_receipt_delivery_self_cleans(self) -> None:
+        # Parent closes the pipe before the id can be delivered.
+        run = self.harness('fs_op create-env "$LIVE_APP" "$CAND_APP" >&- || true\n'
+                           'fs_op create-link "$CAND_APP/public" >&- || true\n')
+        self.assertTrue((self.cand / ".env").exists(), run.stdout + run.stderr)
+        self.assertTrue((self.cand / "public/storage").is_symlink())
+        self.assertIn("FS_OP_ROLLBACK=FAILED_OWNER_REVIEW", run.stderr)
+        self.assertNotIn("CANDIDATE_ROLLBACK=DONE", run.stdout)
+
+    def test_link_created_but_inode_receipt_fails_requires_owner_review(self) -> None:
+        # Inject a failure after symlink(2) succeeds, before lstat returns its
+        # inode id. The link MUST NOT be removed based only on its pathname.
+        needle = '            info = os.stat("storage", dir_fd=pub, follow_symlinks=False)'
+        self.assertEqual(self.source.count(needle), 1)
+        fault = self.source.replace(
+            needle,
+            '            raise OSError("INJECTED_LINK_RECEIPT_FAILURE")\n' + needle,
+        )
+        run = self.harness(self.CREATE, source_override=fault)
+        self.assertNotEqual(run.returncode, 0)
+        self.assertIn("FS_OP_POST_CREATE_RECEIPT=UNATTESTED_OWNER_REVIEW", run.stderr)
+        self.assertIn("CANDIDATE_ROLLBACK=FAILED_REVIEW", run.stdout)
+        self.assertEqual((self.cand / ".env").read_bytes(), (self.live / ".env").read_bytes())
+        self.assertTrue((self.cand / "public/storage").is_symlink())
+        self.assertEqual(os.readlink(self.cand / "public/storage"),
+                         "../storage/app/public")
+
+    def test_env_created_but_inode_receipt_fails_requires_owner_review(self) -> None:
+        # Even an O_EXCL-created file cannot be blindly removed when fstat
+        # fails before its inode receipt; keep it for the privileged review.
+        needle = '            created = ident(os.fstat(dst))'
+        self.assertEqual(self.source.count(needle), 1)
+        fault = self.source.replace(
+            needle,
+            '            raise OSError("INJECTED_ENV_RECEIPT_FAILURE")\n' + needle,
+        )
+        run = self.harness(self.CREATE, source_override=fault)
+        self.assertNotEqual(run.returncode, 0)
+        self.assertIn("FS_OP_POST_CREATE_RECEIPT=UNATTESTED_OWNER_REVIEW", run.stderr)
+        self.assertIn("CANDIDATE_ROLLBACK=FAILED_REVIEW", run.stdout)
+        # os.open(O_EXCL) created an empty candidate before its fstat failed.
+        # Without a receipt it must be LEFT FOR REVIEW, not mistaken for a
+        # successfully copied or rolled-back runtime secret.
+        self.assertEqual((self.cand / ".env").read_bytes(), b"")
+        self.assertEqual((self.live / ".env").read_bytes(),
+                         b"APP_KEY=base64:abc\nDB=x\n")
+        self.assertFalse((self.cand / "public/storage").is_symlink())
+
+    def test_malformed_env_receipt_never_claims_rollback_done(self) -> None:
+        # A successful O_EXCL write may have created a secret file even if
+        # the emitted receipt is malformed. It cannot be unlinked by pathname.
+        needle = '        sys.stdout.write(created + "\\n")'
+        self.assertEqual(self.source.count(needle), 1)
+        fault = self.source.replace(
+            needle,
+            '        sys.stdout.write("BROKEN_ID\\n")',
+        )
+        tail = (
+            'env_id="$(fs_op create-env "$LIVE_APP" "$CAND_APP")" '
+            '|| { receipt_uncertain=1; fail ENV_CREATE_FAILED; }\n'
+            '[[ "$env_id" =~ ^[0-9]+:[0-9]+$ ]] '
+            '|| { env_id=""; receipt_uncertain=1; fail ENV_CREATE_FAILED; }\n'
+        )
+        run = self.harness(tail, source_override=fault)
+        self.assertNotEqual(run.returncode, 0)
+        self.assertIn("CANDIDATE_ROLLBACK=FAILED_REVIEW", run.stdout)
+        self.assertNotIn("CANDIDATE_ROLLBACK=DONE", run.stdout)
+        self.assertEqual((self.cand / ".env").read_bytes(),
+                         (self.live / ".env").read_bytes())
+        self.assertFalse((self.cand / "public/storage").is_symlink())
+
+    def test_malformed_link_receipt_never_deletes_unattested_link(self) -> None:
+        needle = '        emit(created, None, pub, "storage", "l")'
+        self.assertEqual(self.source.count(needle), 1)
+        fault = self.source.replace(needle, '        print("BROKEN_LINK_ID")')
+        tail = (
+            'env_id="$(fs_op create-env "$LIVE_APP" "$CAND_APP")" '
+            '|| { receipt_uncertain=1; fail ENV_CREATE_FAILED; }\n'
+            '[[ "$env_id" =~ ^[0-9]+:[0-9]+$ ]] '
+            '|| { env_id=""; receipt_uncertain=1; fail ENV_CREATE_FAILED; }\n'
+            'link_id="$(fs_op create-link "$CAND_APP/public")" '
+            '|| { receipt_uncertain=1; fail LINK_CREATE_FAILED; }\n'
+            '[[ "$link_id" =~ ^[0-9]+:[0-9]+$ ]] '
+            '|| { link_id=""; receipt_uncertain=1; fail LINK_CREATE_FAILED; }\n'
+        )
+        run = self.harness(tail, source_override=fault)
+        self.assertNotEqual(run.returncode, 0)
+        self.assertIn("CANDIDATE_ROLLBACK=FAILED_REVIEW", run.stdout)
+        self.assertNotIn("CANDIDATE_ROLLBACK=DONE", run.stdout)
+        self.assertEqual((self.cand / ".env").read_bytes(), (self.live / ".env").read_bytes())
+        self.assertEqual(os.readlink(self.cand / "public/storage"),
+                         "../storage/app/public")
+
+    def test_unknown_rollback_receipt_returns_nonzero(self) -> None:
+        run = self.harness('receipt_uncertain=1\nrollback_candidate\n')
+        self.assertNotEqual(run.returncode, 0)
+        self.assertIn("CANDIDATE_ROLLBACK=FAILED_REVIEW", run.stdout)
+        self.assertNotIn("CANDIDATE_ROLLBACK=DONE", run.stdout)
+
+    def test_root_post_fail_rejects_duplicate_malformed_missing_receipts(self) -> None:
+        # Extract the real root-side functions but replace the protected
+        # systemd-run with a harmless echo. Nothing touches root/production.
+        source = self.source
+        start = source.index('sandbox_text=""\n# A completed materializer')
+        end = source.index('\nsandbox_rc=0', start)
+        excerpt = source[start:end]
+        script = (
+            "set -Eeuo pipefail\n"
+            "status() { printf '%s=%s\\n' \"$1\" \"$2\"; }\n"
+            "fail() { echo \"BLOCKED $1\"; exit 2; }\n"
+            "root_retire() { printf REMOVED\\n; }\n"
+            + excerpt +
+            '\nsandbox_text="$1"\nsandbox_rc="$2"\n'
+            'post_fail INJECTED_FAILURE\n'
+        )
+        complete_link = (
+            "MATERIALIZED_ENV_ID=12:34\n"
+            "MATERIALIZED_LINK_ID=45:67\n"
+            "PUBLIC_STORAGE_LINK=MIRRORED\n"
+            "KMJ_MATERIALIZE_SHARED=PASS"
+        )
+        complete_no_link = (
+            "MATERIALIZED_ENV_ID=12:34\n"
+            "PUBLIC_STORAGE_LINK=NOT_PRESENT_LIVE\n"
+            "KMJ_MATERIALIZE_SHARED=PASS"
+        )
+        # tuple: stdout, sandbox exit, complete/verified, known-inode cleanup
+        cases = [
+            ("", "137", False, False),
+            ("MATERIALIZED_ENV_ID=12:34", "137", False, True),
+            ("MATERIALIZED_LINK_ID=45:67", "137", False, True),
+            ("MATERIALIZED_ENV_ID=12:34\nPUBLIC_STORAGE_LINK=MIRRORED", "137", False, True),
+            ("MATERIALIZED_ENV_ID=12:34\nMATERIALIZED_ENV_ID=45:67", "0", False, False),
+            ("MATERIALIZED_ENV_ID=12:34\nMATERIALIZED_LINK_ID=45:67\nMATERIALIZED_LINK_ID=78:90", "0", False, False),
+            ("MATERIALIZED_ENV_ID=invalid", "0", False, False),
+            ("MATERIALIZED_ENV_ID=12:34\nMATERIALIZED_LINK_ID=../unsafe", "0", False, False),
+            (complete_link.replace("MATERIALIZED_LINK_ID=45:67\n", ""), "0", False, True),
+            (complete_link.replace("KMJ_MATERIALIZE_SHARED=PASS", ""), "0", False, True),
+            (complete_link, "137", False, True),
+            (complete_no_link, "0", True, True),
+            (complete_link, "0", True, True),
+        ]
+        for receipt, code, verified, attempted in cases:
+            with self.subTest(receipt=receipt, sandbox_exit=code):
+                out = subprocess.run(
+                    ["/bin/bash", "-c", script, "--", receipt, code],
+                    capture_output=True, text=True,
+                    env={"PATH": "/usr/bin:/bin"}, timeout=10,
+                )
+                self.assertEqual(out.returncode, 2, out.stdout + out.stderr)
+                self.assertIn("BLOCKED INJECTED_FAILURE", out.stdout)
+                if verified:
+                    self.assertIn("CANDIDATE_ROLLBACK=DONE", out.stdout)
+                    self.assertNotIn("CANDIDATE_ROLLBACK=FAILED_REVIEW", out.stdout)
+                else:
+                    self.assertNotIn("CANDIDATE_ROLLBACK=DONE", out.stdout)
+                    self.assertNotIn("CANDIDATE_ROLLBACK=DONE", out.stdout)
+                    self.assertIn("CANDIDATE_ROLLBACK=FAILED_REVIEW", out.stdout)
+                    if attempted:
+                        self.assertTrue("ROLLBACK_STORAGE=REMOVED" in out.stdout or
+                                        "ROLLBACK_ENV=REMOVED" in out.stdout, out.stdout)
+
+    def test_root_rejects_malformed_successful_rollback_transcript(self) -> None:
+        # A claimed child rollback success is untrusted. Only the root-only
+        # protected helper's actual result can authorize a DONE receipt.
+        source = self.source
+        start = source.index('sandbox_text=""\n# A completed materializer')
+        end = source.index('\nsandbox_rc=0', start)
+        excerpt = source[start:end]
+        script = (
+            "set -Eeuo pipefail\n"
+            "status() { printf '%s=%s\\n' \"$1\" \"$2\"; }\n"
+            "fail() { echo \"BLOCKED $1\"; exit 2; }\n"
+            "root_retire() {\n"
+            "  if [[ \"$ROOT_RESULT\" == REMOVED ]]; then echo REMOVED; return 0; fi\n"
+            "  echo QUARANTINED_OWNER_REVIEW; return 3\n"
+            "}\n"
+            + excerpt +
+            '\nsandbox_text="$1"\nsandbox_rc=0\n'
+            'post_fail INJECTED_ROOT_CHECK\n'
+        )
+        complete = (
+            "MATERIALIZED_ENV_ID=12:34\n"
+            "MATERIALIZED_LINK_ID=45:67\n"
+            "PUBLIC_STORAGE_LINK=MIRRORED\n"
+            "KMJ_MATERIALIZE_SHARED=PASS"
+        )
+        for root_result, done in (("REMOVED", True),
+                                  ("QUARANTINED_OWNER_REVIEW", False)):
+            with self.subTest(root_result=root_result):
+                out = subprocess.run(
+                    ["/bin/bash", "-c", script, "--", complete],
+                    capture_output=True, text=True, timeout=10,
+                    env={"PATH": "/usr/bin:/bin", "ROOT_RESULT": root_result,
+                         "MOCK_ROLLBACK": "CANDIDATE_ROLLBACK=DONE"},
+                )
+                self.assertEqual(out.returncode, 2, out.stdout + out.stderr)
+                self.assertIn("BLOCKED INJECTED_ROOT_CHECK", out.stdout)
+                self.assertEqual("CANDIDATE_ROLLBACK=DONE" in out.stdout, done)
+                self.assertEqual("CANDIDATE_ROLLBACK=FAILED_REVIEW" in out.stdout,
+                                 not done)
+                self.assertIn("ROLLBACK_STORAGE=" + root_result, out.stdout)
+                self.assertIn("ROLLBACK_ENV=" + root_result, out.stdout)
+
+    def test_root_never_forwards_child_rollback_done_on_partial_failure(self) -> None:
+        # Exercise the actual root transcript/receipt dispatcher without
+        # systemd, root, or any production/candidate filesystem mutation.
+        source = self.source
+        start = source.index('sandbox_text=""\n# A completed materializer')
+        end = source.index('\nrunuser -u www-data -- test -r', start)
+        excerpt = source[start:end]
+        script = (
+            "set -Eeuo pipefail\n"
+            "status() { printf '%s=%s\\n' \"$1\" \"$2\"; }\n"
+            "fail() { echo \"BLOCKED $1\"; exit 2; }\n"
+            "run_sandbox() {\n"
+            "  if [[ \"$1\" == materialize ]]; then\n"
+            "    printf '%s\\n' \"$MOCK_STDOUT\"; return \"$MOCK_EXIT\"\n"
+            "  fi\n"
+            "  printf 'CANDIDATE_ROLLBACK=DONE\\n'\n"
+            "}\n"
+            + excerpt + "\n"
+        )
+        cases = (
+            "CANDIDATE_ROLLBACK=DONE\nMATERIALIZED_ENV_ID=12:34",
+            "MATERIALIZED_ENV_ID=12:34\nCANDIDATE_ROLLBACK=DONE\nPUBLIC_STORAGE_LINK=MIRRORED",
+            "MATERIALIZED_LINK_ID=45:67\nCANDIDATE_ROLLBACK=DONE",
+        )
+        for child_receipt in cases:
+            with self.subTest(child_receipt=child_receipt):
+                out = subprocess.run(
+                    ["/bin/bash", "-c", script],
+                    capture_output=True, text=True, timeout=10,
+                    env={"PATH": "/usr/bin:/bin",
+                         "MOCK_STDOUT": child_receipt, "MOCK_EXIT": "143"},
+                )
+                self.assertEqual(out.returncode, 2, out.stdout + out.stderr)
+                self.assertNotIn("CANDIDATE_ROLLBACK=DONE", out.stdout)
+                self.assertEqual(out.stdout.count("CANDIDATE_ROLLBACK=FAILED_REVIEW"), 1)
+                self.assertIn("BLOCKED SANDBOX_FAILED_143", out.stdout)
+
+    def test_sigkill_leaves_orphans_for_owner_review(self) -> None:
+        # SIGKILL cannot run the sandbox's EXIT trap; the root controller must
+        # therefore treat a nonzero sandbox result as incomplete even if some
+        # inode receipts were printed before the crash.
+        run = self.harness(self.CREATE + "kill -KILL $$\n")
+        self.assertNotEqual(run.returncode, 0, run.stdout + run.stderr)
+        self.assertTrue((self.cand / ".env").is_file())
+        self.assertTrue((self.cand / "public/storage").is_symlink())
+        self.assertEqual((self.live / ".env").read_bytes(),
+                         b"APP_KEY=base64:abc\nDB=x\n")
+
+    def test_sigterm_after_creation_rolls_back(self) -> None:
+        run = self.harness(self.CREATE + "kill -TERM $$\nsleep 5\n")
+        self.assertEqual(run.returncode, 143, run.stdout + run.stderr)
+        self.assertEqual((self.cand / ".env").read_bytes(), (self.live / ".env").read_bytes())
+        self.assertTrue((self.cand / "public/storage").is_symlink())
+        self.assertIn("CANDIDATE_ROLLBACK=FAILED_REVIEW", run.stdout)
+
+    def test_root_receipt_never_uses_a_temp_pathname(self) -> None:
+        source = self.source
+        for forbidden in ("mktemp", "tee ", "sandbox_out", "TMPDIR=", "/tmp/"):
+            self.assertNotIn(forbidden, source, forbidden)
+        self.assertIn("unset BASH_ENV ENV CDPATH TMPDIR", source)
+        self.assertIn('sandbox_text="$(run_sandbox materialize materialize)"', source)
+        self.assertIn("root_retire() {", source)
+        self.assertIn("KMJ_ROOT_PROTECTED_RETIRE_PY", source)
+
+    def test_artifacts_are_created_after_all_fallible_checks(self) -> None:
+        source = self.source
+        create = source.index('fs_op create-env "$LIVE_APP" "$CAND_APP"')
+        for token in ("SHARED_STORAGE_MOVING_TARGET", "PUBLIC_TREE_ACL_FAILED",
+                      "CANDIDATE_DIRTY_BEFORE_WRITE", "LIVE_PUBLIC_STORAGE_LINK_UNEXPECTED"):
+            self.assertLess(source.index(token), create, token)
+        self.assertLess(create, source.index("CANDIDATE_DIRTY_AFTER"))
+        self.assertIn("trap on_exit EXIT", source)
+        self.assertIn("post_fail NGINX_PRIVATE_ENV_EXPOSED", source)
+        self.assertNotIn("runuser -u www-data -- test ! -r \"$CAND_APP/.env\" || fail", source)
 
 
 class StorageDirectoryBoundaryTest(unittest.TestCase):

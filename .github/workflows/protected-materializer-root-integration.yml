@@ -1,0 +1,32 @@
+name: Protected rollback root wrapper integration QA
+on:
+  pull_request:
+    paths:
+      - scripts/operations/materialize-main-platform-candidate-runtime.sh
+      - scripts/operations/protected-candidate-retire-20261103.py
+      - scripts/test_protected_candidate_retire_20261103.py
+      - scripts/test_materializer_root_retirement_integration_20261103.py
+      - .github/workflows/protected-materializer-root-integration.yml
+  push:
+    branches: [main]
+    paths:
+      - scripts/operations/materialize-main-platform-candidate-runtime.sh
+      - scripts/operations/protected-candidate-retire-20261103.py
+      - scripts/test_protected_candidate_retire_20261103.py
+      - scripts/test_materializer_root_retirement_integration_20261103.py
+      - .github/workflows/protected-materializer-root-integration.yml
+permissions:
+  contents: read
+jobs:
+  root_integration_review:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - name: Validate root-only integration boundaries and hostile inode tests
+        run: |
+          set -euo pipefail
+          bash -n scripts/operations/materialize-main-platform-candidate-runtime.sh
+          python3 -B -m unittest scripts/test_materializer_root_retirement_integration_20261103.py scripts/test_protected_candidate_retire_20261103.py -v
