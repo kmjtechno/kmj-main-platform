@@ -29,7 +29,13 @@ final class OmniDeskActivationBindingStore
         string $installationId,
         string $idempotencyKey,
         string $actorId,
+        ?int $maxActiveDevices = null,
     ): array {
+        // The limit is supplied by the caller from owner-approved commercial
+        // policy. This store never invents a default (null = no seat check).
+        if ($maxActiveDevices !== null && $maxActiveDevices < 1) {
+            throw new DomainException('OMNIDESK_DEVICE_LIMIT_INVALID');
+        }
         $this->validateDeviceIdentity(
             $devicePublicKey,
             $deviceFingerprint,
@@ -47,6 +53,7 @@ final class OmniDeskActivationBindingStore
             $installationId,
             $idempotencyKey,
             $actorId,
+            $maxActiveDevices,
         ): array {
             $license = DB::table('kslp_licenses')
                 ->where('id', $licenseId)
@@ -126,6 +133,20 @@ final class OmniDeskActivationBindingStore
                 $this->requireExactBinding((array) $existing, $candidate);
 
                 return (array) $existing;
+            }
+
+            // Counted under the license row lock, after idempotent replays have
+            // returned, so a retry never consumes a seat and two concurrent
+            // binds for one license serialize here.
+            if ($maxActiveDevices !== null) {
+                $active = DB::table('omnidesk_activation_bindings as b')
+                    ->join('kslp_activations as a', 'a.id', '=', 'b.activation_id')
+                    ->where('a.license_id', $licenseId)
+                    ->whereNull('a.deactivated_at')
+                    ->count();
+                if ($active >= $maxActiveDevices) {
+                    throw new DomainException('OMNIDESK_DEVICE_LIMIT_REACHED');
+                }
             }
 
             $now = now();
