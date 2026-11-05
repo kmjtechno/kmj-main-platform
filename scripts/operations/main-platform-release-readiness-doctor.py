@@ -13,19 +13,26 @@ Prints one KEY=VALUE line per gate and a final RELEASE_READINESS verdict.
 from __future__ import annotations
 
 import hashlib
+import ctypes
+import fcntl
 import json
 import math
 import os
+import pwd
 import re
 import stat
 import subprocess
 import sys
+import types
 from dataclasses import dataclass
 from pathlib import Path
 
 SHA = re.compile(r"^[a-f0-9]{40}$")
 SHA256 = re.compile(r"^[a-f0-9]{64}$")
 RELEASE = re.compile(r"^[a-z0-9][a-z0-9_-]{3,100}$")
+SNAPSHOT = re.compile(r"storage\.pre-shared-\d{8}T\d{6}Z\Z")
+SNAPSHOT_HELPER_SHA256 = "72fe5702c59599bd1b28b88dad808dda5d6be97b61f0db06dc3a7295258a51b6"
+SNAPSHOT_SCANNER_SHA256 = "f4d01f6e3b40c9ad774c8ada5129b241cee93dac782ce75bb0e229b26bbc95ba"
 ARTIFACTS = (
     "apps/platform/artisan",
     "apps/platform/vendor/autoload.php",
@@ -41,6 +48,9 @@ class Paths:
     backups: Path = Path("/var/backups/kmj-platform")
     controller: Path = Path("/usr/local/libexec/kmj-codebridge/activate-main-platform-approved.py")
     unit: Path = Path("/etc/systemd/system/kmj-main-platform-production-release.service")
+    snapshot_helper: Path = Path("/usr/local/libexec/kmj-codebridge/main-platform-storage-snapshot-attest.py")
+    snapshot_scanner: Path = Path("/usr/local/libexec/kmj-codebridge/main-platform-storage-switch-v6.py")
+    snapshot_state: Path = Path("/var/lib/kmj-main-platform-storage-switch")
 
 
 def _protected(path: Path, require_root: bool) -> str | None:
@@ -118,17 +128,91 @@ def _load_protected_json(path: Path, require_root: bool) -> object | None:
 
 def _git(tree: Path, *args: str) -> str | None:
     try:
+        credentials = {}
+        if os.geteuid() == 0:
+            account = pwd.getpwnam("kmjprod")
+            if account.pw_uid == 0 or tree.stat().st_uid != account.pw_uid:
+                return None
+            credentials = dict(user=account.pw_uid, group=account.pw_gid, extra_groups=[], preexec_fn=_no_new_privileges)
         result = subprocess.run(
-            ["git", "-c", f"safe.directory={tree}", "-c", "core.fsmonitor=false",
+            ["/usr/bin/git", "--no-optional-locks", "-c", f"safe.directory={tree}", "-c", "core.fsmonitor=false",
              "-c", "core.untrackedCache=false", "-C", str(tree), *args],
             check=False, capture_output=True, text=True, timeout=60,
             env={"PATH": "/usr/bin:/bin", "HOME": "/nonexistent",
                  "GIT_CONFIG_NOSYSTEM": "1", "GIT_TERMINAL_PROMPT": "0",
-                 "GIT_OPTIONAL_LOCKS": "0"},
+                 "GIT_CONFIG_GLOBAL": "/dev/null", "GIT_OPTIONAL_LOCKS": "0"}, **credentials,
         )
-    except (OSError, subprocess.TimeoutExpired):
+    except (KeyError, OSError, subprocess.SubprocessError):
         return None
     return result.stdout.strip() if result.returncode == 0 else None
+
+
+def _no_new_privileges():
+    libc = ctypes.CDLL(None, use_errno=True)
+    if libc.prctl(38, 1, 0, 0, 0) != 0:
+        raise OSError(ctypes.get_errno(), "PR_SET_NO_NEW_PRIVS failed")
+
+
+def _protected_snapshot_code(path: Path, digest: str) -> bytes:
+    if str(path) != os.path.realpath(path) or not path.is_absolute():
+        raise ValueError("noncanonical dependency")
+    for parent in path.parents:
+        s = os.lstat(parent)
+        if s.st_uid != 0 or s.st_mode & 0o022 and not s.st_mode & stat.S_ISVTX:
+            raise ValueError("unprotected dependency ancestor")
+    fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_CLOEXEC)
+    try:
+        s = os.fstat(fd)
+        if not stat.S_ISREG(s.st_mode) or s.st_nlink != 1 or s.st_uid != 0 or s.st_mode & 0o022 or s.st_size > 1048576:
+            raise ValueError("unprotected dependency")
+        with os.fdopen(os.dup(fd), "rb") as source:
+            raw = source.read(1048577)
+        if hashlib.sha256(raw).hexdigest() != digest:
+            raise ValueError("dependency hash mismatch")
+        return raw
+    finally:
+        os.close(fd)
+
+
+def _snapshot_source_state(candidate: Path, paths: Paths, target: str) -> str:
+    """Call the same pinned root attestor used by the materializer/controller."""
+    try:
+        if os.geteuid() != 0 or not SHA.fullmatch(target):
+            return "SNAPSHOT_ATTESTATION_BLOCKED"
+        app = candidate / "apps/platform"
+        names = [p.name for p in app.iterdir() if p.name.startswith("storage.pre-shared-")]
+        raw = _protected_snapshot_code(paths.snapshot_helper, SNAPSHOT_HELPER_SHA256)
+        _protected_snapshot_code(paths.snapshot_scanner, SNAPSHOT_SCANNER_SHA256)
+        module = types.ModuleType("protected_snapshot_attestor")
+        module.__file__ = str(paths.snapshot_helper)
+        exec(compile(raw, str(paths.snapshot_helper), "exec"), module.__dict__)
+        if names:
+            if len(names) != 1 or not SNAPSHOT.fullmatch(names[0]):
+                return "SNAPSHOT_ATTESTATION_BLOCKED"
+            permitted = module.check_source(release_root=str(candidate), app_dir=str(app), expected_sha=target,
+                                            shared_dir=str(paths.root / "shared/storage"), snapshot_name=names[0],
+                                            state_dir=str(paths.snapshot_state), scanner_path=str(paths.snapshot_scanner))
+            if permitted != "apps/platform/" + names[0] + "/":
+                return "SNAPSHOT_ATTESTATION_BLOCKED"
+        else:
+            module.canonical(str(candidate)); module.canonical(str(app))
+            fd = module.open_dir(app)
+            try:
+                fcntl.flock(fd, fcntl.LOCK_SH | fcntl.LOCK_NB)
+                if any(n.startswith("storage.pre-shared-") for n in os.listdir(fd)):
+                    return "SNAPSHOT_ATTESTATION_BLOCKED"
+                module.git_identity(candidate, target)
+                args = ["status", "--porcelain=v1", "-z", "--untracked-files=all"]
+                if (app / "storage").is_symlink():
+                    args += ["--", ".", ":(literal,exclude)apps/platform/storage"]
+                if module.git_read(candidate, *args, text=False):
+                    return "DIRTY"
+                module.git_identity(candidate, target)
+            finally:
+                os.close(fd)
+        return "PASS"
+    except Exception:
+        return "SNAPSHOT_ATTESTATION_BLOCKED"
 
 
 # Minimum *source + built chunk* UI evidence for the owner-requested release.
@@ -240,16 +324,20 @@ def _attested_shared_storage(candidate: Path, paths: Paths) -> bool:
     return True
 
 
-def _candidate_git_state(candidate: Path, paths: Paths) -> str:
+def _candidate_git_state(candidate: Path, paths: Paths, target: str = "", require_protected: bool = False) -> str:
     storage = candidate / "apps/platform/storage"
     if storage.is_symlink():
         if not _attested_shared_storage(candidate, paths):
             return "STORAGE_LINK_UNVERIFIED"
+        if require_protected or any(p.name.startswith("storage.pre-shared-") for p in storage.parent.iterdir()):
+            return _snapshot_source_state(candidate, paths, target)
         # All non-storage source remains under ordinary exact-HEAD Git status.
         # The only exempt path has *independent* fixed shared-link attestation.
         dirty = _git(candidate, "status", "--porcelain", "--untracked-files=normal",
                      "--", ".", ":(exclude)apps/platform/storage")
     else:
+        if require_protected:
+            return _snapshot_source_state(candidate, paths, target)
         dirty = _git(candidate, "status", "--porcelain")
     if dirty is None:
         return "GIT_STATUS_UNVERIFIED"
@@ -293,8 +381,13 @@ def evaluate(target: str, paths: Paths = Paths(), require_root: bool = True,
         lines.append("CANDIDATE=MISSING_OR_UNSAFE")
         blockers.append("CANDIDATE_NOT_STAGED")
     else:
-        head = _git(candidate, "rev-parse", "HEAD")
-        git_state = _candidate_git_state(candidate, paths)
+        app = candidate / "apps/platform"
+        has_snapshot = app.is_dir() and any(p.name.startswith("storage.pre-shared-") for p in app.iterdir())
+        # The root helper independently checks HEAD under kmjprod credentials.
+        # Do not precede it with root Git in a service-writable repository.
+        protected_route = require_root or has_snapshot and (app / "storage").is_symlink()
+        head = target if protected_route else _git(candidate, "rev-parse", "HEAD")
+        git_state = _candidate_git_state(candidate, paths, target, require_protected=require_root)
         missing = [item for item in ARTIFACTS
                    if not (candidate / item).is_file() or (candidate / item).stat().st_size <= 0]
         state = ("SHA_MISMATCH" if head != target else git_state
