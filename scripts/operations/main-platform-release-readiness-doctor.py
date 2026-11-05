@@ -41,6 +41,7 @@ class Paths:
     backups: Path = Path("/var/backups/kmj-platform")
     controller: Path = Path("/usr/local/libexec/kmj-codebridge/activate-main-platform-approved.py")
     unit: Path = Path("/etc/systemd/system/kmj-main-platform-production-release.service")
+    storage_state: Path = Path("/var/lib/kmj-main-platform-storage-switch")
 
 
 def _protected(path: Path, require_root: bool) -> str | None:
@@ -240,6 +241,19 @@ def _attested_shared_storage(candidate: Path, paths: Paths) -> bool:
     return True
 
 
+def _preserved_storage(candidate: Path, paths: Paths) -> tuple[str, str | None]:
+    try:
+        import importlib.util
+        spec = importlib.util.spec_from_file_location(
+            "kmj_preserved_storage_attest", Path(__file__).resolve().with_name("main_platform_preserved_storage.py"))
+        module = importlib.util.module_from_spec(spec)
+        sys.modules[spec.name] = module
+        spec.loader.exec_module(module)
+        return module.attest(candidate, paths.storage_state)
+    except Exception:  # noqa: BLE001 - an unloadable attestor must never relax the gate
+        return "UNATTESTED", "ATTESTOR_UNAVAILABLE"
+
+
 def _candidate_git_state(candidate: Path, paths: Paths) -> str:
     storage = candidate / "apps/platform/storage"
     if storage.is_symlink():
@@ -247,8 +261,15 @@ def _candidate_git_state(candidate: Path, paths: Paths) -> str:
             return "STORAGE_LINK_UNVERIFIED"
         # All non-storage source remains under ordinary exact-HEAD Git status.
         # The only exempt path has *independent* fixed shared-link attestation.
-        dirty = _git(candidate, "status", "--porcelain", "--untracked-files=normal",
-                     "--", ".", ":(exclude)apps/platform/storage")
+        # The reviewed storage switch leaves ONE frozen original directory next to the symlink. Exempt exactly
+        # that name, and only with journal + content + Git evidence (see main_platform_preserved_storage).
+        excludes = [":(exclude)apps/platform/storage"]
+        verdict, detail = _preserved_storage(candidate, paths)
+        if verdict == "UNATTESTED":
+            return "PRESERVED_STORAGE_UNATTESTED"
+        if verdict == "ATTESTED":
+            excludes.append(f":(exclude)apps/platform/{detail}")
+        dirty = _git(candidate, "status", "--porcelain", "--untracked-files=normal", "--", ".", *excludes)
     else:
         dirty = _git(candidate, "status", "--porcelain")
     if dirty is None:
