@@ -86,6 +86,7 @@ def main(argv=None):
         print('RESULT=BLOCKED_ROOT_ON_KMJ_ELITE_REQUIRED')
         return 2
     os.umask(0o077)
+    activation_requested = False
     try:
         if not check():
             return 2
@@ -95,6 +96,7 @@ def main(argv=None):
         # No approval edits, override flags, root migration logic, arbitrary
         # command/target, reset or service bypass. The installed controller
         # rechecks protected approval, live pointer and evidence under its lock.
+        activation_requested = True
         result = subprocess.run(['/usr/bin/systemctl', 'start', UNIT], env=ENV,
                                 stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
                                 stderr=subprocess.DEVNULL, timeout=600, check=False)
@@ -105,6 +107,9 @@ def main(argv=None):
         print('NEXT=Verify deployed SHA, HTTPS, authenticated application and rollback health.')
         return 0
     except subprocess.TimeoutExpired:
+        if not activation_requested:
+            print('RESULT=READINESS_TIMEOUT_NO_ACTIVATION_REQUEST')
+            return 2
         # Timing out systemctl does not prove the underlying unit stopped.
         print('RESULT=TIMEOUT_UNIT_STATE_UNKNOWN_DO_NOT_RETRY_BLINDLY')
         return 3
