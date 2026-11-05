@@ -1,4 +1,9 @@
 import importlib.util
+import contextlib
+import hashlib
+import io
+import subprocess
+import tempfile
 from pathlib import Path
 import unittest
 from unittest.mock import patch
@@ -79,6 +84,43 @@ class ReleaseTests(unittest.TestCase):
         m = self.module()
         with patch.object(m.os, 'geteuid', return_value=0), patch.object(m.socket, 'gethostname', return_value='KMJ-elite'), patch.object(m, 'check', return_value=True), patch.object(m.subprocess, 'run', side_effect=m.subprocess.TimeoutExpired('systemctl', 600)):
             self.assertEqual(m.main(['deploy']), 3)
+
+    def test_doctor_timeout_reports_no_activation_request(self):
+        m = self.module()
+        output = io.StringIO()
+        with patch.object(m.os, 'geteuid', return_value=0), patch.object(m.socket, 'gethostname', return_value='KMJ-elite'), patch.object(m, 'check', side_effect=m.subprocess.TimeoutExpired('doctor', 180)), patch.object(m.subprocess, 'run') as run, contextlib.redirect_stdout(output):
+            self.assertEqual(m.main(['deploy']), 2)
+            run.assert_not_called()
+        self.assertIn('READINESS_TIMEOUT_NO_ACTIVATION_REQUEST', output.getvalue())
+        self.assertNotIn('UNIT_STATE_UNKNOWN', output.getvalue())
+
+    def test_check_executes_verified_private_snapshot(self):
+        m = self.module()
+        # Run a harmless fixture doctor through the real Python subprocess.
+        # Only test module constants change; no production path is accessed.
+        script = ('print(' + repr(self.report()) + ')\n').encode()
+        directory_factory = tempfile.TemporaryDirectory
+        with directory_factory() as root:
+            source = Path(root) / 'doctor.py'
+            source.write_bytes(script)
+            snapshots = []
+            def private_directory(**kwargs):
+                item = directory_factory(prefix='snapshot-', dir=root)
+                snapshots.append(Path(item.name))
+                return item
+            with patch.object(m, 'DOCTOR', source), patch.object(m, 'DOCTOR_HASH', hashlib.sha256(script).hexdigest()), patch.object(m.tempfile, 'TemporaryDirectory', side_effect=private_directory), contextlib.redirect_stdout(io.StringIO()):
+                self.assertTrue(m.check())
+            self.assertEqual(source.read_bytes(), script)
+            self.assertEqual(len(snapshots), 1)
+            self.assertFalse(snapshots[0].exists())
+
+    def test_deploy_requests_only_fixed_unit(self):
+        m = self.module()
+        with patch.object(m.os, 'geteuid', return_value=0), patch.object(m.socket, 'gethostname', return_value='KMJ-elite'), patch.object(m, 'check', return_value=True), patch.object(m.subprocess, 'run', return_value=subprocess.CompletedProcess([], 0)) as run, contextlib.redirect_stdout(io.StringIO()) as output:
+            self.assertEqual(m.main(['deploy']), 0)
+        self.assertEqual(run.call_args.args, (['/usr/bin/systemctl', 'start', m.UNIT],))
+        self.assertEqual(run.call_args.kwargs['env'], m.ENV)
+        self.assertIn('LIVE_HEALTH_NOT_YET_VERIFIED', output.getvalue())
 
 if __name__ == '__main__':
     unittest.main()
