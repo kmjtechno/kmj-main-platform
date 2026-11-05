@@ -81,6 +81,13 @@ class Base(unittest.TestCase):
     def switch(self):
         return run(self.root, "switch", "--apply", "--plan-id", self.plan()["plan_id"])
 
+    def crash(self, phase):
+        sw.FAULT = phase
+        plan = self.plan()
+        with self.assertRaises(sw.Crash):
+            run(self.root, "switch", "--apply", "--plan-id", plan["plan_id"])
+        sw.FAULT = None
+
     def journals(self):
         """Open journals only; closed ones are kept as .done-* receipts."""
         return sorted(p.name for p in (self.root / "state").glob("*.journal"))
@@ -298,13 +305,6 @@ class PathTests(Base):
 
 
 class CrashRecoveryTests(Base):
-    def crash(self, phase):
-        sw.FAULT = phase
-        plan = self.plan()
-        with self.assertRaises(sw.Crash):
-            run(self.root, "switch", "--apply", "--plan-id", plan["plan_id"])
-        sw.FAULT = None
-
     def test_recover_is_read_only_without_apply(self):
         self.crash("exchanged")
         n_before = self.fz.frozen_count()
@@ -348,7 +348,7 @@ class CrashRecoveryTests(Base):
         self.assertEqual((code, out["recovered"]), (0, "rollback_exchanged"))
         self.assertEqual(self.journals(), [])
         shared_ids = {(os.stat(p).st_dev, os.stat(p).st_ino) for p in [self.shared, *self.shared.rglob("*")]}
-        self.assertFalse(shared_ids & set(self.fz.state))
+        self.assertTrue(shared_ids <= set(self.fz.state))  # deactivated shared remains protected after recovery
 
     def test_crash_before_final_thaw_recovers_as_complete(self):
         self.crash("before_thaw")
@@ -371,7 +371,11 @@ class RollbackTests(Base):
         self.assertTrue(self.live.is_dir() and not self.live.is_symlink())
         self.assertEqual((self.live / "app/private/after-switch.png").read_bytes(), b"new release upload")
         self.assertEqual((self.live / "app/private/live-only.json").read_bytes(), b"{}")
-        self.assertEqual(self.fz.frozen_count(), 0)
+        self.assertTrue(back["deactivated_shared_left_frozen"])
+        live_ids = {(os.stat(p).st_dev, os.stat(p).st_ino) for p in [self.live, *self.live.rglob("*")]}
+        self.assertFalse(live_ids & set(self.fz.state))  # restored storage is writable again
+        shared_ids = {(os.stat(p).st_dev, os.stat(p).st_ino) for p in [self.shared, *self.shared.rglob("*")]}
+        self.assertTrue(shared_ids <= set(self.fz.state))  # deactivated shared stays fully frozen
 
     def test_rollback_blocks_on_update_or_delete_and_restores_freeze_state(self):
         self.switch()
@@ -553,6 +557,244 @@ class HardeningTests(Base):
         finally:
             resource.setrlimit(resource.RLIMIT_NOFILE, (soft, hard))
         self.assertEqual((code, out["status"]), (0, "OK"))
+
+
+class TransactionBlockerTests(Base):
+    """Regressions for the b820d20b re-review blockers 2-5 (blocker 1 is in RealTransactionTests)."""
+
+    def ids(self, root):
+        return {(os.stat(p).st_dev, os.stat(p).st_ino) for p in [root, *root.rglob("*")]}
+
+    def test_preexisting_immutable_state_is_preserved_exactly_when_blocked(self):
+        for victim, name in ((self.live / "app/private", "live"), (self.shared / "app/private", "shared")):
+            with self.subTest(victim=name):
+                self.fz.state.clear()
+                fd = sw.open_dir(victim)
+                self.fz.set_immutable(fd, True)
+                os.close(fd)
+                before = dict(self.fz.state)
+                plan = self.plan()
+                code, out = run(self.root, "switch", "--apply", "--plan-id", plan["plan_id"])
+                self.assertEqual((code, out["status"]), (2, "BLOCKED_ALREADY_IMMUTABLE_OR_APPEND_REVIEW"))
+                self.assertEqual(self.fz.state, before)  # original bit NOT cleared, nothing else frozen
+                self.assertEqual(self.journals(), [])
+                self.assertTrue(self.live.is_dir() and not self.live.is_symlink())
+
+    def _inject_late_top_entry_and_crash(self, fault_name):
+        real = sw.pinned
+        done = []
+
+        def hook(c, live_fd):
+            if not done:
+                done.append(1)
+                (self.live / "late-top-entry.json").write_bytes(b"late persistent record")
+            return real(c, live_fd)
+
+        sw.pinned = hook
+        sw.FAULT = fault_name
+        plan = self.plan()
+        try:
+            with self.assertRaises(sw.Crash):
+                run(self.root, "switch", "--apply", "--plan-id", plan["plan_id"])
+        finally:
+            sw.pinned = real
+            sw.FAULT = None
+
+    def test_recover_after_crash_at_preserved_does_not_commit_unverified_tree(self):
+        self._inject_late_top_entry_and_crash("preserved")
+        self.assertTrue(self.live.is_symlink())
+        code, out = run(self.root, "recover", "--apply")
+        self.assertEqual((code, out["recovered"]), (0, "switch_reverted_unverified"))
+        self.assertTrue(self.live.is_dir() and not self.live.is_symlink())
+        self.assertEqual((self.live / "late-top-entry.json").read_bytes(), b"late persistent record")  # not lost
+        self.assertEqual(self.journals(), [])
+        self.assertFalse(self.ids(self.live) & set(self.fz.state))
+        self.assertFalse(self.ids(self.shared) & set(self.fz.state))
+
+    def test_recover_after_crash_at_verified_completes_without_reverting(self):
+        self.crash("before_thaw")  # journal already says verified
+        code, out = run(self.root, "recover", "--apply")
+        self.assertEqual((code, out["recovered"]), (0, "switch_complete"))
+        self.assertTrue(self.live.is_symlink())
+        self.assertFalse(self.ids(self.shared) & set(self.fz.state))
+
+    def test_recover_rejects_tampered_old_tree_even_if_layout_looks_complete(self):
+        self.crash("preserved")
+        kept = next(p for p in (self.root / "rel/apps/platform").iterdir() if p.name.startswith(sw.PRE))
+        fd = sw.open_dir(kept)
+        self.fz.set_immutable(fd, False)  # simulate a writer that slipped in through a retained top FD
+        os.close(fd)
+        (kept / "slipped-in.json").write_bytes(b"x")
+        code, out = run(self.root, "recover", "--apply")
+        self.assertEqual(out["recovered"], "switch_reverted_unverified")
+        self.assertTrue((self.live / "slipped-in.json").exists())
+
+    def test_shared_stays_frozen_after_rollback_so_stale_handles_cannot_write(self):
+        self.switch()
+        writer = os.open(self.shared / "app/private/art.png", os.O_WRONLY)
+        try:
+            code, out = run(self.root, "rollback", "--apply")
+            self.assertEqual(code, 0)
+            self.assertTrue(self.ids(self.shared) <= set(self.fz.state))
+        finally:
+            os.close(writer)
+
+    def test_release_shared_is_explicit_and_refused_while_linked(self):
+        self.switch()
+        self.assertEqual(run(self.root, "release-shared", "--apply")[1]["status"], "BLOCKED_STORAGE_IS_LINKED_TO_SHARED")
+        run(self.root, "rollback", "--apply")
+        code, out = run(self.root, "release-shared", "--apply")
+        self.assertEqual((code, out["status"]), (0, "OK"))
+        self.assertFalse(self.ids(self.shared) & set(self.fz.state))
+
+    def _rollback_crash(self, point):
+        self.switch()
+        sw.FAULT = point
+        with self.assertRaises(sw.Crash):
+            run(self.root, "rollback", "--apply")
+        sw.FAULT = None
+
+    def test_rollback_recovery_is_idempotent_at_every_crash_point(self):
+        for point in ("rollback_begin", "rollback_shared_frozen", "rollback_old_thawed", "rollback_exchanged"):
+            with self.subTest(point=point):
+                self.tearDown()
+                self.setUp()
+                self._rollback_crash(point)
+                code, out = run(self.root, "recover", "--apply")
+                self.assertEqual(code, 0, out)
+                self.assertEqual(self.journals(), [])
+                again = run(self.root, "recover", "--apply")  # second run: nothing left, still OK
+                self.assertEqual(again[0], 0)
+                if point == "rollback_exchanged":
+                    self.assertTrue(self.live.is_dir() and not self.live.is_symlink())
+                    self.assertTrue(self.ids(self.shared) <= set(self.fz.state))
+                    self.assertFalse(self.ids(self.live) & set(self.fz.state))
+                else:
+                    self.assertTrue(self.live.is_symlink())
+                    self.assertFalse(self.ids(self.shared) & set(self.fz.state))
+                    kept = next(p for p in (self.root / "rel/apps/platform").iterdir() if p.name.startswith(sw.PRE))
+                    self.assertTrue(self.ids(kept) <= set(self.fz.state))  # evidence copy fully re-frozen
+
+    def test_rollback_recovery_after_partial_old_tree_thaw(self):
+        self.switch()
+        real = self.fz.set_immutable
+        kept = next(p for p in (self.root / "rel/apps/platform").iterdir() if p.name.startswith(sw.PRE))
+        old_ids = self.ids(kept)
+        n = {"thaws": 0}
+
+        def dying(fd, on):
+            st = os.fstat(fd)
+            if not on and (st.st_dev, st.st_ino) in old_ids:
+                n["thaws"] += 1
+                if n["thaws"] == 3:
+                    raise sw.Crash("mid-thaw")
+            return real(fd, on)
+
+        self.fz.set_immutable = dying
+        with self.assertRaises(sw.Crash):
+            run(self.root, "rollback", "--apply")
+        self.fz.set_immutable = real
+        partly = old_ids & set(self.fz.state)
+        self.assertTrue(0 < len(partly) < len(old_ids))  # genuinely half-thawed
+        code, out = run(self.root, "recover", "--apply")
+        self.assertEqual(code, 0, out)
+        self.assertTrue(old_ids <= set(self.fz.state))
+        self.assertTrue(self.live.is_symlink())
+
+
+def force_thaw(root):
+    """Test cleanup only: clear any immutable bit left by a failed assertion so the tmpdir can be removed."""
+    real = sw.Freezer()
+    for dirpath, dirs, files in os.walk(root):
+        for name in [dirpath, *[os.path.join(dirpath, n) for n in dirs + files]]:
+            try:
+                fd = os.open(name, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
+            except OSError:
+                continue
+            try:
+                real.set_immutable(fd, False)
+            except OSError:
+                pass
+            finally:
+                os.close(fd)
+
+
+@unittest.skipUnless(os.geteuid() == 0 or os.environ.get("KMJ_REQUIRE_REAL_IMMUTABLE"), "needs root + CAP_LINUX_IMMUTABLE")
+class RealTransactionTests(Base):
+    """Real chattr end to end: real freeze, real crash, real recover (the fake freezer cannot catch these)."""
+
+    def setUp(self):
+        super().setUp()
+        sw.FREEZER = sw.Freezer()
+
+    def tearDown(self):
+        force_thaw(self.root)
+        super().tearDown()
+
+    def real_flags(self, path):
+        fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
+        try:
+            return sw.Freezer().flags(fd) & sw.FS_IMMUTABLE_FL
+        finally:
+            os.close(fd)
+
+    def test_recover_works_while_shared_top_is_really_immutable(self):
+        self.crash("both_frozen")
+        self.assertTrue(self.real_flags(self.shared))  # probe used to live here and died with EPERM
+        with self.assertRaises(OSError):
+            open(self.shared / "probe-here", "w")
+        code, out = run(self.root, "recover", "--apply")
+        self.assertEqual((code, out["recovered"]), (0, "switch_reverted"))
+        self.assertFalse(self.real_flags(self.shared))
+        self.assertFalse(self.real_flags(self.live / "app/private/art.png"))
+        self.assertEqual(self.journals(), [])
+        self.assertEqual([p.name for p in (self.root / "rel/apps/platform").iterdir() if p.name.startswith(".kmj-probe")], [])
+
+    def test_real_crash_at_preserved_with_late_file_reverts_not_commits(self):
+        real = sw.pinned
+        done = []
+
+        def hook(c, live_fd):
+            if not done:
+                done.append(1)
+                (self.live / "late.json").write_bytes(b"late")
+            return real(c, live_fd)
+
+        sw.pinned, sw.FAULT = hook, "preserved"
+        plan = self.plan()
+        try:
+            with self.assertRaises(sw.Crash):
+                run(self.root, "switch", "--apply", "--plan-id", plan["plan_id"])
+        finally:
+            sw.pinned, sw.FAULT = real, None
+        code, out = run(self.root, "recover", "--apply")
+        self.assertEqual((code, out["recovered"]), (0, "switch_reverted_unverified"))
+        self.assertEqual((self.live / "late.json").read_bytes(), b"late")
+        self.assertFalse(self.real_flags(self.live / "app/private/art.png"))
+
+    def test_real_stale_shared_handle_cannot_write_after_rollback(self):
+        self.assertEqual(self.switch()[1]["status"], "OK")
+        writer = os.open(self.shared / "app/private/art.png", os.O_WRONLY)
+        try:
+            self.assertEqual(run(self.root, "rollback", "--apply")[1]["status"], "OK")
+            with self.assertRaises(OSError):
+                os.write(writer, b"late write through retained fd")
+            self.assertEqual((self.shared / "app/private/art.png").read_bytes(), b"artwork")
+        finally:
+            os.close(writer)
+
+    def test_real_rollback_crash_after_exchange_recovers(self):
+        self.switch()
+        sw.FAULT = "rollback_old_thawed"
+        with self.assertRaises(sw.Crash):
+            run(self.root, "rollback", "--apply")
+        sw.FAULT = None
+        code, out = run(self.root, "recover", "--apply")
+        self.assertEqual(code, 0, out)
+        self.assertTrue(self.live.is_symlink())
+        self.assertFalse(self.real_flags(self.shared))
+        self.assertTrue(self.real_flags(next(p for p in (self.root / "rel/apps/platform").iterdir()
+                                             if p.name.startswith(sw.PRE))))
 
 
 @unittest.skipUnless(os.geteuid() == 0 or os.environ.get("KMJ_REQUIRE_REAL_IMMUTABLE"), "needs root + CAP_LINUX_IMMUTABLE")

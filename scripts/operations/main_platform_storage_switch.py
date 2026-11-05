@@ -34,6 +34,7 @@ import fcntl
 import hashlib
 import json
 import os
+import re
 import secrets
 import stat
 import sys
@@ -214,6 +215,11 @@ def freeze(root_fd: int, include_top: bool) -> int:
 
 def thaw(root_fd: int, include_top: bool) -> int:
     return set_tree(root_fd, False, include_top)
+
+
+def ensure_frozen(root_fd: int, include_top: bool) -> int:
+    """Idempotent recovery freeze: no admission precheck (a half-thawed tree is a legal crash state)."""
+    return set_tree(root_fd, True, include_top)
 
 
 # ------------------------------------------------------------------ inventory
@@ -452,7 +458,7 @@ class Ctx:
 _LOCKS: list[int] = []
 PHASES = {"begin", "live_frozen", "both_frozen", "link_created", "exchanged", "preserved", "complete",
           "rollback_begin", "rollback_shared_frozen", "rollback_old_thawed", "rollback_exchanged",
-          "rollback_parked"}
+          "rollback_parked", "verified"}
 NAME_RE = __import__("re").compile(r"\A(\.kmj-storage-link-[0-9a-f]{16}|storage\.pre-shared-\d{8}T\d{6}Z)\Z")
 
 
@@ -510,6 +516,9 @@ def _validate(entry) -> dict:
     for k in ("link", "kept"):
         if k in entry:
             need(isinstance(entry[k], str) and NAME_RE.match(entry[k]) is not None, "JOURNAL_INVALID")
+    for k in ("plan", "shared_plan"):
+        if k in entry:
+            need(isinstance(entry[k], str) and re.fullmatch(r"[0-9a-f]{16}", entry[k]) is not None, "JOURNAL_INVALID")
     return entry
 
 
@@ -587,7 +596,8 @@ def top_dir_holders(tree: str | Path, proc_root: str = "/proc") -> list[int]:
     return out
 
 
-def restore_original(c: Ctx, link: str | None, kept: str | None) -> None:
+def restore_original(c: Ctx, link: str | None, kept: str | None, thaw_live: bool = True,
+                     thaw_shared: bool = True) -> None:
     """Idempotent: make `storage` the original real directory again and thaw everything we froze.
     Only valid while both trees are still frozen (so the swap back hides no accepted write)."""
     if os.path.islink(c.app / "storage"):
@@ -607,9 +617,13 @@ def restore_original(c: Ctx, link: str | None, kept: str | None) -> None:
             os.rename(c.app / link, c.app / (PARKED + "reverted-" + secrets.token_hex(4)))
             os.fsync(c.app_fd)
     live_fd = os.open("storage", DIR_FLAGS, dir_fd=c.app_fd)
-    thaw(c.shared_fd, include_top=True)
-    thaw(live_fd, include_top=False)
-    need(tree_clean(c.shared_fd, True) and tree_clean(live_fd, False), "THAW_NOT_VERIFIED")
+    # Only transaction-owned freezes are cleared: a tree that was never frozen by us keeps its original flags.
+    if thaw_shared:
+        thaw(c.shared_fd, include_top=True)
+        need(tree_clean(c.shared_fd, True), "THAW_NOT_VERIFIED")
+    if thaw_live:
+        thaw(live_fd, include_top=False)
+        need(tree_clean(live_fd, False), "THAW_NOT_VERIFIED")
 
 
 # ------------------------------------------------------------------- commands
@@ -634,16 +648,18 @@ def cmd_plan(args) -> dict:
 def cmd_switch(args) -> dict:
     need(args.apply and args.plan_id, "APPLY_AND_PLAN_ID_REQUIRED")
     c = context(args)
-    FREEZER.require_ready(str(c.shared))
+    FREEZER.require_ready(str(c.app))
     open_state(c)
     need(not journal_entries(c), "JOURNAL_PRESENT_RUN_RECOVER")
     need(stat.S_ISDIR(os.stat("storage", dir_fd=c.app_fd, follow_symlinks=False).st_mode), "LIVE_STORAGE_NOT_A_DIRECTORY")
     live_fd = os.open("storage", DIR_FLAGS, dir_fd=c.app_fd)
     need(top_meta(live_fd) == top_meta(c.shared_fd), "TOP_DIR_MODE_OWNER_MISMATCH_LIVE_VS_SHARED")
     need(not top_dir_holders(c.app / "storage", args.proc_root), "LIVE_TOP_DIR_HELD_OPEN")
+    _precheck_tree(live_fd, include_top=False)  # both trees known flag-clean BEFORE the first mutation/journal:
+    _precheck_tree(c.shared_fd, include_top=True)  # every later crash state is exactly "ours to thaw"
     link = LINK + secrets.token_hex(8)
     kept = PRE + time.strftime("%Y%m%dT%H%M%SZ", time.gmtime())
-    journal_write(c, "begin", link=link, kept=kept)
+    journal_write(c, "begin", link=link, kept=kept, plan=args.plan_id)
     live_frozen = shared_frozen = committed = False
     try:
         fault("begin")
@@ -661,7 +677,7 @@ def cmd_switch(args) -> dict:
             need(klass(rel) != "persistent" or sh.get(rel) == meta, "SHARED_MISSING_PERSISTENT_AFTER_SYNC")
         freeze(c.shared_fd, include_top=True)
         shared_frozen = True
-        journal_write(c, "both_frozen")
+        journal_write(c, "both_frozen", shared_plan=plan_id(sh, sd))
         fault("both_frozen")
         sd2 = {}
         need(plan_id(scan(c.shared_fd, sd2), sd2) == plan_id(sh, sd), "SHARED_CHANGED_UNDER_FREEZE")
@@ -689,6 +705,7 @@ def cmd_switch(args) -> dict:
         FREEZER.set_immutable(old, True)  # closes the retained-top-FD window; final compare below sees anything that slipped in
         d4 = {}
         need(plan_id(scan(old, d4), d4) == plan_id(live, ld), "PRESERVED_TREE_CHANGED")
+        journal_write(c, "verified")  # durable proof the old tree matched; shared is still frozen until now
         fault("before_thaw")
         committed = True  # from here the new tree is the live one: never swap back over accepted writes
         thaw(c.shared_fd, include_top=True)
@@ -707,7 +724,7 @@ def cmd_switch(args) -> dict:
                 journal_close(c)
                 return {"command": "switch", "status": "OK", "preserved_dir": kept, "deleted_anything": False,
                         "note": "thaw needed a retry: " + reason}
-            restore_original(c, link, kept)
+            restore_original(c, link, kept, thaw_live=live_frozen, thaw_shared=shared_frozen)
             journal_close(c)
             return {"command": "switch", "status": "BLOCKED_" + reason, "reverted": True, "deleted_anything": False}
         except (Blocked, OSError) as inner:
@@ -719,7 +736,7 @@ def cmd_switch(args) -> dict:
 def cmd_rollback(args) -> dict:
     need(args.apply, "APPLY_REQUIRED")
     c = context(args)
-    FREEZER.require_ready(str(c.shared))
+    FREEZER.require_ready(str(c.app))
     open_state(c)
     need(not journal_entries(c), "JOURNAL_PRESENT_RUN_RECOVER")
     st = os.stat("storage", dir_fd=c.app_fd, follow_symlinks=False)
@@ -729,14 +746,18 @@ def cmd_rollback(args) -> dict:
     need(len(names) == 1 and NAME_RE.match(names[0]) is not None, "EXACTLY_ONE_PRESERVED_DIR_REQUIRED")
     kept = names[0]
     old_fd = os.open(kept, DIR_FLAGS, dir_fd=c.app_fd)
+    _precheck_tree(c.shared_fd, include_top=True)
     journal_write(c, "rollback_begin", kept=kept)
+    fault("rollback_begin")
     shared_frozen = False
     try:
         freeze(c.shared_fd, include_top=True)
         shared_frozen = True
         journal_write(c, "rollback_shared_frozen", kept=kept)
+        fault("rollback_shared_frozen")
         thaw(old_fd, include_top=True)
         journal_write(c, "rollback_old_thawed", kept=kept)
+        fault("rollback_old_thawed")
         od, nd = {}, {}
         old, new = scan(old_fd, od), scan(c.shared_fd, nd)
         updated = sorted(r for r in old if r in new and old[r] != new[r] and klass(r) == "persistent")
@@ -755,15 +776,15 @@ def cmd_rollback(args) -> dict:
         renameat2(c.app_fd, kept, parked, RENAME_NOREPLACE)
         os.fsync(c.app_fd)
         journal_write(c, "rollback_parked", kept=kept)
-        thaw(c.shared_fd, include_top=True)
+        ensure_frozen(c.shared_fd, include_top=True)  # deactivated tree stays protected: retained FDs cannot write to it
         journal_close(c)
         return {"command": "rollback", "status": "OK", "reverse_sync": back, "link_parked_as": parked,
-                "deleted_anything": False}
+                "deactivated_shared_left_frozen": True, "deleted_anything": False}
     except (Blocked, OSError) as exc:
         reason = str(exc) if isinstance(exc, Blocked) else f"OS_ERROR_{type(exc).__name__}_{getattr(exc, 'errno', '')}"
         try:
             if os.path.islink(c.app / "storage"):  # exchange did not happen: put the evidence copy back as it was
-                freeze(old_fd, include_top=True)
+                ensure_frozen(old_fd, include_top=True)
                 if shared_frozen:
                     thaw(c.shared_fd, include_top=True)
                 journal_close(c)
@@ -784,35 +805,68 @@ def cmd_recover(args) -> dict:
            "storage_is": state, "leftover_names": names, "mutated": False}
     if not args.apply or not entries:
         return out
-    FREEZER.require_ready(str(c.shared))
+    FREEZER.require_ready(str(c.app))  # probe lives in the (never frozen) app dir, not in a frozen tree
     rollback = entries[-1]["phase"].startswith("rollback_")
     link = next((e["link"] for e in reversed(entries) if "link" in e), None)
     kept = next((e["kept"] for e in reversed(entries) if "kept" in e), None)
+    plan = next((e["plan"] for e in entries if "plan" in e), None)
+    shared_plan = next((e["shared_plan"] for e in entries if "shared_plan" in e), None)
+    verified = any(e["phase"] == "verified" for e in entries)
     kept_dir = bool(kept) and os.path.isdir(c.app / kept) and not os.path.islink(c.app / kept)
     link_dir = bool(link) and os.path.isdir(c.app / link) and not os.path.islink(c.app / link)
     shared_live = os.path.realpath(c.app / "storage") == os.path.realpath(c.shared)
     if rollback:
-        if state == "symlink" and shared_live and kept_dir:  # exchange never happened
-            freeze(os.open(kept, DIR_FLAGS, dir_fd=c.app_fd), include_top=True)
+        if state == "symlink" and shared_live and kept_dir:  # exchange never happened: shared is live again
+            ensure_frozen(os.open(kept, DIR_FLAGS, dir_fd=c.app_fd), include_top=True)
             thaw(c.shared_fd, include_top=True)
             how = "rollback_not_exchanged"
-        else:  # exchanged: old directory is live again
-            thaw(c.shared_fd, include_top=True)
-            thaw(os.open("storage", DIR_FLAGS, dir_fd=c.app_fd), include_top=False)
+        else:  # exchanged: old directory is live again, deactivated shared must stay protected
+            thaw(os.open("storage", DIR_FLAGS, dir_fd=c.app_fd), include_top=True)
+            ensure_frozen(c.shared_fd, include_top=True)
+            if kept and os.path.islink(c.app / kept):
+                os.rename(c.app / kept, c.app / (PARKED + "recovered-" + secrets.token_hex(4)))
+                os.fsync(c.app_fd)
             how = "rollback_exchanged"
     elif state == "symlink" and shared_live and kept_dir and not link_dir:
-        thaw(c.shared_fd, include_top=True)  # switch completed; only the final thaw/close was missing
+        if not verified:  # layout alone proves nothing: re-verify old and shared against the journalled identities
+            old = os.open(kept, DIR_FLAGS, dir_fd=c.app_fd)
+            ensure_frozen(old, include_top=True)
+            ensure_frozen(c.shared_fd, include_top=True)  # shared has not been thawed before "verified"
+            d_old, d_sh = {}, {}
+            ok = (plan is not None and shared_plan is not None
+                  and plan_id(scan(old, d_old), d_old) == plan and plan_id(scan(c.shared_fd, d_sh), d_sh) == shared_plan)
+            if not ok:
+                restore_original(c, link, kept)  # shared never accepted a write while frozen: reverting hides nothing
+                journal_close(c)
+                return {**out, "mutated": True, "recovered": "switch_reverted_unverified"}
+            journal_write(c, "verified")
+        thaw(c.shared_fd, include_top=True)  # verified: only the final thaw/close was missing
+        need(tree_clean(c.shared_fd, True), "THAW_NOT_VERIFIED")
         how = "switch_complete"
     else:
-        restore_original(c, link if link_dir else link, kept)
+        restore_original(c, link, kept)
         how = "switch_reverted"
     journal_close(c)
     return {**out, "mutated": True, "recovered": how}
 
 
+def cmd_release_shared(args) -> dict:
+    """Deliberate, separate step: unfreeze the deactivated shared tree after a rollback."""
+    need(args.apply, "APPLY_REQUIRED")
+    c = context(args)
+    FREEZER.require_ready(str(c.app))
+    open_state(c)
+    need(not journal_entries(c), "JOURNAL_PRESENT_RUN_RECOVER")
+    need(stat.S_ISDIR(os.stat("storage", dir_fd=c.app_fd, follow_symlinks=False).st_mode), "STORAGE_IS_LINKED_TO_SHARED")
+    thaw(c.shared_fd, include_top=True)
+    need(tree_clean(c.shared_fd, True), "THAW_NOT_VERIFIED")
+    return {"command": "release-shared", "status": "OK", "note": "restart any process that kept shared handles open before reuse",
+            "deleted_anything": False}
+
+
 def main(argv: list[str]) -> int:
     ap = argparse.ArgumentParser(description=__doc__)
-    ap.add_argument("command", choices=["plan", "switch", "rollback", "recover"])
+    ap.add_argument("command", choices=["plan", "switch", "rollback", "recover", "release-shared"])
     ap.add_argument("--app-dir", required=True, help="release apps/platform directory")
     ap.add_argument("--shared", required=True, help="shared storage directory")
     ap.add_argument("--allowed-root", default="/home/kmjprod")
@@ -823,7 +877,7 @@ def main(argv: list[str]) -> int:
     args = ap.parse_args(argv)
     try:
         result = {"plan": cmd_plan, "switch": cmd_switch, "rollback": cmd_rollback,
-                  "recover": cmd_recover}[args.command](args)
+                  "recover": cmd_recover, "release-shared": cmd_release_shared}[args.command](args)
     except (Blocked, OSError) as exc:
         reason = str(exc) if isinstance(exc, Blocked) else f"OS_ERROR_{type(exc).__name__}_{getattr(exc, 'errno', '')}"
         print(json.dumps({"status": "BLOCKED_" + reason, "deleted_anything": False}))
