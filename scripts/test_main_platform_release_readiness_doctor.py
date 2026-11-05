@@ -5,11 +5,13 @@ import hashlib
 import importlib.util
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
 import tempfile
 import unittest
+from unittest.mock import patch
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[1]
@@ -70,8 +72,18 @@ class ReadinessDoctorTest(unittest.TestCase):
         self.paths.controller.write_text("#")
         self.env = self.candidate / "apps/platform/.env"
         self.paths.unit.write_text("[Unit]")
+        # Logic fixtures use harmless local Git; production's real credential
+        # resolver is covered separately without loosening its root guard.
+        def fixture_git(tree, *args):
+            try:
+                return git(tree, *args)
+            except subprocess.SubprocessError:
+                return None
+        self.git_patch = patch.object(doctor, "_git", side_effect=fixture_git)
+        self.git_patch.start()
 
     def tearDown(self) -> None:
+        self.git_patch.stop()
         self.tmp.cleanup()
 
     def write_backup(self, current="platform-aaaaaaaaaaaa", corrupt=False) -> None:
@@ -225,6 +237,123 @@ class ReadinessDoctorTest(unittest.TestCase):
         lines, blockers = self.run_doctor()
         self.assertIn("CANDIDATE_STORAGE_LINK_UNVERIFIED", blockers)
         self.assertNotIn("RELEASE_READINESS=READY_TO_ACTIVATE", lines)
+
+    def test_unverified_preserved_storage_snapshot_blocks(self) -> None:
+        self.prepare_tracked_shared_storage_fixture()
+        snapshot = self.candidate / "apps/platform/storage.pre-shared-20261105T091800Z"
+        (snapshot / "app").mkdir(parents=True)
+        (snapshot / "app/.gitignore").write_text("*\n!.gitignore\n")
+        self.assertEqual(doctor._candidate_git_state(self.candidate, self.paths), "SNAPSHOT_ATTESTATION_BLOCKED")
+
+    def test_snapshot_source_helper_replaces_all_preceding_git(self) -> None:
+        self.prepare_tracked_shared_storage_fixture()
+        (self.candidate / "apps/platform/storage.pre-shared-20261105T091800Z").mkdir()
+        self.materialize()
+        self.write_backup()
+        self.write_approval()
+        with patch.object(doctor, "_snapshot_source_state", return_value="PASS") as helper, \
+             patch.object(doctor, "_git", side_effect=AssertionError("root Git must not precede helper")):
+            lines, blockers = self.run_doctor()
+        helper.assert_called_once_with(self.candidate, self.paths, self.sha)
+        self.assertEqual(blockers, [], lines)
+
+    def test_snapshot_helper_dependency_missing_blocks(self) -> None:
+        self.prepare_tracked_shared_storage_fixture()
+        (self.candidate / "apps/platform/storage.pre-shared-20261105T091800Z").mkdir()
+        with patch.object(doctor.os, "geteuid", return_value=0), \
+             patch.object(doctor, "_protected_snapshot_code", side_effect=FileNotFoundError("not installed")):
+            self.assertEqual(doctor._candidate_git_state(self.candidate, self.paths, self.sha), "SNAPSHOT_ATTESTATION_BLOCKED")
+
+    def test_snapshot_delegates_exact_values_to_pinned_helper(self) -> None:
+        self.prepare_tracked_shared_storage_fixture()
+        name = "storage.pre-shared-20261105T091800Z"
+        (self.candidate / "apps/platform" / name).mkdir()
+        expected = dict(release_root=str(self.candidate), app_dir=str(self.candidate / "apps/platform"),
+                        expected_sha=self.sha, shared_dir=str(self.paths.root / "shared/storage"), snapshot_name=name,
+                        state_dir=str(self.paths.snapshot_state), scanner_path=str(self.paths.snapshot_scanner))
+        raw = ("def check_source(**kw):\n    assert kw == " + repr(expected) +
+               "\n    return " + repr("apps/platform/" + name + "/") + "\n").encode()
+        with patch.object(doctor.os, "geteuid", return_value=0), \
+             patch.object(doctor, "_protected_snapshot_code", side_effect=[raw, b"scanner"]) as read:
+            self.assertEqual(doctor._candidate_git_state(self.candidate, self.paths, self.sha), "PASS")
+        self.assertEqual(read.call_args_list[0].args, (self.paths.snapshot_helper, doctor.SNAPSHOT_HELPER_SHA256))
+        self.assertEqual(read.call_args_list[1].args, (self.paths.snapshot_scanner, doctor.SNAPSHOT_SCANNER_SHA256))
+
+    def test_snapshot_helper_block_preserves_readiness_block(self) -> None:
+        self.prepare_tracked_shared_storage_fixture()
+        (self.candidate / "apps/platform/storage.pre-shared-20261105T091800Z").mkdir()
+        self.materialize()
+        self.write_backup()
+        self.write_approval()
+        with patch.object(doctor, "_snapshot_source_state", return_value="SNAPSHOT_ATTESTATION_BLOCKED"):
+            lines, blockers = self.run_doctor()
+        self.assertIn("CANDIDATE_SNAPSHOT_ATTESTATION_BLOCKED", blockers)
+        self.assertNotIn("RELEASE_READINESS=READY_TO_ACTIVATE", lines)
+
+    def test_production_plain_candidate_still_requires_protected_helper(self) -> None:
+        with patch.object(doctor, "_snapshot_source_state", return_value="PASS") as helper, \
+             patch.object(doctor, "_git", side_effect=AssertionError("production Git belongs to helper")):
+            self.assertEqual(doctor._candidate_git_state(self.candidate, self.paths, self.sha, require_protected=True), "PASS")
+        helper.assert_called_once_with(self.candidate, self.paths, self.sha)
+
+    def test_advisory_ignored_snapshot_cannot_skip_head_check_for_physical_storage(self) -> None:
+        (self.candidate / "apps/platform/storage").mkdir()
+        name = "storage.pre-shared-20261105T091800Z"
+        (self.candidate / "apps/platform" / name).mkdir()
+        (self.candidate / ".git/info/exclude").write_text("apps/platform/" + name + "/\n")
+        original = self.sha
+        git(self.candidate, "commit", "--allow-empty", "-qm", "different actual HEAD")
+        self.assertNotEqual(git(self.candidate, "rev-parse", "HEAD"), original)
+        self.assertEqual(git(self.candidate, "status", "--porcelain"), "")
+        self.materialize()
+        self.write_backup()
+        self.write_approval()
+        lines, blockers = self.run_doctor()
+        self.assertIn("CANDIDATE=SHA_MISMATCH", lines)
+        self.assertIn("CANDIDATE_SHA_MISMATCH", blockers)
+        self.assertNotIn("CANDIDATE=PASS", lines)
+
+    def test_plain_candidate_protected_helper_checks_all_source(self) -> None:
+        # Compile only this test stub; verify the consumer delegates identity and
+        # source bytes without adding any snapshot exemption for ordinary trees.
+        raw = b'''
+from pathlib import Path
+import os
+def canonical(p): return Path(p)
+def open_dir(p): return os.open(p, os.O_RDONLY | os.O_DIRECTORY)
+def git_identity(candidate, sha):
+    assert len(sha) == 40
+def git_read(candidate, *args, **kw):
+    assert args == ("status", "--porcelain=v1", "-z", "--untracked-files=all")
+    assert kw == {"text": False}
+    return b"?? unrelated\\0"
+'''
+        with patch.object(doctor.os, "geteuid", return_value=0), \
+             patch.object(doctor, "_protected_snapshot_code", side_effect=[raw, b"scanner"]):
+            self.assertEqual(doctor._snapshot_source_state(self.candidate, self.paths, self.sha), "DIRTY")
+
+    def test_root_git_fallback_drops_all_privileges(self) -> None:
+        from types import SimpleNamespace
+        from unittest.mock import MagicMock
+        tree = MagicMock()
+        tree.stat.return_value = SimpleNamespace(st_uid=12345)
+        account = SimpleNamespace(pw_uid=12345, pw_gid=12346)
+        self.git_patch.stop()
+        with patch.object(doctor.os, "geteuid", return_value=0), \
+             patch.object(doctor.pwd, "getpwnam", return_value=account), \
+             patch.object(doctor.subprocess, "run", return_value=SimpleNamespace(returncode=0, stdout="")) as run:
+            self.assertEqual(doctor._git(tree, "status", "--porcelain"), "")
+        self.assertEqual(run.call_args.kwargs["user"], 12345)
+        self.assertEqual(run.call_args.kwargs["group"], 12346)
+        self.assertEqual(run.call_args.kwargs["extra_groups"], [])
+        self.assertIs(run.call_args.kwargs["preexec_fn"], doctor._no_new_privileges)
+
+    def test_root_git_rejects_missing_service_account(self) -> None:
+        self.git_patch.stop()
+        with patch.object(doctor.os, "geteuid", return_value=0), \
+             patch.object(doctor.pwd, "getpwnam", side_effect=KeyError("kmjprod")), \
+             patch.object(doctor.subprocess, "run", side_effect=AssertionError("must not run Git")):
+            self.assertIsNone(doctor._git(self.candidate, "status"))
 
     def test_unrelated_dirty_file_blocks_even_with_attested_storage(self) -> None:
         self.prepare_tracked_shared_storage_fixture()
@@ -453,7 +582,55 @@ class MaterializeContractTest(unittest.TestCase):
         self.assertLess(self.source.index('fail CANDIDATE_STORAGE_NOT_SHARED'),
                         self.source.index('systemd-run --quiet'))
         self.assertNotIn('cp -a --no-clobber', self.source)
-        self.assertIn(":(exclude)apps/platform/storage", self.source)
+        self.assertIn(":(literal,exclude)apps/platform/storage", self.source)
+
+
+class SnapshotMaterializerBoundaryTest(unittest.TestCase):
+    def setUp(self):
+        self.source = (REPO / "scripts/operations/materialize-main-platform-candidate-runtime.sh").read_text()
+        self.parser = re.search(r"/usr/bin/python3 -I -B -c '\n(.*?)\n' \"\$ATTESTED_SNAPSHOT\"", self.source, re.S).group(1)
+        self.allowed = "apps/platform/storage.pre-shared-20261105T091800Z/"
+
+    def parse(self, raw, allowed=None):
+        return subprocess.run([sys.executable, "-I", "-B", "-c", self.parser,
+                               self.allowed if allowed is None else allowed], input=raw, capture_output=True).returncode
+
+    def test_child_allows_only_exact_attested_untracked_directory(self):
+        self.assertEqual(self.parse(b"?? " + self.allowed.encode() + b"app/file\0"), 0)
+        self.assertEqual(self.parse(b""), 0)
+        for raw in (b" M source.py\0", b"?? other\0", b"?? " + self.allowed[:-1].encode() + b"-other/x\0",
+                    b" M " + self.allowed.encode() + b"file\0", b"?? " + self.allowed.encode() + b"../source.py\0"):
+            self.assertNotEqual(self.parse(raw), 0, raw)
+
+    def test_no_snapshot_argument_never_grants_untracked_exemption(self):
+        self.assertEqual(self.parse(b"", allowed=""), 0)
+        self.assertNotEqual(self.parse(b"?? source.py\0", allowed=""), 0)
+        self.assertNotEqual(self.parse(b"?? " + self.allowed.encode() + b"file\0", allowed=""), 0)
+
+    def test_newline_and_rename_records_cannot_bypass_child(self):
+        for raw in (b"?? other\n?? " + self.allowed.encode() + b"file\0",
+                    b"R  destination\0?? " + self.allowed.encode() + b"file\0", b"?? file", b"R  destination\0"):
+            self.assertNotEqual(self.parse(raw), 0, raw)
+
+    def test_root_attestation_brackets_child_and_is_not_readonly_assignment(self):
+        before = self.source.index('ATTESTED_SNAPSHOT="$(root_source_attestation)" || fail')
+        child = self.source.index('systemd-run --quiet')
+        child_end = self.source.index('\nKMJ_UNPRIVILEGED_MATERIALIZE\n')
+        after = self.source.index('snapshot_after="$(root_source_attestation)" || fail')
+        self.assertLess(before, child)
+        self.assertLess(child_end, after)
+        self.assertLess(after, self.source.index('echo "KMJ_MATERIALIZE=PASS"'))
+        self.assertNotIn('readonly ATTESTED_SNAPSHOT="$(' , self.source)
+        self.assertIn('"$ORIGIN_LINE" "$ATTESTED_SNAPSHOT"', self.source)
+
+    def test_root_dependencies_are_exact_private_bytes_and_no_root_git(self):
+        outer = self.source.split("<<'KMJ_UNPRIVILEGED_MATERIALIZE'", 1)[0]
+        self.assertNotIn("git_as", outer)
+        for token in (doctor.SNAPSHOT_HELPER_SHA256, doctor.SNAPSHOT_SCANNER_SHA256,
+                      "os.O_NOFOLLOW", "s.st_nlink != 1", "s.st_uid != 0", "s.st_mode & 0o022",
+                      "exec(compile(raw", 'module.check_source(', 'module.git_identity(candidate, sha)',
+                      'module.git_read(candidate, "status"', '/usr/bin/python3 -I -B -'):
+            self.assertIn(token, outer)
 
 
 class ExactRecoveryContractTest(unittest.TestCase):
@@ -666,4 +843,3 @@ class StorageDirectoryBoundaryTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
-
