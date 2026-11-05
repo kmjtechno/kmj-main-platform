@@ -54,11 +54,72 @@ readonly SHARED="$ROOT/shared/storage"
 [[ -L "$CAND_APP/storage" && "$(readlink -f -- "$CAND_APP/storage")" == "$SHARED" ]] || fail CANDIDATE_STORAGE_NOT_SHARED
 [[ -d "$LIVE_APP/storage/app" && -d "$CAND_APP/storage/app" ]] || fail SHARED_UPLOADS_MISSING
 [[ ! -e "$CAND_APP/.env" && ! -L "$CAND_APP/.env" ]] || fail CANDIDATE_ALREADY_MATERIALIZED_REVIEW
-git_as() { runuser -u kmjprod -- git -c core.fsmonitor=false -C "$CAND" "$@"; }
-[[ "$(git_as rev-parse HEAD)" == "$SHA" ]] || fail CANDIDATE_SHA_MISMATCH
-# Runtime storage is the one owner-verified external symlink, not source code.
-# All OTHER source paths remain subject to exact clean Git attestation.
-[[ -z "$(git_as status --porcelain --untracked-files=normal -- . ':(exclude)apps/platform/storage')" ]] || fail CANDIDATE_DIRTY_BEFORE
+# The exact protected attestor owns the source exception; no root Git runs here.
+# This function makes no installation/repair changes. Missing dependencies block.
+root_source_attestation() {
+  /usr/bin/python3 -I -B - "$CAND" "$SHA" "$SHARED" <<'KMJ_ROOT_SNAPSHOT_ATTEST'
+import fcntl, hashlib, os, pathlib, re, stat, sys, types
+helper = pathlib.Path("/usr/local/libexec/kmj-codebridge/main-platform-storage-snapshot-attest.py")
+scanner = pathlib.Path("/usr/local/libexec/kmj-codebridge/main-platform-storage-switch-v6.py")
+def checked(path, digest):
+    if str(path) != os.path.realpath(path):
+        raise ValueError("noncanonical dependency")
+    for parent in path.parents:
+        s = os.lstat(parent)
+        if s.st_uid != 0 or s.st_mode & 0o022 and not s.st_mode & stat.S_ISVTX:
+            raise ValueError("unprotected dependency ancestor")
+    fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_CLOEXEC)
+    try:
+        s = os.fstat(fd)
+        if not stat.S_ISREG(s.st_mode) or s.st_nlink != 1 or s.st_uid != 0 or s.st_mode & 0o022 or s.st_size > 1048576:
+            raise ValueError("unprotected dependency")
+        with os.fdopen(os.dup(fd), "rb") as source:
+            raw = source.read(1048577)
+        if hashlib.sha256(raw).hexdigest() != digest:
+            raise ValueError("dependency hash mismatch")
+        return raw
+    finally:
+        os.close(fd)
+try:
+    raw = checked(helper, "72fe5702c59599bd1b28b88dad808dda5d6be97b61f0db06dc3a7295258a51b6")
+    checked(scanner, "f4d01f6e3b40c9ad774c8ada5129b241cee93dac782ce75bb0e229b26bbc95ba")
+    candidate, sha, shared = sys.argv[1:]
+    app = pathlib.Path(candidate) / "apps/platform"
+    module = types.ModuleType("protected_snapshot_attestor")
+    module.__file__ = str(helper)
+    exec(compile(raw, str(helper), "exec"), module.__dict__)
+    names = [p.name for p in app.iterdir() if p.name.startswith("storage.pre-shared-")]
+    if names:
+        if len(names) != 1 or not re.fullmatch(r"storage\.pre-shared-\d{8}T\d{6}Z", names[0]):
+            raise ValueError("one exact snapshot required")
+        permitted = module.check_source(release_root=candidate, app_dir=str(app), expected_sha=sha,
+            shared_dir=shared, snapshot_name=names[0], state_dir="/var/lib/kmj-main-platform-storage-switch",
+            scanner_path=str(scanner))
+        if permitted != "apps/platform/" + names[0] + "/":
+            raise ValueError("unexpected attested path")
+    else:
+        candidate = module.canonical(candidate)
+        module.canonical(str(app)); module.canonical(shared)
+        fd = module.open_dir(app)
+        try:
+            fcntl.flock(fd, fcntl.LOCK_SH | fcntl.LOCK_NB)
+            if any(n.startswith("storage.pre-shared-") for n in os.listdir(fd)):
+                raise ValueError("snapshot appeared")
+            module.git_identity(candidate, sha)
+            dirty = module.git_read(candidate, "status", "--porcelain=v1", "-z", "--untracked-files=all",
+                "--", ".", ":(literal,exclude)apps/platform/storage", text=False)
+            if dirty:
+                raise ValueError("other source changes")
+            module.git_identity(candidate, sha)
+        finally:
+            os.close(fd)
+        permitted = ""
+    print(permitted)
+except Exception:
+    print("SNAPSHOT_ATTESTATION_BLOCKED", file=sys.stderr)
+    raise SystemExit(2)
+KMJ_ROOT_SNAPSHOT_ATTEST
+}
 for item in vendor/autoload.php public/build/manifest.json public/assets/kmj-codebridge-icon.png; do
   [[ -s "$CAND_APP/$item" && ! -L "$CAND_APP/$item" ]] || fail CANDIDATE_ARTIFACT_MISSING
 done
@@ -78,6 +139,9 @@ release_lock_fingerprint="$(stat -Lc '%u:%h:%a:%d:%i' -- /proc/self/fd/9)" || fa
 [[ "$release_lock_fingerprint" == "0:1:600:$(stat -c '%d:%i' -- "$RELEASE_LOCK")" ]] || fail RELEASE_LOCK_FD_UNSAFE
 flock -n 9 || fail PRODUCTION_RELEASE_IN_PROGRESS
 [[ "$release_lock_fingerprint" == "0:1:600:$(stat -c '%d:%i' -- "$RELEASE_LOCK")" ]] || fail RELEASE_LOCK_CHANGED
+ATTESTED_SNAPSHOT="$(root_source_attestation)" || fail CANDIDATE_DIRTY_BEFORE
+readonly ATTESTED_SNAPSHOT
+[[ -z "$ATTESTED_SNAPSHOT" || "$ATTESTED_SNAPSHOT" =~ ^apps/platform/storage\.pre-shared-[0-9]{8}T[0-9]{6}Z/$ ]] || fail SNAPSHOT_ATTESTATION_BLOCKED
 
 # Root holds the release lock while a private mount namespace pins writable
 # candidate storage. Live runtime and all other host paths stay read-only even
@@ -88,16 +152,37 @@ systemd-run --quiet --wait --pipe --collect \
   -p ProtectSystem=strict -p ProtectHome=read-only \
   -p PrivateTmp=yes -p NoNewPrivileges=yes \
   -p "ReadWritePaths=$CAND" -p "ReadOnlyPaths=$LIVE_APP" \
-  /bin/bash -s -- "$SHA" "$EXPECTED_CURRENT" "$ROOT" "$LIVE" "$CAND" "$ORIGIN_LINE" <<'KMJ_UNPRIVILEGED_MATERIALIZE'
+  /bin/bash -s -- "$SHA" "$EXPECTED_CURRENT" "$ROOT" "$LIVE" "$CAND" "$ORIGIN_LINE" "$ATTESTED_SNAPSHOT" <<'KMJ_UNPRIVILEGED_MATERIALIZE'
 set -Eeuo pipefail
 umask 077
-readonly SHA="$1" EXPECTED_CURRENT="$2" ROOT="$3" LIVE="$4" CAND="$5" ORIGIN_LINE="$6"
+readonly SHA="$1" EXPECTED_CURRENT="$2" ROOT="$3" LIVE="$4" CAND="$5" ORIGIN_LINE="$6" ATTESTED_SNAPSHOT="$7"
 readonly LIVE_APP="$LIVE/apps/platform" CAND_APP="$CAND/apps/platform"
 fail() { echo "KMJ_MATERIALIZE=BLOCKED $1"; exit 2; }
 status() { printf '%s=%s\n' "$1" "$2"; }
 [[ "$(id -u)" == "$(id -u kmjprod)" && "$(id -u)" != 0 ]] || fail SANDBOX_USER_MISMATCH
 export GIT_OPTIONAL_LOCKS=0
-git_as() { git -c core.fsmonitor=false -C "$CAND" "$@"; }
+git_as() { git --no-optional-locks -c core.fsmonitor=false -c core.untrackedCache=false -C "$CAND" "$@"; }
+[[ -z "$ATTESTED_SNAPSHOT" || "$ATTESTED_SNAPSHOT" =~ ^apps/platform/storage\.pre-shared-[0-9]{8}T[0-9]{6}Z/$ ]] || fail SNAPSHOT_ARGUMENT_INVALID
+source_clean() {
+  git_as status --porcelain=v1 -z --untracked-files=all -- . ':(literal,exclude)apps/platform/storage' |
+    /usr/bin/python3 -I -B -c '
+import os, sys
+allowed = os.fsencode(sys.argv[1])
+raw = sys.stdin.buffer.read()
+if raw and not raw.endswith(b"\0"): raise SystemExit(2)
+fields, i = raw.split(b"\0")[:-1], 0
+while i < len(fields):
+    field = fields[i]; i += 1
+    if len(field) < 4 or field[2:3] != b" ": raise SystemExit(2)
+    status, path = field[:2], field[3:]
+    if b"R" in status or b"C" in status:
+        if i >= len(fields) or not fields[i]: raise SystemExit(2)
+        i += 1
+    safe = all(p not in (b"", b".", b"..") for p in path.rstrip(b"/").split(b"/"))
+    if not (allowed and status == b"??" and safe and (path == allowed[:-1] or path.startswith(allowed))): raise SystemExit(2)
+' "$ATTESTED_SNAPSHOT"
+}
+source_clean || fail CANDIDATE_DIRTY_BEFORE
 
 # 1. Runtime .env must stay byte-identical across the switch.
 # Never add a URL or modify APP_KEY during production runtime materialization.
@@ -264,7 +349,7 @@ done
 setfacl -R -m 'u:www-data:rX' "$CAND_APP/public" || fail PUBLIC_TREE_ACL_FAILED
 
 # Candidate must still be a clean exact checkout for the activation controller.
-[[ -z "$(git_as status --porcelain --untracked-files=normal -- . ':(exclude)apps/platform/storage')" ]] || fail CANDIDATE_DIRTY_AFTER
+source_clean || fail CANDIDATE_DIRTY_AFTER
 [[ "$(git_as rev-parse HEAD)" == "$SHA" ]] || fail CANDIDATE_SHA_CHANGED
 [[ "$(readlink -f "$ROOT/current")" == "$LIVE" ]] || fail CURRENT_RELEASE_CHANGED_DURING_RUN
 
@@ -286,6 +371,8 @@ echo 'KMJ_MATERIALIZE_SHARED=PASS'
 
 KMJ_UNPRIVILEGED_MATERIALIZE
 
+snapshot_after="$(root_source_attestation)" || fail ROOT_POST_ATTESTATION_BLOCKED
+[[ "$snapshot_after" == "$ATTESTED_SNAPSHOT" ]] || fail SNAPSHOT_CHANGED_DURING_MATERIALIZATION
 runuser -u www-data -- test -r "$CAND_APP/public/index.php" || fail NGINX_PUBLIC_UNREADABLE
 runuser -u www-data -- test -r "$CAND_APP/public/assets/kmj-codebridge-icon.png" || fail NGINX_ICON_UNREADABLE
 runuser -u www-data -- test ! -r "$CAND_APP/.env" || fail NGINX_PRIVATE_ENV_EXPOSED
