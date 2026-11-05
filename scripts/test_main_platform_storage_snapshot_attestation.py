@@ -17,6 +17,24 @@ SPEC.loader.exec_module(a)
 SCANNER = next(p for p in (HERE / "operations/main_platform_storage_switch.py",
                           HERE.parent / "review812v6/scripts/operations/main_platform_storage_switch.py") if p.is_file())
 SNAPSHOT = "storage.pre-shared-20261105T091800Z"
+CANONICAL_SCANNER_SHA256 = "281893b277fb4dfabf174b7baaa49801f6b0a4c2dc83c2c711115f45225ea8ef"
+
+
+def scanner_fixture_bytes(path):
+    """Accept only the two independently reviewed exact scanner representations.
+
+    Git's merged source has one final LF; the reviewed pinned scanner has two.
+    This is a test-fixture conversion, not production hash normalization.
+    """
+    raw = path.read_bytes()
+    digest = hashlib.sha256(raw).hexdigest()
+    if digest == CANONICAL_SCANNER_SHA256:
+        raw += b"\n"
+    elif digest != a.V6_SHA256:
+        raise AssertionError("unexpected scanner source bytes")
+    if hashlib.sha256(raw).hexdigest() != a.V6_SHA256:
+        raise AssertionError("scanner fixture does not match pinned dependency")
+    return raw
 
 
 class AttestationTests(unittest.TestCase):
@@ -29,7 +47,7 @@ class AttestationTests(unittest.TestCase):
         self.shared = self.root / "shared"
         self.state = self.root / "state"
         self.trusted_scanner = self.root / "trusted-scanner.py"
-        self.trusted_scanner.write_bytes(SCANNER.read_bytes())
+        self.trusted_scanner.write_bytes(scanner_fixture_bytes(SCANNER))
         self.trusted_scanner.chmod(0o600)
         for p in (self.snap / "private", self.shared / "private", self.state):
             p.mkdir(parents=True, mode=0o700)
