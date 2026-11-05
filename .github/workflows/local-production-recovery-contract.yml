@@ -12,6 +12,9 @@ on:
       - 'scripts/operations/materialize-main-platform-candidate-runtime.sh'
       - 'scripts/operations/verify-main-platform-storage-manifest.py'
       - 'scripts/test_main_platform_release_readiness_doctor.py'
+      - 'scripts/operations/main_platform_preserved_storage.py'
+      - 'scripts/operations/main_platform_storage_switch.py'
+      - 'scripts/test_main_platform_preserved_storage.py'
       - 'scripts/test_root_release_lock_nofollow_20261031.py'
       - 'scripts/test_preflight_local_backup_witness_20261031.py'
       - 'scripts/operations/prepare-owner-shell-local-recovery-kmj-elite-20261020.sh'
@@ -30,6 +33,9 @@ on:
       - 'scripts/operations/materialize-main-platform-candidate-runtime.sh'
       - 'scripts/operations/verify-main-platform-storage-manifest.py'
       - 'scripts/test_main_platform_release_readiness_doctor.py'
+      - 'scripts/operations/main_platform_preserved_storage.py'
+      - 'scripts/operations/main_platform_storage_switch.py'
+      - 'scripts/test_main_platform_preserved_storage.py'
       - 'scripts/test_root_release_lock_nofollow_20261031.py'
       - 'scripts/test_preflight_local_backup_witness_20261031.py'
       - 'scripts/operations/prepare-owner-shell-local-recovery-kmj-elite-20261020.sh'
@@ -58,6 +64,7 @@ jobs:
           bash -n scripts/operations/prepare-main-platform-local-recovery-exact.sh
           bash -n scripts/operations/materialize-main-platform-candidate-runtime.sh
           python3 -B -m unittest scripts/test_main_platform_release_readiness_doctor.py
+          python3 -B -m unittest scripts/test_main_platform_preserved_storage.py
           python3 -B -m unittest scripts/test_root_release_lock_nofollow_20261031.py
           python3 -B -m unittest scripts/test_preflight_local_backup_witness_20261031.py
           bash -n scripts/operations/prepare-owner-shell-local-recovery-kmj-elite-20261020.sh

@@ -58,7 +58,29 @@ git_as() { runuser -u kmjprod -- git -c core.fsmonitor=false -C "$CAND" "$@"; }
 [[ "$(git_as rev-parse HEAD)" == "$SHA" ]] || fail CANDIDATE_SHA_MISMATCH
 # Runtime storage is the one owner-verified external symlink, not source code.
 # All OTHER source paths remain subject to exact clean Git attestation.
-[[ -z "$(git_as status --porcelain --untracked-files=normal -- . ':(exclude)apps/platform/storage')" ]] || fail CANDIDATE_DIRTY_BEFORE
+# The reviewed storage switch preserves the original tree as ONE frozen directory beside the symlink. Exempt exactly
+# that name, and only when the helper proves journal receipt + unchanged content + nothing tracked under it.
+readonly ATTEST_HELPER="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)/main_platform_preserved_storage.py"
+[[ -f "$ATTEST_HELPER" && ! -L "$ATTEST_HELPER" && "$(stat -c '%u %a' "$ATTEST_HELPER")" =~ ^0\ [0-7][0145][0145]$ ]] || fail ATTEST_HELPER_UNSAFE
+# Sets PATHSPEC in THIS shell (never inside a command substitution, so fail/status output cannot be swallowed).
+resolve_pathspec() {
+  local verdict name
+  verdict="$(python3 -I "$ATTEST_HELPER" "$CAND")" || fail PRESERVED_STORAGE_UNATTESTED
+  PATHSPEC=(. ':(exclude)apps/platform/storage')
+  if [[ "$verdict" == ATTESTED\ storage.pre-shared-* ]]; then
+    name="${verdict#ATTESTED }"
+    [[ "$name" =~ ^storage\.pre-shared-[0-9]{8}T[0-9]{6}Z$ ]] || fail PRESERVED_STORAGE_NAME_INVALID
+    PATHSPEC+=(":(exclude)apps/platform/$name")
+    ATTESTED_PRESERVED="$name"
+  elif [[ "$verdict" != NONE ]]; then
+    fail PRESERVED_STORAGE_UNATTESTED
+  fi
+}
+declare -a PATHSPEC=()
+ATTESTED_PRESERVED=""
+resolve_pathspec
+[[ -z "$ATTESTED_PRESERVED" ]] || status STORAGE_PRESERVED_DIR_ATTESTED "$ATTESTED_PRESERVED"
+[[ -z "$(git_as status --porcelain --untracked-files=normal -- "${PATHSPEC[@]}")" ]] || fail CANDIDATE_DIRTY_BEFORE
 for item in vendor/autoload.php public/build/manifest.json public/assets/kmj-codebridge-icon.png; do
   [[ -s "$CAND_APP/$item" && ! -L "$CAND_APP/$item" ]] || fail CANDIDATE_ARTIFACT_MISSING
 done
@@ -88,10 +110,10 @@ systemd-run --quiet --wait --pipe --collect \
   -p ProtectSystem=strict -p ProtectHome=read-only \
   -p PrivateTmp=yes -p NoNewPrivileges=yes \
   -p "ReadWritePaths=$CAND" -p "ReadOnlyPaths=$LIVE_APP" \
-  /bin/bash -s -- "$SHA" "$EXPECTED_CURRENT" "$ROOT" "$LIVE" "$CAND" "$ORIGIN_LINE" <<'KMJ_UNPRIVILEGED_MATERIALIZE'
+  /bin/bash -s -- "$SHA" "$EXPECTED_CURRENT" "$ROOT" "$LIVE" "$CAND" "$ORIGIN_LINE" "$ATTESTED_PRESERVED" <<'KMJ_UNPRIVILEGED_MATERIALIZE'
 set -Eeuo pipefail
 umask 077
-readonly SHA="$1" EXPECTED_CURRENT="$2" ROOT="$3" LIVE="$4" CAND="$5" ORIGIN_LINE="$6"
+readonly SHA="$1" EXPECTED_CURRENT="$2" ROOT="$3" LIVE="$4" CAND="$5" ORIGIN_LINE="$6" PRESERVED="${7:-}"
 readonly LIVE_APP="$LIVE/apps/platform" CAND_APP="$CAND/apps/platform"
 fail() { echo "KMJ_MATERIALIZE=BLOCKED $1"; exit 2; }
 status() { printf '%s=%s\n' "$1" "$2"; }
@@ -264,7 +286,13 @@ done
 setfacl -R -m 'u:www-data:rX' "$CAND_APP/public" || fail PUBLIC_TREE_ACL_FAILED
 
 # Candidate must still be a clean exact checkout for the activation controller.
-[[ -z "$(git_as status --porcelain --untracked-files=normal -- . ':(exclude)apps/platform/storage')" ]] || fail CANDIDATE_DIRTY_AFTER
+# The sandbox cannot read the root-only journal: it receives the name root already attested and exempts only that.
+declare -a PATHSPEC=(. ':(exclude)apps/platform/storage')
+if [[ -n "$PRESERVED" ]]; then
+  [[ "$PRESERVED" =~ ^storage\.pre-shared-[0-9]{8}T[0-9]{6}Z$ ]] || fail PRESERVED_STORAGE_NAME_INVALID
+  PATHSPEC+=(":(exclude)apps/platform/$PRESERVED")
+fi
+[[ -z "$(git_as status --porcelain --untracked-files=normal -- "${PATHSPEC[@]}")" ]] || fail CANDIDATE_DIRTY_AFTER
 [[ "$(git_as rev-parse HEAD)" == "$SHA" ]] || fail CANDIDATE_SHA_CHANGED
 [[ "$(readlink -f "$ROOT/current")" == "$LIVE" ]] || fail CURRENT_RELEASE_CHANGED_DURING_RUN
 
@@ -286,6 +314,9 @@ echo 'KMJ_MATERIALIZE_SHARED=PASS'
 
 KMJ_UNPRIVILEGED_MATERIALIZE
 
+# Root re-attests AFTER the sandbox: the preserved directory must still match its journal, and nothing else may be dirty.
+resolve_pathspec
+[[ -z "$(git_as status --porcelain --untracked-files=normal -- "${PATHSPEC[@]}")" ]] || fail CANDIDATE_DIRTY_FINAL
 runuser -u www-data -- test -r "$CAND_APP/public/index.php" || fail NGINX_PUBLIC_UNREADABLE
 runuser -u www-data -- test -r "$CAND_APP/public/assets/kmj-codebridge-icon.png" || fail NGINX_ICON_UNREADABLE
 runuser -u www-data -- test ! -r "$CAND_APP/.env" || fail NGINX_PRIVATE_ENV_EXPOSED
