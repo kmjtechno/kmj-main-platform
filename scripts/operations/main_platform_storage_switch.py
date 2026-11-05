@@ -523,12 +523,15 @@ def _validate(entry) -> dict:
 
 
 def journal_write(c: Ctx, phase: str, **extra) -> None:
-    fd = os.open(_journal_name(c), os.O_WRONLY | os.O_CREAT | os.O_APPEND | os.O_NOFOLLOW | os.O_CLOEXEC, 0o600,
+    fd = os.open(_journal_name(c), os.O_RDWR | os.O_CREAT | os.O_APPEND | os.O_NOFOLLOW | os.O_CLOEXEC, 0o600,
                  dir_fd=c.state_fd)
     try:
         st = os.fstat(fd)
         need(stat.S_ISREG(st.st_mode) and st.st_nlink == 1 and st.st_uid == os.geteuid()
              and stat.S_IMODE(st.st_mode) & 0o077 == 0 and st.st_size < 65536, "JOURNAL_FILE_UNSAFE")
+        if st.st_size:
+            last = os.pread(fd, 1, st.st_size - 1)
+            need(last == b"\n", "JOURNAL_TORN_TAIL_RUN_RECOVER")
         _write_all(fd, (json.dumps(_validate({"t": int(time.time()), "phase": phase, **extra})) + "\n").encode())
         os.fsync(fd)
     finally:
@@ -536,21 +539,57 @@ def journal_write(c: Ctx, phase: str, **extra) -> None:
     os.fsync(c.state_fd)
 
 
-def journal_entries(c: Ctx) -> list[dict]:
+def _journal_open_checked(c: Ctx, flags: int):
+    fd = os.open(_journal_name(c), flags | os.O_NOFOLLOW | os.O_CLOEXEC, dir_fd=c.state_fd)
+    st = os.fstat(fd)
+    if not (stat.S_ISREG(st.st_mode) and st.st_nlink == 1 and st.st_uid == os.geteuid()
+            and stat.S_IMODE(st.st_mode) & 0o077 == 0 and st.st_size <= 65536):
+        os.close(fd)
+        raise Blocked("JOURNAL_FILE_UNSAFE")
+    return fd
+
+
+def journal_read(c: Ctx) -> tuple[list[dict], int, bool]:
+    """(complete validated entries, byte length of the complete prefix, file_exists).
+
+    Every record is one newline-terminated write. Only an UNTERMINATED final fragment (a torn append from a
+    crash) is tolerated and discarded; any malformed newline-terminated record is internal corruption."""
     try:
-        fd = os.open(_journal_name(c), os.O_RDONLY | os.O_NOFOLLOW | os.O_CLOEXEC, dir_fd=c.state_fd)
+        fd = _journal_open_checked(c, os.O_RDONLY)
     except FileNotFoundError:
-        return []
+        return [], 0, False
     try:
-        st = os.fstat(fd)
-        need(stat.S_ISREG(st.st_mode) and st.st_nlink == 1 and st.st_uid == os.geteuid()
-             and stat.S_IMODE(st.st_mode) & 0o077 == 0 and st.st_size <= 65536, "JOURNAL_FILE_UNSAFE")
         raw = os.read(fd, 65537)
     finally:
         os.close(fd)
-    lines = raw.decode("utf-8", "strict").splitlines()
+    prefix = raw[: raw.rfind(b"\n") + 1]  # drop anything after the last newline (torn tail, possibly all of it)
+    lines = prefix.split(b"\n")[:-1]
     need(len(lines) <= 200, "JOURNAL_INVALID")
-    return [_validate(json.loads(line)) for line in lines]
+    entries = []
+    for line in lines:
+        try:
+            entries.append(_validate(json.loads(line.decode("utf-8", "strict"))))
+        except (ValueError, RecursionError):  # JSONDecodeError and UnicodeDecodeError are ValueErrors
+            raise Blocked("JOURNAL_INVALID")
+    return entries, len(prefix), True
+
+
+def journal_entries(c: Ctx) -> list[dict]:
+    return journal_read(c)[0]
+
+
+def journal_repair(c: Ctx, keep: int) -> bool:
+    """Truncate a torn tail so later appends cannot fuse with it. Returns True when bytes were removed."""
+    fd = _journal_open_checked(c, os.O_RDWR)
+    try:
+        if os.fstat(fd).st_size == keep:
+            return False
+        os.ftruncate(fd, keep)
+        os.fsync(fd)
+    finally:
+        os.close(fd)
+    os.fsync(c.state_fd)
+    return True
 
 
 def journal_close(c: Ctx) -> None:
@@ -798,12 +837,20 @@ def cmd_rollback(args) -> dict:
 def cmd_recover(args) -> dict:
     c = context(args)
     open_state(c)
-    entries = journal_entries(c)
+    entries, keep, exists = journal_read(c)
+    torn = exists and keep != os.stat(_journal_name(c), dir_fd=c.state_fd).st_size
     names = sorted(n for n in os.listdir(c.app_fd) if n.startswith((LINK, PRE, PARKED)))
     state = "symlink" if os.path.islink(c.app / "storage") else "directory"
     out = {"command": "recover", "status": "OK", "journal_phase": entries[-1]["phase"] if entries else None,
-           "storage_is": state, "leftover_names": names, "mutated": False}
-    if not args.apply or not entries:
+           "storage_is": state, "leftover_names": names, "journal_torn_tail": bool(torn), "mutated": False}
+    if not args.apply:
+        return out
+    if torn:
+        journal_repair(c, keep)  # durable before any recovery append
+    if exists and not entries:  # crashed while writing the very first record: nothing was mutated yet
+        journal_close(c)
+        return {**out, "mutated": bool(torn), "recovered": "torn_begin_discarded"}
+    if not entries:
         return out
     FREEZER.require_ready(str(c.app))  # probe lives in the (never frozen) app dir, not in a frozen tree
     rollback = entries[-1]["phase"].startswith("rollback_")

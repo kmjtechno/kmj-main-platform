@@ -797,6 +797,103 @@ class RealTransactionTests(Base):
                                              if p.name.startswith(sw.PRE))))
 
 
+class TornJournalMixin:
+    def jfile(self):
+        return next((self.root / "state").glob("*.journal"))
+
+    def test_torn_final_append_is_discarded_and_recovery_reverts(self):
+        self.crash("both_frozen")
+        with open(self.jfile(), "ab") as fh:
+            fh.write(b'{"t":')  # crash mid-append: no newline
+        code, out = run(self.root, "recover")
+        self.assertTrue(out["journal_torn_tail"] and not out["mutated"])
+        code, out = run(self.root, "recover", "--apply")
+        self.assertEqual((code, out["recovered"]), (0, "switch_reverted"))
+        self.assertEqual(self.journals(), [])
+        self.assertTrue(self.live.is_dir() and not self.live.is_symlink())
+        self.assertEqual(self.frozen_ids(), set())  # nothing stranded
+
+    def test_torn_tail_is_physically_truncated_before_any_recovery_append(self):
+        self.crash("preserved")  # recovery will append "verified"
+        with open(self.jfile(), "ab") as fh:
+            fh.write(b'{"phase":"verif')
+        done = self.jfile().parent
+        code, out = run(self.root, "recover", "--apply")
+        self.assertEqual((code, out["recovered"]), (0, "switch_complete"))
+        receipt = next(done.glob("*.journal.done-*")).read_bytes()
+        for line in receipt.splitlines():
+            json.loads(line)  # every line of the closed receipt is valid: the fragment never fused
+
+    def test_valid_json_without_newline_is_still_treated_as_torn(self):
+        self.crash("both_frozen")
+        with open(self.jfile(), "ab") as fh:
+            fh.write(b'{"t":1,"phase":"verified"}')  # looks complete but was never terminated
+        code, out = run(self.root, "recover", "--apply")
+        self.assertEqual((code, out["recovered"]), (0, "switch_reverted"))  # NOT treated as verified
+
+    def test_internal_corruption_is_rejected_and_nothing_is_touched(self):
+        self.crash("both_frozen")
+        lines = self.jfile().read_bytes().splitlines(keepends=True)
+        lines.insert(1, b'{"t":\n')
+        self.jfile().write_bytes(b"".join(lines))
+        frozen = self.frozen_ids()
+        code, out = run(self.root, "recover", "--apply")
+        self.assertEqual((code, out["status"]), (2, "BLOCKED_JOURNAL_INVALID"))
+        self.assertEqual(self.frozen_ids(), frozen)
+        self.jfile().write_bytes(b"\xff\xfe\n")
+        self.assertEqual(run(self.root, "recover", "--apply")[1]["status"], "BLOCKED_JOURNAL_INVALID")
+
+    def test_torn_first_record_means_nothing_was_mutated(self):
+        sw.FAULT = None
+        (self.root / "state" / sw._journal_name(type("C", (), {"key": hashlib_key(self.root)})())).write_bytes(b'{"t":')
+        (self.root / "state" / sw._journal_name(type("C", (), {"key": hashlib_key(self.root)})())).chmod(0o600)
+        code, out = run(self.root, "recover", "--apply")
+        self.assertEqual((code, out["recovered"]), (0, "torn_begin_discarded"))
+        self.assertEqual(self.journals(), [])
+
+    def test_switch_refuses_to_append_after_a_torn_fragment(self):
+        name = sw._journal_name(type("C", (), {"key": hashlib_key(self.root)})())
+        (self.root / "state" / name).write_bytes(b'{"t":')
+        (self.root / "state" / name).chmod(0o600)
+        plan = self.plan()
+        code, out = run(self.root, "switch", "--apply", "--plan-id", plan["plan_id"])
+        self.assertEqual(out["status"], "BLOCKED_JOURNAL_TORN_TAIL_RUN_RECOVER")
+        self.assertTrue(self.live.is_dir() and not self.live.is_symlink())
+        self.assertEqual(self.frozen_ids(), set())
+
+
+def hashlib_key(root):
+    import hashlib
+    return hashlib.sha256(str(root / "rel/apps/platform").encode()).hexdigest()[:12]
+
+
+class TornJournalFakeTests(TornJournalMixin, Base):
+    def frozen_ids(self):
+        return set(self.fz.state)
+
+
+@unittest.skipUnless(os.geteuid() == 0 or os.environ.get("KMJ_REQUIRE_REAL_IMMUTABLE"), "needs root + CAP_LINUX_IMMUTABLE")
+class TornJournalRealTests(TornJournalMixin, Base):
+    def setUp(self):
+        super().setUp()
+        sw.FREEZER = sw.Freezer()
+
+    def tearDown(self):
+        force_thaw(self.root)
+        super().tearDown()
+
+    def frozen_ids(self):
+        out = set()
+        for p in [self.live, self.shared, *self.live.rglob("*"), *self.shared.rglob("*")]:
+            fd = os.open(p, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
+            try:
+                if sw.Freezer().flags(fd) & sw.FS_IMMUTABLE_FL:
+                    out.add(str(p))
+            finally:
+                os.close(fd)
+        return out
+
+
 @unittest.skipUnless(os.geteuid() == 0 or os.environ.get("KMJ_REQUIRE_REAL_IMMUTABLE"), "needs root + CAP_LINUX_IMMUTABLE")
 class RealImmutableTests(unittest.TestCase):
     def test_real_freeze_blocks_preopened_writer_rename_unlink_and_create(self):
