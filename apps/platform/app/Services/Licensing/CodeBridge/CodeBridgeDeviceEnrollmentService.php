@@ -10,7 +10,6 @@ use Illuminate\Support\Str;
 
 final class CodeBridgeDeviceEnrollmentService
 {
-    /** @return array{credential:string,device_id:string,expires_at_epoch:int} */
     /**
      * Pairing state as seen by the owner. Redemption is refused once the
      * one-time code expires, so an approved but unredeemed pairing past its
@@ -25,17 +24,18 @@ final class CodeBridgeDeviceEnrollmentService
         return $status === 'consumed' && $consumedAt !== null ? 'redeemed' : 'unknown';
     }
 
-    private static function orphaned(object $credential, int $now): bool
+    private static function orphaned(string $activationId, string $tenantId, int $now): bool
     {
         return DB::table('codebridge_device_pairings')
-            ->where('activation_id', $credential->activation_id)
-            ->where('tenant_id', $credential->tenant_id)
+            ->where('activation_id', $activationId)
+            ->where('tenant_id', $tenantId)
             ->where('status', 'approved')
             ->whereNull('consumed_at')
             ->where('expires_at', '<=', gmdate('Y-m-d H:i:s', $now))
             ->exists();
     }
 
+    /** @return array{credential:string,device_id:string,expires_at_epoch:int} */
     public function enroll(string $licenseId, string $activationId, string $tenantId, string $deviceId, int $now): array
     {
         if (! preg_match('/\A[A-Za-z0-9_-]{1,64}\z/D', $tenantId) || ! preg_match('/\A[A-Za-z0-9_-]{1,64}\z/D', $deviceId)) {
@@ -61,7 +61,7 @@ final class CodeBridgeDeviceEnrollmentService
             // only through the same new proof-bound, owner-approved pairing.
             // So can an ORPHANED credential: its approval expired before any
             // agent redeemed it, so its token was never delivered to anyone.
-            $orphaned = $existing !== null && self::orphaned($existing, $now);
+            $orphaned = $existing !== null && self::orphaned((string) $existing->activation_id, $tenantId, $now);
             if (DB::table('codebridge_device_credentials')->where('activation_id', $activationId)->exists()
                 || ($existing !== null && $existing->revoked_at === null && (int) $existing->expires_at_epoch > $now
                     && ! $orphaned)) {
