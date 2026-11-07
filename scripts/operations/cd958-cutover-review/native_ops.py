@@ -303,6 +303,10 @@ class NativeOps:
             scope = p.unit_command(values["ExecStart"], values["WorkingDirectory"], cmd, label)
             require(scope["exact_direct_live_command"] and scope["known_argv_hash_matches"]
                     and scope["live_app_cwd"] and not scope["force"] and values["User"] == "kmjprod", "UNIT_SCOPE_UNVERIFIED")
+        # queue:restart ends the old worker with exit 0; only Restart=always brings
+        # the maintenance-idle replacement that the drain step waits for. Refuse
+        # before any mutation instead of timing out behind the admission guard.
+        require(unit_values[QUEUE]["Restart"] == "always", "QUEUE_RESTART_POLICY_CANNOT_REPLACE_WORKER")
         require(unit_values[SCHEDULER]["Type"] == "oneshot" and unit_values[SCHEDULER]["Restart"] == "no"
                 and unit_values[TIMER]["Triggers"] == SCHEDULER, "SCHEDULER_SCOPE_UNVERIFIED")
         queue, self.queue_fd = bound_process(int(unit_values[QUEUE]["MainPID"]))
@@ -372,6 +376,12 @@ class NativeOps:
                 "comment": "kmj-storage-" + self.evidence["nonce"], "priority": self.evidence["guard_priority"],
                 "netns": self.evidence["netns"], "destination": "127.0.0.1", "port": PORT}
 
+    def guard_script(self):
+        guard = self.guard_identity()
+        return (f"add table inet {guard['table']}\n"
+                f"add chain inet {guard['table']} out {{ type filter hook output priority {guard['priority']}; policy accept; }}\n"
+                f"add rule inet {guard['table']} out ip daddr 127.0.0.1 tcp dport {PORT} tcp flags & syn == syn counter reject with tcp reset comment \"{guard['comment']}\"\n").encode()
+
     def guard_counter(self):
         self.pointer()
         guard = self.guard_identity()
@@ -405,11 +415,7 @@ class NativeOps:
         self.private_environment()
         raw, _ = p.command(["/usr/sbin/nft", "-j", "list", "ruleset"])
         require(ruleset_identity(raw) == self.evidence["ruleset_sha256"], "NFT_BASELINE_CHANGED")
-        guard = self.guard_identity()
-        script = (f"add table inet {guard['table']}\n"
-                  f"add chain inet {guard['table']} out {{ type filter hook output priority {guard['priority']}; policy accept; }}\n"
-                  f"add rule inet {guard['table']} out ip daddr 127.0.0.1 tcp dport {PORT} tcp flags & syn == syn counter reject with tcp reset comment \"{guard['comment']}\"\n")
-        self.execute(["/usr/sbin/nft", "-f", "-"], data=script.encode())
+        self.execute(["/usr/sbin/nft", "-f", "-"], data=self.guard_script())
         self.evidence["guard_installed"] = True
         self.checkpoint()
         before = self.guard_counter()
@@ -727,7 +733,7 @@ class NativeOps:
         return result
 
     def scanner_run(self, command, plan_id=None):
-        require(command in {"plan", "switch"}, "SCANNER_OPERATION_NOT_ALLOWED")
+        require(command in {"plan", "switch", "rollback"}, "SCANNER_OPERATION_NOT_ALLOWED")
         raw = p.read_file(p.DEPENDENCIES["scanner"], protected=True)
         require(p.digest(raw) == PINS["scanner"], "SCANNER_PIN_CHANGED")
         # Execute checked bytes from a sealed private memfd; never reread a
@@ -741,6 +747,9 @@ class NativeOps:
             if command == "switch":
                 require(re.fullmatch(r"[a-f0-9]{16}", plan_id or ""), "PLAN_ID_INVALID")
                 args.extend(["--apply", "--plan-id", plan_id])
+            elif command == "rollback":
+                require(plan_id is None, "ROLLBACK_TAKES_NO_PLAN")
+                args.append("--apply")
             self.release_lock.verify()
             require(self.release_lock.fd is not None, "RELEASE_LOCK_NOT_HELD")
             value = subprocess.run(args, pass_fds=[fd, self.release_lock.fd], stdin=subprocess.DEVNULL, capture_output=True,
@@ -763,6 +772,27 @@ class NativeOps:
         value = self.scanner_run("switch", plan_id)
         require(value.get("status") == "OK" and value.get("command") == "switch", "V6_SWITCH_UNCERTAIN")
         self.evidence["switch_result"] = value
+        self.checkpoint()
+
+    def writers_still_paused(self):
+        """Fresh proof that the transaction still owns admission: guard intact,
+        timer stopped, scheduler and queue cgroups empty, no FPM writer, no
+        pending FastCGI connection. Never re-drains live traffic."""
+        self.pointer()
+        self.release_lock.verify()
+        self.guard_counter()
+        require(p.properties(TIMER)[0]["ActiveState"] == "inactive"
+                and self.unit_empty(SCHEDULER) and self.unit_empty(QUEUE)
+                and not self.fpm_children() and self.socket_empty(), "WRITERS_NOT_PAUSED")
+        return True
+
+    def rollback_storage(self):
+        require(self.writers_still_paused() is True, "WRITERS_NOT_PAUSED")
+        self.evidence["rollback_kept"] = self.snapshot_name(APP)
+        self.checkpoint()  # binds a crashed rollback journal to this exact preserved name
+        value = self.scanner_run("rollback")
+        require(value.get("status") == "OK" and value.get("command") == "rollback", "V6_ROLLBACK_UNCERTAIN")
+        self.evidence["rollback_result"] = value
         self.checkpoint()
 
     def snapshot_name(self, app):
@@ -816,7 +846,7 @@ class NativeOps:
                 "pool", "nginx_uid", "ruleset_sha256", "guard_priority", "marker", "maintenance_initially_absent", "original_storage", "maintenance_storage", "queue_descendants"}
         optional = {"environment", "marker_directory", "maintenance_time", "guard_installed", "guard_remove_intent", "guard_removed", "restart_requested",
                     "queue_replacement", "stop_policy_original", "stop_override", "stop_override_effective", "stop_override_remove_intent", "stop_override_removed",
-                    "fpm_children", "marker_removed", "switch_result"}
+                    "fpm_children", "marker_removed", "switch_result", "rollback_kept", "rollback_result"}
         require(base <= set(evidence) <= base | optional and evidence["maintenance_initially_absent"] is True
                 and evidence["netns"] == p.namespace() == p.namespace(1)
                 and evidence["live_sha"] == LIVE_SHA, "RECOVERY_EVIDENCE_SCHEMA_INVALID")
@@ -876,8 +906,9 @@ class NativeOps:
 
     def recover_active_scanner(self, state):
         """Recover only a switch journal bound to this paused transaction."""
-        if state["phase"] not in {"switch_intent", "recovery_required"} or not state.get("plan_id"):
+        if state["phase"] not in {"switch_intent", "recovery_required", "intent_rollback"} or not state.get("plan_id"):
             return False
+        rollback_kept = self.evidence.get("rollback_kept") if state.get("rollback_intent") else None
         self.pointer()
         self.release_lock.verify()
         self.guard_counter()
@@ -891,10 +922,18 @@ class NativeOps:
             entries, offset, exists = original_read(context)
             phases = ["begin", "live_frozen", "both_frozen", "link_created",
                       "exchanged", "preserved", "verified", "complete"]
+            rollback = ["rollback_begin", "rollback_shared_frozen", "rollback_old_thawed",
+                        "rollback_exchanged", "rollback_parked"]
             observed = [entry["phase"] for entry in entries]
-            require(exists and entries and observed in (phases[:len(observed)],
-                    [phase for phase in phases if phase != "preserved"][:len(observed)])
-                    and entries[0].get("plan") == state["plan_id"], "RECOVERY_JOURNAL_NOT_BOUND")
+            require(exists and entries, "RECOVERY_JOURNAL_NOT_BOUND")
+            if observed[0] == "rollback_begin":
+                # Only a rollback this transaction recorded, for the exact preserved name.
+                require(rollback_kept is not None and observed == rollback[:len(observed)]
+                        and all(entry.get("kept") == rollback_kept for entry in entries), "RECOVERY_JOURNAL_NOT_BOUND")
+            else:
+                require(observed in (phases[:len(observed)],
+                        [phase for phase in phases if phase != "preserved"][:len(observed)])
+                        and entries[0].get("plan") == state["plan_id"], "RECOVERY_JOURNAL_NOT_BOUND")
             return entries, offset, exists
 
         scanner.journal_read = bound_read
@@ -983,12 +1022,33 @@ class NativeOps:
             self.evidence["guard_removed"] = True
             self.checkpoint()
             return
-        self.guard_counter()
+        try:
+            self.guard_counter()
+        except Blocked as exc:
+            # A different nft JSON rendering of OUR rule must not strand production
+            # behind the admission guard. Delete only the transaction-owned table
+            # (128-bit nonce name, install recorded) whose sole chain is our hook.
+            require(str(exc).startswith(("GUARD_EXPRESSION_CHANGED", "GUARD_RULE_CHANGED"))
+                    and self.evidence.get("guard_installed") is True and self.owned_table_shape_only(), str(exc))
         self.evidence["guard_remove_intent"] = True
         self.checkpoint()
         self.execute(["/usr/sbin/nft", "delete", "table", "inet", self.guard_identity()["table"]])
         self.evidence["guard_removed"] = True
         self.checkpoint()
+
+    def owned_table_shape_only(self):
+        """Our nonce table holds exactly one base chain 'out' at our output hook/priority and one rule
+        carrying our nonce comment; nothing else (no sets, maps, other chains)."""
+        guard = self.guard_identity()
+        doc = json.loads(self.execute(["/usr/sbin/nft", "-j", "list", "table", "inet", guard["table"]]),
+                         object_pairs_hook=no_duplicates)
+        kinds = [next(iter(record)) for record in doc["nftables"] if "metainfo" not in record]
+        chains = [record["chain"] for record in doc["nftables"] if "chain" in record]
+        rules = [record["rule"] for record in doc["nftables"] if "rule" in record]
+        return (sorted(kinds) == ["chain", "rule", "table"] and len(chains) == len(rules) == 1
+                and chains[0].get("name") == "out" and chains[0].get("hook") == "output"
+                and chains[0].get("prio") == guard["priority"] and chains[0].get("type") == "filter"
+                and rules[0].get("chain") == "out" and rules[0].get("comment") == guard["comment"])
 
     def guard_absent(self):
         raw, _ = p.command(["/usr/sbin/nft", "-j", "list", "ruleset"])

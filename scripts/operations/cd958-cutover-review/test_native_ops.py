@@ -217,8 +217,94 @@ class AdapterTests(unittest.TestCase):
         with self.assertRaises(o.Blocked): self.ops.maintenance_probe(True)
 
     def test_no_mutation_for_unapproved_scanner_operation(self):
-        with self.assertRaises(o.Blocked): self.ops.scanner_run("rollback")
+        for command in ("recover", "release-shared", "rollback --apply"):
+            with self.assertRaises(o.Blocked): self.ops.scanner_run(command)
+        with self.assertRaisesRegex(o.Blocked, "ROLLBACK_TAKES_NO_PLAN"):
+            with patch.object(n.p, "read_file", return_value=b"x"), patch.object(n.p, "digest", return_value=n.PINS["scanner"]):
+                self.ops.scanner_run("rollback", "aaaaaaaaaaaaaaaa")
         self.ops.execute.assert_not_called()
+
+    def test_rollback_invokes_only_pinned_v6_rollback_apply_with_lock(self):
+        self.ops.release_lock = types.SimpleNamespace(verify=Mock(), fd=7)
+        seen = {}
+        def fake_run(args, **kwargs):
+            seen["args"], seen["pass_fds"] = args, kwargs["pass_fds"]
+            return types.SimpleNamespace(stdout=b'{"command": "rollback", "status": "OK"}')
+        with patch.object(n.p, "read_file", return_value=b"scanner"), \
+                patch.object(n.p, "digest", return_value=n.PINS["scanner"]), patch.object(n.subprocess, "run", side_effect=fake_run):
+            self.assertEqual(self.ops.scanner_run("rollback")["status"], "OK")
+        self.assertEqual(seen["args"][4:], ["rollback", "--app-dir", str(n.APP), "--shared", n.SHARED,
+                                            "--state-dir", n.SCANNER_STATE, "--apply"])
+        self.assertIn(7, seen["pass_fds"])
+
+    def test_rollback_storage_requires_fresh_pause_and_records_name_before_mutation(self):
+        order = []
+        self.ops.writers_still_paused = Mock(side_effect=lambda: order.append("paused") or True)
+        self.ops.snapshot_name = Mock(return_value="storage.pre-shared-20261107T010203Z")
+        self.ops.checkpoint = Mock(side_effect=lambda: order.append(("checkpoint", self.ops.evidence.get("rollback_kept"))))
+        self.ops.scanner_run = Mock(side_effect=lambda c: order.append(c) or {"command": "rollback", "status": "OK"})
+        self.ops.rollback_storage()
+        self.assertEqual(order[:3], ["paused", ("checkpoint", "storage.pre-shared-20261107T010203Z"), "rollback"])
+        self.ops.writers_still_paused = Mock(side_effect=o.Blocked("WRITERS_NOT_PAUSED"))
+        self.ops.scanner_run.reset_mock()
+        with self.assertRaises(o.Blocked): self.ops.rollback_storage()
+        self.ops.scanner_run.assert_not_called()
+        self.ops.writers_still_paused = Mock(return_value=True)
+        self.ops.scanner_run = Mock(return_value={"command": "rollback", "status": "BLOCKED_UPDATED_OR_DELETED_SINCE_SWITCH"})
+        with self.assertRaisesRegex(o.Blocked, "V6_ROLLBACK_UNCERTAIN"): self.ops.rollback_storage()
+
+    def test_crashed_rollback_journal_recovers_only_for_recorded_name(self):
+        self.ops.pointer = Mock()
+        self.ops.release_lock = types.SimpleNamespace(verify=Mock())
+        self.ops.guard_counter = Mock()
+        self.ops.unit_empty = Mock(return_value=True)
+        self.ops.fpm_children = Mock(return_value=[])
+        self.ops.socket_empty = Mock(return_value=True)
+        kept = "storage.pre-shared-20261107T010203Z"
+        entries = [{"phase": "rollback_begin", "kept": kept}, {"phase": "rollback_shared_frozen", "kept": kept}]
+        scanner = types.SimpleNamespace(journal_read=lambda _: (entries, 1, True), _LOCKS=[])
+        mutations = []
+        def recover(args):
+            scanner.journal_read(None)
+            mutations.append(args.apply)
+            return {"status": "OK", "mutated": True}
+        scanner.cmd_recover = recover
+        self.ops.module = Mock(return_value=scanner)
+        state = {"phase": "intent_rollback", "plan_id": "aaaaaaaaaaaaaaaa"}
+        with patch.object(n.p, "properties", return_value=({"ActiveState": "inactive"}, "hash")):
+            with self.assertRaisesRegex(o.Blocked, "RECOVERY_JOURNAL_NOT_BOUND"):
+                self.ops.recover_active_scanner(state)  # no rollback_intent recorded
+            state["rollback_intent"] = True
+            self.ops.evidence["rollback_kept"] = "storage.pre-shared-20200101T000000Z"
+            with self.assertRaisesRegex(o.Blocked, "RECOVERY_JOURNAL_NOT_BOUND"):
+                self.ops.recover_active_scanner(state)  # a different preserved directory
+            entries[1] = {"phase": "rollback_exchanged", "kept": kept}
+            self.ops.evidence["rollback_kept"] = kept
+            with self.assertRaisesRegex(o.Blocked, "RECOVERY_JOURNAL_NOT_BOUND"):
+                self.ops.recover_active_scanner(state)  # phases out of order
+            self.assertEqual(mutations, [])
+            entries[1] = {"phase": "rollback_shared_frozen", "kept": kept}
+            self.assertTrue(self.ops.recover_active_scanner(state))
+        self.assertEqual(mutations, [True])
+
+    def test_writers_still_paused_fails_on_any_admission_or_writer(self):
+        self.ops.pointer = Mock()
+        self.ops.release_lock = types.SimpleNamespace(verify=Mock())
+        self.ops.guard_counter = Mock(return_value=3)
+        self.ops.unit_empty = Mock(return_value=True)
+        self.ops.fpm_children = Mock(return_value={})
+        self.ops.socket_empty = Mock(return_value=True)
+        with patch.object(n.p, "properties", return_value=({"ActiveState": "inactive"}, "hash")):
+            self.assertTrue(self.ops.writers_still_paused())
+            for attribute, value in (("fpm_children", {1: {}}), ("socket_empty", False), ("unit_empty", False)):
+                setattr(self.ops, attribute, Mock(return_value=value))
+                with self.assertRaises(o.Blocked): self.ops.writers_still_paused()
+                setattr(self.ops, attribute, Mock(return_value={} if attribute == "fpm_children" else True))
+        with patch.object(n.p, "properties", return_value=({"ActiveState": "active"}, "hash")):
+            with self.assertRaises(o.Blocked): self.ops.writers_still_paused()
+        self.ops.guard_counter = Mock(side_effect=o.Blocked("GUARD_CONTENT_CHANGED"))
+        with patch.object(n.p, "properties", return_value=({"ActiveState": "inactive"}, "hash")):
+            with self.assertRaises(o.Blocked): self.ops.writers_still_paused()
 
     def test_guard_never_deleted_if_baseline_identity_changed(self):
         self.ops.guard_absent = Mock(return_value=True)
@@ -326,3 +412,55 @@ class MarkerTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class GuardRemovalTests(unittest.TestCase):
+    def setUp(self):
+        store = Mock(fd=0)
+        with patch.object(n.os, "fstat", return_value=types.SimpleNamespace(st_mode=0o40700, st_uid=0)), \
+                patch.object(n.pwd, "getpwnam", return_value=types.SimpleNamespace(pw_uid=1000, pw_gid=1000)):
+            self.ops = n.NativeOps(store, Mock())
+        self.ops.evidence = {"nonce": "a" * 32, "guard_priority": 1, "netns": [1, 2], "guard_installed": True}
+        self.ops.checkpoint = Mock()
+        self.ops.guard_absent = Mock(return_value=False)
+        self.ops.guard_counter = Mock(side_effect=o.Blocked("GUARD_EXPRESSION_CHANGED"))
+        self.ops.execute = Mock()
+
+    def listing(self, extra=()):
+        g = self.ops.guard_identity()
+        return json.dumps({"nftables": [{"metainfo": {}}, {"table": {"family": "inet", "name": g["table"]}},
+            {"chain": {"name": "out", "hook": "output", "prio": 1, "type": "filter", "table": g["table"]}},
+            {"rule": {"chain": "out", "comment": g["comment"], "expr": []}}, *extra]}).encode()
+
+    def test_rendering_difference_still_removes_only_our_exact_table(self):
+        self.ops.execute = Mock(side_effect=[self.listing(), b""])
+        self.ops.remove_owned_guard()
+        self.assertEqual(self.ops.execute.call_args_list[-1].args[0],
+                         ["/usr/sbin/nft", "delete", "table", "inet", "kmj_storage_" + "a" * 32])
+        self.assertTrue(self.ops.evidence["guard_removed"])
+
+    def test_extra_objects_in_table_are_never_deleted(self):
+        for extra in ([{"set": {"name": "x"}}], [{"chain": {"name": "other"}}], [{"rule": {"chain": "out", "comment": "foreign"}}]):
+            self.ops.execute = Mock(return_value=self.listing(extra))
+            with self.assertRaises(o.Blocked): self.ops.remove_owned_guard()
+            self.assertNotIn(["/usr/sbin/nft", "delete", "table", "inet", "kmj_storage_" + "a" * 32],
+                             [c.args[0] for c in self.ops.execute.call_args_list])
+
+    def test_fallback_needs_recorded_install_and_only_rendering_errors(self):
+        self.ops.evidence["guard_installed"] = False
+        self.ops.execute = Mock(return_value=self.listing())
+        with self.assertRaises(o.Blocked): self.ops.remove_owned_guard()
+        self.ops.evidence["guard_installed"] = True
+        self.ops.guard_counter = Mock(side_effect=o.Blocked("GUARD_CHAIN_CHANGED"))
+        with self.assertRaises(o.Blocked): self.ops.remove_owned_guard()
+        self.assertEqual(len(self.ops.execute.call_args_list), 0)
+
+
+class SourceContractTests(unittest.TestCase):
+    def test_preflight_refuses_queue_unit_that_cannot_replace_worker(self):
+        source = Path(n.__file__).read_text()
+        start = source.index("    def preflight(self):")
+        body = source[start:source.index("    def verify_queue(", start)]
+        check = 'require(unit_values[QUEUE]["Restart"] == "always", "QUEUE_RESTART_POLICY_CANNOT_REPLACE_WORKER")'
+        self.assertIn(check, body)
+        self.assertLess(body.index(check), body.index("bound_process("))  # before any pidfd/mutation step

@@ -22,3 +22,7 @@ jobs:
         run: PYTHONPATH=scripts python3 -B -m unittest discover -s scripts/operations/cd958-cutover-review -v
       - name: Rehearse interrupted recovery with real immutable flags
         run: sudo env KMJ_REQUIRE_REAL_IMMUTABLE=1 PYTHONPATH=scripts python3 -B -m unittest discover -s scripts/operations/cd958-cutover-review -p test_scanner_integration.py -v
+      - name: Real nftables guard round trip in a private network namespace
+        run: |
+          command -v nft >/dev/null || { sudo apt-get update -qq && sudo apt-get install -y -qq nftables; }
+          sudo env KMJ_REQUIRE_REAL_NFT=1 PYTHONPATH=scripts python3 -B -m unittest discover -s scripts/operations/cd958-cutover-review -p test_real_nft_guard.py -v

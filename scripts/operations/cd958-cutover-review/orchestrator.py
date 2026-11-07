@@ -255,7 +255,7 @@ class Transaction:
         return {"candidate_sha": self.state["candidate_sha"], "expected_live": LIVE,
                 "materializer_sha256": PINS["materializer"]}
 
-    def recover(self, *, allow_scanner_recovery=False):
+    def load_recovery_state(self):
         self.state = self.store.read()
         require(type(self.state) is dict and self.state.get("version") == 1
                 and self.state.get("pins") == PINS and self.state.get("live") == LIVE
@@ -265,16 +265,48 @@ class Transaction:
         require(type(original) is dict and set(original) == set(UNITS)
                 and all(v in ("active", "inactive") for v in original.values()), "RECOVERY_UNIT_STATES_INVALID")
         allowed = {"version", "phase", "candidate_sha", "original_units", "pins", "live", "shared", "guard",
-                   "plan_id", "switch_verified", "switch_uncertain", "recovery_evidence"}
+                   "plan_id", "switch_verified", "switch_uncertain", "rollback_intent", "recovery_evidence"}
         require(set(self.state) <= allowed and type(self.state.get("guard")) is dict
                 and type(self.state.get("phase")) is str
                 and type(self.state.get("recovery_evidence")) is dict, "RECOVERY_SCHEMA_INVALID")
-        for key in ("switch_verified", "switch_uncertain"):
+        for key in ("switch_verified", "switch_uncertain", "rollback_intent"):
             require(key not in self.state or type(self.state[key]) is bool, "RECOVERY_BOOLEAN_INVALID")
         require("plan_id" not in self.state or (type(self.state["plan_id"]) is str
                 and re.fullmatch(r"[a-f0-9]{16}", self.state["plan_id"]) is not None), "RECOVERY_PLAN_ID_INVALID")
         self.lock.verify()
         require(self.ops.bind_recovery(self.state) is True, "RECOVERY_IDENTITY_UNVERIFIED")
+
+    def finish_original(self):
+        """Admission returns only to the verified, unchanged, writable original inode."""
+        require(self.ops.original_storage_writable_and_unchanged() is True, "ORIGINAL_NOT_SAFE")
+        self.ops.restore_owned_maintenance(self.state)
+        self.ops.restore_units(self.state["original_units"])
+        require(self.ops.runtime_restored(self.state["original_units"]) is True, "RUNTIME_RESTORE_NOT_VERIFIED")
+        self.ops.remove_owned_guard()
+        require(self.ops.guard_absent() is True, "GUARD_REMOVAL_NOT_VERIFIED")
+        self.save("aborted_original_restored")
+
+    def rollback_paused(self):
+        """Explicit operator rollback after a VERIFIED switch whose resume failed.
+
+        Only valid while the transaction still owns the admission guard and the
+        paused writers (phase recovery_required + switch_verified). Live traffic
+        is never drained a second time here. The pinned v6 rollback refuses if
+        any persistent file was updated or deleted in shared since the switch.
+        """
+        self.load_recovery_state()
+        require(self.state["phase"] == "recovery_required" and self.state.get("switch_verified") is True,
+                "ROLLBACK_ONLY_FROM_PAUSED_VERIFIED_SWITCH")
+        require(self.ops.writers_still_paused() is True, "ROLLBACK_WRITERS_NOT_PAUSED")
+        require(self.ops.reconcile_storage_readonly() == "verified_switched", "ROLLBACK_REQUIRES_VERIFIED_SWITCH")
+        self.save("recovery_required", rollback_intent=True)
+        self.step("rollback", self.ops.rollback_storage)
+        require(self.ops.reconcile_storage_readonly() == "verified_original", "ROLLBACK_NOT_VERIFIED")
+        self.finish_original()
+        self.lock.close()
+
+    def recover(self, *, allow_scanner_recovery=False):
+        self.load_recovery_state()
         if self.state["phase"] == "aborted_original_restored":
             # A completed abort grants no permission to restart units again.
             # Administrators may have changed their states since that receipt.
@@ -300,13 +332,7 @@ class Transaction:
         if outcome == "verified_switched":
             return self.resume()
         elif outcome == "verified_original":
-            require(self.ops.original_storage_writable_and_unchanged() is True, "ORIGINAL_NOT_SAFE")
-            self.ops.restore_owned_maintenance(self.state)
-            self.ops.restore_units(self.state["original_units"])
-            require(self.ops.runtime_restored(self.state["original_units"]) is True, "RUNTIME_RESTORE_NOT_VERIFIED")
-            self.ops.remove_owned_guard()
-            require(self.ops.guard_absent() is True, "GUARD_REMOVAL_NOT_VERIFIED")
-            self.save("aborted_original_restored")
+            self.finish_original()
         else:
             self.save("recovery_required", switch_uncertain=True)
             raise Blocked("STORAGE_UNCERTAIN_RETAIN_GUARD_AND_PAUSES")

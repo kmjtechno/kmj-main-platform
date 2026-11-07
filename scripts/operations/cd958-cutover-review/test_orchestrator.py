@@ -110,6 +110,16 @@ class Fake:
     def original_storage_writable_and_unchanged(self): return True
     def restore_owned_maintenance(self, state): self.call("restore_owned_maintenance")
 
+    def writers_still_paused(self):
+        self.call("writers_still_paused")
+        return self.guard
+
+    def rollback_storage(self):
+        assert self.store.value["phase"] == "intent_rollback" and self.store.value["rollback_intent"] is True
+        self.outcome = "uncertain"
+        self.call("rollback_storage")
+        self.outcome = "verified_original"
+
 
 class TransactionTests(unittest.TestCase):
     def setUp(self):
@@ -257,6 +267,81 @@ class TransactionTests(unittest.TestCase):
             self.assertEqual(m.main(["--apply"]), 2)
         op.assert_not_called()
         self.assertFalse(json.loads(output.getvalue())["mutated"])
+
+
+
+class RollbackTests(unittest.TestCase):
+    """Explicit rollback from a paused, verified switch whose runtime restore failed."""
+
+    def setUp(self):
+        self.store, self.lock = MemoryStore(), Lock()
+        self.ops = Fake(self.store, self.lock)
+        self.tx = m.Transaction(self.store, self.ops, self.lock)
+        self.ops.fail = "runtime_restored"
+        with self.assertRaises(m.Blocked): self.tx.apply(m.CANDIDATE_SHA)
+        self.assertEqual(self.store.value["phase"], "recovery_required")
+        self.assertTrue(self.store.value["switch_verified"] and self.ops.guard)
+        self.ops.fail = None
+        self.ops.events.clear()
+        self.lock.open = True
+
+    def fresh(self):
+        return m.Transaction(self.store, self.ops, Lock())
+
+    def test_rollback_restores_original_then_runtime_then_admission(self):
+        tx = self.fresh()
+        tx.rollback_paused()
+        self.assertEqual(self.ops.events, ["writers_still_paused", "rollback_storage", "restore_owned_maintenance",
+                                           "restore_units", "runtime_restored", "remove_owned_guard"])
+        self.assertEqual(self.store.value["phase"], "aborted_original_restored")
+        self.assertFalse(tx.lock.open and self.ops.guard)
+        phases = [h["phase"] for h in self.store.history]
+        self.assertLess(phases.index("intent_rollback"), phases.index("done_rollback"))
+
+    def test_rollback_refused_unless_paused_verified_switch(self):
+        for phase, extra in (("storage_complete_materializer_pending", {}), ("switch_intent", {}),
+                             ("recovery_required", {"switch_verified": False}), ("aborted_original_restored", {})):
+            with self.subTest(phase=phase):
+                value = copy.deepcopy(self.store.value)
+                value.update(extra, phase=phase)
+                self.store.value = value
+                self.ops.events.clear()
+                with self.assertRaisesRegex(m.Blocked, "ROLLBACK_ONLY_FROM_PAUSED_VERIFIED_SWITCH"):
+                    self.fresh().rollback_paused()
+                self.assertEqual(self.ops.events, [])
+
+    def test_rollback_refused_when_admission_or_writers_not_owned(self):
+        self.ops.guard = False
+        with self.assertRaisesRegex(m.Blocked, "ROLLBACK_WRITERS_NOT_PAUSED"):
+            self.fresh().rollback_paused()
+        self.assertNotIn("rollback_storage", self.ops.events)
+
+    def test_rollback_refused_unless_actual_storage_is_switched(self):
+        self.ops.outcome = "uncertain"
+        with self.assertRaisesRegex(m.Blocked, "ROLLBACK_REQUIRES_VERIFIED_SWITCH"):
+            self.fresh().rollback_paused()
+        self.assertNotIn("rollback_storage", self.ops.events)
+
+    def test_failed_rollback_keeps_guard_and_recover_resumes_actual_state(self):
+        self.ops.fail = "rollback_storage"
+        with self.assertRaises(m.Blocked): self.fresh().rollback_paused()
+        self.assertTrue(self.ops.guard)
+        self.assertEqual(self.store.value["phase"], "intent_rollback")
+        self.ops.fail = None
+        self.ops.outcome = "verified_switched"  # v6 refused (data changed): storage still shared
+        result = self.fresh().recover(allow_scanner_recovery=True)
+        self.assertEqual(self.store.value["phase"], "storage_complete_materializer_pending")
+        self.assertEqual(result["candidate_sha"], m.CANDIDATE_SHA)
+        self.assertFalse(self.ops.guard)
+
+    def test_interrupted_rollback_that_reached_original_is_finished_by_recover(self):
+        self.ops.fail = "rollback_storage"
+        with self.assertRaises(m.Blocked): self.fresh().rollback_paused()
+        self.ops.fail = None
+        self.ops.outcome = "verified_original"
+        self.assertIsNone(self.fresh().recover(allow_scanner_recovery=True))
+        self.assertEqual(self.store.value["phase"], "aborted_original_restored")
+        self.assertFalse(self.ops.guard)
 
 
 class StoreTests(unittest.TestCase):
