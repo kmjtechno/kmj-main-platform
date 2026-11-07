@@ -1,0 +1,28 @@
+name: CD958 cutover review
+on:
+  pull_request:
+    paths:
+      - scripts/operations/cd958-cutover-review/**
+      - scripts/operations/main_platform_storage_switch.py
+      - scripts/test_main_platform_storage_switch.py
+      - .github/workflows/cd958-cutover-review.yml
+
+permissions:
+  contents: read
+
+jobs:
+  recovery:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Run cutover contract tests
+        run: PYTHONPATH=scripts python3 -B -m unittest discover -s scripts/operations/cd958-cutover-review -v
+      - name: Rehearse interrupted recovery with real immutable flags
+        run: sudo env KMJ_REQUIRE_REAL_IMMUTABLE=1 PYTHONPATH=scripts python3 -B -m unittest discover -s scripts/operations/cd958-cutover-review -p test_scanner_integration.py -v
+      - name: Real nftables guard round trip in a private network namespace
+        run: |
+          command -v nft >/dev/null || { sudo apt-get update -qq && sudo apt-get install -y -qq nftables; }
+          sudo env KMJ_REQUIRE_REAL_NFT=1 PYTHONPATH=scripts python3 -B -m unittest discover -s scripts/operations/cd958-cutover-review -p test_real_nft_guard.py -v
