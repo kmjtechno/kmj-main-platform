@@ -17,6 +17,14 @@ export const deliveryMilestones: DeliveryMilestone[] = [
         evidence: 'PR #759 tests guarded 503 responses; no signing occurs.',
     },
     {
+        id: 'codebridge-expired-approval-orphan',
+        title: 'Expired CodeBridge approvals no longer strand a device',
+        state: 'active',
+        detail: 'Owner screenshot of live cd958 showed a KMJ-elite registration stuck as Approved, Not redeemed although that machine works through its existing enrollment. An approval writes a device credential whose token only lives in the pairing row, and redemption is refused once the five minute code expires, so such a credential can never reach any agent. It still counted toward the device seat limit and made any new pairing for that device fail with CODEBRIDGE_DEVICE_ALREADY_ENROLLED. The directory now reports approval_expired, Control Center and Workspace explain it, and a new owner approved, proof bound pairing replaces the orphan (old activation deactivated, dead grant marked expired) without it holding a seat. Unexpired unredeemed approvals still block and hold the seat. Source only; no live status is implied and production still runs cd958.',
+        evidence:
+            'Two HTTP feature tests through the real pairing flow on PostgreSQL CI cover the expired and unexpired paths. Exact-head hosted CI, owner review and a separate guarded release remain pending.',
+    },
+    {
         id: 'codebridge-ai-workspace',
         title: 'CodeBridge AI workflow workspace',
         state: 'blocked',
