@@ -10,6 +10,31 @@ use Illuminate\Support\Str;
 
 final class CodeBridgeDeviceEnrollmentService
 {
+    /**
+     * Pairing state as seen by the owner. Redemption is refused once the
+     * one-time code expires, so an approved but unredeemed pairing past its
+     * expiry can never deliver its credential to any agent.
+     */
+    public static function pairingState(?string $status, mixed $consumedAt, ?string $expiresAt, int $now): string
+    {
+        if ($status === 'approved' && $consumedAt === null) {
+            return $expiresAt !== null && strtotime($expiresAt) <= $now ? 'approval_expired' : 'approved_unredeemed';
+        }
+
+        return $status === 'consumed' && $consumedAt !== null ? 'redeemed' : 'unknown';
+    }
+
+    private static function orphaned(string $activationId, string $tenantId, int $now): bool
+    {
+        return DB::table('codebridge_device_pairings')
+            ->where('activation_id', $activationId)
+            ->where('tenant_id', $tenantId)
+            ->where('status', 'approved')
+            ->whereNull('consumed_at')
+            ->where('expires_at', '<=', gmdate('Y-m-d H:i:s', $now))
+            ->exists();
+    }
+
     /** @return array{credential:string,device_id:string,expires_at_epoch:int} */
     public function enroll(string $licenseId, string $activationId, string $tenantId, string $deviceId, int $now): array
     {
@@ -34,8 +59,12 @@ final class CodeBridgeDeviceEnrollmentService
             // Never reuse a prior activation. Active credentials cannot be
             // overwritten. Explicitly expired credentials can be replaced
             // only through the same new proof-bound, owner-approved pairing.
+            // So can an ORPHANED credential: its approval expired before any
+            // agent redeemed it, so its token was never delivered to anyone.
+            $orphaned = $existing !== null && self::orphaned((string) $existing->activation_id, $tenantId, $now);
             if (DB::table('codebridge_device_credentials')->where('activation_id', $activationId)->exists()
-                || ($existing !== null && $existing->revoked_at === null && (int) $existing->expires_at_epoch > $now)) {
+                || ($existing !== null && $existing->revoked_at === null && (int) $existing->expires_at_epoch > $now
+                    && ! $orphaned)) {
                 throw new DomainException('CODEBRIDGE_DEVICE_ALREADY_ENROLLED');
             }
             $policy = DB::table('plans')->where('code', 'codebridge.'.$license->plan)->where('status', 'active')->first();
@@ -43,7 +72,16 @@ final class CodeBridgeDeviceEnrollmentService
             if (! is_array($limits) || ! is_int($limits['devices'] ?? null) || $limits['devices'] < 1) {
                 throw new DomainException('CODEBRIDGE_POLICY_UNAVAILABLE');
             }
-            $active = DB::table('codebridge_device_credentials')->where('license_id', $licenseId)->whereNull('revoked_at')->where('expires_at_epoch', '>', $now)->count();
+            // Orphaned credentials (expired, never-redeemed approvals) hold no seat.
+            $active = DB::table('codebridge_device_credentials')->where('license_id', $licenseId)->whereNull('revoked_at')->where('expires_at_epoch', '>', $now)
+                ->whereNotExists(static function ($query) use ($now): void {
+                    $query->selectRaw('1')->from('codebridge_device_pairings as orphan')
+                        ->whereColumn('orphan.activation_id', 'codebridge_device_credentials.activation_id')
+                        ->where('orphan.status', 'approved')
+                        ->whereNull('orphan.consumed_at')
+                        ->where('orphan.expires_at', '<=', gmdate('Y-m-d H:i:s', $now));
+                })
+                ->count();
             if ($active >= $limits['devices']) {
                 throw new DomainException('CODEBRIDGE_DEVICE_LIMIT');
             }
@@ -59,10 +97,22 @@ final class CodeBridgeDeviceEnrollmentService
                     ->where('license_id', $existing->license_id)
                     ->whereNull('deactivated_at')
                     ->update(['deactivated_at' => now()]);
+                if ($orphaned) {
+                    // The expired one-time grant can never be redeemed; drop its
+                    // undelivered secret so nothing recoverable remains.
+                    DB::table('codebridge_device_pairings')
+                        ->where('activation_id', $existing->activation_id)
+                        ->where('status', 'approved')
+                        ->whereNull('consumed_at')
+                        ->update(['status' => 'expired', 'credential_ciphertext' => null, 'updated_at' => now()]);
+                }
                 $updated = DB::table('codebridge_device_credentials')
                     ->where('id', $existing->id)
-                    ->where(function ($query) use ($now): void {
+                    ->where(function ($query) use ($now, $orphaned): void {
                         $query->whereNotNull('revoked_at')->orWhere('expires_at_epoch', '<=', $now);
+                        if ($orphaned) {
+                            $query->orWhere('revoked_at', null);
+                        }
                     })
                     ->update([
                         'license_id' => $licenseId,

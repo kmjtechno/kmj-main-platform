@@ -49,7 +49,11 @@ type Device = {
     pending_projects: PendingProject[];
     registered_at: string | null;
     registration: string;
-    pairing_state: 'approved_unredeemed' | 'redeemed' | 'unknown';
+    pairing_state:
+        | 'approved_unredeemed'
+        | 'approval_expired'
+        | 'redeemed'
+        | 'unknown';
     connection_status: string;
 };
 type Provider = {
@@ -127,6 +131,8 @@ type Props = {
 const BASE = '/services/kmj-codebridge/workspace';
 const PAIRING_TEXT: Record<Device['pairing_state'], string> = {
     approved_unredeemed: 'Approved — waiting for the device to redeem it',
+    approval_expired:
+        'Approval expired before any agent redeemed it; no agent can use this entry',
     redeemed: 'Pairing redeemed by the device',
     unknown: 'Pairing state unknown',
 };

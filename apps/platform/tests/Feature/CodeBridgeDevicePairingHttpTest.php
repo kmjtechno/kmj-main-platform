@@ -7,6 +7,7 @@ use App\Services\Licensing\CodeBridge\CodeBridgeCustomerDeviceDirectory;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use Illuminate\Testing\TestResponse;
 use Tests\TestCase;
 
 final class CodeBridgeDevicePairingHttpTest extends TestCase
@@ -384,6 +385,111 @@ final class CodeBridgeDevicePairingHttpTest extends TestCase
     }
 
     /** @return array{string,string} */
+    public function test_expired_unredeemed_approval_is_shown_as_orphan_frees_its_seat_and_allows_repairing(): void
+    {
+        $this->gatewayConfig();
+        $user = User::factory()->create();
+        [$tenant] = $this->fixture($user);
+        DB::table('plans')->where('code', 'codebridge.professional')->update(['limits' => json_encode(['devices' => 1])]);
+
+        [$first, $firstVerifier] = $this->pairAndApprove($user, $tenant, 'elite1', 'platform');
+        $orphanActivation = (string) DB::table('codebridge_device_credentials')->where('device_id', 'elite1')->value('activation_id');
+
+        // Still inside the one-time window: honest "approved, not redeemed", and the seat is held.
+        $directory = app(CodeBridgeCustomerDeviceDirectory::class);
+        self::assertSame('approved_unredeemed', $directory->forTenant($tenant, time())[0]['pairing_state']);
+
+        // The window passes without any agent redeeming the code.
+        DB::table('codebridge_device_pairings')->update(['expires_at' => gmdate('Y-m-d H:i:s', time() - 60)]);
+        self::assertSame('approval_expired', $directory->forTenant($tenant, time())[0]['pairing_state']);
+        $this->redeem($first['device_code'], $firstVerifier, 'elite1')
+            ->assertStatus(410)->assertJson(['error' => 'CODEBRIDGE_PAIRING_EXPIRED']);
+
+        // The orphan no longer holds the only seat: a different device can be paired.
+        [$other, $otherVerifier] = $this->pairAndApprove($user, $tenant, 'desk1', 'app');
+        $this->redeem($other['device_code'], $otherVerifier, 'desk1')->assertOk();
+
+        // The orphaned device itself can be paired again; the dead grant is voided, not reused.
+        DB::table('plans')->where('code', 'codebridge.professional')->update(['limits' => json_encode(['devices' => 2])]);
+        [$again, $againVerifier] = $this->pairAndApprove($user, $tenant, 'elite1', 'platform');
+        self::assertDatabaseHas('codebridge_device_pairings', ['activation_id' => $orphanActivation, 'status' => 'expired', 'credential_ciphertext' => null]);
+        self::assertNotNull(DB::table('kslp_activations')->where('id', $orphanActivation)->value('deactivated_at'));
+        $redeemed = $this->redeem($again['device_code'], $againVerifier, 'elite1')->assertOk()->json();
+        $this->withToken($redeemed['agent']['token'])
+            ->postJson('/api/codebridge/v1/device-credentials/introspect')
+            ->assertOk()->assertJson(['active' => true, 'device_id' => 'elite1']);
+        $states = collect($directory->forTenant($tenant, time()))->pluck('pairing_state', 'id')->all();
+        self::assertSame(['desk1' => 'redeemed', 'elite1' => 'redeemed'], $states);
+    }
+
+    public function test_unexpired_unredeemed_approval_still_blocks_repairing_and_holds_its_seat(): void
+    {
+        $this->gatewayConfig();
+        $user = User::factory()->create();
+        [$tenant] = $this->fixture($user);
+        DB::table('plans')->where('code', 'codebridge.professional')->update(['limits' => json_encode(['devices' => 1])]);
+        $this->pairAndApprove($user, $tenant, 'elite1', 'platform');
+        $credential = DB::table('codebridge_device_credentials')->where('device_id', 'elite1')->first();
+
+        // A second approval for the same device inside the window is refused, and so is a new device.
+        foreach ([['elite1', 'platform'], ['desk1', 'app']] as [$device, $project]) {
+            $created = $this->createPairing($device, $project)[0];
+            $this->actingAs($user)->post('/codebridge/pair', ['code' => $created['user_code'], 'tenant_id' => $tenant]);
+            self::assertSame('pending', DB::table('codebridge_device_pairings')
+                ->where('device_code_hash', hash('sha256', $created['device_code']))->value('status'));
+        }
+        self::assertEquals($credential, DB::table('codebridge_device_credentials')->where('device_id', 'elite1')->first());
+        self::assertSame(1, DB::table('codebridge_device_credentials')->count());
+    }
+
+    private function gatewayConfig(): void
+    {
+        config()->set('codebridge.enabled', true);
+        config()->set('services.codebridge_gateway.url', 'http://127.0.0.1:18787');
+        config()->set('app.url', 'https://gateway.example');
+        config()->set('services.codebridge_gateway.agent_public_url', 'https://gateway.example');
+    }
+
+    /** @return array{0: array<string, mixed>, 1: string} */
+    private function createPairing(string $device, string $project): array
+    {
+        $verifier = rtrim(strtr(base64_encode(random_bytes(32)), '+/', '-_'), '=');
+        $challenge = rtrim(strtr(base64_encode(hash('sha256', $verifier, true)), '+/', '-_'), '=');
+        $created = $this->postJson('/api/codebridge/v1/device-enrollments', [
+            'product' => 'KMJ_CODEBRIDGE',
+            'device' => ['id' => $device, 'name' => strtoupper($device), 'platform' => 'linux', 'arch' => 'x64'],
+            'project' => ['id' => $project, 'name' => $project],
+            'requested_permissions' => ['read'],
+            'code_challenge' => $challenge,
+            'code_challenge_method' => 'S256',
+        ])->assertCreated()->json();
+
+        return [$created, $verifier];
+    }
+
+    /** @return array{0: array<string, mixed>, 1: string} */
+    private function pairAndApprove(User $user, string $tenant, string $device, string $project): array
+    {
+        [$created, $verifier] = $this->createPairing($device, $project);
+        $this->actingAs($user)
+            ->post('/codebridge/pair', ['code' => $created['user_code'], 'tenant_id' => $tenant])
+            ->assertRedirect();
+        self::assertSame('approved', DB::table('codebridge_device_pairings')
+            ->where('device_code_hash', hash('sha256', $created['device_code']))->value('status'));
+
+        return [$created, $verifier];
+    }
+
+    private function redeem(string $deviceCode, string $verifier, string $device): TestResponse
+    {
+        return $this->postJson('/api/codebridge/v1/device-enrollments/token', [
+            'product' => 'KMJ_CODEBRIDGE',
+            'device_code' => $deviceCode,
+            'code_verifier' => $verifier,
+            'device_id' => $device,
+        ]);
+    }
+
     private function fixture(User $user): array
     {
         $tenant = (string) Str::uuid();

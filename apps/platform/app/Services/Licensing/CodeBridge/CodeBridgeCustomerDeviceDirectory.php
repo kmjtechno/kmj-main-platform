@@ -36,6 +36,7 @@ final class CodeBridgeCustomerDeviceDirectory
                 'p.project_id',
                 'p.project_name',
                 'p.consumed_at',
+                'p.expires_at as pairing_expires_at',
                 'p.status as pairing_status',
             ]);
 
@@ -50,7 +51,7 @@ final class CodeBridgeCustomerDeviceDirectory
             ->get(['device_id', 'project_id', 'project_name', 'repository_url', 'status'])
             ->groupBy('device_id');
 
-        return $rows->map(static function (object $row) use ($requested): array {
+        return $rows->map(static function (object $row) use ($requested, $now): array {
             $projectId = is_string($row->project_id) && $row->project_id !== ''
                 ? $row->project_id : null;
 
@@ -80,10 +81,14 @@ final class CodeBridgeCustomerDeviceDirectory
                 'registration' => 'registered',
                 // Approval writes a server credential before the agent proves
                 // possession of its pairing verifier. This is NOT a live agent.
-                'pairing_state' => $row->pairing_status === 'approved' && $row->consumed_at === null
-                    ? 'approved_unredeemed'
-                    : ($row->pairing_status === 'consumed' && $row->consumed_at !== null
-                        ? 'redeemed' : 'unknown'),
+                // Redemption is refused after the one-time code expires, so an
+                // expired, unredeemed approval is a credential nobody can hold.
+                'pairing_state' => CodeBridgeDeviceEnrollmentService::pairingState(
+                    is_string($row->pairing_status) ? $row->pairing_status : null,
+                    $row->consumed_at,
+                    is_string($row->pairing_expires_at) ? $row->pairing_expires_at : null,
+                    $now,
+                ),
                 'connection_status' => 'not_verified',
             ];
         })->all();

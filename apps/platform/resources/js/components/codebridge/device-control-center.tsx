@@ -34,7 +34,11 @@ export type CodeBridgeDevice = {
         status: 'pending_local_setup';
     }>;
     registration: 'registered';
-    pairing_state?: 'approved_unredeemed' | 'redeemed' | 'unknown';
+    pairing_state?:
+        | 'approved_unredeemed'
+        | 'approval_expired'
+        | 'redeemed'
+        | 'unknown';
     connection_status: 'not_verified';
     registered_at?: string | null;
 };
@@ -497,7 +501,10 @@ export default function DeviceControlCenter({
                                         {device.pairing_state ===
                                         'approved_unredeemed'
                                             ? 'Approved · Not redeemed'
-                                            : 'Registered · Live status unknown'}
+                                            : device.pairing_state ===
+                                                'approval_expired'
+                                              ? 'Approval expired · Never redeemed'
+                                              : 'Registered · Live status unknown'}
                                     </span>
                                 </div>
 
@@ -515,6 +522,24 @@ export default function DeviceControlCenter({
                                             {missingReceiptDescription}{' '}
                                             {recovery.guidance}{' '}
                                             {pairingRecoveryGuidance}
+                                        </p>
+                                    </div>
+                                )}
+                                {device.pairing_state ===
+                                    'approval_expired' && (
+                                    <div className="mt-3 rounded-lg border border-amber-500/30 p-3 text-xs">
+                                        <p className="font-black text-amber-600 dark:text-amber-400">
+                                            This approval expired before any
+                                            agent redeemed it
+                                        </p>
+                                        <p className="text-muted-foreground mt-1 leading-5">
+                                            Its one-time credential was never
+                                            delivered, so no agent can use it.
+                                            It no longer takes a device seat and
+                                            a new pairing for this device
+                                            replaces it. A device that is
+                                            working through another enrollment
+                                            is not using this entry.
                                         </p>
                                     </div>
                                 )}
