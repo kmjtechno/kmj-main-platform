@@ -403,7 +403,7 @@ final class CodeBridgeDevicePairingHttpTest extends TestCase
         DB::table('codebridge_device_pairings')->update(['expires_at' => gmdate('Y-m-d H:i:s', time() - 60)]);
         self::assertSame('approval_expired', $directory->forTenant($tenant, time())[0]['pairing_state']);
         $this->redeem($first['device_code'], $firstVerifier, 'elite1')
-            ->assertStatus(400)->assertJson(['error' => 'CODEBRIDGE_PAIRING_EXPIRED']);
+            ->assertStatus(410)->assertJson(['error' => 'CODEBRIDGE_PAIRING_EXPIRED']);
 
         // The orphan no longer holds the only seat: a different device can be paired.
         [$other, $otherVerifier] = $this->pairAndApprove($user, $tenant, 'desk1', 'app');
