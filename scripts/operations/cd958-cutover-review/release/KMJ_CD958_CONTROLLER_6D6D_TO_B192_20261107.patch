@@ -1,0 +1,139 @@
+diff --git a/scripts/production/activate-main-platform-approved.py b/scripts/production/activate-main-platform-approved.py
+index 876f1949..465d12ae 100644
+--- a/scripts/production/activate-main-platform-approved.py
++++ b/scripts/production/activate-main-platform-approved.py
+@@ -14,6 +14,7 @@ import re
+ import stat
+ import subprocess
+ import sys
++import types
+ from pathlib import Path
+ 
+ ROOT = Path("/home/kmjprod")
+@@ -28,6 +29,76 @@ SHA256_PATTERN = re.compile(r"^[a-f0-9]{64}$")
+ RELEASE_PATTERN = re.compile(r"^[a-z0-9][a-z0-9_-]{3,100}$")
+ ORIGIN = "https://kmjtechno.com"
+ SERVICE_USER = "kmjprod"
++SNAPSHOT_HELPER = Path("/usr/local/libexec/kmj-codebridge/main-platform-storage-snapshot-attest.py")
++SNAPSHOT_SCANNER = Path("/usr/local/libexec/kmj-codebridge/main-platform-storage-switch-v6.py")
++SNAPSHOT_STATE = Path("/var/lib/kmj-main-platform-storage-switch")
++SNAPSHOT_HELPER_SHA256 = "72fe5702c59599bd1b28b88dad808dda5d6be97b61f0db06dc3a7295258a51b6"
++SNAPSHOT_SCANNER_SHA256 = "f4d01f6e3b40c9ad774c8ada5129b241cee93dac782ce75bb0e229b26bbc95ba"
++SNAPSHOT_INSTALL_UID = 0
++
++
++def protected_snapshot_bytes(path, digest):
++    if str(path) != os.path.abspath(path) or str(path) != os.path.realpath(path):
++        stop("SNAPSHOT_DEPENDENCY_PATH_UNSAFE")
++    for parent in path.parents:
++        info = os.lstat(parent)
++        if (not stat.S_ISDIR(info.st_mode) or info.st_uid not in {0, SNAPSHOT_INSTALL_UID}
++                or info.st_mode & 0o022):
++            # A sticky system temporary ancestor is allowed by the attestor;
++            # the actual installation remains under protected /usr/local.
++            if not (stat.S_ISDIR(info.st_mode) and info.st_uid == 0 and info.st_mode & stat.S_ISVTX):
++                stop("SNAPSHOT_DEPENDENCY_ANCESTOR_UNSAFE")
++    fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_CLOEXEC)
++    try:
++        info = os.fstat(fd)
++        if (not stat.S_ISREG(info.st_mode) or info.st_uid != SNAPSHOT_INSTALL_UID
++                or info.st_nlink != 1 or info.st_mode & 0o022 or info.st_size > 1024 * 1024):
++            stop("SNAPSHOT_DEPENDENCY_UNSAFE")
++        with os.fdopen(os.dup(fd), "rb") as stream:
++            raw = stream.read(1024 * 1024 + 1)
++        if hashlib.sha256(raw).hexdigest() != digest:
++            stop("SNAPSHOT_DEPENDENCY_HASH_MISMATCH")
++        current = os.lstat(path)
++        stamp = lambda s: (s.st_dev, s.st_ino, s.st_size, s.st_mtime_ns, s.st_ctime_ns)
++        if stamp(current) != stamp(info) or stamp(os.fstat(fd)) != stamp(info):
++            stop("SNAPSHOT_DEPENDENCY_CHANGED")
++        return raw
++    finally:
++        os.close(fd)
++
++
++def load_snapshot_attestor():
++    raw = protected_snapshot_bytes(SNAPSHOT_HELPER, SNAPSHOT_HELPER_SHA256)
++    protected_snapshot_bytes(SNAPSHOT_SCANNER, SNAPSHOT_SCANNER_SHA256)
++    module = types.ModuleType("protected_storage_snapshot_attestor")
++    module.__file__ = str(SNAPSHOT_HELPER)
++    exec(compile(raw, str(SNAPSHOT_HELPER), "exec"), module.__dict__)
++    return module
++
++
++def verify_candidate_source(release, sha):
++    helper = load_snapshot_attestor()
++    app = release / "apps/platform"
++    snapshots = [name for name in os.listdir(app) if name.startswith("storage.pre-shared-")]
++    try:
++        if snapshots:
++            if len(snapshots) != 1 or helper.NAME.fullmatch(snapshots[0]) is None:
++                stop("CANDIDATE_SNAPSHOT_AMBIGUOUS")
++            helper.check_source(release_root=str(release), app_dir=str(app), expected_sha=sha,
++                                shared_dir=str(SHARED_STORAGE), snapshot_name=snapshots[0],
++                                state_dir=str(SNAPSHOT_STATE), scanner_path=str(SNAPSHOT_SCANNER))
++        else:
++            helper.git_identity(release, sha)
++            dirty = helper.git_read(release, "status", "--porcelain=v1", "-z", "--untracked-files=all",
++                                    "--", ".", ":(exclude)apps/platform/storage", text=False)
++            if dirty:
++                stop("CANDIDATE_DIRTY")
++    except helper.Rejected as exc:
++        if str(exc) == "wrong_candidate_sha":
++            stop("CANDIDATE_SHA_MISMATCH")
++        if str(exc) == "other_source_changes":
++            stop("CANDIDATE_DIRTY")
++        stop("CANDIDATE_SNAPSHOT_UNVERIFIED")
+ 
+ 
+ def stop(message):
+@@ -146,46 +217,12 @@ def verify_candidate(sha):
+         stop("CANDIDATE_UNSAFE")
+     if not (release / ".git").is_dir():
+         stop("CANDIDATE_GIT_MISSING")
+-    expected = run(
+-        "/usr/bin/git",
+-        "-c",
+-        "safe.directory=" + str(release),
+-        "-C",
+-        str(release),
+-        "rev-parse",
+-        "HEAD",
+-        capture=True,
+-    )
+-    if expected != sha:
+-        stop("CANDIDATE_SHA_MISMATCH")
+-    # Laravel tracks storage placeholder files, while the approved runtime
+-    # MUST replace apps/platform/storage with one persistent shared symlink.
+-    # Exclude ONLY this path from Git's cleanliness scan after independently
+-    # attesting it is the exact approved shared directory outside releases.
+-    # Every other tracked or untracked source path remains checked normally.
++    # First verify the fixed shared link, then use only protected attestation
++    # code. Git executes as kmjprod, including when repository filters exist.
+     if not (release / "apps/platform/storage").is_symlink():
+         stop("CONTINUITY_STORAGE_NOT_SHARED")
+     real_storage(release)
+-    dirty = run(
+-        "/usr/bin/git",
+-        "-c",
+-        "safe.directory=" + str(release),
+-        "-c",
+-        "core.fsmonitor=false",
+-        "-c",
+-        "core.untrackedCache=false",
+-        "-C",
+-        str(release),
+-        "status",
+-        "--porcelain",
+-        "--untracked-files=normal",
+-        "--",
+-        ".",
+-        ":(exclude)apps/platform/storage",
+-        capture=True,
+-    )
+-    if dirty:
+-        stop("CANDIDATE_DIRTY")
++    verify_candidate_source(release, sha)
+     for item in (
+         "apps/platform/artisan",
+         "apps/platform/vendor/autoload.php",
