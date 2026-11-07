@@ -17,12 +17,20 @@ export const deliveryMilestones: DeliveryMilestone[] = [
         evidence: 'PR #759 tests guarded 503 responses; no signing occurs.',
     },
     {
+        id: 'codebridge-workspace-first-message-starts-chat',
+        title: 'AI Workspace: typing the first message starts a chat',
+        state: 'active',
+        detail: 'Owner screenshot of live dee472 showed the AI Workspace composer locked with "Blocked: Start a new chat for this project" even though a project and an admitted free OpenRouter model were selected, so the page looked like it had no way to chat. The composer is now enabled whenever a paired project and an admitted free model are selected; with no open conversation the first message creates a conversation for that project (titled from the message instead of another "New chat") and sends it through the same zero-spend send path. Tenant and project authorization and model admission are unchanged. Source only; production still runs dee472 until a separate guarded release.',
+        evidence:
+            'Two HTTP feature tests cover the start-and-send path and the refusal of a missing model or another organization. Exact-head hosted CI, owner review and a separate guarded release remain pending; a real free provider answer on the live site is not claimed.',
+    },
+    {
         id: 'codebridge-expired-approval-orphan',
         title: 'Expired CodeBridge approvals no longer strand a device',
         state: 'active',
-        detail: 'Owner screenshot of live cd958 showed a KMJ-elite registration stuck as Approved, Not redeemed although that machine works through its existing enrollment. An approval writes a device credential whose token only lives in the pairing row, and redemption is refused once the five minute code expires, so such a credential can never reach any agent. It still counted toward the device seat limit and made any new pairing for that device fail with CODEBRIDGE_DEVICE_ALREADY_ENROLLED. The directory now reports approval_expired, Control Center and Workspace explain it, and a new owner approved, proof bound pairing replaces the orphan (old activation deactivated, dead grant marked expired) without it holding a seat. Unexpired unredeemed approvals still block and hold the seat. Source only; no live status is implied and production still runs cd958.',
+        detail: 'Owner screenshot of live cd958 showed a KMJ-elite registration stuck as Approved, Not redeemed although that machine works through its existing enrollment. An approval writes a device credential whose token only lives in the pairing row, and redemption is refused once the five minute code expires, so such a credential can never reach any agent. It still counted toward the device seat limit and made any new pairing for that device fail with CODEBRIDGE_DEVICE_ALREADY_ENROLLED. The directory now reports approval_expired, Control Center and Workspace explain it, and a new owner approved, proof bound pairing replaces the orphan (old activation deactivated, dead grant marked expired) without it holding a seat. Unexpired unredeemed approvals still block and hold the seat. Released to production as main dee472df on 2026-11-07; the owner screenshot afterwards shows the KMJ-elite entry as Approval expired, Never redeemed.',
         evidence:
-            'Two HTTP feature tests through the real pairing flow on PostgreSQL CI cover the expired and unexpired paths. Exact-head hosted CI, owner review and a separate guarded release remain pending.',
+            'Two HTTP feature tests through the real pairing flow on PostgreSQL CI cover the expired and unexpired paths; PR #816 passed exact-head hosted CI and was merged by the owner. Guarded release receipt: pointer platform-dee472df5253, health 200/200, public browser QA 9/9 PASS. Re-pairing on the live site is not yet exercised.',
     },
     {
         id: 'codebridge-ai-workspace',
