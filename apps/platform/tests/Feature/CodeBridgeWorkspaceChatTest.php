@@ -105,6 +105,35 @@ final class CodeBridgeWorkspaceChatTest extends TestCase
             && $request['messages'][3]['content'] === 'And again');
     }
 
+    public function test_first_message_without_an_open_chat_starts_the_conversation_and_sends_it(): void
+    {
+        Http::fake([self::URL => Http::response(['choices' => [['message' => ['content' => 'Started']]]], 200)]);
+
+        $response = $this->actingAs($this->alice)->post('/services/kmj-codebridge/workspace/conversations', [
+            'device_id' => 'desk-a', 'project_id' => 'proj-a',
+            'content' => "  Explain   the\nbuild steps  ", 'provider_id' => $this->providerA, 'model' => self::MODEL,
+        ]);
+
+        $id = (string) DB::table('codebridge_workspace_conversations')->value('id');
+        $response->assertRedirect($this->pageUrl('desk-a', 'proj-a', $id));
+        $this->assertDatabaseHas('codebridge_workspace_conversations', ['id' => $id, 'title' => 'Explain the build steps']);
+        $this->assertDatabaseHas('codebridge_workspace_messages', ['conversation_id' => $id, 'role' => 'user', 'status' => 'complete']);
+        $this->assertDatabaseHas('codebridge_workspace_messages', ['conversation_id' => $id, 'role' => 'assistant', 'content' => 'Started', 'status' => 'complete']);
+    }
+
+    public function test_a_first_message_needs_a_model_and_another_tenant_cannot_start_one(): void
+    {
+        Http::fake();
+        $this->actingAs($this->alice)->post('/services/kmj-codebridge/workspace/conversations', [
+            'device_id' => 'desk-a', 'project_id' => 'proj-a', 'content' => 'Hi',
+        ])->assertSessionHasErrors(['provider_id', 'model']);
+        $this->actingAs($this->mallory)->post('/services/kmj-codebridge/workspace/conversations', [
+            'device_id' => 'desk-a', 'project_id' => 'proj-a', 'content' => 'Hi', 'provider_id' => $this->providerA, 'model' => self::MODEL,
+        ])->assertNotFound();
+        self::assertSame(0, DB::table('codebridge_workspace_conversations')->count());
+        Http::assertNothingSent();
+    }
+
     public function test_provider_failure_is_recorded_truthfully_and_retry_creates_a_new_attempt(): void
     {
         Http::fake([self::URL => Http::sequence()

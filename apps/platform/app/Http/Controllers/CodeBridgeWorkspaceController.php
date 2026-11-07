@@ -196,8 +196,24 @@ final class CodeBridgeWorkspaceController extends Controller
             'device_id' => ['required', 'string', 'max:64'],
             'project_id' => ['required', 'string', 'max:64'],
             'title' => ['nullable', 'string', 'max:120'],
+            // Optional first message: typing straight into the composer starts the chat and sends it.
+            'content' => ['nullable', 'string', 'max:4000'],
+            'provider_id' => ['required_with:content', 'nullable', 'string', 'max:64'],
+            'model' => ['required_with:content', 'nullable', 'string', 'regex:/\A[A-Za-z0-9._:\/-]{1,128}\z/'],
         ]);
-        $id = $this->chat->createConversation($tenant, (int) $user->id, $data['device_id'], $data['project_id'], (string) ($data['title'] ?? ''));
+        $content = trim((string) ($data['content'] ?? ''));
+        $title = (string) ($data['title'] ?? '');
+        if ($title === '' && $content !== '') {
+            $title = mb_substr((string) preg_replace('/\s+/u', ' ', $content), 0, 60);
+        }
+        $id = $this->chat->createConversation($tenant, (int) $user->id, $data['device_id'], $data['project_id'], $title);
+        if ($content !== '') {
+            try {
+                $this->chat->send($this->chat->conversation($tenant, (int) $user->id, $id), (string) $data['content'], (string) $data['provider_id'], (string) $data['model']);
+            } catch (RuntimeException $exception) {
+                session()->flash('chat_error', $exception->getMessage());
+            }
+        }
 
         return $this->to($data['device_id'], $data['project_id'], $id);
     }

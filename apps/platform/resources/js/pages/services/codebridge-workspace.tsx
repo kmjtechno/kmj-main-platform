@@ -269,19 +269,25 @@ export default function CodeBridgeWorkspace(props: Props) {
         router.get(BASE, query, { preserveScroll: true });
 
     const send = () => {
-        if (
-            !activeConversation ||
-            !choiceValid ||
-            draft.trim() === '' ||
-            busy
-        ) {
+        if (!selected || !choiceValid || draft.trim() === '' || busy) {
             return;
         }
         const submittedDraft = draft;
         setSending(true);
+        // With no open conversation, the first message starts a new chat for this project.
+        const payload = activeConversation
+            ? { content: draft, ...selection() }
+            : {
+                  device_id: selected.device_id,
+                  project_id: selected.project_id,
+                  content: draft,
+                  ...selection(),
+              };
         router.post(
-            `${conversationUrl(activeConversation.id)}/messages`,
-            { content: draft, ...selection() },
+            activeConversation
+                ? `${conversationUrl(activeConversation.id)}/messages`
+                : `${BASE}/conversations`,
+            payload,
             {
                 preserveScroll: true,
                 onSuccess: (page) => {
@@ -298,11 +304,9 @@ export default function CodeBridgeWorkspace(props: Props) {
 
     const blocked = !selected
         ? 'Select a paired project to start a conversation.'
-        : !activeConversation
-          ? 'Start a new chat for this project.'
-          : !capabilities.chat_executor.available || !choiceValid
-            ? capabilities.chat_executor.reason
-            : null;
+        : !capabilities.chat_executor.available || !choiceValid
+          ? capabilities.chat_executor.reason
+          : null;
 
     return (
         <>
@@ -581,7 +585,7 @@ export default function CodeBridgeWorkspace(props: Props) {
                                 >
                                     <Bot className="mb-2 h-5 w-5 text-cyan-300" />
                                     {selected
-                                        ? 'Start a new chat or open a conversation from the left.'
+                                        ? 'Type a message below to start a new chat, or open a conversation from the left.'
                                         : 'Select an authorized project to see its conversations.'}
                                 </p>
                             )}
@@ -818,7 +822,10 @@ export default function CodeBridgeWorkspace(props: Props) {
                                     }
                                 }}
                                 placeholder={
-                                    blocked ?? 'Message the free model…'
+                                    blocked ??
+                                    (activeConversation
+                                        ? 'Message the free model…'
+                                        : 'Type to start a new chat…')
                                 }
                                 className="min-h-10 flex-1 resize-none bg-transparent px-2 py-1 text-sm outline-none disabled:opacity-60"
                             />
