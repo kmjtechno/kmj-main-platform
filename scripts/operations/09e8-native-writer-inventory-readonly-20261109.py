@@ -54,8 +54,10 @@ FRAMEWORK_REF = "7c75fbf93f91fa077d3df1c820cc14f4e59a9774"
 # authoritative current systemd ExecStart, before any writer drain.
 EXPECTED_ARGV_HASHES = {"queue": "", "scheduler": ""}
 ENV = {"PATH": "/usr/sbin:/usr/bin:/sbin:/bin", "HOME": "/nonexistent", "LC_ALL": "C"}
+# Request only service/timer-applicable systemd fields. Never interpret
+# absence of a service-only property on the timer as a failed host.
 SERVICE_PROPERTIES = ("ActiveState", "SubState", "Type", "User", "Group", "MainPID", "ExecStart",
-              "WorkingDirectory", "ControlGroup", "Restart", "KillMode", "TimeoutStopUSec", "Triggers", "TriggeredBy")
+              "WorkingDirectory", "ControlGroup", "Restart", "KillMode", "TimeoutStopUSec")
 TIMER_PROPERTIES = ("ActiveState", "SubState", "Triggers")
 
 
@@ -473,7 +475,7 @@ def attest_report(inventory_doc: dict) -> dict[str, str]:
     fpm = section("production_fpm_processes") or {}
     nginx = section("nginx_workers") or {}
     nginx_cfg = section("nginx_config") or {}
-    deps = section("dependencies") or {}
+    deps = inventory_doc.get("dependencies") or {}
     nft = section("nft") or {}
     candidate = section("candidate_identity") or {}
     maintenance = section("maintenance") or {}
