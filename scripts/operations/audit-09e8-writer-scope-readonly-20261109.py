@@ -33,8 +33,22 @@ TIMER = "kmj-main-platform-scheduler.timer"
 FPM = "php8.4-fpm.service"
 NGINX = "nginx.service"
 UNITS = (QUEUE, SCHEDULER, TIMER, FPM, NGINX)
-PROPS = ("LoadState", "ActiveState", "SubState", "MainPID", "Restart", "KillMode",
-         "TimeoutStopUSec", "User", "Triggers")
+# A systemd timer does not implement service-only properties (MainPID,
+# Restart, KillMode, TimeoutStopUSec, User); conversely, Triggers may be
+# missing on non-timer units. Request the intersection by fixed unit type.
+# Even a missing requested property must be reported as UNVERIFIED rather
+# than silently promoted to a successful write-exclusion admission.
+BASE_PROPS = ("LoadState", "ActiveState", "SubState")
+SERVICE_PROPS = ("MainPID",)
+EXTRA_PROPS = {
+    QUEUE: SERVICE_PROPS + ("Restart", "KillMode", "TimeoutStopUSec", "User"),
+    SCHEDULER: SERVICE_PROPS + ("User",),
+    TIMER: ("Triggers",),
+    FPM: SERVICE_PROPS,
+    NGINX: SERVICE_PROPS,
+}
+LABELS = {QUEUE: "QUEUE", SCHEDULER: "SCHEDULER",
+          TIMER: "SCHEDULER_TIMER", FPM: "PHP_FPM", NGINX: "NGINX"}
 ENV = {"PATH": "/usr/sbin:/usr/bin:/sbin:/bin", "LC_ALL": "C", "HOME": "/nonexistent"}
 
 
@@ -76,28 +90,30 @@ def protected_sha(path: Path, digest: str) -> None:
         os.close(fd)
 
 
-def unit_properties(unit: str) -> dict[str, str]:
+def unit_properties(unit: str) -> tuple[dict[str, str], tuple[str, ...]]:
     require(unit in UNITS, "UNIT_NOT_FIXED")
+    props = BASE_PROPS + EXTRA_PROPS[unit]
     p = subprocess.run(
         ["/usr/bin/systemctl", "show", unit, "--all",
-         "--property=" + ",".join(PROPS), "--no-pager"],
+         "--property=" + ",".join(props), "--no-pager"],
         stdin=subprocess.DEVNULL, capture_output=True, check=False, timeout=12, env=ENV)
     require(p.returncode == 0 and len(p.stdout) <= 16384, "UNIT_READ_FAILED")
     rows: dict[str, str] = {}
     for line in p.stdout.decode("utf-8", "strict").splitlines():
         key, sep, value = line.partition("=")
-        require(bool(sep) and key in PROPS and key not in rows, "UNIT_PROPERTIES_INVALID")
+        require(bool(sep) and key in props and key not in rows, "UNIT_PROPERTIES_INVALID")
         rows[key] = value
-    require(set(rows) == set(PROPS), "UNIT_PROPERTIES_MISSING")
-    return rows
+    # Empty / omitted systemd properties are not positive evidence. Return
+    # only known key names to the caller, never raw property values.
+    missing = tuple(key for key in props if not rows.get(key))
+    return rows, missing
 
 
 def unit_assessment(rows: dict[str, str], unit: str) -> dict[str, str]:
     require(unit in UNITS, "UNIT_NOT_FIXED")
     active = rows.get("ActiveState")
     loaded = rows.get("LoadState")
-    label = {QUEUE: "QUEUE", SCHEDULER: "SCHEDULER", TIMER: "SCHEDULER_TIMER",
-             FPM: "PHP_FPM", NGINX: "NGINX"}[unit]
+    label = LABELS[unit]
     if loaded != "loaded" or active not in {"active", "inactive", "failed"}:
         return {label + "_STATE": "UNVERIFIED"}
     output = {label + "_STATE": active.upper()}
@@ -168,8 +184,13 @@ def execute() -> dict[str, str]:
         "LIVE_RELEASE": CURRENT,
         "PINNED_STORAGE_DEPENDENCIES": "PASS",
     }
+    missing_total = 0
     for unit in UNITS:
-        reports.update(unit_assessment(unit_properties(unit), unit))
+        values, missing = unit_properties(unit)
+        reports.update(unit_assessment(values, unit))
+        reports[LABELS[unit] + "_MISSING_FIELDS"] = str(len(missing))
+        missing_total += len(missing)
+    reports["SYSTEMD_FIELDS_COMPLETE"] = "YES" if missing_total == 0 else "NO"
     p = subprocess.run(
         [sys.executable, "-I", "-B", str(SCANNER), "plan",
          "--app-dir", str(APP), "--shared", str(SHARED),
@@ -205,7 +226,10 @@ def main() -> int:
     print("WRITER_EXCLUSION=NOT_ATTESTED")
     print("STORAGE_APPLY_ALLOWED=NO")
     print("PRODUCTION_MUTATION=NONE")
-    print("WRITER_SCOPE_AUDIT=READ_ONLY_COMPLETE")
+    print("WRITER_SCOPE_AUDIT=" + (
+        "READ_ONLY_COMPLETE" if report.get("SYSTEMD_FIELDS_COMPLETE") == "YES"
+        else "PARTIAL_READ_ONLY"
+    ))
     return 0
 
 
