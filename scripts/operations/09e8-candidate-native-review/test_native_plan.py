@@ -116,12 +116,12 @@ class FileAndConfigTests(unittest.TestCase):
         self.assertTrue(result["helper"]["observed"])
         self.assertFalse(result["helper"]["data"]["pin_matches"])
 
-    def test_materializer_is_source_only_never_claimed_installed(self):
+    def test_materializer_requires_root_protected_pinned_provenance(self):
         raw = b"source"
         with patch.object(n, "read_file", return_value=raw), patch.dict(n.PINS, {"materializer": n.digest(raw)}):
             item = n.dependency_inventory()["materializer"]["data"]
-        self.assertEqual(item["installation"], "SOURCE_PINNED_NOT_ROOT_INSTALLED")
-        self.assertFalse(item["protected_root_install_verified"])
+        self.assertEqual(item["installation"], "ROOT_PROTECTED_PINNED")
+        self.assertTrue(item["protected_root_install_verified"])
 
     def test_missing_dependency_is_explicit_not_fallback(self):
         with patch.object(n, "read_file", side_effect=FileNotFoundError):
