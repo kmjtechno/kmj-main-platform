@@ -98,7 +98,7 @@ class UploadCoverageTests(unittest.TestCase):
         original.symlink_to(target, target_is_directory=True)
         return target
 
-    def placeholder_public_dir(self, *, data=b"*\\n!.gitignore\\n"):
+    def placeholder_public_dir(self, *, data=b"*\n!.gitignore\n"):
         app = self.release / "apps/platform"
         (app / "storage/app/public/example.txt").unlink()
         (app / "storage/app/public/.gitignore").write_bytes(data)
@@ -116,7 +116,7 @@ class UploadCoverageTests(unittest.TestCase):
         self.placeholder_public_dir()
         public_root = self.release / "apps/platform/storage/app/public"
         (public_root / "photo.jpg").write_bytes(b"customer-payload")
-        self.make_bundle(data=b"*\\n!.gitignore\\n",
+        self.make_bundle(data=b"*\n!.gitignore\n",
                          public_name=".gitignore",
                          extra=("storage/app/public/photo.jpg", b"customer-payload"))
         result = self.run_audit()
