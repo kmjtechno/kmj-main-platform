@@ -68,6 +68,8 @@ jobs:
           python3 -B -m unittest tests.test_staging_owner_installer_20261102
           python3 -B scripts/test_verify_offsite_restore_witness_20261101.py
           python3 -B scripts/test_plan_offsite_transport_reconcile_20261101.py
+          python3 -B -m py_compile scripts/operations/probe-pinned-offsite-auth-readonly-20261109.py
+          python3 -B scripts/test_pinned_offsite_auth_probe_20261109.py
           bash -n scripts/operations/push-existing-dfa55-offsite-only-20261102.sh
           python3 -B -m unittest tests.test_existing_dfa55_sftp_only_20261102
           python3 -B scripts/test_seal_main_platform_offsite_release_neutral_20261030.py
