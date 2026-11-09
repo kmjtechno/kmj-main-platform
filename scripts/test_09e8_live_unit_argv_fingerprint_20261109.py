@@ -88,9 +88,9 @@ class ExactArgvTest(unittest.TestCase):
     def test_fixed_service_commands_do_not_print_secret_raw_values(self):
         class Value:
             returncode = 0
-            stdout = (b"ExecStart=PRIVATE_RAW_ARGV\\nWorkingDirectory=/secret\\n"
-                      b"User=kmjprod\\nActiveState=active\\nRestart=always\\n"
-                      b"KillMode=control-group\\nType=simple\\nMainPID=123\\n")
+            stdout = (b"ExecStart=PRIVATE_RAW_ARGV\nWorkingDirectory=/secret\n"
+                      b"User=kmjprod\nActiveState=active\nRestart=always\n"
+                      b"KillMode=control-group\nType=simple\nMainPID=123\n")
         with mock.patch.object(m.subprocess, "run", return_value=Value()) as run:
             parsed = m.show(m.QUEUE, m.FIELDS)
         self.assertIn("PRIVATE_RAW_ARGV", parsed["ExecStart"])
@@ -101,15 +101,15 @@ class ExactArgvTest(unittest.TestCase):
     def test_systemd_show_invalid_or_duplicate_fields_refused(self):
         class Value:
             returncode = 0
-            stdout = b"ActiveState=active\\nActiveState=active\\n"
+            stdout = b"ActiveState=active\nActiveState=active\n"
         with mock.patch.object(m.subprocess, "run", return_value=Value()):
             with self.assertRaises(m.Refused):
                 m.show(m.TIMER, ("ActiveState", "Triggers"))
 
     def test_twice_drift_blocks_argv_release(self):
         hashes = [("a"*64,"b"*64), ("c"*64,"d"*64)]
-        with mock.patch.object(m.os, "geteuid", return_value=0), \\
-             mock.patch.object(m.socket, "gethostname", return_value="KMJ-elite"), \\
+        with mock.patch.object(m.os, "geteuid", return_value=0), \
+             mock.patch.object(m.socket, "gethostname", return_value="KMJ-elite"), \
              mock.patch.object(m, "attest_once", side_effect=hashes):
             out = io.StringIO()
             with contextlib.redirect_stdout(out):
@@ -119,8 +119,8 @@ class ExactArgvTest(unittest.TestCase):
         self.assertNotIn("QUEUE_ARGV_SHA256", out.getvalue())
 
     def test_verified_main_still_never_approves_storage(self):
-        with mock.patch.object(m.os, "geteuid", return_value=0), \\
-             mock.patch.object(m.socket, "gethostname", return_value="KMJ-elite"), \\
+        with mock.patch.object(m.os, "geteuid", return_value=0), \
+             mock.patch.object(m.socket, "gethostname", return_value="KMJ-elite"), \
              mock.patch.object(m, "attest_once", return_value=("a"*64, "b"*64)):
             out = io.StringIO()
             with contextlib.redirect_stdout(out):
