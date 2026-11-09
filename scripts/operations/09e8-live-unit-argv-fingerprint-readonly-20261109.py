@@ -65,11 +65,62 @@ REASONS = frozenset({
     "UNIT_GENERATION_CHANGED", "RUNTIME_UNVERIFIABLE",
 })
 
+# Only these fixed category names can be returned. Never include raw
+# ExecStart flags, values, tokens, filesystem paths, or process arguments.
+OPTION_SHAPES = frozenset({
+    "KNOWN_QUEUE_CONNECTION", "SPLIT_NUMERIC_OPTION",
+    "SPLIT_NUMERIC_VALUE", "SPLIT_QUEUE_OPTION",
+    "VERBOSITY_OPTION", "QUEUE_NAME_REJECTED",
+    "SENSITIVE_OPTION", "UNKNOWN_LONG_VALUE_OPTION",
+    "UNKNOWN_LONG_FLAG", "UNKNOWN_SHORT_FLAG",
+    "UNKNOWN_POSITIONAL", "UNKNOWN_SYNTAX",
+})
+
+
+class UnreviewedOption(Refused):
+    def __init__(self, shape: str):
+        self.shape = shape if shape in OPTION_SHAPES else "UNKNOWN_SYNTAX"
+        super().__init__("UNREVIEWED_OPTION")
+
+
+def classify_option_shape(value: str) -> str:
+    """Privacy-preserving syntax class only; never makes an option safe."""
+    if not isinstance(value, str) or len(value) > 100:
+        return "UNKNOWN_SYNTAX"
+    low = value.lower()
+    if any(secret in low for secret in (
+            "password", "passwd", "secret", "token", "credential",
+            "private", "authorization", "api-key", "api_key")):
+        return "SENSITIVE_OPTION"
+    if value in {"database", "redis", "sqs", "sync", "beanstalkd"}:
+        return "KNOWN_QUEUE_CONNECTION"
+    if value in {"--sleep", "--tries", "--timeout", "--memory",
+                 "--backoff", "--max-time", "--max-jobs"}:
+        return "SPLIT_NUMERIC_OPTION"
+    if re.fullmatch(r"[0-9]{1,10}", value):
+        return "SPLIT_NUMERIC_VALUE"
+    if value == "--queue":
+        return "SPLIT_QUEUE_OPTION"
+    if value in {"--verbose", "-v", "-vv", "-vvv"}:
+        return "VERBOSITY_OPTION"
+    if value.startswith("--queue="):
+        return "QUEUE_NAME_REJECTED"
+    if value.startswith("--") and "=" in value:
+        return "UNKNOWN_LONG_VALUE_OPTION"
+    if value.startswith("--"):
+        return "UNKNOWN_LONG_FLAG"
+    if value.startswith("-"):
+        return "UNKNOWN_SHORT_FLAG"
+    if re.fullmatch(r"[A-Za-z0-9_.:/-]{1,100}", value):
+        return "UNKNOWN_POSITIONAL"
+    return "UNKNOWN_SYNTAX"
+
 
 class AuditBlocked(Refused):
-    def __init__(self, stage: str, reason: str):
+    def __init__(self, stage: str, reason: str, option_shape: str | None = None):
         self.stage = stage if stage in STAGES else "ROOT_SCOPE"
         self.reason = reason if reason in REASONS else "RUNTIME_UNVERIFIABLE"
+        self.option_shape = option_shape if option_shape in OPTION_SHAPES else None
         super().__init__("BLOCKED_REDACTED")
 
 
@@ -81,6 +132,8 @@ def at(stage: str, action):
         return action()
     except AuditBlocked:
         raise
+    except UnreviewedOption as exc:
+        raise AuditBlocked(stage, "UNREVIEWED_OPTION", exc.shape) from None
     except Refused as exc:
         reason = str(exc)
         raise AuditBlocked(stage, reason) from None
@@ -140,7 +193,7 @@ def safe_args(args: list[str], command: str) -> None:
             match = re.fullmatch(r"--queue=([A-Za-z0-9_.-]{1,40}(?:,[A-Za-z0-9_.-]{1,40}){0,5})", arg)
             if match:
                 continue
-        raise Refused("UNREVIEWED_OPTION")
+        raise UnreviewedOption(classify_option_shape(arg))
 
 
 def fingerprint(unit: str, values: dict[str, str]) -> str:
@@ -210,6 +263,8 @@ def main(args: list[str]) -> int:
     except AuditBlocked as exc:
         print("ARGV_BLOCKER_STAGE=" + exc.stage)
         print("ARGV_BLOCKER_REASON=" + exc.reason)
+        if exc.reason == "UNREVIEWED_OPTION" and exc.option_shape is not None:
+            print("ARGV_UNREVIEWED_SHAPE=" + exc.option_shape)
         print("ARGV_FINGERPRINT=BLOCKED_UNVERIFIABLE")
         rc = 2
     except (Refused, OSError, ValueError, UnicodeError, KeyError,
