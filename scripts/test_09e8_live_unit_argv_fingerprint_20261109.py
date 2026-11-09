@@ -180,6 +180,89 @@ class ExactArgvTest(unittest.TestCase):
         self.assertEqual(caught.exception.stage, "SCHEDULER_COMMAND")
         self.assertEqual(caught.exception.reason, "UNIT_POLICY_UNVERIFIED")
 
+    def test_rejected_option_classification_is_finite_and_value_free(self):
+        cases = {
+            "database": "KNOWN_QUEUE_CONNECTION",
+            "redis": "KNOWN_QUEUE_CONNECTION",
+            "--sleep": "SPLIT_NUMERIC_OPTION",
+            "3": "SPLIT_NUMERIC_VALUE",
+            "--queue": "SPLIT_QUEUE_OPTION",
+            "--verbose": "VERBOSITY_OPTION",
+            "--queue=/private/secret": "SENSITIVE_OPTION",
+            "--queue=with/slash": "QUEUE_NAME_REJECTED",
+            "--password=SECRET_TOKEN": "SENSITIVE_OPTION",
+            "--access-token=TOP_SECRET": "SENSITIVE_OPTION",
+            "--foo=bar": "UNKNOWN_LONG_VALUE_OPTION",
+            "--foo": "UNKNOWN_LONG_FLAG",
+            "-x": "UNKNOWN_SHORT_FLAG",
+            "customconnection": "UNKNOWN_POSITIONAL",
+            "@!unknown": "UNKNOWN_SYNTAX",
+        }
+        for raw, shape in cases.items():
+            with self.subTest(expected_shape=shape):
+                result = m.classify_option_shape(raw)
+                self.assertEqual(result, shape)
+                self.assertIn(result, m.OPTION_SHAPES)
+                self.assertNotIn(raw, m.OPTION_SHAPES)
+
+    def test_known_connection_still_blocks_writer_and_never_leaks_arg(self):
+        with mock.patch.object(m.os, "geteuid", return_value=0), \
+             mock.patch.object(m.socket, "gethostname", return_value="KMJ-elite"), \
+             mock.patch.object(m, "live_pointer"), \
+             mock.patch.object(m, "show") as mock_show:
+            def observed(unit_id, fields):
+                if unit_id == m.TIMER:
+                    return {"ActiveState": "active", "Triggers": m.SCHEDULER}
+                args = self.queue_args + ["database"] if unit_id == m.QUEUE else self.scheduler_args
+                return unit(unit_id, args, str(self.app))
+            mock_show.side_effect = observed
+            out = io.StringIO()
+            with contextlib.redirect_stdout(out):
+                rc = m.main([])
+        self.assertEqual(rc, 2)
+        self.assertIn("ARGV_BLOCKER_STAGE=QUEUE_COMMAND", out.getvalue())
+        self.assertIn("ARGV_BLOCKER_REASON=UNREVIEWED_OPTION", out.getvalue())
+        self.assertIn("ARGV_UNREVIEWED_SHAPE=KNOWN_QUEUE_CONNECTION", out.getvalue())
+        self.assertNotIn("database", out.getvalue())
+        self.assertNotIn("QUEUE_ARGV_SHA256=", out.getvalue())
+        self.assertIn("WRITER_ADMISSION=NOT_ATTESTED", out.getvalue())
+        self.assertIn("STORAGE_APPLY_ALLOWED=NO", out.getvalue())
+        self.assertIn("PRODUCTION_MUTATION=NONE", out.getvalue())
+
+    def test_secret_argv_never_leaks_any_raw_input(self):
+        secret = "--password=PRIVATE-CUSTOMER-SUPERSECRET-DO-NOT-LOG"
+        with mock.patch.object(m.os, "geteuid", return_value=0), \
+             mock.patch.object(m.socket, "gethostname", return_value="KMJ-elite"), \
+             mock.patch.object(m, "live_pointer"), \
+             mock.patch.object(m, "show") as mock_show:
+            def observed(unit_id, fields):
+                if unit_id == m.TIMER:
+                    return {"ActiveState": "active", "Triggers": m.SCHEDULER}
+                args = self.queue_args + [secret] if unit_id == m.QUEUE else self.scheduler_args
+                return unit(unit_id, args, str(self.app))
+            mock_show.side_effect = observed
+            out = io.StringIO()
+            with contextlib.redirect_stdout(out):
+                rc = m.main([])
+        self.assertEqual(rc, 2)
+        self.assertIn("ARGV_UNREVIEWED_SHAPE=SENSITIVE_OPTION", out.getvalue())
+        self.assertNotIn("PRIVATE", out.getvalue())
+        self.assertNotIn("CUSTOMER", out.getvalue())
+        self.assertNotIn("SECRET", out.getvalue())
+        self.assertNotIn("QUEUE_ARGV_SHA256=", out.getvalue())
+
+    def test_unreviewed_option_details_are_only_finite_constant_labels(self):
+        self.assertEqual(
+            m.at("QUEUE_COMMAND", lambda: 123),
+            123
+        )
+        with self.assertRaises(m.AuditBlocked) as caught:
+            m.at("QUEUE_COMMAND", lambda: m.safe_args(
+                ["/usr/bin/php8.4", "artisan", "queue:work", "--some-unknown=value"], "queue:work"))
+        self.assertEqual(caught.exception.reason, "UNREVIEWED_OPTION")
+        self.assertEqual(caught.exception.option_shape, "UNKNOWN_LONG_VALUE_OPTION")
+        self.assertNotIn("some-unknown", str(caught.exception))
+
     def test_verified_main_still_never_approves_storage(self):
         with mock.patch.object(m.os, "geteuid", return_value=0), \
              mock.patch.object(m.socket, "gethostname", return_value="KMJ-elite"), \
