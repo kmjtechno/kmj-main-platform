@@ -210,6 +210,51 @@ def recheck_storage_link(app: Path, stamp: tuple[int, ...] | None) -> None:
         reject("SHARED_STORAGE_LINK_CHANGED")
 
 
+# Only an EXACT tracked Laravel placeholder, with NO public-upload payload
+# anywhere under storage/app/public, can justify an absent public/storage link.
+# That is a narrow advisory classification; it does not prove all other
+# customer upload locations or authorize production activation.
+PUBLIC_PLACEHOLDER = b"*\\n!.gitignore\\n".replace(b"\\n", b"\n")
+PUBLIC_PLACEHOLDER_STAT = (
+    len(PUBLIC_PLACEHOLDER), hashlib.sha256(PUBLIC_PLACEHOLDER).hexdigest()
+)
+
+
+def public_storage_link_status(link: Path, expected: Path,
+                               live: dict[str, tuple[int, str]],
+                               parity: bool) -> str:
+    try:
+        info = link.lstat()
+    except FileNotFoundError:
+        info = None
+    except OSError:
+        return "UNVERIFIABLE"
+    if info is not None:
+        if not stat.S_ISLNK(info.st_mode):
+            return "MISSING_OR_DIFFERENT"
+        try:
+            if expected.is_dir() and link.resolve(strict=True) == expected:
+                return "EXPECTED"
+        except (OSError, RuntimeError):
+            pass
+        return "MISSING_OR_DIFFERENT"
+    if (parity and expected.is_dir()
+            and {name: value for name, value in live.items()
+                 if name.startswith("public/")} == {
+                     "public/.gitignore": PUBLIC_PLACEHOLDER_STAT
+                 }):
+        # Recheck the absence: an actor might have created a public/storage
+        # path during the live-source scan. No symlink of any other kind is
+        # accepted by this exception.
+        try:
+            link.lstat()
+        except FileNotFoundError:
+            return "NOT_REQUIRED_PLACEHOLDER_ONLY"
+        except OSError:
+            return "UNVERIFIABLE"
+    return "MISSING_OR_DIFFERENT"
+
+
 def audit(release: Path, bundle: Path, witness: Path, candidate: str,
           current: str) -> dict[str, str]:
     if not re.fullmatch(r"[0-9a-f]{40}", candidate):
@@ -236,10 +281,10 @@ def audit(release: Path, bundle: Path, witness: Path, candidate: str,
     # scanner is active; never call the source-to-archive parity a PASS then.
     recheck_storage_link(app, link_stamp)
     link = public / "storage"
-    linked = link.is_symlink() and expected.is_dir() and link.resolve(strict=False) == expected
     alternate = any((public / name).exists() or (public / name).is_symlink()
                     for name in ("uploads", "media", "product-images"))
     parity = archived == live
+    link_status = public_storage_link_status(link, expected, live, parity)
     return {
         "LIVE_STORAGE_LAYOUT": layout,
         "ARCHIVED_STORAGE_FILES": str(len(archived)),
@@ -247,7 +292,7 @@ def audit(release: Path, bundle: Path, witness: Path, candidate: str,
         "LIVE_STORAGE_FILES": str(len(live)),
         "LIVE_STORAGE_BYTES": str(sum(size for size, _ in live.values())),
         "STORAGE_APP_CONTENT_PARITY": "PASS" if parity else "MISMATCH",
-        "PUBLIC_STORAGE_LINK": "EXPECTED" if linked else "MISSING_OR_DIFFERENT",
+        "PUBLIC_STORAGE_LINK": link_status,
         "ALTERNATE_PUBLIC_UPLOAD_DIRS": "PRESENT_REVIEW" if alternate else "NONE_OBSERVED",
         "ALL_CUSTOMER_UPLOAD_LOCATIONS_VERIFIED": "NO",
         "OWNER_AUTHENTICATED_UPLOAD_QA": "NOT_VERIFIED",
@@ -300,7 +345,7 @@ def main(argv: list[str]) -> int:
         for key, value in result.items():
             print(f"{key}={value}")
         if (result["STORAGE_APP_CONTENT_PARITY"] != "PASS" or
-            result["PUBLIC_STORAGE_LINK"] != "EXPECTED" or
+            result["PUBLIC_STORAGE_LINK"] not in ("EXPECTED", "NOT_REQUIRED_PLACEHOLDER_ONLY") or
             result["ALTERNATE_PUBLIC_UPLOAD_DIRS"] != "NONE_OBSERVED"):
             print("BACKUP_UPLOAD_AUDIT=REVIEW_REQUIRED")
             return 2
