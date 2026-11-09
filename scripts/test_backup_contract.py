@@ -4,79 +4,141 @@ import os
 import stat
 import subprocess
 import tempfile
+import unittest
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 BACKUP = ROOT / "scripts" / "backup_platform.sh"
 
 
-def executable(path: Path, content: str) -> None:
-    path.write_text(content, encoding="utf-8")
+def executable(path: Path, source: str) -> None:
+    path.write_text(source, encoding="utf-8")
     path.chmod(path.stat().st_mode | stat.S_IXUSR)
 
 
-def main() -> None:
-    with tempfile.TemporaryDirectory() as tmp_raw:
-        tmp = Path(tmp_raw)
-        fake_bin = tmp / "bin"
-        app_root = tmp / "platform"
-        storage = app_root / "storage" / "app"
-        status_dir = tmp / "status"
-        marker = tmp / "rclone.marker"
-        fake_bin.mkdir()
+class BackupContractTest(unittest.TestCase):
+    def setUp(self) -> None:
+        temp = tempfile.TemporaryDirectory()
+        self.addCleanup(temp.cleanup)
+        self.tmp = Path(temp.name)
+        self.bin = self.tmp / "bin"
+        self.bin.mkdir()
+        self.app = self.tmp / "platform"
+        storage = self.app / "storage" / "app"
         storage.mkdir(parents=True)
         (storage / "proof.txt").write_text("backup-contract", encoding="utf-8")
+        self.status_dir = self.tmp / "status"
+        self.marker = self.tmp / "rclone.marker"
 
-        executable(
-            fake_bin / "pg_dump",
-            "#!/usr/bin/env bash\nset -euo pipefail\nfor a in \"$@\"; do case \"$a\" in --file=*) printf 'mock-db' > \"${a#--file=}\";; esac; done\n",
-        )
-        executable(
-            fake_bin / "age",
-            "#!/usr/bin/env bash\nset -euo pipefail\nout=''\nin=''\nwhile [ $# -gt 0 ]; do case \"$1\" in -o) out=\"$2\"; shift 2;; -r) shift 2;; *) in=\"$1\"; shift;; esac; done\ncp \"$in\" \"$out\"\n",
-        )
-        executable(
-            fake_bin / "rclone",
-            "#!/usr/bin/env bash\nset -euo pipefail\nprintf '%s\\n' \"$*\" > \"$FAKE_REMOTE_MARKER\"\n",
-        )
+        executable(self.bin / "pg_dump", """#!/usr/bin/env python3
+import pathlib, sys
+for item in sys.argv[1:]:
+    if item.startswith("--file="):
+        pathlib.Path(item.split("=", 1)[1]).write_bytes(b"mock-db")
+""")
+        executable(self.bin / "age", """#!/usr/bin/env python3
+import shutil, sys
+args = sys.argv[1:]
+out = args[args.index("-o") + 1]
+shutil.copyfile(args[-1], out)
+""")
+        executable(self.bin / "rclone", """#!/usr/bin/env python3
+import os, pathlib, shutil, sys
+args = sys.argv[1:]
+if len(args) < 3 or args[0] != "copyto":
+    sys.exit(20)
+src, dst = args[1:3]
+download = src.startswith("mock:")
+behavior = os.environ.get("FAKE_REMOTE_BEHAVIOR", "ok")
+if (behavior == "upload_fail" and not download) or (behavior == "readback_fail" and download):
+    sys.exit(21)
+def remote_path(value):
+    if value.startswith("mock:"):
+        return pathlib.Path(os.environ["FAKE_REMOTE_ROOT"]) / value.removeprefix("mock:")
+    return pathlib.Path(value)
+destination = remote_path(dst)
+destination.parent.mkdir(parents=True, exist_ok=True)
+shutil.copyfile(remote_path(src), destination)
+if behavior == "corrupt_readback" and download:
+    with destination.open("ab") as handle:
+        handle.write(b"corrupt")
+with open(os.environ["FAKE_REMOTE_MARKER"], "a", encoding="utf-8") as handle:
+    handle.write(("get " if download else "put ") + str(src) + "\\n")
+""")
 
-        secret = "postgresql://user:super-secret@example.invalid/kmj"
-        env = os.environ.copy()
-        env.update(
-            {
-                "PATH": f"{fake_bin}:{env['PATH']}",
-                "APP_ROOT": str(app_root),
-                "BACKUP_DATABASE_URL": secret,
-                "BACKUP_REMOTE": "mock:kmj-platform/staging",
-                "BACKUP_AGE_RECIPIENT": "age1testrecipient",
-                "BACKUP_TIER": "daily",
-                "BACKUP_STATUS_DIR": str(status_dir),
-                "FAKE_REMOTE_MARKER": str(marker),
-            }
-        )
+        self.secret = "postgresql://user:super-secret@example.invalid/kmj"
+        self.env = os.environ.copy()
+        self.env.update({
+            "PATH": f"{self.bin}:{self.env['PATH']}",
+            "APP_ROOT": str(self.app),
+            "BACKUP_DATABASE_URL": self.secret,
+            "BACKUP_REMOTE": "mock:kmj-platform/staging",
+            "BACKUP_AGE_RECIPIENT": "age1testrecipient",
+            "BACKUP_TIER": "daily",
+            "BACKUP_STATUS_DIR": str(self.status_dir),
+            "FAKE_REMOTE_ROOT": str(self.tmp / "remote"),
+            "FAKE_REMOTE_MARKER": str(self.marker),
+        })
 
-        run = subprocess.run(
-            ["bash", str(BACKUP)], env=env, text=True, capture_output=True, check=False
-        )
+    def run_backup(self, behavior: str = "ok", **overrides: str) -> subprocess.CompletedProcess:
+        env = {**self.env, "FAKE_REMOTE_BEHAVIOR": behavior, **overrides}
+        run = subprocess.run(["bash", str(BACKUP)], env=env, text=True,
+                             capture_output=True, check=False)
         output = run.stdout + run.stderr
-        status_file = status_dir / "backup-status-daily.status"
+        self.assertNotIn(self.secret, output)
+        self.assertNotIn("super-secret", output)
+        return run
 
-        assert run.returncode == 0, output
-        assert marker.exists(), output
-        assert "mock:kmj-platform/staging/daily/" in marker.read_text(encoding="utf-8")
-        assert status_file.exists(), output
-        status_text = status_file.read_text(encoding="utf-8")
-        assert "status=success" in status_text
-        assert "completed_at_utc=" in status_text
-        assert secret not in output
-        assert secret not in status_text
-        assert "super-secret" not in output
-        assert "super-secret" not in status_text
-        assert "BACKUP_REMOTE" not in status_text
-        assert "Backup uploaded successfully" in output
+    def test_success_requires_an_upload_and_matching_remote_readback(self) -> None:
+        run = self.run_backup()
+        output = run.stdout + run.stderr
+        self.assertEqual(run.returncode, 0, output)
+        transfer = self.marker.read_text(encoding="utf-8")
+        self.assertIn("put ", transfer)
+        self.assertIn("get mock:kmj-platform/staging/daily/", transfer)
+        status_file = self.status_dir / "backup-status-daily.status"
+        self.assertTrue(status_file.exists(), output)
+        self.assertEqual(stat.S_IMODE(status_file.stat().st_mode), 0o600)
+        status = status_file.read_text(encoding="utf-8")
+        self.assertIn("status=success", status)
+        self.assertIn("completed_at_utc=", status)
+        self.assertNotIn(self.secret, status)
+        self.assertNotIn("BACKUP_REMOTE", status)
+        self.assertIn("SHA-256 readback verified", output)
 
-    print("Backup contract test PASS")
+    def test_upload_failure_never_publishes_success(self) -> None:
+        run = self.run_backup("upload_fail")
+        self.assertNotEqual(run.returncode, 0)
+        self.assertIn("upload failed", run.stderr)
+        self.assertFalse((self.status_dir / "backup-status-daily.status").exists())
+
+    def test_readback_failure_never_publishes_success(self) -> None:
+        run = self.run_backup("readback_fail")
+        self.assertNotEqual(run.returncode, 0)
+        self.assertIn("readback failed", run.stderr)
+        self.assertFalse((self.status_dir / "backup-status-daily.status").exists())
+
+    def test_corrupt_remote_ciphertext_never_publishes_success(self) -> None:
+        run = self.run_backup("corrupt_readback")
+        self.assertNotEqual(run.returncode, 0)
+        self.assertIn("checksum mismatch", run.stderr)
+        self.assertFalse((self.status_dir / "backup-status-daily.status").exists())
+
+    def test_invalid_backup_tier_is_rejected_before_upload(self) -> None:
+        run = self.run_backup(BACKUP_TIER="../other")
+        self.assertNotEqual(run.returncode, 0)
+        self.assertFalse(self.marker.exists())
+        self.assertFalse(self.status_dir.exists())
+
+    def test_status_directory_symlink_is_rejected(self) -> None:
+        redirect = self.tmp / "redirect"
+        redirect.mkdir()
+        self.status_dir.symlink_to(redirect, target_is_directory=True)
+        run = self.run_backup()
+        self.assertNotEqual(run.returncode, 0)
+        self.assertIn("unsafe backup status directory", run.stderr)
+        self.assertFalse((redirect / "backup-status-daily.status").exists())
 
 
 if __name__ == "__main__":
-    main()
+    unittest.main()
