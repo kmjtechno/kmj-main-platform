@@ -40,6 +40,85 @@ class GateTests(unittest.TestCase):
         sample["Triggers"] = "unexpected.service"
         self.assertEqual(mod.unit_assessment(sample, mod.TIMER)["TIMER_TRIGGERS_EXPECTED_SCHEDULER"], "NO_OR_UNVERIFIED")
 
+    def test_service_and_timer_request_different_properties(self):
+        class Result:
+            returncode = 0
+            stdout = (b"LoadState=loaded\\nActiveState=active\\nSubState=running\\n"
+                      b"MainPID=234\\nRestart=always\\nKillMode=control-group\\n"
+                      b"TimeoutStopUSec=120000000\\nUser=kmjprod\\n")
+
+        with mock.patch.object(mod.subprocess, "run", return_value=Result()) as run:
+            values, missing = mod.unit_properties(mod.QUEUE)
+        self.assertEqual(missing, ())
+        self.assertEqual(values["Restart"], "always")
+        argv = run.call_args.args[0]
+        self.assertNotIn("Triggers", argv[4])
+        self.assertIn("Restart", argv[4])
+        self.assertNotIn("Triggers", values)
+
+        class TimerResult:
+            returncode = 0
+            stdout = (b"LoadState=loaded\\nActiveState=active\\n"
+                      b"SubState=waiting\\n"
+                      b"Triggers=kmj-main-platform-scheduler.service\\n")
+
+        with mock.patch.object(mod.subprocess, "run", return_value=TimerResult()) as run:
+            values, missing = mod.unit_properties(mod.TIMER)
+        self.assertEqual(missing, ())
+        argv = run.call_args.args[0]
+        self.assertIn("Triggers", argv[4])
+        self.assertNotIn("MainPID", argv[4])
+        self.assertNotIn("Restart", argv[4])
+        self.assertEqual(mod.unit_assessment(values, mod.TIMER)[
+            "TIMER_TRIGGERS_EXPECTED_SCHEDULER"], "YES")
+
+    def test_missing_service_policy_is_unverified_not_success(self):
+        class Result:
+            returncode = 0
+            stdout = (b"LoadState=loaded\\nActiveState=active\\n"
+                      b"SubState=running\\nMainPID=234\\n"
+                      b"Restart=always\\nTimeoutStopUSec=120000000\\n"
+                      b"User=kmjprod\\n")
+        with mock.patch.object(mod.subprocess, "run", return_value=Result()):
+            rows, missing = mod.unit_properties(mod.QUEUE)
+        self.assertEqual(missing, ("KillMode",))
+        self.assertEqual(mod.unit_assessment(rows, mod.QUEUE)[
+            "QUEUE_KILL_CONTROL_GROUP"], "NO_OR_UNVERIFIED")
+
+    def test_timer_missing_triggers_never_passes(self):
+        class Result:
+            returncode = 0
+            stdout = b"LoadState=loaded\\nActiveState=active\\nSubState=waiting\\n"
+        with mock.patch.object(mod.subprocess, "run", return_value=Result()):
+            rows, missing = mod.unit_properties(mod.TIMER)
+        self.assertEqual(missing, ("Triggers",))
+        self.assertEqual(mod.unit_assessment(rows, mod.TIMER)[
+            "TIMER_TRIGGERS_EXPECTED_SCHEDULER"], "NO_OR_UNVERIFIED")
+
+    def test_unit_duplicate_unexpected_value_rejected(self):
+        for bad in (b"LoadState=loaded\\nLoadState=loaded\\n",
+                    b"Unexpected=value\\n"):
+            class Result:
+                returncode = 0
+                stdout = bad
+            with mock.patch.object(mod.subprocess, "run", return_value=Result()):
+                with self.assertRaises(mod.Blocked):
+                    mod.unit_properties(mod.TIMER)
+
+    def test_missing_fields_report_partial_never_apply(self):
+        with mock.patch.object(mod, "execute", return_value={
+            "STORAGE_PLAN_READY": "YES",
+            "SYSTEMD_FIELDS_COMPLETE": "NO",
+            "QUEUE_MISSING_FIELDS": "1"
+        }):
+            out = io.StringIO()
+            with contextlib.redirect_stdout(out):
+                status = mod.main()
+        self.assertEqual(status, 0)
+        self.assertIn("WRITER_SCOPE_AUDIT=PARTIAL_READ_ONLY", out.getvalue())
+        self.assertIn("WRITER_EXCLUSION=NOT_ATTESTED", out.getvalue())
+        self.assertIn("STORAGE_APPLY_ALLOWED=NO", out.getvalue())
+
     def test_plan_sanitized_counts_no_conflict_names(self):
         plan = {"command": "plan", "mutated": False, "inventory_only_not_release_readiness": True,
                 "ready": True, "live_files": 3, "shared_files": 26, "to_copy": 0,
