@@ -7,6 +7,8 @@ set -euo pipefail
 
 APP_ROOT="${APP_ROOT:-$(cd "$(dirname "${BASH_SOURCE[0]}")/../apps/platform" && pwd)}"
 BACKUP_TIER="${BACKUP_TIER:-daily}"
+# Validate before allocating temporary files or constructing a remote path.
+case "$BACKUP_TIER" in daily|weekly|monthly) ;; *) echo "ERROR: invalid BACKUP_TIER" >&2; exit 2;; esac
 STAMP="$(date -u +%Y%m%dT%H%M%SZ)"
 HOST_ID="$(hostname -s 2>/dev/null || hostname)"
 GIT_SHA="$(git -C "$APP_ROOT" rev-parse HEAD 2>/dev/null || printf unknown)"
@@ -14,8 +16,6 @@ NAME="kmj-platform-${BACKUP_TIER}-${HOST_ID}-${STAMP}"
 WORKDIR="$(mktemp -d)"
 STATUS_DIR="${BACKUP_STATUS_DIR:-$APP_ROOT/storage/app/private/ops}"
 STATUS_TMP=""
-# Reject invalid tier names before incorporating them into a remote object path.
-case "$BACKUP_TIER" in daily|weekly|monthly) ;; *) echo "ERROR: invalid BACKUP_TIER" >&2; exit 2;; esac
 
 cleanup() {
   if [[ -n "$STATUS_TMP" && -f "$STATUS_TMP" ]]; then rm -f -- "$STATUS_TMP"; fi
