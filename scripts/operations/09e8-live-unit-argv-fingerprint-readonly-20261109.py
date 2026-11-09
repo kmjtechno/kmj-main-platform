@@ -44,6 +44,51 @@ def insist(ok: bool, reason: str) -> None:
         raise Refused(reason)
 
 
+# Emitted diagnostic identifiers are fixed source constants only. Never
+# interpolate systemctl output, exceptions, argv, environment or paths.
+STAGES = frozenset({
+    "ROOT_SCOPE", "LIVE_POINTER_BEFORE", "QUEUE_UNIT_READ",
+    "SCHEDULER_UNIT_READ", "TIMER_UNIT_READ", "TIMER_TRIGGER",
+    "QUEUE_COMMAND", "SCHEDULER_COMMAND", "LIVE_POINTER_AFTER",
+    "SECOND_READ_STABILITY",
+})
+REASONS = frozenset({
+    "ARGUMENTS_NOT_ALLOWED", "ROOT_ELITE_ONLY", "LIVE_RELEASE_CHANGED",
+    "UNIT_NOT_FIXED", "UNAPPROVED_FIELDS", "SYSTEMD_READ_UNVERIFIABLE",
+    "SYSTEMD_FIELDS_UNVERIFIED", "SYSTEMD_FIELDS_MISSING",
+    "NOT_FIXED_PHP_ARTISAN", "DUPLICATE_OR_LONG_OPTION",
+    "NUMERIC_OPTION_BOUNDS", "UNREVIEWED_OPTION",
+    "UNIT_POLICY_UNVERIFIED", "QUEUE_LIFETIME_UNVERIFIED",
+    "SCHEDULER_RUNNING_OR_UNVERIFIED", "LIVE_APP_WORKDIR_MISMATCH",
+    "SERVICE_EXEC_FORMAT_UNVERIFIED", "SERVICE_EXECUTABLE_UNVERIFIED",
+    "ARTISAN_PATH_UNVERIFIED", "SCHEDULER_TIMER_SCOPE_UNVERIFIED",
+    "UNIT_GENERATION_CHANGED", "RUNTIME_UNVERIFIABLE",
+})
+
+
+class AuditBlocked(Refused):
+    def __init__(self, stage: str, reason: str):
+        self.stage = stage if stage in STAGES else "ROOT_SCOPE"
+        self.reason = reason if reason in REASONS else "RUNTIME_UNVERIFIABLE"
+        super().__init__("BLOCKED_REDACTED")
+
+
+def at(stage: str, action):
+    """Classify a failed fixed step without exposing any untrusted input."""
+    if stage not in STAGES:
+        raise AuditBlocked("ROOT_SCOPE", "RUNTIME_UNVERIFIABLE")
+    try:
+        return action()
+    except AuditBlocked:
+        raise
+    except Refused as exc:
+        reason = str(exc)
+        raise AuditBlocked(stage, reason) from None
+    except (OSError, ValueError, UnicodeError, KeyError,
+            subprocess.SubprocessError):
+        raise AuditBlocked(stage, "RUNTIME_UNVERIFIABLE") from None
+
+
 def live_pointer() -> None:
     current = Path("/home/kmjprod/current")
     insist(current.is_symlink()
@@ -132,35 +177,45 @@ def fingerprint(unit: str, values: dict[str, str]) -> str:
 
 
 def attest_once() -> tuple[str, str]:
-    live_pointer()
-    a = show(QUEUE, FIELDS)
-    b = show(SCHEDULER, FIELDS)
-    timer = show(TIMER, ("ActiveState", "Triggers"))
-    insist(timer == {"ActiveState": "active", "Triggers": SCHEDULER},
-           "SCHEDULER_TIMER_SCOPE_UNVERIFIED")
-    queue_hash = fingerprint(QUEUE, a)
-    scheduler_hash = fingerprint(SCHEDULER, b)
-    live_pointer()
+    at("LIVE_POINTER_BEFORE", live_pointer)
+    a = at("QUEUE_UNIT_READ", lambda: show(QUEUE, FIELDS))
+    b = at("SCHEDULER_UNIT_READ", lambda: show(SCHEDULER, FIELDS))
+    timer = at("TIMER_UNIT_READ", lambda: show(TIMER, ("ActiveState", "Triggers")))
+    at("TIMER_TRIGGER", lambda: insist(
+        timer == {"ActiveState": "active", "Triggers": SCHEDULER},
+        "SCHEDULER_TIMER_SCOPE_UNVERIFIED"))
+    queue_hash = at("QUEUE_COMMAND", lambda: fingerprint(QUEUE, a))
+    scheduler_hash = at("SCHEDULER_COMMAND", lambda: fingerprint(SCHEDULER, b))
+    at("LIVE_POINTER_AFTER", live_pointer)
     return queue_hash, scheduler_hash
 
 
 def main(args: list[str]) -> int:
     print("SCHEMA=kmj.09e8.live-unit-argv-fingerprint.readonly.v1")
     try:
-        insist(not args, "ARGUMENTS_NOT_ALLOWED")
-        insist(os.geteuid() == 0 and socket.gethostname().split(".")[0] == "KMJ-elite",
-               "ROOT_ELITE_ONLY")
+        at("ROOT_SCOPE", lambda: insist(not args, "ARGUMENTS_NOT_ALLOWED"))
+        at("ROOT_SCOPE", lambda: insist(
+            os.geteuid() == 0 and socket.gethostname().split(".")[0] == "KMJ-elite",
+            "ROOT_ELITE_ONLY"))
         first = attest_once()
         second = attest_once()
-        insist(first == second, "UNIT_GENERATION_CHANGED")
+        at("SECOND_READ_STABILITY", lambda: insist(
+            first == second, "UNIT_GENERATION_CHANGED"))
         print("QUEUE_ARGV_SHA256=" + first[0])
         print("SCHEDULER_ARGV_SHA256=" + first[1])
         print("ARGV_SAFE_SCHEMA=YES")
         print("EXPECTED_LIVE_RELEASE=platform-bce4100d005e")
         print("ARGV_FINGERPRINT=READ_ONLY_VERIFIED")
         rc = 0
+    except AuditBlocked as exc:
+        print("ARGV_BLOCKER_STAGE=" + exc.stage)
+        print("ARGV_BLOCKER_REASON=" + exc.reason)
+        print("ARGV_FINGERPRINT=BLOCKED_UNVERIFIABLE")
+        rc = 2
     except (Refused, OSError, ValueError, UnicodeError, KeyError,
-            subprocess.SubprocessError) as exc:
+            subprocess.SubprocessError):
+        print("ARGV_BLOCKER_STAGE=ROOT_SCOPE")
+        print("ARGV_BLOCKER_REASON=RUNTIME_UNVERIFIABLE")
         print("ARGV_FINGERPRINT=BLOCKED_UNVERIFIABLE")
         rc = 2
     print("WRITER_ADMISSION=NOT_ATTESTED")
