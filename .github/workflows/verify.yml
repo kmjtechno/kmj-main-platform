@@ -76,6 +76,8 @@ jobs:
           python3 -B scripts/test_09e8_native_writer_inventory_readonly_20261109.py
           python3 -B -m py_compile scripts/operations/09e8-candidate-only-cutover-review/transaction_contract.py
           python3 -B scripts/test_09e8_candidate_only_cutover_contract_20261109.py
+          python3 -B -m py_compile scripts/operations/09e8-candidate-only-cutover-review/receipt_validation.py
+          python3 -B scripts/test_09e8_candidate_v6_receipt_20261109.py
           python3 -B scripts/tests/test_backup_upload_coverage_20261031.py
           bash -n scripts/operations/push-existing-dfa55-offsite-only-20261102.sh
           python3 -B -m unittest tests.test_existing_dfa55_sftp_only_20261102
