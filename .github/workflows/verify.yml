@@ -86,6 +86,8 @@ jobs:
           python3 -B -m py_compile scripts/operations/09e8-candidate-native-review/native_plan.py
           python3 -B -m py_compile scripts/operations/09e8-candidate-native-review/native_ops.py
           (cd scripts/operations/09e8-candidate-native-review && python3 -B -m unittest -v test_native_plan test_native_ops test_orchestrator test_candidate_native)
+          python3 -B -m py_compile scripts/operations/09e8-live-unit-argv-fingerprint-readonly-20261109.py
+          python3 -B scripts/test_09e8_live_unit_argv_fingerprint_20261109.py
           python3 -B scripts/tests/test_backup_upload_coverage_20261031.py
           bash -n scripts/operations/push-existing-dfa55-offsite-only-20261102.sh
           python3 -B -m unittest tests.test_existing_dfa55_sftp_only_20261102
