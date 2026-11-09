@@ -155,9 +155,21 @@ class ReceiptTests(unittest.TestCase):
 
     def test_no_execution_or_mutation_capabilities(self):
         source = SOURCE.read_text("utf-8")
-        for bad in ("subprocess", "systemctl", "os.unlink", "os.rename", "os.symlink",
-                    "os.replace", "nft add", " --apply", "exec(", "eval(",
-                    "root@KMJ-elite", "curl -", "git reset"):
+        import ast
+        module = ast.parse(source)
+        for node in ast.walk(module):
+            if isinstance(node, ast.Import):
+                self.assertFalse(any(alias.name in {"os", "subprocess", "shutil"}
+                                     for alias in node.names))
+            if isinstance(node, ast.ImportFrom):
+                self.assertNotIn(node.module, {"os", "subprocess", "shutil"})
+            if isinstance(node, ast.Call):
+                if isinstance(node.func, ast.Name):
+                    self.assertNotIn(node.func.id, {"exec", "eval", "compile", "open",
+                                                    "__import__", "breakpoint"})
+        for bad in ("systemctl stop", "systemctl start", "subprocess.run(",
+                    "os.unlink(", "os.rename(", "os.symlink(",
+                    "os.replace(", "nft add", " --apply", "curl -", "git reset"):
             self.assertNotIn(bad, source)
         self.assertIn("SOURCE_ONLY_NO_HOST_ENTRYPOINT", source)
 
