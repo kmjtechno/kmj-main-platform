@@ -214,7 +214,7 @@ def recheck_storage_link(app: Path, stamp: tuple[int, ...] | None) -> None:
 # anywhere under storage/app/public, can justify an absent public/storage link.
 # That is a narrow advisory classification; it does not prove all other
 # customer upload locations or authorize production activation.
-PUBLIC_PLACEHOLDER = b"*\\n!.gitignore\\n".replace(b"\\n", b"\n")
+PUBLIC_PLACEHOLDER = b"*\n!.gitignore\n"
 PUBLIC_PLACEHOLDER_STAT = (
     len(PUBLIC_PLACEHOLDER), hashlib.sha256(PUBLIC_PLACEHOLDER).hexdigest()
 )
