@@ -19,7 +19,7 @@ m = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(m)
 
 
-def unit_doc(unit: str, args: list[str], root: str) -> dict[str,str]:
+def unit(unit: str, args: list[str], root: str) -> dict[str,str]:
     return {
         "ExecStart": "{ path=/usr/bin/php8.4 ; argv[]=" + " ".join(args) + " ; ignore_errors=no ; }",
         "WorkingDirectory": root,
@@ -47,8 +47,8 @@ class ExactArgvTest(unittest.TestCase):
         self.scheduler_args = ["/usr/bin/php8.4", "artisan", "schedule:run"]
 
     def test_known_fixed_commands_match_native_json_argv_digest(self):
-        q = m.fingerprint(m.QUEUE, unit_doc(m.QUEUE, self.queue_args, str(self.app)))
-        s = m.fingerprint(m.SCHEDULER, unit_doc(m.SCHEDULER, self.scheduler_args, str(self.app)))
+        q = m.fingerprint(m.QUEUE, unit(m.QUEUE, self.queue_args, str(self.app)))
+        s = m.fingerprint(m.SCHEDULER, unit(m.SCHEDULER, self.scheduler_args, str(self.app)))
         self.assertEqual(q, hashlib.sha256(json.dumps(self.queue_args).encode()).hexdigest())
         self.assertEqual(s, hashlib.sha256(json.dumps(self.scheduler_args).encode()).hexdigest())
 
@@ -123,12 +123,12 @@ class ExactArgvTest(unittest.TestCase):
              mock.patch.object(m.socket, "gethostname", return_value="KMJ-elite"), \
              mock.patch.object(m, "live_pointer"), \
              mock.patch.object(m, "show") as show:
-            def item(unit, fields):
-                if unit == m.TIMER:
+            def item(unit_id, fields):
+                if unit_id == m.TIMER:
                     return {"ActiveState": "active", "Triggers": m.SCHEDULER}
-                args = (self.queue_args if unit == m.QUEUE else self.scheduler_args)
-                value = unit_doc(unit, args, str(self.app))
-                if unit == m.QUEUE:
+                args = (self.queue_args if unit_id == m.QUEUE else self.scheduler_args)
+                value = unit(unit_id, args, str(self.app))
+                if unit_id == m.QUEUE:
                     value["Type"] = "notify"
                 return value
             show.side_effect = item
@@ -147,8 +147,8 @@ class ExactArgvTest(unittest.TestCase):
              mock.patch.object(m.socket, "gethostname", return_value="KMJ-elite"), \
              mock.patch.object(m, "live_pointer"), \
              mock.patch.object(m, "show", side_effect=[
-                unit_doc(m.QUEUE, self.queue_args, str(self.app)),
-                unit_doc(m.SCHEDULER, self.scheduler_args, str(self.app)),
+                unit(m.QUEUE, self.queue_args, str(self.app)),
+                unit(m.SCHEDULER, self.scheduler_args, str(self.app)),
                 m.Refused("SYSTEMD_FIELDS_MISSING")
             ]):
             out = io.StringIO()
