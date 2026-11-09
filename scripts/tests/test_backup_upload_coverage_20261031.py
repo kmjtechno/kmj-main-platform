@@ -88,6 +88,85 @@ class UploadCoverageTests(unittest.TestCase):
         with self.assertRaises(audit_module.CoverageError):
             self.run_audit()
 
+    def shared_storage(self):
+        """Convert the ordinary fixture to a physically separate shared root."""
+        original = self.release / "apps/platform/storage"
+        shared = self.base / "shared"
+        shared.mkdir(mode=0o700)
+        target = shared / "storage"
+        original.rename(target)
+        original.symlink_to(target, target_is_directory=True)
+        return target
+
+    def test_exact_shared_storage_layout_is_audited_without_traversing_link(self):
+        from unittest import mock
+        target = self.shared_storage()
+        with mock.patch.object(audit_module, "SHARED_ROOT", target):
+            result = self.run_audit()
+        self.assertEqual(result["LIVE_STORAGE_LAYOUT"], "EXACT_SHARED_LINK")
+        self.assertEqual(result["STORAGE_APP_CONTENT_PARITY"], "PASS")
+        self.assertEqual(result["PUBLIC_STORAGE_LINK"], "EXPECTED")
+        self.assertEqual(result["ARCHIVED_STORAGE_FILES"], "1")
+        self.assertEqual(result["ALL_CUSTOMER_UPLOAD_LOCATIONS_VERIFIED"], "NO")
+
+    def test_exact_shared_storage_modified_file_detected(self):
+        from unittest import mock
+        target = self.shared_storage()
+        (target / "app/public/example.txt").write_bytes(b"changed")
+        with mock.patch.object(audit_module, "SHARED_ROOT", target):
+            result = self.run_audit()
+        self.assertEqual(result["STORAGE_APP_CONTENT_PARITY"], "MISMATCH")
+
+    def test_shared_storage_arbitrary_link_still_rejected(self):
+        from unittest import mock
+        target = self.shared_storage()
+        link = self.release / "apps/platform/storage"
+        link.unlink()
+        link.symlink_to(self.base)
+        with mock.patch.object(audit_module, "SHARED_ROOT", target):
+            with self.assertRaises(audit_module.CoverageError):
+                self.run_audit()
+
+    def test_shared_storage_parent_symlink_still_rejected(self):
+        from unittest import mock
+        target = self.shared_storage()
+        original = target.parent
+        renamed = self.base / "real-shared"
+        original.rename(renamed)
+        original.symlink_to(renamed)
+        target = original / "storage"
+        link = self.release / "apps/platform/storage"
+        link.unlink()
+        link.symlink_to(target)
+        with mock.patch.object(audit_module, "SHARED_ROOT", target):
+            with self.assertRaises(audit_module.CoverageError):
+                self.run_audit()
+
+    def test_shared_storage_nested_symlink_still_rejected(self):
+        from unittest import mock
+        target = self.shared_storage()
+        (target / "app/public/evil").symlink_to(self.base)
+        with mock.patch.object(audit_module, "SHARED_ROOT", target):
+            with self.assertRaises(audit_module.CoverageError):
+                self.run_audit()
+
+    def test_swapped_shared_link_during_scan_still_rejected(self):
+        from unittest import mock
+        target = self.shared_storage()
+        link = self.release / "apps/platform/storage"
+        original_snapshot = audit_module.snapshot_storage
+
+        def swapped(path):
+            scanned = original_snapshot(path)
+            link.unlink()
+            link.symlink_to(self.base)
+            return scanned
+
+        with mock.patch.object(audit_module, "SHARED_ROOT", target), \
+             mock.patch.object(audit_module, "snapshot_storage", side_effect=swapped):
+            with self.assertRaises(audit_module.CoverageError):
+                self.run_audit()
+
     def test_symlinked_storage_parent_cannot_redirect_root_scan(self):
         storage = self.release / "apps/platform/storage"
         outside = self.base / "outside-storage"

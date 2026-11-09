@@ -151,6 +151,65 @@ def verify_real_directories(paths: tuple[Path, ...]) -> None:
             reject("LIVE_LAYOUT_SYMLINK_OR_SPECIAL")
 
 
+# The protected live storage-switch migration uses ONE explicit shared root.
+# Do not generalize this exception to arbitrary symlinks or other upload trees.
+SHARED_ROOT = Path("/home/kmjprod/shared/storage")
+
+
+def select_live_storage(release: Path, app: Path, public: Path) -> tuple[Path, str, tuple[int, ...] | None]:
+    """Choose only a physical in-release tree or the exact preapproved shared link.
+
+    The original auditor rejected ANY storage ancestor symlink; that made its
+    backup-coverage check unusable after the owner-approved shared-storage
+    migration. Every OTHER symlink still blocks. This remains advisory: a
+    moving live tree is not an atomic filesystem snapshot.
+    """
+    verify_real_directories((release.parent, release, release / "apps", app, public))
+    storage = app / "storage"
+    try:
+        info = storage.lstat()
+    except OSError:
+        reject("LIVE_STORAGE_LAYOUT_UNVERIFIED")
+    if stat.S_ISDIR(info.st_mode):
+        verify_real_directories((storage, storage / "app"))
+        return storage / "app", "RELEASE_LOCAL", None
+    if not stat.S_ISLNK(info.st_mode):
+        reject("LIVE_STORAGE_LAYOUT_UNSAFE")
+    release_uid = release.lstat().st_uid
+    if info.st_uid not in (0, release_uid) or os.readlink(storage) != str(SHARED_ROOT):
+        reject("LIVE_STORAGE_LINK_NOT_APPROVED")
+    # The selected physical target must not depend on another symlink. It
+    # must also be under an owner-controlled, non-group/world-writable chain.
+    for folder in (SHARED_ROOT.parent, SHARED_ROOT, SHARED_ROOT / "app"):
+        try:
+            st = folder.lstat()
+        except OSError:
+            reject("SHARED_STORAGE_NOT_READY")
+        if (not stat.S_ISDIR(st.st_mode) or st.st_uid not in (0, release_uid)
+                or st.st_mode & 0o022):
+            reject("SHARED_STORAGE_CHAIN_UNSAFE")
+    if storage.resolve(strict=True) != SHARED_ROOT:
+        reject("SHARED_STORAGE_LINK_CHANGED")
+    return SHARED_ROOT / "app", "EXACT_SHARED_LINK", (
+        info.st_dev, info.st_ino, info.st_uid, info.st_mtime_ns, info.st_ctime_ns
+    )
+
+
+def recheck_storage_link(app: Path, stamp: tuple[int, ...] | None) -> None:
+    if stamp is None:
+        return
+    path = app / "storage"
+    try:
+        now = path.lstat()
+        current = (now.st_dev, now.st_ino, now.st_uid, now.st_mtime_ns, now.st_ctime_ns)
+        if (not stat.S_ISLNK(now.st_mode) or current != stamp
+                or os.readlink(path) != str(SHARED_ROOT)
+                or path.resolve(strict=True) != SHARED_ROOT):
+            reject("SHARED_STORAGE_LINK_CHANGED")
+    except OSError:
+        reject("SHARED_STORAGE_LINK_CHANGED")
+
+
 def audit(release: Path, bundle: Path, witness: Path, candidate: str,
           current: str) -> dict[str, str]:
     if not re.fullmatch(r"[0-9a-f]{40}", candidate):
@@ -168,22 +227,21 @@ def audit(release: Path, bundle: Path, witness: Path, candidate: str,
     archived = archive_storage(bundle)
     app = release / "apps/platform"
     public = app / "public"
-    expected = app / "storage/app/public"
-    # The storage root and its ancestors must not redirect the root auditor
-    # outside the fixed production release, even if the leaf is a real dir.
-    verify_real_directories((
-        release.parent, release, release / "apps", app,
-        app / "storage", app / "storage/app", public,
-    ))
+    live_root, layout, link_stamp = select_live_storage(release, app, public)
+    expected = live_root / "public"
     if expected.exists() or expected.is_symlink():
         verify_real_directories((expected,))
-    live = snapshot_storage(app / "storage/app")
+    live = snapshot_storage(live_root)
+    # A service actor could replace the symbolic link while our protected FD
+    # scanner is active; never call the source-to-archive parity a PASS then.
+    recheck_storage_link(app, link_stamp)
     link = public / "storage"
     linked = link.is_symlink() and expected.is_dir() and link.resolve(strict=False) == expected
     alternate = any((public / name).exists() or (public / name).is_symlink()
                     for name in ("uploads", "media", "product-images"))
     parity = archived == live
     return {
+        "LIVE_STORAGE_LAYOUT": layout,
         "ARCHIVED_STORAGE_FILES": str(len(archived)),
         "ARCHIVED_STORAGE_BYTES": str(sum(size for size, _ in archived.values())),
         "LIVE_STORAGE_FILES": str(len(live)),
