@@ -172,9 +172,9 @@ class NativeCandidateWitnessTests(unittest.TestCase):
             mod.post(Helper(source_valid=False))
 
     def test_main_pre_success_no_mutation_or_release_authorization(self):
-        with mock.patch.object(mod.os, "geteuid", return_value=0), \\
-             mock.patch.object(mod.socket, "gethostname", return_value="KMJ-elite"), \\
-             mock.patch.object(mod, "verify_pinned", return_value=b"trusted-source"), \\
+        with mock.patch.object(mod.os, "geteuid", return_value=0), \
+             mock.patch.object(mod.socket, "gethostname", return_value="KMJ-elite"), \
+             mock.patch.object(mod, "verify_pinned", return_value=b"trusted-source"), \
              mock.patch.object(mod, "load_helper", return_value=Helper()):
             output = io.StringIO()
             with contextlib.redirect_stdout(output):
@@ -188,8 +188,8 @@ class NativeCandidateWitnessTests(unittest.TestCase):
     def test_root_failure_does_not_print_sensitive_exception_or_pass(self):
         def fail(*args):
             raise ValueError("PRIVATE_CUSTOMER_PATH")
-        with mock.patch.object(mod.os, "geteuid", return_value=0), \\
-             mock.patch.object(mod.socket, "gethostname", return_value="KMJ-elite"), \\
+        with mock.patch.object(mod.os, "geteuid", return_value=0), \
+             mock.patch.object(mod.socket, "gethostname", return_value="KMJ-elite"), \
              mock.patch.object(mod, "verify_pinned", side_effect=fail):
             output = io.StringIO()
             with contextlib.redirect_stdout(output):
