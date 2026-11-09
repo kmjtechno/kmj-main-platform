@@ -127,10 +127,10 @@ class MaterializerInstallerTests(unittest.TestCase):
         self.assertIn(mod.SOURCE_COMMIT, mod.URL)
 
     def test_inspect_only_no_network_and_no_mutation(self):
-        with mock.patch.object(mod.os, "geteuid", return_value=0), \\
-             mock.patch.object(mod.socket, "gethostname", return_value="KMJ-elite"), \\
+        with mock.patch.object(mod.os, "geteuid", return_value=0), \
+             mock.patch.object(mod.socket, "gethostname", return_value="KMJ-elite"), \
              mock.patch.object(mod, "open_protected_parent",
-                               side_effect=lambda: os.dup(self.fd)), \\
+                               side_effect=lambda: os.dup(self.fd)), \
              mock.patch.object(mod, "fetch_exact", side_effect=AssertionError("network")):
             out = io.StringIO()
             with contextlib.redirect_stdout(out):
@@ -141,10 +141,10 @@ class MaterializerInstallerTests(unittest.TestCase):
         self.assertFalse(self.dest.exists())
 
     def test_main_install_is_only_root_private_artifact(self):
-        with mock.patch.object(mod.os, "geteuid", return_value=0), \\
-             mock.patch.object(mod.socket, "gethostname", return_value="KMJ-elite"), \\
+        with mock.patch.object(mod.os, "geteuid", return_value=0), \
+             mock.patch.object(mod.socket, "gethostname", return_value="KMJ-elite"), \
              mock.patch.object(mod, "open_protected_parent",
-                               side_effect=lambda: os.dup(self.fd)), \\
+                               side_effect=lambda: os.dup(self.fd)), \
              mock.patch.object(mod, "fetch_exact", return_value=self.exact_bytes):
             out = io.StringIO()
             with contextlib.redirect_stdout(out):
