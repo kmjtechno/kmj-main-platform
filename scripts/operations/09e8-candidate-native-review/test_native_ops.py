@@ -233,7 +233,7 @@ class AdapterTests(unittest.TestCase):
         with patch.object(n.p, "read_file", return_value=b"scanner"), \
                 patch.object(n.p, "digest", return_value=n.PINS["scanner"]), patch.object(n.subprocess, "run", side_effect=fake_run):
             self.assertEqual(self.ops.scanner_run("rollback")["status"], "OK")
-        self.assertEqual(seen["args"][4:], ["rollback", "--app-dir", str(n.APP), "--shared", n.SHARED,
+        self.assertEqual(seen["args"][4:], ["rollback", "--app-dir", str(n.TARGET_APP), "--shared", n.SHARED,
                                             "--state-dir", n.SCANNER_STATE, "--apply"])
         self.assertIn(7, seen["pass_fds"])
 
