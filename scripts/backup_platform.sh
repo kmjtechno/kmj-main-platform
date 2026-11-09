@@ -12,7 +12,6 @@ case "$BACKUP_TIER" in daily|weekly|monthly) ;; *) echo "ERROR: invalid BACKUP_T
 STAMP="$(date -u +%Y%m%dT%H%M%SZ)"
 HOST_ID="$(hostname -s 2>/dev/null || hostname)"
 GIT_SHA="$(git -C "$APP_ROOT" rev-parse HEAD 2>/dev/null || printf unknown)"
-NAME="kmj-platform-${BACKUP_TIER}-${HOST_ID}-${STAMP}"
 WORKDIR="$(mktemp -d)"
 STATUS_DIR="${BACKUP_STATUS_DIR:-$APP_ROOT/storage/app/private/ops}"
 STATUS_TMP=""
@@ -24,12 +23,22 @@ cleanup() {
 trap cleanup EXIT
 chmod 700 "$WORKDIR"
 
-for command in pg_dump tar sha256sum age rclone; do
+for command in pg_dump tar sha256sum age rclone od tr; do
   command -v "$command" >/dev/null 2>&1 || {
     echo "ERROR: required command not found: $command" >&2
     exit 2
   }
 done
+
+# Unique remote object identity: concurrent runs within one UTC second must
+# never share an offsite key. Combined with rclone --immutable below, this
+# prevents an overlapping job from silently replacing an encrypted backup.
+RANDOM_SUFFIX="$(od -An -N12 -tx1 /dev/urandom | tr -d '[:space:]')"
+[[ "$RANDOM_SUFFIX" =~ ^[0-9a-f]{24}$ ]] || {
+  echo "ERROR: backup object nonce unavailable" >&2
+  exit 2
+}
+NAME="kmj-platform-${BACKUP_TIER}-${HOST_ID}-${STAMP}-${RANDOM_SUFFIX}"
 
 test -d "$APP_ROOT/storage/app" || {
   echo "ERROR: application storage not found at $APP_ROOT/storage/app" >&2
@@ -59,7 +68,7 @@ LOCAL_CIPHERTEXT="$WORKDIR/$NAME.tar.gz.age"
 # A successful copy operation alone cannot prove that the encrypted object
 # is retrievable or byte-identical. Read it back into the private scratch
 # directory and verify before publishing any success/freshness marker.
-if ! rclone copyto "$LOCAL_CIPHERTEXT" "$REMOTE_OBJECT" --checksum >/dev/null 2>&1; then
+if ! rclone copyto "$LOCAL_CIPHERTEXT" "$REMOTE_OBJECT" --checksum --immutable >/dev/null 2>&1; then
   echo "ERROR: offsite encrypted upload failed" >&2
   exit 4
 fi
