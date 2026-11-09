@@ -43,8 +43,8 @@ class CandidateNativeTests(unittest.TestCase):
         verified_raw = b"scanner-test-fake-source"
         result = types.SimpleNamespace(stdout=b'{"command":"plan","ready":true}',
                                        stderr=b"", returncode=0)
-        with patch.object(n.p, "read_file", return_value=verified_raw) as read, \\
-             patch.object(n.p, "digest", return_value=o.PINS["scanner"]), \\
+        with patch.object(n.p, "read_file", return_value=verified_raw) as read, \
+             patch.object(n.p, "digest", return_value=o.PINS["scanner"]), \
              patch.object(n.subprocess, "run", return_value=result) as run:
             got = operations.scanner_run("plan")
         self.assertEqual(got["command"], "plan")
@@ -61,7 +61,7 @@ class CandidateNativeTests(unittest.TestCase):
         with self.assertRaises(o.Blocked):
             operations.scanner_run("arbitrary-command")
         operations.release_lock = Mock(fd=8)
-        with patch.object(n.p, "read_file", return_value=b"scanner"), \\
+        with patch.object(n.p, "read_file", return_value=b"scanner"), \
              patch.object(n.p, "digest", return_value=o.PINS["scanner"]):
             with self.assertRaises(o.Blocked):
                 operations.scanner_run("switch", "not-exact-plan-id")
