@@ -58,6 +58,11 @@ def remote_path(value):
     return pathlib.Path(value)
 destination = remote_path(dst)
 destination.parent.mkdir(parents=True, exist_ok=True)
+if not download:
+    if "--immutable" not in args:
+        sys.exit(22)
+    if destination.exists():
+        sys.exit(23)
 shutil.copyfile(remote_path(src), destination)
 if behavior == "corrupt_readback" and download:
     with destination.open("ab") as handle:
@@ -105,6 +110,18 @@ with open(os.environ["FAKE_REMOTE_MARKER"], "a", encoding="utf-8") as handle:
         self.assertNotIn(self.secret, status)
         self.assertNotIn("BACKUP_REMOTE", status)
         self.assertIn("SHA-256 readback verified", output)
+
+    def test_two_backups_in_one_second_cannot_overwrite_remote_object(self) -> None:
+        first = self.run_backup()
+        self.assertEqual(first.returncode, 0, first.stderr)
+        second = self.run_backup()
+        self.assertEqual(second.returncode, 0, second.stderr)
+        remote_dir = self.tmp / "remote" / "kmj-platform" / "staging" / "daily"
+        objects = list(remote_dir.glob("*.tar.gz.age"))
+        self.assertEqual(len(objects), 2)
+        self.assertNotEqual(objects[0].name, objects[1].name)
+        for path in objects:
+            self.assertRegex(path.name, r"-[0-9a-f]{24}\.tar\.gz\.age$")
 
     def test_upload_failure_never_publishes_success(self) -> None:
         run = self.run_backup("upload_fail")
