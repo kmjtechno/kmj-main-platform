@@ -121,7 +121,7 @@ with open(os.environ["FAKE_REMOTE_MARKER"], "a", encoding="utf-8") as handle:
         self.assertEqual(len(objects), 2)
         self.assertNotEqual(objects[0].name, objects[1].name)
         for path in objects:
-            self.assertRegex(path.name, r"-[0-9a-f]{24}\\.tar\\.gz\\.age$")
+            self.assertRegex(path.name, r"-[0-9a-f]{24}\.tar\.gz\.age$")
 
     def test_upload_failure_never_publishes_success(self) -> None:
         run = self.run_backup("upload_fail")
