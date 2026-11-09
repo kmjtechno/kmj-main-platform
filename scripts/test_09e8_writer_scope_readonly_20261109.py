@@ -43,9 +43,9 @@ class GateTests(unittest.TestCase):
     def test_service_and_timer_request_different_properties(self):
         class Result:
             returncode = 0
-            stdout = (b"LoadState=loaded\\nActiveState=active\\nSubState=running\\n"
-                      b"MainPID=234\\nRestart=always\\nKillMode=control-group\\n"
-                      b"TimeoutStopUSec=120000000\\nUser=kmjprod\\n")
+            stdout = (b"LoadState=loaded\nActiveState=active\nSubState=running\n"
+                      b"MainPID=234\nRestart=always\nKillMode=control-group\n"
+                      b"TimeoutStopUSec=120000000\nUser=kmjprod\n")
 
         with mock.patch.object(mod.subprocess, "run", return_value=Result()) as run:
             values, missing = mod.unit_properties(mod.QUEUE)
@@ -58,9 +58,9 @@ class GateTests(unittest.TestCase):
 
         class TimerResult:
             returncode = 0
-            stdout = (b"LoadState=loaded\\nActiveState=active\\n"
-                      b"SubState=waiting\\n"
-                      b"Triggers=kmj-main-platform-scheduler.service\\n")
+            stdout = (b"LoadState=loaded\nActiveState=active\n"
+                      b"SubState=waiting\n"
+                      b"Triggers=kmj-main-platform-scheduler.service\n")
 
         with mock.patch.object(mod.subprocess, "run", return_value=TimerResult()) as run:
             values, missing = mod.unit_properties(mod.TIMER)
@@ -75,10 +75,10 @@ class GateTests(unittest.TestCase):
     def test_missing_service_policy_is_unverified_not_success(self):
         class Result:
             returncode = 0
-            stdout = (b"LoadState=loaded\\nActiveState=active\\n"
-                      b"SubState=running\\nMainPID=234\\n"
-                      b"Restart=always\\nTimeoutStopUSec=120000000\\n"
-                      b"User=kmjprod\\n")
+            stdout = (b"LoadState=loaded\nActiveState=active\n"
+                      b"SubState=running\nMainPID=234\n"
+                      b"Restart=always\nTimeoutStopUSec=120000000\n"
+                      b"User=kmjprod\n")
         with mock.patch.object(mod.subprocess, "run", return_value=Result()):
             rows, missing = mod.unit_properties(mod.QUEUE)
         self.assertEqual(missing, ("KillMode",))
@@ -88,7 +88,7 @@ class GateTests(unittest.TestCase):
     def test_timer_missing_triggers_never_passes(self):
         class Result:
             returncode = 0
-            stdout = b"LoadState=loaded\\nActiveState=active\\nSubState=waiting\\n"
+            stdout = b"LoadState=loaded\nActiveState=active\nSubState=waiting\n"
         with mock.patch.object(mod.subprocess, "run", return_value=Result()):
             rows, missing = mod.unit_properties(mod.TIMER)
         self.assertEqual(missing, ("Triggers",))
@@ -96,8 +96,8 @@ class GateTests(unittest.TestCase):
             "TIMER_TRIGGERS_EXPECTED_SCHEDULER"], "NO_OR_UNVERIFIED")
 
     def test_unit_duplicate_unexpected_value_rejected(self):
-        for bad in (b"LoadState=loaded\\nLoadState=loaded\\n",
-                    b"Unexpected=value\\n"):
+        for bad in (b"LoadState=loaded\nLoadState=loaded\n",
+                    b"Unexpected=value\n"):
             class Result:
                 returncode = 0
                 stdout = bad
