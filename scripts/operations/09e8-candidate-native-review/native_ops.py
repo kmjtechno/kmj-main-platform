@@ -198,7 +198,7 @@ class NativeOps:
         require(str(Path("/home/kmjprod/current").resolve(strict=True)) == LIVE, "POINTER_CHANGED")
         require(p.namespace() == self.evidence.get("netns", p.namespace(1)) == p.namespace(1), "NETNS_CHANGED")
         live_storage = APP / "storage"
-        require(live_storage.is_symlink() and os.readlink(live_storage) == SHARED,
+        require(live_storage.is_symlink() and os.path.realpath(live_storage) == SHARED,
                 "LIVE_STORAGE_LINK_CHANGED")
         shared_inode = stamp(Path(SHARED).stat())[:2]
         require(stamp(live_storage.stat())[:2] == shared_inode, "LIVE_SHARED_INODE_CHANGED")
@@ -293,11 +293,14 @@ class NativeOps:
         require(stat.S_ISDIR((candidate_app / "storage").lstat().st_mode)
                 and not (candidate_app / "storage").is_symlink(), "CANDIDATE_STORAGE_NOT_PHYSICAL")
         require(not os.path.lexists(candidate_app / ".env"), "CANDIDATE_ALREADY_MATERIALIZED")
+        require(not any(entry.name.startswith("storage.pre-shared-")
+                        for entry in candidate_app.iterdir()),
+                "CANDIDATE_EXISTING_SNAPSHOT_RECOVERY_REQUIRED")
         require(p.digest(p.read_file(p.MATERIALIZER_SOURCE, protected=True))
                 == PINS["materializer"], "ROOT_MATERIALIZER_PIN_MISMATCH")
         require(not os.path.lexists(candidate_app / "storage/framework/down"),
                 "CANDIDATE_MAINTENANCE_UNEXPECTED")
-        require((APP / "storage").is_symlink() and os.readlink(APP / "storage") == SHARED,
+        require((APP / "storage").is_symlink() and os.path.realpath(APP / "storage") == SHARED,
                 "LIVE_STORAGE_NOT_SHARED")
         # git_identity returns no value on successful verification.
         live_sha = helper.git_read(Path(LIVE), "rev-parse", "--verify", "HEAD").strip()
@@ -349,6 +352,13 @@ class NativeOps:
         storage = TARGET_APP / "storage"
         require(stat.S_ISDIR(storage.lstat().st_mode) and not storage.is_symlink(),
                 "CANDIDATE_STORAGE_NOT_PHYSICAL")
+        plan = self.scanner_run("plan")
+        require(type(plan) is dict and plan.get("command") == "plan"
+                and plan.get("ready") is True and plan.get("mutated") is False
+                and plan.get("to_copy") == 0 and type(plan.get("to_copy")) is int
+                and plan.get("persistent_conflicts") == []
+                and plan.get("inventory_only_not_release_readiness") is True,
+                "CANDIDATE_PRE_ADMISSION_PLAN_UNVERIFIED")
         self.evidence["original_storage"] = stamp(storage.stat())
         self.evidence["live_shared_inode"] = list(stamp(Path(SHARED).stat())[:2])
         # Unknown same-account processes are a real admission hole, not a PASS.
@@ -850,7 +860,7 @@ class NativeOps:
         require(state is not None and records[0].get("plan") == state.get("plan_id"),
                 "CANDIDATE_RECEIPT_WRONG_PLAN")
         require((APP / "storage").is_symlink()
-                and os.readlink(APP / "storage") == SHARED, "LIVE_LINK_CHANGED")
+                and os.path.realpath(APP / "storage") == SHARED, "LIVE_LINK_CHANGED")
         helper.attest_snapshot(str(TARGET_APP), SHARED, candidate_name, CANDIDATE_SHA,
                                SCANNER_STATE, release_root=CANDIDATE,
                                scanner_path=p.DEPENDENCIES["scanner"])
