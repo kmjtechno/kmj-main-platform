@@ -118,6 +118,68 @@ class ExactArgvTest(unittest.TestCase):
         self.assertIn("ARGV_FINGERPRINT=BLOCKED_UNVERIFIABLE", out.getvalue())
         self.assertNotIn("QUEUE_ARGV_SHA256", out.getvalue())
 
+    def test_exact_command_mismatch_reports_stage_and_safe_reason(self):
+        with mock.patch.object(m.os, "geteuid", return_value=0), \
+             mock.patch.object(m.socket, "gethostname", return_value="KMJ-elite"), \
+             mock.patch.object(m, "live_pointer"), \
+             mock.patch.object(m, "show") as show:
+            def item(unit_id, fields):
+                if unit_id == m.TIMER:
+                    return {"ActiveState": "active", "Triggers": m.SCHEDULER}
+                args = (self.queue_args if unit_id == m.QUEUE else self.scheduler_args)
+                value = unit(unit_id, args, str(self.app))
+                if unit_id == m.QUEUE:
+                    value["Type"] = "notify"
+                return value
+            show.side_effect = item
+            out = io.StringIO()
+            with contextlib.redirect_stdout(out):
+                rc = m.main([])
+        self.assertEqual(rc, 2)
+        self.assertIn("ARGV_BLOCKER_STAGE=QUEUE_COMMAND", out.getvalue())
+        self.assertIn("ARGV_BLOCKER_REASON=UNIT_POLICY_UNVERIFIED", out.getvalue())
+        self.assertIn("STORAGE_APPLY_ALLOWED=NO", out.getvalue())
+        self.assertNotIn("ExecStart=", out.getvalue())
+        self.assertNotIn("QUEUE_ARGV_SHA256=", out.getvalue())
+
+    def test_timer_missing_fields_identifies_stage_without_exposing_fields(self):
+        with mock.patch.object(m.os, "geteuid", return_value=0), \
+             mock.patch.object(m.socket, "gethostname", return_value="KMJ-elite"), \
+             mock.patch.object(m, "live_pointer"), \
+             mock.patch.object(m, "show", side_effect=[
+                unit(m.QUEUE, self.queue_args, str(self.app)),
+                unit(m.SCHEDULER, self.scheduler_args, str(self.app)),
+                m.Refused("SYSTEMD_FIELDS_MISSING")
+            ]):
+            out = io.StringIO()
+            with contextlib.redirect_stdout(out):
+                rc = m.main([])
+        self.assertEqual(rc, 2)
+        self.assertIn("ARGV_BLOCKER_STAGE=TIMER_UNIT_READ", out.getvalue())
+        self.assertIn("ARGV_BLOCKER_REASON=SYSTEMD_FIELDS_MISSING", out.getvalue())
+        self.assertIn("PRODUCTION_MUTATION=NONE", out.getvalue())
+
+    def test_raw_exception_text_and_unrecognized_refusal_never_leaks(self):
+        for failure in (ValueError("SECRET_MY_TOKEN"), m.Refused("SECRET_MY_TOKEN")):
+            with mock.patch.object(m.os, "geteuid", return_value=0), \
+                 mock.patch.object(m.socket, "gethostname", return_value="KMJ-elite"), \
+                 mock.patch.object(m, "live_pointer", side_effect=failure):
+                out = io.StringIO()
+                with contextlib.redirect_stdout(out):
+                    rc = m.main([])
+            self.assertEqual(rc, 2)
+            self.assertIn("ARGV_BLOCKER_STAGE=LIVE_POINTER_BEFORE", out.getvalue())
+            self.assertIn("ARGV_BLOCKER_REASON=RUNTIME_UNVERIFIABLE", out.getvalue())
+            self.assertNotIn("SECRET", out.getvalue())
+            self.assertNotIn("QUEUE_ARGV_SHA256", out.getvalue())
+
+    def test_queue_and_scheduler_diagnostic_stage_is_distinct(self):
+        self.assertEqual(m.at("QUEUE_UNIT_READ", lambda: True), True)
+        with self.assertRaises(m.AuditBlocked) as caught:
+            m.at("SCHEDULER_COMMAND", lambda: m.insist(False, "UNIT_POLICY_UNVERIFIED"))
+        self.assertEqual(caught.exception.stage, "SCHEDULER_COMMAND")
+        self.assertEqual(caught.exception.reason, "UNIT_POLICY_UNVERIFIED")
+
     def test_verified_main_still_never_approves_storage(self):
         with mock.patch.object(m.os, "geteuid", return_value=0), \
              mock.patch.object(m.socket, "gethostname", return_value="KMJ-elite"), \
