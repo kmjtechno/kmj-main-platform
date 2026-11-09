@@ -67,6 +67,11 @@ REASONS = frozenset({
 
 # Only these fixed category names can be returned. Never include raw
 # ExecStart flags, values, tokens, filesystem paths, or process arguments.
+# Exact Laravel queue connection names previously classified as KNOWN_QUEUE_CONNECTION.
+# This is only a read-only command-identity validator; a matching fingerprint
+# never admits, stops or restarts live writers.
+KNOWN_QUEUE_CONNECTIONS = frozenset({"database", "redis", "sqs", "sync", "beanstalkd"})
+
 OPTION_SHAPES = frozenset({
     "KNOWN_QUEUE_CONNECTION", "SPLIT_NUMERIC_OPTION",
     "SPLIT_NUMERIC_VALUE", "SPLIT_QUEUE_OPTION",
@@ -92,7 +97,7 @@ def classify_option_shape(value: str) -> str:
             "password", "passwd", "secret", "token", "credential",
             "private", "authorization", "api-key", "api_key")):
         return "SENSITIVE_OPTION"
-    if value in {"database", "redis", "sqs", "sync", "beanstalkd"}:
+    if value in KNOWN_QUEUE_CONNECTIONS:
         return "KNOWN_QUEUE_CONNECTION"
     if value in {"--sleep", "--tries", "--timeout", "--memory",
                  "--backoff", "--max-time", "--max-jobs"}:
@@ -177,10 +182,19 @@ def safe_args(args: list[str], command: str) -> None:
            and args[1] == "artisan"
            and args[2] == command, "NOT_FIXED_PHP_ARTISAN")
     seen = set()
+    connection_seen = False
     for arg in args[3:]:
         insist(type(arg) is str and len(arg) <= 100
                and arg not in seen, "DUPLICATE_OR_LONG_OPTION")
         seen.add(arg)
+        if command == "queue:work":
+            # One finite, recognized Laravel positional connection, independent
+            # of options ordering. Reject a second distinct positional name
+            # rather than accidentally trusting an arbitrary trailing arg.
+            if arg in KNOWN_QUEUE_CONNECTIONS:
+                insist(not connection_seen, "DUPLICATE_OR_LONG_OPTION")
+                connection_seen = True
+                continue
         if arg in ("--no-interaction", "--quiet", "-q"):
             continue
         if command == "queue:work":

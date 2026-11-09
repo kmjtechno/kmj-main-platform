@@ -205,7 +205,11 @@ class ExactArgvTest(unittest.TestCase):
                 self.assertIn(result, m.OPTION_SHAPES)
                 self.assertNotIn(raw, m.OPTION_SHAPES)
 
-    def test_known_connection_still_blocks_writer_and_never_leaks_arg(self):
+    def test_one_known_positional_produces_sha_not_writer_admission(self):
+        # The observed old-v834 blocker was a recognized Laravel queue driver.
+        # A validated *command identity* SHA is not a writer-drain proof.
+        actual = ["/usr/bin/php8.4", "artisan", "queue:work",
+                  "database", "--sleep=3", "--tries=3"]
         with mock.patch.object(m.os, "geteuid", return_value=0), \
              mock.patch.object(m.socket, "gethostname", return_value="KMJ-elite"), \
              mock.patch.object(m, "live_pointer"), \
@@ -213,21 +217,61 @@ class ExactArgvTest(unittest.TestCase):
             def observed(unit_id, fields):
                 if unit_id == m.TIMER:
                     return {"ActiveState": "active", "Triggers": m.SCHEDULER}
-                args = self.queue_args + ["database"] if unit_id == m.QUEUE else self.scheduler_args
+                args = actual if unit_id == m.QUEUE else self.scheduler_args
                 return unit(unit_id, args, str(self.app))
             mock_show.side_effect = observed
             out = io.StringIO()
             with contextlib.redirect_stdout(out):
                 rc = m.main([])
-        self.assertEqual(rc, 2)
-        self.assertIn("ARGV_BLOCKER_STAGE=QUEUE_COMMAND", out.getvalue())
-        self.assertIn("ARGV_BLOCKER_REASON=UNREVIEWED_OPTION", out.getvalue())
-        self.assertIn("ARGV_UNREVIEWED_SHAPE=KNOWN_QUEUE_CONNECTION", out.getvalue())
+        self.assertEqual(rc, 0)
+        self.assertIn("ARGV_FINGERPRINT=READ_ONLY_VERIFIED", out.getvalue())
+        self.assertIn("QUEUE_ARGV_SHA256=" +
+                      hashlib.sha256(json.dumps(actual).encode()).hexdigest(),
+                      out.getvalue())
         self.assertNotIn("database", out.getvalue())
-        self.assertNotIn("QUEUE_ARGV_SHA256=", out.getvalue())
+        self.assertNotIn("ARGV_UNREVIEWED_SHAPE", out.getvalue())
         self.assertIn("WRITER_ADMISSION=NOT_ATTESTED", out.getvalue())
         self.assertIn("STORAGE_APPLY_ALLOWED=NO", out.getvalue())
         self.assertIn("PRODUCTION_MUTATION=NONE", out.getvalue())
+
+    def test_fixed_allowlist_one_connection_before_or_after_options(self):
+        self.assertEqual(
+            m.KNOWN_QUEUE_CONNECTIONS,
+            frozenset({"database", "redis", "sqs", "sync", "beanstalkd"}))
+        for name in sorted(m.KNOWN_QUEUE_CONNECTIONS):
+            for args in (
+                self.queue_args[:3] + [name] + self.queue_args[3:],
+                self.queue_args + [name],
+            ):
+                with self.subTest(name=name, location=args.index(name)):
+                    digest = m.fingerprint(m.QUEUE,
+                                           unit(m.QUEUE, args, str(self.app)))
+                    self.assertEqual(
+                        digest, hashlib.sha256(json.dumps(args).encode()).hexdigest())
+
+    def test_second_known_connection_or_unknown_positional_refused(self):
+        for trailing in (
+            ["database", "redis"], ["redis", "database"],
+            ["database", "database"], ["database", "mysql"],
+            ["mysql"], ["database", "--force"], ["database", "--token=private"],
+        ):
+            args = self.queue_args[:3] + trailing + self.queue_args[3:]
+            with self.subTest(trailing=trailing), self.assertRaises(m.Refused):
+                m.fingerprint(m.QUEUE, unit(m.QUEUE, args, str(self.app)))
+
+    def test_scheduler_must_never_accept_connection_positional(self):
+        for conn in sorted(m.KNOWN_QUEUE_CONNECTIONS):
+            with self.subTest(connection=conn), self.assertRaises(m.Refused):
+                m.fingerprint(m.SCHEDULER, unit(
+                    m.SCHEDULER, self.scheduler_args + [conn], str(self.app)))
+
+    def test_connection_shape_classification_stays_fixed_without_value_leaks(self):
+        for conn in sorted(m.KNOWN_QUEUE_CONNECTIONS):
+            self.assertEqual(m.classify_option_shape(conn), "KNOWN_QUEUE_CONNECTION")
+        self.assertEqual(m.classify_option_shape("unknown_driver"),
+                         "UNKNOWN_POSITIONAL")
+        self.assertEqual(m.classify_option_shape("--password=SECRET"),
+                         "SENSITIVE_OPTION")
 
     def test_secret_argv_never_leaks_any_raw_input(self):
         secret = "--password=PRIVATE-CUSTOMER-SUPERSECRET-DO-NOT-LOG"
