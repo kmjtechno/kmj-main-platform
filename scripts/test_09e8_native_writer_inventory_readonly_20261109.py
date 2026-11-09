@@ -74,7 +74,7 @@ class ExactNativeInventoryTests(unittest.TestCase):
                 return "0" * 64
             return "1" * 64
 
-        with mock.patch.object(module, "read_file", side_effect=get_file), \\
+        with mock.patch.object(module, "read_file", side_effect=get_file), \
              mock.patch.object(module, "digest", side_effect=hasher):
             deps = module.dependency_inventory()
         self.assertIs(deps["materializer"]["data"]["pin_matches"], True)
