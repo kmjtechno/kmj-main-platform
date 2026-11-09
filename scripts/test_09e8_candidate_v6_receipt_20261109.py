@@ -56,6 +56,27 @@ class ReceiptTests(unittest.TestCase):
                          "/home/kmjprod/releases/platform-09e8a224cd37/apps/platform")
         self.assertNotEqual(v.LIVE_RELEASE, "platform-574e443a2c75")
 
+    def test_reviewed_v6_scanner_constants_match_receipt_contract(self):
+        import importlib.util
+        scanner_path = (Path(__file__).resolve().parent /
+                        "operations/main_platform_storage_switch.py")
+        scanner_spec = importlib.util.spec_from_file_location(
+            "receipt_test_v6_scanner", scanner_path
+        )
+        scanner = importlib.util.module_from_spec(scanner_spec)
+        sys.modules[scanner_spec.name] = scanner
+        scanner_spec.loader.exec_module(scanner)
+        self.assertEqual(scanner.PRE, "storage.pre-shared-")
+        self.assertEqual(scanner.LINK, ".kmj-storage-link-")
+        self.assertTrue(set(v.EXPECTED_FIRST) <= scanner.PHASES)
+        self.assertIn("verified", scanner.PHASES)
+        self.assertIn("complete", scanner.PHASES)
+        import hashlib
+        self.assertEqual(
+            v.KEY,
+            hashlib.sha256(v.CANDIDATE_APP.encode()).hexdigest()[:12]
+        )
+
     def test_full_v6_order_and_nonmutating_contract(self):
         result = validate(success_records())
         self.assertEqual(result["CANDIDATE_RECEIPT_PLAN_MATCH"], "YES")
