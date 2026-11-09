@@ -32,6 +32,55 @@ class ExactNativeInventoryTests(unittest.TestCase):
         self.assertEqual(module.PORT if hasattr(module, "PORT") else 21084, 21084)
         self.assertEqual(module.POOL, "kmj-elite-stage")
 
+    def test_root_materializer_is_distinct_from_stale_dev_source(self):
+        self.assertEqual(
+            module.MATERIALIZER_ROOT,
+            "/usr/local/libexec/kmj-codebridge/main-platform-candidate-materialize-v2.sh"
+        )
+        doc = {"dependencies": {
+            "helper": ok({"pin_matches": True}),
+            "scanner": ok({"pin_matches": True}),
+            "materializer": {"observed": False, "reason": "UNVERIFIED"},
+            "materializer_project_source": ok({"pin_matches": True}),
+        }}
+        result = module.attest_report(doc)
+        self.assertEqual(result["MATERIALIZER_SOURCE_PINNED"], "YES")
+        self.assertEqual(result["MATERIALIZER_ROOT_PINNED"], "NO_OR_UNVERIFIED")
+        self.assertEqual(result["MATERIALIZER_ROOT_INSTALL_REQUIRED"], "YES_UNTIL_PROVEN")
+        self.assertEqual(result["STORAGE_APPLY_ALLOWED"], "NO")
+        doc["dependencies"]["materializer"] = ok({"pin_matches": True})
+        result = module.attest_report(doc)
+        self.assertEqual(result["MATERIALIZER_ROOT_PINNED"], "YES")
+        self.assertEqual(result["MATERIALIZER_ROOT_INSTALL_REQUIRED"], "NO")
+        self.assertEqual(result["STORAGE_APPLY_ALLOWED"], "NO")
+
+    def test_root_materializer_checks_root_protected_bytes_not_project_copy(self):
+        def get_file(path, limit=1048576, protected=False):
+            if path == module.MATERIALIZER_ROOT:
+                self.assertTrue(protected)
+                return b"installed-root-script"
+            if path == module.MATERIALIZER_SOURCE:
+                self.assertFalse(protected)
+                return b"stale-dev-source"
+            if path in module.DEPENDENCIES.values():
+                self.assertTrue(protected)
+                return b"protected-other"
+            raise AssertionError("unexpected path " + str(path))
+
+        def hasher(data):
+            if data == b"installed-root-script":
+                return module.PINS["materializer"]
+            if data == b"stale-dev-source":
+                return "0" * 64
+            return "1" * 64
+
+        with mock.patch.object(module, "read_file", side_effect=get_file), \
+             mock.patch.object(module, "digest", side_effect=hasher):
+            deps = module.dependency_inventory()
+        self.assertIs(deps["materializer"]["data"]["pin_matches"], True)
+        self.assertIs(deps["materializer_project_source"]["data"]["pin_matches"], False)
+        self.assertNotIn("stale-dev-source", str(deps))
+
     def test_service_timer_properties_are_type_scoped(self):
         self.assertNotIn("Triggers", module.SERVICE_PROPERTIES)
         self.assertNotIn("MainPID", module.TIMER_PROPERTIES)
@@ -45,7 +94,8 @@ class ExactNativeInventoryTests(unittest.TestCase):
         self.assertEqual(values["WRITER_ADMISSION_CLOSED"], "NOT_ATTESTED")
         self.assertEqual(values["LIVE_STORAGE_SWITCH_REQUIRED"], "NO")
         for key in ("PINNED_SCANNER", "FPM_POOL_EXACT_LISTEN",
-                    "FPM_MASTER_LISTENER_IDENTITY", "ROOT_LOCK_SAFE"):
+                    "FPM_MASTER_LISTENER_IDENTITY", "ROOT_LOCK_SAFE",
+                    "MATERIALIZER_ROOT_PINNED"):
             self.assertEqual(values[key], "NO_OR_UNVERIFIED")
 
     def test_exact_scope_can_be_reported_without_claiming_writer_exclusion(self):

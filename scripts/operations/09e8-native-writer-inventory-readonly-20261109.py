@@ -47,6 +47,10 @@ DEPENDENCIES = {
     "scanner": "/usr/local/libexec/kmj-codebridge/main-platform-storage-switch-v6.py",
 }
 MATERIALIZER_SOURCE = "/srv/kmj-codebridge-projects/kmj-main-platform/scripts/operations/materialize-main-platform-candidate-runtime.sh"
+# Only this root-owned, single-link protected exact-hash copy may ever become
+# an execution dependency of a separately reviewed cutover adapter. The
+# stale/missing shared developer checkout is *not* an acceptable executor.
+MATERIALIZER_ROOT = "/usr/local/libexec/kmj-codebridge/main-platform-candidate-materialize-v2.sh"
 WORKER_HASH = "5eb06f601fa559565b98f6e84e9ca8eff9335e1d9d7a3dca25fcb214c499a617"
 FRAMEWORK_REF = "7c75fbf93f91fa077d3df1c820cc14f4e59a9774"
 # Old CD958 invocation hashes are deliberately NOT reused for a different
@@ -244,12 +248,17 @@ def dependency_inventory():
         hashed = digest(read_file(path, protected=True))
         return {"sha256": hashed, "pin_matches": hashed == PINS[name]}
     result = {name: section(lambda p=path, n=name: inspect(p, n)) for name, path in DEPENDENCIES.items()}
-    def materializer():
+    # The root-private materializer is a distinct trust boundary. Existing
+    # dev source bytes -- even at matching SHA -- may not grant root executor
+    # provenance. Fail closed when root install is missing or unsafe.
+    result["materializer"] = section(
+        lambda: inspect(MATERIALIZER_ROOT, "materializer")
+    )
+    def project_source():
         hashed = digest(read_file(MATERIALIZER_SOURCE))
-        matches = hashed == PINS["materializer"]
-        return {"sha256": hashed, "pin_matches": matches, "protected_root_install_verified": False,
-                "installation": "SOURCE_PINNED_NOT_ROOT_INSTALLED" if matches else "SOURCE_PIN_MISMATCH"}
-    result["materializer"] = section(materializer)
+        return {"sha256": hashed, "pin_matches": hashed == PINS["materializer"],
+                "root_executable_dependency": False}
+    result["materializer_project_source"] = section(project_source)
     return result
 
 
@@ -512,7 +521,12 @@ def attest_report(inventory_doc: dict) -> dict[str, str]:
         "MAINTENANCE_FILE_DRIVER_DECLARED": label(maintenance.get("uncached_explicit_file_driver") is True),
         "PINNED_SCANNER": label((inner(deps, "scanner") or {}).get("pin_matches") is True),
         "PINNED_SNAPSHOT_HELPER": label((inner(deps, "helper") or {}).get("pin_matches") is True),
-        "MATERIALIZER_SOURCE_PINNED": label((inner(deps, "materializer") or {}).get("pin_matches") is True),
+        "MATERIALIZER_SOURCE_PINNED": label((inner(deps, "materializer_project_source") or {}).get("pin_matches") is True),
+        "MATERIALIZER_ROOT_PINNED": label((inner(deps, "materializer") or {}).get("pin_matches") is True),
+        "MATERIALIZER_ROOT_INSTALL_REQUIRED": (
+            "NO" if (inner(deps, "materializer") or {}).get("pin_matches") is True
+            else "YES_UNTIL_PROVEN"
+        ),
         "ROOT_CAP_NET_ADMIN": label(capabilities.get("net_admin") is True),
         "ROOT_CAP_LINUX_IMMUTABLE": label(capabilities.get("linux_immutable") is True),
         "NFT_IPV4_OUTPUT_REVIEW": label(nft.get("cross_family_hook_semantics_verified") is True),
