@@ -39,12 +39,12 @@ class UploadCoverageTests(unittest.TestCase):
         self.witness = self.base / "witness.json"
         self.make_bundle()
 
-    def make_bundle(self, data=b"content", extra=None):
+    def make_bundle(self, data=b"content", extra=None, public_name="example.txt"):
         inner = io.BytesIO()
         with tarfile.open(fileobj=inner, mode="w:gz") as t:
             add(t, "storage/app", kind=tarfile.DIRTYPE)
             add(t, "storage/app/public", kind=tarfile.DIRTYPE)
-            add(t, "storage/app/public/example.txt", data)
+            add(t, "storage/app/public/" + public_name, data)
             add(t, ".env", b"private")
             if extra:
                 add(t, *extra)
@@ -97,6 +97,60 @@ class UploadCoverageTests(unittest.TestCase):
         original.rename(target)
         original.symlink_to(target, target_is_directory=True)
         return target
+
+    def placeholder_public_dir(self, *, data=b"*\\n!.gitignore\\n"):
+        app = self.release / "apps/platform"
+        (app / "storage/app/public/example.txt").unlink()
+        (app / "storage/app/public/.gitignore").write_bytes(data)
+        (app / "public/storage").unlink()
+        self.make_bundle(data=data, public_name=".gitignore")
+
+    def test_missing_public_link_with_exact_placeholder_only_is_optional(self):
+        self.placeholder_public_dir()
+        result = self.run_audit()
+        self.assertEqual(result["STORAGE_APP_CONTENT_PARITY"], "PASS")
+        self.assertEqual(result["PUBLIC_STORAGE_LINK"], "NOT_REQUIRED_PLACEHOLDER_ONLY")
+        self.assertEqual(result["ALL_CUSTOMER_UPLOAD_LOCATIONS_VERIFIED"], "NO")
+
+    def test_missing_public_link_with_real_customer_asset_still_blocks(self):
+        self.placeholder_public_dir()
+        public_root = self.release / "apps/platform/storage/app/public"
+        (public_root / "photo.jpg").write_bytes(b"customer-payload")
+        self.make_bundle(data=b"*\\n!.gitignore\\n",
+                         public_name=".gitignore",
+                         extra=("storage/app/public/photo.jpg", b"customer-payload"))
+        result = self.run_audit()
+        self.assertEqual(result["STORAGE_APP_CONTENT_PARITY"], "PASS")
+        self.assertEqual(result["PUBLIC_STORAGE_LINK"], "MISSING_OR_DIFFERENT")
+
+    def test_missing_public_link_with_modified_placeholder_still_blocks(self):
+        self.placeholder_public_dir(data=b"changed")
+        result = self.run_audit()
+        self.assertEqual(result["STORAGE_APP_CONTENT_PARITY"], "PASS")
+        self.assertEqual(result["PUBLIC_STORAGE_LINK"], "MISSING_OR_DIFFERENT")
+
+    def test_missing_public_link_with_live_archive_mismatch_still_blocks(self):
+        self.placeholder_public_dir()
+        (self.release / "apps/platform/storage/app/public/.gitignore").write_bytes(b"changed")
+        result = self.run_audit()
+        self.assertEqual(result["STORAGE_APP_CONTENT_PARITY"], "MISMATCH")
+        self.assertEqual(result["PUBLIC_STORAGE_LINK"], "MISSING_OR_DIFFERENT")
+
+    def test_missing_public_link_exact_placeholder_on_approved_shared_storage(self):
+        from unittest import mock
+        self.placeholder_public_dir()
+        target = self.shared_storage()
+        with mock.patch.object(audit_module, "SHARED_ROOT", target):
+            result = self.run_audit()
+        self.assertEqual(result["LIVE_STORAGE_LAYOUT"], "EXACT_SHARED_LINK")
+        self.assertEqual(result["PUBLIC_STORAGE_LINK"], "NOT_REQUIRED_PLACEHOLDER_ONLY")
+        self.assertEqual(result["STORAGE_APP_CONTENT_PARITY"], "PASS")
+
+    def test_missing_public_link_other_entries_are_not_optional(self):
+        self.placeholder_public_dir()
+        (self.release / "apps/platform/public/storage").mkdir()
+        result = self.run_audit()
+        self.assertEqual(result["PUBLIC_STORAGE_LINK"], "MISSING_OR_DIFFERENT")
 
     def test_exact_shared_storage_layout_is_audited_without_traversing_link(self):
         from unittest import mock
