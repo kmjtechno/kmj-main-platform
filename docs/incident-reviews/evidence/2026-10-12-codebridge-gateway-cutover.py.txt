@@ -1,0 +1,181 @@
+#!/usr/bin/env python3
+"""KMJ-elite only: pinned CodeBridge gateway cutover with automatic rollback.
+
+No token/config content is displayed, and neither Nginx nor agents are edited.
+"""
+import fcntl
+import json
+import os
+from pathlib import Path
+import pwd
+import re
+import shutil
+import subprocess
+import sys
+import time
+
+UNIT = "kmj-codebridge-gateway-stage.service"
+OLD = Path("/srv/kmj-codebridge-projects/kmj-codebridge")
+BASE = "6b6d7051f3a4a15f6fadc6dcc53e51e54bbd65d1"
+TARGET_SHA = "055fd88ebfd56125abbe2bcec8f99819ed54ae80"
+TARGET = Path("/opt/kmj-codebridge-candidates") / TARGET_SHA
+OVERRIDE = Path("/etc/systemd/system") / (UNIT + ".d") / "99-kmj-pinned-runtime.conf"
+TOOLS = {"local_model_status", "local_model_generate", "autopilot_local_draft"}
+BODY = json.dumps({"jsonrpc": "2.0", "id": 1, "method": "tools/list", "params": {}})
+
+def cmd(argv, input=None, timeout=30, cwd=None):
+    p = subprocess.run(argv, input=input, capture_output=True, text=True, timeout=timeout, cwd=cwd)
+    if p.returncode:
+        raise RuntimeError("COMMAND_FAILED:" + Path(argv[0]).name)
+    return p.stdout.strip()
+
+def require(ok, reason):
+    if not ok:
+        raise RuntimeError("CHECK_FAILED:" + reason)
+
+def prop(key):
+    return cmd(["systemctl", "show", UNIT, "-p", key, "--value"])
+
+def git(root, *args):
+    return cmd(["git", "-c", "safe.directory=" + str(root), "-C", str(root), *args])
+
+def catalog(url, local_tls=False):
+    args = ["curl", "-fsS", "--max-time", "15", "--connect-timeout", "4"]
+    if local_tls:
+        args += ["--resolve", "kmjtechno.com:443:127.0.0.1"]
+    args += ["-H", "Host: kmjtechno.com",
+             "-H", "Content-Type: application/json",
+             "-H", "Accept: application/json, text/event-stream",
+             "--data-binary", "@-", url]
+    data = cmd(args, BODY, 20)
+    require(len(data) <= 1000000, "catalog_too_large")
+    candidates = [data] + [x[5:].strip() for x in data.splitlines() if x.startswith("data:")]
+    for candidate in candidates:
+        try:
+            obj = json.loads(candidate)
+            val = obj.get("result", {}).get("tools")
+            if isinstance(val, list):
+                return {x["name"] for x in val if isinstance(x, dict) and isinstance(x.get("name"), str)}
+        except (ValueError, TypeError, AttributeError):
+            pass
+    raise RuntimeError("CATALOG_UNREADABLE")
+
+def inspect():
+    require(os.geteuid() == 0, "root_required")
+    require(os.uname().nodename.lower() == "kmj-elite", "unexpected_host")
+    pid = int(prop("MainPID") or "0")
+    require(pid > 0 and prop("ActiveState") == "active", "gateway_not_running")
+    require(prop("User") == "kmjcode", "wrong_service_user")
+    require(Path("/proc/" + str(pid) + "/cwd").resolve() == OLD.resolve(), "running_root_changed")
+    require(not OVERRIDE.exists(), "rollout_override_already_exists")
+    require(git(OLD, "rev-parse", "HEAD") == BASE, "old_sha_mismatch")
+    require(not git(OLD, "status", "--porcelain"), "old_checkout_dirty")
+    require(git(TARGET, "rev-parse", "HEAD") == TARGET_SHA, "candidate_sha_mismatch")
+    require(not git(TARGET, "status", "--porcelain"), "candidate_checkout_dirty")
+    require((TARGET / "node_modules" / "zod").is_dir(), "dependencies_missing")
+    require("local_model_generate" in (TARGET / "src" / "tools.js").read_text(), "local_tools_missing")
+    args = [a.decode() for a in Path("/proc/" + str(pid) + "/cmdline").read_bytes().split(b"\0") if a]
+    require(len(args) == 4 and args[2] == "gateway", "unexpected_process_args")
+    entry = Path(args[1])
+    if not entry.is_absolute():
+        entry = OLD / entry
+    require(entry.resolve() == OLD / "src" / "cli.js", "unexpected_entry")
+    config = Path(args[3])
+    node = Path("/proc/" + str(pid) + "/exe").resolve()
+    require(config.is_absolute() and config.is_file(), "private_config_unavailable")
+    require(config.stat().st_mode & 0o077 == 0, "config_permissions_not_private")
+    require(cmd([str(node), "--version"]).startswith("v24."), "node_major_mismatch")
+    for path in (node, config, TARGET):
+        require(bool(re.fullmatch(r"[/A-Za-z0-9_.-]+", str(path))), "unsupported_path_characters")
+    validate = (
+        'import fs from "node:fs"; import {gatewaySchema} from "./src/config.js";'
+        'const c=gatewaySchema.parse(JSON.parse(fs.readFileSync(process.argv[1],"utf8")));'
+        'if(c.host!=="127.0.0.1"||c.port!==18787||!c.allowedHosts.includes("kmjtechno.com"))process.exit(4);'
+        'console.log("CONFIG_VALID");'
+    )
+    v = ["runuser", "-u", "kmjcode", "--", "env", "-i",
+         "HOME=" + pwd.getpwnam("kmjcode").pw_dir,
+         "PATH=/usr/local/bin:/usr/bin:/bin",
+         str(node), "--input-type=module", "-e", validate, str(config)]
+    require(cmd(v, cwd=TARGET) == "CONFIG_VALID", "new_config_schema")
+    old = catalog("http://127.0.0.1:18787/mcp")
+    require(len(old) == 88 and old.isdisjoint(TOOLS), "baseline_catalog_changed")
+    print("PREFLIGHT=PASS")
+    print("SOURCE_TARGET=" + TARGET_SHA)
+    return pid, node, config
+
+def verify():
+    for label, url, local_tls in (
+        ("DIRECT", "http://127.0.0.1:18787/mcp", False),
+        ("LOCAL_NGINX", "https://kmjtechno.com/mcp", True),
+        ("PUBLIC", "https://kmjtechno.com/mcp", False),
+    ):
+        names = catalog(url, local_tls)
+        good = len(names) >= 100 and TOOLS.issubset(names)
+        print(label + "_COUNT=" + str(len(names)))
+        require(good, label + "_missing_tools")
+    print("TOOL_CATALOG=PASS")
+
+def activate():
+    lock = open("/run/lock/kmj-codebridge-gateway-cutover.lock", "w")
+    fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    pid, node, config = inspect()
+    unitfile = Path(prop("FragmentPath"))
+    require(unitfile.is_file(), "unit_file_missing")
+    backup = Path("/var/backups/kmj-codebridge") / time.strftime("%Y%m%dT%H%M%SZ", time.gmtime())
+    backup.mkdir(mode=0o700, parents=True)
+    shutil.copy2(unitfile, backup / "original.service")
+    (backup / "old-sha.txt").write_text(BASE + "\n")
+    (backup / "candidate-sha.txt").write_text(TARGET_SHA + "\n")
+    created = False
+    try:
+        OVERRIDE.parent.mkdir(parents=True, exist_ok=True)
+        with OVERRIDE.open("x") as f:
+            f.write("[Service]\nWorkingDirectory=" + str(TARGET) +
+                    "\nExecStart=\nExecStart=" + str(node) + " " +
+                    str(TARGET / "src" / "cli.js") + " gateway " + str(config) + "\n")
+        created = True
+        os.chmod(OVERRIDE, 0o644)
+        cmd(["systemctl", "daemon-reload"], timeout=40)
+        require(str(TARGET / "src" / "cli.js") in prop("ExecStart"), "unit_override_not_applied")
+        print("CUTOVER=STARTING")
+        cmd(["systemctl", "restart", UNIT], timeout=90)
+        require(prop("ActiveState") == "active", "gateway_failed_restart")
+        new_pid = int(prop("MainPID") or "0")
+        require(new_pid > 0 and new_pid != pid, "gateway_pid_not_changed")
+        require(Path("/proc/" + str(new_pid) + "/cwd").resolve() == TARGET, "runtime_cwd_wrong")
+        for trial in range(10):
+            try:
+                verify()
+                break
+            except Exception:
+                if trial == 9:
+                    raise
+                time.sleep(2)
+        print("CUTOVER=PASS")
+        print("NEW_PID=" + str(new_pid))
+        print("BACKUP=" + str(backup))
+        print("AGENT_ROUND_TRIP=PENDING")
+    except Exception as ex:
+        print("CUTOVER=FAIL")
+        print("FAILURE=" + str(ex)[:120])
+        if created:
+            print("ROLLBACK=STARTING")
+            try:
+                OVERRIDE.unlink(missing_ok=True)
+                cmd(["systemctl", "daemon-reload"], timeout=40)
+                cmd(["systemctl", "restart", UNIT], timeout=90)
+                require(prop("ActiveState") == "active", "rollback_service_inactive")
+                require(len(catalog("http://127.0.0.1:18787/mcp")) == 88, "rollback_catalog_mismatch")
+                print("ROLLBACK=PASS")
+            except Exception:
+                print("ROLLBACK=FAIL_MANUAL_RECOVERY_REQUIRED")
+        raise
+
+if __name__ == "__main__":
+    try:
+        activate()
+    except Exception as exc:
+        print("RESULT=FAIL")
+        print("ERROR=" + str(exc)[:140])
+        sys.exit(1)
