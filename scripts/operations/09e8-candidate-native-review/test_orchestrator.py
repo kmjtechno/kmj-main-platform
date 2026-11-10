@@ -386,13 +386,15 @@ class TransactionTests(unittest.TestCase):
         with self.assertRaises(m.Blocked):
             self.tx.apply(m.CANDIDATE_SHA)
         self.ops.fail = None
+        original = copy.deepcopy(self.store.value)
+        self.assertEqual(original["plan_id"], m.OWNER_ATTESTED_CANDIDATE_PLAN)
         for phase in ("switch_intent", "switch_verified",
                       "intent_runtime_restore", "done_runtime_restore",
                       "intent_guard_remove", "done_guard_remove",
                       "storage_complete_materializer_pending",
                       "intent_rollback", "done_rollback"):
             with self.subTest(phase=phase):
-                state = copy.deepcopy(self.store.value)
+                state = copy.deepcopy(original)
                 state.pop("plan_id")
                 state["phase"] = phase
                 self.store.value = state
