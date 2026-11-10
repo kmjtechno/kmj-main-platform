@@ -83,7 +83,7 @@ class CommandEvidenceTests(unittest.TestCase):
 
     def test_service_only_property_response_never_implies_missing_timer_fields(self):
         sample = dict.fromkeys(n.SERVICE_PROPERTIES, "test")
-        payload = "".join(f"{k}={v}\\n" for k, v in sample.items()).encode()
+        payload = "".join(f"{k}={v}\n" for k, v in sample.items()).encode()
         with patch.object(n, "command", return_value=(payload, b"")) as run:
             values, hashed = n.properties(n.UNITS[0])
         self.assertEqual(values, sample)
@@ -96,7 +96,7 @@ class CommandEvidenceTests(unittest.TestCase):
     def test_timer_only_properties_do_not_require_service_fields(self):
         sample = {"ActiveState": "active", "SubState": "waiting",
                   "Triggers": n.UNITS[1]}
-        payload = "".join(f"{k}={v}\\n" for k, v in sample.items()).encode()
+        payload = "".join(f"{k}={v}\n" for k, v in sample.items()).encode()
         with patch.object(n, "command", return_value=(payload, b"")) as run:
             values, _ = n.properties(n.UNITS[2])
         self.assertEqual(values, sample)
@@ -104,10 +104,10 @@ class CommandEvidenceTests(unittest.TestCase):
                          "--property=" + ",".join(n.TIMER_PROPERTIES))
 
     def test_missing_or_duplicate_systemd_service_field_fails_closed(self):
-        normal = "".join(f"{key}=x\\n" for key in n.SERVICE_PROPERTIES).encode()
-        for raw in (normal.replace(b"MainPID=x\\n", b""),
-                    normal + b"MainPID=2\\n",
-                    normal + b"Triggers=foreign\\n"):
+        normal = "".join(f"{key}=x\n" for key in n.SERVICE_PROPERTIES).encode()
+        for raw in (normal.replace(b"MainPID=x\n", b""),
+                    normal + b"MainPID=2\n",
+                    normal + b"Triggers=foreign\n"):
             with self.subTest(size=len(raw)), patch.object(
                     n, "command", return_value=(raw, b"")):
                 with self.assertRaises(n.Blocked):
