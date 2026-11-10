@@ -39,7 +39,7 @@ void test('every admin section is a real owner route, not an inert card', () => 
     for (const url of [
         '/super-admin',
         '/operator/products',
-        '/super-admin#commercial-orders',
+        '/operator#commercial-orders',
         '/operator/directory',
         '/operator/payments',
         '/operator/kslp',
@@ -57,6 +57,21 @@ void test('every admin section is a real owner route, not an inert card', () => 
     assert.match(nav, /aria-label="Find an admin module"/);
     assert.match(nav, /No matching module/);
     assert.match(nav, /overflow-x-auto/);
+});
+
+const commandOs = read('resources/js/components/operator-command-os.tsx');
+
+void test('Super Admin order actions lead to the real owner order controls', () => {
+    // Only /operator renders the order-management section. /super-admin does not.
+    assert.ok(operator.includes('id="commercial-orders"'));
+    assert.ok(nav.includes("href: '/operator#commercial-orders'"));
+    assert.equal(
+        commandOs.split('/operator#commercial-orders').length - 1,
+        5,
+    );
+    assert.ok(!commandOs.includes('/super-admin#commercial-orders'));
+    assert.ok(!commandOs.includes('href="#commercial-orders"'));
+    assert.ok(!commandOs.includes("'Manage Orders', '#commercial-orders'"));
 });
 
 void test('design accents have semantic variety and reduced-motion accessibility', () => {
