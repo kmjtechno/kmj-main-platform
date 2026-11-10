@@ -469,7 +469,9 @@ export default function OperatorCommandOs({
                                             .replace('kmj-', '')
                                             .replaceAll('-', ' ')}
                                     </p>
-                                    <Link href="/operator/products">
+                                    <Link
+                                        href={`/operator/products?product=${encodeURIComponent(p.slug)}`}
+                                    >
                                         <ProductArtwork
                                             src={
                                                 art[p.slug]
@@ -496,11 +498,15 @@ export default function OperatorCommandOs({
                                             <KeyRound size={14} />
                                             Licensing
                                         </Link>
-                                        <Link href="/operator/products">
+                                        <Link
+                                            href={`/operator/products?product=${encodeURIComponent(p.slug)}`}
+                                        >
                                             <ChartNoAxesCombined size={14} />
                                             Catalog
                                         </Link>
-                                        <Link href="/operator/products">
+                                        <Link
+                                            href={`/operator/products?product=${encodeURIComponent(p.slug)}`}
+                                        >
                                             <Settings size={14} />
                                             Settings
                                         </Link>
