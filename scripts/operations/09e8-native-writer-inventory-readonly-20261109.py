@@ -53,10 +53,16 @@ MATERIALIZER_SOURCE = "/srv/kmj-codebridge-projects/kmj-main-platform/scripts/op
 MATERIALIZER_ROOT = "/usr/local/libexec/kmj-codebridge/main-platform-candidate-materialize-v2.sh"
 WORKER_HASH = "5eb06f601fa559565b98f6e84e9ca8eff9335e1d9d7a3dca25fcb214c499a617"
 FRAMEWORK_REF = "7c75fbf93f91fa077d3df1c820cc14f4e59a9774"
-# Old CD958 invocation hashes are deliberately NOT reused for a different
-# production release. Need fresh owner-reviewed binding after inspecting
-# authoritative current systemd ExecStart, before any writer drain.
-EXPECTED_ARGV_HASHES = {"queue": "", "scheduler": ""}
+# Owner's independent 2026-11-10T07:29:41Z SHA-pinned *current bce410*
+# read-only witness: ARGV_FINGERPRINT=READ_ONLY_VERIFIED, ARGV_SAFE_SCHEMA=YES.
+# Source was GitHub commit 18fb5489c3a1a4954ca7ee4f1e65a27628dafffe
+# (source SHA256 b19f5c26...). The equal historical CD958 digests are
+# NOT a separate trust source. These establish exact command identity ONLY;
+# no live writer drain, admission guard or storage apply is authorized.
+EXPECTED_ARGV_HASHES = {
+    "queue": "b4fb53ed7753d56393a150900faab65e38a4f2dd5db298e2ba4c23227def8359",
+    "scheduler": "6539b4d3319d25bcb4d6f2490f4f827537c06604a21838d3545fe6e82afdbffe",
+}
 ENV = {"PATH": "/usr/sbin:/usr/bin:/sbin:/bin", "HOME": "/nonexistent", "LC_ALL": "C"}
 # Request only service/timer-applicable systemd fields. Never interpret
 # absence of a service-only property on the timer as a failed host.
@@ -500,7 +506,13 @@ def attest_report(inventory_doc: dict) -> dict[str, str]:
                        if queue.get("ActiveState") in {"active", "inactive", "activating", "deactivating", "failed"}
                        else "UNVERIFIED",
         "QUEUE_DIRECT_LIVE_COMMAND": label((inner(queue, "unit_command") or {}).get("exact_direct_live_command") is True),
-        "QUEUE_OLD_ARGV_PINS_REUSED": "NO",
+        "QUEUE_ARGV_SOURCE_OWNER_VERIFIED": "YES_2026_11_10",
+        "QUEUE_ARGV_UNIT_PIN_MATCH": label(
+            (inner(queue, "unit_command") or {}).get("known_argv_hash_matches") is True
+            and (inner(queue, "unit_command") or {}).get("force") is False),
+        "QUEUE_ARGV_RUNTIME_PIN_MATCH": label(
+            (inner(queue, "runtime") or {}).get("known_argv_hash_matches") is True
+            and (inner(queue, "runtime") or {}).get("force") is False),
         "QUEUE_RESTART_ALWAYS": label(queue.get("Restart") == "always"),
         "QUEUE_RUNTIME_SCOPED": label((inner(queue, "runtime") or {}).get("all_uids_kmjprod") is True
                                       and (inner(queue, "runtime") or {}).get("host_network_namespace") is True),
@@ -508,6 +520,9 @@ def attest_report(inventory_doc: dict) -> dict[str, str]:
                            if scheduler.get("ActiveState") in {"active", "inactive", "activating", "deactivating", "failed"}
                            else "UNVERIFIED",
         "SCHEDULER_DIRECT_LIVE_COMMAND": label((inner(scheduler, "unit_command") or {}).get("exact_direct_live_command") is True),
+        "SCHEDULER_ARGV_UNIT_PIN_MATCH": label(
+            (inner(scheduler, "unit_command") or {}).get("known_argv_hash_matches") is True
+            and (inner(scheduler, "unit_command") or {}).get("force") is False),
         "TIMER_EXACT_TRIGGER": label(timer.get("exact_scheduler_trigger") is True),
         "FPM_POOL_EXACT_LISTEN": label(pool.get("listen_exact") is True),
         "FPM_POOL_OWNER": label(pool.get("user_kmjprod") is True),
