@@ -27,9 +27,17 @@ export default function OperatorProducts({
     generation?: GenerationConfiguration;
 }) {
     const pageUrl = usePage().url;
-    const [promptProductId, setPromptProductId] = useState<string | null>(null);
+    // Only an existing catalog slug may preselect an editor. Unrecognized
+    // product slugs never authorize a new product or change owner privileges.
+    const productSlug = new URLSearchParams(pageUrl.split('?')[1] ?? '').get(
+        'product',
+    );
+    const linkedProduct = products.find((item) => item.slug === productSlug);
+    const [promptProductId, setPromptProductId] = useState<string | null>(
+        linkedProduct?.id ?? null,
+    );
     const [promptBusy, setPromptBusy] = useState(false);
-    const [search, setSearch] = useState('');
+    const [search, setSearch] = useState(linkedProduct?.slug ?? '');
     const [category, setCategory] = useState('all');
     const [lifecycle, setLifecycle] = useState('all');
     const [creating, setCreating] = useState(
