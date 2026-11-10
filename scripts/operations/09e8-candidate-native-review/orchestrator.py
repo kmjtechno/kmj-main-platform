@@ -81,25 +81,70 @@ class Store:
     def close(self):
         os.close(self.fd)
 
+    def _entries(self):
+        """Never replay old state when a newer journal write was interrupted.
+
+        Pending stages, unknown objects and surplus sidecars must remain
+        untouched for explicit recovery. An original transaction receipt alone
+        does not establish that the last attempted transaction write completed.
+        """
+        entries = os.listdir(self.fd)
+        require(len(entries) <= 3, "STATE_DIRECTORY_UNREVIEWED_CONTENTS")
+        allowed_env = re.compile(
+            r"queue-environment-[0-9a-f]{32}(?:-replacement)?\.json\Z")
+        for name in entries:
+            require(name == "transaction.json"
+                    or allowed_env.fullmatch(name) is not None,
+                    "UNFINISHED_OR_UNKNOWN_JOURNAL_ARTIFACT")
+        return set(entries)
+
     def read(self):
-        try:
-            fd = os.open("transaction.json", os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK,
-                         dir_fd=self.fd)
-        except FileNotFoundError:
+        entries = self._entries()
+        if "transaction.json" not in entries:
+            require(not entries, "ORPHANED_ENVIRONMENT_WITHOUT_TRANSACTION")
             return None
+        fd = os.open("transaction.json", os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK,
+                     dir_fd=self.fd)
         try:
-            st = os.fstat(fd)
-            require(stat.S_ISREG(st.st_mode) and st.st_nlink == 1 and st.st_uid == self.owner
-                    and stat.S_IMODE(st.st_mode) == 0o600 and st.st_size <= 65536, "UNSAFE_STATE")
+            before = os.fstat(fd)
+            require(stat.S_ISREG(before.st_mode) and before.st_nlink == 1
+                    and before.st_uid == self.owner
+                    and stat.S_IMODE(before.st_mode) == 0o600
+                    and 0 < before.st_size <= 65536, "UNSAFE_STATE")
             raw = os.read(fd, 65537)
             require(raw.endswith(b"\n") and len(raw) <= 65536, "TORN_STATE")
             value = json.loads(raw, object_pairs_hook=no_duplicates)
             require(canonical_json(value) == raw, "NONCANONICAL_STATE")
+            after = os.fstat(fd)
+            named = os.stat("transaction.json", dir_fd=self.fd, follow_symlinks=False)
+            require((before.st_dev, before.st_ino, before.st_mode,
+                     before.st_uid, before.st_nlink, before.st_size)
+                    == (after.st_dev, after.st_ino, after.st_mode,
+                        after.st_uid, after.st_nlink, after.st_size)
+                    == (named.st_dev, named.st_ino, named.st_mode,
+                        named.st_uid, named.st_nlink, named.st_size),
+                    "STATE_FILE_REPLACED_DURING_READ")
+            sidecars = entries - {"transaction.json"}
+            if sidecars:
+                require(type(value) is dict and
+                        type(value.get("recovery_evidence")) is dict,
+                        "STATE_ENVIRONMENT_WITHOUT_RECOVERY_EVIDENCE")
+                nonce = value["recovery_evidence"].get("nonce")
+                require(type(nonce) is str and
+                        re.fullmatch(r"[0-9a-f]{32}", nonce) is not None,
+                        "STATE_ENVIRONMENT_NONCE_MISSING")
+                require(all(name in {
+                    "queue-environment-" + nonce + ".json",
+                    "queue-environment-" + nonce + "-replacement.json",
+                } for name in sidecars), "FOREIGN_QUEUE_ENVIRONMENT_ARTIFACT")
             return value
         finally:
             os.close(fd)
 
     def write(self, state):
+        # Reject a prior torn pending write before any new staging file.
+        # Never replace an untrusted journal or ignore foreign recovery data.
+        self.read()
         raw = canonical_json(state)
         require(len(raw) <= 65536, "STATE_TOO_LARGE")
         # A left-over staging name is a crash artifact; do not unlink blindly.
