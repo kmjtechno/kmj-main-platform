@@ -24,13 +24,26 @@ DEPENDENCIES = {
 MATERIALIZER_SOURCE = "/usr/local/libexec/kmj-codebridge/main-platform-candidate-materialize-v2.sh"
 WORKER_HASH = "5eb06f601fa559565b98f6e84e9ca8eff9335e1d9d7a3dca25fcb214c499a617"
 FRAMEWORK_REF = "7c75fbf93f91fa077d3df1c820cc14f4e59a9774"
-# OLD release command signatures are intentionally invalid. Until root on
-# KMJ-elite attests current queue/scheduler argv without printing credentials,
-# a native writer drain MUST remain blocked (no permissive auto-discovery).
-EXPECTED_ARGV_HASHES = {"queue": "", "scheduler": ""}
+# Independently owner-attested current bce410 live unit argv identity:
+# 2026-11-10T07:29:41Z on KMJ-elite, verified exact immutable source
+# scripts/operations/09e8-live-unit-argv-fingerprint-readonly-20261109.py
+# from commit 18fb5489c3a1a4954ca7ee4f1e65a27628dafffe.
+# Report: ARGV_SAFE_SCHEMA=YES, EXPECTED_LIVE_RELEASE=platform-bce4100d005e,
+# ARGV_FINGERPRINT=READ_ONLY_VERIFIED; source SHA256 b19f5c26...
+# This evidence is for bce410 independent of the same hashes previously
+# observed on the historical CD958 release. No copied historical trust.
+# These exact hashes are ONLY command identity; NOT writer exclusion.
+# The native adapter remains deliberately without an apply entrypoint.
+EXPECTED_ARGV_HASHES = {
+    "queue": "b4fb53ed7753d56393a150900faab65e38a4f2dd5db298e2ba4c23227def8359",
+    "scheduler": "6539b4d3319d25bcb4d6f2490f4f827537c06604a21838d3545fe6e82afdbffe",
+}
 ENV = {"PATH": "/usr/sbin:/usr/bin:/sbin:/bin", "HOME": "/nonexistent", "LC_ALL": "C"}
+# Service-only fields must never be requested from timer units. Systemd
+# omits unsupported properties even under --all; asking for Triggers and
+# TriggeredBy on services can yield a false "UNIT_PROPERTIES_INCOMPLETE".
 SERVICE_PROPERTIES = ("ActiveState", "SubState", "Type", "User", "Group", "MainPID", "ExecStart",
-              "WorkingDirectory", "ControlGroup", "Restart", "KillMode", "TimeoutStopUSec", "Triggers", "TriggeredBy")
+              "WorkingDirectory", "ControlGroup", "Restart", "KillMode", "TimeoutStopUSec")
 TIMER_PROPERTIES = ("ActiveState", "SubState", "Triggers")
 
 
