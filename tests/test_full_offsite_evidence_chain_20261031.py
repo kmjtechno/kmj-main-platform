@@ -86,7 +86,7 @@ class FullOffsiteEvidenceContract(unittest.TestCase):
         self.assertNotIn('bash "$work/$PUSH_SCRIPT" --candidate-sha "$CANDIDATE"', TEXT)
 
     def test_root_coordinator_requires_privileged_bash_and_ignores_startup_hooks(self):
-        self.assertTrue(TEXT.startswith("#!/bin/bash -p\\n"))
+        self.assertTrue(TEXT.startswith("#!/bin/bash -p\n"))
         self.assertIn("export PATH=/usr/sbin:/usr/bin:/sbin:/bin", TEXT)
         self.assertIn("unset BASH_ENV ENV CDPATH", TEXT)
         self.assertIn("blocked PRIVILEGED_BASH_REQUIRED", TEXT)
@@ -105,7 +105,7 @@ class FullOffsiteEvidenceContract(unittest.TestCase):
         import tempfile
         with tempfile.TemporaryDirectory() as temp:
             startup = Path(temp) / "inherited.sh"
-            startup.write_text("printf 'UNSAFE_BASH_ENV_EXECUTED\\\\n' >&2\\n")
+            startup.write_text("echo UNSAFE_BASH_ENV_EXECUTED >&2\n")
             env = os.environ.copy()
             env["BASH_ENV"] = str(startup)
             guarded = subprocess.run(
