@@ -108,7 +108,9 @@ def main(argv: list[str]) -> int:
     args = parser.parse_args(argv)
     print("SCHEMA=kmj.09e8.transaction-state-root-provision.v1")
     status = "BLOCKED_UNVERIFIABLE"
-    mutated = "NO"
+    # A failed --prepare after mkdirat could still have created the directory.
+    # Never misreport no mutation when creation status is uncertain.
+    mutated = "NO" if args.inspect else "UNVERIFIED"
     rc = 2
     try:
         require(os.geteuid() == 0 and
