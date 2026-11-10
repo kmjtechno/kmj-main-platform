@@ -31,7 +31,7 @@ const modules = [
     {
         key: 'orders',
         label: 'Orders',
-        href: '/super-admin#commercial-orders',
+        href: '/operator#commercial-orders',
         icon: ShoppingCart,
         help: 'Sales and fulfillment',
     },
