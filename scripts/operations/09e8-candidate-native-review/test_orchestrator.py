@@ -610,6 +610,69 @@ class StoreTests(unittest.TestCase):
         self.store.write({"phase": "done_guard", "recovery_evidence": {"nonce": nonce}})
         self.assertEqual(self.store.read()["phase"], "done_guard")
 
+    def test_current_nonce_sidecar_rejects_symlink_and_hardlink(self):
+        nonce = "1234567890abcdef1234567890abcdef"
+        state = {"phase": "intent_guard", "recovery_evidence": {"nonce": nonce}}
+        self.store.write(state)
+        artifact = self.root / ("queue-environment-" + nonce + ".json")
+        with tempfile.TemporaryDirectory() as outside:
+            target = Path(outside) / "private-identity"
+            target.write_bytes(b"preserve")
+            target.chmod(0o600)
+            artifact.symlink_to(target)
+            with self.assertRaises((OSError, m.Blocked)):
+                self.store.read()
+            artifact.unlink()
+            os.link(target, artifact)
+            with self.assertRaisesRegex(m.Blocked, "UNSAFE_QUEUE_ENVIRONMENT_ARTIFACT"):
+                self.store.read()
+            self.assertEqual(target.read_bytes(), b"preserve")
+        artifact.unlink()
+        self.assertEqual(self.store.read(), state)
+
+    def test_current_nonce_sidecar_requires_private_nonempty_regular_file(self):
+        nonce = "1234567890abcdef1234567890abcdef"
+        self.store.write({"phase": "intent_guard", "recovery_evidence": {"nonce": nonce}})
+        artifact = self.root / ("queue-environment-" + nonce + ".json")
+        artifact.write_bytes(b"fixture")
+        for mode in (0o644, 0o400):
+            with self.subTest(mode=mode):
+                artifact.chmod(mode)
+                with self.assertRaisesRegex(m.Blocked, "UNSAFE_QUEUE_ENVIRONMENT_ARTIFACT"):
+                    self.store.read()
+        artifact.chmod(0o600)
+        for content in (b"", b"x" * (1048576 + 1)):
+            with self.subTest(size=len(content)):
+                artifact.write_bytes(content)
+                with self.assertRaisesRegex(m.Blocked, "UNSAFE_QUEUE_ENVIRONMENT_ARTIFACT"):
+                    self.store.read()
+        artifact.write_bytes(b"fixture")
+        self.assertEqual(self.store.read()["phase"], "intent_guard")
+
+    def test_current_nonce_sidecar_inode_swap_is_rejected(self):
+        from types import SimpleNamespace
+        nonce = "1234567890abcdef1234567890abcdef"
+        self.store.write({"phase": "intent_guard", "recovery_evidence": {"nonce": nonce}})
+        name = "queue-environment-" + nonce + ".json"
+        artifact = self.root / name
+        artifact.write_bytes(b"fixture")
+        artifact.chmod(0o600)
+        original_stat = os.stat
+
+        def replaced(name_arg, *args, **kwargs):
+            value = original_stat(name_arg, *args, **kwargs)
+            if name_arg != name:
+                return value
+            return SimpleNamespace(
+                st_dev=value.st_dev, st_ino=value.st_ino + 1,
+                st_mode=value.st_mode, st_uid=value.st_uid,
+                st_nlink=value.st_nlink, st_size=value.st_size,
+            )
+
+        with patch.object(os, "stat", side_effect=replaced):
+            with self.assertRaisesRegex(m.Blocked, "QUEUE_ENVIRONMENT_ARTIFACT_REPLACED"):
+                self.store.read()
+
     def test_unbound_environment_sidecar_rejected(self):
         nonce = "1234567890abcdef1234567890abcdef"
         foreign = "ffffffffffffffffffffffffffffffff"

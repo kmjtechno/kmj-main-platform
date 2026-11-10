@@ -141,6 +141,29 @@ class Store:
                     "queue-environment-" + nonce + ".json",
                     "queue-environment-" + nonce + "-replacement.json",
                 } for name in sidecars), "FOREIGN_QUEUE_ENVIRONMENT_ARTIFACT")
+                # Both recorded and not-yet-checkpointed sidecars must be
+                # private regular files. A crash between sidecar creation and
+                # journal checkpoint is legitimate, but must not let a symlink,
+                # hardlink, FIFO or replaced inode survive recovery inspection.
+                for name in sorted(sidecars):
+                    side_fd = os.open(name, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK
+                                      | os.O_CLOEXEC, dir_fd=self.fd)
+                    try:
+                        side_before = os.fstat(side_fd)
+                        require(stat.S_ISREG(side_before.st_mode)
+                                and side_before.st_uid == self.owner
+                                and side_before.st_nlink == 1
+                                and stat.S_IMODE(side_before.st_mode) == 0o600
+                                and 0 < side_before.st_size <= 1048576,
+                                "UNSAFE_QUEUE_ENVIRONMENT_ARTIFACT")
+                        side_named = os.stat(name, dir_fd=self.fd, follow_symlinks=False)
+                        require((side_before.st_dev, side_before.st_ino, side_before.st_mode,
+                                 side_before.st_uid, side_before.st_nlink, side_before.st_size)
+                                == (side_named.st_dev, side_named.st_ino, side_named.st_mode,
+                                    side_named.st_uid, side_named.st_nlink, side_named.st_size),
+                                "QUEUE_ENVIRONMENT_ARTIFACT_REPLACED")
+                    finally:
+                        os.close(side_fd)
             return value
         finally:
             os.close(fd)
