@@ -17,6 +17,10 @@ LIVE = "/home/kmjprod/releases/platform-bce4100d005e"
 CANDIDATE_SHA = "09e8a224cd37445c42588a073a6b52d207475a09"
 CANDIDATE = "/home/kmjprod/releases/platform-09e8a224cd37"
 SHARED = "/home/kmjprod/shared/storage"
+# Pinned to root's 2026-11-09T10:56:40Z independent candidate-only V6
+# witness; a new valid-looking 16-hex ID is a DIFFERENT release geometry.
+# This may never be inferred from an untrusted saved recovery journal.
+OWNER_ATTESTED_CANDIDATE_PLAN = "c651c450b3941f3a"
 RELEASE_LOCK = "/run/lock/kmj-main-platform-production-release.lock"
 PINS = {
     "helper": "72fe5702c59599bd1b28b88dad808dda5d6be97b61f0db06dc3a7295258a51b6",
@@ -204,6 +208,28 @@ DRAIN = ("guard_identity_readback", "nginx_uid_syn_counter_advanced", "scheduler
          "old_queue_generation_exited", "replacement_queue_maintenance_idle", "queue_cgroup_empty",
          "all_fpm_pidfds_exited", "no_untracked_fpm_descendants", "no_replacement_fpm_children",
          "fpm_master_listener_unchanged", "tcp_syn_established_empty", "listen_backlog_zero")
+# The only journal phases the exact reviewed transaction can generate.
+# Recovery must not treat arbitrary strings as permission to restore writers.
+STEPS = (
+    "guard", "timer_pause", "scheduler_drain", "maintenance",
+    "queue_restart", "queue_drain_stop", "fpm_natural_idle",
+    "maintenance_remove", "fresh_plan", "runtime_restore",
+    "guard_remove", "rollback",
+)
+VALID_JOURNAL_PHASES = frozenset(
+    ("prepared", "switch_intent", "switch_verified", "recovery_required",
+     "storage_complete_materializer_pending", "aborted_original_restored")
+) | frozenset(
+    prefix + step for prefix in ("intent_", "done_") for step in STEPS
+)
+PHASES_REQUIRING_PLAN = frozenset({
+    "switch_intent", "switch_verified",
+    "intent_runtime_restore", "done_runtime_restore",
+    "intent_guard_remove", "done_guard_remove",
+    "storage_complete_materializer_pending",
+    "intent_rollback", "done_rollback",
+})
+
 SWITCHED = ("v6_completed_receipt", "candidate_shared_identity", "live_shared_link_unchanged", "preserved_original_frozen",
             "shared_fully_thawed", "candidate_snapshot_attested", "pointer_bce_unchanged")
 
@@ -262,8 +288,11 @@ class Transaction:
             self.step("maintenance_remove", self.ops.maintenance_off)
             proofs(self.ops.drain_proofs(), DRAIN)
             plan = self.step("fresh_plan", self.ops.fresh_plan)
-            require(type(plan) is dict and set(plan) == {"ready", "plan_id"} and plan["ready"] is True
-                    and re.fullmatch(r"[0-9a-f]{16}", plan["plan_id"]) is not None, "FRESH_PLAN_BLOCKED")
+            require(type(plan) is dict and set(plan) == {"ready", "plan_id"}
+                    and plan["ready"] is True
+                    and type(plan["plan_id"]) is str
+                    and plan["plan_id"] == OWNER_ATTESTED_CANDIDATE_PLAN,
+                    "FRESH_PLAN_NOT_OWNER_ATTESTED")
             self.save("switch_intent", plan_id=plan["plan_id"])
             # From this write forward, errors retain admission guard and pauses.
             self.ops.switch(plan["plan_id"])
@@ -324,12 +353,28 @@ class Transaction:
         allowed = {"version", "phase", "candidate_sha", "original_units", "pins", "live", "shared", "guard",
                    "plan_id", "switch_verified", "switch_uncertain", "rollback_intent", "recovery_evidence"}
         require(set(self.state) <= allowed and type(self.state.get("guard")) is dict
-                and type(self.state.get("phase")) is str
-                and type(self.state.get("recovery_evidence")) is dict, "RECOVERY_SCHEMA_INVALID")
+                and self.state.get("phase") in VALID_JOURNAL_PHASES
+                and type(self.state.get("recovery_evidence")) is dict,
+                "RECOVERY_SCHEMA_INVALID")
         for key in ("switch_verified", "switch_uncertain", "rollback_intent"):
             require(key not in self.state or type(self.state[key]) is bool, "RECOVERY_BOOLEAN_INVALID")
-        require("plan_id" not in self.state or (type(self.state["plan_id"]) is str
-                and re.fullmatch(r"[a-f0-9]{16}", self.state["plan_id"]) is not None), "RECOVERY_PLAN_ID_INVALID")
+        # A syntactically well-formed, foreign candidate plan is still
+        # unreviewed. The same owner pin is required on initial apply and on
+        # all recovery paths, including resumed and uncertain scanner journals.
+        if "plan_id" in self.state:
+            require(type(self.state["plan_id"]) is str
+                    and self.state["plan_id"] == OWNER_ATTESTED_CANDIDATE_PLAN,
+                    "RECOVERY_PLAN_NOT_OWNER_ATTESTED")
+        require(self.state["phase"] not in PHASES_REQUIRING_PLAN
+                or self.state.get("plan_id") == OWNER_ATTESTED_CANDIDATE_PLAN,
+                "RECOVERY_PLAN_MISSING")
+        require(not self.state.get("switch_verified") or
+                self.state.get("plan_id") == OWNER_ATTESTED_CANDIDATE_PLAN,
+                "RECOVERY_VERIFIED_SWITCH_WITHOUT_PLAN")
+        require(not self.state.get("rollback_intent") or
+                (self.state["phase"] in {"recovery_required", "intent_rollback", "done_rollback"}
+                 and self.state.get("plan_id") == OWNER_ATTESTED_CANDIDATE_PLAN),
+                "RECOVERY_ROLLBACK_PHASE_OR_PLAN_UNVERIFIED")
         self.lock.verify()
         require(self.ops.bind_recovery(self.state) is True, "RECOVERY_IDENTITY_UNVERIFIED")
 
