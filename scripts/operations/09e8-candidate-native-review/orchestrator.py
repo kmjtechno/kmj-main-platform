@@ -334,7 +334,16 @@ class Transaction:
         require(self.ops.bind_recovery(self.state) is True, "RECOVERY_IDENTITY_UNVERIFIED")
 
     def finish_original(self):
-        """Admission returns only to the verified, unchanged, writable original inode."""
+        """Restore original only while the exact owned admission guard remains.
+
+        Early failure before guard installation, lost nft state, or foreign
+        firewall modification requires explicit operator recovery. A valid
+        original inode alone never authorizes maintenance/queue/FPM changes.
+        The guard check does not demand writers already drained: on an early
+        pre-switch failure they may still be active on untouched LIVE storage.
+        """
+        self.lock.verify()
+        require(self.ops.abort_admission_safe() is True, "ABORT_GUARD_NOT_ATTESTED")
         require(self.ops.original_storage_writable_and_unchanged() is True, "ORIGINAL_NOT_SAFE")
         self.ops.restore_owned_maintenance(self.state)
         self.ops.restore_units(self.state["original_units"])

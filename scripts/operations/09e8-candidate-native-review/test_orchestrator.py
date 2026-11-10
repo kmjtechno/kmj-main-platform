@@ -107,6 +107,9 @@ class Fake:
     def guard_absent(self): return not self.guard
     def bind_recovery(self, state): return True
     def reconcile_storage_readonly(self): return self.outcome
+    def abort_admission_safe(self):
+        self.call("abort_admission_safe")
+        return self.guard
     def original_storage_writable_and_unchanged(self): return True
     def restore_owned_maintenance(self, state): self.call("restore_owned_maintenance")
 
@@ -179,6 +182,46 @@ class TransactionTests(unittest.TestCase):
                 self.assertEqual(self.store.value["phase"], "aborted_original_restored")
                 self.assertFalse(self.ops.guard)
                 self.assertNotIn("switch", self.ops.events)
+
+    def test_lost_guard_while_aborting_original_never_restores_live_units(self):
+        # The storage inode remained physical and safe, but an external actor
+        # removed the admission guard while a pre-switch step failed.
+        # Neither maintenance nor queue/FPM may be restarted automatically.
+        original_call = self.ops.call
+        def lose_guard_at_failure(name):
+            if name == "pause_timer":
+                self.ops.guard = False
+            return original_call(name)
+        self.ops.call = lose_guard_at_failure
+        self.ops.fail = "pause_timer"
+        with self.assertRaisesRegex(m.Blocked, "ABORT_GUARD_NOT_ATTESTED"):
+            self.tx.apply(m.CANDIDATE_SHA)
+        self.assertEqual(self.store.value["phase"], "recovery_required")
+        self.assertNotIn("restore_owned_maintenance", self.ops.events)
+        self.assertNotIn("restore_units", self.ops.events)
+        self.assertNotIn("remove_owned_guard", self.ops.events)
+
+    def test_guard_missing_before_install_never_returns_abort_success(self):
+        self.ops.install_guard = lambda: (_ for _ in ()).throw(
+            m.Blocked("GUARD_NOT_INSTALLED"))
+        with self.assertRaisesRegex(m.Blocked, "ABORT_GUARD_NOT_ATTESTED"):
+            self.tx.apply(m.CANDIDATE_SHA)
+        self.assertEqual(self.store.value["phase"], "recovery_required")
+        self.assertFalse(self.ops.guard)
+        self.assertNotIn("restore_units", self.ops.events)
+
+    def test_verified_guard_allows_safe_pre_switch_abort_in_correct_order(self):
+        self.ops.fail = "pause_timer"
+        with self.assertRaises(m.Blocked):
+            self.tx.apply(m.CANDIDATE_SHA)
+        self.assertEqual(self.store.value["phase"], "aborted_original_restored")
+        events = self.ops.events
+        self.assertLess(events.index("abort_admission_safe"),
+                        events.index("restore_owned_maintenance"))
+        self.assertLess(events.index("abort_admission_safe"),
+                        events.index("restore_units"))
+        self.assertLess(events.index("runtime_restored"),
+                        events.index("remove_owned_guard"))
 
     def test_switch_exception_never_removes_guard_or_resumes(self):
         self.ops.fail = "switch"
@@ -345,8 +388,9 @@ class RollbackTests(unittest.TestCase):
     def test_rollback_restores_original_then_runtime_then_admission(self):
         tx = self.fresh()
         tx.rollback_paused()
-        self.assertEqual(self.ops.events, ["writers_still_paused", "rollback_storage", "restore_owned_maintenance",
-                                           "restore_units", "runtime_restored", "remove_owned_guard"])
+        self.assertEqual(self.ops.events, ["writers_still_paused", "rollback_storage", "abort_admission_safe",
+                                           "restore_owned_maintenance", "restore_units",
+                                           "runtime_restored", "remove_owned_guard"])
         self.assertEqual(self.store.value["phase"], "aborted_original_restored")
         self.assertFalse(tx.lock.open and self.ops.guard)
         phases = [h["phase"] for h in self.store.history]
