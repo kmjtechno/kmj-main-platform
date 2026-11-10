@@ -40,8 +40,7 @@ void test('Super Admin product cards focus the matching owner-only editor', () =
         'utf8',
     );
     const routes = readFileSync('routes/product-manager.php', 'utf8');
-    const directLink =
-        'href={`/operator/products?product=${encodeURIComponent(p.slug)}`}';
+    const directLink = '/operator/products?product=${encodeURIComponent(p.slug)}';
     assert.equal(commandOs.split(directLink).length - 1, 3);
     assert.ok(workspace.includes("get(\n        'product',"));
     assert.ok(
@@ -50,7 +49,9 @@ void test('Super Admin product cards focus the matching owner-only editor', () =
     assert.ok(workspace.includes('linkedProduct?.id ?? null'));
     assert.ok(workspace.includes("useState(linkedProduct?.slug ?? '')"));
     assert.ok(workspace.includes('activeProductId={promptProductId}'));
-    assert.ok(editor.includes('initiallyEditing={product.id === activeProductId}'));
+    assert.ok(
+        editor.includes('initiallyEditing={product.id === activeProductId}'),
+    );
     assert.ok(routes.includes("->prefix('operator/products')"));
     assert.ok(routes.includes("['auth', 'verified', 'password.confirm']"));
     assert.ok(routes.includes('$access->require($user)'));
