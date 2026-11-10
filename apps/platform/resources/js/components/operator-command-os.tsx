@@ -92,7 +92,7 @@ const groups = [
             ['Customers & Orgs', '/operator/directory', Users],
             [
                 'Orders & Payments',
-                '/super-admin#commercial-orders',
+                '/operator#commercial-orders',
                 ShoppingCart,
             ],
             ['Licensing & Entitlements', '/operator/kslp', KeyRound],
@@ -133,7 +133,7 @@ const groups = [
 const quick = [
     ['Add Product', '/operator/products?create=1', Plus],
     ['Add Customer', '/operator/directory', Users],
-    ['Manage Orders', '#commercial-orders', ShoppingCart],
+    ['Manage Orders', '/operator#commercial-orders', ShoppingCart],
     ['Issue License', '/operator/kslp', KeyRound],
     ['Payment Settings', '/operator/payments', CreditCard],
     ['View Analytics', '#owner-revenue', ChartNoAxesCombined],
@@ -639,13 +639,13 @@ export default function OperatorCommandOs({
                         <section className="owner-panel">
                             <PanelTitle
                                 title="Recent Orders"
-                                href="#commercial-orders"
+                                href="/operator#commercial-orders"
                             />
                             {recentOrders.slice(0, 4).map((o) => (
                                 <Link
                                     className="owner-order"
                                     key={o.id}
-                                    href="#commercial-orders"
+                                    href="/operator#commercial-orders"
                                 >
                                     <ShoppingCart size={19} />
                                     <span>
@@ -727,7 +727,7 @@ export default function OperatorCommandOs({
                                 label="View All Activity"
                             />
                             <div className="owner-activity">
-                                <Link href="#commercial-orders">
+                                <Link href="/operator#commercial-orders">
                                     <ShoppingCart />
                                     <span>
                                         <strong>
