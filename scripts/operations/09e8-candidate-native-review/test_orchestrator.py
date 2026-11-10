@@ -81,7 +81,7 @@ class Fake:
     def fresh_plan(self):
         self.call("fresh_plan")
         assert "maintenance_off" in self.events
-        return {"ready": True, "plan_id": "4e95373c30a007b4"}
+        return {"ready": True, "plan_id": m.OWNER_ATTESTED_CANDIDATE_PLAN}
 
     def switch(self, plan):
         assert self.store.value["phase"] == "switch_intent"
@@ -324,8 +324,11 @@ class TransactionTests(unittest.TestCase):
                 m.proofs({"a": value}, ("a",))
 
     def test_v6_actual_plan_identifier_shape(self):
-        for value, accepted in (("4e95373c30a007b4", True), ("c651c450b3941f3a", True),
-                                ("a" * 64, False), ("a" * 15, False)):
+        # A generic hex fingerprint is not the current owner-attested candidate.
+        for value, accepted in (("4e95373c30a007b4", False),
+                                ("c651c450b3941f3a", True),
+                                ("a" * 16, False), ("a" * 64, False),
+                                ("a" * 15, False)):
             with self.subTest(value=value):
                 self.setUp()
                 self.ops.fresh_plan = lambda: {"ready": True, "plan_id": value}
@@ -339,8 +342,10 @@ class TransactionTests(unittest.TestCase):
         self.ops.fail = "switch"
         with self.assertRaises(m.Blocked): self.tx.apply(m.CANDIDATE_SHA)
         self.ops.fail = None
-        for key, value in (("candidate_sha", "f" * 40), ("original_units", {}), ("plan_id", "a" * 64),
-                           ("switch_uncertain", 1)):
+        for key, value in (("candidate_sha", "f" * 40), ("original_units", {}),
+                           ("plan_id", "a" * 64), ("plan_id", "a" * 16),
+                           ("switch_uncertain", 1),
+                           ("phase", "forged_terminal_success")):
             with self.subTest(key=key):
                 old = copy.deepcopy(self.store.value)
                 self.store.value[key] = value
@@ -348,6 +353,63 @@ class TransactionTests(unittest.TestCase):
                     self.tx.recover()
                 bind.assert_not_called()
                 self.store.value = old
+
+    def test_valid_but_unreviewed_plan_and_unknown_phase_block_before_adapter(self):
+        self.ops.fail = "switch"
+        with self.assertRaises(m.Blocked):
+            self.tx.apply(m.CANDIDATE_SHA)
+        self.ops.fail = None
+        original = copy.deepcopy(self.store.value)
+        for change in (
+            {"plan_id": "aaaaaaaaaaaaaaaa"},
+            {"plan_id": "ffffffffffffffff"},
+            {"plan_id": "c651c450b3941f3A"},
+            {"phase": "done_unreviewed_step"},
+            {"phase": "success"},
+            {"phase": 1},
+            {"rollback_intent": True, "phase": "prepared"},
+            {"switch_verified": True, "plan_id": "0123456789abcdef"},
+        ):
+            with self.subTest(change=change):
+                self.store.value = copy.deepcopy(original)
+                self.store.value.update(change)
+                self.ops.events.clear()
+                with patch.object(self.ops, "bind_recovery") as bind:
+                    with self.assertRaises(m.Blocked):
+                        self.tx.recover()
+                    bind.assert_not_called()
+                self.assertNotIn("restore_units", self.ops.events)
+                self.assertNotIn("remove_owned_guard", self.ops.events)
+
+    def test_switch_phase_requires_exact_saved_plan_even_with_valid_receipt(self):
+        self.ops.fail = "switch"
+        with self.assertRaises(m.Blocked):
+            self.tx.apply(m.CANDIDATE_SHA)
+        self.ops.fail = None
+        for phase in ("switch_intent", "switch_verified",
+                      "intent_runtime_restore", "done_runtime_restore",
+                      "intent_guard_remove", "done_guard_remove",
+                      "storage_complete_materializer_pending",
+                      "intent_rollback", "done_rollback"):
+            with self.subTest(phase=phase):
+                state = copy.deepcopy(self.store.value)
+                state.pop("plan_id")
+                state["phase"] = phase
+                self.store.value = state
+                self.ops.events.clear()
+                with patch.object(self.ops, "bind_recovery") as bind:
+                    with self.assertRaises(m.Blocked):
+                        self.tx.recover()
+                    bind.assert_not_called()
+                self.assertNotIn("restore_units", self.ops.events)
+
+    def test_journal_phase_allowlist_covers_transaction_step_protocol(self):
+        for step in m.STEPS:
+            self.assertIn("intent_" + step, m.VALID_JOURNAL_PHASES)
+            self.assertIn("done_" + step, m.VALID_JOURNAL_PHASES)
+        for bad in ("", "success", "complete", "intent_materialize",
+                    "done_restart_untracked", "unknown", None):
+            self.assertNotIn(bad, m.VALID_JOURNAL_PHASES)
 
     def test_completed_recovery_does_not_restart_units_again(self):
         self.tx.apply(m.CANDIDATE_SHA)
