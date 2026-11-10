@@ -103,8 +103,20 @@ final class AiProviderController extends Controller
     {
         $scope = $this->managing($request);
         try {
-            // OpenRouter only redirects back to https; behind the proxy the request scheme may be http.
-            $flow = $this->openRouter->begin((string) preg_replace('#\Ahttp://#', 'https://', route('ai-providers.openrouter.callback')));
+            // Never derive an OAuth callback from a caller-supplied Host header.
+            // Require CloudOS/APP_URL to declare its canonical public HTTPS origin.
+            $origin = (string) config('app.url', '');
+            $url = parse_url($origin);
+            if (! is_array($url)
+                || ($url['scheme'] ?? null) !== 'https'
+                || empty($url['host'])
+                || isset($url['user']) || isset($url['pass'])
+                || isset($url['query']) || isset($url['fragment'])
+                || (isset($url['path']) && ! in_array($url['path'], ['', '/'], true))) {
+                throw new InvalidArgumentException('canonical_https_app_url_required');
+            }
+            $callback = rtrim($origin, '/').route('ai-providers.openrouter.callback', [], false);
+            $flow = $this->openRouter->begin($callback);
         } catch (InvalidArgumentException $exception) {
             return back()->withErrors(['provider' => 'Cannot start sign-in: '.$exception->getMessage()]);
         }
@@ -142,7 +154,25 @@ final class AiProviderController extends Controller
         }
         $tested = $this->manager->test($provider);
 
-        return $index->with('status', 'OpenRouter connected ('.count($tested->models_cache ?? []).' models found). Only ":free" models are admitted.');
+        if ($tested->health !== 'ok') {
+            return $index->with('status', 'OpenRouter authorization saved, but connection verification failed ('.$tested->health.'). Inference remains blocked until a successful connection test.');
+        }
+
+        // Configure only genuinely advertised :free IDs from this fresh read-only
+        // discovery. Never select a billed model or send a generation request here.
+        $freeModels = array_values(array_filter(
+            $tested->models_cache ?? [],
+            static fn (string $model): bool => str_ends_with($model, ':free'),
+        ));
+        if ($freeModels === []) {
+            return $index->with('status', 'OpenRouter authorized, but no verified ":free" model was discovered. Inference remains blocked until a qualifying free model is available.');
+        }
+        $this->manager->update($tested, [
+            'default_model' => $freeModels[0],
+            'fallback_models' => array_slice($freeModels, 1, 5),
+        ]);
+
+        return $index->with('status', 'OpenRouter connected, verified and configured with '.count($freeModels).' free model(s). No paid fallback.');
     }
 
     private function freeName(string $organizationId, string $base): string
