@@ -33,7 +33,10 @@ class CandidateNativeTests(unittest.TestCase):
         self.assertEqual(n.STATE, "/var/lib/kmj-main-platform-09e8-candidate-cutover")
         self.assertEqual(p.MATERIALIZER_SOURCE,
                          "/usr/local/libexec/kmj-codebridge/main-platform-candidate-materialize-v2.sh")
-        self.assertEqual(p.EXPECTED_ARGV_HASHES, {"queue": "", "scheduler": ""})
+        self.assertEqual(p.EXPECTED_ARGV_HASHES, {
+            "queue": "b4fb53ed7753d56393a150900faab65e38a4f2dd5db298e2ba4c23227def8359",
+            "scheduler": "6539b4d3319d25bcb4d6f2490f4f827537c06604a21838d3545fe6e82afdbffe",
+        })
 
     def test_scanner_plan_uses_only_candidate_app_never_live(self):
         operations = n.NativeOps.__new__(n.NativeOps)
