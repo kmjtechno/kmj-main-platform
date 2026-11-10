@@ -857,6 +857,21 @@ class NativeOps:
         self.evidence["switch_result"] = value
         self.checkpoint()
 
+    def abort_admission_safe(self):
+        """An unchanged candidate inode is insufficient without live guard.
+
+        On a pre-switch failure the original queue/FPM processes may still
+        exist, so requiring an *empty* cgroup would prevent a safe restore.
+        Instead freshly verify the pinned release lock, exact live pointer
+        and the transaction's owned nft admission guard before any runtime
+        mutation or deliberate guard release. A guard never installed or
+        modified by another actor blocks automatic abort.
+        """
+        self.pointer()
+        self.release_lock.verify()
+        self.guard_counter()
+        return True
+
     def writers_still_paused(self):
         """Fresh proof that the transaction still owns admission: guard intact,
         timer stopped, scheduler and queue cgroups empty, no FPM writer, no
