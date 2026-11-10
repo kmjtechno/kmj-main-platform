@@ -164,6 +164,13 @@ def ruleset_identity(raw):
 # The reviewed pinned v6 scanner's EXACT plan schema. This source-only
 # transaction is candidate-targeted, despite upstream scanner JSON's
 # historical "live_files" key. Do not confuse it with the bce410 LIVE tree.
+# Root owner independently attested these candidate-only V6 persistent bytes
+# at 2026-11-09T10:56:40Z: candidate exact 09e8 Git HEAD, candidate physical
+# storage, fixed pinned scanner/helper/materializer, 0 copies/conflicts.
+# This 16-hex V6 plan ID identifies only CANDIDATE persistent contents, not
+# the already-shared bce410 LIVE tree. A new ID needs a new root owner review.
+OWNER_ATTESTED_CANDIDATE_PLAN = "c651c450b3941f3a"
+
 PLAN_FIELDS = frozenset({
     "command", "live_files", "shared_files", "to_copy",
     "persistent_conflicts", "benign_log_divergence", "plan_id",
@@ -208,6 +215,10 @@ def candidate_only_v6_plan(value):
     pid = value["plan_id"]
     require(type(pid) is str and re.fullmatch(r"[0-9a-f]{16}", pid) is not None,
             "V6_CANDIDATE_PLAN_ID_UNVERIFIED")
+    require(pid == OWNER_ATTESTED_CANDIDATE_PLAN,
+            "V6_CANDIDATE_PLAN_CHANGED_REQUIRES_NEW_OWNER_WITNESS")
+    # A copy-free plan with a new candidate inode/content is NOT the same
+    # release geometry the owner inspected. Fail closed before guard/switch.
     # This is not proof of fresh writer exclusion; caller separately owns guard.
     return {"ready": True, "plan_id": pid}
 

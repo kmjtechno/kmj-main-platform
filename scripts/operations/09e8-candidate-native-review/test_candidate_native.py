@@ -97,6 +97,7 @@ class CandidateNativeTests(unittest.TestCase):
             ("enforced_freeze_possible_here", False),
             ("top_dir_meta_shared_mode_uid_gid", [493, 1001, 1001]),
             ("plan_id", "NOTHEX"), ("plan_id", "0" * 17),
+            ("plan_id", "a" * 16),  # syntactically valid but NOT owner-witnessed
             ("live_files", -1), ("shared_files", "26"),
             ("benign_log_divergence", True),
             ("top_dir_meta_live_mode_uid_gid", [True, 1001, 1001]),
@@ -112,6 +113,30 @@ class CandidateNativeTests(unittest.TestCase):
         del changed["persistent_conflicts"]
         with self.assertRaises(o.Blocked):
             n.candidate_only_v6_plan(changed)
+
+    def test_owner_exact_plan_id_is_not_a_merely_valid_hex_string(self):
+        self.assertEqual(n.OWNER_ATTESTED_CANDIDATE_PLAN, "c651c450b3941f3a")
+        clean = self.candidate_scanner_plan()
+        self.assertEqual(n.candidate_only_v6_plan(clean)["plan_id"],
+                         n.OWNER_ATTESTED_CANDIDATE_PLAN)
+        altered = self.candidate_scanner_plan()
+        altered["plan_id"] = "a" * 16
+        with self.assertRaisesRegex(
+                o.Blocked, "V6_CANDIDATE_PLAN_CHANGED_REQUIRES_NEW_OWNER_WITNESS"):
+            n.candidate_only_v6_plan(altered)
+
+    def test_post_drain_owner_plan_mismatch_never_gets_switch_intent(self):
+        ops = n.NativeOps.__new__(n.NativeOps)
+        ops.evidence = {"marker_removed": True}
+        ops.drain_proofs = Mock(return_value={})
+        altered = self.candidate_scanner_plan()
+        altered["plan_id"] = "0123456789abcdef"
+        ops.scanner_run = Mock(return_value=altered)
+        with patch.object(n.os.path, "lexists", return_value=False), self.assertRaisesRegex(
+                o.Blocked, "V6_CANDIDATE_PLAN_CHANGED_REQUIRES_NEW_OWNER_WITNESS"):
+            ops.fresh_plan()
+        ops.scanner_run.assert_called_once_with("plan")
+        ops.drain_proofs.assert_called_once()
 
     def test_post_drain_fresh_plan_rechecks_zero_copy_before_switch_intent(self):
         ops = n.NativeOps.__new__(n.NativeOps)
