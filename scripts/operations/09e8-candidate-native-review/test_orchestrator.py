@@ -200,6 +200,60 @@ class TransactionTests(unittest.TestCase):
         self.assertTrue(self.ops.guard)
         self.assertTrue(self.store.value["switch_verified"])
 
+    def test_success_rechecks_guard_after_actual_v6_receipt_before_restart(self):
+        self.tx.apply(m.CANDIDATE_SHA)
+        events = self.ops.events
+        self.assertLess(events.index("switch"), events.index("writers_still_paused"))
+        self.assertLess(events.index("writers_still_paused"), events.index("restore_units"))
+        self.assertLess(events.index("writers_still_paused"), events.index("remove_owned_guard"))
+
+    def test_lost_guard_after_verified_switch_never_restores_units(self):
+        # A stale successful scanner receipt can outlive an nft table flushed
+        # by a foreign process. Source-only recovery MUST NOT turn a receipt
+        # into authorization to start live queue/FPM before new admission proof.
+        self.ops.fail = "switch"
+        with self.assertRaises(m.Blocked):
+            self.tx.apply(m.CANDIDATE_SHA)
+        self.ops.fail = None
+        self.ops.outcome = "verified_switched"
+        self.ops.guard = False
+        self.ops.events.clear()
+        with self.assertRaisesRegex(m.Blocked, "PRE_RESUME_WRITER_GUARD_OR_DRAIN_NOT_ATTESTED"):
+            self.tx.recover()
+        self.assertEqual(self.store.value["phase"], "recovery_required")
+        self.assertNotIn("restore_units", self.ops.events)
+        self.assertNotIn("remove_owned_guard", self.ops.events)
+        self.assertIn("writers_still_paused", self.ops.events)
+        self.assertTrue(self.lock.open)
+
+    def test_guard_present_but_reappearing_writer_denies_resume(self):
+        self.ops.fail = "switch"
+        with self.assertRaises(m.Blocked):
+            self.tx.apply(m.CANDIDATE_SHA)
+        self.ops.fail = None
+        self.ops.outcome = "verified_switched"
+        self.ops.guard = True
+        self.ops.writers_still_paused = lambda: False
+        self.ops.events.clear()
+        with self.assertRaisesRegex(m.Blocked, "PRE_RESUME_WRITER_GUARD_OR_DRAIN_NOT_ATTESTED"):
+            self.tx.recover()
+        self.assertNotIn("restore_units", self.ops.events)
+        self.assertNotIn("remove_owned_guard", self.ops.events)
+        self.assertTrue(self.ops.guard)
+
+    def test_lock_must_be_held_before_resume_writer_proof(self):
+        self.ops.fail = "switch"
+        with self.assertRaises(m.Blocked):
+            self.tx.apply(m.CANDIDATE_SHA)
+        self.ops.fail = None
+        self.ops.outcome = "verified_switched"
+        self.lock.open = False
+        self.ops.events.clear()
+        with self.assertRaisesRegex(m.Blocked, "LOCK_CLOSED"):
+            self.tx.recover()
+        self.assertNotIn("restore_units", self.ops.events)
+        self.assertNotIn("remove_owned_guard", self.ops.events)
+
     def test_missing_fresh_drain_proof_blocks_switch(self):
         self.ops.drain_proofs = lambda: dict.fromkeys(m.DRAIN[:-1], True)
         with self.assertRaises(m.Blocked): self.tx.apply(m.CANDIDATE_SHA)
