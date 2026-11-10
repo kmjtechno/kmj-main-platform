@@ -60,6 +60,59 @@ class CommandEvidenceTests(unittest.TestCase):
         self.assertTrue(result["known_argv_hash_matches"])
         self.assertFalse(result["force"])
 
+    def test_independently_attested_exact_current_hashes_and_no_legacy_trust(self):
+        self.assertEqual(n.EXPECTED_ARGV_HASHES, {
+            "queue": "b4fb53ed7753d56393a150900faab65e38a4f2dd5db298e2ba4c23227def8359",
+            "scheduler": "6539b4d3319d25bcb4d6f2490f4f827537c06604a21838d3545fe6e82afdbffe",
+        })
+        # There is no evidence that this synthetic fixture matches the owner's
+        # live runtime, so even a well-formed PHP command must fail its pin.
+        result = n.unit_command(self.raw, str(n.APP), "queue:work", "queue")
+        self.assertTrue(result["exact_direct_live_command"])
+        self.assertFalse(result["known_argv_hash_matches"])
+        self.assertFalse(result["force"])
+
+    def test_service_and_timer_systemd_fields_are_scoped(self):
+        self.assertNotIn("Triggers", n.SERVICE_PROPERTIES)
+        self.assertNotIn("TriggeredBy", n.SERVICE_PROPERTIES)
+        self.assertNotIn("MainPID", n.TIMER_PROPERTIES)
+        self.assertNotIn("Restart", n.TIMER_PROPERTIES)
+        self.assertEqual(n.property_names(n.UNITS[0]), n.SERVICE_PROPERTIES)
+        self.assertEqual(n.property_names(n.UNITS[1]), n.SERVICE_PROPERTIES)
+        self.assertEqual(n.property_names(n.UNITS[2]), n.TIMER_PROPERTIES)
+
+    def test_service_only_property_response_never_implies_missing_timer_fields(self):
+        sample = dict.fromkeys(n.SERVICE_PROPERTIES, "test")
+        payload = "".join(f"{k}={v}\n" for k, v in sample.items()).encode()
+        with patch.object(n, "command", return_value=(payload, b"")) as run:
+            values, hashed = n.properties(n.UNITS[0])
+        self.assertEqual(values, sample)
+        self.assertEqual(hashed, n.digest(payload))
+        argv = run.call_args.args[0]
+        self.assertEqual(argv[-1], "--property=" + ",".join(n.SERVICE_PROPERTIES))
+        self.assertNotIn("TriggeredBy", argv[-1])
+        self.assertNotIn("Triggers", argv[-1])
+
+    def test_timer_only_properties_do_not_require_service_fields(self):
+        sample = {"ActiveState": "active", "SubState": "waiting",
+                  "Triggers": n.UNITS[1]}
+        payload = "".join(f"{k}={v}\n" for k, v in sample.items()).encode()
+        with patch.object(n, "command", return_value=(payload, b"")) as run:
+            values, _ = n.properties(n.UNITS[2])
+        self.assertEqual(values, sample)
+        self.assertEqual(run.call_args.args[0][-1],
+                         "--property=" + ",".join(n.TIMER_PROPERTIES))
+
+    def test_missing_or_duplicate_systemd_service_field_fails_closed(self):
+        normal = "".join(f"{key}=x\n" for key in n.SERVICE_PROPERTIES).encode()
+        for raw in (normal.replace(b"MainPID=x\n", b""),
+                    normal + b"MainPID=2\n",
+                    normal + b"Triggers=foreign\n"):
+            with self.subTest(size=len(raw)), patch.object(
+                    n, "command", return_value=(raw, b"")):
+                with self.assertRaises(n.Blocked):
+                    n.properties(n.UNITS[0])
+
     def test_wrong_cwd_and_actual_executable_not_admitted(self):
         self.assertFalse(n.unit_command(self.raw, "/", "queue:work", "queue")["exact_direct_live_command"])
         raw = self.raw.replace("path=/usr/bin/php8.4", "path=/bin/sh")
