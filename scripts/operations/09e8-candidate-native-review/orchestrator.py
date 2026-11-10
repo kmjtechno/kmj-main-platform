@@ -237,6 +237,18 @@ class Transaction:
         return materialize_request
 
     def resume(self):
+        # A verified V6 receipt is STORAGE evidence, not proof that the
+        # transaction still owns its nft admission guard and has drained all
+        # queue/scheduler/FPM writers. Crashes or an external systemd/nft
+        # change can invalidate a formerly good drain proof.
+        #
+        # Validate fresh kernel/runtime quiescence BEFORE marking the
+        # transaction resumable or executing ANY original-unit restart.
+        # If a crash occurs after runtime restore was partly attempted,
+        # automatic recovery must fail closed for explicit operator review.
+        self.lock.verify()
+        require(self.ops.writers_still_paused() is True,
+                "PRE_RESUME_WRITER_GUARD_OR_DRAIN_NOT_ATTESTED")
         # This marker precedes any runtime restart and remains sticky on failures.
         self.save("switch_verified", switch_verified=True)
         proofs(self.ops.switched_proofs(), SWITCHED)
