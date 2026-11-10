@@ -28,7 +28,10 @@ class ExactNativeInventoryTests(unittest.TestCase):
         self.assertEqual(module.SHARED, "/home/kmjprod/shared/storage")
         self.assertEqual(module.PINS["scanner"],
                          "f4d01f6e3b40c9ad774c8ada5129b241cee93dac782ce75bb0e229b26bbc95ba")
-        self.assertEqual(module.EXPECTED_ARGV_HASHES, {"queue": "", "scheduler": ""})
+        self.assertEqual(module.EXPECTED_ARGV_HASHES, {
+            "queue": "b4fb53ed7753d56393a150900faab65e38a4f2dd5db298e2ba4c23227def8359",
+            "scheduler": "6539b4d3319d25bcb4d6f2490f4f827537c06604a21838d3545fe6e82afdbffe",
+        })
         self.assertEqual(module.PORT if hasattr(module, "PORT") else 21084, 21084)
         self.assertEqual(module.POOL, "kmj-elite-stage")
 
@@ -101,11 +104,18 @@ class ExactNativeInventoryTests(unittest.TestCase):
     def test_exact_scope_can_be_reported_without_claiming_writer_exclusion(self):
         units = {
             module.UNITS[0]: {"ActiveState": "active", "Restart": "always",
-                              "unit_command": ok({"exact_direct_live_command": True}),
+                              "unit_command": ok({
+                                  "exact_direct_live_command": True,
+                                  "known_argv_hash_matches": True, "force": False,
+                              }),
                               "runtime": ok({"all_uids_kmjprod": True,
-                                             "host_network_namespace": True})},
+                                             "host_network_namespace": True,
+                                             "known_argv_hash_matches": True,
+                                             "force": False})},
             module.UNITS[1]: {"ActiveState": "inactive",
-                              "unit_command": ok({"exact_direct_live_command": True})},
+                              "unit_command": ok({"exact_direct_live_command": True,
+                                                  "known_argv_hash_matches": True,
+                                                  "force": False})},
             module.UNITS[2]: {"exact_scheduler_trigger": True},
         }
         data = {
@@ -132,11 +142,56 @@ class ExactNativeInventoryTests(unittest.TestCase):
         self.assertEqual(report["PINNED_SCANNER"], "YES")
         self.assertEqual(report["FPM_POOL_EXACT_LISTEN"], "YES")
         self.assertEqual(report["CANDIDATE_EXACT_GIT_HEAD"], "YES")
-        self.assertEqual(report["QUEUE_OLD_ARGV_PINS_REUSED"], "NO")
+        self.assertEqual(report["QUEUE_ARGV_SOURCE_OWNER_VERIFIED"], "YES_2026_11_10")
+        self.assertEqual(report["QUEUE_ARGV_UNIT_PIN_MATCH"], "YES")
+        self.assertEqual(report["QUEUE_ARGV_RUNTIME_PIN_MATCH"], "YES")
+        self.assertEqual(report["SCHEDULER_ARGV_UNIT_PIN_MATCH"], "YES")
         self.assertEqual(report["WRITER_ADMISSION_CLOSED"], "NOT_ATTESTED")
         self.assertEqual(report["PROCESS_DRAIN_ATTESTED"], "NO")
         self.assertEqual(report["STORAGE_APPLY_ALLOWED"], "NO")
         self.assertEqual(report["PRODUCTION_MUTATION"], "NONE")
+
+    def test_owner_pins_never_overrule_missing_runtime_or_force(self):
+        fixture = {
+            "units": ok({
+                module.UNITS[0]: {
+                    "unit_command": ok({"known_argv_hash_matches": True,
+                                        "force": False}),
+                    "runtime": {"observed": False, "reason": "PROCESS_CHANGED"},
+                },
+                module.UNITS[1]: {
+                    "unit_command": ok({"known_argv_hash_matches": True,
+                                        "force": True}),
+                },
+                module.UNITS[2]: {"exact_scheduler_trigger": True},
+            }),
+        }
+        proof = module.attest_report(fixture)
+        self.assertEqual(proof["QUEUE_ARGV_UNIT_PIN_MATCH"], "YES")
+        self.assertEqual(proof["QUEUE_ARGV_RUNTIME_PIN_MATCH"], "NO_OR_UNVERIFIED")
+        self.assertEqual(proof["SCHEDULER_ARGV_UNIT_PIN_MATCH"], "NO_OR_UNVERIFIED")
+        self.assertEqual(proof["WRITER_ADMISSION_CLOSED"], "NOT_ATTESTED")
+        self.assertEqual(proof["PROCESS_DRAIN_ATTESTED"], "NO")
+        self.assertEqual(proof["STORAGE_APPLY_ALLOWED"], "NO")
+        self.assertEqual(proof["PRODUCTION_MUTATION"], "NONE")
+
+    def test_forged_unit_hash_not_represented_as_verified(self):
+        data = {"units": ok({
+            module.UNITS[0]: {
+                "unit_command": ok({"known_argv_hash_matches": False,
+                                    "force": False}),
+                "runtime": ok({"known_argv_hash_matches": False,
+                               "force": False}),
+            },
+            module.UNITS[1]: {
+                "unit_command": ok({"known_argv_hash_matches": False,
+                                    "force": False}),
+            },
+        })}
+        result = module.attest_report(data)
+        for label in ("QUEUE_ARGV_UNIT_PIN_MATCH", "QUEUE_ARGV_RUNTIME_PIN_MATCH",
+                      "SCHEDULER_ARGV_UNIT_PIN_MATCH"):
+            self.assertEqual(result[label], "NO_OR_UNVERIFIED")
 
     def test_unobserved_and_transient_process_cannot_pass(self):
         doc = {"units": ok({
