@@ -336,5 +336,9 @@ void test('unredeemed approval prompts existing enrollment review and never clai
         /deviceProjectConnectPlan\(connectDevice, connectProject\.id\)/,
     );
     assert.match(deviceCenter, /pending project\s+requests cannot be used/i);
-    assert.doesNotMatch(deviceCenter, /connectPlan.*online/);
+    // Source normalization flattens line breaks; avoid scanning unrelated UI.
+    // A nearby online claim is forbidden, but distant copy is not a claim.
+    const falseOnlineClaim = /\bconnectPlan\b[^;]{0,300}\bonline\b/i;
+    assert.doesNotMatch(deviceCenter, falseOnlineClaim);
+    assert.match("const connectPlan = 'online';", falseOnlineClaim);
 });
