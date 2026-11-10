@@ -1,10 +1,15 @@
-#!/usr/bin/env bash
+#!/bin/bash -p
 # P0: candidate + real local PG/uploads restore + AGE encrypted Google SFTP evidence.
 # NO production pointer change, service change, DNS change, migrations or release approval.
 # Fixed vetted exact-Git-commit sources verified by SHA256; no arbitrary code paths.
 set -Eeuo pipefail
 umask 077
+# This is a root-only coordinator. Privileged Bash ignores inherited BASH_ENV
+# before evaluating this file; an ordinary `bash script` must fail closed.
+export PATH=/usr/sbin:/usr/bin:/sbin:/bin
+unset BASH_ENV ENV CDPATH
 blocked(){ printf 'KMJ_OFFSITE_RECOVERY=BLOCKED_%s\n' "$1"; exit 2; }
+[[ $- == *p* ]] || blocked PRIVILEGED_BASH_REQUIRED
 [[ "$#" == 4 && "$1" == '--candidate-sha' && "$3" == '--expected-release' ]] ||
   blocked EXACT_ARGS
 [[ "$2" =~ ^[0-9a-f]{40}$ ]] || blocked CANDIDATE_SHA
@@ -64,13 +69,13 @@ download "$PUSH_SCRIPT" "$PUSH_SHA" "$PUSH_BASE"
 printf 'KMJ_PINNED_OPERATOR_SCRIPTS=4_SHA256_VERIFIED\n'
 # First creates only an isolated candidate; verifies exact origin/main itself.
 printf 'KMJ_PHASE=ISOLATED_CANDIDATE_BUILD\n'
-bash "$work/$STAGE_SCRIPT" "$CANDIDATE"
+/bin/bash -p "$work/$STAGE_SCRIPT" "$CANDIDATE"
 [[ "$(readlink -f "$LIVE")" == "/home/kmjprod/releases/$EXPECTED" ]] ||
   blocked LIVE_CHANGED_AFTER_STAGE
 printf 'KMJ_PHASE=REAL_LOCAL_DATABASE_AND_UPLOADS_BACKUP_RESTORE\n'
 # Real pg_dump + storage/app + .env, private root-only archive, disposable
 # isolated PostgreSQL restore, schema verification, SHA witness.
-bash "$work/$LOCAL_SCRIPT" "$CANDIDATE" "$EXPECTED"
+/bin/bash -p "$work/$LOCAL_SCRIPT" "$CANDIDATE" "$EXPECTED"
 [[ "$(readlink -f "$LIVE")" == "/home/kmjprod/releases/$EXPECTED" ]] ||
   blocked LIVE_CHANGED_AFTER_LOCAL_RESTORE
 printf 'KMJ_PHASE=AGE_ENCRYPTION_OF_SANITIZED_BACKUP\n'
@@ -80,7 +85,7 @@ python3 -I "$work/$SEAL_SCRIPT" --candidate-sha "$CANDIDATE" --expected-release 
   blocked LIVE_CHANGED_AFTER_ENCRYPTION
 printf 'KMJ_PHASE=PINNED_GOOGLE_SFTP_NO_CLOBBER_AND_READBACK\n'
 # Exact owner config, strict host pin, key, no-clobber, remote readback SHA.
-bash -p "$work/$PUSH_SCRIPT" --candidate-sha "$CANDIDATE"
+/bin/bash -p "$work/$PUSH_SCRIPT" --candidate-sha "$CANDIDATE"
 [[ "$(readlink -f "$LIVE")" == "/home/kmjprod/releases/$EXPECTED" ]] ||
   blocked LIVE_CHANGED_AFTER_UPLOAD
 printf 'KMJ_OFFSITE_RECOVERY=LOCAL_BACKUP_ENCRYPTED_OFFSITE_READBACK_COMPLETE\n'

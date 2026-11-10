@@ -16,7 +16,7 @@ class FullOffsiteEvidenceContract(unittest.TestCase):
         self.assertEqual(subprocess.run(["bash", "-n", str(SRC)], capture_output=True).returncode, 0)
         for args in [[], ["not-a-sha"], ["--candidate-sha", "invalid", "--expected-release", "platform-574e443a2c75"],
                      ["--candidate-sha", "a"*40, "--expected-release", "unknown"]]:
-            r = subprocess.run(["bash", str(SRC), *args], capture_output=True, timeout=8)
+            r = subprocess.run(["/bin/bash", "-p", str(SRC), *args], capture_output=True, timeout=8)
             self.assertNotEqual(r.returncode, 0)
             self.assertIn(b"KMJ_OFFSITE_RECOVERY=BLOCKED_", r.stdout)
             self.assertNotIn(b"KMJ_PHASE=", r.stdout)
@@ -76,14 +76,46 @@ class FullOffsiteEvidenceContract(unittest.TestCase):
         self.assertIn("EXACT_ARGS", TEXT)
 
     def test_correct_executables_for_each_pinned_script(self):
-        self.assertIn('bash "$work/$STAGE_SCRIPT" "$CANDIDATE"', TEXT)
-        self.assertIn('bash "$work/$LOCAL_SCRIPT" "$CANDIDATE" "$EXPECTED"', TEXT)
+        self.assertIn('/bin/bash -p "$work/$STAGE_SCRIPT" "$CANDIDATE"', TEXT)
+        self.assertIn('/bin/bash -p "$work/$LOCAL_SCRIPT" "$CANDIDATE" "$EXPECTED"', TEXT)
         self.assertIn('python3 -I "$work/$SEAL_SCRIPT" --candidate-sha "$CANDIDATE" --expected-release "$EXPECTED"', TEXT)
         # The SHA-pinned SFTP uploader deliberately fails closed unless Bash's
         # privileged mode (-p) is enabled. A plain `bash script` ignores the
         # script's '#!/bin/bash -p' shebang and always blocks the upload.
-        self.assertIn('bash -p "$work/$PUSH_SCRIPT" --candidate-sha "$CANDIDATE"', TEXT)
+        self.assertIn('/bin/bash -p "$work/$PUSH_SCRIPT" --candidate-sha "$CANDIDATE"', TEXT)
         self.assertNotIn('bash "$work/$PUSH_SCRIPT" --candidate-sha "$CANDIDATE"', TEXT)
+
+    def test_root_coordinator_requires_privileged_bash_and_ignores_startup_hooks(self):
+        self.assertTrue(TEXT.startswith("#!/bin/bash -p\n"))
+        self.assertIn("export PATH=/usr/sbin:/usr/bin:/sbin:/bin", TEXT)
+        self.assertIn("unset BASH_ENV ENV CDPATH", TEXT)
+        self.assertIn("blocked PRIVILEGED_BASH_REQUIRED", TEXT)
+        self.assertLess(TEXT.index("export PATH="), TEXT.index("for command in curl"))
+        self.assertNotIn('bash "$work/$STAGE_SCRIPT"', TEXT)
+        self.assertNotIn('bash "$work/$LOCAL_SCRIPT"', TEXT)
+        ordinary = subprocess.run(
+            ["/bin/bash", str(SRC), "--candidate-sha", "invalid",
+             "--expected-release", "platform-574e443a2c75"],
+            capture_output=True, timeout=8,
+        )
+        self.assertEqual(ordinary.returncode, 2)
+        self.assertIn(b"BLOCKED_PRIVILEGED_BASH_REQUIRED", ordinary.stdout)
+        # Bash -p must refuse BASH_ENV before it even parses our script.
+        import os
+        import tempfile
+        with tempfile.TemporaryDirectory() as temp:
+            startup = Path(temp) / "inherited.sh"
+            startup.write_text("echo UNSAFE_BASH_ENV_EXECUTED >&2\n")
+            env = os.environ.copy()
+            env["BASH_ENV"] = str(startup)
+            guarded = subprocess.run(
+                ["/bin/bash", "-p", str(SRC), "--candidate-sha", "invalid",
+                 "--expected-release", "platform-574e443a2c75"],
+                env=env, capture_output=True, timeout=8,
+            )
+            self.assertEqual(guarded.returncode, 2)
+            self.assertIn(b"BLOCKED_CANDIDATE_SHA", guarded.stdout)
+            self.assertNotIn(b"UNSAFE_BASH_ENV_EXECUTED", guarded.stderr)
 
     def test_sftp_privileged_mode_propagation(self):
         good = subprocess.run(["bash", "-p", "-c", '[[ $- == *p* ]]'], capture_output=True)
