@@ -161,6 +161,57 @@ def ruleset_identity(raw):
     return p.digest(canonical_json(value))
 
 
+# The reviewed pinned v6 scanner's EXACT plan schema. This source-only
+# transaction is candidate-targeted, despite upstream scanner JSON's
+# historical "live_files" key. Do not confuse it with the bce410 LIVE tree.
+PLAN_FIELDS = frozenset({
+    "command", "live_files", "shared_files", "to_copy",
+    "persistent_conflicts", "benign_log_divergence", "plan_id",
+    "persistent_only_plan_id", "top_dir_meta_live_mode_uid_gid",
+    "top_dir_meta_shared_mode_uid_gid", "ready",
+    "enforced_freeze_possible_here",
+    "inventory_only_not_release_readiness", "mutated",
+})
+
+
+def candidate_only_v6_plan(value):
+    """Fail closed on changed or stale post-drain candidate plan metadata.
+
+    Called on BOTH initial pre-admission and fresh post-drain plan. A v6
+    "ready": true alone is not sufficient: it allows additive copy and
+    ignores the candidate-only zero-copy owner witness contract.
+    """
+    require(type(value) is dict and set(value) == PLAN_FIELDS,
+            "V6_CANDIDATE_PLAN_FIELDS_CHANGED")
+    require(value["command"] == "plan"
+            and value["ready"] is True
+            and value["mutated"] is False
+            and value["persistent_only_plan_id"] is True
+            and value["inventory_only_not_release_readiness"] is True
+            and value["enforced_freeze_possible_here"] is True,
+            "V6_CANDIDATE_PLAN_SCOPE_UNVERIFIED")
+    require(type(value["to_copy"]) is int and value["to_copy"] == 0
+            and type(value["persistent_conflicts"]) is list
+            and value["persistent_conflicts"] == [],
+            "V6_CANDIDATE_PLAN_ZERO_COPY_CONFLICT")
+    for field in ("live_files", "shared_files", "benign_log_divergence"):
+        require(type(value[field]) is int and 0 <= value[field] <= 20000,
+                "V6_CANDIDATE_PLAN_COUNTER_UNVERIFIED")
+    for field in ("top_dir_meta_live_mode_uid_gid", "top_dir_meta_shared_mode_uid_gid"):
+        triple = value[field]
+        require(type(triple) is list and len(triple) == 3
+                and all(type(x) is int and 0 <= x <= 2**32 - 1 for x in triple),
+                "V6_CANDIDATE_PLAN_METADATA_UNVERIFIED")
+    require(value["top_dir_meta_live_mode_uid_gid"]
+            == value["top_dir_meta_shared_mode_uid_gid"],
+            "V6_CANDIDATE_PLAN_METADATA_MISMATCH")
+    pid = value["plan_id"]
+    require(type(pid) is str and re.fullmatch(r"[0-9a-f]{16}", pid) is not None,
+            "V6_CANDIDATE_PLAN_ID_UNVERIFIED")
+    # This is not proof of fresh writer exclusion; caller separately owns guard.
+    return {"ready": True, "plan_id": pid}
+
+
 class NativeOps:
     def __init__(self, store, release_lock):
         self.store = store
@@ -353,12 +404,7 @@ class NativeOps:
         require(stat.S_ISDIR(storage.lstat().st_mode) and not storage.is_symlink(),
                 "CANDIDATE_STORAGE_NOT_PHYSICAL")
         plan = self.scanner_run("plan")
-        require(type(plan) is dict and plan.get("command") == "plan"
-                and plan.get("ready") is True and plan.get("mutated") is False
-                and plan.get("to_copy") == 0 and type(plan.get("to_copy")) is int
-                and plan.get("persistent_conflicts") == []
-                and plan.get("inventory_only_not_release_readiness") is True,
-                "CANDIDATE_PRE_ADMISSION_PLAN_UNVERIFIED")
+        candidate_only_v6_plan(plan)  # exact owner-observed physical-candidate geometry
         self.evidence["original_storage"] = stamp(storage.stat())
         self.evidence["live_shared_inode"] = list(stamp(Path(SHARED).stat())[:2])
         # Unknown same-account processes are a real admission hole, not a PASS.
@@ -791,9 +837,7 @@ class NativeOps:
         self.drain_proofs()
         require(self.evidence.get("marker_removed") is True and not os.path.lexists(APP / "storage/framework/down"), "MAINTENANCE_STILL_PRESENT")
         value = self.scanner_run("plan")
-        require(value.get("command") == "plan" and value.get("mutated") is False and value.get("persistent_only_plan_id") is True
-                and value.get("ready") is True and not value.get("persistent_conflicts"), "V6_FRESH_PLAN_NOT_READY")
-        return {"ready": True, "plan_id": value["plan_id"]}
+        return candidate_only_v6_plan(value)  # strict zero-copy AFTER drain, before durable switch intent
 
     def switch(self, plan_id):
         self.drain_proofs()

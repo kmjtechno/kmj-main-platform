@@ -69,6 +69,76 @@ class CandidateNativeTests(unittest.TestCase):
             with self.assertRaises(o.Blocked):
                 operations.scanner_run("switch", "not-exact-plan-id")
 
+    @staticmethod
+    def candidate_scanner_plan():
+        # Exact schema emitted by the SHA-pinned, installed v6 scanner.
+        return {
+            "command": "plan", "live_files": 3, "shared_files": 26,
+            "to_copy": 0, "persistent_conflicts": [],
+            "benign_log_divergence": 0,
+            "plan_id": "c651c450b3941f3a",
+            "persistent_only_plan_id": True,
+            "top_dir_meta_live_mode_uid_gid": [448, 1001, 1001],
+            "top_dir_meta_shared_mode_uid_gid": [448, 1001, 1001],
+            "ready": True, "enforced_freeze_possible_here": True,
+            "inventory_only_not_release_readiness": True, "mutated": False,
+        }
+
+    def test_fresh_candidate_only_plan_rejects_late_copy_or_conflict(self):
+        doc = self.candidate_scanner_plan()
+        self.assertEqual(n.candidate_only_v6_plan(doc),
+                         {"ready": True, "plan_id": "c651c450b3941f3a"})
+        for key, bad in (
+            ("to_copy", 1), ("to_copy", True), ("persistent_conflicts", ["private/file"]),
+            ("persistent_conflicts", None), ("ready", "True"), ("ready", False),
+            ("command", "switch"), ("mutated", True),
+            ("inventory_only_not_release_readiness", False),
+            ("persistent_only_plan_id", False),
+            ("enforced_freeze_possible_here", False),
+            ("top_dir_meta_shared_mode_uid_gid", [493, 1001, 1001]),
+            ("plan_id", "NOTHEX"), ("plan_id", "0" * 17),
+            ("live_files", -1), ("shared_files", "26"),
+            ("benign_log_divergence", True),
+            ("top_dir_meta_live_mode_uid_gid", [True, 1001, 1001]),
+        ):
+            changed = dict(doc)
+            changed[key] = bad
+            with self.subTest(field=key, bad=str(bad)), self.assertRaises(o.Blocked):
+                n.candidate_only_v6_plan(changed)
+        changed = dict(doc, unreviewed=True)
+        with self.assertRaises(o.Blocked):
+            n.candidate_only_v6_plan(changed)
+        changed = dict(doc)
+        del changed["persistent_conflicts"]
+        with self.assertRaises(o.Blocked):
+            n.candidate_only_v6_plan(changed)
+
+    def test_post_drain_fresh_plan_rechecks_zero_copy_before_switch_intent(self):
+        ops = n.NativeOps.__new__(n.NativeOps)
+        ops.evidence = {"marker_removed": True}
+        ops.drain_proofs = Mock(return_value={})
+        copied = self.candidate_scanner_plan()
+        copied["to_copy"] = 1
+        ops.scanner_run = Mock(return_value=copied)
+        with patch.object(n.os.path, "lexists", return_value=False):
+            with self.assertRaisesRegex(o.Blocked, "V6_CANDIDATE_PLAN_ZERO_COPY_CONFLICT"):
+                ops.fresh_plan()
+        ops.scanner_run.assert_called_once_with("plan")
+        ops.drain_proofs.assert_called_once()
+        ops.scanner_run.reset_mock()
+        ops.scanner_run.return_value = self.candidate_scanner_plan()
+        with patch.object(n.os.path, "lexists", return_value=False):
+            proof = ops.fresh_plan()
+        self.assertEqual(proof, {"ready": True, "plan_id": "c651c450b3941f3a"})
+        ops.scanner_run.assert_called_once_with("plan")
+
+    def test_candidate_preflight_and_post_drain_share_identical_validator(self):
+        source = (Path(__file__).resolve().parent / "native_ops.py").read_text("utf-8")
+        self.assertIn('candidate_only_v6_plan(plan)', source)
+        self.assertIn('return candidate_only_v6_plan(value)', source)
+        self.assertIn('"--app-dir", str(TARGET_APP)', source)
+        self.assertNotIn('"--app-dir", str(APP)', source)
+
     def test_switched_receipt_attests_only_candidate_and_keeps_live_link(self):
         operations = n.NativeOps.__new__(n.NativeOps)
         operations.pointer = Mock()
