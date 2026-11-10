@@ -13,6 +13,12 @@ on:
 permissions:
   contents: read
 
+# A follow-up commit supersedes an earlier PR verification attempt. Retain
+# the exact same required job name and all trigger paths.
+concurrency:
+  group: server-infra-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   verify-server-infra:
     runs-on: ubuntu-latest

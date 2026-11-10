@@ -8,7 +8,10 @@ on:
       - completed
   workflow_dispatch:
   schedule:
-    - cron: '*/15 * * * *'
+    # 6-hour drift watchdog only. Actual staging promotions still trigger
+    # immediately via workflow_run; on-demand workflow_dispatch is preserved.
+    # Cuts scheduled invocations from 96/day to 4/day with no paid overages.
+    - cron: '17 */6 * * *'
 
 permissions:
   contents: read
