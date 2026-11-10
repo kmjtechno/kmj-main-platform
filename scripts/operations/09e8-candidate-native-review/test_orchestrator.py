@@ -627,7 +627,8 @@ class StoreTests(unittest.TestCase):
             with self.assertRaisesRegex(m.Blocked, "UNSAFE_QUEUE_ENVIRONMENT_ARTIFACT"):
                 self.store.read()
             self.assertEqual(target.read_bytes(), b"preserve")
-        artifact.unlink()\n        self.assertEqual(self.store.read(), state)
+        artifact.unlink()
+        self.assertEqual(self.store.read(), state)
 
     def test_current_nonce_sidecar_requires_private_nonempty_regular_file(self):
         nonce = "1234567890abcdef1234567890abcdef"
