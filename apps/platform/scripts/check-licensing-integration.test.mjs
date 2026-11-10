@@ -16,6 +16,7 @@ const config = read('config/services.php');
 const keys = read('app/Services/Licensing/Kslp/KslpDeveloperKeys.php');
 const activation = read('routes/developer-activation-api.php');
 const developerRoutes = read('routes/developer-licenses.php');
+const developerApps = read('resources/js/pages/developer-apps.tsx');
 
 void test('Admin and developer routes both stay registered', () => {
     assert.ok(web.includes("require __DIR__.'/developer-licenses.php'"));
@@ -92,4 +93,18 @@ void test('Global PHP route imports cannot produce DomainException Wayfinder war
         assert.doesNotMatch(source, /^use DomainException;$/m);
         assert.ok(source.includes('catch (DomainException'));
     }
+});
+
+void test('Guided AuthSP-style onboarding retains governed server issuance', () => {
+    assert.ok(developerApps.includes('Four-step licensing setup'));
+    assert.ok(developerApps.includes('suggestProductCode(name)'));
+    assert.ok(developerApps.includes('customProductCode'));
+    assert.ok(developerApps.includes('readyToIssue'));
+    assert.ok(developerApps.includes('Use this app'));
+    assert.ok(developerApps.includes('Continue to integration starter'));
+    assert.ok(developerApps.includes('disabled={!displayedApp}'));
+    assert.ok(developerApps.includes('starter only, not a signed SDK'));
+    assert.ok(developerRoutes.includes("'plan' => ['required', 'in:trial']"));
+    assert.ok(developerRoutes.includes("'password.confirm'"));
+    assert.ok(developerRoutes.includes("'throttle:10,1'"));
 });
