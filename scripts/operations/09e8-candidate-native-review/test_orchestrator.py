@@ -432,7 +432,7 @@ class StoreTests(unittest.TestCase):
         victim = self.root / "victim"
         victim.write_text("preserve")
         (self.root / "transaction.json").symlink_to(victim)
-        with self.assertRaises(OSError): self.store.read()
+        with self.assertRaises((OSError, m.Blocked)): self.store.read()
         self.assertEqual(victim.read_text(), "preserve")
 
     def test_hardlink_rejected(self):
@@ -451,12 +451,93 @@ class StoreTests(unittest.TestCase):
     def test_zero_write_cannot_publish(self):
         with patch.object(os, "write", return_value=0), self.assertRaises(m.Blocked):
             self.store.write({"phase": "prepared"})
-        self.assertIsNone(self.store.read())
+        with self.assertRaisesRegex(m.Blocked, "UNFINISHED_OR_UNKNOWN_JOURNAL_ARTIFACT"):
+            self.store.read()
+        self.assertTrue(any(p.name.startswith("pending-") for p in self.root.iterdir()))
 
     def test_fsync_failure_does_not_publish(self):
         with patch.object(os, "fsync", side_effect=OSError("simulated")), self.assertRaises(OSError):
             self.store.write({"phase": "prepared"})
-        self.assertIsNone(self.store.read())
+        with self.assertRaisesRegex(m.Blocked, "UNFINISHED_OR_UNKNOWN_JOURNAL_ARTIFACT"):
+            self.store.read()
+        self.assertTrue(any(p.name.startswith("pending-") for p in self.root.iterdir()))
+
+    def test_old_complete_state_plus_crash_pending_must_not_replay(self):
+        first = {"phase": "switch_verified"}
+        self.store.write(first)
+        pending = self.root / ("pending-" + "a" * 32)
+        pending.write_bytes(b'{"phase":"recovery_required"')
+        pending.chmod(0o600)
+        with self.assertRaisesRegex(m.Blocked, "UNFINISHED_OR_UNKNOWN_JOURNAL_ARTIFACT"):
+            self.store.read()
+        with self.assertRaisesRegex(m.Blocked, "UNFINISHED_OR_UNKNOWN_JOURNAL_ARTIFACT"):
+            self.store.write({"phase": "storage_complete_materializer_pending"})
+        self.assertEqual(pending.read_bytes(), b'{"phase":"recovery_required"')
+        self.assertEqual((self.root / "transaction.json").read_bytes(),
+                         m.canonical_json(first))
+
+    def test_foreign_file_never_silently_overwritten_or_deleted(self):
+        self.store.write({"phase": "prepared"})
+        outsider = self.root / "owner-incident.txt"
+        outsider.write_bytes(b"incident-must-survive")
+        with self.assertRaisesRegex(m.Blocked, "UNFINISHED_OR_UNKNOWN_JOURNAL_ARTIFACT"):
+            self.store.read()
+        with self.assertRaises(m.Blocked):
+            self.store.write({"phase": "switch_intent"})
+        self.assertEqual(outsider.read_bytes(), b"incident-must-survive")
+        self.assertEqual(self.store._entries.__name__, "_entries")
+
+    def test_exact_current_nonce_environment_sidecars_are_allowed(self):
+        nonce = "1234567890abcdef1234567890abcdef"
+        state = {"phase": "intent_guard", "recovery_evidence": {"nonce": nonce}}
+        self.store.write(state)
+        for sidecar in (
+            "queue-environment-" + nonce + ".json",
+            "queue-environment-" + nonce + "-replacement.json",
+        ):
+            artifact = self.root / sidecar
+            artifact.write_bytes(b"fixture-only")
+            artifact.chmod(0o600)
+        self.assertEqual(self.store.read(), state)
+        self.store.write({"phase": "done_guard", "recovery_evidence": {"nonce": nonce}})
+        self.assertEqual(self.store.read()["phase"], "done_guard")
+
+    def test_unbound_environment_sidecar_rejected(self):
+        nonce = "1234567890abcdef1234567890abcdef"
+        foreign = "ffffffffffffffffffffffffffffffff"
+        self.store.write({"phase": "prepared", "recovery_evidence": {"nonce": nonce}})
+        artifact = self.root / ("queue-environment-" + foreign + ".json")
+        artifact.write_bytes(b"do-not-remove")
+        with self.assertRaisesRegex(m.Blocked, "FOREIGN_QUEUE_ENVIRONMENT_ARTIFACT"):
+            self.store.read()
+        self.assertEqual(artifact.read_bytes(), b"do-not-remove")
+
+    def test_environment_without_transaction_never_allows_new_apply(self):
+        nonce = "1234567890abcdef1234567890abcdef"
+        orphan = self.root / ("queue-environment-" + nonce + ".json")
+        orphan.write_bytes(b"orphan-private-context")
+        with self.assertRaisesRegex(m.Blocked, "ORPHANED_ENVIRONMENT_WITHOUT_TRANSACTION"):
+            self.store.read()
+        with self.assertRaises(m.Blocked):
+            self.store.write({"phase": "prepared"})
+        self.assertEqual(orphan.read_bytes(), b"orphan-private-context")
+
+    def test_replaced_journal_inode_after_open_is_rejected(self):
+        from types import SimpleNamespace
+        self.store.write({"phase": "prepared"})
+        original_stat = os.stat
+        def stale_name(name, *args, **kwargs):
+            value = original_stat(name, *args, **kwargs)
+            if name != "transaction.json":
+                return value
+            return SimpleNamespace(
+                st_dev=value.st_dev, st_ino=value.st_ino + 1,
+                st_mode=value.st_mode, st_uid=value.st_uid,
+                st_nlink=value.st_nlink, st_size=value.st_size,
+            )
+        with patch.object(os, "stat", side_effect=stale_name):
+            with self.assertRaisesRegex(m.Blocked, "STATE_FILE_REPLACED_DURING_READ"):
+                self.store.read()
 
     def test_lock_close_is_idempotent(self):
         lockfile = self.root / "release.lock"
