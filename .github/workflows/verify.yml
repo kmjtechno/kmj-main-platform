@@ -82,6 +82,8 @@ jobs:
           python3 -B scripts/test_09e8_materializer_root_installer_20261109.py
           python3 -B -m py_compile scripts/operations/09e8-native-candidate-witness-readonly-20261109.py
           python3 -B scripts/test_09e8_native_candidate_witness_readonly_20261109.py
+          python3 -B -m py_compile scripts/operations/09e8-root-transaction-state-provision-20261110.py
+          python3 -B scripts/test_09e8_root_transaction_state_provision_20261110.py
           python3 -B -m py_compile scripts/operations/09e8-candidate-native-review/orchestrator.py
           python3 -B -m py_compile scripts/operations/09e8-candidate-native-review/native_plan.py
           python3 -B -m py_compile scripts/operations/09e8-candidate-native-review/native_ops.py
