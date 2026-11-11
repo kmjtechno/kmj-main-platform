@@ -78,6 +78,41 @@ class GuardedRepairTests(unittest.TestCase):
             install.assert_not_called()
             transfer.assert_not_called()
 
+    def test_tail31_status_class_and_no_argument_exposure(self):
+        raw = self.recipe(
+            ssh='SSH_FLAGS="ssh -i /root/SECRET"',
+            rsync='rsync -e "$SSH_FLAGS" /vault/ restricted:/path/',
+            after='echo "upload complete"'
+        )
+        r = module.tail_shape_report(raw)
+        self.assertEqual(r["TAIL_29_VARIABLE_CLASS"], "SSH_NAMED")
+        self.assertEqual(r["TAIL_30_USES_VARIABLE_29"], "YES")
+        self.assertEqual(r["TAIL_30_HAS_RSH_FLAG"], "YES")
+        self.assertEqual(r["TAIL_31_COMMAND_CLASS"], "PRINT_STATUS")
+        self.assertEqual(r["TAIL_31_SAFE_TO_DROP"], "NOT_APPROVED")
+        self.assertNotIn("SECRET", str(r))
+        self.assertNotIn("restricted:/path/", str(r))
+
+    def test_tail31_cleanup_and_substitution_never_auto_approved(self):
+        raw = self.recipe(
+            ssh='SSH_FLAGS="ssh -i /root/SECRET"',
+            rsync='rsync -e "$SSH_FLAGS" /vault/ restricted:/path/',
+            after='rm -f /vault/important.age'
+        )
+        r = module.tail_shape_report(raw)
+        self.assertEqual(r["TAIL_31_COMMAND_CLASS"], "LOCAL_CLEANUP")
+        self.assertEqual(r["TAIL_31_SAFE_TO_DROP"], "NOT_APPROVED")
+        self.assertNotIn("/vault/important", str(r))
+        raw = self.recipe(
+            ssh='SSH_FLAGS="ssh $(touch /tmp/side-effect)"',
+            rsync='rsync -e "$SSH_FLAGS" /vault/ restricted:/path/',
+            after='echo "$(touch /tmp/side-effect)"'
+        )
+        r = module.tail_shape_report(raw)
+        self.assertEqual(r["TAIL_29_COMMAND_SUBSTITUTION"], "YES")
+        self.assertEqual(r["TAIL_31_SUBSTITUTION"], "YES")
+        self.assertEqual(r["TAIL_31_SAFE_TO_DROP"], "NOT_APPROVED")
+
     def test_valid_exact_tail_excludes_ssh_and_rsync(self):
         prefix = module.fixed_prefix(self.recipe())
         self.assertEqual(len(prefix.splitlines()), 28)
