@@ -93,26 +93,53 @@ def check_legacy() -> bytes:
 
 
 def fixed_prefix(raw: bytes) -> bytes:
-    """Preserve exact local recipe and exclude ONLY direct last-two SSH commands.
+    """Keep only 1-28 of the SHA-pinned legacy local archive/encryption recipe.
 
-    The user attested that the known SHA's non-comment lines 29 and 30 are ssh
-    and rsync, after archive creation, encryption, move and checksum. Refuse
-    even a harmless source change until reviewed; no heuristic shell patching.
+    Owner-root structural evidence: 31 lines; line29 assigns SSH-only options,
+    line30 uses those options in rsync, line31 prints a completion status.
+    Never run any of lines 29-31. Fail closed on altered shell structure;
+    only exact SHA-pinned legacy source is allowed by check_legacy().
     """
     if b"\x00" in raw or b"\r" in raw:
         raise Block("LEGACY_NOT_CANONICAL_BASH")
     lines = raw.splitlines(keepends=True)
-    if len(lines) < 30:
-        raise Block("LEGACY_TOO_SHORT")
+    if len(lines) != 31:
+        raise Block("LEGACY_31_LINES_REQUIRED")
     nonempty = [(i + 1, x.decode("utf-8", "strict").strip())
-                for i, x in enumerate(lines) if x.strip() and not x.lstrip().startswith(b"#")]
-    if len(nonempty) < 2 or nonempty[-2][0] != 29 or nonempty[-1][0] != 30:
+                for i, x in enumerate(lines)
+                if x.strip() and not x.lstrip().startswith(b"#")]
+    if len(nonempty) < 3 or [i for i, _ in nonempty[-3:]] != [29, 30, 31]:
         raise Block("LEGACY_TAIL_NOT_EXACT")
-    if not re.fullmatch(r"(?:/usr/bin/)?ssh(?:[ \t].*)?", nonempty[-2][1]):
-        raise Block("LEGACY_SSH_NOT_DIRECT")
-    if not re.fullmatch(r"(?:/usr/bin/)?rsync(?:[ \t].*)?", nonempty[-1][1]):
+    assign, rsync_cmd, print_cmd = (x for _, x in nonempty[-3:])
+    parsed = re.fullmatch(r"([A-Za-z_][A-Za-z0-9_]*)=(.*)", assign)
+    if not parsed or re.search(r"SSH|RSYNC", parsed.group(1), re.I) is None:
+        raise Block("LEGACY_SSH_ASSIGNMENT_NOT_PROVEN")
+    varname, val = parsed.groups()
+    if not re.search(r"(?<![A-Za-z0-9_-])ssh(?=\s|$)", val, re.I):
+        raise Block("LEGACY_SSH_OPTIONS_NOT_PRESENT")
+    if any(x in val for x in ("$(", chr(96), ";", "|", "&")):
+        raise Block("LEGACY_SSH_ASSIGNMENT_UNREVIEWED")
+    if re.match(r"^(?:/usr/bin/)?rsync(?:\s|$)", rsync_cmd) is None:
         raise Block("LEGACY_RSYNC_NOT_DIRECT")
-    if lines[27].rstrip(b"\n").endswith(b"\\"):
+    # The original transport must demonstrably consume the SSH-only
+    # assignment as its remote-shell option. Neither statement is executed.
+    uses_var = re.search(
+        r"\$(?:\{" + re.escape(varname) + r"\}|\b" + re.escape(varname) + r"\b)",
+        rsync_cmd,
+    )
+    uses_rsh = re.search(r"(?<!\S)(?:-e|--rsh)(?:\s|=|$)", rsync_cmd)
+    if not uses_var or not uses_rsh:
+        raise Block("LEGACY_RSYNC_SSH_LINK_NOT_PROVEN")
+    if (re.search(r"(?<!\S)--delete(?:\s|=|$)", rsync_cmd)
+            or any(x in rsync_cmd for x in ("$(", chr(96), ";", "|", "&&", "||"))):
+        raise Block("LEGACY_RSYNC_UNREVIEWED")
+    if re.match(r"^(?:echo|printf)(?:\s|$)", print_cmd) is None:
+        raise Block("LEGACY_LINE31_NOT_STATUS_PRINT")
+    if (any(x in print_cmd for x in ("$(", chr(96), ";", "|", "&&", "||"))
+            or re.search(r"\$\?|\bPIPESTATUS\b", print_cmd)
+            or re.search(r"(?<![A-Za-z0-9_-])(?:ssh|rsync|sftp|scp)\b", print_cmd)):
+        raise Block("LEGACY_LINE31_UNREVIEWED")
+    if any(line.rstrip(b"\n").rstrip().endswith(b"\\") for line in lines[27:31]):
         raise Block("LEGACY_PREFIX_CONTINUED_INTO_SSH")
     prefix = b"".join(lines[:28])
     if not prefix.endswith(b"\n"):
@@ -130,6 +157,7 @@ def fixed_prefix(raw: bytes) -> bytes:
     if syntax.returncode != 0:
         raise Block("LEGACY_PREFIX_SYNTAX")
     return prefix
+
 
 
 def tail_shape_report(raw: bytes) -> dict[str, str]:
