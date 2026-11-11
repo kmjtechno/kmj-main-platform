@@ -1,5 +1,7 @@
 """Offline mock-only regression of the guarded legacy offsite service repair."""
 from __future__ import annotations
+import contextlib
+import io
 import importlib.util
 from pathlib import Path
 import subprocess
@@ -72,6 +74,51 @@ class GuardedRepairTests(unittest.TestCase):
         ):
             self.assertIn(expected, values)
         self.assertNotIn('StrictHostKeyChecking=no', values)
+
+    def test_readonly_inspect_reports_fail_closed_source_enum(self):
+        output = io.StringIO()
+        with patch.object(module.os, 'geteuid', return_value=0), \
+             patch.object(module.socket, 'gethostname', return_value='KMJ-elite'), \
+             patch.object(module.sys, 'argv', ['repair.py', '--inspect']), \
+             patch.object(module, 'check_mode', side_effect=module.Block('UNIT_TYPE_NOT_ONESHOT')), \
+             patch.object(module, 'setup_install') as install, \
+             contextlib.redirect_stdout(output):
+            self.assertEqual(module.main(), 3)
+            install.assert_not_called()
+        self.assertIn('PRECHECK_BLOCKER=UNIT_TYPE_NOT_ONESHOT', output.getvalue())
+        self.assertIn('LEGACY_SFTP_REPAIR=BLOCKED_OR_UNVERIFIED', output.getvalue())
+
+    def test_readonly_inspect_sanitizes_unexpected_exception_text(self):
+        output = io.StringIO()
+        with patch.object(module.os, 'geteuid', return_value=0), \
+             patch.object(module.socket, 'gethostname', return_value='KMJ-elite'), \
+             patch.object(module.sys, 'argv', ['repair.py', '--inspect']), \
+             patch.object(module, 'check_mode', side_effect=module.Block('private /root/secret-key')), \
+             patch.object(module, 'setup_install') as install, \
+             contextlib.redirect_stdout(output):
+            self.assertEqual(module.main(), 3)
+            install.assert_not_called()
+        self.assertIn('PRECHECK_BLOCKER=UNCLASSIFIED_GATE', output.getvalue())
+        self.assertNotIn('/root/', output.getvalue())
+
+    def test_inspect_stage_receipts_never_start_service(self):
+        output = io.StringIO()
+        with patch.object(module, 'check_legacy', return_value=b'known-source'), \
+             patch.object(module, 'fixed_prefix', return_value=b'local-prefix'), \
+             patch.object(module, 'prop', return_value='oneshot'), \
+             patch.object(module, 'unit_preflight'), \
+             patch.object(module, 'pinned_conf'), \
+             patch.object(module, 'setup_install') as installer, \
+             patch.object(module, 'transfer') as transfer, \
+             contextlib.redirect_stdout(output):
+            module.check_mode()
+        installer.assert_not_called()
+        transfer.assert_not_called()
+        self.assertIn('PREFLIGHT_LEGACY_SOURCE=PASS', output.getvalue())
+        self.assertIn('PREFLIGHT_PREFIX_SYNTAX=PASS', output.getvalue())
+        self.assertIn('PREFLIGHT_UNIT_TYPE=ONESHOT', output.getvalue())
+        self.assertIn('PREFLIGHT_PINNED_CONFIG=PASS', output.getvalue())
+        self.assertIn('SERVICE_EXECUTION=NOT_RUN', output.getvalue())
 
     def test_wrong_host_rejects_service_apply_without_mutation(self):
         with patch.object(module.os, 'geteuid', return_value=0), \
