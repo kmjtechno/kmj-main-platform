@@ -8,6 +8,11 @@ import unittest
 SCRIPT = Path(__file__).resolve().with_name("stage-selfhosted-outbound-mail-20261021.sh")
 
 class StageControls(unittest.TestCase):
+    def test_current_mail_origin_ip(self):
+        s = SCRIPT.read_text(encoding="utf-8")
+        self.assertIn("IP=150.242.200.81", s)
+        self.assertNotIn("103.212.136.154", s)
+
     def test_actual_argument_guard_without_running_installer(self):
         source = SCRIPT.read_text()
         start = source.index('if [[ "${1:-}" != --stage ]]')
