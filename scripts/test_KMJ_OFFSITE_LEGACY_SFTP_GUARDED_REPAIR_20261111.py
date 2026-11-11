@@ -149,6 +149,29 @@ class GuardedRepairTests(unittest.TestCase):
             self.assertIn('get -p kmj-legacy-', batch)
             self.assertNotIn('\nrename ', batch)
 
+    def test_rollback_refuses_foreign_dropin_and_never_starts_legacy(self):
+        with tempfile.TemporaryDirectory() as td:
+            dropin = Path(td) / 'only-our-dropin.conf'
+            dropin.write_text('not our configuration\n')
+            with patch.object(module, 'DROPIN', dropin), \
+                 patch.object(module, 'prop', return_value='inactive'), \
+                 patch.object(module, 'read_private', return_value=b'foreign'), \
+                 patch.object(module, 'call') as systemd:
+                with self.assertRaisesRegex(module.Block, 'ROLLBACK_DROPIN_NOT_OURS'):
+                    module.rollback_installed()
+                self.assertTrue(dropin.exists())
+                systemd.assert_not_called()
+
+            dropin.write_bytes(module.DROPIN_TEXT.encode('ascii'))
+            with patch.object(module, 'DROPIN', dropin), \
+                 patch.object(module, 'prop', return_value='inactive'), \
+                 patch.object(module, 'read_private', return_value=module.DROPIN_TEXT.encode('ascii')), \
+                 patch.object(module, 'call', return_value=subprocess.CompletedProcess([], 0, b'', b'')) as systemd:
+                module.rollback_installed()
+                self.assertFalse(dropin.exists())
+                self.assertEqual(systemd.call_args.args[0],
+                                 ['/usr/bin/systemctl', 'daemon-reload'])
+
     def test_inspect_never_uploads_or_modifies_service(self):
         with patch.object(module, 'check_legacy', return_value=b'fixed'), \
              patch.object(module, 'fixed_prefix', return_value=b'true\n'), \
