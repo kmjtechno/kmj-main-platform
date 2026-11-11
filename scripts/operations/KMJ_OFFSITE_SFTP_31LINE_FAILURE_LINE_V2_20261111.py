@@ -377,7 +377,8 @@ def transfer(path: Path, expected: str, hostline: str) -> None:
             sftp(known, batch, f"cd {REMOTE}\nput {probe} {pa}\nln {pa} {pb}\nrm {pb}\nrm {pa}\n", timeout=50)
         except (Block, OSError):
             try:
-                sftp(known, batch, f"cd {REMOTE}\n-rm {pb}\n-rm {pa}\n", timeout=25)            except (Block, OSError):
+                sftp(known, batch, f"cd {REMOTE}\n-rm {pb}\n-rm {pa}\n", timeout=25)
+            except (Block, OSError):
                 pass
             raise
         try:
