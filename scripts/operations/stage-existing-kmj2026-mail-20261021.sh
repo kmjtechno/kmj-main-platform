@@ -4,7 +4,7 @@ set -Eeuo pipefail
 umask 077
 
 DOMAIN=kmjtechno.com
-IP=103.212.136.154
+IP=150.242.200.81
 HOST=mail.kmjtechno.com
 SELECTOR=kmj2026
 ORIGINAL_DIR=/etc/opendkim/keys/kmjtechno.com
