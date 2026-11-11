@@ -131,6 +131,24 @@ class GuardedRepairTests(unittest.TestCase):
                     module.verify_exact_service_receipt()
                 journal.assert_not_called()
 
+    def test_remote_publication_uses_hardlink_not_overwriting_rename(self):
+        with tempfile.TemporaryDirectory() as td:
+            ciphertext = Path(td) / 'ciphertext.age'
+            ciphertext.write_bytes(b'age-encryption.org/v1\n' + b'X' * 100)
+            batches = []
+            def read_batch(_known, _batch, instructions, timeout=100):
+                batches.append(instructions)
+            with patch.object(module, 'VAULT', Path(td)), \
+                 patch.object(module, 'sftp', side_effect=read_batch), \
+                 patch.object(module, 'digest_regular_download', return_value='a' * 64):
+                module.transfer(ciphertext, 'a' * 64, '34.63.5.14 ssh-ed25519 AAAABBBB\n')
+            batch = '\n'.join(batches)
+            self.assertIn('ln .probe-', batch)
+            self.assertIn('ln kmj-legacy-', batch)
+            self.assertIn('chmod 600 kmj-legacy-', batch)
+            self.assertIn('get -p kmj-legacy-', batch)
+            self.assertNotIn('\nrename ', batch)
+
     def test_inspect_never_uploads_or_modifies_service(self):
         with patch.object(module, 'check_legacy', return_value=b'fixed'), \
              patch.object(module, 'fixed_prefix', return_value=b'true\n'), \
