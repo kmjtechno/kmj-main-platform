@@ -35,6 +35,49 @@ class GuardedRepairTests(unittest.TestCase):
         assert len(lines) == 28
         return (''.join(lines) + ssh + '\n' + rsync + '\n' + after).encode()
 
+    def test_tail_shape_only_reports_classes_not_source_data(self):
+        # Synthetic counterpart of reviewed source, no credentials/paths emitted.
+        first = self.recipe()
+        expected = module.tail_shape_report(first)
+        self.assertEqual(expected["TAIL_SOURCE_SHA"], "PASS")
+        self.assertEqual(expected["TAIL_LAST_TWO_ACTIVE"], "29_30")
+        self.assertEqual(expected["TAIL_LINE29_SHAPE"], "DIRECT_SSH")
+        self.assertEqual(expected["TAIL_LINE30_SHAPE"], "DIRECT_RSYNC")
+        self.assertEqual(expected["TAIL_AFTER_LINE30_ACTIVE_COUNT"], "0")
+        self.assertEqual(expected["TAIL_AUTOMATIC_REPAIR_ALLOWED"], "NO")
+        self.assertNotIn("old-key", str(expected))
+        self.assertNotIn("/vault/", str(expected))
+
+    def test_trailing_comments_and_commands_are_distinguished_without_leak(self):
+        trailing_comments = self.recipe(after="\n# audit-only comment\n \n")
+        info = module.tail_shape_report(trailing_comments)
+        self.assertEqual(info["TAIL_LINE29_SHAPE"], "DIRECT_SSH")
+        self.assertEqual(info["TAIL_LINE30_SHAPE"], "DIRECT_RSYNC")
+        self.assertEqual(info["TAIL_AFTER_LINE30_ACTIVE_COUNT"], "0")
+        self.assertEqual(info["TAIL_AFTER_LINE30_COMMENT_COUNT"], "1")
+        extra = self.recipe(after="echo DO_NOT_DISCLOSE_SECRETS\n")
+        info = module.tail_shape_report(extra)
+        self.assertEqual(info["TAIL_AFTER_LINE30_ACTIVE_COUNT"], "1")
+        self.assertEqual(info["TAIL_LAST_ACTIVE_LINE"], "31")
+        self.assertNotIn("DO_NOT_DISCLOSE_SECRETS", str(info))
+
+    def test_embedded_or_indirect_remote_commands_remain_untrusted(self):
+        indirect = self.recipe(ssh='REMOTE="ssh -i /root/private"', rsync='if rsync -a /vault /remote; then')
+        info = module.tail_shape_report(indirect)
+        self.assertEqual(info["TAIL_LINE29_SHAPE"], "VARIABLE_ASSIGNMENT")
+        self.assertEqual(info["TAIL_LINE30_SHAPE"], "SHELL_CONTROL")
+        self.assertEqual(info["TAIL_AUTOMATIC_REPAIR_ALLOWED"], "NO")
+        with self.assertRaises(module.Block):
+            module.fixed_prefix(indirect)
+
+    def test_tail_readonly_does_not_install_or_transfer(self):
+        with patch.object(module, "check_legacy", return_value=self.recipe()), \
+             patch.object(module, "setup_install") as install, \
+             patch.object(module, "transfer") as transfer:
+            module.tail_review()
+            install.assert_not_called()
+            transfer.assert_not_called()
+
     def test_valid_exact_tail_excludes_ssh_and_rsync(self):
         prefix = module.fixed_prefix(self.recipe())
         self.assertEqual(len(prefix.splitlines()), 28)
