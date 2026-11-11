@@ -186,6 +186,49 @@ def tail_shape_report(raw: bytes) -> dict[str, str]:
         "TAIL_DIAGNOSTIC_IS_EXECUTION_PROOF": "NO",
         "TAIL_AUTOMATIC_REPAIR_ALLOWED": "NO",
     }
+    if len(lines) == 31:
+        assign, rsync, trailing = (lines[28].strip(), lines[29].strip(), lines[30].strip())
+        m = re.fullmatch(r"([A-Za-z_][A-Za-z0-9_]*)=(.*)", assign)
+        variable = m.group(1) if m else ""
+        value = m.group(2) if m else ""
+        result["TAIL_29_VARIABLE_CLASS"] = (
+            "SSH_NAMED" if re.search(r"SSH|RSYNC", variable, re.I)
+            else "OTHER_NAMED" if m else "NOT_AN_ASSIGNMENT"
+        )
+        result["TAIL_29_COMMAND_SUBSTITUTION"] = (
+            "YES" if "$(" in value or chr(96) in value else "NO")
+        result["TAIL_29_QUOTE_CLASS"] = (
+            "DOUBLE" if value.startswith('"') and value.endswith('"')
+            else "SINGLE" if value.startswith("'") and value.endswith("'")
+            else "OTHER")
+        result["TAIL_30_USES_VARIABLE_29"] = (
+            "YES" if variable and re.search(
+                r"\$(?:\{" + re.escape(variable) + r"\}|\b" + re.escape(variable) + r"\b)", rsync
+            ) else "NO")
+        result["TAIL_30_HAS_RSH_FLAG"] = (
+            "YES" if re.search(r"(?<!\S)(?:-e|--rsh)(?:\s|=|$)", rsync) else "NO")
+        result["TAIL_30_DELETE_FLAG"] = (
+            "YES" if re.search(r"(?<!\S)--delete(?:\s|=|$)", rsync) else "NO")
+        result["TAIL_30_SHELL_SUBSTITUTION"] = (
+            "YES" if "$(" in rsync or chr(96) in rsync else "NO")
+        result["TAIL_31_COMMAND_CLASS"] = (
+            "PRINT_STATUS" if re.match(r"^(?:echo|printf)(?:\s|$)", trailing)
+            else "FIXED_EXIT" if re.fullmatch(r"(?:exit|return)(?:\s+[0-9]+)?", trailing)
+            else "NOOP" if trailing in ("true", ":")
+            else "LOCAL_CLEANUP" if re.match(r"^(?:rm|shred|unlink|rmdir)(?:\s|$)", trailing)
+            else "READ_CHECK" if re.match(r"^(?:test|\[|stat|sha256sum)(?:\s|$)", trailing)
+            else "REMOTE_COMMAND" if re.match(r"^(?:ssh|rsync|sftp|scp)(?:\s|$)", trailing)
+            else "ASSIGNMENT" if re.match(r"^[A-Za-z_][A-Za-z0-9_]*=", trailing)
+            else "SHELL_CONTROL" if re.match(r"^(?:if|then|fi|for|while|do|done|case|esac|trap)\b", trailing)
+            else "OTHER")
+        result["TAIL_31_SUBSTITUTION"] = (
+            "YES" if "$(" in trailing or chr(96) in trailing else "NO")
+        result["TAIL_31_REMOTE_REFERENCE"] = (
+            "YES" if re.search(r"(?<![A-Za-z0-9_-])(?:ssh|rsync|scp|sftp)\b", trailing)
+            else "NO")
+        result["TAIL_31_USES_EXIT_STATUS"] = (
+            "YES" if re.search(r"\$\?|\bPIPESTATUS\b", trailing) else "NO")
+        result["TAIL_31_SAFE_TO_DROP"] = "NOT_APPROVED"
     return result
 
 
