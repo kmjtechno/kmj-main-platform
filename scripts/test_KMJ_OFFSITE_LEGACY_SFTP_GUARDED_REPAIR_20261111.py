@@ -174,6 +174,40 @@ class GuardedRepairTests(unittest.TestCase):
         with self.assertRaisesRegex(module.Block, 'LEGACY_PREFIX_CONTINUED_INTO_SSH'):
             module.fixed_prefix(b''.join(lines))
 
+    def test_receiver_auth_preflight_uses_pinned_sftp_without_archive_transfer(self):
+        out = io.StringIO()
+        with tempfile.TemporaryDirectory() as td:
+            with patch.object(module.tempfile, "TemporaryDirectory",
+                              return_value=contextlib.nullcontext(td)), \
+                 patch.object(module, "sftp") as remote, \
+                 contextlib.redirect_stdout(out):
+                module.receiver_preflight("34.63.5.14 ssh-ed25519 TESTPUBLICKEY\n")
+            remote.assert_called_once()
+            args = remote.call_args.args
+            self.assertEqual(args[2], "pwd\ncd /home/info/kmj-recovery-scratch\n")
+            self.assertEqual(remote.call_args.kwargs["timeout"], 45)
+        self.assertIn("RECEIVER_PINNED_SFTP_AUTH_PRE_ARCHIVE=PASS", out.getvalue())
+
+    def test_receiver_preflight_failure_blocks_before_local_backup_execution(self):
+        observations = []
+        with patch.object(module, "check_legacy", side_effect=lambda:
+                          observations.append("legacy") or b"PINNED"), \
+             patch.object(module, "fixed_prefix", side_effect=lambda raw:
+                          observations.append("prefix") or b"true\n"), \
+             patch.object(module, "pinned_conf", side_effect=lambda:
+                          observations.append("pin")), \
+             patch.object(module, "host_key", side_effect=lambda:
+                          observations.append("hostkey") or "test hostkey\n"), \
+             patch.object(module, "receiver_preflight",
+                          side_effect=module.Block("PINNED_PUBLICKEY_DENIED")), \
+             patch.object(module, "vault_list") as vault, \
+             patch.object(module.subprocess, "run") as shell:
+            with self.assertRaisesRegex(module.Block, "PINNED_PUBLICKEY_DENIED"):
+                module.run_job()
+            vault.assert_not_called()
+            shell.assert_not_called()
+        self.assertEqual(observations, ["legacy", "prefix", "pin", "hostkey"])
+
     def test_options_forbid_password_agent_or_insecure_hostkey(self):
         options = module.sftp_argv(Path('/tmp/pinned'), Path('/tmp/batch'))
         self.assertEqual(options[:3], ['/usr/bin/sftp', '-F', '/dev/null'])
