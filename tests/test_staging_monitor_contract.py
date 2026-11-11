@@ -73,7 +73,7 @@ class StagingMonitorContractTests(unittest.TestCase):
         self.assertIn("persist-credentials: false", workflow)
         self.assertIn("ref: staging-approved", workflow)
         self.assertNotIn("APPROVED_SHA_DRIFT", workflow)
-        self.assertIn("103.212.136.154", workflow)
+        self.assertIn("150.242.200.81", workflow)
         self.assertIn("TLS_SAN_MISMATCH", workflow)
         self.assertIn("TLS_CHAIN_OR_HOST_INVALID", workflow)
         self.assertIn("check-staging-readback.py", workflow)
