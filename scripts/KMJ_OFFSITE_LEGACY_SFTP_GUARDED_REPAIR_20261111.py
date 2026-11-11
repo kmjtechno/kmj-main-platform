@@ -287,16 +287,33 @@ def transfer(path: Path, expected: str, hostline: str) -> None:
         known.chmod(0o600)
         sftp(known, batch, "pwd\n" + "cd " + REMOTE + "\n")
         emit("SSH_AUTH", "PASS")
+        # Match the existing reviewed uploader: prove remote hard-link
+        # support with a tiny object before spending bytes on the archive.
+        probe = tmp / "probe"
+        probe.write_bytes(b"kmj-offsite-sftp-link-probe\n")
+        probe.chmod(0o600)
+        pa, pb = ".probe-" + random_name, ".probe-" + random_name + ".ln"
         try:
-            sftp(known, batch, f"cd {REMOTE}\nput -p {path} {partial}\nchmod 600 {partial}\nget {partial} {copy}\n", timeout=240)
+            sftp(known, batch, f"cd {REMOTE}\nput {probe} {pa}\nln {pa} {pb}\nrm {pb}\nrm {pa}\n", timeout=50)
+        except (Block, OSError):
+            try:
+                sftp(known, batch, f"cd {REMOTE}\n-rm {pb}\n-rm {pa}\n", timeout=25)
+            except (Block, OSError):
+                pass
+            raise
+        try:
+            sftp(known, batch, f"cd {REMOTE}\nput -p {path} {partial}\nchmod 600 {partial}\nget -p {partial} {copy}\n", timeout=240)
             if digest_regular_download(copy) != expected:
                 raise Block("CIPHER_READBACK_MISMATCH")
-            sftp(known, batch, f"cd {REMOTE}\nrename {partial} {final}\nget {final} {copy}\n", timeout=240)
+            # SFTP 'ln' creates the final name exclusively (EEXIST fails).
+            # Never use 'rename', which could overwrite an existing archive.
+            sftp(known, batch, f"cd {REMOTE}\nln {partial} {final}\n", timeout=45)
+            sftp(known, batch, f"cd {REMOTE}\nrm {partial}\nget -p {final} {copy}\n", timeout=240)
             if digest_regular_download(copy) != expected:
                 raise Block("FINAL_CIPHER_READBACK_MISMATCH")
         except (Block, OSError):
             try:
-                sftp(known, batch, f"cd {REMOTE}\nrm {partial}\n", timeout=30)
+                sftp(known, batch, f"cd {REMOTE}\n-rm {partial}\n", timeout=30)
             except (Block, OSError):
                 pass
             raise
@@ -308,8 +325,10 @@ def digest_regular_download(path: Path) -> str:
     fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
     try:
         st = os.fstat(fd)
-        if not stat.S_ISREG(st.st_mode) or st.st_nlink != 1 or not 60 <= st.st_size <= MAX_CIPHER:
-            raise Block("BAD_DOWNLOAD")
+        if (not stat.S_ISREG(st.st_mode) or st.st_nlink != 1
+                or stat.S_IMODE(st.st_mode) != 0o600
+                or not 60 <= st.st_size <= MAX_CIPHER):
+            raise Block("BAD_DOWNLOAD_OR_REMOTE_MODE")
         h = hashlib.sha256()
         while True:
             part = os.read(fd, 1024 * 1024)
