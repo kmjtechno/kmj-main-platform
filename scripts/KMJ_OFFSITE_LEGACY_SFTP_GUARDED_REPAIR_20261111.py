@@ -471,11 +471,20 @@ def rollback_installed() -> None:
 
 
 def check_mode() -> None:
-    fixed_prefix(check_legacy())
+    """Stage-identified, redacted and strictly read-only host preflight."""
+    raw = check_legacy()
+    emit("PREFLIGHT_LEGACY_SOURCE", "PASS")
+    fixed_prefix(raw)
+    emit("PREFLIGHT_PREFIX_SYNTAX", "PASS")
+    observed_type = prop("Type")
+    if observed_type in ("oneshot", "simple", "exec", "forking", "notify"):
+        emit("PREFLIGHT_UNIT_TYPE", observed_type.upper())
+    else:
+        emit("PREFLIGHT_UNIT_TYPE", "UNKNOWN")
     unit_preflight(original=True)
+    emit("PREFLIGHT_UNIT_INVARIANTS", "PASS")
     pinned_conf()
-    emit("LEGACY_EXACT_SHA", "PASS")
-    emit("LOCAL_PREFIX_SHAPE", "PASS")
+    emit("PREFLIGHT_PINNED_CONFIG", "PASS")
     emit("SYSTEMD_SCOPE", "FAIL_CLOSED_REVIEWED")
     emit("UNIT_MUTATION", "NONE")
     emit("SERVICE_EXECUTION", "NOT_RUN")
@@ -495,7 +504,17 @@ def main() -> int:
             rollback_installed()
         else:
             run_job()
-    except (OSError, ValueError, UnicodeError, Block):
+    except Block as exc:
+        # Block reasons are source-coded enums, never raw paths/SSH/journal.
+        # Keep sensitive OSError content out of stdout and service journals.
+        reason = str(exc)
+        if re.fullmatch(r"[A-Z][A-Z0-9_]{2,63}", reason) is None:
+            reason = "UNCLASSIFIED_GATE"
+        emit("PRECHECK_BLOCKER", reason)
+        emit("LEGACY_SFTP_REPAIR", "BLOCKED_OR_UNVERIFIED")
+        return 3
+    except (OSError, ValueError, UnicodeError):
+        emit("PRECHECK_BLOCKER", "SANITIZED_LOCAL_ERROR")
         emit("LEGACY_SFTP_REPAIR", "BLOCKED_OR_UNVERIFIED")
         return 3
     status = {"--run": "PASS", "--apply": "INSTALL_PASS",
