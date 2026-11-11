@@ -12,7 +12,7 @@ deny() { printf 'KMJ_POST_IP_OFFSITE=BLOCKED_%s\n' "$1" >&2; exit 2; }
 
 # No public address is discovered from untrusted keyscan output or a stale /etc/hosts.
 # Confirm ELITE's egress NAT path independently before contacting Google receiver.
-actual=$(/usr/bin/curl --noproxy '*' --proto '=https' --tlsv1.2 \
+actual=$(/usr/bin/curl -4 --noproxy '*' --proto '=https' --tlsv1.2 \
     --fail --silent --show-error --connect-timeout 6 --max-time 18 \
     'https://api.ipify.org') || deny PUBLIC_EGRESS_UNVERIFIED
 [[ "$actual" == "150.242.200.81" ]] || deny EGRESS_NOT_NEW_ELITE_IP
