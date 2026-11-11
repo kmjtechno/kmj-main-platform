@@ -11,6 +11,11 @@ class SafeMailReuse(unittest.TestCase):
     def setUpClass(cls):
         cls.text = SCRIPT.read_text(encoding="utf-8")
 
+    def test_current_mail_origin_ip(self):
+        s = SCRIPT.read_text(encoding="utf-8")
+        self.assertIn("IP=150.242.200.81", s)
+        self.assertNotIn("103.212.136.154", s)
+
     def test_expected_reuse_and_no_leaked_private_key(self):
         s = self.text
         for marker in (
