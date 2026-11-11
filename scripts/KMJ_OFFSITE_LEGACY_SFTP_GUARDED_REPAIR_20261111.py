@@ -132,6 +132,72 @@ def fixed_prefix(raw: bytes) -> bytes:
     return prefix
 
 
+def tail_shape_report(raw: bytes) -> dict[str, str]:
+    """Metadata-only pinned legacy recipe shape. Never return shell text.
+
+    This is not a waiver to the guarded apply preflight; the latter must still
+    independently prove precisely which local lines are safe to execute.
+    """
+    if b"\x00" in raw or b"\r" in raw:
+        raise Block("TAIL_NONCANONICAL_BYTES")
+    lines = raw.decode("utf-8", "strict").splitlines()
+    if not 30 <= len(lines) <= 5000:
+        raise Block("TAIL_LINE_COUNT_UNEXPECTED")
+
+    def active(line: str) -> bool:
+        stripped = line.strip()
+        return bool(stripped) and not stripped.startswith("#")
+
+    def label(line: str, verb: str) -> str:
+        item = line.strip()
+        if not item:
+            return "BLANK"
+        if item.startswith("#"):
+            return "COMMENT"
+        if re.match(r"^(?:/usr/bin/)?"+verb+r"(?=\s|$)", item):
+            return "DIRECT_" + verb.upper()
+        if re.match(r"^(?:if|then|fi|for|while|do|done|case|esac|function|else|elif)\b", item):
+            return "SHELL_CONTROL"
+        if re.match(r"^[A-Za-z_][A-Za-z0-9_]*=", item):
+            return "VARIABLE_ASSIGNMENT"
+        if re.search(r"\b"+verb+r"\b", item):
+            return "EMBEDDED_" + verb.upper()
+        return "OTHER"
+
+    noncomment = [i + 1 for i, value in enumerate(lines) if active(value)]
+    after30 = [i for i in noncomment if i > 30]
+    result = {
+        "TAIL_SOURCE_SHA": "PASS",
+        "TAIL_TOTAL_LINES": str(len(lines)),
+        "TAIL_LAST_ACTIVE_LINE": str(noncomment[-1]) if noncomment else "0",
+        "TAIL_LAST_TWO_ACTIVE": "_".join(map(str, noncomment[-2:])) if len(noncomment) >= 2 else "NONE",
+        "TAIL_AFTER_LINE30_ACTIVE_COUNT": str(len(after30)),
+        "TAIL_AFTER_LINE30_COMMENT_COUNT": str(sum(1 for row in lines[30:] if row.strip().startswith("#"))),
+        "TAIL_LINE28_CONTINUES": "YES" if lines[27].rstrip().endswith("\\") else "NO",
+        "TAIL_LINE29_CONTINUES": "YES" if lines[28].rstrip().endswith("\\") else "NO",
+        "TAIL_LINE30_CONTINUES": "YES" if lines[29].rstrip().endswith("\\") else "NO",
+        "TAIL_LINE29_SHAPE": label(lines[28], "ssh"),
+        "TAIL_LINE30_SHAPE": label(lines[29], "rsync"),
+        "TAIL_LINE29_HAS_SSH": "YES" if re.search(r"\bssh\b", lines[28]) else "NO",
+        "TAIL_LINE30_HAS_RSYNC": "YES" if re.search(r"\brsync\b", lines[29]) else "NO",
+        "TAIL_PREFIX_HAS_REMOTE_VERBS": "YES" if any(
+            active(row) and re.search(r"(?<![A-Za-z0-9_-])(?:ssh|rsync|scp)\b", row)
+            for row in lines[:28]) else "NO",
+        "TAIL_DIAGNOSTIC_IS_EXECUTION_PROOF": "NO",
+        "TAIL_AUTOMATIC_REPAIR_ALLOWED": "NO",
+    }
+    return result
+
+
+def tail_review() -> None:
+    """Owner-only read-only classification; no service/SSH/backup action."""
+    report = tail_shape_report(check_legacy())
+    for key, value in report.items():
+        emit(key, value)
+    emit("UNIT_MUTATION", "NONE")
+    emit("SERVICE_EXECUTION", "NOT_RUN")
+
+
 def call(argv: list[str], *, input_data: bytes | None = None, timeout: int = 40) -> subprocess.CompletedProcess:
     try:
         process = subprocess.run(argv, input=input_data, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
@@ -491,13 +557,15 @@ def check_mode() -> None:
 
 
 def main() -> int:
-    if (len(sys.argv) != 2 or sys.argv[1] not in ("--inspect", "--run", "--apply", "--rollback")
+    if (len(sys.argv) != 2 or sys.argv[1] not in ("--inspect", "--tail-review", "--run", "--apply", "--rollback")
             or os.geteuid() != 0 or socket.gethostname().split(".")[0] != "KMJ-elite"):
         emit("LEGACY_SFTP_REPAIR", "BLOCKED_OWNER_OR_ARGUMENTS")
         return 2
     try:
         if sys.argv[1] == "--inspect":
             check_mode()
+        elif sys.argv[1] == "--tail-review":
+            tail_review()
         elif sys.argv[1] == "--apply":
             setup_install()
         elif sys.argv[1] == "--rollback":
@@ -518,7 +586,8 @@ def main() -> int:
         emit("LEGACY_SFTP_REPAIR", "BLOCKED_OR_UNVERIFIED")
         return 3
     status = {"--run": "PASS", "--apply": "INSTALL_PASS",
-              "--inspect": "INSPECT_PASS", "--rollback": "ROLLBACK_PASS"}
+              "--inspect": "INSPECT_PASS", "--tail-review": "TAIL_READONLY_COMPLETE",
+              "--rollback": "ROLLBACK_PASS"}
     emit("LEGACY_SFTP_REPAIR", status[sys.argv[1]])
     return 0
 
