@@ -454,6 +454,22 @@ def setup_install() -> None:
         raise
 
 
+def rollback_installed() -> None:
+    """Only reverse this exact backup unit's reviewed drop-in, never run legacy."""
+    if prop("ActiveState") not in ("inactive", "failed"):
+        raise Block("ROLLBACK_SERVICE_STILL_ACTIVE")
+    if (DROPIN.is_symlink() or not DROPIN.is_file()
+            or read_private(DROPIN, 4096) != DROPIN_TEXT.encode("ascii")):
+        raise Block("ROLLBACK_DROPIN_NOT_OURS")
+    DROPIN.unlink()
+    result = call(["/usr/bin/systemctl", "daemon-reload"], timeout=30)
+    if result.returncode != 0:
+        raise Block("ROLLBACK_RELOAD_FAILED")
+    emit("ROLLBACK", "REVIEWED_DROPIN_REMOVED")
+    emit("SERVICE_EXECUTION", "NOT_RUN")
+    emit("LEGACY_RESTORED", "YES_NO_START")
+
+
 def check_mode() -> None:
     fixed_prefix(check_legacy())
     unit_preflight(original=True)
@@ -466,7 +482,7 @@ def check_mode() -> None:
 
 
 def main() -> int:
-    if (len(sys.argv) != 2 or sys.argv[1] not in ("--inspect", "--run", "--apply")
+    if (len(sys.argv) != 2 or sys.argv[1] not in ("--inspect", "--run", "--apply", "--rollback")
             or os.geteuid() != 0 or socket.gethostname().split(".")[0] != "KMJ-elite"):
         emit("LEGACY_SFTP_REPAIR", "BLOCKED_OWNER_OR_ARGUMENTS")
         return 2
@@ -475,12 +491,16 @@ def main() -> int:
             check_mode()
         elif sys.argv[1] == "--apply":
             setup_install()
+        elif sys.argv[1] == "--rollback":
+            rollback_installed()
         else:
             run_job()
     except (OSError, ValueError, UnicodeError, Block):
         emit("LEGACY_SFTP_REPAIR", "BLOCKED_OR_UNVERIFIED")
         return 3
-    emit("LEGACY_SFTP_REPAIR", "PASS" if sys.argv[1] == "--run" else "INSTALL_PASS" if sys.argv[1] == "--apply" else "INSPECT_PASS")
+    status = {"--run": "PASS", "--apply": "INSTALL_PASS",
+              "--inspect": "INSPECT_PASS", "--rollback": "ROLLBACK_PASS"}
+    emit("LEGACY_SFTP_REPAIR", status[sys.argv[1]])
     return 0
 
 
