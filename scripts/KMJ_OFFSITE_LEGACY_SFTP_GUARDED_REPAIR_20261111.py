@@ -355,6 +355,7 @@ def run_job() -> int:
     transfer(path, expected, hk)
     emit("BACKUP_OFFSITE", "PASS")
     emit("INDEPENDENT_RESTORE", "NOT_VERIFIED")
+    emit("REMOTE_RETENTION", "NOT_VERIFIED")
     return 0
 
 
@@ -363,11 +364,32 @@ def _protected_write(path: Path, body: bytes, mode: int) -> None:
     flags = os.O_CREAT | os.O_EXCL | os.O_WRONLY | os.O_NOFOLLOW
     fd = os.open(path, flags, mode)
     try:
-        os.write(fd, body)
+        written = os.write(fd, body)
+        if written != len(body):
+            raise Block("INSTALL_FILE_SHORT_WRITE")
         os.fchmod(fd, mode)
         os.fsync(fd)
     finally:
         os.close(fd)
+
+
+def verify_exact_service_receipt() -> None:
+    """Tie evidence to the new systemd invocation, not a separate SFTP test."""
+    inv = prop("InvocationID")
+    if not inv or re.fullmatch(r"[0-9a-f]{32}", inv) is None:
+        raise Block("SERVICE_INVOCATION_UNAVAILABLE")
+    receipt = call(["/usr/bin/journalctl", "--no-pager", "--output=cat",
+                    "--lines=200", "_SYSTEMD_INVOCATION_ID=" + inv], timeout=15)
+    if receipt.returncode != 0:
+        raise Block("SERVICE_JOURNAL_UNAVAILABLE")
+    values = set(receipt.stdout.decode("utf-8", "replace").splitlines())
+    required = ("HOSTKEY_PIN=PASS", "SSH_AUTH=PASS",
+                "LOCAL_AGE_ENCRYPTED_ARCHIVE=PASS", "OFFSITE_TRANSFER=PASS",
+                "SHA256_READBACK=PASS", "BACKUP_OFFSITE=PASS")
+    if not set(required).issubset(values):
+        raise Block("SERVICE_INDEPENDENT_RECEIPT_MISSING")
+    for item in required:
+        print(item, flush=True)
 
 
 def setup_install() -> None:
@@ -393,6 +415,7 @@ def setup_install() -> None:
         if (start.returncode != 0 or prop("Result") != "success"
                 or prop("ExecMainStatus") != "0"):
             raise Block("SERVICE_EXECUTION_FAILED")
+        verify_exact_service_receipt()
         emit("SERVICE_EXECUTION", "PASS")
         emit("EXIT_255", "RESOLVED_FOR_REPAIRED_SERVICE")
     except (OSError, Block):
@@ -402,7 +425,9 @@ def setup_install() -> None:
         try:
             if DROPIN.is_file() and not DROPIN.is_symlink() and DROPIN.read_bytes() == DROPIN_TEXT.encode("ascii"):
                 DROPIN.unlink()
-                call(["/usr/bin/systemctl", "daemon-reload"], timeout=30)
+                restored = call(["/usr/bin/systemctl", "daemon-reload"], timeout=30)
+                if restored.returncode != 0:
+                    raise Block("ROLLBACK_DAEMON_RELOAD_FAILED")
         except (OSError, Block):
             emit("ROLLBACK", "NEEDS_OWNER_REVIEW")
         else:
