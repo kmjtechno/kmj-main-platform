@@ -8,9 +8,15 @@ trap '/usr/bin/rm -f -- "$T"' EXIT
 printf '%s  %s\n' 142ea8eb22904ec8bf5f165a2ec04049893f4d85aff50967a185d62f7cf13249 "$T" | /usr/bin/sha256sum -c -
 /usr/bin/python3 -I -B - "$T" <<'PY'
 import importlib.util, os, re, socket, sys
+from importlib.machinery import SourceFileLoader
 if os.geteuid() != 0 or socket.gethostname().split('.')[0] != 'KMJ-elite':
     raise SystemExit('BLOCKED_ROOT_HOST')
-spec = importlib.util.spec_from_file_location('kmj_pinned_readonly', sys.argv[1])
+# mktemp has no .py suffix. Use the explicit source loader only after
+# sha256sum -c has verified these exact bytes above.
+loader = SourceFileLoader('kmj_pinned_readonly', sys.argv[1])
+spec = importlib.util.spec_from_loader(loader.name, loader)
+if spec is None or spec.loader is None:
+    raise SystemExit('BLOCKED_VERIFIED_SOURCE_LOADER')
 module = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(module)
 try:
@@ -54,6 +60,36 @@ try:
     }
     for key, item in report.items():
         assert re.fullmatch(r'[A-Z0-9_]+', key) and re.fullmatch(r'[A-Z0-9_]+', item)
+        print(f'{key}={item}')
+    # Also show the current EFFECTIVE unit shape, not its raw ExecStart,
+    # because the latest service result has changed since the earlier audit.
+    attrs = {key: module.prop(key) for key in
+             ('LoadState', 'User', 'Type', 'DropInPaths', 'ExecStart',
+              'ActiveState', 'Result', 'ExecMainStatus')}
+    exec_text = attrs['ExecStart'] or ''
+    paths = re.findall(r'\bpath=([^\s;]+)', exec_text)
+    repair_argv = str(module.REPAIR_FILE) in exec_text and '--run' in exec_text
+    current_executable = ('LEGACY' if len(paths) == 1 and paths[0] == str(module.LEGACY)
+                          else 'REPAIR_CANDIDATE' if len(paths) == 1
+                               and paths[0] == '/usr/bin/python3' and repair_argv
+                          else 'UNKNOWN_OR_OTHER')
+    state = {
+        'CURRENT_UNIT_LOADED': 'YES' if attrs['LoadState'] == 'loaded' else 'NO_OR_UNKNOWN',
+        'CURRENT_UNIT_ROOT': 'YES' if attrs['User'] in ('', 'root') else 'NO_OR_UNKNOWN',
+        'CURRENT_UNIT_ONESHOT': 'YES' if attrs['Type'] == 'oneshot' else 'NO_OR_UNKNOWN',
+        'CURRENT_DROPINS': 'NONE' if attrs['DropInPaths'] == '' else
+                           'PRESENT' if attrs['DropInPaths'] else 'UNKNOWN',
+        'CURRENT_EXECSTART': current_executable,
+        'CURRENT_ACTIVE': 'FAILED' if attrs['ActiveState'] == 'failed' else
+                          'INACTIVE' if attrs['ActiveState'] == 'inactive' else 'OTHER',
+        'CURRENT_RESULT': 'EXIT_CODE' if attrs['Result'] == 'exit-code' else
+                          'SUCCESS' if attrs['Result'] == 'success' else 'OTHER',
+        'CURRENT_LAST_EXIT': str(attrs['ExecMainStatus']) if attrs['ExecMainStatus'] in ('0','3','255')
+                             else 'OTHER_OR_UNKNOWN',
+    }
+    for key, item in state.items():
+        if not re.fullmatch(r'[A-Z0-9_]+', item):
+            raise ValueError('UNEXPECTED_PROPERTY_ENUM')
         print(f'{key}={item}')
     print('TAIL31=READ_ONLY_COMPLETE')
 except (OSError, ValueError, UnicodeError):
