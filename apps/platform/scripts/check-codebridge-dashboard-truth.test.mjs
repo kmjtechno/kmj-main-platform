@@ -15,6 +15,9 @@ const directory = readFileSync(
     'app/Services/Licensing/CodeBridge/CodeBridgeCustomerDeviceDirectory.php',
     'utf8',
 );
+const enrollment = readSourceText(
+    'app/Services/Licensing/CodeBridge/CodeBridgeDeviceEnrollmentService.php',
+);
 const routes = readFileSync('routes/web.php', 'utf8');
 
 void test('green entitlement badge and owner plan ceiling cannot imply device online', () => {
@@ -35,11 +38,16 @@ void test('dashboard never invents online device presence from registration', ()
 });
 
 void test('approved-but-unredeemed device cannot masquerade as a successfully paired agent', () => {
-    assert.match(directory, /'pairing_state' =>/);
-    assert.match(directory, /'approved_unredeemed'/);
-    assert.match(directory, /'redeemed'/);
+    assert.match(
+        directory,
+        /'pairing_state' => CodeBridgeDeviceEnrollmentService::pairingState\(/,
+    );
+    assert.match(enrollment, /'approved_unredeemed'/);
+    assert.match(enrollment, /'approval_expired'/);
+    assert.match(enrollment, /'redeemed'/);
     assert.match(deviceCenter, /Approved · Not redeemed/);
-    assert.match(deviceCenter, /Approval has not reached this computer/);
+    assert.match(deviceCenter, /Pairing redemption receipt missing/);
+    assert.match(deviceCenter, /This pairing record has no redemption receipt/);
     assert.match(deviceCenter, /recent\s+password confirmation required/);
     assert.match(deviceCenter, /gateway heartbeat is verified/);
     assert.match(deviceCenter, /connection_status: 'not_verified'/);
@@ -95,9 +103,12 @@ void test('many OAuth grants have compact, searchable cards and unique client cl
 });
 
 void test('offline recovery stays inside the KMJ-hosted device dashboard', () => {
-    assert.match(deviceCenter, /\/install-codebridge-windows\.cmd/);
-    assert.match(deviceCenter, /Connect this Windows PC/);
-    assert.match(deviceCenter, /deviceRecoveryAction\(device\.platform\)/);
+    assert.match(recovery, /\/install-codebridge-windows\.cmd/);
+    assert.match(recovery, /deviceId === 'kmj-homeoffice-desktop-5fvjmet'/);
+    assert.match(recovery, /pendingProjects\.length === 0/);
+    assert.match(recovery, /\/codebridge\/pair/);
+    assert.match(recovery, /Reconnect Calibration Pro/);
+    assert.match(deviceCenter, /deviceRecoveryAction\(device\.platform, \{/);
     assert.match(deviceCenter, /href=\{recovery\.href\}/);
     assert.match(deviceCenter, /\{recovery\.label\}/);
     assert.match(
@@ -115,6 +126,9 @@ void test('offline recovery stays inside the KMJ-hosted device dashboard', () =>
 
 const hub = readSourceText(
     'resources/js/components/codebridge/control-center-hub.tsx',
+);
+const recovery = readSourceText(
+    'resources/js/components/codebridge/device-recovery.mjs',
 );
 
 void test('control center provides working sections and scoped device onboarding', () => {
@@ -219,7 +233,7 @@ void test('one CodeBridge dashboard with owner-only license settings', () => {
     assert.match(ui, /codeBridgeSectionFromHash\(window\.location\.hash\)/);
     assert.match(ui, /window\.addEventListener\('hashchange', apply\)/);
     assert.match(ui, /window\.removeEventListener\('hashchange', apply\)/);
-    assert.match(ui, /scrollIntoView\(\{ block: 'start' \}\)/);
+    assert.match(ui, /scrollIntoView\(\{\s*block: 'start'\s*\}\)/);
 });
 
 void test('repeated hash links scroll within the same CodeBridge tab', () => {
@@ -229,7 +243,7 @@ void test('repeated hash links scroll within the same CodeBridge tab', () => {
     );
     assert.match(ui, /\[activeSection, hashNavigationRevision\]/);
     assert.match(ui, /pendingAnchor\.current = null/);
-    assert.match(ui, /scrollIntoView\(\{ block: 'start' \}\)/);
+    assert.match(ui, /scrollIntoView\(\{\s*block: 'start'\s*\}\)/);
 });
 
 void test('one-click device/project setup is scoped to an existing exact grant, never a pending request', () => {
@@ -336,5 +350,9 @@ void test('unredeemed approval prompts existing enrollment review and never clai
         /deviceProjectConnectPlan\(connectDevice, connectProject\.id\)/,
     );
     assert.match(deviceCenter, /pending project\s+requests cannot be used/i);
-    assert.doesNotMatch(deviceCenter, /connectPlan.*online/);
+    // Source normalization flattens line breaks; avoid scanning unrelated UI.
+    // A nearby online claim is forbidden, but distant copy is not a claim.
+    const falseOnlineClaim = /\bconnectPlan\b[^;]{0,300}\bonline\b/i;
+    assert.doesNotMatch(deviceCenter, falseOnlineClaim);
+    assert.match("const connectPlan = 'online';", falseOnlineClaim);
 });

@@ -65,10 +65,7 @@ void test('Super Admin order actions lead to the real owner order controls', () 
     // Only /operator renders the order-management section. /super-admin does not.
     assert.ok(operator.includes('id="commercial-orders"'));
     assert.ok(nav.includes("href: '/operator#commercial-orders'"));
-    assert.equal(
-        commandOs.split('/operator#commercial-orders').length - 1,
-        5,
-    );
+    assert.equal(commandOs.split('/operator#commercial-orders').length - 1, 5);
     assert.ok(!commandOs.includes('/super-admin#commercial-orders'));
     assert.ok(!commandOs.includes('href="#commercial-orders"'));
     assert.ok(!commandOs.includes("'Manage Orders', '#commercial-orders'"));

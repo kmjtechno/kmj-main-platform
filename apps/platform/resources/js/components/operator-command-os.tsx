@@ -90,11 +90,7 @@ const groups = [
         items: [
             ['Products & Catalog', '/operator/products', Package],
             ['Customers & Orgs', '/operator/directory', Users],
-            [
-                'Orders & Payments',
-                '/operator#commercial-orders',
-                ShoppingCart,
-            ],
+            ['Orders & Payments', '/operator#commercial-orders', ShoppingCart],
             ['Licensing & Entitlements', '/operator/kslp', KeyRound],
             ['Subscriptions & Plans', '/operator/kslp', FileText],
             ['Revenue & Analytics', '#owner-revenue', ChartNoAxesCombined],
