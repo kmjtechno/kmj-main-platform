@@ -364,6 +364,22 @@ def sftp(known: Path, batch: Path, instructions: str, *, timeout: int = 100) -> 
         raise Block("PINNED_SFTP_COMMAND_FAILED")
 
 
+def receiver_preflight(hostline: str) -> None:
+    """Confirm post-origin-rotation pinned restricted-SFTP auth before archive work.
+
+    A matching SSH host key alone is NOT authentication. Use the exact reviewed
+    key/config and a read-only pwd/cd SFTP batch, fail closed on any denial,
+    and never try legacy rsync or unrestricted remote shell.
+    """
+    with tempfile.TemporaryDirectory(prefix="kmj-receiver-preflight-", dir="/run") as work:
+        known = Path(work) / "known_hosts"
+        batch = Path(work) / "commands"
+        known.write_text(hostline, encoding="ascii")
+        known.chmod(0o600)
+        sftp(known, batch, "pwd\ncd " + REMOTE + "\n", timeout=45)
+    emit("RECEIVER_PINNED_SFTP_AUTH_PRE_ARCHIVE", "PASS")
+
+
 def vault_list() -> dict[str, tuple[int, int]]:
     protected_chain(VAULT / "object")
     v = os.lstat(VAULT)
@@ -483,6 +499,9 @@ def run_job() -> int:
     pinned_conf()
     hk = host_key()
     emit("HOSTKEY_PIN", "PASS")
+    # Recheck authentication from the new ELITE source IP before generating
+    # any new archive. The old working SFTP canary predated the IP rotation.
+    receiver_preflight(hk)
     before = vault_list()
     with tempfile.TemporaryDirectory(prefix="kmj-legacy-backup-", dir="/run") as scratch:
         file = Path(scratch) / "local-prefix.sh"
