@@ -17,8 +17,9 @@ spec.loader.exec_module(module)
 
 
 class GuardedRepairTests(unittest.TestCase):
-    def recipe(self, ssh='ssh -i /tmp/old-key oldhost "mkdir -p /legacy"',
-               rsync='rsync -a /vault/ oldhost:/legacy/', after=''):
+    def recipe(self, ssh='SSH_OPTIONS="ssh -i /tmp/old-key"',
+               rsync='rsync -e "$SSH_OPTIONS" /vault/ oldhost:/legacy/',
+               after='echo "backup upload complete"'):
         lines = ['#!/bin/bash\n', 'set -Eeuo pipefail\n']
         lines.extend('# old fixed reviewed setup\n' for _ in range(2, 15))
         lines.extend([
@@ -40,10 +41,10 @@ class GuardedRepairTests(unittest.TestCase):
         first = self.recipe()
         expected = module.tail_shape_report(first)
         self.assertEqual(expected["TAIL_SOURCE_SHA"], "PASS")
-        self.assertEqual(expected["TAIL_LAST_TWO_ACTIVE"], "29_30")
-        self.assertEqual(expected["TAIL_LINE29_SHAPE"], "DIRECT_SSH")
+        self.assertEqual(expected["TAIL_LAST_TWO_ACTIVE"], "30_31")
+        self.assertEqual(expected["TAIL_LINE29_SHAPE"], "VARIABLE_ASSIGNMENT")
         self.assertEqual(expected["TAIL_LINE30_SHAPE"], "DIRECT_RSYNC")
-        self.assertEqual(expected["TAIL_AFTER_LINE30_ACTIVE_COUNT"], "0")
+        self.assertEqual(expected["TAIL_AFTER_LINE30_ACTIVE_COUNT"], "1")
         self.assertEqual(expected["TAIL_AUTOMATIC_REPAIR_ALLOWED"], "NO")
         self.assertNotIn("old-key", str(expected))
         self.assertNotIn("/vault/", str(expected))
@@ -51,9 +52,9 @@ class GuardedRepairTests(unittest.TestCase):
     def test_trailing_comments_and_commands_are_distinguished_without_leak(self):
         trailing_comments = self.recipe(after="\n# audit-only comment\n \n")
         info = module.tail_shape_report(trailing_comments)
-        self.assertEqual(info["TAIL_LINE29_SHAPE"], "DIRECT_SSH")
+        self.assertEqual(info["TAIL_LINE29_SHAPE"], "VARIABLE_ASSIGNMENT")
         self.assertEqual(info["TAIL_LINE30_SHAPE"], "DIRECT_RSYNC")
-        self.assertEqual(info["TAIL_AFTER_LINE30_ACTIVE_COUNT"], "0")
+        self.assertEqual(info["TAIL_AFTER_LINE30_ACTIVE_COUNT"], "1")
         self.assertEqual(info["TAIL_AFTER_LINE30_COMMENT_COUNT"], "1")
         extra = self.recipe(after="echo DO_NOT_DISCLOSE_SECRETS\n")
         info = module.tail_shape_report(extra)
@@ -123,12 +124,47 @@ class GuardedRepairTests(unittest.TestCase):
     def test_wrong_tail_and_extra_operation_denied(self):
         cases = [
             self.recipe(ssh='false'), self.recipe(rsync='sftp -b /tmp/batch'),
-            self.recipe(after='echo unreviewed-operation\n'),
+            self.recipe(after='rm -f /vault/archive.age\n'),
         ]
         for content in cases:
             with self.subTest(tail=content[-35:]):
                 with self.assertRaises(module.Block):
                     module.fixed_prefix(content)
+
+    def test_exact_ssh_variable_and_rsync_link_is_required(self):
+        cases = [
+            self.recipe(ssh='REMOTE="ssh -i /tmp/key"'),
+            self.recipe(ssh='SSH_OPTIONS="ssh -i /tmp/key"', rsync='rsync -a /vault/ oldhost:/legacy/'),
+            self.recipe(ssh='SSH_OPTIONS="ssh -i /tmp/key"', rsync='rsync -e "$UNRELATED" /vault/ oldhost:/legacy/'),
+            self.recipe(ssh='SSH_OPTIONS="ssh -i /tmp/key"', rsync='rsync -e "$SSH_OPTIONS" --delete /vault/ oldhost:/legacy/'),
+            self.recipe(ssh='SSH_OPTIONS="ssh -i /tmp/key"', rsync='rsync -e "$SSH_OPTIONS" /vault/ oldhost:/legacy/ || true'),
+        ]
+        for source in cases:
+            with self.subTest(source=source[-100:]):
+                with self.assertRaises(module.Block):
+                    module.fixed_prefix(source)
+
+    def test_shell_injection_and_status_side_effects_fail_closed(self):
+        cases = [
+            self.recipe(ssh='SSH_OPTIONS="ssh $(touch /tmp/injected)"'),
+            self.recipe(ssh='SSH_OPTIONS="ssh -i /tmp/key; echo unsafe"'),
+            self.recipe(after='echo "backup complete" && touch /tmp/injected'),
+            self.recipe(after='echo "$(touch /tmp/injected)"'),
+            self.recipe(after='echo $?'),
+            self.recipe(after='rm -f /vault/new.age'),
+            self.recipe(after='echo "backup complete"\necho "extra"'),
+        ]
+        for source in cases:
+            with self.subTest(source=source[-90:]):
+                with self.assertRaises(module.Block):
+                    module.fixed_prefix(source)
+
+    def test_only_trusted_local_prefix_is_accepted(self):
+        raw = self.recipe()
+        kept = module.fixed_prefix(raw)
+        self.assertEqual(kept, b''.join(raw.splitlines(keepends=True)[:28]))
+        for value in (b'SSH_OPTIONS=', b'rsync -e', b'backup upload complete'):
+            self.assertNotIn(value, kept)
 
     def test_source_with_prior_ssh_or_continuation_denied(self):
         with self.assertRaisesRegex(module.Block, 'LEGACY_PREFIX_UNEXPECTED_CONTROL'):
