@@ -107,6 +107,30 @@ class GuardedRepairTests(unittest.TestCase):
                     module.setup_install()
             self.assertEqual([mode for _, mode in recorded], [0o500, 0o644])
 
+    def test_service_pass_requires_exact_invocation_backup_receipts(self):
+        required = (b"HOSTKEY_PIN=PASS\nSSH_AUTH=PASS\n"
+                    b"LOCAL_AGE_ENCRYPTED_ARCHIVE=PASS\n"
+                    b"OFFSITE_TRANSFER=PASS\nSHA256_READBACK=PASS\n"
+                    b"BACKUP_OFFSITE=PASS\n")
+        with patch.object(module, 'prop', return_value='a' * 32), \
+             patch.object(module, 'call', return_value=subprocess.CompletedProcess([], 0, required, b'')) as journal:
+            module.verify_exact_service_receipt()
+            self.assertIn('_SYSTEMD_INVOCATION_ID=' + 'a' * 32,
+                          journal.call_args.args[0])
+        with patch.object(module, 'prop', return_value='a' * 32), \
+             patch.object(module, 'call', return_value=subprocess.CompletedProcess(
+                 [], 0, b'SSH_AUTH=PASS\nHOSTKEY_PIN=PASS\n', b'')):
+            with self.assertRaisesRegex(module.Block, 'SERVICE_INDEPENDENT_RECEIPT_MISSING'):
+                module.verify_exact_service_receipt()
+
+    def test_missing_invocation_denies_service_success_claim(self):
+        for invalid in ('', 'bad-id', 'a' * 31):
+            with patch.object(module, 'prop', return_value=invalid), \
+                 patch.object(module, 'call') as journal:
+                with self.assertRaisesRegex(module.Block, 'SERVICE_INVOCATION_UNAVAILABLE'):
+                    module.verify_exact_service_receipt()
+                journal.assert_not_called()
+
     def test_inspect_never_uploads_or_modifies_service(self):
         with patch.object(module, 'check_legacy', return_value=b'fixed'), \
              patch.object(module, 'fixed_prefix', return_value=b'true\n'), \
