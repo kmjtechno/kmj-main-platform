@@ -1,0 +1,28 @@
+[Unit]
+Description=KMJ-elite Cloudflare origin tunnel (IP independent, HTTP/S only)
+After=network-online.target
+Wants=network-online.target
+ConditionPathExists=/etc/cloudflared/config.yml
+
+[Service]
+Type=simple
+User=root
+Group=root
+UMask=0077
+ExecStart=/usr/local/bin/cloudflared --no-autoupdate --config /etc/cloudflared/config.yml tunnel run
+Restart=always
+RestartSec=10s
+TimeoutStartSec=90s
+NoNewPrivileges=true
+ProtectHome=true
+ProtectSystem=strict
+PrivateTmp=true
+PrivateDevices=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+CapabilityBoundingSet=
+AmbientCapabilities=
+
+[Install]
+WantedBy=multi-user.target
