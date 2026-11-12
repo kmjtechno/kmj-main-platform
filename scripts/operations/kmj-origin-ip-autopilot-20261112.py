@@ -255,12 +255,19 @@ def detected_egress() -> str:
 
 
 def origin_https(ip: str, *, mode: str) -> None:
-    if mode == "direct_only":
-        return
-    for host, route in (
-        (ZONE_HOST, "/"), ("staging.kmjtechno.com", "/"),
-        ("cloudos.kmjtechno.com", "/info")
-    ):
+    # Outbound IP consensus alone cannot establish that mail/SSH inbound
+    # traffic reaches the same host. Even after the web Tunnel cutover,
+    # direct_only mode MUST prove direct verified HTTPS reachability to
+    # the proposed public IPv4 before editing mail or SSH records.
+    # This is a conservative guard, not a guarantee of external reachability.
+    if mode == "ddns":
+        routes = ((ZONE_HOST, "/"), ("staging.kmjtechno.com", "/"),
+                  ("cloudos.kmjtechno.com", "/info"))
+    elif mode == "direct_only":
+        routes = ((ZONE_HOST, "/"),)
+    else:
+        raise Block("ORIGIN_PROBE_MODE_UNREVIEWED")
+    for host, route in routes:
         argv = ["/usr/bin/curl", "--noproxy", "*", "--proto", "=https",
                 "--tlsv1.2", "--silent", "--output", "/dev/null",
                 "--write-out", "%{http_code}", "--connect-timeout", "6",
