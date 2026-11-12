@@ -101,8 +101,17 @@ def classify_edge_probe(rc: int, output: bytes, headers: bytes) -> str:
     return "HTTP_200_EDGE_PASS" if ray and server else "EDGE_NOT_ATTESTED"
 
 
-def stage_edge_https() -> str:
-    host = "staging.kmjtechno.com"
+PUBLIC_EDGE_TARGETS = (
+    ("STAGING_PUBLIC_EDGE", "staging.kmjtechno.com", "/"),
+    ("CLOUDOS_PUBLIC_EDGE", "cloudos.kmjtechno.com", "/info"),
+    ("WWW_PUBLIC_EDGE", "www.kmjtechno.com", "/"),
+    ("MAIN_PUBLIC_EDGE", "kmjtechno.com", "/"),
+)
+
+
+def public_edge_https(host: str, route: str) -> str:
+    if (host, route) not in {(name, path) for _, name, path in PUBLIC_EDGE_TARGETS}:
+        raise RuntimeError("PUBLIC_EDGE_TARGET_UNREVIEWED")
     with tempfile.NamedTemporaryFile(
             mode="w+b", prefix="kmj-tunnel-edge-", dir="/run",
             delete=True) as file:
@@ -112,7 +121,7 @@ def stage_edge_https() -> str:
                 "KMJ-Origin-Health/1.0", "--output", "/dev/null",
                 "--dump-header", file.name,
                 "--write-out", "%{http_code}|%{ssl_verify_result}",
-                "https://" + host + "/"]
+                "https://" + host + route]
         rc, output = command(argv, timeout=17)
         file.seek(0)
         headers = file.read(16_385)
@@ -194,7 +203,15 @@ def self_test() -> None:
     for rc, result, headers, expected in edge_checks:
         if classify_edge_probe(rc, result, headers) != expected:
             raise RuntimeError("TEST_EDGE_CLASSIFIER_FAILED")
-    say("OFFLINE_CLASSIFIER_TESTS", "17_PASS")
+    for key, hostname, route in PUBLIC_EDGE_TARGETS:
+        if not re.fullmatch(r"[A-Z][A-Z0-9_]{3,30}", key):
+            raise RuntimeError("TEST_EDGE_KEY_UNSAFE")
+        if hostname not in ("staging.kmjtechno.com", "cloudos.kmjtechno.com",
+                            "www.kmjtechno.com", "kmjtechno.com"):
+            raise RuntimeError("TEST_EDGE_HOST_UNREVIEWED")
+        if route not in ("/", "/info"):
+            raise RuntimeError("TEST_EDGE_ROUTE_UNREVIEWED")
+    say("OFFLINE_CLASSIFIER_TESTS", "21_PASS")
 
 
 def main() -> None:
@@ -218,7 +235,8 @@ def main() -> None:
         say(key, curl_https(host, route, local))
         if key == "TUNNEL_CANARY":
             say("TUNNEL_CANARY_HEALTH_UA", curl_https(host, route, local, health_ua=True))
-    say("STAGING_PUBLIC_EDGE", stage_edge_https())
+    for key, host, route in PUBLIC_EDGE_TARGETS:
+        say(key, public_edge_https(host, route))
     rc, value = command(["/usr/bin/journalctl", "--no-pager",
                          "--output=cat", "--unit=" + UNIT,
                          "--lines=120"], timeout=12)
