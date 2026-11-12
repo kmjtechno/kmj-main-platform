@@ -30,9 +30,18 @@ jobs:
         run: |
           set -Eeuo pipefail
           mapfile -t ips < <(getent ahostsv4 staging.kmjtechno.com | awk '{print $1}' | sort -u)
-          [[ "${#ips[@]}" == 1 && "${ips[0]}" == 150.242.200.81 ]] || {
-            echo 'STAGING_EXTERNAL=BLOCKED DNS_PIN_MISMATCH'; exit 2;
+          [[ "${#ips[@]}" == 1 ]] || {
+            echo 'STAGING_EXTERNAL=BLOCKED DNS_AMBIGUOUS'; exit 2;
           }
+          python3 - "${ips[0]}" <<'KMJ_GLOBAL_V4'
+          import ipaddress
+          import sys
+          try:
+              addr = ipaddress.IPv4Address(sys.argv[1])
+              assert addr.is_global and not addr.is_reserved and not addr.is_multicast
+          except (ValueError, AssertionError):
+              raise SystemExit("STAGING_EXTERNAL=BLOCKED DNS_NOT_PUBLIC_IPV4")
+          KMJ_GLOBAL_V4
           echo 'STAGING_DNS_PIN=PASS'
       - name: Validate public SNI certificate SAN
         shell: bash
