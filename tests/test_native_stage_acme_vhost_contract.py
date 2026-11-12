@@ -61,7 +61,11 @@ class StagingAcmeVhostContract(unittest.TestCase):
             self.assertNotIn(prohibited, S)
 
     def test_host_origin_and_acme_local_probe(self):
-        self.assertIn('150.242.200.81', S)
+        self.assertNotIn('150.242.200.81', S)
+        self.assertNotIn('public_ip=', S)
+        self.assertIn('https://ipv4.icanhazip.com', S)
+        self.assertIn('[[ "$server_ip" == "$witness_ip"', S)
+        self.assertIn('addr.is_global', S)
         self.assertIn('https://api.ipify.org', S)
         self.assertIn('getent ahostsv4', S)
         self.assertIn("--noproxy '*'", S)
