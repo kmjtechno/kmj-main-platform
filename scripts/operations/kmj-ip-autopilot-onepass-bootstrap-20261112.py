@@ -56,6 +56,9 @@ UNIT_TIMER = Path("/etc/systemd/system/kmj-ip-autopilot.timer")
 UNIT_TUN = Path("/etc/systemd/system/kmj-cloudflared-tunnel.service")
 CF_BIN = Path("/usr/bin/cloudflared")
 CANARY = "https://tunnel-canary.kmjtechno.com/"
+# Health check must not trigger an existing WAF rule that challenges the
+# generic curl/wget User-Agent. No WAF configuration or security policy changes.
+CANARY_USER_AGENT = "KMJ-Origin-Health/1.0"
 TIMEOUT = 150
 ENV = {"PATH": "/usr/sbin:/usr/bin:/sbin:/bin",
        "HOME": "/root", "LC_ALL": "C", "LANG": "C"}
@@ -343,6 +346,7 @@ def canary_ready() -> bool:
             result = run(["/usr/bin/curl", "--noproxy", "*", "--fail",
                           "--silent", "--show-error", "--proto", "=https",
                           "--connect-timeout", "8", "--max-time", "18",
+                          "--user-agent", CANARY_USER_AGENT,
                           "--output", "/dev/null", "--write-out", "%{http_code}",
                           CANARY], timeout=21, capture=True).strip()
             if result == "200":
