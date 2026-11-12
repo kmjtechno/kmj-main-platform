@@ -10,11 +10,11 @@ required_workflow = (
     "infra/server/trust/kmj-elite-staging-known_hosts",
     "LOGIN_KEY_MISSING",
     "TRUSTED_HOSTS_FILE_INVALID",
-    "SSH_HOST: '150.242.200.81'",
-    "Fail closed if public staging DNS no longer targets reviewed VPS",
+    "SSH_HOST: 'staging.kmjtechno.com'",
+    "Validate public staging DNS is a unique global IPv4",
     "STAGING_TLS_REPAIR=BLOCKED DNS_CHANGED_OR_AMBIGUOUS",
     "STAGING_DNS_PIN=PASS",
-    '[[ "${#resolved[@]}" -eq 1 && "${resolved[0]}" == "$expected_ipv4" ]]',
+    '[[ "${#resolved[@]}" -eq 1 ]]',
     "StrictHostKeyChecking=yes",
     "UserKnownHostsFile=",
     "HOST_KEY_NOT_PINNED",
@@ -38,7 +38,7 @@ for s in required_workflow:
 for s in required_guard:
     assert s in guard, f"existing staging guard missing: {s}"
 HOST_KEY_FILE = Path(__file__).resolve().parents[1] / "infra/server/trust/kmj-elite-staging-known_hosts"
-EXPECTED_HOST_KEY = "150.242.200.81 ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAINZMT7YHsS5qRX/ciXTbLxKZVCgpJS7m/L9Nwgr3RNZS"
+EXPECTED_HOST_KEY = "staging.kmjtechno.com ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAINZMT7YHsS5qRX/ciXTbLxKZVCgpJS7m/L9Nwgr3RNZS"
 assert HOST_KEY_FILE.read_text(encoding="utf-8").strip() == EXPECTED_HOST_KEY, "reviewed host key drift"
 assert "pull_request:" in pr_workflow, "PR contract workflow required"
 assert "staging-tls-repair-execute.yml" in pr_workflow, "PR must test execution source"
@@ -71,3 +71,8 @@ assert 'NGINX_EFFECTIVE_CONFIG_UNREADABLE' in guard
 assert 'certbot --nginx' in guard and 'certbot --apache' not in guard
 assert 'curl -k' not in guard and '--insecure' not in guard
 print("Guarded staging-only TLS repair contract PASS")
+
+# The staging target is hostname-authenticated, never the ephemeral public IP.
+assert "150.242.200.81" not in workflow
+assert "150.242.200.81" not in HOST_KEY_FILE.read_text(encoding="utf-8")
+assert "python3 - \"\u0024{resolved[0]}\"" in workflow, "DNS must validate an actual global IPv4"
