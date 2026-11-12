@@ -207,7 +207,8 @@ def main() -> None:
         return
     identity()
     say("KMJ_ELITE_IDENTITY", "PASS")
-    for service, unit in (("CLOUDFLARED", UNIT), ("NGINX", "nginx.service")):
+    for service, unit in (("CLOUDFLARED", UNIT), ("NGINX", "nginx.service"),
+                          ("DNS_AGENT_TIMER", "kmj-ip-autopilot.timer")):
         rc, value = command(["/usr/bin/systemctl", "is-active", unit], timeout=9)
         if rc == 0 and value.strip() == b"active":
             say(service + "_SERVICE", "ACTIVE")
