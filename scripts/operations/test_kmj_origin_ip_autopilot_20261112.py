@@ -42,6 +42,38 @@ class ReconcilerTests(unittest.TestCase):
             m.emit("TEST_VALUE", "PASS")
         self.assertEqual(output.getvalue(), "TEST_VALUE=PASS\n")
 
+    def test_concurrent_dns_a_change_aborts_before_patch(self):
+        row = {"id": "a" * 32, "name": m.MAIL_HOST, "type": "A",
+               "content": OLD, "proxied": False}
+        changed = {**row, "content": "150.242.200.94"}
+        with patch.object(m, "exact_a", return_value=changed), \
+             patch.object(m, "cloudflare") as api:
+            with self.assertRaisesRegex(m.Block, "CF_RECORD_CHANGED_CONCURRENTLY"):
+                m.patch_record("f" * 32, "fake", row, NEW)
+        api.assert_not_called()
+
+    def test_concurrent_spf_change_aborts_before_patch(self):
+        row = {"id": "b" * 32, "name": m.ZONE_HOST, "type": "TXT",
+               "content": f"v=spf1 ip4:{OLD} include:_spf.mx.cloudflare.net ~all"}
+        changed = {**row, "content": "v=spf1 -all"}
+        with patch.object(m, "exact_spf", return_value=changed), \
+             patch.object(m, "cloudflare") as api:
+            with self.assertRaisesRegex(m.Block, "CF_RECORD_CHANGED_CONCURRENTLY"):
+                m.patch_record("f" * 32, "fake", row,
+                    f"v=spf1 ip4:{NEW} include:_spf.mx.cloudflare.net ~all")
+        api.assert_not_called()
+
+    def test_invalid_dns_patch_scope_is_denied_without_network(self):
+        for name, typ in (("host.kmjtechno.com", "A"),
+                          (m.MAIL_HOST, "TXT"),
+                          (m.ZONE_HOST, "MX")):
+            row = {"id": "a" * 32, "name": name, "type": typ,
+                   "content": OLD, "proxied": False}
+            with self.subTest(name=name, typ=typ), patch.object(m, "cloudflare") as api:
+                with self.assertRaises(m.Block):
+                    m.patch_record("f" * 32, "fake", row, NEW)
+                api.assert_not_called()
+
     def test_independent_egress_agreement_required(self):
         with patch.object(m, "url_text", side_effect=[NEW.encode(), (NEW + "\n").encode()]):
             self.assertEqual(m.detected_egress(), NEW)
