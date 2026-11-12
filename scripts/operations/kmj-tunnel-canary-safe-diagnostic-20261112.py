@@ -12,6 +12,7 @@ import socket
 import stat
 import subprocess
 import sys
+import tempfile
 from pathlib import Path
 
 PUBKEY = "AAAAC3NzaC1lZDI1NTE5AAAAINZMT7YHsS5qRX/ciXTbLxKZVCgpJS7m/L9Nwgr3RNZS"
@@ -87,6 +88,37 @@ def curl_https(host: str, route: str, local: bool, *, health_ua: bool = False) -
     return classify_http(rc, out)
 
 
+def classify_edge_probe(rc: int, output: bytes, headers: bytes) -> str:
+    base = classify_http(rc, output)
+    if base != "HTTP_200_PASS":
+        return base
+    if not isinstance(headers, bytes) or len(headers) > 16_384:
+        return "EDGE_HEADERS_UNAVAILABLE"
+    # A successful origin-direct request is NOT evidence of Cloudflare
+    # Tunnel routing. Require Cloudflare edge headers for the exact public URL.
+    ray = re.search(rb"(?im)^cf-ray:[ \t]*[A-Za-z0-9-]{6,100}[ \t]*\r?$", headers)
+    server = re.search(rb"(?im)^server:[ \t]*cloudflare[ \t]*\r?$", headers)
+    return "HTTP_200_EDGE_PASS" if ray and server else "EDGE_NOT_ATTESTED"
+
+
+def stage_edge_https() -> str:
+    host = "staging.kmjtechno.com"
+    with tempfile.NamedTemporaryFile(
+            mode="w+b", prefix="kmj-tunnel-edge-", dir="/run",
+            delete=True) as file:
+        argv = ["/usr/bin/curl", "--noproxy", "*", "--silent",
+                "--proto", "=https", "--connect-timeout", "5",
+                "--max-time", "14", "--user-agent",
+                "KMJ-Origin-Health/1.0", "--output", "/dev/null",
+                "--dump-header", file.name,
+                "--write-out", "%{http_code}|%{ssl_verify_result}",
+                "https://" + host + "/"]
+        rc, output = command(argv, timeout=17)
+        file.seek(0)
+        headers = file.read(16_385)
+        return classify_edge_probe(rc, output, headers)
+
+
 def journal_class(raw: bytes) -> str:
     if not isinstance(raw, bytes) or len(raw) > 65_536:
         return "UNAVAILABLE"
@@ -151,7 +183,18 @@ def self_test() -> None:
     for value, expected in tests2:
         if journal_class(value) != expected:
             raise RuntimeError("TEST_JOURNAL_CLASSIFIER_FAILED")
-    say("OFFLINE_CLASSIFIER_TESTS", "12_PASS")
+    edge_headers = b"HTTP/2 200\r\nserver: cloudflare\r\ncf-ray: a593b319f9373f85-BOM\r\n"
+    edge_checks = [
+        (0, b"200|0", edge_headers, "HTTP_200_EDGE_PASS"),
+        (0, b"200|0", b"HTTP/1.1 200 OK\r\n", "EDGE_NOT_ATTESTED"),
+        (0, b"403|0", edge_headers, "HTTP_403"),
+        (60, b"000|20", edge_headers, "TLS_CERTIFICATE_OR_HANDSHAKE_FAILED"),
+        (0, b"200|0", b"x" * 16_385, "EDGE_HEADERS_UNAVAILABLE"),
+    ]
+    for rc, result, headers, expected in edge_checks:
+        if classify_edge_probe(rc, result, headers) != expected:
+            raise RuntimeError("TEST_EDGE_CLASSIFIER_FAILED")
+    say("OFFLINE_CLASSIFIER_TESTS", "17_PASS")
 
 
 def main() -> None:
@@ -174,6 +217,7 @@ def main() -> None:
         say(key, curl_https(host, route, local))
         if key == "TUNNEL_CANARY":
             say("TUNNEL_CANARY_HEALTH_UA", curl_https(host, route, local, health_ua=True))
+    say("STAGING_PUBLIC_EDGE", stage_edge_https())
     rc, value = command(["/usr/bin/journalctl", "--no-pager",
                          "--output=cat", "--unit=" + UNIT,
                          "--lines=120"], timeout=12)
