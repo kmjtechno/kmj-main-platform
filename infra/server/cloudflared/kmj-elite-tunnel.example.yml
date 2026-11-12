@@ -27,4 +27,10 @@ ingress:
     originRequest:
       originServerName: cloudos.kmjtechno.com
       noTLSVerify: false
+  - hostname: tunnel-canary.kmjtechno.com
+    service: https://127.0.0.1:443
+    originRequest:
+      originServerName: kmjtechno.com
+      httpHostHeader: kmjtechno.com
+      noTLSVerify: false
   - service: http_status:404
