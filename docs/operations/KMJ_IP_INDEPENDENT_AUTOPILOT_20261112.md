@@ -23,10 +23,10 @@ installed/verified and **live DNS is unchanged**:
    agent.** A hardened systemd one-shot/timer discovers the current
    server *outbound* IPv4 using two independent HTTPS sources, requires exact
    agreement and globally routable IPv4, then confirms local origin HTTPS via
-   direct \`curl --resolve\` before updating only five allowlisted DNS-only
+   direct \`curl --resolve\` before updating only six allowlisted DNS-only
    A records and the exact pre-existing SPF policy. After Tunnel cutover,
-   change mode to \`mail_only\`: web CNAMEs are never touched again; only
-   \`mail.kmjtechno.com\` A and the reviewed SPF token remain dynamic.
+   change mode to \`direct_only\`: web CNAMEs are never touched again; only
+   \`mail.kmjtechno.com\`, \`elite-ssh.kmjtechno.com\` A records and the reviewed SPF token remain dynamic.
 
 Neither approach assumes that detecting outbound IP proves inbound reachability.
 The direct-DNS mode fails closed when origin HTTPS identity or network cannot
@@ -35,7 +35,7 @@ provider uses asymmetric NAT/firewall, an outage or different inbound/outbound I
 
 ## Cloudflare audit before deployment (12 November)
 
-Five distinct DNS-only A records (main/www/staging/cloudos/mail) point to
+Six distinct DNS-only A records (main/www/staging/cloudos/mail/elite-ssh) point to
 \`150.242.200.81\`. The only SPF TXT is exactly
 \`v=spf1 ip4:150.242.200.81 include:_spf.mx.cloudflare.net ~all\`.
 Cloudflare Email Routing owns MX records. The unrelated
@@ -85,7 +85,7 @@ silently install software, mint tokens, or change live DNS.
    verify exact SHA-256, install the two pinned systemd unit/timer files
    in \`/etc/systemd/system\`, run \`systemd-analyze verify\`, and run
    \`python3 -I -B ... --inspect\` first. **Inspect makes no DNS writes.**
-4. Only after the current five-record Cloudflare snapshot and all origin
+4. Only after the current six-record Cloudflare snapshot and all origin
    HTTPS preflights PASS, activate \`kmj-ip-autopilot.timer\`. The timer
    retries a failed check later; a periodic run is a one-shot and never
    restarts Nginx/Postfix/PHP/CloudOS or the production release pointer.
@@ -94,7 +94,7 @@ silently install software, mint tokens, or change live DNS.
    nonproduction canary hostname with Full (strict) TLS and correct origin
    SNI. Then migrate each public web hostname to the named Tunnel using
    Cloudflare-controlled CNAMEs, with independent HTTPS/browser validation.
-   Only after the tunnel cutover set \`config.json\` to \`mail_only\`:
+   Before the tunnel cutover set \`config.json\` to \`direct_only\`:
    the reconciler must stop managing web A records. Existing staging
    TLS workflow uses DNS **hostname + pinned SSH host key**, not rotating IP.
 6. Preserve and validate rollback of Cloudflare DNS, including HTTP/S and
