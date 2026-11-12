@@ -24,8 +24,8 @@ installed/verified and **live DNS is unchanged**:
    server *outbound* IPv4 using two independent HTTPS sources, requires exact
    agreement and globally routable IPv4, then confirms local origin HTTPS via
    direct \`curl --resolve\` before updating only six allowlisted DNS-only
-   A records and the exact pre-existing SPF policy. After Tunnel cutover,
-   change mode to \`direct_only\`: web CNAMEs are never touched again; only
+   A records and the exact pre-existing SPF policy. Before Tunnel cutover,
+   set mode to \`direct_only\`: web CNAMEs are never touched again; only
    \`mail.kmjtechno.com\`, \`elite-ssh.kmjtechno.com\` A records and the reviewed SPF token remain dynamic.
 
 Neither approach assumes that detecting outbound IP proves inbound reachability.
@@ -89,14 +89,27 @@ silently install software, mint tokens, or change live DNS.
    HTTPS preflights PASS, activate \`kmj-ip-autopilot.timer\`. The timer
    retries a failed check later; a periodic run is a one-shot and never
    restarts Nginx/Postfix/PHP/CloudOS or the production release pointer.
-5. Configure a named Cloudflare Tunnel with separately protected credentials
-   and \`cloudflared\`. First demonstrate **all four** routes on a
-   nonproduction canary hostname with Full (strict) TLS and correct origin
-   SNI. Then migrate each public web hostname to the named Tunnel using
-   Cloudflare-controlled CNAMEs, with independent HTTPS/browser validation.
-   Before the tunnel cutover set \`config.json\` to \`direct_only\`:
-   the reconciler must stop managing web A records. Existing staging
-   TLS workflow uses DNS **hostname + pinned SSH host key**, not rotating IP.
+5. **Activate the existing remotely managed named Tunnel** (ID
+   `b18c637f-2700-442a-a12e-b225c43dfc72`, already configured in
+   Cloudflare). Do not create a replacement or expose any tunnel token.
+   Install a verified cloudflared >=2025.4.0 with its root-owned token-file
+   `/etc/cloudflared/kmj-elite-ip-independent.token` mode 0600 and the
+   reviewed fixed `cloudflared-kmj-elite.example.service` unit. Token-file
+   support is documented by Cloudflare; no token is printed in the process
+   argv. The Tunnel must become connected, and
+   `tunnel-canary.kmjtechno.com` must pass independently verified HTTPS,
+   Host/SNI, origin certificate and browser checks before any live DNS edit.
+
+   **First** set `config.json` mode to `direct_only` so the agent will
+   manage only `mail.kmjtechno.com`, `elite-ssh.kmjtechno.com` and the
+   exact existing SPF. Confirm an inspected no-op and pin the new mode.
+   **Then** migrate public web A records (main/www/staging/cloudos) to the
+   existing Tunnel CNAME in an audited rollback-ready operation.
+   Staging web DNS can then resolve to multiple Cloudflare edge IPs.
+   Staging release SSH must instead use the separate DNS-only
+   `elite-ssh.kmjtechno.com` name with the exact pinned ED25519 key.
+   Do not reuse staging's proxied web hostname for direct SSH.
+
 6. Preserve and validate rollback of Cloudflare DNS, including HTTP/S and
    staging. Never turn off SSH StrictHostKeyChecking or enable
    \`noTLSVerify\` to make a broken tunnel look healthy.
