@@ -1,15 +1,15 @@
 [Unit]
-Description=KMJ-elite Cloudflare origin tunnel (IP independent, HTTP/S only)
+Description=KMJ-elite remotely managed Cloudflare Tunnel (IP independent HTTP/S)
 After=network-online.target
 Wants=network-online.target
-ConditionPathExists=/etc/cloudflared/config.yml
+ConditionPathExists=/etc/cloudflared/kmj-elite-ip-independent.token
 
 [Service]
 Type=simple
 User=root
 Group=root
 UMask=0077
-ExecStart=/usr/local/bin/cloudflared --no-autoupdate --config /etc/cloudflared/config.yml tunnel run
+ExecStart=/usr/local/bin/cloudflared --no-autoupdate tunnel run --token-file /etc/cloudflared/kmj-elite-ip-independent.token
 Restart=always
 RestartSec=10s
 TimeoutStartSec=90s
