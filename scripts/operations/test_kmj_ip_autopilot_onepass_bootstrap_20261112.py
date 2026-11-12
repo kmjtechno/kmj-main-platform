@@ -7,6 +7,7 @@ All file writes in these tests are inside disposable /run temp directories.
 import importlib.util
 import hashlib
 import os
+import re
 from pathlib import Path
 import stat
 import tempfile
@@ -80,6 +81,33 @@ class OnepassBootstrapTests(unittest.TestCase):
             link.symlink_to(root, target_is_directory=True)
             with self.assertRaisesRegex(m.Stop, "PRIVATE_DIR_SYMLINK"):
                 m.root_dir(link, 0o700)
+
+    def test_tunnel_token_base64_padding_and_url_safe_chars(self):
+        # Synthetic token fixtures only, not real Cloudflare credentials.
+        prefix = "eyJ" + "a" * 100
+        valid = [prefix, prefix + "==", prefix + "+/=", prefix + "_-=",
+                 prefix + ".aaa"]
+        for item in valid:
+            with self.subTest(kind=item[-3:]):
+                self.assertIsNotNone(re.fullmatch(m.TUNNEL_TOKEN_PATTERN, item))
+        invalid = [prefix + " ", prefix + "\\n", prefix + ";rm",
+                   "not-a-cloudflare-tunnel-token", "eyJshort",
+                   prefix + "${SECRET}"]
+        for item in invalid:
+            with self.subTest(kind="reject"):
+                self.assertIsNone(re.fullmatch(m.TUNNEL_TOKEN_PATTERN, item))
+
+    def test_tunnel_token_never_echoed_and_kept_root_private(self):
+        with tempfile.TemporaryDirectory(prefix="kmj-ip-bootstrap-test-", dir="/run") as td:
+            p = Path(td) / "tunnel.token"
+            fake = "eyJ" + "b" * 104 + "="
+            with patch.object(m.getpass, "getpass", return_value=fake) as getpass_mock:
+                with patch.object(m, "report") as safe_report:
+                    m.capture_token(p, prompt="hidden: ", pattern=m.TUNNEL_TOKEN_PATTERN)
+            getpass_mock.assert_called_once_with(prompt="hidden: ")
+            safe_report.assert_called_with("TOKEN", "PRIVATE_CREATED")
+            self.assertEqual(p.read_text("ascii"), fake)
+            self.assertEqual(stat.S_IMODE(p.stat().st_mode), 0o600)
 
     def test_existing_private_token_is_never_returned(self):
         with tempfile.TemporaryDirectory(prefix="kmj-ip-bootstrap-test-", dir="/run") as td:
