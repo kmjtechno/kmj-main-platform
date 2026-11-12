@@ -4,7 +4,7 @@ set -Eeuo pipefail
 umask 077
 
 DOMAIN=kmjtechno.com
-IP=150.242.200.81
+# Runtime origin determined by two independent HTTPS sources and checked against mail DNS.
 HOST=mail.kmjtechno.com
 SELECTOR=kmj2026
 ORIGINAL_DIR=/etc/opendkim/keys/kmjtechno.com
@@ -21,9 +21,20 @@ fail() { printf 'MAIL_STAGE=BLOCKED\nREASON=%s\n' "$1"; exit 2; }
 . /etc/os-release
 [ "${ID:-}" = ubuntu ] && [ "${VERSION_ID:-}" = 24.04 ] || fail OS_UNSUPPORTED
 [ -t 0 ] && [ -t 1 ] || fail INTERACTIVE_TTY_REQUIRED
-for cmd in apt-get debconf-set-selections dpkg-query openssl python3 ss getent systemctl find stat install sha256sum cmp cut awk grep df; do
+for cmd in apt-get debconf-set-selections dpkg-query openssl python3 curl ss getent systemctl find stat install sha256sum cmp cut awk grep df sort; do
   command -v "$cmd" >/dev/null 2>&1 || fail "TOOL_MISSING_$cmd"
 done
+IP="$(curl --noproxy '*' -4 --fail --silent --show-error --max-time 12 https://api.ipify.org)" || fail PUBLIC_IP_PROBE_FAILED
+IP_WITNESS="$(curl --noproxy '*' -4 --fail --silent --show-error --max-time 12 https://ipv4.icanhazip.com)" || fail PUBLIC_IP_WITNESS_FAILED
+[[ "$IP" == "$IP_WITNESS" ]] || fail PUBLIC_IP_CONSENSUS_FAILED
+python3 - "$IP" <<'KMJ_PUBLIC_MAIL_IP' || fail PUBLIC_IP_NOT_GLOBAL
+import ipaddress, sys
+try:
+    addr = ipaddress.IPv4Address(sys.argv[1])
+    assert addr.is_global and not addr.is_reserved and not addr.is_multicast
+except (ValueError, AssertionError):
+    sys.exit(2)
+KMJ_PUBLIC_MAIL_IP
 [ ! -e "$STAGED" ] && [ ! -L "$STAGED" ] || fail ALREADY_STAGED
 [ ! -e /etc/postfix/main.cf ] && [ ! -L /etc/postfix/main.cf ] || fail EXISTING_POSTFIX_CONFIG
 [ ! -e /etc/opendkim.conf ] && [ ! -L /etc/opendkim.conf ] || fail EXISTING_OPENDKIM_CONFIG
@@ -41,7 +52,8 @@ done
 [ -z "$(find /etc/opendkim -mindepth 1 -maxdepth 1 ! -name keys -print -quit)" ] || fail EXISTING_OPENDKIM_CONTENT
 [ -z "$(find /etc/opendkim/keys -mindepth 1 -maxdepth 1 ! -name kmjtechno.com -print -quit)" ] || fail EXISTING_OTHER_DOMAIN_KEYS
 [ -z "$(find "$ORIGINAL_DIR" -mindepth 1 -maxdepth 1 ! -name kmj2026.private ! -name kmj2026.txt -print -quit)" ] || fail EXISTING_EXTRA_KEY_FILES
-[ "$(getent ahostsv4 "$HOST" | awk 'NR==1 {print $1}')" = "$IP" ] || fail MAIL_A_RECORD_CHANGED
+mapfile -t mail_ips < <(getent ahostsv4 "$HOST" | awk '{print $1}' | sort -u)
+[ "${#mail_ips[@]}" -eq 1 ] && [ "${mail_ips[0]}" = "$IP" ] || fail MAIL_A_RECORD_CHANGED
 if ss -ltnH | awk '{print $4}' | grep -Eq '(^|:)(25|465|587|8891)$'; then
   fail EXISTING_SMTP_LISTENER
 fi
