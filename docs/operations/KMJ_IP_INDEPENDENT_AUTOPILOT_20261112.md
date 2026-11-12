@@ -168,8 +168,8 @@ The reviewed fail-closed launcher is checked into
 and already staged through the authorized CodeBridge project at
 `/srv/kmj-codebridge-projects/kmj-main-platform/work/qa/KMJ_IP_AUTOPILOT_20261112/`.
 Its current staged SHA-256 is
-`4cf146da9a20c802dad077a31fc147f533d164a757097cec2a9b7d6b25883a24`
-(16,106 bytes). Verify **this exact hash** before root execution; never
+`f716f9ecc9557fac1eab2b86075f2ae8d0646031f95a977c86e4c5fd5a65eb33`
+(17,720 bytes). Verify **this exact hash** before root execution; never
 execute the GitHub URL without a pinned local copy.
 
 `--preflight` is read-only: checks Ubuntu 24.04, exact KMJ-elite SSH ED25519
@@ -210,3 +210,27 @@ records DNS-only; preserve Cloudflare Email Routing MX and current SPF.
 The live health-check's existing fixed IP literal and provider PTR remain
 separate outstanding dependencies; do not mark every aspect zero-touch
 until they are addressed.
+
+### 12 Nov 2026 failed owner bootstrap and exact repair
+
+The first owner-root attempt passed `KMJ_ELITE_IDENTITY=PASS` and
+`QA_PINNED_SOURCES=6_PASS`, then failed at
+`APPROVED_SUBPROCESS_FAILED_PYTHON3` **before** token prompts,
+Cloudflare APT installation, DNS or systemd. Source inspection found
+`test_inspect_never_mutates` incorrectly expected 5 A changes even after
+the agent was extended to manage 6 (web ×4, mail, elite-ssh).
+Updated the test to use `len(m.EXPECTED_HOSTS)` instead and
+updated its SHA pin. The new installer prints **only** the stage and
+canonical failing Python unittest name from an anonymous private
+stderr capture; no raw traceback or secret text is exposed.
+
+The revised owner-root bootstrap is staged at the same project path and
+has SHA-256
+`f716f9ecc9557fac1eab2b86075f2ae8d0646031f95a977c86e4c5fd5a65eb33`
+(17,720 bytes). The associated DNS test source is now
+`ad521727836982ffaae89ad865605a7f83a86565e0832b3008400a765f16b595`
+(15,168 bytes). All six support-file digests were independently read
+back through CodeBridge. **The full 31-test suite is not yet proven PASS**;
+subsequent owner invocation must remain fail-closed. Keep the web DNS
+records pointing to the currently verified origin while the named
+Tunnel remains inactive.
