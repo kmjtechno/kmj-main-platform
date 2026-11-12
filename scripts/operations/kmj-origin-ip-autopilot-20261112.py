@@ -144,10 +144,20 @@ def url_text(url: str, *, limit: int, token: str | None = None,
     if data is not None:
         headers["Content-Type"] = "application/json"
     request = urllib.request.Request(url, data=data, headers=headers, method=method)
+    # Never follow redirects: protects the zone-scoped Bearer token from
+    # cross-origin forwarding and disallows IP probes silently moving hosts.
+    class RefuseRedirect(urllib.request.HTTPRedirectHandler):
+        def redirect_request(self, req, fp, code, msg, headers, newurl):
+            return None
+
     # Do not inherit HTTP(S)_PROXY from systemd or environment.
-    opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
+    opener = urllib.request.build_opener(
+        urllib.request.ProxyHandler({}), RefuseRedirect(),
+    )
     try:
         with opener.open(request, timeout=12) as response:
+            if response.geturl() != url:
+                raise Block("HTTPS_UNEXPECTED_REDIRECT")
             if response.status < 200 or response.status >= 300:
                 raise Block("HTTP_STATUS_NOT_SUCCESS")
             result = response.read(limit + 1)
