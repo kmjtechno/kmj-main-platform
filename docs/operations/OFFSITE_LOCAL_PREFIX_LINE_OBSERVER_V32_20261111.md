@@ -66,3 +66,20 @@ Once local failure is repaired, require a new autonomous encrypted archive,
 remote SFTP SHA-256 read-back, **independent Google decrypt, disposable
 PostgreSQL restore and storage parity** before declaring automated backup
 production-ready. Production release pointer approval remains a separate gate.
+
+## CodeBridge read-only observation (12 Nov, source-only)
+
+The matching CodeBridge integration is developed separately on
+[`feat/offsite-v32-line-supervisor-20261112`](https://github.com/kmjtechno/kmj-codebridge/tree/feat/offsite-v32-line-supervisor-20261112),
+head `578a0cc3e2733f281cdaed54d8cf2e781cbc06d1`.
+After an owner-approved signed agent/Supervisor rollout, the already-authorized
+`main_platform_offsite_status` profile can report only the validated
+`backupPrefixFailureLine=LINE_01..LINE_28|UNKNOWN`. It binds the journal to
+the exact systemd invocation and requires exit 3; malformed or duplicate
+markers cannot promote an error line. Raw journal and host secrets are never
+returned, and no additional shell/root capability is added.
+
+**Do not misread the source branch as installed:** as of 12 Nov 08:13 IST,
+the existing KMJ-elite offsite service still reports exit 3 and the new
+telemetry is not deployed. The signed updater remains disabled. Full
+regression and approval gates must pass before either component goes live.
