@@ -16,7 +16,7 @@ WorkingDirectory=/
 Environment=HOME=/root
 Environment=LC_ALL=C
 ExecStart=/usr/bin/python3 -I -B /usr/local/libexec/kmj-origin-ip-autopilot.py --apply
-TimeoutStartSec=120
+TimeoutStartSec=300
 NoNewPrivileges=yes
 PrivateTmp=yes
 PrivateDevices=yes
