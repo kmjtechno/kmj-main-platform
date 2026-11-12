@@ -580,8 +580,10 @@ def setup_install() -> None:
     code = read_private(local, MAX_SOURCE)
     if not code.startswith(b"#!/usr/bin/python3\n"):
         raise Block("INSTALL_SOURCE_UNEXPECTED")
-    _protected_write(REPAIR_FILE, code, 0o500)
+    created_helper = False
     try:
+        _protected_write(REPAIR_FILE, code, 0o500)
+        created_helper = True
         _protected_write(DROPIN, DROPIN_TEXT.encode("ascii"), 0o644)
         reload = call(["/usr/bin/systemctl", "daemon-reload"], timeout=30)
         if reload.returncode != 0:
@@ -594,19 +596,31 @@ def setup_install() -> None:
         emit("SERVICE_EXECUTION", "PASS")
         emit("EXIT_255", "RESOLVED_FOR_REPAIRED_SERVICE")
     except (OSError, Block):
+        # Never touch an active or unknown-status unit: its worker might still
+        # need the installed helper after systemctl start returns/has timed out.
         if prop("ActiveState") not in ("inactive", "failed"):
             emit("ROLLBACK", "NEEDS_OWNER_REVIEW")
             raise
         try:
-            if DROPIN.is_file() and not DROPIN.is_symlink() and DROPIN.read_bytes() == DROPIN_TEXT.encode("ascii"):
+            # Refuse to unlink a foreign, symlinked or modified drop-in.
+            if os.path.lexists(DROPIN):
+                if read_private(DROPIN, 4096) != DROPIN_TEXT.encode("ascii"):
+                    raise Block("ROLLBACK_DROPIN_UNREVIEWED")
                 DROPIN.unlink()
-                restored = call(["/usr/bin/systemctl", "daemon-reload"], timeout=30)
-                if restored.returncode != 0:
-                    raise Block("ROLLBACK_DAEMON_RELOAD_FAILED")
+            restored = call(["/usr/bin/systemctl", "daemon-reload"], timeout=30)
+            if restored.returncode != 0:
+                raise Block("ROLLBACK_DAEMON_RELOAD_FAILED")
+            # The old broken backup unit is now restored (without starting it).
+            # Clean ONLY the helper this invocation created, exact bytes and
+            # no-follow root protection. Leave foreign/orphan files untouched.
+            if created_helper:
+                if read_private(REPAIR_FILE, MAX_SOURCE) != code:
+                    raise Block("ROLLBACK_HELPER_UNREVIEWED")
+                REPAIR_FILE.unlink()
         except (OSError, Block):
             emit("ROLLBACK", "NEEDS_OWNER_REVIEW")
         else:
-            emit("ROLLBACK", "DROPIN_REVERTED")
+            emit("ROLLBACK", "EXACT_DROPIN_AND_HELPER_REVERTED")
         raise
 
 
@@ -617,10 +631,20 @@ def rollback_installed() -> None:
     if (DROPIN.is_symlink() or not DROPIN.is_file()
             or read_private(DROPIN, 4096) != DROPIN_TEXT.encode("ascii")):
         raise Block("ROLLBACK_DROPIN_NOT_OURS")
+    # A helper is optional for compatibility with a partly rolled-back older
+    # attempt. Never remove a helper whose exact SHA/source does not match.
+    helper_owned = False
+    if os.path.lexists(REPAIR_FILE):
+        if (REPAIR_FILE.is_symlink() or
+                read_private(REPAIR_FILE, MAX_SOURCE) != read_private(Path(__file__), MAX_SOURCE)):
+            raise Block("ROLLBACK_HELPER_NOT_OURS")
+        helper_owned = True
     DROPIN.unlink()
     result = call(["/usr/bin/systemctl", "daemon-reload"], timeout=30)
     if result.returncode != 0:
         raise Block("ROLLBACK_RELOAD_FAILED")
+    if helper_owned:
+        REPAIR_FILE.unlink()
     emit("ROLLBACK", "REVIEWED_DROPIN_REMOVED")
     emit("SERVICE_EXECUTION", "NOT_RUN")
     emit("LEGACY_RESTORED", "YES_NO_START")
