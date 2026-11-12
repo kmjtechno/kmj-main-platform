@@ -46,22 +46,23 @@ jobs:
         with:
           persist-credentials: false
           ref: ${{ github.sha }}
-      - name: Validate public staging DNS is a unique global IPv4
+      - name: Validate public staging DNS resolves only globally routed IPv4
         shell: bash
         run: |
           set -Eeuo pipefail
           stage_host='staging.kmjtechno.com'
           mapfile -t resolved < <(getent ahostsv4 "$stage_host" | awk '{print $1}' | sort -u)
-          [[ "${#resolved[@]}" -eq 1 ]] || {
+          [[ "${#resolved[@]}" -ge 1 && "${#resolved[@]}" -le 8 ]] || {
             echo 'STAGING_TLS_REPAIR=BLOCKED DNS_CHANGED_OR_AMBIGUOUS'
             exit 2
           }
-          python3 - "${resolved[0]}" <<'KMJ_VERIFY_GLOBAL_IP'
+          python3 - "${resolved[@]}" <<'KMJ_VERIFY_GLOBAL_IP'
           import ipaddress
           import sys
           try:
-              addr = ipaddress.IPv4Address(sys.argv[1])
-              assert addr.is_global and not addr.is_reserved and not addr.is_multicast
+              for raw in sys.argv[1:]:
+                  addr = ipaddress.IPv4Address(raw)
+                  assert addr.is_global and not addr.is_reserved and not addr.is_multicast
           except (ValueError, AssertionError):
               raise SystemExit("STAGING_TLS_REPAIR=BLOCKED INVALID_PUBLIC_IPV4")
           KMJ_VERIFY_GLOBAL_IP
@@ -70,14 +71,14 @@ jobs:
         shell: bash
         env:
           # IP-independent DNS name; exact ED25519 host key remains pinned in source.
-          SSH_HOST: 'staging.kmjtechno.com'
+          SSH_HOST: 'elite-ssh.kmjtechno.com'
           SSH_USER: ${{ secrets.STAGING_SSH_USER }}
           SSH_PRIVATE_KEY: ${{ secrets.STAGING_SSH_PRIVATE_KEY }}
         run: |
           set -Eeuo pipefail
           umask 077
           # DNS may change IP; require the same exact authenticated SSH server identity.
-          [[ "$SSH_HOST" == 'staging.kmjtechno.com' ]] || {
+          [[ "$SSH_HOST" == 'elite-ssh.kmjtechno.com' ]] || {
             echo 'STAGING_TLS_REPAIR=BLOCKED STAGING_VPS_IDENTITY_MISMATCH'; exit 2;
           }
           [[ "$SSH_USER" =~ ^[a-z_][a-z0-9_-]*$ ]] || {
@@ -86,6 +87,21 @@ jobs:
           [[ -n "$SSH_PRIVATE_KEY" ]] || {
             echo 'STAGING_TLS_REPAIR=BLOCKED LOGIN_KEY_MISSING'; exit 2;
           }
+          # Web stage hostname may be Cloudflare-proxied; direct SSH uses a
+          # separate DNS-only name whose exact host public key remains pinned.
+          mapfile -t ssh_ips < <(getent ahostsv4 "$SSH_HOST" | awk '{print $1}' | sort -u)
+          [[ "${#ssh_ips[@]}" -eq 1 ]] || {
+            echo 'STAGING_TLS_REPAIR=BLOCKED SSH_DNS_AMBIGUOUS'; exit 2;
+          }
+          python3 - "${ssh_ips[0]}" <<'KMJ_VERIFY_SSH_GLOBAL'
+          import ipaddress
+          import sys
+          try:
+              addr = ipaddress.IPv4Address(sys.argv[1])
+              assert addr.is_global and not addr.is_reserved and not addr.is_multicast
+          except (ValueError, AssertionError):
+              raise SystemExit("STAGING_TLS_REPAIR=BLOCKED SSH_DNS_INVALID")
+          KMJ_VERIFY_SSH_GLOBAL
           trusted_hosts='infra/server/trust/kmj-elite-staging-known_hosts'
           [[ -f "$trusted_hosts" && ! -L "$trusted_hosts" ]] || {
             echo 'STAGING_TLS_REPAIR=BLOCKED TRUSTED_HOSTS_FILE_MISSING'; exit 2;
