@@ -40,7 +40,7 @@ class ReconcilerTests(unittest.TestCase):
         output = StringIO()
         with redirect_stdout(output):
             m.emit("TEST_VALUE", "PASS")
-        self.assertEqual(output.getvalue(), "TEST_VALUE=PASS\\n".replace("\\n", "\n"))
+        self.assertEqual(output.getvalue(), "TEST_VALUE=PASS\n")
 
     def test_independent_egress_agreement_required(self):
         with patch.object(m, "url_text", side_effect=[NEW.encode(), (NEW + "\n").encode()]):
