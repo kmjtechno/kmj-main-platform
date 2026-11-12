@@ -205,15 +205,19 @@ def cloudflared_package() -> None:
             if st.st_uid != 0 or st.st_mode & 0o022:
                 raise Stop("APT_SIGNING_KEY_UNTRUSTED")
         else:
-            raw = run(["/usr/bin/curl", "--fail", "--silent", "--show-error",
-                       "--proto", "=https", "--max-time", "30",
-                       "https://pkg.cloudflare.com/cloudflare-main.gpg"],
-                      timeout=40, capture=True)
-            # This endpoint returns a public ASCII-armored/binary key,
-            # which must be installed without decoding or printing it.
-            if len(raw) < 400:
-                raise Stop("APT_KEY_RESPONSE_TOO_SMALL")
-            write_new(key, raw.encode("utf-8"), 0o644)
+            # GPG key may be BINARY: never decode it to text, or truncate
+            # subprocess stdout. Curl saves it into a random root-private file.
+            with tempfile.NamedTemporaryFile(
+                    prefix="cloudflare-apt-key-", dir="/run", delete=True) as tmpkey:
+                run(["/usr/bin/curl", "--fail", "--silent", "--show-error",
+                     "--proto", "=https", "--max-time", "30",
+                     "--output", tmpkey.name,
+                     "https://pkg.cloudflare.com/cloudflare-main.gpg"],
+                    timeout=40)
+                data = Path(tmpkey.name).read_bytes()
+                if not 400 <= len(data) <= 200_000:
+                    raise Stop("APT_KEY_RESPONSE_SIZE_UNREVIEWED")
+                write_new(key, data, 0o644)
         write_new(repo, REPO_ENTRY.encode(), 0o644)
         run(["/usr/bin/apt-get", "update", "-qq"], timeout=300)
         run(["/usr/bin/apt-get", "install", "-y", "-qq",
