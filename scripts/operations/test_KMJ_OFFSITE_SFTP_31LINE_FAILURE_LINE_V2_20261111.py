@@ -62,6 +62,28 @@ class PrefixLineObserverTests(unittest.TestCase):
                     ("LOCAL_PREFIX_ERR_TRAP_LINE_CANDIDATE", f"LINE_{line:02}")
                 ])
 
+    def test_anonymous_line_marker_must_be_single_complete_record(self):
+        self.assertEqual(mod.classify_anonymous_err_line(
+            b"KMJ_LOCAL_PREFIX_ERR_LINE:29\n"), "LINE_28")
+        self.assertEqual(mod.classify_anonymous_err_line(
+            b"KMJ_LOCAL_PREFIX_ERR_LINE:2\n"), "LINE_01")
+        bad = (
+            b"", b"KMJ_LOCAL_PREFIX_ERR_LINE:1\n",
+            b"KMJ_LOCAL_PREFIX_ERR_LINE:30\n",
+            b"KMJ_LOCAL_PREFIX_ERR_LINE:8",
+            b"KMJ_LOCAL_PREFIX_ERR_LINE:08\n",
+            b"KMJ_LOCAL_PREFIX_ERR_LINE:8\nextra",
+            b"noise KMJ_LOCAL_PREFIX_ERR_LINE:8\n",
+            b"KMJ_LOCAL_PREFIX_ERR_LINE:8\nKMJ_LOCAL_PREFIX_ERR_LINE:8\n",
+            b"KMJ_LOCAL_PREFIX_ERR_LINE:8\n" + b"x" * 100,
+        )
+        for blob in bad:
+            with self.subTest(blob=blob[:48]):
+                self.assertEqual(mod.classify_anonymous_err_line(blob),
+                                 "UNKNOWN")
+        self.assertEqual(mod.classify_anonymous_err_line("not bytes"),
+                         "UNKNOWN")
+
     def test_explicit_exit_without_err_trap_is_unknown(self):
         err, output = self.invoke(prefix(fail_line=12, explicit_exit=True))
         self.assertEqual(err, "LOCAL_BACKUP_PREFIX_FAILED")
