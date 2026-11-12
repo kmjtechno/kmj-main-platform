@@ -189,7 +189,13 @@ def records(zone: str, token: str, *, name: str, record_type: str) -> dict:
     filtered = [r for r in rows if isinstance(r, dict) and r.get("name") == name and r.get("type") == record_type]
     if len(filtered) != len(rows):
         raise Block("DNS_RECORD_SET_DRIFT")
-    return {r["id"]: r for r in filtered if isinstance(r.get("id"), str) and re.fullmatch(r"[a-f0-9]{32}", r["id"])}
+    if any(not isinstance(r.get("id"), str) or
+           re.fullmatch(r"[a-f0-9]{32}", r["id"]) is None for r in filtered):
+        raise Block("DNS_RECORD_ID_INVALID")
+    by_id = {r["id"]: r for r in filtered}
+    if len(by_id) != len(filtered):
+        raise Block("DNS_RECORD_ID_DUPLICATE")
+    return by_id
 
 
 def exact_a(zone: str, token: str, name: str) -> dict:
@@ -284,8 +290,9 @@ def reconcile(zone: str, mode: str, token: str, ip: str, *, apply: bool) -> dict
         raise Block("UNREVIEWED_PRIOR_IP")
     changes = [name for name in names if current_ips[name] != ip]
     spf_changed = prior_spf_ip != ip
-    if apply:
-        # Fail closed if the intended origin is not directly TLS reachable.
+    if apply and (changes or spf_changed):
+        # Fail closed if the intended web origin is not directly TLS reachable.
+        # An already converged no-op never triggers incidental web probes.
         origin_https(ip, mode=mode)
         for name in changes:
             patch_record(zone, token, a[name], ip)
