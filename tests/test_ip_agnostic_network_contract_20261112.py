@@ -78,6 +78,22 @@ class IPIndependenceContract(unittest.TestCase):
         self.assertNotIn(" --token ", service)
         self.assertNotIn("Environment=TUNNEL_TOKEN", service)
 
+    def test_legacy_mail_stage_only_preflight_tracks_current_egress(self):
+        for path in (
+            ROOT / "scripts/operations/stage-existing-kmj2026-mail-20261021.sh",
+            ROOT / "scripts/operations/stage-selfhosted-outbound-mail-20261021.sh",
+        ):
+            script = contents(path)
+            self.assertNotIn("IP=150.242.200.81", script)
+            self.assertNotIn("103.212.136.154", script)
+            self.assertIn("https://api.ipify.org", script)
+            self.assertIn("https://ipv4.icanhazip.com", script)
+            self.assertIn("PUBLIC_IP_CONSENSUS_FAILED", script)
+            self.assertIn("PUBLIC_IP_NOT_GLOBAL", script)
+            self.assertIn("mail_ips", script)
+            self.assertIn("--noproxy", script)
+            self.assertIn("OWNER", script.upper())
+
     def test_autopilot_read_only_inspect_and_zero_privilege_escalation(self):
         s = contents(AUTOPILOT)
         service = contents(SERVICE)
