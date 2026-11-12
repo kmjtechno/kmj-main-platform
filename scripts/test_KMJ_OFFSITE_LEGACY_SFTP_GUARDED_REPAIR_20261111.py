@@ -50,7 +50,7 @@ class GuardedRepairTests(unittest.TestCase):
         self.assertNotIn("/vault/", str(expected))
 
     def test_trailing_comments_and_commands_are_distinguished_without_leak(self):
-        trailing_comments = self.recipe(after="\n# audit-only comment\n \n")
+        trailing_comments = self.recipe(after='echo "backup upload complete"\n# audit-only comment\n \n')
         info = module.tail_shape_report(trailing_comments)
         self.assertEqual(info["TAIL_LINE29_SHAPE"], "VARIABLE_ASSIGNMENT")
         self.assertEqual(info["TAIL_LINE30_SHAPE"], "DIRECT_RSYNC")
@@ -329,6 +329,7 @@ class GuardedRepairTests(unittest.TestCase):
                  patch.object(module, 'DROPIN', dropin), \
                  patch.object(module, '__file__', str(local)), \
                  patch.object(module, 'read_private', side_effect=read), \
+                 patch.object(module, 'prop', return_value='failed'), \
                  patch.object(module, 'call', side_effect=systemd):
                 with self.assertRaisesRegex(module.Block, 'SERVICE_EXECUTION_FAILED'):
                     module.setup_install()
@@ -341,6 +342,38 @@ class GuardedRepairTests(unittest.TestCase):
                     module.setup_install()
                 self.assertFalse(repair.exists())
                 self.assertFalse(dropin.exists())
+
+    def test_unknown_service_state_preserves_helper_and_dropin_for_review(self):
+        """Never delete a possibly active worker's helper on unknown state."""
+        code = b"#!/usr/bin/python3\npass\n"
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            repair, dropin = root / 'helper.py', root / 'repair.conf'
+            local = root / 'source.py'
+            local.write_bytes(code)
+            def systemd(cmd, **kwargs):
+                if cmd[:2] == ['/usr/bin/systemctl', 'start']:
+                    return subprocess.CompletedProcess(cmd, 1, b'', b'')
+                return subprocess.CompletedProcess(cmd, 0, b'', b'')
+            with patch.object(module, 'check_legacy', return_value=b'legacy'), \
+                 patch.object(module, 'fixed_prefix', return_value=b'true\n'), \
+                 patch.object(module, 'unit_preflight'), \
+                 patch.object(module, 'pinned_conf'), \
+                 patch.object(module, 'protected_chain'), \
+                 patch.object(module, 'REPAIR_FILE', repair), \
+                 patch.object(module, 'DROPIN_DIR', root), \
+                 patch.object(module, 'DROPIN', dropin), \
+                 patch.object(module, '__file__', str(local)), \
+                 patch.object(module, 'read_private',
+                              side_effect=lambda path, *_a, **_k: Path(path).read_bytes()), \
+                 patch.object(module, 'prop', return_value=None), \
+                 patch.object(module, 'call', side_effect=systemd):
+                with self.assertRaisesRegex(module.Block, 'SERVICE_EXECUTION_FAILED'):
+                    module.setup_install()
+                self.assertTrue(repair.exists())
+                self.assertTrue(dropin.exists())
+                self.assertEqual(repair.read_bytes(), code)
+                self.assertEqual(dropin.read_bytes(), module.DROPIN_TEXT.encode('ascii'))
 
     def test_explicit_rollback_removes_only_exact_matching_helper(self):
         code = b"#!/usr/bin/python3\npass\n"
