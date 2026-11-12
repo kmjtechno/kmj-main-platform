@@ -127,6 +127,29 @@ class OnepassBootstrapTests(unittest.TestCase):
             with self.assertRaisesRegex(m.Stop, "TOKEN_FILE_OWNER_OR_MODE"):
                 m.capture_token(p, prompt="unused", pattern=r"[A-Za-z0-9_-]{32,250}")
 
+    def test_public_canary_uses_explicit_waf_compatible_health_user_agent(self):
+        self.assertEqual(m.CANARY_USER_AGENT, "KMJ-Origin-Health/1.0")
+        self.assertNotIn("curl", m.CANARY_USER_AGENT.lower())
+        with patch.object(m, "run", return_value="200") as cmd:
+            self.assertTrue(m.canary_ready())
+        args = cmd.call_args.args[0]
+        self.assertEqual(args[0], "/usr/bin/curl")
+        self.assertIn("--proto", args)
+        self.assertIn("=https", args)
+        self.assertIn("--user-agent", args)
+        self.assertEqual(args[args.index("--user-agent") + 1], m.CANARY_USER_AGENT)
+        self.assertNotIn("--insecure", args)
+        self.assertNotIn("-k", args)
+        self.assertEqual(args[-1], m.CANARY)
+        self.assertEqual(cmd.call_count, 1)
+
+    def test_canary_http_403_does_not_allow_automation_activation(self):
+        with patch.object(m, "run", return_value="403") as cmd, \
+             patch.object(m.time, "sleep") as asleep:
+            self.assertFalse(m.canary_ready())
+        self.assertEqual(cmd.call_count, 8)
+        self.assertEqual(asleep.call_count, 8)
+
     def test_no_production_dns_or_service_override(self):
         source = SCRIPT.read_text("utf-8")
         self.assertNotIn("kmj-elite-health-check.service", source)
