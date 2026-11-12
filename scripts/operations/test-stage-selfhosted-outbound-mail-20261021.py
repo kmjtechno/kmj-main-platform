@@ -10,7 +10,14 @@ SCRIPT = Path(__file__).resolve().with_name("stage-selfhosted-outbound-mail-2026
 class StageControls(unittest.TestCase):
     def test_current_mail_origin_ip(self):
         s = SCRIPT.read_text(encoding="utf-8")
-        self.assertIn("IP=150.242.200.81", s)
+        self.assertNotIn("IP=150.242.200.81", s)
+        self.assertNotIn("103.212.136.154", s)
+        self.assertIn("https://api.ipify.org", s)
+        self.assertIn("https://ipv4.icanhazip.com", s)
+        self.assertIn("PUBLIC_IP_CONSENSUS_FAILED", s)
+        self.assertIn("PUBLIC_IP_NOT_GLOBAL", s)
+        self.assertIn("mail_ips", s)
+        self.assertIn("MAIL_A_RECORD_MISMATCH", s)
         self.assertNotIn("103.212.136.154", s)
 
     def test_actual_argument_guard_without_running_installer(self):
