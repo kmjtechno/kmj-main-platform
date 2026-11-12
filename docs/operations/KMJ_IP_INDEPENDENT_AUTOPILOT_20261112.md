@@ -6,7 +6,11 @@ When the hosting provider changes KMJ-elite's public IPv4, routine IP
 rotations must require no changes to GitHub workflows or application
 configuration, and no manual Cloudflare DNS editing.
 
-Two compatible layers are staged, **not yet active**:
+Two compatible layers are staged; **neither is active on KMJ-elite**. The
+Cloudflare remotely managed Tunnel resource and its four safe HTTPS ingress
+rules are already created in the account (ID
+`b18c637f-2700-442a-a12e-b225c43dfc72`), but cloudflared is not
+installed/verified and **live DNS is unchanged**:
 
 1. **Preferred web path: Cloudflare Tunnel.** A locally running
    \`cloudflared\` daemon connects outbound to Cloudflare and publishes
@@ -36,7 +40,8 @@ Five distinct DNS-only A records (main/www/staging/cloudos/mail) point to
 \`v=spf1 ip4:150.242.200.81 include:_spf.mx.cloudflare.net ~all\`.
 Cloudflare Email Routing owns MX records. The unrelated
 \`host.kmjtechno.com\` and \`authsp.kmjtechno.com\` use a DIFFERENT IP
-and must not be modified. **No Cloudflare Tunnel exists yet.**
+and must not be modified. **The new remotely managed Cloudflare Tunnel exists with configured HTTPS
+ingress, but has no verified connected daemon or live DNS routes.**
 
 ## Once-only secure provisioning, authorized root operator required
 
