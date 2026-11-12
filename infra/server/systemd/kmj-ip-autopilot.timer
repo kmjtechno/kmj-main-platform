@@ -1,0 +1,13 @@
+[Unit]
+Description=Reconcile KMJ-elite Cloudflare origin IP on reboot and every five minutes
+
+[Timer]
+OnBootSec=2min
+OnUnitInactiveSec=5min
+AccuracySec=30s
+RandomizedDelaySec=15s
+Persistent=true
+Unit=kmj-ip-autopilot.service
+
+[Install]
+WantedBy=timers.target
