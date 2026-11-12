@@ -1,0 +1,29 @@
+# KMJ-elite IP-independent HTTP/S front door.
+# Credentials JSON must be root-only and come from a dedicated Cloudflare
+# named Tunnel; NEVER commit them or the tunnel token to GitHub.
+# This is a template, not an active server configuration.
+tunnel: REPLACE_WITH_CLOUDFLARE_TUNNEL_UUID
+credentials-file: /etc/cloudflared/REPLACE_WITH_CLOUDFLARE_TUNNEL_UUID.json
+
+ingress:
+  - hostname: kmjtechno.com
+    service: https://127.0.0.1:443
+    originRequest:
+      originServerName: kmjtechno.com
+      noTLSVerify: false
+  - hostname: www.kmjtechno.com
+    service: https://127.0.0.1:443
+    originRequest:
+      originServerName: www.kmjtechno.com
+      noTLSVerify: false
+  - hostname: staging.kmjtechno.com
+    service: https://127.0.0.1:443
+    originRequest:
+      originServerName: staging.kmjtechno.com
+      noTLSVerify: false
+  - hostname: cloudos.kmjtechno.com
+    service: https://127.0.0.1:443
+    originRequest:
+      originServerName: cloudos.kmjtechno.com
+      noTLSVerify: false
+  - service: http_status:404
