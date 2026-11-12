@@ -290,6 +290,21 @@ def patch_record(zone: str, token: str, row: dict, new_content: str) -> None:
     record_id = row["id"]
     if not re.fullmatch(r"[a-f0-9]{32}", record_id):
         raise Block("CF_RECORD_ID_INVALID")
+    name = row.get("name")
+    record_type = row.get("type")
+    if name not in EXPECTED_HOSTS or record_type not in ("A", "TXT"):
+        raise Block("CF_PATCH_SCOPE_UNREVIEWED")
+    if record_type == "TXT" and name != ZONE_HOST:
+        raise Block("CF_PATCH_TXT_SCOPE_UNREVIEWED")
+    if record_type == "A" and row.get("proxied") is not False:
+        raise Block("CF_PATCH_PROXY_SCOPE_UNREVIEWED")
+    # The original list/read may be stale. Re-fetch the *same unique record*
+    # and abort on any concurrent content, proxy-mode or identity mutation.
+    # We do not PATCH a record that changed since the initial reconciliation.
+    fresh = exact_a(zone, token, name) if record_type == "A" else exact_spf(zone, token)
+    for field in ("id", "name", "type", "content", "proxied"):
+        if fresh.get(field) != row.get(field):
+            raise Block("CF_RECORD_CHANGED_CONCURRENTLY")
     patched = cloudflare(zone, token, "/" + record_id, body={"content": new_content})
     obj = patched.get("result")
     if not isinstance(obj, dict) or obj.get("id") != record_id or obj.get("content") != new_content:
