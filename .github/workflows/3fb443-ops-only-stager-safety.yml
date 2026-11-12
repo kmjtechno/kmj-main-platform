@@ -1,0 +1,23 @@
+name: KMJ 3FB443 Operations-only SHA Advance Safety
+on:
+  pull_request:
+    paths:
+      - 'scripts/operations/stage-3fb443-only-ops-main-advance-20261027.sh'
+      - 'scripts/test_3fb443_ops_only_release_stager.py'
+      - '.github/workflows/3fb443-ops-only-stager-safety.yml'
+permissions:
+  contents: read
+jobs:
+  ops-only-stager-source:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - name: Exact product SHA ancestry and ops-only checks
+        run: |
+          set -Eeuo pipefail
+          python3 -B -m unittest discover -s scripts -p test_3fb443_ops_only_release_stager.py -v
+          echo 'SOURCE_SAFETY=PASS'
+          echo 'REAL_GIT_HOST_STAGE=NOT_RUN_BY_CI'
