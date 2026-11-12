@@ -23,7 +23,7 @@ class OnepassBootstrapTests(unittest.TestCase):
     def test_exact_scope_and_pins(self):
         self.assertEqual(m.ZONE, "49f7523905736979a04e93497d8ccd43")
         self.assertEqual(m.TUNNEL_ID, "b18c637f-2700-442a-a12e-b225c43dfc72")
-        self.assertEqual(len(m.FILES), 5)
+        self.assertEqual(len(m.FILES), 6)
         self.assertTrue(all(len(v) == 64 and all(c in "0123456789abcdef" for c in v)
                             for v in m.FILES.values()))
         self.assertEqual(m.CANARY, "https://tunnel-canary.kmjtechno.com/")
