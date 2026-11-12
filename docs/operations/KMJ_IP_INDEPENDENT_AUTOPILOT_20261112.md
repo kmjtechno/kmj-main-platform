@@ -160,3 +160,53 @@ files in this branch.
   on named A records (six in `ddns`, mail plus SSH in `direct_only`)
   and exactly one existing SPF TXT, no creation or deletion of MX, DKIM,
   DMARC, NS, proxied unrelated hostnames or SSH trust.
+
+## One-time owner-root bootstrap (12 Nov 2026, source staged, not executed)
+
+The reviewed fail-closed launcher is checked into
+`scripts/operations/kmj-ip-autopilot-onepass-bootstrap-20261112.py`
+and already staged through the authorized CodeBridge project at
+`/srv/kmj-codebridge-projects/kmj-main-platform/work/qa/KMJ_IP_AUTOPILOT_20261112/`.
+Its current staged SHA-256 is
+`4cf146da9a20c802dad077a31fc147f533d164a757097cec2a9b7d6b25883a24`
+(16,106 bytes). Verify **this exact hash** before root execution; never
+execute the GitHub URL without a pinned local copy.
+
+`--preflight` is read-only: checks Ubuntu 24.04, exact KMJ-elite SSH ED25519
+identity, and source SHA hashes. `--activate` is an **explicit privileged
+mutation**, not installed and not callable through current CodeBridge
+approved profiles. It runs the pinned 22 DNS-agent Python regression cases
+plus nine root-bootstrap negative cases **before** any service/package change.
+It then installs signed Cloudflare APT `cloudflared` >= 2025.4.0 if absent,
+uses two hidden local TTY prompts to store the existing Tunnel token and
+a KMJ-zone-scoped DNS Read/Edit API token as root-owned mode 0600 files,
+installs exact source/systemd units, performs DNS-agent `--inspect` requiring
+an initial no-diff, starts only the new Cloudflare Tunnel service, and
+verifies the isolated Tunnel canary externally over HTTPS. It enables the
+5-minute DNS-only `direct_only` timer **only if** canary HTTPS 200 passed.
+This script neither changes live production A to CNAME nor modifies
+Postfix, Nginx, main platform release pointers, existing health checks,
+backup units, MX or PTR.
+
+Tokens must be obtained from the Cloudflare account dashboard, **never**
+pasted into ChatGPT or committed to GitHub. The remotely-managed Tunnel
+token is available in Networking > Tunnels > this tunnel > Add replica.
+The independent Cloudflare API token must be **limited to DNS Read and Edit
+on the KMJ zone**; do not enter an account-global API key. The installer
+only asks the operator for these secrets through the controlling root TTY,
+with keyboard echo disabled, and refuses malformed tokens. If installation
+or canary fails, production web DNS is unchanged and the script reports a
+categorical blocker. Root-only files already installed are preserved for
+idempotent retry, not deleted through an unsafe cleanup.
+
+The existing Cloudflare Tunnel itself is
+`b18c637f-2700-442a-a12e-b225c43dfc72` and is currently inactive,
+zero connectors. Once the owner-root bootstrap has produced
+`RESULT=BOOTSTRAP_READY_FOR_WEB_CNAME_CUTOVER`, confirm the named Tunnel is
+healthy through the connected Cloudflare API, run a real nonproduction
+canary browser QA, then migrate web A records to Tunnel CNAMEs **one by one**
+using exact-record read-back and rollback checks. Keep mail and elite-ssh A
+records DNS-only; preserve Cloudflare Email Routing MX and current SPF.
+The live health-check's existing fixed IP literal and provider PTR remain
+separate outstanding dependencies; do not mark every aspect zero-touch
+until they are addressed.
