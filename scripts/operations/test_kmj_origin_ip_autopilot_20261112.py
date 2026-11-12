@@ -169,5 +169,64 @@ class ReconcilerTests(unittest.TestCase):
             self.assertFalse(call.kwargs.get("shell", False))
 
 
+    def test_cloudflare_api_token_cannot_follow_redirect(self):
+        class Response:
+            status = 200
+            def __init__(self, destination):
+                self.destination = destination
+            def __enter__(self): return self
+            def __exit__(self, *args): return None
+            def geturl(self): return self.destination
+            def read(self, size): return b"150.242.200.82"
+
+        class Opener:
+            def __init__(self, destination):
+                self.destination = destination
+            def open(self, request, timeout):
+                self.request = request
+                return Response(self.destination)
+
+        url = "https://api.cloudflare.com/client/v4/zones/" + "a" * 32 + "/dns_records"
+        safe = Opener(url)
+        with patch.object(m.urllib.request, "build_opener", return_value=safe) as builder:
+            result = m.url_text(url, limit=100, token="PRIVATE_TEST_TOKEN")
+        self.assertEqual(result, b"150.242.200.82")
+        self.assertEqual(safe.request.get_header("Authorization"),
+                         "Bearer PRIVATE_TEST_TOKEN")
+        self.assertTrue(any(isinstance(handler, m.urllib.request.HTTPRedirectHandler)
+                            for handler in builder.call_args.args))
+        redirect = [h for h in builder.call_args.args
+                    if isinstance(h, m.urllib.request.HTTPRedirectHandler)][0]
+        self.assertIsNone(redirect.redirect_request(None, None, 302, "Moved",
+                                                     {}, "https://example.org/"))
+
+        malicious = Opener("https://example.org/exfil")
+        with patch.object(m.urllib.request, "build_opener", return_value=malicious):
+            with self.assertRaisesRegex(m.Block, "HTTPS_UNEXPECTED_REDIRECT"):
+                m.url_text(url, limit=100, token="PRIVATE_TEST_TOKEN")
+
+    def test_record_ids_must_be_unique_and_well_formed(self):
+        zone = "a" * 32
+        name = m.ZONE_HOST
+        row = {"id": "1" * 32, "name": name, "type": "A",
+               "content": OLD, "proxied": False}
+        for bad in (
+            {**row, "id": "not-valid"},
+            {**row, "id": None},
+        ):
+            with patch.object(m, "cloudflare", return_value={
+                "success": True, "result": [bad], "result_info": {"total_pages": 1}
+            }):
+                with self.assertRaisesRegex(m.Block, "DNS_RECORD_ID_INVALID"):
+                    m.records(zone, "fake", name=name, record_type="A")
+        with patch.object(m, "cloudflare", return_value={
+            "success": True, "result": [row, row],
+            "result_info": {"total_pages": 1},
+        }):
+            with self.assertRaisesRegex(m.Block, "DNS_RECORD_ID_DUPLICATE"):
+                m.records(zone, "fake", name=name, record_type="A")
+
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
