@@ -1,0 +1,23 @@
+name: KMJ 52F4 Cloud Quota P0 Release Safety
+on:
+  pull_request:
+    paths:
+      - 'scripts/operations/*52f4*'
+      - 'scripts/test_52f4_cloud_quota_release_safety.py'
+      - '.github/workflows/52f4-cloud-quota-release-safety.yml'
+permissions:
+  contents: read
+jobs:
+  source-only:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - name: Verify 52f4 immutable source and four-migration cloud gates
+        run: |
+          set -Eeuo pipefail
+          python3 -B -m unittest discover -s scripts -p test_52f4_cloud_quota_release_safety.py -v
+          echo 'SOURCE_CONTRACT=PASS'
+          echo 'LIVE_OFFSITE_OWNER_AND_GATEWAY_QA=NOT_EXECUTED_BY_CI'
