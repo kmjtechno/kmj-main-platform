@@ -1,10 +1,11 @@
-# KMJ-elite IP-independent HTTP/S front door.
-# Credentials JSON must be root-only and come from a dedicated Cloudflare
-# named Tunnel; NEVER commit them or the tunnel token to GitHub.
-# This is a template, not an active server configuration.
-tunnel: REPLACE_WITH_CLOUDFLARE_TUNNEL_UUID
-credentials-file: /etc/cloudflared/REPLACE_WITH_CLOUDFLARE_TUNNEL_UUID.json
-
+# DOCUMENTATION ONLY. Cloudflare named Tunnel is remotely managed,
+# ID b18c637f-2700-442a-a12e-b225c43dfc72.
+# These ingress rules are already stored in the Cloudflare account through
+# the Tunnel configuration API, but public DNS has NOT been switched.
+# DO NOT deploy this YAML as the connector config: on KMJ-elite, provision
+# the root-private token-file and use the remotely-managed cloudflared
+# systemd service template instead. Never put the token in GitHub.
+#
 ingress:
   - hostname: kmjtechno.com
     service: https://127.0.0.1:443
