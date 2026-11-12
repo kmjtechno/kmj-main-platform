@@ -184,7 +184,11 @@ def records(zone: str, token: str, *, name: str, record_type: str) -> dict:
     })
     reply = cloudflare(zone, token, query)
     rows = reply.get("result")
-    if not isinstance(rows, list) or len(rows) > 100 or reply.get("result_info", {}).get("total_pages", 1) != 1:
+    page_info = reply.get("result_info")
+    if (page_info is not None and
+            (not isinstance(page_info, dict) or page_info.get("total_pages", 1) != 1)):
+        raise Block("DNS_PAGINATION_AMBIGUOUS")
+    if not isinstance(rows, list) or len(rows) > 100:
         raise Block("DNS_RECORD_SET_AMBIGUOUS")
     filtered = [r for r in rows if isinstance(r, dict) and r.get("name") == name and r.get("type") == record_type]
     if len(filtered) != len(rows):
