@@ -32,7 +32,7 @@ import time
 SRC = Path("/srv/kmj-codebridge-projects/kmj-main-platform/work/qa/KMJ_IP_AUTOPILOT_20261112")
 FILES = {
     "kmj-origin-ip-autopilot-20261112.py": "a5aa10bd19957e42ec91e5515f42b62186e1c7a78075afdeacb364d2366604ab",
-    "test_kmj_origin_ip_autopilot_20261112.py": "0db9ec9d1c836e2f8efa585d68ec2b1aaaf1b90f49c77e67bba638bcb9bbedc5",
+    "test_kmj_origin_ip_autopilot_20261112.py": "ad521727836982ffaae89ad865605a7f83a86565e0832b3008400a765f16b595",
     "test_kmj_ip_autopilot_onepass_bootstrap_20261112.py": "dd72064953d5c38916352386355f24b241e50960524a2e14a363d89d2e3ffaff",
     "kmj-ip-autopilot.service": "ccf3f40ed779c0cc5e0e85c3caeab57f910e749bbfa8ec2a8b528ab31a82c058",
     "kmj-ip-autopilot.timer": "b0f7f80575d715c09419dd1f68cc1e282307e7ec93f314f32fd1ccb98d6f5b2f",
@@ -233,6 +233,40 @@ def cloudflared_package() -> None:
     report("CLOUDFLARED_TOKEN_FILE", "SUPPORTED")
 
 
+def run_offline_test_suite(script: Path, *, stage: str, scratch: Path) -> None:
+    """Run a SHA-pinned offline unittest script; expose only sanitized test IDs.
+
+    Raw traceback may contain fixture values, and MUST NEVER be printed.
+    Stderr goes to a private anonymous file and is deleted on close.
+    """
+    if stage not in ("DNS_AGENT", "BOOTSTRAP"):
+        raise Stop("OFFLINE_STAGE_NOT_REVIEWED")
+    with tempfile.TemporaryFile(dir=scratch) as private_log:
+        try:
+            result = subprocess.run(
+                ["/usr/bin/python3", "-I", "-B", str(script), "-q"],
+                cwd="/", env=ENV, stdin=subprocess.DEVNULL,
+                stdout=subprocess.DEVNULL, stderr=private_log,
+                timeout=55, check=False,
+            )
+        except (OSError, subprocess.TimeoutExpired):
+            report("OFFLINE_TEST_STAGE", stage)
+            raise Stop("PYTHON_TEST_RUNTIME_UNAVAILABLE") from None
+        if result.returncode:
+            report("OFFLINE_TEST_STAGE", stage)
+            private_log.seek(0)
+            diagnostic = private_log.read(65_537)
+            # Test names only; avoid reading/printing tracebacks or secrets.
+            if len(diagnostic) <= 65_536:
+                cases = sorted(set(re.findall(
+                    rb"(?m)^(?:FAIL|ERROR): (test_[A-Za-z0-9_]{1,62})\b",
+                    diagnostic,
+                )))
+                if cases:
+                    report("FIRST_FAILED_TEST", cases[0].decode("ascii"))
+                    report("FAILED_TEST_COUNT", str(len(cases)))
+            raise Stop("PINNED_OFFLINE_TESTS_FAILED")
+
 def offline_tests(staged: dict[str, bytes], scratch: Path) -> None:
     for filename in ("kmj-origin-ip-autopilot-20261112.py",
                      "test_kmj_origin_ip_autopilot_20261112.py",
@@ -249,18 +283,20 @@ def offline_tests(staged: dict[str, bytes], scratch: Path) -> None:
         run(["/usr/bin/python3", "-I", "-B", "-c",
              "import ast,pathlib,sys;ast.parse(pathlib.Path(sys.argv[1]).read_bytes())",
              str(scratch / filename)], timeout=12)
-    run(["/usr/bin/python3", "-I", "-B",
-         str(scratch / "test_kmj_origin_ip_autopilot_20261112.py"),
-         "-q"], timeout=45)
+    run_offline_test_suite(
+        scratch / "test_kmj_origin_ip_autopilot_20261112.py",
+        stage="DNS_AGENT", scratch=scratch,
+    )
     # Independently test the installer itself before any package or service
     # mutation. Tests import a pinned copy from the private scratch folder.
     run(["/usr/bin/python3", "-I", "-B", "-c",
          "import ast,pathlib,sys;ast.parse(pathlib.Path(sys.argv[1]).read_bytes())",
          str(scratch / "test_kmj_ip_autopilot_onepass_bootstrap_20261112.py")],
         timeout=12)
-    run(["/usr/bin/python3", "-I", "-B",
-         str(scratch / "test_kmj_ip_autopilot_onepass_bootstrap_20261112.py"),
-         "-q"], timeout=45)
+    run_offline_test_suite(
+        scratch / "test_kmj_ip_autopilot_onepass_bootstrap_20261112.py",
+        stage="BOOTSTRAP", scratch=scratch,
+    )
     report("OFFLINE_PYTHON_TESTS", "PASS")
 
 
