@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """KMJ-elite Cloudflare IPv4 DNS reconciler, never an arbitrary DNS updater.
 
-Modes: ddns (five exact A records + one SPF) or mail_only (mail A + SPF).
+Modes: ddns (six exact A records + SPF), direct_only (mail + SSH A and SPF).
 Runs unattended from a pinned systemd service after one-time private token
 provisioning. External egress detection alone is not sufficient: HTTPS SNI
 checks against the proposed address must pass for ddns mode. Always fail closed
@@ -34,7 +34,8 @@ WEB_HOSTS = (
     "cloudos.kmjtechno.com",
 )
 MAIL_HOST = "mail.kmjtechno.com"
-EXPECTED_HOSTS = WEB_HOSTS + (MAIL_HOST,)
+SSH_HOST = "elite-ssh.kmjtechno.com"
+EXPECTED_HOSTS = WEB_HOSTS + (MAIL_HOST, SSH_HOST)
 DETECTORS = ("https://api.ipify.org", "https://ipv4.icanhazip.com")
 API_BASE = "https://api.cloudflare.com/client/v4"
 CONFIG_FILE = Path("/etc/kmj-ip-autopilot/config.json")
@@ -125,7 +126,7 @@ def config() -> tuple[str, str, str]:
         raise Block("CONFIG_NOT_JSON") from None
     if set(cfg) != {"zone_id", "mode"} or not re.fullmatch(r"[a-f0-9]{32}", str(cfg["zone_id"])):
         raise Block("CONFIG_SCOPE_INVALID")
-    if cfg["mode"] not in ("ddns", "mail_only"):
+    if cfg["mode"] not in ("ddns", "direct_only"):
         raise Block("CONFIG_MODE_INVALID")
     raw = read_private(TOKEN_FILE, limit=512, exact_mode=0o600)
     token = raw.decode("ascii", "strict").strip()
@@ -254,7 +255,7 @@ def detected_egress() -> str:
 
 
 def origin_https(ip: str, *, mode: str) -> None:
-    if mode == "mail_only":
+    if mode == "direct_only":
         return
     for host, route in (
         (ZONE_HOST, "/"), ("staging.kmjtechno.com", "/"),
@@ -289,7 +290,7 @@ def patch_record(zone: str, token: str, row: dict, new_content: str) -> None:
 
 
 def reconcile(zone: str, mode: str, token: str, ip: str, *, apply: bool) -> dict:
-    names = EXPECTED_HOSTS if mode == "ddns" else (MAIL_HOST,)
+    names = EXPECTED_HOSTS if mode == "ddns" else (MAIL_HOST, SSH_HOST)
     a = {name: exact_a(zone, token, name) for name in names}
     spf = exact_spf(zone, token)
     prior_spf_ip = spf_ipv4(spf["content"])
