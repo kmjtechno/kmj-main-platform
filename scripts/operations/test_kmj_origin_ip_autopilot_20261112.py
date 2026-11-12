@@ -80,7 +80,7 @@ class ReconcilerTests(unittest.TestCase):
              patch.object(m, "origin_https") as health:
             res = m.reconcile("a"*32, "ddns", "fake", NEW, apply=True)
         self.assertEqual([r[0] for r in edits], [*m.EXPECTED_HOSTS, m.ZONE_HOST])
-        self.assertEqual(len(edits), 6)
+        self.assertEqual(len(edits), 7)
         self.assertTrue(res["fully_converged"])
         health.assert_called_once_with(NEW, mode="ddns")
         self.assertEqual(spf["content"], f"v=spf1 ip4:{NEW} include:_spf.mx.cloudflare.net ~all")
@@ -104,7 +104,7 @@ class ReconcilerTests(unittest.TestCase):
              patch.object(m, "patch_record", side_effect=update), \
              patch.object(m, "origin_https"):
             m.reconcile("a"*32, "ddns", "fake", NEW, apply=True)
-        self.assertEqual(len(edits), 4)
+        self.assertEqual(len(edits), 5)
 
     def test_multiple_unreviewed_origins_fail_without_mutation(self):
         a, spf, edits, exact_a, exact_spf, update = self.scenario(
@@ -127,15 +127,15 @@ class ReconcilerTests(unittest.TestCase):
                 m.reconcile("a"*32, "ddns", "fake", NEW, apply=True)
         self.assertEqual(edits, [])
 
-    def test_mail_only_mode_never_changes_web_and_skips_web_probe(self):
+    def test_direct_only_mode_never_changes_web_and_skips_web_probe(self):
         _, _, edits, exact_a, exact_spf, update = self.scenario()
         with patch.object(m, "exact_a", side_effect=exact_a), \
              patch.object(m, "exact_spf", side_effect=exact_spf), \
              patch.object(m, "patch_record", side_effect=update), \
              patch.object(m, "origin_https") as health:
-            m.reconcile("a"*32, "mail_only", "fake", NEW, apply=True)
-        self.assertEqual([x[0] for x in edits], [m.MAIL_HOST, m.ZONE_HOST])
-        health.assert_called_once_with(NEW, mode="mail_only")
+            m.reconcile("a"*32, "direct_only", "fake", NEW, apply=True)
+        self.assertEqual([x[0] for x in edits], [m.MAIL_HOST, m.SSH_HOST, m.ZONE_HOST])
+        health.assert_called_once_with(NEW, mode="direct_only")
 
     def test_origin_health_failure_halts_updates(self):
         _, _, edits, exact_a, exact_spf, update = self.scenario()
