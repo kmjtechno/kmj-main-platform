@@ -19,6 +19,7 @@ PUBKEY = "AAAAC3NzaC1lZDI1NTE5AAAAINZMT7YHsS5qRX/ciXTbLxKZVCgpJS7m/L9Nwgr3RNZS"
 UNIT = "kmj-cloudflared-tunnel.service"
 FIXED = (
     ("ORIGIN_MAIN", "kmjtechno.com", "/", True),
+    ("ORIGIN_WWW", "www.kmjtechno.com", "/", True),
     ("ORIGIN_STAGE", "staging.kmjtechno.com", "/", True),
     ("ORIGIN_CLOUDOS", "cloudos.kmjtechno.com", "/info", True),
     ("TUNNEL_CANARY", "tunnel-canary.kmjtechno.com", "/", False),
