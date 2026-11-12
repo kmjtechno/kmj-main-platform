@@ -1,0 +1,4 @@
+{
+  "zone_id": "REPLACE_WITH_CLOUDFLARE_ZONE_ID",
+  "mode": "ddns"
+}
