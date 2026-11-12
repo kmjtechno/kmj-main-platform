@@ -106,6 +106,7 @@ class IPIndependenceContract(unittest.TestCase):
         self.assertNotIn("subprocess.Popen", s)
         self.assertNotIn("shell=True", s)
         self.assertIn("Type=oneshot", service)
+        self.assertIn("TimeoutStartSec=300", service)
         self.assertIn("ProtectSystem=strict", service)
         self.assertIn("CapabilityBoundingSet=", service)
         self.assertIn("OnUnitInactiveSec=5min", timer)
