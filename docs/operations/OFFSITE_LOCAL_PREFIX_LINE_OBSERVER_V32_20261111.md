@@ -24,7 +24,9 @@ PASS; this was not an automatic service PASS or a restore test.
   Bash line number to an **anonymous inherited file descriptor**. Captured
   local stdout/stderr stay `/dev/null`, without tracing commands, secrets,
   environment, database contents or raw journal data.
-* Maps this injected line to original lines 1–28. Emits only
+* Maps this injected line to original lines 1–28. Accepts **exactly one
+  canonical complete numeric marker**, rejecting duplicates, truncation,
+  prefix/suffix junk, and out-of-range values. Emits only
   `LOCAL_PREFIX_ERR_TRAP_LINE_CANDIDATE=LINE_XX` or `UNKNOWN`; the
   marker is advisory, not cryptographic proof, and some shell failures such
   as explicit `exit` cannot be mapped.
@@ -41,9 +43,11 @@ CodeBridge project to this feature branch and then byte-for-byte compared.
 The anonymous-fd ERR-trap algorithm passed seven **isolated synthetic
 non-root Bash scenarios** (success, failing lines 3/9/21/28,
 explicit exit, output suppression and missing stdin). These are algorithm
-tests, **not** a full root-service integration test. The nine included
-Python regression tests still require the exact branch test command to
-run before protected installation.
+tests, **not** a full root-service integration test. The ten included Python regression tests, including a strict canonical
+single-line marker anti-spoofing case, still require the exact branch test
+command to run before protected installation. The observer logic alone
+passed eight non-root isolated local regression scenarios on 12 Nov 2026;
+this is not an attested full-module or KMJ-elite service run.
 
 No paid hosted CI, root command, systemd reload/restart, SSH transfer, DB
 restore, Nginx change or production release action was performed by this PR
