@@ -49,6 +49,14 @@ export const deliveryMilestones: DeliveryMilestone[] = [
             'Source-only on a separate UI branch. A new node contract test passes, vp check is clean and a real Chromium run against a synthetic fixture confirmed the device deep link at 390 and 1280 px with no console errors or horizontal overflow. The new HTTP redirect test, exact-head CI, deployment and logged-in owner QA remain pending; production still serves an older release and nothing here changes runtime, Supervisor or device authorization.',
     },
     {
+        id: 'codebridge-calibration-private-github-proxy-scope',
+        title: 'Calibration Studio private GitHub scope for CodeBridge',
+        state: 'active',
+        detail: 'Draft PR #854 introduces an exact kmjtechno/KMJ-Calibration-Studio allowlist opt-in for the existing Render GitHub controller. The separate opt-in requires an existing private proxy token and GitHub credential, preserves every existing repository and cannot grant a device, branch write or merge permission. The matching CodeBridge gateway opt-in is proposed in draft PR #882. Both are disabled by default; neither live Render service has been changed or approved for release.',
+        evidence:
+            'Two scoped Python regression tests cover enabled, disabled and missing-credential cases. Exact-head hosted CI, owner-reviewed Render deployment, separate P520 browser pairing, live private GitHub read and negative scope verification remain pending. The source-only change is not a working live CodeBridge grant.',
+    },
+    {
         id: 'codebridge-github-authority-proxy',
         title: 'Main Platform authorizes CodeBridge GitHub operations',
         state: 'active',

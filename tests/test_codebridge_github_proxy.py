@@ -38,6 +38,45 @@ class CodeBridgeGitHubProxyTest(unittest.TestCase):
                 },
             )
 
+    def test_calibration_studio_owner_opt_in_preserves_existing_repositories(self) -> None:
+        env = {
+            "KMJ_CODEBRIDGE_GITHUB_REPOSITORIES": "kmjtechno/kmj-codebridge",
+            "KMJ_CODEBRIDGE_ENABLE_CALIBRATION_STUDIO_REPOSITORY": "true",
+            "KMJ_CODEBRIDGE_GITHUB_PROXY_TOKEN": "x" * 48,
+            "GITHUB_TOKEN": "test-existing-token",
+        }
+        with patch.dict(os.environ, env, clear=True):
+            self.assertEqual(
+                codebridge_github_repositories(),
+                {"kmjtechno/kmj-codebridge", "kmjtechno/KMJ-Calibration-Studio"},
+            )
+            os.environ["KMJ_CODEBRIDGE_ENABLE_CALIBRATION_STUDIO_REPOSITORY"] = "false"
+            self.assertEqual(
+                codebridge_github_repositories(), {"kmjtechno/kmj-codebridge"}
+            )
+            os.environ["KMJ_CODEBRIDGE_ENABLE_CALIBRATION_STUDIO_REPOSITORY"] = "TRUE"
+            self.assertEqual(
+                codebridge_github_repositories(), {"kmjtechno/kmj-codebridge"}
+            )
+
+    def test_calibration_studio_opt_in_denied_without_existing_proxy_credentials(self) -> None:
+        base = {
+            "KMJ_CODEBRIDGE_GITHUB_REPOSITORIES": "kmjtechno/kmj-codebridge",
+            "KMJ_CODEBRIDGE_ENABLE_CALIBRATION_STUDIO_REPOSITORY": "true",
+        }
+        with patch.dict(os.environ, base, clear=True):
+            self.assertEqual(
+                codebridge_github_repositories(), {"kmjtechno/kmj-codebridge"}
+            )
+            os.environ["KMJ_CODEBRIDGE_GITHUB_PROXY_TOKEN"] = "x" * 48
+            self.assertEqual(
+                codebridge_github_repositories(), {"kmjtechno/kmj-codebridge"}
+            )
+            os.environ["GITHUB_TOKEN"] = "test-existing-token"
+            self.assertIn(
+                "kmjtechno/KMJ-Calibration-Studio", codebridge_github_repositories()
+            )
+
     def test_proxy_token_is_required_and_constant_time_checked(self) -> None:
         secret = "x" * 48
         with patch.dict(

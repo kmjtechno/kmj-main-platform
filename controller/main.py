@@ -82,11 +82,21 @@ def require_control_token(authorization: str | None):
 
 def codebridge_github_repositories() -> set[str]:
     configured = os.getenv("KMJ_CODEBRIDGE_GITHUB_REPOSITORIES", "")
-    return {
+    repositories = {
         item.strip()
         for item in configured.split(",")
         if re.fullmatch(r"[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+", item.strip())
     }
+    # Owner-controlled, exact private repository opt-in for the independent
+    # Render proxy. Keep every existing grant and require existing credentials.
+    # This switch never grants GitHub writes or creates any device pairing.
+    if (
+        os.getenv("KMJ_CODEBRIDGE_ENABLE_CALIBRATION_STUDIO_REPOSITORY") == "true"
+        and len(os.getenv("KMJ_CODEBRIDGE_GITHUB_PROXY_TOKEN", "")) >= 32
+        and bool(os.getenv("GITHUB_TOKEN", ""))
+    ):
+        repositories.add("kmjtechno/KMJ-Calibration-Studio")
+    return repositories
 
 
 def require_codebridge_github_proxy_token(authorization: str | None) -> None:
