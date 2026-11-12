@@ -33,6 +33,7 @@ SRC = Path("/srv/kmj-codebridge-projects/kmj-main-platform/work/qa/KMJ_IP_AUTOPI
 FILES = {
     "kmj-origin-ip-autopilot-20261112.py": "a5aa10bd19957e42ec91e5515f42b62186e1c7a78075afdeacb364d2366604ab",
     "test_kmj_origin_ip_autopilot_20261112.py": "0db9ec9d1c836e2f8efa585d68ec2b1aaaf1b90f49c77e67bba638bcb9bbedc5",
+    "test_kmj_ip_autopilot_onepass_bootstrap_20261112.py": "dd72064953d5c38916352386355f24b241e50960524a2e14a363d89d2e3ffaff",
     "kmj-ip-autopilot.service": "ccf3f40ed779c0cc5e0e85c3caeab57f910e749bbfa8ec2a8b528ab31a82c058",
     "kmj-ip-autopilot.timer": "b0f7f80575d715c09419dd1f68cc1e282307e7ec93f314f32fd1ccb98d6f5b2f",
     "cloudflared-kmj-elite.example.service": "e51ba357ec86b5e33be6789d4f7ce7951d3d42cdfdcf80d545c9c47ce4af5fe4",
@@ -234,7 +235,9 @@ def cloudflared_package() -> None:
 
 def offline_tests(staged: dict[str, bytes], scratch: Path) -> None:
     for filename in ("kmj-origin-ip-autopilot-20261112.py",
-                     "test_kmj_origin_ip_autopilot_20261112.py"):
+                     "test_kmj_origin_ip_autopilot_20261112.py",
+                     "kmj-ip-autopilot-onepass-bootstrap-20261112.py",
+                     "test_kmj_ip_autopilot_onepass_bootstrap_20261112.py"):
         write_new(scratch / filename, staged[filename], 0o600)
         # Python syntax check only, never import from mutable project sources.
         run(["/usr/bin/python3", "-I", "-B", "-c",
@@ -242,6 +245,15 @@ def offline_tests(staged: dict[str, bytes], scratch: Path) -> None:
              str(scratch / filename)], timeout=12)
     run(["/usr/bin/python3", "-I", "-B",
          str(scratch / "test_kmj_origin_ip_autopilot_20261112.py"),
+         "-q"], timeout=45)
+    # Independently test the installer itself before any package or service
+    # mutation. Tests import a pinned copy from the private scratch folder.
+    run(["/usr/bin/python3", "-I", "-B", "-c",
+         "import ast,pathlib,sys;ast.parse(pathlib.Path(sys.argv[1]).read_bytes())",
+         str(scratch / "test_kmj_ip_autopilot_onepass_bootstrap_20261112.py")],
+        timeout=12)
+    run(["/usr/bin/python3", "-I", "-B",
+         str(scratch / "test_kmj_ip_autopilot_onepass_bootstrap_20261112.py"),
          "-q"], timeout=45)
     report("OFFLINE_PYTHON_TESTS", "PASS")
 
@@ -300,7 +312,7 @@ def main() -> None:
         raise Stop("USAGE_PREFLIGHT_OR_ACTIVATE")
     fixed_host_identity()
     pinned = {name: read_pinned(SRC / name, expected) for name, expected in FILES.items()}
-    report("QA_PINNED_SOURCES", "5_PASS")
+    report("QA_PINNED_SOURCES", "6_PASS")
     if sys.argv[1] == "--preflight":
         report("MODE", "READ_ONLY")
         report("CLOUDFLARED_INSTALLED", "YES" if CF_BIN.exists() else "NO")
