@@ -39,6 +39,10 @@ FILES = {
     "cloudflared-kmj-elite.example.service": "e51ba357ec86b5e33be6789d4f7ce7951d3d42cdfdcf80d545c9c47ce4af5fe4",
 }
 HOST_PUBLIC_KEY = "AAAAC3NzaC1lZDI1NTE5AAAAINZMT7YHsS5qRX/ciXTbLxKZVCgpJS7m/L9Nwgr3RNZS"
+# Cloudflare named Tunnel tokens are base64/base64url-encoded strings that
+# commonly start eyJ and may include +, /, URL-safe characters and = padding.
+# No spaces, shell metacharacters or newlines are permitted.
+TUNNEL_TOKEN_PATTERN = r"eyJ[A-Za-z0-9_+/.=-]{47,4093}"
 ZONE = "49f7523905736979a04e93497d8ccd43"
 TUNNEL_ID = "b18c637f-2700-442a-a12e-b225c43dfc72"
 CONF_DIR = Path("/etc/kmj-ip-autopilot")
@@ -307,7 +311,7 @@ def config_and_tokens() -> None:
                       sort_keys=True) + "\n").encode("ascii")
     write_new(CONFIG, cfg, 0o600)
     capture_token(TUN_TOKEN, prompt="Cloudflare named Tunnel token (hidden): ",
-                  pattern=r"[A-Za-z0-9_.-]{50,4096}")
+                  pattern=TUNNEL_TOKEN_PATTERN)
     capture_token(CF_API_TOKEN, prompt="Cloudflare KMJ zone DNS Read/Edit token (hidden): ",
                   pattern=r"[A-Za-z0-9_-]{32,250}")
     report("CONFIG_MODE", "DIRECT_ONLY")
