@@ -3,15 +3,15 @@
 set -Eeuo pipefail
 umask 077
 export PATH=/usr/sbin:/usr/bin:/sbin:/bin
-unset BASH_ENV ENV CDPATH
+unset BASH_ENV ENV CDPATH LD_PRELOAD LD_LIBRARY_PATH PYTHONPATH PYTHONHOME
 fail(){ printf 'KMJ_OFFSITE_P0=BLOCKED_%s\n' "$1" >&2; exit 2; }
 [[ $- == *p* && $(id -u) == 0 && $(hostname -s) == KMJ-elite ]] || fail ROOT_ELITE_REQUIRED
 [[ $# -eq 1 && $1 == --apply ]] || fail EXACT_OWNER_ACTION_REQUIRED
 readonly P=/srv/kmj-codebridge-projects/kmj-main-platform/scripts
 readonly A=KMJ_OFFSITE_LEGACY_SFTP_GUARDED_REPAIR_20261111.py
 readonly B=test_KMJ_OFFSITE_LEGACY_SFTP_GUARDED_REPAIR_20261111.py
-readonly SHA_A=0dfca31fc4522c245c439936e9c7877b232a5292cd61164a1df52a8d6c360445
-readonly SHA_B=140af1fa30ccd6bda8543900934aea1d1777591d6b95fc173046c271ad8a9271
+readonly SHA_A=bc33e1f4b471fe4d690bdd172ae61abdb8106f9d67b5ed6595189d7a9514b2da
+readonly SHA_B=7dcab9e28751442f3f4f96f6628c32d85cc948c62afc8f492cbe95fadd7e364e
 for file in "$P/$A" "$P/$B"; do
   [[ -f $file && ! -L $file ]] || fail SOURCE_ABSENT_OR_SYMLINK
   [[ $(stat -c '%h' -- "$file") == 1 ]] || fail SOURCE_HARDLINK
@@ -37,8 +37,9 @@ print('PYTHON_SYNTAX=PASS')
 PY
 /usr/bin/python3 -I -B -m unittest discover -s "$D" \
   -p 'test_KMJ_OFFSITE_LEGACY_SFTP_GUARDED_REPAIR_20261111.py' -v || fail OFFLINE_REGRESSION
-printf 'OFFLINE_REGRESSION=PASS\n'
+printf 'OFFLINE_REGRESSION=PASS_MOCK_ONLY\n'
 /usr/bin/python3 -I -B "$D/$A" --inspect || fail LIVE_READONLY_INSPECT
+printf 'ACTUAL_READONLY_HOST_PREFLIGHT=PASS\n'
 printf 'ACTIVATION=GUARDED_SINGLE_BACKUP_UNIT\n'
 /usr/bin/python3 -I -B "$D/$A" --apply || fail SERVICE_OR_REMOTE_PROOF
 printf 'KMJ_OFFSITE_P0=REPAIRED_SERVICE_AND_READBACK_VERIFIED\n'
