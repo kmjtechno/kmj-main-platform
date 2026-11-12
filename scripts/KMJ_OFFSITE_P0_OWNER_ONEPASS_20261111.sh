@@ -6,7 +6,7 @@ export PATH=/usr/sbin:/usr/bin:/sbin:/bin
 unset BASH_ENV ENV CDPATH LD_PRELOAD LD_LIBRARY_PATH PYTHONPATH PYTHONHOME
 fail(){ printf 'KMJ_OFFSITE_P0=BLOCKED_%s\n' "$1" >&2; exit 2; }
 [[ $- == *p* && $(id -u) == 0 && $(hostname -s) == KMJ-elite ]] || fail ROOT_ELITE_REQUIRED
-[[ $# -eq 1 && $1 == --apply ]] || fail EXACT_OWNER_ACTION_REQUIRED
+[[ $# -eq 1 && ( $1 == --verify || $1 == --apply ) ]] || fail EXACT_OWNER_ACTION_REQUIRED
 readonly P=/srv/kmj-codebridge-projects/kmj-main-platform/scripts
 readonly A=KMJ_OFFSITE_LEGACY_SFTP_GUARDED_REPAIR_20261111.py
 readonly B=test_KMJ_OFFSITE_LEGACY_SFTP_GUARDED_REPAIR_20261111.py
@@ -41,6 +41,12 @@ printf 'MOCK_REGRESSION_BEGIN=YES\n'
 printf 'OFFLINE_REGRESSION=PASS_MOCK_ONLY\n'
 /usr/bin/python3 -I -B "$D/$A" --inspect || fail LIVE_READONLY_INSPECT
 printf 'ACTUAL_READONLY_HOST_PREFLIGHT=PASS\n'
+if [[ $1 == --verify ]]; then
+  printf 'PRE_ACTIVATION_QA=PASS_READ_ONLY\n'
+  printf 'SERVICE_EXECUTION=NOT_RUN\n'
+  printf 'EXIT_255=NOT_RESOLVED_BY_THIS_PROBE\n'
+  exit 0
+fi
 printf 'ACTIVATION=GUARDED_SINGLE_BACKUP_UNIT\n'
 /usr/bin/python3 -I -B "$D/$A" --apply || fail SERVICE_OR_REMOTE_PROOF
 printf 'KMJ_OFFSITE_P0=REPAIRED_SERVICE_AND_READBACK_VERIFIED\n'
