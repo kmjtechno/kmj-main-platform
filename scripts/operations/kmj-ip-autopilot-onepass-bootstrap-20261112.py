@@ -33,7 +33,7 @@ SRC = Path("/srv/kmj-codebridge-projects/kmj-main-platform/work/qa/KMJ_IP_AUTOPI
 FILES = {
     "kmj-origin-ip-autopilot-20261112.py": "a5aa10bd19957e42ec91e5515f42b62186e1c7a78075afdeacb364d2366604ab",
     "test_kmj_origin_ip_autopilot_20261112.py": "ad521727836982ffaae89ad865605a7f83a86565e0832b3008400a765f16b595",
-    "test_kmj_ip_autopilot_onepass_bootstrap_20261112.py": "7f8a97ba265b561ad347ee11ce7869c2d0efcb336ce12b108b53f1f0352a8dfb",
+    "test_kmj_ip_autopilot_onepass_bootstrap_20261112.py": "c82e94ef85cc8bc88bbe5176b982da29fe7cca3e852bbbd8d6760c04a02e6ae5",
     "kmj-ip-autopilot.service": "ccf3f40ed779c0cc5e0e85c3caeab57f910e749bbfa8ec2a8b528ab31a82c058",
     "kmj-ip-autopilot.timer": "b0f7f80575d715c09419dd1f68cc1e282307e7ec93f314f32fd1ccb98d6f5b2f",
     "cloudflared-kmj-elite.example.service": "e51ba357ec86b5e33be6789d4f7ce7951d3d42cdfdcf80d545c9c47ce4af5fe4",
