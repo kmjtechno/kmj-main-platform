@@ -28,9 +28,19 @@ class ReconcilerTests(unittest.TestCase):
         self.assertEqual(m.public_ipv4(NEW), NEW)
 
     def test_cloudflare_token_not_in_any_report(self):
+        # Use a VALID key so each rejection actually tests the value,
+        # rather than accidentally passing because of an invalid key.
         for value in ("A token with spaces", "A/B", "x" * 200):
             with self.subTest(value=value), self.assertRaises(m.Block):
-                m.emit("X", value)
+                m.emit("TEST_VALUE", value)
+
+    def test_safe_report_control_accepted(self):
+        from contextlib import redirect_stdout
+        from io import StringIO
+        output = StringIO()
+        with redirect_stdout(output):
+            m.emit("TEST_VALUE", "PASS")
+        self.assertEqual(output.getvalue(), "TEST_VALUE=PASS\\n".replace("\\n", "\n"))
 
     def test_independent_egress_agreement_required(self):
         with patch.object(m, "url_text", side_effect=[NEW.encode(), (NEW + "\n").encode()]):
