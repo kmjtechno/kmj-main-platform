@@ -134,7 +134,7 @@ class ReconcilerTests(unittest.TestCase):
              patch.object(m, "patch_record", side_effect=update), \
              patch.object(m, "origin_https") as health:
             res = m.reconcile("a"*32, "ddns", "fake", NEW, apply=False)
-        self.assertEqual(res["a_records_to_change"], 5)
+        self.assertEqual(res["a_records_to_change"], len(m.EXPECTED_HOSTS))
         self.assertEqual(edits, [])
         health.assert_not_called()
 
