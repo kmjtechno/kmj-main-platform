@@ -137,6 +137,29 @@ class ReconcilerTests(unittest.TestCase):
         self.assertEqual([x[0] for x in edits], [m.MAIL_HOST, m.SSH_HOST, m.ZONE_HOST])
         health.assert_called_once_with(NEW, mode="direct_only")
 
+    def test_direct_only_origin_requires_verified_direct_https(self):
+        with patch.object(m.subprocess, "run",
+                          return_value=subprocess.CompletedProcess([], 0, b"200", b"")) as runner:
+            m.origin_https(NEW, mode="direct_only")
+        runner.assert_called_once()
+        cmd = runner.call_args.args[0]
+        self.assertIn("--resolve", cmd)
+        self.assertIn(f"{m.ZONE_HOST}:443:{NEW}", cmd)
+        self.assertIn("=https", cmd)
+        self.assertNotIn("--insecure", cmd)
+        self.assertTrue(runner.call_args.kwargs.get("check") is False)
+
+    def test_direct_only_origin_unreachable_cannot_modify_mail_or_ssh(self):
+        _, _, edits, exact_a, exact_spf, update = self.scenario()
+        with patch.object(m, "exact_a", side_effect=exact_a), \
+             patch.object(m, "exact_spf", side_effect=exact_spf), \
+             patch.object(m, "patch_record", side_effect=update), \
+             patch.object(m.subprocess, "run",
+                          return_value=subprocess.CompletedProcess([], 60, b"000", b"")):
+            with self.assertRaisesRegex(m.Block, "ORIGIN_HTTPS_PREFLIGHT_FAILED"):
+                m.reconcile("a"*32, "direct_only", "fake", NEW, apply=True)
+        self.assertEqual(edits, [])
+
     def test_origin_health_failure_halts_updates(self):
         _, _, edits, exact_a, exact_spf, update = self.scenario()
         with patch.object(m, "exact_a", side_effect=exact_a), \
