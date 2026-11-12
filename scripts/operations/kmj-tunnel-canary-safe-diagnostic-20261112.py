@@ -71,11 +71,15 @@ def classify_http(rc: int, output: bytes) -> str:
     return "HTTP_" + code
 
 
-def curl_https(host: str, route: str, local: bool) -> str:
+def curl_https(host: str, route: str, local: bool, *, health_ua: bool = False) -> str:
     argv = ["/usr/bin/curl", "--noproxy", "*", "--silent",
             "--proto", "=https", "--connect-timeout", "5",
             "--max-time", "14", "--output", "/dev/null",
             "--write-out", "%{http_code}|%{ssl_verify_result}"]
+    if health_ua:
+        # The zone's existing Smart WAF challenges default curl User-Agent.
+        # Compare both UAs without changing WAF policy or disabling TLS.
+        argv += ["--user-agent", "KMJ-Origin-Health/1.0"]
     if local:
         argv += ["--resolve", f"{host}:443:127.0.0.1"]
     argv.append(f"https://{host}{route}")
@@ -168,6 +172,8 @@ def main() -> None:
             say(service + "_SERVICE", "NOT_ACTIVE_OR_UNAVAILABLE")
     for key, host, route, local in FIXED:
         say(key, curl_https(host, route, local))
+        if key == "TUNNEL_CANARY":
+            say("TUNNEL_CANARY_HEALTH_UA", curl_https(host, route, local, health_ua=True))
     rc, value = command(["/usr/bin/journalctl", "--no-pager",
                          "--output=cat", "--unit=" + UNIT,
                          "--lines=120"], timeout=12)
