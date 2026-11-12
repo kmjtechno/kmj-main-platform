@@ -302,6 +302,74 @@ class GuardedRepairTests(unittest.TestCase):
                     module.setup_install()
             self.assertEqual([mode for _, mode in recorded], [0o500, 0o644])
 
+    def test_service_start_failure_removes_only_new_helper_and_dropin(self):
+        code = b"#!/usr/bin/python3\npass\n"
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            repair = root / 'repair.py'
+            dropin_dir = root / 'service.d'
+            dropin = dropin_dir / '90-exact.conf'
+            local = root / 'source.py'
+            local.write_bytes(code)
+            calls = []
+            def systemd(cmd, **kwargs):
+                calls.append(tuple(cmd))
+                if cmd[:2] == ['/usr/bin/systemctl', 'start']:
+                    return subprocess.CompletedProcess(cmd, 1, b'', b'')
+                return subprocess.CompletedProcess(cmd, 0, b'', b'')
+            def read(path, _limit, mode=0o022):
+                return Path(path).read_bytes()
+            with patch.object(module, 'check_legacy', return_value=b'legacy'), \
+                 patch.object(module, 'fixed_prefix', return_value=b'true\n'), \
+                 patch.object(module, 'unit_preflight'), \
+                 patch.object(module, 'pinned_conf'), \
+                 patch.object(module, 'protected_chain'), \
+                 patch.object(module, 'REPAIR_FILE', repair), \
+                 patch.object(module, 'DROPIN_DIR', dropin_dir), \
+                 patch.object(module, 'DROPIN', dropin), \
+                 patch.object(module, '__file__', str(local)), \
+                 patch.object(module, 'read_private', side_effect=read), \
+                 patch.object(module, 'call', side_effect=systemd):
+                with self.assertRaisesRegex(module.Block, 'SERVICE_EXECUTION_FAILED'):
+                    module.setup_install()
+                self.assertFalse(repair.exists())
+                self.assertFalse(dropin.exists())
+                self.assertEqual(sum(1 for x in calls if x[:2] ==
+                                     ('/usr/bin/systemctl', 'daemon-reload')), 2)
+                # No stale helper may poison the next guarded attempt.
+                with self.assertRaisesRegex(module.Block, 'SERVICE_EXECUTION_FAILED'):
+                    module.setup_install()
+                self.assertFalse(repair.exists())
+                self.assertFalse(dropin.exists())
+
+    def test_explicit_rollback_removes_only_exact_matching_helper(self):
+        code = b"#!/usr/bin/python3\npass\n"
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            helper = root / 'helper.py'
+            dropin = root / '90-exact.conf'
+            local = root / 'source.py'
+            local.write_bytes(code)
+            helper.write_bytes(code)
+            dropin.write_bytes(module.DROPIN_TEXT.encode('ascii'))
+            with patch.object(module, 'REPAIR_FILE', helper), \
+                 patch.object(module, 'DROPIN', dropin), \
+                 patch.object(module, '__file__', str(local)), \
+                 patch.object(module, 'prop', return_value='inactive'), \
+                 patch.object(module, 'protected_chain'), \
+                 patch.object(module, 'call', return_value=subprocess.CompletedProcess([], 0, b'', b'')):
+                module.rollback_installed()
+                self.assertFalse(helper.exists())
+                self.assertFalse(dropin.exists())
+                # Foreign content is preserved, and even our dropin cannot
+                # authorize removal of an unrelated modified helper.
+                helper.write_bytes(b'NOT_THE_OWNED_HELPER\n')
+                dropin.write_bytes(module.DROPIN_TEXT.encode('ascii'))
+                with self.assertRaisesRegex(module.Block, 'ROLLBACK_HELPER_NOT_OURS'):
+                    module.rollback_installed()
+                self.assertTrue(helper.exists())
+                self.assertTrue(dropin.exists())
+
     def test_service_pass_requires_exact_invocation_backup_receipts(self):
         required = (b"HOSTKEY_PIN=PASS\nSSH_AUTH=PASS\n"
                     b"LOCAL_AGE_ENCRYPTED_ARCHIVE=PASS\n"
