@@ -238,7 +238,13 @@ def offline_tests(staged: dict[str, bytes], scratch: Path) -> None:
                      "test_kmj_origin_ip_autopilot_20261112.py",
                      "kmj-ip-autopilot-onepass-bootstrap-20261112.py",
                      "test_kmj_ip_autopilot_onepass_bootstrap_20261112.py"):
-        write_new(scratch / filename, staged[filename], 0o600)
+        # The bootstrap file is pinned by the owner's *external* SHA-256
+        # launcher and is copied from this running private file. It is never
+        # loaded as untrusted input from a project checkout.
+        contents = (Path(__file__).read_bytes()
+                    if filename == "kmj-ip-autopilot-onepass-bootstrap-20261112.py"
+                    else staged[filename])
+        write_new(scratch / filename, contents, 0o600)
         # Python syntax check only, never import from mutable project sources.
         run(["/usr/bin/python3", "-I", "-B", "-c",
              "import ast,pathlib,sys;ast.parse(pathlib.Path(sys.argv[1]).read_bytes())",
