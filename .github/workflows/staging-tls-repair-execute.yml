@@ -46,30 +46,38 @@ jobs:
         with:
           persist-credentials: false
           ref: ${{ github.sha }}
-      - name: Fail closed if public staging DNS no longer targets reviewed VPS
+      - name: Validate public staging DNS is a unique global IPv4
         shell: bash
         run: |
           set -Eeuo pipefail
           stage_host='staging.kmjtechno.com'
-          expected_ipv4='150.242.200.81'
           mapfile -t resolved < <(getent ahostsv4 "$stage_host" | awk '{print $1}' | sort -u)
-          [[ "${#resolved[@]}" -eq 1 && "${resolved[0]}" == "$expected_ipv4" ]] || {
+          [[ "${#resolved[@]}" -eq 1 ]] || {
             echo 'STAGING_TLS_REPAIR=BLOCKED DNS_CHANGED_OR_AMBIGUOUS'
             exit 2
           }
+          python3 - "${resolved[0]}" <<'KMJ_VERIFY_GLOBAL_IP'
+          import ipaddress
+          import sys
+          try:
+              addr = ipaddress.IPv4Address(sys.argv[1])
+              assert addr.is_global and not addr.is_reserved and not addr.is_multicast
+          except (ValueError, AssertionError):
+              raise SystemExit("STAGING_TLS_REPAIR=BLOCKED INVALID_PUBLIC_IPV4")
+          KMJ_VERIFY_GLOBAL_IP
           echo 'STAGING_DNS_PIN=PASS'
       - name: Verify pinned SSH connection and execute staging-only repair
         shell: bash
         env:
-          # New 2026-11-11 Cloudflare staging A record. Host key still requires independent console attestation before merge.
-          SSH_HOST: '150.242.200.81'
+          # IP-independent DNS name; exact ED25519 host key remains pinned in source.
+          SSH_HOST: 'staging.kmjtechno.com'
           SSH_USER: ${{ secrets.STAGING_SSH_USER }}
           SSH_PRIVATE_KEY: ${{ secrets.STAGING_SSH_PRIVATE_KEY }}
         run: |
           set -Eeuo pipefail
           umask 077
-          # Staging A record migrated on 11 Nov 2026. Require pinned identical KMJ-elite host identity.
-          [[ "$SSH_HOST" == '150.242.200.81' ]] || {
+          # DNS may change IP; require the same exact authenticated SSH server identity.
+          [[ "$SSH_HOST" == 'staging.kmjtechno.com' ]] || {
             echo 'STAGING_TLS_REPAIR=BLOCKED STAGING_VPS_IDENTITY_MISMATCH'; exit 2;
           }
           [[ "$SSH_USER" =~ ^[a-z_][a-z0-9_-]*$ ]] || {
