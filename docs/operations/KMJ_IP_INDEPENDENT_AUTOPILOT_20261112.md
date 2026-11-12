@@ -7,8 +7,8 @@ rotations must require no changes to GitHub workflows or application
 configuration, and no manual Cloudflare DNS editing.
 
 Two compatible layers are staged; **neither is active on KMJ-elite**. The
-Cloudflare remotely managed Tunnel resource and its four safe HTTPS ingress
-rules are already created in the account (ID
+Cloudflare remotely managed Tunnel resource and five safe HTTPS ingress
+rules (including the isolated canary route) are already created in the account (ID
 `b18c637f-2700-442a-a12e-b225c43dfc72`), but cloudflared is not
 installed/verified and **live DNS is unchanged**:
 
@@ -42,6 +42,27 @@ Cloudflare Email Routing owns MX records. The unrelated
 \`host.kmjtechno.com\` and \`authsp.kmjtechno.com\` use a DIFFERENT IP
 and must not be modified. **The new remotely managed Cloudflare Tunnel exists with configured HTTPS
 ingress, but has no verified connected daemon or live DNS routes.**
+
+
+### Isolated Cloudflare Tunnel canary (12 November)
+
+A remotely managed ingress was added for `tunnel-canary.kmjtechno.com`.
+It points to `https://127.0.0.1:443` with explicit
+`originServerName=kmjtechno.com`,
+`httpHostHeader=kmjtechno.com`, and `noTLSVerify=false`.
+The DNS entry is a **proxied CNAME** targeting
+`b18c637f-2700-442a-a12e-b225c43dfc72.cfargotunnel.com`. This
+is a new dedicated canary hostname; no production A, MX or SPF record was
+altered. The Tunnel remains inactive with no connected origin connector,
+so a canary request is expected to fail until the approved daemon is
+installed. This is **configuration evidence**, not canary availability proof.
+
+The direct management SSH hostname
+`elite-ssh.kmjtechno.com` was also added as a DNS-only A record pointing
+at the currently verified `150.242.200.81`. It does **not** change the
+server's SSH listener or firewall; it is only a name for existing SSH.
+The exact ED25519 server host public key remains pinned. It must be
+automatically updated by the `direct_only` DNS reconciler after activation.
 
 ## Once-only secure provisioning, authorized root operator required
 
@@ -123,5 +144,6 @@ files in this branch.
   after the next timer activation; investigate only through
   sanitized logs/approved operator channel.
 - \`--inspect\`: Cloudflare Read only; \`--apply\`: allowlisted PATCH
-  on named A records and exactly one existing SPF TXT, no creation or
-  deletion of MX, DKIM, DMARC, NS, proxied unrelated hostnames or SSH trust.
+  on named A records (six in `ddns`, mail plus SSH in `direct_only`)
+  and exactly one existing SPF TXT, no creation or deletion of MX, DKIM,
+  DMARC, NS, proxied unrelated hostnames or SSH trust.
