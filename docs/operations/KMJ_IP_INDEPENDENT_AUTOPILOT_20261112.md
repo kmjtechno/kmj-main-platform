@@ -234,3 +234,29 @@ back through CodeBridge. **The full 31-test suite is not yet proven PASS**;
 subsequent owner invocation must remain fail-closed. Keep the web DNS
 records pointing to the currently verified origin while the named
 Tunnel remains inactive.
+
+### 12 Nov 2026 Cloudflare token Base64 compatibility repair
+
+Second owner-root run **passed offline Python tests** and signed Cloudflare APT
+installation (`CLOUDFLARED_BIN=PASS`, `CLOUDFLARED_TOKEN_FILE=SUPPORTED`),
+then stopped safely at `NEW_TOKEN_FORMAT_INVALID`. This was caused by the
+initial tunnel token validator excluding the Base64 `+`, `/` and `=`
+alphabet. Token was **not stored**, services/DNS unchanged.
+
+Corrected bootstrap now uses
+`TUNNEL_TOKEN_PATTERN = r"eyJ[A-Za-z0-9_+/.=-]{47,4093}"`, with
+**two additional synthetic-token privacy/character tests**. The updated
+11-test bootstrap regression file SHA-256 is
+`7f8a97ba265b561ad347ee11ce7869c2d0efcb336ce12b108b53f1f0352a8dfb`.
+The corrected bootstrap was uploaded via CodeBridge into the existing
+QA project path, SHA-256
+`4e15216aaac2eb176b1e63ae2c4b9cb578063b3f798129d219d7af86121ab7de`
+(17,984 bytes). Its pinned 6-file manifest was independently read back.
+Owner uses this NEW SHA only, never the prior pinned installer hash.
+
+On the Cloudflare dashboard's **Add a replica** screen, choose Debian
+for Ubuntu 24.04 / 64-bit, and copy **only the token beginning `eyJ`**
+from the suggested connector installation command. Do not run
+`cloudflared.exe service install` on KMJ-elite. The token is entered
+at the revised, hidden interactive prompt and never shared in ChatGPT.
+A separate least-privilege Cloudflare zone DNS Read/Edit API token follows.
