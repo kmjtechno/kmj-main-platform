@@ -7,7 +7,7 @@ set -Eeuo pipefail
 umask 077
 
 DOMAIN=kmjtechno.com
-IP=150.242.200.81
+# Current outbound IP must match both trusted HTTPS witnesses and DNS-only mail A.
 HOST=mail.kmjtechno.com
 SELECTOR=kmjmail2026
 STAMP=/etc/kmj-mail-selfhost-stage-v1
@@ -53,12 +53,27 @@ check_preexisting_dkim_tree() {
 }
 check_preexisting_dkim_tree /etc/opendkim
 [[ ! -e /etc/opendkim.conf.kmj-package-default-20261021 && ! -L /etc/opendkim.conf.kmj-package-default-20261021 ]] || fail EXISTING_BACKUP_DO_NOT_OVERWRITE
-[[ $(getent ahostsv4 "$HOST" | awk 'NR==1 {print $1}') == "$IP" ]] || fail MAIL_A_RECORD_MISMATCH
+for cmd in curl python3 getent awk sort; do
+  command -v "$cmd" >/dev/null 2>&1 || fail "MISSING_TOOL_$cmd"
+done
+IP="$(curl --noproxy '*' -4 --fail --silent --show-error --max-time 12 https://api.ipify.org)" || fail PUBLIC_IP_PROBE_FAILED
+IP_WITNESS="$(curl --noproxy '*' -4 --fail --silent --show-error --max-time 12 https://ipv4.icanhazip.com)" || fail PUBLIC_IP_WITNESS_FAILED
+[[ "$IP" == "$IP_WITNESS" ]] || fail PUBLIC_IP_CONSENSUS_FAILED
+python3 - "$IP" <<'KMJ_PUBLIC_MAIL_IP' || fail PUBLIC_IP_NOT_GLOBAL
+import ipaddress, sys
+try:
+    addr = ipaddress.IPv4Address(sys.argv[1])
+    assert addr.is_global and not addr.is_reserved and not addr.is_multicast
+except (ValueError, AssertionError):
+    sys.exit(2)
+KMJ_PUBLIC_MAIL_IP
+mapfile -t mail_ips < <(getent ahostsv4 "$HOST" | awk '{print $1}' | sort -u)
+[[ "${#mail_ips[@]}" -eq 1 && "${mail_ips[0]}" == "$IP" ]] || fail MAIL_A_RECORD_MISMATCH
 if ss -ltnH | awk '{print $4}' | grep -Eq '(^|:)(25|465|587|993)$'; then
   fail EXISTING_MAIL_LISTENER
 fi
 [[ $(df -Pk / | awk 'NR==2 {print $4}') -ge 1048576 ]] || fail INSUFFICIENT_DISK
-for cmd in apt-get dpkg-query debconf-set-selections ss getent openssl systemctl; do
+for cmd in apt-get dpkg-query debconf-set-selections ss getent openssl systemctl curl python3 awk sort; do
   command -v "$cmd" >/dev/null 2>&1 || fail "MISSING_TOOL_$cmd"
 done
 
