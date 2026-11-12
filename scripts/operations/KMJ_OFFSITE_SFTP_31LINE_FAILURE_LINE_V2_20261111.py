@@ -420,6 +420,21 @@ def digest_regular_download(path: Path) -> str:
 
 
 
+def classify_anonymous_err_line(telemetry: bytes) -> str:
+    """Fail closed unless the entire private marker is one canonical line.
+
+    Do not accept multiple, truncated, padded, or prefixed markers; this signal
+    is for diagnostics only, never an attestation or release approval.
+    """
+    if not isinstance(telemetry, bytes) or len(telemetry) > 64:
+        return "UNKNOWN"
+    match = re.fullmatch(rb"KMJ_LOCAL_PREFIX_ERR_LINE:([1-9][0-9]?)\n", telemetry)
+    if match is None:
+        return "UNKNOWN"
+    source_line = int(match.group(1)) - 1
+    return "LINE_%02d" % source_line if 1 <= source_line <= 28 else "UNKNOWN"
+
+
 def execute_local_prefix_with_line_marker(prefix: bytes, scratch: Path,
                                           backup_env: dict[str, str], *,
                                           timeout: int = 900) -> None:
@@ -457,21 +472,10 @@ def execute_local_prefix_with_line_marker(prefix: bytes, scratch: Path,
             raise Block("LOCAL_BACKUP_TIMEOUT_OR_TOOL") from None
         if result.returncode != 0:
             private_marker.seek(0)
-            # This is NEVER printed raw. Reject truncation/ambiguity/spoofing.
-            telemetry = private_marker.read(513)
-            if len(telemetry) <= 512:
-                markers = re.findall(
-                    rb"(?m)^KMJ_LOCAL_PREFIX_ERR_LINE:([1-9][0-9]?)$",
-                    telemetry,
-                )
-                values = {int(x) - 1 for x in markers}
-                if len(values) == 1 and all(1 <= n <= 28 for n in values):
-                    emit("LOCAL_PREFIX_ERR_TRAP_LINE_CANDIDATE",
-                         "LINE_%02d" % next(iter(values)))
-                else:
-                    emit("LOCAL_PREFIX_ERR_TRAP_LINE_CANDIDATE", "UNKNOWN")
-            else:
-                emit("LOCAL_PREFIX_ERR_TRAP_LINE_CANDIDATE", "UNKNOWN")
+            # This is NEVER printed raw. Only one entire numeric record is accepted.
+            telemetry = private_marker.read(65)
+            emit("LOCAL_PREFIX_ERR_TRAP_LINE_CANDIDATE",
+                 classify_anonymous_err_line(telemetry))
             raise Block("LOCAL_BACKUP_PREFIX_FAILED")
 
 def run_job() -> int:
