@@ -11,7 +11,7 @@ readonly P=/srv/kmj-codebridge-projects/kmj-main-platform/scripts
 readonly A=KMJ_OFFSITE_LEGACY_SFTP_GUARDED_REPAIR_20261111.py
 readonly B=test_KMJ_OFFSITE_LEGACY_SFTP_GUARDED_REPAIR_20261111.py
 readonly SHA_A=bc33e1f4b471fe4d690bdd172ae61abdb8106f9d67b5ed6595189d7a9514b2da
-readonly SHA_B=7dcab9e28751442f3f4f96f6628c32d85cc948c62afc8f492cbe95fadd7e364e
+readonly SHA_B=3d8b22ebcfa83a513915a55e4ba7f69c76b3647b2d9d0337203f0f242ba1b928
 for file in "$P/$A" "$P/$B"; do
   [[ -f $file && ! -L $file ]] || fail SOURCE_ABSENT_OR_SYMLINK
   [[ $(stat -c '%h' -- "$file") == 1 ]] || fail SOURCE_HARDLINK
@@ -35,6 +35,7 @@ for file in sys.argv[1:]:
     ast.parse(pathlib.Path(file).read_bytes(), filename=file)
 print('PYTHON_SYNTAX=PASS')
 PY
+printf 'MOCK_REGRESSION_BEGIN=YES\n'
 /usr/bin/python3 -I -B -m unittest discover -s "$D" \
   -p 'test_KMJ_OFFSITE_LEGACY_SFTP_GUARDED_REPAIR_20261111.py' -v || fail OFFLINE_REGRESSION
 printf 'OFFLINE_REGRESSION=PASS_MOCK_ONLY\n'
