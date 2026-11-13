@@ -90,6 +90,22 @@ void test('mail doctor never prints credentials or verification URLs', () => {
     );
 });
 
+void test('mail doctor resolves its potentially stateful local SMTP probe only once', () => {
+    assert.equal(
+        (doctor.match(/\$readiness->canAttemptDelivery\(\)/g) ?? []).length,
+        1,
+    );
+    const required = [
+        /\$canAttemptDelivery = \$readiness->canAttemptDelivery\(\);/,
+        /'can_attempt_external_delivery' => \$canAttemptDelivery/,
+        /'diagnostic' => \$canAttemptDelivery/,
+        /return \$state\['can_attempt_external_delivery'\]/,
+    ];
+    for (const marker of required) {
+        assert.match(doctor, marker);
+    }
+});
+
 void test('Fortify resend endpoint does not claim success for production log transport', () => {
     assert.match(user, /sendEmailVerificationNotification\(\)/);
     assert.match(user, /app\(\)->isProduction\(\)/);
