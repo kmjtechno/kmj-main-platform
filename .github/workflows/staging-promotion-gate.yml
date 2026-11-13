@@ -146,8 +146,8 @@ jobs:
 
     steps:
       - name: Record blocked staging promotion when exact owner SHA is absent
-        id: skipped
         if: ${{ github.ref != 'refs/heads/main' || vars.KMJ_STAGING_PROMOTION_APPROVED_SHA != github.sha }}
+        id: skipped
         shell: bash
         run: |
           set -euo pipefail
@@ -162,7 +162,6 @@ jobs:
             echo 'STAGING_PROMOTION=SKIPPED_NO_EXACT_OWNER_SHA'
           } >> "$GITHUB_STEP_SUMMARY"
       - name: Move staging-approved only after all verification passes
-        id: promoted
         if: ${{ github.ref == 'refs/heads/main' && vars.KMJ_STAGING_PROMOTION_APPROVED_SHA == github.sha }}
         env:
           GH_TOKEN: ${{ github.token }}
@@ -210,3 +209,4 @@ jobs:
             echo 'STAGING_PROMOTION=REF_ADVANCED_EXACT_OWNER_SHA'
             echo 'STAGING_SERVER_DEPLOYMENT=NOT_ATTESTED_BY_THIS_JOB'
           } >> "$GITHUB_STEP_SUMMARY"
+        id: promoted
