@@ -116,6 +116,31 @@ class ExactShaStagingApprovalContract(unittest.TestCase):
         ):
             self.assertFalse(authorized_workflow_run(broken))
 
+    def test_skipped_promotion_has_explicit_no_deployment_receipt(self):
+        job = job_block(PROMOTION.read_text(), "promote")
+        skipped = job.split(
+            "      - name: Record blocked staging promotion when exact owner SHA is absent\n", 1
+        )[1].split("      - name: Move staging-approved only after all verification passes\n", 1)[0]
+        self.assertIn("id: skipped", skipped)
+        self.assertIn("echo 'performed=false' >> \"$GITHUB_OUTPUT\"", skipped)
+        self.assertIn("STAGING_PROMOTION=SKIPPED_NO_EXACT_OWNER_SHA", skipped)
+        self.assertIn("Staging promotion NOT performed", skipped)
+        self.assertIn(
+            "owner_sha_missing: ${{ steps.skipped.outputs.performed == 'false' }}", job
+        )
+
+    def test_approved_ref_update_never_claims_staging_server_deployment(self):
+        job = job_block(PROMOTION.read_text(), "promote")
+        promote = job.split(
+            "      - name: Move staging-approved only after all verification passes\n", 1
+        )[1]
+        self.assertIn("id: promoted", promote)
+        self.assertIn("echo 'performed=true' >> \"$GITHUB_OUTPUT\"", promote)
+        self.assertIn("STAGING_PROMOTION=REF_ADVANCED_EXACT_OWNER_SHA", promote)
+        self.assertIn("STAGING_SERVER_DEPLOYMENT=NOT_ATTESTED_BY_THIS_JOB", promote)
+        self.assertIn("ref_advanced: ${{ steps.promoted.outputs.performed == 'true' }}", job)
+        self.assertNotIn("STAGING_SERVER_DEPLOYMENT=PASS", job)
+
     def test_no_environment_or_credential_bypass_added(self):
         for path in (PROMOTION, DEPLOY):
             raw = path.read_text()
