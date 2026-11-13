@@ -16,14 +16,17 @@ final class RegistrationMailDoctorCommand extends Command
         $transport = (string) config('mail.default', '');
         $mailers = config('mail.mailers.'.$transport, []);
         $type = is_array($mailers) ? (string) ($mailers['transport'] ?? '') : '';
+        // Loopback SMTP readiness can change between probes. Resolve once
+        // so JSON state, explanation and exit code agree.
+        $canAttemptDelivery = $readiness->canAttemptDelivery();
 
         $state = [
             'environment' => app()->environment(),
             'transport' => $type,
             'adapter' => $transport === 'kmj_brevo' ? 'temporary_brevo_free_smtps' : $transport,
-            'can_attempt_external_delivery' => $readiness->canAttemptDelivery(),
+            'can_attempt_external_delivery' => $canAttemptDelivery,
             'live_delivery_proven' => false,
-            'diagnostic' => $readiness->canAttemptDelivery()
+            'diagnostic' => $canAttemptDelivery
                 ? 'Mailer appears configured; verify provider acceptance, SPF/DKIM/DMARC and an actual recipient inbox.'
                 : 'Verification mail is not externally deliverable with the active configuration. Configure authenticated SMTP or a supported transactional provider.',
         ];
