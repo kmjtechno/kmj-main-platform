@@ -5,7 +5,7 @@ umask 077
 # Stage-only ACME HTTP bootstrap on the existing production host.
 # It does NOT create a Laravel deployment, issue a cert or alter production.
 domain=staging.kmjtechno.com
-public_ip=103.212.136.154
+public_ip=150.242.200.81
 conf=/etc/nginx/conf.d/kmj-staging-acme.conf
 webroot=/var/lib/kmj-staging-acme
 site_dir=/home/kmjstage/htdocs/staging.kmjtechno.com
