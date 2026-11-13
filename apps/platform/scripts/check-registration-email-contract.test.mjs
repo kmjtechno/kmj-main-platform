@@ -95,10 +95,15 @@ void test('mail doctor resolves its potentially stateful local SMTP probe only o
         (doctor.match(/\$readiness->canAttemptDelivery\(\)/g) ?? []).length,
         1,
     );
-    assert.match(doctor, /\$canAttemptDelivery = \$readiness->canAttemptDelivery\(\);/);
-    assert.match(doctor, /'can_attempt_external_delivery' => \$canAttemptDelivery,/);
-    assert.match(doctor, /'diagnostic' => \$canAttemptDelivery/);
-    assert.match(doctor, /return \$state\['can_attempt_external_delivery'\]/);
+    const required = [
+        /\$canAttemptDelivery = \$readiness->canAttemptDelivery\(\);/,
+        /'can_attempt_external_delivery' => \$canAttemptDelivery/,
+        /'diagnostic' => \$canAttemptDelivery/,
+        /return \$state\['can_attempt_external_delivery'\]/,
+    ];
+    for (const marker of required) {
+        assert.match(doctor, marker);
+    }
 });
 
 void test('Fortify resend endpoint does not claim success for production log transport', () => {
