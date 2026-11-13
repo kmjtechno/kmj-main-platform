@@ -10,6 +10,15 @@ export type DeliveryMilestone = {
 
 export const deliveryMilestones: DeliveryMilestone[] = [
     {
+        id: 'registration-mail-doctor-single-readiness-snapshot',
+        title: 'Registration mail readiness reports a consistent result',
+        state: 'active',
+        detail:
+            'The read-only kmj:mail:doctor previously probed its readiness twice. A local SMTP listener can change between probes and produce contradictory diagnostic text versus JSON or exit status. The doctor now evaluates once per invocation. This is source-only, and live production mailer configuration and signed verification email delivery remain unverified.',
+        evidence:
+            'PR #857 adds a single-probe contract check. No SMTP credentials, sender DNS, provider account or production runtime were changed; hosted exact-head CI and deployment remain separate gates.',
+    },
+    {
         id: 'omnidesk-issuance-contract-fail-closed',
         title: 'OmniDesk M9 issuance endpoints',
         state: 'blocked',
