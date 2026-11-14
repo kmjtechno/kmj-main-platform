@@ -43,7 +43,7 @@ class InstallFeaturesCommand extends Command
         $answersOption = $this->option('answers');
 
         if ($answersOption !== null && ! is_string($answersOption)) {
-            throw new \\InvalidArgumentException('The --answers option must be a JSON string.');
+            throw new \InvalidArgumentException('The --answers option must be a JSON string.');
         }
 
         $providedAnswers = $answersOption === null
@@ -51,7 +51,7 @@ class InstallFeaturesCommand extends Command
             : json_decode($answersOption, true, 512, JSON_THROW_ON_ERROR);
 
         if (! is_array($providedAnswers)) {
-            throw new \\InvalidArgumentException('The --answers option must decode to a JSON object or array.');
+            throw new \InvalidArgumentException('The --answers option must decode to a JSON object or array.');
         }
 
         $answers = $script
