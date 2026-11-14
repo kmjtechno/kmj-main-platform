@@ -234,7 +234,10 @@ export default function CodeBridgeService({
                                     download="KMJ-CodeBridge-Connect-Windows.cmd"
                                     className="focus-visible:ring-ring inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-red-600 px-4 py-2 text-sm font-bold text-white transition hover:bg-red-500 focus-visible:ring-2 focus-visible:outline-none"
                                 >
-                                    <Laptop2 className="h-4 w-4 shrink-0" aria-hidden="true" />
+                                    <Laptop2
+                                        className="h-4 w-4 shrink-0"
+                                        aria-hidden="true"
+                                    />
                                     Connect Windows PC
                                 </a>
                                 <button
@@ -242,7 +245,10 @@ export default function CodeBridgeService({
                                     onClick={() => setActiveSection('devices')}
                                     className="focus-visible:ring-ring inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border px-4 py-2 text-sm font-bold transition hover:border-red-500/40 hover:text-red-500 focus-visible:ring-2 focus-visible:outline-none"
                                 >
-                                    <Laptop2 className="h-4 w-4 shrink-0" aria-hidden="true" />
+                                    <Laptop2
+                                        className="h-4 w-4 shrink-0"
+                                        aria-hidden="true"
+                                    />
                                     Manage devices
                                 </button>
                             </div>
@@ -254,21 +260,30 @@ export default function CodeBridgeService({
                                     href="/services/kmj-codebridge/workspace"
                                     className="focus-visible:ring-ring inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border px-3 py-2 text-xs font-semibold transition hover:border-red-500/40 hover:text-red-500 focus-visible:ring-2 focus-visible:outline-none"
                                 >
-                                    <Laptop2 className="h-4 w-4 shrink-0" aria-hidden="true" />
+                                    <Laptop2
+                                        className="h-4 w-4 shrink-0"
+                                        aria-hidden="true"
+                                    />
                                     AI Workspace
                                 </Link>
                                 <Link
                                     href="/services/kmj-codebridge/ai-providers"
                                     className="focus-visible:ring-ring inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border px-3 py-2 text-xs font-semibold transition hover:border-red-500/40 hover:text-red-500 focus-visible:ring-2 focus-visible:outline-none"
                                 >
-                                    <KeyRound className="h-4 w-4 shrink-0" aria-hidden="true" />
+                                    <KeyRound
+                                        className="h-4 w-4 shrink-0"
+                                        aria-hidden="true"
+                                    />
                                     AI Providers
                                 </Link>
                                 <a
                                     href={vscodeInstallUrl(service.endpoint)}
                                     className="focus-visible:ring-ring inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border px-3 py-2 text-xs font-semibold transition hover:border-red-500/40 hover:text-red-500 focus-visible:ring-2 focus-visible:outline-none"
                                 >
-                                    <Laptop2 className="h-4 w-4 shrink-0" aria-hidden="true" />
+                                    <Laptop2
+                                        className="h-4 w-4 shrink-0"
+                                        aria-hidden="true"
+                                    />
                                     Open in VS Code / Copilot
                                 </a>
                                 <a
@@ -276,14 +291,20 @@ export default function CodeBridgeService({
                                     download
                                     className="focus-visible:ring-ring inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border px-3 py-2 text-xs font-semibold transition hover:border-red-500/40 hover:text-red-500 focus-visible:ring-2 focus-visible:outline-none"
                                 >
-                                    <Link2 className="h-4 w-4 shrink-0" aria-hidden="true" />
+                                    <Link2
+                                        className="h-4 w-4 shrink-0"
+                                        aria-hidden="true"
+                                    />
                                     Set up ChatGPT Desktop
                                 </a>
                                 <Link
                                     href="/codebridge/pair"
                                     className="focus-visible:ring-ring inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border px-3 py-2 text-xs font-semibold transition hover:border-red-500/40 hover:text-red-500 focus-visible:ring-2 focus-visible:outline-none"
                                 >
-                                    <Laptop2 className="h-4 w-4 shrink-0" aria-hidden="true" />
+                                    <Laptop2
+                                        className="h-4 w-4 shrink-0"
+                                        aria-hidden="true"
+                                    />
                                     Approve pairing
                                 </Link>
                             </div>
