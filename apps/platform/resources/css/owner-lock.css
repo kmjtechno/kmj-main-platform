@@ -8,8 +8,8 @@
     color: #eef2f7;
     font-family: Arial, Helvetica, sans-serif;
     min-height: 100vh;
-    font-size: 12px;
-    line-height: 1.4;
+    font-size: 13px;
+    line-height: 1.5;
 }
 .owner-lock * {
     box-sizing: border-box;
@@ -252,7 +252,7 @@
     margin: 2px 0;
 }
 .owner-hero-description {
-    font-size: 11px;
+    font-size: 12px;
     color: #bdc8d4;
     margin: 7px 0 10px;
     line-height: 1.5;
@@ -272,7 +272,7 @@
     border-radius: 7px;
     padding: 8px 15px;
     background: #0e141cdd;
-    font-size: 10px;
+    font-size: 12px;
     font-weight: 600;
 }
 .owner-hero-actions > .owner-primary {
@@ -426,34 +426,37 @@
     border: 1px solid #342a35;
     border-radius: 9px;
     padding: 9px 8px 7px;
-    flex: 0 0 calc((100% - 45px) /6);
-    min-width: 145px;
+    flex: 0 0 max(190px, calc((100% - 45px) / 6));
+    min-width: 190px;
     background: linear-gradient(140deg, #0c1218, #090b10);
     scroll-snap-align: start;
     overflow: hidden;
 }
 .owner-product h3 {
-    font-size: 10px;
+    font-size: 12px;
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     gap: 7px;
     margin: 0;
+    min-height: 2.7em;
+    line-height: 1.35;
     font-weight: 700;
-    white-space: nowrap;
+    white-space: normal;
+    overflow-wrap: anywhere;
 }
 .owner-product h3 > svg {
     color: #ec1e3d;
     flex-shrink: 0;
 }
 .owner-product > p {
-    font-size: 8px;
+    font-size: 10px;
     color: #c2ccd9;
     margin: 3px 0 8px 23px;
     text-transform: capitalize;
 }
 .owner-product img,
 .owner-product-art-unavailable {
-    height: 65px;
+    height: 90px;
     width: 100%;
     object-fit: cover;
     border-radius: 5px;
@@ -464,7 +467,7 @@
     padding: 8px;
     background: linear-gradient(135deg, #111c28, #2c1321);
     color: #bdc9d6;
-    font-size: 10px;
+    font-size: 11px;
     text-align: center;
 }
 .owner-product-state {
@@ -473,17 +476,17 @@
     justify-content: space-between;
     gap: 4px;
     margin: 6px 0;
-    font-size: 9px;
+    font-size: 11px;
 }
 .owner-product-state > span {
     color: #5ae0b1;
 }
 .owner-product-state small {
-    font-size: 8px;
-    padding: 2px 4px;
+    font-size: 10px;
+    padding: 3px 6px;
     background: #222a31;
     border-radius: 5px;
-    max-width: 75px;
+    max-width: 95px;
     overflow: hidden;
     text-overflow: ellipsis;
 }
@@ -495,7 +498,8 @@
     padding-top: 7px;
 }
 .owner-product-actions > a {
-    font-size: 8px;
+    font-size: 10px;
+    min-height: 38px;
     display: grid;
     justify-items: center;
     gap: 4px;
@@ -574,7 +578,7 @@
     align-items: center;
     gap: 7px;
     margin-top: 8px;
-    font-size: 9px;
+    font-size: 11px;
 }
 .owner-health > span {
     height: 7px;
@@ -584,7 +588,7 @@
 }
 .owner-health > small {
     margin-left: auto;
-    font-size: 8px;
+    font-size: 10px;
     color: #d9b778;
 }
 .owner-bottom {
@@ -640,9 +644,11 @@
     display: flex;
     flex-direction: column;
     align-items: center;
+    justify-content: center;
+    min-height: 58px;
     text-align: center;
     gap: 6px;
-    font-size: 8px;
+    font-size: 10px;
     background: #101923;
     border-radius: 7px;
     padding: 8px 3px;
@@ -719,7 +725,7 @@
 .owner-assistant .kmj-os-chat-bubble {
     border: 1px solid #9a3548;
     background: linear-gradient(130deg, #252b36ee, #17131aee);
-    font-size: 11px;
+    font-size: 12px;
     padding: 13px;
     border-radius: 13px;
     line-height: 1.5;
@@ -733,12 +739,12 @@
     margin-top: 12px;
 }
 .owner-assistant .kmj-os-kristi-chat a {
-    font-size: 10px;
+    font-size: 12px;
     padding: 8px 10px;
     border-radius: 10px;
 }
 .owner-assistant label {
-    font-size: 9px;
+    font-size: 11px;
     line-height: 1.5;
     margin: 9px 6px;
 }
@@ -747,10 +753,10 @@
 }
 .owner-assistant .kmj-os-kristi-form input,
 .owner-assistant .kmj-os-kristi-form textarea {
-    font-size: 11px;
+    font-size: 13px;
 }
 .owner-assistant .kmj-os-kristi > p {
-    font-size: 9px;
+    font-size: 11px;
     line-height: 1.4;
     padding: 0 6px;
 }
@@ -774,7 +780,7 @@
         grid-template-columns: minmax(0, 1fr) 310px;
     }
     .owner-product img {
-        height: 90px;
+        height: 110px;
     }
     .owner-hero {
         height: 230px;
@@ -851,10 +857,10 @@
         font-size: 15px;
     }
     .owner-stat h2 {
-        font-size: 8px;
+        font-size: 10px;
     }
     .owner-stat p {
-        font-size: 8px;
+        font-size: 10px;
     }
     .owner-middle {
         grid-template-columns: 1fr 1fr;

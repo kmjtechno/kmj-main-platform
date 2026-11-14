@@ -356,3 +356,31 @@ void test('unredeemed approval prompts existing enrollment review and never clai
     assert.doesNotMatch(deviceCenter, falseOnlineClaim);
     assert.match("const connectPlan = 'online';", falseOnlineClaim);
 });
+
+void test('CodeBridge owner quick actions are grouped responsively without losing destinations', () => {
+    assert.match(ui, /aria-label="CodeBridge quick actions"/);
+    assert.match(ui, /aria-label="Workspaces and integrations"/);
+    assert.match(ui, /sm:grid-cols-2/);
+    assert.match(ui, /2xl:grid-cols-\[minmax\(0,1fr\)_minmax\(420px,680px\)\]/);
+    assert.match(ui, /min-h-11/);
+    for (const label of [
+        'Connect Windows PC',
+        'Manage devices',
+        'AI Workspace',
+        'AI Providers',
+        'Open in VS Code / Copilot',
+        'Set up ChatGPT Desktop',
+        'Approve pairing',
+    ]) {
+        assert.ok(
+            ui.includes(label),
+            'Missing working CodeBridge action: ' + label,
+        );
+    }
+    assert.match(ui, /href="\/services\/kmj-codebridge\/workspace"/);
+    assert.match(ui, /href="\/services\/kmj-codebridge\/ai-providers"/);
+    assert.match(ui, /href="\/codebridge\/pair"/);
+    assert.match(ui, /href=\{vscodeInstallUrl\(service\.endpoint\)\}/);
+    assert.match(ui, /download="KMJ-CodeBridge-Connect-Windows\.cmd"/);
+    assert.match(ui, /onClick=\{\(\) => setActiveSection\('devices'\)\}/);
+});

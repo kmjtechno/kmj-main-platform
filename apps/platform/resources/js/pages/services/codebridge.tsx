@@ -191,7 +191,7 @@ export default function CodeBridgeService({
                         Back to My Services
                     </Link>
 
-                    <div className="mt-6 flex flex-col justify-between gap-6 lg:flex-row lg:items-start">
+                    <div className="mt-6 grid min-w-0 gap-6 2xl:grid-cols-[minmax(0,1fr)_minmax(420px,680px)] 2xl:items-start">
                         <div className="flex items-start gap-4">
                             <span className="grid h-14 w-14 shrink-0 place-items-center rounded-2xl border border-red-500/20 bg-red-500/10 text-red-500">
                                 <img
@@ -224,60 +224,91 @@ export default function CodeBridgeService({
                             </div>
                         </div>
 
-                        <div className="flex flex-wrap gap-2">
-                            <a
-                                href="/install-codebridge-windows.cmd"
-                                download="KMJ-CodeBridge-Connect-Windows.cmd"
-                                className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-red-600 px-4 text-xs font-black text-white transition hover:bg-red-500"
+                        <nav
+                            aria-label="CodeBridge quick actions"
+                            className="grid min-w-0 gap-3"
+                        >
+                            <div className="grid gap-2 sm:grid-cols-2">
+                                <a
+                                    href="/install-codebridge-windows.cmd"
+                                    download="KMJ-CodeBridge-Connect-Windows.cmd"
+                                    className="focus-visible:ring-ring inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-red-600 px-4 py-2 text-sm font-bold text-white transition hover:bg-red-500 focus-visible:ring-2 focus-visible:outline-none"
+                                >
+                                    <Laptop2
+                                        className="h-4 w-4 shrink-0"
+                                        aria-hidden="true"
+                                    />
+                                    Connect Windows PC
+                                </a>
+                                <button
+                                    type="button"
+                                    onClick={() => setActiveSection('devices')}
+                                    className="focus-visible:ring-ring inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border px-4 py-2 text-sm font-bold transition hover:border-red-500/40 hover:text-red-500 focus-visible:ring-2 focus-visible:outline-none"
+                                >
+                                    <Laptop2
+                                        className="h-4 w-4 shrink-0"
+                                        aria-hidden="true"
+                                    />
+                                    Manage devices
+                                </button>
+                            </div>
+                            <div
+                                aria-label="Workspaces and integrations"
+                                className="flex flex-wrap gap-2"
                             >
-                                <Laptop2 className="h-3.5 w-3.5" />
-                                Connect Windows PC
-                            </a>
-                            <button
-                                type="button"
-                                onClick={() => setActiveSection('devices')}
-                                className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border px-4 text-xs font-bold transition hover:border-red-500/40 hover:text-red-500"
-                            >
-                                <Laptop2 className="h-3.5 w-3.5" />
-                                Manage devices
-                            </button>
-                            <Link
-                                href="/services/kmj-codebridge/workspace"
-                                className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border px-4 text-xs font-bold transition hover:border-red-500/40 hover:text-red-500"
-                            >
-                                <Laptop2 className="h-3.5 w-3.5" />
-                                AI Workspace
-                            </Link>
-                            <Link
-                                href="/services/kmj-codebridge/ai-providers"
-                                className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border px-4 text-xs font-bold transition hover:border-red-500/40 hover:text-red-500"
-                            >
-                                <KeyRound className="h-3.5 w-3.5" />
-                                AI Providers
-                            </Link>
-                            <a
-                                href={vscodeInstallUrl(service.endpoint)}
-                                className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-red-600 px-4 text-xs font-black text-white transition hover:bg-red-500"
-                            >
-                                <Laptop2 className="h-3.5 w-3.5" />
-                                Open in VS Code / Copilot
-                            </a>
-                            <a
-                                href={CHATGPT_DESKTOP_SETUP_URL}
-                                download
-                                className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-red-600 px-4 text-xs font-black text-white transition hover:bg-red-500"
-                            >
-                                <Link2 className="h-3.5 w-3.5" />
-                                Set up ChatGPT Desktop
-                            </a>
-                            <Link
-                                href="/codebridge/pair"
-                                className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border px-4 text-xs font-bold transition hover:border-red-500/40 hover:text-red-500"
-                            >
-                                <Laptop2 className="h-3.5 w-3.5" />
-                                Approve pairing
-                            </Link>
-                        </div>
+                                <Link
+                                    href="/services/kmj-codebridge/workspace"
+                                    className="focus-visible:ring-ring inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border px-3 py-2 text-xs font-semibold transition hover:border-red-500/40 hover:text-red-500 focus-visible:ring-2 focus-visible:outline-none"
+                                >
+                                    <Laptop2
+                                        className="h-4 w-4 shrink-0"
+                                        aria-hidden="true"
+                                    />
+                                    AI Workspace
+                                </Link>
+                                <Link
+                                    href="/services/kmj-codebridge/ai-providers"
+                                    className="focus-visible:ring-ring inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border px-3 py-2 text-xs font-semibold transition hover:border-red-500/40 hover:text-red-500 focus-visible:ring-2 focus-visible:outline-none"
+                                >
+                                    <KeyRound
+                                        className="h-4 w-4 shrink-0"
+                                        aria-hidden="true"
+                                    />
+                                    AI Providers
+                                </Link>
+                                <a
+                                    href={vscodeInstallUrl(service.endpoint)}
+                                    className="focus-visible:ring-ring inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border px-3 py-2 text-xs font-semibold transition hover:border-red-500/40 hover:text-red-500 focus-visible:ring-2 focus-visible:outline-none"
+                                >
+                                    <Laptop2
+                                        className="h-4 w-4 shrink-0"
+                                        aria-hidden="true"
+                                    />
+                                    Open in VS Code / Copilot
+                                </a>
+                                <a
+                                    href={CHATGPT_DESKTOP_SETUP_URL}
+                                    download
+                                    className="focus-visible:ring-ring inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border px-3 py-2 text-xs font-semibold transition hover:border-red-500/40 hover:text-red-500 focus-visible:ring-2 focus-visible:outline-none"
+                                >
+                                    <Link2
+                                        className="h-4 w-4 shrink-0"
+                                        aria-hidden="true"
+                                    />
+                                    Set up ChatGPT Desktop
+                                </a>
+                                <Link
+                                    href="/codebridge/pair"
+                                    className="focus-visible:ring-ring inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border px-3 py-2 text-xs font-semibold transition hover:border-red-500/40 hover:text-red-500 focus-visible:ring-2 focus-visible:outline-none"
+                                >
+                                    <Laptop2
+                                        className="h-4 w-4 shrink-0"
+                                        aria-hidden="true"
+                                    />
+                                    Approve pairing
+                                </Link>
+                            </div>
+                        </nav>
                     </div>
                 </section>
 

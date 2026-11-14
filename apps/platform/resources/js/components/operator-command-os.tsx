@@ -37,6 +37,7 @@ import {
 import LockedBrand from '@/components/locked-brand';
 import ProductArtwork from '@/components/product-artwork';
 import KristiOwnerAssistant from '@/components/kristi-owner-assistant';
+import { ownerGreetingForHour } from '@/components/owner-greeting.mjs';
 import '../../css/owner-lock.css';
 
 type Product = {
@@ -177,7 +178,13 @@ export default function OperatorCommandOs({
     const [searchOpen, setSearchOpen] = useState(false);
     const [query, setQuery] = useState('');
     const [navOpen, setNavOpen] = useState(false);
+    // Local time exists only in the browser. Never render a hard-coded
+    // evening greeting for an owner opening the dashboard in the morning.
+    const [greeting, setGreeting] = useState('Welcome,');
     const track = useRef<HTMLDivElement>(null);
+    useEffect(() => {
+        setGreeting(ownerGreetingForHour(new Date().getHours()));
+    }, []);
     useEffect(() => {
         const listener = (e: KeyboardEvent) => {
             if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
@@ -331,7 +338,7 @@ export default function OperatorCommandOs({
                     <section className="owner-hero">
                         <img src="/assets/locked/owner-earth.webp" alt="" />
                         <div>
-                            <p>Good Evening,</p>
+                            <p>{greeting}</p>
                             <h1>
                                 {name} <Crown size={25} />
                             </h1>
