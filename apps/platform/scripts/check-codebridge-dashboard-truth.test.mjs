@@ -372,7 +372,10 @@ void test('CodeBridge owner quick actions are grouped responsively without losin
         'Set up ChatGPT Desktop',
         'Approve pairing',
     ]) {
-        assert.ok(ui.includes(label), 'Missing working CodeBridge action: ' + label);
+        assert.ok(
+            ui.includes(label),
+            'Missing working CodeBridge action: ' + label,
+        );
     }
     assert.match(ui, /href="\/services\/kmj-codebridge\/workspace"/);
     assert.match(ui, /href="\/services\/kmj-codebridge\/ai-providers"/);
