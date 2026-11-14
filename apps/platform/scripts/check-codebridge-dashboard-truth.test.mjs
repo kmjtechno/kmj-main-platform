@@ -368,7 +368,7 @@ void test('CodeBridge owner quick actions are grouped responsively without losin
         'Manage devices',
         'AI Workspace',
         'AI Providers',
-        'Open in VS Code \/ Copilot',
+        'Open in VS Code / Copilot',
         'Set up ChatGPT Desktop',
         'Approve pairing',
     ]) {
