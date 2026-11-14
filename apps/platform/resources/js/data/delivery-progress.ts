@@ -10,6 +10,14 @@ export type DeliveryMilestone = {
 
 export const deliveryMilestones: DeliveryMilestone[] = [
     {
+        id: 'laravel-security-lock-compatibility-20261114',
+        title: 'Laravel security patch and account settings compatibility',
+        state: 'active',
+        detail: 'The source candidate uses a Composer-generated minimal-change lock for Laravel 13.42.0 and laravel/prompts 0.3.27, correcting the reported Laravel concurrency-output advisory without disabling dependency audits. The authenticated settings landing redirect now handles GET/HEAD only because Laravel 13 added the QUERY verb and current Wayfinder generated method types cannot represent it. Install-features --answers validates JSON strings before parsing. No runtime release or claim of completed owner acceptance is made.',
+        evidence:
+            'PR #860 exact-head Composer production audit PASS, Laravel + TypeScript PASS and PostgreSQL 18 migration/rollback checks PASS in hosted CI. Remaining exact-head/Foundation checks, staging and production release approval, independently restored backup and live owner acceptance must be verified separately.',
+    },
+    {
         id: 'omnidesk-issuance-contract-fail-closed',
         title: 'OmniDesk M9 issuance endpoints',
         state: 'blocked',
@@ -642,5 +650,5 @@ export const deliveryProgress = Math.round(
 export const deliveryProgressMeta = {
     label: 'Revenue-capable working phase',
     note: 'Evidence-based delivery milestones, not total product completion.',
-    refreshed: '2026-10-30',
+    refreshed: '2026-11-14',
 } as const;
