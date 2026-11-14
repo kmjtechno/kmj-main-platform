@@ -260,6 +260,9 @@ void test('locked dashboard product and Kristi controls remain legible and click
     assert.match(rule('.owner-product-actions > a'), /font-size: 10px/);
     assert.match(rule('.owner-health'), /font-size: 11px/);
     assert.match(rule('.owner-quick > a'), /min-height: 58px/);
-    assert.match(rule('.owner-assistant .kmj-os-kristi-chat a'), /font-size: 12px/);
+    assert.match(
+        rule('.owner-assistant .kmj-os-kristi-chat a'),
+        /font-size: 12px/,
+    );
     assert.match(rule('.owner-assistant label'), /font-size: 11px/);
 });
