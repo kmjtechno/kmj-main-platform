@@ -10,6 +10,23 @@ class ProfileUpdateTest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_settings_landing_redirect_is_authenticated_and_get_only(): void
+    {
+        $this->get('/settings')->assertRedirect(route('login'));
+
+        $user = User::factory()->create();
+
+        $this->actingAs($user)
+            ->get('/settings')
+            ->assertRedirect('/settings/profile');
+
+        // POST/QUERY requests must not turn a settings navigation shortcut
+        // into an unrestricted redirect endpoint.
+        $this->actingAs($user)
+            ->post('/settings')
+            ->assertStatus(405);
+    }
+
     public function test_profile_page_is_displayed()
     {
         $user = User::factory()->create();

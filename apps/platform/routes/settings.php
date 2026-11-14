@@ -8,7 +8,10 @@ use Illuminate\Auth\Middleware\RequirePassword;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware(['auth'])->group(function () {
-    Route::redirect('settings', '/settings/profile');
+    // Keep the settings landing page GET-only. Laravel 13's redirect route
+    // now matches the QUERY verb, which older Wayfinder generated types do not
+    // understand; settings navigation needs only GET/HEAD.
+    Route::get('settings', fn () => redirect('/settings/profile'));
 
     Route::get('settings/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('settings/profile', [ProfileController::class, 'update'])->name('profile.update');
