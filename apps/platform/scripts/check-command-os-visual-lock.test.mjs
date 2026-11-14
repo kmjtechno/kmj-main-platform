@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { readFileSync } from 'node:fs';
+import { ownerGreetingForHour } from '../resources/js/components/owner-greeting.mjs';
 
 const read = (path) =>
     readFileSync(new URL('../' + path, import.meta.url), 'utf8');
@@ -226,4 +227,39 @@ void test('guarded owner subpages share the locked shell without changing custom
         shell,
         /router\.post\(|fetch\(|is_platform_owner\s*=|password\.confirm/,
     );
+});
+
+void test('owner dashboard greeting follows the local hour without SSR hydration mismatch', () => {
+    assert.equal(ownerGreetingForHour(0), 'Good Morning,');
+    assert.equal(ownerGreetingForHour(11), 'Good Morning,');
+    assert.equal(ownerGreetingForHour(12), 'Good Afternoon,');
+    assert.equal(ownerGreetingForHour(16), 'Good Afternoon,');
+    assert.equal(ownerGreetingForHour(17), 'Good Evening,');
+    assert.equal(ownerGreetingForHour(23), 'Good Evening,');
+    assert.equal(ownerGreetingForHour(-1), 'Welcome,');
+    assert.equal(ownerGreetingForHour(24), 'Welcome,');
+    assert.equal(ownerGreetingForHour(Number.NaN), 'Welcome,');
+    assert.match(command, /useState\('Welcome,'\)/);
+    assert.match(command, /new Date\(\)\.getHours\(\)/);
+    assert.match(command, /<p>\{greeting\}<\/p>/);
+    assert.doesNotMatch(command, /<p>Good Evening,<\/p>/);
+});
+
+void test('locked dashboard product and Kristi controls remain legible and clickable', () => {
+    const css = read('resources/css/owner-lock.css');
+    const rule = (selector) => {
+        const anchor = css.indexOf(selector + ' {');
+        assert.ok(anchor >= 0, selector + ' must exist');
+        return css.slice(anchor, css.indexOf('}', anchor));
+    };
+    assert.match(rule('.owner-product'), /min-width: 190px/);
+    assert.match(rule('.owner-product h3'), /font-size: 12px/);
+    assert.match(rule('.owner-product h3'), /white-space: normal/);
+    assert.match(rule('.owner-product > p'), /font-size: 10px/);
+    assert.match(rule('.owner-product-actions > a'), /min-height: 38px/);
+    assert.match(rule('.owner-product-actions > a'), /font-size: 10px/);
+    assert.match(rule('.owner-health'), /font-size: 11px/);
+    assert.match(rule('.owner-quick > a'), /min-height: 58px/);
+    assert.match(rule('.owner-assistant .kmj-os-kristi-chat a'), /font-size: 12px/);
+    assert.match(rule('.owner-assistant label'), /font-size: 11px/);
 });
