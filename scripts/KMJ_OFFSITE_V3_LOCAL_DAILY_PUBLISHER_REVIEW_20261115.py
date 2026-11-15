@@ -67,13 +67,13 @@ def child_dir(fd,name,allowed_uids,mode=0o700):
         raise
 
 
-def regular(fd,name,allowed_uids,*,secret=[REDACTED]
+def regular(fd,name,allowed_uids,*,restricted=False):
     f=os.open(name,os.O_RDONLY|os.O_NOFOLLOW|os.O_CLOEXEC,dir_fd=fd)
     try:
         s=os.fstat(f)
         if (not stat.S_ISREG(s.st_mode) or s.st_uid not in allowed_uids
             or s.st_nlink!=1 or s.st_mode&0o022
-            or (secret and stat.S_IMODE(s.st_mode)!=0o600)):
+            or (restricted and stat.S_IMODE(s.st_mode)!=0o600)):
             raise Deny("SNAPSHOT_FILE_UNSAFE")
         return f,s
     except BaseException:
@@ -119,7 +119,7 @@ def walk_tree(fd,allowed_uids,stats,depth=0):
 
 
 def pgdump_and_manifest(fd,allowed_uids):
-    dump,st=regular(fd,"platform.dump",allowed_uids,secret=[REDACTED]
+    dump,st=regular(fd,"platform.dump",allowed_uids,restricted=True)
     try:
         if st.st_size<32 or st.st_size>MAX_BYTES:
             raise Deny("DATABASE_DUMP_SIZE_INVALID")
@@ -139,7 +139,7 @@ def pgdump_and_manifest(fd,allowed_uids):
         digest=h.hexdigest()
     finally:
         os.close(dump)
-    mf,mstat=regular(fd,"SHA256SUMS",allowed_uids,secret=[REDACTED]
+    mf,mstat=regular(fd,"SHA256SUMS",allowed_uids,restricted=True)
     try:
         if not 80<=mstat.st_size<=65536:
             raise Deny("MANIFEST_SIZE_UNEXPECTED")
@@ -163,7 +163,7 @@ def verify_snapshot(fd,expected_uid,allowed_uids):
     # Exact critical names; additional legacy-compatible files are inspected
     # recursively and must pass the safe tree rules as well.
     for name in TOP_FILES:
-        f,s=regular(fd,name,{expected_uid},secret=[REDACTED]
+        f,s=regular(fd,name,{expected_uid},restricted=True)
         os.close(f)
         if s.st_size==0:raise Deny("REQUIRED_TOP_FILE_EMPTY")
     for name in TOP_DIRS:
