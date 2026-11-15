@@ -118,6 +118,8 @@ def parse_exact_find(line):
         raise Deny("HEALTH_FIND_FLAGS_CHANGED")
     if opts["-type"]!="f" or opts["-mtime"]!="-2":
         raise Deny("HEALTH_FIND_FRESHNESS_CHANGED")
+    if (opts["-mindepth"],opts["-maxdepth"]) not in (("1","1"),("2","2")):
+        raise Deny("HEALTH_FIND_DEPTH_CHANGED")
     if not re.fullmatch(r"[A-Za-z0-9*?_.@+-]{1,120}",opts["-name"]):
         raise Deny("HEALTH_FIND_GLOB_UNSAFE")
     return (tok[1],opts["-mindepth"],opts["-maxdepth"],opts["-name"])
