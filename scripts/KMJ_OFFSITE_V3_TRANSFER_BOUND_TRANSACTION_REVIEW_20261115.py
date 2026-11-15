@@ -82,6 +82,15 @@ def _fresh_source_and_daily_preflight(
         try:
             if os.fstat(stage_fd).st_dev!=os.fstat(daily_fd).st_dev:
                 raise Deny("DAILY_STAGE_NOT_SAME_FILESYSTEM")
+            # A completed atomic publish has consumed its staging directory.
+            # Reject an already-published UTC stamp BEFORE opening the stage;
+            # report the real collision, never interpret it as a missing backup.
+            try:
+                os.stat(stamp,dir_fd=daily_fd,follow_symlinks=False)
+            except FileNotFoundError:
+                pass
+            else:
+                raise Deny("DAILY_TIMESTAMP_ALREADY_PUBLISHED")
             staging_name="stage-"+stamp
             snapshot_fd=daily.child_dir(stage_fd,staging_name,{owner_uid})
             try:
