@@ -1,0 +1,43 @@
+name: KMJ V3 dual-artifact offline policy QA
+on:
+  pull_request:
+    paths:
+      - "scripts/KMJ_OFFSITE_V3_DUAL_ARTIFACT_POLICY_REVIEW_20261115.py"
+      - "scripts/test_KMJ_OFFSITE_V3_DUAL_ARTIFACT_POLICY_REVIEW_20261115.py"
+      - ".github/workflows/kmj-v3-dual-artifact-policy-qa.yml"
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  safe-offline-fixtures:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Checkout commit under test
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Verify syntax without loading production backup secrets
+        run: |
+          python3 -m py_compile scripts/KMJ_OFFSITE_V3_DUAL_ARTIFACT_POLICY_REVIEW_20261115.py
+          python3 -m py_compile scripts/test_KMJ_OFFSITE_V3_DUAL_ARTIFACT_POLICY_REVIEW_20261115.py
+      - name: Run disposable fixture tests (no actual vault, backup, network or root)
+        run: |
+          python3 -m unittest discover -s scripts \
+            -p 'test_KMJ_OFFSITE_V3_DUAL_ARTIFACT_POLICY_REVIEW_20261115.py' -v
+      - name: Reject any accidental installation CLI added to review-only policy
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import ast
+          from pathlib import Path
+          p=Path('scripts/KMJ_OFFSITE_V3_DUAL_ARTIFACT_POLICY_REVIEW_20261115.py')
+          src=p.read_text()
+          tree=ast.parse(src)
+          assert 'NOT AN INSTALLER' in src
+          assert 'READ_ONLY_REVIEW' in src
+          assert 'SNAPSHOT_WRITTEN=NO' in src
+          assert 'RETENTION_EXECUTED=NO' in src
+          assert all(not any(token in arg.value for token in ('--apply', '--install', '--send', '--deploy')) for node in ast.walk(tree) if isinstance(node,ast.Call) for arg in node.args if isinstance(arg,ast.Constant) and isinstance(arg.value,str))
+          print('SOURCE_REVIEW_ONLY_CONTRACT=PASS')
+          PY
