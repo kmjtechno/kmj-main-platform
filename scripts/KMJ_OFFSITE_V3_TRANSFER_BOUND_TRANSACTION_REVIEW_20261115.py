@@ -192,6 +192,12 @@ def commit_after_same_invocation_v2_readback(
             raise Deny("DAILY_COMMIT_RECEIPT_INVALID")
         if daily_receipt.get("platform_dump_sha256")!=pg_sha:
             raise Deny("DAILY_POSTCOMMIT_HASH_DRIFT")
+        # A release change during the final atomic daily publication must
+        # never be returned as an all-green completed backup. Both local
+        # artifacts now exist, so preserve them for owner reconciliation.
+        phase="REMOTE_CIPHER_AND_DAILY_COMMITTED_RELEASE_UNVERIFIED"
+        if pinned_live_release_probe()!=expected_release:
+            raise Deny("LIVE_RELEASE_CHANGED_AFTER_DAILY_COMMIT")
     except Exception as exc:
         # Never delete an old/new local artifact, remote object or stage.
         # An owner-audited recovery state machine must explicitly reconcile
