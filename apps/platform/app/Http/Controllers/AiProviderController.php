@@ -57,6 +57,7 @@ final class AiProviderController extends Controller
             'preset' => ['required', Rule::in(array_keys($this->manager->presets()))],
             'base_url' => ['nullable', 'string', 'max:255'],
             'api_key' => ['required', 'string', 'min:8', 'max:512', 'regex:/\A\S+\z/'],
+            'verify_connection' => ['sometimes', 'boolean'],
             // Zero-spend is global: billed inference cannot be enabled from this page.
             'free_only' => ['prohibited'],
         ]);
@@ -64,7 +65,7 @@ final class AiProviderController extends Controller
         try {
             $label = (string) ($this->manager->presets()[$data['preset']]['label'] ?? 'Provider');
             $data['name'] = filled($data['name'] ?? null) ? $data['name'] : $this->freeName($scope['organization_id'], $label);
-            $this->manager->create($scope['organization_id'], (int) $this->user($request)->id, $data);
+            $created = $this->manager->create($scope['organization_id'], (int) $this->user($request)->id, $data);
         } catch (InvalidArgumentException $exception) {
             return back()->withErrors(['base_url' => 'Endpoint rejected: '.$exception->getMessage()]);
         } catch (UniqueConstraintViolationException) {
@@ -72,7 +73,23 @@ final class AiProviderController extends Controller
             return back()->withErrors(['name' => 'A provider with this name already exists.']);
         }
 
-        return back()->with('status', 'Provider added. Run Test connection to verify it.');
+        if (! ($data['verify_connection'] ?? false)) {
+            return back()->with('status', 'Provider added. Run Test connection to verify it.');
+        }
+
+        // GET /models only. Never send a prompt, charge tokens or enable billed inference.
+        $tested = $this->manager->test($created);
+        if ($tested->health !== 'ok') {
+            return back()->with('status', 'Provider saved, but connection not verified: '.$tested->health.'. No inference enabled.');
+        }
+
+        $free = $this->verifiedFreeModels($tested);
+        if ($free !== []) {
+            $this->manager->update($tested, ['default_model' => $free[0]]);
+        }
+
+        return back()->with('status', 'Provider connection verified. '.count($free).' approved free model(s) found.'
+            .($free === [] ? ' Inference remains blocked until free-model admission is configured.' : ' Default free model selected.'));
     }
 
     public function update(Request $request, string $provider): RedirectResponse
@@ -130,6 +147,10 @@ final class AiProviderController extends Controller
             return $index->withErrors(['provider' => 'Sign-in expired or was not started here. Start again.']);
         }
 
+        if ($request->query('error') !== null) {
+            return $index->withErrors(['provider' => 'Authorization was declined or canceled. No provider was added.']);
+        }
+
         try {
             $key = $this->openRouter->exchange((string) $request->query('code', ''), (string) $pending['verifier']);
             $provider = $this->manager->create($scope['organization_id'], (int) $this->user($request)->id, [
@@ -141,8 +162,39 @@ final class AiProviderController extends Controller
             return $index->withErrors(['provider' => 'OpenRouter sign-in failed: '.$exception->getMessage()]);
         }
         $tested = $this->manager->test($provider);
+        if ($tested->health !== 'ok') {
+            return $index->with('status', 'OpenRouter account authorized and key stored securely. Free-model verification is pending: '.$tested->health.'. No inference enabled.');
+        }
 
-        return $index->with('status', 'OpenRouter connected ('.count($tested->models_cache ?? []).' models found). Only ":free" models are admitted.');
+        $free = $this->verifiedFreeModels($tested);
+        if ($free !== []) {
+            $this->manager->update($tested, ['default_model' => $free[0]]);
+        }
+
+        return $index->with('status', 'OpenRouter account connected. '.count($free).' ":free" model(s) discovered.'
+            .($free === [] ? ' No inference admitted until a free model is verified.' : ' First verified-free model selected.'));
+    }
+
+    /**
+     * Count only discovered IDs that the existing provider zero-spend policy
+     * allows. GET /models is not proof of pricing or available credits.
+     *
+     * @return list<string>
+     */
+    private function verifiedFreeModels(AiProvider $provider): array
+    {
+        $tier = $this->manager->presets()[$provider->preset]['free_tier'] ?? 'none';
+        $models = array_values(array_filter((array) ($provider->models_cache ?? []), 'is_string'));
+        if ($tier === 'model-suffix') {
+            return array_values(array_filter($models, static fn (string $model): bool => str_ends_with($model, ':free')));
+        }
+        if ($tier === 'allowlist') {
+            $allowed = (array) config('ai_providers.free_models.'.$provider->preset, []);
+
+            return array_values(array_filter($models, static fn (string $model): bool => in_array($model, $allowed, true)));
+        }
+
+        return [];
     }
 
     private function freeName(string $organizationId, string $base): string
