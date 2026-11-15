@@ -10,6 +10,14 @@ export type DeliveryMilestone = {
 
 export const deliveryMilestones: DeliveryMilestone[] = [
     {
+        id: 'codebridge-ai-only-admitted-free-model-selector-20261115',
+        title: 'AI Providers — show only free models that pass current admission policy',
+        state: 'active',
+        detail: 'Source-only follow-up: the AI Providers dropdown previously offered any discovered model including a paid/unverified model even though the runtime inference guard would later refuse it. The owner model choices and backend default/fallback update validation are now restricted to fresh healthy enabled and verified free-model admission, preventing accidental selection of catalog-only model IDs. Stale or unverified catalog states remain visible as honest blocked guidance, not a connected/ready claim.',
+        evidence:
+            'Follow-up source draft requires exact-head security tests, PHP/TypeScript, owner source/browser QA and gated production review. Production stays on the previous SHA until a separately verified owner release. OpenRouter consent, pricing and zero-spend policy are not bypassed.',
+    },
+    {
         id: 'codebridge-ai-provider-oneclick-secure-connect-20261115',
         title: 'AI Providers — safe one-click OpenRouter connection and guided free-only keys',
         state: 'active',
