@@ -155,6 +155,24 @@ void test('owner Ops navigation targets actual backed sections, not generic page
     }
 });
 
+void test('registered and pending project names are not clipped to badge-sized ellipses', () => {
+    assert.match(
+        device,
+        /className="break-words text-sm font-black leading-5"[\s\S]{0,100}\{device\.name\}/,
+    );
+    assert.doesNotMatch(
+        device,
+        /className="truncate text-sm font-black"[\s\S]{0,100}\{device\.name\}/,
+    );
+    assert.match(
+        device,
+        /className="min-w-0 break-words text-sm font-black leading-5"/,
+    );
+    const browser = read('scripts/browser-preview-verify.mjs');
+    assert.match(browser, /CodeBridge device name clipped at width/);
+    assert.match(browser, /identity\.ellipsis/);
+});
+
 void test('no false claims of live status or fabricated owner revenue are introduced', () => {
     assert.doesNotMatch(premium, /Online\s*:\s*(?:true|yes)/i);
     assert.match(device, /Online status: Not verified/);
