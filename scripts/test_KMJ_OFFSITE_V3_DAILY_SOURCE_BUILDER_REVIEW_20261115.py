@@ -124,6 +124,93 @@ class CompleteDailyStagingFixtures(unittest.TestCase):
             self.build()
         self.assertFalse((self.daily/self.stamp).exists())
 
+    def certbot_fixture(self):
+        root=self.cfg["letsencrypt"]
+        lineage="kmj-example.test"
+        archived=root/"archive"/lineage
+        live=root/"live"/lineage
+        archived.mkdir(parents=True,mode=0o700)
+        live.mkdir(parents=True,mode=0o700)
+        archived.chmod(0o700)
+        live.chmod(0o700)
+        result={}
+        for name in m.daily.CERTBOT_FILES:
+            target=name[:-4]+"1.pem"
+            self.file(archived/target,b"offline-certbot-"+name.encode())
+            text="../../archive/"+lineage+"/"+target
+            (live/name).symlink_to(text)
+            result[name]=text
+        return live,result
+
+    def test_standard_certbot_relative_links_restorable_after_atomic_publish(self):
+        live,expected=self.certbot_fixture()
+        result=self.build()
+        self.assertTrue(result["private_staging_written"])
+        staged=self.snapshot()
+        for name,target in expected.items():
+            path=staged/"config"/"letsencrypt"/"live"/live.name/name
+            self.assertTrue(path.is_symlink())
+            self.assertEqual(os.readlink(path),target)
+            self.assertEqual(path.read_bytes(),b"offline-certbot-"+name.encode())
+            self.assertIn("config/letsencrypt/live/"+live.name+"/"+name,
+                          (staged/"SHA256SUMS").read_text())
+        fd=m.daily.private_dir_fd(staged,self.uid)
+        try:
+            _,stats=m.daily.verify_snapshot(fd,self.uid,{self.uid})
+            self.assertEqual(stats["certbot_links"],4)
+        finally:
+            os.close(fd)
+        receipt=m.daily.publish_after_separately_verified_remote_readback(
+            self.staging,self.daily,self.stamp,"a"*64,
+            expected_uid=self.uid,allowed_uids=(self.uid,))
+        self.assertTrue(receipt["daily_snapshot_published"])
+        self.assertFalse(receipt["independent_remote_restore_verified"])
+        restored=self.daily/self.stamp/"config"/"letsencrypt"/"live"/live.name/"privkey.pem"
+        self.assertTrue(restored.is_symlink())
+        self.assertEqual(os.readlink(restored),expected["privkey.pem"])
+
+    def test_certbot_absolute_and_escaping_links_fail_closed(self):
+        for target in ("/etc/passwd","../../../../etc/passwd",
+                       "../../archive/wrong-lineage/cert1.pem",
+                       "../../archive/kmj-example.test/cert999999.pem"):
+            with self.subTest(target=target):
+                live,_=self.certbot_fixture() if not (self.cfg["letsencrypt"]/"live").exists() else (
+                    self.cfg["letsencrypt"]/"live"/"kmj-example.test",None)
+                (live/"cert.pem").unlink()
+                (live/"cert.pem").symlink_to(target)
+                with self.assertRaisesRegex(m.daily.Deny,"CERTBOT_LINK_TARGET_NOT_PINNED_IN_TREE"):
+                    self.build()
+                # Failed run may leave private staging, but nothing reaches
+                # the monitored live daily root.
+                self.assertFalse((self.daily/self.stamp).exists())
+                if self.snapshot().exists():
+                    import shutil
+                    shutil.rmtree(self.snapshot())
+
+    def test_dangling_certbot_target_blocks_freshness(self):
+        live,_=self.certbot_fixture()
+        (live/"cert.pem").unlink()
+        (live/"cert.pem").symlink_to("../../archive/kmj-example.test/cert2.pem")
+        with self.assertRaises(FileNotFoundError):
+            self.build()
+        self.assertFalse((self.daily/self.stamp).exists())
+
+    def test_link_in_other_config_never_allowed(self):
+        root=self.cfg["sites-available"]
+        (root/"link.pem").symlink_to("fixture.conf")
+        with self.assertRaisesRegex(m.Deny,"SOURCE_LINK_OR_SPECIAL_ENTRY"):
+            self.build()
+        self.assertFalse((self.daily/self.stamp).exists())
+
+    def test_certbot_archive_target_is_symlink_rejected(self):
+        live,_=self.certbot_fixture()
+        archive=live.parent.parent/"archive"/live.name/"cert1.pem"
+        archive.unlink()
+        archive.symlink_to("/etc/passwd")
+        with self.assertRaisesRegex(m.Deny,"SOURCE_LINK_OR_SPECIAL_ENTRY"):
+            self.build()
+        self.assertFalse((self.daily/self.stamp).exists())
+
     def test_intermediate_symlink_in_config_parent_is_denied(self):
         alias=self.root_alias()
         self.cfg["letsencrypt"]=alias/"letsencrypt"
