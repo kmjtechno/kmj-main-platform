@@ -8,6 +8,9 @@ on:
       - "apps/platform/resources/js/components/codebridge/device-control-center.tsx"
       - "apps/platform/resources/js/layouts/owner-module-shell.tsx"
       - "apps/platform/scripts/check-owner-ui-fidelity.test.mjs"
+      - "apps/platform/resources/css/owner-payments-premium.css"
+      - "apps/platform/resources/js/pages/operator-payments.tsx"
+      - "apps/platform/scripts/check-owner-payment-ux.test.mjs"
       - "apps/platform/scripts/browser-preview-verify.mjs"
       - "apps/platform/visual/entry.tsx"
       - "apps/platform/scripts/check-visual-qa-coverage.test.mjs"
@@ -25,6 +28,8 @@ jobs:
           persist-credentials: false
       - name: Check locked owner shell, honest status and device actions
         run: node --test apps/platform/scripts/check-owner-ui-fidelity.test.mjs
+      - name: Check real Payment Gateway owner UI and unchanged payment security
+        run: node --test apps/platform/scripts/check-owner-payment-ux.test.mjs
       - name: Assert limited review scope, not a live rollout
         shell: bash
         run: |
@@ -58,10 +63,13 @@ jobs:
           node_modules/.bin/vp fmt \
             resources/css/codebridge-premium.css \
             resources/css/owner-module-shell.css \
+            resources/css/owner-payments-premium.css \
             resources/js/components/codebridge/device-control-center.tsx \
             resources/js/components/operator-command-os.tsx \
             resources/js/layouts/owner-module-shell.tsx \
             resources/js/pages/operator-ops.tsx \
+            resources/js/pages/operator-payments.tsx \
+            scripts/check-owner-payment-ux.test.mjs \
             visual/entry.tsx \
             scripts/check-visual-qa-coverage.test.mjs \
             scripts/browser-preview-verify.mjs \
@@ -70,10 +78,13 @@ jobs:
           git diff --no-ext-diff -- \
             resources/css/codebridge-premium.css \
             resources/css/owner-module-shell.css \
+            resources/css/owner-payments-premium.css \
             resources/js/components/codebridge/device-control-center.tsx \
             resources/js/components/operator-command-os.tsx \
             resources/js/layouts/owner-module-shell.tsx \
             resources/js/pages/operator-ops.tsx \
+            resources/js/pages/operator-payments.tsx \
+            scripts/check-owner-payment-ux.test.mjs \
             visual/entry.tsx \
             scripts/check-visual-qa-coverage.test.mjs \
             scripts/browser-preview-verify.mjs \
