@@ -12,6 +12,8 @@ on:
       - "scripts/test_KMJ_OFFSITE_V3_DAILY_SOURCE_BUILDER_REVIEW_20261115.py"
       - "scripts/KMJ_OFFSITE_V3_TRANSFER_BOUND_TRANSACTION_REVIEW_20261115.py"
       - "scripts/test_KMJ_OFFSITE_V3_TRANSFER_BOUND_TRANSACTION_REVIEW_20261115.py"
+      - "scripts/KMJ_OFFSITE_V3_PINNED_V2_ADMISSION_REVIEW_20261115.py"
+      - "scripts/test_KMJ_OFFSITE_V3_PINNED_V2_ADMISSION_REVIEW_20261115.py"
       - ".github/workflows/kmj-v3-dual-artifact-policy-qa.yml"
   workflow_dispatch:
 permissions:
@@ -37,6 +39,8 @@ jobs:
           python3 -m py_compile scripts/test_KMJ_OFFSITE_V3_DAILY_SOURCE_BUILDER_REVIEW_20261115.py
           python3 -m py_compile scripts/KMJ_OFFSITE_V3_TRANSFER_BOUND_TRANSACTION_REVIEW_20261115.py
           python3 -m py_compile scripts/test_KMJ_OFFSITE_V3_TRANSFER_BOUND_TRANSACTION_REVIEW_20261115.py
+          python3 -m py_compile scripts/KMJ_OFFSITE_V3_PINNED_V2_ADMISSION_REVIEW_20261115.py
+          python3 -m py_compile scripts/test_KMJ_OFFSITE_V3_PINNED_V2_ADMISSION_REVIEW_20261115.py
       - name: Run disposable fixture tests (no actual vault, backup, network or root)
         run: |
           python3 -m unittest discover -s scripts \
@@ -74,5 +78,10 @@ jobs:
           assert 'transfer_result=transport.transfer(path,sha,hostline)' in boundary
           assert 'independent_remote_decrypt_restore_verified' in boundary
           assert 'IncompleteTransaction' in boundary
+          admission=Path('scripts/KMJ_OFFSITE_V3_PINNED_V2_ADMISSION_REVIEW_20261115.py').read_text()
+          assert 'SOURCE_ONLY_NOT_INSTALLED' in admission
+          assert 'V2_SHA=' in admission and 'TRANSPORT_SHA=' in admission
+          assert 'pinned_transport()' in admission
+          assert 'SCHEDULED_V2_EXEC_IDENTITY_CHANGED' in admission
           print('SOURCE_REVIEW_ONLY_CONTRACT=PASS')
           PY
