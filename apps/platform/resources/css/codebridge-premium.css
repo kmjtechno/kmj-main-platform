@@ -98,7 +98,7 @@
     line-height: 1.35;
 }
 
-.kmj-codebridge-premium #codebridge-device-control > div.grid > article {
+.kmj-codebridge-premium #codebridge-device-control .grid > article {
     background: #0c141e;
     border: 1px solid #344554;
     border-radius: 16px;
@@ -107,8 +107,8 @@
     transition: border-color 180ms ease, box-shadow 180ms ease;
 }
 
-.kmj-codebridge-premium #codebridge-device-control > div.grid > article:hover,
-.kmj-codebridge-premium #codebridge-device-control > div.grid > article:focus-within {
+.kmj-codebridge-premium #codebridge-device-control .grid > article:hover,
+.kmj-codebridge-premium #codebridge-device-control .grid > article:focus-within {
     border-color: #964054;
     box-shadow: 0 0 0 1px rgba(239, 18, 59, 0.12);
 }
