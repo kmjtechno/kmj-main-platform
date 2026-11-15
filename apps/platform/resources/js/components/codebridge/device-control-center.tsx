@@ -237,14 +237,18 @@ export default function DeviceControlCenter({
                         necessarily online: Main Platform does not receive live
                         gateway heartbeats.
                     </p>
-                    <p className="text-muted-foreground mt-2 text-xs leading-5">
-                        Choose setup for the registered device operating system:
-                        Windows connector for Windows, Linux/VPS instructions
-                        for servers. Run setup on that device, which may differ
-                        from the computer showing this page. Preserve an
-                        existing private enrollment; browser approval is
-                        required for new grants.
-                    </p>
+                    <details className="mt-3 max-w-2xl rounded-xl border border-white/10 bg-white/[0.02] p-3">
+                        <summary className="cursor-pointer text-sm font-semibold text-slate-200">
+                            Setup guidance and enrollment safety
+                        </summary>
+                        <p className="text-muted-foreground mt-2 text-sm leading-6">
+                            Choose Windows setup for workstations or Linux/VPS
+                            setup for servers. Install on the actual device,
+                            preserve an existing private enrollment, and approve
+                            new grants in your account. This page cannot start
+                            an offline device remotely.
+                        </p>
+                    </details>
                 </div>
                 <div className="flex flex-wrap gap-2">
                     <Link
@@ -460,7 +464,11 @@ export default function DeviceControlCenter({
                     No devices match these filters.
                 </div>
             ) : (
-                <div className="mt-5 grid gap-3 lg:grid-cols-2">
+                <div className="mt-5">
+                    <p className="text-muted-foreground mb-3 text-sm" role="status" aria-live="polite">
+                        Showing {visibleDevices.length} of {devices.length} registered devices
+                    </p>
+                    <div className="grid gap-4 lg:grid-cols-2">
                     {visibleDevices.map((device) => {
                         const recovery = deviceRecoveryAction(device.platform, {
                             deviceId: device.id,
@@ -504,13 +512,13 @@ export default function DeviceControlCenter({
                                             : device.pairing_state ===
                                                 'approval_expired'
                                               ? 'Approval expired · Never redeemed'
-                                              : 'Registered · Live status unknown'}
+                                              : 'Registration saved'}
                                     </span>
                                 </div>
 
                                 <div className="text-muted-foreground mt-4 flex items-center gap-2 text-xs">
                                     <ShieldAlert className="h-4 w-4 text-amber-500" />
-                                    Live connection has not been verified
+                                    Live connection not verified · Gateway heartbeat required
                                 </div>
                                 {device.pairing_state ===
                                     'approved_unredeemed' && (
@@ -615,7 +623,7 @@ export default function DeviceControlCenter({
                                             className="inline-flex items-center gap-1.5 rounded-lg border px-3 py-2 text-xs font-bold hover:border-red-500/40 disabled:opacity-50"
                                         >
                                             <FolderPlus className="h-3.5 w-3.5" />{' '}
-                                            Request on this device
+                                            Request project setup
                                         </button>
                                     )}
                                     {canManage && (
@@ -826,6 +834,7 @@ export default function DeviceControlCenter({
                             </article>
                         );
                     })}
+                    </div>
                 </div>
             )}
             {pendingRequests.length > 0 && (
