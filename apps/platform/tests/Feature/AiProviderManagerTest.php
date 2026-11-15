@@ -243,7 +243,6 @@ final class AiProviderManagerTest extends TestCase
         $this->assertSame('unknown', $provider->health);
     }
 
-
     public function test_owner_model_selector_shows_only_fresh_verified_free_ids_and_honest_catalog_count(): void
     {
         config(['ai_providers.free_models.groq' => ['verified-free']]);
