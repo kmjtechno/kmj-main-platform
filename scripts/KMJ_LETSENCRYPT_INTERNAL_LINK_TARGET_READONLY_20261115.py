@@ -11,6 +11,7 @@ from __future__ import annotations
 import os
 from pathlib import Path
 import posixpath
+import re
 import socket
 import stat
 import sys
@@ -23,6 +24,23 @@ LIMIT_DEPTH = 20
 MAX_TARGET_BYTES = 1024 * 1024
 DIR_FLAGS = os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW | os.O_CLOEXEC
 FILE_FLAGS = os.O_RDONLY | os.O_NOFOLLOW | os.O_CLOEXEC | os.O_NONBLOCK
+CERTBOT_FILES = ("cert.pem", "chain.pem", "fullchain.pem", "privkey.pem")
+LINEAGE = re.compile(r"[A-Za-z0-9][A-Za-z0-9._-]{0,119}\Z", re.ASCII)
+
+def standard_certbot_link(parent: str, name: str, target: str):
+    """Exact Certbot live/lineage -> archive/SAME-lineage numbered pem."""
+    parts = parent.split("/")
+    if (len(parts) != 2 or parts[0] != "live" or
+            LINEAGE.fullmatch(parts[1]) is None or name not in CERTBOT_FILES):
+        raise Block("CERTBOT_LINK_SHAPE_NOT_STANDARD")
+    lineage = parts[1]
+    stem = name[:-4]
+    pattern = rf"\.\./\.\./archive/{re.escape(lineage)}/{stem}[1-9][0-9]{{0,4}}\.pem"
+    if re.fullmatch(pattern, target, flags=re.ASCII) is None:
+        raise Block("CERTBOT_TARGET_NOT_SAME_LINEAGE")
+    if posixpath.normpath(posixpath.join(parent, target)) != target.removeprefix("../../"):
+        raise Block("CERTBOT_RELATIVE_PATH_NOT_CANONICAL")
+    return lineage
 
 class Block(Exception):
     pass
@@ -69,7 +87,7 @@ def target_file(root_fd: int, parts: list[str], uid: int):
     finally:
         os.close(fd)
 
-def inspect_tree(root: Path, uid: int, expected: int = EXPECTED_LINKS):
+def inspect_tree(root: Path, uid: int, expected: int = EXPECTED_LINKS, *, certbot_shape: bool = False):
     if type(expected) is not int or not 0 <= expected <= 64:
         raise Block("LINK_EXPECTATION_INVALID")
     fd = os.open(root, DIR_FLAGS)
@@ -79,6 +97,7 @@ def inspect_tree(root: Path, uid: int, expected: int = EXPECTED_LINKS):
         os.close(fd)
         raise Block("ROOT_NOT_TRUSTED")
     counters = {"links": 0, "targets": 0, "special": 0, "regular": 0, "entries": 0}
+    lineages = {}
     def visit(curr: int, parent: str, depth: int):
         if depth > LIMIT_DEPTH:
             raise Block("SOURCE_DEPTH_LIMIT")
@@ -103,6 +122,12 @@ def inspect_tree(root: Path, uid: int, expected: int = EXPECTED_LINKS):
                     if counters["links"] > 64:
                         raise Block("TOO_MANY_LINKS")
                     value = os.readlink(name, dir_fd=curr)
+                    if certbot_shape:
+                        lineage = standard_certbot_link(parent, name, value)
+                        previously = lineages.setdefault(lineage, set())
+                        if name in previously:
+                            raise Block("CERTBOT_DUPLICATE_NAME")
+                        previously.add(name)
                     parts = normalized_target(parent, value)
                     target_file(fd, parts, uid)
                     latest = os.stat(name, dir_fd=curr, follow_symlinks=False)
@@ -134,6 +159,11 @@ def inspect_tree(root: Path, uid: int, expected: int = EXPECTED_LINKS):
         visit(fd, "", 0)
         if counters["links"] != expected or counters["targets"] != expected:
             raise Block("LINK_COUNT_NOT_EXPECTED")
+        if certbot_shape and (not lineages or any(
+                set(CERTBOT_FILES) != names for names in lineages.values())):
+            raise Block("CERTBOT_INCOMPLETE_LINEAGE")
+        if certbot_shape:
+            counters["lineages"] = len(lineages)
         return counters
     finally:
         os.close(fd)
@@ -166,14 +196,14 @@ def main():
     if sys.argv[1:] == ["--selftest"]:
         selftest()
         return 0
-    if sys.argv[1:] != ["--inspect"]:
+    if sys.argv[1:] not in (["--inspect"], ["--inspect-certbot"]):
         print("RESULT=BLOCKED_ARGUMENT")
         return 2
     if os.geteuid() != 0 or socket.gethostname().split(".")[0] != "KMJ-elite":
         print("RESULT=BLOCKED_ROOT_HOST_REQUIRED")
         return 3
     try:
-        x = inspect_tree(SOURCE, 0)
+        x = inspect_tree(SOURCE, 0, certbot_shape=(sys.argv[1:] == ["--inspect-certbot"]))
     except (Block, OSError, ValueError) as ex:
         code = str(ex)
         if code not in ("LINK_ABSOLUTE_OR_INVALID", "LINK_TARGET_ESCAPES_ROOT",
@@ -183,7 +213,10 @@ def main():
             "SOURCE_ENTRIES_LIMIT", "SOURCE_NAME_INVALID", "SOURCE_ENTRY_OWNER_MISMATCH",
             "TOO_MANY_LINKS", "LINK_CHANGED_DURING_CHECK", "DIRECTORY_CHANGED_DURING_OPEN",
             "SOURCE_REGULAR_FILE_UNTRUSTED", "SOURCE_SPECIAL_ENTRY",
-            "SOURCE_CHANGED_DURING_SCAN", "LINK_COUNT_NOT_EXPECTED"):
+            "SOURCE_CHANGED_DURING_SCAN", "LINK_COUNT_NOT_EXPECTED",
+            "CERTBOT_LINK_SHAPE_NOT_STANDARD", "CERTBOT_TARGET_NOT_SAME_LINEAGE",
+            "CERTBOT_RELATIVE_PATH_NOT_CANONICAL", "CERTBOT_DUPLICATE_NAME",
+            "CERTBOT_INCOMPLETE_LINEAGE"):
             code = "SOURCE_TREE_UNVERIFIED"
         print("BLOCKER=" + code)
         print("RESULT=BLOCKED_NO_MUTATION")
@@ -192,13 +225,17 @@ def main():
     print("SOURCE_ENTRY_COUNT=" + str(x["entries"]))
     print("RELATIVE_LINKS=" + str(x["links"]))
     print("NONFOLLOW_ROOTED_REGULAR_TARGETS=" + str(x["targets"]))
+    print("CERTBOT_SHAPE_REQUIRED=" + ("YES" if "lineages" in x else "NO"))
+    if "lineages" in x:
+        print("CERTBOT_COMPLETE_LINEAGES=" + str(x["lineages"]))
     print("SPECIAL_ENTRIES=" + str(x["special"]))
     print("SOURCE_OR_TARGET_FILE_CONTENT_READ=NO")
     print("SOURCE_NAMES_LINK_VALUES_SECRETS_PRINTED=NO")
     print("BACKUP_AND_SERVICE_MUTATION=NONE")
     print("BUILDER_OR_PUBLISHER_MUTATION=NONE")
     print("INDEPENDENT_REMOTE_RESTORE=NOT_VERIFIED")
-    print("RESULT=INTERNAL_CERT_TARGETS_METADATA_PASS")
+    print("RESULT=" + ("CERTBOT_STANDARD_TOPOLOGY_PASS" if "lineages" in x
+                       else "INTERNAL_CERT_TARGETS_METADATA_PASS"))
     return 0
 
 if __name__ == "__main__":
