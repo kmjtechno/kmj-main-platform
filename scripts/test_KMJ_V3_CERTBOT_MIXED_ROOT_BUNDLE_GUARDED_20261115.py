@@ -35,7 +35,7 @@ class SourceBundleOfflineFixtures(unittest.TestCase):
                 m.convert_publisher(source+b"extra")
 
     def test_publisher_semantics_cannot_change_even_if_source_fingerprint_forged(self):
-        source=b"secret one secret two secret three secret four secret five"
+        source=b"secret one secret two secret three secret four secret five secret six"
         with mock.patch.object(m,"PUB_SOURCE_SHA",m.digest(source)),mock.patch.object(
             m,"PUB_REVIEWED_SHA","a"*64):
             with self.assertRaisesRegex(m.Deny,"PUBLISHER_REVIEWED_SOURCE_SHA_MISMATCH"):
