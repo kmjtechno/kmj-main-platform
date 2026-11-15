@@ -195,6 +195,9 @@ def copy_tree(src_path,dstfd,owners,stats,manifest,prefix,depth=0,*,
                     or (not cert_link and before.st_mode&0o022)):
                 raise Deny("SOURCE_ENTRY_OWNER_OR_MODE")
             if cert_link:
+                if re.fullmatch(r"live/[A-Za-z0-9][A-Za-z0-9._-]{0,119}",
+                                certbot_relative) is None:
+                    raise Deny("SOURCE_LINK_OR_SPECIAL_ENTRY")
                 certrootfd=owned_dir(certbot_root,owners)
                 try:
                     target,digest=daily.certbot_link_target(
