@@ -188,6 +188,33 @@ def snapshot_manifest(fd,uid):
     return seen
 
 
+def regular_file_sha(fd,name,original):
+    """Hash an unchanged, nofollow, non-hardlinked snapshot file descriptor."""
+    flags=os.O_RDONLY|os.O_NOFOLLOW|os.O_CLOEXEC|os.O_NONBLOCK
+    filefd=os.open(name,flags,dir_fd=fd)
+    try:
+        before=os.fstat(filefd)
+        identity=lambda s:(s.st_dev,s.st_ino,s.st_size,s.st_mtime_ns,s.st_ctime_ns)
+        if (not stat.S_ISREG(before.st_mode) or identity(before)!=identity(original)
+                or before.st_nlink!=1 or before.st_mode&0o022
+                or not 0<=before.st_size<=MAX_BYTES):
+            raise Deny("SNAPSHOT_HASH_SOURCE_CHANGED")
+        sha=hashlib.sha256()
+        total=0
+        while True:
+            chunk=os.read(filefd,1024*1024)
+            if not chunk:break
+            total+=len(chunk)
+            if total>MAX_BYTES:raise Deny("SNAPSHOT_HASH_BYTES_LIMIT")
+            sha.update(chunk)
+        after=os.fstat(filefd)
+        if total!=before.st_size or identity(after)!=identity(before):
+            raise Deny("SNAPSHOT_HASH_SOURCE_CHANGED")
+        return sha.hexdigest()
+    finally:
+        os.close(filefd)
+
+
 def walk_tree(fd,allowed_uids,stats,depth=0,*,relative="",certrootfd=None,manifest=None):
     if depth>MAX_DEPTH:
         raise Deny("SNAPSHOT_TREE_TOO_DEEP")
@@ -217,6 +244,15 @@ def walk_tree(fd,allowed_uids,stats,depth=0,*,relative="",certrootfd=None,manife
             stats["bytes"]+=s.st_size
             if stats["bytes"]>MAX_BYTES:
                 raise Deny("SNAPSHOT_BYTES_LIMIT")
+            fullpath=(relative+"/"+name).lstrip("/")
+            # SHA256SUMS cannot hash itself. Every other regular file MUST
+            # have a digest in the immutable staged source manifest.
+            if fullpath!="SHA256SUMS":
+                if manifest is None or fullpath not in manifest:
+                    raise Deny("SNAPSHOT_MANIFEST_UNLISTED_FILE")
+                if regular_file_sha(fd,name,s)!=manifest[fullpath]:
+                    raise Deny("SNAPSHOT_FILE_HASH_MISMATCH")
+                stats.setdefault("_manifest_seen",set()).add(fullpath)
         elif stat.S_ISLNK(s.st_mode):
             if (certrootfd is None or manifest is None
                     or not relative.startswith("config/letsencrypt/")):
@@ -226,6 +262,7 @@ def walk_tree(fd,allowed_uids,stats,depth=0,*,relative="",certrootfd=None,manife
                 certrootfd,fd,link_dir,name,allowed_uids)
             if manifest.get(relative+"/"+name)!=digest:
                 raise Deny("CERTBOT_LINK_MANIFEST_SHA_MISMATCH")
+            stats.setdefault("_manifest_seen",set()).add(relative+"/"+name)
             stats["certbot_links"]=stats.get("certbot_links",0)+1
         else:
             # Other links, sockets, FIFOs and devices remain blocked.
@@ -305,6 +342,9 @@ def verify_snapshot(fd,expected_uid,allowed_uids):
     try:
         counts={"entries":0,"bytes":0,"certbot_links":0}
         walk_tree(fd,allowed_uids,counts,certrootfd=certfd,manifest=hashes)
+        seen=counts.pop("_manifest_seen",set())
+        if seen!=set(hashes):
+            raise Deny("SNAPSHOT_MANIFEST_COVERAGE_INCOMPLETE")
         return digest,counts
     finally:
         os.close(certfd)
