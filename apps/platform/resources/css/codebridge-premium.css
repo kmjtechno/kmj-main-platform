@@ -1,0 +1,198 @@
+/*
+ * KMJ TECHNO — CodeBridge owner workspace fidelity, 2026-11-15.
+ *
+ * Scoped to the real authenticated page. Preserves device enrollment,
+ * revocation, OAuth, server permissions and truthful heartbeat semantics.
+ * The locked charcoal/red visual language is shared with Enterprise Command OS.
+ * Intentionally no fake online indicators, counters, or sample account data.
+ */
+.kmj-codebridge-premium {
+    --kmj-codebridge-accent: #ef123b;
+    --kmj-codebridge-edge: #30404f;
+    --kmj-codebridge-surface: #0b1119;
+    --kmj-codebridge-muted: #aebccc;
+    color: #eef2f7;
+    font-size: 14px;
+    line-height: 1.6;
+    width: 100%;
+    max-width: 100%;
+    margin-inline: auto;
+}
+
+.kmj-codebridge-premium :is(.text-xs, .text-sm) {
+    font-size: 14px;
+    line-height: 1.55;
+}
+
+.kmj-codebridge-premium .text-muted-foreground {
+    color: var(--kmj-codebridge-muted);
+}
+
+.kmj-codebridge-premium > section:first-of-type {
+    position: relative;
+    isolation: isolate;
+    border: 1px solid #4c2c3a;
+    border-radius: 20px;
+    background:
+        linear-gradient(105deg, rgba(6, 11, 17, 0.99) 0%, rgba(7, 13, 20, 0.94) 48%, rgba(7, 13, 20, 0.78) 100%),
+        url('/assets/locked/owner-earth.webp') center 55% / cover no-repeat;
+    box-shadow: 0 12px 44px rgba(0, 0, 0, 0.18);
+}
+
+.kmj-codebridge-premium > section:first-of-type h1 {
+    font-size: clamp(26px, 2.1vw, 36px);
+    line-height: 1.17;
+    letter-spacing: -0.025em;
+}
+
+.kmj-codebridge-premium [aria-label='CodeBridge workspace management'] {
+    gap: clamp(16px, 1.6vw, 26px);
+}
+
+.kmj-codebridge-premium [aria-label='CodeBridge sections'] > button {
+    min-height: 44px;
+    border-radius: 10px;
+    line-height: 1.35;
+}
+
+.kmj-codebridge-premium [aria-label='CodeBridge sections'] > button[aria-pressed='true'] {
+    background: linear-gradient(100deg, #ad0928, #440d1b);
+    color: #fff;
+    box-shadow: inset 3px 0 0 #ff3855;
+}
+
+.kmj-codebridge-premium [aria-label='CodeBridge workspace management'] > aside {
+    border: 1px solid var(--kmj-codebridge-edge);
+    background: linear-gradient(145deg, #0d1520, #080d14);
+    border-radius: 17px;
+    padding: clamp(16px, 1.3vw, 22px);
+}
+
+.kmj-codebridge-premium [aria-label='CodeBridge workspace management'] > aside h2 {
+    font-size: 17px;
+    line-height: 1.3;
+}
+
+.kmj-codebridge-premium #codebridge-device-control {
+    border: 1px solid var(--kmj-codebridge-edge);
+    border-radius: 18px;
+    background: linear-gradient(150deg, #0b121b 0%, #080d14 100%);
+    padding: clamp(18px, 1.6vw, 28px);
+}
+
+.kmj-codebridge-premium #codebridge-control-title {
+    font-size: clamp(20px, 1.55vw, 26px);
+    line-height: 1.2;
+    letter-spacing: -0.015em;
+}
+
+.kmj-codebridge-premium #codebridge-device-project-connect {
+    border: 1px solid #793043;
+    background: linear-gradient(115deg, #1a0d17 0%, #10131b 100%);
+    border-radius: 16px;
+    padding: clamp(16px, 1.35vw, 22px);
+}
+
+.kmj-codebridge-premium #codebridge-device-project-connect h3 {
+    font-size: 17px;
+    line-height: 1.35;
+}
+
+.kmj-codebridge-premium #codebridge-device-control > div.grid > article {
+    background: #0c141e;
+    border: 1px solid #344554;
+    border-radius: 16px;
+    padding: clamp(18px, 1.45vw, 24px);
+    min-width: 0;
+    transition: border-color 180ms ease, box-shadow 180ms ease;
+}
+
+.kmj-codebridge-premium #codebridge-device-control > div.grid > article:hover,
+.kmj-codebridge-premium #codebridge-device-control > div.grid > article:focus-within {
+    border-color: #964054;
+    box-shadow: 0 0 0 1px rgba(239, 18, 59, 0.12);
+}
+
+.kmj-codebridge-premium #codebridge-device-control article h3 {
+    font-size: 16px;
+    line-height: 1.35;
+    overflow-wrap: anywhere;
+}
+
+.kmj-codebridge-premium :is(input, select, textarea) {
+    min-height: 44px;
+    border: 1px solid #475464;
+    border-radius: 10px;
+    background: #101924;
+    color: #f4f7fb;
+    font-size: 14px;
+}
+
+.kmj-codebridge-premium :is(input, select, textarea):focus-visible,
+.kmj-codebridge-premium button:focus-visible,
+.kmj-codebridge-premium a:focus-visible {
+    outline: 2px solid #ff4a67;
+    outline-offset: 3px;
+}
+
+.kmj-codebridge-premium :is(button, a).rounded-lg {
+    min-height: 40px;
+}
+
+.kmj-codebridge-premium [role='status'] {
+    color: #f4f7fb;
+    background: #12202c;
+    border-color: #546374;
+}
+
+.kmj-codebridge-premium .border-amber-500\/30 {
+    border-color: rgba(245, 158, 11, 0.53);
+}
+
+.kmj-codebridge-premium #codebridge-device-control code {
+    overflow-wrap: anywhere;
+    font-size: 0.875em;
+}
+
+.kmj-codebridge-premium :is(.bg-red-600, .bg-red-500) {
+    background: #d90c34;
+}
+
+@media (max-width: 1280px) {
+    .kmj-codebridge-premium [aria-label='CodeBridge workspace management'] {
+        grid-template-columns: minmax(0, 1fr);
+    }
+    .kmj-codebridge-premium [aria-label='CodeBridge sections'] {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+    .kmj-codebridge-premium [aria-label='CodeBridge workspace management'] > aside {
+        position: static;
+    }
+}
+
+@media (max-width: 720px) {
+    .kmj-codebridge-premium {
+        font-size: 14px;
+        padding: 12px;
+    }
+    .kmj-codebridge-premium > section:first-of-type {
+        padding: 18px;
+    }
+    .kmj-codebridge-premium [aria-label='CodeBridge sections'] {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    .kmj-codebridge-premium #codebridge-device-control > div.grid {
+        grid-template-columns: minmax(0, 1fr);
+    }
+    .kmj-codebridge-premium #codebridge-device-control {
+        padding: 16px;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .kmj-codebridge-premium *,
+    .kmj-codebridge-premium *::before,
+    .kmj-codebridge-premium *::after {
+        transition: none !important;
+    }
+}
