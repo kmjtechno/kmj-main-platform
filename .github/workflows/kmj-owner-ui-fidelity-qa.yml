@@ -56,12 +56,18 @@ jobs:
             resources/css/codebridge-premium.css \
             resources/css/owner-module-shell.css \
             resources/js/components/codebridge/device-control-center.tsx \
+            resources/js/components/operator-command-os.tsx \
+            resources/js/layouts/owner-module-shell.tsx \
+            resources/js/pages/operator-ops.tsx \
             scripts/check-owner-ui-fidelity.test.mjs
           echo '=== BEGIN EXACT FORMAT PATCH ==='
           git diff --no-ext-diff -- \
             resources/css/codebridge-premium.css \
             resources/css/owner-module-shell.css \
             resources/js/components/codebridge/device-control-center.tsx \
+            resources/js/components/operator-command-os.tsx \
+            resources/js/layouts/owner-module-shell.tsx \
+            resources/js/pages/operator-ops.tsx \
             scripts/check-owner-ui-fidelity.test.mjs
           echo '=== END EXACT FORMAT PATCH ==='
           echo 'FORMAT_PREVIEW_ONLY=PASS'
