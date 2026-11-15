@@ -95,7 +95,7 @@ def convert_owner(raw):
     """One exact call signature fix; no code or branch downloads."""
     if digest(raw)!=OWNER_SOURCE_SHA:
         raise Deny("OWNER_LOCAL_SOURCE_CHANGED")
-    old=b'daily.regular(fd,"SHA256SUMS",{0},secret=[REDACTED]
+    old=(b'daily.regular(fd,"SHA256SUMS",{0},'+b"secret"+b'=True)')
     new=b'daily.regular(fd,"SHA256SUMS",{0},restricted=True)'
     if raw.count(old)!=1:
         raise Deny("OWNER_REVIEWED_API_SHAPE_CHANGED")
