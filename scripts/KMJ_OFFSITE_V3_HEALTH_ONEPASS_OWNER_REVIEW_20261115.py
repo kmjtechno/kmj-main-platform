@@ -246,7 +246,7 @@ def attach_full_v2_storage_archive(builder,daily,stamp,work):
     try:
         counts={"bytes":0}
         digest=builder.copy_file(work/"storage.tar.gz",fd,"storage.tar.gz",{0},counts)
-        mf,mstat=daily.regular(fd,"SHA256SUMS",{0},secret=True)
+        mf,mstat=daily.regular(fd,"SHA256SUMS",{0},restricted=True)
         try:
             if mstat.st_size>64000:raise Deny("DAILY_MANIFEST_OVERSIZE")
             body=os.read(mf,64001)
