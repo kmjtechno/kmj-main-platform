@@ -212,7 +212,6 @@
     line-height: 1.3;
 }
 
-
 /* Locked Owner/Super Admin subpage fidelity: real authenticated UI, no fake metrics. */
 .owner-module-shell {
     font-size: 14px;
@@ -290,7 +289,9 @@
     color: #fff;
 }
 @media (max-width: 1000px) and (min-width: 701px) {
-    .owner-module-shell .owner-sidebar { width: 198px; }
+    .owner-module-shell .owner-sidebar {
+        width: 198px;
+    }
     .owner-module-shell .owner-module-body {
         margin-left: 215px;
         padding-right: 12px;
