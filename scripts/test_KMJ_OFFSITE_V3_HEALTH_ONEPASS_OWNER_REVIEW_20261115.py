@@ -146,6 +146,118 @@ class GuardedOnepassTests(unittest.TestCase):
             owner_source,
         )
 
+    def certbot_mixed_source_fixture(self,root):
+        root.mkdir(mode=0o700)
+        live=root/"live"
+        archive=root/"archive"
+        live.mkdir(mode=0o700)
+        archive.mkdir(mode=0o700)
+        for i,lineage in enumerate(("kmj-alpha.test","kmj-beta.test","kmj-local-files.test")):
+            here=live/lineage
+            here.mkdir(mode=0o700)
+            if i<2:
+                archived=archive/lineage
+                archived.mkdir(mode=0o700)
+                for name in ("cert.pem","chain.pem","fullchain.pem","privkey.pem"):
+                    filename=name[:-4]+"1.pem"
+                    (archived/filename).write_bytes(("offline-"+name).encode())
+                    (archived/filename).chmod(0o600)
+                    (here/name).symlink_to("../../archive/"+lineage+"/"+filename)
+            else:
+                for name in ("cert.pem","chain.pem","fullchain.pem","privkey.pem"):
+                    file=here/name
+                    file.write_bytes(("offline-regular-"+name).encode())
+                    file.chmod(0o600)
+        return live,archive
+
+    def pinned_publisher_bytes(self):
+        return SOURCE.with_name("KMJ_OFFSITE_V3_LOCAL_DAILY_PUBLISHER_REVIEW_20261115.py").read_bytes()
+
+    def test_mixed_three_lineage_certbot_preflight_reads_eight_links_four_regular(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp)/"letsencrypt"
+            self.certbot_mixed_source_fixture(root)
+            with mock.patch.dict(m.CONFIG,{"letsencrypt":root}):
+                with mock.patch("builtins.print") as info:
+                    self.assertEqual(m.validate_certbot_live_matrix(
+                        self.pinned_publisher_bytes(),expected_uid=os.geteuid()),12)
+                messages=" ".join(str(x.args) for x in info.call_args_list)
+                self.assertIn("CERTBOT_STANDARD_INTERNAL_LINKS=8_VERIFIED",messages)
+                self.assertIn("CERTBOT_REGULAR_PEMS=4_VERIFIED",messages)
+                self.assertNotIn("kmj-alpha.test",messages)
+                self.assertNotIn("PRIVATE_KEY",messages)
+
+    def test_mixed_certbot_preflight_rejects_world_writable_regular_pem(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp)/"letsencrypt"
+            live,_=self.certbot_mixed_source_fixture(root)
+            file=live/"kmj-local-files.test"/"cert.pem"
+            file.chmod(0o666)
+            with mock.patch.dict(m.CONFIG,{"letsencrypt":root}):
+                with self.assertRaisesRegex(m.Deny,"CERTBOT_REGULAR_PEM_METADATA_UNTRUSTED"):
+                    m.validate_certbot_live_matrix(
+                        self.pinned_publisher_bytes(),expected_uid=os.geteuid())
+
+    def test_mixed_certbot_preflight_rejects_hardlinked_regular_pem(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp)/"letsencrypt"
+            live,_=self.certbot_mixed_source_fixture(root)
+            file=live/"kmj-local-files.test"/"cert.pem"
+            os.link(file,live/"kmj-local-files.test"/"hardlinked-copy.pem")
+            with mock.patch.dict(m.CONFIG,{"letsencrypt":root}):
+                with self.assertRaisesRegex(m.Deny,"CERTBOT_REGULAR_PEM_METADATA_UNTRUSTED"):
+                    m.validate_certbot_live_matrix(
+                        self.pinned_publisher_bytes(),expected_uid=os.geteuid())
+
+    def test_mixed_certbot_preflight_rejects_external_link(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp)/"letsencrypt"
+            live,_=self.certbot_mixed_source_fixture(root)
+            file=live/"kmj-alpha.test"/"cert.pem"
+            file.unlink()
+            file.symlink_to("/etc/passwd")
+            with mock.patch.dict(m.CONFIG,{"letsencrypt":root}):
+                with self.assertRaisesRegex(Exception,"CERTBOT_LINK_TARGET_NOT_PINNED_IN_TREE"):
+                    m.validate_certbot_live_matrix(
+                        self.pinned_publisher_bytes(),expected_uid=os.geteuid())
+
+    def test_mixed_certbot_preflight_rejects_missing_expected_file(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp)/"letsencrypt"
+            live,_=self.certbot_mixed_source_fixture(root)
+            (live/"kmj-local-files.test"/"cert.pem").unlink()
+            with mock.patch.dict(m.CONFIG,{"letsencrypt":root}):
+                with self.assertRaises(FileNotFoundError):
+                    m.validate_certbot_live_matrix(
+                        self.pinned_publisher_bytes(),expected_uid=os.geteuid())
+
+    def test_mixed_certbot_preflight_rejects_wrong_lineage_distribution(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp)/"letsencrypt"
+            live,archive=self.certbot_mixed_source_fixture(root)
+            more=archive/"kmj-local-files.test"
+            more.mkdir(mode=0o700)
+            file=live/"kmj-local-files.test"/"cert.pem"
+            file.unlink()
+            (more/"cert1.pem").write_bytes(b"offline-synthetic-cert")
+            (more/"cert1.pem").chmod(0o600)
+            file.symlink_to("../../archive/kmj-local-files.test/cert1.pem")
+            with mock.patch.dict(m.CONFIG,{"letsencrypt":root}):
+                with self.assertRaisesRegex(m.Deny,"CERTBOT_MIXED_SOURCE_MATRIX_DRIFT"):
+                    m.validate_certbot_live_matrix(
+                        self.pinned_publisher_bytes(),expected_uid=os.geteuid())
+
+    def test_mixed_certbot_preflight_never_accepts_bad_owner_uid_override(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp)/"letsencrypt"
+            self.certbot_mixed_source_fixture(root)
+            with mock.patch.dict(m.CONFIG,{"letsencrypt":root}):
+                for invalid in (-1,65536,"0",True):
+                    with self.subTest(value=invalid),self.assertRaisesRegex(
+                            m.Deny,"CERTBOT_EXPECTED_UID_INVALID"):
+                        m.validate_certbot_live_matrix(self.pinned_publisher_bytes(),
+                                                       expected_uid=invalid)
+
     def test_selftest_offline_no_installed_sources(self):
         with mock.patch.object(m,"runtime_sources") as preflight:
             with mock.patch.object(m,"install_bundle") as install:
