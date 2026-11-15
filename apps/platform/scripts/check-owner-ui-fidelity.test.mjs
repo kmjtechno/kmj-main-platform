@@ -20,7 +20,7 @@ const device = read(
 );
 const premium = read('resources/css/codebridge-premium.css');
 
-test('locked owner route does not fall back to customer sidebar', () => {
+void test('locked owner route does not fall back to customer sidebar', () => {
     assert.match(app, /name\.startsWith\('operator-'\)/);
     assert.match(app, /return OwnerModuleShell/);
     const layout = read('resources/js/layouts/app-layout.tsx');
@@ -28,7 +28,7 @@ test('locked owner route does not fall back to customer sidebar', () => {
     assert.match(layout, /if \(isOwner\)[\s\S]*?OwnerModuleShell/);
 });
 
-test('owner brand, verified existing identity and 3 navigation sections remain', () => {
+void test('owner brand, verified existing identity and 3 navigation sections remain', () => {
     assert.match(shell, /LockedBrand compact/);
     assert.match(shell, /Platform Owner \/ Super Admin/);
     for (const group of ['BUSINESS', 'PLATFORM', 'OPERATIONS']) {
@@ -39,7 +39,7 @@ test('owner brand, verified existing identity and 3 navigation sections remain',
     assert.match(shell, /href\.split\('#'\)\[0\] === url/);
 });
 
-test('original locked dashboard earth hero, product gallery and Kristi panel are retained', () => {
+void test('original locked dashboard earth hero, product gallery and Kristi panel are retained', () => {
     assert.match(os, /owner-earth\.webp/);
     assert.match(os, /Product Suite Overview/);
     assert.match(os, /owner-product-track/);
@@ -47,7 +47,7 @@ test('original locked dashboard earth hero, product gallery and Kristi panel are
     assert.match(os, /\/assets\/locked\//);
 });
 
-test('shared owner shell uses readable typography and scoped dark enterprise colors', () => {
+void test('shared owner shell uses readable typography and scoped dark enterprise colors', () => {
     assert.match(css, /Locked Owner\/Super Admin subpage fidelity/);
     assert.match(css, /font-size: 14px;/);
     assert.match(css, /\.owner-module-shell \.owner-sidebar nav > a/);
@@ -57,7 +57,7 @@ test('shared owner shell uses readable typography and scoped dark enterprise col
     assert.doesNotMatch(css, /^(?:html|body)\s*\{/m);
 });
 
-test('CodeBridge page imports premium CSS within real authenticated owner content', () => {
+void test('CodeBridge page imports premium CSS within real authenticated owner content', () => {
     assert.match(
         bridge,
         /import '\.\.\/\.\.\/\.\.\/css\/codebridge-premium\.css';/,
@@ -72,7 +72,7 @@ test('CodeBridge page imports premium CSS within real authenticated owner conten
     assert.match(premium, /@media \(max-width: 720px\)/);
 });
 
-test('device registration, gateway heartbeat and pairing are never invented', () => {
+void test('device registration, gateway heartbeat and pairing are never invented', () => {
     assert.match(device, /connection_status: 'not_verified'/);
     assert.match(
         device,
@@ -86,7 +86,7 @@ test('device registration, gateway heartbeat and pairing are never invented', ()
     assert.match(device, /pairingRecoveryGuidance/);
 });
 
-test('device controls retain secure owner confirmation and no silent pairing changes', () => {
+void test('device controls retain secure owner confirmation and no silent pairing changes', () => {
     assert.match(device, /confirmation !== device\.id/);
     assert.match(device, /router\.post\(/);
     assert.match(device, /\/disconnect/);
@@ -96,7 +96,7 @@ test('device controls retain secure owner confirmation and no silent pairing cha
     assert.match(device, /aria-expanded=\{\s*details === device\.id\s*\}/);
 });
 
-test('accessible device filtering and progressive disclosure are retained', () => {
+void test('accessible device filtering and progressive disclosure are retained', () => {
     assert.match(device, /useMemo\(\(\) => \{/);
     assert.match(device, /setView\(event\.target\.value as View\)/);
     assert.match(device, /aria-live="polite"/);
@@ -109,7 +109,7 @@ test('accessible device filtering and progressive disclosure are retained', () =
     assert.match(device, /Select an existing device\/project grant/);
 });
 
-test('layout uses readable, keyboard-accessible, responsive controls', () => {
+void test('layout uses readable, keyboard-accessible, responsive controls', () => {
     assert.match(premium, /font-size: 14px/);
     assert.match(premium, /min-height: 44px/);
     assert.match(premium, /:focus-visible/);
@@ -118,7 +118,7 @@ test('layout uses readable, keyboard-accessible, responsive controls', () => {
     assert.match(premium, /grid-template-columns: minmax\(0, 1fr\)/);
 });
 
-test('owner functional pages remain routed to their real protected modules', () => {
+void test('owner functional pages remain routed to their real protected modules', () => {
     for (const path of [
         'resources/js/pages/operator.tsx',
         'resources/js/pages/operator-products.tsx',
@@ -139,7 +139,7 @@ test('owner functional pages remain routed to their real protected modules', () 
     );
 });
 
-test('owner Ops navigation targets actual backed sections, not generic page top', () => {
+void test('owner Ops navigation targets actual backed sections, not generic page top', () => {
     const ops = read('resources/js/pages/operator-ops.tsx');
     const shellNav = read('resources/js/layouts/owner-module-shell.tsx');
     const lockedNav = read('resources/js/components/operator-command-os.tsx');
@@ -155,7 +155,7 @@ test('owner Ops navigation targets actual backed sections, not generic page top'
     }
 });
 
-test('no false claims of live status or fabricated owner revenue are introduced', () => {
+void test('no false claims of live status or fabricated owner revenue are introduced', () => {
     assert.doesNotMatch(premium, /Online\s*:\s*(?:true|yes)/i);
     assert.match(device, /Online status: Not verified/);
     assert.match(os, /confirmed_inr_revenue_minor/);
