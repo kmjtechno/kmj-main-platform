@@ -8,6 +8,13 @@ on:
       - "apps/platform/resources/js/components/codebridge/device-control-center.tsx"
       - "apps/platform/resources/js/layouts/owner-module-shell.tsx"
       - "apps/platform/scripts/check-owner-ui-fidelity.test.mjs"
+      - "apps/platform/resources/js/pages/services/ai-providers.tsx"
+      - "apps/platform/resources/js/components/ai-provider-connect-hub.tsx"
+      - "apps/platform/resources/css/ai-provider-connect.css"
+      - "apps/platform/scripts/check-ai-provider-oneclick.test.mjs"
+      - "apps/platform/app/Http/Controllers/AiProviderController.php"
+      - "apps/platform/tests/Feature/AiProviderOpenRouterConnectTest.php"
+      - "apps/platform/tests/Feature/AiProviderManagerTest.php"
       - "apps/platform/scripts/browser-preview-verify.mjs"
       - "apps/platform/visual/entry.tsx"
       - "apps/platform/scripts/check-visual-qa-coverage.test.mjs"
@@ -25,6 +32,8 @@ jobs:
           persist-credentials: false
       - name: Check locked owner shell, honest status and device actions
         run: node --test apps/platform/scripts/check-owner-ui-fidelity.test.mjs
+      - name: Verify real AI provider quick-connect and free-only security
+        run: node --test apps/platform/scripts/check-ai-provider-oneclick.test.mjs
       - name: Assert limited review scope, not a live rollout
         shell: bash
         run: |
@@ -58,10 +67,14 @@ jobs:
           node_modules/.bin/vp fmt \
             resources/css/codebridge-premium.css \
             resources/css/owner-module-shell.css \
+            resources/css/ai-provider-connect.css \
             resources/js/components/codebridge/device-control-center.tsx \
             resources/js/components/operator-command-os.tsx \
             resources/js/layouts/owner-module-shell.tsx \
             resources/js/pages/operator-ops.tsx \
+            resources/js/pages/services/ai-providers.tsx \
+            resources/js/components/ai-provider-connect-hub.tsx \
+            scripts/check-ai-provider-oneclick.test.mjs \
             visual/entry.tsx \
             scripts/check-visual-qa-coverage.test.mjs \
             scripts/browser-preview-verify.mjs \
@@ -70,10 +83,14 @@ jobs:
           git diff --no-ext-diff -- \
             resources/css/codebridge-premium.css \
             resources/css/owner-module-shell.css \
+            resources/css/ai-provider-connect.css \
             resources/js/components/codebridge/device-control-center.tsx \
             resources/js/components/operator-command-os.tsx \
             resources/js/layouts/owner-module-shell.tsx \
             resources/js/pages/operator-ops.tsx \
+            resources/js/pages/services/ai-providers.tsx \
+            resources/js/components/ai-provider-connect-hub.tsx \
+            scripts/check-ai-provider-oneclick.test.mjs \
             visual/entry.tsx \
             scripts/check-visual-qa-coverage.test.mjs \
             scripts/browser-preview-verify.mjs \
