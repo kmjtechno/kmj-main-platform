@@ -7,7 +7,7 @@ set -Eeuo pipefail
 umask 077
 
 DOMAIN=kmjtechno.com
-IP=103.212.136.154
+IP=150.242.200.81
 HOST=mail.kmjtechno.com
 SELECTOR=kmjmail2026
 STAMP=/etc/kmj-mail-selfhost-stage-v1
