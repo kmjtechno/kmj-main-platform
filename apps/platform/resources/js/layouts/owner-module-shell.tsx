@@ -248,7 +248,7 @@ export default function OwnerModuleShell({
                                 key={label}
                                 href={href}
                                 aria-current={
-                                    href === url &&
+                                    href.split('#')[0] === url &&
                                     (href === '/operator/ops'
                                         ? label === 'System Health'
                                         : href === '/operator/products'
