@@ -797,6 +797,35 @@ try {
                     });
                 await advanced.locator(':scope > summary').click();
             }
+            if (name === 'canonical-devices') {
+                // The owner's real screenshot exposed ellipsized device names.
+                // Check the actual rendered component at every viewport width.
+                const identity = await page
+                    .locator('#codebridge-device-control article h3')
+                    .first()
+                    .evaluate((node) => {
+                        const style = getComputedStyle(node);
+                        return {
+                            name: node.textContent?.trim() ?? '',
+                            noWrap: style.whiteSpace === 'nowrap',
+                            ellipsis: style.textOverflow === 'ellipsis',
+                            overflow: node.scrollWidth > node.clientWidth + 1,
+                        };
+                    });
+                if (
+                    identity.name !== 'Synthetic preview desktop' ||
+                    identity.noWrap ||
+                    identity.ellipsis ||
+                    identity.overflow
+                ) {
+                    errors.push(
+                        'CodeBridge device name clipped at width ' +
+                            width +
+                            ': ' +
+                            JSON.stringify(identity),
+                    );
+                }
+            }
             if (name === 'owner-devices' || name === 'canonical-devices') {
                 await page
                     .getByRole('heading', {
