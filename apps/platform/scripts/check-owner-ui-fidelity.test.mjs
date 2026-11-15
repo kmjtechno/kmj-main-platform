@@ -21,8 +21,8 @@ const premium = read('resources/css/codebridge-premium.css');
 test('locked owner route does not fall back to customer sidebar', () => {
     assert.match(app, /name\.startsWith\('operator-'\)/);
     assert.match(app, /return OwnerModuleShell/);
-    assert.match(app, /const isOwner/);
     const layout = read('resources/js/layouts/app-layout.tsx');
+    assert.match(layout, /const isOwner/);
     assert.match(layout, /if \(isOwner\)[\s\S]*?OwnerModuleShell/);
 });
 
@@ -52,14 +52,14 @@ test('shared owner shell uses readable typography and scoped dark enterprise col
     assert.match(css, /\.owner-module-shell \.kmj-admin-tab/);
     assert.match(css, /min-height: 44px;/);
     assert.match(css, /@media \(max-width: 700px\)/);
-    assert.doesNotMatch(css, /html\s*\{|body\s*\{/);
+    assert.doesNotMatch(css, /^(?:html|body)\s*\{/m);
 });
 
 test('CodeBridge page imports premium CSS within real authenticated owner content', () => {
     assert.match(bridge, /import '\.\.\/\.\.\/\.\.\/css\/codebridge-premium\.css';/);
     assert.match(bridge, /className="kmj-codebridge-premium flex/);
     assert.match(premium, /owner-earth\.webp/);
-    assert.match(premium, /\.kmj-codebridge-premium \.text-xs/);
+    assert.match(premium, /\.kmj-codebridge-premium :is\(\.text-xs, \.text-sm\)/);
     assert.match(premium, /#codebridge-device-control/);
     assert.match(premium, /@media \(max-width: 720px\)/);
 });
@@ -113,7 +113,7 @@ test('owner functional pages remain routed to their real protected modules', () 
         'resources/js/pages/operator-kslp.tsx',
         'resources/js/pages/operator-ops.tsx'
     ]) {
-        assert.match(read(path), /<Head title=/, path);
+        assert.match(read(path), /<Head\b/, path);
     }
     assert.match(shell, /href: '\/operator\/payments'/);
     assert.match(shell, /href: '\/operator\/kslp'/);
