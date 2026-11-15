@@ -123,7 +123,11 @@ const groups: { title: string; items: Workspace[] }[] = [
     {
         title: 'OPERATIONS',
         items: [
-            { label: 'System Health', href: '/operator/ops#owner-readiness', icon: Activity },
+            {
+                label: 'System Health',
+                href: '/operator/ops#owner-readiness',
+                icon: Activity,
+            },
             {
                 label: 'Backups & Restore',
                 href: '/operator/ops#owner-backup-freshness',
@@ -134,8 +138,16 @@ const groups: { title: string; items: Workspace[] }[] = [
                 href: '/settings/security',
                 icon: ShieldCheck,
             },
-            { label: 'Audit Logs', href: '/operator/ops#owner-action-audit', icon: FileText },
-            { label: 'Monitoring & Alerts', href: '/operator/ops#owner-guardrail-signals', icon: Bell },
+            {
+                label: 'Audit Logs',
+                href: '/operator/ops#owner-action-audit',
+                icon: FileText,
+            },
+            {
+                label: 'Monitoring & Alerts',
+                href: '/operator/ops#owner-guardrail-signals',
+                icon: Bell,
+            },
             { label: 'Task Automation', href: '/operator/ops', icon: Zap },
             {
                 label: 'Settings & Configuration',
@@ -263,12 +275,12 @@ export default function OwnerModuleShell({
                                             : label === 'System Health'
                                         : href === '/operator/ops'
                                           ? label === 'System Health'
-                                        : href === '/operator/products'
-                                          ? label === 'Products & Catalog'
-                                          : href === '/operator/kslp'
-                                            ? label ===
-                                              'Licensing & Entitlements'
-                                            : true)
+                                          : href === '/operator/products'
+                                            ? label === 'Products & Catalog'
+                                            : href === '/operator/kslp'
+                                              ? label ===
+                                                'Licensing & Entitlements'
+                                              : true)
                                         ? 'page'
                                         : undefined
                                 }
