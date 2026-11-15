@@ -8,6 +8,8 @@ on:
       - "scripts/test_KMJ_OFFSITE_V3_LOCAL_CIPHER_PUBLISHER_REVIEW_20261115.py"
       - "scripts/KMJ_OFFSITE_V3_LOCAL_DAILY_PUBLISHER_REVIEW_20261115.py"
       - "scripts/test_KMJ_OFFSITE_V3_LOCAL_DAILY_PUBLISHER_REVIEW_20261115.py"
+      - "scripts/KMJ_OFFSITE_V3_DAILY_SOURCE_BUILDER_REVIEW_20261115.py"
+      - "scripts/test_KMJ_OFFSITE_V3_DAILY_SOURCE_BUILDER_REVIEW_20261115.py"
       - ".github/workflows/kmj-v3-dual-artifact-policy-qa.yml"
   workflow_dispatch:
 permissions:
@@ -29,6 +31,8 @@ jobs:
           python3 -m py_compile scripts/test_KMJ_OFFSITE_V3_LOCAL_CIPHER_PUBLISHER_REVIEW_20261115.py
           python3 -m py_compile scripts/KMJ_OFFSITE_V3_LOCAL_DAILY_PUBLISHER_REVIEW_20261115.py
           python3 -m py_compile scripts/test_KMJ_OFFSITE_V3_LOCAL_DAILY_PUBLISHER_REVIEW_20261115.py
+          python3 -m py_compile scripts/KMJ_OFFSITE_V3_DAILY_SOURCE_BUILDER_REVIEW_20261115.py
+          python3 -m py_compile scripts/test_KMJ_OFFSITE_V3_DAILY_SOURCE_BUILDER_REVIEW_20261115.py
       - name: Run disposable fixture tests (no actual vault, backup, network or root)
         run: |
           python3 -m unittest discover -s scripts \
@@ -57,5 +61,9 @@ jobs:
           assert 'STAGING_DAILY_ROOTS_NOT_SEPARATED' in daily
           assert 'renameat2' in daily
           assert 'independent_remote_restore_verified' in daily
+          builder=Path('scripts/KMJ_OFFSITE_V3_DAILY_SOURCE_BUILDER_REVIEW_20261115.py').read_text()
+          assert 'REVIEW_ONLY_NOT_INSTALLED' in builder
+          assert 'STAGING_ROOT_INSIDE_HEALTH_MONITOR' in builder
+          assert 'daily_published' in builder and 'offsite_readback_verified' in builder
           print('SOURCE_REVIEW_ONLY_CONTRACT=PASS')
           PY
