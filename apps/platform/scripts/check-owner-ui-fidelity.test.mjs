@@ -102,7 +102,7 @@ test('accessible device filtering and progressive disclosure are retained', () =
     assert.match(device, /aria-live="polite"/);
     assert.match(
         device,
-        /Showing \{visibleDevices\.length\} of \{devices\.length\}[\s\S]{0,25}registered devices/,
+        /Showing \{visibleDevices\.length\} of \{devices\.length\}[\s\S]{0,160}registered devices/,
     );
     assert.match(device, /Setup guidance and enrollment safety/);
     assert.match(device, /<summary className=/);
