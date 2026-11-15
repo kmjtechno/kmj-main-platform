@@ -34,13 +34,19 @@ void test('other providers use only exact official key pages, no fake OAuth', ()
     assert.match(hub, /Get key &amp; connect/);
     assert.match(hub, /rel="noopener noreferrer"/);
     assert.match(hub, /onChooseKeyProvider\(guide\.key\)/);
-    assert.doesNotMatch(hub, /connect\/groq\/callback|connect\/gemini\/callback/);
+    assert.doesNotMatch(
+        hub,
+        /connect\/groq\/callback|connect\/gemini\/callback/,
+    );
 });
 
 void test('one-action guided key connection verifies only read-only models', () => {
     assert.match(page, /verify_connection: true/);
     assert.match(page, /Save & verify connection/);
-    assert.match(controller, /'verify_connection' => \['sometimes', 'boolean'\]/);
+    assert.match(
+        controller,
+        /'verify_connection' => \['sometimes', 'boolean'\]/,
+    );
     assert.match(controller, /manager->test\(\$created\)/);
     assert.match(manager, /GET \{base\}\/models|GET \/models/);
     assert.match(controller, /verifiedFreeModels/);
@@ -52,7 +58,10 @@ void test('unverified model or failed OAuth never produces fake success', () => 
     assert.match(controller, /verification is pending/);
     assert.match(controller, /Inference remains blocked/);
     assert.match(controller, /str_ends_with\(\$model, ':free'\)/);
-    assert.match(controller, /manager->update\(\$tested, \['default_model' => \$free\[0\]\]\)/);
+    assert.match(
+        controller,
+        /manager->update\(\$tested, \['default_model' => \$free\[0\]\]\)/,
+    );
     assert.match(controller, /No inference enabled/);
 });
 
@@ -66,7 +75,10 @@ void test('ownership, session-bound OAuth and no paid overrides remain in place'
 });
 
 void test('owner enterprise styles are scoped and inputs remain accessible', () => {
-    assert.match(page, /import '\.\.\/\.\.\/\.\.\/css\/ai-provider-connect\.css'/);
+    assert.match(
+        page,
+        /import '\.\.\/\.\.\/\.\.\/css\/ai-provider-connect\.css'/,
+    );
     assert.match(page, /className="kmj-ai-providers flex/);
     assert.match(css, /\.owner-module-shell \.kmj-ai-providers/);
     assert.match(css, /focus-visible/);
