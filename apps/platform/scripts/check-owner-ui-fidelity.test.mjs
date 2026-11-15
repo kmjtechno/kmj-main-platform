@@ -134,6 +134,22 @@ test('owner functional pages remain routed to their real protected modules', () 
     assert.match(shell, /href: '\/operator\/directory'/);
 });
 
+test('owner Ops navigation targets actual backed sections, not generic page top', () => {
+    const ops = read('resources/js/pages/operator-ops.tsx');
+    const shellNav = read('resources/js/layouts/owner-module-shell.tsx');
+    const lockedNav = read('resources/js/components/operator-command-os.tsx');
+    for (const id of [
+        'owner-readiness',
+        'owner-backup-freshness',
+        'owner-action-audit',
+        'owner-guardrail-signals',
+    ]) {
+        assert.ok(ops.includes(`id="${id}"`), id);
+        assert.ok(shellNav.includes(`/operator/ops#${id}`), id);
+        assert.ok(lockedNav.includes(`/operator/ops#${id}`), id);
+    }
+});
+
 test('no false claims of live status or fabricated owner revenue are introduced', () => {
     assert.doesNotMatch(premium, /Online\s*:\s*(?:true|yes)/i);
     assert.match(device, /Online status: Not verified/);
