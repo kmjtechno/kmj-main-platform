@@ -1,0 +1,24 @@
+name: KMJ Operator Receipt Cross-Chat Source Safety
+on:
+  pull_request:
+    paths:
+      - 'scripts/operations/kmj_codebridge_operator_receipt_bridge_20261027.py'
+      - 'scripts/test_kmj_codebridge_operator_receipt_bridge.py'
+      - '.github/workflows/operator-receipt-crosschat-source-safety.yml'
+      - 'docs/operations/codebridge-operator-receipts.md'
+permissions:
+  contents: read
+jobs:
+  receipt-bridge-static:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - name: Test fixed SHA-pinned receipt adapter without elevated runner privileges
+        run: |
+          set -Eeuo pipefail
+          python3 -B -m unittest discover -s scripts -p test_kmj_codebridge_operator_receipt_bridge.py -v
+          echo 'RECEIPT_BRIDGE_SOURCE=PASS'
+          echo 'REAL_OPERATOR_EXECUTION=NOT_ATTEMPTED_BY_CI'
