@@ -860,10 +860,9 @@ try {
                     errors.push('Current admin module tab missing');
                 } else {
                     const clipped = await active.evaluate((element) => {
-                        const viewport =
-                            element.closest(
-                                '[aria-label="Available admin sections"]',
-                            );
+                        const viewport = element.closest(
+                            '[aria-label="Available admin sections"]',
+                        );
                         if (!viewport) return true;
                         const tab = element.getBoundingClientRect();
                         const region = viewport.getBoundingClientRect();
