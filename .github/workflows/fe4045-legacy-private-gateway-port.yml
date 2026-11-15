@@ -1,0 +1,23 @@
+name: KMJ Legacy Private Gateway Port Guard Safety
+on:
+  pull_request:
+    paths:
+      - 'scripts/operations/fix-fe4045-legacy-main-platform-private-codebridge-port-20261027.py'
+      - 'scripts/test_fe4045_legacy_private_gateway_port.py'
+      - '.github/workflows/fe4045-legacy-private-gateway-port.yml'
+permissions:
+  contents: read
+jobs:
+  source-safety:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - name: Guard root-only scoped port and backup, no live access
+        run: |
+          set -Eeuo pipefail
+          python3 -B -m unittest discover -s scripts -p test_fe4045_legacy_private_gateway_port.py -v
+          echo 'GUARDED_SOURCE_CONTRACT=PASS'
+          echo 'LIVE_ENV_ALIGNMENT=NOT_RUN_BY_CI'
