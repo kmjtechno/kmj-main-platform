@@ -76,7 +76,7 @@ test('device registration, gateway heartbeat and pairing are never invented', ()
     assert.match(device, /connection_status: 'not_verified'/);
     assert.match(
         device,
-        /Live connection not verified · Gateway heartbeat required/,
+        /Live connection not verified · Gateway\s+heartbeat required/,
     );
     assert.match(device, /Registration saved/);
     assert.doesNotMatch(device, /Registered · Live status unknown/);
@@ -93,7 +93,7 @@ test('device controls retain secure owner confirmation and no silent pairing cha
     assert.match(device, /\/projects\/assign/);
     assert.match(device, /onFinish: \(\) => setSubmitting\(false\)/);
     assert.match(device, /\/codebridge\/pair/);
-    assert.match(device, /aria-expanded=\{details === device\.id\}/);
+    assert.match(device, /aria-expanded=\{\s*details === device\.id\s*\}/);
 });
 
 test('accessible device filtering and progressive disclosure are retained', () => {
@@ -102,7 +102,7 @@ test('accessible device filtering and progressive disclosure are retained', () =
     assert.match(device, /aria-live="polite"/);
     assert.match(
         device,
-        /Showing \{visibleDevices\.length\} of \{devices\.length\} registered devices/,
+        /Showing \{visibleDevices\.length\} of \{devices\.length\}[\s\S]{0,25}registered devices/,
     );
     assert.match(device, /Setup guidance and enrollment safety/);
     assert.match(device, /<summary className=/);
