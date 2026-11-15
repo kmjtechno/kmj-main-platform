@@ -139,7 +139,7 @@ const groups: { title: string; items: Workspace[] }[] = [
             { label: 'Task Automation', href: '/operator/ops', icon: Zap },
             {
                 label: 'Settings & Configuration',
-                href: '/operator/ops',
+                href: '/settings/profile',
                 icon: Settings,
             },
         ],
