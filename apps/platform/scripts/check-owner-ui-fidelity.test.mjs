@@ -158,7 +158,7 @@ void test('owner Ops navigation targets actual backed sections, not generic page
 void test('registered and pending project names are not clipped to badge-sized ellipses', () => {
     assert.match(
         device,
-        /className="break-words text-sm font-black leading-5"[\s\S]{0,100}\{device\.name\}/,
+        /className="text-sm leading-5 font-black break-words"[\s\S]{0,100}\{device\.name\}/,
     );
     assert.doesNotMatch(
         device,
@@ -166,7 +166,7 @@ void test('registered and pending project names are not clipped to badge-sized e
     );
     assert.match(
         device,
-        /className="min-w-0 break-words text-sm font-black leading-5"/,
+        /className="min-w-0 text-sm leading-5 font-black break-words"/,
     );
     const browser = read('scripts/browser-preview-verify.mjs');
     assert.match(browser, /CodeBridge device name clipped at width/);
