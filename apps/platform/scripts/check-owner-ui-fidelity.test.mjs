@@ -132,6 +132,8 @@ test('owner functional pages remain routed to their real protected modules', () 
     assert.match(shell, /href: '\/operator\/payments'/);
     assert.match(shell, /href: '\/operator\/kslp'/);
     assert.match(shell, /href: '\/operator\/directory'/);
+    assert.match(shell, /href: '\/settings\/profile'/);
+    assert.match(read('routes/settings.php'), /Route::get\('settings\/profile'/);
 });
 
 test('owner Ops navigation targets actual backed sections, not generic page top', () => {
