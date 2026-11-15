@@ -17,7 +17,7 @@ const manager = read('app/Services/AiProviders/ProviderManager.php');
 
 void test('OpenRouter account click starts real protected PKCE route once', () => {
     assert.match(page, /onConnectOpenRouter=\{startOpenRouter\}/);
-    assert.match(page, /router\.post\(BASE \+ '\/connect\/openrouter'/);
+    assert.match(page, /router\.post\(\s*BASE\s*\+\s*'\/connect\/openrouter'/);
     assert.match(page, /if \(oauthBusy\) return/);
     assert.match(hub, /aria-busy=\{oauthBusy\}/);
     assert.match(routes, /connect\/openrouter.*password\.confirm/);
