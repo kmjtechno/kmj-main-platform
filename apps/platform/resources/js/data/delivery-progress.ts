@@ -10,6 +10,14 @@ export type DeliveryMilestone = {
 
 export const deliveryMilestones: DeliveryMilestone[] = [
     {
+        id: 'codebridge-ai-provider-oneclick-secure-connect-20261115',
+        title: 'AI Providers — safe one-click OpenRouter connection and guided free-only keys',
+        state: 'active',
+        detail: 'Draft PR #877 introduces the real OpenRouter owner click-through PKCE account authorization, a provider-connect hub with official Groq, Google Gemini, Mistral and Hugging Face key pages, and one-action encrypted Save & Verify using read-only GET /models. Models are selected automatically only when they match an existing verified-free admission rule; paid and unverified models, failed discovery, canceled OAuth and cross-tenant use remain blocked. Other provider consoles require the owner to create and paste their own key; there is no invented third-party OAuth or automated billing activation.',
+        evidence:
+            'Source-only change; no account-level OAuth sign-in completed and no live deployment claimed. Draft PR #877 has new Laravel OAuth failure and free-model negative tests, guided-key feature tests and owner UI source-contract tests. Exact-head CI, authenticated owner browser OAuth callback, independent URL/network checks and guarded backup-and-release activation remain separate gates.',
+    },
+    {
         id: 'laravel-security-lock-compatibility-20261114',
         title: 'Laravel security patch and account settings compatibility',
         state: 'active',

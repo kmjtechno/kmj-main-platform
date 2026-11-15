@@ -1,6 +1,8 @@
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import { ArrowLeft, KeyRound, Plug, RefreshCw, Trash2 } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import AiProviderConnectHub from '@/components/ai-provider-connect-hub';
+import '../../../css/ai-provider-connect.css';
 
 type Preset = {
     key: string;
@@ -257,7 +259,13 @@ function ProviderCard({
     );
 }
 
-function AddProvider({ presets }: { presets: Preset[] }) {
+function AddProvider({
+    presets,
+    preferredPreset,
+}: {
+    presets: Preset[];
+    preferredPreset: string | null;
+}) {
     const [preset, setPreset] = useState(presets[0]?.key ?? 'groq');
     const [name, setName] = useState('');
     const [apiKey, setApiKey] = useState('');
@@ -266,9 +274,20 @@ function AddProvider({ presets }: { presets: Preset[] }) {
     const errors = usePage().props.errors as Record<string, string>;
     const selected = presets.find((item) => item.key === preset);
 
+    useEffect(() => {
+        if (
+            preferredPreset &&
+            presets.some((item) => item.key === preferredPreset)
+        ) {
+            setPreset(preferredPreset);
+        }
+    }, [preferredPreset, presets]);
+
     return (
         <form
-            className="border-sidebar-border/70 dark:border-sidebar-border grid gap-3 rounded-2xl border p-5 md:grid-cols-2"
+            id="ai-provider-key-form"
+            aria-label="Connect provider with encrypted API key"
+            className="kmj-ai-key-form border-sidebar-border/70 dark:border-sidebar-border grid gap-4 rounded-2xl border p-5 md:grid-cols-2"
             onSubmit={(event) => {
                 event.preventDefault();
                 setBusy(true);
@@ -279,6 +298,7 @@ function AddProvider({ presets }: { presets: Preset[] }) {
                         name,
                         api_key: apiKey,
                         base_url: selected?.custom ? baseUrl : null,
+                        verify_connection: true,
                     },
                     {
                         preserveScroll: true,
@@ -292,7 +312,7 @@ function AddProvider({ presets }: { presets: Preset[] }) {
             }}
         >
             <h2 className="flex items-center gap-2 text-base font-black md:col-span-2">
-                <Plug className="h-4 w-4" /> Add provider
+                <Plug className="h-4 w-4" /> Connect with provider API key
             </h2>
             <label className="text-xs font-bold">
                 Provider
@@ -358,7 +378,7 @@ function AddProvider({ presets }: { presets: Preset[] }) {
                 disabled={busy}
                 className="h-10 rounded-xl border border-red-500/40 px-4 text-xs font-bold text-red-500 md:col-span-2"
             >
-                Add provider
+                {busy ? 'Verifying securely…' : 'Save & verify connection'}
             </button>
         </form>
     );
@@ -371,11 +391,25 @@ export default function AiProviders({
     providers,
 }: Props) {
     const errors = usePage().props.errors as Record<string, string>;
+    const [preferredPreset, setPreferredPreset] = useState<string | null>(null);
+    const [oauthBusy, setOauthBusy] = useState(false);
+    const startOpenRouter = () => {
+        if (oauthBusy) return;
+        setOauthBusy(true);
+        router.post(
+            BASE + '/connect/openrouter',
+            {},
+            {
+                preserveScroll: true,
+                onFinish: () => setOauthBusy(false),
+            },
+        );
+    };
 
     return (
         <>
             <Head title="AI Providers" />
-            <div className="flex h-full min-w-0 flex-1 flex-col gap-6 p-4 sm:p-6">
+            <div className="kmj-ai-providers flex h-full min-w-0 flex-1 flex-col gap-6 p-4 sm:p-6">
                 <Link
                     href="/services/kmj-codebridge"
                     className="text-muted-foreground hover:text-foreground inline-flex items-center gap-2 text-xs font-bold"
@@ -410,28 +444,16 @@ export default function AiProviders({
                 )}
                 {canManage ? (
                     <>
-                        <div className="border-sidebar-border/70 dark:border-sidebar-border flex flex-wrap items-center justify-between gap-3 rounded-2xl border p-5">
-                            <div>
-                                <h2 className="text-base font-black">
-                                    One-click: sign in with Google or GitHub via
-                                    OpenRouter
-                                </h2>
-                                <p className="text-muted-foreground text-xs">
-                                    OpenRouter creates the API key for you. Only
-                                    models ending in “:free” are ever admitted.
-                                </p>
-                            </div>
-                            <button
-                                type="button"
-                                onClick={() =>
-                                    router.post(`${BASE}/connect/openrouter`)
-                                }
-                                className="h-10 rounded-xl border border-red-500/40 px-4 text-xs font-bold text-red-500"
-                            >
-                                Connect OpenRouter
-                            </button>
-                        </div>
-                        <AddProvider presets={presets} />
+                        <AiProviderConnectHub
+                            presets={presets}
+                            oauthBusy={oauthBusy}
+                            onConnectOpenRouter={startOpenRouter}
+                            onChooseKeyProvider={setPreferredPreset}
+                        />
+                        <AddProvider
+                            presets={presets}
+                            preferredPreset={preferredPreset}
+                        />
                     </>
                 ) : (
                     <p className="text-muted-foreground text-sm">
