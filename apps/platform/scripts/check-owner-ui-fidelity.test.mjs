@@ -15,7 +15,9 @@ const app = read('resources/js/app.tsx');
 const os = read('resources/js/components/operator-command-os.tsx');
 const css = read('resources/css/owner-module-shell.css');
 const bridge = read('resources/js/pages/services/codebridge.tsx');
-const device = read('resources/js/components/codebridge/device-control-center.tsx');
+const device = read(
+    'resources/js/components/codebridge/device-control-center.tsx',
+);
 const premium = read('resources/css/codebridge-premium.css');
 
 test('locked owner route does not fall back to customer sidebar', () => {
@@ -29,8 +31,8 @@ test('locked owner route does not fall back to customer sidebar', () => {
 test('owner brand, verified existing identity and 3 navigation sections remain', () => {
     assert.match(shell, /LockedBrand compact/);
     assert.match(shell, /Platform Owner \/ Super Admin/);
-    for (const group of ['BUSINESS','PLATFORM','OPERATIONS']) {
-        assert.ok(shell.includes("title: '"+group+"'"));
+    for (const group of ['BUSINESS', 'PLATFORM', 'OPERATIONS']) {
+        assert.ok(shell.includes("title: '" + group + "'"));
     }
     assert.match(shell, /href="\/super-admin"/);
     assert.match(shell, /href="\/operator"/);
@@ -56,17 +58,26 @@ test('shared owner shell uses readable typography and scoped dark enterprise col
 });
 
 test('CodeBridge page imports premium CSS within real authenticated owner content', () => {
-    assert.match(bridge, /import '\.\.\/\.\.\/\.\.\/css\/codebridge-premium\.css';/);
+    assert.match(
+        bridge,
+        /import '\.\.\/\.\.\/\.\.\/css\/codebridge-premium\.css';/,
+    );
     assert.match(bridge, /className="kmj-codebridge-premium flex/);
     assert.match(premium, /owner-earth\.webp/);
-    assert.match(premium, /\.kmj-codebridge-premium :is\(\.text-xs, \.text-sm\)/);
+    assert.match(
+        premium,
+        /\.kmj-codebridge-premium :is\(\.text-xs, \.text-sm\)/,
+    );
     assert.match(premium, /#codebridge-device-control/);
     assert.match(premium, /@media \(max-width: 720px\)/);
 });
 
 test('device registration, gateway heartbeat and pairing are never invented', () => {
     assert.match(device, /connection_status: 'not_verified'/);
-    assert.match(device, /Live connection not verified · Gateway heartbeat required/);
+    assert.match(
+        device,
+        /Live connection not verified · Gateway heartbeat required/,
+    );
     assert.match(device, /Registration saved/);
     assert.doesNotMatch(device, /Registered · Live status unknown/);
     assert.match(device, /'approved_unredeemed'/);
@@ -89,7 +100,10 @@ test('accessible device filtering and progressive disclosure are retained', () =
     assert.match(device, /useMemo\(\(\) => \{/);
     assert.match(device, /setView\(event\.target\.value as View\)/);
     assert.match(device, /aria-live="polite"/);
-    assert.match(device, /Showing \{visibleDevices\.length\} of \{devices\.length\} registered devices/);
+    assert.match(
+        device,
+        /Showing \{visibleDevices\.length\} of \{devices\.length\} registered devices/,
+    );
     assert.match(device, /Setup guidance and enrollment safety/);
     assert.match(device, /<summary className=/);
     assert.match(device, /Select an existing device\/project grant/);
@@ -111,7 +125,7 @@ test('owner functional pages remain routed to their real protected modules', () 
         'resources/js/pages/operator-directory.tsx',
         'resources/js/pages/operator-payments.tsx',
         'resources/js/pages/operator-kslp.tsx',
-        'resources/js/pages/operator-ops.tsx'
+        'resources/js/pages/operator-ops.tsx',
     ]) {
         assert.match(read(path), /<Head\b/, path);
     }
