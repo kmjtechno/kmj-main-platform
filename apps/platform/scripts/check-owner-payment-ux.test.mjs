@@ -10,13 +10,16 @@ const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const read = (path) => readFileSync(resolve(root, path), 'utf8');
 const page = read('resources/js/pages/operator-payments.tsx');
 const css = read('resources/css/owner-payments-premium.css');
-const onboarding = read('resources/js/components/payment-gateway-onboarding.tsx');
+const onboarding = read(
+    'resources/js/components/payment-gateway-onboarding.tsx',
+);
 const settings = read('resources/js/components/operator-payment-settings.tsx');
 
-const gitBlobHash = (source) => createHash('sha1')
-    .update('blob ' + Buffer.byteLength(source) + '\0')
-    .update(source)
-    .digest('hex');
+const gitBlobHash = (source) =>
+    createHash('sha1')
+        .update('blob ' + Buffer.byteLength(source) + '\0')
+        .update(source)
+        .digest('hex');
 
 void test('real owner Payment Gateway page opts into owner-only design scope', () => {
     assert.match(page, /import '\.\.\/\.\.\/css\/owner-payments-premium\.css'/);
@@ -44,14 +47,23 @@ void test('readable, keyboard accessible and responsive locked enterprise UI', (
 
 void test('payment security state and live charging guard stay real', () => {
     assert.match(page, /paymentReadiness\.live_charging_enabled/);
-    assert.match(page, /Live charging disabled until reconciled end-to-end tests pass/);
+    assert.match(
+        page,
+        /Live charging disabled until reconciled end-to-end tests pass/,
+    );
     assert.match(page, /live_transaction_verified/);
     assert.match(page, /sandbox_credentials_present/);
 });
 
 void test('sandbox probes and credential lifecycle files remain byte-identical', () => {
-    assert.equal(gitBlobHash(onboarding), '9f9de4abdb881c9b05b2aec9ce33564ba02e4315');
-    assert.equal(gitBlobHash(settings), 'fcdebcf49be9f51b72411fe90ec38c8c6bd0be6e');
+    assert.equal(
+        gitBlobHash(onboarding),
+        '9f9de4abdb881c9b05b2aec9ce33564ba02e4315',
+    );
+    assert.equal(
+        gitBlobHash(settings),
+        'fcdebcf49be9f51b72411fe90ec38c8c6bd0be6e',
+    );
 });
 
 void test('sandbox probe remains guarded by real stored keys', () => {
