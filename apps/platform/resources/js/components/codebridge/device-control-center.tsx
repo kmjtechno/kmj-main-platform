@@ -489,13 +489,13 @@ export default function DeviceControlCenter({
                                     key={device.id}
                                     className="min-w-0 rounded-xl border p-4"
                                 >
-                                    <div className="flex items-start justify-between gap-3">
+                                    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                                         <div className="flex min-w-0 items-start gap-3">
                                             <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-red-500/10 text-red-500">
                                                 <HardDrive className="h-5 w-5" />
                                             </span>
                                             <div className="min-w-0">
-                                                <h3 className="truncate text-sm font-black">
+                                                <h3 className="break-words text-sm font-black leading-5">
                                                     {device.name}
                                                 </h3>
                                                 <code
@@ -890,7 +890,7 @@ export default function DeviceControlCenter({
                                 className="min-w-0 rounded-xl border border-amber-500/30 p-4"
                             >
                                 <div className="flex items-center justify-between gap-2">
-                                    <h4 className="truncate text-sm font-black">
+                                    <h4 className="min-w-0 break-words text-sm font-black leading-5">
                                         {request.projectName}
                                     </h4>
                                     <span className="rounded-lg border border-amber-500/30 px-2 py-1 text-xs font-bold">
