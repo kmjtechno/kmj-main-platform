@@ -275,7 +275,10 @@ function AddProvider({
     const selected = presets.find((item) => item.key === preset);
 
     useEffect(() => {
-        if (preferredPreset && presets.some((item) => item.key === preferredPreset)) {
+        if (
+            preferredPreset &&
+            presets.some((item) => item.key === preferredPreset)
+        ) {
             setPreset(preferredPreset);
         }
     }, [preferredPreset, presets]);
@@ -393,10 +396,14 @@ export default function AiProviders({
     const startOpenRouter = () => {
         if (oauthBusy) return;
         setOauthBusy(true);
-        router.post(BASE + '/connect/openrouter', {}, {
-            preserveScroll: true,
-            onFinish: () => setOauthBusy(false),
-        });
+        router.post(
+            BASE + '/connect/openrouter',
+            {},
+            {
+                preserveScroll: true,
+                onFinish: () => setOauthBusy(false),
+            },
+        );
     };
 
     return (
