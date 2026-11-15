@@ -274,7 +274,7 @@ step_rollback() {
   mark POINTER "$(pointer)"
   health || :
   restart_queue
-  mark ROLLBACK DONE_TO_E5B438
+  mark ROLLBACK DONE_TO_E71582
 }
 
 step_status() {
