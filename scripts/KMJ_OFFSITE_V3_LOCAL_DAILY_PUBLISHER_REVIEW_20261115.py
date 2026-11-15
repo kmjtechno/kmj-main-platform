@@ -76,7 +76,7 @@ def regular(fd,name,allowed_uids,*,restricted=False):
         s=os.fstat(f)
         if (not stat.S_ISREG(s.st_mode) or s.st_uid not in allowed_uids
             or s.st_nlink!=1 or s.st_mode&0o022
-            or (secret and stat.S_IMODE(s.st_mode)!=0o600)):
+            or (restricted and stat.S_IMODE(s.st_mode)!=0o600)):
             raise Deny("SNAPSHOT_FILE_UNSAFE")
         return f,s
     except BaseException:
