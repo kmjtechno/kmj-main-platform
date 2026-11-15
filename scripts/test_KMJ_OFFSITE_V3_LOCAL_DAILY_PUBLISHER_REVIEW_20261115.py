@@ -48,13 +48,21 @@ class DailySnapshotSourceOnlyFixtures(unittest.TestCase):
         self.dump.chmod(0o600)
         self.mkfile("app.env",b"fixture=no-secret-data\n")
         self.mkfile("RECOVERY-METADATA.txt",b"fixture-independent-restore=NOT_VERIFIED\n")
-        self.mkfile("SHA256SUMS",
-            (hashlib.sha256(self.dump.read_bytes()).hexdigest()+"  platform.dump\n").encode())
+        self.mkfile("SHA256SUMS", (
+            hashlib.sha256(self.dump.read_bytes()).hexdigest()+"  platform.dump\n"+
+            hashlib.sha256((self.staged/"app.env").read_bytes()).hexdigest()+"  app.env\n"+
+            hashlib.sha256((self.staged/"RECOVERY-METADATA.txt").read_bytes()).hexdigest()+
+            "  RECOVERY-METADATA.txt\n"
+        ).encode())
 
     def mkfile(self,relative,body):
         path=self.staged/relative
         path.write_bytes(body)
         path.chmod(0o600)
+        manifest=self.staged/"SHA256SUMS"
+        if relative!="SHA256SUMS" and manifest.is_file():
+            with manifest.open("a",encoding="ascii") as sink:
+                sink.write(hashlib.sha256(body).hexdigest()+"  "+relative+"\n")
         return path
 
     def publish(self,**kw):
@@ -131,8 +139,7 @@ class DailySnapshotSourceOnlyFixtures(unittest.TestCase):
         manifest=self.staged/"SHA256SUMS"
         prior=manifest.read_text()
         manifest.write_text(
-            prior+digest+"  config/letsencrypt/archive/"+lineage+"/cert1.pem\n"
-                 +digest+"  config/letsencrypt/live/"+lineage+"/cert.pem\n",
+            prior+digest+"  config/letsencrypt/live/"+lineage+"/cert.pem\n",
             encoding="ascii")
         manifest.chmod(0o600)
         return link,target
@@ -236,6 +243,44 @@ class DailySnapshotSourceOnlyFixtures(unittest.TestCase):
             with self.assertRaisesRegex(m.Deny,"DAILY_DISK_RESERVE_LOW"):
                 self.publish()
         self.assertTrue(self.staged.exists())
+
+    def test_modified_app_env_after_manifest_is_rejected(self):
+        env=self.staged/"app.env"
+        env.write_bytes(b"fixture-changed-after-manifest\n")
+        with self.assertRaisesRegex(m.Deny,"SNAPSHOT_FILE_HASH_MISMATCH"):
+            self.publish()
+        self.assertFalse((self.daily/self.stamp).exists())
+
+    def test_modified_optional_storage_file_is_rejected(self):
+        path=self.mkfile("platform-storage/logs/old.txt",b"original")
+        path.write_bytes(b"changed-content")
+        with self.assertRaisesRegex(m.Deny,"SNAPSHOT_FILE_HASH_MISMATCH"):
+            self.publish()
+        self.assertFalse((self.daily/self.stamp).exists())
+
+    def test_unlisted_file_is_rejected(self):
+        rogue=self.staged/"platform-storage"/"app"/"unlisted.txt"
+        rogue.write_bytes(b"this file has no manifest row")
+        rogue.chmod(0o600)
+        with self.assertRaisesRegex(m.Deny,"SNAPSHOT_MANIFEST_UNLISTED_FILE"):
+            self.publish()
+        self.assertFalse((self.daily/self.stamp).exists())
+
+    def test_manifest_orphan_reference_is_rejected(self):
+        manifest=self.staged/"SHA256SUMS"
+        with manifest.open("a",encoding="ascii") as sink:
+            sink.write("b"*64+"  platform-storage/app/missing.txt\n")
+        with self.assertRaisesRegex(m.Deny,"SNAPSHOT_MANIFEST_COVERAGE_INCOMPLETE"):
+            self.publish()
+        self.assertFalse((self.daily/self.stamp).exists())
+
+    def test_manifest_cannot_self_reference(self):
+        manifest=self.staged/"SHA256SUMS"
+        with manifest.open("a",encoding="ascii") as sink:
+            sink.write("a"*64+"  SHA256SUMS\n")
+        with self.assertRaisesRegex(m.Deny,"SNAPSHOT_MANIFEST_COVERAGE_INCOMPLETE"):
+            self.publish()
+        self.assertFalse((self.daily/self.stamp).exists())
 
     def test_regular_legacy_files_are_preserved(self):
         self.mkfile("config/sites-available/custom.conf",b"fixture-conf")
