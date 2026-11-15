@@ -154,6 +154,8 @@ def copy_tree(src_path,dstfd,owners,stats,manifest,prefix,depth=0):
             stats["entries"]+=1
             if stats["entries"]>MAX_ENTRIES:raise Deny("SOURCE_TREE_ENTRY_LIMIT")
             before=os.stat(name,dir_fd=src,follow_symlinks=False)
+            if not (stat.S_ISDIR(before.st_mode) or stat.S_ISREG(before.st_mode)):
+                raise Deny("SOURCE_LINK_OR_SPECIAL_ENTRY")
             if before.st_uid not in owners or before.st_mode&0o022:
                 raise Deny("SOURCE_ENTRY_OWNER_OR_MODE")
             if stat.S_ISREG(before.st_mode):
