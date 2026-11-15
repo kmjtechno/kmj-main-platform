@@ -123,7 +123,7 @@ const groups = [
             ['Audit Logs', '/operator/ops#owner-action-audit', FileText],
             ['Monitoring & Alerts', '/operator/ops#owner-guardrail-signals', Bell],
             ['Task Automation', '/operator/ops', Zap],
-            ['Settings & Configuration', '/operator/ops', Settings],
+            ['Settings & Configuration', '/settings/profile', Settings],
         ],
     },
 ];
