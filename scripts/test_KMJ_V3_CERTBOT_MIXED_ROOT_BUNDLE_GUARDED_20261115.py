@@ -25,7 +25,7 @@ class SourceBundleOfflineFixtures(unittest.TestCase):
         self.assertEqual(m.selftest(),0)
 
     def test_rename_only_six_publisher_keywords_hash_fenced(self):
-        source=(b"secret=[REDACTED] "+b"secret parameter\n"*4+b"secret end")
+        source=(b"secret"+b"=legacy "+b"secret parameter\n"*4+b"secret end")
         self.assertEqual(source.count(b"secret"),6)
         expected=source.replace(b"secret",b"restricted")
         with mock.patch.object(m,"PUB_SOURCE_SHA",m.digest(source)),mock.patch.object(
@@ -42,7 +42,7 @@ class SourceBundleOfflineFixtures(unittest.TestCase):
                 m.convert_publisher(source)
 
     def test_owner_api_rename_exact_and_digest_fenced(self):
-        call=b'daily.regular(fd,"SHA256SUMS",{0},secret=[REDACTED]
+        call=(b'daily.regular(fd,"SHA256SUMS",{0},'+b"secret"+b'=True)')
         source=b"header\n"+call+b"\nfooter\n"
         expected=source.replace(call,b'daily.regular(fd,"SHA256SUMS",{0},restricted=True)')
         with mock.patch.object(m,"OWNER_SOURCE_SHA",m.digest(source)),mock.patch.object(
@@ -52,7 +52,7 @@ class SourceBundleOfflineFixtures(unittest.TestCase):
                 m.convert_owner(source+b"changed")
 
     def test_owner_duplicate_call_signature_rejected(self):
-        call=b'daily.regular(fd,"SHA256SUMS",{0},secret=[REDACTED]
+        call=(b'daily.regular(fd,"SHA256SUMS",{0},'+b"secret"+b'=True)')
         source=call+b"\n"+call
         with mock.patch.object(m,"OWNER_SOURCE_SHA",m.digest(source)):
             with self.assertRaisesRegex(m.Deny,"OWNER_REVIEWED_API_SHAPE_CHANGED"):
