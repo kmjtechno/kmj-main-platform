@@ -89,6 +89,7 @@ final class AiProviderOpenRouterConnectTest extends TestCase
         $this->assertSame('openrouter', $provider->preset);
         $this->assertSame('ok', $provider->health);
         $this->assertSame(['meta/llama-3:free', 'x/paid-model'], $provider->models_cache);
+        $this->assertSame('meta/llama-3:free', $provider->default_model);
         $this->assertNull(session('ai_provider_oauth'));
         $this->assertStringNotContainsString(self::KEY, (string) session('status'));
 
@@ -136,6 +137,51 @@ final class AiProviderOpenRouterConnectTest extends TestCase
 
         $this->assertDatabaseCount('ai_providers', 0);
         Http::assertNothingSent();
+    }
+
+    public function test_denied_oauth_callback_never_exchanges_a_code_or_adds_a_provider(): void
+    {
+        Http::fake();
+        $this->confirmed($this->owner)->post(self::START);
+
+        $this->actingAs($this->owner)->get(self::CALLBACK.'?error=access_denied')
+            ->assertSessionHasErrors('provider');
+
+        $this->assertNull(session('ai_provider_oauth'));
+        $this->assertDatabaseCount('ai_providers', 0);
+        Http::assertNothingSent();
+    }
+
+    public function test_only_paid_catalog_models_leave_free_default_unset(): void
+    {
+        Http::fake([
+            'openrouter.ai/api/v1/auth/keys' => Http::response(['key' => self::KEY], 200),
+            'openrouter.ai/api/v1/models' => Http::response(['data' => [['id' => 'x/paid-model']]], 200),
+        ]);
+        $this->confirmed($this->owner)->post(self::START);
+        $this->actingAs($this->owner)->get(self::CALLBACK.'?code=abcdefgh12345')->assertRedirect();
+
+        $provider = AiProvider::query()->firstOrFail();
+        $this->assertNull($provider->default_model);
+        $this->assertTrue($provider->free_only);
+        $this->assertStringContainsString('0 ":free" model', (string) session('status'));
+    }
+
+    public function test_unreachable_free_model_catalog_does_not_claim_a_verified_connection(): void
+    {
+        Http::fake([
+            'openrouter.ai/api/v1/auth/keys' => Http::response(['key' => self::KEY], 200),
+            'openrouter.ai/api/v1/models' => Http::response(['error' => 'temporarily unavailable'], 503),
+        ]);
+        $this->confirmed($this->owner)->post(self::START);
+        $this->actingAs($this->owner)->get(self::CALLBACK.'?code=abcdefgh12345')->assertRedirect();
+
+        $provider = AiProvider::query()->firstOrFail();
+        $this->assertSame('unreachable', $provider->health);
+        $this->assertNull($provider->default_model);
+        $this->assertStringContainsString('verification is pending', (string) session('status'));
+        $this->assertStringNotContainsString(self::KEY, (string) session('status'));
+        Http::assertSentCount(2);
     }
 
     private function fakeOpenRouter(): void
