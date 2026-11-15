@@ -1,4 +1,10 @@
-import { ExternalLink, KeyRound, LockKeyhole, ShieldCheck, Zap } from 'lucide-react';
+import {
+    ExternalLink,
+    KeyRound,
+    LockKeyhole,
+    ShieldCheck,
+    Zap,
+} from 'lucide-react';
 
 type Preset = {
     key: string;
@@ -81,7 +87,10 @@ export default function AiProviderConnectHub({
                 <div className="kmj-ai-oauth-panel mt-5 flex flex-wrap items-center justify-between gap-4 rounded-2xl border p-5">
                     <div className="max-w-2xl">
                         <h3 className="flex items-center gap-2 text-lg font-bold">
-                            <Zap className="h-5 w-5 text-red-400" aria-hidden="true" />
+                            <Zap
+                                className="h-5 w-5 text-red-400"
+                                aria-hidden="true"
+                            />
                             OpenRouter — connect with your account
                         </h3>
                         <p className="text-muted-foreground mt-1 text-sm leading-6">
@@ -99,17 +108,22 @@ export default function AiProviderConnectHub({
                         className="kmj-ai-primary-action inline-flex min-h-11 items-center justify-center gap-2 rounded-xl px-5 py-3 text-sm font-bold disabled:cursor-wait disabled:opacity-60"
                     >
                         <LockKeyhole className="h-4 w-4" aria-hidden="true" />
-                        {oauthBusy ? 'Opening secure sign-in…' : 'Connect OpenRouter'}
+                        {oauthBusy
+                            ? 'Opening secure sign-in…'
+                            : 'Connect OpenRouter'}
                     </button>
                 </div>
             )}
 
             <div className="mt-5">
-                <h3 className="text-base font-bold">Other providers — guided key connection</h3>
+                <h3 className="text-base font-bold">
+                    Other providers — guided key connection
+                </h3>
                 <p className="text-muted-foreground mt-1 text-sm">
-                    These providers require their own key. The official dashboard
-                    opens in a new tab and the KMJ connection form is prepared
-                    below; the key is never read automatically from the browser.
+                    These providers require their own key. The official
+                    dashboard opens in a new tab and the KMJ connection form is
+                    prepared below; the key is never read automatically from the
+                    browser.
                 </p>
                 <div className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
                     {guides
@@ -123,7 +137,9 @@ export default function AiProviderConnectHub({
                                     key={guide.key}
                                     className="kmj-ai-key-card flex flex-col rounded-xl border p-4"
                                 >
-                                    <h4 className="font-bold">{provider?.label}</h4>
+                                    <h4 className="font-bold">
+                                        {provider?.label}
+                                    </h4>
                                     <p className="text-muted-foreground mt-1 flex-1 text-sm leading-6">
                                         {guide.helper}
                                     </p>
@@ -131,12 +147,20 @@ export default function AiProviderConnectHub({
                                         href={guide.url}
                                         target="_blank"
                                         rel="noopener noreferrer"
-                                        onClick={() => onChooseKeyProvider(guide.key)}
+                                        onClick={() =>
+                                            onChooseKeyProvider(guide.key)
+                                        }
                                         className="mt-4 inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border px-3 text-sm font-semibold"
                                     >
-                                        <KeyRound className="h-4 w-4" aria-hidden="true" />
+                                        <KeyRound
+                                            className="h-4 w-4"
+                                            aria-hidden="true"
+                                        />
                                         Get key &amp; connect
-                                        <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
+                                        <ExternalLink
+                                            className="h-3.5 w-3.5"
+                                            aria-hidden="true"
+                                        />
                                     </a>
                                 </article>
                             );
