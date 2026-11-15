@@ -89,10 +89,16 @@ void test('owner enterprise styles are scoped and inputs remain accessible', () 
 
 void test('catalog-only and paid models never enter free selectable defaults', () => {
     const ui = read('resources/js/pages/services/ai-providers.tsx');
-    assert.match(manager, /public function admittedFreeModels\(AiProvider \$provider\): array/);
+    assert.match(
+        manager,
+        /public function admittedFreeModels\(AiProvider \$provider\): array/,
+    );
     assert.match(manager, /FreePolicy::inferenceAllowed/);
     assert.match(manager, /\$known = \$this->admittedFreeModels\(\$provider\)/);
-    assert.match(manager, /'models' => \$this->admittedFreeModels\(\$provider\)/);
+    assert.match(
+        manager,
+        /'models' => \$this->admittedFreeModels\(\$provider\)/,
+    );
     assert.match(manager, /discovered_model_count/);
     assert.match(ui, /Verified-free default model/);
     assert.match(ui, /Verified-free fallback models/);
