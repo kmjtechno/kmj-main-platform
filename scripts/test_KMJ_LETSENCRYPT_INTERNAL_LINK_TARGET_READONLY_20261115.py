@@ -24,8 +24,8 @@ class CertLinkTargetTests(unittest.TestCase):
         self.symlink = self.root / "live/site/cert.pem"
         self.uid = os.geteuid()
 
-    def check(self, expected=1):
-        return m.inspect_tree(self.root, self.uid, expected=expected)
+    def check(self, expected=1, **kwargs):
+        return m.inspect_tree(self.root, self.uid, expected=expected, **kwargs)
 
     def test_single_certbot_style_in_tree_link(self):
         self.symlink.symlink_to("../../archive/site/cert1.pem")
@@ -107,6 +107,68 @@ class CertLinkTargetTests(unittest.TestCase):
                 m.Block, "LINK_EXPECTATION_INVALID"
             ):
                 self.check(expected=count)
+
+    def certbot_set(self, lineage="site"):
+        archive = self.root / "archive" / lineage
+        live = self.root / "live" / lineage
+        archive.mkdir(parents=True, mode=0o700, exist_ok=True)
+        live.mkdir(parents=True, mode=0o700, exist_ok=True)
+        for name in m.CERTBOT_FILES:
+            stem = name[:-4] + "1.pem"
+            dest = archive / stem
+            if not dest.exists():
+                dest.write_bytes(("fixture " + name).encode("ascii"))
+                dest.chmod(0o600)
+            (live / name).symlink_to("../../archive/" + lineage + "/" + stem)
+
+    def test_standard_certbot_four_link_lineage(self):
+        self.certbot_set()
+        x = self.check(expected=4, certbot_shape=True)
+        self.assertEqual(x["lineages"], 1)
+        self.assertEqual(x["targets"], 4)
+
+    def test_two_certbot_lineages_eight_links(self):
+        self.certbot_set()
+        self.certbot_set("second.test")
+        x = self.check(expected=8, certbot_shape=True)
+        self.assertEqual(x["lineages"], 2)
+        self.assertEqual(x["targets"], 8)
+
+    def test_partial_lineage_is_denied(self):
+        self.symlink.symlink_to("../../archive/site/cert1.pem")
+        with self.assertRaisesRegex(m.Block, "CERTBOT_INCOMPLETE_LINEAGE"):
+            self.check(certbot_shape=True)
+
+    def test_cross_lineage_even_when_target_exists_denied(self):
+        self.certbot_set()
+        self.certbot_set("second.test")
+        target = self.root / "live/site/cert.pem"
+        target.unlink()
+        target.symlink_to("../../archive/second.test/cert1.pem")
+        with self.assertRaisesRegex(m.Block, "CERTBOT_TARGET_NOT_SAME_LINEAGE"):
+            self.check(expected=8, certbot_shape=True)
+
+    def test_noncanonical_archive_version_denied(self):
+        self.certbot_set()
+        target = self.root / "live/site/cert.pem"
+        target.unlink()
+        target.symlink_to("../../archive/site/cert0000.pem")
+        with self.assertRaisesRegex(m.Block, "CERTBOT_TARGET_NOT_SAME_LINEAGE"):
+            self.check(expected=4, certbot_shape=True)
+
+    def test_symlink_in_wrong_subfolder_denied(self):
+        self.certbot_set()
+        sub = self.root / "live" / "site" / "nested"
+        sub.mkdir(mode=0o700)
+        (sub / "cert.pem").symlink_to("../../../archive/site/cert1.pem")
+        with self.assertRaisesRegex(m.Block, "CERTBOT_LINK_SHAPE_NOT_STANDARD"):
+            self.check(expected=5, certbot_shape=True)
+
+    def test_non_certbot_name_denied(self):
+        self.certbot_set()
+        (self.root / "live/site/untrusted.pem").symlink_to("../../archive/site/cert1.pem")
+        with self.assertRaisesRegex(m.Block, "CERTBOT_LINK_SHAPE_NOT_STANDARD"):
+            self.check(expected=5, certbot_shape=True)
 
     def test_selftest_uses_only_disposable_fixture(self):
         self.assertEqual(m.main.__name__, "main")
