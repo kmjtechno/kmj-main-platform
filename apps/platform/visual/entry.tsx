@@ -239,7 +239,8 @@ function WorkspacePreview() {
 }
 function CanonicalDevicesPreview() {
     return (
-        <CodeBridgeService
+        <OwnerModuleShell>
+            <CodeBridgeService
             organization={{
                 id: 'qa-preview-organization',
                 name: 'Synthetic preview organization',
@@ -283,7 +284,8 @@ function CanonicalDevicesPreview() {
                     },
                 ],
             }}
-        />
+            />
+        </OwnerModuleShell>
     );
 }
 
@@ -414,7 +416,8 @@ void createInertiaApp({
                     ownerOps ||
                     ownerDevices ||
                     ownerDeveloper ||
-                    ownerProducts,
+                    ownerProducts ||
+                    canonicalDevices,
             },
             localization: {
                 locale: 'en',
