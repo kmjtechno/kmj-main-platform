@@ -15,12 +15,12 @@
     background: linear-gradient(130deg, #101c2a 0%, #0b121d 60%, #140b14 100%);
 }
 .owner-module-shell .kmj-ai-providers .kmj-ai-oauth-panel {
-    border-color: rgba(245, 43, 81, .48);
-    background: linear-gradient(115deg, rgba(83, 12, 33, .48), #101923);
+    border-color: rgba(245, 43, 81, 0.48);
+    background: linear-gradient(115deg, rgba(83, 12, 33, 0.48), #101923);
 }
 .owner-module-shell .kmj-ai-providers .kmj-ai-zero-spend {
     border-color: #466756;
-    background: rgba(35, 96, 64, .13);
+    background: rgba(35, 96, 64, 0.13);
     color: #bef2d2;
 }
 .owner-module-shell .kmj-ai-providers .kmj-ai-key-card {
@@ -39,9 +39,11 @@
 .owner-module-shell .kmj-ai-providers .kmj-ai-primary-action {
     background: #db143d;
     color: #fff;
-    box-shadow: 0 5px 25px rgba(233, 20, 64, .16);
+    box-shadow: 0 5px 25px rgba(233, 20, 64, 0.16);
 }
-.owner-module-shell .kmj-ai-providers .kmj-ai-primary-action:hover:not(:disabled) {
+.owner-module-shell
+    .kmj-ai-providers
+    .kmj-ai-primary-action:hover:not(:disabled) {
     background: #f02a51;
 }
 .owner-module-shell .kmj-ai-providers .kmj-ai-key-form {
@@ -62,7 +64,9 @@
     border-color: #4e6074;
     color: #f0f4fa;
 }
-.owner-module-shell .kmj-ai-providers :is(button, a, input, select, textarea):focus-visible {
+.owner-module-shell
+    .kmj-ai-providers
+    :is(button, a, input, select, textarea):focus-visible {
     outline: 2px solid #ff5a7c;
     outline-offset: 3px;
 }
