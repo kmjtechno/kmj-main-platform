@@ -118,10 +118,18 @@ const groups = [
         title: 'OPERATIONS',
         items: [
             ['System Health', '/operator/ops#owner-readiness', Activity],
-            ['Backups & Restore', '/operator/ops#owner-backup-freshness', Database],
+            [
+                'Backups & Restore',
+                '/operator/ops#owner-backup-freshness',
+                Database,
+            ],
             ['Security & Access', '/settings/security', ShieldCheck],
             ['Audit Logs', '/operator/ops#owner-action-audit', FileText],
-            ['Monitoring & Alerts', '/operator/ops#owner-guardrail-signals', Bell],
+            [
+                'Monitoring & Alerts',
+                '/operator/ops#owner-guardrail-signals',
+                Bell,
+            ],
             ['Task Automation', '/operator/ops', Zap],
             ['Settings & Configuration', '/settings/profile', Settings],
         ],
