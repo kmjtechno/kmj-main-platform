@@ -79,7 +79,9 @@ class V3SameInvocationReviewFixtures(unittest.TestCase):
         self._file("app.env",b"OFFLINE_FIXTURE_NO_SECRET\n")
         self._file("RECOVERY-METADATA.txt",b"offline_fixture_only\n")
         self._file("SHA256SUMS",(
-            hashlib.sha256(self.dump).hexdigest()+"  platform.dump\n"
+            hashlib.sha256(self.dump).hexdigest()+"  platform.dump\n"+
+            hashlib.sha256(b"OFFLINE_FIXTURE_NO_SECRET\n").hexdigest()+"  app.env\n"+
+            hashlib.sha256(b"offline_fixture_only\n").hexdigest()+"  RECOVERY-METADATA.txt\n"
         ).encode("ascii"))
         for folder in ("platform-storage","config"):
             sub=self.snapshot/folder
@@ -101,6 +103,10 @@ class V3SameInvocationReviewFixtures(unittest.TestCase):
         file=self.snapshot/name
         file.write_bytes(body)
         file.chmod(0o600)
+        manifest=self.snapshot/"SHA256SUMS"
+        if name!="SHA256SUMS" and manifest.is_file():
+            with manifest.open("a",encoding="ascii") as out:
+                out.write(hashlib.sha256(body).hexdigest()+"  "+name+"\n")
         return file
 
     def commit(self,**kwargs):
