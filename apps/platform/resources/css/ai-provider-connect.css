@@ -1,0 +1,91 @@
+/*
+ * KMJ TECHNO AI Provider Connect — authenticated owner-only presentation.
+ * No global theme changes, paid inference unlocks or client-side secrets.
+ */
+.owner-module-shell .kmj-ai-providers {
+    color: #eff4fa;
+    font-size: 14px;
+    line-height: 1.55;
+    width: 100%;
+    max-width: none;
+    padding: clamp(16px, 1.5vw, 26px);
+}
+.owner-module-shell .kmj-ai-providers .kmj-ai-connect-hub {
+    border-color: #33465b;
+    background: linear-gradient(130deg, #101c2a 0%, #0b121d 60%, #140b14 100%);
+}
+.owner-module-shell .kmj-ai-providers .kmj-ai-oauth-panel {
+    border-color: rgba(245, 43, 81, .48);
+    background: linear-gradient(115deg, rgba(83, 12, 33, .48), #101923);
+}
+.owner-module-shell .kmj-ai-providers .kmj-ai-zero-spend {
+    border-color: #466756;
+    background: rgba(35, 96, 64, .13);
+    color: #bef2d2;
+}
+.owner-module-shell .kmj-ai-providers .kmj-ai-key-card {
+    border-color: #35465a;
+    background: #0d1722;
+    min-width: 0;
+}
+.owner-module-shell .kmj-ai-providers .kmj-ai-key-card a {
+    border-color: #485d73;
+    background: #162331;
+}
+.owner-module-shell .kmj-ai-providers .kmj-ai-key-card a:hover {
+    border-color: #ff5371;
+    background: #263243;
+}
+.owner-module-shell .kmj-ai-providers .kmj-ai-primary-action {
+    background: #db143d;
+    color: #fff;
+    box-shadow: 0 5px 25px rgba(233, 20, 64, .16);
+}
+.owner-module-shell .kmj-ai-providers .kmj-ai-primary-action:hover:not(:disabled) {
+    background: #f02a51;
+}
+.owner-module-shell .kmj-ai-providers .kmj-ai-key-form {
+    border-color: #35465a;
+    background: #0b141f;
+}
+.owner-module-shell .kmj-ai-providers :is(.text-xs, .text-sm) {
+    font-size: 14px;
+    line-height: 1.55;
+}
+.owner-module-shell .kmj-ai-providers .text-muted-foreground {
+    color: #b6c4d2;
+}
+.owner-module-shell .kmj-ai-providers :is(input, select, textarea) {
+    font-size: 14px;
+    min-height: 44px;
+    background: #142132;
+    border-color: #4e6074;
+    color: #f0f4fa;
+}
+.owner-module-shell .kmj-ai-providers :is(button, a, input, select, textarea):focus-visible {
+    outline: 2px solid #ff5a7c;
+    outline-offset: 3px;
+}
+.owner-module-shell .kmj-ai-providers .kmj-ai-key-form button[type='submit'] {
+    min-height: 44px;
+    color: #fff;
+    background: #b81238;
+}
+@media (max-width: 720px) {
+    .owner-module-shell .kmj-ai-providers {
+        padding: 12px;
+    }
+    .owner-module-shell .kmj-ai-providers .kmj-ai-oauth-panel {
+        padding: 16px;
+    }
+    .owner-module-shell .kmj-ai-providers .kmj-ai-key-card {
+        min-width: 0;
+    }
+}
+@media (prefers-reduced-motion: reduce) {
+    .owner-module-shell .kmj-ai-providers *,
+    .owner-module-shell .kmj-ai-providers *::before,
+    .owner-module-shell .kmj-ai-providers *::after {
+        transition: none !important;
+    }
+}
