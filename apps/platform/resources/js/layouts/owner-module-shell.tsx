@@ -123,10 +123,10 @@ const groups: { title: string; items: Workspace[] }[] = [
     {
         title: 'OPERATIONS',
         items: [
-            { label: 'System Health', href: '/operator/ops', icon: Activity },
+            { label: 'System Health', href: '/operator/ops#owner-readiness', icon: Activity },
             {
                 label: 'Backups & Restore',
-                href: '/operator/ops',
+                href: '/operator/ops#owner-backup-freshness',
                 icon: Database,
             },
             {
@@ -134,8 +134,8 @@ const groups: { title: string; items: Workspace[] }[] = [
                 href: '/settings/security',
                 icon: ShieldCheck,
             },
-            { label: 'Audit Logs', href: '/operator/ops', icon: FileText },
-            { label: 'Monitoring & Alerts', href: '/operator/ops', icon: Bell },
+            { label: 'Audit Logs', href: '/operator/ops#owner-action-audit', icon: FileText },
+            { label: 'Monitoring & Alerts', href: '/operator/ops#owner-guardrail-signals', icon: Bell },
             { label: 'Task Automation', href: '/operator/ops', icon: Zap },
             {
                 label: 'Settings & Configuration',
