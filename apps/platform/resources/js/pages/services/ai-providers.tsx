@@ -173,7 +173,12 @@ function ProviderCard({
                         Verified-free default model
                         <select
                             className="bg-background mt-1 block h-9 w-full rounded-xl border px-2"
-                            value={provider.default_model && provider.models.includes(provider.default_model) ? provider.default_model : ''}
+                            value={
+                                provider.default_model &&
+                                provider.models.includes(provider.default_model)
+                                    ? provider.default_model
+                                    : ''
+                            }
                             disabled={busy || !canManage}
                             onChange={(event) =>
                                 patch({
