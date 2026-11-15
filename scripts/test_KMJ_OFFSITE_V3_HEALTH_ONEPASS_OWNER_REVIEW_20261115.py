@@ -119,6 +119,33 @@ class GuardedOnepassTests(unittest.TestCase):
         self.assertNotIn("install_service",m.__dict__)
         self.assertNotIn("install_timer",m.__dict__)
 
+    def test_pinned_source_bytes_and_publisher_api_compatible(self):
+        # Fail the SAME offline gate if any SHA-pinned module is missing,
+        # modified, or the owner wrapper calls an incompatible keyword.
+        import inspect
+        for filename, expected in sorted(m.PINS.items()):
+            with self.subTest(filename=filename):
+                source = SOURCE.with_name(filename).read_bytes()
+                self.assertEqual(hashlib.sha256(source).hexdigest(), expected)
+        publisher_source = SOURCE.with_name(
+            "KMJ_OFFSITE_V3_LOCAL_DAILY_PUBLISHER_REVIEW_20261115.py"
+        )
+        spec = importlib.util.spec_from_file_location(
+            "kmj_v3_publisher_exact_source_compat", publisher_source
+        )
+        publisher = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(publisher)
+        self.assertIn("restricted", inspect.signature(publisher.regular).parameters)
+        owner_source = SOURCE.read_text(encoding="utf-8")
+        self.assertIn(
+            'daily.regular(fd,"SHA256SUMS",{0},restricted=True)',
+            owner_source,
+        )
+        self.assertNotIn(
+            'daily.regular(fd,"SHA256SUMS",{0},secret=True)',
+            owner_source,
+        )
+
     def test_selftest_offline_no_installed_sources(self):
         with mock.patch.object(m,"runtime_sources") as preflight:
             with mock.patch.object(m,"install_bundle") as install:
