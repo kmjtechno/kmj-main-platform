@@ -4,6 +4,8 @@ on:
     paths:
       - "scripts/KMJ_OFFSITE_V3_DUAL_ARTIFACT_POLICY_REVIEW_20261115.py"
       - "scripts/test_KMJ_OFFSITE_V3_DUAL_ARTIFACT_POLICY_REVIEW_20261115.py"
+      - "scripts/KMJ_OFFSITE_V3_LOCAL_CIPHER_PUBLISHER_REVIEW_20261115.py"
+      - "scripts/test_KMJ_OFFSITE_V3_LOCAL_CIPHER_PUBLISHER_REVIEW_20261115.py"
       - ".github/workflows/kmj-v3-dual-artifact-policy-qa.yml"
   workflow_dispatch:
 permissions:
@@ -21,10 +23,12 @@ jobs:
         run: |
           python3 -m py_compile scripts/KMJ_OFFSITE_V3_DUAL_ARTIFACT_POLICY_REVIEW_20261115.py
           python3 -m py_compile scripts/test_KMJ_OFFSITE_V3_DUAL_ARTIFACT_POLICY_REVIEW_20261115.py
+          python3 -m py_compile scripts/KMJ_OFFSITE_V3_LOCAL_CIPHER_PUBLISHER_REVIEW_20261115.py
+          python3 -m py_compile scripts/test_KMJ_OFFSITE_V3_LOCAL_CIPHER_PUBLISHER_REVIEW_20261115.py
       - name: Run disposable fixture tests (no actual vault, backup, network or root)
         run: |
           python3 -m unittest discover -s scripts \
-            -p 'test_KMJ_OFFSITE_V3_DUAL_ARTIFACT_POLICY_REVIEW_20261115.py' -v
+            -p 'test_KMJ_OFFSITE_V3_*_20261115.py' -v
       - name: Reject any accidental installation CLI added to review-only policy
         shell: bash
         run: |
@@ -39,5 +43,10 @@ jobs:
           assert 'SNAPSHOT_WRITTEN=NO' in src
           assert 'RETENTION_EXECUTED=NO' in src
           assert all(not any(token in arg.value for token in ('--apply', '--install', '--send', '--deploy')) for node in ast.walk(tree) if isinstance(node,ast.Call) for arg in node.args if isinstance(arg,ast.Constant) and isinstance(arg.value,str))
+          writer=Path('scripts/KMJ_OFFSITE_V3_LOCAL_CIPHER_PUBLISHER_REVIEW_20261115.py').read_text()
+          assert 'SOURCE_ONLY_NOT_INSTALLED' in writer
+          assert 'REMOTE_SFTP_SHA_READBACK=PASS' in writer
+          assert 'renameat2' in writer
+          assert 'remote_restore_verified' in writer
           print('SOURCE_REVIEW_ONLY_CONTRACT=PASS')
           PY
