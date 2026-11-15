@@ -31,7 +31,7 @@ import tempfile
 import types
 
 BASE=Path("/srv/kmj-codebridge-projects/kmj-main-platform/scripts")
-ROOT=Path("/usr/local/libexec/kmj-offsite-dual-local-v3-20261115")
+ROOT=Path("/usr/local/libexec/kmj-offsite-dual-local-v3-certbot-20261115")
 DAILY=Path("/var/backups/kmj-elite-daily")
 VAULT=Path("/var/backups/kmj-elite-offsite-encrypted")
 STAGE=Path("/var/backups/kmj-v3-private-stage")
@@ -158,6 +158,110 @@ def trusted_dir(path,owners):
             raise Deny("SOURCE_DIRECTORY_UNTRUSTED")
     return obj
 
+def validate_certbot_live_matrix(publisher_raw):
+    """Read-only: exactly eight original Certbot links, four per live lineage.
+
+    This runs on --preflight BEFORE pg_dump or creating local backup trees.
+    Whitelist and O_NOFOLLOW target checks are furnished by the exact pinned
+    daily publisher source; no link target, secret or source name is printed.
+    """
+    name="KMJ_OFFSITE_V3_LOCAL_DAILY_PUBLISHER_REVIEW_20261115.py"
+    module=types.ModuleType("kmj_exact_certbot_source_guard")
+    module.__file__=str(BASE/name)
+    exec(compile(publisher_raw,str(BASE/name),"exec"),module.__dict__)
+    flags=os.O_RDONLY|os.O_DIRECTORY|os.O_NOFOLLOW|os.O_CLOEXEC
+    rootfd=os.open(CONFIG["letsencrypt"],flags)
+    count=0
+    links=0
+    regular_files=0
+    lineages=0
+    try:
+        rs=os.fstat(rootfd)
+        if (not stat.S_ISDIR(rs.st_mode) or rs.st_uid!=0 or rs.st_mode&0o022):
+            raise Deny("CERTBOT_ROOT_SOURCE_UNTRUSTED")
+        livefd=os.open("live",flags,dir_fd=rootfd)
+        try:
+            live_root=os.fstat(livefd)
+            if (not stat.S_ISDIR(live_root.st_mode) or live_root.st_uid!=0
+                    or live_root.st_mode&0o022):
+                raise Deny("CERTBOT_LIVE_ROOT_UNTRUSTED")
+            for lineage in os.listdir(livefd):
+                state=os.stat(lineage,dir_fd=livefd,follow_symlinks=False)
+                if stat.S_ISREG(state.st_mode):
+                    # Standard Certbot live/README is not a certificate link.
+                    if lineage!="README" or state.st_uid!=0 or state.st_mode&0o022:
+                        raise Deny("CERTBOT_LIVE_NONSTANDARD_FILE")
+                    continue
+                if (not stat.S_ISDIR(state.st_mode) or state.st_uid!=0
+                        or state.st_mode&0o022):
+                    raise Deny("CERTBOT_LIVE_LINEAGE_UNTRUSTED")
+                fd=os.open(lineage,flags,dir_fd=livefd)
+                try:
+                    observed=os.fstat(fd)
+                    if (observed.st_dev,observed.st_ino)!=(state.st_dev,state.st_ino):
+                        raise Deny("CERTBOT_LINEAGE_DIRECTORY_RACE")
+                    names=os.listdir(fd)
+                    if len(names)>32:
+                        raise Deny("CERTBOT_LINEAGE_ENTRY_LIMIT")
+                    for entry in names:
+                        est=os.stat(entry,dir_fd=fd,follow_symlinks=False)
+                        if stat.S_ISLNK(est.st_mode) and entry not in module.CERTBOT_FILES:
+                            raise Deny("CERTBOT_UNEXPECTED_LINK")
+                    lineages+=1
+                    for expected in module.CERTBOT_FILES:
+                        before=os.stat(expected,dir_fd=fd,follow_symlinks=False)
+                        if stat.S_ISLNK(before.st_mode):
+                            module.certbot_link_target(rootfd,fd,"live/"+lineage,expected,{0})
+                            links+=1
+                        elif stat.S_ISREG(before.st_mode):
+                            # Real owner inventory: four root-owned regular PEM
+                            # entries across three certificate lineages.
+                            # Do not treat regular files as failed symlinks,
+                            # but never accept hardlinks, unsafe modes, or
+                            # files that change during bounded verification.
+                            if (before.st_uid!=0 or before.st_nlink!=1
+                                    or before.st_mode&0o022
+                                    or not 1<=before.st_size<=1048576):
+                                raise Deny("CERTBOT_REGULAR_PEM_METADATA_UNTRUSTED")
+                            handle=os.open(expected,os.O_RDONLY|os.O_NOFOLLOW|os.O_CLOEXEC,
+                                           dir_fd=fd)
+                            try:
+                                initial=os.fstat(handle)
+                                digest=hashlib.sha256()
+                                amount=0
+                                while True:
+                                    part=os.read(handle,131072)
+                                    if not part:break
+                                    amount+=len(part)
+                                    if amount>1048576:
+                                        raise Deny("CERTBOT_REGULAR_PEM_SIZE_LIMIT")
+                                    digest.update(part)
+                                after=os.fstat(handle)
+                                ident=lambda s:(s.st_dev,s.st_ino,s.st_size,
+                                                s.st_mtime_ns,s.st_ctime_ns)
+                                if (not stat.S_ISREG(initial.st_mode)
+                                        or amount!=initial.st_size
+                                        or ident(before)!=ident(initial)
+                                        or ident(initial)!=ident(after)):
+                                    raise Deny("CERTBOT_REGULAR_PEM_CHANGED")
+                            finally:
+                                os.close(handle)
+                            regular_files+=1
+                        else:
+                            raise Deny("CERTBOT_LIVE_NONSTANDARD_ENTRY")
+                        count+=1
+                finally:os.close(fd)
+        finally:os.close(livefd)
+    finally:os.close(rootfd)
+    if (lineages!=3 or count!=12 or links!=8 or regular_files!=4):
+        raise Deny("CERTBOT_MIXED_SOURCE_MATRIX_DRIFT")
+    print("CERTBOT_LINEAGES=3_VERIFIED")
+    print("CERTBOT_STANDARD_INTERNAL_LINKS=8_VERIFIED")
+    print("CERTBOT_REGULAR_PEMS=4_VERIFIED")
+    print("CERTBOT_LINK_TARGETS=NOFOLLOW_SAME_LINEAGE_SHA256_PASS")
+    return count
+
+
 def runtime_sources():
     root_owner()
     buf=bundle_source()
@@ -173,6 +277,7 @@ def runtime_sources():
         trusted_dir(root_storage/part,{user.pw_uid})
     for path in CONFIG.values():
         trusted_dir(path,{0})
+    validate_certbot_live_matrix(buf["KMJ_OFFSITE_V3_LOCAL_DAILY_PUBLISHER_REVIEW_20261115.py"])
     env_source=(app/".env").resolve(strict=True)
     if not env_source.is_relative_to("/home/kmjprod/"):
         raise Deny("APP_ENV_OUTSIDE_OWNER_HOME")
