@@ -51,6 +51,19 @@ void test('preview fails on broken assets or horizontal overflow, never real own
     assert.doesNotMatch(script, /\/operator\/login|\/api\/login/);
 });
 
+void test('canonical CodeBridge visual preview uses real locked OwnerModuleShell, never public customer layout', () => {
+    const fixture = readFileSync(
+        new URL('../visual/entry.tsx', import.meta.url),
+        'utf8',
+    );
+    assert.match(fixture, /function CanonicalDevicesPreview\(\)/);
+    assert.match(fixture, /<OwnerModuleShell>\s*<CodeBridgeService/);
+    assert.match(fixture, /canonicalDevices,\s*\}/);
+    assert.match(fixture, /connection_status: 'not_verified'/);
+    assert.match(fixture, /canManageDevices=\{false\}/);
+    assert.match(fixture, /'qa-preview-organization'/);
+});
+
 void test('owner Operations preview is synthetic-only and renders the real owner component', () => {
     const fixture = readFileSync(
         new URL('../visual/entry.tsx', import.meta.url),
