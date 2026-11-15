@@ -58,6 +58,9 @@ final class ProviderManager
             'api_key' => $apiKey,
             'key_last4' => substr($apiKey, -4),
             'free_only' => true,
+            // Persist and hydrate the existing enabled-by-default policy immediately.
+            // A newly created model does not hydrate database defaults until refresh.
+            'enabled' => true,
             'created_by' => $userId,
         ]);
     }
