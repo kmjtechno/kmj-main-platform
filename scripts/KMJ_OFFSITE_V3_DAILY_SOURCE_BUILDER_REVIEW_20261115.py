@@ -52,15 +52,45 @@ def path_guard(path):
 
 
 def owned_dir(path,owners,strict=False):
+    """Walk every directory component using descriptor-relative O_NOFOLLOW.
+
+    A trusted owner may place disposable fixtures under root-owned /tmp or
+    /var/tmp (mode 1777); no other writable parent is admitted. The last
+    component must also meet the caller's ownership and mode requirements.
+    """
     obj=path_guard(path)
-    fd=os.open(obj,os.O_RDONLY|os.O_DIRECTORY|os.O_NOFOLLOW|os.O_CLOEXEC)
-    st=os.fstat(fd)
-    if (not stat.S_ISDIR(st.st_mode) or st.st_uid not in owners
-            or (strict and stat.S_IMODE(st.st_mode)!=0o700)
-            or st.st_mode&0o022):
+    flags=os.O_RDONLY|os.O_DIRECTORY|os.O_NOFOLLOW|os.O_CLOEXEC
+    fd=os.open("/",flags)
+    current=""
+    try:
+        for index,component in enumerate(obj.parts[1:]):
+            try:
+                child=os.open(component,flags,dir_fd=fd)
+            except OSError:
+                raise Deny("SOURCE_PATH_COMPONENT_NOT_TRUSTED") from None
+            current+="/"+component
+            try:
+                st=os.fstat(child)
+                mode=stat.S_IMODE(st.st_mode)
+                root_sticky=(current in ("/tmp","/var/tmp")
+                             and st.st_uid==0 and mode==0o1777)
+                if (not stat.S_ISDIR(st.st_mode)
+                        or st.st_uid not in set(owners)|{0}
+                        or (st.st_mode&0o022 and not root_sticky)):
+                    raise Deny("SOURCE_DIRECTORY_MODE_OR_OWNER")
+                if strict and index==len(obj.parts)-2 and (
+                    st.st_uid not in owners or mode!=0o700
+                ):
+                    raise Deny("PRIVATE_STAGING_DIRECTORY_NOT_EXACT")
+            except BaseException:
+                os.close(child)
+                raise
+            os.close(fd)
+            fd=child
+        return fd
+    except BaseException:
         os.close(fd)
-        raise Deny("SOURCE_DIRECTORY_MODE_OR_OWNER")
-    return fd
+        raise
 
 
 def checked_file(dirfd,name,owners,exact_private=False):
