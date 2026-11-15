@@ -64,6 +64,7 @@ class MetadataFixtures(unittest.TestCase):
     def test_symlink_live_root_denied_nofollow(self):
         other=self.root/"archive"
         other.mkdir(mode=0o700)
+        self.lineage.rmdir()
         self.live.rmdir()
         self.live.symlink_to(other,target_is_directory=True)
         with self.assertRaises(OSError):
