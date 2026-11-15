@@ -31,7 +31,7 @@ jobs:
             exit 2
           fi
           printf '%s  %s\n' \
-            '60eb16efbf2500ef1f38f2e3a63388c7503dd377ab2f2ceb316b5fe013b872d7' \
+            '8ab7f26b321ea0c3ef10b6849efa52533e5eda34425753104b08fd67d0ddd442' \
             scripts/KMJ_E5B438_OWNER_RELEASE_20261115.sh | sha256sum -c -
           printf '%s  %s\n' \
             'fed6a74d7152d2efccd7f7dec11c98241e0ca5d3ec4b6445a13bdf382db878d1' \
