@@ -217,6 +217,25 @@ class V3SameInvocationReviewFixtures(unittest.TestCase):
         self.assertFalse((self.daily_root/self.stamp).exists())
         self.assertTrue(self.snapshot.exists())
 
+    def test_release_change_during_daily_commit_is_incomplete_not_success(self):
+        real_publish=m.daily.publish_after_separately_verified_remote_readback
+        def publish_then_change_release(*args,**kwargs):
+            receipt=real_publish(*args,**kwargs)
+            self.live[0]="different-release-after-daily-commit"
+            return receipt
+        with mock.patch.object(m.daily,"publish_after_separately_verified_remote_readback",
+                               side_effect=publish_then_change_release):
+            with self.assertRaises(m.IncompleteTransaction) as ctx:
+                self.commit()
+        self.assertEqual(
+            ctx.exception.phase,
+            "REMOTE_CIPHER_AND_DAILY_COMMITTED_RELEASE_UNVERIFIED",
+        )
+        self.assertEqual(self.transport.calls,["digest","host_key","transfer"])
+        self.assertTrue((self.vault/(self.stamp+".tar.age")).is_file())
+        self.assertTrue((self.vault/(self.stamp+".sha256")).is_file())
+        self.assertTrue((self.daily_root/self.stamp/"platform.dump").is_file())
+
     def test_cannot_repeat_after_success_without_overwriting(self):
         self.commit()
         with self.assertRaisesRegex(m.Deny,"DAILY_TIMESTAMP_ALREADY_PUBLISHED"):
