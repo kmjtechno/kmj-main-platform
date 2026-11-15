@@ -158,8 +158,10 @@ def trusted_dir(path,owners):
             raise Deny("SOURCE_DIRECTORY_UNTRUSTED")
     return obj
 
-def validate_certbot_live_matrix(publisher_raw):
-    """Read-only: exactly eight original Certbot links, four per live lineage.
+def validate_certbot_live_matrix(publisher_raw, *, expected_uid=0):
+    if type(expected_uid) is not int or not 0<=expected_uid<=65535:
+        raise Deny("CERTBOT_EXPECTED_UID_INVALID")
+    """Read-only: three owner-pinned lineages, eight symlinks plus four regular PEMs.
 
     This runs on --preflight BEFORE pg_dump or creating local backup trees.
     Whitelist and O_NOFOLLOW target checks are furnished by the exact pinned
@@ -177,22 +179,22 @@ def validate_certbot_live_matrix(publisher_raw):
     lineages=0
     try:
         rs=os.fstat(rootfd)
-        if (not stat.S_ISDIR(rs.st_mode) or rs.st_uid!=0 or rs.st_mode&0o022):
+        if (not stat.S_ISDIR(rs.st_mode) or rs.st_uid!=expected_uid or rs.st_mode&0o022):
             raise Deny("CERTBOT_ROOT_SOURCE_UNTRUSTED")
         livefd=os.open("live",flags,dir_fd=rootfd)
         try:
             live_root=os.fstat(livefd)
-            if (not stat.S_ISDIR(live_root.st_mode) or live_root.st_uid!=0
+            if (not stat.S_ISDIR(live_root.st_mode) or live_root.st_uid!=expected_uid
                     or live_root.st_mode&0o022):
                 raise Deny("CERTBOT_LIVE_ROOT_UNTRUSTED")
             for lineage in os.listdir(livefd):
                 state=os.stat(lineage,dir_fd=livefd,follow_symlinks=False)
                 if stat.S_ISREG(state.st_mode):
                     # Standard Certbot live/README is not a certificate link.
-                    if lineage!="README" or state.st_uid!=0 or state.st_mode&0o022:
+                    if lineage!="README" or state.st_uid!=expected_uid or state.st_mode&0o022:
                         raise Deny("CERTBOT_LIVE_NONSTANDARD_FILE")
                     continue
-                if (not stat.S_ISDIR(state.st_mode) or state.st_uid!=0
+                if (not stat.S_ISDIR(state.st_mode) or state.st_uid!=expected_uid
                         or state.st_mode&0o022):
                     raise Deny("CERTBOT_LIVE_LINEAGE_UNTRUSTED")
                 fd=os.open(lineage,flags,dir_fd=livefd)
@@ -211,7 +213,7 @@ def validate_certbot_live_matrix(publisher_raw):
                     for expected in module.CERTBOT_FILES:
                         before=os.stat(expected,dir_fd=fd,follow_symlinks=False)
                         if stat.S_ISLNK(before.st_mode):
-                            module.certbot_link_target(rootfd,fd,"live/"+lineage,expected,{0})
+                            module.certbot_link_target(rootfd,fd,"live/"+lineage,expected,{expected_uid})
                             links+=1
                         elif stat.S_ISREG(before.st_mode):
                             # Real owner inventory: four root-owned regular PEM
@@ -219,7 +221,7 @@ def validate_certbot_live_matrix(publisher_raw):
                             # Do not treat regular files as failed symlinks,
                             # but never accept hardlinks, unsafe modes, or
                             # files that change during bounded verification.
-                            if (before.st_uid!=0 or before.st_nlink!=1
+                            if (before.st_uid!=expected_uid or before.st_nlink!=1
                                     or before.st_mode&0o022
                                     or not 1<=before.st_size<=1048576):
                                 raise Deny("CERTBOT_REGULAR_PEM_METADATA_UNTRUSTED")
