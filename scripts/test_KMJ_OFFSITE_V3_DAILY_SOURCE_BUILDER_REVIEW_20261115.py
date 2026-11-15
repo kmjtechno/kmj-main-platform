@@ -124,6 +124,39 @@ class CompleteDailyStagingFixtures(unittest.TestCase):
             self.build()
         self.assertFalse((self.daily/self.stamp).exists())
 
+    def test_intermediate_symlink_in_config_parent_is_denied(self):
+        alias=self.root_alias()
+        self.cfg["letsencrypt"]=alias/"letsencrypt"
+        with self.assertRaisesRegex(m.Deny,"SOURCE_PATH_COMPONENT_NOT_TRUSTED"):
+            self.build()
+        self.assertFalse((self.daily/self.stamp).exists())
+
+    def root_alias(self):
+        alias=Path(self.temp.name)/"config-parent-alias"
+        alias.symlink_to(self.cfgbase,target_is_directory=True)
+        return alias
+
+    def test_world_writable_intermediate_parent_denied(self):
+        outer=Path(self.temp.name)/"public-config-base"
+        outer.mkdir(mode=0o700)
+        actual=outer/"allowed"
+        actual.mkdir(mode=0o700)
+        config=actual/"sites-available"
+        config.mkdir(mode=0o700)
+        outer.chmod(0o777)
+        self.cfg["sites-available"]=config
+        with self.assertRaisesRegex(m.Deny,"SOURCE_DIRECTORY_MODE_OR_OWNER"):
+            self.build()
+        self.assertFalse((self.daily/self.stamp).exists())
+
+    def test_intermediate_symlink_in_dump_source_is_denied(self):
+        alias=Path(self.temp.name)/"dump-parent-alias"
+        alias.symlink_to(Path(self.temp.name),target_is_directory=True)
+        self.dump=alias/"database.dump"
+        with self.assertRaisesRegex(m.Deny,"SOURCE_PATH_COMPONENT_NOT_TRUSTED"):
+            self.build()
+        self.assertFalse(self.snapshot().exists())
+
     def test_hardlink_inside_config_denied(self):
         target=self.cfg["sites-available"]/"fixture.conf"
         os.link(target,self.cfg["sites-available"]/"again.conf")
