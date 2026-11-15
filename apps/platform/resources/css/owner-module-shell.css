@@ -321,9 +321,7 @@
 
 /* Show every real admin module on desktop; prevent a clipped active tab. */
 @media (min-width: 1100px) {
-    .owner-module-shell
-        .kmj-admin-nav
-        [aria-label='Available admin sections'] {
+    .owner-module-shell .kmj-admin-nav [aria-label='Available admin sections'] {
         flex-wrap: wrap;
         overflow-x: visible;
         row-gap: 8px;
