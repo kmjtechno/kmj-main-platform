@@ -80,7 +80,9 @@ final class ProviderManager
             }
         }
         if (array_key_exists('default_model', $data) || array_key_exists('fallback_models', $data)) {
-            $known = $provider->models_cache ?? [];
+            // A discovered model is not necessarily free. Never persist an unadmitted
+            // paid/unknown-price default or fallback just because GET /models listed it.
+            $known = $this->admittedFreeModels($provider);
             $default = array_key_exists('default_model', $data) ? $data['default_model'] : $provider->default_model;
             $fallbacks = array_values(array_unique((array) ($data['fallback_models'] ?? $provider->fallback_models ?? [])));
             $fallbacks = array_values(array_filter($fallbacks, static fn ($model): bool => $model !== $default));
@@ -117,6 +119,32 @@ final class ProviderManager
     {
         // Deleting the row removes the encrypted key; there is no soft-deleted copy.
         $provider->delete();
+    }
+
+    /**
+     * Only currently usable free models may appear as selectable defaults/fallbacks.
+     * A successful catalog probe is not billing evidence for an arbitrary model.
+     *
+     * @return list<string>
+     */
+    public function admittedFreeModels(AiProvider $provider): array
+    {
+        if (! $provider->enabled || $provider->health !== 'ok'
+            || $provider->models_checked_at === null
+            || $provider->models_checked_at->lt(now()->subHours(self::DISCOVERY_MAX_AGE_HOURS))) {
+            return [];
+        }
+
+        $tier = $this->presets()[$provider->preset]['free_tier'] ?? 'none';
+        $allowlist = array_values(array_filter(
+            (array) Config::get('ai_providers.free_models.'.$provider->preset, []),
+            'is_string',
+        ));
+
+        return array_values(array_filter(
+            $provider->models_cache ?? [],
+            static fn (string $model): bool => FreePolicy::inferenceAllowed($tier, $model, $allowlist),
+        ));
     }
 
     /**
@@ -184,7 +212,8 @@ final class ProviderManager
             'free_tier' => $tier,
             'default_model' => $provider->default_model,
             'fallback_models' => $provider->fallback_models ?? [],
-            'models' => $provider->models_cache ?? [],
+            'models' => $this->admittedFreeModels($provider),
+            'discovered_model_count' => count($provider->models_cache ?? []),
             'health' => $provider->health,
             'health_checked_at' => $provider->health_checked_at?->toIso8601String(),
             'error_code' => $provider->last_error_code,
