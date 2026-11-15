@@ -211,3 +211,119 @@
     font-size: 22px;
     line-height: 1.3;
 }
+
+/* Locked Owner/Super Admin subpage fidelity: real authenticated UI, no fake metrics. */
+.owner-module-shell {
+    font-size: 14px;
+    line-height: 1.55;
+}
+.owner-module-shell .owner-header {
+    min-height: 66px;
+}
+.owner-module-shell .owner-search {
+    min-height: 40px;
+    font-size: 14px;
+}
+.owner-module-shell .owner-identity strong {
+    font-size: 13px;
+}
+.owner-module-shell .owner-identity small {
+    font-size: 11px;
+}
+.owner-module-shell .owner-sidebar {
+    width: 225px;
+}
+.owner-module-shell .owner-sidebar > a,
+.owner-module-shell .owner-sidebar > button,
+.owner-module-shell .owner-sidebar nav > a {
+    font-size: 13px;
+    min-height: 39px;
+    line-height: 1.3;
+    border-radius: 9px;
+}
+.owner-module-shell .owner-sidebar nav h2 {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.075em;
+}
+.owner-module-shell .owner-module-body {
+    margin-left: 244px;
+    padding: 16px 20px 28px 12px;
+}
+.owner-module-shell .owner-module-content .kmj-admin-shell {
+    gap: 18px;
+    padding: 18px;
+}
+.owner-module-shell .owner-module-content .kmj-admin-hero {
+    border-radius: 17px;
+    padding: 24px;
+}
+.owner-module-shell .kmj-admin-hero h1,
+.owner-module-shell .owner-shared-page h1 {
+    font-size: clamp(24px, 2vw, 32px);
+    line-height: 1.2;
+}
+.owner-module-shell .kmj-admin-tab {
+    min-height: 44px;
+    padding: 10px 14px;
+    font-size: 14px;
+    border-radius: 10px;
+}
+.owner-module-shell .owner-shared-page {
+    gap: 18px;
+}
+.owner-module-shell .owner-shared-page > section {
+    padding: clamp(18px, 1.6vw, 26px);
+    border-radius: 16px;
+}
+.owner-module-shell .owner-module-content > :not(.kmj-admin-shell) {
+    padding: clamp(14px, 1.45vw, 22px);
+}
+.owner-module-shell :is(input, select, textarea) {
+    min-height: 42px;
+}
+.owner-module-shell .owner-sidebar > a[aria-current='page'],
+.owner-module-shell .owner-sidebar nav > a[aria-current='page'] {
+    background: linear-gradient(105deg, #df092f 0%, #790d27 100%);
+    box-shadow: inset 3px 0 0 #ff5673;
+    color: #fff;
+}
+@media (max-width: 1000px) and (min-width: 701px) {
+    .owner-module-shell .owner-sidebar {
+        width: 198px;
+    }
+    .owner-module-shell .owner-module-body {
+        margin-left: 215px;
+        padding-right: 12px;
+    }
+    .owner-module-shell .owner-sidebar > a,
+    .owner-module-shell .owner-sidebar nav > a {
+        font-size: 12px;
+    }
+}
+@media (max-width: 700px) {
+    .owner-module-shell .owner-header {
+        min-height: 62px;
+    }
+    .owner-module-shell .owner-sidebar {
+        width: min(86vw, 300px);
+        max-height: calc(100dvh - 62px);
+        overflow-y: auto;
+    }
+    .owner-module-shell .owner-module-body {
+        margin-left: 0;
+        padding: 10px;
+    }
+    .owner-module-shell .owner-module-content > :not(.kmj-admin-shell) {
+        padding: 12px;
+    }
+}
+
+/* Show every real admin module on desktop; prevent a clipped active tab. */
+@media (min-width: 1100px) {
+    .owner-module-shell .kmj-admin-nav [aria-label='Available admin sections'] {
+        flex-wrap: wrap;
+        overflow-x: visible;
+        row-gap: 8px;
+    }
+}

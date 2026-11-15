@@ -1,0 +1,82 @@
+name: KMJ Locked Super Admin UI Fidelity QA
+on:
+  pull_request:
+    paths:
+      - "apps/platform/resources/css/codebridge-premium.css"
+      - "apps/platform/resources/css/owner-module-shell.css"
+      - "apps/platform/resources/js/pages/services/codebridge.tsx"
+      - "apps/platform/resources/js/components/codebridge/device-control-center.tsx"
+      - "apps/platform/resources/js/layouts/owner-module-shell.tsx"
+      - "apps/platform/scripts/check-owner-ui-fidelity.test.mjs"
+      - "apps/platform/scripts/browser-preview-verify.mjs"
+      - "apps/platform/visual/entry.tsx"
+      - "apps/platform/scripts/check-visual-qa-coverage.test.mjs"
+      - ".github/workflows/kmj-owner-ui-fidelity-qa.yml"
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  locked-shell-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Check locked owner shell, honest status and device actions
+        run: node --test apps/platform/scripts/check-owner-ui-fidelity.test.mjs
+      - name: Assert limited review scope, not a live rollout
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -q 'kmj-codebridge-premium' apps/platform/resources/js/pages/services/codebridge.tsx
+          grep -q 'Registration saved' apps/platform/resources/js/components/codebridge/device-control-center.tsx
+          grep -q 'Owner/Super Admin subpage fidelity' apps/platform/resources/css/owner-module-shell.css
+          echo 'KMJ_OWNER_LOCKED_UI_SOURCE_QA=PASS'
+          echo 'PRODUCTION_DEPLOYMENT=NOT_ATTEMPTED'
+
+  formatting-preview:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: apps/platform/package-lock.json
+      - name: Install pinned lockfile dependencies, never run lifecycle scripts
+        working-directory: apps/platform
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Show exact VitePlus formatter-only patch, without changing PR
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          cd apps/platform
+          node_modules/.bin/vp fmt \
+            resources/css/codebridge-premium.css \
+            resources/css/owner-module-shell.css \
+            resources/js/components/codebridge/device-control-center.tsx \
+            resources/js/components/operator-command-os.tsx \
+            resources/js/layouts/owner-module-shell.tsx \
+            resources/js/pages/operator-ops.tsx \
+            visual/entry.tsx \
+            scripts/check-visual-qa-coverage.test.mjs \
+            scripts/browser-preview-verify.mjs \
+            scripts/check-owner-ui-fidelity.test.mjs
+          echo '=== BEGIN EXACT FORMAT PATCH ==='
+          git diff --no-ext-diff -- \
+            resources/css/codebridge-premium.css \
+            resources/css/owner-module-shell.css \
+            resources/js/components/codebridge/device-control-center.tsx \
+            resources/js/components/operator-command-os.tsx \
+            resources/js/layouts/owner-module-shell.tsx \
+            resources/js/pages/operator-ops.tsx \
+            visual/entry.tsx \
+            scripts/check-visual-qa-coverage.test.mjs \
+            scripts/browser-preview-verify.mjs \
+            scripts/check-owner-ui-fidelity.test.mjs
+          echo '=== END EXACT FORMAT PATCH ==='
+          echo 'FORMAT_PREVIEW_ONLY=PASS'

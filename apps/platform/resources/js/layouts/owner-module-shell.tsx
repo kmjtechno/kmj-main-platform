@@ -123,10 +123,14 @@ const groups: { title: string; items: Workspace[] }[] = [
     {
         title: 'OPERATIONS',
         items: [
-            { label: 'System Health', href: '/operator/ops', icon: Activity },
+            {
+                label: 'System Health',
+                href: '/operator/ops#owner-readiness',
+                icon: Activity,
+            },
             {
                 label: 'Backups & Restore',
-                href: '/operator/ops',
+                href: '/operator/ops#owner-backup-freshness',
                 icon: Database,
             },
             {
@@ -134,12 +138,20 @@ const groups: { title: string; items: Workspace[] }[] = [
                 href: '/settings/security',
                 icon: ShieldCheck,
             },
-            { label: 'Audit Logs', href: '/operator/ops', icon: FileText },
-            { label: 'Monitoring & Alerts', href: '/operator/ops', icon: Bell },
+            {
+                label: 'Audit Logs',
+                href: '/operator/ops#owner-action-audit',
+                icon: FileText,
+            },
+            {
+                label: 'Monitoring & Alerts',
+                href: '/operator/ops#owner-guardrail-signals',
+                icon: Bell,
+            },
             { label: 'Task Automation', href: '/operator/ops', icon: Zap },
             {
                 label: 'Settings & Configuration',
-                href: '/operator/ops',
+                href: '/settings/profile',
                 icon: Settings,
             },
         ],
@@ -159,7 +171,15 @@ export default function OwnerModuleShell({
         (parts[0]?.[0] ?? '') + (parts.at(-1)?.[0] ?? '')
     ).toLocaleUpperCase();
     const [navOpen, setNavOpen] = useState(false);
+    const [activeHash, setActiveHash] = useState('');
     const menuButton = useRef<HTMLButtonElement>(null);
+
+    useEffect(() => {
+        const syncHash = () => setActiveHash(window.location.hash);
+        syncHash();
+        window.addEventListener('hashchange', syncHash);
+        return () => window.removeEventListener('hashchange', syncHash);
+    }, [url]);
 
     useEffect(() => {
         if (!navOpen) return;
@@ -248,19 +268,30 @@ export default function OwnerModuleShell({
                                 key={label}
                                 href={href}
                                 aria-current={
-                                    href === url &&
-                                    (href === '/operator/ops'
-                                        ? label === 'System Health'
-                                        : href === '/operator/products'
-                                          ? label === 'Products & Catalog'
-                                          : href === '/operator/kslp'
-                                            ? label ===
-                                              'Licensing & Entitlements'
-                                            : true)
+                                    href.split('#')[0] === url &&
+                                    (href.startsWith('/operator/ops#')
+                                        ? activeHash
+                                            ? href.endsWith(activeHash)
+                                            : label === 'System Health'
+                                        : href === '/operator/ops'
+                                          ? label === 'System Health'
+                                          : href === '/operator/products'
+                                            ? label === 'Products & Catalog'
+                                            : href === '/operator/kslp'
+                                              ? label ===
+                                                'Licensing & Entitlements'
+                                              : true)
                                         ? 'page'
                                         : undefined
                                 }
-                                onClick={() => setNavOpen(false)}
+                                onClick={() => {
+                                    setNavOpen(false);
+                                    setActiveHash(
+                                        href.includes('#')
+                                            ? '#' + href.split('#')[1]
+                                            : '',
+                                    );
+                                }}
                             >
                                 <Icon size={17} aria-hidden="true" />
                                 {label}

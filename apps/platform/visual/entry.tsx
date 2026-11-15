@@ -239,51 +239,53 @@ function WorkspacePreview() {
 }
 function CanonicalDevicesPreview() {
     return (
-        <CodeBridgeService
-            organization={{
-                id: 'qa-preview-organization',
-                name: 'Synthetic preview organization',
-                role: 'owner',
-            }}
-            entitlement={{
-                id: 'qa-preview-entitlement',
-                capability: 'codebridge',
-                status: 'active',
-                starts_at: '2026-01-01',
-            }}
-            canManageOwnerPlan={true}
-            canManageDevices={false}
-            service={{
-                endpoint: 'http://127.0.0.1:4173/mcp',
-                oauth_ready: false,
-                plan: null,
-                license_status: 'unverified',
-                license_starts_at: null,
-                license_expires_at: null,
-                permissions: [],
-                device_limit: null,
-                managed_devices: 1,
-                pending_pairings: 0,
-                connected_clients: [],
-                access_token_ttl_seconds: 0,
-                devices: [
-                    {
-                        id: 'qa-preview-desktop',
-                        name: 'Synthetic preview desktop',
-                        platform: 'windows',
-                        arch: 'x64',
-                        projects: [
-                            {
-                                id: 'qa-preview-project',
-                                name: 'Synthetic preview project',
-                            },
-                        ],
-                        registration: 'registered',
-                        connection_status: 'not_verified',
-                    },
-                ],
-            }}
-        />
+        <OwnerModuleShell>
+            <CodeBridgeService
+                organization={{
+                    id: 'qa-preview-organization',
+                    name: 'Synthetic preview organization',
+                    role: 'owner',
+                }}
+                entitlement={{
+                    id: 'qa-preview-entitlement',
+                    capability: 'codebridge',
+                    status: 'active',
+                    starts_at: '2026-01-01',
+                }}
+                canManageOwnerPlan={true}
+                canManageDevices={false}
+                service={{
+                    endpoint: 'http://127.0.0.1:4173/mcp',
+                    oauth_ready: false,
+                    plan: null,
+                    license_status: 'unverified',
+                    license_starts_at: null,
+                    license_expires_at: null,
+                    permissions: [],
+                    device_limit: null,
+                    managed_devices: 1,
+                    pending_pairings: 0,
+                    connected_clients: [],
+                    access_token_ttl_seconds: 0,
+                    devices: [
+                        {
+                            id: 'qa-preview-desktop',
+                            name: 'Synthetic preview desktop',
+                            platform: 'windows',
+                            arch: 'x64',
+                            projects: [
+                                {
+                                    id: 'qa-preview-project',
+                                    name: 'Synthetic preview project',
+                                },
+                            ],
+                            registration: 'registered',
+                            connection_status: 'not_verified',
+                        },
+                    ],
+                }}
+            />
+        </OwnerModuleShell>
     );
 }
 
@@ -414,7 +416,8 @@ void createInertiaApp({
                     ownerOps ||
                     ownerDevices ||
                     ownerDeveloper ||
-                    ownerProducts,
+                    ownerProducts ||
+                    canonicalDevices,
             },
             localization: {
                 locale: 'en',

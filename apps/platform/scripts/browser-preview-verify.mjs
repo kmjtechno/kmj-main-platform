@@ -797,6 +797,35 @@ try {
                     });
                 await advanced.locator(':scope > summary').click();
             }
+            if (name === 'canonical-devices') {
+                // The owner's real screenshot exposed ellipsized device names.
+                // Check the actual rendered component at every viewport width.
+                const identity = await page
+                    .locator('#codebridge-device-control article h3')
+                    .first()
+                    .evaluate((node) => {
+                        const style = getComputedStyle(node);
+                        return {
+                            name: node.textContent?.trim() ?? '',
+                            noWrap: style.whiteSpace === 'nowrap',
+                            ellipsis: style.textOverflow === 'ellipsis',
+                            overflow: node.scrollWidth > node.clientWidth + 1,
+                        };
+                    });
+                if (
+                    identity.name !== 'Synthetic preview desktop' ||
+                    identity.noWrap ||
+                    identity.ellipsis ||
+                    identity.overflow
+                ) {
+                    errors.push(
+                        'CodeBridge device name clipped at width ' +
+                            width +
+                            ': ' +
+                            JSON.stringify(identity),
+                    );
+                }
+            }
             if (name === 'owner-devices' || name === 'canonical-devices') {
                 await page
                     .getByRole('heading', {
@@ -819,6 +848,33 @@ try {
                                 : '.owner-main h1',
                     )
                     .waitFor();
+            if (
+                width >= 1170 &&
+                ['owner-products', 'owner-ops', 'owner-devices'].includes(name)
+            ) {
+                const tabs = page
+                    .getByRole('navigation', { name: 'Super Admin modules' })
+                    .locator('[aria-label="Available admin sections"]');
+                const active = tabs.locator('a[aria-current="page"]');
+                if ((await active.count()) !== 1) {
+                    errors.push('Current admin module tab missing');
+                } else {
+                    const clipped = await active.evaluate((element) => {
+                        const viewport = element.closest(
+                            '[aria-label="Available admin sections"]',
+                        );
+                        if (!viewport) return true;
+                        const tab = element.getBoundingClientRect();
+                        const region = viewport.getBoundingClientRect();
+                        return (
+                            tab.left < region.left - 1 ||
+                            tab.right > region.right + 1
+                        );
+                    });
+                    if (clipped)
+                        errors.push('Active admin module tab is clipped');
+                }
+            }
             // Horizontal carousels can keep valid lazy images outside the
             // viewport. Decode every asset before checking failures so that
             // off-screen, unrequested images are not counted as broken.

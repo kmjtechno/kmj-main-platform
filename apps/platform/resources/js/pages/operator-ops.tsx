@@ -396,7 +396,7 @@ export default function OperatorOps({
                     />
                 </section>
 
-                <section>
+                <section id="owner-readiness" className="scroll-mt-6">
                     <div className="mb-3 flex items-end justify-between gap-3">
                         <div>
                             <h2 className="font-black">
@@ -540,7 +540,10 @@ export default function OperatorOps({
                     ) : null}
                 </section>
 
-                <section className="bg-card rounded-2xl border p-5 sm:p-6">
+                <section
+                    id="owner-backup-freshness"
+                    className="bg-card scroll-mt-6 rounded-2xl border p-5 sm:p-6"
+                >
                     <div className="flex items-center gap-2">
                         <ArchiveRestore className="h-4 w-4 text-red-500" />
                         <h2 className="font-bold">Backup freshness evidence</h2>
@@ -664,7 +667,10 @@ export default function OperatorOps({
                     </div>
                 </section>
 
-                <section className="bg-card rounded-2xl border p-5 sm:p-6">
+                <section
+                    id="owner-guardrail-signals"
+                    className="bg-card scroll-mt-6 rounded-2xl border p-5 sm:p-6"
+                >
                     <h2 className="font-bold">Operational guardrail signals</h2>
                     <p className="text-muted-foreground mt-1 text-xs">
                         These are KMJ internal warning thresholds, not claims
@@ -694,7 +700,10 @@ export default function OperatorOps({
                     </div>
                 </section>
 
-                <section className="bg-card rounded-2xl border p-5 sm:p-6">
+                <section
+                    id="owner-action-audit"
+                    className="bg-card scroll-mt-6 rounded-2xl border p-5 sm:p-6"
+                >
                     <h2 className="font-bold">Operator action audit</h2>
                     <p className="text-muted-foreground mt-1 text-xs">
                         Latest privileged actions recorded by the control plane.
