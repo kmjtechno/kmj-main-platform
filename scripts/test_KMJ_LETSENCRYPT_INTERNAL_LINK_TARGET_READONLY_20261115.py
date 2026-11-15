@@ -83,7 +83,7 @@ class CertLinkTargetTests(unittest.TestCase):
         os.link(self.root / "archive/site/cert1.pem",
                 self.root / "archive/site/cert2.pem")
         self.symlink.symlink_to("../../archive/site/cert1.pem")
-        with self.assertRaisesRegex(m.Block, "SOURCE_REGULAR_FILE_UNTRUSTED"):
+        with self.assertRaisesRegex(m.Block, "TARGET_FILE_UNTRUSTED"):
             self.check()
 
     def test_reject_link_count_drift(self):
