@@ -8,6 +8,8 @@ on:
       - "apps/platform/resources/js/components/codebridge/device-control-center.tsx"
       - "apps/platform/resources/js/layouts/owner-module-shell.tsx"
       - "apps/platform/scripts/check-owner-ui-fidelity.test.mjs"
+      - "apps/platform/visual/entry.tsx"
+      - "apps/platform/scripts/check-visual-qa-coverage.test.mjs"
       - ".github/workflows/kmj-owner-ui-fidelity-qa.yml"
   workflow_dispatch:
 permissions:
@@ -59,6 +61,8 @@ jobs:
             resources/js/components/operator-command-os.tsx \
             resources/js/layouts/owner-module-shell.tsx \
             resources/js/pages/operator-ops.tsx \
+            visual/entry.tsx \
+            scripts/check-visual-qa-coverage.test.mjs \
             scripts/check-owner-ui-fidelity.test.mjs
           echo '=== BEGIN EXACT FORMAT PATCH ==='
           git diff --no-ext-diff -- \
@@ -68,6 +72,8 @@ jobs:
             resources/js/components/operator-command-os.tsx \
             resources/js/layouts/owner-module-shell.tsx \
             resources/js/pages/operator-ops.tsx \
+            visual/entry.tsx \
+            scripts/check-visual-qa-coverage.test.mjs \
             scripts/check-owner-ui-fidelity.test.mjs
           echo '=== END EXACT FORMAT PATCH ==='
           echo 'FORMAT_PREVIEW_ONLY=PASS'
