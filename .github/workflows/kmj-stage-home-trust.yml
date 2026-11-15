@@ -1,0 +1,21 @@
+name: KMJ stage home trust audit safety
+on:
+  pull_request:
+    paths:
+      - scripts/operations/KMJ_STAGE_HOME_TRUST_AUDIT_20261104.py
+      - scripts/test_stage_home_trust_audit_20261104.py
+      - .github/workflows/kmj-stage-home-trust.yml
+permissions:
+  contents: read
+jobs:
+  read_only_stage_home:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - name: Metadata-only audit contracts
+        run: |
+          set -euo pipefail
+          python3 -B -m unittest scripts/test_stage_home_trust_audit_20261104.py -v
