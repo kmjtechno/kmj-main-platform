@@ -31,3 +31,37 @@ jobs:
           grep -q 'Owner/Super Admin subpage fidelity' apps/platform/resources/css/owner-module-shell.css
           echo 'KMJ_OWNER_LOCKED_UI_SOURCE_QA=PASS'
           echo 'PRODUCTION_DEPLOYMENT=NOT_ATTEMPTED'
+
+  formatting-preview:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: apps/platform/package-lock.json
+      - name: Install pinned lockfile dependencies, never run lifecycle scripts
+        working-directory: apps/platform
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Show exact VitePlus formatter-only patch, without changing PR
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          cd apps/platform
+          node_modules/.bin/vp fmt \
+            resources/css/codebridge-premium.css \
+            resources/css/owner-module-shell.css \
+            resources/js/components/codebridge/device-control-center.tsx \
+            scripts/check-owner-ui-fidelity.test.mjs
+          echo '=== BEGIN EXACT FORMAT PATCH ==='
+          git diff --no-ext-diff -- \
+            resources/css/codebridge-premium.css \
+            resources/css/owner-module-shell.css \
+            resources/js/components/codebridge/device-control-center.tsx \
+            scripts/check-owner-ui-fidelity.test.mjs
+          echo '=== END EXACT FORMAT PATCH ==='
+          echo 'FORMAT_PREVIEW_ONLY=PASS'
