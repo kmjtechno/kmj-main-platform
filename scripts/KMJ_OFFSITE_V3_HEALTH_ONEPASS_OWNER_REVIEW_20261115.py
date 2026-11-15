@@ -1,0 +1,381 @@
+#!/usr/bin/python3
+"""KMJ-elite OWNER-ADMITTED V3 dual-local backup health onepass.
+
+SOURCE REVIEW: --selftest safe offline; --preflight is root-only read-only.
+--run-once is explicitly mutating: creates an immutable root-owned V3 module
+bundle, a private complete daily staging tree, makes ONE real fresh V2
+PostgreSQL+storage X25519 remote transfer, then atomically publishes
+cipher+sidecar and the complete daily snapshot. Only after all artifacts are
+present does it start the unchanged health-check service once.
+
+NO existing backup is overwritten or deleted. NO systemd configuration, V2
+timer, releases, health source, application, DNS, firewall or keys are edited.
+Failures preserve any partial artifacts for owner review; no false PASS.
+Independent Google decrypt+restore remains a SEPARATE release gate.
+"""
+from __future__ import annotations
+
+import datetime as dt
+import fnmatch
+import hashlib
+import importlib.util
+import os
+from pathlib import Path
+import re
+import shlex
+import socket
+import stat
+import subprocess
+import sys
+import tempfile
+import types
+
+BASE=Path("/srv/kmj-codebridge-projects/kmj-main-platform/scripts")
+ROOT=Path("/usr/local/libexec/kmj-offsite-dual-local-v3-20261115")
+DAILY=Path("/var/backups/kmj-elite-daily")
+VAULT=Path("/var/backups/kmj-elite-offsite-encrypted")
+STAGE=Path("/var/backups/kmj-v3-private-stage")
+HEALTH=Path("/usr/local/sbin/kmj-elite-health-check")
+HEALTH_SHA="2a8cb007acaea2ef8d240ee82a95b13314799dcea36c0cac594e7e5d32acca20"
+UNIT="kmj-elite-health-check.service"
+PINS={
+ "KMJ_OFFSITE_V3_DUAL_ARTIFACT_POLICY_REVIEW_20261115.py":
+  "2d3fdc5456c3ee7a75fdb133fdab5e7713e036ed659cc7008c5ec2a8df0139c7",
+ "KMJ_OFFSITE_V3_LOCAL_CIPHER_PUBLISHER_REVIEW_20261115.py":
+  "22c85a6a5e239055b69697d47c733e7afe07c9c5cd74cf70478d3577dc3ebc3f",
+ "KMJ_OFFSITE_V3_LOCAL_DAILY_PUBLISHER_REVIEW_20261115.py":
+  "1384cfb8d6b4455470a8fbb7704a13b13b438615ed56c7a832ba2a5f42bb07d7",
+ "KMJ_OFFSITE_V3_DAILY_SOURCE_BUILDER_REVIEW_20261115.py":
+  "9c06b69e5b699453f7593d69c4e04b925abae9216402fc60814c08c922199b86",
+ "KMJ_OFFSITE_V3_TRANSFER_BOUND_TRANSACTION_REVIEW_20261115.py":
+  "cebc9366412ef689e4887d0ebac958989842c55fade1feff607f754c1bd209ea",
+ "KMJ_OFFSITE_V3_PINNED_V2_ADMISSION_REVIEW_20261115.py":
+  "a476833c2185f2271693ee5f957fc1434a782284a9c0050001ca3b2fd44594ed",
+}
+CONFIG={
+ "letsencrypt":Path("/etc/letsencrypt"),
+ "codebridge-stage":Path("/etc/systemd/system/kmj-codebridge-gateway-stage.service.d"),
+ "sites-available":Path("/etc/nginx/sites-available"),
+}
+ENV={"PATH":"/usr/sbin:/usr/bin:/sbin:/bin","LC_ALL":"C","LANG":"C","HOME":"/root"}
+SHA=re.compile(r"[a-f0-9]{64}\Z")
+STAMP=re.compile(r"20[0-9]{6}T[0-9]{6}Z\Z")
+
+class Deny(Exception):
+    pass
+
+def private_bytes(path,digest,*,uid=None,maximum=131072):
+    meta=os.lstat(path)
+    if (not stat.S_ISREG(meta.st_mode) or meta.st_nlink!=1
+        or (uid is not None and meta.st_uid!=uid)
+        or meta.st_mode&0o022 or not 128<=meta.st_size<=maximum):
+        raise Deny("SOURCE_METADATA_UNTRUSTED")
+    fd=os.open(path,os.O_RDONLY|os.O_NOFOLLOW|os.O_CLOEXEC)
+    try:
+        seen=os.fstat(fd)
+        body=os.read(fd,maximum+1)
+        after=os.fstat(fd)
+    finally:
+        os.close(fd)
+    ident=lambda s:(s.st_dev,s.st_ino,s.st_size,s.st_mtime_ns,s.st_ctime_ns)
+    if ident(meta)!=ident(seen) or ident(seen)!=ident(after):
+        raise Deny("SOURCE_RACED")
+    if len(body)!=meta.st_size or hashlib.sha256(body).hexdigest()!=digest:
+        raise Deny("SOURCE_SHA_UNVERIFIED")
+    return body
+
+def bundle_source():
+    return {name:private_bytes(BASE/name,sha) for name,sha in PINS.items()}
+
+def load_admission(raw):
+    name="KMJ_OFFSITE_V3_PINNED_V2_ADMISSION_REVIEW_20261115.py"
+    m=types.ModuleType("kmj_root_pinned_v2_admission")
+    m.__file__=str(BASE/name)
+    exec(compile(raw,str(BASE/name),"exec"),m.__dict__)
+    return m
+
+def existing_private_directory(path):
+    s=os.lstat(path)
+    if (not stat.S_ISDIR(s.st_mode) or s.st_uid!=0
+        or stat.S_IMODE(s.st_mode)!=0o700):
+        raise Deny("PRIVATE_ROOT_DIRECTORY_UNTRUSTED")
+
+def root_owner():
+    if os.geteuid()!=0 or socket.gethostname().split(".")[0]!="KMJ-elite":
+        raise Deny("OWNER_ROOT_KMJ_ELITE_REQUIRED")
+
+def parse_exact_find(line):
+    if any(c in line for c in ("$(",chr(96),"\\","\r","\n")):
+        raise Deny("HEALTH_SOURCE_SHELL_UNSUPPORTED")
+    lex=shlex.shlex(line,posix=True,punctuation_chars=";&|()<>")
+    lex.whitespace_split=True
+    lex.commenters=""
+    tok=list(lex)
+    if len(tok)!=16 or tok[0]!="find" or tok[12:]!=["|","grep","-q","."]:
+        raise Deny("HEALTH_FIND_PIPELINE_CHANGED")
+    opts={tok[i]:tok[i+1] for i in (2,4,6,8,10)}
+    if set(opts)!={"-mindepth","-maxdepth","-name","-type","-mtime"}:
+        raise Deny("HEALTH_FIND_FLAGS_CHANGED")
+    if opts["-type"]!="f" or opts["-mtime"]!="-2":
+        raise Deny("HEALTH_FIND_FRESHNESS_CHANGED")
+    if not re.fullmatch(r"[A-Za-z0-9*?_.@+-]{1,120}",opts["-name"]):
+        raise Deny("HEALTH_FIND_GLOB_UNSAFE")
+    return (tok[1],opts["-mindepth"],opts["-maxdepth"],opts["-name"])
+
+def health_contract():
+    body=private_bytes(HEALTH,HEALTH_SHA,uid=0,maximum=2048)
+    lines=body.decode("utf-8").splitlines()
+    if len(lines)!=29 or len(body)!=1840:
+        raise Deny("HEALTH_PINNED_SOURCE_CHANGED")
+    a=parse_exact_find(lines[24])
+    b=parse_exact_find(lines[27])
+    if (a[:3]!=(str(DAILY),"2","2")
+        or b[:3]!=(str(VAULT),"1","1")):
+        raise Deny("HEALTH_ARCHIVE_PATH_OR_DEPTH_CHANGED")
+    if not any(fnmatch.fnmatchcase(name,a[3]) for name in ("platform.dump","storage.tar.gz")):
+        raise Deny("HEALTH_DAILY_GLOB_NOT_SATISFIED_BY_REAL_SNAPSHOT")
+    if not fnmatch.fnmatchcase("20261115T120000Z.tar.age",b[3]):
+        raise Deny("HEALTH_VAULT_GLOB_NOT_SATISFIED")
+    t=shlex.split(lines[26])
+    if len(t)!=3 or t[:2]!=["test","-s"] or not t[2].startswith("/"):
+        raise Deny("HEALTH_METADATA_SOURCE_CHANGED")
+    file=os.lstat(t[2])
+    if not stat.S_ISREG(file.st_mode) or file.st_nlink!=1 or file.st_size<1:
+        raise Deny("HEALTH_METADATA_NOT_NONEMPTY_FILE")
+    return True
+
+def trusted_dir(path,owners):
+    obj=Path(path)
+    if not obj.is_absolute() or ".." in obj.parts:
+        raise Deny("SOURCE_DIRECTORY_PATH_UNSAFE")
+    part=Path("/")
+    for component in obj.parts[1:]:
+        part=part/component
+        s=os.lstat(part)
+        if not stat.S_ISDIR(s.st_mode) or s.st_uid not in set(owners)|{0} or s.st_mode&0o022:
+            raise Deny("SOURCE_DIRECTORY_UNTRUSTED")
+    return obj
+
+def runtime_sources():
+    root_owner()
+    buf=bundle_source()
+    health_contract()
+    existing_private_directory(DAILY)
+    # Vault mode need not be exactly 0700; V2 and V3 pin root ownership
+    # and prohibit group/world writes. Keep its existing mode unchanged.
+    admission=load_admission(buf["KMJ_OFFSITE_V3_PINNED_V2_ADMISSION_REVIEW_20261115.py"])
+    v2,transport=admission.admit_exact_installed_v2()
+    user,release,app,storage=v2.inspect(transport,scheduled=True)
+    root_storage=trusted_dir(storage.parent,{user.pw_uid})
+    for part in ("app","framework","logs"):
+        trusted_dir(root_storage/part,{user.pw_uid})
+    for path in CONFIG.values():
+        trusted_dir(path,{0})
+    env_source=(app/".env").resolve(strict=True)
+    if not env_source.is_relative_to("/home/kmjprod/"):
+        raise Deny("APP_ENV_OUTSIDE_OWNER_HOME")
+    s=os.lstat(env_source)
+    if (not stat.S_ISREG(s.st_mode) or s.st_uid not in (0,user.pw_uid)
+        or stat.S_IMODE(s.st_mode)!=0o600 or s.st_nlink!=1):
+        raise Deny("APP_ENV_PRIVATE_SOURCE_UNTRUSTED")
+    parent=trusted_dir(env_source.parent,{0,user.pw_uid})
+    assert parent==env_source.parent
+    if ROOT.exists():
+        existing_private_directory(ROOT)
+        for name,sha in PINS.items():
+            private_bytes(ROOT/name,sha,uid=0)
+    print("KMJ_HEALTH_ORIGINAL_SOURCE=PINNED_UNCHANGED")
+    print("V2_AUTHENTICATED_UNIT_AND_TRANSPORT=PINNED")
+    print("LOCAL_SOURCE_ROOTS=GUARDED")
+    print("REMOTE_RESTORE=NOT_ATTESTED")
+    return buf,v2,transport,user,release,app,storage,env_source
+
+def install_bundle(buf):
+    if not ROOT.exists():
+        os.mkdir(ROOT,0o700)
+    existing_private_directory(ROOT)
+    fd=os.open(ROOT,os.O_RDONLY|os.O_DIRECTORY|os.O_NOFOLLOW|os.O_CLOEXEC)
+    try:
+        for name,sha in PINS.items():
+            target=ROOT/name
+            if os.path.lexists(target):
+                private_bytes(target,sha,uid=0)
+                continue
+            out=os.open(name,os.O_WRONLY|os.O_CREAT|os.O_EXCL|os.O_NOFOLLOW|os.O_CLOEXEC,
+                        0o600,dir_fd=fd)
+            try:
+                os.fchmod(out,0o600)
+                os.fchown(out,0,0)
+                data=buf[name]
+                start=0
+                while start<len(data):
+                    done=os.write(out,data[start:])
+                    if done<1:raise Deny("PRIVATE_BUNDLE_SHORT_WRITE")
+                    start+=done
+                os.fsync(out)
+            finally:
+                os.close(out)
+            private_bytes(target,sha,uid=0)
+        os.fsync(fd)
+    finally:
+        os.close(fd)
+
+def imported(name,label):
+    path=ROOT/name
+    private_bytes(path,PINS[name],uid=0)
+    spec=importlib.util.spec_from_file_location(label,path)
+    if spec is None or spec.loader is None:
+        raise Deny("PINNED_RUNTIME_IMPORT_UNAVAILABLE")
+    m=importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(m)
+    private_bytes(path,PINS[name],uid=0)
+    return m
+
+def prepare_stage():
+    if not STAGE.exists():
+        os.mkdir(STAGE,0o700)
+    existing_private_directory(STAGE)
+    if os.stat(STAGE).st_dev!=os.stat(DAILY).st_dev:
+        raise Deny("STAGE_DAILY_FILESYSTEM_DIFFER")
+
+def attach_full_v2_storage_archive(builder,daily,stamp,work):
+    stage=STAGE/("stage-"+stamp)
+    fd=daily.private_dir_fd(stage,0)
+    try:
+        counts={"bytes":0}
+        digest=builder.copy_file(work/"storage.tar.gz",fd,"storage.tar.gz",{0},counts)
+        mf,mstat=daily.regular(fd,"SHA256SUMS",{0},secret=[REDACTED]
+        try:
+            if mstat.st_size>64000:raise Deny("DAILY_MANIFEST_OVERSIZE")
+            body=os.read(mf,64001)
+            if len(body)!=mstat.st_size:raise Deny("DAILY_MANIFEST_DRIFT")
+        finally:
+            os.close(mf)
+        lines=body.decode("ascii").splitlines()
+        if any(x.endswith("  storage.tar.gz") for x in lines):
+            raise Deny("DAILY_MANIFEST_DUPLICATE_STORAGE_ARCHIVE")
+        lines.append(digest+"  storage.tar.gz")
+        fresh=("".join(row+"\n" for row in sorted(lines))).encode("ascii")
+        builder.new_private_file(fd,"SHA256SUMS.new",fresh)
+        os.replace("SHA256SUMS.new","SHA256SUMS",src_dir_fd=fd,dst_dir_fd=fd)
+        os.fsync(fd)
+        daily.verify_snapshot(fd,0,{0})
+    finally:
+        os.close(fd)
+
+def verify_health_service_once():
+    show=["/usr/bin/systemctl","show","--no-pager","-p","InvocationID",
+          "-p","Result","-p","ExecMainStatus",UNIT]
+    def read_props():
+        p=subprocess.run(show,cwd="/",env=ENV,stdin=subprocess.DEVNULL,
+                         stdout=subprocess.PIPE,stderr=subprocess.DEVNULL,
+                         timeout=15,check=False)
+        if p.returncode!=0 or len(p.stdout)>8192:
+            raise Deny("HEALTH_UNIT_METADATA_UNAVAILABLE")
+        return dict(row.split("=",1) for row in p.stdout.decode("ascii").splitlines()
+                    if "=" in row)
+    before=read_props()
+    result=subprocess.run(["/usr/bin/systemctl","start",UNIT],
+                          cwd="/",env=ENV,stdin=subprocess.DEVNULL,
+                          stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL,
+                          timeout=90,check=False)
+    after=read_props()
+    if (result.returncode!=0 or after.get("Result")!="success"
+        or after.get("ExecMainStatus")!="0" or not after.get("InvocationID")
+        or after["InvocationID"]==before.get("InvocationID")):
+        raise Deny("NATIVE_HEALTH_OWN_INVOCATION_NOT_PASS")
+    return True
+
+def run_once():
+    buf,v2,transport,user,release,app,storage,env_source=runtime_sources()
+    install_bundle(buf)
+    prepare_stage()
+    builder=imported("KMJ_OFFSITE_V3_DAILY_SOURCE_BUILDER_REVIEW_20261115.py","kmj_owner_v3_builder")
+    tx=imported("KMJ_OFFSITE_V3_TRANSFER_BOUND_TRANSACTION_REVIEW_20261115.py","kmj_owner_v3_transaction")
+    with os.fdopen(v2.exclusive_lock(),"r+b"):
+        with tempfile.TemporaryDirectory(prefix=".kmj-fresh-x25519-",dir=str(transport.VAULT)) as tmp:
+            work=Path(tmp)
+            v2.create_fresh(app,storage,user,work)
+            stamp=dt.datetime.now(dt.timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+            fd=os.open(work,os.O_RDONLY|os.O_DIRECTORY|os.O_NOFOLLOW|os.O_CLOEXEC)
+            try:
+                builder.copy_file(env_source,fd,"app.env",{0,user.pw_uid},
+                                  {"bytes":0},private=True)
+            finally:
+                os.close(fd)
+            builder.build_preverified_snapshot(
+                STAGE,DAILY,stamp,work/"database.dump",storage.parent,
+                CONFIG,work/"app.env",expected_uid=0,storage_owner_uid=user.pw_uid,
+            )
+            attach_full_v2_storage_archive(builder,tx.daily,stamp,work)
+            if v2.LIVE.resolve(strict=True)!=release:
+                raise Deny("LIVE_RELEASE_CHANGED_BEFORE_ENCRYPTION")
+            cipher=work/"fresh.age"
+            v2.encrypt(work,cipher)
+            receipt=tx.commit_after_same_invocation_v2_readback(
+                transport=transport,
+                pinned_live_release_probe=lambda:v2.LIVE.resolve(strict=True),
+                expected_release=release,vault=transport.VAULT,
+                fresh_cipher=cipher,stage_root=STAGE,daily_root=DAILY,
+                stamp=stamp,expected_uid=0,
+            )
+            if not (receipt["remote_sha_readback_same_invocation"]
+                    and receipt["local_cipher_sidecar_verified"]
+                    and receipt["local_daily_snapshot_verified"]
+                    and receipt["local_complete"]):
+                raise Deny("DUAL_LOCAL_COMMIT_NOT_VERIFIED")
+    print("FRESH_REMOTE_SFTP_SHA_READBACK=PASS")
+    print("FRESH_LOCAL_CIPHER_SIDECAR=PASS")
+    print("FRESH_LOCAL_DAILY_PGDMP_STORAGE_CONFIG=PASS")
+    print("INDEPENDENT_REMOTE_RESTORE=NOT_VERIFIED")
+    # Do not change health source, do not mark pass without systemd.
+    health_contract()
+    verify_health_service_once()
+    print("HEALTH_UNIT_OWN_INVOCATION=SUCCESS_EXIT0")
+    print("RESULT=FRESH_DUAL_LOCAL_HEALTH_ONEPASS_PASS")
+    return 0
+
+def selftest():
+    pattern="find /var/backups/kmj-elite-daily -mindepth 2 -maxdepth 2 -name '*.tar.gz' -type f -mtime -2 | grep -q ."
+    a=parse_exact_find(pattern)
+    assert a==(str(DAILY),"2","2","*.tar.gz")
+    assert fnmatch.fnmatchcase("storage.tar.gz",a[3])
+    for bad in (pattern.replace("-mtime -2","-mtime +2"),
+                pattern.replace("-maxdepth 2","-maxdepth 30"),
+                pattern+"; touch /root/bad"):
+        try:parse_exact_find(bad)
+        except Deny:pass
+        else:raise AssertionError("BAD_HEALTH_FIND_ADMITTED")
+    assert len(PINS)==6 and len(set(PINS.values()))==6
+    print("KMJ_V3_HEALTH_ONEPASS_OFFLINE_SELFTEST=PASS")
+    print("HOST_OR_SERVICE_MUTATION=NONE")
+    return 0
+
+def main():
+    os.umask(0o077)
+    if len(sys.argv)!=2 or sys.argv[1] not in ("--selftest","--preflight","--run-once"):
+        print("RESULT=BLOCKED_ARGS")
+        return 2
+    if sys.argv[1]=="--selftest":
+        return selftest()
+    try:
+        root_owner()
+        if sys.argv[1]=="--preflight":
+            runtime_sources()
+            print("BACKUP_TRANSFER_EXECUTED=NO")
+            print("SERVICE_MODIFIED=NO")
+            print("RESULT=GUARDED_ONEPASS_PREFLIGHT_PASS")
+            return 0
+        return run_once()
+    except Exception as e:
+        reason=str(e)
+        if not re.fullmatch(r"[A-Z0-9_]{5,96}",reason):
+            reason=type(e).__name__.upper()
+        print("BLOCKER="+reason)
+        print("NATIVE_HEALTH_EXIT0=NOT_ATTESTED")
+        print("LIVE_SERVICE_AND_RELEASE_CONFIG_CHANGED=NO")
+        print("RESULT=BLOCKED_FAIL_CLOSED")
+        return 3
+
+if __name__=="__main__":
+    raise SystemExit(main())
