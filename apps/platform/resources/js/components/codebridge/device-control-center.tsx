@@ -495,7 +495,7 @@ export default function DeviceControlCenter({
                                                 <HardDrive className="h-5 w-5" />
                                             </span>
                                             <div className="min-w-0">
-                                                <h3 className="break-words text-sm font-black leading-5">
+                                                <h3 className="text-sm leading-5 font-black break-words">
                                                     {device.name}
                                                 </h3>
                                                 <code
@@ -890,7 +890,7 @@ export default function DeviceControlCenter({
                                 className="min-w-0 rounded-xl border border-amber-500/30 p-4"
                             >
                                 <div className="flex items-center justify-between gap-2">
-                                    <h4 className="min-w-0 break-words text-sm font-black leading-5">
+                                    <h4 className="min-w-0 text-sm leading-5 font-black break-words">
                                         {request.projectName}
                                     </h4>
                                     <span className="rounded-lg border border-amber-500/30 px-2 py-1 text-xs font-bold">
