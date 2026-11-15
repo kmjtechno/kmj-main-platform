@@ -6,6 +6,8 @@ on:
       - "scripts/test_KMJ_OFFSITE_V3_DUAL_ARTIFACT_POLICY_REVIEW_20261115.py"
       - "scripts/KMJ_OFFSITE_V3_LOCAL_CIPHER_PUBLISHER_REVIEW_20261115.py"
       - "scripts/test_KMJ_OFFSITE_V3_LOCAL_CIPHER_PUBLISHER_REVIEW_20261115.py"
+      - "scripts/KMJ_OFFSITE_V3_LOCAL_DAILY_PUBLISHER_REVIEW_20261115.py"
+      - "scripts/test_KMJ_OFFSITE_V3_LOCAL_DAILY_PUBLISHER_REVIEW_20261115.py"
       - ".github/workflows/kmj-v3-dual-artifact-policy-qa.yml"
   workflow_dispatch:
 permissions:
@@ -25,6 +27,8 @@ jobs:
           python3 -m py_compile scripts/test_KMJ_OFFSITE_V3_DUAL_ARTIFACT_POLICY_REVIEW_20261115.py
           python3 -m py_compile scripts/KMJ_OFFSITE_V3_LOCAL_CIPHER_PUBLISHER_REVIEW_20261115.py
           python3 -m py_compile scripts/test_KMJ_OFFSITE_V3_LOCAL_CIPHER_PUBLISHER_REVIEW_20261115.py
+          python3 -m py_compile scripts/KMJ_OFFSITE_V3_LOCAL_DAILY_PUBLISHER_REVIEW_20261115.py
+          python3 -m py_compile scripts/test_KMJ_OFFSITE_V3_LOCAL_DAILY_PUBLISHER_REVIEW_20261115.py
       - name: Run disposable fixture tests (no actual vault, backup, network or root)
         run: |
           python3 -m unittest discover -s scripts \
@@ -48,5 +52,10 @@ jobs:
           assert 'REMOTE_SFTP_SHA_READBACK=PASS' in writer
           assert 'renameat2' in writer
           assert 'remote_restore_verified' in writer
+          daily=Path('scripts/KMJ_OFFSITE_V3_LOCAL_DAILY_PUBLISHER_REVIEW_20261115.py').read_text()
+          assert 'SOURCE_ONLY_NOT_INSTALLED' in daily
+          assert 'STAGING_DAILY_ROOTS_NOT_SEPARATED' in daily
+          assert 'renameat2' in daily
+          assert 'independent_remote_restore_verified' in daily
           print('SOURCE_REVIEW_ONLY_CONTRACT=PASS')
           PY
