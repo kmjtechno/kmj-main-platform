@@ -159,7 +159,15 @@ export default function OwnerModuleShell({
         (parts[0]?.[0] ?? '') + (parts.at(-1)?.[0] ?? '')
     ).toLocaleUpperCase();
     const [navOpen, setNavOpen] = useState(false);
+    const [activeHash, setActiveHash] = useState('');
     const menuButton = useRef<HTMLButtonElement>(null);
+
+    useEffect(() => {
+        const syncHash = () => setActiveHash(window.location.hash);
+        syncHash();
+        window.addEventListener('hashchange', syncHash);
+        return () => window.removeEventListener('hashchange', syncHash);
+    }, [url]);
 
     useEffect(() => {
         if (!navOpen) return;
@@ -249,8 +257,12 @@ export default function OwnerModuleShell({
                                 href={href}
                                 aria-current={
                                     href.split('#')[0] === url &&
-                                    (href === '/operator/ops'
-                                        ? label === 'System Health'
+                                    (href.startsWith('/operator/ops#')
+                                        ? activeHash
+                                            ? href.endsWith(activeHash)
+                                            : label === 'System Health'
+                                        : href === '/operator/ops'
+                                          ? label === 'System Health'
                                         : href === '/operator/products'
                                           ? label === 'Products & Catalog'
                                           : href === '/operator/kslp'
@@ -260,7 +272,14 @@ export default function OwnerModuleShell({
                                         ? 'page'
                                         : undefined
                                 }
-                                onClick={() => setNavOpen(false)}
+                                onClick={() => {
+                                    setNavOpen(false);
+                                    setActiveHash(
+                                        href.includes('#')
+                                            ? '#' + href.split('#')[1]
+                                            : '',
+                                    );
+                                }}
                             >
                                 <Icon size={17} aria-hidden="true" />
                                 {label}
