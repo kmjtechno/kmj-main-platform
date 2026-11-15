@@ -138,6 +138,70 @@ final class AiProviderManagerTest extends TestCase
         $this->assertSame('unknown', AiProvider::query()->findOrFail($id)->rate_limit['status']);
     }
 
+    public function test_guided_key_connect_saves_encrypted_key_and_only_probes_models_automatically(): void
+    {
+        config(['ai_providers.free_models.groq' => ['llama-3.1-8b-instant']]);
+        Http::fake(['api.groq.com/*' => Http::response([
+            'data' => [['id' => 'llama-3.1-8b-instant'], ['id' => 'unverified-paid-model']],
+        ], 200)]);
+
+        $response = $this->confirmed($this->owner)->post('/services/kmj-codebridge/ai-providers', [
+            'preset' => 'groq',
+            'name' => 'One action Groq',
+            'api_key' => self::KEY,
+            'verify_connection' => true,
+        ]);
+        $response->assertSessionHasNoErrors()->assertRedirect();
+        $provider = AiProvider::query()->firstOrFail();
+
+        $this->assertSame('ok', $provider->health);
+        $this->assertSame('llama-3.1-8b-instant', $provider->default_model);
+        $this->assertTrue($provider->free_only);
+        $this->assertNotSame(self::KEY, DB::table('ai_providers')->value('api_key'));
+        $this->assertStringContainsString('1 approved free model', (string) session('status'));
+        $this->assertStringNotContainsString(self::KEY, (string) session('status'));
+
+        Http::assertSentCount(1);
+        Http::assertSent(fn ($request): bool => $request->method() === 'GET'
+            && $request->url() === 'https://api.groq.com/openai/v1/models'
+            && $request->body() === '');
+        $this->expectException(RuntimeException::class);
+        app(ProviderManager::class)->assertInferenceAllowed($provider, 'unverified-paid-model');
+    }
+
+    public function test_guided_key_connect_without_owner_approved_free_models_stays_blocked(): void
+    {
+        config(['ai_providers.free_models.groq' => []]);
+        Http::fake(['api.groq.com/*' => Http::response(['data' => [['id' => 'available-but-unverified']]], 200)]);
+
+        $response = $this->confirmed($this->owner)->post('/services/kmj-codebridge/ai-providers', [
+            'preset' => 'groq', 'api_key' => self::KEY, 'verify_connection' => true,
+        ]);
+        $response->assertSessionHasNoErrors();
+
+        $provider = AiProvider::query()->firstOrFail();
+        $this->assertSame('ok', $provider->health);
+        $this->assertNull($provider->default_model);
+        $this->assertTrue($provider->free_only);
+        $this->assertStringContainsString('Inference remains blocked', (string) session('status'));
+        Http::assertSentCount(1);
+    }
+
+    public function test_guided_key_connect_failed_probe_does_not_claim_connected(): void
+    {
+        Http::fake(['api.groq.com/*' => Http::response(['error' => 'rate limited'], 429)]);
+        $response = $this->confirmed($this->owner)->post('/services/kmj-codebridge/ai-providers', [
+            'preset' => 'groq', 'api_key' => self::KEY, 'verify_connection' => true,
+        ]);
+        $response->assertRedirect();
+        $provider = AiProvider::query()->firstOrFail();
+        $this->assertSame('rate_limited', $provider->health);
+        $this->assertNull($provider->default_model);
+        $this->assertStringContainsString('connection not verified', (string) session('status'));
+        $this->assertStringNotContainsString(self::KEY, (string) session('status'));
+        Http::assertSentCount(1);
+    }
+
     public function test_unapproved_or_private_endpoints_are_rejected_before_any_request(): void
     {
         Http::fake();
