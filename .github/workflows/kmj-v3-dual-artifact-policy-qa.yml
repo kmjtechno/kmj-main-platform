@@ -18,6 +18,8 @@ on:
       - "scripts/test_KMJ_OFFSITE_V3_HEALTH_ONEPASS_OWNER_REVIEW_20261115.py"
       - "scripts/KMJ_HEALTH_SOURCE_ENTRY_CLASSIFIER_READONLY_20261115.py"
       - "scripts/test_KMJ_HEALTH_SOURCE_ENTRY_CLASSIFIER_READONLY_20261115.py"
+      - "scripts/KMJ_CERTBOT_LINK_METADATA_CLASSIFIER_READONLY_20261115.py"
+      - "scripts/test_KMJ_CERTBOT_LINK_METADATA_CLASSIFIER_READONLY_20261115.py"
       - ".github/workflows/kmj-v3-dual-artifact-policy-qa.yml"
   workflow_dispatch:
 permissions:
@@ -49,12 +51,16 @@ jobs:
           python3 -m py_compile scripts/test_KMJ_OFFSITE_V3_HEALTH_ONEPASS_OWNER_REVIEW_20261115.py
           python3 -m py_compile scripts/KMJ_HEALTH_SOURCE_ENTRY_CLASSIFIER_READONLY_20261115.py
           python3 -m py_compile scripts/test_KMJ_HEALTH_SOURCE_ENTRY_CLASSIFIER_READONLY_20261115.py
+          python3 -m py_compile scripts/KMJ_CERTBOT_LINK_METADATA_CLASSIFIER_READONLY_20261115.py
+          python3 -m py_compile scripts/test_KMJ_CERTBOT_LINK_METADATA_CLASSIFIER_READONLY_20261115.py
       - name: Run disposable fixture tests (no actual vault, backup, network or root)
         run: |
           python3 -m unittest discover -s scripts \
             -p 'test_KMJ_OFFSITE_V3_*_20261115.py' -v
           python3 -m unittest discover -s scripts \
             -p 'test_KMJ_HEALTH_SOURCE_ENTRY_CLASSIFIER_READONLY_20261115.py' -v
+          python3 -m unittest discover -s scripts \
+            -p 'test_KMJ_CERTBOT_LINK_METADATA_CLASSIFIER_READONLY_20261115.py' -v
       - name: Reject any accidental installation CLI added to review-only policy
         shell: bash
         run: |
