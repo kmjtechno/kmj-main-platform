@@ -105,7 +105,7 @@ void test('catalog-only and paid models never enter free selectable defaults', (
     assert.match(ui, /Paid and unknown-price models cannot be selected/);
 });
 
-void test('official key launcher selects provider and resumes secure form without cross-origin key access', () => {
+void test('Official key launcher resumes secure form safely', () => {
     assert.match(hub, /onChooseKeyProvider\(guide\.key\)/);
     assert.match(hub, /data-selected=\{\s*selectedPreset\s*===\s*guide\.key/);
     assert.match(hub, /Connect \{guide\.title\}/);
