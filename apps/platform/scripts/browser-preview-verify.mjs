@@ -41,6 +41,7 @@ try {
             ['super-admin', '/super-admin'],
             ['owner-command', '/operator'],
             ['owner-ops', '/operator/ops'],
+            ['owner-ai-providers', '/services/kmj-codebridge/ai-providers'],
             ['owner-products', '/operator/products?create=1'],
             ['owner-developer', '/developer/apps'],
             ['owner-devices', '/operator/codebridge/owner-plan'],
@@ -1203,6 +1204,97 @@ try {
                         name: 'Search devices and projects',
                     })
                     .waitFor({ state: 'visible' });
+            }
+            if (name === 'owner-ai-providers') {
+                // Real React + Inertia page with synthetic owner data. No
+                // external account login, API keys or billable model calls.
+                if (
+                    (await page
+                        .getByRole('heading', {
+                            name: 'Connect an AI provider',
+                            exact: true,
+                        })
+                        .count()) !== 1
+                ) {
+                    errors.push('AI Provider quick-connect hub missing');
+                }
+                if (
+                    (await page
+                        .locator('.kmj-ai-managed-provider')
+                        .count()) !== 2
+                ) {
+                    errors.push('Synthetic provider summaries not rendered');
+                }
+                const managed = page.locator('.kmj-ai-managed-provider').first();
+                if ((await managed.locator('input[type="password"]').count()) !== 0) {
+                    errors.push('Replace key leaked into collapsed summary');
+                }
+                // Suppress external navigation only in this visual QA fixture.
+                // The real production anchor is unchanged and keeps its
+                // official href, new-tab and noreferrer properties.
+                await page.evaluate(() => {
+                    const link = document.querySelector(
+                        'a[href="https://console.groq.com/keys"]',
+                    );
+                    link?.addEventListener(
+                        'click',
+                        (event) => event.preventDefault(),
+                        { once: true },
+                    );
+                });
+                await page.getByRole('link', { name: 'Connect Groq', exact: true }).click();
+                await page
+                    .getByRole('heading', { name: 'Finish Groq connection' })
+                    .waitFor({ state: 'visible' });
+                if (
+                    (await page.locator('.kmj-ai-key-card[data-selected="true"]').count()) !== 1
+                ) {
+                    errors.push('Chosen provider card not highlighted');
+                }
+                if (
+                    (await page
+                        .locator('#ai-provider-key-form select')
+                        .first()
+                        .inputValue()) !== 'groq'
+                ) {
+                    errors.push('Official key connection not preselected');
+                }
+                const focused = await page.evaluate(() => {
+                    const keyInput = document.querySelector(
+                        '#ai-provider-key-form input[type="password"]',
+                    );
+                    return keyInput === document.activeElement;
+                });
+                if (!focused) {
+                    errors.push('Guided key input did not receive focus');
+                }
+                await managed.getByRole('button', { name: 'Manage settings' }).click();
+                if (
+                    (await managed.getByRole('button', { name: 'Hide settings' })
+                        .getAttribute('aria-expanded')) !== 'true'
+                ) {
+                    errors.push('Manage settings did not expand');
+                }
+                if (
+                    (await managed.locator('input[type="password"]').count()) !== 0
+                ) {
+                    errors.push('Advanced key replacement not concealed');
+                }
+                await managed
+                    .getByRole('button', { name: 'Replace API key' })
+                    .click();
+                if (
+                    (await managed.locator('input[type="password"]').count()) !== 1
+                ) {
+                    errors.push('Explicit replace-key control did not expand');
+                }
+                if (
+                    (await page
+                        .locator('.kmj-ai-admission-summary')
+                        .count()) !== 2
+                ) {
+                    errors.push('Free model admission summary missing');
+                }
             }
             if (name === 'owner-ops') {
                 if (
