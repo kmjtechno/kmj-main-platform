@@ -117,7 +117,10 @@ void test('official key launcher selects provider and resumes secure form withou
     assert.match(page, /ref=\{keyInputRef\}/);
     assert.match(page, /Finish \{selected\?\.label/);
     assert.match(page, /verify_connection: true/);
-    assert.doesNotMatch(hub, /localStorage|sessionStorage|document\.cookie|navigator\.clipboard/);
+    assert.doesNotMatch(
+        hub,
+        /localStorage|sessionStorage|document\.cookie|navigator\.clipboard/,
+    );
 });
 
 void test('configured providers use honest summary and deliberate advanced controls', () => {
