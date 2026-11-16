@@ -157,10 +157,14 @@ function ProviderCard({
                             <button
                                 type="button"
                                 disabled={busy}
-                                onClick={() => patch({ enabled: !provider.enabled })}
+                                onClick={() =>
+                                    patch({ enabled: !provider.enabled })
+                                }
                                 className="min-h-10 rounded-xl border px-3 text-sm font-semibold"
                             >
-                                {provider.enabled ? 'Disable provider' : 'Enable provider'}
+                                {provider.enabled
+                                    ? 'Disable provider'
+                                    : 'Enable provider'}
                             </button>
                             <span className="rounded-full border px-3 py-2 text-sm">
                                 Zero-spend enforced
@@ -187,127 +191,149 @@ function ProviderCard({
                                 }}
                                 className="inline-flex min-h-10 items-center gap-2 rounded-xl border px-3 text-sm font-semibold text-red-400"
                             >
-                                <Trash2 className="h-4 w-4" aria-hidden="true" />
+                                <Trash2
+                                    className="h-4 w-4"
+                                    aria-hidden="true"
+                                />
                                 Delete provider
                             </button>
                         </div>
                     )}
 
-            {provider.models.length === 0 ? (
-                <p className="text-muted-foreground text-sm" role="status">
-                    {provider.discovered_model_count > 0
-                        ? `${provider.discovered_model_count} catalog models found, but none is currently admitted as verified free. Verify your free model allowlist and run “Test connection” again. Paid and unknown-price models cannot be selected.`
-                        : 'No admitted free models yet. Run “Test connection” to discover models and verify the free-only policy.'}
-                </p>
-            ) : (
-                <div className="grid gap-3 md:grid-cols-2">
-                    <label className="text-xs font-bold">
-                        Verified-free default model
-                        <select
-                            className="bg-background mt-1 block h-9 w-full rounded-xl border px-2"
-                            value={
-                                provider.default_model &&
-                                provider.models.includes(provider.default_model)
-                                    ? provider.default_model
-                                    : ''
-                            }
-                            disabled={busy || !canManage}
-                            onChange={(event) =>
-                                patch({
-                                    default_model: event.target.value || null,
-                                })
-                            }
+                    {provider.models.length === 0 ? (
+                        <p
+                            className="text-muted-foreground text-sm"
+                            role="status"
                         >
-                            <option value="">None</option>
-                            {provider.models.map((model) => (
-                                <option key={model} value={model}>
-                                    {model}
-                                </option>
-                            ))}
-                        </select>
-                    </label>
-                    <fieldset className="text-xs font-bold">
-                        <legend>Verified-free fallback models (max 5)</legend>
-                        <div className="mt-1 max-h-32 space-y-1 overflow-y-auto">
-                            {provider.models
-                                .filter(
-                                    (model) => model !== provider.default_model,
-                                )
-                                .map((model) => (
-                                    <label
-                                        key={model}
-                                        className="flex items-center gap-2 font-normal"
-                                    >
-                                        <input
-                                            type="checkbox"
-                                            checked={provider.fallback_models.includes(
-                                                model,
-                                            )}
-                                            disabled={busy || !canManage}
-                                            onChange={() =>
-                                                toggleFallback(model)
-                                            }
-                                        />
-                                        {model}
-                                    </label>
-                                ))}
+                            {provider.discovered_model_count > 0
+                                ? `${provider.discovered_model_count} catalog models found, but none is currently admitted as verified free. Verify your free model allowlist and run “Test connection” again. Paid and unknown-price models cannot be selected.`
+                                : 'No admitted free models yet. Run “Test connection” to discover models and verify the free-only policy.'}
+                        </p>
+                    ) : (
+                        <div className="grid gap-3 md:grid-cols-2">
+                            <label className="text-xs font-bold">
+                                Verified-free default model
+                                <select
+                                    className="bg-background mt-1 block h-9 w-full rounded-xl border px-2"
+                                    value={
+                                        provider.default_model &&
+                                        provider.models.includes(
+                                            provider.default_model,
+                                        )
+                                            ? provider.default_model
+                                            : ''
+                                    }
+                                    disabled={busy || !canManage}
+                                    onChange={(event) =>
+                                        patch({
+                                            default_model:
+                                                event.target.value || null,
+                                        })
+                                    }
+                                >
+                                    <option value="">None</option>
+                                    {provider.models.map((model) => (
+                                        <option key={model} value={model}>
+                                            {model}
+                                        </option>
+                                    ))}
+                                </select>
+                            </label>
+                            <fieldset className="text-xs font-bold">
+                                <legend>
+                                    Verified-free fallback models (max 5)
+                                </legend>
+                                <div className="mt-1 max-h-32 space-y-1 overflow-y-auto">
+                                    {provider.models
+                                        .filter(
+                                            (model) =>
+                                                model !==
+                                                provider.default_model,
+                                        )
+                                        .map((model) => (
+                                            <label
+                                                key={model}
+                                                className="flex items-center gap-2 font-normal"
+                                            >
+                                                <input
+                                                    type="checkbox"
+                                                    checked={provider.fallback_models.includes(
+                                                        model,
+                                                    )}
+                                                    disabled={
+                                                        busy || !canManage
+                                                    }
+                                                    onChange={() =>
+                                                        toggleFallback(model)
+                                                    }
+                                                />
+                                                {model}
+                                            </label>
+                                        ))}
+                                </div>
+                            </fieldset>
                         </div>
-                    </fieldset>
-                </div>
-            )}
+                    )}
 
-            {canManage && (
-                <button
-                    type="button"
-                    onClick={() => setReplaceVisible((current) => !current)}
-                    aria-expanded={replaceVisible}
-                    aria-controls={`ai-provider-replace-key-${provider.id}`}
-                    className="min-h-10 rounded-xl border px-3 text-sm font-semibold"
-                >
-                    {replaceVisible ? 'Cancel key replacement' : 'Replace API key'}
-                </button>
-            )}
-            {canManage && replaceVisible && (
-                <div id={`ai-provider-replace-key-${provider.id}`}>
-                <form
-                    className="flex flex-wrap items-end gap-2"
-                    onSubmit={(event) => {
-                        event.preventDefault();
-                        if (newKey.length >= 8) {
-                            act(() =>
-                                router.patch(
-                                    `${BASE}/${provider.id}`,
-                                    { api_key: newKey },
-                                    {
-                                        ...options,
-                                        onSuccess: () => setNewKey(''),
-                                    },
-                                ),
-                            );
-                        }
-                    }}
-                >
-                    <label className="text-xs font-bold">
-                        Replace API key
-                        <input
-                            type="password"
-                            autoComplete="off"
-                            value={newKey}
-                            onChange={(event) => setNewKey(event.target.value)}
-                            className="bg-background mt-1 block h-9 w-64 rounded-xl border px-3 font-normal"
-                        />
-                    </label>
-                    <button
-                        type="submit"
-                        disabled={busy || newKey.length < 8}
-                        className="inline-flex h-9 items-center gap-2 rounded-xl border px-3 text-xs font-bold"
-                    >
-                        <KeyRound className="h-3.5 w-3.5" />
-                        Replace key
-                    </button>
-                </form>
-                </div>
-            )}
+                    {canManage && (
+                        <button
+                            type="button"
+                            onClick={() =>
+                                setReplaceVisible((current) => !current)
+                            }
+                            aria-expanded={replaceVisible}
+                            aria-controls={`ai-provider-replace-key-${provider.id}`}
+                            className="min-h-10 rounded-xl border px-3 text-sm font-semibold"
+                        >
+                            {replaceVisible
+                                ? 'Cancel key replacement'
+                                : 'Replace API key'}
+                        </button>
+                    )}
+                    {canManage && replaceVisible && (
+                        <div id={`ai-provider-replace-key-${provider.id}`}>
+                            <form
+                                className="flex flex-wrap items-end gap-2"
+                                onSubmit={(event) => {
+                                    event.preventDefault();
+                                    if (newKey.length >= 8) {
+                                        act(() =>
+                                            router.patch(
+                                                `${BASE}/${provider.id}`,
+                                                { api_key: newKey },
+                                                {
+                                                    ...options,
+                                                    onSuccess: () =>
+                                                        setNewKey(''),
+                                                },
+                                            ),
+                                        );
+                                    }
+                                }}
+                            >
+                                <label className="text-xs font-bold">
+                                    Replace API key
+                                    <input
+                                        type="password"
+                                        autoComplete="off"
+                                        value={newKey}
+                                        onChange={(event) =>
+                                            setNewKey(event.target.value)
+                                        }
+                                        className="bg-background mt-1 block h-9 w-64 rounded-xl border px-3 font-normal"
+                                    />
+                                </label>
+                                <button
+                                    type="submit"
+                                    disabled={busy || newKey.length < 8}
+                                    className="inline-flex h-9 items-center gap-2 rounded-xl border px-3 text-xs font-bold"
+                                >
+                                    <KeyRound className="h-3.5 w-3.5" />
+                                    Replace key
+                                </button>
+                            </form>
+                        </div>
+                    )}
                 </div>
             )}
         </article>
@@ -384,14 +410,17 @@ function AddProvider({
                 <p className="text-xs font-bold tracking-wider text-red-400 uppercase">
                     Step 2 of 2 · Secure key verification
                 </p>
-                <h2 className="mt-1 flex items-center gap-2 text-lg font-black" aria-live="polite">
+                <h2
+                    className="mt-1 flex items-center gap-2 text-lg font-black"
+                    aria-live="polite"
+                >
                     <Plug className="h-4 w-4" />
                     Finish {selected?.label ?? 'provider'} connection
                 </h2>
                 <p className="text-muted-foreground mt-1 text-sm">
-                    Get a key from the official provider dashboard, paste it below,
-                    then verify with a read-only model discovery call. No inference
-                    or billed fallback will be started.
+                    Get a key from the official provider dashboard, paste it
+                    below, then verify with a read-only model discovery call. No
+                    inference or billed fallback will be started.
                 </p>
             </div>
             <label className="text-xs font-bold">
