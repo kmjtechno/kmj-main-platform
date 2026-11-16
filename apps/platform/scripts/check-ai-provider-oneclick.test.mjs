@@ -153,3 +153,15 @@ void test('API-key setup is progressive instead of a permanently open form', () 
     assert.match(page, /Connect another provider using an API key/);
     assert.match(page, /<AddProvider/);
 });
+
+void test('draft secrets clear when provider or key editor changes', () => {
+    assert.match(page, /lastPreferredSelection\.current/);
+    assert.match(page, /onManualProviderChange/);
+    assert.match(page, /setApiKey\(''\)/);
+    assert.match(page, /setReplaceVisible\(false\)/);
+    assert.match(page, /setNewKey\(''\)/);
+    const browser = read('scripts/browser-preview-verify.mjs');
+    assert.match(browser, /Key persisted across provider cards/);
+    assert.match(browser, /Key persisted across manual preset change/);
+    assert.match(browser, /Cancelled replacement key was retained/);
+});

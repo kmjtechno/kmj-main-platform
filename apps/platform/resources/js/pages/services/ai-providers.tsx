@@ -132,7 +132,11 @@ function ProviderCard({
                     type="button"
                     aria-expanded={expanded}
                     aria-controls={`ai-provider-details-${provider.id}`}
-                    onClick={() => setExpanded((current) => !current)}
+                    onClick={() => {
+                        setExpanded((current) => !current);
+                        setReplaceVisible(false);
+                        setNewKey('');
+                    }}
                     className="inline-flex min-h-10 items-center rounded-xl border px-4 text-sm font-semibold"
                 >
                     {expanded ? 'Hide settings' : 'Manage settings'}
@@ -278,9 +282,10 @@ function ProviderCard({
                     {canManage && (
                         <button
                             type="button"
-                            onClick={() =>
-                                setReplaceVisible((current) => !current)
-                            }
+                            onClick={() => {
+                                setReplaceVisible((current) => !current);
+                                setNewKey('');
+                            }}
                             aria-expanded={replaceVisible}
                             aria-controls={`ai-provider-replace-key-${provider.id}`}
                             className="min-h-10 rounded-xl border px-3 text-sm font-semibold"
@@ -303,8 +308,10 @@ function ProviderCard({
                                                 { api_key: newKey },
                                                 {
                                                     ...options,
-                                                    onSuccess: () =>
-                                                        setNewKey(''),
+                                                    onSuccess: () => {
+                                                        setNewKey('');
+                                                        setReplaceVisible(false);
+                                                    },
                                                 },
                                             ),
                                         );
@@ -343,13 +350,16 @@ function ProviderCard({
 function AddProvider({
     presets,
     preferredPreset,
+    onManualProviderChange,
 }: {
     presets: Preset[];
     preferredPreset: { key: string; token: number } | null;
+    onManualProviderChange: () => void;
 }) {
     const [preset, setPreset] = useState(presets[0]?.key ?? 'groq');
     const formRef = useRef<HTMLFormElement>(null);
     const keyInputRef = useRef<HTMLInputElement>(null);
+    const lastPreferredSelection = useRef<typeof preferredPreset>(null);
     const [name, setName] = useState('');
     const [apiKey, setApiKey] = useState('');
     const [baseUrl, setBaseUrl] = useState('');
@@ -364,6 +374,12 @@ function AddProvider({
         ) {
             return;
         }
+        if (lastPreferredSelection.current === preferredPreset) return;
+        lastPreferredSelection.current = preferredPreset;
+        // Never carry a draft credential across different provider accounts.
+        setApiKey('');
+        setBaseUrl('');
+        setName('');
         setPreset(preferredPreset.key);
         // Official provider keys cannot be read across sites. Prepare and focus
         // the legitimate local form for the owner to finish on returning.
@@ -428,7 +444,13 @@ function AddProvider({
                 <select
                     className="bg-background mt-1 block h-9 w-full rounded-xl border px-2"
                     value={preset}
-                    onChange={(event) => setPreset(event.target.value)}
+                    onChange={(event) => {
+                        setApiKey('');
+                        setBaseUrl('');
+                        setName('');
+                        setPreset(event.target.value);
+                        onManualProviderChange();
+                    }}
                 >
                     {presets.map((item) => (
                         <option key={item.key} value={item.key}>
@@ -588,6 +610,9 @@ export default function AiProviders({
                                 <AddProvider
                                     presets={presets}
                                     preferredPreset={preferredPreset}
+                                    onManualProviderChange={() =>
+                                        setPreferredPreset(null)
+                                    }
                                 />
                             </div>
                         ) : (

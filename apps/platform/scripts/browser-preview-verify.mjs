@@ -1293,6 +1293,48 @@ try {
                 if (!focused) {
                     errors.push('Guided key input did not receive focus');
                 }
+                // Synthetic, never-submitted draft must not survive provider
+                // switching or leak into a different provider's key form.
+                const secretInput = page.locator(
+                    '#ai-provider-key-form input[type="password"]',
+                );
+                await secretInput.fill('synthetic-not-a-real-credential');
+                await page.evaluate(() => {
+                    const link = document.querySelector(
+                        'a[href="https://aistudio.google.com/apikey"]',
+                    );
+                    link?.addEventListener(
+                        'click',
+                        (event) => event.preventDefault(),
+                        { once: true },
+                    );
+                });
+                await page
+                    .getByRole('link', { name: 'Connect Gemini', exact: true })
+                    .click();
+                await page
+                    .getByRole('heading', {
+                        name: 'Finish Google Gemini connection',
+                    })
+                    .waitFor({ state: 'visible' });
+                if ((await secretInput.inputValue()) !== '') {
+                    errors.push('Key persisted across provider cards');
+                }
+                await secretInput.fill('synthetic-second-draft-key');
+                await page
+                    .locator('#ai-provider-key-form select')
+                    .first()
+                    .selectOption('mistral');
+                if ((await secretInput.inputValue()) !== '') {
+                    errors.push('Key persisted across manual preset change');
+                }
+                if (
+                    (await page
+                        .locator('.kmj-ai-key-card[data-selected="true"]')
+                        .count()) !== 0
+                ) {
+                    errors.push('Stale guided selection after manual change');
+                }
                 await page
                     .getByRole('button', { name: 'Close key setup' })
                     .click();
@@ -1334,6 +1376,33 @@ try {
                         .count()) !== 1
                 ) {
                     errors.push('Explicit replace-key control did not expand');
+                }
+                // Cancellation and collapse must discard unsubmitted secrets.
+                const replacementInput = managed.locator(
+                    'input[type="password"]',
+                );
+                await replacementInput.fill('synthetic-replacement-draft');
+                await managed
+                    .getByRole('button', { name: 'Cancel key replacement' })
+                    .click();
+                await managed
+                    .getByRole('button', { name: 'Replace API key' })
+                    .click();
+                if ((await replacementInput.inputValue()) !== '') {
+                    errors.push('Cancelled replacement key was retained');
+                }
+                await replacementInput.fill('synthetic-collapse-draft');
+                await managed
+                    .getByRole('button', { name: 'Hide settings' })
+                    .click();
+                await managed
+                    .getByRole('button', { name: 'Manage settings' })
+                    .click();
+                if (
+                    (await managed.locator('input[type="password"]').count()) !==
+                    0
+                ) {
+                    errors.push('Collapsed settings retained replacement key');
                 }
                 if (
                     (await page
