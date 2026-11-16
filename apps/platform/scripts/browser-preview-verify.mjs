@@ -1219,14 +1219,19 @@ try {
                     errors.push('AI Provider quick-connect hub missing');
                 }
                 if (
-                    (await page
-                        .locator('.kmj-ai-managed-provider')
-                        .count()) !== 2
+                    (await page.locator('.kmj-ai-managed-provider').count()) !==
+                    2
                 ) {
                     errors.push('Synthetic provider summaries not rendered');
                 }
-                const managed = page.locator('.kmj-ai-managed-provider').first();
-                if ((await managed.locator('input[type="password"]').count()) !== 0) {
+                const managed = page
+                    .locator('.kmj-ai-managed-provider')
+                    .first();
+                if (
+                    (await managed
+                        .locator('input[type="password"]')
+                        .count()) !== 0
+                ) {
                     errors.push('Replace key leaked into collapsed summary');
                 }
                 // Suppress external navigation only in this visual QA fixture.
@@ -1242,12 +1247,16 @@ try {
                         { once: true },
                     );
                 });
-                await page.getByRole('link', { name: 'Connect Groq', exact: true }).click();
+                await page
+                    .getByRole('link', { name: 'Connect Groq', exact: true })
+                    .click();
                 await page
                     .getByRole('heading', { name: 'Finish Groq connection' })
                     .waitFor({ state: 'visible' });
                 if (
-                    (await page.locator('.kmj-ai-key-card[data-selected="true"]').count()) !== 1
+                    (await page
+                        .locator('.kmj-ai-key-card[data-selected="true"]')
+                        .count()) !== 1
                 ) {
                     errors.push('Chosen provider card not highlighted');
                 }
@@ -1268,15 +1277,20 @@ try {
                 if (!focused) {
                     errors.push('Guided key input did not receive focus');
                 }
-                await managed.getByRole('button', { name: 'Manage settings' }).click();
+                await managed
+                    .getByRole('button', { name: 'Manage settings' })
+                    .click();
                 if (
-                    (await managed.getByRole('button', { name: 'Hide settings' })
+                    (await managed
+                        .getByRole('button', { name: 'Hide settings' })
                         .getAttribute('aria-expanded')) !== 'true'
                 ) {
                     errors.push('Manage settings did not expand');
                 }
                 if (
-                    (await managed.locator('input[type="password"]').count()) !== 0
+                    (await managed
+                        .locator('input[type="password"]')
+                        .count()) !== 0
                 ) {
                     errors.push('Advanced key replacement not concealed');
                 }
@@ -1284,7 +1298,9 @@ try {
                     .getByRole('button', { name: 'Replace API key' })
                     .click();
                 if (
-                    (await managed.locator('input[type="password"]').count()) !== 1
+                    (await managed
+                        .locator('input[type="password"]')
+                        .count()) !== 1
                 ) {
                     errors.push('Explicit replace-key control did not expand');
                 }
