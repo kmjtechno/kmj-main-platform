@@ -161,8 +161,16 @@ final class AiProviderController extends Controller
             return $index->withErrors(['provider' => 'Sign-in session mismatch. Start again.']);
         }
 
+        // Query parameters are untrusted: PHP array-valued code/verifier input
+        // must fail closed before any cast, network exchange or key creation.
+        $code = $request->query('code');
+        $verifier = $pending['verifier'] ?? null;
+        if (! is_string($code) || ! is_string($verifier)) {
+            return $index->withErrors(['provider' => 'Invalid sign-in response. Start again.']);
+        }
+
         try {
-            $key = $this->openRouter->exchange((string) $request->query('code', ''), (string) $pending['verifier']);
+            $key = $this->openRouter->exchange($code, $verifier);
             $provider = $this->manager->create($scope['organization_id'], (int) $this->user($request)->id, [
                 'preset' => 'openrouter',
                 'name' => $this->freeName($scope['organization_id'], 'OpenRouter'),
