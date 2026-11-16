@@ -4,6 +4,8 @@ on:
     paths:
       - 'scripts/KMJ_4C9_GOOGLE_ISOLATED_RESTORE_ONEPASS_20261116.sh'
       - 'scripts/test_KMJ_4C9_GOOGLE_ISOLATED_RESTORE_ONEPASS_20261116.py'
+      - 'scripts/KMJ_4C9_GOOGLE_CIPHER_IMPORT_20261116.py'
+      - 'scripts/test_KMJ_4C9_GOOGLE_CIPHER_IMPORT_20261116.py'
       - '.github/workflows/kmj-4c9-google-isolated-restore-source-qa.yml'
   workflow_dispatch:
 permissions:
@@ -20,6 +22,7 @@ jobs:
         run: |
           set -Eeuo pipefail
           bash -n scripts/KMJ_4C9_GOOGLE_ISOLATED_RESTORE_ONEPASS_20261116.sh
+          python3 -B -m unittest discover -s scripts -p 'test_KMJ_4C9_GOOGLE_CIPHER_IMPORT_20261116.py' -v
           python3 -B -m unittest discover -s scripts \
             -p 'test_KMJ_4C9_GOOGLE_ISOLATED_RESTORE_ONEPASS_20261116.py' -v
           echo GOOGLE_PRIVATE_KEY_READ=NO

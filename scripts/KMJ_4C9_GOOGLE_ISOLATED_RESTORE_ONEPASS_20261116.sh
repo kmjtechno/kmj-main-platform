@@ -23,6 +23,8 @@ readonly BUNDLE=verify_backup_bundle.sh
 readonly BUNDLE_SHA=4e0a7c61f317d1ecacfe6bf8a3c3199bb3fdaaf33b92c23b25e34f45c57de166
 readonly PARITY=operations/verify-restored-storage-parity.py
 readonly PARITY_SHA=a5cc97d5395f7ab4ed5a0a1f426f13a5dd26cfc575323b213276c5cee1bb9171
+readonly IMPORTER=KMJ_4C9_GOOGLE_CIPHER_IMPORT_20261116.py
+readonly IMPORTER_SHA=7229c1cdcacab3353a7566636ddd62e4bbdb48d74f65a755ff65c5dd1707be7b
 
 mode=''
 encrypted_sha=''
@@ -64,7 +66,8 @@ checked(){
 checked "$SCRIPTS/$RESTORE" "$RESTORE_SHA"
 checked "$SCRIPTS/$BUNDLE" "$BUNDLE_SHA"
 checked "$SCRIPTS/$PARITY" "$PARITY_SHA"
-mark KMJ_GOOGLE_SOURCE_HASHES 3_PASS
+checked "$SCRIPTS/$IMPORTER" "$IMPORTER_SHA"
+mark KMJ_GOOGLE_SOURCE_HASHES 4_PASS
 mark CANDIDATE_SHA "$CANDIDATE"
 mark CURRENT_RELEASE_EXPECTED "$PREDECESSOR"
 
@@ -83,6 +86,9 @@ fi
 
 # Digest values must come from independently reviewed Elite seal + transfer
 # receipts; caller input is NOT a trusted attestation by itself.
+# Attempt only exact name+SHA no-overwrite import from Google's private vault.
+/usr/bin/python3 -I -B "$SCRIPTS/$IMPORTER" --encrypted-sha256 "$encrypted_sha" ||
+    blocked EXACT_VAULT_CIPHER_IMPORT
 [[ -f "$CIPHER" && ! -L "$CIPHER" && "$(stat -c '%u:%a:%h' "$CIPHER")" == "$(id -u):600:1" ]] ||
     blocked CIPHER_IMPORT_NOT_PRIVATE
 bytes="$(stat -c '%s' "$CIPHER")" || blocked CIPHER_SIZE

@@ -27,13 +27,16 @@ class Google4C9SourceSafety(unittest.TestCase):
         self.assertIn("readonly PREDECESSOR=" + PREV, self.s)
         self.assertIn("readonly SHORT=4c9d59103b99", self.s)
 
-    def test_all_three_independently_exact_pinned_sources(self):
+    def test_all_four_independently_exact_pinned_sources(self):
         for pin in PINS:
             self.assertEqual(self.s.count(pin), 1)
-        self.assertIn("KMJ_GOOGLE_SOURCE_HASHES 3_PASS", self.s)
+        self.assertIn("KMJ_GOOGLE_SOURCE_HASHES 4_PASS", self.s)
         self.assertIn('checked "$work/repo/scripts/$RESTORE" "$RESTORE_SHA"', self.s)
         self.assertIn('checked "$work/repo/scripts/$BUNDLE" "$BUNDLE_SHA"', self.s)
         self.assertIn('checked "$work/repo/scripts/$PARITY" "$PARITY_SHA"', self.s)
+        self.assertIn("readonly IMPORTER_SHA=7229c1cdcacab3353a7566636ddd62e4bbdb48d74f65a755ff65c5dd1707be7b", self.s)
+        self.assertIn('checked "$SCRIPTS/$IMPORTER" "$IMPORTER_SHA"', self.s)
+        self.assertIn('blocked EXACT_VAULT_CIPHER_IMPORT', self.s)
 
     def test_never_uses_root_prod_db_or_mutates_release(self):
         for forbidden in ("sudo ", "systemctl", "php artisan", "git reset",
