@@ -197,11 +197,36 @@ function OwnerOpsPreview() {
  */
 function OwnerAiProvidersPreview() {
     const presets = [
-        { key: 'openrouter', label: 'OpenRouter', free_tier: 'model-suffix' as const, custom: false },
-        { key: 'groq', label: 'Groq', free_tier: 'allowlist' as const, custom: false },
-        { key: 'gemini', label: 'Google Gemini', free_tier: 'allowlist' as const, custom: false },
-        { key: 'mistral', label: 'Mistral', free_tier: 'allowlist' as const, custom: false },
-        { key: 'huggingface', label: 'Hugging Face', free_tier: 'allowlist' as const, custom: false },
+        {
+            key: 'openrouter',
+            label: 'OpenRouter',
+            free_tier: 'model-suffix' as const,
+            custom: false,
+        },
+        {
+            key: 'groq',
+            label: 'Groq',
+            free_tier: 'allowlist' as const,
+            custom: false,
+        },
+        {
+            key: 'gemini',
+            label: 'Google Gemini',
+            free_tier: 'allowlist' as const,
+            custom: false,
+        },
+        {
+            key: 'mistral',
+            label: 'Mistral',
+            free_tier: 'allowlist' as const,
+            custom: false,
+        },
+        {
+            key: 'huggingface',
+            label: 'Hugging Face',
+            free_tier: 'allowlist' as const,
+            custom: false,
+        },
     ];
 
     const providers = [
@@ -426,7 +451,8 @@ function OwnerProductsPreview() {
 }
 const workspace = location.pathname === '/services/kmj-codebridge/workspace';
 const canonicalDevices = location.pathname === '/services/kmj-codebridge';
-const ownerAiProviders = location.pathname === '/services/kmj-codebridge/ai-providers';
+const ownerAiProviders =
+    location.pathname === '/services/kmj-codebridge/ai-providers';
 const ownerProducts = location.pathname === '/operator/products';
 const ownerDeveloper = location.pathname === '/developer/apps';
 const ownerDevices = location.pathname === '/operator/codebridge/owner-plan';
@@ -441,17 +467,17 @@ void createInertiaApp({
               ? 'services/codebridge'
               : ownerAiProviders
                 ? 'services/ai-providers'
-              : ownerProducts
-                ? 'operator-products'
-                : ownerOps
-                  ? 'operator-ops'
-                  : ownerDevices
-                    ? 'operator-codebridge-owner'
-                    : ownerDeveloper
-                      ? 'developer-apps'
-                      : owner
-                        ? 'operator'
-                        : 'welcome',
+                : ownerProducts
+                  ? 'operator-products'
+                  : ownerOps
+                    ? 'operator-ops'
+                    : ownerDevices
+                      ? 'operator-codebridge-owner'
+                      : ownerDeveloper
+                        ? 'developer-apps'
+                        : owner
+                          ? 'operator'
+                          : 'welcome',
         props: {
             errors: {},
             ...(workspace ? workspaceProps() : {}),
@@ -522,15 +548,15 @@ void createInertiaApp({
               ? CanonicalDevicesPreview
               : ownerAiProviders
                 ? OwnerAiProvidersPreview
-              : ownerProducts
-                ? OwnerProductsPreview
-                : ownerDeveloper
-                  ? OwnerDeveloperPreview
-                  : ownerOps
-                    ? OwnerOpsPreview
-                    : ownerDevices
-                      ? OwnerDevicesPreview
-                      : owner
-                        ? OwnerDashboardPreview
-                        : Welcome,
+                : ownerProducts
+                  ? OwnerProductsPreview
+                  : ownerDeveloper
+                    ? OwnerDeveloperPreview
+                    : ownerOps
+                      ? OwnerOpsPreview
+                      : ownerDevices
+                        ? OwnerDevicesPreview
+                        : owner
+                          ? OwnerDashboardPreview
+                          : Welcome,
 });
