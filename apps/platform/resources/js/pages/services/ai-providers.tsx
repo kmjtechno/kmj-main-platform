@@ -1,6 +1,6 @@
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import { ArrowLeft, KeyRound, Plug, RefreshCw, Trash2 } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import AiProviderConnectHub from '@/components/ai-provider-connect-hub';
 import '../../../css/ai-provider-connect.css';
 
@@ -272,9 +272,11 @@ function AddProvider({
     preferredPreset,
 }: {
     presets: Preset[];
-    preferredPreset: string | null;
+    preferredPreset: { key: string; token: number } | null;
 }) {
     const [preset, setPreset] = useState(presets[0]?.key ?? 'groq');
+    const formRef = useRef<HTMLFormElement>(null);
+    const keyInputRef = useRef<HTMLInputElement>(null);
     const [name, setName] = useState('');
     const [apiKey, setApiKey] = useState('');
     const [baseUrl, setBaseUrl] = useState('');
@@ -284,15 +286,27 @@ function AddProvider({
 
     useEffect(() => {
         if (
-            preferredPreset &&
-            presets.some((item) => item.key === preferredPreset)
+            !preferredPreset ||
+            !presets.some((item) => item.key === preferredPreset.key)
         ) {
-            setPreset(preferredPreset);
+            return;
         }
+        setPreset(preferredPreset.key);
+        // Official provider keys cannot be read across sites. Prepare and focus
+        // the legitimate local form for the owner to finish on returning.
+        const frame = window.requestAnimationFrame(() => {
+            formRef.current?.scrollIntoView({
+                behavior: 'smooth',
+                block: 'center',
+            });
+            keyInputRef.current?.focus({ preventScroll: true });
+        });
+        return () => window.cancelAnimationFrame(frame);
     }, [preferredPreset, presets]);
 
     return (
         <form
+            ref={formRef}
             id="ai-provider-key-form"
             aria-label="Connect provider with encrypted API key"
             className="kmj-ai-key-form border-sidebar-border/70 dark:border-sidebar-border grid gap-4 rounded-2xl border p-5 md:grid-cols-2"
@@ -319,9 +333,20 @@ function AddProvider({
                 );
             }}
         >
-            <h2 className="flex items-center gap-2 text-base font-black md:col-span-2">
-                <Plug className="h-4 w-4" /> Connect with provider API key
-            </h2>
+            <div className="md:col-span-2">
+                <p className="text-xs font-bold tracking-wider text-red-400 uppercase">
+                    Step 2 of 2 · Secure key verification
+                </p>
+                <h2 className="mt-1 flex items-center gap-2 text-lg font-black" aria-live="polite">
+                    <Plug className="h-4 w-4" />
+                    Finish {selected?.label ?? 'provider'} connection
+                </h2>
+                <p className="text-muted-foreground mt-1 text-sm">
+                    Get a key from the official provider dashboard, paste it below,
+                    then verify with a read-only model discovery call. No inference
+                    or billed fallback will be started.
+                </p>
+            </div>
             <label className="text-xs font-bold">
                 Provider
                 <select
@@ -365,6 +390,7 @@ function AddProvider({
             <label className="text-xs font-bold md:col-span-2">
                 API key (stored encrypted on the server; never shown again)
                 <input
+                    ref={keyInputRef}
                     required
                     type="password"
                     autoComplete="off"
@@ -386,7 +412,9 @@ function AddProvider({
                 disabled={busy}
                 className="h-10 rounded-xl border border-red-500/40 px-4 text-xs font-bold text-red-500 md:col-span-2"
             >
-                {busy ? 'Verifying securely…' : 'Save & verify connection'}
+                {busy
+                    ? 'Verifying securely…'
+                    : `Save & verify ${selected?.label ?? 'provider'} connection`}
             </button>
         </form>
     );
@@ -399,7 +427,10 @@ export default function AiProviders({
     providers,
 }: Props) {
     const errors = usePage().props.errors as Record<string, string>;
-    const [preferredPreset, setPreferredPreset] = useState<string | null>(null);
+    const [preferredPreset, setPreferredPreset] = useState<{
+        key: string;
+        token: number;
+    } | null>(null);
     const [oauthBusy, setOauthBusy] = useState(false);
     const startOpenRouter = () => {
         if (oauthBusy) return;
@@ -456,7 +487,13 @@ export default function AiProviders({
                             presets={presets}
                             oauthBusy={oauthBusy}
                             onConnectOpenRouter={startOpenRouter}
-                            onChooseKeyProvider={setPreferredPreset}
+                            selectedPreset={preferredPreset?.key ?? null}
+                            onChooseKeyProvider={(key) =>
+                                setPreferredPreset((prev) => ({
+                                    key,
+                                    token: (prev?.token ?? 0) + 1,
+                                }))
+                            }
                         />
                         <AddProvider
                             presets={presets}
