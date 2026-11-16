@@ -1296,7 +1296,9 @@ try {
                 await page
                     .getByRole('button', { name: 'Close key setup' })
                     .click();
-                if ((await page.locator('#ai-provider-key-form').count()) !== 0) {
+                if (
+                    (await page.locator('#ai-provider-key-form').count()) !== 0
+                ) {
                     errors.push('Key wizard not closed on request');
                 }
                 if (
