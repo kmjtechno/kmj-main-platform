@@ -166,3 +166,9 @@ void test('draft secrets clear when provider or key editor changes', () => {
     assert.match(browser, /Key persisted across manual preset change/);
     assert.match(browser, /Cancelled replacement key was retained/);
 });
+
+void test('empty provider view remains cloud-only with strict zero-spend policy', () => {
+    assert.match(page, /No cloud AI providers connected/);
+    assert.match(page, /inference stays blocked/);
+    assert.doesNotMatch(page, /Local Ollama|local LLM/i);
+});
