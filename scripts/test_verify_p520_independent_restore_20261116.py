@@ -8,7 +8,7 @@ import tempfile
 from pathlib import Path
 import unittest
 
-SRC = Path(__file__).with_name("verify-p520-independent-restore-20261116.py")
+SRC = Path(__file__).parent / "operations" / "verify-p520-independent-restore-20261116.py"
 s = importlib.util.spec_from_file_location("p520_offsite", SRC)
 m = importlib.util.module_from_spec(s)
 s.loader.exec_module(m)
