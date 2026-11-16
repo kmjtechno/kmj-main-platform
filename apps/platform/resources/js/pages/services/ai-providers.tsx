@@ -577,7 +577,10 @@ export default function AiProviders({
                             <div className="space-y-2">
                                 <button
                                     type="button"
-                                    onClick={() => setShowKeyForm(false)}
+                                    onClick={() => {
+                                        setShowKeyForm(false);
+                                        setPreferredPreset(null);
+                                    }}
                                     className="min-h-10 rounded-xl border px-3 text-sm font-semibold"
                                 >
                                     Close key setup
