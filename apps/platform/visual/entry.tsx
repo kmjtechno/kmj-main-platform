@@ -9,6 +9,7 @@ import OperatorProducts from '../resources/js/pages/operator-products';
 import OwnerModuleShell from '../resources/js/layouts/owner-module-shell';
 import OperatorOps from '../resources/js/pages/operator-ops';
 import CodeBridgeService from '../resources/js/pages/services/codebridge';
+import AiProviders from '../resources/js/pages/services/ai-providers';
 import { workspaceProps } from './workspace-fixture';
 import CodeBridgeWorkspace from '../resources/js/pages/services/codebridge-workspace';
 import OperatorCodeBridgeOwner from '../resources/js/pages/operator-codebridge-owner';
@@ -190,6 +191,68 @@ function OwnerOpsPreview() {
         </OwnerModuleShell>
     );
 }
+/**
+ * Authenticated owner AI Provider page preview with synthetic catalog data.
+ * No real API keys, OAuth flow, model inference or network requests are used.
+ */
+function OwnerAiProvidersPreview() {
+    const presets = [
+        { key: 'openrouter', label: 'OpenRouter', free_tier: 'model-suffix' as const, custom: false },
+        { key: 'groq', label: 'Groq', free_tier: 'allowlist' as const, custom: false },
+        { key: 'gemini', label: 'Google Gemini', free_tier: 'allowlist' as const, custom: false },
+        { key: 'mistral', label: 'Mistral', free_tier: 'allowlist' as const, custom: false },
+        { key: 'huggingface', label: 'Hugging Face', free_tier: 'allowlist' as const, custom: false },
+    ];
+
+    const providers = [
+        {
+            id: 'qa-verified-free-only',
+            name: 'Synthetic verified-free provider',
+            preset: 'openrouter',
+            host: 'openrouter.example.invalid',
+            key_mask: '***QA',
+            enabled: true,
+            free_tier: 'model-suffix',
+            default_model: 'synthetic/example:free',
+            fallback_models: [],
+            models: ['synthetic/example:free'],
+            discovered_model_count: 14,
+            health: 'ok',
+            health_checked_at: null,
+            error_code: null,
+            rate_limit: { status: 'unknown' },
+        },
+        {
+            id: 'qa-catalog-only',
+            name: 'Synthetic unverified catalog',
+            preset: 'groq',
+            host: 'groq.example.invalid',
+            key_mask: '***QA',
+            enabled: true,
+            free_tier: 'allowlist',
+            default_model: null,
+            fallback_models: [],
+            models: [],
+            discovered_model_count: 11,
+            health: 'ok',
+            health_checked_at: null,
+            error_code: null,
+            rate_limit: { status: 'unknown' },
+        },
+    ];
+
+    return (
+        <OwnerModuleShell>
+            <AiProviders
+                canManage={true}
+                status={null}
+                presets={presets}
+                providers={providers}
+            />
+        </OwnerModuleShell>
+    );
+}
+
 function OwnerDevicesPreview() {
     return (
         <OwnerModuleShell>
@@ -363,6 +426,7 @@ function OwnerProductsPreview() {
 }
 const workspace = location.pathname === '/services/kmj-codebridge/workspace';
 const canonicalDevices = location.pathname === '/services/kmj-codebridge';
+const ownerAiProviders = location.pathname === '/services/kmj-codebridge/ai-providers';
 const ownerProducts = location.pathname === '/operator/products';
 const ownerDeveloper = location.pathname === '/developer/apps';
 const ownerDevices = location.pathname === '/operator/codebridge/owner-plan';
@@ -375,6 +439,8 @@ void createInertiaApp({
             ? 'services/codebridge-workspace'
             : canonicalDevices
               ? 'services/codebridge'
+              : ownerAiProviders
+                ? 'services/ai-providers'
               : ownerProducts
                 ? 'operator-products'
                 : ownerOps
@@ -395,6 +461,7 @@ void createInertiaApp({
                 user:
                     workspace ||
                     canonicalDevices ||
+                    ownerAiProviders ||
                     owner ||
                     ownerOps ||
                     ownerDevices ||
@@ -417,7 +484,8 @@ void createInertiaApp({
                     ownerDevices ||
                     ownerDeveloper ||
                     ownerProducts ||
-                    canonicalDevices,
+                    canonicalDevices ||
+                    ownerAiProviders,
             },
             localization: {
                 locale: 'en',
@@ -452,6 +520,8 @@ void createInertiaApp({
             ? WorkspacePreview
             : canonicalDevices
               ? CanonicalDevicesPreview
+              : ownerAiProviders
+                ? OwnerAiProvidersPreview
               : ownerProducts
                 ? OwnerProductsPreview
                 : ownerDeveloper
