@@ -135,7 +135,8 @@ void test('configured providers use honest summary and deliberate advanced contr
     assert.match(page, /data: \{ confirm: 'DELETE' \}/);
     assert.match(page, /fallback_models: next/);
     assert.match(page, /\{ api_key: newKey \}/);
-    assert.match(page, /onSuccess:\s*\(\)\s*=>\s*setNewKey\(''\)/);
+    assert.match(page, /onSuccess:\s*\(\)\s*=>\s*\{\s*setNewKey\(''\);/);
+    assert.match(page, /setReplaceVisible\(\s*false,\s*\);/);
 });
 
 void test('API-key setup is progressive instead of a permanently open form', () => {

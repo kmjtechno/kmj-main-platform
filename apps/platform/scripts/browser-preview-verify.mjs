@@ -1399,8 +1399,9 @@ try {
                     .getByRole('button', { name: 'Manage settings' })
                     .click();
                 if (
-                    (await managed.locator('input[type="password"]').count()) !==
-                    0
+                    (await managed
+                        .locator('input[type="password"]')
+                        .count()) !== 0
                 ) {
                     errors.push('Collapsed settings retained replacement key');
                 }

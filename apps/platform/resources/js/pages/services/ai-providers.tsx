@@ -310,7 +310,9 @@ function ProviderCard({
                                                     ...options,
                                                     onSuccess: () => {
                                                         setNewKey('');
-                                                        setReplaceVisible(false);
+                                                        setReplaceVisible(
+                                                            false,
+                                                        );
                                                     },
                                                 },
                                             ),
