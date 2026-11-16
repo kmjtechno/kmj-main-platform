@@ -80,3 +80,24 @@ void test('owner Operations preview is synthetic-only and renders the real owner
     assert.match(fixture, /status: 'unknown'/);
     assert.doesNotMatch(fixture, /fetch\(|router\.post\(|APP_KEY|\.env/);
 });
+
+void test('AI Provider preview renders real locked owner UI and tests quick-connect safely', () => {
+    const fixture = readFileSync(
+        new URL('../visual/entry.tsx', import.meta.url),
+        'utf8',
+    );
+    assert.match(
+        script,
+        /\['owner-ai-providers', '\/services\/kmj-codebridge\/ai-providers'\]/,
+    );
+    assert.match(script, /Chosen provider card not highlighted/);
+    assert.match(script, /Guided key input did not receive focus/);
+    assert.match(script, /Advanced key replacement not concealed/);
+    assert.match(script, /Free model admission summary missing/);
+    assert.match(fixture, /function OwnerAiProvidersPreview\(\)/);
+    assert.match(fixture, /<OwnerModuleShell>\s*<AiProviders/);
+    assert.match(fixture, /ownerAiProviders/);
+    assert.match(fixture, /synthetic\/example:free/);
+    assert.match(fixture, /example\.invalid/);
+    assert.doesNotMatch(fixture, /Authorization: Bearer|OPENROUTER_API_KEY/);
+});
