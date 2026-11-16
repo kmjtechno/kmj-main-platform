@@ -221,6 +221,37 @@ final class AiProviderOpenRouterConnectTest extends TestCase
         $this->assertDatabaseCount('ai_providers', 0);
     }
 
+    public function test_array_valued_oauth_code_is_rejected_without_network_or_provider_creation(): void
+    {
+        Http::fake();
+        $this->confirmed($this->owner)->post(self::START);
+        $state = (string) session('ai_provider_oauth.state');
+
+        $this->actingAs($this->owner)->get(self::CALLBACK.'?state='.$state.'&code%5B%5D=abcdefgh12345')
+            ->assertRedirect(route('ai-providers.index'))
+            ->assertSessionHasErrors('provider');
+
+        $this->assertNull(session('ai_provider_oauth'));
+        $this->assertDatabaseCount('ai_providers', 0);
+        Http::assertNothingSent();
+    }
+
+    public function test_malformed_session_verifier_is_rejected_without_network_or_provider_creation(): void
+    {
+        Http::fake();
+        $this->confirmed($this->owner)->post(self::START);
+        $pending = session('ai_provider_oauth');
+        $pending['verifier'] = ['forged'];
+        $this->actingAs($this->owner)->withSession(['ai_provider_oauth' => $pending])
+            ->get(self::CALLBACK.'?code=abcdefgh12345&state='.$pending['state'])
+            ->assertRedirect(route('ai-providers.index'))
+            ->assertSessionHasErrors('provider');
+
+        $this->assertNull(session('ai_provider_oauth'));
+        $this->assertDatabaseCount('ai_providers', 0);
+        Http::assertNothingSent();
+    }
+
     private function callbackUrl(string $code = 'abcdefgh12345'): string
     {
         return self::CALLBACK.'?'.http_build_query([
