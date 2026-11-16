@@ -1304,7 +1304,7 @@ try {
                         .locator('.kmj-ai-key-card[data-selected="true"]')
                         .count()) !== 0
                 ) {
-                    errors.push('Stale provider selection persisted after closing');
+                    errors.push('Stale provider selection after closing');
                 }
                 await managed
                     .getByRole('button', { name: 'Manage settings' })
