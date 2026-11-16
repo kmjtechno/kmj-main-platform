@@ -137,3 +137,12 @@ void test('configured providers use honest summary and deliberate advanced contr
     assert.match(page, /\{ api_key: newKey \}/);
     assert.match(page, /onSuccess:\s*\(\)\s*=>\s*setNewKey\(''\)/);
 });
+
+void test('API-key setup is progressive instead of a permanently open form', () => {
+    assert.match(page, /const \[showKeyForm, setShowKeyForm\] = useState\(false\)/);
+    assert.match(page, /setShowKeyForm\(true\)/);
+    assert.match(page, /\{showKeyForm \? \(/);
+    assert.match(page, /Close key setup/);
+    assert.match(page, /Connect another provider using an API key/);
+    assert.match(page, /<AddProvider/);
+});
