@@ -31,7 +31,7 @@ void test('other providers use only exact official key pages, no fake OAuth', ()
     assert.match(hub, /https:\/\/aistudio\.google\.com\/apikey/);
     assert.match(hub, /https:\/\/console\.mistral\.ai\/api-keys\//);
     assert.match(hub, /https:\/\/huggingface\.co\/settings\/tokens/);
-    assert.match(hub, /Get key &amp; connect/);
+    assert.match(hub, /Connect \{guide\.title\}/);
     assert.match(hub, /rel="noopener noreferrer"/);
     assert.match(hub, /onChooseKeyProvider\(guide\.key\)/);
     assert.doesNotMatch(
@@ -42,7 +42,7 @@ void test('other providers use only exact official key pages, no fake OAuth', ()
 
 void test('one-action guided key connection verifies only read-only models', () => {
     assert.match(page, /verify_connection: true/);
-    assert.match(page, /Save & verify connection/);
+    assert.match(page, /Save & verify \$\{selected\?\.label/);
     assert.match(
         controller,
         /'verify_connection' => \['sometimes', 'boolean'\]/,
@@ -103,4 +103,72 @@ void test('catalog-only and paid models never enter free selectable defaults', (
     assert.match(ui, /Verified-free default model/);
     assert.match(ui, /Verified-free fallback models/);
     assert.match(ui, /Paid and unknown-price models cannot be selected/);
+});
+
+void test('Official key launcher resumes secure form safely', () => {
+    assert.match(hub, /onChooseKeyProvider\(guide\.key\)/);
+    assert.match(hub, /data-selected=\{\s*selectedPreset\s*===\s*guide\.key/);
+    assert.match(hub, /Connect \{guide\.title\}/);
+    assert.match(page, /setPreferredPreset\(\(prev\) =>/);
+    assert.match(page, /preferredPreset\.key/);
+    assert.match(page, /window\.requestAnimationFrame/);
+    assert.match(page, /formRef\.current\?\.scrollIntoView/);
+    assert.match(page, /keyInputRef\.current\?\.focus/);
+    assert.match(page, /ref=\{keyInputRef\}/);
+    assert.match(page, /Finish \{selected\?\.label/);
+    assert.match(page, /verify_connection: true/);
+    assert.doesNotMatch(
+        hub,
+        /localStorage|sessionStorage|document\.cookie|navigator\.clipboard/,
+    );
+});
+
+void test('configured providers use honest summary and deliberate advanced controls', () => {
+    assert.match(page, /discovered_model_count/);
+    assert.match(page, /verified-free models/);
+    assert.match(page, /Inference blocked until verified-free admission/);
+    assert.match(page, /const \[expanded, setExpanded\] = useState\(false\)/);
+    assert.match(page, /aria-expanded=\{expanded\}/);
+    assert.match(page, /\{expanded && \(/);
+    assert.match(page, /\{canManage && replaceVisible && \(/);
+    assert.match(page, /window\.confirm/);
+    assert.match(page, /data: \{ confirm: 'DELETE' \}/);
+    assert.match(page, /fallback_models: next/);
+    assert.match(page, /\{ api_key: newKey \}/);
+    assert.match(page, /onSuccess:\s*\(\)\s*=>\s*\{\s*setNewKey\(''\);/);
+    assert.match(page, /setReplaceVisible\(\s*false,\s*\);/);
+});
+
+void test('API-key setup is progressive instead of a permanently open form', () => {
+    assert.match(
+        page,
+        /const \[showKeyForm, setShowKeyForm\] = useState\(false\)/,
+    );
+    assert.match(page, /setShowKeyForm\(true\)/);
+    assert.match(page, /\{showKeyForm \? \(/);
+    assert.match(page, /Close key setup/);
+    assert.match(
+        page,
+        /setShowKeyForm\(false\);\s*setPreferredPreset\(null\);/,
+    );
+    assert.match(page, /Connect another provider using an API key/);
+    assert.match(page, /<AddProvider/);
+});
+
+void test('draft secrets clear when provider or key editor changes', () => {
+    assert.match(page, /lastPreferredSelection\.current/);
+    assert.match(page, /onManualProviderChange/);
+    assert.match(page, /setApiKey\(''\)/);
+    assert.match(page, /setReplaceVisible\(false\)/);
+    assert.match(page, /setNewKey\(''\)/);
+    const browser = read('scripts/browser-preview-verify.mjs');
+    assert.match(browser, /Key persisted across provider cards/);
+    assert.match(browser, /Key persisted across manual preset change/);
+    assert.match(browser, /Cancelled replacement key was retained/);
+});
+
+void test('empty provider view remains cloud-only with strict zero-spend policy', () => {
+    assert.match(page, /No cloud AI providers connected/);
+    assert.match(page, /inference stays blocked/);
+    assert.doesNotMatch(page, /Local Ollama|local LLM/i);
 });
