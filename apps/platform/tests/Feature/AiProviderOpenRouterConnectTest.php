@@ -57,7 +57,11 @@ final class AiProviderOpenRouterConnectTest extends TestCase
         $location = (string) $response->headers->get('Location');
         parse_str((string) parse_url($location, PHP_URL_QUERY), $query);
         $verifier = (string) session('ai_provider_oauth.verifier');
+        $state = (string) session('ai_provider_oauth.state');
 
+        $this->assertSame($state, $query['state']);
+        $this->assertMatchesRegularExpression('/\A[A-Za-z0-9_-]{43}\z/', $state);
+        $this->assertNotSame($verifier, $state);
         $this->assertSame('openrouter.ai', parse_url($location, PHP_URL_HOST));
         $this->assertSame('S256', $query['code_challenge_method']);
         $this->assertStringStartsWith('https://', $query['callback_url']);
@@ -79,7 +83,7 @@ final class AiProviderOpenRouterConnectTest extends TestCase
         $this->confirmed($this->owner)->post(self::START);
         $verifier = (string) session('ai_provider_oauth.verifier');
 
-        $this->actingAs($this->owner)->get(self::CALLBACK.'?code=abcdefgh12345')->assertRedirect(route('ai-providers.index'));
+        $this->actingAs($this->owner)->get($this->callbackUrl())->assertRedirect(route('ai-providers.index'));
 
         Http::assertSent(fn ($request): bool => str_ends_with($request->url(), '/api/v1/auth/keys')
             && $request['code'] === 'abcdefgh12345' && $request['code_verifier'] === $verifier);
@@ -102,12 +106,12 @@ final class AiProviderOpenRouterConnectTest extends TestCase
     public function test_a_replayed_or_unstarted_callback_redeems_nothing(): void
     {
         $this->fakeOpenRouter();
-        $this->actingAs($this->owner)->get(self::CALLBACK.'?code=abcdefgh12345')->assertSessionHasErrors('provider');
+        $this->actingAs($this->owner)->get($this->callbackUrl())->assertSessionHasErrors('provider');
         Http::assertNothingSent();
 
         $this->confirmed($this->owner)->post(self::START);
-        $this->actingAs($this->owner)->get(self::CALLBACK.'?code=abcdefgh12345');
-        $this->actingAs($this->owner)->get(self::CALLBACK.'?code=abcdefgh12345')->assertSessionHasErrors('provider');
+        $this->actingAs($this->owner)->get($this->callbackUrl());
+        $this->actingAs($this->owner)->get($this->callbackUrl())->assertSessionHasErrors('provider');
 
         Http::assertSentCount(2);
         $this->assertDatabaseCount('ai_providers', 1);
@@ -117,10 +121,10 @@ final class AiProviderOpenRouterConnectTest extends TestCase
     {
         Http::fake(['openrouter.ai/*' => Http::response(['error' => 'bad'], 401)]);
         $this->confirmed($this->owner)->post(self::START);
-        $this->actingAs($this->owner)->get(self::CALLBACK.'?code=abcdefgh12345')->assertSessionHasErrors('provider');
+        $this->actingAs($this->owner)->get($this->callbackUrl())->assertSessionHasErrors('provider');
 
         $this->confirmed($this->owner)->post(self::START);
-        $this->actingAs($this->owner)->get(self::CALLBACK.'?code=%3Cscript%3E')->assertSessionHasErrors('provider');
+        $this->actingAs($this->owner)->get($this->callbackUrl('<script>'))->assertSessionHasErrors('provider');
 
         $this->assertDatabaseCount('ai_providers', 0);
         Http::assertSentCount(1);
@@ -133,7 +137,7 @@ final class AiProviderOpenRouterConnectTest extends TestCase
         $pending = session('ai_provider_oauth');
 
         $this->actingAs($this->outsider)->withSession(['ai_provider_oauth' => $pending])
-            ->get(self::CALLBACK.'?code=abcdefgh12345')->assertSessionHasErrors('provider');
+            ->get($this->callbackUrl())->assertSessionHasErrors('provider');
 
         $this->assertDatabaseCount('ai_providers', 0);
         Http::assertNothingSent();
@@ -156,10 +160,10 @@ final class AiProviderOpenRouterConnectTest extends TestCase
     {
         Http::fake([
             'openrouter.ai/api/v1/auth/keys' => Http::response(['key' => self::KEY], 200),
-            'openrouter.ai/api/v1/models' => Http::response(['data' => [['id' => 'x/paid-model']]], 200),
+            'openrouter.ai/api/v1/models?max_price=0' => Http::response(['data' => [['id' => 'x/paid-model']]], 200),
         ]);
         $this->confirmed($this->owner)->post(self::START);
-        $this->actingAs($this->owner)->get(self::CALLBACK.'?code=abcdefgh12345')->assertRedirect();
+        $this->actingAs($this->owner)->get($this->callbackUrl())->assertRedirect();
 
         $provider = AiProvider::query()->firstOrFail();
         $this->assertNull($provider->default_model);
@@ -171,10 +175,10 @@ final class AiProviderOpenRouterConnectTest extends TestCase
     {
         Http::fake([
             'openrouter.ai/api/v1/auth/keys' => Http::response(['key' => self::KEY], 200),
-            'openrouter.ai/api/v1/models' => Http::response(['error' => 'temporarily unavailable'], 503),
+            'openrouter.ai/api/v1/models?max_price=0' => Http::response(['error' => 'temporarily unavailable'], 503),
         ]);
         $this->confirmed($this->owner)->post(self::START);
-        $this->actingAs($this->owner)->get(self::CALLBACK.'?code=abcdefgh12345')->assertRedirect();
+        $this->actingAs($this->owner)->get($this->callbackUrl())->assertRedirect();
 
         $provider = AiProvider::query()->firstOrFail();
         $this->assertSame('unreachable', $provider->health);
@@ -184,11 +188,83 @@ final class AiProviderOpenRouterConnectTest extends TestCase
         Http::assertSentCount(2);
     }
 
+    public function test_missing_wrong_or_stale_callback_state_never_redeems_a_code(): void
+    {
+        Http::fake();
+
+        $this->confirmed($this->owner)->post(self::START);
+        $original = (string) session('ai_provider_oauth.state');
+        $this->actingAs($this->owner)->get(self::CALLBACK.'?code=abcdefgh12345')
+            ->assertSessionHasErrors('provider');
+        $this->assertNull(session('ai_provider_oauth'));
+
+        $this->confirmed($this->owner)->post(self::START);
+        $this->actingAs($this->owner)->get(self::CALLBACK.'?code=abcdefgh12345&state=forged')
+            ->assertSessionHasErrors('provider');
+        $this->assertNull(session('ai_provider_oauth'));
+
+        $this->confirmed($this->owner)->post(self::START);
+        $this->actingAs($this->owner)->get(self::CALLBACK.'?code=abcdefgh12345&state%5B%5D=malformed')
+            ->assertSessionHasErrors('provider');
+        $this->assertNull(session('ai_provider_oauth'));
+
+        $this->confirmed($this->owner)->post(self::START);
+        $stale = (string) session('ai_provider_oauth.state');
+        $this->confirmed($this->owner)->post(self::START);
+        $fresh = (string) session('ai_provider_oauth.state');
+        $this->assertNotSame($stale, $fresh);
+        $this->assertNotSame($original, $fresh);
+        $this->actingAs($this->owner)->get(self::CALLBACK.'?code=abcdefgh12345&state='.$stale)
+            ->assertSessionHasErrors('provider');
+
+        Http::assertNothingSent();
+        $this->assertDatabaseCount('ai_providers', 0);
+    }
+
+    public function test_array_valued_oauth_code_is_rejected_without_network_or_provider_creation(): void
+    {
+        Http::fake();
+        $this->confirmed($this->owner)->post(self::START);
+        $state = (string) session('ai_provider_oauth.state');
+
+        $this->actingAs($this->owner)->get(self::CALLBACK.'?state='.$state.'&code%5B%5D=abcdefgh12345')
+            ->assertRedirect(route('ai-providers.index'))
+            ->assertSessionHasErrors('provider');
+
+        $this->assertNull(session('ai_provider_oauth'));
+        $this->assertDatabaseCount('ai_providers', 0);
+        Http::assertNothingSent();
+    }
+
+    public function test_malformed_session_verifier_is_rejected_without_network_or_provider_creation(): void
+    {
+        Http::fake();
+        $this->confirmed($this->owner)->post(self::START);
+        $pending = session('ai_provider_oauth');
+        $pending['verifier'] = ['forged'];
+        $this->actingAs($this->owner)->withSession(['ai_provider_oauth' => $pending])
+            ->get(self::CALLBACK.'?code=abcdefgh12345&state='.$pending['state'])
+            ->assertRedirect(route('ai-providers.index'))
+            ->assertSessionHasErrors('provider');
+
+        $this->assertNull(session('ai_provider_oauth'));
+        $this->assertDatabaseCount('ai_providers', 0);
+        Http::assertNothingSent();
+    }
+
+    private function callbackUrl(string $code = 'abcdefgh12345'): string
+    {
+        return self::CALLBACK.'?'.http_build_query([
+            'code' => $code,
+            'state' => (string) session('ai_provider_oauth.state'),
+        ]);
+    }
+
     private function fakeOpenRouter(): void
     {
         Http::fake([
             'openrouter.ai/api/v1/auth/keys' => Http::response(['key' => self::KEY], 200),
-            'openrouter.ai/api/v1/models' => Http::response(['data' => [['id' => 'meta/llama-3:free'], ['id' => 'x/paid-model']]], 200),
+            'openrouter.ai/api/v1/models?max_price=0' => Http::response(['data' => [['id' => 'meta/llama-3:free'], ['id' => 'x/paid-model']]], 200),
         ]);
     }
 

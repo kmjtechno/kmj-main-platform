@@ -15,6 +15,7 @@ type Preset = {
 
 type Guide = {
     key: string;
+    title: string;
     url: string;
     helper: string;
 };
@@ -22,21 +23,25 @@ type Guide = {
 const guides: Guide[] = [
     {
         key: 'groq',
+        title: 'Groq',
         url: 'https://console.groq.com/keys',
         helper: 'Create a GroqCloud API key. Only owner-approved free models can run.',
     },
     {
         key: 'gemini',
+        title: 'Gemini',
         url: 'https://aistudio.google.com/apikey',
         helper: 'Create a Gemini API authorization key. Verify the free model allowlist.',
     },
     {
         key: 'mistral',
+        title: 'Mistral',
         url: 'https://console.mistral.ai/api-keys/',
         helper: 'Use your Mistral workspace key. Paid or unverified models stay blocked.',
     },
     {
         key: 'huggingface',
+        title: 'Hugging Face',
         url: 'https://huggingface.co/settings/tokens',
         helper: 'Create a restricted Hugging Face token. Check the free model allowlist.',
     },
@@ -47,11 +52,13 @@ export default function AiProviderConnectHub({
     oauthBusy,
     onConnectOpenRouter,
     onChooseKeyProvider,
+    selectedPreset,
 }: {
     presets: Preset[];
     oauthBusy: boolean;
     onConnectOpenRouter: () => void;
     onChooseKeyProvider: (preset: string) => void;
+    selectedPreset: string | null;
 }) {
     const supported = new Set(presets.map((preset) => preset.key));
 
@@ -136,6 +143,11 @@ export default function AiProviderConnectHub({
                                 <article
                                     key={guide.key}
                                     className="kmj-ai-key-card flex flex-col rounded-xl border p-4"
+                                    data-selected={
+                                        selectedPreset === guide.key
+                                            ? 'true'
+                                            : undefined
+                                    }
                                 >
                                     <h4 className="font-bold">
                                         {provider?.label}
@@ -143,6 +155,15 @@ export default function AiProviderConnectHub({
                                     <p className="text-muted-foreground mt-1 flex-1 text-sm leading-6">
                                         {guide.helper}
                                     </p>
+                                    {selectedPreset === guide.key && (
+                                        <p
+                                            className="kmj-ai-selected-hint mt-2 text-sm"
+                                            role="status"
+                                        >
+                                            Selected · Finish the secure
+                                            connection below
+                                        </p>
+                                    )}
                                     <a
                                         href={guide.url}
                                         target="_blank"
@@ -156,7 +177,7 @@ export default function AiProviderConnectHub({
                                             className="h-4 w-4"
                                             aria-hidden="true"
                                         />
-                                        Get key &amp; connect
+                                        Connect {guide.title}
                                         <ExternalLink
                                             className="h-3.5 w-3.5"
                                             aria-hidden="true"

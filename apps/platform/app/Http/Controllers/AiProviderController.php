@@ -127,6 +127,7 @@ final class AiProviderController extends Controller
         }
         $request->session()->put('ai_provider_oauth', [
             'verifier' => $flow['verifier'],
+            'state' => $flow['state'],
             'user' => (int) $this->user($request)->id,
             'organization' => $scope['organization_id'],
             'expires' => time() + 600,
@@ -151,8 +152,25 @@ final class AiProviderController extends Controller
             return $index->withErrors(['provider' => 'Authorization was declined or canceled. No provider was added.']);
         }
 
+        // PKCE binds the code to its verifier. State additionally binds this
+        // successful callback to the exact single-use owner browser session.
+        $returnedState = $request->query('state');
+        $expectedState = $pending['state'] ?? null;
+        if (! is_string($returnedState) || ! is_string($expectedState)
+            || ! hash_equals($expectedState, $returnedState)) {
+            return $index->withErrors(['provider' => 'Sign-in session mismatch. Start again.']);
+        }
+
+        // Query parameters are untrusted: PHP array-valued code/verifier input
+        // must fail closed before any cast, network exchange or key creation.
+        $code = $request->query('code');
+        $verifier = $pending['verifier'] ?? null;
+        if (! is_string($code) || ! is_string($verifier)) {
+            return $index->withErrors(['provider' => 'Invalid sign-in response. Start again.']);
+        }
+
         try {
-            $key = $this->openRouter->exchange((string) $request->query('code', ''), (string) $pending['verifier']);
+            $key = $this->openRouter->exchange($code, $verifier);
             $provider = $this->manager->create($scope['organization_id'], (int) $this->user($request)->id, [
                 'preset' => 'openrouter',
                 'name' => $this->freeName($scope['organization_id'], 'OpenRouter'),

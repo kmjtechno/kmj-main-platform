@@ -10,6 +10,30 @@ export type DeliveryMilestone = {
 
 export const deliveryMilestones: DeliveryMilestone[] = [
     {
+        id: 'codebridge-openrouter-price-filtered-model-discovery-20261116',
+        title: 'OpenRouter — price-filtered GET models without admitting paid inference',
+        state: 'active',
+        detail: 'Draft source-only PR #884 now asks OpenRouter for its documented max_price=0 catalog query instead of downloading the entire paid catalog, while preserving HTTPS DNS pinning, a single GET, response byte cap, the 200-ID cache limit and the exact :free runtime admission requirement. A zero-prompt-price catalog candidate is not itself considered zero-billing authorization. Other provider endpoints are unchanged. Malformed HTTP-200 catalog envelopes fail health rather than reporting success.',
+        evidence:
+            'Mocked Laravel feature tests check the exact read-only price-filtered URL, no request body, unchanged authenticated header, late free variants, rejected malformed success envelopes and existing OAuth callbacks. Exact-head hosted CI, real owner-authenticated provider recheck and release-specific restore/rollback approvals remain separate. No live mutation or inferred paid-route permission.',
+    },
+    {
+        id: 'codebridge-ai-free-first-catalog-bound-20261116',
+        title: 'AI Providers — preserve late OpenRouter free variants within bounded discovery',
+        state: 'active',
+        detail: 'Draft PR #882 hardens real GET /models catalog handling: the adapter previously cached the first 200 valid model IDs before seeing later free variants. The source-only patch inspects the existing 2 MB capped response and gives OpenRouter :free model IDs priority within the same 200-ID persisted cache limit. Other provider catalog order stays unchanged. Model admission, encrypted credentials, verified-free allowlists, tenant isolation, DNS pinning and paid/unknown-price inference refusal remain enforced.',
+        evidence:
+            'New mocked Laravel feature regressions include 220 paid IDs ahead of a duplicate late :free variant and a non-OpenRouter 200-entry control. Exact-head CI and release-specific owner acceptance remain separate; 200 discovered / 0 admitted in the existing live release has not been diagnosed from its actual provider response. No production mutation or paid route is claimed.',
+    },
+    {
+        id: 'codebridge-openrouter-pkce-state-bind-20261116',
+        title: 'OpenRouter account connection — server-session-bound OAuth state',
+        state: 'active',
+        detail: 'Source-only OpenRouter PKCE hardening generates an independent random one-time state parameter on each sign-in, holds it with owner, organization, verifier and expiry server-side, and rejects missing, forged, malformed or stale callbacks before any API-key exchange. A denied authorization still fails safely without state. Tests use only a mocked provider, never a real API key.',
+        evidence:
+            'Draft source patch with Laravel owner/tenant/replay tests. Exact-head CI, authenticated owner OpenRouter consent, independent Google restore, rollback drill and protected owner activation remain separate gates. Live CE6 stays unchanged.',
+    },
+    {
         id: 'codebridge-ai-only-admitted-free-model-selector-20261115',
         title: 'AI Providers — show only free models that pass current admission policy',
         state: 'active',

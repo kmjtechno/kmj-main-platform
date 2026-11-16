@@ -21,7 +21,7 @@ final class OpenRouterConnect
 
     public function __construct(private readonly EndpointGuard $guard) {}
 
-    /** @return array{url: string, verifier: string} */
+    /** @return array{url: string, verifier: string, state: string} */
     public function begin(string $callbackUrl): array
     {
         if (! str_starts_with($callbackUrl, 'https://')) {
@@ -29,14 +29,18 @@ final class OpenRouterConnect
         }
         $verifier = self::base64Url(random_bytes(48));
         $challenge = self::base64Url(hash('sha256', $verifier, true));
+        // Independent one-time CSRF state: the PKCE verifier remains server-only.
+        $state = self::base64Url(random_bytes(32));
 
         return [
             'url' => self::AUTH_URL.'?'.http_build_query([
                 'callback_url' => $callbackUrl,
                 'code_challenge' => $challenge,
                 'code_challenge_method' => 'S256',
+                'state' => $state,
             ]),
             'verifier' => $verifier,
+            'state' => $state,
         ];
     }
 

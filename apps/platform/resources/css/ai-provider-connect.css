@@ -93,3 +93,48 @@
         transition: none !important;
     }
 }
+
+/* Real owner quick-connect: active choice, continuous form and compact provider maintenance. */
+.owner-module-shell .kmj-ai-providers .kmj-ai-key-card[data-selected='true'] {
+    border-color: #f43e63;
+    background: linear-gradient(150deg, #281524, #111e2b);
+    box-shadow: inset 3px 0 0 #f43e63;
+}
+.owner-module-shell .kmj-ai-providers .kmj-ai-selected-hint {
+    color: #fda7b9;
+    font-weight: 700;
+}
+.owner-module-shell .kmj-ai-providers #ai-provider-key-form {
+    scroll-margin-top: 86px;
+    border-color: #3c536a;
+}
+.owner-module-shell .kmj-ai-providers .kmj-ai-managed-provider {
+    background: #0d1520;
+    border-color: #334559;
+    padding: clamp(16px, 1.5vw, 24px);
+}
+.owner-module-shell .kmj-ai-providers .kmj-ai-managed-provider header h2 {
+    font-size: 18px;
+    line-height: 1.25;
+}
+.owner-module-shell .kmj-ai-providers .kmj-ai-admission-summary {
+    color: #c8d5e4;
+    overflow-wrap: anywhere;
+}
+.owner-module-shell .kmj-ai-providers .kmj-ai-provider-details {
+    border-color: #374b5e;
+}
+.owner-module-shell .kmj-ai-providers .kmj-ai-provider-details fieldset label {
+    overflow-wrap: anywhere;
+}
+.owner-module-shell .kmj-ai-providers .kmj-ai-managed-provider button {
+    min-height: 40px;
+}
+@media (max-width: 720px) {
+    .owner-module-shell .kmj-ai-providers .kmj-ai-managed-provider {
+        padding: 14px;
+    }
+    .owner-module-shell .kmj-ai-providers .kmj-ai-key-card {
+        width: 100%;
+    }
+}
