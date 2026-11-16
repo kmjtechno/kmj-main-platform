@@ -139,7 +139,10 @@ void test('configured providers use honest summary and deliberate advanced contr
 });
 
 void test('API-key setup is progressive instead of a permanently open form', () => {
-    assert.match(page, /const \[showKeyForm, setShowKeyForm\] = useState\(false\)/);
+    assert.match(
+        page,
+        /const \[showKeyForm, setShowKeyForm\] = useState\(false\)/,
+    );
     assert.match(page, /setShowKeyForm\(true\)/);
     assert.match(page, /\{showKeyForm \? \(/);
     assert.match(page, /Close key setup/);
