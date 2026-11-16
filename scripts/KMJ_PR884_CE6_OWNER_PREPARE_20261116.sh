@@ -16,17 +16,17 @@ mark() { printf '%s=%s\n' "$1" "$2"; }
 [[ $- == *p* ]] || fail PRIVILEGED_BASH_REQUIRED
 [[ "$(id -u)" == 0 && "$(hostname -s)" == KMJ-elite ]] || fail ROOT_ELITE_ONLY
 
-readonly TARGET_SHA=b5e7ad41eaf9ef9468731a6a47499c9b67dc8348
+readonly TARGET_SHA=45f95dbf7a4bad29852ab6f45c54873ab39e5a2e
 readonly PREVIOUS_SHA=ce6ad7dc9d898dce1ba9561a0e221f8ad750180f
 readonly PREVIOUS_RELEASE=platform-ce6ad7dc9d89
-readonly TARGET_RELEASE=platform-b5e7ad41eaf9
+readonly TARGET_RELEASE=platform-45f95dbf7a4b
 readonly LIVE=/home/kmjprod/current
 readonly ROOT=/home/kmjprod
 readonly SOURCE_ROOT=/srv/kmj-codebridge-projects/kmj-main-platform
 readonly ONEPASS_SOURCE="$SOURCE_ROOT/scripts/KMJ_B07_OWNER_ONEPASS_BUILD_BACKUP_OFFSITE_20261104.sh"
 readonly ONEPASS_SHA256=0070697927babaa9a9035ebadcffe9a07311c12bcc4fbbd7a5a9d024cbc00dd3
-readonly WITNESS="/var/backups/kmj-platform/pre-deploy-b5e7ad41eaf9.json"
-readonly BACKUP="/var/backups/kmj-platform/pre-deploy-b5e7ad41eaf9.tar.gz"
+readonly WITNESS="/var/backups/kmj-platform/pre-deploy-45f95dbf7a4b.json"
+readonly BACKUP="/var/backups/kmj-platform/pre-deploy-45f95dbf7a4b.tar.gz"
 
 [[ -L "$LIVE" ]] || fail LIVE_POINTER_MISSING
 current="$(readlink -f -- "$LIVE")" || fail LIVE_POINTER_UNRESOLVED
