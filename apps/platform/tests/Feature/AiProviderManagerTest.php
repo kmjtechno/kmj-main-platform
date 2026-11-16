@@ -142,6 +142,10 @@ final class AiProviderManagerTest extends TestCase
         $this->assertSame(['sample/late-free:free'], app(ProviderManager::class)->present($provider)['models']);
         $this->assertNotContains('paid-219', $provider->models_cache);
         Http::assertSentCount(1);
+        Http::assertSent(fn ($request): bool => $request->url() === 'https://openrouter.ai/api/v1/models?max_price=0'
+            && $request->method() === 'GET'
+            && $request->body() === ''
+            && $request->hasHeader('Authorization', 'Bearer '.self::KEY));
         $this->expectException(RuntimeException::class);
         app(ProviderManager::class)->assertInferenceAllowed($provider, 'paid-001');
     }
@@ -165,6 +169,23 @@ final class AiProviderManagerTest extends TestCase
         $this->assertSame('groq-000', $provider->models_cache[0]);
         $this->assertSame('groq-199', $provider->models_cache[199]);
         $this->assertNotContains('late/free:free', $provider->models_cache);
+        Http::assertSentCount(1);
+    }
+
+    public function test_http_200_without_model_catalog_is_not_a_verified_connection(): void
+    {
+        // Some gateways return HTTP 200 with an error instead of a model list.
+        // This must never be reported as an authenticated model catalog.
+        Http::fake(['api.groq.com/*' => Http::response(['error' => 'not a model catalog'], 200)]);
+        $this->add('Groq invalid catalog');
+        $id = AiProvider::query()->value('id');
+
+        $this->confirmed($this->owner)->post("/services/kmj-codebridge/ai-providers/{$id}/test")
+            ->assertRedirect();
+        $provider = AiProvider::query()->findOrFail($id);
+        $this->assertSame('unreachable', $provider->health);
+        $this->assertSame('invalid_catalog', $provider->last_error_code);
+        $this->assertSame([], app(ProviderManager::class)->present($provider)['models']);
         Http::assertSentCount(1);
     }
 

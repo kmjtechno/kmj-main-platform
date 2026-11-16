@@ -101,7 +101,10 @@ function ProviderCard({
 
             <p className="kmj-ai-admission-summary text-sm" role="status">
                 <strong>{provider.models.length}</strong> verified-free models
-                admitted · {provider.discovered_model_count} catalog models
+                admitted · {provider.discovered_model_count}{' '}
+                {provider.preset === 'openrouter'
+                    ? 'zero-prompt-price catalog candidates'
+                    : 'catalog models'}{' '}
                 discovered
                 {provider.models.length === 0
                     ? ' · Inference blocked until verified-free admission'
@@ -210,7 +213,7 @@ function ProviderCard({
                             role="status"
                         >
                             {provider.discovered_model_count > 0
-                                ? `${provider.discovered_model_count} catalog models found, but none is currently admitted as verified free. Verify your free model allowlist and run “Test connection” again. Paid and unknown-price models cannot be selected.`
+                                ? `${provider.discovered_model_count} ${provider.preset === 'openrouter' ? 'zero-prompt-price catalog candidates' : 'catalog models'} found, but none is currently admitted as verified free. Verify your free model allowlist and run “Test connection” again. Paid and unknown-price models cannot be selected.`
                                 : 'No admitted free models yet. Run “Test connection” to discover models and verify the free-only policy.'}
                         </p>
                     ) : (

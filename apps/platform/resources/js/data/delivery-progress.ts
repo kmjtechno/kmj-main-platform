@@ -10,6 +10,14 @@ export type DeliveryMilestone = {
 
 export const deliveryMilestones: DeliveryMilestone[] = [
     {
+        id: 'codebridge-openrouter-price-filtered-model-discovery-20261116',
+        title: 'OpenRouter — price-filtered GET models without admitting paid inference',
+        state: 'active',
+        detail: 'Draft source-only PR #884 now asks OpenRouter for its documented max_price=0 catalog query instead of downloading the entire paid catalog, while preserving HTTPS DNS pinning, a single GET, response byte cap, the 200-ID cache limit and the exact :free runtime admission requirement. A zero-prompt-price catalog candidate is not itself considered zero-billing authorization. Other provider endpoints are unchanged. Malformed HTTP-200 catalog envelopes fail health rather than reporting success.',
+        evidence:
+            'Mocked Laravel feature tests check the exact read-only price-filtered URL, no request body, unchanged authenticated header, late free variants, rejected malformed success envelopes and existing OAuth callbacks. Exact-head hosted CI, real owner-authenticated provider recheck and release-specific restore/rollback approvals remain separate. No live mutation or inferred paid-route permission.',
+    },
+    {
         id: 'codebridge-ai-free-first-catalog-bound-20261116',
         title: 'AI Providers — preserve late OpenRouter free variants within bounded discovery',
         state: 'active',

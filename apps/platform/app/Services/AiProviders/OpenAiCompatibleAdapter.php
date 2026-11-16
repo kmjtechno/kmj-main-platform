@@ -9,7 +9,9 @@ use Illuminate\Support\Facades\Http;
 use InvalidArgumentException;
 
 /**
- * Read-only probe of an OpenAI-compatible API: GET {base}/models. It never sends a prompt,
+ * Read-only probe of an OpenAI-compatible API: GET {base}/models. OpenRouter alone
+ * adds its documented max_price=0 catalog filter (admission still checks :free).
+ * It never sends a prompt,
  * so a connection test cannot consume tokens or money. The key is sent only as a bearer
  * header to the pinned, validated address and is never placed in any result or error.
  */
@@ -40,11 +42,19 @@ final class OpenAiCompatibleAdapter
             return $this->result('blocked', [], [], 'pinning_unavailable');
         }
 
+        // OpenRouter's documented server-side filter reduces the catalog sent
+        // to this fixed 2 MB / 200-ID reader. A zero prompt-price result is NOT
+        // authorization for inference: only the existing :free rule admits it.
+        $catalogUrl = $target['base'].'/models';
+        if ($target['host'] === 'openrouter.ai') {
+            $catalogUrl .= '?max_price=0';
+        }
+
         try {
             $response = Http::withOptions([
                 'allow_redirects' => false,
                 'curl' => [CURLOPT_RESOLVE => [$target['host'].':443:'.$target['ip']]],
-            ])->withToken($apiKey)->acceptJson()->timeout(10)->connectTimeout(5)->get($target['base'].'/models');
+            ])->withToken($apiKey)->acceptJson()->timeout(10)->connectTimeout(5)->get($catalogUrl);
         } catch (ConnectionException) {
             return $this->result('unreachable', [], [], 'connection_failed');
         }
@@ -64,13 +74,19 @@ final class OpenAiCompatibleAdapter
             return $this->result('unreachable', [], $rate, 'response_too_large');
         }
 
+        $data = $response->json('data');
+        if (! is_array($data) || ! array_is_list($data)) {
+            // An HTTP 200 with an error payload is not a successful catalog.
+            return $this->result('unreachable', [], $rate, 'invalid_catalog');
+        }
+
         // Some catalogs list paid models before free variants. Scan the
         // already size-limited response before applying the 200-ID cache cap.
         // Only OpenRouter suffix variants get priority. Other providers keep
         // the prior first-200 order; inference still requires FreePolicy.
         $free = [];
         $other = [];
-        foreach ((array) ($response->json('data') ?? []) as $entry) {
+        foreach ($data as $entry) {
             $id = is_array($entry) ? ($entry['id'] ?? null) : null;
             if (! is_string($id) || preg_match('/\A[A-Za-z0-9._:\/-]{1,128}\z/', $id) !== 1) {
                 continue;

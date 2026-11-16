@@ -160,7 +160,7 @@ final class AiProviderOpenRouterConnectTest extends TestCase
     {
         Http::fake([
             'openrouter.ai/api/v1/auth/keys' => Http::response(['key' => self::KEY], 200),
-            'openrouter.ai/api/v1/models' => Http::response(['data' => [['id' => 'x/paid-model']]], 200),
+            'openrouter.ai/api/v1/models?max_price=0' => Http::response(['data' => [['id' => 'x/paid-model']]], 200),
         ]);
         $this->confirmed($this->owner)->post(self::START);
         $this->actingAs($this->owner)->get($this->callbackUrl())->assertRedirect();
@@ -175,7 +175,7 @@ final class AiProviderOpenRouterConnectTest extends TestCase
     {
         Http::fake([
             'openrouter.ai/api/v1/auth/keys' => Http::response(['key' => self::KEY], 200),
-            'openrouter.ai/api/v1/models' => Http::response(['error' => 'temporarily unavailable'], 503),
+            'openrouter.ai/api/v1/models?max_price=0' => Http::response(['error' => 'temporarily unavailable'], 503),
         ]);
         $this->confirmed($this->owner)->post(self::START);
         $this->actingAs($this->owner)->get($this->callbackUrl())->assertRedirect();
@@ -233,7 +233,7 @@ final class AiProviderOpenRouterConnectTest extends TestCase
     {
         Http::fake([
             'openrouter.ai/api/v1/auth/keys' => Http::response(['key' => self::KEY], 200),
-            'openrouter.ai/api/v1/models' => Http::response(['data' => [['id' => 'meta/llama-3:free'], ['id' => 'x/paid-model']]], 200),
+            'openrouter.ai/api/v1/models?max_price=0' => Http::response(['data' => [['id' => 'meta/llama-3:free'], ['id' => 'x/paid-model']]], 200),
         ]);
     }
 
