@@ -143,7 +143,11 @@ export default function AiProviderConnectHub({
                                 <article
                                     key={guide.key}
                                     className="kmj-ai-key-card flex flex-col rounded-xl border p-4"
-                                    data-selected={selectedPreset === guide.key ? 'true' : undefined}
+                                    data-selected={
+                                        selectedPreset === guide.key
+                                            ? 'true'
+                                            : undefined
+                                    }
                                 >
                                     <h4 className="font-bold">
                                         {provider?.label}
@@ -152,8 +156,12 @@ export default function AiProviderConnectHub({
                                         {guide.helper}
                                     </p>
                                     {selectedPreset === guide.key && (
-                                        <p className="kmj-ai-selected-hint mt-2 text-sm" role="status">
-                                            Selected · Finish the secure connection below
+                                        <p
+                                            className="kmj-ai-selected-hint mt-2 text-sm"
+                                            role="status"
+                                        >
+                                            Selected · Finish the secure
+                                            connection below
                                         </p>
                                     )}
                                     <a
