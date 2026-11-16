@@ -127,6 +127,7 @@ final class AiProviderController extends Controller
         }
         $request->session()->put('ai_provider_oauth', [
             'verifier' => $flow['verifier'],
+            'state' => $flow['state'],
             'user' => (int) $this->user($request)->id,
             'organization' => $scope['organization_id'],
             'expires' => time() + 600,
@@ -149,6 +150,15 @@ final class AiProviderController extends Controller
 
         if ($request->query('error') !== null) {
             return $index->withErrors(['provider' => 'Authorization was declined or canceled. No provider was added.']);
+        }
+
+        // PKCE binds the code to its verifier. State additionally binds this
+        // successful callback to the exact single-use owner browser session.
+        $returnedState = $request->query('state');
+        $expectedState = $pending['state'] ?? null;
+        if (! is_string($returnedState) || ! is_string($expectedState)
+            || ! hash_equals($expectedState, $returnedState)) {
+            return $index->withErrors(['provider' => 'Sign-in session mismatch. Start again.']);
         }
 
         try {
