@@ -53,10 +53,10 @@ function docker(args,timeout=900000) {
   if(r.error||r.status!==0||typeof r.stdout!=='string')throw Error('DOCKER_COMMAND_FAILED');
   return r.stdout.trim();
 }
-function fail(reason) {
+function fail(reason,attempted=false) {
   console.log('KMJ_P520_BUNDLE_ONLY=BLOCKED_'+(/^[A-Z0-9_]{1,80}$/.test(reason)?reason:'UNCLASSIFIED'));
-  console.log('POSTGRESQL_RESTORE=NOT_EXECUTED');
-  console.log('STORAGE_RESTORE=NOT_EXECUTED');
+  console.log('POSTGRESQL_RESTORE='+(attempted?'UNVERIFIED':'NOT_EXECUTED'));
+  console.log('STORAGE_RESTORE='+(attempted?'UNVERIFIED':'NOT_EXECUTED'));
   console.log('PRODUCTION_APPROVAL=NOT_GRANTED');
   process.exitCode=2;
 }
@@ -80,8 +80,8 @@ function execute(argv){
     verifyCipher(paths.cipher,opt.cipher,opt.bytes);
     vol='kmj-p520-verify-'+randomUUID().replaceAll('-','');
     const createdName=docker(['volume','create','--name',vol],15000);
-    if(createdName!==vol)throw Error('VOLUME_CREATE_NOT_EXACT');
     created=true;
+    if(createdName!==vol)throw Error('VOLUME_CREATE_NOT_EXACT');
     docker(decryptArgs(vol,opt.image,paths.cipher,key));
     const out=docker(validateArgs(vol,opt.image,opt.source));
     if(out!==RECEIPT)throw Error('BUNDLE_RECEIPT_INVALID');
@@ -90,11 +90,11 @@ function execute(argv){
     if(recovered!=='KMJ_P520_DISPOSABLE_PG_STORAGE=PASS')throw Error('DISPOSABLE_RESTORE_INVALID');
     passed=true;
   }catch{
-    fail(restoreStarted?'DISPOSABLE_PG_STORAGE_RESTORE_FAILED':'DECRYPT_OR_INTEGRITY');
+    fail(restoreStarted?'DISPOSABLE_PG_STORAGE_RESTORE_FAILED':'DECRYPT_OR_INTEGRITY',restoreStarted);
   }finally{
     if(created){
       try{docker(['volume','rm',vol],15000);cleaned=true;}
-      catch{fail('PLAINTEXT_VOLUME_CLEANUP_FAILED');}
+      catch{fail('PLAINTEXT_VOLUME_CLEANUP_FAILED',restoreStarted);}
     }
   }
   if(passed&&cleaned&&process.exitCode!==2){
