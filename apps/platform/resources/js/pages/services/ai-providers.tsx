@@ -508,6 +508,7 @@ export default function AiProviders({
         token: number;
     } | null>(null);
     const [oauthBusy, setOauthBusy] = useState(false);
+    const [showKeyForm, setShowKeyForm] = useState(false);
     const startOpenRouter = () => {
         if (oauthBusy) return;
         setOauthBusy(true);
@@ -564,17 +565,37 @@ export default function AiProviders({
                             oauthBusy={oauthBusy}
                             onConnectOpenRouter={startOpenRouter}
                             selectedPreset={preferredPreset?.key ?? null}
-                            onChooseKeyProvider={(key) =>
+                            onChooseKeyProvider={(key) => {
+                                setShowKeyForm(true);
                                 setPreferredPreset((prev) => ({
                                     key,
                                     token: (prev?.token ?? 0) + 1,
-                                }))
-                            }
+                                }));
+                            }}
                         />
-                        <AddProvider
-                            presets={presets}
-                            preferredPreset={preferredPreset}
-                        />
+                        {showKeyForm ? (
+                            <div className="space-y-2">
+                                <button
+                                    type="button"
+                                    onClick={() => setShowKeyForm(false)}
+                                    className="min-h-10 rounded-xl border px-3 text-sm font-semibold"
+                                >
+                                    Close key setup
+                                </button>
+                                <AddProvider
+                                    presets={presets}
+                                    preferredPreset={preferredPreset}
+                                />
+                            </div>
+                        ) : (
+                            <button
+                                type="button"
+                                onClick={() => setShowKeyForm(true)}
+                                className="kmj-ai-manual-launcher min-h-11 self-start rounded-xl border px-4 text-sm font-semibold"
+                            >
+                                Connect another provider using an API key
+                            </button>
+                        )}
                     </>
                 ) : (
                     <p className="text-muted-foreground text-sm">
