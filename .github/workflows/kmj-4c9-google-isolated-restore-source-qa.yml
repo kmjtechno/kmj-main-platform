@@ -1,0 +1,28 @@
+name: KMJ 4C9 Google Isolated Restore Source QA
+on:
+  pull_request:
+    paths:
+      - 'scripts/KMJ_4C9_GOOGLE_ISOLATED_RESTORE_ONEPASS_20261116.sh'
+      - 'scripts/test_KMJ_4C9_GOOGLE_ISOLATED_RESTORE_ONEPASS_20261116.py'
+      - '.github/workflows/kmj-4c9-google-isolated-restore-source-qa.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  safe-source:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Verify immutable 4C9 candidate and isolated restore non-execution
+        run: |
+          set -Eeuo pipefail
+          bash -n scripts/KMJ_4C9_GOOGLE_ISOLATED_RESTORE_ONEPASS_20261116.sh
+          python3 -B -m unittest discover -s scripts \
+            -p 'test_KMJ_4C9_GOOGLE_ISOLATED_RESTORE_ONEPASS_20261116.py' -v
+          echo GOOGLE_PRIVATE_KEY_READ=NO
+          echo GOOGLE_CIPHER_READ=NO
+          echo GOOGLE_INDEPENDENT_RESTORE=NOT_EXECUTED
+          echo PRODUCTION_ACTIVATION=NOT_ATTEMPTED
