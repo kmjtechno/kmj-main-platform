@@ -107,7 +107,7 @@ void test('catalog-only and paid models never enter free selectable defaults', (
 
 void test('official key launcher selects provider and resumes secure form without cross-origin key access', () => {
     assert.match(hub, /onChooseKeyProvider\(guide\.key\)/);
-    assert.match(hub, /data-selected=\{selectedPreset === guide\.key/);
+    assert.match(hub, /data-selected=\{\s*selectedPreset\s*===\s*guide\.key/);
     assert.match(hub, /Connect \{guide\.title\}/);
     assert.match(page, /setPreferredPreset\(\(prev\) =>/);
     assert.match(page, /preferredPreset\.key/);
@@ -135,5 +135,5 @@ void test('configured providers use honest summary and deliberate advanced contr
     assert.match(page, /data: \{ confirm: 'DELETE' \}/);
     assert.match(page, /fallback_models: next/);
     assert.match(page, /\{ api_key: newKey \}/);
-    assert.match(page, /onSuccess: \(\) => setNewKey\(''\)/);
+    assert.match(page, /onSuccess:\s*\(\)\s*=>\s*setNewKey\(''\)/);
 });
