@@ -8,7 +8,7 @@ import { spawnSync } from 'node:child_process';
 import os from 'node:os';
 import { pathToFileURL } from 'node:url';
 import { NAME, MAX_BYTES, Refuse, fixedRecoveryPath, verifyCipher } from './P520-OFFSITE-CIPHER-READBACK-20261116.mjs';
-import { isPrivateAcl } from './P520-OFFSITE-KEY-BOOTSTRAP-20261116.mjs';
+import { verifyWindowsPrivateAcl } from './P520-OFFSITE-ACL-VERIFY-20261116.mjs';
 
 const SHA = /^[a-f0-9]{64}$/;
 
@@ -52,8 +52,7 @@ function lstatMaybe(file) {
   catch (e) { if (e?.code === 'ENOENT') return false; throw e; }
 }
 function ensurePrivateAcl(path) {
-  const check = spawnSync('icacls.exe', [path], { encoding: 'utf8', timeout: 10000, windowsHide: true });
-  if (check.status !== 0 || !isPrivateAcl(check.stdout)) throw new Refuse('INBOX_PRIVATE_ACL_UNVERIFIED');
+  if (!verifyWindowsPrivateAcl(path)) throw new Refuse('INBOX_PRIVATE_ACL_UNVERIFIED');
 }
 function deny(code) {
   process.stdout.write('KMJ_P520_INBOX_FINALIZE=BLOCKED_' +

@@ -8,6 +8,7 @@ import { basename, join } from 'node:path';
 import os from 'node:os';
 import { spawnSync } from 'node:child_process';
 import { pathToFileURL } from 'node:url';
+import { verifyWindowsPrivateAcl } from './P520-OFFSITE-ACL-VERIFY-20261116.mjs';
 
 const PUB = /^age1[023456789acdefghjklmnpqrstuvwxyz]{58}$/;
 export function validAgeRecipient(value) {
@@ -51,8 +52,7 @@ function provision() {
   if (!existsSync(folder) || !lstatSync(folder).isDirectory() || lstatSync(folder).isSymbolicLink()) {
     return block('PRIVATE_KEY_DIRECTORY_NOT_PROVISIONED');
   }
-  const acl = spawnSync('icacls.exe', [folder], { encoding: 'utf8', timeout: 12000, windowsHide: true });
-  if (acl.status !== 0 || !isPrivateAcl(acl.stdout)) return block('PRIVATE_ACL_NOT_VERIFIED');
+  if (!verifyWindowsPrivateAcl(folder)) return block('PRIVATE_ACL_NOT_VERIFIED');
   const ageKey = join(folder, 'p520-offsite.agekey');
   const signer = join(folder, 'p520-receipt-signing-ed25519.pem');
   const signingPub = join(folder, 'p520-receipt-ed25519-public.pem');

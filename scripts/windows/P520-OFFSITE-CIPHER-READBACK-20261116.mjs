@@ -6,7 +6,7 @@ import { join } from 'node:path';
 import os from 'node:os';
 import { spawnSync } from 'node:child_process';
 import { pathToFileURL } from 'node:url';
-import { isPrivateAcl } from './P520-OFFSITE-KEY-BOOTSTRAP-20261116.mjs';
+import { verifyWindowsPrivateAcl } from './P520-OFFSITE-ACL-VERIFY-20261116.mjs';
 
 export const NAME = 'offsite-p520-4c9d59103b99.tar.gz.age';
 export const MAX_BYTES = 10 * 1024 ** 3;
@@ -67,8 +67,7 @@ export function verifyCipher(cipher, digest, expectedBytes) {
   }
 }
 function ensurePrivateAcl(path) {
-  const result = spawnSync('icacls.exe', [path], { encoding: 'utf8', timeout: 10000, windowsHide: true });
-  if (result.status !== 0 || !isPrivateAcl(result.stdout)) throw new Refuse('PRIVATE_ACL_NOT_VERIFIED');
+  if (!verifyWindowsPrivateAcl(path)) throw new Refuse('PRIVATE_ACL_NOT_VERIFIED');
 }
 function block(reason) {
   const msg = /^[A-Z0-9_]+$/.test(reason) ? reason : 'UNCLASSIFIED';
