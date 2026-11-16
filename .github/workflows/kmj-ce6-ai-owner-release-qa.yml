@@ -1,0 +1,46 @@
+name: KMJ AI Providers CE6 Owner Release QA
+on:
+  pull_request:
+    paths:
+      - "scripts/KMJ_CE6AD7_AI_PROVIDERS_OWNER_RELEASE_20261116.sh"
+      - "scripts/test_KMJ_CE6AD7_AI_PROVIDERS_OWNER_RELEASE_20261116.py"
+      - ".github/workflows/kmj-ce6-ai-owner-release-qa.yml"
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  source-only-gates:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - name: Verify exact source, old release and no migration diffs
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          previous=e5b43872bc031eb4b074a1e318abd80949c321d8
+          target=ce6ad7dc9d898dce1ba9561a0e221f8ad750180f
+          git cat-file -e "${target}^{commit}"
+          git cat-file -e "${previous}^{commit}"
+          [[ "$(git merge-base "$previous" "$target")" == "$previous" ]]
+          if git diff --name-only "$previous" "$target" | grep -E '^apps/platform/database/migrations/'; then
+            echo DB_MIGRATIONS_REQUIRE_SEPARATE_REVIEW
+            exit 2
+          fi
+          printf '%s  %s\n' \
+            '9b0edc9a52bde6051bc1dddb7ce8d97c76647bf7e5c2d127af845d9b13e1db7f' \
+            scripts/KMJ_CE6AD7_AI_PROVIDERS_OWNER_RELEASE_20261116.sh | sha256sum -c -
+          printf '%s  %s\n' \
+            '3eaa6bd71da4598c504a96c2a93ef5b08d76e7dc6dd7d1e0fac1d0aed36ab623' \
+            scripts/test_KMJ_CE6AD7_AI_PROVIDERS_OWNER_RELEASE_20261116.py | sha256sum -c -
+          bash -n scripts/KMJ_CE6AD7_AI_PROVIDERS_OWNER_RELEASE_20261116.sh
+          python3 -m py_compile scripts/test_KMJ_CE6AD7_AI_PROVIDERS_OWNER_RELEASE_20261116.py
+          echo AI_PROVIDER_RELEASE_SOURCE_SHA=PASS
+      - name: Guarded release offline positive and negative tests
+        run: |
+          python3 -B -m unittest discover -s scripts \
+            -p 'test_KMJ_CE6AD7_AI_PROVIDERS_OWNER_RELEASE_20261116.py' -v
+          echo PRODUCTION_ACTIVATION=NOT_ATTEMPTED
