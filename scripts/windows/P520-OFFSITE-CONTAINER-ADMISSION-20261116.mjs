@@ -2,7 +2,7 @@
 // KMJ P520 container-only isolated PostgreSQL restore admission doctor.
 // No Docker pulls, builds, containers, keys, archives, credentials or disk writes.
 import { spawnSync } from 'node:child_process';
-import { lstatSync } from 'node:fs';
+import { lstatSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import os from 'node:os';
 import { pathToFileURL } from 'node:url';
@@ -25,6 +25,16 @@ export function dockerInfo(output) {
 }
 export function validateImageId(value, digest) {
   return HASH.test(digest)&&value?.trim()===('sha256:'+digest);
+}
+export function ownerPinnedImage(policyFile,imageSha) {
+  if(!HASH.test(imageSha))return false;
+  try {
+    const st=lstatSync(policyFile);
+    if(!st.isFile()||st.isSymbolicLink()||st.nlink!==1||
+       st.size<64||st.size>66)return false;
+    const contents=readFileSync(policyFile,{encoding:'ascii'});
+    return contents===imageSha||contents===imageSha+'\n'||contents===imageSha+'\r\n';
+  }catch{return false;}
 }
 export function safePath(value) {
   return typeof value==='string'&&value.length>0&&value.length<1024&&
@@ -51,6 +61,9 @@ export function admission(imageSha,host){
       return {ok:false,reason:'KEY_OR_CIPHER_NOT_REGULAR'};
     if(!verifyWindowsPrivateAcl(parent)||!verifyWindowsPrivateAcl(inbox))
       return {ok:false,reason:'PRIVATE_ACL'};
+    // Owner-approved private immutable image digest. CLI input alone is NOT authority.
+    if(!ownerPinnedImage(join(parent,'restore-image.sha256'),imageSha))
+      return {ok:false,reason:'OWNER_IMAGE_POLICY_NOT_PINNED'};
   }catch{return {ok:false,reason:'P520_KEYS_OR_CIPHER_NOT_PROVISIONED'};}
   const info=runReadonlyDocker(['info','--format','{{.OSType}}']);
   if(!dockerInfo(info))return {ok:false,reason:'DOCKER_LINUX_ENGINE'};

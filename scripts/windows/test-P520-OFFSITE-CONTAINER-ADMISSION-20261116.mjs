@@ -1,7 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {spawnSync} from 'node:child_process';
-import {parseArgv,dockerInfo,validateImageId,safePath,runReadonlyDocker} from './P520-OFFSITE-CONTAINER-ADMISSION-20261116.mjs';
+import {writeFileSync, mkdtempSync, symlinkSync, linkSync, rmSync} from 'node:fs';
+import {join} from 'node:path';
+import os from 'node:os';
+import {parseArgv,dockerInfo,validateImageId,safePath,runReadonlyDocker,ownerPinnedImage} from './P520-OFFSITE-CONTAINER-ADMISSION-20261116.mjs';
 
 const SHA='b'.repeat(64);
 test('only immutable SHA256 local image identity accepted',()=>{
@@ -43,4 +46,26 @@ test('source contract does not launch Docker container or pull image',()=>{
   assert.ok(s.includes('spawnSync'));
   assert.ok(!s.includes('docker pull'));
   assert.ok(!s.includes('docker run'));
+});
+
+test('owner-private local image policy must exactly pin SHA, not CLI only',()=>{
+  const tmp=mkdtempSync(join(os.tmpdir(),'kmj-p520-docker-policy-'));
+  try {
+    const policy=join(tmp,'restore-image.sha256');
+    writeFileSync(policy,SHA+'\n');
+    assert.equal(ownerPinnedImage(policy,SHA),true);
+    assert.equal(ownerPinnedImage(policy,'a'.repeat(64)),false);
+    writeFileSync(policy,SHA+'\nsha256:latest\n');
+    assert.equal(ownerPinnedImage(policy,SHA),false);
+    writeFileSync(policy,SHA+'\n');
+    const duplicate=join(tmp,'duplicate');
+    linkSync(policy,duplicate);
+    assert.equal(ownerPinnedImage(policy,SHA),false);
+    rmSync(duplicate);
+    rmSync(policy);
+    symlinkSync(join(tmp,'untrusted'),policy);
+    assert.equal(ownerPinnedImage(policy,SHA),false);
+  } finally {
+    rmSync(tmp,{recursive:true,force:true});
+  }
 });
