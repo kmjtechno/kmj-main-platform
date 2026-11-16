@@ -1,0 +1,32 @@
+name: KMJ P520 Private Directory PowerShell Parse QA
+on:
+  pull_request:
+    paths:
+      - 'scripts/windows/P520-OFFSITE-PRIVATE-DIRECTORY-20261116.ps1'
+      - '.github/workflows/kmj-p520-private-directory-qa.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  parser:
+    runs-on: windows-2022
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Parse Windows PowerShell 5.1 source without invoking it
+        shell: powershell
+        run: |
+          $path = 'scripts/windows/P520-OFFSITE-PRIVATE-DIRECTORY-20261116.ps1'
+          $tokens = $null
+          $errors = $null
+          $null = [System.Management.Automation.Language.Parser]::ParseFile((Resolve-Path $path), [ref]$tokens, [ref]$errors)
+          if ($errors.Count -ne 0) { $errors | Format-List | Out-String | Write-Host; exit 1 }
+          $source = Get-Content $path -Raw
+          foreach($marker in @("SetAccessRuleProtection(", "GetAccessRules(", "GetOwner(", "PRIVATE_KEY_CREATED=NO", "PRODUCTION_APPROVAL=NOT_GRANTED")) {
+            if (-not $source.Contains($marker)) { throw "MISSING_CONTRACT_$marker" }
+          }
+          Write-Output 'WINDOWS_PS51_SYNTAX=PASS'
+          Write-Output 'ACTUAL_PRIVATE_DIRECTORY=NOT_PROVISIONED'
+          Write-Output 'PRODUCTION_APPROVAL=NOT_GRANTED'
