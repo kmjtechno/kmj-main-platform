@@ -64,16 +64,23 @@ final class OpenAiCompatibleAdapter
             return $this->result('unreachable', [], $rate, 'response_too_large');
         }
 
-        $models = [];
+        // Some catalogs list paid models before free variants. Scan the
+        // already size-limited response before applying the 200-ID cache cap.
+        // This is discovery only: inference still requires FreePolicy admission.
+        $free = [];
+        $other = [];
         foreach ((array) ($response->json('data') ?? []) as $entry) {
             $id = is_array($entry) ? ($entry['id'] ?? null) : null;
-            if (is_string($id) && preg_match('/\A[A-Za-z0-9._:\/-]{1,128}\z/', $id) === 1) {
-                $models[] = $id;
+            if (! is_string($id) || preg_match('/\A[A-Za-z0-9._:\/-]{1,128}\z/', $id) !== 1) {
+                continue;
             }
-            if (count($models) >= self::MAX_MODELS) {
-                break;
+            if (str_ends_with($id, ':free')) {
+                $free[$id] = true;
+            } else {
+                $other[$id] = true;
             }
         }
+        $models = array_slice(array_merge(array_keys($free), array_keys($other)), 0, self::MAX_MODELS);
         sort($models);
 
         return $this->result('ok', $models, $rate, null);

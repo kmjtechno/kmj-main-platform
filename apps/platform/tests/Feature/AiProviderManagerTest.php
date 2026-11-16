@@ -118,6 +118,34 @@ final class AiProviderManagerTest extends TestCase
         $this->assertNull($provider->rate_limit['tokens_remaining']);
     }
 
+    public function test_openrouter_free_variant_beyond_200_catalog_entries_is_still_discovered(): void
+    {
+        $catalog = [];
+        for ($i = 0; $i < 220; $i++) {
+            $catalog[] = ['id' => sprintf('paid-%03d', $i)];
+        }
+        $catalog[] = ['id' => 'sample/late-free:free'];
+        $catalog[] = ['id' => 'sample/late-free:free'];
+        $catalog[] = ['id' => 'invalid model id'];
+
+        Http::fake(['openrouter.ai/*' => Http::response(['data' => $catalog], 200)]);
+        $response = $this->confirmed($this->owner)->post('/services/kmj-codebridge/ai-providers', [
+            'preset' => 'openrouter', 'api_key' => self::KEY, 'verify_connection' => true,
+        ]);
+        $response->assertSessionHasNoErrors()->assertRedirect();
+
+        $provider = AiProvider::query()->firstOrFail();
+        $this->assertSame('ok', $provider->health);
+        $this->assertCount(200, $provider->models_cache);
+        $this->assertContains('sample/late-free:free', $provider->models_cache);
+        $this->assertSame('sample/late-free:free', $provider->default_model);
+        $this->assertSame(['sample/late-free:free'], app(ProviderManager::class)->present($provider)['models']);
+        $this->assertNotContains('paid-219', $provider->models_cache);
+        Http::assertSentCount(1);
+        $this->expectException(RuntimeException::class);
+        app(ProviderManager::class)->assertInferenceAllowed($provider, 'paid-001');
+    }
+
     public function test_provider_failures_are_classified_and_never_echo_the_key(): void
     {
         $this->add('Groq main');
