@@ -31,7 +31,7 @@ void test('other providers use only exact official key pages, no fake OAuth', ()
     assert.match(hub, /https:\/\/aistudio\.google\.com\/apikey/);
     assert.match(hub, /https:\/\/console\.mistral\.ai\/api-keys\//);
     assert.match(hub, /https:\/\/huggingface\.co\/settings\/tokens/);
-    assert.match(hub, /Get key &amp; connect/);
+    assert.match(hub, /Connect \{guide\.title\}/);
     assert.match(hub, /rel="noopener noreferrer"/);
     assert.match(hub, /onChooseKeyProvider\(guide\.key\)/);
     assert.doesNotMatch(
@@ -42,7 +42,7 @@ void test('other providers use only exact official key pages, no fake OAuth', ()
 
 void test('one-action guided key connection verifies only read-only models', () => {
     assert.match(page, /verify_connection: true/);
-    assert.match(page, /Save & verify connection/);
+    assert.match(page, /Save & verify \$\{selected\?\.label/);
     assert.match(
         controller,
         /'verify_connection' => \['sometimes', 'boolean'\]/,
@@ -103,4 +103,34 @@ void test('catalog-only and paid models never enter free selectable defaults', (
     assert.match(ui, /Verified-free default model/);
     assert.match(ui, /Verified-free fallback models/);
     assert.match(ui, /Paid and unknown-price models cannot be selected/);
+});
+
+void test('official key launcher selects provider and resumes secure form without cross-origin key access', () => {
+    assert.match(hub, /onChooseKeyProvider\(guide\.key\)/);
+    assert.match(hub, /data-selected=\{selectedPreset === guide\.key/);
+    assert.match(hub, /Connect \{guide\.title\}/);
+    assert.match(page, /setPreferredPreset\(\(prev\) =>/);
+    assert.match(page, /preferredPreset\.key/);
+    assert.match(page, /window\.requestAnimationFrame/);
+    assert.match(page, /formRef\.current\?\.scrollIntoView/);
+    assert.match(page, /keyInputRef\.current\?\.focus/);
+    assert.match(page, /ref=\{keyInputRef\}/);
+    assert.match(page, /Finish \{selected\?\.label/);
+    assert.match(page, /verify_connection: true/);
+    assert.doesNotMatch(hub, /localStorage|sessionStorage|document\.cookie|navigator\.clipboard/);
+});
+
+void test('configured providers use honest summary and deliberate advanced controls', () => {
+    assert.match(page, /discovered_model_count/);
+    assert.match(page, /verified-free models/);
+    assert.match(page, /Inference blocked until verified-free admission/);
+    assert.match(page, /const \[expanded, setExpanded\] = useState\(false\)/);
+    assert.match(page, /aria-expanded=\{expanded\}/);
+    assert.match(page, /\{expanded && \(/);
+    assert.match(page, /\{canManage && replaceVisible && \(/);
+    assert.match(page, /window\.confirm/);
+    assert.match(page, /data: \{ confirm: 'DELETE' \}/);
+    assert.match(page, /fallback_models: next/);
+    assert.match(page, /\{ api_key: newKey \}/);
+    assert.match(page, /onSuccess: \(\) => setNewKey\(''\)/);
 });
