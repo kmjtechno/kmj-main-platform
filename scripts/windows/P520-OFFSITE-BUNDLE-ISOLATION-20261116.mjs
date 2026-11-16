@@ -9,6 +9,7 @@ import os from 'node:os';
 import { pathToFileURL } from 'node:url';
 import { admission, ownerPinnedImage, safePath } from './P520-OFFSITE-CONTAINER-ADMISSION-20261116.mjs';
 import { fixedRecoveryPath, verifyCipher } from './P520-OFFSITE-CIPHER-READBACK-20261116.mjs';
+import { pgStorageArgs } from './P520-OFFSITE-PG-STORAGE-RESTORE-20261116.mjs';
 
 const HEX=/^[a-f0-9]{64}$/;
 const DOCKER='C:\\Program Files\\Docker\\Docker\\resources\\bin\\docker.exe';
@@ -38,7 +39,7 @@ export function decryptArgs(volume,image,cipher,key){
     '--mount=type=bind,src='+cipher+',dst=/sealed.age,readonly',
     '--mount=type=bind,src='+key+',dst=/identity.agekey,readonly',
     '--entrypoint=/bin/sh','sha256:'+image,
-    '-ec','umask 077; age -d -i /identity.agekey -o /recovery/bundle.tar.gz /sealed.age'];
+    '-ec','umask 077; age -d -i /identity.agekey -o /recovery/bundle.tar.gz /sealed.age; chmod 0644 /recovery/bundle.tar.gz'];
 }
 export const VALIDATION_PY="import hashlib, re, sys, tarfile\nfrom pathlib import PurePosixPath\nfrom io import BytesIO\nsource=sys.argv[1]\nexpected_names={\"database.dump\",\"storage.tar.gz\",\"metadata.txt\",\"SHA256SUMS\"}\nchecks={}\nbundle=sys.argv[2] if len(sys.argv)==3 else \"/recovery/bundle.tar.gz\"\nwith tarfile.open(bundle,\"r:gz\") as arc:\n    members=arc.getmembers()\n    if len(members)!=4 or {m.name for m in members}!=expected_names:\n        raise SystemExit(\"INVALID_OUTER_MEMBERS\")\n    if any(not m.isfile() or m.size<=0 for m in members):\n        raise SystemExit(\"NONREGULAR_MEMBER\")\n    if sum(m.size for m in members)>2*1024**3:\n        raise SystemExit(\"UNBOUNDED_ARCHIVE\")\n    if any(m.size>16384 for m in members if m.name in {\"metadata.txt\",\"SHA256SUMS\"}):\n        raise SystemExit(\"OVERSIZED_METADATA\")\n    small={}\n    for item in members:\n        stream=arc.extractfile(item)\n        if stream is None:raise SystemExit(\"UNREADABLE_MEMBER\")\n        digest=hashlib.sha256()\n        total=0\n        data=BytesIO() if item.name in {\"metadata.txt\",\"SHA256SUMS\"} else None\n        while True:\n            block=stream.read(1024*1024)\n            if not block:break\n            total+=len(block)\n            if total>item.size:raise SystemExit(\"MEMBER_GROWTH\")\n            if item.name==\"database.dump\" and total==len(block) and not block.startswith(b\"PGDMP\"):\n                raise SystemExit(\"NOT_PGDMP\")\n            digest.update(block)\n            if data is not None:data.write(block)\n        if total!=item.size:raise SystemExit(\"MEMBER_TRUNCATED\")\n        checks[item.name]=digest.hexdigest()\n        if data is not None:small[item.name]=data.getvalue().decode(\"ascii\")\n    manifest={}\n    for line in small[\"SHA256SUMS\"].splitlines():\n        m=re.fullmatch(r\"([a-f0-9]{64})  (database\\.dump|storage\\.tar\\.gz|metadata\\.txt)\",line)\n        if not m or m.group(2) in manifest:raise SystemExit(\"MANIFEST_INVALID\")\n        manifest[m.group(2)]=m.group(1)\n    if set(manifest)!=expected_names-{\"SHA256SUMS\"} or any(checks[k]!=digest for k,digest in manifest.items()):\n        raise SystemExit(\"MANIFEST_MISMATCH\")\n    meta={}\n    for line in small[\"metadata.txt\"].splitlines():\n        key,sep,value=line.partition(\"=\")\n        if not sep or key in meta:raise SystemExit(\"METADATA_INVALID\")\n        meta[key]=value\n    expected={\n        \"backup_kind\":\"offsite_sanitized_local_witness\",\n        \"source_local_sha256\":source,\n        \"target_sha\":\"4c9d59103b99a6cfe675bb7b8961fc956eb294f0\",\n        \"current_release\":\"platform-ce6ad7dc9d89\",\n        \"production_env_excluded\":\"YES\"}\n    if meta!=expected:raise SystemExit(\"METADATA_MISMATCH\")\n    # Validate nested storage before any extraction. No AGE key is mounted here.\n    nested=next(m for m in members if m.name==\"storage.tar.gz\")\n    nested_stream=arc.extractfile(nested)\n    if nested_stream is None:raise SystemExit(\"STORAGE_UNREADABLE\")\n    names=set()\n    entries=0\n    uncompressed=0\n    with tarfile.open(fileobj=nested_stream,mode=\"r|gz\") as storage:\n        for m in storage:\n            entries+=1\n            uncompressed+=m.size\n            p=PurePosixPath(m.name)\n            canonical=p.as_posix()\n            if (entries>100000 or m.size<0 or\n                uncompressed>256*1024**3 or canonical in names or\n                p.is_absolute() or \"..\" in p.parts or\n                p.parts[:2]!=(\"storage\",\"app\") or\n                not (m.isfile() or m.isdir()) or\n                m.sparse is not None or \"\\\\\" in m.name or\n                any(part.lower().startswith(\".env\") for part in p.parts)):\n                raise SystemExit(\"UNSAFE_STORAGE_ARCHIVE\")\n            names.add(canonical)\n    if entries==0:raise SystemExit(\"EMPTY_STORAGE_ARCHIVE\")\nprint(\"KMJ_P520_BUNDLE_INTEGRITY=PASS\")\n";
 export function validateArgs(volume,image,source){
@@ -64,7 +65,7 @@ function execute(argv){
   if(!opt)return fail('EXACT_ARGS');
   if(process.platform!=='win32'||os.hostname().toUpperCase()!=='DESKTOP-5FVJMET')return fail('WRONG_P520_HOST');
   if(!existsSync(DOCKER))return fail('PINNED_DOCKER_CLI_MISSING');
-  let vol='',created=false,passed=false,cleaned=false;
+  let vol='',created=false,passed=false,cleaned=false,restoreStarted=false;
   try{
     const paths=fixedRecoveryPath(process.env.LOCALAPPDATA);
     const key=join(paths.parent,'p520-offsite.agekey');
@@ -84,9 +85,12 @@ function execute(argv){
     docker(decryptArgs(vol,opt.image,paths.cipher,key));
     const out=docker(validateArgs(vol,opt.image,opt.source));
     if(out!==RECEIPT)throw Error('BUNDLE_RECEIPT_INVALID');
+    restoreStarted=true;
+    const recovered=docker(pgStorageArgs(vol,opt.image,opt.source),900000);
+    if(recovered!=='KMJ_P520_DISPOSABLE_PG_STORAGE=PASS')throw Error('DISPOSABLE_RESTORE_INVALID');
     passed=true;
   }catch{
-    fail('DECRYPT_OR_INTEGRITY');
+    fail(restoreStarted?'DISPOSABLE_PG_STORAGE_RESTORE_FAILED':'DECRYPT_OR_INTEGRITY');
   }finally{
     if(created){
       try{docker(['volume','rm',vol],15000);cleaned=true;}
@@ -97,8 +101,9 @@ function execute(argv){
     console.log('KMJ_P520_BUNDLE_ONLY=PASS');
     console.log('KEY_SEPARATION_TWO_CONTAINERS=PASS');
     console.log('ENCRYPTED_SHA_AND_CANDIDATE_METADATA=PASS');
-    console.log('POSTGRESQL_RESTORE=NOT_EXECUTED');
-    console.log('STORAGE_RESTORE=NOT_EXECUTED');
+    console.log('POSTGRESQL_RESTORE=PASS_DISPOSABLE');
+    console.log('STORAGE_RESTORE=PASS_DISPOSABLE');
+    console.log('OWNER_SIGNED_INDEPENDENT_RECEIPT=REQUIRED');
     console.log('PRODUCTION_APPROVAL=NOT_GRANTED');
   }
 }
