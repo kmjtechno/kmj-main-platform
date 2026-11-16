@@ -64,6 +64,8 @@ function ProviderCard({
 }) {
     const [busy, setBusy] = useState(false);
     const [newKey, setNewKey] = useState('');
+    const [expanded, setExpanded] = useState(false);
+    const [replaceVisible, setReplaceVisible] = useState(false);
     const act = (run: () => void) => {
         setBusy(true);
         run();
@@ -79,7 +81,7 @@ function ProviderCard({
     };
 
     return (
-        <article className="border-sidebar-border/70 dark:border-sidebar-border flex flex-col gap-4 rounded-2xl border p-5">
+        <article className="kmj-ai-managed-provider border-sidebar-border/70 dark:border-sidebar-border flex flex-col gap-3 rounded-2xl border p-5">
             <header className="flex flex-wrap items-start justify-between gap-3">
                 <div>
                     <h2 className="text-base font-black">{provider.name}</h2>
@@ -97,17 +99,17 @@ function ProviderCard({
                 </div>
             </header>
 
-            <p className="text-muted-foreground text-xs">
-                Credit balance: UNKNOWN (no authoritative API) ·{' '}
-                {creditText(provider.rate_limit)} ·{' '}
-                {FREE_TIER_TEXT[provider.free_tier]}
-                {provider.error_code
-                    ? ` · last error: ${provider.error_code}`
-                    : ''}
+            <p className="kmj-ai-admission-summary text-sm" role="status">
+                <strong>{provider.models.length}</strong> verified-free models
+                admitted · {provider.discovered_model_count} catalog models
+                discovered
+                {provider.models.length === 0
+                    ? ' · Inference blocked until verified-free admission'
+                    : ' · Free-only policy active'}
             </p>
 
-            {canManage && (
-                <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap items-center gap-2">
+                {canManage && (
                     <button
                         type="button"
                         disabled={busy}
@@ -120,46 +122,76 @@ function ProviderCard({
                                 ),
                             )
                         }
-                        className="inline-flex h-9 items-center gap-2 rounded-xl border px-3 text-xs font-bold"
+                        className="inline-flex min-h-10 items-center gap-2 rounded-xl border px-3 text-sm font-semibold"
                     >
-                        <RefreshCw className="h-3.5 w-3.5" />
-                        Test connection &amp; discover models
+                        <RefreshCw className="h-4 w-4" aria-hidden="true" />
+                        Recheck models
                     </button>
-                    <button
-                        type="button"
-                        disabled={busy}
-                        onClick={() => patch({ enabled: !provider.enabled })}
-                        className="h-9 rounded-xl border px-3 text-xs font-bold"
-                    >
-                        {provider.enabled ? 'Disable' : 'Enable'}
-                    </button>
-                    <span className="flex h-9 items-center rounded-xl border px-3 text-xs font-bold">
-                        Zero-spend enforced
-                    </span>
-                    <button
-                        type="button"
-                        disabled={busy}
-                        onClick={() => {
-                            if (
-                                window.confirm(
-                                    `Delete ${provider.name} and its stored key?`,
-                                )
-                            ) {
-                                act(() =>
-                                    router.delete(`${BASE}/${provider.id}`, {
-                                        ...options,
-                                        data: { confirm: 'DELETE' },
-                                    }),
-                                );
-                            }
-                        }}
-                        className="inline-flex h-9 items-center gap-2 rounded-xl border px-3 text-xs font-bold text-red-500"
-                    >
-                        <Trash2 className="h-3.5 w-3.5" />
-                        Delete
-                    </button>
-                </div>
-            )}
+                )}
+                <button
+                    type="button"
+                    aria-expanded={expanded}
+                    aria-controls={`ai-provider-details-${provider.id}`}
+                    onClick={() => setExpanded((current) => !current)}
+                    className="inline-flex min-h-10 items-center rounded-xl border px-4 text-sm font-semibold"
+                >
+                    {expanded ? 'Hide settings' : 'Manage settings'}
+                </button>
+            </div>
+
+            {expanded && (
+                <div
+                    id={`ai-provider-details-${provider.id}`}
+                    className="kmj-ai-provider-details space-y-4 border-t pt-4"
+                >
+                    <p className="text-muted-foreground text-sm">
+                        Credit balance: UNKNOWN (no authoritative API) ·{' '}
+                        {creditText(provider.rate_limit)} ·{' '}
+                        {FREE_TIER_TEXT[provider.free_tier]}
+                        {provider.error_code
+                            ? ` · last error: ${provider.error_code}`
+                            : ''}
+                    </p>
+                    {canManage && (
+                        <div className="flex flex-wrap items-center gap-2">
+                            <button
+                                type="button"
+                                disabled={busy}
+                                onClick={() => patch({ enabled: !provider.enabled })}
+                                className="min-h-10 rounded-xl border px-3 text-sm font-semibold"
+                            >
+                                {provider.enabled ? 'Disable provider' : 'Enable provider'}
+                            </button>
+                            <span className="rounded-full border px-3 py-2 text-sm">
+                                Zero-spend enforced
+                            </span>
+                            <button
+                                type="button"
+                                disabled={busy}
+                                onClick={() => {
+                                    if (
+                                        window.confirm(
+                                            `Delete ${provider.name} and its stored key?`,
+                                        )
+                                    ) {
+                                        act(() =>
+                                            router.delete(
+                                                `${BASE}/${provider.id}`,
+                                                {
+                                                    ...options,
+                                                    data: { confirm: 'DELETE' },
+                                                },
+                                            ),
+                                        );
+                                    }
+                                }}
+                                className="inline-flex min-h-10 items-center gap-2 rounded-xl border px-3 text-sm font-semibold text-red-400"
+                            >
+                                <Trash2 className="h-4 w-4" aria-hidden="true" />
+                                Delete provider
+                            </button>
+                        </div>
+                    )}
 
             {provider.models.length === 0 ? (
                 <p className="text-muted-foreground text-sm" role="status">
@@ -225,6 +257,18 @@ function ProviderCard({
             )}
 
             {canManage && (
+                <button
+                    type="button"
+                    onClick={() => setReplaceVisible((current) => !current)}
+                    aria-expanded={replaceVisible}
+                    aria-controls={`ai-provider-replace-key-${provider.id}`}
+                    className="min-h-10 rounded-xl border px-3 text-sm font-semibold"
+                >
+                    {replaceVisible ? 'Cancel key replacement' : 'Replace API key'}
+                </button>
+            )}
+            {canManage && replaceVisible && (
+                <div id={`ai-provider-replace-key-${provider.id}`}>
                 <form
                     className="flex flex-wrap items-end gap-2"
                     onSubmit={(event) => {
@@ -262,6 +306,9 @@ function ProviderCard({
                         Replace key
                     </button>
                 </form>
+                </div>
+            )}
+                </div>
             )}
         </article>
     );
