@@ -24,7 +24,7 @@ jobs:
           $null = [System.Management.Automation.Language.Parser]::ParseFile((Resolve-Path $path), [ref]$tokens, [ref]$errors)
           if ($errors.Count -ne 0) { $errors | Format-List | Out-String | Write-Host; exit 1 }
           $source = Get-Content $path -Raw
-          foreach($marker in @("SetAccessRuleProtection(", "GetAccessRules(", "GetOwner(", "PRIVATE_KEY_CREATED=NO", "PRODUCTION_APPROVAL=NOT_GRANTED")) {
+          foreach($marker in @("SetAccessRuleProtection(", "GetAccessRules(", "GetOwner(", "::new(", "PRIVATE_KEY_CREATED=NO", "PRODUCTION_APPROVAL=NOT_GRANTED")) {
             if (-not $source.Contains($marker)) { throw "MISSING_CONTRACT_$marker" }
           }
           Write-Output 'WINDOWS_PS51_SYNTAX=PASS'
