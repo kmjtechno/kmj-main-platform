@@ -58,7 +58,7 @@ void test('canonical CodeBridge visual preview uses real locked OwnerModuleShell
     );
     assert.match(fixture, /function CanonicalDevicesPreview\(\)/);
     assert.match(fixture, /<OwnerModuleShell>\s*<CodeBridgeService/);
-    assert.match(fixture, /canonicalDevices,\s*\}/);
+    assert.match(fixture, /canonicalDevices\s*\|\|\s*ownerAiProviders,\s*\}/);
     assert.match(fixture, /connection_status: 'not_verified'/);
     assert.match(fixture, /canManageDevices=\{false\}/);
     assert.match(fixture, /'qa-preview-organization'/);
