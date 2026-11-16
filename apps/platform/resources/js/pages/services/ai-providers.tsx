@@ -640,8 +640,8 @@ export default function AiProviders({
                         <p className="text-muted-foreground text-sm">
                             No cloud AI providers connected. An organization
                             owner must connect a verified-free cloud provider
-                            before inference is available. Paid and unknown-price
-                            inference stays blocked.
+                            before inference is available. Paid and
+                            unknown-price inference stays blocked.
                         </p>
                     )}
                     {providers.map((provider) => (
