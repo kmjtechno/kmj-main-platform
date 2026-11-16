@@ -22,6 +22,7 @@ type Provider = {
     default_model: string | null;
     fallback_models: string[];
     models: string[];
+    discovered_model_count: number;
     health: string;
     health_checked_at: string | null;
     error_code: string | null;
@@ -161,16 +162,23 @@ function ProviderCard({
             )}
 
             {provider.models.length === 0 ? (
-                <p className="text-muted-foreground text-xs">
-                    No models yet. Run “Test connection” to discover them.
+                <p className="text-muted-foreground text-sm" role="status">
+                    {provider.discovered_model_count > 0
+                        ? `${provider.discovered_model_count} catalog models found, but none is currently admitted as verified free. Verify your free model allowlist and run “Test connection” again. Paid and unknown-price models cannot be selected.`
+                        : 'No admitted free models yet. Run “Test connection” to discover models and verify the free-only policy.'}
                 </p>
             ) : (
                 <div className="grid gap-3 md:grid-cols-2">
                     <label className="text-xs font-bold">
-                        Default model
+                        Verified-free default model
                         <select
                             className="bg-background mt-1 block h-9 w-full rounded-xl border px-2"
-                            value={provider.default_model ?? ''}
+                            value={
+                                provider.default_model &&
+                                provider.models.includes(provider.default_model)
+                                    ? provider.default_model
+                                    : ''
+                            }
                             disabled={busy || !canManage}
                             onChange={(event) =>
                                 patch({
@@ -187,7 +195,7 @@ function ProviderCard({
                         </select>
                     </label>
                     <fieldset className="text-xs font-bold">
-                        <legend>Fallback models (max 5)</legend>
+                        <legend>Verified-free fallback models (max 5)</legend>
                         <div className="mt-1 max-h-32 space-y-1 overflow-y-auto">
                             {provider.models
                                 .filter(

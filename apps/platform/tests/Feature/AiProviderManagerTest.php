@@ -220,6 +220,7 @@ final class AiProviderManagerTest extends TestCase
 
     public function test_default_and_fallback_models_must_be_discovered_and_replacing_the_key_resets_evidence(): void
     {
+        config(['ai_providers.free_models.groq' => ['a-model', 'b-model']]);
         Http::fake(['api.groq.com/*' => Http::response(['data' => [['id' => 'a-model'], ['id' => 'b-model'], ['id' => 'c-model']]], 200)]);
         $this->add('Groq main');
         $id = AiProvider::query()->value('id');
@@ -240,6 +241,56 @@ final class AiProviderManagerTest extends TestCase
         $this->assertSame('6789', $provider->key_last4);
         $this->assertNull($provider->default_model);
         $this->assertSame('unknown', $provider->health);
+    }
+
+    public function test_owner_model_selector_shows_only_fresh_verified_free_ids_and_honest_catalog_count(): void
+    {
+        config(['ai_providers.free_models.groq' => ['verified-free']]);
+        $manager = app(ProviderManager::class);
+
+        $groq = $this->provider('groq', ['unverified-model', 'verified-free']);
+        $presented = $manager->present($groq);
+        $this->assertSame(['verified-free'], $presented['models']);
+        $this->assertSame(2, $presented['discovered_model_count']);
+
+        $router = $this->provider('openrouter', ['meta/llama:free', 'anthropic/paid-model']);
+        $this->assertSame(['meta/llama:free'], $manager->present($router)['models']);
+
+        $paidOnly = $this->provider('openai', ['gpt-4o']);
+        $this->assertSame([], $manager->present($paidOnly)['models']);
+        $this->assertSame(1, $manager->present($paidOnly)['discovered_model_count']);
+
+        $stale = $this->provider('groq', ['verified-free'], ['models_checked_at' => now()->subHours(25)]);
+        $unhealthy = $this->provider('groq', ['verified-free'], ['health' => 'rate_limited']);
+        $disabled = $this->provider('groq', ['verified-free'], ['enabled' => false]);
+        foreach ([$stale, $unhealthy, $disabled] as $provider) {
+            $this->assertSame([], $manager->present($provider)['models']);
+        }
+    }
+
+    public function test_unverified_catalog_model_cannot_be_saved_as_default_or_fallback(): void
+    {
+        config(['ai_providers.free_models.groq' => ['verified-free']]);
+        Http::fake(['api.groq.com/*' => Http::response(['data' => [
+            ['id' => 'verified-free'], ['id' => 'unverified-or-paid'],
+        ]], 200)]);
+        $this->add('Verified-only Groq');
+        $id = AiProvider::query()->value('id');
+        $url = "/services/kmj-codebridge/ai-providers/{$id}";
+        $this->confirmed($this->owner)->post("{$url}/test")->assertSessionHasNoErrors();
+
+        $this->confirmed($this->owner)->patch($url, ['default_model' => 'unverified-or-paid'])
+            ->assertSessionHasErrors('provider');
+        $this->confirmed($this->owner)->patch($url, ['fallback_models' => ['unverified-or-paid']])
+            ->assertSessionHasErrors('provider');
+        $this->confirmed($this->owner)->patch($url, [
+            'default_model' => 'verified-free', 'fallback_models' => [],
+        ])->assertSessionHasNoErrors();
+
+        $provider = AiProvider::query()->findOrFail($id);
+        $this->assertSame('verified-free', $provider->default_model);
+        $this->assertSame([], $provider->fallback_models);
+        $this->assertSame(['verified-free'], app(ProviderManager::class)->present($provider)['models']);
     }
 
     public function test_delete_requires_confirmation_and_removes_the_stored_key(): void
