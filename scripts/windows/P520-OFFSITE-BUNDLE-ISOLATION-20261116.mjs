@@ -10,6 +10,7 @@ import { pathToFileURL } from 'node:url';
 import { admission, ownerPinnedImage, safePath } from './P520-OFFSITE-CONTAINER-ADMISSION-20261116.mjs';
 import { fixedRecoveryPath, verifyCipher } from './P520-OFFSITE-CIPHER-READBACK-20261116.mjs';
 import { pgStorageArgs } from './P520-OFFSITE-PG-STORAGE-RESTORE-20261116.mjs';
+import { signAfterRestore } from './P520-OFFSITE-SIGNED-RESTORE-RECEIPT-20261116.mjs';
 
 const HEX=/^[a-f0-9]{64}$/;
 const DOCKER='C:\\Program Files\\Docker\\Docker\\resources\\bin\\docker.exe';
@@ -98,12 +99,22 @@ function execute(argv){
     }
   }
   if(passed&&cleaned&&process.exitCode!==2){
+    let signed;
+    try {
+      const parent=fixedRecoveryPath(process.env.LOCALAPPDATA).parent;
+      signed=signAfterRestore({parent,cipherSha:opt.cipher,sourceSha:opt.source,bytes:opt.bytes});
+    } catch {
+      return fail('OWNER_RECEIPT_SIGNATURE_NOT_VERIFIED',true);
+    }
+    console.log('KMJ_P520_OWNER_SIGNED_RECEIPT=LOCAL_ONLY_CREATED');
+    console.log('P520_ED25519_PUBLIC_KEY_SHA256='+signed.publicKeySha256);
     console.log('KMJ_P520_BUNDLE_ONLY=PASS');
     console.log('KEY_SEPARATION_TWO_CONTAINERS=PASS');
     console.log('ENCRYPTED_SHA_AND_CANDIDATE_METADATA=PASS');
     console.log('POSTGRESQL_RESTORE=PASS_DISPOSABLE');
     console.log('STORAGE_RESTORE=PASS_DISPOSABLE');
-    console.log('OWNER_SIGNED_INDEPENDENT_RECEIPT=REQUIRED');
+    console.log('OWNER_SIGNED_INDEPENDENT_RECEIPT=CREATED_LOCAL_ONLY');
+    console.log('ELITE_RECEIPT_INDEPENDENT_VERIFICATION=REQUIRED');
     console.log('PRODUCTION_APPROVAL=NOT_GRANTED');
   }
 }
