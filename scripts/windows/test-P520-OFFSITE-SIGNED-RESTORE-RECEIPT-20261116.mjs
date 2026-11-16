@@ -15,7 +15,7 @@ test('candidate/predecessor and all mandatory proof flags exactly match Elite ve
  assert.equal(receipt.receivedCipherSha256,A);
  assert.equal(receipt.productionDatabaseUnchanged,true);
  assert.equal(Object.keys(receipt).length,16);
- for(const [input,source,bytes] of [['NOT_SHA',B,441334],[A,B,441334],
+ for(const [input,source,bytes] of [['NOT_SHA',B,441334],[A,'NOT_SHA',441334],
    [A,B,-1],[A,B,11*1024**3]]){
    assert.throws(()=>buildReceipt(input,source,bytes));
  }
