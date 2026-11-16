@@ -10,6 +10,14 @@ export type DeliveryMilestone = {
 
 export const deliveryMilestones: DeliveryMilestone[] = [
     {
+        id: 'codebridge-ai-free-first-catalog-bound-20261116',
+        title: 'AI Providers — preserve late OpenRouter free variants within bounded discovery',
+        state: 'active',
+        detail: 'Draft PR #882 hardens real GET /models catalog handling: the adapter previously cached the first 200 valid model IDs before seeing later free variants. The source-only patch inspects the existing 2 MB capped response and gives OpenRouter :free model IDs priority within the same 200-ID persisted cache limit. Other provider catalog order stays unchanged. Model admission, encrypted credentials, verified-free allowlists, tenant isolation, DNS pinning and paid/unknown-price inference refusal remain enforced.',
+        evidence:
+            'New mocked Laravel feature regressions include 220 paid IDs ahead of a duplicate late :free variant and a non-OpenRouter 200-entry control. Exact-head CI and release-specific owner acceptance remain separate; 200 discovered / 0 admitted in the existing live release has not been diagnosed from its actual provider response. No production mutation or paid route is claimed.',
+    },
+    {
         id: 'codebridge-ai-only-admitted-free-model-selector-20261115',
         title: 'AI Providers — show only free models that pass current admission policy',
         state: 'active',
