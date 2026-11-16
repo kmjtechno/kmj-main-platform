@@ -1227,6 +1227,16 @@ try {
                 const managed = page
                     .locator('.kmj-ai-managed-provider')
                     .first();
+                if ((await page.locator('#ai-provider-key-form').count()) !== 0) {
+                    errors.push('Manual key form shown before provider selection');
+                }
+                if (
+                    (await page.getByRole('button', {
+                        name: 'Connect another provider using an API key',
+                    }).count()) !== 1
+                ) {
+                    errors.push('Manual provider setup launcher missing');
+                }
                 if (
                     (await managed
                         .locator('input[type="password"]')
