@@ -1293,6 +1293,19 @@ try {
                 if (!focused) {
                     errors.push('Guided key input did not receive focus');
                 }
+                await page
+                    .getByRole('button', { name: 'Close key setup' })
+                    .click();
+                if ((await page.locator('#ai-provider-key-form').count()) !== 0) {
+                    errors.push('Key wizard not closed on request');
+                }
+                if (
+                    (await page
+                        .locator('.kmj-ai-key-card[data-selected="true"]')
+                        .count()) !== 0
+                ) {
+                    errors.push('Stale provider selection persisted after closing');
+                }
                 await managed
                     .getByRole('button', { name: 'Manage settings' })
                     .click();
