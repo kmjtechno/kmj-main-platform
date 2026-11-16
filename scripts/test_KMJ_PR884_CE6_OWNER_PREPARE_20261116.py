@@ -8,7 +8,7 @@ import subprocess
 import unittest
 
 SRC = Path(__file__).with_name("KMJ_PR884_CE6_OWNER_PREPARE_20261116.sh")
-TARGET = "b5e7ad41eaf9ef9468731a6a47499c9b67dc8348"
+TARGET = "45f95dbf7a4bad29852ab6f45c54873ab39e5a2e"
 BASE = "ce6ad7dc9d898dce1ba9561a0e221f8ad750180f"
 ONEPASS = "0070697927babaa9a9035ebadcffe9a07311c12bcc4fbbd7a5a9d024cbc00dd3"
 
@@ -26,7 +26,7 @@ class OwnerPrepareContract(unittest.TestCase):
         self.assertIn("readonly TARGET_SHA=" + TARGET, self.source)
         self.assertIn("readonly PREVIOUS_SHA=" + BASE, self.source)
         self.assertIn("readonly PREVIOUS_RELEASE=platform-ce6ad7dc9d89", self.source)
-        self.assertIn("readonly TARGET_RELEASE=platform-b5e7ad41eaf9", self.source)
+        self.assertIn("readonly TARGET_RELEASE=platform-45f95dbf7a4b", self.source)
         self.assertNotIn("platform-e5b43872bc03", self.source)
 
     def test_no_unreviewed_command_or_arbitrary_sha(self):
