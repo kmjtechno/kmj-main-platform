@@ -10,6 +10,14 @@ export type DeliveryMilestone = {
 
 export const deliveryMilestones: DeliveryMilestone[] = [
     {
+        id: 'codebridge-openrouter-pkce-state-bind-20261116',
+        title: 'OpenRouter account connection — server-session-bound OAuth state',
+        state: 'active',
+        detail: 'Source-only OpenRouter PKCE hardening generates an independent random one-time state parameter on each sign-in, holds it with owner, organization, verifier and expiry server-side, and rejects missing, forged, malformed or stale callbacks before any API-key exchange. A denied authorization still fails safely without state. Tests use only a mocked provider, never a real API key.',
+        evidence:
+            'Draft source patch with Laravel owner/tenant/replay tests. Exact-head CI, authenticated owner OpenRouter consent, independent Google restore, rollback drill and protected owner activation remain separate gates. Live CE6 stays unchanged.',
+    },
+    {
         id: 'codebridge-ai-only-admitted-free-model-selector-20261115',
         title: 'AI Providers — show only free models that pass current admission policy',
         state: 'active',
