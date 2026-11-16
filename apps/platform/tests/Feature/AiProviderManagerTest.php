@@ -146,6 +146,28 @@ final class AiProviderManagerTest extends TestCase
         app(ProviderManager::class)->assertInferenceAllowed($provider, 'paid-001');
     }
 
+    public function test_non_openrouter_catalog_keeps_its_previous_200_entry_cap_order(): void
+    {
+        $catalog = [];
+        for ($i = 0; $i < 220; $i++) {
+            $catalog[] = ['id' => sprintf('groq-%03d', $i)];
+        }
+        $catalog[] = ['id' => 'late/free:free'];
+
+        Http::fake(['api.groq.com/*' => Http::response(['data' => $catalog], 200)]);
+        $this->add('Groq bounded');
+        $id = AiProvider::query()->value('id');
+        $this->confirmed($this->owner)->post("/services/kmj-codebridge/ai-providers/{$id}/test")
+            ->assertSessionHasNoErrors()->assertRedirect();
+
+        $provider = AiProvider::query()->findOrFail($id);
+        $this->assertCount(200, $provider->models_cache);
+        $this->assertSame('groq-000', $provider->models_cache[0]);
+        $this->assertSame('groq-199', $provider->models_cache[199]);
+        $this->assertNotContains('late/free:free', $provider->models_cache);
+        Http::assertSentCount(1);
+    }
+
     public function test_provider_failures_are_classified_and_never_echo_the_key(): void
     {
         $this->add('Groq main');

@@ -66,7 +66,8 @@ final class OpenAiCompatibleAdapter
 
         // Some catalogs list paid models before free variants. Scan the
         // already size-limited response before applying the 200-ID cache cap.
-        // This is discovery only: inference still requires FreePolicy admission.
+        // Only OpenRouter suffix variants get priority. Other providers keep
+        // the prior first-200 order; inference still requires FreePolicy.
         $free = [];
         $other = [];
         foreach ((array) ($response->json('data') ?? []) as $entry) {
@@ -74,7 +75,7 @@ final class OpenAiCompatibleAdapter
             if (! is_string($id) || preg_match('/\A[A-Za-z0-9._:\/-]{1,128}\z/', $id) !== 1) {
                 continue;
             }
-            if (str_ends_with($id, ':free')) {
+            if ($target['host'] === 'openrouter.ai' && str_ends_with($id, ':free')) {
                 $free[$id] = true;
             } else {
                 $other[$id] = true;
