@@ -22,7 +22,7 @@ jobs:
         run: |
           set -Eeuo pipefail
           previous=ce6ad7dc9d898dce1ba9561a0e221f8ad750180f
-          target=b5e7ad41eaf9ef9468731a6a47499c9b67dc8348
+          target=45f95dbf7a4bad29852ab6f45c54873ab39e5a2e
           git cat-file -e "$previous^{commit}"
           git cat-file -e "$target^{commit}"
           [[ "$(git merge-base "$previous" "$target")" == "$previous" ]]
