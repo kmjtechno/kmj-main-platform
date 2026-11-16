@@ -1,0 +1,30 @@
+name: KMJ P520 Independent Offsite Receipt Safety
+on:
+  pull_request:
+    paths:
+      - 'scripts/operations/verify-p520-independent-restore-20261116.py'
+      - 'scripts/test_verify_p520_independent_restore_20261116.py'
+      - 'scripts/windows/P520-MAIN-PLATFORM-OFFSITE-DOCTOR-20261116.ps1'
+      - '.github/workflows/kmj-p520-independent-offsite-qa.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  verifier:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Isolated signature fixture + adversarial contract tests
+        run: |
+          set -Eeuo pipefail
+          python3 -B -m unittest discover -s scripts -p 'test_verify_p520_independent_restore_20261116.py' -v
+          python3 -B -m py_compile scripts/operations/verify-p520-independent-restore-20261116.py
+          grep -Fq 'PRODUCTION_RELEASE_APPROVAL=NOT_GRANTED' scripts/windows/P520-MAIN-PLATFORM-OFFSITE-DOCTOR-20261116.ps1
+          grep -Fq 'P520_INDEPENDENT_DECRYPT_RESTORE=NOT_EXECUTED' scripts/windows/P520-MAIN-PLATFORM-OFFSITE-DOCTOR-20261116.ps1
+          echo P520_SIGNED_RECEIPT_SOURCE_QA=PASS
+          echo ACTUAL_P520_OFFSITE_RESTORE=NOT_EXECUTED
+          echo GOOGLE_VPS_NOT_REQUIRED_BY_VERIFIER=PASS
+          echo PRODUCTION_APPROVAL=NOT_GRANTED
