@@ -82,8 +82,17 @@ def attest_source(meta,version):
         if (not stat.S_ISREG(s.st_mode) or s.st_uid!=0 or
             s.st_nlink!=1 or s.st_mode&0o022 or not 1024<=s.st_size<=65536):
             return "SOURCE_FILE_UNTRUSTED"
-        with open(path,"rb") as file:
-            data=file.read(65537)
+        fd=os.open(path,os.O_RDONLY|os.O_NOFOLLOW|os.O_CLOEXEC)
+        try:
+            before=os.fstat(fd)
+            if (before.st_dev,before.st_ino,before.st_size,before.st_mtime_ns)!=(s.st_dev,s.st_ino,s.st_size,s.st_mtime_ns):
+                return "SOURCE_FILE_UNTRUSTED"
+            data=os.read(fd,65537)
+            after=os.fstat(fd)
+            if (after.st_dev,after.st_ino,after.st_size,after.st_mtime_ns)!=(before.st_dev,before.st_ino,before.st_size,before.st_mtime_ns):
+                return "SOURCE_FILE_UNTRUSTED"
+        finally:
+            os.close(fd)
         if len(data)!=s.st_size or hashlib.sha256(data).hexdigest()!=pin:
             return "SOURCE_SHA_MISMATCH"
     except (OSError,ValueError):
