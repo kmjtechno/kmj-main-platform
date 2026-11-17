@@ -195,10 +195,13 @@ def v3_safe_direct_category(scratch):
     if spec is None or spec.loader is None:return "IMPORT_UNAVAILABLE"
     module=importlib.util.module_from_spec(spec)
     transport=None
+    stage="MODULE_LOAD"
     try:
         with contextlib.redirect_stdout(io.StringIO()):
             spec.loader.exec_module(module)
+            stage="TRANSPORT_LOAD"
             transport=module.pinned_transport()
+            stage="INSPECT"
             module.inspect(transport,scheduled=False)
     except Exception as exc:
         if isinstance(exc,getattr(module,"Deny",())):
@@ -206,14 +209,39 @@ def v3_safe_direct_category(scratch):
         elif transport is not None and isinstance(exc,transport.Block):
             prefix="TRANSPORT_"
         else:
-            names={FileNotFoundError:"FILE_MISSING",PermissionError:"PERMISSION",
-                   AttributeError:"ATTRIBUTE",TypeError:"TYPE",
-                   ValueError:"VALUE",OSError:"OS_ERROR"}
-            return "EXCEPTION_"+names.get(type(exc),"OTHER")
+            # This is a *closed* allowlist of exception classes. Classify
+            # subclassed OS errors with isinstance, never print exception
+            # messages, traceback, exception repr, file or code locations.
+            classes=(
+              (ModuleNotFoundError,"MODULE_NOT_FOUND"),
+              (ImportError,"IMPORT"),
+              (NameError,"NAME"),
+              (KeyError,"KEY"),
+              (IndexError,"INDEX"),
+              (FileNotFoundError,"FILE_MISSING"),
+              (PermissionError,"PERMISSION"),
+              (IsADirectoryError,"IS_DIRECTORY"),
+              (NotADirectoryError,"NOT_DIRECTORY"),
+              (subprocess.TimeoutExpired,"TIMEOUT"),
+              (ConnectionError,"CONNECTION"),
+              (TimeoutError,"TIMEOUT"),
+              (AttributeError,"ATTRIBUTE"),
+              (TypeError,"TYPE"),
+              (ValueError,"VALUE"),
+              (OSError,"OS_ERROR"),
+              (RuntimeError,"RUNTIME"),
+              (AssertionError,"ASSERTION"),
+              (SyntaxError,"SYNTAX"),
+              (OverflowError,"OVERFLOW"),
+              (UnicodeError,"UNICODE"),
+              (Exception,"OTHER"),
+            )
+            kind=next(name for klass,name in classes if isinstance(exc,klass))
+            return "EXCEPTION_"+stage+"_"+kind
         code=str(exc)
         if re.fullmatch(r"[A-Z][A-Z0-9_]{2,59}",code):
-            return prefix+code
-        return prefix+"UNCLASSIFIED"
+            return prefix+stage+"_"+code
+        return prefix+stage+"_UNCLASSIFIED"
     return "DIRECT_READONLY_PASS"
 
 def offline_and_inspect(scratch):
