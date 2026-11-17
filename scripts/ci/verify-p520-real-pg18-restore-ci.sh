@@ -82,24 +82,6 @@ PY
 # CI synthetic files only; read-only bind readable by Docker's postgres UID.
 chmod 0755 "$tmp"
 chmod 0644 "$tmp/bundle.tar.gz" "$tmp/restore.py"
-# CI-only diagnosis: call the UNCHANGED embedded main() and report bounded
-# exception class/reason from synthetic data without weakening production code.
-cat > "$tmp/debug.py" <<'PY'
-from pathlib import Path
-import sys
-source=Path("/recovery/restore.py")
-code=compile(source.read_text("utf8"),str(source),"exec")
-scope={"__name__":"kmj_ci_synthetic"}
-exec(code,scope)
-sys.argv=["restore.py","a"*64]
-try:
-    scope["main"]()
-except Exception as exc:
-    print("KMJ_SYNTHETIC_FAILURE_CLASS="+type(exc).__name__,file=sys.stderr)
-    print("KMJ_SYNTHETIC_FAILURE_DETAIL="+str(exc)[:160],file=sys.stderr)
-    sys.exit(2)
-PY
-chmod 0644 "$tmp/debug.py"
 docker rm -fv "$name" >/dev/null
 output="$(docker run --rm --pull=never --network=none --read-only \
   --cap-drop=ALL --security-opt=no-new-privileges --user=postgres \
@@ -107,7 +89,7 @@ output="$(docker run --rm --pull=never --network=none --read-only \
   --pids-limit=128 --cpus=1 --memory=2048m \
   --tmpfs=/tmp:rw,nosuid,nodev,size=1024m,mode=1777 \
   --mount="type=bind,src=$tmp,dst=/recovery,readonly" \
-  --entrypoint=python3 "$tag" /recovery/debug.py)"
+  --entrypoint=python3 "$tag" /recovery/restore.py "$(printf 'a%.0s' {1..64})")"
 [[ "$output" == KMJ_P520_DISPOSABLE_PG_STORAGE=PASS ]] || {
   echo BLOCKED_SYNTHETIC_RESTORE_RECEIPT; exit 2;
 }
