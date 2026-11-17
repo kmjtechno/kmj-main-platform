@@ -54,7 +54,7 @@ def parse_properties(raw: str) -> dict:
         raise ValueError("EXIT_STATUS_UNKNOWN")
     if out["Result"]!="exit-code" or out["ExecMainStatus"]!="3":
         raise ValueError("NOT_CURRENT_EXIT3")
-    if not INVOCATION.fullmatch(out["InvocationID"]):
+    if not INVOCATION.fullmatch(out["InvocationID"]) or out["InvocationID"]=="0"*32:
         raise ValueError("NO_EXACT_INVOCATION_ID")
     if out["LoadState"]!="loaded" or out["ActiveState"]!="failed":
         raise ValueError("SERVICE_STATE_CHANGED")
@@ -81,12 +81,19 @@ def main(args: list[str]) -> int:
             raise ValueError("COMMAND_FAILED_OR_OVERSIZED")
         return response.stdout.decode("utf8",errors="replace")
     try:
-        props=run(["/usr/bin/systemctl","show","--no-pager",
-                   "--property=Id,LoadState,ActiveState,SubState,Result,ExecMainStatus,InvocationID",UNIT])
+        unit_cmd=["/usr/bin/systemctl","show","--no-pager",
+                  "--property=Id,LoadState,ActiveState,SubState,Result,ExecMainStatus,InvocationID",UNIT]
+        props=run(unit_cmd)
         fields=parse_properties(props)
         log=run(["/usr/bin/journalctl","--no-pager","-o","cat",
                  "-n",str(MAX_LINES),
                  "_SYSTEMD_INVOCATION_ID="+fields["InvocationID"]],15)
+        # A concurrent timer/service restart must not attach stale invocation
+        # journal messages to the current failed unit. Re-read fixed metadata
+        # and accept only if the complete identity and state match exactly.
+        after=parse_properties(run(unit_cmd))
+        if after!=fields:
+            raise ValueError("INVOCATION_CHANGED")
         # A successful journal query with zero matching rows does NOT attest
         # a cause or a valid backup.
         result=classify(log)
