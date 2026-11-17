@@ -29,11 +29,11 @@ V3=LIBEXEC/"kmj-offsite-fresh-x25519-v3-20261112.py"
 V3PARENT=LIBEXEC/"KMJ_OFFSITE_SFTP_DNS_PINNED_V2_20261112.py"
 SOURCES=(
     ("KMJ_OFFSITE_FRESH_X25519_SFTP_V3_20261112.py",
-     "b594d46d2dc2dd8dec3feaea829934c34b72bde45cb836fe23d3066a9eb5f880"),
+     "2834ff3361027536bee0b971fae6dddb00677460f15adf3e8d81e7821853016f"),
     ("KMJ_OFFSITE_SFTP_DNS_PINNED_V2_20261112.py",
-     "17d99cb2ba2d0fd9a889a4f458f3a72985296a30cef040a58f0cedbf3e41fc41"),
+     "8f9165714774758a6bef05abff7bf72d655518ab7ed1c3cdd8dc588d3c85c13c"),
     ("test_KMJ_OFFSITE_FRESH_X25519_SFTP_V3_20261112.py",
-     "7eca739c5c4c8dc8bd2e20c307f3ef1d1dc73aab85baf8e732ebc97523e8767f"),
+     "828048391620c0ba8661d31a8723b6d25c151c85cf0ef81f2a4608b2f072af60"),
 )
 PINNED_V2="fb6ec4a4c5f0189562d35141765dcfcea84bc1cec3d8f4b79362e33d884b281e"
 PINNED_V2_PARENT="3535f47c7cb49924d929978993553359f3f16320c34d11bd251de3fe1936d37f"
@@ -245,6 +245,15 @@ def v3_safe_direct_category(scratch):
     return "DIRECT_READONLY_PASS"
 
 def offline_and_inspect(scratch):
+    import ast
+    # Syntax was broken in the original DNS transport; refuse any candidate
+    # with invalid Python BEFORE loading V3 or installing service files.
+    for name, pinned in SOURCES:
+        source=safe_read(scratch/name,pinned,require_root=True,mode=0o600,minimum=100)
+        try:
+            ast.parse(source,filename="<pinned-offsite-source>")
+        except (SyntaxError,ValueError):
+            raise Guard("PINNED_CANDIDATE_PYTHON_SYNTAX") from None
     r=run(["/usr/bin/python3","-I","-B","-m","unittest","discover",
             "-s",str(scratch),"-p",SOURCES[2][0]],90)
     if r.returncode:raise Guard("V3_OFFLINE_REGRESSION_FAILED")
