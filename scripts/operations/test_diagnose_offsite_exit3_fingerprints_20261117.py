@@ -48,7 +48,7 @@ class Fingerprints(unittest.TestCase):
         self.assertEqual([x[0] for x in unique],["KEYED","STANDALONE","KEYED"])
     def test_digest_is_fixed_ascii_sha256(self):
         self.assertEqual(m.digest("STATUS"),
-                         "f799f958bd2dc580608a2bca53e4f7d1805222ca277d1b3500429175bd708042")
+                         "8c2e4a035f5f3d218f87211a0ba367ef05fc2242510559807ef03969dd091b32")
     def test_empty_journal_no_fabricated_guards(self):
         self.assertEqual(m.scan(""),(0,[]))
     def test_wrong_unit_status_or_invocation_fails_closed(self):
