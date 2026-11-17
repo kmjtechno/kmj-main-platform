@@ -75,7 +75,7 @@ class V3DualLocalHealthSourceTests(unittest.TestCase):
         self.assertNotIn('systemctl","daemon-reload',SOURCE)
 
     def test_mode_gate_does_not_default_to_backup(self):
-        self.assertIn('("--selftest","--preflight","--run-once")',SOURCE)
+        self.assertIn('("--selftest","--audit-pins","--preflight","--run-once")',SOURCE)
         self.assertIn('if sys.argv[1]=="--preflight":',SOURCE)
         self.assertIn('print("BACKUP_TRANSFER_EXECUTED=NO")',SOURCE)
         self.assertIn('print("RESULT=BLOCKED_FAIL_CLOSED")',SOURCE)
@@ -110,6 +110,52 @@ class V3DualLocalHealthSourceTests(unittest.TestCase):
                     good+" ; touch /tmp/unsafe"):
             with self.assertRaises(m.Deny):
                 m.parse_exact_find(bad)
+
+    def test_pin_audit_only_uses_exact_fixed_sources(self):
+        self.assertIn("def bound_root_digest(path):",SOURCE)
+        self.assertIn("os.O_RDONLY|os.O_NOFOLLOW|os.O_CLOEXEC",SOURCE)
+        self.assertIn('("INSTALLED_V3",V3_INSTALLED,V3_INSTALLED_SHA)',SOURCE)
+        self.assertIn('("INSTALLED_SFTP",V3_PARENT,V3_PARENT_SHA)',SOURCE)
+        self.assertIn('("HEALTH_SOURCE",HEALTH,HEALTH_SHA)',SOURCE)
+        self.assertEqual(len(m.PINS),6)
+
+    def test_pin_audit_all_match_is_nonmutating_pass(self):
+        values={str(m.BASE/name):sha for name,sha in m.PINS.items()}
+        values[str(m.V3_INSTALLED)]=m.V3_INSTALLED_SHA
+        values[str(m.V3_PARENT)]=m.V3_PARENT_SHA
+        values[str(m.HEALTH)]=m.HEALTH_SHA
+        with mock.patch.object(m,"bound_root_digest",side_effect=lambda path: values[str(path)]):
+            stream=io.StringIO()
+            with contextlib.redirect_stdout(stream):
+                ret=m.audit_root_pins()
+        self.assertEqual(ret,0)
+        self.assertEqual(stream.getvalue().count("_PIN=PASS"),9)
+        self.assertIn("RESULT=ROOT_PIN_AUDIT_PASS",stream.getvalue())
+        self.assertIn("PRODUCTION_AND_BACKUP_MUTATION=NONE",stream.getvalue())
+
+    def test_pin_audit_single_mismatch_fails_closed(self):
+        values={str(m.BASE/name):sha for name,sha in m.PINS.items()}
+        values[str(m.V3_INSTALLED)]=m.V3_INSTALLED_SHA
+        values[str(m.V3_PARENT)]=m.V3_PARENT_SHA
+        values[str(m.HEALTH)]=m.HEALTH_SHA
+        name=list(m.PINS)[2]
+        values[str(m.BASE/name)]="4e30509de13e5c6126f742f4a9f32499d1c95c8467185591c0f8b25a26e1fc76"
+        with mock.patch.object(m,"bound_root_digest",side_effect=lambda path: values[str(path)]):
+            stream=io.StringIO()
+            with contextlib.redirect_stdout(stream):
+                ret=m.audit_root_pins()
+        self.assertEqual(ret,4)
+        self.assertIn("BUNDLE_03_PIN=SHA_MISMATCH",stream.getvalue())
+        self.assertIn("BUNDLE_03_OBSERVED_SHA256=",stream.getvalue())
+        self.assertIn("RESULT=ROOT_PIN_AUDIT_BLOCKED",stream.getvalue())
+
+    def test_pin_audit_missing_source_fails_closed(self):
+        with mock.patch.object(m,"bound_root_digest",side_effect=FileNotFoundError):
+            stream=io.StringIO()
+            with contextlib.redirect_stdout(stream):
+                ret=m.audit_root_pins()
+        self.assertEqual(ret,4)
+        self.assertEqual(stream.getvalue().count("_PIN=UNREADABLE_OR_UNTRUSTED"),9)
 
     def test_no_unrestricted_root_or_release_switch(self):
         for forbidden in ("git reset","git clean","systemctl restart",
