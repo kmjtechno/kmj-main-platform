@@ -208,6 +208,57 @@ class Cases(unittest.TestCase):
                 # A failed import must never be transformed into a path leak.
                 with self.assertRaises(OSError):
                     m.v3_safe_direct_category(scratch)
+    def test_v3_direct_staged_exception_classification_is_categorical(self):
+        with tempfile.TemporaryDirectory() as directory:
+            scratch=Path(directory)
+            class Loader:
+                def exec_module(self, module):
+                    raise ModuleNotFoundError("private-module-path-not-for-output")
+            import types
+            with patch.object(m,"safe_read",return_value=b"pinned"),\
+                 patch("importlib.util.spec_from_file_location",
+                       return_value=types.SimpleNamespace(loader=Loader())),\
+                 patch("importlib.util.module_from_spec",
+                       return_value=types.SimpleNamespace()):
+                result=m.v3_safe_direct_category(scratch)
+            self.assertEqual(result,"EXCEPTION_MODULE_LOAD_MODULE_NOT_FOUND")
+            self.assertNotIn("private-module-path",result)
+        with tempfile.TemporaryDirectory() as directory:
+            scratch=Path(directory)
+            class Loader:
+                def exec_module(self, module):
+                    def break_transport():
+                        raise NameError("private name should not leak")
+                    module.pinned_transport=break_transport
+            import types
+            with patch.object(m,"safe_read",return_value=b"pinned"),\
+                 patch("importlib.util.spec_from_file_location",
+                       return_value=types.SimpleNamespace(loader=Loader())),\
+                 patch("importlib.util.module_from_spec",
+                       return_value=types.SimpleNamespace()):
+                result=m.v3_safe_direct_category(scratch)
+            self.assertEqual(result,"EXCEPTION_TRANSPORT_LOAD_NAME")
+            self.assertNotIn("private name",result)
+    def test_v3_direct_parent_and_inspect_stage_are_separate(self):
+        with tempfile.TemporaryDirectory() as directory:
+            scratch=Path(directory)
+            class Block(Exception):
+                pass
+            class Loader:
+                def exec_module(self, module):
+                    module.Deny=type("Deny",(Exception,),{})
+                    module.pinned_transport=lambda: type("Transport",(),{"Block":Block})()
+                    def failing_inspect(transport,scheduled=False):
+                        raise transport.Block("DNS_UNIQUE_IPV4_REQUIRED")
+                    module.inspect=failing_inspect
+            import types
+            with patch.object(m,"safe_read",return_value=b"pinned"),\
+                 patch("importlib.util.spec_from_file_location",
+                       return_value=types.SimpleNamespace(loader=Loader())),\
+                 patch("importlib.util.module_from_spec",
+                       return_value=types.SimpleNamespace()):
+                result=m.v3_safe_direct_category(scratch)
+            self.assertEqual(result,"TRANSPORT_INSPECT_DNS_UNIQUE_IPV4_REQUIRED")
     def test_root_script_does_not_weaken_security_or_delete_old_assets(self):
         text=PATH.read_text()
         self.assertNotIn("StrictHostKeyChecking=no",text)
