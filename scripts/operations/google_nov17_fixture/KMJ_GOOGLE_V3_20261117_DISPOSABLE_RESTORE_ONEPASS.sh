@@ -19,7 +19,7 @@ KEY=/home/info/.local/share/kmj-recovery/google-vps-20261019.agekey
 UID_EXPECT=$(id -u)
 [[ -f "$P/$A" && -f "$P/$B" && -f "$P/$C" && ! -L "$P/$A" && ! -L "$P/$B" && ! -L "$P/$C" ]] || blocked SOURCE_MISSING
 printf '%s  %s\n' \
-'c72476c4be2648e3ed31457334b7e5acba56d52084e5059c932ffd4bf45fcc9c' "$P/$A" \
+'8c6c62522c016cd771fdb62934a6462d9db1b21657205cb3fd1641836cf88303' "$P/$A" \
 'db33552104f6e8c51c03d931bb90d280f7c062bc6ecb6892775e7fa42228d2be' "$P/$B" \
 'b20e55f1de13d8bae3f6e4156dafc135002b4d73215bf3f5613359419c893f26' "$P/$C" \
 | sha256sum -c - || blocked HELPER_SHA
@@ -54,7 +54,7 @@ cleanup(){
 trap cleanup EXIT
 install -m 600 "$P/$A" "$T/helper.py"
 install -m 600 "$P/$C" "$T/$C"
-printf '%s  %s\n' 'c72476c4be2648e3ed31457334b7e5acba56d52084e5059c932ffd4bf45fcc9c' "$T/helper.py" \
+printf '%s  %s\n' '8c6c62522c016cd771fdb62934a6462d9db1b21657205cb3fd1641836cf88303' "$T/helper.py" \
 'b20e55f1de13d8bae3f6e4156dafc135002b4d73215bf3f5613359419c893f26' "$T/$C" \
 | sha256sum -c - || blocked HELPER_COPY_SHA
 python3 -I -B "$T/helper.py" --prepare "$T" || blocked COPY_CIPHER
