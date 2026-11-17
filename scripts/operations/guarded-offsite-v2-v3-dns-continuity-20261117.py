@@ -170,6 +170,52 @@ def sealed_source_bundle(scratch):
         safe_read(dest,pin,require_root=True,mode=0o600)
     return blobs
 
+def safe_v3_inspect_marker(stdout):
+    """Single bounded, exact V3 RESULT token; never expose arbitrary output."""
+    if len(stdout)>MAX_OUTPUT:
+        return "OUTPUT_OVERSIZE"
+    matches=re.findall(rb"(?m)^RESULT=(BLOCKED_[A-Z0-9_]{3,60})$",stdout)
+    if len(matches)!=1:return "UNKNOWN"
+    return matches[0].decode("ascii")
+
+def v3_safe_direct_category(scratch):
+    """When V3 masks parent Block as SAFE, classify only read-only inspect.
+
+    Original audited V3+parent sources are rechecked by SHA; no send, lock,
+    authentication, backup, service or Cloudflare mutation. No raw exception
+    messages are emitted; only allowlisted codes and exception types.
+    """
+    import contextlib
+    import importlib.util
+    import io
+    script=scratch/SOURCES[0][0]
+    safe_read(script,SOURCES[0][1],require_root=True,mode=0o600,minimum=1024)
+    safe_read(scratch/SOURCES[1][0],SOURCES[1][1],require_root=True,mode=0o600,minimum=1024)
+    spec=importlib.util.spec_from_file_location("kmj_pinned_v3_readonly_classify",script)
+    if spec is None or spec.loader is None:return "IMPORT_UNAVAILABLE"
+    module=importlib.util.module_from_spec(spec)
+    transport=None
+    try:
+        with contextlib.redirect_stdout(io.StringIO()):
+            spec.loader.exec_module(module)
+            transport=module.pinned_transport()
+            module.inspect(transport,scheduled=False)
+    except Exception as exc:
+        if isinstance(exc,module.Deny):
+            prefix="DENY_"
+        elif transport is not None and isinstance(exc,transport.Block):
+            prefix="TRANSPORT_"
+        else:
+            names={FileNotFoundError:"FILE_MISSING",PermissionError:"PERMISSION",
+                   AttributeError:"ATTRIBUTE",TypeError:"TYPE",
+                   ValueError:"VALUE",OSError:"OS_ERROR"}
+            return "EXCEPTION_"+names.get(type(exc),"OTHER")
+        code=str(exc)
+        if re.fullmatch(r"[A-Z][A-Z0-9_]{2,59}",code):
+            return prefix+code
+        return prefix+"UNCLASSIFIED"
+    return "DIRECT_READONLY_PASS"
+
 def offline_and_inspect(scratch):
     r=run(["/usr/bin/python3","-I","-B","-m","unittest","discover",
             "-s",str(scratch),"-p",SOURCES[2][0]],90)
@@ -180,7 +226,13 @@ def offline_and_inspect(scratch):
     r=run(["/usr/bin/python3","-I","-B",str(scratch/SOURCES[0][0]),"--inspect"],45)
     if (r.returncode or b"RESULT=INSPECT_PASS" not in r.stdout or
         b"GOOGLE_ENDPOINT=DNS_ONLY_STRICT_PINNED_HOSTKEY" not in r.stdout):
-        raise Guard("V3_READONLY_PREFLIGHT_FAILED")
+        marker=safe_v3_inspect_marker(r.stdout)
+        if marker=="BLOCKED_SAFE":
+            marker="MASKED_"+v3_safe_direct_category(scratch)
+        # No user-directed command, path, exception text or log is printed.
+        category="V3_PREFLIGHT_"+marker
+        if len(category)>85:category="V3_PREFLIGHT_DIAGNOSIS_TOO_LONG"
+        raise Guard(category)
     return True
 
 def exclusive_install(path,data):
