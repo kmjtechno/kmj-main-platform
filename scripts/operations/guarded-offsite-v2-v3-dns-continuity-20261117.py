@@ -194,7 +194,7 @@ def atomic_dropin(data,scratch):
     t=scratch/"unit.new"
     fd=os.open(t,os.O_WRONLY|os.O_CREAT|os.O_EXCL|os.O_NOFOLLOW|os.O_CLOEXEC,0o644)
     with os.fdopen(fd,"wb") as f:
-        f.write(data);f.flush();os.fsync(f.fileno())
+        f.write(data);f.flush();os.fchmod(f.fileno(),0o644);os.fsync(f.fileno())
     if safe_read(t,require_root=True,mode=0o644,maximum=2048)!=data:
         raise Guard("TEMP_DROPIN_DRIFT")
     os.replace(t,DROPIN)
