@@ -399,7 +399,17 @@ def attach_full_v2_storage_archive(builder,daily,stamp,work):
     try:
         counts={"bytes":0}
         digest=builder.copy_file(work/"storage.tar.gz",fd,"storage.tar.gz",{0},counts)
-        mf,mstat=daily.regular(fd,"SHA256SUMS",{0},secret=[REDACTED]
+        # The earlier source-review transcript masked daily.regular's
+        # internal secret argument. Do not reconstruct a redacted API call.
+        # Open only this root-owned 0600 file under the already validated
+        # private stage dirfd, with no symlink following and exact metadata.
+        mf=os.open("SHA256SUMS",
+                   os.O_RDONLY|os.O_NOFOLLOW|os.O_CLOEXEC,dir_fd=fd)
+        mstat=os.fstat(mf)
+        if (not stat.S_ISREG(mstat.st_mode) or mstat.st_uid!=0
+            or mstat.st_nlink!=1 or stat.S_IMODE(mstat.st_mode)!=0o600):
+            os.close(mf)
+            raise Deny("DAILY_MANIFEST_FILE_UNTRUSTED")
         try:
             if mstat.st_size>64000:raise Deny("DAILY_MANIFEST_OVERSIZE")
             body=os.read(mf,64001)
