@@ -48,6 +48,16 @@ docker exec -u postgres "$name" psql -X -q -h /var/run/postgresql \
 docker exec -u postgres "$name" pg_dump -h /var/run/postgresql \
   -U kmj_qa -d kmj_source_qa -Fc > "$tmp/database.dump"
 [[ "$(head -c 5 "$tmp/database.dump")" == PGDMP ]] || { echo BLOCKED_BAD_PG_DUMP;exit 2; }
+# Negative fixture: preserve normal application table but remove Laravel
+# migrations, so this is a structurally restorable yet incomplete backup.
+docker exec -u postgres "$name" psql -X -q -h /var/run/postgresql \
+  -U kmj_qa -d kmj_source_qa -v ON_ERROR_STOP=1 \
+  -c 'DROP TABLE public.migrations'
+docker exec -u postgres "$name" pg_dump -h /var/run/postgresql \
+  -U kmj_qa -d kmj_source_qa -Fc > "$tmp/database-no-migrations.dump"
+[[ "$(head -c 5 "$tmp/database-no-migrations.dump")" == PGDMP ]] || {
+  echo BLOCKED_BAD_NEGATIVE_DUMP;exit 2;
+}
 node --input-type=module -e '
  import {RESTORE_PY} from "./scripts/windows/P520-OFFSITE-PG-STORAGE-RESTORE-20261116.mjs";
  process.stdout.write(RESTORE_PY);
@@ -95,6 +105,46 @@ output="$(docker run --rm --pull=never --network=none --read-only \
 [[ "$output" == KMJ_P520_DISPOSABLE_PG_STORAGE=PASS ]] || {
   echo BLOCKED_SYNTHETIC_RESTORE_RECEIPT; exit 2;
 }
+# Mutate only the synthetic host-side archive, preserving valid SHA manifests.
+# Re-run the same networkless, nonroot restore against a real PG18 dump that
+# lacks Laravel migration history: the guarded restore must fail closed.
+python3 - "$tmp" <<'PY_NEGATIVE'
+from pathlib import Path
+from io import BytesIO
+import hashlib
+import sys
+import tarfile
+root=Path(sys.argv[1])
+members={}
+with tarfile.open(root/"bundle.tar.gz","r:gz") as previous:
+    for item in previous:
+        reader=previous.extractfile(item)
+        assert item.isfile() and reader is not None
+        members[item.name]=reader.read()
+assert set(members)=={"database.dump","storage.tar.gz","metadata.txt","SHA256SUMS"}
+members["database.dump"]=(root/"database-no-migrations.dump").read_bytes()
+members["SHA256SUMS"]="".join(
+    hashlib.sha256(members[name]).hexdigest()+"  "+name+"\n"
+    for name in ("database.dump","storage.tar.gz","metadata.txt")
+).encode("ascii")
+with tarfile.open(root/"bundle.tar.gz","w:gz") as tar:
+    for name,payload in members.items():
+        info=tarfile.TarInfo(name)
+        info.size=len(payload)
+        tar.addfile(info,BytesIO(payload))
+PY_NEGATIVE
+bad_rc=0
+bad_out="$(docker run --rm --pull=never --network=none --read-only \
+  --cap-drop=ALL --security-opt=no-new-privileges --user=postgres \
+  --env=KMJ_P520_NETWORKLESS=1 \
+  --pids-limit=128 --cpus=1 --memory=2048m \
+  --tmpfs=/tmp:rw,nosuid,nodev,size=1024m,mode=1777 \
+  --mount="type=bind,src=$tmp,dst=/recovery,readonly" \
+  --entrypoint=python3 "$tag" /recovery/restore.py "$(printf 'a%.0s' {1..64})" 2>&1)" || bad_rc=$?
+[[ "$bad_rc" -ne 0 && "$bad_out" == *"KMJ_P520_DISPOSABLE_PG_STORAGE=BLOCKED"* ]] || {
+  echo BLOCKED_MISSING_MIGRATIONS_UNEXPECTEDLY_ACCEPTED; exit 2;
+}
+echo 'KMJ_P520_MISSING_MIGRATIONS_FAIL_CLOSED_SYNTHETIC=PASS'
 echo 'KMJ_P520_REAL_PG18_RESTORE_SYNTHETIC=PASS'
 echo 'KMJ_P520_REAL_UPLOADS_SHA_PARITY_SYNTHETIC=PASS'
 echo 'KMJ_P520_DISPOSABLE_NETWORK_NONE_NONROOT=PASS'
