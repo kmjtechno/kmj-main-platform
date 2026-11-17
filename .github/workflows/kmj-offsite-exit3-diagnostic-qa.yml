@@ -12,6 +12,8 @@ on:
       - 'scripts/operations/test_diagnose_offsite_exit3_phase_hostkey_20261117.py'
       - 'scripts/operations/guarded-offsite-v2-v3-dns-continuity-20261117.py'
       - 'scripts/operations/test_guarded_offsite_v2_v3_dns_continuity_20261117.py'
+      - 'scripts/operations/verify-offsite-v3-last-success-20261117.py'
+      - 'scripts/operations/test_verify_offsite_v3_last_success_20261117.py'
       - 'scripts/KMJ_OFFSITE_SFTP_DNS_PINNED_V2_20261112.py'
       - 'scripts/KMJ_OFFSITE_FRESH_X25519_SFTP_V3_20261112.py'
       - 'scripts/test_KMJ_OFFSITE_FRESH_X25519_SFTP_V3_20261112.py'
@@ -49,6 +51,7 @@ jobs:
           python3 -B -m unittest discover -s scripts/operations -p 'test_diagnose_offsite_exit3_fingerprints_20261117.py' -v
           python3 -B -m unittest discover -s scripts/operations -p 'test_diagnose_offsite_exit3_phase_hostkey_20261117.py' -v
           python3 -B -m unittest discover -s scripts/operations -p 'test_guarded_offsite_v2_v3_dns_continuity_20261117.py' -v
+          python3 -B -m unittest discover -s scripts/operations -p 'test_verify_offsite_v3_last_success_20261117.py' -v
           echo OFFSITE_EXIT3_SOURCE_QA=PASS
           echo REAL_ELITE_UNIT_JOURNAL_READ=NOT_EXECUTED
           echo OFFSITE_BACKUP_REPAIRED=NO
