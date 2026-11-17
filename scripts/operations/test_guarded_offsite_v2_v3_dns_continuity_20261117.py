@@ -123,9 +123,13 @@ class Cases(unittest.TestCase):
             target=Path(root)/"target.conf"
             target.write_bytes(m.OLD_DROPIN)
             old=os.umask(0o077)
+            reader=m.safe_read
+            def unprivileged_test_reader(path,sha=None,**kwargs):
+                return reader(path,sha,require_root=False,
+                              mode=kwargs.get("mode"),maximum=kwargs.get("maximum",131072))
             try:
                 with patch.object(m,"DROPIN",target),\
-                     patch.object(m,"safe_read",wraps=m.safe_read) as rd:
+                     patch.object(m,"safe_read",side_effect=unprivileged_test_reader) as rd:
                     m.atomic_dropin(m.NEW_DROPIN,scratch)
                     self.assertGreaterEqual(rd.call_count,1)
             finally:os.umask(old)
