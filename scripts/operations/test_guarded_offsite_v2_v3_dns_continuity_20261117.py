@@ -167,7 +167,7 @@ class Cases(unittest.TestCase):
         bad[-1]=SimpleNamespace(returncode=0,stdout=b"RESULT=INSPECT_PASS\n")
         with patch.object(m,"run",side_effect=bad):
             with tempfile.TemporaryDirectory() as x:
-                with self.assertRaisesRegex(m.Guard,"V3_READONLY_PREFLIGHT_FAILED"):
+                with self.assertRaisesRegex(m.Guard,"V3_PREFLIGHT_UNKNOWN"):
                     m.offline_and_inspect(Path(x))
     def test_preflight_bounded_reason_from_child_marker(self):
         cases=[
