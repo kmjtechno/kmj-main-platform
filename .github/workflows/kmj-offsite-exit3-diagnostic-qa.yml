@@ -1,0 +1,26 @@
+name: KMJ Elite Offsite Exit3 Exact Invocation Diagnostic Source QA
+on:
+  pull_request:
+    paths:
+      - 'scripts/operations/diagnose-offsite-exit3-20261117.py'
+      - 'scripts/operations/test_diagnose_offsite_exit3_20261117.py'
+      - '.github/workflows/kmj-offsite-exit3-diagnostic-qa.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  offline:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Exact-invocation category classification without journal, root or backup access
+        run: |
+          set -Eeuo pipefail
+          python3 -B -m unittest discover -s scripts/operations -p 'test_diagnose_offsite_exit3_20261117.py' -v
+          echo OFFSITE_EXIT3_SOURCE_QA=PASS
+          echo REAL_ELITE_UNIT_JOURNAL_READ=NOT_EXECUTED
+          echo OFFSITE_BACKUP_REPAIRED=NO
+          echo PRODUCTION_APPROVAL=UNCHANGED
