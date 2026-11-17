@@ -59,7 +59,7 @@ class Tests(unittest.TestCase):
         self.assertEqual(m.attest_source({**good,"ExecStart":"path=/bin/bash; argv[]=sh -c evil;"},"V3"),
                          "EXECSTART_OR_DROPIN_MISMATCH")
     def test_pinned_file_hash_with_descriptor_race_and_nofollow(self):
-        source=b"# immutable synthetic script\n"
+        source=b"# immutable synthetic script\n"+b"#"*1200
         import os
         pin=hashlib.sha256(source).hexdigest()
         before=m.SRC["V3"]
