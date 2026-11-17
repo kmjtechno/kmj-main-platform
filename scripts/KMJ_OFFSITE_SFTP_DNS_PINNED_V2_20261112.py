@@ -498,6 +498,7 @@ def _protected_write(path: Path, body: bytes, mode: int) -> None:
         os.fsync(fd)
     finally:
         os.close(fd)
+
 def verify_exact_service_receipt() -> None:
     """Tie evidence to the new systemd invocation, not a separate SFTP test."""
     inv = prop("InvocationID")
