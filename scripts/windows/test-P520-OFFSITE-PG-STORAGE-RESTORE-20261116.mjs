@@ -25,7 +25,8 @@ test('PG restore calls real initdb, pg_ctl, pg_restore and table query via UNIX 
    'initdb','pg_ctl','pg_restore','--single-transaction',
    '--exit-on-error','--no-owner','--no-privileges',
    "listen_addresses = ''",'unix_socket_directories',
-   'pg_catalog.pg_class','NO_RESTORED_TABLES'])
+   'pg_catalog.pg_class','NO_RESTORED_TABLES',
+   'SELECT count(*) FROM public.migrations;', 'NO_RESTORED_MIGRATIONS'])
    assert.ok(RESTORE_PY.includes(x),x);
 });
 test('uploads restore constrains traversal, symlinks and .env* and checks parity',()=>{
