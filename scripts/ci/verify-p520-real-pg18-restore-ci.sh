@@ -42,7 +42,9 @@ done
 docker exec -u postgres "$name" psql -X -q -h /var/run/postgresql \
   -U kmj_qa -d kmj_source_qa -v ON_ERROR_STOP=1 \
   -c 'CREATE TABLE public.kmj_p520_roundtrip (id integer PRIMARY KEY, marker text NOT NULL)' \
-  -c "INSERT INTO public.kmj_p520_roundtrip VALUES (1, 'CI_SYNTHETIC_NO_CUSTOMER_DATA')"
+  -c "INSERT INTO public.kmj_p520_roundtrip VALUES (1, 'CI_SYNTHETIC_NO_CUSTOMER_DATA')" \
+  -c 'CREATE TABLE public.migrations (id bigint PRIMARY KEY, migration varchar(255) NOT NULL, batch integer NOT NULL)' \
+  -c "INSERT INTO public.migrations VALUES (1, 'CI_SYNTHETIC_MIGRATION', 1)"
 docker exec -u postgres "$name" pg_dump -h /var/run/postgresql \
   -U kmj_qa -d kmj_source_qa -Fc > "$tmp/database.dump"
 [[ "$(head -c 5 "$tmp/database.dump")" == PGDMP ]] || { echo BLOCKED_BAD_PG_DUMP;exit 2; }
