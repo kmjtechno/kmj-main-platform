@@ -12,7 +12,9 @@ on:
       - 'scripts/operations/test_diagnose_offsite_exit3_phase_hostkey_20261117.py'
       - 'scripts/operations/guarded-offsite-v2-v3-dns-continuity-20261117.py'
       - 'scripts/operations/test_guarded_offsite_v2_v3_dns_continuity_20261117.py'
-      - 'scripts/operations/offsite-dns-pinned-transport-syntax-candidate-20261117.py'
+      - 'scripts/KMJ_OFFSITE_SFTP_DNS_PINNED_V2_20261112.py'
+      - 'scripts/KMJ_OFFSITE_FRESH_X25519_SFTP_V3_20261112.py'
+      - 'scripts/test_KMJ_OFFSITE_FRESH_X25519_SFTP_V3_20261112.py'
       - '.github/workflows/kmj-offsite-exit3-diagnostic-qa.yml'
   workflow_dispatch:
 permissions:
@@ -25,18 +27,20 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - name: Offline Python AST source gate for DNS-only transport
+      - name: Offline Python AST gate for V3 and DNS transport pinned sources
         run: |
+          set -Eeuo pipefail
           python3 - <<'PY'
-          import ast, pathlib, sys
-          p=pathlib.Path('scripts/operations/offsite-dns-pinned-transport-syntax-candidate-20261117.py')
-          try:
-              ast.parse(p.read_bytes(), filename='<offsite-transport>')
-          except SyntaxError as e:
-              print(f'TRANSPORT_AST=FAIL_LINE_{e.lineno}_COLUMN_{e.offset}')
-              sys.exit(1)
-          print('TRANSPORT_AST=PASS')
+          import ast, pathlib
+          for name in (
+              'KMJ_OFFSITE_SFTP_DNS_PINNED_V2_20261112.py',
+              'KMJ_OFFSITE_FRESH_X25519_SFTP_V3_20261112.py',
+              'test_KMJ_OFFSITE_FRESH_X25519_SFTP_V3_20261112.py',
+          ):
+              ast.parse((pathlib.Path('scripts')/name).read_bytes(),filename='<pinned-v3-source>')
+          print('PINNED_V3_TRANSPORT_AST=3_PASS')
           PY
+          python3 -B -m unittest discover -s scripts -p 'test_KMJ_OFFSITE_FRESH_X25519_SFTP_V3_20261112.py' -v
       - name: Exact-invocation category classification without journal, root or backup access
         run: |
           set -Eeuo pipefail
