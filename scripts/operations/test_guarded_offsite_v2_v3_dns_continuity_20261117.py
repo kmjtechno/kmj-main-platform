@@ -160,12 +160,14 @@ class Cases(unittest.TestCase):
             SimpleNamespace(returncode=0,stdout=b"RESULT=SELFTEST_PASS"),
             SimpleNamespace(returncode=0,stdout=b"GOOGLE_ENDPOINT=DNS_ONLY_STRICT_PINNED_HOSTKEY\nRESULT=INSPECT_PASS"),
         ]
-        with patch.object(m,"run",side_effect=ok):
+        with patch.object(m,"run",side_effect=ok),\
+             patch.object(m,"safe_read",return_value=b"x=1\n"):
             with tempfile.TemporaryDirectory() as x:
                 self.assertTrue(m.offline_and_inspect(Path(x)))
         bad=ok.copy()
         bad[-1]=SimpleNamespace(returncode=0,stdout=b"RESULT=INSPECT_PASS\n")
-        with patch.object(m,"run",side_effect=bad):
+        with patch.object(m,"run",side_effect=bad),\
+             patch.object(m,"safe_read",return_value=b"x=1\n"):
             with tempfile.TemporaryDirectory() as x:
                 with self.assertRaisesRegex(m.Guard,"V3_PREFLIGHT_UNKNOWN"):
                     m.offline_and_inspect(Path(x))
@@ -184,7 +186,8 @@ class Cases(unittest.TestCase):
                    SimpleNamespace(returncode=3,stdout=receipt)
                  ]),\
                  patch.object(m,"v3_safe_direct_category",
-                              return_value="TRANSPORT_PINNED_CONFIG_DRIFT") as direct:
+                              return_value="TRANSPORT_PINNED_CONFIG_DRIFT") as direct,\
+                 patch.object(m,"safe_read",return_value=b"x=1\n"):
                 with tempfile.TemporaryDirectory() as x:
                     with self.assertRaisesRegex(m.Guard,expected):
                         m.offline_and_inspect(Path(x))
@@ -259,6 +262,22 @@ class Cases(unittest.TestCase):
                        return_value=types.SimpleNamespace()):
                 result=m.v3_safe_direct_category(scratch)
             self.assertEqual(result,"TRANSPORT_INSPECT_DNS_UNIQUE_IPV4_REQUIRED")
+    def test_repaired_dns_transport_v3_and_tests_parse_and_match_exact_pins(self):
+        import ast
+        for name,pin in m.SOURCES:
+            path=PATH.parent.parent/name
+            raw=path.read_bytes()
+            self.assertEqual(hashlib.sha256(raw).hexdigest(),pin)
+            ast.parse(raw,filename="<pinned-source>")
+        source=(PATH.parent.parent/m.SOURCES[1][0]).read_text()
+        self.assertIn('    os.makedirs(DROPIN_DIR, mode=0o755, exist_ok=True)\n    if REPAIR_FILE.exists()',source)
+        self.assertNotIn('exist_ok=True)    if REPAIR_FILE.exists()',source)
+    def test_invalid_candidate_ast_denies_before_any_python_test_runs(self):
+        with tempfile.TemporaryDirectory() as directory:
+            with patch.object(m,"safe_read",return_value=b"if True then: pass\n"),\
+                 patch.object(m,"run",side_effect=AssertionError("MUST_NOT_RUN")):
+                with self.assertRaisesRegex(m.Guard,"PINNED_CANDIDATE_PYTHON_SYNTAX"):
+                    m.offline_and_inspect(Path(directory))
     def test_root_script_does_not_weaken_security_or_delete_old_assets(self):
         text=PATH.read_text()
         self.assertNotIn("StrictHostKeyChecking=no",text)
