@@ -8,6 +8,13 @@ spec=importlib.util.spec_from_file_location("kmj_fresh_offsite_mock_tests",HERE)
 assert spec and spec.loader
 m=importlib.util.module_from_spec(spec);spec.loader.exec_module(m)
 
+_REAL_PRIVATE_FILE=m.private_file
+
+def rootless_fixture_private(path,uid=0):
+    # Exercise the real mode/nlink/regular-file guard against fixture owner.
+    # Never change the production uid=0 requirement in V3.
+    return _REAL_PRIVATE_FILE(path,uid=os.geteuid())
+
 class NewFreshOffsiteTests(TestCase):
     def test_php_dump_is_nonroot_and_argument_vector(self):
         php=m.DUMP_PHP
@@ -86,7 +93,9 @@ class NewFreshOffsiteTests(TestCase):
     def test_exclusive_lock_only_new_fixture(self):
         with tempfile.TemporaryDirectory() as root:
             fake=Path(root)/"lock"
-            with mock.patch.object(m,"LOCK",fake):
+            with mock.patch.object(m,"LOCK",fake),\
+                 mock.patch.object(m.os,"fstat",return_value=mock.Mock(
+                     st_mode=stat.S_IFREG|0o600,st_uid=0,st_nlink=1)):
                 f=m.exclusive_lock()
                 self.assertTrue(fake.is_file())
                 self.assertEqual(stat.S_IMODE(fake.stat().st_mode),0o600)
@@ -102,6 +111,7 @@ class NewFreshOffsiteTests(TestCase):
                      mock.Mock(returncode=0,stderr=b"")]
             with mock.patch.object(m,"native_pg_restore_candidates",return_value=candidates),\
                  mock.patch.object(m,"run",side_effect=replies) as runner,\
+                 mock.patch.object(m,"private_file",side_effect=rootless_fixture_private),\
                  contextlib.redirect_stdout(io.StringIO()) as output:
                 selected=m.verify_pg_dump_custom(dump)
             self.assertEqual(selected,17)
@@ -114,6 +124,7 @@ class NewFreshOffsiteTests(TestCase):
             dump.write_bytes(b"PGDMP"+b"x"*128);dump.chmod(0o600)
             with mock.patch.object(m,"native_pg_restore_candidates",return_value=[(15,Path("/bin/false"))]),\
                  mock.patch.object(m,"run",return_value=mock.Mock(returncode=1,stderr=b"unsupported version")),\
+                 mock.patch.object(m,"private_file",side_effect=rootless_fixture_private),\
                  contextlib.redirect_stdout(io.StringIO()):
                 with self.assertRaisesRegex(m.Deny,"FRESH_PGDMP_NO_COMPATIBLE_READER"):
                     m.verify_pg_dump_custom(dump)
@@ -122,7 +133,8 @@ class NewFreshOffsiteTests(TestCase):
         with tempfile.TemporaryDirectory() as root:
             dump=Path(root)/"database.dump"
             dump.write_bytes(b"NOTDB"+b"x"*128);dump.chmod(0o600)
-            with mock.patch.object(m,"run") as tool:\
+            with mock.patch.object(m,"run") as tool,\
+                 mock.patch.object(m,"private_file",side_effect=rootless_fixture_private):
                 self.assertRaisesRegex(m.Deny,"FRESH_DUMP_NOT_PGDMP",m.verify_pg_dump_custom,dump)
             tool.assert_not_called()
 
@@ -132,6 +144,7 @@ class NewFreshOffsiteTests(TestCase):
             dump.write_bytes(b"PGDMP"+b"x"*128);dump.chmod(0o600)
             with mock.patch.object(m,"native_pg_restore_candidates",return_value=[]),\
                  mock.patch.object(m,"run") as tool,\
+                 mock.patch.object(m,"private_file",side_effect=rootless_fixture_private),\
                  contextlib.redirect_stdout(io.StringIO()):
                 with self.assertRaisesRegex(m.Deny,"PG_RESTORE_NATIVE_MISSING"):
                     m.verify_pg_dump_custom(dump)
