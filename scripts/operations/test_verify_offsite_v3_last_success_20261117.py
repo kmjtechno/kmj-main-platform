@@ -97,9 +97,11 @@ class Attest(TestCase):
                 m.service_contract()
     def test_old_success_does_not_count(self):
         u,t=unit(),timer()
-        u["ExecMainExitTimestampMonotonic"]=str(time.monotonic_ns()//1000-49*3600*1000000)
+        fake_now_ns=100*3600*1000000000
+        u["ExecMainExitTimestampMonotonic"]=str(fake_now_ns//1000-49*3600*1000000)
         with mock.patch.object(m,"props",side_effect=lambda id,keys:u if id==m.UNIT else t),\
-             mock.patch.object(m,"safe_source",return_value=m.UNIT_CONTENT):
+             mock.patch.object(m,"safe_source",return_value=m.UNIT_CONTENT),\
+             mock.patch.object(m.time,"monotonic_ns",return_value=fake_now_ns):
             with self.assertRaisesRegex(m.Block,"EXIT_OUTSIDE_48_HOURS"):
                 m.service_contract()
     def test_root_and_arguments_rejected_before_host_commands(self):
