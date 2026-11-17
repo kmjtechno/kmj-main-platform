@@ -500,6 +500,70 @@ def run_once():
     print("RESULT=FRESH_DUAL_LOCAL_HEALTH_ONEPASS_PASS")
     return 0
 
+def bound_root_digest(path):
+    """Read ONLY a fixed reviewed source using nofollow, tight size and inode check.
+
+    Digest is a file-identity diagnostic, never release approval. This routine
+    does not import source code, read secrets, alter files or start services.
+    """
+    before=os.lstat(path)
+    if (not stat.S_ISREG(before.st_mode) or before.st_uid!=0
+        or before.st_nlink!=1 or before.st_mode&0o022
+        or not 128<=before.st_size<=131072):
+        raise Deny("PIN_SOURCE_METADATA_INVALID")
+    fd=os.open(path,os.O_RDONLY|os.O_NOFOLLOW|os.O_CLOEXEC)
+    try:
+        actual=os.fstat(fd)
+        if (before.st_dev,before.st_ino,before.st_size,before.st_mtime_ns,
+            before.st_ctime_ns)!=(actual.st_dev,actual.st_ino,
+                                  actual.st_size,actual.st_mtime_ns,actual.st_ctime_ns):
+            raise Deny("PIN_SOURCE_RACED")
+        raw=os.read(fd,131073)
+        after=os.fstat(fd)
+        if (after.st_dev,after.st_ino,after.st_size,after.st_mtime_ns,
+            after.st_ctime_ns)!=(actual.st_dev,actual.st_ino,
+                                 actual.st_size,actual.st_mtime_ns,actual.st_ctime_ns):
+            raise Deny("PIN_SOURCE_RACED")
+        if len(raw)!=actual.st_size:
+            raise Deny("PIN_SOURCE_SHORT_READ")
+    finally:
+        os.close(fd)
+    return hashlib.sha256(raw).hexdigest()
+
+
+def audit_root_pins():
+    """Exact-path, metadata-guarded source hash audit; never reads backup data.
+
+    Prints fixed symbolic labels, pin verdict and mismatched SOURCE digest only.
+    Source digests identify reviewed code bytes, not credentials or archives.
+    """
+    sources=[("BUNDLE_%02d" % n, BASE/name, sha)
+             for n,(name,sha) in enumerate(PINS.items(),1)]
+    sources.extend((
+        ("INSTALLED_V3",V3_INSTALLED,V3_INSTALLED_SHA),
+        ("INSTALLED_SFTP",V3_PARENT,V3_PARENT_SHA),
+        ("HEALTH_SOURCE",HEALTH,HEALTH_SHA),
+    ))
+    all_match=True
+    for label,path,expected in sources:
+        try:
+            digest=bound_root_digest(path)
+        except (OSError,Deny):
+            print(label+"_PIN=UNREADABLE_OR_UNTRUSTED")
+            all_match=False
+            continue
+        if digest==expected:
+            print(label+"_PIN=PASS")
+        else:
+            print(label+"_PIN=SHA_MISMATCH")
+            print(label+"_OBSERVED_SHA256="+digest)
+            all_match=False
+    print("PRODUCTION_AND_BACKUP_MUTATION=NONE")
+    print("SOURCE_CONTENT_OR_CREDENTIALS_PRINTED=NO")
+    print("RESULT="+("ROOT_PIN_AUDIT_PASS" if all_match else "ROOT_PIN_AUDIT_BLOCKED"))
+    return 0 if all_match else 4
+
+
 def selftest():
     pattern="find /var/backups/kmj-elite-daily -mindepth 2 -maxdepth 2 -name '*.tar.gz' -type f -mtime -2 | grep -q ."
     a=parse_exact_find(pattern)
@@ -523,13 +587,15 @@ def selftest():
 
 def main():
     os.umask(0o077)
-    if len(sys.argv)!=2 or sys.argv[1] not in ("--selftest","--preflight","--run-once"):
+    if len(sys.argv)!=2 or sys.argv[1] not in ("--selftest","--audit-pins","--preflight","--run-once"):
         print("RESULT=BLOCKED_ARGS")
         return 2
     if sys.argv[1]=="--selftest":
         return selftest()
     try:
         root_owner()
+        if sys.argv[1]=="--audit-pins":
+            return audit_root_pins()
         if sys.argv[1]=="--preflight":
             runtime_sources()
             print("BACKUP_TRANSFER_EXECUTED=NO")
