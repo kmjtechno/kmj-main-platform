@@ -18,6 +18,7 @@ on:
       - 'scripts/KMJ_OFFSITE_FRESH_X25519_SFTP_V3_20261112.py'
       - 'scripts/test_KMJ_OFFSITE_FRESH_X25519_SFTP_V3_20261112.py'
       - 'scripts/operations/google_nov17_fixture/**'
+      - 'scripts/operations/health_v3/**'
       - '.github/workflows/kmj-offsite-exit3-diagnostic-qa.yml'
   workflow_dispatch:
 permissions:
@@ -60,7 +61,12 @@ jobs:
             '4e9038bd84f2e7e362a1ebb37981071f4a430e6f0b57909a392ef545bcd0cd6a' 'scripts/operations/google_nov17_fixture/KMJ_GOOGLE_V3_20261117_DISPOSABLE_RESTORE_ONEPASS.sh' | sha256sum -c -
           python3 -B -m unittest discover -s scripts/operations/google_nov17_fixture -p 'test_KMJ_GOOGLE_V3_20261117_RESTORE_HELPER.py' -v
           bash -n scripts/operations/google_nov17_fixture/KMJ_GOOGLE_V3_20261117_DISPOSABLE_RESTORE_ONEPASS.sh
+          # Source-only V3 dual-local retention and native health invoker:
+          # never runs a real production backup, SFTP or systemd unit.
+          python3 -B -m unittest discover -s scripts/operations/health_v3 -p 'test_KMJ_OFFSITE_V3_DUAL_LOCAL_HEALTH_ONEPASS_20261117.py' -v
+          python3 -I -B scripts/operations/health_v3/KMJ_OFFSITE_V3_DUAL_LOCAL_HEALTH_ONEPASS_20261117.py --selftest
           echo GOOGLE_NOV17_ISOLATED_RESTORE_SOURCE_QA=PASS
+          echo V3_DUAL_LOCAL_HEALTH_SOURCE_QA=PASS
           echo REMOTE_RESTORE_NOT_EXECUTED=YES
           echo OFFSITE_EXIT3_SOURCE_QA=PASS
           echo REAL_ELITE_UNIT_JOURNAL_READ=NOT_EXECUTED
