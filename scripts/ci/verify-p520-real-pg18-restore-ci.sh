@@ -103,6 +103,7 @@ chmod 0644 "$tmp/debug.py"
 docker rm -fv "$name" >/dev/null
 output="$(docker run --rm --pull=never --network=none --read-only \
   --cap-drop=ALL --security-opt=no-new-privileges --user=postgres \
+  --env=KMJ_P520_NETWORKLESS=1 \
   --pids-limit=128 --cpus=1 --memory=2048m \
   --tmpfs=/tmp:rw,nosuid,nodev,size=1024m,mode=1777 \
   --mount="type=bind,src=$tmp,dst=/recovery,readonly" \
