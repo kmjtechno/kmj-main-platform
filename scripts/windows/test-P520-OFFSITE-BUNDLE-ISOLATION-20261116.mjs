@@ -6,7 +6,10 @@ import os from 'node:os';
 import {join} from 'node:path';
 import {args,localEndpoint,containerBase,decryptArgs,validateArgs,VALIDATION_PY} from './P520-OFFSITE-BUNDLE-ISOLATION-20261116.mjs';
 const a='a'.repeat(64),b='b'.repeat(64),c='c'.repeat(64),vol='kmj-p520-verify-'+'d'.repeat(32);
-const valid=['--execute','--image-sha256',a,'--encrypted-sha256',b,'--source-local-sha256',c,'--bytes','441334','--ack-bundle-only'];
+const valid=['--execute','--image-sha256',a,'--encrypted-sha256',b,'--source-local-sha256',c,'--bytes','441334','--ack-disposable-pg-storage-restore'];
+test('legacy bundle-only consent cannot authorize real PG restore',()=>{
+ assert.equal(args(valid.map(x=>x==='--ack-disposable-pg-storage-restore'?'--ack-bundle-only':x)),null);
+});
 test('only bounded exact digests and explicit non-production consent',()=>{
  assert.deepEqual(args(valid),{image:a,cipher:b,source:c,bytes:441334});
  for(const bad of [[],['--help'],valid.slice(0,9),

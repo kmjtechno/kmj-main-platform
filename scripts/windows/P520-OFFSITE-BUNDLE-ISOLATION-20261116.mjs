@@ -20,7 +20,7 @@ const RECEIPT='KMJ_P520_BUNDLE_INTEGRITY=PASS';
 export function args(argv) {
   if(argv.length!==10||argv[0]!=='--execute'||argv[1]!=='--image-sha256'||
      argv[3]!=='--encrypted-sha256'||argv[5]!=='--source-local-sha256'||
-     argv[7]!=='--bytes'||argv[9]!=='--ack-bundle-only')return null;
+     argv[7]!=='--bytes'||argv[9]!=='--ack-disposable-pg-storage-restore')return null;
   if(![argv[2],argv[4],argv[6]].every(x=>HEX.test(x))||
      !/^[1-9][0-9]{2,10}$/.test(argv[8])||Number(argv[8])>10*1024**3)return null;
   return {image:argv[2],cipher:argv[4],source:argv[6],bytes:Number(argv[8])};
@@ -55,7 +55,7 @@ function docker(args,timeout=900000) {
   return r.stdout.trim();
 }
 function fail(reason,attempted=false) {
-  console.log('KMJ_P520_BUNDLE_ONLY=BLOCKED_'+(/^[A-Z0-9_]{1,80}$/.test(reason)?reason:'UNCLASSIFIED'));
+  console.log('KMJ_P520_DISPOSABLE_RESTORE=BLOCKED_'+(/^[A-Z0-9_]{1,80}$/.test(reason)?reason:'UNCLASSIFIED'));
   console.log('POSTGRESQL_RESTORE='+(attempted?'UNVERIFIED':'NOT_EXECUTED'));
   console.log('STORAGE_RESTORE='+(attempted?'UNVERIFIED':'NOT_EXECUTED'));
   console.log('PRODUCTION_APPROVAL=NOT_GRANTED');
@@ -108,7 +108,7 @@ function execute(argv){
     }
     console.log('KMJ_P520_OWNER_SIGNED_RECEIPT=LOCAL_ONLY_CREATED');
     console.log('P520_ED25519_PUBLIC_KEY_SHA256='+signed.publicKeySha256);
-    console.log('KMJ_P520_BUNDLE_ONLY=PASS');
+    console.log('KMJ_P520_DISPOSABLE_RESTORE=PASS');
     console.log('KEY_SEPARATION_TWO_CONTAINERS=PASS');
     console.log('ENCRYPTED_SHA_AND_CANDIDATE_METADATA=PASS');
     console.log('POSTGRESQL_RESTORE=PASS_DISPOSABLE');
