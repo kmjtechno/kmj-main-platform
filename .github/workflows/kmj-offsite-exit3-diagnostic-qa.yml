@@ -55,9 +55,9 @@ jobs:
           python3 -B -m unittest discover -s scripts/operations -p 'test_verify_offsite_v3_last_success_20261117.py' -v
           # Byte-identical mirrors of Google PR281 sources; do not run live restore.
           printf '%s  %s\n' \
-            'c72476c4be2648e3ed31457334b7e5acba56d52084e5059c932ffd4bf45fcc9c' 'scripts/operations/google_nov17_fixture/KMJ_GOOGLE_V3_20261117_RESTORE_HELPER.py' \
+            '8c6c62522c016cd771fdb62934a6462d9db1b21657205cb3fd1641836cf88303' 'scripts/operations/google_nov17_fixture/KMJ_GOOGLE_V3_20261117_RESTORE_HELPER.py' \
             'db33552104f6e8c51c03d931bb90d280f7c062bc6ecb6892775e7fa42228d2be' 'scripts/operations/google_nov17_fixture/test_KMJ_GOOGLE_V3_20261117_RESTORE_HELPER.py' \
-            '6c5708a639307027a28e174a164912c755bbeb8cd70a477a3e3e96f580ea68ec' 'scripts/operations/google_nov17_fixture/KMJ_GOOGLE_V3_20261117_DISPOSABLE_RESTORE_ONEPASS.sh' | sha256sum -c -
+            '4e9038bd84f2e7e362a1ebb37981071f4a430e6f0b57909a392ef545bcd0cd6a' 'scripts/operations/google_nov17_fixture/KMJ_GOOGLE_V3_20261117_DISPOSABLE_RESTORE_ONEPASS.sh' | sha256sum -c -
           python3 -B -m unittest discover -s scripts/operations/google_nov17_fixture -p 'test_KMJ_GOOGLE_V3_20261117_RESTORE_HELPER.py' -v
           bash -n scripts/operations/google_nov17_fixture/KMJ_GOOGLE_V3_20261117_DISPOSABLE_RESTORE_ONEPASS.sh
           echo GOOGLE_NOV17_ISOLATED_RESTORE_SOURCE_QA=PASS
