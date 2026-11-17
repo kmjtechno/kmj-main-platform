@@ -169,6 +169,45 @@ class Cases(unittest.TestCase):
             with tempfile.TemporaryDirectory() as x:
                 with self.assertRaisesRegex(m.Guard,"V3_READONLY_PREFLIGHT_FAILED"):
                     m.offline_and_inspect(Path(x))
+    def test_preflight_bounded_reason_from_child_marker(self):
+        cases=[
+          (b"SCHEMA=KMJ_OFFSITE\nRESULT=BLOCKED_DNS_UNIQUE_IPV4_REQUIRED\n",
+           "V3_PREFLIGHT_BLOCKED_DNS_UNIQUE_IPV4_REQUIRED"),
+          (b"SCHEMA=KMJ_OFFSITE\nRESULT=BLOCKED_SAFE\n",
+           "V3_PREFLIGHT_MASKED_TRANSPORT_PINNED_CONFIG_DRIFT"),
+        ]
+        for receipt,expected in cases:
+            with self.subTest(expected=expected),\
+                 patch.object(m,"run",side_effect=[
+                   SimpleNamespace(returncode=0,stdout=b"OK"),
+                   SimpleNamespace(returncode=0,stdout=b"RESULT=SELFTEST_PASS"),
+                   SimpleNamespace(returncode=3,stdout=receipt)
+                 ]),\
+                 patch.object(m,"v3_safe_direct_category",
+                              return_value="TRANSPORT_PINNED_CONFIG_DRIFT") as direct:
+                with tempfile.TemporaryDirectory() as x:
+                    with self.assertRaisesRegex(m.Guard,expected):
+                        m.offline_and_inspect(Path(x))
+                self.assertEqual(direct.call_count,
+                                 int(expected.startswith("V3_PREFLIGHT_MASKED_")))
+    def test_v3_inspect_marker_does_not_leak_paths_secrets(self):
+        self.assertEqual(m.safe_v3_inspect_marker(
+          b"SECRET=/root/.ssh/private\nRESULT=BLOCKED_MIGRATION_UNIT_DRIFT\n"),
+          "BLOCKED_MIGRATION_UNIT_DRIFT")
+        self.assertEqual(m.safe_v3_inspect_marker(
+          b"RESULT=BLOCKED_X\nRESULT=BLOCKED_Y\n"),"UNKNOWN")
+        self.assertEqual(m.safe_v3_inspect_marker(
+          b"RESULT=BLOCKED_/root/password\n"),"UNKNOWN")
+        self.assertEqual(m.safe_v3_inspect_marker(b"x"*(m.MAX_OUTPUT+1)),"OUTPUT_OVERSIZE")
+    def test_v3_direct_import_errors_fail_closed_categorically(self):
+        with tempfile.TemporaryDirectory() as dir:
+            scratch=Path(dir)
+            with patch.object(m,"safe_read",return_value=b"pinned"),\
+                 patch("importlib.util.spec_from_file_location",
+                       side_effect=OSError("secret path that must not print")):
+                # A failed import must never be transformed into a path leak.
+                with self.assertRaises(OSError):
+                    m.v3_safe_direct_category(scratch)
     def test_root_script_does_not_weaken_security_or_delete_old_assets(self):
         text=PATH.read_text()
         self.assertNotIn("StrictHostKeyChecking=no",text)
