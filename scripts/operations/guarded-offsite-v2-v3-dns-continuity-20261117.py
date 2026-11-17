@@ -201,7 +201,7 @@ def v3_safe_direct_category(scratch):
             transport=module.pinned_transport()
             module.inspect(transport,scheduled=False)
     except Exception as exc:
-        if isinstance(exc,module.Deny):
+        if isinstance(exc,getattr(module,"Deny",())):
             prefix="DENY_"
         elif transport is not None and isinstance(exc,transport.Block):
             prefix="TRANSPORT_"
