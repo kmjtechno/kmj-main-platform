@@ -54,6 +54,31 @@ final class KslpCodec
         return [$header, $claims, self::unb64($parts[2]), $parts[0].'.'.$parts[1]];
     }
 
+    /**
+     * Verify that the signed v1 bytes follow this protocol's exact canonical
+     * JSON encoding. In particular json_decode() silently overwrites repeated
+     * object members: reconstructing the signed bytes after Ed25519 verification
+     * rejects duplicate keys at every nesting level and alternate escape forms.
+     *
+     * Invoke ONLY after verifying the detached signature, never as an
+     * entitlement/authorization decision on an untrusted token.
+     *
+     * @param  array<array-key, mixed>  $header
+     * @param  array<array-key, mixed>  $claims
+     */
+    public static function isCanonicalSignedPayload(string $signed, array $header, array $claims): bool
+    {
+        $parts = explode('.', $signed);
+        if (count($parts) !== 2) {
+            return false;
+        }
+
+        self::sortRecursive($header);
+
+        return hash_equals($parts[0], self::b64(json_encode($header, JSON_THROW_ON_ERROR)))
+            && hash_equals($parts[1], self::b64(self::canonical($claims)));
+    }
+
     private static function b64(string $v): string
     {
         return rtrim(strtr(base64_encode($v), '+/', '-_'), '=');
