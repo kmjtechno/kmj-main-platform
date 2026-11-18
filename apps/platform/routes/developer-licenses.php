@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Models\User;
 use App\Services\AuthorityBootstrapper;
+use App\Services\PlatformOwnerAccess;
 use App\Services\Licensing\Kslp\KslpDeveloperKeys;
 use App\Services\Licensing\Kslp\KslpIssuerSubscriptionAuthority;
 use App\Services\Licensing\Kslp\KslpLicenseControlPlane;
@@ -22,6 +23,7 @@ Route::middleware(['auth', 'verified'])->prefix('developer')->name('developer.')
         Request $request,
         OrganizationDirectory $directory,
         OrganizationCapabilityContext $capabilities,
+        PlatformOwnerAccess $ownerAccess,
     ) {
         $actor = $request->user();
         abort_unless($actor instanceof User, 401);
@@ -37,6 +39,11 @@ Route::middleware(['auth', 'verified'])->prefix('developer')->name('developer.')
                     $org['current_period_end'] = null;
                 } else {
                     $org['issuer_status'] = (string) $subscription->status;
+                    if ($org['issuer_status'] === 'active'
+                        && $subscription->current_period_end !== null
+                        && now()->greaterThan($subscription->current_period_end)) {
+                        $org['issuer_status'] = 'expired';
+                    }
                     $org['product_limit'] = (int) $subscription->product_limit;
                     $org['current_period_end'] = $subscription->current_period_end;
                 }
@@ -70,6 +77,7 @@ Route::middleware(['auth', 'verified'])->prefix('developer')->name('developer.')
             'applications' => $products,
             'keys' => $keys,
             'canIssueKeys' => $storageReady && (bool) config('services.kmj_developer_licensing.enabled', false),
+            'canAccessOwnerHub' => $ownerAccess->allows($actor),
             'newKey' => $request->session()->get('developer_license_key'),
         ]);
     })->name('apps.index');
