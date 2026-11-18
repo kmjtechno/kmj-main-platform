@@ -256,18 +256,11 @@ mod tests {
     #[test]
     fn validly_signed_duplicate_json_header_and_nested_claims_are_rejected() {
         let canonical = serde_json::to_string(&fixture_claims()).unwrap();
-        let duplicate_top = canonical.replace(
-            r#""plan":"trial""#,
-            r#""plan":"enterprise","plan":"trial""#
-        );
-        let duplicate_nested = canonical.replace(
-            r#""hosting":true"#,
-            r#""hosting":false,"hosting":true"#
-        );
-        let extra_whitespace = canonical.replace(
-            r#""plan":"trial""#,
-            r#""plan": "trial""#
-        );
+        let duplicate_top =
+            canonical.replace(r#""plan":"trial""#, r#""plan":"enterprise","plan":"trial""#);
+        let duplicate_nested =
+            canonical.replace(r#""hosting":true"#, r#""hosting":false,"hosting":true"#);
+        let extra_whitespace = canonical.replace(r#""plan":"trial""#, r#""plan": "trial""#);
         for raw in [&duplicate_top, &duplicate_nested, &extra_whitespace] {
             assert_ne!(raw, &canonical);
             let (token, public_key) = sign_raw_json_for_test(raw.as_bytes(), None);
