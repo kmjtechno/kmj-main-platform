@@ -38,6 +38,7 @@ test('fresh Ed25519 key pair succeeds only with exact public PEM hash and matchi
 test('private material cannot be logged, copied, encrypted or sent; read-only P520 host gating',()=>{
  const src=readFileSync(file,'utf8');
  for(const marker of ['--inspect','PRIVATE_KEY_CONTENT_EXPOSED=NO',
+   'P520_SIGNING_PUBLIC_PEM_BASE64',
    'ELITE_OWNER_PIN_OF_PUBLIC_KEYS=NOT_YET_VERIFIED',
    'P520_INDEPENDENT_RESTORE=NOT_EXECUTED',
    'PRODUCTION_APPROVAL=NOT_GRANTED',
