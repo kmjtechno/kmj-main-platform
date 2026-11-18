@@ -44,13 +44,39 @@ class V3DualLocalHealthSourceTests(unittest.TestCase):
     def test_installed_v3_source_and_transport_are_exact_pinned(self):
         self.assertEqual(m.V3_INSTALLED.name,"kmj-offsite-fresh-x25519-v3-20261112.py")
         self.assertEqual(m.V3_PARENT.name,"KMJ_OFFSITE_SFTP_DNS_PINNED_V2_20261112.py")
-        self.assertEqual(m.V3_INSTALLED_SHA,"b594d46d2dc2dd8dec3feaea829934c34b72bde45cb836fe23d3066a9eb5f880")
+        self.assertEqual(m.V3_INSTALLED_SHA,"2834ff3361027536bee0b971fae6dddb00677460f15adf3e8d81e7821853016f")
         self.assertEqual(m.V3_PARENT_SHA,"8f9165714774758a6bef05abff7bf72d655518ab7ed1c3cdd8dc588d3c85c13c")
         self.assertIn("V3_RUNTIME_IMPORT_CONTRACT_DRIFT",SOURCE)
         self.assertIn("V3_RUNTIME_PARENT_UNTRUSTED",SOURCE)
         self.assertIn("V3_RUNTIME_METADATA_DRIFT",SOURCE)
         self.assertIn("v3.schedule_unit_preflight(transport)",SOURCE)
         self.assertIn("private_bytes(V3_INSTALLED,V3_INSTALLED_SHA,uid=0)",SOURCE)
+
+    def test_installed_v3_pin_matches_repo_source_and_runtime_contract(self):
+        upstream=TARGET.parents[2]/"KMJ_OFFSITE_FRESH_X25519_SFTP_V3_20261112.py"
+        data=upstream.read_bytes()
+        self.assertEqual(hashlib.sha256(data).hexdigest(),m.V3_INSTALLED_SHA)
+        text=data.decode("utf-8")
+        self.assertIn('PARENT_SHA="8f9165714774758a6bef05abff7bf72d655518ab7ed1c3cdd8dc588d3c85c13c"',text)
+        self.assertIn('SCHEDULED=Path("/usr/local/libexec/kmj-offsite-fresh-x25519-v3-20261112.py")',text)
+        self.assertIn('def schedule_unit_preflight(transport):',text)
+        self.assertIn('def create_fresh(app,storage,user,work):',text)
+        self.assertIn('def encrypt(work,cipher):',text)
+
+    def test_prior_stale_pin_is_rejected_by_audit(self):
+        observed_old="b594d46d2dc2dd8dec3feaea829934c34b72bde45cb836fe23d3066a9eb5f880"
+        self.assertNotEqual(observed_old,m.V3_INSTALLED_SHA)
+        values={str(m.BASE/name):sha for name,sha in m.PINS.items()}
+        values[str(m.V3_INSTALLED)]=observed_old
+        values[str(m.V3_PARENT)]=m.V3_PARENT_SHA
+        values[str(m.HEALTH)]=m.HEALTH_SHA
+        with mock.patch.object(m,"bound_root_digest",side_effect=lambda path:values[str(path)]):
+            output=io.StringIO()
+            with contextlib.redirect_stdout(output):
+                result=m.audit_root_pins()
+        self.assertEqual(result,4)
+        self.assertIn("INSTALLED_V3_PIN=SHA_MISMATCH",output.getvalue())
+        self.assertIn("RESULT=ROOT_PIN_AUDIT_BLOCKED",output.getvalue())
 
     def test_runtime_is_validated_before_dangerous_operations(self):
         routine=SOURCE.split("def run_once():",1)[1].split("\ndef selftest():",1)[0]
