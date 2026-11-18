@@ -49,8 +49,8 @@ class OwnerV3TimerTests(unittest.TestCase):
         self.assertIn("PrivateTmp=true",m.SERVICE_TEXT)
         self.assertNotIn("ExecStartPost=",m.SERVICE_TEXT)
 
-    def test_calendar_is_twice_daily_no_immediate_catchup(self):
-        self.assertIn("OnCalendar=*-*-* 03:45:00",m.TIMER_TEXT)
+    def test_calendar_is_one_daily_window_no_immediate_catchup(self):
+        self.assertEqual(m.TIMER_TEXT.count("OnCalendar="),1)
         self.assertIn("OnCalendar=*-*-* 15:45:00",m.TIMER_TEXT)
         self.assertIn("Persistent=false",m.TIMER_TEXT)
         self.assertIn("Unit="+m.SERVICE,m.TIMER_TEXT)
