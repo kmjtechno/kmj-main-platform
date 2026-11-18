@@ -243,6 +243,29 @@ final class KslpDeveloperAppsTest extends TestCase
                 ->where('newKeys', null));
     }
 
+    public function test_trial_batch_service_rejects_nonstring_customers_before_writes(): void
+    {
+        [$owner, $org] = $this->owner('Strict Batch Boundary');
+        $this->enroll($org);
+        app(KslpIssuerSubscriptionAuthority::class)
+            ->registerProduct($org, 'VENDOR.STRICTBATCH', 'Strict Batch');
+
+        try {
+            app(KslpDeveloperKeys::class)->issueTrialBatch(
+                $org, 'VENDOR.STRICTBATCH',
+                ['customer-allowed', 123],
+                (string) $owner->id,
+                'Reject nonstring customer references safely',
+            );
+            self::fail('A nonstring customer reference must never be issued a key.');
+        } catch (DomainException $exception) {
+            self::assertSame('KSLP_TRIAL_BATCH_CUSTOMER_INVALID', $exception->getMessage());
+        }
+
+        $this->assertDatabaseCount('kslp_license_keys', 0);
+        $this->assertDatabaseCount('kslp_licenses', 0);
+    }
+
     public function test_trial_batch_rejects_duplicate_customers_before_issuing_any_key(): void
     {
         [$owner, $org] = $this->owner('Duplicate Batch');
