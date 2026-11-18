@@ -112,6 +112,102 @@ pub fn verify(
 mod tests {
     use super::*;
     use base64::engine::general_purpose::STANDARD;
+    use ed25519_dalek::{Signer, SigningKey};
+    use serde_json::{Value, json};
+
+    // Deterministic key is exclusively a synthetic test fixture, never an
+    // issuer private key or a deployment value.
+    fn fixture_claims() -> Value {
+        json!({
+            "protocol_version": "KSLP-v1",
+            "license_id": "test-license",
+            "customer_id": "test-customer",
+            "product": "KMJ_CLOUDOS",
+            "plan": "trial",
+            "server_identity": "ed25519:test-device",
+            "activation_id": "test-activation",
+            "features": {"hosting": true},
+            "limits": {"nodes": 1},
+            "iat": 1800000000,
+            "nbf": 1799999995,
+            "exp": 1800003600,
+            "sequence": 1,
+            "nonce": "test-nonce",
+            "kid": "unit-test-kid",
+            "jti": "unit-test-jti",
+            "aud": "kmj-cloudos",
+            "grace_until": 1800007200
+        })
+    }
+
+    fn sign_test_claims(value: &Value) -> (String, [u8; 32]) {
+        let signing = SigningKey::from_bytes(&[13u8; 32]);
+        let header = json!({"alg": "EdDSA", "kid": "unit-test-kid", "typ": "KSLP-v1"});
+        let signed = format!(
+            "{}.{}",
+            URL_SAFE_NO_PAD.encode(serde_json::to_vec(&header).unwrap()),
+            URL_SAFE_NO_PAD.encode(serde_json::to_vec(value).unwrap())
+        );
+        let signature = signing.sign(signed.as_bytes());
+        let token = format!("{}.{}", signed, URL_SAFE_NO_PAD.encode(signature.to_bytes()));
+        (token, signing.verifying_key().to_bytes())
+    }
+
+    #[test]
+    fn strict_signed_v1_claim_types_and_audience_fail_closed() {
+        let mut claims = fixture_claims();
+        let (good_token, pk) = sign_test_claims(&claims);
+        assert!(verify(
+            &good_token,
+            &pk,
+            "unit-test-kid",
+            "KMJ_CLOUDOS",
+            "ed25519:test-device",
+            1800000000,
+        ).is_ok());
+
+        let invalid = [
+            ("aud", json!("kmj-omnidesk"), "KSLP_WRONG_AUDIENCE"),
+            ("exp", json!("1800003600"), "KSLP_MALFORMED"),
+            ("sequence", json!(0), "KSLP_MALFORMED"),
+            ("nbf", json!(1800000001), "KSLP_MALFORMED"),
+            ("license_id", json!(""), "KSLP_MALFORMED"),
+            ("exp", json!(1799999999), "KSLP_EXPIRED"),
+        ];
+        for (field, bad, expected_error) in invalid {
+            claims[field] = bad;
+            let (token, key) = sign_test_claims(&claims);
+            assert_eq!(
+                verify(
+                    &token,
+                    &key,
+                    "unit-test-kid",
+                    "KMJ_CLOUDOS",
+                    "ed25519:test-device",
+                    1800000000
+                ),
+                Err(expected_error),
+                "KSLP-v1 field {field} did not fail closed"
+            );
+            claims = fixture_claims();
+        }
+
+        claims["unsigned_entitlement_override"] = json!(true);
+        let (extra_token, extra_pk) = sign_test_claims(&claims);
+        assert_eq!(
+            verify(&extra_token, &extra_pk, "unit-test-kid", "KMJ_CLOUDOS", "ed25519:test-device", 1800000000),
+            Err("KSLP_MALFORMED")
+        );
+    }
+
+    #[test]
+    fn oversized_token_is_rejected_before_parsing_or_key_access() {
+        assert_eq!(
+            verify(&"A".repeat(MAX_TOKEN_BYTES + 1), &[], "unit-test-kid", "KMJ_CLOUDOS", "ed25519:test-device", 1800000000),
+            Err("KSLP_MALFORMED")
+        );
+    }
+
     #[derive(Deserialize)]
     struct Vector {
         now: i64,
