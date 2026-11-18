@@ -142,7 +142,13 @@ Route::get('operator/kslp', function (Request $request, PlatformOwnerAccess $acc
             'trials' => DB::table('kslp_licenses')->where('plan', 'trial')->count(),
             'activations' => DB::table('kslp_activations')->whereNull('deactivated_at')->count(),
             'revoked' => DB::table('kslp_licenses')->whereNotNull('revoked_at')->count(),
-            'issuerSubscriptions' => DB::table('kslp_issuer_subscriptions')->where('status', 'active')->count(),
+            // Effective active issuers: expired subscriptions are not eligible
+            // even if the historical status column is still "active".
+            'issuerSubscriptions' => DB::table('kslp_issuer_subscriptions')
+                ->where('status', 'active')
+                ->where(fn ($query) => $query->whereNull('current_period_end')
+                    ->orWhere('current_period_end', '>', now()))
+                ->count(),
         ],
         'licenses' => $licenses,
         'issuerWorkspaces' => $issuerWorkspaces,
