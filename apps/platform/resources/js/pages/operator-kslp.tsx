@@ -34,6 +34,17 @@ type ProductEntitlement = {
     ends_at: string | null;
 };
 
+type IssuerWorkspace = {
+    id: string;
+    name: string;
+    issuer_status: string;
+    tier: string | null;
+    registered_apps: number;
+    product_limit: number;
+    monthly_issue_limit: number;
+    current_period_end: string | null;
+};
+
 type Event = {
     id: number;
     license_id: string;
@@ -58,6 +69,8 @@ type Props = {
     matchingCount: number;
     customerOptions: { id: string; name: string; email: string }[];
     productEntitlements: ProductEntitlement[];
+    issuerWorkspaces: IssuerWorkspace[];
+    developerIssuanceEnabled: boolean;
 };
 
 export default function OperatorKslp({
@@ -68,6 +81,8 @@ export default function OperatorKslp({
     matchingCount,
     customerOptions,
     productEntitlements,
+    issuerWorkspaces,
+    developerIssuanceEnabled,
 }: Props) {
     const [actionReason, setActionReason] = useState('');
     const [customerQuery, setCustomerQuery] = useState(filters.customer_q);
@@ -135,6 +150,7 @@ export default function OperatorKslp({
                 >
                     {[
                         ['#license-overview', 'Overview'],
+                        ['#issuer-workspaces', 'Developer issuers'],
                         ['#license-issue', 'Issue license'],
                         ['#license-search', 'Find customer'],
                         ['#license-register', 'Manage plans'],
@@ -185,6 +201,103 @@ export default function OperatorKslp({
                             <div className="mt-2 text-2xl font-black">{v}</div>
                         </div>
                     ))}
+                </section>
+                <section
+                    id="issuer-workspaces"
+                    aria-label="Developer issuer organizations"
+                    className="bg-card scroll-mt-6 rounded-2xl border p-5"
+                >
+                    <div className="flex flex-wrap items-start justify-between gap-4">
+                        <div>
+                            <h2 className="font-bold">
+                                Developer issuer organizations
+                            </h2>
+                            <p className="text-muted-foreground mt-1 max-w-3xl text-xs leading-5">
+                                AuthSP-style application and developer workflow
+                                visibility. These are issuer subscription and
+                                registered-app records, not commercial customer
+                                licenses. Active KSLP licenses above do not
+                                automatically entitle an organization to create
+                                apps or generate customer keys.
+                            </p>
+                        </div>
+                        <a
+                            href="/developer/apps"
+                            className="inline-flex min-h-10 items-center rounded-lg border px-3 text-xs font-bold hover:border-red-500/40"
+                        >
+                            Open Developer Apps &amp; Keys
+                        </a>
+                    </div>
+                    <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                        <div className="rounded-xl border p-3">
+                            <p className="text-muted-foreground text-xs">
+                                Developer self-service release gate
+                            </p>
+                            <p className="mt-1 text-sm font-bold">
+                                {developerIssuanceEnabled
+                                    ? 'Enabled for eligible subscribed issuers'
+                                    : 'Protected rollout — disabled'}
+                            </p>
+                        </div>
+                        <div className="rounded-xl border p-3">
+                            <p className="text-muted-foreground text-xs">
+                                Active issuer subscriptions
+                            </p>
+                            <p className="mt-1 text-sm font-bold">
+                                {metrics.issuerSubscriptions} · distinct from
+                                { ' ' }{metrics.active} active commercial licenses
+                            </p>
+                        </div>
+                    </div>
+                    <div className="mt-4 overflow-x-auto">
+                        <table className="w-full min-w-[740px] text-left text-xs">
+                            <thead className="text-muted-foreground">
+                                <tr>
+                                    {[
+                                        'Organization',
+                                        'Issuer status',
+                                        'Tier',
+                                        'Apps / limit',
+                                        'Monthly issue quota',
+                                        'Period end',
+                                    ].map((name) => (
+                                        <th className="border-b px-3 py-2" key={name}>
+                                            {name}
+                                        </th>
+                                    ))}
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {issuerWorkspaces.map((issuer) => (
+                                    <tr className="border-b last:border-0" key={issuer.id}>
+                                        <td className="px-3 py-3 font-semibold">
+                                            {issuer.name}
+                                        </td>
+                                        <td className="px-3 py-3">{issuer.issuer_status}</td>
+                                        <td className="px-3 py-3">{issuer.tier ?? '—'}</td>
+                                        <td className="px-3 py-3">
+                                            {issuer.registered_apps} / {issuer.product_limit}
+                                        </td>
+                                        <td className="px-3 py-3">{issuer.monthly_issue_limit}</td>
+                                        <td className="px-3 py-3">
+                                            {issuer.current_period_end ?? '—'}
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                        {issuerWorkspaces.length === 0 && (
+                            <p className="text-muted-foreground p-4 text-xs">
+                                No issuer organizations available.
+                            </p>
+                        )}
+                    </div>
+                    <p className="text-muted-foreground mt-3 text-xs">
+                        Read-only, first 60 organizations. Subscription approval,
+                        reseller quotas, commercial settlement, and customer
+                        key issuance require their separate verified workflows.
+                        This table cannot grant licenses or unlock the release gate.
+                    </p>
                 </section>
                 <section
                     id="license-issue"
