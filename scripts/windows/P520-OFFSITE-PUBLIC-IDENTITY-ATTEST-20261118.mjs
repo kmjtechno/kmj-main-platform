@@ -93,6 +93,8 @@ function main(args) {
   console.log('P520_PRIVATE_FILES_ACL=PASS');
   console.log('P520_AGE_PUBLIC_RECIPIENT='+EXPECTED_AGE_RECIPIENT);
   console.log('P520_SIGNING_PUBLIC_PEM_SHA256='+pin);
+  // Ed25519 SPKI PEM is PUBLIC; emit a transport-safe handoff for owner pinning.
+  console.log('P520_SIGNING_PUBLIC_PEM_BASE64='+pub.toString('base64'));
   console.log('PRIVATE_KEY_CONTENT_EXPOSED=NO');
   console.log('ELITE_OWNER_PIN_OF_PUBLIC_KEYS=NOT_YET_VERIFIED');
   console.log('P520_NEW_CANDIDATE_ENCRYPTED_BACKUP=NOT_YET_VERIFIED');
