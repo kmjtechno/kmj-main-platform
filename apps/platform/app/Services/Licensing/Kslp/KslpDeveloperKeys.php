@@ -66,7 +66,7 @@ final class KslpDeveloperKeys
      * licenses or audit events are committed. The returned plaintext secrets
      * are flashed once by the authenticated controller and never stored here.
      *
-     * @param list<string> $customerIds
+     * @param  list<string>  $customerIds
      * @return list<array{customer_id: string, key: string, license_id: string, product_code: string}>
      */
     public function issueTrialBatch(
