@@ -72,6 +72,21 @@ pub fn verify(
     let pb = URL_SAFE_NO_PAD
         .decode(parts[1])
         .map_err(|_| "KSLP_MALFORMED")?;
+
+    // The PHP issuer signs recursively key-sorted, compact JSON. Compare the
+    // verified wire bytes against that exact canonical profile BEFORE parsing
+    // entitlement fields: duplicate object names (including nested members)
+    // and alternate JSON spellings cannot acquire parser-specific meaning.
+    // serde_json::Map uses sorted keys in our locked dependency profile.
+    for bytes in [&hb[..], &pb[..]] {
+        let value: serde_json::Value =
+            serde_json::from_slice(bytes).map_err(|_| "KSLP_MALFORMED")?;
+        let canonical = serde_json::to_vec(&value).map_err(|_| "KSLP_MALFORMED")?;
+        if canonical.as_slice() != bytes {
+            return Err("KSLP_MALFORMED");
+        }
+    }
+
     let c: Claims = serde_json::from_slice(&pb).map_err(|_| "KSLP_MALFORMED")?;
     if c.protocol_version != KSLP_V1 || c.kid != h.kid {
         return Err("KSLP_MALFORMED");
