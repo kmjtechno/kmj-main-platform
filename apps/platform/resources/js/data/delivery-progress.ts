@@ -10,6 +10,14 @@ export type DeliveryMilestone = {
 
 export const deliveryMilestones: DeliveryMilestone[] = [
     {
+        id: 'authsp-licensing-unified-role-workflow-20261118',
+        title: 'Licensing Hub — reconcile AuthSP owner and developer workflows without new issuance',
+        state: 'active',
+        detail: 'Source-only draft PR #892 uses the owner-provided AuthSP archive as a workflow reference, not a deployable PHP/MySQL backend. It adds owner-only read-only issuer organization readiness, registered app/quota visibility and explicit separate developer global rollout/issuer subscription gates. The developer page shows current expiry and only a verified passkey owner receives the Super Admin navigation. The two pages remain role-filtered projections of one KSLP authority; a CloudOS license never implies an issuer subscription. Full AuthSP application lifecycle, bulk keys, device transfer, reseller settlement and signed per-language SDKs are NOT complete.',
+        evidence:
+            'Archive inventory confirms legacy application, license, subscription, reseller, user and SDK pages. New owner/developer feature tests cover active, unsubscribed and expired issuer status, owner-only navigation, tenant safety, and no new commercial license created by read-only views. Exact-head CI, real staging owner/browser QA, validated payment entitlements, SDK conformance, independent backups and protected release approval remain separate; production unchanged.',
+    },
+    {
         id: 'codebridge-openrouter-price-filtered-model-discovery-20261116',
         title: 'OpenRouter — price-filtered GET models without admitting paid inference',
         state: 'active',
