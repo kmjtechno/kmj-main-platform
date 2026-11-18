@@ -196,6 +196,7 @@ final class OwnerLicensingCenterHttpTest extends TestCase
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->component('operator-kslp')
+                ->where('metrics.issuerSubscriptions', 0)
                 ->where('issuerWorkspaces', fn ($items): bool => collect($items)
                     ->contains(fn ($issuer): bool => $issuer['name'] === 'Expired Issuer Example'
                         && $issuer['issuer_status'] === 'expired')));
