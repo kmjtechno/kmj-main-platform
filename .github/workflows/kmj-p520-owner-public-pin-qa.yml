@@ -1,0 +1,38 @@
+name: KMJ P520 Elite Public Identity Pin Safety QA
+
+on:
+  pull_request:
+    paths:
+      - 'scripts/operations/kmj-p520-owner-public-pin-20261118.sh'
+      - 'scripts/operations/p520-owner-observed-public-key-20261118.pem'
+      - 'scripts/operations/p520-owner-observed-public-identity-20261118.json'
+      - 'scripts/operations/test-p520-owner-public-pin-20261118.mjs'
+      - '.github/workflows/kmj-p520-owner-public-pin-qa.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  public-pin-qa:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-2025, ubuntu-24.04]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 8
+    steps:
+      - name: Exact SHA source checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - name: Public identity PEM fingerprint, installer and negative host tests
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          test "$(git rev-parse HEAD)" = "${{ github.event.pull_request.head.sha || github.sha }}"
+          node --test scripts/operations/test-p520-owner-public-pin-20261118.mjs
+          echo 'ACTUAL_ELITE_PUBLIC_PIN_INSTALL=NOT_EXECUTED'
+          echo 'PRIVATE_P520_KEYS_COPIED=NO'
+          echo 'PRODUCTION_RELEASE_APPROVAL=NOT_GRANTED'
