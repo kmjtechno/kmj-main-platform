@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 use App\Models\User;
 use App\Services\AuthorityBootstrapper;
-use App\Services\PlatformOwnerAccess;
 use App\Services\Licensing\Kslp\KslpDeveloperKeys;
 use App\Services\Licensing\Kslp\KslpIssuerSubscriptionAuthority;
 use App\Services\Licensing\Kslp\KslpLicenseControlPlane;
+use App\Services\PlatformOwnerAccess;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
