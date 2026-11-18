@@ -187,7 +187,14 @@ export default function DeveloperApps({
     const [selectedApp, setSelectedApp] = useState<string>('');
     const [copied, setCopied] = useState(false);
     const [revokeKeyId, setRevokeKeyId] = useState<string | null>(null);
+    const [manageAppId, setManageAppId] = useState<string | null>(null);
     const revokeForm = useForm({ reason: '' });
+    const manageAppForm = useForm({
+        organization_id: '',
+        action: 'pause',
+        name: '',
+        reason: '',
+    });
     const createOrganization = useForm({ name: '' });
     const createApp = useForm({
         organization_id: organizations[0]?.id ?? '',
@@ -788,6 +795,121 @@ export default function DeveloperApps({
                                         <p className="text-muted-foreground mt-1 font-mono text-xs">
                                             {app.product_code}
                                         </p>
+                                        {(app.status === 'active' ||
+                                            (canIssueKeys && app.status === 'paused')) && (
+                                            <button
+                                                type="button"
+                                                className="mt-3 min-h-10 rounded-lg border px-3 text-xs font-bold"
+                                                onClick={() => {
+                                                    if (manageAppId === app.id) {
+                                                        setManageAppId(null);
+                                                        return;
+                                                    }
+                                                    setManageAppId(app.id);
+                                                    manageAppForm.clearErrors();
+                                                    manageAppForm.setData({
+                                                        organization_id: app.organization_id,
+                                                        action:
+                                                            app.status === 'active'
+                                                                ? 'pause'
+                                                                : 'resume',
+                                                        name: app.name,
+                                                        reason: '',
+                                                    });
+                                                }}
+                                            >
+                                                {manageAppId === app.id
+                                                    ? 'Close'
+                                                    : 'Manage application'}
+                                            </button>
+                                        )}
+                                        {manageAppId === app.id && (
+                                            <form
+                                                className="mt-3 space-y-3 border-t pt-3"
+                                                onSubmit={(event) => {
+                                                    event.preventDefault();
+                                                    manageAppForm.post(
+                                                        '/developer/apps/' + app.id + '/manage',
+                                                        {
+                                                            preserveScroll: true,
+                                                            onSuccess: () => {
+                                                                setManageAppId(null);
+                                                                manageAppForm.reset();
+                                                            },
+                                                        },
+                                                    );
+                                                }}
+                                            >
+                                                <label className="block text-xs font-semibold" htmlFor={'app-action-' + app.id}>
+                                                    Action
+                                                </label>
+                                                <select
+                                                    id={'app-action-' + app.id}
+                                                    className="bg-background h-10 w-full rounded-lg border px-3 text-sm"
+                                                    value={manageAppForm.data.action}
+                                                    onChange={(event) =>
+                                                        manageAppForm.setData('action', event.target.value)
+                                                    }
+                                                >
+                                                    {canIssueKeys && <option value="rename">Rename display name</option>}
+                                                    {app.status === 'active' && (
+                                                        <option value="pause">Pause online issuance</option>
+                                                    )}
+                                                    {canIssueKeys && app.status === 'paused' && (
+                                                        <option value="resume">Resume online issuance</option>
+                                                    )}
+                                                </select>
+                                                {manageAppForm.data.action === 'rename' && (
+                                                    <>
+                                                        <label className="block text-xs font-semibold" htmlFor={'app-name-' + app.id}>
+                                                            Display name (product code cannot change)
+                                                        </label>
+                                                        <input
+                                                            id={'app-name-' + app.id}
+                                                            className="bg-background h-10 w-full rounded-lg border px-3 text-sm"
+                                                            maxLength={160}
+                                                            minLength={2}
+                                                            required
+                                                            value={manageAppForm.data.name}
+                                                            onChange={(event) =>
+                                                                manageAppForm.setData('name', event.target.value)
+                                                            }
+                                                        />
+                                                    </>
+                                                )}
+                                                <label className="block text-xs font-semibold" htmlFor={'app-reason-' + app.id}>
+                                                    Audit reason
+                                                </label>
+                                                <textarea
+                                                    id={'app-reason-' + app.id}
+                                                    className="bg-background w-full rounded-lg border px-3 py-2 text-sm"
+                                                    rows={2}
+                                                    minLength={8}
+                                                    maxLength={240}
+                                                    required
+                                                    value={manageAppForm.data.reason}
+                                                    onChange={(event) =>
+                                                        manageAppForm.setData('reason', event.target.value)
+                                                    }
+                                                />
+                                                {Object.values(manageAppForm.errors).map((error, index) => (
+                                                    <p className="text-xs text-red-500" key={index}>
+                                                        {error}
+                                                    </p>
+                                                ))}
+                                                <p className="text-muted-foreground text-xs">
+                                                    Pause blocks new keys and online bootstrap redemption.
+                                                    Existing offline-signed leases expire on their own schedule.
+                                                </p>
+                                                <button
+                                                    type="submit"
+                                                    disabled={manageAppForm.processing}
+                                                    className="min-h-10 rounded-lg bg-red-600 px-3 text-xs font-bold text-white disabled:opacity-50"
+                                                >
+                                                    {manageAppForm.processing ? 'Applying…' : 'Confirm audited action'}
+                                                </button>
+                                            </form>
+                                        )}
                                     </article>
                                 ))
                             )}
