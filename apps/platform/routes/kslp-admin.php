@@ -6,6 +6,7 @@ use App\Services\PlatformOwnerAccess;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
 
@@ -90,6 +91,50 @@ Route::get('operator/kslp', function (Request $request, PlatformOwnerAccess $acc
             'entitlement.ends_at',
         ]);
 
+    // One commercial KSLP authority, with separate bounded role views.
+    // A KSLP license count is NOT a developer issuer subscription count.
+    // Owner may inspect issuer organization readiness but this read-only view
+    // does not grant a tier, create an app, enable a flag or issue a key.
+    $issuerOrganizations = DB::table('organizations as organization')
+        ->leftJoin('kslp_issuer_subscriptions as issuer', 'issuer.organization_id', '=', 'organization.id')
+        ->orderBy('organization.name')
+        ->limit(60)
+        ->get([
+            'organization.id',
+            'organization.name',
+            'issuer.tier',
+            'issuer.status as issuer_status',
+            'issuer.product_limit',
+            'issuer.monthly_issue_limit',
+            'issuer.current_period_end',
+        ]);
+    $issuerOrganizationIds = $issuerOrganizations->pluck('id')->all();
+    $issuerAppCounts = $issuerOrganizationIds === []
+        ? collect()
+        : DB::table('kslp_licensed_products')
+            ->whereIn('organization_id', $issuerOrganizationIds)
+            ->selectRaw('organization_id, count(*) as aggregate')
+            ->groupBy('organization_id')
+            ->pluck('aggregate', 'organization_id');
+    $issuerWorkspaces = $issuerOrganizations->map(function ($organization) use ($issuerAppCounts): array {
+        $status = (string) ($organization->issuer_status ?? 'not_subscribed');
+        if ($status === 'active' && $organization->current_period_end
+            && Carbon::parse($organization->current_period_end)->isPast()) {
+            $status = 'expired';
+        }
+
+        return [
+            'id' => (string) $organization->id,
+            'name' => (string) $organization->name,
+            'issuer_status' => $status,
+            'tier' => $organization->tier === null ? null : (string) $organization->tier,
+            'registered_apps' => (int) $issuerAppCounts->get((string) $organization->id, 0),
+            'product_limit' => (int) ($organization->product_limit ?? 0),
+            'monthly_issue_limit' => (int) ($organization->monthly_issue_limit ?? 0),
+            'current_period_end' => $organization->current_period_end,
+        ];
+    })->all();
+
     return Inertia::render('operator-kslp', [
         'metrics' => [
             'licenses' => DB::table('kslp_licenses')->count(),
@@ -100,6 +145,8 @@ Route::get('operator/kslp', function (Request $request, PlatformOwnerAccess $acc
             'issuerSubscriptions' => DB::table('kslp_issuer_subscriptions')->where('status', 'active')->count(),
         ],
         'licenses' => $licenses,
+        'issuerWorkspaces' => $issuerWorkspaces,
+        'developerIssuanceEnabled' => Schema::hasTable('kslp_license_keys') && (bool) config('services.kmj_developer_licensing.enabled', false),
         'productEntitlements' => $entitlements,
         'filters' => ['customer_q' => $search, 'plan' => $plan],
         'matchingCount' => $matchingCount,
