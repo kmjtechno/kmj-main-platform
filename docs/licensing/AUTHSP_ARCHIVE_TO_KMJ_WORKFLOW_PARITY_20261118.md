@@ -1,4 +1,6 @@
-# AuthSP archive → KMJ Licensing Hub: verified workflow parity
+# AuthSP source-to-UI reconciliation — 18 Nov 2026
+
+> **Canonical workflow lock:** [AUTHSP_LEGACY_WORKFLOW_PARITY_LOCK_20261028.md](./AUTHSP_LEGACY_WORKFLOW_PARITY_LOCK_20261028.md) (merged PR #649, tracked by issue #650). That document defines the complete owner-approved task order and parity obligations. **This page is only the 18 Nov archive/source/screenshot implementation delta**, not a second authority or a replacement workflow specification.
 
 Owner requirement (18 Nov 2026): retain the **complete useful legacy user workflow** while using the modern Main Platform / KSLP authority, approved enterprise design and safer signed licensing. This is a **source inventory and staged parity contract**, not evidence that every feature is deployed.
 
