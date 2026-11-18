@@ -61,8 +61,15 @@ final class KslpCodec
 
     private static function unb64(string $v): string
     {
+        // KSLP-v1 uses *unpadded* base64url, exactly as the Rust verifier and
+        // existing signed golden vector. Accept no alphabet/padding aliases or
+        // non-zero unused bits that could create multiple token spellings.
+        if ($v === '' || strlen($v) % 4 === 1 || preg_match('/\A[A-Za-z0-9_-]+\z/', $v) !== 1) {
+            throw new DomainException('KSLP_MALFORMED');
+        }
+
         $x = base64_decode(strtr($v, '-_', '+/'), true);
-        if ($x === false) {
+        if ($x === false || ! hash_equals($v, self::b64($x))) {
             throw new DomainException('KSLP_MALFORMED');
         }
 
