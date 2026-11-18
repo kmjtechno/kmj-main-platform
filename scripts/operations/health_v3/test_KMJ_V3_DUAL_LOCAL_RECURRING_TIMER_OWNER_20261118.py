@@ -80,11 +80,23 @@ class OwnerV3TimerTests(unittest.TestCase):
             system.assert_not_called()
             self.assertIn("OWNER_APPROVAL_REQUIRED",output.getvalue())
 
-    def test_stale_or_writable_source_denies_before_unit_install(self):
-        with mock.patch.object(m,"read_exact",side_effect=m.Deny("SOURCE_SHA_MISMATCH")) as read,\
+    def test_stale_source_denies_before_unit_install(self):
+        ready={(m.ORIGINAL_SERVICE,"LoadState"):"loaded",
+               (m.ORIGINAL_SERVICE,"Type"):"oneshot",
+               (m.ORIGINAL_TIMER,"LoadState"):"loaded",
+               (m.ORIGINAL_TIMER,"ActiveState"):"active",
+               (m.ORIGINAL_HEALTH,"LoadState"):"loaded",
+               (m.ORIGINAL_HEALTH,"Result"):"success",
+               (m.ORIGINAL_HEALTH,"ExecMainStatus"):"0",
+               (m.SERVICE,"LoadState"):"not-found",
+               (m.TIMER,"LoadState"):"not-found"}
+        with mock.patch.object(m,"guard_dir"),\
+             mock.patch.object(m,"prop",side_effect=lambda u,k:ready[(u,k)]),\
+             mock.patch.object(m.os.path,"lexists",return_value=False),\
+             mock.patch.object(m,"read_exact",side_effect=m.Deny("SOURCE_SHA_MISMATCH")),\
              mock.patch.object(m,"no_clobber_install") as writer:
-            with self.assertRaises(m.Deny):
-                m.verify_existing_baseline() if False else read(m.SOURCE,m.PIN)
+            with self.assertRaisesRegex(m.Deny,"SOURCE_SHA_MISMATCH"):
+                m.verify_existing_baseline()
             writer.assert_not_called()
 
     def test_source_is_opened_without_following_symlinks(self):
@@ -118,7 +130,7 @@ class OwnerV3TimerTests(unittest.TestCase):
 
     def test_systemd_service_is_not_claimed_pass_before_first_run(self):
         self.assertIn("FIRST_SCHEDULED_DUAL_LOCAL_BACKUP=NOT_YET_VERIFIED",BODY)
-        self.assertIn("NO_NEW",BODY.replace("NoNewPrivileges","NO_NEW") if False else "NO_NEW")
+        self.assertIn("NoNewPrivileges=true",m.SERVICE_TEXT)
         self.assertNotIn("FRESH_REMOTE_SFTP_SHA_READBACK=PASS",BODY)
 
 
