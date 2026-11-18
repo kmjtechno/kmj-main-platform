@@ -14,26 +14,26 @@
 ## Implemented application lifecycle slice (source only)
 
 - **Rename** changes display name only; product_code remains immutable because existing signed entitlements bind to that code.
-- **Pause** can be executed with a valid organization \`license.manage\` capability plus recent password step-up even if the developer rollout flag is OFF or issuer subscription expired. The server takes an issuer row lock before the product lock and commits the change with a bounded actor/reason/action audit event.
+- **Pause** can be executed with a valid organization `license.manage` capability plus recent password step-up even if the developer rollout flag is OFF or issuer subscription expired. The server takes an issuer row lock before the product lock and commits the change with a bounded actor/reason/action audit event.
 - **Resume** and rename additionally demand a currently active, unexpired issuer subscription and the global rollout flag. Missing/unknown app or state fails closed.
-- Delegated trial issuance rechecks active product under the same issuer lock; online bootstrap key resolution already filters by \`p.status = active\`. Exactly repeated changes do not create redundant audit events.
+- Delegated trial issuance rechecks active product under the same issuer lock; online bootstrap key resolution already filters by `p.status = active`. Exactly repeated changes do not create redundant audit events.
 - **No data loss:** pause does not delete licenses, keys, customer accounts, devices, issuer subscriptions or existing activations, and does not mutate the primary protected deployment.
 
 ### Important limitation of this first slice
 
-Pausing a developer app **does not immediately invalidate an already-issued, independently signed offline lease**; the contract must define short signed lease expiry, renewal authorization checks, revocation sequence and client conformance tests. Current \`license_audit_events\` rows are transactional database records, **not cryptographically tamper-evident append-only WORM records**. Those require a separately reviewed design and key custody. The existing direct license activation/lease paths must also be examined for issuer/product-policy consistency; do not claim end-to-end revocation before those checks and negative tests pass.
+Pausing a developer app **does not immediately invalidate an already-issued, independently signed offline lease**; the contract must define short signed lease expiry, renewal authorization checks, revocation sequence and client conformance tests. Current `license_audit_events` rows are transactional database records, **not cryptographically tamper-evident append-only WORM records**. Those require a separately reviewed design and key custody. The stacked draft now adds current issuer/product policy checks to direct delegated activation, idempotent activation replay and CloudOS-audience lease signing. The direct activation transaction locks the issuer row to serialize with emergency pause. Exact-head negative tests and device-SDK end-to-end review are still required; do not claim immediate offline revocation or zero-bypass licensing.
 
 ## Legacy AuthSP mapping (navigation only)
 
-- \`manage-apps.php\` → developer app create/list/rename/pause/resume under server RBAC.
-- \`licenses.php\` / \`users.php\` → governed trial/commercial license and customer/device journeys with issuer and payment truth.
-- \`manage-accs.php\` / \`reseller-licenses.php\` → scoped owner-reviewed delegated reseller roles, settlement/quota ledgers and audit (still pending).
-- \`sdk-downloads.php\` → **real** signed-verifier SDK releases with cross-language conformance vectors (still pending).
-- \`billing.php\` → verified provider transaction → entitlement → license; never generate commercial keys from unverified payments.
+- `manage-apps.php` → developer app create/list/rename/pause/resume under server RBAC.
+- `licenses.php` / `users.php` → governed trial/commercial license and customer/device journeys with issuer and payment truth.
+- `manage-accs.php` / `reseller-licenses.php` → scoped owner-reviewed delegated reseller roles, settlement/quota ledgers and audit (still pending).
+- `sdk-downloads.php` → **real** signed-verifier SDK releases with cross-language conformance vectors (still pending).
+- `billing.php` → verified provider transaction → entitlement → license; never generate commercial keys from unverified payments.
 
 ## Release acceptance
 
 - Exact-head secure PHP and TypeScript tests, real PostgreSQL transaction/race and tenant-negative tests; independent verifier cross-language vector and replay/rollback tests.
-- Full npm production audit must be green; \`GHSA-fc5q-39xc-vjpf\` currently blocks the parent PR, tracked by issue #893. Never use \`--force\`, disable audits or claim an upstream fix that has not been independently validated.
+- Full npm production audit must be green; `GHSA-fc5q-39xc-vjpf` currently blocks the parent PR, tracked by issue #893. Never use `--force`, disable audits or claim an upstream fix that has not been independently validated.
 - Authenticated owner/developer/customer browser workflows, isolated backup/decrypt/PG+uploads restore, owner-approved protected staging and production rollout with observed live pointer, tested rollback and verified receipts.
 - Source PR #892 and issue #650 remain authoritative for the outstanding complete parity scope; this document does not claim those workflows implemented.
