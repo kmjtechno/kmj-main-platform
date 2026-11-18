@@ -92,7 +92,7 @@ def bundle_source():
 # Immutable installed V3 source, not an unreviewed project checkout.
 # SHA comes from the trusted V3 installed implementation receipt contract.
 V3_INSTALLED=Path("/usr/local/libexec/kmj-offsite-fresh-x25519-v3-20261112.py")
-V3_INSTALLED_SHA="b594d46d2dc2dd8dec3feaea829934c34b72bde45cb836fe23d3066a9eb5f880"
+V3_INSTALLED_SHA="2834ff3361027536bee0b971fae6dddb00677460f15adf3e8d81e7821853016f"
 V3_PARENT_NAME="KMJ_OFFSITE_SFTP_DNS_PINNED_V2_20261112.py"
 V3_PARENT_SHA="8f9165714774758a6bef05abff7bf72d655518ab7ed1c3cdd8dc588d3c85c13c"
 V3_PARENT=V3_INSTALLED.with_name(V3_PARENT_NAME)
@@ -576,7 +576,7 @@ def selftest():
         except Deny:pass
         else:raise AssertionError("BAD_HEALTH_FIND_ADMITTED")
     assert len(PINS)==6 and len(set(PINS.values()))==6
-    assert V3_INSTALLED_SHA=="b594d46d2dc2dd8dec3feaea829934c34b72bde45cb836fe23d3066a9eb5f880"
+    assert V3_INSTALLED_SHA=="2834ff3361027536bee0b971fae6dddb00677460f15adf3e8d81e7821853016f"
     assert V3_PARENT_SHA=="8f9165714774758a6bef05abff7bf72d655518ab7ed1c3cdd8dc588d3c85c13c"
     assert all(callable(x) for x in (admit_exact_installed_v3,runtime_sources,run_once))
     assert V3_INSTALLED.parent==V3_PARENT.parent
