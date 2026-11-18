@@ -275,6 +275,172 @@ final class KslpDeveloperAppsTest extends TestCase
         $this->assertDatabaseCount('kslp_licenses', 0);
     }
 
+    public function test_application_rename_preserves_immutable_code_and_audits_once(): void
+    {
+        [$owner, $org] = $this->owner('Secure App Rename');
+        $this->enroll($org);
+        $product = app(KslpIssuerSubscriptionAuthority::class)
+            ->registerProduct($org, 'VENDOR.RENAME', 'Old Application');
+        $request = [
+            'organization_id' => $org,
+            'action' => 'rename',
+            'name' => 'Updated Application',
+            'reason' => 'Approved customer-facing display name correction',
+        ];
+
+        $this->actingAs($owner)->withSession(['auth.password_confirmed_at' => time()])
+            ->post('/developer/apps/'.$product['id'].'/manage', $request)
+            ->assertRedirect(route('developer.apps.index'));
+        $this->assertDatabaseHas('kslp_licensed_products', [
+            'id' => $product['id'],
+            'organization_id' => $org,
+            'product_code' => 'VENDOR.RENAME',
+            'name' => 'Updated Application',
+            'status' => 'active',
+        ]);
+        $this->assertDatabaseHas('license_audit_events', [
+            'actor_id' => $owner->id,
+            'organization_id' => $org,
+            'action' => 'kslp_product_rename',
+            'status' => 'success',
+        ]);
+
+        // Exactly the same request has no second ledger entry.
+        $this->actingAs($owner)->withSession(['auth.password_confirmed_at' => time()])
+            ->post('/developer/apps/'.$product['id'].'/manage', $request)
+            ->assertRedirect(route('developer.apps.index'));
+        self::assertSame(
+            1,
+            DB::table('license_audit_events')
+                ->where('organization_id', $org)->where('action', 'kslp_product_rename')
+                ->count(),
+        );
+    }
+
+    public function test_application_pause_revokes_online_bootstrap_and_blocks_new_key(): void
+    {
+        [$owner, $org] = $this->owner('Secure App Pause');
+        $this->enroll($org);
+        $product = app(KslpIssuerSubscriptionAuthority::class)
+            ->registerProduct($org, 'VENDOR.PAUSABLE', 'Pausable Application');
+        $issued = app(KslpDeveloperKeys::class)->issue(
+            $org, 'VENDOR.PAUSABLE', 'first-customer', 'trial', (string) $owner->id,
+        );
+
+        $this->actingAs($owner)->withSession(['auth.password_confirmed_at' => time()])
+            ->post('/developer/apps/'.$product['id'].'/manage', [
+                'organization_id' => $org,
+                'action' => 'pause',
+                'reason' => 'Suspected issuer application credential compromise',
+            ])->assertRedirect(route('developer.apps.index'));
+        $this->assertDatabaseHas('kslp_licensed_products', [
+            'id' => $product['id'], 'status' => 'paused',
+        ]);
+
+        try {
+            app(KslpDeveloperKeys::class)->resolve($issued['key']);
+            self::fail('Suspended application must reject existing online bootstrap keys.');
+        } catch (DomainException $exception) {
+            self::assertSame('KSLP_LICENSE_KEY_INVALID', $exception->getMessage());
+        }
+
+        $this->actingAs($owner)->withSession(['auth.password_confirmed_at' => time()])
+            ->post('/developer/keys', [
+                'organization_id' => $org,
+                'product_code' => 'VENDOR.PAUSABLE',
+                'customer_id' => 'second-customer',
+                'plan' => 'trial',
+            ])->assertSessionHasErrors('customer_id');
+
+        self::assertSame(1, DB::table('kslp_license_keys')->count());
+        $this->assertDatabaseHas('license_audit_events', [
+            'organization_id' => $org,
+            'action' => 'kslp_product_pause',
+        ]);
+    }
+
+    public function test_app_management_rejects_cross_tenant_and_unconfirmed_actions(): void
+    {
+        [$owner, $org] = $this->owner('Protected Owner');
+        $this->enroll($org);
+        $product = app(KslpIssuerSubscriptionAuthority::class)
+            ->registerProduct($org, 'VENDOR.PROTECTED', 'Protected Application');
+        $attacker = User::factory()->create();
+        $request = [
+            'organization_id' => $org,
+            'action' => 'rename',
+            'name' => 'Unauthorized Name',
+            'reason' => 'Attempted unauthorized name change',
+        ];
+
+        $this->actingAs($attacker)
+            ->withSession(['auth.password_confirmed_at' => time()])
+            ->post('/developer/apps/'.$product['id'].'/manage', $request)
+            ->assertForbidden();
+
+        $this->actingAs($owner)
+            ->post('/developer/apps/'.$product['id'].'/manage', $request)
+            ->assertRedirect();
+
+        $this->assertDatabaseHas('kslp_licensed_products', [
+            'id' => $product['id'], 'name' => 'Protected Application',
+        ]);
+        self::assertSame(
+            0,
+            DB::table('license_audit_events')
+                ->where('organization_id', $org)
+                ->where('action', 'kslp_product_rename')->count(),
+        );
+    }
+
+    public function test_emergency_pause_works_with_rollout_off_but_resume_fails_closed(): void
+    {
+        [$owner, $org] = $this->owner('Emergency Shutdown');
+        $this->enroll($org);
+        $product = app(KslpIssuerSubscriptionAuthority::class)
+            ->registerProduct($org, 'VENDOR.EMERGENCY', 'Emergency Application');
+        config()->set('services.kmj_developer_licensing.enabled', false);
+
+        $this->actingAs($owner)->withSession(['auth.password_confirmed_at' => time()])
+            ->post('/developer/apps/'.$product['id'].'/manage', [
+                'organization_id' => $org,
+                'action' => 'pause',
+                'reason' => 'Urgent security lockdown required',
+            ])->assertRedirect(route('developer.apps.index'));
+
+        $this->actingAs($owner)->withSession(['auth.password_confirmed_at' => time()])
+            ->post('/developer/apps/'.$product['id'].'/manage', [
+                'organization_id' => $org,
+                'action' => 'resume',
+                'reason' => 'Security review has now been approved',
+            ])->assertStatus(503);
+
+        config()->set('services.kmj_developer_licensing.enabled', true);
+        app(KslpIssuerSubscriptionAuthority::class)
+            ->subscribe($org, 'professional', 3, 50, now()->subDay());
+        $this->actingAs($owner)->withSession(['auth.password_confirmed_at' => time()])
+            ->post('/developer/apps/'.$product['id'].'/manage', [
+                'organization_id' => $org,
+                'action' => 'resume',
+                'reason' => 'Attempt before issuer renewal',
+            ])->assertSessionHasErrors('action');
+
+        $this->assertDatabaseHas('kslp_licensed_products', [
+            'id' => $product['id'], 'status' => 'paused',
+        ]);
+        app(KslpIssuerSubscriptionAuthority::class)
+            ->subscribe($org, 'professional', 3, 50);
+        $this->actingAs($owner)->withSession(['auth.password_confirmed_at' => time()])
+            ->post('/developer/apps/'.$product['id'].'/manage', [
+                'organization_id' => $org,
+                'action' => 'resume',
+                'reason' => 'Issuer renewed, owner reviewed reactivation',
+            ])->assertRedirect(route('developer.apps.index'));
+        $this->assertDatabaseHas('kslp_licensed_products', [
+            'id' => $product['id'], 'status' => 'active',
+        ]);
+    }
+
     public function test_revoked_developer_key_cannot_be_resolved(): void
     {
         [$owner, $org] = $this->owner();
