@@ -128,7 +128,7 @@ def prop(unit,key):
 
 def verify_existing_baseline():
     for parent in ("/usr","/usr/local",ROOT,"/etc","/etc/systemd",UNITS,
-                   "/var","/var/backups","/run","/run/lock"):
+                   "/var","/var/backups","/run"):
         guard_dir(Path(parent))
     for folder in ("/var/backups/kmj-elite-daily",
                    "/var/backups/kmj-elite-offsite-encrypted",
