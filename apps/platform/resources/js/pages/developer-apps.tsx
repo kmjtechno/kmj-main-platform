@@ -485,6 +485,51 @@ export default function DeveloperApps({
                         </p>
                     </section>
                 )}
+                {newKeys && newKeys.length > 0 && (
+                    <section
+                        className="rounded-xl border border-emerald-500/35 bg-emerald-500/5 p-5"
+                        aria-label="One-time trial batch keys"
+                    >
+                        <h2 className="font-bold">
+                            Trial batch created — {newKeys.length} one-time keys
+                        </h2>
+                        <p className="text-muted-foreground mt-2 text-xs">
+                            Save these secrets in your approved password manager now.
+                            They cannot be retrieved again. These are trial bootstrap
+                            keys, NOT paid rights or signed offline licenses.
+                        </p>
+                        <div className="mt-3 space-y-2">
+                            {newKeys.map((issued) => (
+                                <div
+                                    key={issued.license_id}
+                                    className="flex flex-wrap items-center gap-2 rounded-lg border p-2 text-xs"
+                                >
+                                    <span className="min-w-0 flex-1 break-all font-mono">
+                                        {issued.customer_id}: {issued.key}
+                                    </span>
+                                    <button
+                                        type="button"
+                                        className="min-h-10 rounded-lg border px-3"
+                                        onClick={() => void copyText(issued.key)}
+                                    >
+                                        Copy
+                                    </button>
+                                </div>
+                            ))}
+                        </div>
+                        <button
+                            type="button"
+                            className="mt-3 min-h-10 rounded-lg border px-4 text-xs font-bold"
+                            onClick={() =>
+                                void copyText(
+                                    newKeys.map((key) => key.customer_id + ': ' + key.key).join('\n'),
+                                )
+                            }
+                        >
+                            Copy one-time batch
+                        </button>
+                    </section>
+                )}
 
                 {organizations.length === 0 && (
                     <section className="bg-card rounded-2xl border p-5 sm:p-6">
