@@ -1,0 +1,3 @@
+# Preserve the exact 113-byte owner-observed Ed25519 SPKI public key.
+# CRLF conversion changes the authenticated SHA-256 on Windows.
+scripts/operations/p520-owner-observed-public-key-20261118.pem -text
