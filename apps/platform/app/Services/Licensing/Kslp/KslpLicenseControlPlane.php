@@ -121,6 +121,10 @@ final class KslpLicenseControlPlane
                 throw new DomainException('KSLP_EXPIRED');
             }
 
+            // A known license ID and valid device proof cannot bypass an
+            // issuer application's emergency pause or expired subscription.
+            // Locking the issuer serializes this with product pause/resume.
+            $this->assertDelegatedProductActive($lic, true);
             app(KslpActivationProof::class)->consume($challengeId, $licenseId, $serverIdentity, $nonce, $proof);
 
             $active = DB::table('kslp_activations')->where('license_id', $licenseId)->whereNull('deactivated_at')->first();
@@ -150,7 +154,7 @@ final class KslpLicenseControlPlane
 
         $license = DB::table('kslp_licenses')
             ->where('id', $licenseId)
-            ->first(['revoked_at', 'status', 'starts_at', 'expires_at']);
+            ->first(['revoked_at', 'status', 'starts_at', 'expires_at', 'issuer_organization_id', 'product']);
         if ($license === null) {
             throw new DomainException('KSLP_LICENSE_NOT_FOUND');
         }
@@ -163,6 +167,10 @@ final class KslpLicenseControlPlane
         if (now()->lt($license->starts_at) || now()->gte($license->expires_at)) {
             throw new DomainException('KSLP_EXPIRED');
         }
+
+        // Idempotent activation replay must obey current issuer/product
+        // policy even when the previous device binding was once valid.
+        $this->assertDelegatedProductActive($license, false);
 
         return (array) $activation;
     }
@@ -263,6 +271,7 @@ final class KslpLicenseControlPlane
         if (($l['product'] ?? null) !== 'KMJ_CLOUDOS') {
             throw new DomainException('KSLP_WRONG_PRODUCT');
         }
+        $this->assertDelegatedProductActive((object) $l, false);
         $state = $this->state($id, $now);
         if (in_array($state, ['REVOKED', 'RESTRICTED'], true)) {
             throw new DomainException('KSLP_LICENSE_NOT_LEASABLE');
@@ -273,6 +282,44 @@ final class KslpLicenseControlPlane
         $claims = ['protocol_version' => 'KSLP-v1', 'license_id' => $id, 'customer_id' => $l['customer_id'], 'product' => $l['product'], 'plan' => $l['plan'], 'server_identity' => $a['server_identity'], 'activation_id' => $activationId, 'features' => $features, 'limits' => $limits, 'iat' => $now->getTimestamp(), 'nbf' => $now->getTimestamp() - 5, 'exp' => min($now->copy()->addHours(24)->getTimestamp(), Carbon::parse($l['grace_until'] ?? $l['expires_at'])->timestamp), 'sequence' => (int) $l['sequence'], 'nonce' => Str::random(32), 'kid' => $signer->kid(), 'jti' => (string) Str::uuid(), 'aud' => 'kmj-cloudos', 'grace_until' => $l['grace_until'] ? Carbon::parse($l['grace_until'])->timestamp : null];
 
         return KslpCodec::encode($claims, $signer->kid(), fn ($m) => $signer->sign($m));
+    }
+
+    /**
+     * A delegated license carries an immutable issuer and product binding.
+     * CloudOS first-party licenses have no issuer_organization_id and retain
+     * their existing commercial policy. This is a server-side authorization
+     * check, never a client-declared flag.
+     */
+    private function assertDelegatedProductActive(object $license, bool $lockIssuer): void
+    {
+        $issuerOrganizationId = $license->issuer_organization_id ?? null;
+        if ($issuerOrganizationId === null) {
+            return;
+        }
+
+        $query = DB::table('kslp_issuer_subscriptions')
+            ->where('organization_id', $issuerOrganizationId);
+        if ($lockIssuer) {
+            $query->lockForUpdate();
+        }
+        $issuer = $query->first();
+
+        if ($issuer === null
+            || $issuer->status !== 'active'
+            || ($issuer->current_period_end !== null
+                && now()->gte($issuer->current_period_end))) {
+            throw new DomainException('KSLP_ISSUER_PRODUCT_NOT_AUTHORIZED');
+        }
+
+        $active = DB::table('kslp_licensed_products')
+            ->where('organization_id', $issuerOrganizationId)
+            ->where('product_code', (string) $license->product)
+            ->where('status', 'active')
+            ->exists();
+
+        if (! $active) {
+            throw new DomainException('KSLP_ISSUER_PRODUCT_NOT_AUTHORIZED');
+        }
     }
 
     /**
