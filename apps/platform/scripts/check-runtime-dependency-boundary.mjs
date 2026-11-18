@@ -13,8 +13,12 @@ import path from 'node:path';
 import assert from 'node:assert/strict';
 
 const app = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const manifest = JSON.parse(readFileSync(path.join(app, 'package.json'), 'utf8'));
-const lock = JSON.parse(readFileSync(path.join(app, 'package-lock.json'), 'utf8'));
+const manifest = JSON.parse(
+    readFileSync(path.join(app, 'package.json'), 'utf8'),
+);
+const lock = JSON.parse(
+    readFileSync(path.join(app, 'package-lock.json'), 'utf8'),
+);
 const pkgs = lock.packages;
 
 assert.equal(lock.lockfileVersion, 3);
@@ -37,8 +41,16 @@ const buildOnly = [
 ];
 
 for (const name of buildOnly) {
-    assert.equal(typeof manifest.devDependencies[name], 'string', name + ' must be a declared build-only dependency');
-    assert.equal(manifest.dependencies[name], undefined, name + ' must not be considered a production runtime dependency');
+    assert.equal(
+        typeof manifest.devDependencies[name],
+        'string',
+        name + ' must be a declared build-only dependency',
+    );
+    assert.equal(
+        manifest.dependencies[name],
+        undefined,
+        name + ' must not be considered a production runtime dependency',
+    );
 }
 
 function resolveDependency(from, name) {
@@ -57,19 +69,23 @@ function resolveDependency(from, name) {
 const queue = [
     ...Object.keys(manifest.dependencies),
     ...Object.keys(manifest.optionalDependencies ?? {}),
-].map(name => ['node_modules/' + name, name]);
+].map((name) => ['node_modules/' + name, name]);
 const visited = new Set();
 const vulnerablePaths = [];
 
 for (let index = 0; index < queue.length; index++) {
     const [id, ancestry] = queue[index];
     if (!Object.hasOwn(pkgs, id)) {
-        throw new Error('Missing production dependency in lockfile: ' + ancestry);
+        throw new Error(
+            'Missing production dependency in lockfile: ' + ancestry,
+        );
     }
     if (visited.has(id)) continue;
     visited.add(id);
     if (pkgs[id].dev) {
-        throw new Error('Production dependency incorrectly marked dev: ' + ancestry);
+        throw new Error(
+            'Production dependency incorrectly marked dev: ' + ancestry,
+        );
     }
     // devOptional nodes can also be optional peer dependencies of a
     // production-optional package. npm's actual omit=dev install and advisory
@@ -88,7 +104,12 @@ for (let index = 0; index < queue.length; index++) {
         const next = resolveDependency(id, dependency);
         if (!next) {
             if (Object.hasOwn(required, dependency)) {
-                throw new Error('Unresolved required dependency: ' + ancestry + ' > ' + dependency);
+                throw new Error(
+                    'Unresolved required dependency: ' +
+                        ancestry +
+                        ' > ' +
+                        dependency,
+                );
             }
             // Peer/optional packages may legitimately be absent from a
             // platform-specific lockfile (e.g. Vue peers of a React app).
@@ -98,11 +119,17 @@ for (let index = 0; index < queue.length; index++) {
     }
 }
 
-assert.deepEqual(vulnerablePaths, [], 'Unpatched picomatch appears in the runtime dependency closure');
-for (const id of Object.keys(pkgs).filter(p => p.endsWith('/picomatch'))) {
+assert.deepEqual(
+    vulnerablePaths,
+    [],
+    'Unpatched picomatch appears in the runtime dependency closure',
+);
+for (const id of Object.keys(pkgs).filter((p) => p.endsWith('/picomatch'))) {
     assert.equal(
-        pkgs[id].dev, true,
-        'picomatch remains installed in the build toolchain, not in shipped production dependencies: ' + id,
+        pkgs[id].dev,
+        true,
+        'picomatch remains installed in the build toolchain, not in shipped production dependencies: ' +
+            id,
     );
 }
 console.log('KMJ_RUNTIME_NODE_DEPENDENCY_BOUNDARY=PASS');
