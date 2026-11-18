@@ -34,7 +34,7 @@ export function attestSigningPair(privateBytes, publicBytes, expected = EXPECTED
   }
   const fingerprint = createHash('sha256').update(publicBytes).digest('hex');
   if (fingerprint !== expected) throw new Refuse('SIGNER_OWNER_PUBLIC_PIN_MISMATCH');
-  const secret = [REDACTED];
+  const secret = createPrivateKey(privateBytes);
   const publicKey = createPublicKey(publicBytes);
   if (secret.asymmetricKeyType !== 'ed25519' || publicKey.asymmetricKeyType !== 'ed25519') {
     throw new Refuse('SIGNER_ALGORITHM_INVALID');
