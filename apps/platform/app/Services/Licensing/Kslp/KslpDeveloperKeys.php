@@ -66,7 +66,7 @@ final class KslpDeveloperKeys
      * licenses or audit events are committed. The returned plaintext secrets
      * are flashed once by the authenticated controller and never stored here.
      *
-     * @param  list<string>  $customerIds
+     * @param  list<mixed>  $customerIds
      * @return list<array{customer_id: string, key: string, license_id: string, product_code: string}>
      */
     public function issueTrialBatch(
@@ -81,6 +81,7 @@ final class KslpDeveloperKeys
         }
 
         $seen = [];
+        $validatedCustomers = [];
         foreach ($customerIds as $customerId) {
             if (! is_string($customerId)
                 || preg_match('/\A[A-Za-z0-9._:@-]{3,128}\z/D', $customerId) !== 1
@@ -88,6 +89,7 @@ final class KslpDeveloperKeys
                 throw new DomainException('KSLP_TRIAL_BATCH_CUSTOMER_INVALID');
             }
             $seen[$customerId] = true;
+            $validatedCustomers[] = $customerId;
         }
 
         if (mb_strlen(trim($reason)) < 8 || mb_strlen(trim($reason)) > 240) {
@@ -95,10 +97,10 @@ final class KslpDeveloperKeys
         }
 
         return DB::transaction(function () use (
-            $organizationId, $productCode, $customerIds, $actor, $reason,
+            $organizationId, $productCode, $validatedCustomers, $actor, $reason,
         ): array {
             $results = [];
-            foreach ($customerIds as $customerId) {
+            foreach ($validatedCustomers as $customerId) {
                 $issued = $this->issue(
                     $organizationId, $productCode, $customerId, 'trial', $actor,
                 );
