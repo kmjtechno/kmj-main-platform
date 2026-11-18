@@ -7,6 +7,7 @@ namespace Tests\Feature;
 use App\Models\User;
 use App\Services\Licensing\Kslp\KslpDeveloperKeys;
 use App\Services\Licensing\Kslp\KslpIssuerSubscriptionAuthority;
+use App\Services\Licensing\Kslp\KslpLicenseControlPlane;
 use DomainException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
@@ -357,6 +358,44 @@ final class KslpDeveloperAppsTest extends TestCase
             'organization_id' => $org,
             'action' => 'kslp_product_pause',
         ]);
+    }
+
+    public function test_paused_app_cannot_be_directly_activated_by_known_license_id(): void
+    {
+        [$owner, $org] = $this->owner('Direct Activation Guard');
+        $this->enroll($org);
+        $authority = app(KslpIssuerSubscriptionAuthority::class);
+        $product = $authority->registerProduct($org, 'VENDOR.DIRECT', 'Direct Activation Test');
+        $issued = app(KslpDeveloperKeys::class)->issue(
+            $org, 'VENDOR.DIRECT', 'direct-customer', 'trial', (string) $owner->id,
+        );
+
+        $this->actingAs($owner)->withSession(['auth.password_confirmed_at' => time()])
+            ->post('/developer/apps/'.$product['id'].'/manage', [
+                'organization_id' => $org,
+                'action' => 'pause',
+                'reason' => 'Block direct activation bypass during incident',
+            ])->assertRedirect(route('developer.apps.index'));
+
+        // Deliberately invalid proof: a suspended issuer must be rejected
+        // before any challenge consumption or device activation side effect.
+        try {
+            app(KslpLicenseControlPlane::class)->activate(
+                $issued['license_id'],
+                'ed25519:bogus-device',
+                'device-hash',
+                (string) Str::uuid(),
+                (string) $owner->id,
+                (string) Str::uuid(),
+                'bogus-nonce',
+                'bogus-proof',
+            );
+            self::fail('Paused app must fail closed even with a known license ID.');
+        } catch (DomainException $exception) {
+            self::assertSame('KSLP_ISSUER_PRODUCT_NOT_AUTHORIZED', $exception->getMessage());
+        }
+
+        $this->assertDatabaseCount('kslp_activations', 0);
     }
 
     public function test_app_management_rejects_cross_tenant_and_unconfirmed_actions(): void
