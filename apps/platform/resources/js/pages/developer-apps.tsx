@@ -494,9 +494,10 @@ export default function DeveloperApps({
                             Trial batch created — {newKeys.length} one-time keys
                         </h2>
                         <p className="text-muted-foreground mt-2 text-xs">
-                            Save these secrets in your approved password manager now.
-                            They cannot be retrieved again. These are trial bootstrap
-                            keys, NOT paid rights or signed offline licenses.
+                            Save these secrets in your approved password manager
+                            now. They cannot be retrieved again. These are trial
+                            bootstrap keys, NOT paid rights or signed offline
+                            licenses.
                         </p>
                         <div className="mt-3 space-y-2">
                             {newKeys.map((issued) => (
@@ -504,13 +505,15 @@ export default function DeveloperApps({
                                     key={issued.license_id}
                                     className="flex flex-wrap items-center gap-2 rounded-lg border p-2 text-xs"
                                 >
-                                    <span className="min-w-0 flex-1 break-all font-mono">
+                                    <span className="min-w-0 flex-1 font-mono break-all">
                                         {issued.customer_id}: {issued.key}
                                     </span>
                                     <button
                                         type="button"
                                         className="min-h-10 rounded-lg border px-3"
-                                        onClick={() => void copyText(issued.key)}
+                                        onClick={() =>
+                                            void copyText(issued.key)
+                                        }
                                     >
                                         Copy
                                     </button>
@@ -522,7 +525,14 @@ export default function DeveloperApps({
                             className="mt-3 min-h-10 rounded-lg border px-4 text-xs font-bold"
                             onClick={() =>
                                 void copyText(
-                                    newKeys.map((key) => key.customer_id + ': ' + key.key).join('\n'),
+                                    newKeys
+                                        .map(
+                                            (key) =>
+                                                key.customer_id +
+                                                ': ' +
+                                                key.key,
+                                        )
+                                        .join('\n'),
                                 )
                             }
                         >
@@ -855,9 +865,9 @@ export default function DeveloperApps({
                         Trial batch — 2 to 10 customers
                     </h2>
                     <p className="text-muted-foreground mt-1 text-xs">
-                        Enter one unique customer reference per line. Either all keys are
-                        issued or none. This is trial-only; commercial license
-                        issuance requires verified payment rights.
+                        Enter one unique customer reference per line. Either all
+                        keys are issued or none. This is trial-only; commercial
+                        license issuance requires verified payment rights.
                     </p>
                     <form
                         className="mt-4 grid gap-3 md:grid-cols-2"
@@ -865,12 +875,16 @@ export default function DeveloperApps({
                             event.preventDefault();
                             batchKeys.post('/developer/keys/batch', {
                                 preserveScroll: true,
-                                onSuccess: () => batchKeys.reset('customers', 'reason'),
+                                onSuccess: () =>
+                                    batchKeys.reset('customers', 'reason'),
                             });
                         }}
                     >
                         <div className="space-y-2">
-                            <label className="block text-xs font-semibold" htmlFor="batch-org">
+                            <label
+                                className="block text-xs font-semibold"
+                                htmlFor="batch-org"
+                            >
                                 Authorized issuer organization
                             </label>
                             <select
@@ -891,7 +905,10 @@ export default function DeveloperApps({
                                     </option>
                                 ))}
                             </select>
-                            <label className="block text-xs font-semibold" htmlFor="batch-app">
+                            <label
+                                className="block text-xs font-semibold"
+                                htmlFor="batch-app"
+                            >
                                 Registered application
                             </label>
                             <select
@@ -899,18 +916,27 @@ export default function DeveloperApps({
                                 className="bg-background min-h-11 w-full rounded-lg border px-3 text-sm"
                                 value={batchKeys.data.product_code}
                                 onChange={(event) =>
-                                    batchKeys.setData('product_code', event.target.value)
+                                    batchKeys.setData(
+                                        'product_code',
+                                        event.target.value,
+                                    )
                                 }
                                 required
                             >
                                 <option value="">Select your app</option>
                                 {batchEligibleApps.map((app) => (
-                                    <option key={app.id} value={app.product_code}>
+                                    <option
+                                        key={app.id}
+                                        value={app.product_code}
+                                    >
                                         {app.name} ({app.product_code})
                                     </option>
                                 ))}
                             </select>
-                            <label className="block text-xs font-semibold" htmlFor="batch-reason">
+                            <label
+                                className="block text-xs font-semibold"
+                                htmlFor="batch-reason"
+                            >
                                 Audit reason
                             </label>
                             <input
@@ -921,13 +947,19 @@ export default function DeveloperApps({
                                 placeholder="Approved QA trial for customer onboarding"
                                 value={batchKeys.data.reason}
                                 onChange={(event) =>
-                                    batchKeys.setData('reason', event.target.value)
+                                    batchKeys.setData(
+                                        'reason',
+                                        event.target.value,
+                                    )
                                 }
                                 required
                             />
                         </div>
                         <div className="space-y-2">
-                            <label className="block text-xs font-semibold" htmlFor="batch-customers">
+                            <label
+                                className="block text-xs font-semibold"
+                                htmlFor="batch-customers"
+                            >
                                 Customer references (one per line)
                             </label>
                             <textarea
@@ -938,19 +970,28 @@ export default function DeveloperApps({
                                 placeholder={'customer-001\ncustomer-002'}
                                 value={batchKeys.data.customers}
                                 onChange={(event) =>
-                                    batchKeys.setData('customers', event.target.value)
+                                    batchKeys.setData(
+                                        'customers',
+                                        event.target.value,
+                                    )
                                 }
                                 required
                             />
                             <p className="text-muted-foreground text-xs">
                                 2–10 unique references, 3–128 characters each.
-                                Letters, digits, dot, dash, underscore, colon and @ only.
+                                Letters, digits, dot, dash, underscore, colon
+                                and @ only.
                             </p>
-                            {Object.values(batchKeys.errors).map((error, index) => (
-                                <p key={index} className="text-xs text-red-500">
-                                    {error}
-                                </p>
-                            ))}
+                            {Object.values(batchKeys.errors).map(
+                                (error, index) => (
+                                    <p
+                                        key={index}
+                                        className="text-xs text-red-500"
+                                    >
+                                        {error}
+                                    </p>
+                                ),
+                            )}
                             <button
                                 type="submit"
                                 disabled={
