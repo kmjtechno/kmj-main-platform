@@ -91,7 +91,6 @@ final class KslpVerifier
         }
         if ($claims['iat'] <= 0
             || $claims['nbf'] > $claims['iat']
-            || $claims['exp'] <= $claims['iat']
             || $claims['sequence'] < 1) {
             throw new DomainException('KSLP_MALFORMED');
         }
@@ -107,7 +106,7 @@ final class KslpVerifier
         if ($now < $claims['nbf']) {
             throw new DomainException('KSLP_NOT_YET_VALID');
         }
-        if ($now > $claims['exp']) {
+        if ($claims['exp'] <= $claims['iat'] || $now > $claims['exp']) {
             throw new DomainException('KSLP_EXPIRED');
         }
 
