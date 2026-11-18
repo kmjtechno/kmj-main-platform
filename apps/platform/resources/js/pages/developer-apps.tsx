@@ -53,6 +53,10 @@ type IssuedKey = {
     product_code: string;
 };
 
+type IssuedBatchKey = IssuedKey & {
+    customer_id: string;
+};
+
 type Props = {
     organizations: Organization[];
     applications: Application[];
@@ -60,6 +64,7 @@ type Props = {
     canIssueKeys: boolean;
     canAccessOwnerHub: boolean;
     newKey: IssuedKey | null;
+    newKeys: IssuedBatchKey[] | null;
 };
 
 const languages = [
@@ -185,6 +190,7 @@ export default function DeveloperApps({
     canIssueKeys,
     canAccessOwnerHub,
     newKey,
+    newKeys,
 }: Props) {
     const [language, setLanguage] = useState<string>('TypeScript');
     const [selectedApp, setSelectedApp] = useState<string>('');
@@ -210,7 +216,23 @@ export default function DeveloperApps({
         customer_id: '',
         plan: 'trial',
     });
+    const batchKeys = useForm({
+        organization_id: organizations[0]?.id ?? '',
+        product_code: '',
+        customers: '',
+        reason: '',
+    });
 
+    const batchEligibleApps = applications.filter(
+        (app) =>
+            app.organization_id === batchKeys.data.organization_id &&
+            app.status === 'active',
+    );
+    const batchIssuer = organizations.find(
+        (org) => org.id === batchKeys.data.organization_id,
+    );
+    const canIssueBatch =
+        canIssueKeys && batchIssuer?.issuer_status === 'active';
     const eligibleApps = applications.filter(
         (app) =>
             app.organization_id === issueKey.data.organization_id &&
