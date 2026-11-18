@@ -54,6 +54,9 @@ final class KslpVerifier
         if (! sodium_crypto_sign_verify_detached($signature, $signed, $publicKey)) {
             throw new DomainException('KSLP_INVALID_SIGNATURE');
         }
+        if (! KslpCodec::isCanonicalSignedPayload($signed, $header, $claims)) {
+            throw new DomainException('KSLP_MALFORMED');
+        }
 
         // Interpret NO untrusted entitlement claims until signature verifies.
         foreach (self::V1_CLAIMS as $field) {
