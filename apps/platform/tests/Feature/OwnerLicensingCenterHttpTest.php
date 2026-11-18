@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\User;
+use App\Services\Licensing\Kslp\KslpIssuerSubscriptionAuthority;
 use App\Services\Licensing\Kslp\KslpLicenseControlPlane;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
@@ -144,6 +145,66 @@ final class OwnerLicensingCenterHttpTest extends TestCase
             'status' => 'active',
         ]);
         $this->assertDatabaseCount('kslp_licenses', 0);
+    }
+
+    public function test_owner_sees_shared_developer_issuer_readiness_without_issuing_paid_rights(): void
+    {
+        $activeOrg = Organization::query()->create(['name' => 'Active Issuer Example']);
+        Organization::query()->create(['name' => 'Unsubscribed Organization']);
+        $authority = app(KslpIssuerSubscriptionAuthority::class);
+        $authority->subscribe((string) $activeOrg->getKey(), 'professional', 3, 20);
+        $authority->registerProduct((string) $activeOrg->getKey(), 'VENDOR.TEST', 'Vendor Test');
+        config()->set('services.kmj_developer_licensing.enabled', false);
+
+        $this->actingAs($this->owner())
+            ->withSession(['auth.password_confirmed_at' => time()])
+            ->get('/operator/kslp')
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('operator-kslp')
+                ->where('developerIssuanceEnabled', false)
+                ->where('metrics.issuerSubscriptions', 1)
+                ->where('metrics.licenses', 0)
+                ->where('issuerWorkspaces', fn ($items): bool => collect($items)
+                    ->contains(fn ($org): bool => $org['name'] === 'Active Issuer Example'
+                        && $org['issuer_status'] === 'active'
+                        && $org['registered_apps'] === 1
+                        && $org['product_limit'] === 3
+                        && $org['monthly_issue_limit'] === 20)
+                    && collect($items)->contains(fn ($org): bool =>
+                        $org['name'] === 'Unsubscribed Organization'
+                        && $org['issuer_status'] === 'not_subscribed'
+                        && $org['registered_apps'] === 0)));
+
+        $this->assertDatabaseCount('kslp_license_keys', 0);
+        $this->assertDatabaseCount('kslp_licenses', 0);
+        $this->assertDatabaseHas('kslp_issuer_subscriptions', [
+            'organization_id' => (string) $activeOrg->getKey(),
+            'status' => 'active',
+        ]);
+    }
+
+    public function test_expired_issuer_is_displayed_expired_without_mutating_subscription_or_license(): void
+    {
+        $org = Organization::query()->create(['name' => 'Expired Issuer Example']);
+        app(KslpIssuerSubscriptionAuthority::class)
+            ->subscribe((string) $org->getKey(), 'business', 2, 10, now()->subDay());
+
+        $this->actingAs($this->owner())
+            ->withSession(['auth.password_confirmed_at' => time()])
+            ->get('/operator/kslp')
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('operator-kslp')
+                ->where('issuerWorkspaces', fn ($items): bool => collect($items)
+                    ->contains(fn ($issuer): bool => $issuer['name'] === 'Expired Issuer Example'
+                        && $issuer['issuer_status'] === 'expired')));
+
+        $this->assertDatabaseHas('kslp_issuer_subscriptions', [
+            'organization_id' => (string) $org->getKey(),
+            'status' => 'active',
+        ]);
+        $this->assertDatabaseCount('kslp_license_keys', 0);
     }
 
     private function owner(): User
