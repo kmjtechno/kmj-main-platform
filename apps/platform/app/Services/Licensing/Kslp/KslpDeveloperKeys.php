@@ -74,6 +74,7 @@ final class KslpDeveloperKeys
         string $productCode,
         array $customerIds,
         string $actor,
+        string $reason,
     ): array {
         if (count($customerIds) < 2 || count($customerIds) > 10) {
             throw new DomainException('KSLP_TRIAL_BATCH_SIZE_INVALID');
@@ -89,8 +90,12 @@ final class KslpDeveloperKeys
             $seen[$customerId] = true;
         }
 
+        if (mb_strlen(trim($reason)) < 8 || mb_strlen(trim($reason)) > 240) {
+            throw new DomainException('KSLP_TRIAL_BATCH_REASON_REQUIRED');
+        }
+
         return DB::transaction(function () use (
-            $organizationId, $productCode, $customerIds, $actor,
+            $organizationId, $productCode, $customerIds, $actor, $reason,
         ): array {
             $results = [];
             foreach ($customerIds as $customerId) {
@@ -117,6 +122,7 @@ final class KslpDeveloperKeys
                 'metadata' => json_encode([
                     'product_code' => $productCode,
                     'count' => count($results),
+                    'reason' => trim($reason),
                 ], JSON_THROW_ON_ERROR),
                 'created_at' => $now,
                 'updated_at' => $now,
