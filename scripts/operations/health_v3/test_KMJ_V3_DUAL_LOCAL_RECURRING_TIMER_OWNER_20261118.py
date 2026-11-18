@@ -124,9 +124,18 @@ class OwnerV3TimerTests(unittest.TestCase):
                         routine.index("pinned_runner_preflight(source)"))
         self.assertLess(routine.index("pinned_runner_preflight(source)"),
                         routine.index("no_clobber_install(path,body,mode)"))
-        self.assertLess(routine.index("read_exact(RUNNER,PIN"),
+        self.assertLess(routine.index("verify_new_installation_bytes()"),
                         routine.index('["/usr/bin/systemctl","enable","--now",TIMER]'))
         self.assertIn("FIRST_SCHEDULED_DUAL_LOCAL_BACKUP=NOT_YET_VERIFIED",routine)
+
+    def test_new_unit_bytes_and_modes_attested_before_timer_activation(self):
+        self.assertIn("def verify_new_installation_bytes():",BODY)
+        self.assertIn("if path==RUNNER:",BODY)
+        self.assertIn("read_exact(path,PIN,expected_uid=0)",BODY)
+        self.assertIn("NEW_INSTALL_METADATA_UNTRUSTED",BODY)
+        self.assertIn("NEW_INSTALL_BYTES_MISMATCH",BODY)
+        self.assertIn("NEW_INSTALL_INODE_CHANGED",BODY)
+        self.assertIn("os.O_RDONLY|os.O_NOFOLLOW|os.O_CLOEXEC",BODY)
 
     def test_systemd_service_is_not_claimed_pass_before_first_run(self):
         self.assertIn("FIRST_SCHEDULED_DUAL_LOCAL_BACKUP=NOT_YET_VERIFIED",BODY)
