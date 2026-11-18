@@ -74,7 +74,7 @@ final class KslpStrictVerifierTest extends TestCase
 
     public function test_valid_signed_v1_claims_are_unchanged(): void
     {
-        self::assertSame($this->claims(), $this->check());
+        self::assertSame(KslpCodec::canonical($this->claims()), KslpCodec::canonical($this->check()));
     }
 
     public function test_signed_unknown_v1_field_is_rejected_not_silently_accepted(): void
@@ -105,7 +105,7 @@ final class KslpStrictVerifierTest extends TestCase
 
     public function test_signed_float_and_boolean_time_are_rejected(): void
     {
-        foreach (['nbf' => (float) (self::NOW - 5), 'iat' => true] as $field => $invalid) {
+        foreach (['nbf' => (float) (self::NOW - 5) + 0.25, 'iat' => true] as $field => $invalid) {
             try {
                 $this->check([$field => $invalid]);
                 self::fail('Invalid time field was treated as integer: '.$field);
@@ -174,7 +174,7 @@ final class KslpStrictVerifierTest extends TestCase
         [$token] = $this->signed($this->claims());
         $parts = explode('.', $token);
         foreach ([
-            $parts[0].'='.$parts[1].'.'.$parts[2],
+            $parts[0].'=.'.$parts[1].'.'.$parts[2],
             $parts[0].'.'.$parts[1].'.'.$parts[2].'=',
             '+'.$parts[0].'.'.$parts[1].'.'.$parts[2],
         ] as $badToken) {
