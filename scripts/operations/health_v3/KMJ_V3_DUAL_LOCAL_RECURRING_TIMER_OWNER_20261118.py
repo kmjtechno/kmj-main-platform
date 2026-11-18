@@ -275,9 +275,9 @@ def disable():
     if not all(os.path.isfile(path) and not os.path.islink(path)
                for path in (RUNNER,SIDECAR,SERVICE_PATH,TIMER_PATH)):
         raise Deny("NEW_TIMER_NOT_INSTALLED_EXACT")
-    read_exact(RUNNER,PIN,expected_uid=0)
-    if SERVICE_PATH.read_bytes()!=SERVICE_TEXT.encode("ascii") or TIMER_PATH.read_bytes()!=TIMER_TEXT.encode("ascii"):
-        raise Deny("NEW_UNIT_CONTENT_CHANGED")
+    # Rollback must attest the same four exact installed root-only artifacts,
+    # never disable a timer whose unit files were changed by another actor.
+    verify_new_installation_bytes()
     sysrun(["/usr/bin/systemctl","disable","--now",TIMER],timeout=40)
     if prop(TIMER,"ActiveState")!="inactive":
         raise Deny("TIMER_DISABLE_UNVERIFIED")
