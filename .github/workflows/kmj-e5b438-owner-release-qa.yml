@@ -1,0 +1,47 @@
+name: KMJ E5B438 Super Admin Owner Production Release QA
+on:
+  pull_request:
+    paths:
+      - "scripts/KMJ_E5B438_OWNER_RELEASE_20261115.sh"
+      - "scripts/test_KMJ_E5B438_OWNER_RELEASE_20261115.py"
+      - ".github/workflows/kmj-e5b438-owner-release-qa.yml"
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  release-source-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - name: Verify exact approved source, predecessor and zero migration diffs
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          next=e5b43872bc031eb4b074a1e318abd80949c321d8
+          previous=e715829a56cc77e7aa63418ca1539635ae24e446
+          git cat-file -e "${next}^{commit}"
+          git cat-file -e "${previous}^{commit}"
+          test "$(git merge-base "$previous" "$next")" = "$previous"
+          if git diff --name-only "$previous" "$next" | grep -E '^apps/platform/database/migrations/'; then
+            echo NEW_MIGRATION_FILES_BLOCKED
+            exit 2
+          fi
+          printf '%s  %s\n' \
+            '8ab7f26b321ea0c3ef10b6849efa52533e5eda34425753104b08fd67d0ddd442' \
+            scripts/KMJ_E5B438_OWNER_RELEASE_20261115.sh | sha256sum -c -
+          printf '%s  %s\n' \
+            'fed6a74d7152d2efccd7f7dec11c98241e0ca5d3ec4b6445a13bdf382db878d1' \
+            scripts/test_KMJ_E5B438_OWNER_RELEASE_20261115.py | sha256sum -c -
+          bash -n scripts/KMJ_E5B438_OWNER_RELEASE_20261115.sh
+          python3 -m py_compile scripts/test_KMJ_E5B438_OWNER_RELEASE_20261115.py
+          echo E5B438_SRC_AND_MIGRATION_GUARD=PASS
+      - name: Offline negative/positive deployment source checks
+        run: |
+          python3 -B -m unittest discover -s scripts \
+            -p 'test_KMJ_E5B438_OWNER_RELEASE_20261115.py' -v
+          echo PRODUCTION_MUTATION=NONE
+          echo OWNER_ROOT_RELEASE=NOT_ATTEMPTED
