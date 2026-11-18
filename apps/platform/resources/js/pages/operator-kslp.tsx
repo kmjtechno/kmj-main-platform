@@ -244,8 +244,8 @@ export default function OperatorKslp({
                                 Active issuer subscriptions
                             </p>
                             <p className="mt-1 text-sm font-bold">
-                                {metrics.issuerSubscriptions} · distinct from
-                                { ' ' }{metrics.active} active commercial licenses
+                                {metrics.issuerSubscriptions} · distinct from{' '}
+                                {metrics.active} active commercial licenses
                             </p>
                         </div>
                     </div>
