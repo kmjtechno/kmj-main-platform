@@ -94,6 +94,7 @@ Route::middleware(['auth', 'verified'])->prefix('developer')->name('developer.')
             'canIssueKeys' => $storageReady && (bool) config('services.kmj_developer_licensing.enabled', false),
             'canAccessOwnerHub' => $ownerAccess->allows($actor),
             'newKey' => $request->session()->get('developer_license_key'),
+            'newKeys' => $request->session()->get('developer_license_batch'),
         ]);
     })->name('apps.index');
 
@@ -180,6 +181,48 @@ Route::middleware(['auth', 'verified'])->prefix('developer')->name('developer.')
         return redirect()->route('developer.apps.index')
             ->with('success', 'Application lifecycle updated.');
     })->middleware(['password.confirm', 'throttle:5,1'])->name('apps.manage');
+
+    // Modern AuthSP-equivalent user journey: bounded, trial-only multi-
+    // customer issue. Transactionally all-or-none; never a commercial plan.
+    Route::post('keys/batch', function (
+        Request $request,
+        OrganizationCapabilityContext $capabilities,
+        KslpDeveloperKeys $developerKeys,
+    ) {
+        $actor = $request->user();
+        abort_unless($actor instanceof User, 401);
+        abort_unless((bool) config('services.kmj_developer_licensing.enabled', false), 503);
+        abort_unless(Schema::hasTable('kslp_license_keys'), 503);
+
+        $data = $request->validate([
+            'organization_id' => ['required', 'uuid'],
+            'product_code' => ['required', 'string', 'max:96'],
+            'customers' => ['required', 'string', 'max:1400'],
+            'reason' => ['required', 'string', 'min:8', 'max:240'],
+        ]);
+        abort_unless(
+            $capabilities->allows($actor->id, $data['organization_id'], 'license.manage'),
+            403,
+        );
+
+        $customerIds = array_values(array_filter(
+            array_map('trim', preg_split('/\r\n|\n|\r/', $data['customers'])),
+            fn (string $value): bool => $value !== '',
+        ));
+        try {
+            $issued = $developerKeys->issueTrialBatch(
+                $data['organization_id'], $data['product_code'],
+                $customerIds, (string) $actor->id, $data['reason'],
+            );
+        } catch (DomainException $exception) {
+            return back()->withErrors(['customers' => $exception->getMessage()]);
+        }
+
+        // One-time authorized session flash only. On replay, unique trial
+        // constraints fail closed rather than generating a second set of keys.
+        return redirect()->route('developer.apps.index')
+            ->with('developer_license_batch', $issued);
+    })->middleware(['password.confirm', 'throttle:2,1'])->name('keys.batch');
 
     Route::post('keys/{key}/revoke', function (
         Request $request,
