@@ -149,7 +149,11 @@ mod tests {
             URL_SAFE_NO_PAD.encode(serde_json::to_vec(value).unwrap())
         );
         let signature = signing.sign(signed.as_bytes());
-        let token = format!("{}.{}", signed, URL_SAFE_NO_PAD.encode(signature.to_bytes()));
+        let token = format!(
+            "{}.{}",
+            signed,
+            URL_SAFE_NO_PAD.encode(signature.to_bytes())
+        );
         (token, signing.verifying_key().to_bytes())
     }
 
@@ -157,14 +161,17 @@ mod tests {
     fn strict_signed_v1_claim_types_and_audience_fail_closed() {
         let mut claims = fixture_claims();
         let (good_token, pk) = sign_test_claims(&claims);
-        assert!(verify(
-            &good_token,
-            &pk,
-            "unit-test-kid",
-            "KMJ_CLOUDOS",
-            "ed25519:test-device",
-            1800000000,
-        ).is_ok());
+        assert!(
+            verify(
+                &good_token,
+                &pk,
+                "unit-test-kid",
+                "KMJ_CLOUDOS",
+                "ed25519:test-device",
+                1800000000,
+            )
+            .is_ok()
+        );
 
         let invalid = [
             ("aud", json!("kmj-omnidesk"), "KSLP_WRONG_AUDIENCE"),
@@ -195,7 +202,14 @@ mod tests {
         claims["unsigned_entitlement_override"] = json!(true);
         let (extra_token, extra_pk) = sign_test_claims(&claims);
         assert_eq!(
-            verify(&extra_token, &extra_pk, "unit-test-kid", "KMJ_CLOUDOS", "ed25519:test-device", 1800000000),
+            verify(
+                &extra_token,
+                &extra_pk,
+                "unit-test-kid",
+                "KMJ_CLOUDOS",
+                "ed25519:test-device",
+                1800000000
+            ),
             Err("KSLP_MALFORMED")
         );
     }
@@ -203,7 +217,14 @@ mod tests {
     #[test]
     fn oversized_token_is_rejected_before_parsing_or_key_access() {
         assert_eq!(
-            verify(&"A".repeat(MAX_TOKEN_BYTES + 1), &[], "unit-test-kid", "KMJ_CLOUDOS", "ed25519:test-device", 1800000000),
+            verify(
+                &"A".repeat(MAX_TOKEN_BYTES + 1),
+                &[],
+                "unit-test-kid",
+                "KMJ_CLOUDOS",
+                "ed25519:test-device",
+                1800000000
+            ),
             Err("KSLP_MALFORMED")
         );
     }
