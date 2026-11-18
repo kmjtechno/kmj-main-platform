@@ -3,6 +3,7 @@ use ed25519_dalek::{Signature, Verifier, VerifyingKey};
 use serde::Deserialize;
 
 pub const KSLP_V1: &str = "KSLP-v1";
+const MAX_TOKEN_BYTES: usize = 16_384;
 
 #[derive(Debug, Clone, PartialEq, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -43,6 +44,9 @@ pub fn verify(
     expected_server: &str,
     now: i64,
 ) -> Result<Claims, &'static str> {
+    if token.is_empty() || token.len() > MAX_TOKEN_BYTES {
+        return Err("KSLP_MALFORMED");
+    }
     let parts: Vec<&str> = token.split('.').collect();
     if parts.len() != 3 {
         return Err("KSLP_MALFORMED");
@@ -72,8 +76,25 @@ pub fn verify(
     if c.protocol_version != KSLP_V1 || c.kid != h.kid {
         return Err("KSLP_MALFORMED");
     }
-    if c.product != expected_product || c.aud != "kmj-cloudos" {
+    if c.license_id.is_empty()
+        || c.customer_id.is_empty()
+        || c.plan.is_empty()
+        || c.server_identity.is_empty()
+        || c.activation_id.is_empty()
+        || c.nonce.is_empty()
+        || c.jti.is_empty()
+        || c.kid.is_empty()
+        || c.iat <= 0
+        || c.nbf > c.iat
+        || c.sequence == 0
+    {
+        return Err("KSLP_MALFORMED");
+    }
+    if c.product != expected_product {
         return Err("KSLP_WRONG_PRODUCT");
+    }
+    if c.aud != "kmj-cloudos" {
+        return Err("KSLP_WRONG_AUDIENCE");
     }
     if c.server_identity != expected_server {
         return Err("KSLP_SERVER_MISMATCH");
@@ -81,7 +102,7 @@ pub fn verify(
     if now < c.nbf {
         return Err("KSLP_NOT_YET_VALID");
     }
-    if now > c.exp {
+    if c.exp <= c.iat || now > c.exp {
         return Err("KSLP_EXPIRED");
     }
     Ok(c)
