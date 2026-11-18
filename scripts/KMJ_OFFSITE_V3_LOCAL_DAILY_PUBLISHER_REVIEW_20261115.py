@@ -11,14 +11,17 @@ the staged DB, full storage and config and attest SAME-invocation remote SFTP
 readback. This library validates caller-provided receipt digest, it does not
 authenticate the remote transfer or independently restore any archive.
 
-Never follows symlinks, accepts hardlinks or special files, overwrites an old
-snapshot, touches mtime of existing backups, prunes or runs arbitrary shell.
+Only certbot-standard relative config/letsencrypt/live/<lineage> links to
+archive/<same-lineage>/<numbered-certificate>.pem may be preserved after
+nofollow root-owned target verification and digest match. Other symlinks,
+hardlinks/special files remain rejected. Never overwrite or prune.
 """
 from __future__ import annotations
 import ctypes
 import errno
 import hashlib
 import os
+import posixpath
 from pathlib import Path
 import re
 import stat
@@ -86,7 +89,106 @@ def safe_name(name):
             and "/" not in name and not any(ord(c)<32 or ord(c)==127 for c in name))
 
 
-def walk_tree(fd,allowed_uids,stats,depth=0):
+CERTBOT_FILES=("cert.pem","chain.pem","fullchain.pem","privkey.pem")
+CERTBOT_NOFOLLOW=os.O_RDONLY|os.O_DIRECTORY|os.O_NOFOLLOW|os.O_CLOEXEC
+
+def certbot_link_target(rootfd,linkfd,relative_dir,name,allowed_uids):
+    """Standard same-lineage Certbot live->archive link, never follow symlinks.
+
+    rootfd identifies a pinned Let’s Encrypt directory. Target is checked
+    only with O_NOFOLLOW directory/regular-file descriptors and bounded SHA.
+    No raw paths, link text or certificate/private key contents are printed.
+    """
+    parts=relative_dir.split("/")
+    if (len(parts)!=2 or parts[0]!="live"
+            or re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._-]{0,119}",parts[1]) is None
+            or name not in CERTBOT_FILES or not allowed_uids):
+        raise Deny("CERTBOT_LINK_NOT_STANDARD_LIVE_FILE")
+    lineage=parts[1]
+    before=os.stat(name,dir_fd=linkfd,follow_symlinks=False)
+    if (not stat.S_ISLNK(before.st_mode) or before.st_uid not in allowed_uids
+            or before.st_nlink!=1):
+        raise Deny("CERTBOT_LINK_METADATA_UNTRUSTED")
+    target=os.readlink(name,dir_fd=linkfd)
+    stem=name[:-4]
+    pattern=rf"\.\./\.\./archive/{re.escape(lineage)}/{stem}[1-9][0-9]{{0,4}}\.pem"
+    if (not isinstance(target,str) or len(target)>255
+            or re.fullmatch(pattern,target,flags=re.ASCII) is None
+            or posixpath.normpath(posixpath.join(relative_dir,target))
+            !=target.removeprefix("../../")):
+        raise Deny("CERTBOT_LINK_TARGET_NOT_PINNED_IN_TREE")
+    base=os.fstat(rootfd)
+    if (not stat.S_ISDIR(base.st_mode) or base.st_uid not in allowed_uids
+            or base.st_mode&0o022):
+        raise Deny("CERTBOT_ROOT_UNTRUSTED")
+    handle=os.dup(rootfd)
+    try:
+        for component in ("archive",lineage):
+            nextfd=os.open(component,CERTBOT_NOFOLLOW,dir_fd=handle)
+            os.close(handle)
+            handle=nextfd
+            state=os.fstat(handle)
+            if (not stat.S_ISDIR(state.st_mode) or state.st_uid not in allowed_uids
+                    or state.st_mode&0o022):
+                raise Deny("CERTBOT_TARGET_DIRECTORY_UNTRUSTED")
+        filename=target.rsplit("/",1)[-1]
+        filefd=os.open(filename,os.O_RDONLY|os.O_NOFOLLOW|os.O_CLOEXEC,dir_fd=handle)
+        try:
+            original=os.fstat(filefd)
+            if (not stat.S_ISREG(original.st_mode)
+                    or original.st_uid not in allowed_uids
+                    or original.st_nlink!=1 or original.st_mode&0o022
+                    or not 1<=original.st_size<=1048576):
+                raise Deny("CERTBOT_TARGET_FILE_UNTRUSTED")
+            sha=hashlib.sha256()
+            size=0
+            while True:
+                chunk=os.read(filefd,131072)
+                if not chunk:break
+                size+=len(chunk)
+                if size>1048576:
+                    raise Deny("CERTBOT_TARGET_FILE_SIZE_LIMIT")
+                sha.update(chunk)
+            end=os.fstat(filefd)
+            if (size!=original.st_size or
+                    (original.st_dev,original.st_ino,original.st_size,original.st_mtime_ns,original.st_ctime_ns)
+                    !=(end.st_dev,end.st_ino,end.st_size,end.st_mtime_ns,end.st_ctime_ns)):
+                raise Deny("CERTBOT_TARGET_FILE_CHANGED")
+        finally:
+            os.close(filefd)
+    finally:
+        os.close(handle)
+    after=os.stat(name,dir_fd=linkfd,follow_symlinks=False)
+    if ((before.st_dev,before.st_ino,before.st_mtime_ns,before.st_ctime_ns)
+            !=(after.st_dev,after.st_ino,after.st_mtime_ns,after.st_ctime_ns)
+            or not stat.S_ISLNK(after.st_mode)
+            or os.readlink(name,dir_fd=linkfd)!=target):
+        raise Deny("CERTBOT_LINK_CHANGED_DURING_VERIFY")
+    return target,sha.hexdigest()
+
+
+def snapshot_manifest(fd,uid):
+    f,st=regular(fd,"SHA256SUMS",{uid},restricted=True)
+    try:
+        if not 80<=st.st_size<=65536:
+            raise Deny("SNAPSHOT_MANIFEST_SIZE_UNEXPECTED")
+        raw=os.read(f,65537)
+        if len(raw)!=st.st_size:
+            raise Deny("SNAPSHOT_MANIFEST_CHANGED")
+    finally:os.close(f)
+    seen={}
+    for line in raw.decode("ascii",errors="strict").splitlines():
+        match=re.fullmatch(r"([a-f0-9]{64})  ([^\r\n]{1,2000})",line)
+        if match is None or match.group(2) in seen:
+            raise Deny("SNAPSHOT_MANIFEST_INVALID_LINE_OR_DUPLICATE")
+        name=match.group(2)
+        if name.startswith("/") or ".." in name.split("/") or "\x00" in name:
+            raise Deny("SNAPSHOT_MANIFEST_UNSAFE_PATH")
+        seen[name]=match.group(1)
+    return seen
+
+
+def walk_tree(fd,allowed_uids,stats,depth=0,*,relative="",certrootfd=None,manifest=None):
     if depth>MAX_DEPTH:
         raise Deny("SNAPSHOT_TREE_TOO_DEEP")
     for name in os.listdir(fd):
@@ -104,7 +206,9 @@ def walk_tree(fd,allowed_uids,stats,depth=0):
                 current=os.fstat(sub)
                 if (current.st_dev,current.st_ino)!=(s.st_dev,s.st_ino):
                     raise Deny("SNAPSHOT_DIRECTORY_RACE")
-                walk_tree(sub,allowed_uids,stats,depth+1)
+                walk_tree(sub,allowed_uids,stats,depth+1,
+                          relative=(relative+"/"+name).lstrip("/"),
+                          certrootfd=certrootfd,manifest=manifest)
             finally:
                 os.close(sub)
         elif stat.S_ISREG(s.st_mode):
@@ -113,8 +217,18 @@ def walk_tree(fd,allowed_uids,stats,depth=0):
             stats["bytes"]+=s.st_size
             if stats["bytes"]>MAX_BYTES:
                 raise Deny("SNAPSHOT_BYTES_LIMIT")
+        elif stat.S_ISLNK(s.st_mode):
+            if (certrootfd is None or manifest is None
+                    or not relative.startswith("config/letsencrypt/")):
+                raise Deny("SNAPSHOT_LINK_OR_SPECIAL_FILE")
+            link_dir=relative[len("config/letsencrypt/"):]
+            target,digest=certbot_link_target(
+                certrootfd,fd,link_dir,name,allowed_uids)
+            if manifest.get(relative+"/"+name)!=digest:
+                raise Deny("CERTBOT_LINK_MANIFEST_SHA_MISMATCH")
+            stats["certbot_links"]=stats.get("certbot_links",0)+1
         else:
-            # Reject symlinks, FIFO, sockets and device nodes; NEVER follow them.
+            # Other links, sockets, FIFOs and devices remain blocked.
             raise Deny("SNAPSHOT_LINK_OR_SPECIAL_FILE")
 
 
@@ -182,9 +296,18 @@ def verify_snapshot(fd,expected_uid,allowed_uids):
             os.close(sfd)
     finally:os.close(config)
     digest=pgdump_and_manifest(fd,{expected_uid})
-    counts={"entries":0,"bytes":0}
-    walk_tree(fd,allowed_uids,counts)
-    return digest,counts
+    hashes=snapshot_manifest(fd,expected_uid)
+    configfd=child_dir(fd,"config",allowed_uids)
+    try:
+        certfd=child_dir(configfd,"letsencrypt",allowed_uids)
+    finally:
+        os.close(configfd)
+    try:
+        counts={"entries":0,"bytes":0,"certbot_links":0}
+        walk_tree(fd,allowed_uids,counts,certrootfd=certfd,manifest=hashes)
+        return digest,counts
+    finally:
+        os.close(certfd)
 
 
 def rename_dir_noreplace(from_fd,name,to_fd,target):

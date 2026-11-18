@@ -114,6 +114,76 @@ class DailySnapshotSourceOnlyFixtures(unittest.TestCase):
             self.publish()
         self.assertFalse((self.daily/self.stamp).exists())
 
+    def certbot_fixture(self):
+        base=self.staged/"config"/"letsencrypt"
+        lineage="kmj-example.test"
+        archive=base/"archive"/lineage
+        live=base/"live"/lineage
+        archive.mkdir(parents=True,mode=0o700)
+        live.mkdir(parents=True,mode=0o700)
+        archive.chmod(0o700)
+        live.chmod(0o700)
+        body=b"offline-certbot-archive-fixture"
+        target=self.mkfile("config/letsencrypt/archive/"+lineage+"/cert1.pem",body)
+        link=live/"cert.pem"
+        link.symlink_to("../../archive/"+lineage+"/cert1.pem")
+        digest=hashlib.sha256(body).hexdigest()
+        manifest=self.staged/"SHA256SUMS"
+        prior=manifest.read_text()
+        manifest.write_text(
+            prior+digest+"  config/letsencrypt/archive/"+lineage+"/cert1.pem\n"
+                 +digest+"  config/letsencrypt/live/"+lineage+"/cert.pem\n",
+            encoding="ascii")
+        manifest.chmod(0o600)
+        return link,target
+
+    def test_certbot_link_preserved_across_atomic_publication(self):
+        link,target=self.certbot_fixture()
+        result=self.publish()
+        self.assertTrue(result["daily_snapshot_published"])
+        copied=self.daily/self.stamp/"config"/"letsencrypt"/"live"/"kmj-example.test"/"cert.pem"
+        self.assertTrue(copied.is_symlink())
+        self.assertEqual(os.readlink(copied),"../../archive/kmj-example.test/cert1.pem")
+        self.assertEqual(copied.read_bytes(),b"offline-certbot-archive-fixture")
+        self.assertFalse(target.exists())
+
+    def test_certbot_symlink_tampered_manifest_blocks_publication(self):
+        link,_=self.certbot_fixture()
+        manifest=self.staged/"SHA256SUMS"
+        original=manifest.read_text()
+        manifest.write_text(original.replace(
+            hashlib.sha256(b"offline-certbot-archive-fixture").hexdigest()
+            +"  config/letsencrypt/live/kmj-example.test/cert.pem",
+            "a"*64+"  config/letsencrypt/live/kmj-example.test/cert.pem"),
+            encoding="ascii")
+        manifest.chmod(0o600)
+        with self.assertRaisesRegex(m.Deny,"CERTBOT_LINK_MANIFEST_SHA_MISMATCH"):
+            self.publish()
+        self.assertTrue(link.is_symlink())
+        self.assertFalse((self.daily/self.stamp).exists())
+
+    def test_certbot_bad_link_target_never_published(self):
+        for bad in ("/etc/passwd","../../../../etc/passwd",
+                    "../../archive/other-lineage/cert1.pem",
+                    "../../archive/kmj-example.test/cert999999.pem"):
+            with self.subTest(bad=bad):
+                if not (self.staged/"config"/"letsencrypt"/"live").exists():
+                    self.certbot_fixture()
+                link=self.staged/"config"/"letsencrypt"/"live"/"kmj-example.test"/"cert.pem"
+                link.unlink()
+                link.symlink_to(bad)
+                with self.assertRaisesRegex(m.Deny,"CERTBOT_LINK_TARGET_NOT_PINNED_IN_TREE"):
+                    self.publish()
+                self.assertFalse((self.daily/self.stamp).exists())
+
+    def test_certbot_dangling_target_never_published(self):
+        link,target=self.certbot_fixture()
+        target.unlink()
+        with self.assertRaises(FileNotFoundError):
+            self.publish()
+        self.assertTrue(link.is_symlink())
+        self.assertFalse((self.daily/self.stamp).exists())
+
     def test_symlink_within_storage_rejected_nofollow(self):
         (self.staged/"platform-storage"/"app"/"outside").symlink_to("/etc/passwd")
         with self.assertRaisesRegex(m.Deny,"SNAPSHOT_LINK_OR_SPECIAL_FILE"):
