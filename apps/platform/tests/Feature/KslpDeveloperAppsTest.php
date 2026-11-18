@@ -379,6 +379,7 @@ final class KslpDeveloperAppsTest extends TestCase
             ->assertForbidden();
 
         $this->actingAs($owner)
+            ->withSession(['auth.password_confirmed_at' => 0])
             ->post('/developer/apps/'.$product['id'].'/manage', $request)
             ->assertRedirect();
 
