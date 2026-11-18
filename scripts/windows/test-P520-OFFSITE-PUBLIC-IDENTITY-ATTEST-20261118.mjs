@@ -7,6 +7,7 @@ import {
   Refuse, EXPECTED_AGE_RECIPIENT, EXPECTED_ED25519_PUBLIC_SHA,
   isAgePublicPair, attestSigningPair
 } from './P520-OFFSITE-PUBLIC-IDENTITY-ATTEST-20261118.mjs';
+import { trustedPrivateChildFileAcl } from './P520-OFFSITE-FILE-ACL-READONLY-20261118.mjs';
 const file='scripts/windows/P520-OFFSITE-PUBLIC-IDENTITY-ATTEST-20261118.mjs';
 
 test('fixed P520 public recipient and Ed25519 pin match owner observation',()=>{
@@ -48,4 +49,23 @@ test('private material cannot be logged, copied, encrypted or sent; read-only P5
  assert.equal(r.status,2);
  assert.match(r.stdout,/P520_READONLY_PUBLIC_IDENTITY_ATTEST=BLOCKED_WRONG_OWNER_P520_HOST/);
  assert.doesNotMatch(r.stdout,/BEGIN PRIVATE KEY|AGE-SECRET-KEY/);
+});
+
+test('child key file ACL accepts only owner-private inherited or explicit ACEs',()=>{
+ const owner='S-1-5-21-100-200-300-1001';
+ const base={OwnerSid:owner,UserSid:owner,Rules:[
+   {Sid:owner,Type:'Allow',Inherited:true,FullControl:true},
+   {Sid:'S-1-5-18',Type:'Allow',Inherited:true,FullControl:true},
+   {Sid:'S-1-5-32-544',Type:'Allow',Inherited:true,FullControl:true}
+ ]};
+ assert.equal(trustedPrivateChildFileAcl(base),true);
+ assert.equal(trustedPrivateChildFileAcl({...base,Rules:[{...base.Rules[0],Inherited:false}]}),true);
+ for(const bad of [
+  {...base,OwnerSid:'S-1-5-18'},
+  {...base,Rules:[...base.Rules,{Sid:'S-1-1-0',Type:'Allow',Inherited:true,FullControl:true}]},
+  {...base,Rules:[...base.Rules,{Sid:'S-1-5-32-545',Type:'Allow',Inherited:false,FullControl:true}]},
+  {...base,Rules:[{...base.Rules[0],Type:'Deny'}]},
+  {...base,Rules:[{...base.Rules[0],FullControl:false}]},
+  {...base,Rules:[]}
+ ]) assert.equal(trustedPrivateChildFileAcl(bad),false);
 });
