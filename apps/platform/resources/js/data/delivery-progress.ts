@@ -10,6 +10,14 @@ export type DeliveryMilestone = {
 
 export const deliveryMilestones: DeliveryMilestone[] = [
     {
+        id: 'kslp-atomic-trial-batch-20261118',
+        title: 'Licensing Hub — bounded all-or-none trial customer batch issuance',
+        state: 'active',
+        detail: 'Stacked source-only draft adds an issuer-tenant-scoped 2–10-customer trial-key batch with password step-up and global rollout control. A single database transaction includes every per-customer delegated issuer quota, unique-trial and product authorization check, license/key issuance and one bounded aggregate audit event. Duplicate customers or quota failures roll back the complete batch. Server ignores any submitted paid plan: only trial is allowed, and keys are random, digest-only at rest and session-flashed exactly once.',
+        evidence:
+            'Regression tests cover cross-tenant 403, rollout disabled 503, old password confirmation, duplicate inputs, existing-customer collision mid-batch, monthly quota rollback, fixed trial-only plan, no plaintext in audit/database and one-time key display. AuthSP supplies workflow labels only, not legacy backend. Exact-head CI and P520 independent restore, real signer/SDK conformance, verified payment settlement and owner-protected staging/production cutover remain pending; npm picomatch GHSA-fc5q-39xc-vjpf release blocker remains.',
+    },
+    {
         id: 'kslp-tenant-device-summary-20261118',
         title: 'Licensing Hub — tenant-safe aggregate device binding evidence',
         state: 'active',
