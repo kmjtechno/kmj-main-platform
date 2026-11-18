@@ -10,6 +10,14 @@ export type DeliveryMilestone = {
 
 export const deliveryMilestones: DeliveryMilestone[] = [
     {
+        id: 'kslp-php-rust-signed-verifier-strict-v1-20261118',
+        title: 'KSLP-v1 — align PHP and Rust signed verifier fail-closed contracts',
+        state: 'active',
+        detail: 'Stacked security draft hardens existing KSLP-v1 CloudOS audience, not a new issuer. PHP requires valid Ed25519 signature and trusted key lookup before interpreting entitlement claims; strict time/sequence types, unknown fields, bounded token length and canonical unpadded Base64URL are enforced. Rust receives equivalent malformed-time and audience checks with synthetic signed negative vectors. Existing v1 golden tokens and the separate offline checkpoint guard must remain compatible.',
+        evidence:
+            'Source branch security/kslp-v1-strict-signed-verifier-20261118 adds PHP and Rust tests for signature corruption, wrong audience, invalid time types, zero sequence, unknown entitlement fields and oversized tokens. Exact-head CI, golden-vector cross-language checks, security dependency audit and protected release approvals are pending. Parent #894/#892 remain drafts; production unchanged.',
+    },
+    {
         id: 'kslp-app-lifecycle-audited-20261118',
         title: 'Licensing Hub — guarded app rename and emergency pause/resume',
         state: 'active',
