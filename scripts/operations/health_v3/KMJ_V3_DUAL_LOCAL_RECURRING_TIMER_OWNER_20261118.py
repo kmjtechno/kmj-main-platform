@@ -187,6 +187,32 @@ def no_clobber_install(path,body,mode):
     finally:
         os.close(fd)
 
+def verify_new_installation_bytes():
+    for path,expected,mode in (
+        (RUNNER,None,0o600),
+        (SIDECAR,CHECKSUM_TEXT.encode("ascii"),0o600),
+        (SERVICE_PATH,SERVICE_TEXT.encode("ascii"),0o644),
+        (TIMER_PATH,TIMER_TEXT.encode("ascii"),0o644),
+    ):
+        st=os.lstat(path)
+        if (not stat.S_ISREG(st.st_mode) or st.st_uid!=0
+            or st.st_nlink!=1 or stat.S_IMODE(st.st_mode)!=mode):
+            raise Deny("NEW_INSTALL_METADATA_UNTRUSTED")
+        if path==RUNNER:
+            read_exact(path,PIN,expected_uid=0)
+        else:
+            fd=os.open(path,os.O_RDONLY|os.O_NOFOLLOW|os.O_CLOEXEC)
+            try:
+                content=os.read(fd,len(expected)+1)
+                after=os.fstat(fd)
+                if after.st_ino!=st.st_ino or after.st_dev!=st.st_dev:
+                    raise Deny("NEW_INSTALL_INODE_CHANGED")
+            finally:
+                os.close(fd)
+            if content!=expected:
+                raise Deny("NEW_INSTALL_BYTES_MISMATCH")
+
+
 def install():
     source=verify_existing_baseline()
     pinned_runner_preflight(source)
@@ -198,9 +224,7 @@ def install():
             (TIMER_PATH,TIMER_TEXT.encode("ascii"),0o644)):
             no_clobber_install(path,body,mode)
             created.append(path)
-        read_exact(RUNNER,PIN,expected_uid=0)
-        if SIDECAR.read_bytes()!=CHECKSUM_TEXT.encode("ascii"):
-            raise Deny("INSTALLED_SHA_SIDECAR_CHANGED")
+        verify_new_installation_bytes()
         sysrun(["/usr/bin/systemd-analyze","verify",str(SERVICE_PATH),str(TIMER_PATH)],timeout=30)
         sysrun(["/usr/bin/systemctl","daemon-reload"],timeout=30)
         if prop(SERVICE,"LoadState")!="loaded" or prop(TIMER,"LoadState")!="loaded":
