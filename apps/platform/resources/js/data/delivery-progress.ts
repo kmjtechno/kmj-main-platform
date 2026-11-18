@@ -10,6 +10,14 @@ export type DeliveryMilestone = {
 
 export const deliveryMilestones: DeliveryMilestone[] = [
     {
+        id: 'kslp-tenant-device-summary-20261118',
+        title: 'Licensing Hub — tenant-safe aggregate device binding evidence',
+        state: 'active',
+        detail: 'Source-only stacked draft PR #896 adds grouped recorded and non-deactivated activation-binding counts and latest activation timestamp to the already capability-filtered developer keys dashboard. It exposes no Ed25519 device identity, machine hash, raw hardware identifier or idempotency key. A recorded binding is explicitly not live connectivity, valid paid entitlement or remaining seat authorization.',
+        evidence:
+            'New two-issuer feature test verifies cross-tenant isolation, deactivation counting and sensitive identifier omission. This is not device transfer, reseller settlement, full AuthSP workflow parity or production-ready release. PHP/PostgreSQL exact-head tests and formatter are required; npm picomatch GHSA-fc5q-39xc-vjpf (issue #893), independent P520 restore and owner protected approval remain release blockers. LIVE CE6 unchanged.',
+    },
+    {
         id: 'kslp-php-rust-signed-verifier-strict-v1-20261118',
         title: 'KSLP-v1 — align PHP and Rust signed verifier fail-closed contracts',
         state: 'active',
