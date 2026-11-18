@@ -206,7 +206,7 @@ Route::middleware(['auth', 'verified'])->prefix('developer')->name('developer.')
         );
 
         $customerIds = array_values(array_filter(
-            array_map('trim', preg_split('/\r\n|\n|\r/', $data['customers'])),
+            array_map('trim', preg_split('/\r\n|\n|\r/', $data['customers']) ?: []),
             fn (string $value): bool => $value !== '',
         ));
         try {
