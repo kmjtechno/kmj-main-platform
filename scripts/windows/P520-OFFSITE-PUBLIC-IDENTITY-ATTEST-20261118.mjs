@@ -10,6 +10,7 @@ import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { pathToFileURL } from 'node:url';
 import { verifyWindowsPrivateAcl } from './P520-OFFSITE-ACL-VERIFY-20261116.mjs';
+import { verifyWindowsPrivateChildFileAcl } from './P520-OFFSITE-FILE-ACL-READONLY-20261118.mjs';
 
 export const EXPECTED_AGE_RECIPIENT =
   'age1jgk7wrgccyu8s7wlh6zpxnm4qdvfus0d5t092s9zkjjmtwe8efjstvcs5u';
@@ -52,7 +53,7 @@ function plainFile(file, max) {
   const stat = lstatSync(file);
   if (!stat.isFile() || stat.isSymbolicLink() || stat.nlink !== 1 ||
     stat.size < 32 || stat.size > max) throw new Refuse('PUBLIC_PROOF_FILE_METADATA');
-  if (!verifyWindowsPrivateAcl(file)) throw new Refuse('PRIVATE_KEY_OR_PUBLIC_FILE_ACL_UNTRUSTED');
+  if (!verifyWindowsPrivateChildFileAcl(file)) throw new Refuse('PRIVATE_KEY_OR_PUBLIC_FILE_ACL_UNTRUSTED');
   return readFileSync(file);
 }
 
@@ -74,7 +75,7 @@ function main(args) {
   // The AGE private key is NEVER read by this script: age-keygen -y derives only public.
   const ageStat=lstatSync(ageKey);
   if (!ageStat.isFile() || ageStat.isSymbolicLink() || ageStat.nlink !== 1 ||
-    ageStat.size < 40 || ageStat.size > 8192 || !verifyWindowsPrivateAcl(ageKey)) {
+    ageStat.size < 40 || ageStat.size > 8192 || !verifyWindowsPrivateChildFileAcl(ageKey)) {
     throw new Refuse('AGE_PRIVATE_FILE_ACL_UNTRUSTED');
   }
   const agePublic=plainFile(path.join(folder,'p520-age-recipient.txt'),256).toString('ascii');
