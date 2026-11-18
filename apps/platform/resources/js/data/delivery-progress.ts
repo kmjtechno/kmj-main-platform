@@ -10,6 +10,14 @@ export type DeliveryMilestone = {
 
 export const deliveryMilestones: DeliveryMilestone[] = [
     {
+        id: 'kslp-app-lifecycle-audited-20261118',
+        title: 'Licensing Hub — guarded app rename and emergency pause/resume',
+        state: 'active',
+        detail: 'Stacked draft PR #894 adds a server-authorized app rename/pause/resume workflow on the existing KSLP authority. Product codes stay immutable. Tenant capability, recent password step-up, bounded audit reason, issuer and application transaction locks, fail-closed status checks and rollout/active-subscription gates govern changes. Emergency pause remains available during disabled rollout; online bootstrap keys and new trial issuance must reject a paused application. Existing independently signed offline leases are not instantly revoked by this UI action.',
+        evidence:
+            'Source and negative feature tests are proposed for cross-tenant attempts, stale step-up, idempotent audit events, paused online keys and guarded resume. This change is NOT full AuthSP parity or cryptographically tamper-evident audit. Parent #892 has npm production security audit blocked by picomatch GHSA-fc5q-39xc-vjpf (issue #893). Exact-head CI, device verifier contracts, independent restore, protected staging and owner production approval remain required; LIVE CE6 unchanged.',
+    },
+    {
         id: 'authsp-licensing-unified-role-workflow-20261118',
         title: 'Licensing Hub — reconcile AuthSP owner and developer workflows without new issuance',
         state: 'active',
