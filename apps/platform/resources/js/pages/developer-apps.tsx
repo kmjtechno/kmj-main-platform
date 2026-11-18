@@ -846,6 +846,128 @@ export default function DeveloperApps({
                     </section>
                 </div>
 
+                <section
+                    id="developer-trial-batch"
+                    className="bg-card rounded-2xl border p-5 sm:p-6"
+                >
+                    <h2 className="flex items-center gap-2 text-lg font-bold">
+                        <Layers3 className="size-5 text-red-500" />
+                        Trial batch — 2 to 10 customers
+                    </h2>
+                    <p className="text-muted-foreground mt-1 text-xs">
+                        Enter one unique customer reference per line. Either all keys are
+                        issued or none. This is trial-only; commercial license
+                        issuance requires verified payment rights.
+                    </p>
+                    <form
+                        className="mt-4 grid gap-3 md:grid-cols-2"
+                        onSubmit={(event) => {
+                            event.preventDefault();
+                            batchKeys.post('/developer/keys/batch', {
+                                preserveScroll: true,
+                                onSuccess: () => batchKeys.reset('customers', 'reason'),
+                            });
+                        }}
+                    >
+                        <div className="space-y-2">
+                            <label className="block text-xs font-semibold" htmlFor="batch-org">
+                                Authorized issuer organization
+                            </label>
+                            <select
+                                id="batch-org"
+                                className="bg-background min-h-11 w-full rounded-lg border px-3 text-sm"
+                                value={batchKeys.data.organization_id}
+                                onChange={(event) =>
+                                    batchKeys.setData({
+                                        ...batchKeys.data,
+                                        organization_id: event.target.value,
+                                        product_code: '',
+                                    })
+                                }
+                            >
+                                {organizations.map((org) => (
+                                    <option key={org.id} value={org.id}>
+                                        {org.name}
+                                    </option>
+                                ))}
+                            </select>
+                            <label className="block text-xs font-semibold" htmlFor="batch-app">
+                                Registered application
+                            </label>
+                            <select
+                                id="batch-app"
+                                className="bg-background min-h-11 w-full rounded-lg border px-3 text-sm"
+                                value={batchKeys.data.product_code}
+                                onChange={(event) =>
+                                    batchKeys.setData('product_code', event.target.value)
+                                }
+                                required
+                            >
+                                <option value="">Select your app</option>
+                                {batchEligibleApps.map((app) => (
+                                    <option key={app.id} value={app.product_code}>
+                                        {app.name} ({app.product_code})
+                                    </option>
+                                ))}
+                            </select>
+                            <label className="block text-xs font-semibold" htmlFor="batch-reason">
+                                Audit reason
+                            </label>
+                            <input
+                                id="batch-reason"
+                                className="bg-background min-h-11 w-full rounded-lg border px-3 text-sm"
+                                minLength={8}
+                                maxLength={240}
+                                placeholder="Approved QA trial for customer onboarding"
+                                value={batchKeys.data.reason}
+                                onChange={(event) =>
+                                    batchKeys.setData('reason', event.target.value)
+                                }
+                                required
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <label className="block text-xs font-semibold" htmlFor="batch-customers">
+                                Customer references (one per line)
+                            </label>
+                            <textarea
+                                id="batch-customers"
+                                className="bg-background min-h-32 w-full rounded-lg border p-3 font-mono text-sm"
+                                rows={5}
+                                maxLength={1400}
+                                placeholder={'customer-001\ncustomer-002'}
+                                value={batchKeys.data.customers}
+                                onChange={(event) =>
+                                    batchKeys.setData('customers', event.target.value)
+                                }
+                                required
+                            />
+                            <p className="text-muted-foreground text-xs">
+                                2–10 unique references, 3–128 characters each.
+                                Letters, digits, dot, dash, underscore, colon and @ only.
+                            </p>
+                            {Object.values(batchKeys.errors).map((error, index) => (
+                                <p key={index} className="text-xs text-red-500">
+                                    {error}
+                                </p>
+                            ))}
+                            <button
+                                type="submit"
+                                disabled={
+                                    !canIssueBatch ||
+                                    !batchKeys.data.product_code ||
+                                    batchKeys.processing
+                                }
+                                className="min-h-11 w-full rounded-xl bg-red-600 px-4 text-sm font-bold text-white disabled:opacity-40"
+                            >
+                                {batchKeys.processing
+                                    ? 'Issuing secured trial batch…'
+                                    : 'Issue trial batch — one-time keys'}
+                            </button>
+                        </div>
+                    </form>
+                </section>
+
                 <section className="bg-card rounded-2xl border p-5 sm:p-6">
                     <h2 className="font-bold">
                         Your applications and issued licenses
