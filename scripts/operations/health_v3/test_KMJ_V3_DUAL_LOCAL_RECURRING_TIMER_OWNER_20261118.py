@@ -109,6 +109,9 @@ class OwnerV3TimerTests(unittest.TestCase):
         self.assertIn('["/usr/bin/systemctl","disable","--now",TIMER]',BODY)
         self.assertIn("BACKUP_FILES_AND_RUNNER=RETAINED_FOR_REVIEW",BODY)
         self.assertIn("EXISTING_OFFSITE_TIMER=UNCHANGED",BODY)
+        rollback=BODY.split("def disable():",1)[1].split("\ndef selftest():",1)[0]
+        self.assertLess(rollback.index("verify_new_installation_bytes()"),
+                        rollback.index('["/usr/bin/systemctl","disable","--now",TIMER]'))
         self.assertNotIn('["/usr/bin/systemctl","stop",ORIGINAL_SERVICE]',BODY)
         self.assertNotIn('["/usr/bin/systemctl","disable","--now",ORIGINAL_TIMER]',BODY)
 
