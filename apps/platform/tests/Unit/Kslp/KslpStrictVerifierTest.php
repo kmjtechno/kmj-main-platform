@@ -187,6 +187,63 @@ final class KslpStrictVerifierTest extends TestCase
         }
     }
 
+    /**
+     * Valid Ed25519 test signatures over intentionally NONcanonical raw JSON.
+     * This makes duplicate field rejection independent of signature rejection.
+     */
+    private function verifyRawSignedJson(string $rawClaims, ?string $rawHeader = null): array
+    {
+        $pair = sodium_crypto_sign_keypair();
+        $secret = sodium_crypto_sign_secretkey($pair);
+        $public = sodium_crypto_sign_publickey($pair);
+        $header = $rawHeader ?? '{"alg":"EdDSA","kid":"test-signing-kid","typ":"KSLP-v1"}';
+        $b64 = static fn (string $value): string => rtrim(strtr(base64_encode($value), '+/', '-_'), '=');
+        $signed = $b64($header).'.'.$b64($rawClaims);
+        $token = $signed.'.'.$b64(sodium_crypto_sign_detached($signed, $secret));
+
+        return (new KslpVerifier)->verify(
+            $token,
+            fn (string $kid): ?string => $kid === 'test-signing-kid' ? $public : null,
+            'ed25519:valid-unique-test-device',
+            self::NOW,
+        );
+    }
+
+    public function test_validly_signed_duplicate_top_level_and_nested_json_fields_fail_closed(): void
+    {
+        $canonical = KslpCodec::canonical($this->claims());
+        $mutations = [
+            str_replace('"plan":"professional"', '"plan":"trial","plan":"professional"', $canonical),
+            str_replace('"hosting":true', '"hosting":false,"hosting":true', $canonical),
+        ];
+        foreach ($mutations as $noncanonical) {
+            self::assertNotSame($canonical, $noncanonical);
+            try {
+                $this->verifyRawSignedJson($noncanonical);
+                self::fail('Duplicate signed JSON member must be rejected at any nesting level.');
+            } catch (DomainException $exception) {
+                self::assertSame('KSLP_MALFORMED', $exception->getMessage());
+            }
+        }
+    }
+
+    public function test_validly_signed_duplicate_header_and_alternate_json_serialization_fail_closed(): void
+    {
+        $canonical = KslpCodec::canonical($this->claims());
+        $duplicatedHeader = '{"alg":"EdDSA","kid":"test-signing-kid","kid":"test-signing-kid","typ":"KSLP-v1"}';
+        foreach ([
+            [$canonical, $duplicatedHeader],
+            [str_replace('"plan":"professional"', '"plan": "professional"', $canonical), null],
+        ] as [$body, $header]) {
+            try {
+                $this->verifyRawSignedJson($body, $header);
+                self::fail('Ambiguous signed v1 JSON must be rejected.');
+            } catch (DomainException $exception) {
+                self::assertSame('KSLP_MALFORMED', $exception->getMessage());
+            }
+        }
+    }
+
     public function test_oversized_token_is_rejected_before_key_lookup(): void
     {
         $calls = 0;
