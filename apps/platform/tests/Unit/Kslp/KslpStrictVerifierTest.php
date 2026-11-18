@@ -40,7 +40,8 @@ final class KslpStrictVerifierTest extends TestCase
 
     /**
      * A fresh **test-only** signing key is never used for production licensing.
-     * @param array<string,mixed> $claims
+     *
+     * @param  array<string,mixed>  $claims
      * @return array{string,string}
      */
     private function signed(array $claims): array
