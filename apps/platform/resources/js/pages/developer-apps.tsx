@@ -1030,17 +1030,28 @@ export default function DeveloperApps({
                                         </p>
                                         <div className="mt-2 rounded-lg border p-2 text-xs">
                                             <p className="font-semibold">
-                                                Device bindings: {key.recorded_binding_count} recorded
-                                                {' · '}{key.non_deactivated_binding_count} not deactivated
+                                                Device bindings:{' '}
+                                                {key.recorded_binding_count}{' '}
+                                                recorded
+                                                {' · '}
+                                                {
+                                                    key.non_deactivated_binding_count
+                                                }{' '}
+                                                not deactivated
                                             </p>
                                             {key.last_activation_at && (
                                                 <p className="text-muted-foreground mt-1">
-                                                    Latest recorded activation: {key.last_activation_at.slice(0, 19).replace('T', ' ')}
+                                                    Latest recorded activation:{' '}
+                                                    {key.last_activation_at
+                                                        .slice(0, 19)
+                                                        .replace('T', ' ')}
                                                 </p>
                                             )}
                                             <p className="text-muted-foreground mt-1">
-                                                Recorded bindings are not online presence or valid license entitlement.
-                                                No hardware identifiers are displayed.
+                                                Recorded bindings are not online
+                                                presence or valid license
+                                                entitlement. No hardware
+                                                identifiers are displayed.
                                             </p>
                                         </div>
                                         {!key.revoked_at && canIssueKeys && (
