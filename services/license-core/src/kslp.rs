@@ -229,6 +229,78 @@ mod tests {
         );
     }
 
+    fn sign_raw_json_for_test(payload: &[u8], header: Option<&[u8]>) -> (String, [u8; 32]) {
+        let signing = SigningKey::from_bytes(&[13u8; 32]);
+        let default_header = serde_json::to_vec(&json!({
+            "alg": "EdDSA",
+            "kid": "unit-test-kid",
+            "typ": "KSLP-v1"
+        }))
+        .unwrap();
+        let header = header.unwrap_or(&default_header);
+        let signed = format!(
+            "{}.{}",
+            URL_SAFE_NO_PAD.encode(header),
+            URL_SAFE_NO_PAD.encode(payload)
+        );
+        let signature = signing.sign(signed.as_bytes());
+        let token = format!(
+            "{}.{}",
+            signed,
+            URL_SAFE_NO_PAD.encode(signature.to_bytes())
+        );
+
+        (token, signing.verifying_key().to_bytes())
+    }
+
+    #[test]
+    fn validly_signed_duplicate_json_header_and_nested_claims_are_rejected() {
+        let canonical = serde_json::to_string(&fixture_claims()).unwrap();
+        let duplicate_top = canonical.replace(
+            r#""plan":"trial""#,
+            r#""plan":"enterprise","plan":"trial""#
+        );
+        let duplicate_nested = canonical.replace(
+            r#""hosting":true"#,
+            r#""hosting":false,"hosting":true"#
+        );
+        let extra_whitespace = canonical.replace(
+            r#""plan":"trial""#,
+            r#""plan": "trial""#
+        );
+        for raw in [&duplicate_top, &duplicate_nested, &extra_whitespace] {
+            assert_ne!(raw, &canonical);
+            let (token, public_key) = sign_raw_json_for_test(raw.as_bytes(), None);
+            assert_eq!(
+                verify(
+                    &token,
+                    &public_key,
+                    "unit-test-kid",
+                    "KMJ_CLOUDOS",
+                    "ed25519:test-device",
+                    1800000000
+                ),
+                Err("KSLP_MALFORMED")
+            );
+        }
+
+        let duplicate_header =
+            br#"{"alg":"EdDSA","kid":"unit-test-kid","kid":"unit-test-kid","typ":"KSLP-v1"}"#;
+        let (token, public_key) =
+            sign_raw_json_for_test(canonical.as_bytes(), Some(duplicate_header));
+        assert_eq!(
+            verify(
+                &token,
+                &public_key,
+                "unit-test-kid",
+                "KMJ_CLOUDOS",
+                "ed25519:test-device",
+                1800000000
+            ),
+            Err("KSLP_MALFORMED")
+        );
+    }
+
     #[test]
     fn oversized_token_is_rejected_before_parsing_or_key_access() {
         assert_eq!(
