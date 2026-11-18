@@ -62,10 +62,9 @@ LockPersonality=true
 ReadWritePaths=/var/backups/kmj-elite-daily /var/backups/kmj-elite-offsite-encrypted /var/backups/kmj-v3-private-stage /usr/local/libexec/kmj-offsite-dual-local-v3-certbot-20261115 /run /tmp
 """
 TIMER_TEXT="""[Unit]
-Description=Schedule KMJ V3 dual-local backup (two daily safe windows)
+Description=Schedule KMJ V3 dual-local backup (daily guarded window)
 
 [Timer]
-OnCalendar=*-*-* 03:45:00
 OnCalendar=*-*-* 15:45:00
 Persistent=false
 RandomizedDelaySec=0
@@ -291,7 +290,7 @@ def selftest():
     assert len(PIN)==64 and re.fullmatch("[0-9a-f]{64}",PIN)
     assert CHECKSUM_TEXT==PIN+"  "+str(RUNNER)+"\n"
     assert "Persistent=false" in TIMER_TEXT
-    assert TIMER_TEXT.count("OnCalendar=")==2
+    assert TIMER_TEXT.count("OnCalendar=")==1
     assert "Unit="+SERVICE in TIMER_TEXT
     assert "ExecStartPre=/usr/bin/sha256sum --check --status "+str(SIDECAR) in SERVICE_TEXT
     assert "ExecStart=/usr/bin/python3 -I -B "+str(RUNNER)+" --run-once" in SERVICE_TEXT
