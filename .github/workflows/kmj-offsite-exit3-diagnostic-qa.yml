@@ -66,6 +66,10 @@ jobs:
           python3 -B -m unittest discover -s scripts/operations/health_v3 -p 'test_KMJ_OFFSITE_V3_DUAL_LOCAL_HEALTH_ONEPASS_20261117.py' -v
           python3 -I -B scripts/operations/health_v3/KMJ_OFFSITE_V3_DUAL_LOCAL_HEALTH_ONEPASS_20261117.py --selftest
           echo GOOGLE_NOV17_ISOLATED_RESTORE_SOURCE_QA=PASS
+          # Recurrence installer remains SOURCE ONLY: no root/systemd changes.
+          python3 -B -m unittest discover -s scripts/operations/health_v3 -p 'test_KMJ_V3_DUAL_LOCAL_RECURRING_TIMER_OWNER_20261118.py' -v
+          python3 -I -B scripts/operations/health_v3/KMJ_V3_DUAL_LOCAL_RECURRING_TIMER_OWNER_20261118.py --selftest
+          echo V3_DUAL_LOCAL_RECURRING_TIMER_OFFLINE_QA=PASS
           echo V3_DUAL_LOCAL_HEALTH_SOURCE_QA=PASS
           echo REMOTE_RESTORE_NOT_EXECUTED=YES
           echo OFFSITE_EXIT3_SOURCE_QA=PASS
