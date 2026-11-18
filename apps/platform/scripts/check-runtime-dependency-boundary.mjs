@@ -68,9 +68,12 @@ for (let index = 0; index < queue.length; index++) {
     }
     if (visited.has(id)) continue;
     visited.add(id);
-    if (pkgs[id].dev || pkgs[id].devOptional) {
+    if (pkgs[id].dev) {
         throw new Error('Production dependency incorrectly marked dev: ' + ancestry);
     }
+    // devOptional nodes can also be optional peer dependencies of a
+    // production-optional package. npm's actual omit=dev install and advisory
+    // scanner remain the authority for whether those are installed.
     if (id.endsWith('/picomatch')) {
         vulnerablePaths.push(ancestry);
     }
@@ -79,14 +82,17 @@ for (let index = 0; index < queue.length; index++) {
     // Include optional AND peer dependencies conservatively. If a new package
     // adds a picomatch peer edge, fail closed until reviewed rather than
     // relying on one specific npm Arborist installation layout.
-    for (const dependency of Object.keys({
-        ...node.dependencies,
-        ...node.optionalDependencies,
-        ...node.peerDependencies,
-    })) {
+    const required = node.dependencies ?? {};
+    const optional = { ...node.optionalDependencies, ...node.peerDependencies };
+    for (const dependency of Object.keys({ ...required, ...optional })) {
         const next = resolveDependency(id, dependency);
         if (!next) {
-            throw new Error('Unresolved production lock dependency: ' + ancestry + ' > ' + dependency);
+            if (Object.hasOwn(required, dependency)) {
+                throw new Error('Unresolved required dependency: ' + ancestry + ' > ' + dependency);
+            }
+            // Peer/optional packages may legitimately be absent from a
+            // platform-specific lockfile (e.g. Vue peers of a React app).
+            continue;
         }
         queue.push([next, ancestry + ' > ' + dependency]);
     }
