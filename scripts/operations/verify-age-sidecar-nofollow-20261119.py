@@ -89,6 +89,20 @@ def verify(cipher_path, sidecar_path):
                         raise Rejected("sidecar path swapped")
                     if h.hexdigest().encode("ascii") != match.group(1):
                         raise Rejected("SHA256 mismatch")
+                    # Rewalk the original absolute path: an attacker may rename
+                    # the parent directory while our open directory FD stays valid.
+                    check_fd, check_name = open_parent(cipher_path)
+                    try:
+                        if check_name != cname or (os.fstat(check_fd).st_dev, os.fstat(check_fd).st_ino) != (cp.st_dev, cp.st_ino):
+                            raise Rejected("cipher parent path swapped")
+                    finally:
+                        os.close(check_fd)
+                    check_fd, check_name = open_parent(sidecar_path)
+                    try:
+                        if check_name != sname or (os.fstat(check_fd).st_dev, os.fstat(check_fd).st_ino) != (sp.st_dev, sp.st_ino):
+                            raise Rejected("sidecar parent path swapped")
+                    finally:
+                        os.close(check_fd)
                 finally:
                     os.close(sfd)
             finally:
