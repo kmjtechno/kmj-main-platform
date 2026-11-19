@@ -4,7 +4,7 @@ on:
   pull_request:
     paths:
       - 'scripts/operations/kmj-p520-owner-public-pin-20261118.sh'
-      - 'scripts/operations/p520-owner-observed-public-key-20261118.pem'
+      - 'scripts/operations/p520-owner-observed-public-key-20261118.txt'
       - 'scripts/operations/p520-owner-observed-public-identity-20261118.json'
       - 'scripts/operations/test-p520-owner-public-pin-20261118.mjs'
       - '.github/workflows/kmj-p520-owner-public-pin-qa.yml'
