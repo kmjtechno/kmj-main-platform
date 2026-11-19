@@ -40,8 +40,8 @@ final class KslpInventoryCsv
     }
 
     /**
-     * @param resource $stream
-     * @param array<int, mixed> $cells
+     * @param  resource  $stream
+     * @param  array<int, mixed>  $cells
      */
     public static function writeRow($stream, array $cells): void
     {
