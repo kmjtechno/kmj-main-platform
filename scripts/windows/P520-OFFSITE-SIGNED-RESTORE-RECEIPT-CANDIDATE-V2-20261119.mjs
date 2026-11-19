@@ -7,6 +7,7 @@ import { constants,existsSync,fstatSync,lstatSync,openSync,readFileSync,closeSyn
 import { join } from 'node:path';
 import os from 'node:os';
 import { verifyWindowsPrivateAcl } from './P520-OFFSITE-ACL-VERIFY-20261116.mjs';
+import { verifyWindowsPrivateChildFileAcl } from './P520-OFFSITE-FILE-ACL-READONLY-20261118.mjs';
 
 const HEX=/^[0-9a-f]{64}$/;
 const CANDIDATE='bd8975f0ee888a26013a6669e687db540f39f440';
@@ -46,6 +47,8 @@ export function signVerifiedPayload(payload,privatePem,publicPem){
   return signature;
 }
 function readPrivateFile(path,max){
+  // Fail closed before reading a private key if Windows owner/ACL has drifted.
+  if(!verifyWindowsPrivateChildFileAcl(path))throw Error('PRIVATE_FILE_ACL_UNTRUSTED');
   const before=lstatSync(path,{bigint:true});
   if(!before.isFile()||before.isSymbolicLink()||before.nlink!==1n||
      before.size<32n||before.size>BigInt(max))throw Error('PRIVATE_FILE_METADATA');
