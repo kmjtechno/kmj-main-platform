@@ -66,12 +66,16 @@ class SidecarTests(unittest.TestCase):
     def test_cipher_symlink(self):
         link = self.root / "alias.tar.age"
         link.symlink_to(self.c)
+        matching_sidecar = self.root / "alias.tar.age.sha256"
+        matching_sidecar.write_text(self.good.replace(self.c.name, link.name), encoding="ascii")
         with self.assertRaises(OSError):
-            v.verify(str(link), str(self.s))
+            v.verify(str(link), str(matching_sidecar))
 
     def test_sidecar_symlink(self):
-        link = self.root / "alias.sha256"
-        link.symlink_to(self.s)
+        link = self.root / (self.c.name + ".sha256")
+        self.s.unlink()
+        link.symlink_to(self.root / "real.sha256")
+        (self.root / "real.sha256").write_text(self.good, encoding="ascii")
         with self.assertRaises(OSError):
             v.verify(str(self.c), str(link))
 
