@@ -21,6 +21,12 @@ BASE_EVIDENCE = {
     "standingOwnerAuthorization": True,
     **{k: True for k in mod.ACCEPTANCE_KEYS},
 }
+ELITE_EVIDENCE = {
+    "schema": "kmj.autopublish.release-admission.elite-local.v2",
+    "approvedSha": SHA, "expectedCurrentRelease": OLD, "stagingSha": SHA,
+    "standingOwnerAuthorization": True,
+    **{k: True for k in mod.ELITE_LOCAL_ACCEPTANCE_KEYS},
+}
 
 def verdict(approval=None, evidence=None, live=OLD, remote=SHA, candidate=SHA):
     return mod.decision(
@@ -32,6 +38,56 @@ def verdict(approval=None, evidence=None, live=OLD, remote=SHA, candidate=SHA):
 class AutoPublishSafetyTest(unittest.TestCase):
     def test_all_independent_gates_exact_sha(self):
         self.assertEqual(verdict(), "READY_APPROVED_RELEASE")
+
+    def test_elite_only_v2_requires_explicit_owner_authorized_local_restore(self):
+        # Elite-local promotion can be admitted only after independently
+        # witnessed exact candidate PG/uploads restore and backup SHA.
+        self.assertEqual(verdict(evidence=ELITE_EVIDENCE),
+                         "READY_APPROVED_RELEASE")
+        self.assertEqual(verdict(evidence=ELITE_EVIDENCE,
+                                 live="platform-" + SHA[:12]), "ALREADY_LIVE")
+        for key in mod.ELITE_LOCAL_ACCEPTANCE_KEYS:
+            with self.subTest(key=key):
+                candidate = dict(ELITE_EVIDENCE, **{key: False})
+                self.assertEqual(verdict(evidence=candidate),
+                                 "BLOCKED_ACCEPTANCE_EVIDENCE")
+                candidate[key] = "true"
+                self.assertEqual(verdict(evidence=candidate),
+                                 "BLOCKED_ACCEPTANCE_EVIDENCE")
+                candidate[key] = None
+                self.assertEqual(verdict(evidence=candidate),
+                                 "BLOCKED_ACCEPTANCE_EVIDENCE")
+
+    def test_elite_only_v2_never_infers_local_recovery_from_legacy_offsite(self):
+        # Do not rename legacy evidence, admit mixed contracts, or manufacture
+        # backup/rollback/owner attestations when switching deployment policy.
+        old = dict(BASE_EVIDENCE, schema=ELITE_EVIDENCE["schema"])
+        new = dict(ELITE_EVIDENCE, schema=BASE_EVIDENCE["schema"])
+        self.assertEqual(verdict(evidence=old), "BLOCKED_ACCEPTANCE_SCHEMA")
+        self.assertEqual(verdict(evidence=new), "BLOCKED_ACCEPTANCE_SCHEMA")
+        for key in ("eliteDisposablePgUploadsRestorePass", "eliteBackupWitnessShaPass"):
+            modified = dict(ELITE_EVIDENCE)
+            modified.pop(key)
+            self.assertEqual(verdict(evidence=modified),
+                             "BLOCKED_ACCEPTANCE_SCHEMA")
+        modified = dict(ELITE_EVIDENCE, independentOffsiteRestorePass=True)
+        self.assertEqual(verdict(evidence=modified), "BLOCKED_ACCEPTANCE_SCHEMA")
+        modified = dict(ELITE_EVIDENCE, standingOwnerAuthorization=False)
+        self.assertEqual(verdict(evidence=modified), "BLOCKED_OWNER_AUTHORIZATION")
+        modified = dict(ELITE_EVIDENCE, extra=True)
+        self.assertEqual(verdict(evidence=modified), "BLOCKED_ACCEPTANCE_SCHEMA")
+        self.assertEqual(verdict(evidence=ELITE_EVIDENCE,
+                                 live="platform-" + "c" * 12),
+                         "BLOCKED_CURRENT_RELEASE_DRIFT")
+        self.assertEqual(verdict(evidence=ELITE_EVIDENCE,
+                                 remote="c" * 40),
+                         "BLOCKED_STAGING_APPROVAL_DRIFT")
+        self.assertEqual(verdict(evidence=ELITE_EVIDENCE,
+                                 candidate="c" * 40),
+                         "BLOCKED_CANDIDATE_IDENTITY")
+        approval = dict(BASE_APPROVAL, rollbackVerified=False)
+        self.assertEqual(verdict(approval=approval, evidence=ELITE_EVIDENCE),
+                         "BLOCKED_PROTECTED_APPROVAL")
 
     def test_noop_when_already_live(self):
         self.assertEqual(verdict(live="platform-" + SHA[:12]), "ALREADY_LIVE")

@@ -4,6 +4,65 @@
 is exclusively a release-test origin. GitHub merge, `staging-approved`
 promotion, an isolated build, or HTTP 200 are NOT equivalent to a live release.
 
+## Owner-selected Elite-only staging → live policy (19 November 2026)
+
+The owner may choose a **single-VPS release pipeline on KMJ-elite**, with
+`staging.kmjtechno.com` and `kmjtechno.com` as isolated logical sites on the
+same machine. **P520/Google must not be automatic prerequisites for routine
+promotion under the owner-selected V2 admission.** This does not change the
+need for offsite disaster recovery: a single-server backup cannot survive
+total loss of KMJ-elite. Keep the separate encrypted offsite jobs operational
+and report degraded offsite protection clearly.
+
+Existing release implementation already supports a fixed systemd staging unit,
+an existing guarded production unit, and an unattended auto-publish source.
+The owner has NOT authorized this source to silently write or alter root
+approval files. New deployment must still pass real owner-authenticated QA,
+staging exact SHA, local root-owned backup witness (SHA256), non-production
+**disposable PostgreSQL + uploads restore on Elite**, migration/storage
+continuity, real rollback rehearsal, and public origin QA. Each check must
+apply to the *exact candidate* and the *verified current LIVE predecessor*.
+No reusing the previous E5B manifest when LIVE is CE6.
+
+For this policy, the separately owner-created root-owned admission file uses
+the explicitly new `kmj.autopublish.release-admission.elite-local.v2`
+schema. No client or CI job may prefill true flags from source tests; each true
+flag requires its respective real immutable receipt:
+
+```json
+{
+  "schema": "kmj.autopublish.release-admission.elite-local.v2",
+  "approvedSha": "<exact-owner-approved-40-hex-SHA>",
+  "expectedCurrentRelease": "<verified-current-platform-sha12>",
+  "stagingSha": "<same-exact-SHA>",
+  "standingOwnerAuthorization": false,
+  "ownerAuthenticatedQaPass": false,
+  "stagingExactShaPass": false,
+  "eliteBackupWitnessShaPass": false,
+  "eliteDisposablePgUploadsRestorePass": false,
+  "rollbackRehearsalPass": false,
+  "migrationAndStorageContinuityPass": false,
+  "publicOriginQaPass": false
+}
+```
+
+The example intentionally cannot authorize anything. The legacy V1 offsite
+schema remains unchanged and still requires its independent offsite evidence.
+No V1 `independentOffsiteRestorePass` field is silently converted into a
+V2 local-restore field or vice versa. Both schema versions require the
+**separate protected production approval** with `backupVerified` and
+`rollbackVerified` set only by real owner review of evidence, not by this
+controller.
+
+Target operator UX: owner authorizes one exact SHA/predecessor and approved
+release policy; the existing fixed units stage, test, locally rehearse and
+promote **only if every protected gate passes**, otherwise do nothing.
+The fixed production controller independently rechecks runtime/backup/rollback
+before cutover and post-activation health. This V2 code change alone does
+NOT install a systemd timer or service, modify a live manifest, create a
+recovery receipt, trigger staging, or switch production. Separate root-side
+review and verified deployment are required.
+
 ## Goal and boundaries
 
 When the owner has granted *exact-release* authorization after independent QA,
