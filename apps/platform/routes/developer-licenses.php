@@ -195,6 +195,8 @@ Route::middleware(['auth', 'verified'])->prefix('developer')->name('developer.')
 
         $data = $request->validate([
             'organization_id' => ['required', 'uuid'],
+            'product_code' => ['nullable', 'string', 'regex:/^[A-Z0-9][A-Z0-9_.:-]{2,95}$/'],
+            'key_state' => ['nullable', 'in:all,revoked,not_revoked'],
         ]);
         abort_unless(
             $capabilities->allows($actor->id, $data['organization_id'], 'license.manage'),
@@ -204,15 +206,31 @@ Route::middleware(['auth', 'verified'])->prefix('developer')->name('developer.')
 
         // All three rows must belong to the same authorized issuer/product
         // chain; a forged UUID or manipulated join may not cross tenants.
-        $rows = DB::table('kslp_license_keys as k')
+        $query = DB::table('kslp_license_keys as k')
             ->join('kslp_licensed_products as p', function ($join): void {
                 $join->on('p.id', '=', 'k.licensed_product_id')
                     ->on('p.organization_id', '=', 'k.organization_id');
             })
             ->join('kslp_licenses as l', 'l.id', '=', 'k.license_id')
             ->where('k.organization_id', $data['organization_id'])
-            ->whereColumn('l.product', 'p.product_code')
-            ->orderByDesc('k.created_at')
+            ->whereColumn('l.product', 'p.product_code');
+
+        // An app filter NEVER widens the authorized organization scope.
+        // "Not revoked" describes only stored revocation state: it is NOT
+        // proof of a currently usable entitlement or online device.
+        if (! empty($data['product_code'])) {
+            $query->where('p.product_code', $data['product_code']);
+        }
+        if (($data['key_state'] ?? 'all') === 'revoked') {
+            $query->where(function ($nested): void {
+                $nested->whereNotNull('k.revoked_at')
+                    ->orWhereNotNull('l.revoked_at');
+            });
+        } elseif (($data['key_state'] ?? 'all') === 'not_revoked') {
+            $query->whereNull('k.revoked_at')->whereNull('l.revoked_at');
+        }
+
+        $rows = $query->orderByDesc('k.created_at')
             ->orderByDesc('k.id')
             ->limit(KslpInventoryCsv::MAX_ROWS)
             ->get([
