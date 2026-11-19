@@ -147,6 +147,37 @@ class StageRootFinalizerTests(unittest.TestCase):
             with self.subTest(bad=bad[:36]):
                 self.assertFalse(m.staging_env_isolated(bad))
 
+    def test_redacted_policy_diagnosis_exposes_only_fixed_field_labels(self):
+        safe = (b"APP_ENV=staging\nAPP_URL=https://staging.kmjtechno.com\n"
+                b"APP_DEBUG=false\nDB_CONNECTION=pgsql\nDB_HOST=127.0.0.1\n"
+                b"DB_DATABASE=kmj_stage_2026\nDB_USERNAME=kmjstage_2026\n"
+                b"MAIL_MAILER=log\nDB_PASSWORD=SECRET_NEVER_PRINT_ME\n")
+        self.assertEqual(m.staging_env_policy_failures(safe), ())
+        modified = safe.replace(b"DB_HOST=127.0.0.1",
+                                b"DB_HOST=production-db.internal").replace(
+                                    b"MAIL_MAILER=log", b"MAIL_MAILER=smtp")
+        self.assertEqual(m.staging_env_policy_failures(modified),
+                         ("DB_HOST", "MAIL_MAILER"))
+        self.assertNotIn("SECRET_NEVER_PRINT_ME",
+                         str(m.staging_env_policy_failures(modified)))
+        self.assertEqual(m.staging_env_policy_failures(
+            safe + b"DB_PASSWORD=SECRET_NEVER_PRINT_ME\n"), ("DUPLICATE",))
+        self.assertEqual(m.staging_env_policy_failures(
+            safe + b"bad line\n"), ("SYNTAX",))
+        self.assertEqual(m.staging_env_policy_failures(
+            safe + b"\xff"), ("ENCODING",))
+
+    def test_unsafe_env_inspect_does_not_output_field_values(self):
+        bad = b"DB_PASSWORD=SUPER_SECRET\nDB_HOST=production.internal\n"
+        with mock.patch.object(m, "staging_env_policy_failures",
+                               wraps=m.staging_env_policy_failures) as fn:
+            self.assertEqual(fn(bad),
+                             ("APP_ENV", "APP_URL", "DB_CONNECTION",
+                              "DB_DATABASE", "DB_USERNAME", "DB_HOST",
+                              "MAIL_MAILER", "APP_DEBUG"))
+        self.assertNotIn("SUPER_SECRET",
+                         repr(m.staging_env_policy_failures(bad)))
+
     def test_parent_acl_rollback_requires_successful_restore(self):
         with mock.patch.object(m.subprocess, "run") as run:
             run.return_value.returncode = 0
