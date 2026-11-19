@@ -18,7 +18,7 @@ const batch = [
     },
 ];
 
-test('bounded, one-time CSV preserves exact secrets only in local return value', () => {
+void test('bounded, one-time CSV preserves exact secrets only in local return value', () => {
     const csv = buildOneTimeTrialBatchCsv(batch);
     assert.equal(csv.split('\r\n').filter(Boolean).length, 3);
     assert.match(csv, /one_time_trial_bootstrap_key/);
@@ -28,7 +28,7 @@ test('bounded, one-time CSV preserves exact secrets only in local return value',
     assert.ok(csv.startsWith('customer_id,product_code,license_id'));
 });
 
-test('rejects forged, duplicate, paid-like or unbounded payloads', () => {
+void test('rejects forged, duplicate, paid-like or unbounded payloads', () => {
     for (const value of [
         [],
         [batch[0]],
@@ -47,7 +47,7 @@ test('rejects forged, duplicate, paid-like or unbounded payloads', () => {
     }
 });
 
-test('helper is side-effect free; download must stay in one-time UI on explicit confirmation', () => {
+void test('helper is side-effect free; download must stay in one-time UI on explicit confirmation', () => {
     const helper = readFileSync(
         'resources/js/lib/one-time-trial-batch-csv.mjs',
         'utf8',
