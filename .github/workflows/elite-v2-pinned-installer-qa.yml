@@ -23,6 +23,7 @@ jobs:
         run: |
           set -Eeuo pipefail
           python3 -B -m py_compile scripts/operations/install-elite-autopublish-v2-20261119.py
+          sha256sum scripts/operations/install-elite-autopublish-v2-20261119.py
           python3 -B -m unittest discover \
             -s scripts -p 'test_install_elite_autopublish_v2_20261119.py' -v
           echo "ELITE_V2_PINNED_INSTALLER_OFFLINE_QA=PASS"
