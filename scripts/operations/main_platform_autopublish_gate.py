@@ -26,6 +26,10 @@ LOCK = Path("/run/lock/kmj-main-platform-autopublish.lock")
 UNIT = "kmj-main-platform-production-release.service"
 REMOTE = "https://github.com/kmjtechno/kmj-main-platform.git"
 URL = "https://kmjtechno.com/login"
+# Legacy V1 remains strict for releases using independently verified offsite DR.
+# V2 is an EXPLICIT owner-selected, same-KMJ-elite deployment policy. It requires
+# candidate-bound local SHA witness and a real isolated PostgreSQL+uploads
+# restore, not a dump existing on disk. Neither schema is inferred or upgraded.
 ACCEPTANCE_KEYS = (
     "ownerAuthenticatedQaPass",
     "stagingExactShaPass",
@@ -34,11 +38,22 @@ ACCEPTANCE_KEYS = (
     "migrationAndStorageContinuityPass",
     "publicOriginQaPass",
 )
+ELITE_LOCAL_ACCEPTANCE_KEYS = (
+    "ownerAuthenticatedQaPass",
+    "stagingExactShaPass",
+    "eliteBackupWitnessShaPass",
+    "eliteDisposablePgUploadsRestorePass",
+    "rollbackRehearsalPass",
+    "migrationAndStorageContinuityPass",
+    "publicOriginQaPass",
+)
 APPROVAL_KEYS = {"approvedSha", "expectedCurrentRelease", "backupVerified", "rollbackVerified"}
-ADMISSION_KEYS = {
+ADMISSION_COMMON_KEYS = {
     "schema", "approvedSha", "expectedCurrentRelease", "stagingSha",
-    "standingOwnerAuthorization", *ACCEPTANCE_KEYS,
+    "standingOwnerAuthorization",
 }
+ADMISSION_KEYS = ADMISSION_COMMON_KEYS | set(ACCEPTANCE_KEYS)
+ELITE_LOCAL_ADMISSION_KEYS = ADMISSION_COMMON_KEYS | set(ELITE_LOCAL_ACCEPTANCE_KEYS)
 
 def decision(approval, admission, current_release, approved_remote_sha, candidate_sha):
     """Pure fail-closed gate. Tests exercise all boundary conditions."""
@@ -57,16 +72,28 @@ def decision(approval, admission, current_release, approved_remote_sha, candidat
         return "BLOCKED_STAGING_APPROVAL_DRIFT"
     if candidate_sha != sha:
         return "BLOCKED_CANDIDATE_IDENTITY"
-    if not isinstance(admission, dict) or set(admission) != ADMISSION_KEYS:
+    if not isinstance(admission, dict):
         return "BLOCKED_ACCEPTANCE_SCHEMA"
-    if (admission.get("schema") != "kmj.autopublish.release-admission.v1"
+    schema = admission.get("schema")
+    if schema == "kmj.autopublish.release-admission.elite-local.v2":
+        required = ELITE_LOCAL_ACCEPTANCE_KEYS
+        allowed_keys = ELITE_LOCAL_ADMISSION_KEYS
+    else:
+        # An unknown schema cannot silently switch policy or add extra fields.
+        required = ACCEPTANCE_KEYS
+        allowed_keys = ADMISSION_KEYS
+    if set(admission) != allowed_keys:
+        return "BLOCKED_ACCEPTANCE_SCHEMA"
+    if (schema not in (
+            "kmj.autopublish.release-admission.v1",
+            "kmj.autopublish.release-admission.elite-local.v2")
             or admission.get("approvedSha") != sha
             or admission.get("expectedCurrentRelease") != expected
             or admission.get("stagingSha") != sha):
         return "BLOCKED_ACCEPTANCE_IDENTITY"
     if admission.get("standingOwnerAuthorization") is not True:
         return "BLOCKED_OWNER_AUTHORIZATION"
-    if any(admission.get(key) is not True for key in ACCEPTANCE_KEYS):
+    if any(admission.get(key) is not True for key in required):
         return "BLOCKED_ACCEPTANCE_EVIDENCE"
     if current_release == "platform-" + sha[:12]:
         return "ALREADY_LIVE"
