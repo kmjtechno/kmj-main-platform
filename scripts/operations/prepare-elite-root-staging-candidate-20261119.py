@@ -192,6 +192,9 @@ def staging_env_policy_failures(raw: bytes) -> tuple[str, ...]:
             "127.0.0.1", "localhost", "/var/run/postgresql"
         }),
         ("DB_PORT", values.get("DB_PORT", "5432") == "5432"),
+        # Laravel's DB_URL takes precedence over DB_HOST/DB_DATABASE.
+        # Never allow a hidden production DSN to override the stage identity.
+        ("DB_URL", values.get("DB_URL", "") == ""),
         ("MAIL_MAILER", values.get("MAIL_MAILER") in {"log", "array"}),
         ("APP_DEBUG", values.get("APP_DEBUG") in {"false", "0"}),
     )
@@ -202,6 +205,33 @@ def staging_env_isolated(raw: bytes) -> bool:
     return not staging_env_policy_failures(raw)
 
 
+def normalize_candidate_mailer(raw: bytes) -> bytes:
+    """Repair only candidate mail transport; never change predecessor .env.
+
+    Preserve every other environment byte, including database credentials and
+    application key. Explicitly refuse ANY other environment policy mismatch.
+    """
+    failures = staging_env_policy_failures(raw)
+    require(not set(failures) - {"MAIL_MAILER"},
+            "STAGING_ENV_HAS_UNSAFE_NONMAILER_FIELD")
+    require(len(raw) <= 1024 * 1024, "STAGING_ENV_OVERSIZED")
+    output = []
+    replaced = False
+    for line in raw.splitlines(keepends=True):
+        if line.startswith(b"MAIL_MAILER="):
+            require(not replaced, "STAGING_ENV_DUPLICATE_MAILER")
+            output.append(b"MAIL_MAILER=log\n")
+            replaced = True
+        else:
+            output.append(line)
+    result = b"".join(output)
+    if not replaced:
+        if result and not result.endswith(b"\n"):
+            result += b"\n"
+        result += b"MAIL_MAILER=log\n"
+    require(staging_env_isolated(result),
+            "STAGING_ENV_CANDIDATE_NOT_ISOLATED")
+    return result
 
 
 def inspect(sha: str, old: str, live: str) -> tuple[Path, Path, list]:
@@ -233,7 +263,12 @@ def inspect(sha: str, old: str, live: str) -> tuple[Path, Path, list]:
     # Only fixed field labels are emitted; no .env data, secrets, or values.
     for field in failed_fields:
         print("STAGING_ENV_POLICY_" + field + "=BLOCKED")
-    require(not failed_fields, "PREDECESSOR_STAGING_DATABASE_NOT_ISOLATED")
+    require(not set(failed_fields) - {"MAIL_MAILER"},
+            "PREDECESSOR_STAGING_DATABASE_NOT_ISOLATED")
+    if "MAIL_MAILER" in failed_fields:
+        print("STAGING_LEGACY_MAILER=REPAIR_CANDIDATE_ONLY")
+    require(staging_env_isolated(normalize_candidate_mailer(data)),
+            "CANDIDATE_MAILER_REPAIR_UNSAFE")
     require(not (RELEASES / sha).exists() and
             not (RELEASES / sha).is_symlink(),
             "CANDIDATE_ALREADY_PRESENT")
@@ -303,14 +338,20 @@ def build_stage(sha: str, old_app: Path, scratch: Path) -> Path:
     require((app / "composer.lock").is_file() and
             (app / "package-lock.json").is_file() and
             not (app / ".env").exists(), "APP_TREE_INCOMPLETE")
-    # Only staging env copied; no production env/DB access.
+    # Copy all stage-only credentials byte-for-byte; replace/append ONLY
+    # MAIL_MAILER=log in the *new scratch candidate*. Old staging remains
+    # unchanged. Re-validate on this second read to reject concurrent drift.
     env = app / ".env"
+    candidate_env = normalize_candidate_mailer((old_app / ".env").read_bytes())
     fd = os.open(env, os.O_WRONLY | os.O_CREAT | os.O_EXCL |
                  os.O_NOFOLLOW | os.O_CLOEXEC, 0o600)
     with os.fdopen(fd, "wb") as stream:
-        stream.write((old_app / ".env").read_bytes())
+        stream.write(candidate_env)
         stream.flush()
         os.fsync(stream.fileno())
+    require(env.read_bytes() == candidate_env and
+            staging_env_isolated(candidate_env),
+            "STAGING_ENV_CANDIDATE_READBACK_FAILED")
     uid = int(fixed(["/usr/bin/id", "-u", STAGE_USER]))
     gid = int(fixed(["/usr/bin/id", "-g", STAGE_USER]))
     os.chown(env, uid, gid, follow_symlinks=False)
@@ -516,6 +557,7 @@ def run(argv: list[str]) -> int:
                 output.flush()
                 os.fsync(output.fileno())
             print("STAGING_CANDIDATE=ROOT_OWNED_SEALED_PASS")
+            print("STAGING_CANDIDATE_MAILER=LOG_NO_EXTERNAL_SEND")
             print("STAGING_SOURCE_SHA=" + a.sha)
             print("STAGING_STORAGE_CONTINUITY=NOT_ATTESTED")
             print("STAGING_ROLLBACK=NOT_ATTESTED")
