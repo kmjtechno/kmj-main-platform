@@ -194,6 +194,9 @@ export default function DeveloperApps({
 }: Props) {
     const [language, setLanguage] = useState<string>('TypeScript');
     const [selectedApp, setSelectedApp] = useState<string>('');
+    const [exportOrganizationId, setExportOrganizationId] = useState<string>(
+        organizations[0]?.id ?? '',
+    );
     const [copied, setCopied] = useState(false);
     const [revokeKeyId, setRevokeKeyId] = useState<string | null>(null);
     const [manageAppId, setManageAppId] = useState<string | null>(null);
@@ -1235,6 +1238,51 @@ export default function DeveloperApps({
                             )}
                         </div>
                         <div className="space-y-2">
+                            {organizations.length > 0 && (
+                                <section
+                                    className="rounded-xl border p-4"
+                                    aria-label="Export masked license key inventory"
+                                >
+                                    <h3 className="text-sm font-bold">
+                                        Export your organization's key inventory
+                                    </h3>
+                                    <p className="text-muted-foreground mt-1 text-xs leading-5">
+                                        Read-only CSV for up to 1,000 recent keys.
+                                        Includes app names and masked key prefixes,
+                                        never full license keys, digests, customer
+                                        identities or device identifiers. Password
+                                        confirmation is required.
+                                    </p>
+                                    <div className="mt-3 flex flex-wrap items-end gap-3">
+                                        <label className="flex min-w-48 flex-1 flex-col gap-1 text-xs font-semibold">
+                                            Authorized organization
+                                            <select
+                                                aria-label="CSV inventory organization"
+                                                className="bg-background min-h-10 rounded-lg border px-3 text-sm"
+                                                value={exportOrganizationId}
+                                                onChange={(event) =>
+                                                    setExportOrganizationId(event.target.value)
+                                                }
+                                            >
+                                                {organizations.map((org) => (
+                                                    <option key={org.id} value={org.id}>
+                                                        {org.name}
+                                                    </option>
+                                                ))}
+                                            </select>
+                                        </label>
+                                        <a
+                                            className="inline-flex min-h-10 items-center rounded-lg border px-4 text-xs font-bold hover:border-red-500/40"
+                                            href={
+                                                '/developer/keys/export?organization_id=' +
+                                                encodeURIComponent(exportOrganizationId)
+                                            }
+                                        >
+                                            Export masked CSV
+                                        </a>
+                                    </div>
+                                </section>
+                            )}
                             {keys.length === 0 ? (
                                 <p className="text-muted-foreground rounded-xl border border-dashed p-5 text-sm">
                                     No customer keys issued yet.
