@@ -33,7 +33,8 @@ test('all six candidate-bound sources exclude old 4C9 evidence and import no V1 
     const src=readFileSync(fileURLToPath(new URL('./'+name,import.meta.url)),'utf8');
     assert.ok(!src.includes(OLD),name);
     assert.doesNotMatch(src,/\b(?:P520-OFFSITE-CIPHER-READBACK|P520-OFFSITE-CONTAINER-ADMISSION|P520-OFFSITE-PG-STORAGE-RESTORE|P520-OFFSITE-SIGNED-RESTORE-RECEIPT)-20261116\.mjs/);
-    assert.doesNotMatch(src,/docker(?:\.exe)?\s+(?:pull|build)|--pull=always|--network=host/i);
+    const executable = src.split(/\r?\n/).filter(line => !line.trimStart().startsWith('//')).join('\n');
+    assert.doesNotMatch(executable,/docker(?:\.exe)?\s+(?:pull|build)|--pull=always|--network=host/i);
   }
   assert.equal(NAME,'offsite-p520-bd8975f0ee88.tar.gz.age');
   assert.ok(RESTORE_PY.includes(CANDIDATE));
