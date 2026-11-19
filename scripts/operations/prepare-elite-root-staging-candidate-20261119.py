@@ -162,36 +162,46 @@ def approved_ref_sha() -> str:
 
 
 
-def staging_env_isolated(raw: bytes) -> bool:
-    """Require one local, staging-namespaced DB identity; never print secrets."""
+def staging_env_policy_failures(raw: bytes) -> tuple[str, ...]:
+    """Fail-closed policy reasons; never return input, credential values or names."""
     try:
-        values = {}
-        for line in raw.decode("utf-8", "strict").splitlines():
-            if not line or line.lstrip().startswith("#"):
-                continue
-            if "=" not in line:
-                return False
-            key, value = line.split("=", 1)
-            if not re.fullmatch(r"[A-Z][A-Z0-9_]{0,80}", key) or key in values:
-                return False
-            values[key] = value.strip()
-        return (
-            values.get("APP_ENV") == "staging"
-            and values.get("APP_URL") == "https://staging.kmjtechno.com"
-            and values.get("DB_CONNECTION") == "pgsql"
-            and re.fullmatch(r"kmj_stage_[a-z0-9_]{2,64}",
-                             values.get("DB_DATABASE", "")) is not None
-            and re.fullmatch(r"kmjstage(?:_[a-z0-9_]{1,64})?",
-                             values.get("DB_USERNAME", "")) is not None
-            and values.get("DB_HOST") in {
-                "127.0.0.1", "localhost", "/var/run/postgresql"
-            }
-            and values.get("DB_PORT", "5432") == "5432"
-            and values.get("MAIL_MAILER") in {"log", "array"}
-            and values.get("APP_DEBUG") in {"false", "0"}
-        )
+        text = raw.decode("utf-8", "strict")
     except UnicodeError:
-        return False
+        return ("ENCODING",)
+    values: dict[str, str] = {}
+    for line in text.splitlines():
+        if not line or line.lstrip().startswith("#"):
+            continue
+        if "=" not in line:
+            return ("SYNTAX",)
+        key, value = line.split("=", 1)
+        if not re.fullmatch(r"[A-Z][A-Z0-9_]{0,80}", key):
+            return ("SYNTAX",)
+        if key in values:
+            return ("DUPLICATE",)
+        values[key] = value.strip()
+    tests = (
+        ("APP_ENV", values.get("APP_ENV") == "staging"),
+        ("APP_URL", values.get("APP_URL") == "https://staging.kmjtechno.com"),
+        ("DB_CONNECTION", values.get("DB_CONNECTION") == "pgsql"),
+        ("DB_DATABASE", re.fullmatch(r"kmj_stage_[a-z0-9_]{2,64}",
+                                      values.get("DB_DATABASE", "")) is not None),
+        ("DB_USERNAME", re.fullmatch(r"kmjstage(?:_[a-z0-9_]{1,64})?",
+                                      values.get("DB_USERNAME", "")) is not None),
+        ("DB_HOST", values.get("DB_HOST") in {
+            "127.0.0.1", "localhost", "/var/run/postgresql"
+        }),
+        ("DB_PORT", values.get("DB_PORT", "5432") == "5432"),
+        ("MAIL_MAILER", values.get("MAIL_MAILER") in {"log", "array"}),
+        ("APP_DEBUG", values.get("APP_DEBUG") in {"false", "0"}),
+    )
+    return tuple(field for field, valid in tests if not valid)
+
+
+def staging_env_isolated(raw: bytes) -> bool:
+    return not staging_env_policy_failures(raw)
+
+
 
 
 def inspect(sha: str, old: str, live: str) -> tuple[Path, Path, list]:
@@ -219,8 +229,11 @@ def inspect(sha: str, old: str, live: str) -> tuple[Path, Path, list]:
             stat.S_IMODE(old_env.stat().st_mode) in (0o400, 0o600),
             "PREDECESSOR_ENV_UNTRUSTED")
     data = old_env.read_bytes()
-    require(staging_env_isolated(data),
-            "PREDECESSOR_STAGING_DATABASE_NOT_ISOLATED")
+    failed_fields = staging_env_policy_failures(data)
+    # Only fixed field labels are emitted; no .env data, secrets, or values.
+    for field in failed_fields:
+        print("STAGING_ENV_POLICY_" + field + "=BLOCKED")
+    require(not failed_fields, "PREDECESSOR_STAGING_DATABASE_NOT_ISOLATED")
     require(not (RELEASES / sha).exists() and
             not (RELEASES / sha).is_symlink(),
             "CANDIDATE_ALREADY_PRESENT")
