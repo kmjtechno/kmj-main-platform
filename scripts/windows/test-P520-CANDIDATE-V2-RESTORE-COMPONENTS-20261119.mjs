@@ -43,6 +43,9 @@ test('all six candidate-bound sources exclude old 4C9 evidence and import no V1 
   assert.ok(VALIDATION_PY.includes(PREVIOUS));
   assert.ok(!RESTORE_PY.includes(OLD));
   assert.ok(!VALIDATION_PY.includes(OLD));
+  const signerSource=readFileSync(fileURLToPath(new URL('./P520-OFFSITE-SIGNED-RESTORE-RECEIPT-CANDIDATE-V2-20261119.mjs',import.meta.url)),'utf8');
+  assert.match(signerSource,/verifyWindowsPrivateChildFileAcl\(path\)/);
+  assert.match(signerSource,/PRIVATE_FILE_ACL_UNTRUSTED/);
 });
 
 test('cipher readback checks full digest and encrypted inbox no-clobber finalizer',()=>{
