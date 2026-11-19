@@ -197,6 +197,8 @@ export default function DeveloperApps({
     const [exportOrganizationId, setExportOrganizationId] = useState<string>(
         organizations[0]?.id ?? '',
     );
+    const [exportProductCode, setExportProductCode] = useState<string>('');
+    const [exportKeyState, setExportKeyState] = useState<string>('all');
     const [copied, setCopied] = useState(false);
     const [revokeKeyId, setRevokeKeyId] = useState<string | null>(null);
     const [manageAppId, setManageAppId] = useState<string | null>(null);
@@ -225,6 +227,15 @@ export default function DeveloperApps({
         customers: '',
         reason: '',
     });
+
+    const exportEligibleApps = applications.filter(
+        (app) => app.organization_id === exportOrganizationId,
+    );
+    const exportCsvQuery = new URLSearchParams({
+        organization_id: exportOrganizationId,
+        ...(exportProductCode ? { product_code: exportProductCode } : {}),
+        ...(exportKeyState !== 'all' ? { key_state: exportKeyState } : {}),
+    }).toString();
 
     const batchEligibleApps = applications.filter(
         (app) =>
@@ -1261,11 +1272,12 @@ export default function DeveloperApps({
                                                 aria-label="CSV inventory organization"
                                                 className="bg-background min-h-10 rounded-lg border px-3 text-sm"
                                                 value={exportOrganizationId}
-                                                onChange={(event) =>
+                                                onChange={(event) => {
                                                     setExportOrganizationId(
                                                         event.target.value,
-                                                    )
-                                                }
+                                                    );
+                                                    setExportProductCode('');
+                                                }}
                                             >
                                                 {organizations.map((org) => (
                                                     <option
@@ -1277,14 +1289,46 @@ export default function DeveloperApps({
                                                 ))}
                                             </select>
                                         </label>
+                                        <label className="flex min-w-48 flex-1 flex-col gap-1 text-xs font-semibold">
+                                            Application
+                                            <select
+                                                aria-label="CSV inventory application filter"
+                                                className="bg-background min-h-10 rounded-lg border px-3 text-sm"
+                                                value={exportProductCode}
+                                                onChange={(event) =>
+                                                    setExportProductCode(
+                                                        event.target.value,
+                                                    )
+                                                }
+                                            >
+                                                <option value="">All apps</option>
+                                                {exportEligibleApps.map((app) => (
+                                                    <option key={app.id} value={app.product_code}>
+                                                        {app.name}
+                                                    </option>
+                                                ))}
+                                            </select>
+                                        </label>
+                                        <label className="flex min-w-48 flex-1 flex-col gap-1 text-xs font-semibold">
+                                            Recorded key state
+                                            <select
+                                                aria-label="CSV inventory revocation filter"
+                                                className="bg-background min-h-10 rounded-lg border px-3 text-sm"
+                                                value={exportKeyState}
+                                                onChange={(event) =>
+                                                    setExportKeyState(
+                                                        event.target.value,
+                                                    )
+                                                }
+                                            >
+                                                <option value="all">All records</option>
+                                                <option value="revoked">Revoked</option>
+                                                <option value="not_revoked">Not revoked (not necessarily valid)</option>
+                                            </select>
+                                        </label>
                                         <a
                                             className="inline-flex min-h-10 items-center rounded-lg border px-4 text-xs font-bold hover:border-red-500/40"
-                                            href={
-                                                '/developer/keys/export?organization_id=' +
-                                                encodeURIComponent(
-                                                    exportOrganizationId,
-                                                )
-                                            }
+                                            href={'/developer/keys/export?' + exportCsvQuery}
                                         >
                                             Export masked CSV
                                         </a>
