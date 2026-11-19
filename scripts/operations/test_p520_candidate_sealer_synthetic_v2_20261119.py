@@ -10,6 +10,7 @@ import importlib.util
 from io import BytesIO
 import json
 from pathlib import Path
+from types import SimpleNamespace
 import tarfile
 import tempfile
 import unittest
@@ -133,6 +134,44 @@ class SyntheticCandidateSealerTest(unittest.TestCase):
         })
         self._write_bundle(malicious_storage)
         with self.assertRaisesRegex(RuntimeError, "UNSAFE_STORAGE_ARCHIVE_MEMBER"):
+            self._repack()
+
+    def test_duplicate_witness_json_identity_is_rejected(self):
+        witness = json.loads(self.target.witness.read_text(encoding="utf-8"))
+        # A normal json.loads would silently keep the second approvedSha.
+        duplicate = (
+            '{"approvedSha":"4c9d59103b99a6cfe675bb7b8961fc956eb294f0",'
+            '"approvedSha":"' + self.target.sha + '",'
+            '"currentRelease":"' + self.target.release + '",'
+            '"backupSha256":"' + witness["backupSha256"] + '"}'
+        )
+        self.target.witness.write_text(duplicate, encoding="utf-8")
+        with self.assertRaisesRegex(RuntimeError, "WITNESS_DUPLICATE_JSON_MEMBER"):
+            self._repack()
+
+    def test_outer_gzip_expansion_cannot_exhaust_scratch(self):
+        with patch.object(
+            sealer.shutil, "disk_usage",
+            return_value=SimpleNamespace(free=sealer.MIN_SCRATCH_RESERVE + 1)
+        ):
+            with self.assertRaisesRegex(RuntimeError, "SOURCE_BUNDLE_EXTRACT_CAPACITY"):
+                self._repack()
+
+    def test_nested_storage_expansion_is_bounded_by_available_disk(self):
+        large = SimpleNamespace(free=1 << 40)
+        insufficient = SimpleNamespace(free=sealer.MIN_SCRATCH_RESERVE + 2)
+        with patch.object(sealer.shutil, "disk_usage", side_effect=[large, insufficient]):
+            with self.assertRaisesRegex(RuntimeError, "UNSAFE_STORAGE_ARCHIVE_MEMBER"):
+                self._repack()
+
+    def test_nested_env_is_rejected_instead_of_exported(self):
+        nested = archive_bytes({
+            ".env": self.secret,
+            "storage/app/.env": b"NESTED_SECRET=not_for_transfer",
+            "storage/app/readme.txt": b"safe",
+        })
+        self._write_bundle(nested)
+        with self.assertRaisesRegex(RuntimeError, "NESTED_ENV_MEMBER_NOT_ALLOWED"):
             self._repack()
 
 if __name__ == "__main__":
