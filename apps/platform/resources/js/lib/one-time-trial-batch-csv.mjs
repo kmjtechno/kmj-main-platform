@@ -8,7 +8,10 @@
 
 /** @param {string} value */
 function csvCell(value) {
-    const cleaned = value.replace(/[\u0000-\u001F\u007F]/g, ' ');
+    const cleaned = Array.from(value, (char) => {
+        const code = char.charCodeAt(0);
+        return code < 32 || code === 127 ? ' ' : char;
+    }).join('');
     const normalized = /^\s*[=+\-@]/u.test(cleaned) ? "'" + cleaned : cleaned;
     return '"' + normalized.replace(/"/g, '""') + '"';
 }
