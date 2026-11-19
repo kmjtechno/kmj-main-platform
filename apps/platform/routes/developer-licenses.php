@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Models\User;
 use App\Services\AuthorityBootstrapper;
 use App\Services\Licensing\Kslp\KslpDeveloperKeys;
+use App\Services\Licensing\Kslp\KslpInventoryCsv;
 use App\Services\Licensing\Kslp\KslpIssuerSubscriptionAuthority;
 use App\Services\Licensing\Kslp\KslpLicenseControlPlane;
 use App\Services\PlatformOwnerAccess;
@@ -181,6 +182,98 @@ Route::middleware(['auth', 'verified'])->prefix('developer')->name('developer.')
         return redirect()->route('developer.apps.index')
             ->with('success', 'Application lifecycle updated.');
     })->middleware(['password.confirm', 'throttle:5,1'])->name('apps.manage');
+
+    // AuthSP inventory export parity: only a bounded, masked, tenant-scoped
+    // read-only record export. NEVER export bootstrap plaintext, digest,
+    // customer identity, device ID, payment data or private signing material.
+    Route::get('keys/export', function (
+        Request $request,
+        OrganizationCapabilityContext $capabilities,
+    ) {
+        $actor = $request->user();
+        abort_unless($actor instanceof User, 401);
+
+        $data = $request->validate([
+            'organization_id' => ['required', 'uuid'],
+            'product_code' => ['nullable', 'string', 'regex:/^[A-Z0-9][A-Z0-9_.:-]{2,95}$/'],
+            'key_state' => ['nullable', 'in:all,revoked,not_revoked'],
+        ]);
+        abort_unless(
+            $capabilities->allows($actor->id, $data['organization_id'], 'license.manage'),
+            403,
+        );
+        abort_unless(Schema::hasTable('kslp_license_keys'), 503);
+
+        // All three rows must belong to the same authorized issuer/product
+        // chain; a forged UUID or manipulated join may not cross tenants.
+        $query = DB::table('kslp_license_keys as k')
+            ->join('kslp_licensed_products as p', function ($join): void {
+                $join->on('p.id', '=', 'k.licensed_product_id')
+                    ->on('p.organization_id', '=', 'k.organization_id');
+            })
+            ->join('kslp_licenses as l', 'l.id', '=', 'k.license_id')
+            ->where('k.organization_id', $data['organization_id'])
+            ->whereColumn('l.product', 'p.product_code');
+
+        // An app filter NEVER widens the authorized organization scope.
+        // "Not revoked" describes only stored revocation state: it is NOT
+        // proof of a currently usable entitlement or online device.
+        if (! empty($data['product_code'])) {
+            $query->where('p.product_code', $data['product_code']);
+        }
+        if (($data['key_state'] ?? 'all') === 'revoked') {
+            $query->where(function ($nested): void {
+                $nested->whereNotNull('k.revoked_at')
+                    ->orWhereNotNull('l.revoked_at');
+            });
+        } elseif (($data['key_state'] ?? 'all') === 'not_revoked') {
+            $query->whereNull('k.revoked_at')->whereNull('l.revoked_at');
+        }
+
+        $rows = $query->orderByDesc('k.created_at')
+            ->orderByDesc('k.id')
+            ->limit(KslpInventoryCsv::MAX_ROWS)
+            ->get([
+                'p.product_code', 'p.name as application_name',
+                'k.license_id', 'k.display_prefix',
+                'l.plan', 'l.status as license_status',
+                'l.expires_at', 'l.revoked_at as license_revoked_at',
+                'k.revoked_at as key_revoked_at',
+                'k.created_at as issued_at', 'k.first_activated_at',
+            ]);
+
+        return response()->streamDownload(function () use ($rows): void {
+            $stream = fopen('php://output', 'wb');
+            if ($stream === false) {
+                throw new RuntimeException('KSLP_INVENTORY_CSV_UNAVAILABLE');
+            }
+
+            try {
+                KslpInventoryCsv::writeRow($stream, KslpInventoryCsv::COLUMNS);
+                foreach ($rows as $item) {
+                    KslpInventoryCsv::writeRow($stream, [
+                        $item->product_code,
+                        $item->application_name,
+                        $item->license_id,
+                        $item->display_prefix,
+                        $item->plan,
+                        $item->key_revoked_at !== null || $item->license_revoked_at !== null
+                            ? 'revoked' : $item->license_status,
+                        $item->issued_at,
+                        $item->expires_at,
+                        $item->first_activated_at,
+                    ]);
+                }
+            } finally {
+                fclose($stream);
+            }
+        }, 'kmj-developer-key-inventory-'.$data['organization_id'].'.csv', [
+            'Content-Type' => 'text/csv; charset=UTF-8',
+            'Cache-Control' => 'private, no-store, max-age=0',
+            'Pragma' => 'no-cache',
+            'X-Content-Type-Options' => 'nosniff',
+        ]);
+    })->middleware(['password.confirm', 'throttle:3,1'])->name('keys.export');
 
     // Modern AuthSP-equivalent user journey: bounded, trial-only multi-
     // customer issue. Transactionally all-or-none; never a commercial plan.

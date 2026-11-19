@@ -1,5 +1,6 @@
 import { Head, Link, useForm } from '@inertiajs/react';
 import { useMemo, useState } from 'react';
+import { buildOneTimeTrialBatchCsv } from '../lib/one-time-trial-batch-csv.mjs';
 import {
     ArrowRight,
     BookOpen,
@@ -194,7 +195,13 @@ export default function DeveloperApps({
 }: Props) {
     const [language, setLanguage] = useState<string>('TypeScript');
     const [selectedApp, setSelectedApp] = useState<string>('');
+    const [exportOrganizationId, setExportOrganizationId] = useState<string>(
+        organizations[0]?.id ?? '',
+    );
+    const [exportProductCode, setExportProductCode] = useState<string>('');
+    const [exportKeyState, setExportKeyState] = useState<string>('all');
     const [copied, setCopied] = useState(false);
+    const [batchDownloadError, setBatchDownloadError] = useState(false);
     const [revokeKeyId, setRevokeKeyId] = useState<string | null>(null);
     const [manageAppId, setManageAppId] = useState<string | null>(null);
     const revokeForm = useForm({ reason: '' });
@@ -222,6 +229,15 @@ export default function DeveloperApps({
         customers: '',
         reason: '',
     });
+
+    const exportEligibleApps = applications.filter(
+        (app) => app.organization_id === exportOrganizationId,
+    );
+    const exportCsvQuery = new URLSearchParams({
+        organization_id: exportOrganizationId,
+        ...(exportProductCode ? { product_code: exportProductCode } : {}),
+        ...(exportKeyState !== 'all' ? { key_state: exportKeyState } : {}),
+    }).toString();
 
     const batchEligibleApps = applications.filter(
         (app) =>
@@ -283,6 +299,38 @@ export default function DeveloperApps({
         link.click();
         link.remove();
         URL.revokeObjectURL(objectUrl);
+    };
+
+    const downloadOneTimeBatch = () => {
+        if (!newKeys || newKeys.length === 0) {
+            return;
+        }
+        if (
+            !window.confirm(
+                'This CSV contains reusable plaintext trial bootstrap keys and may remain in Downloads. Save it only to a trusted private location and remove it after secure import. Download now?',
+            )
+        ) {
+            return;
+        }
+
+        try {
+            const csv = buildOneTimeTrialBatchCsv(newKeys);
+            const file = new Blob([csv], {
+                type: 'text/csv;charset=utf-8',
+            });
+            const objectUrl = URL.createObjectURL(file);
+            const link = document.createElement('a');
+            link.href = objectUrl;
+            link.download = 'kmj-one-time-trial-bootstrap-keys.csv';
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            URL.revokeObjectURL(objectUrl);
+            setBatchDownloadError(false);
+        } catch {
+            // Do not disclose malformed key data, payload or user identities.
+            setBatchDownloadError(true);
+        }
     };
 
     const copyText = async (value: string) => {
@@ -520,24 +568,42 @@ export default function DeveloperApps({
                                 </div>
                             ))}
                         </div>
-                        <button
-                            type="button"
-                            className="mt-3 min-h-10 rounded-lg border px-4 text-xs font-bold"
-                            onClick={() =>
-                                void copyText(
-                                    newKeys
-                                        .map(
-                                            (key) =>
-                                                key.customer_id +
-                                                ': ' +
-                                                key.key,
-                                        )
-                                        .join('\n'),
-                                )
-                            }
-                        >
-                            Copy one-time batch
-                        </button>
+                        <div className="mt-3 flex flex-wrap gap-2">
+                            <button
+                                type="button"
+                                className="min-h-10 rounded-lg border px-4 text-xs font-bold"
+                                onClick={() =>
+                                    void copyText(
+                                        newKeys
+                                            .map(
+                                                (key) =>
+                                                    key.customer_id +
+                                                    ': ' +
+                                                    key.key,
+                                            )
+                                            .join('\n'),
+                                    )
+                                }
+                            >
+                                Copy one-time batch
+                            </button>
+                            <button
+                                type="button"
+                                className="min-h-10 rounded-lg border border-amber-600/40 px-4 text-xs font-bold hover:border-amber-600"
+                                onClick={downloadOneTimeBatch}
+                            >
+                                Download one-time trial batch CSV
+                            </button>
+                        </div>
+                        {batchDownloadError && (
+                            <p
+                                role="alert"
+                                className="mt-2 text-xs text-red-600"
+                            >
+                                One-time export blocked: malformed issuance
+                                data.
+                            </p>
+                        )}
                     </section>
                 )}
 
@@ -1235,6 +1301,111 @@ export default function DeveloperApps({
                             )}
                         </div>
                         <div className="space-y-2">
+                            {organizations.length > 0 && (
+                                <section
+                                    className="rounded-xl border p-4"
+                                    aria-label="Export masked license key inventory"
+                                >
+                                    <h3 className="text-sm font-bold">
+                                        Export your organization's key inventory
+                                    </h3>
+                                    <p className="text-muted-foreground mt-1 text-xs leading-5">
+                                        Read-only CSV for up to 1,000 recent
+                                        keys. Includes app names and masked key
+                                        prefixes, never full license keys,
+                                        digests, customer identities or device
+                                        identifiers. Password confirmation is
+                                        required.
+                                    </p>
+                                    <div className="mt-3 flex flex-wrap items-end gap-3">
+                                        <label className="flex min-w-48 flex-1 flex-col gap-1 text-xs font-semibold">
+                                            Authorized organization
+                                            <select
+                                                aria-label="CSV inventory organization"
+                                                className="bg-background min-h-10 rounded-lg border px-3 text-sm"
+                                                value={exportOrganizationId}
+                                                onChange={(event) => {
+                                                    setExportOrganizationId(
+                                                        event.target.value,
+                                                    );
+                                                    setExportProductCode('');
+                                                }}
+                                            >
+                                                {organizations.map((org) => (
+                                                    <option
+                                                        key={org.id}
+                                                        value={org.id}
+                                                    >
+                                                        {org.name}
+                                                    </option>
+                                                ))}
+                                            </select>
+                                        </label>
+                                        <label className="flex min-w-48 flex-1 flex-col gap-1 text-xs font-semibold">
+                                            Application
+                                            <select
+                                                aria-label="CSV inventory application filter"
+                                                className="bg-background min-h-10 rounded-lg border px-3 text-sm"
+                                                value={exportProductCode}
+                                                onChange={(event) =>
+                                                    setExportProductCode(
+                                                        event.target.value,
+                                                    )
+                                                }
+                                            >
+                                                <option value="">
+                                                    All apps
+                                                </option>
+                                                {exportEligibleApps.map(
+                                                    (app) => (
+                                                        <option
+                                                            key={app.id}
+                                                            value={
+                                                                app.product_code
+                                                            }
+                                                        >
+                                                            {app.name}
+                                                        </option>
+                                                    ),
+                                                )}
+                                            </select>
+                                        </label>
+                                        <label className="flex min-w-48 flex-1 flex-col gap-1 text-xs font-semibold">
+                                            Recorded key state
+                                            <select
+                                                aria-label="CSV inventory revocation filter"
+                                                className="bg-background min-h-10 rounded-lg border px-3 text-sm"
+                                                value={exportKeyState}
+                                                onChange={(event) =>
+                                                    setExportKeyState(
+                                                        event.target.value,
+                                                    )
+                                                }
+                                            >
+                                                <option value="all">
+                                                    All records
+                                                </option>
+                                                <option value="revoked">
+                                                    Revoked
+                                                </option>
+                                                <option value="not_revoked">
+                                                    Not revoked (not necessarily
+                                                    valid)
+                                                </option>
+                                            </select>
+                                        </label>
+                                        <a
+                                            className="inline-flex min-h-10 items-center rounded-lg border px-4 text-xs font-bold hover:border-red-500/40"
+                                            href={
+                                                '/developer/keys/export?' +
+                                                exportCsvQuery
+                                            }
+                                        >
+                                            Export masked CSV
+                                        </a>
+                                    </div>
+                                </section>
+                            )}
                             {keys.length === 0 ? (
                                 <p className="text-muted-foreground rounded-xl border border-dashed p-5 text-sm">
                                     No customer keys issued yet.
