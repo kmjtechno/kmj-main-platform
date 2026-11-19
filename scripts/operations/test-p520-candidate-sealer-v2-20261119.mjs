@@ -7,7 +7,7 @@ import { spawnSync } from 'node:child_process';
 const src='scripts/operations/seal-main-platform-p520-candidate-v2-20261119.py';
 const body=readFileSync(src,'utf8');
 const recipient='age1jgk7wrgccyu8s7wlh6zpxnm4qdvfus0d5t092s9zkjjmtwe8efjstvcs5u';
-const pubKey=readFileSync('scripts/operations/p520-owner-observed-public-key-20261118.pem');
+const pubKey=readFileSync('scripts/operations/p520-owner-observed-public-key-20261118.txt');
 const sha='6216f2bc0bd7b63bea2f15bc771494fa6e2ab2fcfca01e75761a113120be81c4';
 
 test('v2 sealer fixes immutable CE6->Licensing Hub identity, never old 4C9',()=>{
