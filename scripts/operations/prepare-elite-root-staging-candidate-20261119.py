@@ -43,7 +43,7 @@ PARENTS = (STAGE, STAGE / "htdocs", RELEASES)
 STAGE_USER = "kmjstage"
 WEB_USER = "www-data"
 MIN_SPACE = 2 * 1024**3
-ENV = {"PATH": "/usr/sbin:/usr/bin:/sbin:/bin", "LANG": "C",
+ENV = {"PATH": "/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin", "LANG": "C",
        "GIT_TERMINAL_PROMPT": "0"}
 
 
@@ -303,7 +303,7 @@ def build_stage(sha: str, old_app: Path, scratch: Path) -> Path:
     os.chown(env, uid, gid, follow_symlinks=False)
     stage_run("/bin/bash", "-c",
               'set -Eeuo pipefail; cd "$1"; COMPOSER_MEMORY_LIMIT=-1 '
-              'composer install --no-dev --no-scripts --no-interaction '
+              'composer install --no-dev --no-plugins --no-scripts --no-interaction '
               '--prefer-dist --optimize-autoloader --no-progress --no-ansi; '
               'npm ci --ignore-scripts --no-audit --no-fund; '
               'npm run build; '
