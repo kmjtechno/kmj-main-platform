@@ -9,6 +9,7 @@ use App\Services\Licensing\Kslp\KslpDeveloperKeys;
 use App\Services\Licensing\Kslp\KslpInventoryCsv;
 use App\Services\Licensing\Kslp\KslpIssuerSubscriptionAuthority;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Routing\Middleware\ThrottleRequests;
 use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
@@ -103,6 +104,9 @@ final class KslpDeveloperKeyInventoryExportTest extends TestCase
 
     public function test_app_and_revocation_filters_remain_tenant_scoped_and_do_not_infer_usable_license(): void
     {
+        // This case verifies the filter predicates. Production throttle is
+        // separately enforced and regression-tested below, not disabled.
+        $this->withoutMiddleware(ThrottleRequests::class);
         [$ownerA, $orgA] = $this->owner('Filtered Export A');
         $keyA = $this->key($orgA, 'VENDOR.FILTERA', 'App A', 'customer-a', $ownerA->id);
         $keyB = $this->key($orgA, 'VENDOR.FILTERB', 'App B', 'customer-b', $ownerA->id);
@@ -140,6 +144,19 @@ final class KslpDeveloperKeyInventoryExportTest extends TestCase
             ->assertSessionHasErrors('key_state');
         $this->get($url.'&product_code=INVALID%25CODE')
             ->assertSessionHasErrors('product_code');
+    }
+
+    public function test_masked_inventory_export_stays_bounded_by_production_request_throttle(): void
+    {
+        [$owner, $org] = $this->owner('Throttled Export Owner');
+        $this->key($org, 'VENDOR.THROTTLE', 'Throttle App', 'customer-limit', $owner->id);
+        $url = '/developer/keys/export?organization_id='.$org;
+
+        $this->actingAs($owner)->withSession(['auth.password_confirmed_at' => time()]);
+        for ($attempt = 1; $attempt <= 3; $attempt++) {
+            $this->get($url)->assertOk();
+        }
+        $this->get($url)->assertStatus(429);
     }
 
     public function test_csv_cells_neutralize_spreadsheet_formula_inputs_and_control_characters(): void
