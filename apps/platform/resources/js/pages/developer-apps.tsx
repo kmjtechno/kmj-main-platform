@@ -596,8 +596,12 @@ export default function DeveloperApps({
                             </button>
                         </div>
                         {batchDownloadError && (
-                            <p role="alert" className="mt-2 text-xs text-red-600">
-                                One-time export blocked: malformed issuance data.
+                            <p
+                                role="alert"
+                                className="mt-2 text-xs text-red-600"
+                            >
+                                One-time export blocked: malformed issuance
+                                data.
                             </p>
                         )}
                     </section>
