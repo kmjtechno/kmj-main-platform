@@ -101,6 +101,47 @@ final class KslpDeveloperKeyInventoryExportTest extends TestCase
             ->assertSessionHasErrors('organization_id');
     }
 
+    public function test_app_and_revocation_filters_remain_tenant_scoped_and_do_not_infer_usable_license(): void
+    {
+        [$ownerA, $orgA] = $this->owner('Filtered Export A');
+        $keyA = $this->key($orgA, 'VENDOR.FILTERA', 'App A', 'customer-a', $ownerA->id);
+        $keyB = $this->key($orgA, 'VENDOR.FILTERB', 'App B', 'customer-b', $ownerA->id);
+        [$ownerB, $orgB] = $this->owner('Filtered Export B');
+        $otherKey = $this->key($orgB, 'VENDOR.OTHER', 'Other App', 'customer-c', $ownerB->id);
+
+        $url = '/developer/keys/export?organization_id='.$orgA;
+        $this->actingAs($ownerA)->withSession(['auth.password_confirmed_at' => time()]);
+        $filtered = $this->get($url.'&product_code=VENDOR.FILTERA&key_state=all')
+            ->assertOk()->streamedContent();
+        self::assertStringContainsString((string) $keyA['license_id'], $filtered);
+        self::assertStringNotContainsString((string) $keyB['license_id'], $filtered);
+
+        // Product code belongs to a different organization: return header
+        // only, NEVER crossing the issuer capability boundary.
+        $foreignFilter = $this->get($url.'&product_code=VENDOR.OTHER')
+            ->assertOk()->streamedContent();
+        self::assertStringNotContainsString((string) $otherKey['license_id'], $foreignFilter);
+        self::assertStringNotContainsString('VENDOR.OTHER', $foreignFilter);
+
+        DB::table('kslp_license_keys')
+            ->where('license_id', $keyA['license_id'])
+            ->update(['revoked_at' => now()]);
+
+        $revoked = $this->get($url.'&key_state=revoked')
+            ->assertOk()->streamedContent();
+        self::assertStringContainsString((string) $keyA['license_id'], $revoked);
+        self::assertStringNotContainsString((string) $keyB['license_id'], $revoked);
+        $nonRevoked = $this->get($url.'&key_state=not_revoked')
+            ->assertOk()->streamedContent();
+        self::assertStringContainsString((string) $keyB['license_id'], $nonRevoked);
+        self::assertStringNotContainsString((string) $keyA['license_id'], $nonRevoked);
+
+        $this->get($url.'&key_state=usable_entitlement')
+            ->assertSessionHasErrors('key_state');
+        $this->get($url.'&product_code=INVALID%25CODE')
+            ->assertSessionHasErrors('product_code');
+    }
+
     public function test_csv_cells_neutralize_spreadsheet_formula_inputs_and_control_characters(): void
     {
         self::assertSame("'=SUM(1,2)", KslpInventoryCsv::safeCell('=SUM(1,2)'));
