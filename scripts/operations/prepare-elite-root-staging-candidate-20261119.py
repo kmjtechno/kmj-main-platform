@@ -260,11 +260,12 @@ def inspect(sha: str, old: str, live: str) -> tuple[Path, Path, list]:
             "PREDECESSOR_ENV_UNTRUSTED")
     data = old_env.read_bytes()
     failed_fields = staging_env_policy_failures(data)
-    # Only fixed field labels are emitted; no .env data, secrets, or values.
-    for field in failed_fields:
+    # Never call a safely isolated legacy mailer an unresolved blocker.
+    # Only fixed policy labels are emitted, never values or secrets.
+    unresolved = tuple(field for field in failed_fields if field != "MAIL_MAILER")
+    for field in unresolved:
         print("STAGING_ENV_POLICY_" + field + "=BLOCKED")
-    require(not set(failed_fields) - {"MAIL_MAILER"},
-            "PREDECESSOR_STAGING_DATABASE_NOT_ISOLATED")
+    require(not unresolved, "PREDECESSOR_STAGING_DATABASE_NOT_ISOLATED")
     if "MAIL_MAILER" in failed_fields:
         print("STAGING_LEGACY_MAILER=REPAIR_CANDIDATE_ONLY")
     require(staging_env_isolated(normalize_candidate_mailer(data)),
