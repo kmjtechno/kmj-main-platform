@@ -125,6 +125,37 @@ class StageRootFinalizerTests(unittest.TestCase):
                 with self.assertRaisesRegex(m.Block, "APPROVED_REF_UNVERIFIED"):
                     m.approved_ref_sha()
 
+    def test_staging_env_isolation_never_reuses_production_database(self):
+        safe = (b"APP_ENV=staging\n"
+                b"APP_URL=https://staging.kmjtechno.com\n"
+                b"APP_DEBUG=false\nDB_CONNECTION=pgsql\n"
+                b"DB_HOST=127.0.0.1\nDB_PORT=5432\n"
+                b"DB_DATABASE=kmj_stage_a9796a25\n"
+                b"DB_USERNAME=kmjstage_a9796a25\n"
+                b"MAIL_MAILER=log\nDB_PASSWORD=redacted-fixture\n")
+        self.assertTrue(m.staging_env_isolated(safe))
+        for bad in (
+            safe.replace(b"kmj_stage_a9796a25", b"kmj_platform"),
+            safe.replace(b"127.0.0.1", b"db.production.internal"),
+            safe.replace(b"MAIL_MAILER=log", b"MAIL_MAILER=smtp"),
+            safe.replace(b"APP_ENV=staging", b"APP_ENV=production"),
+            safe.replace(b"APP_URL=https://staging.kmjtechno.com",
+                         b"APP_URL=https://kmjtechno.com"),
+            safe + b"DB_HOST=127.0.0.1\n",
+            safe + b"\xff",
+        ):
+            with self.subTest(bad=bad[:36]):
+                self.assertFalse(m.staging_env_isolated(bad))
+
+    def test_parent_acl_rollback_requires_successful_restore(self):
+        with mock.patch.object(m.subprocess, "run") as run:
+            run.return_value.returncode = 0
+            self.assertTrue(m.restore_metadata([b"one", b"two"]))
+            self.assertEqual(run.call_count, 2)
+        with mock.patch.object(m.subprocess, "run") as run:
+            run.return_value.returncode = 1
+            self.assertFalse(m.restore_metadata([b"one"]))
+
     def test_requires_exact_confirmation_before_any_host_audit(self):
         with mock.patch.object(m, "inspect") as audit:
             with self.assertRaisesRegex(m.Block, "EXPLICIT_OWNER_CONFIRMATION_REQUIRED"):
