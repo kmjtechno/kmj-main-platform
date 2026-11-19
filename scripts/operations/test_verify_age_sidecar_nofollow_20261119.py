@@ -128,5 +128,29 @@ class SidecarTests(unittest.TestCase):
         finally:
             v.os.read = original
 
+    def test_parent_directory_swap_during_hash(self):
+        original = v.os.read
+        archive_dir = self.root / "archive"
+        archive_dir.mkdir()
+        moved_cipher = archive_dir / self.c.name
+        moved_sidecar = archive_dir / self.s.name
+        self.c.rename(moved_cipher)
+        self.s.rename(moved_sidecar)
+        swapped = False
+        def swap(fd, size):
+            nonlocal swapped
+            data = original(fd, size)
+            if size == 1024 * 1024 and not swapped:
+                swapped = True
+                archive_dir.rename(self.root / "renamed")
+                archive_dir.mkdir()
+            return data
+        v.os.read = swap
+        try:
+            with self.assertRaises(v.Rejected):
+                v.verify(str(moved_cipher), str(moved_sidecar))
+        finally:
+            v.os.read = original
+
 if __name__ == "__main__":
     unittest.main()
