@@ -6,7 +6,7 @@ import { spawnSync } from 'node:child_process';
 
 const prefix='scripts/operations/p520-owner-observed-';
 const policy=JSON.parse(readFileSync(prefix+'public-identity-20261118.json','utf8'));
-const pem=readFileSync(prefix+'public-key-20261118.pem');
+const pem=readFileSync(prefix+'public-key-20261118.txt');
 const installerPath='scripts/operations/kmj-p520-owner-public-pin-20261118.sh';
 const source=readFileSync(installerPath,'utf8');
 
