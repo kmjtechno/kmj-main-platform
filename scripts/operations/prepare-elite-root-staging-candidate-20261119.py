@@ -161,6 +161,39 @@ def approved_ref_sha() -> str:
     return parts[0]
 
 
+
+def staging_env_isolated(raw: bytes) -> bool:
+    """Require one local, staging-namespaced DB identity; never print secrets."""
+    try:
+        values = {}
+        for line in raw.decode("utf-8", "strict").splitlines():
+            if not line or line.lstrip().startswith("#"):
+                continue
+            if "=" not in line:
+                return False
+            key, value = line.split("=", 1)
+            if not re.fullmatch(r"[A-Z][A-Z0-9_]{0,80}", key) or key in values:
+                return False
+            values[key] = value.strip()
+        return (
+            values.get("APP_ENV") == "staging"
+            and values.get("APP_URL") == "https://staging.kmjtechno.com"
+            and values.get("DB_CONNECTION") == "pgsql"
+            and re.fullmatch(r"kmj_stage_[a-z0-9_]{2,64}",
+                             values.get("DB_DATABASE", "")) is not None
+            and re.fullmatch(r"kmjstage(?:_[a-z0-9_]{1,64})?",
+                             values.get("DB_USERNAME", "")) is not None
+            and values.get("DB_HOST") in {
+                "127.0.0.1", "localhost", "/var/run/postgresql"
+            }
+            and values.get("DB_PORT", "5432") == "5432"
+            and values.get("MAIL_MAILER") in {"log", "array"}
+            and values.get("APP_DEBUG") in {"false", "0"}
+        )
+    except UnicodeError:
+        return False
+
+
 def inspect(sha: str, old: str, live: str) -> tuple[Path, Path, list]:
     require(os.geteuid() == 0 and socket.gethostname().split(".")[0] ==
             "KMJ-elite", "ROOT_ELITE_ONLY")
@@ -186,9 +219,8 @@ def inspect(sha: str, old: str, live: str) -> tuple[Path, Path, list]:
             stat.S_IMODE(old_env.stat().st_mode) in (0o400, 0o600),
             "PREDECESSOR_ENV_UNTRUSTED")
     data = old_env.read_bytes()
-    require(b"\nAPP_ENV=staging\n" in b"\n" + data and
-            b"\nAPP_URL=https://staging.kmjtechno.com\n" in b"\n" + data,
-            "PREDECESSOR_ENV_NOT_STAGING")
+    require(staging_env_isolated(data),
+            "PREDECESSOR_STAGING_DATABASE_NOT_ISOLATED")
     require(not (RELEASES / sha).exists() and
             not (RELEASES / sha).is_symlink(),
             "CANDIDATE_ALREADY_PRESENT")
@@ -203,11 +235,18 @@ def inspect(sha: str, old: str, live: str) -> tuple[Path, Path, list]:
     return old_app, RELEASES / sha, plan
 
 
-def restore_metadata(backups: list[bytes]) -> None:
+def restore_metadata(backups: list[bytes]) -> bool:
     # Restore ONLY the three fixed original paths saved by getfacl -p.
+    ok = True
     for content in reversed(backups):
-        subprocess.run(["/usr/bin/setfacl", "--restore=-"], input=content,
-                       capture_output=True, timeout=15, check=False)
+        try:
+            result = subprocess.run(
+                ["/usr/bin/setfacl", "--restore=-"], input=content,
+                capture_output=True, timeout=15, check=False)
+            ok &= result.returncode == 0
+        except (OSError, subprocess.TimeoutExpired):
+            ok = False
+    return ok
 
 
 def lock_stage_parents(plan: list, old_app: Path) -> None:
@@ -230,8 +269,9 @@ def lock_stage_parents(plan: list, old_app: Path) -> None:
         fixed(["/usr/sbin/runuser", "-u", WEB_USER, "--",
                "/usr/bin/test", "-r", str(old_app / "public/index.php")])
     except (Block, OSError, subprocess.SubprocessError):
-        restore_metadata(backups)
-        raise Block("STAGE_PARENT_LOCK_FAILED") from None
+        restored = restore_metadata(backups)
+        raise Block("STAGE_PARENT_LOCK_FAILED" if restored else
+                    "STAGE_PARENT_ROLLBACK_UNVERIFIED") from None
 
 
 def build_stage(sha: str, old_app: Path, scratch: Path) -> Path:
