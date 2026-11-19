@@ -6,6 +6,8 @@ on:
       - 'apps/platform/routes/developer-licenses.php'
       - 'apps/platform/tests/Feature/KslpDeveloperKeyInventoryExportTest.php'
       - 'apps/platform/resources/js/pages/developer-apps.tsx'
+      - 'apps/platform/resources/js/lib/one-time-trial-batch-csv.mjs'
+      - 'apps/platform/scripts/check-one-time-trial-batch-csv.test.mjs'
       - 'apps/platform/resources/js/data/delivery-progress.ts'
       - '.github/workflows/kslp-masked-inventory-format-preview-20261119.yml'
   workflow_dispatch:
@@ -39,9 +41,9 @@ jobs:
           composer install --no-interaction --prefer-dist --no-scripts --no-progress
           npm ci --ignore-scripts --no-audit --no-fund
           vendor/bin/pint app/Services/Licensing/Kslp/KslpInventoryCsv.php routes/developer-licenses.php tests/Feature/KslpDeveloperKeyInventoryExportTest.php
-          node_modules/.bin/vp fmt resources/js/pages/developer-apps.tsx resources/js/data/delivery-progress.ts
+          node_modules/.bin/vp fmt resources/js/pages/developer-apps.tsx resources/js/data/delivery-progress.ts resources/js/lib/one-time-trial-batch-csv.mjs scripts/check-one-time-trial-batch-csv.test.mjs
           echo 'KMJ_FORMAT_PREVIEW_START'
-          git diff --unified=2 -- app/Services/Licensing/Kslp/KslpInventoryCsv.php routes/developer-licenses.php tests/Feature/KslpDeveloperKeyInventoryExportTest.php resources/js/pages/developer-apps.tsx resources/js/data/delivery-progress.ts
+          git diff --unified=2 -- app/Services/Licensing/Kslp/KslpInventoryCsv.php routes/developer-licenses.php tests/Feature/KslpDeveloperKeyInventoryExportTest.php resources/js/pages/developer-apps.tsx resources/js/data/delivery-progress.ts resources/js/lib/one-time-trial-batch-csv.mjs scripts/check-one-time-trial-batch-csv.test.mjs
           echo 'KMJ_FORMAT_PREVIEW_END'
           echo 'REPOSITORY_PUSH=NONE'
           echo 'PRODUCTION_MUTATION=NONE'
