@@ -147,6 +147,99 @@ class StageRootFinalizerTests(unittest.TestCase):
             with self.subTest(bad=bad[:36]):
                 self.assertFalse(m.staging_env_isolated(bad))
 
+    def test_redacted_policy_diagnosis_exposes_only_fixed_field_labels(self):
+        safe = (b"APP_ENV=staging\nAPP_URL=https://staging.kmjtechno.com\n"
+                b"APP_DEBUG=false\nDB_CONNECTION=pgsql\nDB_HOST=127.0.0.1\n"
+                b"DB_DATABASE=kmj_stage_2026\nDB_USERNAME=kmjstage_2026\n"
+                b"MAIL_MAILER=log\nDB_PASSWORD=SECRET_NEVER_PRINT_ME\n")
+        self.assertEqual(m.staging_env_policy_failures(safe), ())
+        modified = safe.replace(b"DB_HOST=127.0.0.1",
+                                b"DB_HOST=production-db.internal").replace(
+                                    b"MAIL_MAILER=log", b"MAIL_MAILER=smtp")
+        self.assertEqual(m.staging_env_policy_failures(modified),
+                         ("DB_HOST", "MAIL_MAILER"))
+        self.assertNotIn("SECRET_NEVER_PRINT_ME",
+                         str(m.staging_env_policy_failures(modified)))
+        self.assertEqual(m.staging_env_policy_failures(
+            safe + b"DB_PASSWORD=SECRET_NEVER_PRINT_ME\n"), ("DUPLICATE",))
+        self.assertEqual(m.staging_env_policy_failures(
+            safe + b"bad line\n"), ("SYNTAX",))
+        self.assertEqual(m.staging_env_policy_failures(
+            safe + b"\xff"), ("ENCODING",))
+
+    def test_unsafe_env_inspect_does_not_output_field_values(self):
+        bad = b"DB_PASSWORD=SUPER_SECRET\nDB_HOST=production.internal\n"
+        with mock.patch.object(m, "staging_env_policy_failures",
+                               wraps=m.staging_env_policy_failures) as fn:
+            self.assertEqual(fn(bad),
+                             ("APP_ENV", "APP_URL", "DB_CONNECTION",
+                              "DB_DATABASE", "DB_USERNAME", "DB_HOST",
+                              "MAIL_MAILER", "APP_DEBUG"))
+        self.assertNotIn("SUPER_SECRET",
+                         repr(m.staging_env_policy_failures(bad)))
+
+    def test_only_candidate_mailer_is_repaired_without_mutating_old_env(self):
+        previous = (b"# stage legacy config stays unchanged\r\n"
+                    b"APP_ENV=staging\r\nAPP_URL=https://staging.kmjtechno.com\r\n"
+                    b"APP_DEBUG=false\r\nDB_CONNECTION=pgsql\r\n"
+                    b"DB_HOST=127.0.0.1\r\nDB_PORT=5432\r\n"
+                    b"DB_DATABASE=kmj_stage_2026\r\n"
+                    b"DB_USERNAME=kmjstage_2026\r\n"
+                    b"DB_PASSWORD=private-db-token\r\n"
+                    b"APP_KEY=base64:private-app-key\r\n"
+                    b"MAIL_MAILER=smtp\r\nMAIL_PASSWORD=private-mail-token\r\n")
+        snapshot = bytes(previous)
+        self.assertEqual(m.staging_env_policy_failures(previous),
+                         ("MAIL_MAILER",))
+        candidate = m.normalize_candidate_mailer(previous)
+        self.assertEqual(previous, snapshot)
+        self.assertEqual(candidate.count(b"MAIL_MAILER=log\n"), 1)
+        self.assertNotIn(b"MAIL_MAILER=smtp", candidate)
+        self.assertIn(b"DB_PASSWORD=private-db-token\r\n", candidate)
+        self.assertIn(b"APP_KEY=base64:private-app-key\r\n", candidate)
+        self.assertIn(b"MAIL_PASSWORD=private-mail-token\r\n", candidate)
+        self.assertFalse(m.staging_env_policy_failures(candidate))
+        self.assertEqual(candidate.replace(b"MAIL_MAILER=log\n",
+                                           b"MAIL_MAILER=smtp\r\n"), previous)
+
+    def test_missing_mailer_adds_only_candidate_log_mailer(self):
+        old = (b"APP_ENV=staging\nAPP_URL=https://staging.kmjtechno.com\n"
+               b"DB_CONNECTION=pgsql\nDB_HOST=localhost\n"
+               b"DB_DATABASE=kmj_stage_2026\nDB_USERNAME=kmjstage_2026\n"
+               b"APP_DEBUG=false\n")
+        self.assertEqual(m.staging_env_policy_failures(old), ("MAIL_MAILER",))
+        target = m.normalize_candidate_mailer(old)
+        self.assertEqual(target, old + b"MAIL_MAILER=log\n")
+        self.assertEqual(m.normalize_candidate_mailer(target), target)
+        self.assertTrue(m.staging_env_isolated(target))
+        self.assertEqual(m.normalize_candidate_mailer(
+            old[:-1]), old + b"MAIL_MAILER=log\n")
+
+    def test_mailer_repair_never_bypasses_database_or_syntax_guards(self):
+        safe = (b"APP_ENV=staging\nAPP_URL=https://staging.kmjtechno.com\n"
+                b"DB_CONNECTION=pgsql\nDB_HOST=127.0.0.1\n"
+                b"DB_DATABASE=kmj_stage_2026\nDB_USERNAME=kmjstage_2026\n"
+                b"APP_DEBUG=false\nMAIL_MAILER=smtp\n")
+        invalid = (
+            safe.replace(b"kmj_stage_2026", b"kmj_prod"),
+            safe.replace(b"DB_HOST=127.0.0.1", b"DB_HOST=prod.internal"),
+            safe + b"DB_URL=postgresql://production.internal/prod\n",
+            safe.replace(b"APP_ENV=staging", b"APP_ENV=production"),
+            safe + b"MAIL_MAILER=smtp\n",
+            safe + b"DB_PASSWORD=first\nDB_PASSWORD=second\n",
+            safe + b"junk-no-equals\n",
+        )
+        for original in invalid:
+            with self.subTest(data=original[:36]):
+                with self.assertRaisesRegex(
+                    m.Block, "STAGING_ENV_HAS_UNSAFE_NONMAILER_FIELD"
+                ):
+                    m.normalize_candidate_mailer(original)
+        self.assertEqual(
+            m.staging_env_policy_failures(safe + b"DB_URL=postgresql://production.internal/prod\n"),
+            ("DB_URL", "MAIL_MAILER")
+        )
+
     def test_parent_acl_rollback_requires_successful_restore(self):
         with mock.patch.object(m.subprocess, "run") as run:
             run.return_value.returncode = 0
