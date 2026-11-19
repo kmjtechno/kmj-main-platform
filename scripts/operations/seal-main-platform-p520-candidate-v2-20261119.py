@@ -145,6 +145,18 @@ def verified_elite_public_pins() -> str:
 MEMBERS = {"database.dump", "storage.tar.gz", "metadata.txt", "SHA256SUMS"}
 MAX_FILES = 100_000
 MAX_STORAGE_UNCOMPRESSED = 256 * 1024 * 1024 * 1024
+MIN_SCRATCH_RESERVE = 64 * 1024 * 1024
+
+
+def reject_duplicate_json_members(pairs: list[tuple[str, object]]) -> dict[str, object]:
+    """Reject ambiguous witness identity anywhere in the JSON object tree."""
+    record: dict[str, object] = {}
+    for key, value in pairs:
+        if key in record:
+            fail("WITNESS_DUPLICATE_JSON_MEMBER")
+        record[key] = value
+    return record
+
 
 
 
@@ -179,7 +191,11 @@ def repack_verified_local(target: Target, original: Path, witness: Path, scratch
     """Fail closed and return a standard 4-member archive with no root .env."""
     verify_root_only(original)
     verify_root_only(witness)
-    record = json.loads(witness.read_text("utf-8"))
+    record = json.loads(
+        witness.read_text("utf-8"), object_pairs_hook=reject_duplicate_json_members
+    )
+    if not isinstance(record, dict):
+        fail("WITNESS_FORMAT_INVALID")
     if record.get("approvedSha") != target.sha or record.get("currentRelease") != target.release:
         fail("WITNESS_RELEASE_MISMATCH")
     source_hash = digest(original)
@@ -187,9 +203,22 @@ def repack_verified_local(target: Target, original: Path, witness: Path, scratch
         fail("WITNESS_DIGEST_MISMATCH")
 
     with tarfile.open(original, "r:gz") as archive:
-        members = archive.getmembers()
+        # Iterate with a hard member-count cap. getmembers() would parse the
+        # entire attacker-supplied tar and allocate unbounded metadata first.
+        members: list[tarfile.TarInfo] = []
+        for member in archive:
+            members.append(member)
+            if len(members) > len(MEMBERS):
+                fail("SOURCE_BUNDLE_MEMBERS_INVALID")
         if len(members) != 4 or {m.name for m in members} != MEMBERS:
             fail("SOURCE_BUNDLE_MEMBERS_INVALID")
+        # Check the declared expanded member sizes BEFORE extracting even one
+        # byte. A tiny gzip can otherwise fill scratch with a huge PGDMP.
+        available = shutil.disk_usage(scratch).free
+        reserve = max(MIN_SCRATCH_RESERVE, original.stat().st_size * 2)
+        expanded = sum(m.size for m in members)
+        if available <= reserve or expanded > available - reserve:
+            fail("SOURCE_BUNDLE_EXTRACT_CAPACITY")
         if any(not m.isfile() or m.size <= 0 for m in members):
             fail("SOURCE_BUNDLE_NONREGULAR_MEMBER")
         if any(m.size > 16384 for m in members if m.name in {"metadata.txt", "SHA256SUMS"}):
@@ -215,6 +244,12 @@ def repack_verified_local(target: Target, original: Path, witness: Path, scratch
     path_seen: set[str] = set()
     file_count = 0
     total_bytes = 0
+    # Nested storage may be a second gzip bomb. Account for its declared
+    # expanded size and preserve scratch headroom before copying members.
+    storage_free = shutil.disk_usage(scratch).free
+    storage_budget = min(
+        MAX_STORAGE_UNCOMPRESSED, max(0, storage_free - MIN_SCRATCH_RESERVE)
+    )
     with tarfile.open(scratch / "storage.tar.gz", "r:gz") as source:
         with tarfile.open(sanitized, "w:gz") as sink:
             for member in source:
@@ -226,11 +261,13 @@ def repack_verified_local(target: Target, original: Path, witness: Path, scratch
                     not name or name != normal.as_posix() or normal.is_absolute()
                     or ".." in normal.parts or "\\" in name
                     or name in path_seen or member.sparse is not None
-                    or file_count > MAX_FILES or total_bytes > MAX_STORAGE_UNCOMPRESSED
+                    or file_count > MAX_FILES or total_bytes > storage_budget
                     or not (member.isfile() or member.isdir())
                 ):
                     fail("UNSAFE_STORAGE_ARCHIVE_MEMBER")
                 path_seen.add(name)
+                if name != ".env" and normal.name == ".env":
+                    fail("NESTED_ENV_MEMBER_NOT_ALLOWED")
                 if name == ".env":
                     if not member.isfile():
                         fail("ENV_MEMBER_NOT_REGULAR")
