@@ -1,0 +1,35 @@
+name: KMJ Elite Root-Owned Staging Candidate Safety QA
+
+on:
+  pull_request:
+    paths:
+      - scripts/operations/prepare-elite-root-staging-candidate-20261119.py
+      - scripts/test_prepare_elite_root_staging_candidate_20261119.py
+      - .github/workflows/elite-stage-root-preparation-qa.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  offline-contract:
+    name: Staging root finalizer fail-closed contract (no VPS access)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 7
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - name: Syntax, root freeze metadata, no-activation regression
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          python3 -B -m py_compile \
+            scripts/operations/prepare-elite-root-staging-candidate-20261119.py
+          python3 -B -m unittest discover -s scripts \
+            -p test_prepare_elite_root_staging_candidate_20261119.py -v
+          sha256sum scripts/operations/prepare-elite-root-staging-candidate-20261119.py
+          echo 'ELITE_STAGE_ROOT_FINALIZER_OFFLINE_QA=PASS'
+          echo 'STAGING_DEPLOYMENT=NOT_ATTEMPTED'
+          echo 'PRODUCTION_DEPLOYMENT=NOT_ATTEMPTED'
+          echo 'APPROVAL_MUTATION=NONE'
