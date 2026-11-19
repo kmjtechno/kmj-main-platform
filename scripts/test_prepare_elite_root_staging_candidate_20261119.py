@@ -48,10 +48,10 @@ class StageRootFinalizerTests(unittest.TestCase):
 
     def test_root_readonly_executable_tree_and_exact_stage_env(self):
         x = self.operations()
-        self.assertEqual(x["apps/platform"], (0, 0, 0o755))
+        self.assertEqual(x["apps/platform"], (0, 5678, 0o750))
         self.assertEqual(x["apps/platform/.env"], (0, 5678, 0o640))
-        self.assertEqual(x["apps/platform/artisan"], (0, 0, 0o555))
-        self.assertEqual(x["apps/platform/public/build/manifest.json"], (0, 0, 0o444))
+        self.assertEqual(x["apps/platform/artisan"], (0, 5678, 0o550))
+        self.assertEqual(x["apps/platform/public/build/manifest.json"], (0, 5678, 0o440))
         self.assertEqual(x["apps/platform/storage/framework/views/rendered.php"],
                          (0, 0, 0o444))
 
@@ -66,6 +66,15 @@ class StageRootFinalizerTests(unittest.TestCase):
                      "apps/platform/storage/logs"):
             self.assertEqual(x[path], (4567, 5678, 0o750), path)
         self.assertEqual(x["apps/platform/storage/app/upload.txt"], (4567, 5678, 0o640))
+
+    def test_no_world_readable_private_source(self):
+        x = self.operations()
+        for key in ("apps/platform/artisan",
+                    "apps/platform/public/build/manifest.json",
+                    "apps/platform/.env"):
+            self.assertEqual(x[key][2] & 0o007, 0, key)
+        self.assertEqual(x["apps/platform/storage/framework/views"], (0, 0, 0o755))
+        self.assertEqual(x["apps/platform/storage/framework/views/rendered.php"], (0, 0, 0o444))
 
     def test_symlinked_executable_is_rejected(self):
         path = self.tree / "apps/platform/public/build/evil.php"
