@@ -365,12 +365,15 @@ def publish_noclobber(source: Path, destination: Path) -> None:
 
 def run(argv: list[str]) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("mode", choices=("--inspect", "--prepare"))
+    mode = parser.add_mutually_exclusive_group(required=True)
+    mode.add_argument("--inspect", action="store_true")
+    mode.add_argument("--prepare", action="store_true")
     parser.add_argument("sha")
     parser.add_argument("stage_current_sha")
     parser.add_argument("live_release")
     parser.add_argument("confirmation", nargs="?", default="")
     a = parser.parse_args(argv)
+    a.mode = "--inspect" if a.inspect else "--prepare"
     require((a.mode == "--inspect" and a.confirmation == "") or
             (a.mode == "--prepare" and a.confirmation == "OWNER_STAGE_PREPARE"),
             "EXPLICIT_OWNER_CONFIRMATION_REQUIRED")
