@@ -1301,12 +1301,21 @@ export default function DeveloperApps({
                                                     )
                                                 }
                                             >
-                                                <option value="">All apps</option>
-                                                {exportEligibleApps.map((app) => (
-                                                    <option key={app.id} value={app.product_code}>
-                                                        {app.name}
-                                                    </option>
-                                                ))}
+                                                <option value="">
+                                                    All apps
+                                                </option>
+                                                {exportEligibleApps.map(
+                                                    (app) => (
+                                                        <option
+                                                            key={app.id}
+                                                            value={
+                                                                app.product_code
+                                                            }
+                                                        >
+                                                            {app.name}
+                                                        </option>
+                                                    ),
+                                                )}
                                             </select>
                                         </label>
                                         <label className="flex min-w-48 flex-1 flex-col gap-1 text-xs font-semibold">
@@ -1321,14 +1330,24 @@ export default function DeveloperApps({
                                                     )
                                                 }
                                             >
-                                                <option value="all">All records</option>
-                                                <option value="revoked">Revoked</option>
-                                                <option value="not_revoked">Not revoked (not necessarily valid)</option>
+                                                <option value="all">
+                                                    All records
+                                                </option>
+                                                <option value="revoked">
+                                                    Revoked
+                                                </option>
+                                                <option value="not_revoked">
+                                                    Not revoked (not necessarily
+                                                    valid)
+                                                </option>
                                             </select>
                                         </label>
                                         <a
                                             className="inline-flex min-h-10 items-center rounded-lg border px-4 text-xs font-bold hover:border-red-500/40"
-                                            href={'/developer/keys/export?' + exportCsvQuery}
+                                            href={
+                                                '/developer/keys/export?' +
+                                                exportCsvQuery
+                                            }
                                         >
                                             Export masked CSV
                                         </a>
