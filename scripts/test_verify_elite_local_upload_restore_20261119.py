@@ -7,6 +7,7 @@ import importlib.util
 import io
 import json
 import os
+import shutil
 from pathlib import Path
 import stat
 import tarfile
@@ -52,6 +53,11 @@ class RestoreTests(unittest.TestCase):
 
     def fixture(self, *, inner_entries=None, outer_extra=None,
                 meta=None, bad_sums=False, witness_sha=None):
+        # Every fixture gets a fresh disposable output tree. Prior expected
+        # failures must not leave an artifact that masks the next failure.
+        if self.scratch.exists():
+            shutil.rmtree(self.scratch)
+        self.scratch.mkdir(mode=0o700)
         inner_entries = inner_entries if inner_entries is not None else [
             ("storage/app", "dir", b""),
             ("storage/app/public", "dir", b""),
