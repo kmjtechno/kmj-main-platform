@@ -38,6 +38,14 @@ class SidecarTests(unittest.TestCase):
         with self.assertRaises(v.Rejected):
             v.verify(str(self.c), str(alias))
 
+    def test_matching_sidecar_in_different_directory_rejected(self):
+        other = self.root / "untrusted"
+        other.mkdir()
+        remote_sidecar = other / self.s.name
+        remote_sidecar.write_text(self.good, encoding="ascii")
+        with self.assertRaises(v.Rejected):
+            v.verify(str(self.c), str(remote_sidecar))
+
     def test_digest_mismatch(self):
         self.c.write_bytes(b"modified")
         with self.assertRaises(v.Rejected):
