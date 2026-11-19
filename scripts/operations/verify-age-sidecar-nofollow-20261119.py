@@ -50,6 +50,10 @@ def verify(cipher_path, sidecar_path):
     try:
         sparent, sname = open_parent(sidecar_path)
         try:
+            # Reject same-basename sidecars supplied from another directory.
+            cp, sp = os.fstat(cparent), os.fstat(sparent)
+            if (cp.st_dev, cp.st_ino) != (sp.st_dev, sp.st_ino):
+                raise Rejected("cipher and sidecar must share a directory")
             if not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._-]*\.tar\.age", cname):
                 raise Rejected("unsafe ciphertext basename")
             if sname != cname + ".sha256":
