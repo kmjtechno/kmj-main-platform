@@ -40,14 +40,23 @@ test('rejects forged, duplicate, paid-like or unbounded payloads', () => {
         [batch[0], { ...batch[1], license_id: batch[0].license_id }],
         [batch[0], { ...batch[1], customer_id: batch[0].customer_id }],
     ]) {
-        assert.throws(() => buildOneTimeTrialBatchCsv(value), /KSLP_ONE_TIME_TRIAL_BATCH_(?:SIZE|SHAPE)_REJECTED/);
+        assert.throws(
+            () => buildOneTimeTrialBatchCsv(value),
+            /KSLP_ONE_TIME_TRIAL_BATCH_(?:SIZE|SHAPE)_REJECTED/,
+        );
     }
 });
 
 test('helper is side-effect free; download must stay in one-time UI on explicit confirmation', () => {
-    const helper = readFileSync('resources/js/lib/one-time-trial-batch-csv.mjs', 'utf8');
+    const helper = readFileSync(
+        'resources/js/lib/one-time-trial-batch-csv.mjs',
+        'utf8',
+    );
     const page = readFileSync('resources/js/pages/developer-apps.tsx', 'utf8');
-    assert.doesNotMatch(helper, /\b(fetch|XMLHttpRequest|sendBeacon|localStorage|sessionStorage|indexedDB|console\.log|navigator\.sendBeacon)\b/);
+    assert.doesNotMatch(
+        helper,
+        /\b(fetch|XMLHttpRequest|sendBeacon|localStorage|sessionStorage|indexedDB|console\.log|navigator\.sendBeacon)\b/,
+    );
     assert.ok(page.includes('buildOneTimeTrialBatchCsv'));
     assert.ok(page.includes('window.confirm('));
     assert.ok(page.includes('Download one-time trial batch CSV'));
