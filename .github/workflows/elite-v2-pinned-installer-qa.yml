@@ -1,0 +1,30 @@
+name: Elite V2 Pinned Autopublish Install QA
+
+on:
+  pull_request:
+    paths:
+      - "scripts/operations/install-elite-autopublish-v2-20261119.py"
+      - "scripts/test_install_elite_autopublish_v2_20261119.py"
+      - ".github/workflows/elite-v2-pinned-installer-qa.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  offline-pinned-installer:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 7
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - name: Compile installer and execute fail-closed offline tests (no root)
+        run: |
+          set -Eeuo pipefail
+          python3 -B -m py_compile scripts/operations/install-elite-autopublish-v2-20261119.py
+          python3 -B -m unittest discover \
+            -s scripts -p 'test_install_elite_autopublish_v2_20261119.py' -v
+          echo "ELITE_V2_PINNED_INSTALLER_OFFLINE_QA=PASS"
+          echo "ROOT_INSTALL=NOT_EXECUTED"
+          echo "PRODUCTION_RELEASE=UNCHANGED"
