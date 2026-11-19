@@ -5,7 +5,7 @@
 param([switch]$Inspect)
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
-if (-not $Inspect -or $args.Count -gt 0) { Write-Output 'KMJ_P520_OFFSITE_DOCTOR=BLOCKED_INSPECT_ONLY'; exit 2 }
+if (-not $Inspect) { Write-Output 'KMJ_P520_OFFSITE_DOCTOR=BLOCKED_INSPECT_ONLY'; exit 2 }
 if ($env:COMPUTERNAME -ne 'DESKTOP-5FVJMET' -or $env:OS -ne 'Windows_NT') {
   Write-Output 'KMJ_P520_OFFSITE_DOCTOR=BLOCKED_WRONG_HOST'; exit 2
 }
