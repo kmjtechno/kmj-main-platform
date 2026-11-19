@@ -95,12 +95,16 @@ def verify(cipher_path, sidecar_path):
                     try:
                         if check_name != cname or (os.fstat(check_fd).st_dev, os.fstat(check_fd).st_ino) != (cp.st_dev, cp.st_ino):
                             raise Rejected("cipher parent path swapped")
+                        if identity(os.stat(check_name, dir_fd=check_fd, follow_symlinks=False)) != identity(cst):
+                            raise Rejected("cipher entry swapped during final path rewalk")
                     finally:
                         os.close(check_fd)
                     check_fd, check_name = open_parent(sidecar_path)
                     try:
                         if check_name != sname or (os.fstat(check_fd).st_dev, os.fstat(check_fd).st_ino) != (sp.st_dev, sp.st_ino):
                             raise Rejected("sidecar parent path swapped")
+                        if identity(os.stat(check_name, dir_fd=check_fd, follow_symlinks=False)) != identity(sst):
+                            raise Rejected("sidecar entry swapped during final path rewalk")
                     finally:
                         os.close(check_fd)
                 finally:
