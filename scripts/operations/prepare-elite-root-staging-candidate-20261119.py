@@ -72,8 +72,13 @@ def stage_run(*args: str, timeout=3600, home: Path | None = None) -> str:
     if home:
         allowed_env.update(HOME=str(home), COMPOSER_HOME=str(home / "composer"),
                            npm_config_cache=str(home / "npm"))
-    return fixed(["/usr/sbin/runuser", "-u", STAGE_USER, "--", *args],
-                 timeout=timeout, env=allowed_env)
+    injected = ["/usr/bin/env", "PATH=" + ENV["PATH"], "LANG=C"]
+    if home:
+        injected += ["HOME=" + str(home),
+                     "COMPOSER_HOME=" + str(home / "composer"),
+                     "npm_config_cache=" + str(home / "npm")]
+    return fixed(["/usr/sbin/runuser", "-u", STAGE_USER, "--",
+                  *injected, *args], timeout=timeout, env=allowed_env)
 
 
 def exact_link(link: Path, target: Path) -> bool:
@@ -146,6 +151,16 @@ def digest_program(script: bytes) -> str:
     return match.group(1).decode("ascii", "strict")
 
 
+def approved_ref_sha() -> str:
+    out = fixed(["/usr/bin/git", "ls-remote", "--exit-code",
+                 REMOTE, "refs/heads/staging-approved"], timeout=20)
+    parts = out.split()
+    require(len(parts) == 2 and parts[1] == "refs/heads/staging-approved"
+            and SHA_RE.fullmatch(parts[0]) is not None,
+            "APPROVED_REF_UNVERIFIED")
+    return parts[0]
+
+
 def inspect(sha: str, old: str, live: str) -> tuple[Path, Path, list]:
     require(os.geteuid() == 0 and socket.gethostname().split(".")[0] ==
             "KMJ-elite", "ROOT_ELITE_ONLY")
@@ -157,9 +172,7 @@ def inspect(sha: str, old: str, live: str) -> tuple[Path, Path, list]:
             "LIVE_RELEASE_DRIFT")
     old_app = RELEASES / old / "apps/platform"
     require(exact_link(SITE, old_app), "STAGE_POINTER_DRIFT")
-    require(fixed(["/usr/bin/git", "ls-remote", "--exit-code", REMOTE,
-                   "refs/heads/staging-approved"], timeout=20).split()[0] == sha,
-            "APPROVED_SOURCE_MOVED")
+    require(approved_ref_sha() == sha, "APPROVED_SOURCE_MOVED")
     st_uid = int(fixed(["/usr/bin/id", "-u", STAGE_USER]))
     plan = parent_plan(st_uid)
     require(fixed(["/usr/bin/systemctl", "is-active", "nginx"]) == "active"
@@ -221,25 +234,13 @@ def lock_stage_parents(plan: list, old_app: Path) -> None:
         raise Block("STAGE_PARENT_LOCK_FAILED") from None
 
 
-def precompile(app: Path, scratch: Path) -> None:
-    home = scratch / "home"
-    home.mkdir(mode=0o700)
-    app_env = app / ".env"
-    stage_run("/usr/bin/php8.4", "artisan", "view:cache",
-              timeout=180, home=home) if False else None
-    # Running PHP artisan with cwd must be explicit, always under stage UID.
-    stage_run("/bin/bash", "-c",
-              'set -Eeuo pipefail; cd "$1"; /usr/bin/php8.4 artisan view:cache --no-ansi',
-              "stage-view-cache", str(app), timeout=240, home=home)
-    views = app / "storage/framework/views"
-    require(views.is_dir() and any(views.glob("*.php")),
-            "BLADE_VIEW_CACHE_NOT_COMPILED")
-
-
 def build_stage(sha: str, old_app: Path, scratch: Path) -> Path:
     tree = scratch / "repo"
     home = scratch / "home"
     home.mkdir(mode=0o700)
+    os.chown(home, int(fixed(["/usr/bin/id", "-u", STAGE_USER])),
+             int(fixed(["/usr/bin/id", "-g", STAGE_USER])),
+             follow_symlinks=False)
     stage_run("/usr/bin/git", "clone", "--quiet", "--depth", "1",
               "--single-branch", "--branch", "staging-approved", "--",
               REMOTE, str(tree), timeout=240, home=home)
@@ -275,6 +276,11 @@ def build_stage(sha: str, old_app: Path, scratch: Path) -> Path:
     require(stage_run("/usr/bin/git", "-C", str(tree),
                       "status", "--porcelain", "--untracked-files=normal") == "",
             "STAGE_SOURCE_DIRTY")
+    # Remove generated Node dependencies from this never-live isolated
+    # candidate after frontend output is sealed. They are not runtime code.
+    deps = app / "node_modules"
+    if deps.exists() and deps.is_dir() and not deps.is_symlink():
+        shutil.rmtree(deps)
     return tree
 
 
@@ -374,9 +380,15 @@ def run(argv: list[str]) -> int:
         print("PRODUCTION_SWITCH=NOT_ATTEMPTED")
         return 0
 
-    with open("/run/lock/kmj-stage-root-prepare.lock", "a+b", buffering=0) as lock:
+    # Untrusted sticky lock directory: never open through a symlink, never
+    # truncate or chmod a pre-existing inode.
+    lock_path = "/run/lock/kmj-stage-root-prepare.lock"
+    lock_fd = os.open(lock_path, os.O_RDWR | os.O_CREAT |
+                      os.O_NOFOLLOW | os.O_CLOEXEC, 0o600)
+    with os.fdopen(lock_fd, "r+b", buffering=0) as lock:
         st = os.fstat(lock.fileno())
-        require(stat.S_ISREG(st.st_mode) and st.st_uid == 0 and st.st_nlink == 1,
+        require(stat.S_ISREG(st.st_mode) and st.st_uid == 0 and
+                st.st_nlink == 1 and stat.S_IMODE(st.st_mode) == 0o600,
                 "STAGE_PREPARE_LOCK_INVALID")
         fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
         # Recheck after acquiring lock to avoid changing staging after drift.
@@ -391,15 +403,17 @@ def run(argv: list[str]) -> int:
             os.chown(scratch, stage_uid, stage_gid, follow_symlinks=False)
             os.chmod(scratch, 0o700, follow_symlinks=False)
             tree = build_stage(a.sha, old, scratch)
+            # Stage UID must no longer be able to traverse this scratch
+            # directory while root walks and freezes its descendants.
+            os.chown(tree, 0, 0, follow_symlinks=False)
+            os.chmod(tree, 0o700, follow_symlinks=False)
             freeze(tree, stage_uid, stage_gid)
             app = tree / "apps/platform"
             digest = seal_sha(app)
             require(exact_link(SITE, old) and exact_link(
                     LIVE, Path("/home/kmjprod/releases") / a.live_release),
                     "POINTER_DRIFT_DURING_PREPARE")
-            approved = fixed(["/usr/bin/git", "ls-remote", "--exit-code",
-                              REMOTE, "refs/heads/staging-approved"], timeout=20)
-            require(approved.split()[0] == a.sha, "APPROVED_REF_DRIFT")
+            require(approved_ref_sha() == a.sha, "APPROVED_REF_DRIFT")
             # Rename only after root has frozen the entire candidate tree.
             publish_noclobber(tree, candidate)
             final_digest = seal_sha(candidate / "apps/platform")
