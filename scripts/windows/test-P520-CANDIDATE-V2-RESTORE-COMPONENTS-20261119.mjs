@@ -114,3 +114,46 @@ test('embedded Python bundle and nonroot restore code compile on Linux CI', {ski
     {encoding:'utf8',input:payload,timeout:15000});
   assert.equal(p.status,0,p.stdout+p.stderr);
 });
+
+
+test('V2-generated synthetic owner Ed25519 receipt verifies against independent Python gate, old SHA fails', {
+  skip:process.platform==='win32'
+},()=>{
+  const root=mkdtempSync(join(tmpdir(),'kmj-p520-v2-signature-'));
+  try {
+    const pair=generateKeyPairSync('ed25519');
+    const privateKey=Buffer.from(pair.privateKey.export({format:'pem',type:'pkcs8'}));
+    const pub=Buffer.from(pair.publicKey.export({format:'pem',type:'spki'}));
+    const raw=Buffer.from(JSON.stringify(buildReceipt(
+      '1'.repeat(64),'2'.repeat(64),512,new Date()
+    )),'utf8');
+    const sig=signVerifiedPayload(raw,privateKey,pub);
+    const receipt=join(root,'candidate.json');
+    const signature=join(root,'candidate.sig');
+    const publicKey=join(root,'public.txt');
+    writeFileSync(receipt,raw,{flag:'wx'});
+    writeFileSync(signature,sig,{flag:'wx'});
+    writeFileSync(publicKey,pub,{flag:'wx'});
+    const base=[
+      'scripts/operations/verify-p520-independent-restore-v2-20261118.py',
+      '--receipt',receipt,'--signature',signature,
+      '--owner-pinned-public-key',publicKey,
+      '--expected-key-sha256',createHash('sha256').update(pub).digest('hex'),
+      '--encrypted-sha256','1'.repeat(64),
+      '--source-local-sha256','2'.repeat(64),
+      '--expected-candidate-sha',CANDIDATE,
+      '--expected-current-release',PREVIOUS
+    ];
+    const good=spawnSync('python3',['-I','-B',...base],{encoding:'utf8',timeout:15000});
+    assert.equal(good.status,0,good.stdout+good.stderr);
+    assert.match(good.stdout,/KMJ_P520_RECEIPT=CRYPTO_VALIDATED/);
+    assert.match(good.stdout,/PRODUCTION_APPROVAL=NOT_GRANTED/);
+    const wrong=[...base];
+    const at=wrong.indexOf('--expected-candidate-sha')+1;
+    wrong[at]=OLD;
+    const refused=spawnSync('python3',['-I','-B',...wrong],{encoding:'utf8',timeout:15000});
+    assert.equal(refused.status,2,refused.stdout+refused.stderr);
+    assert.match(refused.stdout,/KMJ_P520_RECEIPT=BLOCKED_RECOVERY_IDENTITY_OR_DIGEST/);
+    assert.match(refused.stdout,/PRODUCTION_APPROVAL=NOT_GRANTED/);
+  }finally{rmSync(root,{recursive:true,force:true});}
+});
