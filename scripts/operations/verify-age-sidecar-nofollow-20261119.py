@@ -52,6 +52,8 @@ def verify(cipher_path, sidecar_path):
         try:
             if not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._-]*\.tar\.age", cname):
                 raise Rejected("unsafe ciphertext basename")
+            if sname != cname + ".sha256":
+                raise Rejected("sidecar path must match ciphertext basename")
             cfd, cst = open_regular(cparent, cname)
             try:
                 sfd, sst = open_regular(sparent, sname)
