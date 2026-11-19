@@ -20,7 +20,7 @@ def open_regular(parent_fd, name):
     fd = os.open(name, FLAGS, dir_fd=parent_fd)
     try:
         st = os.fstat(fd)
-        if not stat.S_ISREG(st.st_mode) or st.st_nlink != 1:
+        if not stat.S_ISREG(st.st_mode) or st.st_nlink != 1 or st.st_size == 0:
             raise Rejected("not a singly-linked regular file")
         return fd, st
     except BaseException:
