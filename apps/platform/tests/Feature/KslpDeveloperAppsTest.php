@@ -181,6 +181,200 @@ final class KslpDeveloperAppsTest extends TestCase
                 ->missing('keys.0.machine_identity_hash'));
     }
 
+    public function test_trial_batch_is_atomic_only_trial_and_one_time_visible(): void
+    {
+        [$owner, $org] = $this->owner('Bounded Batch Developer');
+        $this->enroll($org);
+        app(KslpIssuerSubscriptionAuthority::class)
+            ->registerProduct($org, 'VENDOR.BATCH', 'Batch App');
+
+        $response = $this->actingAs($owner)
+            ->withSession(['auth.password_confirmed_at' => time()])
+            ->post('/developer/keys/batch', [
+                'organization_id' => $org,
+                'product_code' => 'VENDOR.BATCH',
+                'customers' => "batch-customer-01\nbatch-customer-02\nbatch-customer-03",
+                'reason' => 'Approved customer onboarding trial QA',
+                // A user-supplied paid plan can never override the fixed
+                // server-side trial plan in this batch endpoint.
+                'plan' => 'enterprise',
+            ])->assertRedirect(route('developer.apps.index'))
+            ->assertSessionHas('developer_license_batch');
+
+        $issued = session('developer_license_batch');
+        self::assertIsArray($issued);
+        self::assertCount(3, $issued);
+        $digests = DB::table('kslp_license_keys')->pluck('key_digest')->all();
+        self::assertCount(3, $digests);
+        foreach ($issued as $key) {
+            self::assertMatchesRegularExpression('/^KMJ1-[A-Za-z0-9_-]{43}$/D', $key['key']);
+            self::assertContains(hash('sha256', $key['key']), $digests);
+            self::assertNotContains($key['key'], $digests);
+        }
+
+        self::assertSame(3, DB::table('kslp_licenses')
+            ->where('issuer_organization_id', $org)
+            ->where('product', 'VENDOR.BATCH')
+            ->where('plan', 'trial')->count());
+        $this->assertDatabaseHas('license_audit_events', [
+            'organization_id' => $org,
+            'actor_id' => $owner->id,
+            'action' => 'kslp_trial_batch_issued',
+            'status' => 'success',
+        ]);
+        $audit = DB::table('license_audit_events')
+            ->where('organization_id', $org)->where('action', 'kslp_trial_batch_issued')
+            ->value('metadata');
+        self::assertIsString($audit);
+        self::assertStringNotContainsString($issued[0]['key'], $audit);
+        self::assertStringNotContainsString('batch-customer-01', $audit);
+
+        $this->get('/developer/apps')
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('developer-apps')
+                ->has('newKeys', 3)
+                ->where('newKeys.0.customer_id', 'batch-customer-01'));
+
+        $this->get('/developer/apps')
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('developer-apps')
+                ->where('newKeys', null));
+    }
+
+    public function test_trial_batch_service_rejects_nonstring_customers_before_writes(): void
+    {
+        [$owner, $org] = $this->owner('Strict Batch Boundary');
+        $this->enroll($org);
+        app(KslpIssuerSubscriptionAuthority::class)
+            ->registerProduct($org, 'VENDOR.STRICTBATCH', 'Strict Batch');
+
+        try {
+            app(KslpDeveloperKeys::class)->issueTrialBatch(
+                $org, 'VENDOR.STRICTBATCH',
+                ['customer-allowed', 123],
+                (string) $owner->id,
+                'Reject nonstring customer references safely',
+            );
+            self::fail('A nonstring customer reference must never be issued a key.');
+        } catch (DomainException $exception) {
+            self::assertSame('KSLP_TRIAL_BATCH_CUSTOMER_INVALID', $exception->getMessage());
+        }
+
+        $this->assertDatabaseCount('kslp_license_keys', 0);
+        $this->assertDatabaseCount('kslp_licenses', 0);
+    }
+
+    public function test_trial_batch_rejects_duplicate_customers_before_issuing_any_key(): void
+    {
+        [$owner, $org] = $this->owner('Duplicate Batch');
+        $this->enroll($org);
+        app(KslpIssuerSubscriptionAuthority::class)
+            ->registerProduct($org, 'VENDOR.DUPBATCH', 'Duplicates');
+
+        $this->actingAs($owner)
+            ->withSession(['auth.password_confirmed_at' => time()])
+            ->post('/developer/keys/batch', [
+                'organization_id' => $org,
+                'product_code' => 'VENDOR.DUPBATCH',
+                'customers' => "batch-customer-01\nbatch-customer-01",
+                'reason' => 'Customer batch duplicate control QA',
+            ])->assertSessionHasErrors('customers');
+
+        $this->assertDatabaseCount('kslp_license_keys', 0);
+        $this->assertDatabaseCount('kslp_licenses', 0);
+    }
+
+    public function test_trial_batch_rolls_back_previous_rows_when_later_trial_already_used(): void
+    {
+        [$owner, $org] = $this->owner('Atomic Batch Rollback');
+        $this->enroll($org);
+        app(KslpIssuerSubscriptionAuthority::class)
+            ->registerProduct($org, 'VENDOR.ROLLBACKBATCH', 'Rollback');
+        app(KslpDeveloperKeys::class)->issue(
+            $org, 'VENDOR.ROLLBACKBATCH', 'batch-existing', 'trial', (string) $owner->id,
+        );
+
+        $this->actingAs($owner)
+            ->withSession(['auth.password_confirmed_at' => time()])
+            ->post('/developer/keys/batch', [
+                'organization_id' => $org,
+                'product_code' => 'VENDOR.ROLLBACKBATCH',
+                'customers' => "batch-new\nbatch-existing",
+                'reason' => 'Ensure full rollback for repeated trial',
+            ])->assertSessionHasErrors('customers');
+
+        $this->assertDatabaseCount('kslp_license_keys', 1);
+        $this->assertDatabaseCount('kslp_licenses', 1);
+        self::assertSame(
+            0,
+            DB::table('license_audit_events')->where('action', 'kslp_trial_batch_issued')->count(),
+        );
+        self::assertSame(
+            0,
+            DB::table('kslp_licenses')->where('customer_id', 'batch-new')->count(),
+        );
+    }
+
+    public function test_trial_batch_rolls_back_at_issuer_monthly_quota_boundary(): void
+    {
+        [$owner, $org] = $this->owner('Quota Batch Rollback');
+        app(KslpIssuerSubscriptionAuthority::class)
+            ->subscribe($org, 'professional', 3, 1);
+        app(KslpIssuerSubscriptionAuthority::class)
+            ->registerProduct($org, 'VENDOR.QUOTABATCH', 'Quota Batch');
+
+        $this->actingAs($owner)
+            ->withSession(['auth.password_confirmed_at' => time()])
+            ->post('/developer/keys/batch', [
+                'organization_id' => $org,
+                'product_code' => 'VENDOR.QUOTABATCH',
+                'customers' => "batch-quota-one\nbatch-quota-two",
+                'reason' => 'Enforce monthly issuer issue quota',
+            ])->assertSessionHasErrors('customers');
+
+        $this->assertDatabaseCount('kslp_license_keys', 0);
+        $this->assertDatabaseCount('kslp_licenses', 0);
+        self::assertSame(0, DB::table('license_audit_events')
+            ->where('action', 'kslp_trial_batch_issued')->count());
+    }
+
+    public function test_trial_batch_requires_tenant_rights_rollout_and_password_step_up(): void
+    {
+        [$owner, $org] = $this->owner('Batch Permission Owner');
+        $this->enroll($org);
+        app(KslpIssuerSubscriptionAuthority::class)
+            ->registerProduct($org, 'VENDOR.PERMISSIONS', 'Protected Batch');
+
+        $request = [
+            'organization_id' => $org,
+            'product_code' => 'VENDOR.PERMISSIONS',
+            'customers' => "batch-forbidden-1\nbatch-forbidden-2",
+            'reason' => 'Negative tenant and rollout QA checks',
+        ];
+        $outsider = User::factory()->create();
+        $this->actingAs($outsider)
+            ->withSession(['auth.password_confirmed_at' => time()])
+            ->post('/developer/keys/batch', $request)
+            ->assertForbidden();
+
+        config()->set('services.kmj_developer_licensing.enabled', false);
+        $this->actingAs($owner)
+            ->withSession(['auth.password_confirmed_at' => time()])
+            ->post('/developer/keys/batch', $request)
+            ->assertStatus(503);
+
+        config()->set('services.kmj_developer_licensing.enabled', true);
+        $this->actingAs($owner)
+            ->withSession(['auth.password_confirmed_at' => 0])
+            ->post('/developer/keys/batch', $request)
+            ->assertRedirect();
+
+        $this->assertDatabaseCount('kslp_license_keys', 0);
+        $this->assertDatabaseCount('kslp_licenses', 0);
+    }
+
     public function test_duplicate_application_code_returns_validation_error_without_duplicate_record(): void
     {
         [$owner, $org] = $this->owner('Developer Duplicate Code');

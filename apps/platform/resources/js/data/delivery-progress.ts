@@ -10,6 +10,22 @@ export type DeliveryMilestone = {
 
 export const deliveryMilestones: DeliveryMilestone[] = [
     {
+        id: 'kslp-runtime-dependency-boundary-20261118',
+        title: 'Licensing Hub release — audited Node runtime/build dependency separation',
+        state: 'active',
+        detail: 'Stacked source-only PR #898 moves 11 Vite, Tailwind, TypeScript and tooling packages from npm production dependencies to development-only while preserving exact package versions and lock integrity. This distinguishes the published PHP/React runtime from frontend build tools and adds an independent runtime dependency-graph and real npm production-audit check. A production runtime audit can PASS without claiming that the full build toolchain is patched or the release is approved.',
+        evidence:
+            'Standalone CI includes npm ci, exact lock-graph closure, and npm audit --omit=dev --audit-level=high. Picomatch through 4.0.7 remains affected by CVE-2026-112366 in build dependencies, so full build-chain security acceptance is not implied. Existing protected production manifest expects predecessor E5B although LIVE is CE6, staging approval is invalid, and independent P520 encrypted PostgreSQL/uploads restore and rollback have not been attested. No production release switch, protected approval change, signing key export, paid licensing activation, or rollout flag mutation occurred.',
+    },
+    {
+        id: 'kslp-atomic-trial-batch-20261118',
+        title: 'Licensing Hub — bounded all-or-none trial customer batch issuance',
+        state: 'active',
+        detail: 'Stacked source-only draft adds an issuer-tenant-scoped 2–10-customer trial-key batch with password step-up and global rollout control. A single database transaction includes every per-customer delegated issuer quota, unique-trial and product authorization check, license/key issuance and one bounded aggregate audit event. Duplicate customers or quota failures roll back the complete batch. Server ignores any submitted paid plan: only trial is allowed, and keys are random, digest-only at rest and session-flashed exactly once.',
+        evidence:
+            'Regression tests cover cross-tenant 403, rollout disabled 503, old password confirmation, duplicate inputs, existing-customer collision mid-batch, monthly quota rollback, fixed trial-only plan, no plaintext in audit/database and one-time key display. AuthSP supplies workflow labels only, not legacy backend. Exact-head CI and P520 independent restore, real signer/SDK conformance, verified payment settlement and owner-protected staging/production cutover remain pending; npm picomatch GHSA-fc5q-39xc-vjpf release blocker remains.',
+    },
+    {
         id: 'kslp-tenant-device-summary-20261118',
         title: 'Licensing Hub — tenant-safe aggregate device binding evidence',
         state: 'active',

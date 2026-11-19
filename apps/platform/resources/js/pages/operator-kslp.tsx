@@ -261,7 +261,10 @@ export default function OperatorKslp({
                                         'Monthly issue quota',
                                         'Period end',
                                     ].map((name) => (
-                                        <th className="border-b px-3 py-2" key={name}>
+                                        <th
+                                            className="border-b px-3 py-2"
+                                            key={name}
+                                        >
                                             {name}
                                         </th>
                                     ))}
@@ -269,16 +272,26 @@ export default function OperatorKslp({
                             </thead>
                             <tbody>
                                 {issuerWorkspaces.map((issuer) => (
-                                    <tr className="border-b last:border-0" key={issuer.id}>
+                                    <tr
+                                        className="border-b last:border-0"
+                                        key={issuer.id}
+                                    >
                                         <td className="px-3 py-3 font-semibold">
                                             {issuer.name}
                                         </td>
-                                        <td className="px-3 py-3">{issuer.issuer_status}</td>
-                                        <td className="px-3 py-3">{issuer.tier ?? '—'}</td>
                                         <td className="px-3 py-3">
-                                            {issuer.registered_apps} / {issuer.product_limit}
+                                            {issuer.issuer_status}
                                         </td>
-                                        <td className="px-3 py-3">{issuer.monthly_issue_limit}</td>
+                                        <td className="px-3 py-3">
+                                            {issuer.tier ?? '—'}
+                                        </td>
+                                        <td className="px-3 py-3">
+                                            {issuer.registered_apps} /{' '}
+                                            {issuer.product_limit}
+                                        </td>
+                                        <td className="px-3 py-3">
+                                            {issuer.monthly_issue_limit}
+                                        </td>
                                         <td className="px-3 py-3">
                                             {issuer.current_period_end ?? '—'}
                                         </td>
@@ -293,10 +306,11 @@ export default function OperatorKslp({
                         )}
                     </div>
                     <p className="text-muted-foreground mt-3 text-xs">
-                        Read-only, first 60 organizations. Subscription approval,
-                        reseller quotas, commercial settlement, and customer
-                        key issuance require their separate verified workflows.
-                        This table cannot grant licenses or unlock the release gate.
+                        Read-only, first 60 organizations. Subscription
+                        approval, reseller quotas, commercial settlement, and
+                        customer key issuance require their separate verified
+                        workflows. This table cannot grant licenses or unlock
+                        the release gate.
                     </p>
                 </section>
                 <section
