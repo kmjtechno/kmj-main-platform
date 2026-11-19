@@ -26,6 +26,18 @@ class SidecarTests(unittest.TestCase):
     def test_valid(self):
         v.verify(str(self.c), str(self.s))
 
+    def test_sidecar_wrong_filename_rejected(self):
+        alias = self.root / "unrelated.sha256"
+        alias.write_text(self.good, encoding="ascii")
+        with self.assertRaises(v.Rejected):
+            v.verify(str(self.c), str(alias))
+
+    def test_sidecar_wrong_ciphertext_suffix_rejected(self):
+        alias = self.root / (self.c.name + ".sha256.backup")
+        alias.write_text(self.good, encoding="ascii")
+        with self.assertRaises(v.Rejected):
+            v.verify(str(self.c), str(alias))
+
     def test_digest_mismatch(self):
         self.c.write_bytes(b"modified")
         with self.assertRaises(v.Rejected):
