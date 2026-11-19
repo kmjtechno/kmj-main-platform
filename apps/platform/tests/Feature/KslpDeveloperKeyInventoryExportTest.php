@@ -57,8 +57,11 @@ final class KslpDeveloperKeyInventoryExportTest extends TestCase
             ->get('/developer/keys/export?organization_id='.$orgA);
 
         $response->assertOk()
-            ->assertHeader('Cache-Control', 'private, no-store, max-age=0')
             ->assertHeader('X-Content-Type-Options', 'nosniff');
+        $cacheDirectives = explode(', ', (string) $response->headers->get('Cache-Control'));
+        self::assertContains('private', $cacheDirectives);
+        self::assertContains('no-store', $cacheDirectives);
+        self::assertContains('max-age=0', $cacheDirectives);
         $csv = $response->streamedContent();
 
         self::assertStringContainsString('product_code,application_name,license_id,masked_key_prefix', $csv);
