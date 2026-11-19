@@ -1247,11 +1247,12 @@ export default function DeveloperApps({
                                         Export your organization's key inventory
                                     </h3>
                                     <p className="text-muted-foreground mt-1 text-xs leading-5">
-                                        Read-only CSV for up to 1,000 recent keys.
-                                        Includes app names and masked key prefixes,
-                                        never full license keys, digests, customer
-                                        identities or device identifiers. Password
-                                        confirmation is required.
+                                        Read-only CSV for up to 1,000 recent
+                                        keys. Includes app names and masked key
+                                        prefixes, never full license keys,
+                                        digests, customer identities or device
+                                        identifiers. Password confirmation is
+                                        required.
                                     </p>
                                     <div className="mt-3 flex flex-wrap items-end gap-3">
                                         <label className="flex min-w-48 flex-1 flex-col gap-1 text-xs font-semibold">
@@ -1261,11 +1262,16 @@ export default function DeveloperApps({
                                                 className="bg-background min-h-10 rounded-lg border px-3 text-sm"
                                                 value={exportOrganizationId}
                                                 onChange={(event) =>
-                                                    setExportOrganizationId(event.target.value)
+                                                    setExportOrganizationId(
+                                                        event.target.value,
+                                                    )
                                                 }
                                             >
                                                 {organizations.map((org) => (
-                                                    <option key={org.id} value={org.id}>
+                                                    <option
+                                                        key={org.id}
+                                                        value={org.id}
+                                                    >
                                                         {org.name}
                                                     </option>
                                                 ))}
@@ -1275,7 +1281,9 @@ export default function DeveloperApps({
                                             className="inline-flex min-h-10 items-center rounded-lg border px-4 text-xs font-bold hover:border-red-500/40"
                                             href={
                                                 '/developer/keys/export?organization_id=' +
-                                                encodeURIComponent(exportOrganizationId)
+                                                encodeURIComponent(
+                                                    exportOrganizationId,
+                                                )
                                             }
                                         >
                                             Export masked CSV
