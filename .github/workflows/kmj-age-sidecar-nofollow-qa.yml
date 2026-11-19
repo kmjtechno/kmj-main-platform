@@ -1,0 +1,24 @@
+name: KMJ AGE Sidecar Nonroot QA
+on:
+  pull_request:
+    paths:
+      - 'scripts/operations/verify-age-sidecar-nofollow-20261119.py'
+      - 'scripts/operations/test_verify_age_sidecar_nofollow_20261119.py'
+      - '.github/workflows/kmj-age-sidecar-nofollow-qa.yml'
+permissions:
+  contents: read
+jobs:
+  offline-negative-qa:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+          ref: ${{ github.event.pull_request.head.sha }}
+      - run: |
+          set -Eeuo pipefail
+          test "$(git rev-parse HEAD)" = "${{ github.event.pull_request.head.sha }}"
+          python3 -I -B scripts/operations/test_verify_age_sidecar_nofollow_20261119.py -v
+          echo 'REAL_BACKUP_READ=NO'
+          echo 'PRODUCTION_APPROVAL=NOT_GRANTED'
