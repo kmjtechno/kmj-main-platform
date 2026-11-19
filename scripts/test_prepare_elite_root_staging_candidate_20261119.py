@@ -237,7 +237,7 @@ class StageRootFinalizerTests(unittest.TestCase):
                     m.normalize_candidate_mailer(original)
         self.assertEqual(
             m.staging_env_policy_failures(safe + b"DB_URL=postgresql://production.internal/prod\n"),
-            ("DB_URL",)
+            ("DB_URL", "MAIL_MAILER")
         )
 
     def test_parent_acl_rollback_requires_successful_restore(self):
