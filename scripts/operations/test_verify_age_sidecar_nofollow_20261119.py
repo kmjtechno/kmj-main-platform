@@ -139,6 +139,40 @@ class SidecarTests(unittest.TestCase):
         finally:
             v.os.read = original
 
+    def test_cipher_entry_swap_at_final_rewalk(self):
+        original = v.open_parent
+        calls = 0
+        def rewalk(path):
+            nonlocal calls
+            calls += 1
+            if calls == 3:
+                self.c.rename(self.root / "cipher-original.tar.age")
+                self.c.write_bytes(b"replacement")
+            return original(path)
+        v.open_parent = rewalk
+        try:
+            with self.assertRaises(v.Rejected):
+                v.verify(str(self.c), str(self.s))
+        finally:
+            v.open_parent = original
+
+    def test_sidecar_entry_swap_at_final_rewalk(self):
+        original = v.open_parent
+        calls = 0
+        def rewalk(path):
+            nonlocal calls
+            calls += 1
+            if calls == 4:
+                self.s.rename(self.root / "sidecar-original.sha256")
+                self.s.write_text(self.good, encoding="ascii")
+            return original(path)
+        v.open_parent = rewalk
+        try:
+            with self.assertRaises(v.Rejected):
+                v.verify(str(self.c), str(self.s))
+        finally:
+            v.open_parent = original
+
     def test_parent_directory_swap_during_hash(self):
         original = v.os.read
         archive_dir = self.root / "archive"
