@@ -1,0 +1,53 @@
+name: KMJ Node Production Dependency Boundary
+
+on:
+  pull_request:
+    paths:
+      - 'apps/platform/package.json'
+      - 'apps/platform/package-lock.json'
+      - 'apps/platform/scripts/check-runtime-dependency-boundary.mjs'
+      - '.github/workflows/kmj-node-production-dependency-boundary.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: kmj-node-runtime-boundary-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  locked-node-runtime-audit:
+    name: Locked runtime graph + full production npm advisory
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Checkout immutable PR HEAD
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - name: Node 24 LTS
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: apps/platform/package-lock.json
+      - name: Install complete locked dependency graph
+        working-directory: apps/platform
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "${{ github.event.pull_request.head.sha || github.sha }}"
+          npm ci --ignore-scripts --no-audit --no-fund
+      - name: Assert compiler dependencies stay out of production runtime
+        working-directory: apps/platform
+        run: |
+          set -euo pipefail
+          node scripts/check-runtime-dependency-boundary.mjs
+      - name: FAIL on any high advisory still in production runtime
+        working-directory: apps/platform
+        run: |
+          set -euo pipefail
+          npm audit --omit=dev --audit-level=high
+          echo 'PRODUCTION_NODE_RUNTIME_ADVISORY=PASS'
+          echo 'FULL_BUILD_TOOLCHAIN_ADVISORY_NOT_WAIVED=GHSA-fc5q-39xc-vjpf'

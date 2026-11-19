@@ -1,0 +1,41 @@
+name: KMJ Release Formatter Exact Patch Preview
+
+on:
+  pull_request:
+    paths:
+      - 'apps/platform/resources/js/pages/operator-kslp.tsx'
+      - 'apps/platform/scripts/check-runtime-dependency-boundary.mjs'
+      - 'apps/platform/package.json'
+      - 'apps/platform/package-lock.json'
+      - '.github/workflows/kmj-release-formatter-preview.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  preview:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - name: Checkout exact candidate head
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - name: Node 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: apps/platform/package-lock.json
+      - name: Install locked formatter
+        working-directory: apps/platform
+        run: npm ci --no-audit --no-fund
+      - name: Produce exact formatter corrections (never commit)
+        working-directory: apps/platform
+        run: |
+          set -euo pipefail
+          ./node_modules/.bin/vp fmt resources/js/pages/operator-kslp.tsx scripts/check-runtime-dependency-boundary.mjs
+          git diff -- resources/js/pages/operator-kslp.tsx scripts/check-runtime-dependency-boundary.mjs
+          echo 'FORMAT_PREVIEW=GENERATED_NOT_COMMITTED'

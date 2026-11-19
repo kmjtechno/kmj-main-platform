@@ -10,6 +10,14 @@ export type DeliveryMilestone = {
 
 export const deliveryMilestones: DeliveryMilestone[] = [
     {
+        id: 'kslp-runtime-dependency-boundary-20261118',
+        title: 'Licensing Hub release — audited Node runtime/build dependency separation',
+        state: 'active',
+        detail: 'Stacked source-only PR #898 moves 11 Vite, Tailwind, TypeScript and tooling packages from npm production dependencies to development-only while preserving exact package versions and lock integrity. This distinguishes the published PHP/React runtime from frontend build tools and adds an independent runtime dependency-graph and real npm production-audit check. A production runtime audit can PASS without claiming that the full build toolchain is patched or the release is approved.',
+        evidence:
+            'Standalone CI includes npm ci, exact lock-graph closure, and npm audit --omit=dev --audit-level=high. Picomatch through 4.0.7 remains affected by CVE-2026-112366 in build dependencies, so full build-chain security acceptance is not implied. Existing protected production manifest expects predecessor E5B although LIVE is CE6, staging approval is invalid, and independent P520 encrypted PostgreSQL/uploads restore and rollback have not been attested. No production release switch, protected approval change, signing key export, paid licensing activation, or rollout flag mutation occurred.',
+    },
+    {
         id: 'kslp-atomic-trial-batch-20261118',
         title: 'Licensing Hub — bounded all-or-none trial customer batch issuance',
         state: 'active',

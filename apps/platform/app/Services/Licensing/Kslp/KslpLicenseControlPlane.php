@@ -311,9 +311,15 @@ final class KslpLicenseControlPlane
             throw new DomainException('KSLP_ISSUER_PRODUCT_NOT_AUTHORIZED');
         }
 
+        $licenseData = (array) $license;
+        $product = $licenseData['product'] ?? null;
+        if (! is_string($product) || $product === '') {
+            throw new DomainException('KSLP_ISSUER_PRODUCT_NOT_AUTHORIZED');
+        }
+
         $active = DB::table('kslp_licensed_products')
             ->where('organization_id', $issuerOrganizationId)
-            ->where('product_code', (string) $license->product)
+            ->where('product_code', $product)
             ->where('status', 'active')
             ->exists();
 
