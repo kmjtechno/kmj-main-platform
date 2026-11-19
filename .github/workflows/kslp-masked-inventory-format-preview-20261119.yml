@@ -1,0 +1,47 @@
+name: KMJ KSLP Masked Inventory Exact Formatter Preview
+on:
+  pull_request:
+    paths:
+      - 'apps/platform/app/Services/Licensing/Kslp/KslpInventoryCsv.php'
+      - 'apps/platform/routes/developer-licenses.php'
+      - 'apps/platform/tests/Feature/KslpDeveloperKeyInventoryExportTest.php'
+      - 'apps/platform/resources/js/pages/developer-apps.tsx'
+      - 'apps/platform/resources/js/data/delivery-progress.ts'
+      - '.github/workflows/kslp-masked-inventory-format-preview-20261119.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  preview:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - uses: shivammathur/setup-php@87d00bde2555f25eb54fedf940384e99cbdc55ef
+        with:
+          php-version: '8.4'
+          extensions: pdo_sqlite, sqlite3, sodium
+          coverage: none
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: apps/platform/package-lock.json
+      - name: Format only exact changed export sources in CI sandbox
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          test "$(git rev-parse HEAD)" = "${{ github.event.pull_request.head.sha || github.sha }}"
+          cd apps/platform
+          composer install --no-interaction --prefer-dist --no-scripts --no-progress
+          npm ci --ignore-scripts --no-audit --no-fund
+          vendor/bin/pint app/Services/Licensing/Kslp/KslpInventoryCsv.php routes/developer-licenses.php tests/Feature/KslpDeveloperKeyInventoryExportTest.php
+          node_modules/.bin/vp fmt resources/js/pages/developer-apps.tsx resources/js/data/delivery-progress.ts
+          echo 'KMJ_FORMAT_PREVIEW_START'
+          git diff --unified=2 -- app/Services/Licensing/Kslp/KslpInventoryCsv.php routes/developer-licenses.php tests/Feature/KslpDeveloperKeyInventoryExportTest.php resources/js/pages/developer-apps.tsx resources/js/data/delivery-progress.ts
+          echo 'KMJ_FORMAT_PREVIEW_END'
+          echo 'REPOSITORY_PUSH=NONE'
+          echo 'PRODUCTION_MUTATION=NONE'
