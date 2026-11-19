@@ -9,9 +9,7 @@
 /** @param {string} value */
 function csvCell(value) {
     const cleaned = value.replace(/[\u0000-\u001F\u007F]/g, ' ');
-    const normalized = /^\s*[=+\-@]/u.test(cleaned)
-        ? "'" + cleaned
-        : cleaned;
+    const normalized = /^\s*[=+\-@]/u.test(cleaned) ? "'" + cleaned : cleaned;
     return '"' + normalized.replace(/"/g, '""') + '"';
 }
 
