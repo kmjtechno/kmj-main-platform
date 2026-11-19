@@ -46,6 +46,17 @@ class SidecarTests(unittest.TestCase):
         with self.assertRaises(v.Rejected):
             v.verify(str(self.c), str(remote_sidecar))
 
+    def test_zero_byte_cipher_rejected_even_with_matching_digest(self):
+        self.c.write_bytes(b"")
+        self.s.write_text(hashlib.sha256(b"").hexdigest() + "  " + self.c.name + "\n", encoding="ascii")
+        with self.assertRaises(v.Rejected):
+            v.verify(str(self.c), str(self.s))
+
+    def test_zero_byte_sidecar_rejected(self):
+        self.s.write_bytes(b"")
+        with self.assertRaises(v.Rejected):
+            v.verify(str(self.c), str(self.s))
+
     def test_digest_mismatch(self):
         self.c.write_bytes(b"modified")
         with self.assertRaises(v.Rejected):
