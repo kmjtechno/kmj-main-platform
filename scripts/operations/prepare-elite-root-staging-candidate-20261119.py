@@ -293,10 +293,8 @@ def mutable(relative: str) -> bool:
     return any(relative == p or relative.startswith(p + "/") for p in paths)
 
 
-def freeze(tree: Path, stage_uid: int, stage_gid: int) -> None:
-    """Do not follow symlinks while chowning any file/dir. Reject dangerous links."""
-    # Need postorder: metadata of root-owned parent stays protected, and no
-    # stage-owned writable ancestor remains above executable PHP code.
+def freeze_plan(tree: Path, stage_uid: int, stage_gid: int) -> list:
+    """Pure metadata plan: strict no-follow type and link validation."""
     paths = []
     for root, subdirs, files in os.walk(tree, followlinks=False):
         rootp = Path(root)
@@ -315,6 +313,7 @@ def freeze(tree: Path, stage_uid: int, stage_gid: int) -> None:
             require(st.st_nlink == 1 if stat.S_ISREG(st.st_mode) else True,
                     "EXECUTABLE_TREE_HARDLINK")
             paths.append((path, rel, st))
+    operations = []
     for path, rel, st in reversed(paths):
         isdir = stat.S_ISDIR(st.st_mode)
         if rel == "apps/platform/.env":
@@ -326,6 +325,13 @@ def freeze(tree: Path, stage_uid: int, stage_gid: int) -> None:
             owner, group = 0, 0
             mode = (0o755 if isdir else
                     (0o555 if st.st_mode & 0o111 else 0o444))
+        operations.append((path, rel, owner, group, mode))
+    return operations
+
+
+def freeze(tree: Path, stage_uid: int, stage_gid: int) -> None:
+    """Stage-user cannot traverse tree; apply no-follow root metadata freeze."""
+    for path, _rel, owner, group, mode in freeze_plan(tree, stage_uid, stage_gid):
         os.chown(path, owner, group, follow_symlinks=False)
         os.chmod(path, mode, follow_symlinks=False)
     os.chown(tree, 0, 0, follow_symlinks=False)
