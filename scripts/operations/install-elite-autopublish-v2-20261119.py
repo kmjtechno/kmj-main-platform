@@ -188,6 +188,9 @@ def install_new(path: Path, contents: bytes, mode: int) -> str:
             os.link(tmp, path, follow_symlinks=False)
         except FileExistsError:
             raise Blocked("INSTALL_TARGET_RACE") from None
+        # Remove the transient second hard link BEFORE checking the required
+        # single-link root-owned installed inode. No overwrite or replace.
+        os.unlink(tmp)
         check(classify_file(path, mode, sha) == "PIN_MATCH",
               "INSTALLED_ARTIFACT_SHA_MISMATCH")
         return "INSTALLED_PIN_MATCH"
