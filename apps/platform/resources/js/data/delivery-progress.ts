@@ -10,6 +10,13 @@ export type DeliveryMilestone = {
 
 export const deliveryMilestones: DeliveryMilestone[] = [
     {
+        id: 'kslp-developer-masked-inventory-export-20261119',
+        title: 'Licensing Hub — masked tenant-scoped developer key inventory CSV',
+        state: 'active',
+        detail: 'Stacked draft PR #900 adds a bounded latest-1,000 key inventory CSV for a capability-authorized issuer organization with recent password confirmation. The read-only endpoint exports app name/code, license UUID, masked key prefix, plan/status and timestamps, not reusable plaintext bootstrap keys, key digests, customer identifiers, device identifiers, billing rights or signing material. CSV formula/control characters are neutralized, download caching is disabled, and the Developer Console provides an authorized organization selector. This is NOT a complete AuthSP import/export service or commercial licensing delivery.',
+        evidence: 'PHP feature tests cover tenant A/B isolation, password step-up, rollout-disabled read access, no plaintext/key hash/customer leakage and spreadsheet formula escaping. Source-only, awaiting exact-head CI and independent security review; UI/browser acceptance, large-export pagination, billing settlement, reseller workflows, signed SDKs, independent P520 restore and protected CE6-current production approval remain blocked. Production unchanged.',
+    },
+    {
         id: 'kslp-runtime-dependency-boundary-20261118',
         title: 'Licensing Hub release — audited Node runtime/build dependency separation',
         state: 'active',
