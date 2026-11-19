@@ -4,7 +4,7 @@
   "receiverHost": "DESKTOP-5FVJMET",
   "ageRecipient": "age1jgk7wrgccyu8s7wlh6zpxnm4qdvfus0d5t092s9zkjjmtwe8efjstvcs5u",
   "signingAlgorithm": "ed25519",
-  "signingPublicPemRelativePath": "p520-owner-observed-public-key-20261118.pem",
+  "signingPublicPemRelativePath": "p520-owner-observed-public-key-20261118.txt",
   "signingPublicPemSha256": "6216f2bc0bd7b63bea2f15bc771494fa6e2ab2fcfca01e75761a113120be81c4",
   "source": "owner-supplied P520 read-only public identity attestation, 2026-11-18",
   "eliteHostPinVerified": false,
