@@ -5,6 +5,7 @@ on:
     paths:
       - 'scripts/operations/seal-main-platform-p520-candidate-v2-20261119.py'
       - 'scripts/operations/test-p520-candidate-sealer-v2-20261119.mjs'
+      - 'scripts/operations/test_p520_candidate_sealer_synthetic_v2_20261119.py'
       - 'scripts/operations/p520-owner-observed-public-key-20261118.pem'
       - '.github/workflows/kmj-p520-candidate-sealer-v2-qa.yml'
   workflow_dispatch:
@@ -32,6 +33,9 @@ jobs:
           set -Eeuo pipefail
           test "$(git rev-parse HEAD)" = "${{ github.event.pull_request.head.sha || github.sha }}"
           node --test scripts/operations/test-p520-candidate-sealer-v2-20261119.mjs
+          if [[ "${{ matrix.os }}" == ubuntu-* ]]; then
+            python3 -I -B scripts/operations/test_p520_candidate_sealer_synthetic_v2_20261119.py -v
+          fi
           echo 'PRODUCTION_OR_BACKUP_MUTATION=NONE'
           echo 'OWNER_REAL_AGE_CIPHER_CREATED=NO'
           echo 'P520_INDEPENDENT_RESTORE=NOT_EXECUTED'
