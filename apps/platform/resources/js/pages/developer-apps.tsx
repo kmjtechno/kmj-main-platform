@@ -1,5 +1,6 @@
 import { Head, Link, useForm } from '@inertiajs/react';
 import { useMemo, useState } from 'react';
+import { buildOneTimeTrialBatchCsv } from '../lib/one-time-trial-batch-csv.mjs';
 import {
     ArrowRight,
     BookOpen,
@@ -200,6 +201,7 @@ export default function DeveloperApps({
     const [exportProductCode, setExportProductCode] = useState<string>('');
     const [exportKeyState, setExportKeyState] = useState<string>('all');
     const [copied, setCopied] = useState(false);
+    const [batchDownloadError, setBatchDownloadError] = useState(false);
     const [revokeKeyId, setRevokeKeyId] = useState<string | null>(null);
     const [manageAppId, setManageAppId] = useState<string | null>(null);
     const revokeForm = useForm({ reason: '' });
@@ -297,6 +299,38 @@ export default function DeveloperApps({
         link.click();
         link.remove();
         URL.revokeObjectURL(objectUrl);
+    };
+
+    const downloadOneTimeBatch = () => {
+        if (!newKeys || newKeys.length === 0) {
+            return;
+        }
+        if (
+            !window.confirm(
+                'This CSV contains reusable plaintext trial bootstrap keys and may remain in Downloads. Save it only to a trusted private location and remove it after secure import. Download now?',
+            )
+        ) {
+            return;
+        }
+
+        try {
+            const csv = buildOneTimeTrialBatchCsv(newKeys);
+            const file = new Blob([csv], {
+                type: 'text/csv;charset=utf-8',
+            });
+            const objectUrl = URL.createObjectURL(file);
+            const link = document.createElement('a');
+            link.href = objectUrl;
+            link.download = 'kmj-one-time-trial-bootstrap-keys.csv';
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            URL.revokeObjectURL(objectUrl);
+            setBatchDownloadError(false);
+        } catch {
+            // Do not disclose malformed key data, payload or user identities.
+            setBatchDownloadError(true);
+        }
     };
 
     const copyText = async (value: string) => {
@@ -534,24 +568,38 @@ export default function DeveloperApps({
                                 </div>
                             ))}
                         </div>
-                        <button
-                            type="button"
-                            className="mt-3 min-h-10 rounded-lg border px-4 text-xs font-bold"
-                            onClick={() =>
-                                void copyText(
-                                    newKeys
-                                        .map(
-                                            (key) =>
-                                                key.customer_id +
-                                                ': ' +
-                                                key.key,
-                                        )
-                                        .join('\n'),
-                                )
-                            }
-                        >
-                            Copy one-time batch
-                        </button>
+                        <div className="mt-3 flex flex-wrap gap-2">
+                            <button
+                                type="button"
+                                className="min-h-10 rounded-lg border px-4 text-xs font-bold"
+                                onClick={() =>
+                                    void copyText(
+                                        newKeys
+                                            .map(
+                                                (key) =>
+                                                    key.customer_id +
+                                                    ': ' +
+                                                    key.key,
+                                            )
+                                            .join('\n'),
+                                    )
+                                }
+                            >
+                                Copy one-time batch
+                            </button>
+                            <button
+                                type="button"
+                                className="min-h-10 rounded-lg border border-amber-600/40 px-4 text-xs font-bold hover:border-amber-600"
+                                onClick={downloadOneTimeBatch}
+                            >
+                                Download one-time trial batch CSV
+                            </button>
+                        </div>
+                        {batchDownloadError && (
+                            <p role="alert" className="mt-2 text-xs text-red-600">
+                                One-time export blocked: malformed issuance data.
+                            </p>
+                        )}
                     </section>
                 )}
 
