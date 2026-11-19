@@ -321,10 +321,20 @@ def freeze_plan(tree: Path, stage_uid: int, stage_gid: int) -> list:
         elif mutable(rel):
             owner, group = stage_uid, stage_gid
             mode = (0o750 if isdir else 0o640)
-        else:
+        elif (rel in {"apps/platform/storage",
+                      "apps/platform/storage/framework",
+                      "apps/platform/storage/framework/views"} or
+              rel.startswith("apps/platform/storage/framework/views/")):
+            # Existing guarded tree digest requires 0755 immutable Blade
+            # parent chain and world-readable compiled PHP views.
             owner, group = 0, 0
-            mode = (0o755 if isdir else
-                    (0o555 if st.st_mode & 0o111 else 0o444))
+            mode = (0o755 if isdir else 0o444)
+        else:
+            # Private source is accessible to PHP's staging group, NOT to
+            # the untrusted www-data worker or other VPS users.
+            owner, group = 0, stage_gid
+            mode = (0o750 if isdir else
+                    (0o550 if st.st_mode & 0o111 else 0o440))
         operations.append((path, rel, owner, group, mode))
     return operations
 
@@ -334,8 +344,13 @@ def freeze(tree: Path, stage_uid: int, stage_gid: int) -> None:
     for path, _rel, owner, group, mode in freeze_plan(tree, stage_uid, stage_gid):
         os.chown(path, owner, group, follow_symlinks=False)
         os.chmod(path, mode, follow_symlinks=False)
-    os.chown(tree, 0, 0, follow_symlinks=False)
-    os.chmod(tree, 0o755, follow_symlinks=False)
+    os.chown(tree, 0, stage_gid, follow_symlinks=False)
+    os.chmod(tree, 0o750, follow_symlinks=False)
+    # www-data needs only public assets, never the private source or .env.
+    for ancestor in (tree, tree / "apps", tree / "apps/platform"):
+        fixed(["/usr/bin/setfacl", "-m", "u:www-data:--x", str(ancestor)])
+    fixed(["/usr/bin/setfacl", "-R", "-m", "u:www-data:rX",
+           str(tree / "apps/platform/public")], timeout=120)
     # The entire writable storage subtrees must be children of root-owned
     # storage parents, not a way to replace sealed compiled views.
     views = tree / "apps/platform/storage/framework/views"
@@ -412,8 +427,11 @@ def run(argv: list[str]) -> int:
             os.chown(scratch, stage_uid, stage_gid, follow_symlinks=False)
             os.chmod(scratch, 0o700, follow_symlinks=False)
             tree = build_stage(a.sha, old, scratch)
-            # Stage UID must no longer be able to traverse this scratch
-            # directory while root walks and freezes its descendants.
+            # Stage UID must lose scratch-parent write access BEFORE the
+            # root-owned freeze; otherwise it could swap the final tree by
+            # renaming a root-owned child from its stage-owned parent.
+            os.chown(scratch, 0, 0, follow_symlinks=False)
+            os.chmod(scratch, 0o700, follow_symlinks=False)
             os.chown(tree, 0, 0, follow_symlinks=False)
             os.chmod(tree, 0o700, follow_symlinks=False)
             freeze(tree, stage_uid, stage_gid)
@@ -427,6 +445,15 @@ def run(argv: list[str]) -> int:
             publish_noclobber(tree, candidate)
             final_digest = seal_sha(candidate / "apps/platform")
             require(final_digest == digest, "PUBLISHED_CANDIDATE_DRIFT")
+            stage_run("/usr/bin/test", "-r", str(candidate / "apps/platform/.env"))
+            fixed(["/usr/sbin/runuser", "-u", WEB_USER, "--", "/usr/bin/test",
+                   "-r", str(candidate / "apps/platform/public/index.php")])
+            # Enforce web-user denial of the root-sealed application .env.
+            readable = subprocess.run(
+                ["/usr/sbin/runuser", "-u", WEB_USER, "--", "/usr/bin/test",
+                 "-r", str(candidate / "apps/platform/.env")],
+                env=ENV, timeout=10, capture_output=True, check=False)
+            require(readable.returncode == 1, "WEB_ENV_EXPOSED")
             seal_path = SEAL_DIR / (
                 "main-platform-staging-seal-" + a.sha + ".sha256")
             fd = os.open(seal_path, os.O_WRONLY | os.O_CREAT | os.O_EXCL |
