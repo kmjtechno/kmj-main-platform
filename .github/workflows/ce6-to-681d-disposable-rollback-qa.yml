@@ -10,7 +10,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: ce6-681d-rollback-\${{ github.workflow }}-\${{ github.ref }}
+  group: ce6-681d-rollback-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -83,7 +83,7 @@ jobs:
             echo "- Approved staging candidate: $CANDIDATE_SHA"
             echo "- private disposable PostgreSQL 18, no listeners or production secrets"
             echo "- previous HTTP, candidate migrations/HTTP, previous HTTP, schema rollback/reapply"
-            echo "- rollback job result: \${{ job.status }}"
+            echo "- rollback job result: ${{ job.status }}"
             echo "- root Elite release switch: NOT EXECUTED"
             echo "- protected release approval: NOT UPDATED"
           } >> "$GITHUB_STEP_SUMMARY"
