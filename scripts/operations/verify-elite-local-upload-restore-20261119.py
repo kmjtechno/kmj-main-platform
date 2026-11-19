@@ -83,6 +83,53 @@ def read_protected(path: Path, maximum: int, uid: int) -> bytes:
         raise Blocked("PROTECTED_FILE_READ_FAILED") from None
 
 
+
+def copy_protected_archive(source: Path, destination: Path, maximum: int,
+                           uid: int) -> str:
+    """Stream a pinned root-only archive into private scratch (bounded RAM)."""
+    try:
+        before = os.lstat(source)
+        require(stat.S_ISREG(before.st_mode) and before.st_uid == uid
+                and before.st_nlink == 1 and 0 < before.st_size <= maximum
+                and not before.st_mode & 0o077, "ARCHIVE_FILE_UNTRUSTED")
+        require(shutil.disk_usage(destination.parent).free >
+                before.st_size + RESERVE, "ARCHIVE_SCRATCH_CAPACITY")
+        fd = os.open(source, os.O_RDONLY | os.O_NOFOLLOW | os.O_CLOEXEC)
+        try:
+            opened = os.fstat(fd)
+            require((before.st_dev, before.st_ino) ==
+                    (opened.st_dev, opened.st_ino), "ARCHIVE_FILE_REPLACED")
+            h = hashlib.sha256()
+            count = 0
+            outfd = os.open(destination, os.O_WRONLY | os.O_CREAT |
+                            os.O_EXCL | os.O_NOFOLLOW | os.O_CLOEXEC, 0o600)
+            try:
+                while block := os.read(fd, 1024 * 1024):
+                    count += len(block)
+                    require(count <= before.st_size, "ARCHIVE_FILE_GROWING")
+                    h.update(block)
+                    view = memoryview(block)
+                    while view:
+                        used = os.write(outfd, view)
+                        require(used > 0, "ARCHIVE_COPY_SHORT_WRITE")
+                        view = view[used:]
+                os.fsync(outfd)
+            finally:
+                os.close(outfd)
+            after = os.fstat(fd)
+            now = os.lstat(source)
+            fields = lambda st: (st.st_dev, st.st_ino, st.st_uid, st.st_mode,
+                                 st.st_nlink, st.st_size, st.st_mtime_ns,
+                                 st.st_ctime_ns)
+            require(count == before.st_size and
+                    fields(before) == fields(opened) == fields(after) ==
+                    fields(now), "ARCHIVE_FILE_CHANGED")
+            return h.hexdigest()
+        finally:
+            os.close(fd)
+    except OSError:
+        raise Blocked("ARCHIVE_COPY_FAILED") from None
+
 def unique_pairs(pairs):
     values = {}
     for key, value in pairs:
@@ -222,12 +269,11 @@ def verify_archive(archive: Path, witness: Path, sha: str, predecessor: str,
             predecessor != "platform-" + sha[:12], "RELEASE_IDENTITY_INVALID")
     wanted = verify_witness(witness, sha, predecessor, uid)
     # Bound both the serialized bundle bytes and its logical entries.
-    content = read_protected(archive, MAX_ARCHIVE, uid)
-    require(hashlib.sha256(content).hexdigest() == wanted,
-            "BUNDLE_WITNESS_SHA_MISMATCH")
+    # Stream into root-private scratch rather than loading a potentially
+    # multi-gigabyte compressed backup into RAM.
     archive_path = scratch / "original.tar.gz"
-    with archive_path.open("xb") as out:
-        out.write(content)
+    actual = copy_protected_archive(archive, archive_path, MAX_ARCHIVE, uid)
+    require(actual == wanted, "BUNDLE_WITNESS_SHA_MISMATCH")
     allowed = {"database.dump", "storage.tar.gz", "metadata.txt", "SHA256SUMS"}
     fingerprints = {}
     sizes = {}
