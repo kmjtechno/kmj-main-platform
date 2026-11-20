@@ -8,6 +8,7 @@ use App\Models\User;
 use App\Services\Payments\RazorpayCheckoutOrders;
 use App\Services\Payments\RazorpayWebhookReconciler;
 use DomainException;
+use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Crypt;
@@ -183,7 +184,7 @@ final class RazorpayCheckoutReconciliationTest extends TestCase
         try {
             $service->open($order->getKey(), self::AMOUNT);
             $this->fail('Local provider-link conflict must not be hidden.');
-        } catch (\Illuminate\Database\QueryException) {
+        } catch (QueryException) {
             $this->addToAssertionCount(1);
         }
 
