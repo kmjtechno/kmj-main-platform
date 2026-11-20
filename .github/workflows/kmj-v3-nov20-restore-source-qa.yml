@@ -1,0 +1,22 @@
+name: KMJ V3 Nov20 Google Isolated Restore Source QA
+on:
+  pull_request:
+    paths:
+      - 'scripts/operations/google_nov20_fixture/**'
+      - '.github/workflows/kmj-v3-nov20-restore-source-qa.yml'
+  workflow_dispatch:
+jobs:
+  synthetic-only:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - name: Bash parser and synthetic Python tests — no restore or private keys
+        shell: bash
+        run: |
+          set -euo pipefail
+          bash -n scripts/operations/google_nov20_fixture/KMJ_GOOGLE_V3_20261120_DISPOSABLE_RESTORE_ONEPASS.sh
+          python3 -I -B -m unittest discover -s scripts/operations/google_nov20_fixture -p 'test_KMJ_GOOGLE_V3_20261120_RESTORE_HELPER.py' -v
+          echo 'REAL_GOOGLE_RESTORE=NOT_EXECUTED'
+          echo 'PRIVATE_KEY_READ=NO'
