@@ -10,6 +10,14 @@ export type DeliveryMilestone = {
 
 export const deliveryMilestones: DeliveryMilestone[] = [
     {
+        id: 'payment-sandbox-credential-control-bytes-20261120',
+        title: 'Payment Gateway — reject unsafe sandbox credential characters at write boundary',
+        state: 'active',
+        detail: 'Owner-only sandbox settings previously allowed ASCII control bytes in Cashfree key IDs, API secrets, and webhook secrets even though subsequent vault readability checks marked them unusable. This source-only change validates all three HTTP inputs and enforces the same character and size limits in the service writer, so invalid secrets are not stored at all. No live payment, provider call, or license activation is added.',
+        evidence:
+            'HTTP and direct-service regression tests assert bad control-byte input is rejected, no gateway row is created and secret fields are never flashed to the browser. Exact-head CI, protected staging approval, real backup/restore/rollback and guarded owner production release remain separate unverified gates.',
+    },
+    {
         id: 'payment-webhook-receiver-20261120',
         title: 'Payment webhooks — verified, idempotent receiver (no settlement)',
         state: 'active',
