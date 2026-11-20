@@ -100,7 +100,7 @@ final class RazorpayWebhookReconciler
             // Missing links are not proof of a foreign order while the provider
             // create/DB commit may still be in flight. Never query provider or
             // confirm a commercial order until the trusted local link exists.
-            if (Carbon::parse((string) $event->received_at)->lte(now()->subMinutes(self::LINK_GRACE_MINUTES))) {
+            if (Carbon::parse((string) data_get($event, 'received_at'))->lte(now()->subMinutes(self::LINK_GRACE_MINUTES))) {
                 return ['bucket' => 'unmatched', 'status' => 'unmatched', 'note' => 'LINK_WINDOW_EXPIRED'];
             }
 
