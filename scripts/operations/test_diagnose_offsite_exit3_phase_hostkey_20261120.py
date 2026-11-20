@@ -47,12 +47,12 @@ class Tests(unittest.TestCase):
     def test_conflicting_hostkey_markers_fail_closed(self):
         contradictory=journal(hostkey=True).replace(
             b"SFTP_HOSTKEY=PIN_MATCH",
-            b"SFTP_HOSTKEY=PIN_MATCH\\nSFTP_HOSTKEY=PIN_MISMATCH")
+            b"SFTP_HOSTKEY=PIN_MATCH\nSFTP_HOSTKEY=PIN_MISMATCH")
         self.assertEqual(m.phase(contradictory),
                          ("V3","HOSTKEY_EVIDENCE_CONFLICT"))
-        self.assertEqual(m.phase(journal()+b"SFTP_HOSTKEY=PIN_MISMATCH\\n"),
+        self.assertEqual(m.phase(journal()+b"SFTP_HOSTKEY=PIN_MISMATCH\n"),
                          ("V3","HOSTKEY_NOT_VERIFIED"))
-        self.assertEqual(m.phase(journal()+b"SFTP_HOSTKEY=PIN_MATCH\\n"),
+        self.assertEqual(m.phase(journal()+b"SFTP_HOSTKEY=PIN_MATCH\n"),
                          ("V3","AFTER_HOSTKEY"))
 
     def test_invalid_systemd_exact_state_blocks_before_journal(self):
