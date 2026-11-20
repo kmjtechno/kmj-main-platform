@@ -182,6 +182,45 @@ final class OwnerPaymentGatewaySettings
         return ['client_id' => $id, 'client_secret' => $secret];
     }
 
+    /**
+     * Internal-only webhook signing secret. Never expose through Inertia, JSON or logs.
+     * Cashfree signs webhooks with the client secret, so it is the fallback there.
+     */
+    public function webhookSecret(string $provider): ?string
+    {
+        $this->ensureProvider($provider);
+
+        if (Schema::hasTable('payment_gateway_settings')) {
+            $record = DB::table('payment_gateway_settings')->where('provider', $provider)->first();
+            $candidates = [$record?->encrypted_webhook_secret];
+            if ($provider === 'cashfree') {
+                $candidates[] = $record?->encrypted_client_secret;
+            }
+
+            foreach ($candidates as $encrypted) {
+                if (! is_string($encrypted) || $encrypted === '') {
+                    continue;
+                }
+                try {
+                    $plain = Crypt::decryptString($encrypted);
+                } catch (DecryptException) {
+                    continue;
+                }
+                if ($plain !== '' && strlen($plain) <= 1024 && ! preg_match('/[\\x00-\\x1F\\x7F]/', $plain)) {
+                    return $plain;
+                }
+            }
+        }
+
+        if ($provider === 'razorpay') {
+            $configured = config('payment-providers.providers.razorpay.webhook_secret');
+
+            return is_string($configured) && trim($configured) !== '' ? $configured : null;
+        }
+
+        return null;
+    }
+
     private static function usableStoredCredential(mixed $encrypted, string $provider, bool $isClientId): bool
     {
         if (! is_string($encrypted) || $encrypted === '') {

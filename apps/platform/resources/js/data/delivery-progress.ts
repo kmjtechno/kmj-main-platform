@@ -10,6 +10,14 @@ export type DeliveryMilestone = {
 
 export const deliveryMilestones: DeliveryMilestone[] = [
     {
+        id: 'payment-webhook-receiver-20261120',
+        title: 'Payment webhooks — verified, idempotent receiver (no settlement)',
+        state: 'active',
+        detail: 'Source-only POST /webhooks/payments/{razorpay|cashfree} verifies the provider HMAC over the exact raw request bytes with the encrypted owner-vault secret, then records a minimal idempotent inbox row (provider, event id, type, order/payment references, payload hash; no raw payload or customer contact data). Bad signature returns 401, missing secret fails closed with 503, non-object or envelope-less signed bodies return 400, identical replays are acknowledged once and the same event id with different signed bytes returns 409 and records a sanitized conflict. Receipt does not mark an order paid, touch entitlements or issue a license; reconciliation and checkout remain separate unbuilt gates.',
+        evidence:
+            'Laravel feature tests cover valid Razorpay and Cashfree signatures, replay dedupe, tampered body, missing secret, unknown provider, non-JSON body and no license side effects. Exact-head hosted CI, migration on the Elite release, real Razorpay dashboard webhook delivery and merchant onboarding are not yet proven; live charging stays disabled.',
+    },
+    {
         id: 'main-platform-global-security-headers-20261120',
         title: 'Platform security headers — conservative response-only protection',
         state: 'active',

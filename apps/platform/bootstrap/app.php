@@ -22,6 +22,7 @@ return Application::configure(basePath: dirname(__DIR__))
             __DIR__.'/../routes/operator-directory.php',
             __DIR__.'/../routes/kslp-public.php',
             __DIR__.'/../routes/codebridge-oauth.php',
+            __DIR__.'/../routes/payments-webhooks.php',
         ],
         api: __DIR__.'/../routes/codebridge-api.php',
         commands: __DIR__.'/../routes/console.php',
@@ -30,7 +31,7 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->encryptCookies(except: ['appearance', 'sidebar_state']);
         // OAuth machine endpoints authenticate with authorization codes/refresh tokens, not CSRF cookies.
-        $middleware->validateCsrfTokens(except: ['oauth/token', 'oauth/register', 'mcp']);
+        $middleware->validateCsrfTokens(except: ['oauth/token', 'oauth/register', 'mcp', 'webhooks/payments/*']);
 
         // Include stateless API, OAuth, JSON failures and the /up health endpoint.
         // Web-only middleware does not protect the /api/* and health route groups.
