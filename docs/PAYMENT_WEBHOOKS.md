@@ -4,7 +4,7 @@ Endpoint: `POST /webhooks/payments/{provider}` where provider is `razorpay` or `
 
 - Authentication: provider HMAC over the exact raw request bytes (no session, no CSRF).
 - Secret: encrypted owner vault (`/operator/payments`, webhook secret field). Cashfree falls back to its client secret; Razorpay may fall back to `KMJ_RAZORPAY_WEBHOOK_SECRET`.
-- Responses: 200 verified (new or replay), 401 bad signature, 400 signed non-JSON, 503 no secret/table (fail closed; provider will retry), 404 other provider.
+- Responses: 200 verified (new or identical replay), 409 same event id with different signed body (conflict row recorded, original untouched), 401 bad signature, 400 signed non-JSON, 503 no secret/table (fail closed; provider will retry), 404 other provider.
 - Storage: `payment_webhook_events` keeps provider, event id, type, order/payment ids, payload SHA-256 only. Unique on (provider, event id) gives replay safety.
 - Not included: order settlement, entitlement or license issuance. Payment state is not a license; reconciliation must verify with the provider API first.
 

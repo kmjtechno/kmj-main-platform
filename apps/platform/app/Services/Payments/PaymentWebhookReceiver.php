@@ -24,6 +24,8 @@ final class PaymentWebhookReceiver
 
     public const INVALID_PAYLOAD = 'invalid_payload';
 
+    public const CONFLICT = 'conflict';
+
     public const UNAVAILABLE = 'unavailable';
 
     public function __construct(
@@ -54,7 +56,13 @@ final class PaymentWebhookReceiver
         }
 
         $payload = json_decode($rawBody, true);
-        if (! is_array($payload)) {
+        // Signed does not mean well-formed: require a JSON object with the provider's envelope.
+        if (! is_array($payload) || $payload === [] || array_is_list($payload)) {
+            return self::INVALID_PAYLOAD;
+        }
+        $envelope = $provider === 'razorpay' ? 'payload' : 'data';
+        if ($this->safe($payload[$provider === 'razorpay' ? 'event' : 'type'] ?? null, 96) === null
+            || ! is_array($payload[$envelope] ?? null)) {
             return self::INVALID_PAYLOAD;
         }
 
@@ -62,20 +70,39 @@ final class PaymentWebhookReceiver
         $eventId = $this->eventId($provider, $headers, $hash);
         [$type, $orderId, $paymentId] = $this->references($provider, $payload);
 
-        $inserted = DB::table('payment_webhook_events')->insertOrIgnore([
+        $row = [
             'provider' => $provider,
-            'event_id' => $eventId,
             'event_type' => $type,
             'provider_order_id' => $orderId,
             'provider_payment_id' => $paymentId,
             'payload_sha256' => $hash,
-            'processing_status' => 'received',
             'received_at' => now(),
             'created_at' => now(),
             'updated_at' => now(),
+        ];
+
+        // Atomic on the unique (provider, event_id) index, so concurrent retries cannot double-insert.
+        if (DB::table('payment_webhook_events')->insertOrIgnore($row + [
+            'event_id' => $eventId,
+            'processing_status' => 'received',
+        ]) === 1) {
+            return self::ACCEPTED;
+        }
+
+        $existing = DB::table('payment_webhook_events')
+            ->where('provider', $provider)->where('event_id', $eventId)->value('payload_sha256');
+        if ($existing === $hash) {
+            return self::DUPLICATE;
+        }
+
+        // Same event id, different validly signed bytes: never collapse silently.
+        // Keep the original untouched, record a sanitized conflict (deduped by hash), fail closed.
+        DB::table('payment_webhook_events')->insertOrIgnore($row + [
+            'event_id' => 'conflict:'.substr($hash, 0, 32),
+            'processing_status' => 'conflict',
         ]);
 
-        return $inserted === 1 ? self::ACCEPTED : self::DUPLICATE;
+        return self::CONFLICT;
     }
 
     /** @param array<string, string> $headers */

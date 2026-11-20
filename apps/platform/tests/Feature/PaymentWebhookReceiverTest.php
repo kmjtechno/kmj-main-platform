@@ -8,6 +8,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
 final class PaymentWebhookReceiverTest extends TestCase
@@ -150,6 +151,63 @@ final class PaymentWebhookReceiverTest extends TestCase
         $this->assertSame('PAYMENT_SUCCESS_WEBHOOK', $row->event_type);
         $this->assertSame('998877', $row->provider_payment_id);
         $this->assertStringStartsWith('sha256:', $row->event_id);
+    }
+
+    public function test_same_event_id_with_different_signed_body_is_a_conflict_not_a_duplicate(): void
+    {
+        $this->storeSecret('razorpay');
+        $first = $this->razorpayBody();
+        $second = json_encode(['event' => 'payment.failed', 'payload' => ['payment' => ['entity' => ['id' => 'pay_ABC123']]]], JSON_THROW_ON_ERROR);
+
+        $this->call('POST', '/webhooks/payments/razorpay', [], [], [], $this->razorpayServer($first), $first)->assertOk();
+        for ($i = 0; $i < 2; $i++) {
+            $this->call('POST', '/webhooks/payments/razorpay', [], [], [], $this->razorpayServer($second), $second)
+                ->assertStatus(409);
+        }
+
+        $original = DB::table('payment_webhook_events')->where('event_id', 'evt_001')->first();
+        $this->assertSame(hash('sha256', $first), $original->payload_sha256);
+        $this->assertSame('received', $original->processing_status);
+        $this->assertSame(1, DB::table('payment_webhook_events')->where('processing_status', 'conflict')->count());
+        $this->assertSame(2, DB::table('payment_webhook_events')->count());
+    }
+
+    /** @return array<string, array{0: string}> */
+    public static function malformedSignedBodies(): array
+    {
+        return [
+            'json list' => ['[1,2]'],
+            'empty list' => ['[]'],
+            'empty object' => ['{}'],
+            'scalar' => ['123'],
+            'missing event' => ['{"payload":{"payment":{}}}'],
+            'missing envelope' => ['{"event":"payment.captured"}'],
+            'envelope not object' => ['{"event":"payment.captured","payload":"x"}'],
+        ];
+    }
+
+    #[DataProvider('malformedSignedBodies')]
+    public function test_signed_but_malformed_razorpay_shapes_are_rejected(string $body): void
+    {
+        $this->storeSecret('razorpay');
+
+        $this->call('POST', '/webhooks/payments/razorpay', [], [], [], $this->razorpayServer($body), $body)
+            ->assertStatus(400);
+        $this->assertSame(0, DB::table('payment_webhook_events')->count());
+    }
+
+    public function test_signed_cashfree_body_without_type_or_data_is_rejected(): void
+    {
+        $this->storeSecret('cashfree', 'encrypted_client_secret');
+        $body = '{"type":"PAYMENT_SUCCESS_WEBHOOK"}';
+        $timestamp = (string) time();
+
+        $this->call('POST', '/webhooks/payments/cashfree', [], [], [], [
+            'CONTENT_TYPE' => 'application/json',
+            'HTTP_X_WEBHOOK_TIMESTAMP' => $timestamp,
+            'HTTP_X_WEBHOOK_SIGNATURE' => base64_encode(hash_hmac('sha256', $timestamp.$body, self::SECRET, true)),
+        ], $body)->assertStatus(400);
+        $this->assertSame(0, DB::table('payment_webhook_events')->count());
     }
 
     public function test_webhook_receipt_never_creates_licenses_or_settlement_state(): void

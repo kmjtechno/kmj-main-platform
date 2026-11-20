@@ -24,6 +24,7 @@ Route::post('webhooks/payments/{provider}', function (
     [$status, $code] = match ($result) {
         PaymentWebhookReceiver::ACCEPTED, PaymentWebhookReceiver::DUPLICATE => ['ok', 200],
         PaymentWebhookReceiver::INVALID_PAYLOAD => ['invalid_payload', 400],
+        PaymentWebhookReceiver::CONFLICT => ['event_conflict', 409],
         PaymentWebhookReceiver::UNAVAILABLE => ['unavailable', 503],
         default => ['invalid_signature', 401],
     };
