@@ -253,6 +253,53 @@ final class OwnerPaymentGatewaySettingsTest extends TestCase
         $this->assertDatabaseCount('operator_action_audits', 2);
     }
 
+    public function test_webhook_secret_readiness_requires_decryptable_safe_ciphertext(): void
+    {
+        $owner = $this->owner();
+        config()->set('payment-providers.providers.razorpay.webhook_secret', null);
+
+        $this->actingAs($owner)->withSession(['auth.password_confirmed_at' => time()])
+            ->put('/operator/payments/gateways/razorpay', [
+                ...$this->payload(),
+                'client_id' => 'rzp_test_ABC123',
+                'client_secret' => 'synthetic_sandbox_secret',
+                'webhook_secret' => 'synthetic_valid_webhook_secret',
+            ])->assertRedirect('/operator/payments');
+
+        foreach (['unreadable_ciphertext', Crypt::encryptString('invalid'.chr(10).'webhook')] as $badCiphertext) {
+            DB::table('payment_gateway_settings')->where('provider', 'razorpay')->update([
+                'encrypted_webhook_secret' => $badCiphertext,
+            ]);
+
+            $this->actingAs($owner)->withSession(['auth.password_confirmed_at' => time()])
+                ->get('/operator/payments')
+                ->assertOk()
+                ->assertInertia(fn (Assert $page) => $page
+                    ->component('operator-payments')
+                    ->where('gatewaySettings.1.client_id_stored', true)
+                    ->where('gatewaySettings.1.client_secret_stored', true)
+                    ->where('gatewaySettings.1.webhook_secret_stored', false)
+                    ->where('paymentReadiness.providers.0.webhook_secret_stored', false)
+                    ->where('paymentReadiness.live_charging_enabled', false));
+
+            self::assertNull(app(OwnerPaymentGatewaySettings::class)->webhookSecret('razorpay'));
+        }
+
+        DB::table('payment_gateway_settings')->where('provider', 'razorpay')->update([
+            'encrypted_webhook_secret' => Crypt::encryptString('synthetic_valid_webhook_secret'),
+        ]);
+
+        $this->actingAs($owner)->withSession(['auth.password_confirmed_at' => time()])
+            ->get('/operator/payments')
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('operator-payments')
+                ->where('gatewaySettings.1.webhook_secret_stored', true)
+                ->where('paymentReadiness.providers.0.webhook_secret_stored', true)
+                ->where('paymentReadiness.live_charging_enabled', false))
+            ->assertDontSee('synthetic_valid_webhook_secret');
+    }
+
     public function test_live_mode_invalid_provider_and_live_razorpay_key_fail_closed(): void
     {
         $owner = $this->owner();
