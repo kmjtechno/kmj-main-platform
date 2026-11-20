@@ -63,7 +63,12 @@ def phase(log):
     v=schemas[0]
     if "RESULT=BLOCKED_SAFE" not in lines:return v,"BLOCKED_SAFE_NOT_OBSERVED"
     if "RESULT=INSPECT_PASS" not in lines:return v,"PREFLIGHT_NOT_COMPLETE"
-    if "SFTP_HOSTKEY=PIN_MATCH" in lines:return v,"AFTER_HOSTKEY"
+    # Conflicting phase evidence cannot establish where the failed run stopped.
+    # Fail closed instead of selecting the optimistic hostkey marker.
+    hostkey_markers={line for line in lines if line.startswith("SFTP_HOSTKEY=")}
+    if len(hostkey_markers)>1:return v,"HOSTKEY_EVIDENCE_CONFLICT"
+    if "SFTP_HOSTKEY=PIN_MATCH" in hostkey_markers:return v,"AFTER_HOSTKEY"
+    if hostkey_markers:return v,"HOSTKEY_NOT_VERIFIED"
     return v,"AFTER_PREFLIGHT_BEFORE_HOSTKEY_PASS"
 
 def attest_source(meta,version):
