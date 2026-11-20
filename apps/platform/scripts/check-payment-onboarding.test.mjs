@@ -22,15 +22,24 @@ void test('both payment providers have explicit, opt-in dashboard onboarding', (
     assert.match(guide, /rel="noopener noreferrer"/);
 });
 
-void test('gateway setup is explicitly sandbox-only and does not publish an invented webhook', () => {
+void test('gateway setup is sandbox-only and publishes only the KMJ-owned webhook receiver', () => {
     const guide = read(
         '../resources/js/components/payment-gateway-onboarding.tsx',
     );
     const server = read('../app/Services/Payments/PaymentGatewayReadiness.php');
     const routes = read('../routes/payments-console.php');
     assert.match(guide, /live checkout locked/i);
-    assert.match(guide, /does NOT mean a webhook endpoint/i);
-    assert.match(guide, /Do not configure a public webhook URL/i);
+    assert.match(guide, /does not prove webhook delivery/i);
+    assert.match(guide, /Use only the KMJ webhook URL/i);
+    assert.match(guide, /Never\s+substitute\s+an\s+arbitrary\s+URL/i);
+    assert.match(
+        read('../resources/js/pages/operator-payments.tsx'),
+        /webhook_receiver_url/,
+    );
+    assert.match(
+        server,
+        /'webhook_receiver_url' => url\('\/webhooks\/payments\/'\.\$provider\)/,
+    );
     assert.match(server, /'live_charging_enabled' => false/);
     assert.match(routes, /'environment' => \['required', 'in:sandbox'\]/);
     assert.doesNotMatch(routes, /Route::post\('payments\/webhooks\//);

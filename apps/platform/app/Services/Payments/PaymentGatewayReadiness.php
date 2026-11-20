@@ -4,12 +4,15 @@ declare(strict_types=1);
 
 namespace App\Services\Payments;
 
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
+
 final class PaymentGatewayReadiness
 {
     /**
      * Sanitized owner-only status: no API secrets, key IDs, or merchant details.
      *
-     * @return array{live_charging_enabled: bool, providers: list<array<string, bool|string>>}
+     * @return array{live_charging_enabled: bool, providers: list<array<string, bool|int|string|null>>}
      */
     public function snapshot(): array
     {
@@ -17,7 +20,15 @@ final class PaymentGatewayReadiness
         $gatewaySettings = app(OwnerPaymentGatewaySettings::class);
         $ownerSettings = collect($gatewaySettings->snapshot())->keyBy('provider');
 
+        $eventsReady = Schema::hasTable('payment_webhook_events');
+
         foreach (['razorpay', 'cashfree'] as $provider) {
+            $inbox = $eventsReady
+                ? DB::table('payment_webhook_events')->where('provider', $provider)
+                : null;
+            // Count only; payloads and secrets never reach the browser.
+            $eventsReceived = $inbox === null ? 0 : (clone $inbox)->where('processing_status', '!=', 'conflict')->count();
+            $lastReceived = $inbox === null ? null : (clone $inbox)->max('received_at');
             $settings = (array) config('payment-providers.providers.'.$provider, []);
             $record = $ownerSettings->get($provider);
             // The owner-only sandbox order probe reads its test keys from
@@ -37,8 +48,12 @@ final class PaymentGatewayReadiness
                     ? 'reported_by_owner_not_api_verified' : 'not_verified',
                 'sandbox_credentials_present' => $keysPresent,
                 'webhook_secret_stored' => $webhookSecretStored,
-                // A stored signature secret cannot prove a live webhook receiver or reconciliation.
-                'webhook_verification_configured' => false,
+                // A stored secret alone proves nothing: this turns true only after the live receiver
+                // has accepted at least one provider-signed event for this provider.
+                'webhook_verification_configured' => $webhookSecretStored && $eventsReceived > 0,
+                'webhook_receiver_url' => url('/webhooks/payments/'.$provider),
+                'webhook_events_received' => $eventsReceived,
+                'webhook_last_received_at' => is_string($lastReceived) ? $lastReceived : null,
                 'international_approval_recorded' => ($settings['international_approved'] ?? false) === true,
                 'live_transaction_verified' => false,
                 'status' => $keysPresent ? 'sandbox_validation_required' : 'credentials_required',

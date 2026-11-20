@@ -10,6 +10,14 @@ export type DeliveryMilestone = {
 
 export const deliveryMilestones: DeliveryMilestone[] = [
     {
+        id: 'payment-console-webhook-setup-20261120',
+        title: 'Payment console — webhook URL, secret state and delivery proof',
+        state: 'active',
+        detail: 'Source-only owner console update: each Razorpay/Cashfree card now shows the KMJ-owned webhook receiver URL with copy, the exact provider-dashboard steps, and an evidence-based delivery line. Delivery is reported as proven only when a webhook secret is stored here AND the live receiver has accepted at least one provider-signed event; a stored secret alone, conflict rows or an unsigned request never count. Only counts and a timestamp reach the browser, never payloads or secrets. The stale "do not configure a webhook URL" guidance is replaced by "use only the KMJ URL" now that the receiver is deployed.',
+        evidence:
+            'Feature tests cover the published URL, no claim with only a secret, proof only with secret plus received event, conflict rows excluded, and no secret leakage; static UI policy tests updated (probe component hash re-pinned for copy-only change, diff reviewed). Exact-head CI is separate. No real Razorpay delivery, merchant onboarding, checkout or live charging is claimed.',
+    },
+    {
         id: 'razorpay-order-link-webhook-reconcile-20261120',
         title: 'Razorpay sandbox order linkage and webhook-triggered order reconciliation',
         state: 'active',
