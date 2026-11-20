@@ -300,6 +300,71 @@ final class OwnerPaymentGatewaySettingsTest extends TestCase
             ->assertDontSee('synthetic_valid_webhook_secret');
     }
 
+    public function test_owner_webhook_revoke_blocks_legacy_environment_secret_and_signed_delivery(): void
+    {
+        $owner = $this->owner();
+        $legacy = 'synthetic_legacy_config_webhook_secret';
+        $vaultSecret = 'synthetic_owner_vault_webhook_secret';
+        config()->set('payment-providers.providers.razorpay.webhook_secret', $legacy);
+        $settings = app(OwnerPaymentGatewaySettings::class);
+        $readiness = app(PaymentGatewayReadiness::class);
+        config()->set('payment-providers.providers.cashfree.client_secret', 'synthetic_env_only_cashfree_secret');
+        // Cashfree must not claim a configured verifier secret from env alone.
+        self::assertFalse($readiness->snapshot()['providers'][1]['webhook_secret_stored']);
+
+        // Legacy configuration remains readable until owner vault takes authority.
+        self::assertSame($legacy, $settings->webhookSecret('razorpay'));
+        self::assertTrue($readiness->snapshot()['providers'][0]['webhook_secret_stored']);
+
+        $this->actingAs($owner)->withSession(['auth.password_confirmed_at' => time()])
+            ->delete('/operator/payments/gateways/razorpay/credentials')
+            ->assertRedirect('/operator/payments');
+
+        // A revoke with no previous vault row must persist an explicit tombstone.
+        $this->assertDatabaseHas('payment_gateway_settings', [
+            'provider' => 'razorpay',
+            'encrypted_webhook_secret' => null,
+        ]);
+        self::assertNull($settings->webhookSecret('razorpay'));
+        self::assertFalse($readiness->snapshot()['providers'][0]['webhook_secret_stored']);
+
+        $body = json_encode([
+            'event' => 'payment.captured',
+            'payload' => ['payment' => ['entity' => [
+                'id' => 'pay_test_revoked',
+                'order_id' => 'order_test_revoked',
+            ]]],
+        ], JSON_THROW_ON_ERROR);
+
+        $this->call('POST', '/webhooks/payments/razorpay', [], [], [], [
+            'CONTENT_TYPE' => 'application/json',
+            'HTTP_X_RAZORPAY_SIGNATURE' => hash_hmac('sha256', $body, $legacy),
+            'HTTP_X_RAZORPAY_EVENT_ID' => 'evt_revoked_legacy',
+        ], $body)->assertStatus(503);
+
+        $this->assertDatabaseCount('payment_webhook_events', 0);
+
+        // New owner-managed secret restores receipt trust; stale config never does.
+        $this->actingAs($owner)->withSession(['auth.password_confirmed_at' => time()])
+            ->put('/operator/payments/gateways/razorpay', [
+                ...$this->payload(),
+                'webhook_secret' => $vaultSecret,
+            ])->assertRedirect('/operator/payments');
+        self::assertSame($vaultSecret, $settings->webhookSecret('razorpay'));
+        self::assertTrue($readiness->snapshot()['providers'][0]['webhook_secret_stored']);
+
+        DB::table('payment_gateway_settings')->where('provider', 'razorpay')->update([
+            'encrypted_webhook_secret' => 'corrupt_encrypted_webhook_secret',
+        ]);
+        self::assertNull($settings->webhookSecret('razorpay'));
+        self::assertFalse($readiness->snapshot()['providers'][0]['webhook_secret_stored']);
+
+        $this->assertDatabaseHas('operator_action_audits', [
+            'action' => 'payment_gateway.sandbox_credentials_revoked',
+            'outcome' => 'revoked',
+        ]);
+    }
+
     public function test_live_mode_invalid_provider_and_live_razorpay_key_fail_closed(): void
     {
         $owner = $this->owner();

@@ -10,6 +10,14 @@ export type DeliveryMilestone = {
 
 export const deliveryMilestones: DeliveryMilestone[] = [
     {
+        id: 'razorpay-owner-vault-revocation-overrides-legacy-secret-20261120',
+        title: 'Razorpay webhook — owner revocation overrides legacy environment secret',
+        state: 'active',
+        detail: 'Legacy webhook signing configuration must not silently reauthorize a revoked or unreadable owner-vault key. When an owner payment-settings row exists, webhook verification trusts only a usable encrypted vault secret. The revoke action atomically creates a blank provider row if none exists so it cannot fall back to the old configuration; existing metadata is preserved. Owner readiness uses the same effective verifier secret, so neither a revoked Razorpay key nor a Cashfree environment-only config falsely claims configured webhook trust. No checkout or live charging is enabled.',
+        evidence:
+            'Regression covers old configuration fallback before owner enrollment, owner revoke with no previous row, validly signed legacy webhook rejected after revocation, fresh encrypted owner secret reauthorization, corrupted ciphertext rejection, and readiness parity for Razorpay and Cashfree. Source-only pending exact-head CI, owner security review, staging, independent recovery and guarded production approval.',
+    },
+    {
         id: 'payment-sandbox-credential-control-bytes-20261120',
         title: 'Payment Gateway — reject unsafe sandbox credential characters at write boundary',
         state: 'active',

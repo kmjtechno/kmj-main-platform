@@ -14,7 +14,8 @@ final class PaymentGatewayReadiness
     public function snapshot(): array
     {
         $providers = [];
-        $ownerSettings = collect(app(OwnerPaymentGatewaySettings::class)->snapshot())->keyBy('provider');
+        $gatewaySettings = app(OwnerPaymentGatewaySettings::class);
+        $ownerSettings = collect($gatewaySettings->snapshot())->keyBy('provider');
 
         foreach (['razorpay', 'cashfree'] as $provider) {
             $settings = (array) config('payment-providers.providers.'.$provider, []);
@@ -25,10 +26,9 @@ final class PaymentGatewayReadiness
             // Vault snapshot checks decrypted-key validity fail-closed.
             $keysPresent = (bool) ($record['client_id_stored'] ?? false)
                 && (bool) ($record['client_secret_stored'] ?? false);
-            $webhookSecretStored = (bool) ($record['webhook_secret_stored'] ?? false)
-                || ($provider === 'cashfree'
-                    ? $this->present($settings['client_secret'] ?? null)
-                    : $this->present($settings['webhook_secret'] ?? null));
+            // The readiness indicator must use the exact same signing-secret
+            // authority as webhook verification (including owner revocation).
+            $webhookSecretStored = $gatewaySettings->webhookSecret($provider) !== null;
 
             $providers[] = [
                 'id' => $provider,
@@ -67,10 +67,5 @@ final class PaymentGatewayReadiness
             'live_charging_enabled' => false,
             'providers' => $providers,
         ];
-    }
-
-    private function present(mixed $value): bool
-    {
-        return is_string($value) && trim($value) !== '';
     }
 }
