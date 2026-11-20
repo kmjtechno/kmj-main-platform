@@ -66,11 +66,27 @@ final class SecurityHeadersTest extends TestCase
         $this->assertNull($response->headers->get('Strict-Transport-Security'));
     }
 
-    public function test_is_registered_on_the_web_group_so_real_responses_carry_headers(): void
+    public function test_is_registered_globally_for_web_api_health_and_http_errors(): void
     {
-        $response = $this->get('/');
+        foreach ([
+            '/',
+            '/up',
+            '/api/codebridge/v1/device-enrollments/readiness',
+            '/api/kmj-unmapped-route-for-security-header-test',
+        ] as $path) {
+            $response = $this->get($path);
 
+            $response->assertHeader('X-Content-Type-Options', 'nosniff');
+            $response->assertHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+            $response->assertHeader('Content-Security-Policy', SecurityHeaders::CSP);
+        }
+    }
+
+    public function test_real_api_response_preserves_its_no_store_cache_control(): void
+    {
+        $response = $this->get('/api/codebridge/v1/device-enrollments/readiness');
+
+        $response->assertHeader('Cache-Control', 'no-store, private');
         $response->assertHeader('X-Content-Type-Options', 'nosniff');
-        $response->assertHeader('Content-Security-Policy', SecurityHeaders::CSP);
     }
 }
