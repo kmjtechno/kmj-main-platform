@@ -201,7 +201,8 @@ export default function OperatorPayments({
                                     <p className="text-muted-foreground mt-2 leading-5">
                                         {gateway.webhook_verification_configured
                                             ? `Delivery proven: ${gateway.webhook_events_received} signed event(s) received, last ${gateway.webhook_last_received_at ?? 'n/a'}.`
-                                            : gateway.webhook_events_received > 0
+                                            : gateway.webhook_events_received >
+                                                0
                                               ? `${gateway.webhook_events_received} signed event(s) received, but no webhook secret is stored here yet.`
                                               : 'No signed event received yet. Add this URL in the provider dashboard with the same secret you save here, then send a test event.'}
                                     </p>
@@ -215,8 +216,8 @@ export default function OperatorPayments({
                                     ) : (
                                         <p className="text-muted-foreground mt-1 leading-5">
                                             Cashfree signs webhooks with the
-                                            client secret, so no separate
-                                            secret is needed.
+                                            client secret, so no separate secret
+                                            is needed.
                                         </p>
                                     )}
                                 </div>

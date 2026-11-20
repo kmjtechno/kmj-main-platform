@@ -303,9 +303,9 @@ export default function PaymentGatewayOnboarding({
                 <p className="flex gap-2">
                     <LockKeyhole className="mt-1 size-4 shrink-0" />
                     Use only the KMJ webhook URL shown on this page, the
-                    dedicated provider-specific HTTPS receiver. Never
-                    substitute an arbitrary URL. Delivery counts as proven only
-                    after a provider-signed event appears below.
+                    dedicated provider-specific HTTPS receiver. Never substitute
+                    an arbitrary URL. Delivery counts as proven only after a
+                    provider-signed event appears below.
                 </p>
                 <p className="flex gap-2">
                     <ShieldCheck className="mt-1 size-4 shrink-0" />

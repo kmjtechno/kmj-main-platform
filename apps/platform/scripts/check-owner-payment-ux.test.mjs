@@ -58,7 +58,7 @@ void test('payment security state and live charging guard stay real', () => {
 void test('sandbox probe and credential lifecycle files remain pinned (hash updated only for the webhook copy change)', () => {
     assert.equal(
         gitBlobHash(onboarding),
-        '83fbb0f3f191c3afadd909ab25b35e53ab681eed',
+        '65337d7a01c8b3bff1878e3a1da10dde56e17fbb',
     );
     assert.equal(
         gitBlobHash(settings),
