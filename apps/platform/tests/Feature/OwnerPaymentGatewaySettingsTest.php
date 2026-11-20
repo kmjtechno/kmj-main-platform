@@ -322,6 +322,44 @@ final class OwnerPaymentGatewaySettingsTest extends TestCase
         $this->assertDatabaseCount('payment_gateway_settings', 0);
     }
 
+    public function test_control_byte_sandbox_credentials_are_never_saved_or_flashed(): void
+    {
+        $owner = $this->owner();
+        $cases = [
+            ['cashfree', 'client_id', 'test'.chr(0).'key'],
+            ['razorpay', 'client_secret', 'test'.chr(10).'secret'],
+            ['cashfree', 'webhook_secret', 'test'.chr(127).'secret'],
+        ];
+
+        foreach ($cases as [$provider, $field, $value]) {
+            $this->actingAs($owner)->withSession(['auth.password_confirmed_at' => time()])
+                ->from('/operator/payments')
+                ->put('/operator/payments/gateways/'.$provider, [
+                    ...$this->payload(),
+                    $field => $value,
+                ])->assertSessionHasErrors($field);
+
+            $flashed = session()->get('_old_input', []);
+            foreach (['client_id', 'client_secret', 'webhook_secret'] as $secretField) {
+                self::assertArrayNotHasKey($secretField, $flashed);
+            }
+        }
+
+        $this->assertDatabaseCount('payment_gateway_settings', 0);
+
+        try {
+            app(OwnerPaymentGatewaySettings::class)->save($owner, 'cashfree', [
+                ...$this->payload(),
+                'webhook_secret' => 'test'.chr(10).'secret',
+            ]);
+            self::fail('Service accepted an invalid stored webhook secret.');
+        } catch (\\InvalidArgumentException $exception) {
+            self::assertSame('Unsafe sandbox credential.', $exception->getMessage());
+        }
+
+        $this->assertDatabaseCount('payment_gateway_settings', 0);
+    }
+
     public function test_secret_fields_are_never_flashed_to_session_after_validation_failure(): void
     {
         $owner = $this->owner();
