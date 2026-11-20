@@ -43,7 +43,7 @@ final class OwnerPaymentGatewaySettings
                 'international_requested' => $row !== null && (bool) $row->international_requested,
                 'client_id_stored' => $storedClientIdValid,
                 'client_secret_stored' => $storedClientSecretValid,
-                'webhook_secret_stored' => $row?->encrypted_webhook_secret !== null,
+                'webhook_secret_stored' => self::usableStoredCredential($row?->encrypted_webhook_secret, $provider, false),
                 'last_updated' => $row?->updated_at,
                 'live_charging_enabled' => false,
                 'sandbox_transaction_verified' => false,
