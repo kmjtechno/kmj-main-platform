@@ -1,5 +1,6 @@
 import { Head, Link } from '@inertiajs/react';
 import { useState } from 'react';
+import '../../css/owner-payments-premium.css';
 import OperatorModuleNavigation from '@/components/operator-module-navigation';
 import PaymentGatewayOnboarding from '@/components/payment-gateway-onboarding';
 import OperatorPaymentSettings, {
@@ -44,7 +45,7 @@ export default function OperatorPayments({
     return (
         <>
             <Head title="KMJ TECHNO — Payment Gateway Control" />
-            <main className="kmj-admin-shell flex min-h-screen min-w-0 flex-col gap-6 p-4 sm:p-8">
+            <main className="kmj-admin-shell kmj-owner-payments flex min-h-screen min-w-0 flex-col gap-6 p-4 sm:p-8">
                 <div className="mx-auto w-full max-w-6xl">
                     <OperatorModuleNavigation active="payments" />
                 </div>
