@@ -88,9 +88,6 @@ final class RazorpayCheckoutOrders
         }
 
         $credentials = $decision['credentials'];
-        if ($credentials === null) {
-            throw new DomainException('RAZORPAY_ORDER_CREATION_PENDING_REVIEW');
-        }
 
         // The reservation has committed and is now durable. On network
         // timeout or DB failure, leave it unresolved; retry must NOT create
