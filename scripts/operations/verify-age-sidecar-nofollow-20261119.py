@@ -28,8 +28,12 @@ def open_regular(parent_fd, name):
         raise
 
 def open_parent(path):
-    path = os.path.abspath(path)
+    # Never normalize away dot segments before validating each ancestor.
+    if not os.path.isabs(path):
+        raise Rejected("absolute path required")
     parts = path.split(os.sep)
+    if any(part in ("", ".", "..") for part in parts[1:]):
+        raise Rejected("unsafe path component")
     fd = os.open(os.sep, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
     try:
         for part in parts[1:-1]:
