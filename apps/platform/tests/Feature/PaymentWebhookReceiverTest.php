@@ -7,6 +7,7 @@ namespace Tests\Feature;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Tests\TestCase;
 
 final class PaymentWebhookReceiverTest extends TestCase
@@ -155,11 +156,11 @@ final class PaymentWebhookReceiverTest extends TestCase
     {
         $this->storeSecret('razorpay');
         $body = $this->razorpayBody();
-        $tablesBefore = collect(DB::select("select name from sqlite_master where type = 'table'"))->count();
+        $tablesBefore = count(Schema::getTables());
 
         $this->call('POST', '/webhooks/payments/razorpay', [], [], [], $this->razorpayServer($body), $body)->assertOk();
 
-        $this->assertSame($tablesBefore, collect(DB::select("select name from sqlite_master where type = 'table'"))->count());
+        $this->assertSame($tablesBefore, count(Schema::getTables()));
         $this->assertSame(0, DB::table('kslp_licenses')->count());
     }
 }
