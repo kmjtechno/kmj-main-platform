@@ -10,6 +10,14 @@ export type DeliveryMilestone = {
 
 export const deliveryMilestones: DeliveryMilestone[] = [
     {
+        id: 'razorpay-payment-evidence-adapter-20261120',
+        title: 'Razorpay payment evidence adapter for the commerce reconciler (sandbox)',
+        state: 'active',
+        detail: 'Source-only RazorpayPaymentAdapter implements the existing PaymentProviderAdapter contract: it asks Razorpay server-to-server for the exact payment with owner-vault sandbox test keys and returns evidence only when the provider affirms that payment id as captured, unrefunded, with an integer positive amount and a currency. Anything else (authorized-only, failed, mismatched id, refunded, malformed reference, provider error, missing vault) fails closed before PaymentReconciler can confirm an order. Confirming an order grants no entitlement or license.',
+        evidence:
+            'Laravel feature tests with a faked provider cover captured evidence, eight unsettled shapes, provider 500, missing credentials, malformed references never sent, and reconciler confirmation with zero entitlements. Exact-head CI is separate. Not wired to webhooks or checkout; no order-to-provider-order linkage, live keys, real Razorpay call, merchant onboarding or live charging is claimed.',
+    },
+    {
         id: 'razorpay-owner-vault-revocation-overrides-legacy-secret-20261120',
         title: 'Razorpay webhook — owner revocation overrides legacy environment secret',
         state: 'active',
