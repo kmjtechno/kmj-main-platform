@@ -23,6 +23,14 @@ class SidecarTests(unittest.TestCase):
         self.good = hashlib.sha256(self.c.read_bytes()).hexdigest() + "  " + self.c.name + "\n"
         self.s.write_text(self.good, encoding="ascii")
 
+    def test_relative_cipher_rejected(self):
+        with self.assertRaises(v.Rejected):
+            v.verify(self.c.name, str(self.s))
+
+    def test_relative_sidecar_rejected(self):
+        with self.assertRaises(v.Rejected):
+            v.verify(str(self.c), self.s.name)
+
     def test_valid(self):
         v.verify(str(self.c), str(self.s))
 
