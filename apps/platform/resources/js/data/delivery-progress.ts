@@ -10,6 +10,14 @@ export type DeliveryMilestone = {
 
 export const deliveryMilestones: DeliveryMilestone[] = [
     {
+        id: 'razorpay-durable-provider-order-intent-20261120',
+        title: 'Razorpay sandbox provider order — durable pre-call reservation',
+        state: 'active',
+        detail: 'Create a committed commercial-provider order intent before outbound Razorpay Orders API HTTP instead of holding a PostgreSQL row lock across network I/O. Retry with a prior in-flight or uncertain intent now fails closed for operator reconciliation rather than opening a second provider order. This is sandbox-only; no card capture, live charging or entitlement issuance.',
+        evidence:
+            'New additive reservation migration, HTTP-outside-transaction regression, provider-success/local-DB-constraint-failure negative case, and provider-unavailable/uncertain-outcome idempotency case. Manual reconciliation is intentionally required for incomplete intents; no automatic charging or fake provider proof. Exact-head CI, Claude review, owner-protected stage, independent P520 restore and rollback gates remain required before deployment.',
+    },
+    {
         id: 'razorpay-order-link-webhook-reconcile-20261120',
         title: 'Razorpay sandbox order linkage and webhook-triggered order reconciliation',
         state: 'active',
