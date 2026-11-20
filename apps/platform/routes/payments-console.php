@@ -45,9 +45,9 @@ Route::middleware(['auth', 'verified', 'password.confirm'])
                 'environment' => ['required', 'in:sandbox'],
                 'merchant_status' => ['required', 'in:not_verified,verification_pending,owner_reports_approved'],
                 'international_requested' => ['required', 'boolean'],
-                'client_id' => ['nullable', 'string', 'max:255'],
-                'client_secret' => ['nullable', 'string', 'max:1024'],
-                'webhook_secret' => ['nullable', 'string', 'max:1024'],
+                'client_id' => ['nullable', 'string', 'max:255', 'not_regex:/[\x00-\x1F\x7F]/'],
+                'client_secret' => ['nullable', 'string', 'max:1024', 'not_regex:/[\x00-\x1F\x7F]/'],
+                'webhook_secret' => ['nullable', 'string', 'max:1024', 'not_regex:/[\x00-\x1F\x7F]/'],
             ]);
             if ($provider === 'razorpay'
                 && isset($input['client_id'])
