@@ -353,7 +353,7 @@ final class OwnerPaymentGatewaySettingsTest extends TestCase
                 'webhook_secret' => 'test'.chr(10).'secret',
             ]);
             self::fail('Service accepted an invalid stored webhook secret.');
-        } catch (\\InvalidArgumentException $exception) {
+        } catch (\InvalidArgumentException $exception) {
             self::assertSame('Unsafe sandbox credential.', $exception->getMessage());
         }
 
