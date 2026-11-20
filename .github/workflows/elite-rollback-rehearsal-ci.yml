@@ -1,0 +1,110 @@
+name: Exact Release Disposable Rollback Rehearsal
+
+# Evidence only. Runs the reviewed scripts/ci/rehearse-app-rollback-ci.sh for an
+# exact predecessor -> candidate pair on GitHub-hosted CI with a private,
+# disposable PostgreSQL 18 (no network, no production DB, no secrets).
+# It does NOT deploy, switch pointers or write any protected approval, and it is
+# NOT a substitute for the physical Elite rollback or a verified Elite backup.
+
+on:
+  pull_request:
+    paths:
+      - .github/workflows/elite-rollback-rehearsal-ci.yml
+  workflow_dispatch:
+    inputs:
+      previous_sha:
+        description: 'Exact live predecessor commit (40 hex)'
+        required: true
+        default: 'ce6ad7dc9d898dce1ba9561a0e221f8ad750180f'
+      candidate_sha:
+        description: 'Exact candidate commit (40 hex), a descendant of the predecessor'
+        required: true
+        default: '11885d5e6ed5b819e57d8503e112872ec8e159ad'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: exact-rollback-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  rollback-rehearsal:
+    name: Predecessor to candidate, previous-code and schema rollback (isolated)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    env:
+      PREVIOUS_SHA: ${{ inputs.previous_sha || 'ce6ad7dc9d898dce1ba9561a0e221f8ad750180f' }}
+      CANDIDATE_SHA: ${{ inputs.candidate_sha || '11885d5e6ed5b819e57d8503e112872ec8e159ad' }}
+    steps:
+      - name: Validate exact SHA inputs
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          [[ "$PREVIOUS_SHA" =~ ^[0-9a-f]{40}$ ]]
+          [[ "$CANDIDATE_SHA" =~ ^[0-9a-f]{40}$ ]]
+          [[ "$PREVIOUS_SHA" != "$CANDIDATE_SHA" ]]
+          echo "ROLLBACK_INPUTS=EXACT_40_HEX"
+
+      - name: Check out exact candidate without credentials
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          ref: ${{ env.CANDIDATE_SHA }}
+          fetch-depth: 0
+
+      - name: Verify exact candidate and predecessor ancestry
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          test "$(git rev-parse HEAD)" = "$CANDIDATE_SHA"
+          test -z "$(git status --porcelain)"
+          git cat-file -e "$PREVIOUS_SHA^{commit}"
+          git merge-base --is-ancestor "$PREVIOUS_SHA" "$CANDIDATE_SHA"
+          test -f scripts/ci/rehearse-app-rollback-ci.sh
+          test -f scripts/operations/rehearse-app-http-db-rollback-20261029.py
+          echo "ROLLBACK_CANDIDATE_EXACT_SHA=PASS"
+          echo "ROLLBACK_PREDECESSOR_ANCESTOR=PASS"
+          echo "LIVE_PRODUCTION_MUTATION=NONE"
+
+      - name: Set up PHP 8.4 PostgreSQL extensions
+        uses: shivammathur/setup-php@87d00bde2555f25eb54fedf940384e99cbdc55ef
+        with:
+          php-version: '8.4'
+          extensions: pdo_pgsql, pgsql, pdo_sqlite, sqlite3, sodium
+          coverage: none
+
+      - name: Set up Node 22
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22'
+
+      - name: Verify rollback script fail-closed contract
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          bash -n scripts/ci/rehearse-app-rollback-ci.sh
+          python3 -B -m unittest discover -s tests -p test_rehearse_app_http_db_rollback.py -v
+          echo "ROLLBACK_SOURCE_CONTRACT=PASS"
+
+      - name: Run previous and candidate HTTP/migrations with private PG18
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          bash scripts/ci/rehearse-app-rollback-ci.sh "$PREVIOUS_SHA" "$CANDIDATE_SHA"
+          echo "DISPOSABLE_HTTP_DB_ROLLBACK=PASS"
+          echo "PRODUCTION_DEPLOYMENT=NOT_EXECUTED"
+          echo "PRODUCTION_APPROVAL=NOT_UPDATED"
+
+      - name: Report evidence scope
+        if: always()
+        shell: bash
+        run: |
+          {
+            echo "## Isolated rollback rehearsal (NOT a production cutover)"
+            echo "- Predecessor: $PREVIOUS_SHA"
+            echo "- Candidate: $CANDIDATE_SHA"
+            echo "- private disposable PostgreSQL 18, no production secrets"
+            echo "- job result: ${{ job.status }}"
+            echo "- Elite backup witness / physical rollback / protected approval: NOT PROVEN BY THIS JOB"
+          } >> "$GITHUB_STEP_SUMMARY"
