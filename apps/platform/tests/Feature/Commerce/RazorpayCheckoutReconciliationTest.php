@@ -111,6 +111,128 @@ final class RazorpayCheckoutReconciliationTest extends TestCase
         $this->assertDatabaseCount('entitlements', 0);
     }
 
+    public function test_provider_create_http_runs_outside_the_locked_database_transaction(): void
+    {
+        $this->vault();
+        $order = $this->commercialOrder('request:rzp-checkout:no-network-lock');
+        Http::fake([
+            'api.razorpay.com/v1/orders' => function (Request $request) {
+                $this->assertSame(0, DB::transactionLevel(), 'Provider HTTP must not run under a DB transaction.');
+
+                return Http::response([
+                    'id' => 'order_TEST1',
+                    'receipt' => $request['receipt'],
+                    'currency' => 'INR',
+                    'amount' => $request['amount'],
+                    'status' => 'created',
+                    'amount_paid' => 0,
+                    'amount_due' => $request['amount'],
+                ]);
+            },
+        ]);
+
+        $created = app(RazorpayCheckoutOrders::class)->open($order->getKey(), self::AMOUNT);
+
+        $this->assertSame('order_TEST1', $created['provider_order_id']);
+        $this->assertDatabaseHas('commerce_provider_order_intents', [
+            'commercial_order_id' => $order->getKey(),
+            'provider' => 'razorpay',
+            'amount_minor' => self::AMOUNT,
+            'creation_status' => 'linked',
+        ]);
+        Http::assertSentCount(1);
+        $this->assertDatabaseCount('entitlements', 0);
+    }
+
+    public function test_provider_success_then_local_link_failure_never_creates_second_provider_order(): void
+    {
+        $this->vault();
+        $order = $this->commercialOrder('request:rzp-checkout:provider-success-db-fail');
+        $collider = $this->commercialOrder('request:rzp-checkout:other-order');
+        Http::fake([
+            'api.razorpay.com/v1/orders' => function (Request $request) use ($collider) {
+                // Inject a real unique constraint failure after the remote provider
+                // responds successfully. The durable intent must survive rollback.
+                $this->assertSame(0, DB::transactionLevel());
+                DB::table('commerce_provider_orders')->insert([
+                    'commercial_order_id' => $collider->getKey(),
+                    'provider' => 'razorpay',
+                    'provider_order_id' => 'order_TEST1',
+                    'amount_minor' => self::AMOUNT,
+                    'currency' => 'INR',
+                    'environment' => 'sandbox',
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
+
+                return Http::response([
+                    'id' => 'order_TEST1',
+                    'receipt' => $request['receipt'],
+                    'currency' => 'INR',
+                    'amount' => $request['amount'],
+                    'status' => 'created',
+                    'amount_paid' => 0,
+                    'amount_due' => $request['amount'],
+                ]);
+            },
+        ]);
+
+        $service = app(RazorpayCheckoutOrders::class);
+        try {
+            $service->open($order->getKey(), self::AMOUNT);
+            $this->fail('Local provider-link conflict must not be hidden.');
+        } catch (\\Illuminate\\Database\\QueryException) {
+            $this->addToAssertionCount(1);
+        }
+
+        $this->assertDatabaseHas('commerce_provider_order_intents', [
+            'commercial_order_id' => $order->getKey(),
+            'creation_status' => 'creating',
+        ]);
+        $this->assertDatabaseMissing('commerce_provider_orders', [
+            'commercial_order_id' => $order->getKey(),
+        ]);
+
+        try {
+            $service->open($order->getKey(), self::AMOUNT);
+            $this->fail('A retry must not create another remote order after an uncertain outcome.');
+        } catch (DomainException $exception) {
+            $this->assertSame('RAZORPAY_ORDER_CREATION_PENDING_REVIEW', $exception->getMessage());
+        }
+        Http::assertSentCount(1);
+        $this->assertDatabaseCount('entitlements', 0);
+    }
+
+    public function test_provider_unavailable_keeps_durable_reservation_and_blocks_duplicate_create(): void
+    {
+        $this->vault();
+        $order = $this->commercialOrder('request:rzp-checkout:provider-unavailable');
+        Http::fake(['api.razorpay.com/v1/orders' => Http::response([], 503)]);
+        $service = app(RazorpayCheckoutOrders::class);
+
+        try {
+            $service->open($order->getKey(), self::AMOUNT);
+            $this->fail('HTTP failure must never be mistaken for provider order creation.');
+        } catch (DomainException $exception) {
+            $this->assertSame('RAZORPAY_SANDBOX_PROVIDER_UNAVAILABLE', $exception->getMessage());
+        }
+
+        $this->assertDatabaseHas('commerce_provider_order_intents', [
+            'commercial_order_id' => $order->getKey(),
+            'creation_status' => 'creating',
+        ]);
+
+        try {
+            $service->open($order->getKey(), self::AMOUNT);
+            $this->fail('Uncertain external result must be reconciled before any retry.');
+        } catch (DomainException $exception) {
+            $this->assertSame('RAZORPAY_ORDER_CREATION_PENDING_REVIEW', $exception->getMessage());
+        }
+        Http::assertSentCount(1);
+        $this->assertDatabaseCount('commerce_provider_orders', 0);
+        $this->assertDatabaseCount('entitlements', 0);
+    }
+
     public function test_open_rejects_bad_amount_conflicts_and_non_requested_orders(): void
     {
         $this->vault();
