@@ -5,6 +5,8 @@ on:
     paths:
       - 'scripts/operations/diagnose-offsite-exit3-20261117.py'
       - 'scripts/operations/test_diagnose_offsite_exit3_20261117.py'
+      - 'scripts/operations/diagnose-offsite-exit3-phase-hostkey-20261120.py'
+      - 'scripts/operations/test_diagnose_offsite_exit3_phase_hostkey_20261120.py'
       - '.github/workflows/kmj-offsite-exit3-minimal-qa.yml'
   push:
     branches:
@@ -12,6 +14,8 @@ on:
     paths:
       - 'scripts/operations/diagnose-offsite-exit3-20261117.py'
       - 'scripts/operations/test_diagnose_offsite_exit3_20261117.py'
+      - 'scripts/operations/diagnose-offsite-exit3-phase-hostkey-20261120.py'
+      - 'scripts/operations/test_diagnose_offsite_exit3_phase_hostkey_20261120.py'
       - '.github/workflows/kmj-offsite-exit3-minimal-qa.yml'
 
 permissions:
@@ -38,6 +42,8 @@ jobs:
           files = [
               'scripts/operations/diagnose-offsite-exit3-20261117.py',
               'scripts/operations/test_diagnose_offsite_exit3_20261117.py',
+              'scripts/operations/diagnose-offsite-exit3-phase-hostkey-20261120.py',
+              'scripts/operations/test_diagnose_offsite_exit3_phase_hostkey_20261120.py',
           ]
           for name in files:
               compile(Path(name).read_text(encoding='utf-8'), name, 'exec')
@@ -46,6 +52,7 @@ jobs:
       - name: Run isolated synthetic exact-invocation tests
         run: |
           python3 -I -B scripts/operations/test_diagnose_offsite_exit3_20261117.py -v
+          python3 -I -B scripts/operations/test_diagnose_offsite_exit3_phase_hostkey_20261120.py -v
           echo 'KMJ_EXIT3_CURRENT_INVOCATION_OFFLINE_QA=PASS'
       - name: Verify no privileged backup access in this job
         run: |
