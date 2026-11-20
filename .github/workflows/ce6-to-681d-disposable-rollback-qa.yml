@@ -1,0 +1,89 @@
+name: CE6 to 681D Disposable App HTTP DB Rollback Proof
+
+on:
+  pull_request:
+    paths:
+      - .github/workflows/ce6-to-681d-disposable-rollback-qa.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ce6-681d-rollback-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  physical-ci-rehearsal:
+    name: CE6 to exact 681D and previous-code/schema rollback (isolated)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    env:
+      PREVIOUS_SHA: ce6ad7dc9d898dce1ba9561a0e221f8ad750180f
+      CANDIDATE_SHA: 681d75531cd5fa91e47de2b4b639129ca53bcee2
+    steps:
+      - name: Check out approved exact staging candidate without credentials
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+          ref: 681d75531cd5fa91e47de2b4b639129ca53bcee2
+          fetch-depth: 0
+
+      - name: Verify fixed predecessor and immutable staging candidate
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          test "$(git rev-parse HEAD)" = "$CANDIDATE_SHA"
+          test -z "$(git status --porcelain)"
+          git merge-base --is-ancestor "$PREVIOUS_SHA" "$CANDIDATE_SHA"
+          test "$(git merge-base "$PREVIOUS_SHA" "$CANDIDATE_SHA")" = "$PREVIOUS_SHA"
+          test -f scripts/ci/rehearse-app-rollback-ci.sh
+          test -f scripts/operations/rehearse-app-http-db-rollback-20261029.py
+          echo "ROLLBACK_CANDIDATE_EXACT_SHA=PASS"
+          echo "ROLLBACK_PREDECESSOR_CE6=PASS"
+          echo "LIVE_PRODUCTION_MUTATION=NONE"
+
+      - name: Set up PHP 8.4 PostgreSQL extensions
+        uses: shivammathur/setup-php@87d00bde2555f25eb54fedf940384e99cbdc55ef
+        with:
+          php-version: '8.4'
+          extensions: pdo_pgsql, pgsql, pdo_sqlite, sqlite3, sodium
+          coverage: none
+
+      - name: Set up Node 22
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22'
+
+      - name: Verify rollback script's fail-closed contract
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          bash -n scripts/ci/rehearse-app-rollback-ci.sh
+          python3 -B -m unittest discover -s tests -p test_rehearse_app_http_db_rollback.py -v
+          echo "ROLLBACK_SOURCE_CONTRACT=PASS"
+
+      - name: Run previous and candidate HTTP/migrations with private PG18
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          bash scripts/ci/rehearse-app-rollback-ci.sh \
+            "$PREVIOUS_SHA" "$CANDIDATE_SHA"
+          echo "CE6_TO_681D_DISPOSABLE_HTTP_DB_ROLLBACK=PASS"
+          echo "PRODUCTION_DEPLOYMENT=NOT_EXECUTED"
+          echo "PRODUCTION_APPROVAL=NOT_UPDATED"
+
+      - name: Report evidence scope
+        if: always()
+        shell: bash
+        run: |
+          {
+            echo "## Isolated rollback evidence (NOT a production cutover)"
+            echo "- Live predecessor code: $PREVIOUS_SHA"
+            echo "- Approved staging candidate: $CANDIDATE_SHA"
+            echo "- private disposable PostgreSQL 18, no listeners or production secrets"
+            echo "- previous HTTP, candidate migrations/HTTP, previous HTTP, schema rollback/reapply"
+            echo "- rollback job result: ${{ job.status }}"
+            echo "- root Elite release switch: NOT EXECUTED"
+            echo "- protected release approval: NOT UPDATED"
+          } >> "$GITHUB_STEP_SUMMARY"
