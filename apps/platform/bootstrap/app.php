@@ -32,12 +32,15 @@ return Application::configure(basePath: dirname(__DIR__))
         // OAuth machine endpoints authenticate with authorization codes/refresh tokens, not CSRF cookies.
         $middleware->validateCsrfTokens(except: ['oauth/token', 'oauth/register', 'mcp']);
 
+        // Include stateless API, OAuth, JSON failures and the /up health endpoint.
+        // Web-only middleware does not protect the /api/* and health route groups.
+        $middleware->append(SecurityHeaders::class);
+
         $middleware->web(append: [
             HandleAppearance::class,
             SetPreferredLocale::class,
             HandleInertiaRequests::class,
             AddLinkHeadersForPreloadedAssets::class,
-            SecurityHeaders::class,
             StagingDeploymentEvidence::class,
             ThrottlePublicRegistration::class,
         ]);
