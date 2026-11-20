@@ -75,6 +75,13 @@ final class OwnerPaymentGatewaySettings
         ] as $inputName => $column) {
             $plain = $input[$inputName] ?? null;
             if (is_string($plain) && $plain !== '') {
+                // All writers must enforce the same credential-byte contract as
+                // snapshot()/webhookSecret(), not only the owner HTTP form.
+                if (strlen($plain) > ($inputName === 'client_id' ? 255 : 1024)
+                    || preg_match('/[\x00-\x1F\x7F]/', $plain)) {
+                    throw new InvalidArgumentException('Unsafe sandbox credential.');
+                }
+
                 if ($provider === 'razorpay' && $inputName === 'client_id'
                     && ! self::validRazorpaySandboxKey($plain)) {
                     throw new InvalidArgumentException('Razorpay test keys only.');
