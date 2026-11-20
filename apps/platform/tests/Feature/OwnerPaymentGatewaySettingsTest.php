@@ -307,9 +307,14 @@ final class OwnerPaymentGatewaySettingsTest extends TestCase
         $vaultSecret = 'synthetic_owner_vault_webhook_secret';
         config()->set('payment-providers.providers.razorpay.webhook_secret', $legacy);
         $settings = app(OwnerPaymentGatewaySettings::class);
+        $readiness = app(PaymentGatewayReadiness::class);
+        config()->set('payment-providers.providers.cashfree.client_secret', 'synthetic_env_only_cashfree_secret');
+        // Cashfree must not claim a configured verifier secret from env alone.
+        self::assertFalse($readiness->snapshot()['providers'][1]['webhook_secret_stored']);
 
         // Legacy configuration remains readable until owner vault takes authority.
         self::assertSame($legacy, $settings->webhookSecret('razorpay'));
+        self::assertTrue($readiness->snapshot()['providers'][0]['webhook_secret_stored']);
 
         $this->actingAs($owner)->withSession(['auth.password_confirmed_at' => time()])
             ->delete('/operator/payments/gateways/razorpay/credentials')
@@ -321,6 +326,7 @@ final class OwnerPaymentGatewaySettingsTest extends TestCase
             'encrypted_webhook_secret' => null,
         ]);
         self::assertNull($settings->webhookSecret('razorpay'));
+        self::assertFalse($readiness->snapshot()['providers'][0]['webhook_secret_stored']);
 
         $body = json_encode([
             'event' => 'payment.captured',
@@ -345,11 +351,13 @@ final class OwnerPaymentGatewaySettingsTest extends TestCase
                 'webhook_secret' => $vaultSecret,
             ])->assertRedirect('/operator/payments');
         self::assertSame($vaultSecret, $settings->webhookSecret('razorpay'));
+        self::assertTrue($readiness->snapshot()['providers'][0]['webhook_secret_stored']);
 
         DB::table('payment_gateway_settings')->where('provider', 'razorpay')->update([
             'encrypted_webhook_secret' => 'corrupt_encrypted_webhook_secret',
         ]);
         self::assertNull($settings->webhookSecret('razorpay'));
+        self::assertFalse($readiness->snapshot()['providers'][0]['webhook_secret_stored']);
 
         $this->assertDatabaseHas('operator_action_audits', [
             'action' => 'payment_gateway.sandbox_credentials_revoked',
