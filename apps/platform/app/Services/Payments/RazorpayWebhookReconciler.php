@@ -30,7 +30,7 @@ final class RazorpayWebhookReconciler
      */
     public function reconcilePending(int $limit = 50): array
     {
-        $totals = ['reconciled' => 0, 'unmatched' => 0, 'rejected' => 0, 'retry_later' => 0];
+        $reconciled = $unmatched = $rejected = $retryLater = 0;
 
         $events = DB::table('payment_webhook_events')
             ->where('provider', 'razorpay')
@@ -42,7 +42,12 @@ final class RazorpayWebhookReconciler
 
         foreach ($events as $event) {
             $outcome = $this->handle($event);
-            $totals[$outcome['bucket']]++;
+            match ($outcome['bucket']) {
+                'reconciled' => $reconciled++,
+                'unmatched' => $unmatched++,
+                'rejected' => $rejected++,
+                default => $retryLater++,
+            };
             if ($outcome['status'] !== null) {
                 DB::table('payment_webhook_events')
                     ->where('id', $event->id)->where('processing_status', 'received')
@@ -54,7 +59,12 @@ final class RazorpayWebhookReconciler
             }
         }
 
-        return $totals;
+        return [
+            'reconciled' => $reconciled,
+            'unmatched' => $unmatched,
+            'rejected' => $rejected,
+            'retry_later' => $retryLater,
+        ];
     }
 
     /**
@@ -62,8 +72,8 @@ final class RazorpayWebhookReconciler
      */
     private function handle(object $event): array
     {
-        $orderRef = $event->provider_order_id;
-        $paymentRef = $event->provider_payment_id;
+        $orderRef = data_get($event, 'provider_order_id');
+        $paymentRef = data_get($event, 'provider_payment_id');
         $link = is_string($orderRef)
             ? DB::table('commerce_provider_orders')->where('provider', 'razorpay')->where('provider_order_id', $orderRef)->first()
             : null;
@@ -89,7 +99,7 @@ final class RazorpayWebhookReconciler
             return ['bucket' => 'rejected', 'status' => 'rejected', 'note' => 'AMOUNT_MISMATCH'];
         }
 
-        $order = CommercialOrder::query()->find($link->commercial_order_id);
+        $order = CommercialOrder::query()->whereKey($link->commercial_order_id)->first();
         if ($order === null) {
             return ['bucket' => 'unmatched', 'status' => 'unmatched', 'note' => 'ORDER_MISSING'];
         }
@@ -98,7 +108,7 @@ final class RazorpayWebhookReconciler
             // The requester is the ledger actor: the webhook itself has no human operator.
             $this->orders->confirm(
                 (string) $order->getKey(),
-                (int) $order->requester_user_id,
+                (int) $order->getAttribute('requester_user_id'),
                 $evidence->currency,
                 $evidence->amountMinor,
                 'razorpay:'.$evidence->reference,

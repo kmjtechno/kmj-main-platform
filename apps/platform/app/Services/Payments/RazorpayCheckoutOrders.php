@@ -31,8 +31,8 @@ final class RazorpayCheckoutOrders
         }
 
         return DB::transaction(function () use ($commercialOrderId, $expectedAmountMinor): array {
-            $order = CommercialOrder::query()->lockForUpdate()->findOrFail($commercialOrderId);
-            if ($order->status !== 'requested') {
+            $order = CommercialOrder::query()->whereKey($commercialOrderId)->lockForUpdate()->firstOrFail();
+            if ((string) $order->getAttribute('status') !== 'requested') {
                 throw new DomainException('RAZORPAY_ORDER_NOT_OPENABLE');
             }
 
