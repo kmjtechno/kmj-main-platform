@@ -266,7 +266,7 @@ final class OwnerPaymentGatewaySettingsTest extends TestCase
                 'webhook_secret' => 'synthetic_valid_webhook_secret',
             ])->assertRedirect('/operator/payments');
 
-        foreach (['unreadable_ciphertext', Crypt::encryptString("invalid\\nwebhook")] as $badCiphertext) {
+        foreach (['unreadable_ciphertext', Crypt::encryptString('invalid'.chr(10).'webhook')] as $badCiphertext) {
             DB::table('payment_gateway_settings')->where('provider', 'razorpay')->update([
                 'encrypted_webhook_secret' => $badCiphertext,
             ]);
