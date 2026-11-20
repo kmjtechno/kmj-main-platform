@@ -29,6 +29,24 @@ final class RazorpayPaymentAdapter implements PaymentProviderAdapter
 
     public function confirmation(string $providerReference): ProviderPaymentConfirmation
     {
+        return $this->fetchSettled($providerReference, null);
+    }
+
+    /**
+     * Same evidence, additionally bound to the Razorpay order we created for the
+     * commercial order, so a captured payment for a different order cannot settle it.
+     */
+    public function confirmationForProviderOrder(string $providerReference, string $providerOrderId): ProviderPaymentConfirmation
+    {
+        if (! preg_match('/\Aorder_[A-Za-z0-9]{1,64}\z/D', $providerOrderId)) {
+            throw new InvalidArgumentException('RAZORPAY_ORDER_REFERENCE_INVALID');
+        }
+
+        return $this->fetchSettled($providerReference, $providerOrderId);
+    }
+
+    private function fetchSettled(string $providerReference, ?string $expectedOrderId): ProviderPaymentConfirmation
+    {
         if (! preg_match('/\Apay_[A-Za-z0-9]{1,64}\z/D', $providerReference)) {
             throw new InvalidArgumentException('RAZORPAY_PAYMENT_REFERENCE_INVALID');
         }
@@ -57,7 +75,8 @@ final class RazorpayPaymentAdapter implements PaymentProviderAdapter
             || ($body['captured'] ?? null) !== true
             || ! is_string($body['currency'] ?? null)
             || ! is_int($body['amount'] ?? null) || $body['amount'] < 1
-            || (int) ($body['amount_refunded'] ?? 0) !== 0) {
+            || (int) ($body['amount_refunded'] ?? 0) !== 0
+            || ($expectedOrderId !== null && ($body['order_id'] ?? null) !== $expectedOrderId)) {
             throw new DomainException('RAZORPAY_PAYMENT_NOT_SETTLED');
         }
 

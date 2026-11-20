@@ -10,6 +10,14 @@ export type DeliveryMilestone = {
 
 export const deliveryMilestones: DeliveryMilestone[] = [
     {
+        id: 'razorpay-order-link-webhook-reconcile-20261120',
+        title: 'Razorpay sandbox order linkage and webhook-triggered order reconciliation',
+        state: 'active',
+        detail: 'Source-only: RazorpayCheckoutOrders opens one sandbox Razorpay order per requested commercial order with a server-supplied expected amount and stores the binding in commerce_provider_orders. An operator-run payments:reconcile-razorpay command turns signature-verified inbox events (payment.captured, order.paid) into confirmed orders only when Razorpay server-to-server evidence shows the exact captured, unrefunded payment bound to our provider order with the expected amount and currency. Unlinked, mismatched, other-order and unsettled cases are marked and never confirm; provider outages keep the event for retry. No customer-facing checkout endpoint, no schedule, no entitlement or license grant, sandbox test keys only.',
+        evidence:
+            'Laravel feature tests with a faked provider cover idempotent order opening, amount conflicts, missing vault, happy-path confirmation with zero entitlements and no reprocessing, unknown order, amount mismatch, payment of another order, provider outage retry and ignored event types. Exact-head CI is separate. New migration (commerce_provider_orders, processing_note) is not yet applied on any host. No real Razorpay call, live key, merchant onboarding, customer checkout or live charging is claimed.',
+    },
+    {
         id: 'razorpay-payment-evidence-adapter-20261120',
         title: 'Razorpay payment evidence adapter for the commerce reconciler (sandbox)',
         state: 'active',

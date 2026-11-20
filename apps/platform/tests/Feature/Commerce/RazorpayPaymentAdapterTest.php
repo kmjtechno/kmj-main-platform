@@ -93,6 +93,18 @@ final class RazorpayPaymentAdapterTest extends TestCase
         app(RazorpayPaymentAdapter::class)->confirmation('pay_ABC123');
     }
 
+    public function test_confirmation_can_be_bound_to_the_expected_provider_order(): void
+    {
+        $this->vault();
+        $this->fakePayment(['order_id' => 'order_MINE1']);
+        $adapter = app(RazorpayPaymentAdapter::class);
+
+        $this->assertSame(249900, $adapter->confirmationForProviderOrder('pay_ABC123', 'order_MINE1')->amountMinor);
+
+        $this->expectException(DomainException::class);
+        $adapter->confirmationForProviderOrder('pay_ABC123', 'order_OTHER2');
+    }
+
     public function test_provider_error_and_missing_credentials_fail_closed(): void
     {
         $this->fakePayment([], 500);
