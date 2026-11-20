@@ -1,0 +1,61 @@
+name: KMJ Offsite Exit3 Minimal QA
+
+on:
+  pull_request:
+    paths:
+      - 'scripts/operations/diagnose-offsite-exit3-20261117.py'
+      - 'scripts/operations/test_diagnose_offsite_exit3_20261117.py'
+      - 'scripts/operations/diagnose-offsite-exit3-phase-hostkey-20261120.py'
+      - 'scripts/operations/test_diagnose_offsite_exit3_phase_hostkey_20261120.py'
+      - '.github/workflows/kmj-offsite-exit3-minimal-qa.yml'
+  push:
+    branches:
+      - 'ops/offsite-exit3-exact-invocation-minimal-20261120'
+    paths:
+      - 'scripts/operations/diagnose-offsite-exit3-20261117.py'
+      - 'scripts/operations/test_diagnose_offsite_exit3_20261117.py'
+      - 'scripts/operations/diagnose-offsite-exit3-phase-hostkey-20261120.py'
+      - 'scripts/operations/test_diagnose_offsite_exit3_phase_hostkey_20261120.py'
+      - '.github/workflows/kmj-offsite-exit3-minimal-qa.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: kmj-offsite-exit3-minimal-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  hermetic-exit3:
+    name: read-only-exit3-offline
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Checkout exact source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - name: Verify Python syntax without writing bytecode
+        run: |
+          python3 -I -B - <<'PY'
+          from pathlib import Path
+          files = [
+              'scripts/operations/diagnose-offsite-exit3-20261117.py',
+              'scripts/operations/test_diagnose_offsite_exit3_20261117.py',
+              'scripts/operations/diagnose-offsite-exit3-phase-hostkey-20261120.py',
+              'scripts/operations/test_diagnose_offsite_exit3_phase_hostkey_20261120.py',
+          ]
+          for name in files:
+              compile(Path(name).read_text(encoding='utf-8'), name, 'exec')
+          print('EXACT_SOURCE_PYTHON_SYNTAX=PASS')
+          PY
+      - name: Run isolated synthetic exact-invocation tests
+        run: |
+          python3 -I -B scripts/operations/test_diagnose_offsite_exit3_20261117.py -v
+          python3 -I -B scripts/operations/test_diagnose_offsite_exit3_phase_hostkey_20261120.py -v
+          echo 'KMJ_EXIT3_CURRENT_INVOCATION_OFFLINE_QA=PASS'
+      - name: Verify no privileged backup access in this job
+        run: |
+          test "$(id -u)" -ne 0
+          test ! -e /run/kmj-elite-offsite-backup
+          echo 'ROOT_BACKUP_AND_SYSTEMD_ACCESS=NOT_USED'
