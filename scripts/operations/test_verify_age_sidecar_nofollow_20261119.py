@@ -31,6 +31,21 @@ class SidecarTests(unittest.TestCase):
         with self.assertRaises(v.Rejected):
             v.verify(str(self.c), self.s.name)
 
+    def test_cipher_dot_segment_rejected(self):
+        path = str(self.root) + "/./" + self.c.name
+        with self.assertRaises(v.Rejected):
+            v.verify(path, str(self.s))
+
+    def test_sidecar_parent_segment_rejected(self):
+        path = str(self.root) + "/../" + self.root.name + "/" + self.s.name
+        with self.assertRaises(v.Rejected):
+            v.verify(str(self.c), path)
+
+    def test_double_slash_parent_rejected(self):
+        path = str(self.root) + "//" + self.c.name
+        with self.assertRaises(v.Rejected):
+            v.verify(path, str(self.s))
+
     def test_valid(self):
         v.verify(str(self.c), str(self.s))
 
