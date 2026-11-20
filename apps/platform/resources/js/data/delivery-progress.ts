@@ -10,6 +10,14 @@ export type DeliveryMilestone = {
 
 export const deliveryMilestones: DeliveryMilestone[] = [
     {
+        id: 'main-platform-global-security-headers-20261120',
+        title: 'Platform security headers — conservative response-only protection',
+        state: 'active',
+        detail: 'PR #911 adds a configurable response-only middleware for X-Content-Type-Options nosniff, strict-origin-when-cross-origin referrer policy, same-origin framing controls, base-uri and object-src restrictions, and HTTPS-only HSTS without subdomain preload. Existing controller-set headers take priority and an explicit server configuration flag can disable this middleware. Source-only pending current-head Foundation CI, independent review, approved staging, full backup and rollback evidence, and guarded owner production release; not yet deployed.',
+        evidence:
+            'PR #911 source includes feature tests and an opt-out guard; original run 44717757441 failed Foundation capability-progress accounting, not a proven HTTP or Laravel test failure. The actual latest-head CI, security header HTTP observations and owner rollout are separate release gates.',
+    },
+    {
         id: 'codebridge-openrouter-price-filtered-model-discovery-20261116',
         title: 'OpenRouter — price-filtered GET models without admitting paid inference',
         state: 'active',
