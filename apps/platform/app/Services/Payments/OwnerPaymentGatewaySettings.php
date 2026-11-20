@@ -132,12 +132,27 @@ final class OwnerPaymentGatewaySettings
         $this->ensureProvider($provider);
 
         DB::transaction(static function () use ($actor, $provider): void {
-            DB::table('payment_gateway_settings')->where('provider', $provider)->update([
+            // A revoke must leave a durable vault tombstone even if credentials
+            // had only been supplied by legacy environment configuration.
+            // upsert is atomic on the provider PK and preserves existing owner
+            // metadata/created_at while clearing all sensitive material.
+            DB::table('payment_gateway_settings')->upsert([[
+                'provider' => $provider,
+                'environment' => 'sandbox',
+                'merchant_status' => 'not_verified',
+                'international_requested' => false,
                 'encrypted_client_id' => null,
                 'encrypted_client_secret' => null,
                 'encrypted_webhook_secret' => null,
                 'updated_by' => $actor->getKey(),
+                'created_at' => now(),
                 'updated_at' => now(),
+            ]], ['provider'], [
+                'encrypted_client_id',
+                'encrypted_client_secret',
+                'encrypted_webhook_secret',
+                'updated_by',
+                'updated_at',
             ]);
 
             OperatorActionAudit::query()->create([
@@ -216,6 +231,12 @@ final class OwnerPaymentGatewaySettings
                 if ($plain !== '' && strlen($plain) <= 1024 && ! preg_match('/[\\x00-\\x1F\\x7F]/', $plain)) {
                     return $plain;
                 }
+            }
+
+            // Once an owner vault row exists it is authoritative. Never revive
+            // an older environment secret after a revoke or cipher corruption.
+            if ($record !== null) {
+                return null;
             }
         }
 
