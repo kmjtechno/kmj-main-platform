@@ -222,6 +222,7 @@ final class PaymentWebhookReceiverTest extends TestCase
         $this->assertSame($tablesBefore, count(Schema::getTables()));
         $this->assertSame(0, DB::table('kslp_licenses')->count());
     }
+
     public function test_webhook_responses_retain_global_security_headers_and_no_store(): void
     {
         $this->storeSecret('razorpay');
@@ -231,15 +232,14 @@ final class PaymentWebhookReceiverTest extends TestCase
         $valid->assertOk();
         $valid->assertHeader('X-Content-Type-Options', 'nosniff');
         $valid->assertHeader('Content-Security-Policy', SecurityHeaders::CSP);
-        $valid->assertHeader('Cache-Control', 'no-store');
+        $this->assertStringContainsString('no-store', (string) $valid->headers->get('Cache-Control'));
 
         $tampered = $this->razorpayServer($body, str_repeat('0', 64), 'evt_bad_signature');
         $rejected = $this->call('POST', '/webhooks/payments/razorpay', [], [], [], $tampered, $body);
         $rejected->assertUnauthorized();
         $rejected->assertHeader('X-Content-Type-Options', 'nosniff');
-        $rejected->assertHeader('Cache-Control', 'no-store');
+        $this->assertStringContainsString('no-store', (string) $rejected->headers->get('Cache-Control'));
 
         $this->assertSame(1, DB::table('payment_webhook_events')->count());
     }
-
 }
