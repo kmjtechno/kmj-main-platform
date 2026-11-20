@@ -220,5 +220,46 @@ class SidecarTests(unittest.TestCase):
         finally:
             v.os.read = original
 
+
+    def test_sidecar_inplace_mutation_during_cipher_hash(self):
+        # A sidecar opened before hashing must remain byte-for-byte stable.
+        original_read = v.os.read
+        changed = False
+        def mutate(fd, size):
+            nonlocal changed
+            data = original_read(fd, size)
+            if size == 1024 * 1024 and not changed:
+                changed = True
+                self.s.write_text(self.good.replace("  ", " *", 1), encoding="ascii")
+            return data
+        v.os.read = mutate
+        try:
+            with self.assertRaises(v.Rejected):
+                v.verify(str(self.c), str(self.s))
+            self.assertTrue(changed)
+        finally:
+            v.os.read = original_read
+
+    def test_cipher_inplace_mutation_during_hash(self):
+        # A stable pathname alone is insufficient: reject modified opened data.
+        original_read = v.os.read
+        changed = False
+        def mutate(fd, size):
+            nonlocal changed
+            data = original_read(fd, size)
+            if size == 1024 * 1024 and not changed:
+                changed = True
+                with self.c.open("r+b") as out:
+                    out.seek(0)
+                    out.write(b"X")
+            return data
+        v.os.read = mutate
+        try:
+            with self.assertRaises(v.Rejected):
+                v.verify(str(self.c), str(self.s))
+            self.assertTrue(changed)
+        finally:
+            v.os.read = original_read
+
 if __name__ == "__main__":
     unittest.main()
