@@ -7,7 +7,7 @@ use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
- * Conservative, response-only security headers for every web response.
+ * Conservative, response-only security headers for every Laravel HTTP response.
  *
  * Deliberately NOT a full script/style CSP: Inertia/Vite and the payment-provider checkouts need
  * inline and third-party scripts, so a strict script policy would break the site. This only adds
