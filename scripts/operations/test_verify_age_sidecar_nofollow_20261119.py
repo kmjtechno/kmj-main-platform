@@ -261,5 +261,51 @@ class SidecarTests(unittest.TestCase):
         finally:
             v.os.read = original_read
 
+
+    def test_sidecar_unlinked_during_cipher_hash(self):
+        # An opened sidecar FD is not proof that its original pathname survives.
+        original_read = v.os.read
+        changed = False
+        def unlink(fd, size):
+            nonlocal changed
+            data = original_read(fd, size)
+            if size == 1024 * 1024 and not changed:
+                changed = True
+                self.s.unlink()
+            return data
+        v.os.read = unlink
+        try:
+            with self.assertRaises((OSError, v.Rejected)):
+                v.verify(str(self.c), str(self.s))
+            self.assertTrue(changed)
+        finally:
+            v.os.read = original_read
+
+    def test_parent_replaced_by_symlink_at_final_rewalk(self):
+        # An open directory FD must not authorize a newly symlinked path.
+        archive = self.root / "archive"
+        archive.mkdir()
+        cipher = archive / self.c.name
+        sidecar = archive / self.s.name
+        self.c.rename(cipher)
+        self.s.rename(sidecar)
+        original_open = v.open_parent
+        calls = 0
+        def rewalk(path):
+            nonlocal calls
+            calls += 1
+            if calls == 3:
+                moved = self.root / "moved"
+                archive.rename(moved)
+                archive.symlink_to(moved, target_is_directory=True)
+            return original_open(path)
+        v.open_parent = rewalk
+        try:
+            with self.assertRaises((OSError, v.Rejected)):
+                v.verify(str(cipher), str(sidecar))
+            self.assertGreaterEqual(calls, 3)
+        finally:
+            v.open_parent = original_open
+
 if __name__ == "__main__":
     unittest.main()
