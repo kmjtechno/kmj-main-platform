@@ -17,6 +17,7 @@ use KMJ\MainPlatform\Catalog\Models\Product;
 use KMJ\MainPlatform\Commerce\Services\CommercialOrderService;
 use KMJ\MainPlatform\Commerce\Services\PaymentReconciler;
 use KMJ\MainPlatform\Organizations\Services\OrganizationCreator;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
 final class RazorpayPaymentAdapterTest extends TestCase
@@ -82,7 +83,7 @@ final class RazorpayPaymentAdapterTest extends TestCase
     }
 
     /** @param array<string, mixed> $override */
-    #[\PHPUnit\Framework\Attributes\DataProvider('unsettledPayments')]
+    #[DataProvider('unsettledPayments')]
     public function test_anything_short_of_a_captured_unrefunded_exact_payment_fails_closed(array $override): void
     {
         $this->vault();
