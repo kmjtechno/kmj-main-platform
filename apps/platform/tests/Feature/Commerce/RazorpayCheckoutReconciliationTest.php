@@ -115,9 +115,10 @@ final class RazorpayCheckoutReconciliationTest extends TestCase
     {
         $this->vault();
         $order = $this->commercialOrder('request:rzp-checkout:no-network-lock');
+        $testTransactionDepth = DB::transactionLevel();
         Http::fake([
-            'api.razorpay.com/v1/orders' => function (Request $request) {
-                $this->assertSame(0, DB::transactionLevel(), 'Provider HTTP must not run under a DB transaction.');
+            'api.razorpay.com/v1/orders' => function (Request $request) use ($testTransactionDepth) {
+                $this->assertSame($testTransactionDepth, DB::transactionLevel(), 'Provider HTTP must not hold a new order transaction.');
 
                 return Http::response([
                     'id' => 'order_TEST1',
@@ -149,11 +150,12 @@ final class RazorpayCheckoutReconciliationTest extends TestCase
         $this->vault();
         $order = $this->commercialOrder('request:rzp-checkout:provider-success-db-fail');
         $collider = $this->commercialOrder('request:rzp-checkout:other-order');
+        $testTransactionDepth = DB::transactionLevel();
         Http::fake([
-            'api.razorpay.com/v1/orders' => function (Request $request) use ($collider) {
-                // Inject a real unique constraint failure after the remote provider
-                // responds successfully. The durable intent must survive rollback.
-                $this->assertSame(0, DB::transactionLevel());
+            'api.razorpay.com/v1/orders' => function (Request $request) use ($collider, $testTransactionDepth) {
+                // Assert no extra order lock above the RefreshDatabase test transaction.
+                $this->assertSame($testTransactionDepth, DB::transactionLevel());
+                // Inject a real unique constraint failure after provider success.
                 DB::table('commerce_provider_orders')->insert([
                     'commercial_order_id' => $collider->getKey(),
                     'provider' => 'razorpay',
