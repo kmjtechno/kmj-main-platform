@@ -2,6 +2,7 @@
 
 use App\Http\Middleware\HandleAppearance;
 use App\Http\Middleware\HandleInertiaRequests;
+use App\Http\Middleware\SecurityHeaders;
 use App\Http\Middleware\SetPreferredLocale;
 use App\Http\Middleware\StagingDeploymentEvidence;
 use App\Http\Middleware\ThrottlePublicRegistration;
@@ -36,6 +37,7 @@ return Application::configure(basePath: dirname(__DIR__))
             SetPreferredLocale::class,
             HandleInertiaRequests::class,
             AddLinkHeadersForPreloadedAssets::class,
+            SecurityHeaders::class,
             StagingDeploymentEvidence::class,
             ThrottlePublicRegistration::class,
         ]);
