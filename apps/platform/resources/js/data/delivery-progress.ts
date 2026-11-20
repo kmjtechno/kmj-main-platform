@@ -10,6 +10,14 @@ export type DeliveryMilestone = {
 
 export const deliveryMilestones: DeliveryMilestone[] = [
     {
+        id: 'razorpay-prelink-inbox-retry-20261120',
+        title: 'Razorpay reconciliation — bounded retry for verified event before local provider order link',
+        state: 'active',
+        detail: 'The operator-run sandbox reconciliation no longer permanently discards a valid payment notification simply because the provider order link has not yet committed. Events with a missing local link enter awaiting_link with a 60-second retry delay and one-hour expiry. No external provider call or commercial-order confirmation occurs without a trusted local link.',
+        evidence:
+            'Positive regression confirms event-before-link eventually reconciles exactly once after the local link is created; negative cases prove unknown provider IDs expire without confirmation, no entitlement/license is issued, and already reconciled events are not reprocessed. No live charging enabled. Source-only draft review and exact-head CI are required before Claude-led merge, protected staging and owner recovery approval.',
+    },
+    {
         id: 'razorpay-order-link-webhook-reconcile-20261120',
         title: 'Razorpay sandbox order linkage and webhook-triggered order reconciliation',
         state: 'active',

@@ -168,18 +168,62 @@ final class RazorpayCheckoutReconciliationTest extends TestCase
         $this->assertSame(['reconciled' => 0, 'unmatched' => 0, 'rejected' => 0, 'retry_later' => 0], $again);
     }
 
-    public function test_event_for_unknown_provider_order_is_unmatched_and_changes_nothing(): void
+    public function test_event_for_unknown_provider_order_retries_then_expires_without_confirmation(): void
     {
         $this->vault();
         $this->fakeProvider();
         $order = $this->commercialOrder();
         $this->inbox('evt_2', orderId: 'order_UNKNOWN9');
 
-        $totals = app(RazorpayWebhookReconciler::class)->reconcilePending();
+        $first = app(RazorpayWebhookReconciler::class)->reconcilePending();
 
-        $this->assertSame(1, $totals['unmatched']);
+        $this->assertSame(1, $first['retry_later']);
+        $this->assertSame('awaiting_link', DB::table('payment_webhook_events')->value('processing_status'));
+        Http::assertNothingSent();
+
+        // A foreign provider order cannot keep a verified inbox row forever.
+        $this->travel(61)->minutes();
+        $expired = app(RazorpayWebhookReconciler::class)->reconcilePending();
+
+        $this->assertSame(1, $expired['unmatched']);
+        $this->assertSame('LINK_WINDOW_EXPIRED', DB::table('payment_webhook_events')->value('processing_note'));
         $this->assertSame('requested', $order->refresh()->status);
         $this->assertSame('unmatched', DB::table('payment_webhook_events')->value('processing_status'));
+        $this->assertDatabaseCount('entitlements', 0);
+        Http::assertNothingSent();
+    }
+
+    public function test_signed_webhook_arriving_before_link_is_retried_and_reconciled_once(): void
+    {
+        $this->vault();
+        $this->fakeProvider();
+        $order = $this->commercialOrder('request:rzp-checkout:before-link');
+        $this->inbox('evt_before_link');
+
+        $reconciler = app(RazorpayWebhookReconciler::class);
+        $first = $reconciler->reconcilePending();
+
+        $this->assertSame(1, $first['retry_later']);
+        $this->assertSame('awaiting_link', DB::table('payment_webhook_events')->value('processing_status'));
+        $this->assertSame('requested', $order->refresh()->status);
+        Http::assertNothingSent();
+
+        app(RazorpayCheckoutOrders::class)->open($order->getKey(), self::AMOUNT);
+
+        // Avoid retry storm: an event waiting for a link has a short backoff.
+        $tooEarly = $reconciler->reconcilePending();
+        $this->assertSame(['reconciled' => 0, 'unmatched' => 0, 'rejected' => 0, 'retry_later' => 0], $tooEarly);
+
+        $this->travel(61)->seconds();
+        $later = $reconciler->reconcilePending();
+
+        $this->assertSame(1, $later['reconciled']);
+        $this->assertSame('confirmed', $order->refresh()->status);
+        $this->assertSame('razorpay:pay_ABC123', $order->confirmation_reference);
+        $this->assertSame('reconciled', DB::table('payment_webhook_events')->value('processing_status'));
+        $this->assertDatabaseCount('entitlements', 0);
+        $this->assertSame(['reconciled' => 0, 'unmatched' => 0, 'rejected' => 0, 'retry_later' => 0], $reconciler->reconcilePending());
+        Http::assertSentCount(2);
     }
 
     public function test_amount_mismatch_with_the_server_expected_amount_is_rejected(): void
