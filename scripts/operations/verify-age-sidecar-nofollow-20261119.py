@@ -44,6 +44,10 @@ def open_parent(path):
         raise
 
 def verify(cipher_path, sidecar_path):
+    # Freeze the pathname reference frame: cwd changes must not redirect a
+    # final identity rewalk to another tree after the initial open.
+    if not os.path.isabs(cipher_path) or not os.path.isabs(sidecar_path):
+        raise Rejected("absolute paths required")
     if os.path.abspath(cipher_path) == os.path.abspath(sidecar_path):
         raise Rejected("same input")
     cparent, cname = open_parent(cipher_path)
