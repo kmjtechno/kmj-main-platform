@@ -181,7 +181,7 @@ final class RazorpayCheckoutReconciliationTest extends TestCase
         try {
             $service->open($order->getKey(), self::AMOUNT);
             $this->fail('Local provider-link conflict must not be hidden.');
-        } catch (\\Illuminate\\Database\\QueryException) {
+        } catch (\Illuminate\Database\QueryException) {
             $this->addToAssertionCount(1);
         }
 
