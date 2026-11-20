@@ -182,7 +182,7 @@ export default function PaymentGatewayOnboarding({
                 <SetupStage
                     done={webhookSecretSaved}
                     label="3. Store sandbox webhook secret"
-                    detail="A stored secret does NOT mean a webhook endpoint or payment-event reconciliation is configured."
+                    detail="Save the same secret in the provider dashboard webhook. A stored secret alone does not prove webhook delivery: a provider-signed event must reach the KMJ webhook URL shown below."
                 />
                 <SetupStage
                     done={false}
@@ -302,9 +302,10 @@ export default function PaymentGatewayOnboarding({
             <div className="mt-6 grid gap-4 rounded-xl border border-amber-500/20 bg-amber-500/[0.06] p-4 text-xs leading-6 text-amber-100 sm:grid-cols-2">
                 <p className="flex gap-2">
                     <LockKeyhole className="mt-1 size-4 shrink-0" />
-                    Do not configure a public webhook URL before KMJ has
-                    deployed and verified a dedicated provider-specific HTTPS
-                    receiver. Never substitute an arbitrary URL.
+                    Use only the KMJ webhook URL shown on this page, the
+                    dedicated provider-specific HTTPS receiver. Never
+                    substitute an arbitrary URL. Delivery counts as proven only
+                    after a provider-signed event appears below.
                 </p>
                 <p className="flex gap-2">
                     <ShieldCheck className="mt-1 size-4 shrink-0" />
