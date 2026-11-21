@@ -12,7 +12,7 @@ CONFIRM=${3:-}
 [[ "$EXPECTED" =~ ^platform-[a-f0-9]{12}$ ]] || fail EXPECTED_RELEASE
 [[ "$(hostname -s | tr '[:upper:]' '[:lower:]')" == kmj-elite ]] || fail HOST
 [[ "$MODE" != --apply || ( "$(id -u)" == 0 && "$CONFIRM" == CONNECT_EXISTING_POSTFIX ) ]] || fail OWNER_CONFIRMATION
-for cmd in readlink stat systemctl postconf ss python3 runuser php8.4 mktemp cp mv chown chmod; do
+for cmd in readlink stat systemctl postconf ss python3 runuser php8.4 mktemp cp mv cmp chown chmod; do
  command -v "$cmd" >/dev/null || fail "MISSING_TOOL_${cmd}"
 done
 RELEASE=/home/kmjprod/releases/$EXPECTED
@@ -110,6 +110,12 @@ for k,v in values.items():
     if k not in keys:new+=f'{k}={v}\n'
 open(dst,'wb').write(new.encode('utf8'))
 PY
+# A second apply is a no-op if the live Laravel doctor and scoped env already agree.
+if cmp -s -- "$ENV" "$TMP" && [[ "$DOC_RC" == 0 ]]; then
+  rm -f -- "$TMP"
+  echo 'KMJ_MAIL_BRIDGE=ALREADY_CONFIGURED_NO_CHANGE'
+  exit 0
+fi
 chown --reference="$ENV" "$TMP"
 chmod --reference="$ENV" "$TMP"
 mv -fT -- "$TMP" "$ENV"
