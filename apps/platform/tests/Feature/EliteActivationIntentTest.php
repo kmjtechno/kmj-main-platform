@@ -186,23 +186,36 @@ final class EliteActivationIntentTest extends TestCase
         }
     }
 
-    public function test_wrong_sha_or_invented_confirm_action_fails_validation(): void
+    public function test_bad_shape_or_invented_confirm_action_fails_validation(): void
     {
         $this->installSyntheticTrustedProof();
         $owner = $this->owner();
 
         foreach ([
             ['approved_sha' => 'latest'],
+            ['expected_current_release' => 'arbitrary-current'],
+            ['confirmation' => 'FORCE_DEPLOY'],
+        ] as $bad) {
+            $field = array_key_first($bad);
+            $this->actingAs($owner)->withSession(['auth.password_confirmed_at' => time()])
+                ->post('/operator/ops/actions/release-activation-intent', array_replace($this->request(), $bad))
+                ->assertSessionHasErrors($field);
+            $this->assertFileDoesNotExist($this->requestPath);
+        }
+    }
+
+    public function test_well_shaped_but_incorrect_exact_sha_fails_preflight(): void
+    {
+        $this->installSyntheticTrustedProof();
+        $owner = $this->owner();
+
+        foreach ([
             ['approved_sha' => str_repeat('c', 40)],
             ['expected_current_release' => 'platform-'.str_repeat('c', 12)],
-            ['confirmation' => 'FORCE_DEPLOY'],
         ] as $bad) {
             $this->actingAs($owner)->withSession(['auth.password_confirmed_at' => time()])
                 ->post('/operator/ops/actions/release-activation-intent', array_replace($this->request(), $bad))
-                ->assertSessionHasErrors(
-                    array_key_first($bad) === 'confirmation' || strlen((string) current($bad)) !== 40
-                        ? array_key_first($bad) : [],
-                );
+                ->assertStatus(409);
             $this->assertFileDoesNotExist($this->requestPath);
         }
     }
