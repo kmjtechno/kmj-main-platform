@@ -16,7 +16,7 @@ final class RouteScorer
 
     /**
      * @param  list<array<string, mixed>>  $routes
-     * @param  callable(string): array{low: bool, fails: int}  $signals  per provider id
+     * @param  callable(string): array{low: bool, fails: int, priority?: int}  $signals  per provider id
      * @return list<array<string, mixed>>
      */
     public function order(array $routes, string $profile, callable $signals): array
@@ -43,6 +43,8 @@ final class RouteScorer
                 $score -= 8;
             }
             $score -= min(6, $signal['fails'] * 2);
+            // Owner priority (lower = preferred) is a small nudge: it breaks ties and never overrides task fit.
+            $score += max(-3, min(3, intdiv(100 - ($signal['priority'] ?? 100), 10)));
             $scored[] = ['score' => $score, 'index' => $index, 'route' => $route];
         }
 

@@ -46,9 +46,11 @@ final class ModelFabricGateway
         if ($plan['status'] === ModelFabricRouter::NO_ROUTE) {
             return $this->fail(ModelFabricRouter::NO_ROUTE, 0, $profile);
         }
+        $limits = $this->providerLimits($organizationId);
         $plan['routes'] = $this->scorer->order($plan['routes'], $profile, fn (string $id): array => [
-            'low' => $this->nearLimit($id),
+            'low' => $this->nearLimit($id) || $this->nearDailyCap($limits[$id] ?? null),
             'fails' => (int) Cache::get($this->failKey($id), 0),
+            'priority' => (int) ($limits[$id]['priority'] ?? 100),
         ]);
 
         $attempts = 0;
@@ -59,6 +61,12 @@ final class ModelFabricGateway
             }
             $providerId = (string) $route['provider_id'];
             if (self::coolingUntil($providerId) !== null) {
+                continue;
+            }
+            // Owner's daily cap: skip before the provider's own limit can be hit.
+            if (($limits[$providerId]['cap'] ?? null) !== null && $limits[$providerId]['used'] >= $limits[$providerId]['cap']) {
+                $last = 'daily_cap_reached';
+
                 continue;
             }
             $provider = AiProvider::query()->where('organization_id', $organizationId)->whereKey($providerId)->first();
@@ -92,6 +100,38 @@ final class ModelFabricGateway
         }
 
         return $this->fail($last, $attempts, $profile);
+    }
+
+    /**
+     * Owner priority/cap plus today's routed attempts (UTC day) per provider of this organization.
+     *
+     * @return array<string, array{priority: int, cap: ?int, used: int}>
+     */
+    private function providerLimits(string $organizationId): array
+    {
+        $used = AiModelRequest::query()
+            ->where('organization_id', $organizationId)
+            ->where('created_at', '>=', now()->utc()->startOfDay())
+            ->selectRaw('ai_provider_id, count(*) as c')
+            ->groupBy('ai_provider_id')
+            ->pluck('c', 'ai_provider_id');
+
+        $out = [];
+        foreach (AiProvider::query()->where('organization_id', $organizationId)->get(['id', 'priority', 'daily_request_cap']) as $provider) {
+            $out[$provider->id] = [
+                'priority' => (int) $provider->priority,
+                'cap' => $provider->daily_request_cap === null ? null : (int) $provider->daily_request_cap,
+                'used' => (int) ($used[$provider->id] ?? 0),
+            ];
+        }
+
+        return $out;
+    }
+
+    /** @param  array{priority: int, cap: ?int, used: int}|null  $limit */
+    private function nearDailyCap(?array $limit): bool
+    {
+        return $limit !== null && $limit['cap'] !== null && $limit['cap'] > 0 && $limit['used'] * 10 >= $limit['cap'] * 8;
     }
 
     /** Unix time until which the provider is skipped, or null when it may be used. */

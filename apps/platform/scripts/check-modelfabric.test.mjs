@@ -75,3 +75,14 @@ void test('API endpoint is bearer-hashed, throttled, non-streaming and ignores c
     assert.match(controller, /Flashed for exactly one page load/);
     assert.match(read('routes/model-fabric.php'), /tokens\.store/);
 });
+
+void test('owner daily caps and priority are enforced before provider limits and stay owner-only', () => {
+    const gateway = read('app/Services/AiProviders/ModelFabricGateway.php');
+    const scorer = read('app/Services/AiProviders/RouteScorer.php');
+    assert.match(gateway, /daily_cap_reached/);
+    assert.match(gateway, /nearDailyCap/);
+    assert.match(scorer, /never overrides task fit/);
+    assert.match(controller, /provider_limits_saved/);
+    assert.match(read('routes/model-fabric.php'), /providers\.update/);
+    assert.match(page, /Save limits/);
+});
