@@ -10,6 +10,14 @@ export type DeliveryMilestone = {
 
 export const deliveryMilestones: DeliveryMilestone[] = [
     {
+        id: 'kslp-v1-strict-signed-verifier-20261121',
+        title: 'Strict signed KSLP v1 license verifier in PHP and Rust',
+        state: 'active',
+        detail: 'Source-only hardening carried from the reviewed draft stack: signature-first claim parsing, bounded v1 types, rejection of non-canonical base64url, duplicate JSON members and alternate serialization, with signed negative vectors in PHP and Rust. No route, issuance or entitlement change.',
+        evidence:
+            'Exact-head CI runs the PHP unit vectors and Rust tests; nothing deployed yet.',
+    },
+    {
         id: 'single-licensing-hub-navigation-20261121',
         title: 'One Licensing Hub entry in navigation',
         state: 'active',
