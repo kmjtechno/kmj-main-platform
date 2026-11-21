@@ -50,11 +50,12 @@ type IssuedKey = {
     product_code: string;
 };
 
-type Props = {
+export type DeveloperWorkspaceProps = {
     organizations: Organization[];
     applications: Application[];
     keys: LicenseKey[];
     canIssueKeys: boolean;
+    canAccessOwnerHub: boolean;
     newKey: IssuedKey | null;
 };
 
@@ -174,13 +175,15 @@ function sdkConfiguration(language: string, productCode: string): string {
     }
 }
 
-export default function DeveloperApps({
+export function DeveloperAppsWorkspace({
     organizations,
     applications,
     keys,
     canIssueKeys,
+    canAccessOwnerHub,
     newKey,
-}: Props) {
+    embedded = false,
+}: DeveloperWorkspaceProps & { embedded?: boolean }) {
     const [language, setLanguage] = useState<string>('TypeScript');
     const [selectedApp, setSelectedApp] = useState<string>('');
     const [copied, setCopied] = useState(false);
@@ -218,6 +221,11 @@ export default function DeveloperApps({
     );
     const canRegister =
         canIssueKeys && selectedIssuer?.issuer_status === 'active';
+    const selectedKeyIssuer = organizations.find(
+        (org) => org.id === issueKey.data.organization_id,
+    );
+    const canGenerateTrialKey =
+        canIssueKeys && selectedKeyIssuer?.issuer_status === 'active';
 
     const downloadSetup = () => {
         const extension: Record<string, string> = {
@@ -257,9 +265,9 @@ export default function DeveloperApps({
 
     return (
         <>
-            <Head title="KMJ Licensing Hub · Developer Apps" />
-            <div className="owner-shared-page flex min-w-0 flex-1 flex-col gap-6 p-4 sm:p-7">
-                <section className="overflow-hidden rounded-2xl border bg-gradient-to-br from-[#111b29] via-[#10151f] to-[#231523] p-6 text-white sm:p-8">
+            {!embedded && <Head title="KMJ Licensing Hub · Developer Apps" />}
+            <div className={embedded ? 'flex min-w-0 flex-col gap-6' : 'owner-shared-page flex min-w-0 flex-1 flex-col gap-6 p-4 sm:p-7'}>
+                <section className={embedded ? 'hidden' : 'overflow-hidden rounded-2xl border bg-gradient-to-br from-[#111b29] via-[#10151f] to-[#231523] p-6 text-white sm:p-8'}>
                     <div className="flex flex-col justify-between gap-6 lg:flex-row lg:items-center">
                         <div className="max-w-2xl">
                             <div className="mb-3 flex items-center gap-2 text-xs font-bold tracking-[0.14em] text-amber-300 uppercase">
@@ -319,6 +327,65 @@ export default function DeveloperApps({
                             </div>
                         ))}
                     </div>
+                </section>
+
+                <section
+                    aria-label="KMJ licensing authority and workspaces"
+                    className="bg-card rounded-2xl border p-5 sm:p-6"
+                >
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                        <div>
+                            <h2 className="text-base font-bold">
+                                One KMJ Licensing Hub · Developer workspace
+                            </h2>
+                            <p className="text-muted-foreground mt-1 max-w-3xl text-sm leading-6">
+                                This is your organization-scoped app and trial-key
+                                workspace. The Super Admin Licensing Hub governs
+                                platform-wide CloudOS commercial licenses,
+                                policies, renewals and audit. These are different
+                                records under the same KMJ authority: an existing
+                                commercial license does not create a developer
+                                issuer subscription.
+                            </p>
+                        </div>
+                        {canAccessOwnerHub && (
+                            <Link
+                                href="/operator/kslp#issuer-workspaces"
+                                className="inline-flex min-h-10 items-center gap-2 rounded-xl border px-3 py-2 text-xs font-bold hover:border-red-500/40"
+                            >
+                                Super Admin · Issuer overview
+                                <ArrowRight className="size-4" />
+                            </Link>
+                        )}
+                    </div>
+                    <div className="mt-4 grid gap-3 sm:grid-cols-3">
+                        <div className="rounded-xl border p-3">
+                            <p className="text-xs font-semibold">Developer rollout</p>
+                            <p className="mt-1 text-sm font-bold">
+                                {canIssueKeys ? 'Available for authorized issuers' : 'Protected — globally disabled'}
+                            </p>
+                        </div>
+                        <div className="rounded-xl border p-3">
+                            <p className="text-xs font-semibold">Selected issuer subscription</p>
+                            <p className="mt-1 text-sm font-bold">
+                                {selectedIssuer?.issuer_status ?? 'No organization'}
+                            </p>
+                        </div>
+                        <div className="rounded-xl border p-3">
+                            <p className="text-xs font-semibold">Commercial customer licenses</p>
+                            <p className="text-muted-foreground mt-1 text-xs">
+                                Issued by governed KSLP entitlement authority,
+                                not by an unverified trial-key form
+                            </p>
+                        </div>
+                    </div>
+                    {!canRegister && organizations.length > 0 && (
+                        <p role="status" className="text-muted-foreground mt-3 text-xs leading-5">
+                            {canIssueKeys
+                                ? 'This organization has no currently active issuer subscription. Owner approval and recorded commercial entitlement are required before app registration.'
+                                : 'Developer issuance is paused by a platform-wide release gate. An active owner-issued license does not bypass this gate or create an issuer subscription.'}
+                        </p>
+                    )}
                 </section>
 
                 {!canIssueKeys && (
@@ -676,7 +743,7 @@ export default function DeveloperApps({
                             <button
                                 type="submit"
                                 disabled={
-                                    !canIssueKeys ||
+                                    !canGenerateTrialKey ||
                                     !issueKey.data.product_code ||
                                     issueKey.processing
                                 }
@@ -937,4 +1004,9 @@ export default function DeveloperApps({
             </div>
         </>
     );
+}
+
+// Non-owner developers retain a restricted view of the SAME KSLP authority.
+export default function DeveloperApps(props: DeveloperWorkspaceProps) {
+    return <DeveloperAppsWorkspace {...props} />;
 }
