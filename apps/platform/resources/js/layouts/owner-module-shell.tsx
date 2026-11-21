@@ -183,7 +183,10 @@ export default function OwnerModuleShell({
     }, [navOpen]);
 
     return (
-        <div className="owner-lock owner-module-shell" data-owner-design="command-center-v1">
+        <div
+            className="owner-lock owner-module-shell"
+            data-owner-design="command-center-v1"
+        >
             <a className="owner-skip" href="#owner-main">
                 Skip to owner module
             </a>
