@@ -103,6 +103,26 @@ final class OperatorDeliveryControlTest extends TestCase
         $this->assertSame(['run_id' => 999], $request['parameters']);
     }
 
+    public function test_a_second_delivery_request_cannot_replace_the_first_pending_request(): void
+    {
+        $owner = $this->platformOwner();
+        $queue = app(\\App\\Services\\Operations\\DeliveryControlRequestQueue::class);
+        $queue->enqueue($owner, 'dispatch_worker');
+
+        $original = File::get($this->path);
+
+        try {
+            $queue->enqueue($owner, 'rerun_failed_ci', null, 999);
+            $this->fail('A pending request must never be overwritten.');
+        } catch (\\RuntimeException $exception) {
+            $this->assertStringContainsString('already pending', $exception->getMessage());
+        }
+
+        $this->assertSame($original, File::get($this->path));
+        $this->assertDatabaseCount('operator_action_audits', 1);
+        $this->assertSame([], glob($this->path.'.*.tmp') ?: []);
+    }
+
     public function test_unknown_or_high_risk_actions_fail_closed(): void
     {
         $owner = $this->platformOwner();
