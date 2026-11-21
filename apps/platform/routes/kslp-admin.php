@@ -9,6 +9,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
 
@@ -195,6 +196,44 @@ Route::get('operator/kslp', function (Request $request, PlatformOwnerAccess $acc
         'events' => DB::table('kslp_license_events')->latest('created_at')->limit(50)->get(),
     ]);
 })->name('operator.kslp')->middleware('password.confirm');
+
+// One-click owner-initiated deletion of ONLY exact-preview, old, standalone
+// email-unverified accounts. Disabled until protected backup/release approval.
+// No blanket DELETE where email_verified_at IS NULL is ever allowed.
+Route::post('operator/kslp/unverified-accounts/purge', function (
+    Request $request,
+    PlatformOwnerAccess $access,
+    UnverifiedAccountCleanup $cleanup,
+) {
+    $actor = $request->user();
+    abort_unless($actor instanceof User, 401);
+    $access->require($actor);
+    abort_unless((bool) config('services.kmj_unverified_account_cleanup.enabled', false), 503);
+
+    $values = $request->validate([
+        'confirmation' => ['required', 'in:REMOVE_UNVERIFIED_EMAIL_USERS'],
+        'expected' => ['required', 'integer', 'min:0', 'max:100'],
+        'sha256' => ['required', 'string', 'regex:/\\A[a-f0-9]{64}\\z/D'],
+    ]);
+    try {
+        $removed = $cleanup->purge((int) $values['expected'], $values['sha256']);
+    } catch (RuntimeException) {
+        return back()->withErrors([
+            'cleanup' => 'Cohort changed or protected account linkage detected. Refresh the preview; no partial deletion.',
+        ]);
+    }
+
+    Log::notice('KMJ_OWNER_UNVERIFIED_EMAIL_CLEANUP', [
+        'actor_id' => (int) $actor->id,
+        'deleted_count' => $removed,
+        'preview_sha256' => $values['sha256'],
+        'email_addresses_logged' => false,
+    ]);
+
+    return redirect('/operator/kslp#unverified-accounts')
+        ->with('success', "Removed {$removed} eligible old unverified accounts.");
+})->middleware(['password.confirm', 'throttle:1,1'])
+    ->name('operator.kslp.unverified-cleanup');
 
 Route::post('operator/kslp/licenses', function (Request $request, PlatformOwnerAccess $access, KslpLicenseControlPlane $control) {
     $user = $request->user();
