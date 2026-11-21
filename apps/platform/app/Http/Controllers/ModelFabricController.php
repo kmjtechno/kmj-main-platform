@@ -6,6 +6,7 @@ namespace App\Http\Controllers;
 
 use App\Models\AiModelEvidence;
 use App\Models\AiModelRequest;
+use App\Models\AiModelToken;
 use App\Models\AiProvider;
 use App\Models\OperatorActionAudit;
 use App\Models\User;
@@ -16,6 +17,7 @@ use App\Services\AiProviders\ResolvesAiProviderScope;
 use App\Services\PlatformOwnerAccess;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -67,6 +69,17 @@ final class ModelFabricController extends Controller
                 'revoked' => $row->revoked_at !== null,
             ])->values(),
             'analytics' => $this->analytics($orgId, $providers->all()),
+            'newToken' => session('modelfabric_new_token'),
+            'tokens' => AiModelToken::query()->where('organization_id', $orgId)->orderByDesc('created_at')->limit(50)->get()
+                ->map(fn (AiModelToken $t): array => [
+                    'id' => $t->id,
+                    'name' => $t->name,
+                    'prefix' => $t->token_prefix,
+                    'private_source' => $t->private_source,
+                    'expires_at' => $t->expires_at->toIso8601String(),
+                    'last_used_at' => $t->last_used_at?->toIso8601String(),
+                    'active' => $t->isUsable(),
+                ])->values(),
             'plans' => [
                 'chat' => $this->router->plan($orgId, 'chat', false),
                 'privateSource' => $this->router->plan($orgId, 'code', true),
@@ -147,6 +160,46 @@ final class ModelFabricController extends Controller
         $this->audit($request, 'model_fabric.evidence_revoked', ['model' => $row->model_id]);
 
         return back()->with('status', 'Evidence revoked. The model is no longer routable.');
+    }
+
+    public function storeToken(Request $request): RedirectResponse
+    {
+        $scope = $this->owner($request, true);
+        $data = $request->validate([
+            'name' => ['required', 'string', 'min:3', 'max:80'],
+            'valid_days' => ['required', 'integer', 'min:1', 'max:90'],
+            'private_source' => ['required', 'boolean'],
+        ]);
+
+        $plain = AiModelToken::PREFIX.Str::random(48);
+        AiModelToken::query()->create([
+            'organization_id' => $scope['organization_id'],
+            'name' => $data['name'],
+            'token_hash' => AiModelToken::hash($plain),
+            'token_prefix' => substr($plain, 0, 12),
+            'private_source' => (bool) $data['private_source'],
+            'created_by' => (int) $this->user($request)->id,
+            'expires_at' => now()->addDays((int) $data['valid_days']),
+        ]);
+        $this->audit($request, 'model_fabric.token_created', [
+            'name' => $data['name'],
+            'valid_days' => (int) $data['valid_days'],
+            'private_source' => (bool) $data['private_source'],
+        ]);
+
+        // Flashed for exactly one page load; the plain token is never stored or logged.
+        return back()->with('status', 'Token created. Copy it now: it is shown only once.')->with('modelfabric_new_token', $plain);
+    }
+
+    public function revokeToken(Request $request, string $token): RedirectResponse
+    {
+        $scope = $this->owner($request, true);
+        $row = AiModelToken::query()->where('organization_id', $scope['organization_id'])->whereKey($token)->firstOrFail();
+        $row->revoked_at = now();
+        $row->save();
+        $this->audit($request, 'model_fabric.token_revoked', ['name' => $row->name]);
+
+        return back()->with('status', 'Token revoked. It stops working immediately.');
     }
 
     /**
