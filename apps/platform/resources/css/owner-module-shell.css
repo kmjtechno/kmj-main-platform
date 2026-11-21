@@ -400,7 +400,7 @@
 }
 
 .owner-module-shell .owner-admin-page
-    :is(input, select, textarea) {
+    :is(input:not([type='checkbox']):not([type='radio']):not([type='hidden']), select, textarea) {
     max-width: 100%;
     min-height: 42px;
     border-radius: 10px;
@@ -410,7 +410,7 @@
 }
 
 .owner-module-shell .owner-admin-page
-    :is(input, select, textarea):focus-visible {
+    :is(input:not([type='checkbox']):not([type='radio']):not([type='hidden']), select, textarea):focus-visible {
     outline: 2px solid #f43b5c;
     outline-offset: 2px;
     border-color: #f43b5c;
