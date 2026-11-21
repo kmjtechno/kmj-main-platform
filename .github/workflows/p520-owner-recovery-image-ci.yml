@@ -1,0 +1,40 @@
+name: P520 owner recovery image — isolated source QA
+on:
+  pull_request:
+    paths:
+      - "scripts/windows/Dockerfile.KMJ-P520-RECOVERY-OWNER-20261121"
+      - "scripts/windows/test-P520-OWNER-RECOVERY-IMAGE-20261121.mjs"
+      - ".github/workflows/p520-owner-recovery-image-ci.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-nonroot-probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout exact tested PR contents
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      - name: Static negative regression
+        run: node --test scripts/windows/test-P520-OWNER-RECOVERY-IMAGE-20261121.mjs
+      - name: Build only in disposable hosted CI (no P520 mutation)
+        run: |
+          set -Eeuo pipefail
+          docker build --platform linux/amd64 --pull=false --no-cache \
+            --tag kmj-p520-pg18-age-ci:pr \
+            --file scripts/windows/Dockerfile.KMJ-P520-RECOVERY-OWNER-20261121 scripts/windows
+      - name: Probe no-network nonroot AGE and PG18; no secrets mounted
+        run: |
+          set -Eeuo pipefail
+          image="$(docker image inspect --format '{{.Id}}' kmj-p520-pg18-age-ci:pr)"
+          [[ "$image" =~ ^sha256:[a-f0-9]{64}$ ]]
+          docker run --rm --pull=never --network=none --read-only \
+            --cap-drop=ALL --security-opt=no-new-privileges \
+            --user=postgres --memory=384m --cpus=1 --pids-limit=32 \
+            --entrypoint=/bin/sh "$image" -ec \
+            'test "$(id -u)" -ne 0; age --version >/dev/null; python3 --version >/dev/null; pg_restore --version >/dev/null; initdb --version >/dev/null; pg_ctl --version >/dev/null'
+          echo "P520_CI_SOURCE_IMAGE=PASS_NONROOT_NETWORKLESS_TOOLS"
+          echo "OWNER_LOCAL_IMAGE=NOT_INSTALLED"
+          echo "INDEPENDENT_P520_RESTORE=NOT_EXECUTED"
