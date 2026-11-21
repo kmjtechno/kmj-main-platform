@@ -48,12 +48,23 @@ type Plan = {
     reasons: { provider: string; reason: string }[];
 };
 
+type Analytics = {
+    provider: string;
+    requests: number;
+    ok: number;
+    p50_ms: number | null;
+    p95_ms: number | null;
+    last_error: string | null;
+    cooling_until: string | null;
+};
+
 type Props = {
     status?: string | null;
     canManage: boolean;
     maxEvidenceDays: number;
     providers: Provider[];
     evidence: Evidence[];
+    analytics: Analytics[];
     plans: { chat: Plan; privateSource: Plan };
 };
 
@@ -109,6 +120,7 @@ export default function OperatorModelFabric({
     maxEvidenceDays,
     providers,
     evidence,
+    analytics,
     plans,
 }: Props) {
     const { errors } = usePage().props as { errors?: Record<string, string> };
@@ -225,6 +237,44 @@ export default function OperatorModelFabric({
                                 {provider.discovered_model_count} discovered
                                 {provider.error_code
                                     ? ` · last error ${provider.error_code}`
+                                    : ''}
+                            </li>
+                        ))}
+                    </ul>
+                </section>
+
+                <section
+                    aria-label="Routing activity"
+                    className="kmj-admin-metric p-5"
+                >
+                    <h2 className="text-lg font-bold">
+                        Routing activity (last 24 hours)
+                    </h2>
+                    <p className="text-muted-foreground mt-1 text-xs">
+                        Metadata only: no prompt or response is stored. Failover
+                        tries at most 3 verified-zero routes, then cools a
+                        rate-limited or failing provider down. Discovery
+                        refreshes automatically every 6 hours.
+                    </p>
+                    <ul
+                        className="mt-3 divide-y divide-white/10 text-sm"
+                        data-testid="modelfabric-analytics"
+                    >
+                        {analytics.length === 0 ? (
+                            <li className="py-2">No provider connected yet.</li>
+                        ) : null}
+                        {analytics.map((row) => (
+                            <li key={row.provider} className="py-2">
+                                <strong>{row.provider}</strong> · {row.requests}{' '}
+                                request(s), {row.ok} ok
+                                {row.p50_ms !== null
+                                    ? ` · p50 ${row.p50_ms} ms, p95 ${row.p95_ms} ms`
+                                    : ''}
+                                {row.last_error
+                                    ? ` · last error ${row.last_error}`
+                                    : ''}
+                                {row.cooling_until
+                                    ? ` · cooling down until ${new Date(row.cooling_until).toLocaleTimeString()}`
                                     : ''}
                             </li>
                         ))}

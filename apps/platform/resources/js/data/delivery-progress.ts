@@ -10,6 +10,14 @@ export type DeliveryMilestone = {
 
 export const deliveryMilestones: DeliveryMilestone[] = [
     {
+        id: 'modelfabric-failover-gateway-20261121',
+        title: 'ModelFabric: verified-zero failover, cooldowns, auto-refresh and routing analytics',
+        state: 'active',
+        detail: 'Source-only, ideas adopted from the MIT-licensed FreeLLMAPI project and reimplemented in Laravel: a gateway walks only routes the verified-zero planner admits, tries at most 3, cools down rate-limited or failing providers, stops routing a rejected key and logs metadata only (no prompt, response or key). Model discovery now refreshes every 6 hours through the read-only catalog call so routes no longer silently go stale, and the owner page shows 24-hour request, success and latency figures.',
+        evidence:
+            'Feature tests use faked HTTP and cover failover, cooldown skip, rejected key and metadata-only logging; exact-head CI only, nothing deployed, no real provider was called.',
+    },
+    {
         id: 'modelfabric-verified-zero-router-20261121',
         title: 'ModelFabric & AI: owner page with verified-zero price evidence and route plan',
         state: 'active',

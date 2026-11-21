@@ -5,9 +5,11 @@ declare(strict_types=1);
 namespace App\Http\Controllers;
 
 use App\Models\AiModelEvidence;
+use App\Models\AiModelRequest;
 use App\Models\AiProvider;
 use App\Models\OperatorActionAudit;
 use App\Models\User;
+use App\Services\AiProviders\ModelFabricGateway;
 use App\Services\AiProviders\ModelFabricRouter;
 use App\Services\AiProviders\ProviderManager;
 use App\Services\AiProviders\ResolvesAiProviderScope;
@@ -64,6 +66,7 @@ final class ModelFabricController extends Controller
                 'current' => $row->isCurrent(),
                 'revoked' => $row->revoked_at !== null,
             ])->values(),
+            'analytics' => $this->analytics($orgId, $providers->all()),
             'plans' => [
                 'chat' => $this->router->plan($orgId, 'chat', false),
                 'privateSource' => $this->router->plan($orgId, 'code', true),
@@ -144,6 +147,51 @@ final class ModelFabricController extends Controller
         $this->audit($request, 'model_fabric.evidence_revoked', ['model' => $row->model_id]);
 
         return back()->with('status', 'Evidence revoked. The model is no longer routable.');
+    }
+
+    /**
+     * Last 24 hours of routed attempts per provider (metadata only).
+     *
+     * @param  array<int, AiProvider>  $providers
+     * @return list<array<string, mixed>>
+     */
+    private function analytics(string $orgId, array $providers): array
+    {
+        $rows = AiModelRequest::query()
+            ->where('organization_id', $orgId)
+            ->where('created_at', '>=', now()->subDay())
+            ->orderByDesc('created_at')
+            ->limit(5000)
+            ->get(['ai_provider_id', 'outcome', 'latency_ms', 'error_code']);
+
+        $out = [];
+        foreach ($providers as $provider) {
+            $mine = $rows->where('ai_provider_id', $provider->id);
+            $ok = $mine->where('outcome', 'ok');
+            $latencies = $ok->pluck('latency_ms')->map(fn ($ms): int => (int) $ms)->sort()->values()->all();
+            $cooling = ModelFabricGateway::coolingUntil($provider->id);
+            $out[] = [
+                'provider' => $provider->name,
+                'requests' => $mine->count(),
+                'ok' => $ok->count(),
+                'p50_ms' => $this->percentile($latencies, 50),
+                'p95_ms' => $this->percentile($latencies, 95),
+                'last_error' => $mine->where('outcome', 'failed')->pluck('error_code')->first(),
+                'cooling_until' => $cooling === null ? null : date('c', $cooling),
+            ];
+        }
+
+        return $out;
+    }
+
+    /** @param  list<int>  $sorted */
+    private function percentile(array $sorted, int $p): ?int
+    {
+        if ($sorted === []) {
+            return null;
+        }
+
+        return $sorted[(int) max(0, ceil(count($sorted) * $p / 100) - 1)];
     }
 
     /** @return array{organization_id: string, can_manage: bool} */
