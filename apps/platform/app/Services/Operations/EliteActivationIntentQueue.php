@@ -63,7 +63,7 @@ final class EliteActivationIntentQueue
         $audit = OperatorActionAudit::query()->create([
             'actor_user_id' => $user->getKey(),
             'action' => 'release.activation_intent',
-            'outcome' => 'requested_not_deployed',
+            'outcome' => 'queued_not_deployed',
             'metadata' => [
                 'intent_id' => $id,
                 'approved_sha' => $approvedSha,
@@ -86,7 +86,6 @@ final class EliteActivationIntentQueue
             if (! @link($temporary, $path)) {
                 throw new RuntimeException('A production activation request is already pending or cannot be safely published.');
             }
-            $audit->forceFill(['outcome' => 'queued_not_deployed'])->save();
         } catch (\Throwable $exception) {
             $audit->forceFill(['outcome' => 'blocked'])->save();
             throw $exception;
