@@ -6,7 +6,9 @@ const read = (path) =>
     readFileSync(new URL('../' + path, import.meta.url), 'utf8');
 const ownerRoutes = read('routes/kslp-admin.php');
 const developerRoutes = read('routes/developer-licenses.php');
-const developerWorkspace = read('app/Services/Licensing/Kslp/KslpDeveloperWorkspaceQuery.php');
+const developerWorkspace = read(
+    'app/Services/Licensing/Kslp/KslpDeveloperWorkspaceQuery.php',
+);
 const ownerUi = read('resources/js/pages/operator-kslp.tsx');
 const dashboard = read('resources/js/pages/dashboard.tsx');
 const developerUi = read('resources/js/pages/developer-apps.tsx');
