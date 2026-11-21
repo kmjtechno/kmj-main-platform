@@ -184,7 +184,7 @@ final class ModelFabricController extends Controller
         return $out;
     }
 
-    /** @param  list<int>  $sorted */
+    /** @param  array<int, int>  $sorted */
     private function percentile(array $sorted, int $p): ?int
     {
         if ($sorted === []) {

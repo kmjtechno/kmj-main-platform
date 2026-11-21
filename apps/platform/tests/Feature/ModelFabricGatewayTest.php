@@ -45,8 +45,8 @@ final class ModelFabricGatewayTest extends TestCase
 
     public function test_rate_limit_fails_over_to_the_next_verified_route_and_cools_the_first(): void
     {
-        $groq = $this->provider('groq', 'Groq', 'https://api.groq.com/openai/v1', 'llama-free');
-        $gemini = $this->provider('gemini', 'Gemini', 'https://generativelanguage.googleapis.com/v1beta/openai', 'gemini-free');
+        $groq = $this->provider('groq', 'A Groq', 'https://api.groq.com/openai/v1', 'llama-free');
+        $gemini = $this->provider('gemini', 'B Gemini', 'https://generativelanguage.googleapis.com/v1beta/openai', 'gemini-free');
         Http::fake([
             'api.groq.com/*' => Http::response(['error' => 'slow down'], 429),
             'generativelanguage.googleapis.com/*' => Http::response(['choices' => [['message' => ['content' => 'pong']]]], 200),
@@ -56,7 +56,7 @@ final class ModelFabricGatewayTest extends TestCase
 
         $this->assertTrue($result['ok']);
         $this->assertSame('pong', $result['content']);
-        $this->assertSame('Gemini', $result['provider']);
+        $this->assertSame('B Gemini', $result['provider']);
         $this->assertSame(2, $result['attempts']);
         $this->assertNotNull(ModelFabricGateway::coolingUntil($groq->id));
         $this->assertNull(ModelFabricGateway::coolingUntil($gemini->id));
