@@ -49,7 +49,7 @@ final class VerifiedMemberOmniDeskAuthorizer implements OmniDeskApiAuthorizer
 
             $organizationId = $memberships[0]['id'];
         } else {
-            if (! is_string($requested) || trim($requested) === '') {
+            if (trim($requested) === '') {
                 throw new DomainException('OMNIDESK_FORBIDDEN');
             }
 
