@@ -84,6 +84,54 @@ Route::middleware(['auth', 'verified'])->prefix('developer')->name('developer.')
         )->with('success', 'Application registered.');
     })->middleware(['password.confirm', 'throttle:10,1'])->name('apps.store');
 
+    // Application code is immutable: existing signed licenses bind to it.
+    // A pause closes new trial issuance and online bootstrap-key redemption.
+    // Existing offline-signed leases remain subject to their own short expiry.
+    Route::post('apps/{app}/manage', function (
+        Request $request,
+        string $app,
+        OrganizationCapabilityContext $capabilities,
+        KslpIssuerSubscriptionAuthority $authority,
+    ) {
+        $actor = $request->user();
+        abort_unless($actor instanceof User, 401);
+        $data = $request->validate([
+            'organization_id' => ['required', 'uuid'],
+            'action' => ['required', 'in:rename,pause,resume'],
+            'name' => ['required_if:action,rename', 'nullable', 'string', 'min:2', 'max:160'],
+            'reason' => ['required', 'string', 'min:8', 'max:240'],
+        ]);
+
+        abort_unless(
+            $capabilities->allows($actor->id, $data['organization_id'], 'license.manage'),
+            403,
+        );
+
+        // Emergency pause remains possible even when the rollout switch is
+        // disabled; rename and resume may NEVER bypass that owner gate.
+        abort_unless(
+            $data['action'] === 'pause'
+                || (bool) config('services.kmj_developer_licensing.enabled', false),
+            503,
+        );
+
+        try {
+            $authority->manageProduct(
+                $data['organization_id'],
+                $app,
+                $data['action'],
+                $data['name'] ?? null,
+                $data['reason'],
+                (int) $actor->id,
+            );
+        } catch (DomainException $exception) {
+            return back()->withErrors(['action' => $exception->getMessage()]);
+        }
+
+        return redirect()->route('developer.apps.index')
+            ->with('success', 'Application lifecycle updated.');
+    })->middleware(['password.confirm', 'throttle:5,1'])->name('apps.manage');
+
     Route::post('keys/{key}/revoke', function (
         Request $request,
         string $key,

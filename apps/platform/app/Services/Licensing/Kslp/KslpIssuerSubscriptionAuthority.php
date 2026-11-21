@@ -119,6 +119,117 @@ final class KslpIssuerSubscriptionAuthority
     }
 
     /**
+     * Rename or suspend one issuer application without changing its immutable
+     * product code or existing signed-license records.
+     *
+     * All mutations are serialized on the issuer row. The delegated-issue
+     * transaction also locks that row and rechecks active product status,
+     * so a pause cannot race a new key into existence after it commits.
+     *
+     * @return array<array-key, mixed>
+     */
+    public function manageProduct(
+        string $organizationId,
+        string $productId,
+        string $operation,
+        ?string $name,
+        string $reason,
+        int $actorId,
+    ): array {
+        if (! in_array($operation, ['rename', 'pause', 'resume'], true)) {
+            throw new DomainException('KSLP_PRODUCT_ACTION_INVALID');
+        }
+
+        $reason = trim($reason);
+        if (mb_strlen($reason) < 8 || mb_strlen($reason) > 240) {
+            throw new DomainException('KSLP_PRODUCT_REASON_REQUIRED');
+        }
+
+        $nextName = $name === null ? null : trim($name);
+        if ($operation === 'rename'
+            && ($nextName === null || mb_strlen($nextName) < 2 || mb_strlen($nextName) > 160)) {
+            throw new DomainException('KSLP_PRODUCT_NAME_INVALID');
+        }
+
+        return DB::transaction(function () use (
+            $organizationId, $productId, $operation, $nextName, $reason, $actorId,
+        ): array {
+            $issuer = DB::table('kslp_issuer_subscriptions')
+                ->where('organization_id', $organizationId)
+                ->lockForUpdate()
+                ->first();
+
+            // A suspended / expired issuer may still shut an app down.
+            // But renaming or reopening requires an active, unexpired issuer.
+            if ($operation !== 'pause') {
+                $this->assertActive($issuer);
+            }
+
+            $product = DB::table('kslp_licensed_products')
+                ->where('organization_id', $organizationId)
+                ->where('id', $productId)
+                ->lockForUpdate()
+                ->first();
+
+            if ($product === null) {
+                throw new DomainException('KSLP_ISSUER_PRODUCT_NOT_AUTHORIZED');
+            }
+            if (! in_array($product->status, ['active', 'paused'], true)) {
+                throw new DomainException('KSLP_PRODUCT_STATE_UNRECOGNIZED');
+            }
+
+            $oldStatus = (string) $product->status;
+            $oldName = (string) $product->name;
+            $newStatus = match ($operation) {
+                'pause' => 'paused',
+                'resume' => 'active',
+                default => $oldStatus,
+            };
+            $newName = $operation === 'rename' ? $nextName : $oldName;
+
+            // Exact retry is idempotent and does not spam the audit ledger.
+            if ($oldStatus === $newStatus && $oldName === $newName) {
+                return (array) $product;
+            }
+
+            DB::table('kslp_licensed_products')
+                ->where('organization_id', $organizationId)
+                ->where('id', $productId)
+                ->update([
+                    'name' => $newName,
+                    'status' => $newStatus,
+                    'updated_at' => now(),
+                ]);
+
+            // A failed audit insert rolls back the state change. No plaintext
+            // license keys, device fingerprints, or secrets are recorded.
+            $now = now();
+            DB::table('license_audit_events')->insert([
+                'actor_id' => $actorId,
+                'organization_id' => $organizationId,
+                'action' => 'kslp_product_'.$operation,
+                'status' => 'success',
+                'metadata' => json_encode([
+                    'product_id' => $productId,
+                    'product_code' => (string) $product->product_code,
+                    'old_status' => $oldStatus,
+                    'new_status' => $newStatus,
+                    'old_name' => $oldName,
+                    'new_name' => $newName,
+                    'reason' => $reason,
+                ], JSON_THROW_ON_ERROR),
+                'created_at' => $now,
+                'updated_at' => $now,
+            ]);
+
+            return (array) DB::table('kslp_licensed_products')
+                ->where('organization_id', $organizationId)
+                ->where('id', $productId)
+                ->first();
+        }, 3);
+    }
+
+    /**
      * @return array<array-key, mixed>
      */
     public function authorizeIssue(string $organizationId, string $productCode): array
