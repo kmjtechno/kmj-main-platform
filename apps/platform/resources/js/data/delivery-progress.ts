@@ -18,6 +18,14 @@ export const deliveryMilestones: DeliveryMilestone[] = [
             'PR #957 adds Python and Laravel negative tests, fixed receipt reader, owner gated UI and exact-head CI. The root publisher still requires separate reviewed installation; independent stage origin, Elite PG+uploads restore, rollback and Supervisor execution remain REQUIRED before real one-click deployment.',
     },
     {
+        id: 'modelfabric-huggingface-oauth-20261121',
+        title: 'ModelFabric: one-click Hugging Face sign-in',
+        state: 'active',
+        detail: 'Source-only: Connect Hugging Face uses the documented OAuth code + PKCE flow with a public client described by a metadata document served from this site, so no app has to be registered by hand. Only the inference-api scope is requested, the owner must attest the account is a Free account with no payment method (a PRO or pay-as-you-go account could be billed), the token is exchanged server-side and stored encrypted, and reconnecting replaces the key. Models still need per-model price evidence before any request is sent.',
+        evidence:
+            'Feature and static tests with faked HTTP; exact-head CI only. Not proven against the real Hugging Face service: token lifetime and refresh are not documented, so the first real sign-in, and any reconnect after expiry, are unverified until the owner clicks Connect.',
+    },
+    {
         id: 'modelfabric-daily-caps-priority-20261121',
         title: 'ModelFabric: owner daily caps and provider priority',
         state: 'active',

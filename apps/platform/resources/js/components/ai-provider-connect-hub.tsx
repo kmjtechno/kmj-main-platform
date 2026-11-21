@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import {
     ExternalLink,
     KeyRound,
@@ -51,16 +52,19 @@ export default function AiProviderConnectHub({
     presets,
     oauthBusy,
     onConnectOpenRouter,
+    onConnectHuggingFace,
     onChooseKeyProvider,
     selectedPreset,
 }: {
     presets: Preset[];
     oauthBusy: boolean;
     onConnectOpenRouter: () => void;
+    onConnectHuggingFace: () => void;
     onChooseKeyProvider: (preset: string) => void;
     selectedPreset: string | null;
 }) {
     const supported = new Set(presets.map((preset) => preset.key));
+    const [hfFree, setHfFree] = useState(false);
 
     return (
         <section
@@ -118,6 +122,45 @@ export default function AiProviderConnectHub({
                         {oauthBusy
                             ? 'Opening secure sign-in…'
                             : 'Connect OpenRouter'}
+                    </button>
+                </div>
+            )}
+
+            {supported.has('huggingface') && (
+                <div className="kmj-ai-oauth-panel mt-4 flex flex-wrap items-center justify-between gap-4 rounded-2xl border p-5">
+                    <div className="max-w-2xl">
+                        <h3 className="flex items-center gap-2 text-lg font-bold">
+                            <Zap
+                                className="h-5 w-5 text-red-400"
+                                aria-hidden="true"
+                            />
+                            Hugging Face — connect with your account
+                        </h3>
+                        <p className="text-muted-foreground mt-1 text-sm leading-6">
+                            One click opens Hugging Face sign-in (no app to
+                            register, no key to copy). Free accounts get a small
+                            monthly credit; a PRO or pay-as-you-go account could
+                            be billed, so connect a Free account only.
+                        </p>
+                        <label className="mt-2 flex items-start gap-2 text-xs font-medium">
+                            <input
+                                type="checkbox"
+                                className="mt-0.5"
+                                checked={hfFree}
+                                onChange={(e) => setHfFree(e.target.checked)}
+                            />
+                            This Hugging Face account is a Free account with no
+                            payment method.
+                        </label>
+                    </div>
+                    <button
+                        type="button"
+                        disabled={oauthBusy || !hfFree}
+                        onClick={onConnectHuggingFace}
+                        className="kmj-ai-primary-action inline-flex min-h-11 items-center justify-center gap-2 rounded-xl px-5 py-3 text-sm font-bold disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                        <LockKeyhole className="h-4 w-4" aria-hidden="true" />
+                        Connect Hugging Face
                     </button>
                 </div>
             )}

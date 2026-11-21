@@ -86,3 +86,21 @@ void test('owner daily caps and priority are enforced before provider limits and
     assert.match(read('routes/model-fabric.php'), /providers\.update/);
     assert.match(page, /Save limits/);
 });
+
+void test('Hugging Face one-click OAuth is secretless PKCE, inference-api only and needs a free-account attestation', () => {
+    const service = read('app/Services/AiProviders/HuggingFaceConnect.php');
+    const hf = read('app/Http/Controllers/HuggingFaceConnectController.php');
+    const aiRoutes = read('routes/ai-providers.php');
+    const web = read('routes/web.php');
+    const hub = read('resources/js/components/ai-provider-connect-hub.tsx');
+    assert.match(service, /SCOPE = 'inference-api'/);
+    assert.match(service, /'token_endpoint_auth_method' => 'none'/);
+    assert.match(service, /code_challenge_method' => 'S256'/);
+    assert.doesNotMatch(service, /client_secret/);
+    assert.match(hf, /'free_account_confirmed' => \['accepted'\]/);
+    assert.match(hf, /hash_equals\(\$expectedState, \$returnedState\)/);
+    assert.match(hf, /pull\('ai_provider_hf_oauth'\)/);
+    assert.match(aiRoutes, /connect\/huggingface/);
+    assert.match(web, /\.well-known\/oauth-cimd/);
+    assert.match(hub, /Free account with no\s+payment method/);
+});
