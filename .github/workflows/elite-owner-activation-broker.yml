@@ -46,3 +46,21 @@ jobs:
           assert not Path('/opt/kmj-main-platform-activation/elite_owner_activation_broker.py').exists()
           print('ELITE_ACTIVATION_SOURCE_CONTRACT=PASS_NO_PRODUCTION_MUTATION')
           PY
+
+  frontend-formatter-preview:
+    runs-on: ubuntu-latest
+    timeout-minutes: 7
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: apps/platform/package-lock.json
+      - name: Output exact Vite Plus formatter diff without touching source
+        working-directory: apps/platform
+        run: |
+          set -Eeuo pipefail
+          npm ci --ignore-scripts --no-audit --no-fund
+          ./node_modules/.bin/vp fmt resources/js/pages/operator-ops.tsx
+          git --no-pager diff -- resources/js/pages/operator-ops.tsx
