@@ -127,6 +127,59 @@ final class OwnerPaymentGatewaySettings
         });
     }
 
+    /**
+     * Owner-requested Razorpay webhook secret. The plaintext is returned exactly once to the
+     * caller (shown once in the owner console) and is stored only encrypted; it is never
+     * written to the audit, a log or the session. Cashfree signs with its client secret.
+     */
+    public function generateWebhookSecret(User $actor, string $provider): string
+    {
+        $this->ensureProvider($provider);
+        if ($provider !== 'razorpay') {
+            throw new InvalidArgumentException('Only Razorpay uses a separate webhook secret.');
+        }
+
+        $secret = 'whsec_'.bin2hex(random_bytes(24));
+        $encrypted = Crypt::encryptString($secret);
+
+        DB::transaction(static function () use ($actor, $provider, $encrypted): void {
+            $existing = DB::table('payment_gateway_settings')->where('provider', $provider)->first();
+
+            if ($existing === null) {
+                DB::table('payment_gateway_settings')->insert([
+                    'provider' => $provider,
+                    'environment' => 'sandbox',
+                    'merchant_status' => 'not_verified',
+                    'international_requested' => false,
+                    'encrypted_webhook_secret' => $encrypted,
+                    'updated_by' => $actor->getKey(),
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
+            } else {
+                // Only the webhook secret changes: merchant notes and test keys are untouched.
+                DB::table('payment_gateway_settings')->where('provider', $provider)->update([
+                    'encrypted_webhook_secret' => $encrypted,
+                    'updated_by' => $actor->getKey(),
+                    'updated_at' => now(),
+                ]);
+            }
+
+            OperatorActionAudit::query()->create([
+                'actor_user_id' => $actor->getKey(),
+                'action' => 'payment_gateway.webhook_secret_generated',
+                'outcome' => 'saved_unverified',
+                'metadata' => [
+                    'provider' => $provider,
+                    'changed_secret_fields' => ['webhook_secret'],
+                    'live_charging_enabled' => false,
+                ],
+            ]);
+        });
+
+        return $secret;
+    }
+
     public function revoke(User $actor, string $provider): void
     {
         $this->ensureProvider($provider);

@@ -1,9 +1,9 @@
 import { Head, Link } from '@inertiajs/react';
 import { useState } from 'react';
-import { Copy, Webhook } from 'lucide-react';
 import '../../css/owner-payments-premium.css';
 import OperatorModuleNavigation from '@/components/operator-module-navigation';
 import PaymentGatewayOnboarding from '@/components/payment-gateway-onboarding';
+import WebhookSetupGuide from '@/components/webhook-setup-guide';
 import OperatorPaymentSettings, {
     type OwnerGatewaySetting,
 } from '@/components/operator-payment-settings';
@@ -22,6 +22,7 @@ type Gateway = {
     label: string;
     merchant_approval: string;
     sandbox_credentials_present: boolean;
+    webhook_secret_stored: boolean;
     webhook_verification_configured: boolean;
     webhook_receiver_url: string;
     webhook_events_received: number;
@@ -173,54 +174,7 @@ export default function OperatorPayments({
                                         </dd>
                                     </div>
                                 </dl>
-                                <div
-                                    className="border-border mt-4 rounded-xl border p-3 text-xs"
-                                    data-testid={`webhook-${gateway.id}`}
-                                >
-                                    <p className="text-foreground flex items-center gap-2 font-semibold">
-                                        <Webhook className="h-4 w-4" />
-                                        Webhook
-                                    </p>
-                                    <div className="mt-2 flex items-center gap-2">
-                                        <code className="bg-muted min-w-0 flex-1 overflow-x-auto rounded px-2 py-1">
-                                            {gateway.webhook_receiver_url}
-                                        </code>
-                                        <button
-                                            type="button"
-                                            className="border-border inline-flex min-h-9 items-center gap-1 rounded-lg border px-2"
-                                            onClick={() =>
-                                                void navigator.clipboard?.writeText(
-                                                    gateway.webhook_receiver_url,
-                                                )
-                                            }
-                                        >
-                                            <Copy className="h-3 w-3" />
-                                            Copy
-                                        </button>
-                                    </div>
-                                    <p className="text-muted-foreground mt-2 leading-5">
-                                        {gateway.webhook_verification_configured
-                                            ? `Delivery proven: ${gateway.webhook_events_received} signed event(s) received, last ${gateway.webhook_last_received_at ?? 'n/a'}.`
-                                            : gateway.webhook_events_received >
-                                                0
-                                              ? `${gateway.webhook_events_received} signed event(s) received, but no webhook secret is stored here yet.`
-                                              : 'No signed event received yet. Add this URL in the provider dashboard with the same secret you save here, then send a test event.'}
-                                    </p>
-                                    {gateway.id === 'razorpay' ? (
-                                        <p className="text-muted-foreground mt-1 leading-5">
-                                            Razorpay Dashboard (Test Mode) →
-                                            Settings → Webhooks → Add. Events:
-                                            payment.captured, payment.failed,
-                                            order.paid.
-                                        </p>
-                                    ) : (
-                                        <p className="text-muted-foreground mt-1 leading-5">
-                                            Cashfree signs webhooks with the
-                                            client secret, so no separate secret
-                                            is needed.
-                                        </p>
-                                    )}
-                                </div>
+                                <WebhookSetupGuide gateway={gateway} />
                             </article>
                         ))}
                 </section>
