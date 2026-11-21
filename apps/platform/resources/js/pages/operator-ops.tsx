@@ -129,8 +129,22 @@ type OutboxHealth = {
     }>;
 };
 
+type EliteRelease = {
+    status: string;
+    reason: string;
+    captured_at_unix?: number | null;
+    current_release?: string | null;
+    approved_sha?: string | null;
+    expected_current_release?: string | null;
+    promoted_sha?: string | null;
+    staging_origin_verified?: boolean;
+    independent_dr_verified?: boolean;
+    deploy_triggered?: boolean;
+};
+
 type Props = {
     snapshot: OpsSnapshot;
+    eliteRelease: EliteRelease;
     readiness: OperationalReadiness;
     outbox: OutboxHealth;
     recentActions: ActionAudit[];
@@ -272,6 +286,7 @@ export default function OperatorOps({
     readiness,
     recentActions,
     outbox,
+    eliteRelease,
 }: Props) {
     const [refreshing, setRefreshing] = useState(false);
     const [restarting, setRestarting] = useState(false);
@@ -279,7 +294,7 @@ export default function OperatorOps({
     const refresh = () => {
         setRefreshing(true);
         router.reload({
-            only: ['snapshot', 'readiness', 'outbox', 'recentActions'],
+            only: ['snapshot', 'readiness', 'eliteRelease', 'outbox', 'recentActions'],
             onFinish: () => setRefreshing(false),
         });
     };
@@ -291,7 +306,7 @@ export default function OperatorOps({
             if (document.visibilityState !== 'visible') return;
 
             router.reload({
-                only: ['snapshot', 'readiness', 'outbox', 'recentActions'],
+                only: ['snapshot', 'readiness', 'eliteRelease', 'outbox', 'recentActions'],
             });
         };
         const resumeWhenVisible = () => {
@@ -364,6 +379,78 @@ export default function OperatorOps({
                             Refresh now
                         </button>
                     </div>
+                </section>
+
+                <section
+                    id="elite-release-control"
+                    className="bg-card scroll-mt-6 rounded-2xl border p-5 sm:p-6"
+                    aria-label="KMJ Elite release preflight"
+                >
+                    <div className="flex flex-wrap items-start justify-between gap-4">
+                        <div>
+                            <div className="flex items-center gap-2">
+                                <ShieldCheck className="h-4 w-4 text-red-500" />
+                                <h2 className="font-bold">Elite-only release control</h2>
+                            </div>
+                            <p className="text-muted-foreground mt-2 max-w-2xl text-xs leading-5">
+                                One server: KMJ-elite. Staging, restore and production
+                                each require independently verified evidence. This
+                                read-only receipt is not a deploy authorization.
+                            </p>
+                        </div>
+                        <StatusPill status={eliteRelease.status} />
+                    </div>
+                    <div className="mt-5 grid gap-3 sm:grid-cols-3">
+                        {[
+                            { label: '1 · Stage', value: 'Requires exact staged-origin SHA' },
+                            { label: '2 · Verify', value: 'Owner QA, local restore, rollback and protected SHA' },
+                            { label: '3 · Deploy', value: 'Fixed privileged broker not connected to this page' },
+                        ].map((step) => (
+                            <div key={step.label} className="bg-muted/20 rounded-xl border p-4">
+                                <div className="text-xs font-black">{step.label}</div>
+                                <p className="text-muted-foreground mt-2 text-xs leading-5">
+                                    {step.value}
+                                </p>
+                            </div>
+                        ))}
+                    </div>
+                    <div className="mt-4 grid gap-3 text-xs sm:grid-cols-2">
+                        <div className="rounded-xl border p-3">
+                            <div className="text-muted-foreground font-semibold">
+                                Trusted root preflight
+                            </div>
+                            <div className="mt-1 break-all font-mono">
+                                {eliteRelease.reason}
+                            </div>
+                        </div>
+                        <div className="rounded-xl border p-3">
+                            <div className="text-muted-foreground font-semibold">
+                                Current release / approved SHA
+                            </div>
+                            <div className="mt-1 break-all font-mono">
+                                {eliteRelease.current_release ?? 'Not independently observed'}
+                            </div>
+                            <div className="text-muted-foreground mt-1 break-all font-mono">
+                                {eliteRelease.approved_sha ?? 'No trusted approval receipt'}
+                            </div>
+                        </div>
+                    </div>
+                    <p className="text-muted-foreground mt-3 text-[11px]">
+                        {eliteRelease.captured_at_unix
+                            ? `Root snapshot: ${new Date(eliteRelease.captured_at_unix * 1000).toLocaleString()} · `
+                            : 'No fresh root receipt · '}
+                        Deployment not triggered. Independent disaster recovery
+                        not verified. Google VPS is not a Main Platform dependency.
+                    </p>
+                    <button
+                        type="button"
+                        onClick={refresh}
+                        disabled={refreshing}
+                        className="hover:bg-muted mt-4 inline-flex items-center gap-2 rounded-xl border px-4 py-3 text-xs font-bold disabled:opacity-50"
+                    >
+                        <RefreshCw className={`size-4 ${refreshing ? 'animate-spin' : ''}`} />
+                        Check release readiness
+                    </button>
                 </section>
 
                 <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
