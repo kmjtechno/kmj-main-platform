@@ -230,4 +230,39 @@ final class OwnerLicensingCenterHttpTest extends TestCase
 
         return $owner;
     }
+
+    public function test_unverified_account_purge_is_disabled_by_default_even_for_owner(): void
+    {
+        $unverified = User::factory()->create(['email_verified_at' => null]);
+        config()->set('services.kmj_unverified_account_cleanup.enabled', false);
+
+        $this->actingAs($this->owner())
+            ->withSession(['auth.password_confirmed_at' => time()])
+            ->post('/operator/kslp/unverified-accounts/purge', [
+                'confirmation' => 'REMOVE_UNVERIFIED_EMAIL_USERS',
+                'expected' => 1,
+                'sha256' => str_repeat('a', 64),
+            ])->assertStatus(503);
+
+        $this->assertDatabaseHas('users', [
+            'id' => $unverified->id,
+            'email_verified_at' => null,
+        ]);
+    }
+
+    public function test_unverified_account_purge_is_owner_only_and_requires_fresh_step_up(): void
+    {
+        $unverified = User::factory()->create(['email_verified_at' => null]);
+        config()->set('services.kmj_unverified_account_cleanup.enabled', true);
+
+        $this->actingAs(User::factory()->create(['email_verified_at' => now()]))
+            ->withSession(['auth.password_confirmed_at' => time()])
+            ->post('/operator/kslp/unverified-accounts/purge', [
+                'confirmation' => 'REMOVE_UNVERIFIED_EMAIL_USERS',
+                'expected' => 0,
+                'sha256' => hash('sha256', ''),
+            ])->assertForbidden();
+
+        $this->assertDatabaseHas('users', ['id' => $unverified->id]);
+    }
 }
