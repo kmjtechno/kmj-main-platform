@@ -10,6 +10,14 @@ export type DeliveryMilestone = {
 
 export const deliveryMilestones: DeliveryMilestone[] = [
     {
+        id: 'ops-oneclick-queue-noclobber-20261121',
+        title: 'One-click deploy prerequisite: non-overwriting operator request queue',
+        state: 'active',
+        detail: 'Source-only safety fix for owner Ops actions: the private pending action file now uses same-filesystem atomic create-only publication instead of rename, so a second click cannot silently replace another pending request. Existing role/step-up gates and audit remain unchanged. This does not add a Stage/Verify/Deploy web action, broker, protected approval or live release.',
+        evidence:
+            'PR #949 regression tests cover preservation of pending requests and dangling-symlink rejection. Exact-head CI must pass before merge; no deployment or production mutation performed.',
+    },
+    {
         id: 'modelfabric-smart-routing-20261121',
         title: 'ModelFabric: task-aware model choice and pre-emptive limit shifting',
         state: 'active',
