@@ -8,6 +8,7 @@ return [
         'delivery_status_path' => env('KMJ_DELIVERY_STATUS_PATH', '/var/tmp/kmj-delivery-control/status.json'),
         'delivery_status_max_age_seconds' => (int) env('KMJ_DELIVERY_STATUS_MAX_AGE_SECONDS', 600),
         'control_request_path' => env('KMJ_CONTROL_REQUEST_PATH', storage_path('app/private/ops/control-request.json')),
+        'release_receipt_path' => env('KMJ_ELITE_RELEASE_RECEIPT_PATH', '/run/kmj-main-platform/release-readiness.json'),
         'backup_freshness_hours' => [
             'daily' => 36,
             'weekly' => 216,
