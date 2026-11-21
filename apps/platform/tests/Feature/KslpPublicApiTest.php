@@ -82,6 +82,14 @@ final class KslpPublicApiTest extends TestCase
             ->assertJsonPath('algorithm', 'Ed25519')
             ->json();
 
+        // Generic legacy discovery is CloudOS-compatible but must not
+        // advertise OmniDesk's product-scoped signing authority.
+        $genericKeys = $this->getJson('/api/v1/kslp/keys/license')
+            ->assertOk()
+            ->json('keys');
+        self::assertCount(1, $genericKeys);
+        self::assertSame('omni-unbounded', $genericKeys[0]['kid']);
+
         self::assertCount(1, $response['keys']);
         self::assertSame('omni-active', $response['keys'][0]['kid']);
         self::assertSame('Ed25519', $response['keys'][0]['algorithm']);
@@ -129,6 +137,13 @@ final class KslpPublicApiTest extends TestCase
             sodium_crypto_sign_publickey(sodium_crypto_sign_seed_keypair(hash('sha256', 'explicit-omnidesk', true))),
             $registry->publicKey('bounded-omni', 'license', OmniDeskLicenseContract::PRODUCT_ID),
         );
+
+        try {
+            $registry->publicKey('bounded-omni', 'license');
+            self::fail('Generic CloudOS/KSLP verifier cannot resolve OmniDesk-only key.');
+        } catch (DomainException $error) {
+            self::assertSame('KSLP_UNKNOWN_KID', $error->getMessage());
+        }
 
         try {
             $registry->publicKey('bounded-omni', 'license', 'KMJ_CLOUDOS');
