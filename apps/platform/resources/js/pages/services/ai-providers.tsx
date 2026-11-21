@@ -552,7 +552,7 @@ export default function AiProviders({
     return (
         <>
             <Head title="AI Providers" />
-            <div className="kmj-ai-providers flex h-full min-w-0 flex-1 flex-col gap-6 p-4 sm:p-6">
+            <div className="owner-admin-surface kmj-ai-providers flex h-full min-w-0 flex-1 flex-col gap-6 p-4 sm:p-6">
                 <Link
                     href="/services/kmj-codebridge"
                     className="text-muted-foreground hover:text-foreground inline-flex items-center gap-2 text-xs font-bold"
