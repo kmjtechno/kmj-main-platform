@@ -63,13 +63,12 @@ final class ModelFabricGatewayTest extends TestCase
         $this->assertSame(2, AiModelRequest::query()->count());
         $this->assertSame(1, AiModelRequest::query()->where('error_code', 'rate_limited')->count());
 
-        // The cooled provider is skipped next time: no second request reaches it.
-        Http::fake([
-            'generativelanguage.googleapis.com/*' => Http::response(['choices' => [['message' => ['content' => 'again']]]], 200),
-        ]);
+        // The cooled provider is skipped next time: only one more request is sent, to Gemini.
         $second = app(ModelFabricGateway::class)->complete($this->org, [['role' => 'user', 'content' => 'ping']]);
-        $this->assertSame('again', $second['content']);
+        $this->assertSame('pong', $second['content']);
+        $this->assertSame('B Gemini', $second['provider']);
         $this->assertSame(1, $second['attempts']);
+        $this->assertSame(1, AiModelRequest::query()->where('error_code', 'rate_limited')->count());
     }
 
     public function test_unevidenced_model_is_never_sent_even_when_a_provider_is_healthy(): void
