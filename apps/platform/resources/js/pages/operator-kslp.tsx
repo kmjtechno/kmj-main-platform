@@ -158,7 +158,7 @@ export default function OperatorKslp({
     return (
         <>
             <Head title="KMJ Licensing Hub · Super Admin" />
-            <div className="kmj-admin-shell flex h-full min-w-0 flex-1 flex-col gap-6 overflow-x-auto p-4 sm:p-6 lg:p-8">
+            <div className="owner-admin-page kmj-admin-shell flex h-full min-w-0 flex-1 flex-col gap-6 overflow-x-auto p-4 sm:p-6 lg:p-8">
                 <OperatorModuleNavigation active="licensing" />
                 <nav
                     aria-label="KMJ Licensing Hub Super Admin sections"
@@ -186,7 +186,7 @@ export default function OperatorKslp({
                 </nav>
                 <section
                     id="license-overview"
-                    className="kmj-admin-hero scroll-mt-6 rounded-[1.65rem] p-6 sm:p-8"
+                    className="owner-admin-hero kmj-admin-hero scroll-mt-6 rounded-[1.65rem] p-6 sm:p-8"
                 >
                     <div className="flex gap-4">
                         <span className="grid h-11 w-11 place-items-center rounded-xl bg-red-500/10 text-red-500">
