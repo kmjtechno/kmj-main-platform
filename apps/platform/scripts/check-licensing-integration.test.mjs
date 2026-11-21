@@ -99,14 +99,26 @@ void test('one KMJ Licensing Hub embeds developer workflow and retains owner aut
     const developer = read('resources/js/pages/developer-apps.tsx');
     const ownerRoutes = read('routes/kslp-admin.php');
     const commands = read('resources/js/components/operator-command-os.tsx');
-    const workspaces = read('resources/js/components/operator-workspace-map.tsx');
+    const workspaces = read(
+        'resources/js/components/operator-workspace-map.tsx',
+    );
 
-    assert.ok(owner.includes('<DeveloperAppsWorkspace {...developerWorkspace} embedded />'));
+    assert.ok(
+        owner.includes(
+            '<DeveloperAppsWorkspace {...developerWorkspace} embedded />',
+        ),
+    );
     assert.ok(developer.includes('export function DeveloperAppsWorkspace'));
-    assert.ok(developerRoutes.includes("return redirect('/operator/kslp#developer-workspace')"));
+    assert.ok(
+        developerRoutes.includes(
+            "return redirect('/operator/kslp#developer-workspace')",
+        ),
+    );
     assert.ok(ownerRoutes.includes("'developerWorkspace' => ["));
     assert.ok(commands.includes("['KMJ Licensing Hub', '/operator/kslp'"));
-    assert.ok(!commands.includes("['Developer Apps & Keys', '/developer/apps'"));
+    assert.ok(
+        !commands.includes("['Developer Apps & Keys', '/developer/apps'"),
+    );
     assert.ok(!workspaces.includes("href: '/developer/apps'"));
 });
 
