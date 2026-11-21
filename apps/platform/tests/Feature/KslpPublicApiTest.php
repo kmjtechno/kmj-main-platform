@@ -3,6 +3,8 @@
 namespace Tests\Feature;
 
 use App\Services\Licensing\Kslp\KslpKeyRegistry;
+use App\Services\Licensing\OmniDeskLicenseContract;
+use DomainException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
@@ -48,19 +50,27 @@ final class KslpPublicApiTest extends TestCase
         [$rawActive, $active] = $this->key('omnidesk-active');
         [, $unbounded] = $this->key('omnidesk-unbounded');
         [, $future] = $this->key('omnidesk-future');
+        [, $otherProduct] = $this->key('cloudos-bound');
 
         $registry = app(KslpKeyRegistry::class);
-        $registry->publish('omni-active', 'license', $active);
+        $registry->publish(
+            'omni-active', 'license', $active, 'active',
+            OmniDeskLicenseContract::PRODUCT_ID, now()->addDay(),
+        );
+        // Unscoped legacy keys and keys scoped to other products must never
+        // be accepted by the OmniDesk verifier even when temporally valid.
         $registry->publish('omni-unbounded', 'license', $unbounded);
-        $registry->publish('omni-future', 'license', $future, 'retiring');
+        $registry->publish(
+            'cloudos-bound', 'license', $otherProduct, 'active',
+            'KMJ_CLOUDOS', now()->addDay(),
+        );
+        $registry->publish(
+            'omni-future', 'license', $future, 'retiring',
+            OmniDeskLicenseContract::PRODUCT_ID, now()->addDay(),
+        );
 
-        DB::table('kslp_signing_keys')->where('kid', 'omni-active')->update([
-            'not_before' => now()->subHour(),
-            'not_after' => now()->addDay(),
-        ]);
         DB::table('kslp_signing_keys')->where('kid', 'omni-future')->update([
             'not_before' => now()->addHour(),
-            'not_after' => now()->addDay(),
         ]);
 
         $response = $this->getJson('/api/v1/licensing/keys')
@@ -81,4 +91,61 @@ final class KslpPublicApiTest extends TestCase
         self::assertIsInt($response['keys'][0]['not_after']);
         self::assertArrayNotHasKey('private_key', $response['keys'][0]);
     }
+
+    public function test_omnidesk_requires_bounded_product_scoped_key_identity(): void
+    {
+        [, $generic] = $this->key('legacy-generic');
+        [, $scoped] = $this->key('explicit-omnidesk');
+        $registry = app(KslpKeyRegistry::class);
+
+        $registry->publish('legacy-kid', 'license', $generic);
+        $expires = now()->addDay();
+
+        try {
+            $registry->publish(
+                'legacy-kid', 'license', $generic, 'active',
+                OmniDeskLicenseContract::PRODUCT_ID, $expires,
+            );
+            self::fail('An unscoped kid must never acquire OmniDesk issuer authority.');
+        } catch (DomainException $error) {
+            self::assertSame('KSLP_KEY_IDENTITY_CONFLICT', $error->getMessage());
+        }
+
+        try {
+            $registry->publish(
+                'no-expiry', 'license', $scoped, 'active',
+                OmniDeskLicenseContract::PRODUCT_ID,
+            );
+            self::fail('OmniDesk scope requires finite key validity.');
+        } catch (DomainException $error) {
+            self::assertSame('KSLP_INVALID_KEY_SCOPE', $error->getMessage());
+        }
+
+        $registry->publish(
+            'bounded-omni', 'license', $scoped, 'active',
+            OmniDeskLicenseContract::PRODUCT_ID, $expires,
+        );
+        self::assertSame(
+            sodium_crypto_sign_publickey(sodium_crypto_sign_seed_keypair(hash('sha256', 'explicit-omnidesk', true))),
+            $registry->publicKey('bounded-omni', 'license', OmniDeskLicenseContract::PRODUCT_ID),
+        );
+
+        try {
+            $registry->publicKey('bounded-omni', 'license', 'KMJ_CLOUDOS');
+            self::fail('Other-product callers must not resolve OmniDesk key IDs.');
+        } catch (DomainException $error) {
+            self::assertSame('KSLP_UNKNOWN_KID', $error->getMessage());
+        }
+
+        try {
+            $registry->publish(
+                'bounded-omni', 'license', $scoped, 'active',
+                OmniDeskLicenseContract::PRODUCT_ID, now()->addDays(2),
+            );
+            self::fail('An existing key validity window cannot be silently extended.');
+        } catch (DomainException $error) {
+            self::assertSame('KSLP_KEY_WINDOW_CONFLICT', $error->getMessage());
+        }
+    }
+
 }
