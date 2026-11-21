@@ -67,7 +67,6 @@ export default function WebhookSetupGuide({
             if (document.visibilityState === 'visible') {
                 router.reload({
                     only: ['paymentReadiness'],
-                    preserveScroll: true,
                 });
             }
         }, 5000);
@@ -101,7 +100,6 @@ export default function WebhookSetupGuide({
             setConfirming(false);
             router.reload({
                 only: ['paymentReadiness', 'gatewaySettings'],
-                preserveScroll: true,
             });
         } catch {
             setError(
