@@ -1,0 +1,27 @@
+[Unit]
+Description=KMJ TECHNO owner-queued exact-release activation broker (protected fixed unit only)
+Documentation=https://github.com/kmjtechno/kmj-main-platform/blob/main/docs/operations/ELITE_ONECLICK_ACTIVATION_BROKER.md
+Wants=network-online.target
+After=network-online.target
+ConditionPathExists=/home/kmjprod/shared/storage/app/private/ops/production-activation-request.json
+
+[Service]
+Type=oneshot
+User=root
+Group=root
+WorkingDirectory=/
+ExecStart=/usr/bin/python3 -I -B /opt/kmj-main-platform-activation/elite_owner_activation_broker.py --execute
+StateDirectory=kmj-main-platform/activation-broker
+StateDirectoryMode=0700
+UMask=0077
+TimeoutStartSec=240
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=false
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+LockPersonality=true
+RestrictSUIDSGID=true
+ReadWritePaths=/var/lib/kmj-main-platform/activation-broker
