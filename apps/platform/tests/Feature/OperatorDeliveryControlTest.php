@@ -106,7 +106,7 @@ final class OperatorDeliveryControlTest extends TestCase
     public function test_a_second_delivery_request_cannot_replace_the_first_pending_request(): void
     {
         $owner = $this->platformOwner();
-        $queue = app(\\App\\Services\\Operations\\DeliveryControlRequestQueue::class);
+        $queue = app(\App\Services\Operations\DeliveryControlRequestQueue::class);
         $queue->enqueue($owner, 'dispatch_worker');
 
         $original = File::get($this->path);
@@ -114,7 +114,7 @@ final class OperatorDeliveryControlTest extends TestCase
         try {
             $queue->enqueue($owner, 'rerun_failed_ci', null, 999);
             $this->fail('A pending request must never be overwritten.');
-        } catch (\\RuntimeException $exception) {
+        } catch (\RuntimeException $exception) {
             $this->assertStringContainsString('already pending', $exception->getMessage());
         }
 
