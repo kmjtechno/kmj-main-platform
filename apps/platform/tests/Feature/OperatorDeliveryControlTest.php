@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\User;
+use App\Services\Operations\DeliveryControlRequestQueue;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
@@ -106,7 +107,7 @@ final class OperatorDeliveryControlTest extends TestCase
     public function test_a_second_delivery_request_cannot_replace_the_first_pending_request(): void
     {
         $owner = $this->platformOwner();
-        $queue = app(\App\Services\Operations\DeliveryControlRequestQueue::class);
+        $queue = app(DeliveryControlRequestQueue::class);
         $queue->enqueue($owner, 'dispatch_worker');
 
         $original = File::get($this->path);
@@ -135,7 +136,7 @@ final class OperatorDeliveryControlTest extends TestCase
             $this->markTestSkipped('Symlink creation is unavailable.');
         }
 
-        $queue = app(\App\Services\Operations\DeliveryControlRequestQueue::class);
+        $queue = app(DeliveryControlRequestQueue::class);
 
         try {
             $queue->enqueue($owner, 'dispatch_worker');
