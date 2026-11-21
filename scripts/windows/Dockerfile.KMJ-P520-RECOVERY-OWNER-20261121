@@ -1,0 +1,18 @@
+# KMJ P520 owner recovery image. No production services or approvals.
+# Base is an immutable multi-platform digest; launcher requests linux/amd64.
+FROM postgres:18.6-alpine3.24@sha256:10a5c69a83035ab5239f5620d708520e8b28f5aa1f2b20143e6024532edadfb5
+
+# AGE is REQUIRED by the offline decrypt phase (the old CI-only image lacked it).
+# Python 3 validates archives; the pinned PostgreSQL base provides PG18 tools.
+RUN apk add --no-cache age python3 \
+    && age --version >/dev/null \
+    && python3 --version >/dev/null \
+    && pg_restore --version >/dev/null \
+    && initdb --version >/dev/null \
+    && mkdir -p /recovery \
+    && chown postgres:postgres /recovery \
+    && chmod 0700 /recovery
+
+# Any 'docker run' must also specify --network=none --pull=never and limits.
+USER postgres
+WORKDIR /recovery
