@@ -1,0 +1,42 @@
+name: Owner Admin Design Formatter Preview
+on:
+  pull_request:
+    paths:
+      - 'apps/platform/resources/css/owner-module-shell.css'
+      - 'apps/platform/resources/js/layouts/owner-module-shell.tsx'
+      - 'apps/platform/resources/js/pages/**'
+      - 'apps/platform/scripts/check-owner-design-parity.test.mjs'
+      - '.github/workflows/owner-admin-design-parity-formatter.yml'
+  workflow_dispatch:
+jobs:
+  read-only-source-preview:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: apps/platform/package-lock.json
+      - name: Show exact owned-source formatter diff
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          cd apps/platform
+          npm ci --no-audit --no-fund --ignore-scripts
+          ./node_modules/.bin/vp fmt \
+            resources/css/owner-module-shell.css \
+            resources/js/layouts/owner-module-shell.tsx \
+            resources/js/pages/services/ai-providers.tsx \
+            resources/js/pages/services/codebridge.tsx \
+            scripts/check-owner-design-parity.test.mjs
+          git diff --no-ext-diff -- \
+            resources/css/owner-module-shell.css \
+            resources/js/layouts/owner-module-shell.tsx \
+            resources/js/pages/services/ai-providers.tsx \
+            resources/js/pages/services/codebridge.tsx \
+            scripts/check-owner-design-parity.test.mjs
+          echo 'LIVE_HOST_MUTATION=NONE'
+          echo 'GIT_BRANCH_WRITE=NONE'
