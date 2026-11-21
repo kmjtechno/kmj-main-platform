@@ -49,7 +49,7 @@ final class HuggingFaceConnectTest extends TestCase
 
     public function test_public_metadata_is_a_secretless_pkce_client_with_the_exact_callback(): void
     {
-        $json = $this->getJson('/.well-known/oauth-cimd')->assertOk()->json();
+        $json = $this->getJson('/oauth/clients/huggingface.json')->assertOk()->json();
 
         $this->assertSame($this->clientId(), $json['client_id']);
         $this->assertSame('none', $json['token_endpoint_auth_method']);

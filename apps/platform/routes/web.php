@@ -340,8 +340,8 @@ Route::get('refund-policy', fn () => Inertia::render('legal/refund-policy'))->na
 Route::get('acceptable-use', fn () => Inertia::render('legal/acceptable-use'))->name('legal.acceptable-use');
 Route::get('cookie-policy', fn () => Inertia::render('legal/cookie-policy'))->name('legal.cookies');
 
-// Public client metadata for Hugging Face's documented CIMD OAuth flow (no secret, no registration by hand).
-Route::get('.well-known/oauth-cimd', [HuggingFaceConnectController::class, 'metadata'])
+// Public client metadata for Hugging Face's documented CIMD OAuth flow (a normal path: nginx refuses dot-paths such as /.well-known here) (no secret).
+Route::get('oauth/clients/huggingface.json', [HuggingFaceConnectController::class, 'metadata'])
     ->middleware('throttle:60,1')->name('ai-providers.huggingface.metadata');
 
 Route::middleware(['auth', 'verified'])->group(function () {

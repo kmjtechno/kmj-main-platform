@@ -101,7 +101,7 @@ void test('Hugging Face one-click OAuth is secretless PKCE, inference-api only a
     assert.match(hf, /hash_equals\(\$expectedState, \$returnedState\)/);
     assert.match(hf, /pull\('ai_provider_hf_oauth'\)/);
     assert.match(aiRoutes, /connect\/huggingface/);
-    assert.match(web, /\.well-known\/oauth-cimd/);
+    assert.match(web, /oauth\/clients\/huggingface\.json/);
     assert.match(hub, /Free account with no\s+payment method/);
 });
 
