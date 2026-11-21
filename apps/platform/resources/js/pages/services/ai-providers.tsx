@@ -549,6 +549,19 @@ export default function AiProviders({
         );
     };
 
+    const startHuggingFace = () => {
+        if (oauthBusy) return;
+        setOauthBusy(true);
+        router.post(
+            BASE + '/connect/huggingface',
+            { free_account_confirmed: true },
+            {
+                preserveScroll: true,
+                onFinish: () => setOauthBusy(false),
+            },
+        );
+    };
+
     return (
         <>
             <Head title="AI Providers" />
@@ -591,6 +604,7 @@ export default function AiProviders({
                             presets={presets}
                             oauthBusy={oauthBusy}
                             onConnectOpenRouter={startOpenRouter}
+                            onConnectHuggingFace={startHuggingFace}
                             selectedPreset={preferredPreset?.key ?? null}
                             onChooseKeyProvider={(key) => {
                                 setShowKeyForm(true);

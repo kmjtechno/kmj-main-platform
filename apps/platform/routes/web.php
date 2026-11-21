@@ -339,6 +339,10 @@ Route::get('refund-policy', fn () => Inertia::render('legal/refund-policy'))->na
 Route::get('acceptable-use', fn () => Inertia::render('legal/acceptable-use'))->name('legal.acceptable-use');
 Route::get('cookie-policy', fn () => Inertia::render('legal/cookie-policy'))->name('legal.cookies');
 
+// Public client metadata for Hugging Face's documented CIMD OAuth flow (no secret, no registration by hand).
+Route::get('.well-known/oauth-cimd', [\App\Http\Controllers\HuggingFaceConnectController::class, 'metadata'])
+    ->middleware('throttle:60,1')->name('ai-providers.huggingface.metadata');
+
 Route::middleware(['auth', 'verified'])->group(function () {
     require __DIR__.'/ai-providers.php';
     require __DIR__.'/codebridge-workspace.php';
