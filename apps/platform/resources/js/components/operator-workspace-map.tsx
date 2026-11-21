@@ -13,7 +13,6 @@ import {
     ShieldCheck,
     ShoppingCart,
     Users,
-    Wrench,
 } from 'lucide-react';
 import { useMemo, useState } from 'react';
 
