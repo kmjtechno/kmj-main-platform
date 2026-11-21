@@ -26,7 +26,7 @@ final class KslpVerifier
     ];
 
     /**
-     * @param  callable(string): (?string)  $publicKeyForKid Trusted signing-purpose key lookup.
+     * @param  callable(string): (?string)  $publicKeyForKid  Trusted signing-purpose key lookup.
      * @return array<array-key, mixed>
      */
     public function verify(string $token, callable $publicKeyForKid, string $serverIdentity, int $now, string $expectedProduct = 'KMJ_CLOUDOS'): array
