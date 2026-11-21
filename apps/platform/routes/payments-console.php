@@ -62,6 +62,24 @@ Route::middleware(['auth', 'verified', 'password.confirm'])
                 ->with('success', 'Sandbox settings stored. Provider connection and checkout remain unverified.');
         })->name('payments.settings.update')->middleware('throttle:10,1');
 
+        Route::post('payments/gateways/{provider}/webhook-secret', function (
+            Request $request,
+            string $provider,
+            PlatformOwnerAccess $access,
+            OwnerPaymentGatewaySettings $settings,
+        ) {
+            $user = $request->user();
+            abort_unless($user instanceof User, 401);
+            $access->require($user);
+            abort_unless($provider === 'razorpay', 404);
+            abort_unless(Schema::hasTable('payment_gateway_settings'), 503, 'Gateway settings storage is not ready.');
+
+            // Shown once in the console and held only in page memory: JSON, never the session.
+            return response()
+                ->json(['webhook_secret' => $settings->generateWebhookSecret($user, $provider)])
+                ->header('Cache-Control', 'no-store, private');
+        })->name('payments.webhook-secret.generate')->middleware('throttle:5,1');
+
         Route::post('payments/gateways/{provider}/test-connection', function (
             Request $request,
             string $provider,

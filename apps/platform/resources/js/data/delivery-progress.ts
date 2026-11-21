@@ -10,6 +10,14 @@ export type DeliveryMilestone = {
 
 export const deliveryMilestones: DeliveryMilestone[] = [
     {
+        id: 'webhook-secret-generator-guided-setup-20261121',
+        title: 'Razorpay webhook secret generator and guided setup',
+        state: 'active',
+        detail: 'Source-only owner console update: the owner can generate a high-entropy Razorpay webhook secret that is stored encrypted, shown once and never audited or kept in the session, and a field-by-field guide matches the Razorpay form (URL, secret, only payment.captured, payment.failed and order.paid). The card refreshes itself until the first signed event proves delivery. Nothing is deployed or proven against Razorpay yet.',
+        evidence:
+            'Feature tests cover owner-only access, encrypted one-time secret, no audit or session leakage, end-to-end signature verification with the generated secret, regeneration retiring the old secret, and Cashfree rejection.',
+    },
+    {
         id: 'payment-console-webhook-setup-20261120',
         title: 'Payment console — webhook URL, secret state and delivery proof',
         state: 'active',
