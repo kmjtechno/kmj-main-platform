@@ -109,6 +109,78 @@ final class KslpDeveloperAppsTest extends TestCase
                 ->where('newKey', null));
     }
 
+    public function test_developer_sees_only_owned_aggregate_bindings_without_device_identity(): void
+    {
+        [$ownerA, $orgA] = $this->owner('Device Evidence Company A');
+        $this->enroll($orgA);
+        app(KslpIssuerSubscriptionAuthority::class)
+            ->registerProduct($orgA, 'VENDOR.DEVICEA', 'Device App A');
+        $keyA = app(KslpDeveloperKeys::class)->issue(
+            $orgA, 'VENDOR.DEVICEA', 'customer-a', 'trial', (string) $ownerA->id,
+        );
+
+        [$ownerB, $orgB] = $this->owner('Device Evidence Company B');
+        $this->enroll($orgB);
+        app(KslpIssuerSubscriptionAuthority::class)
+            ->registerProduct($orgB, 'VENDOR.DEVICEB', 'Device App B');
+        $keyB = app(KslpDeveloperKeys::class)->issue(
+            $orgB, 'VENDOR.DEVICEB', 'customer-b', 'trial', (string) $ownerB->id,
+        );
+
+        $now = now();
+        DB::table('kslp_activations')->insert([
+            [
+                'id' => (string) Str::uuid(),
+                'license_id' => $keyA['license_id'],
+                'server_identity' => 'ed25519:PRIVATE_DO_NOT_EXPOSE_ORG_A',
+                'machine_identity_hash' => str_repeat('a', 64),
+                'idempotency_key' => 'org-a-private-idempotency',
+                'activated_at' => $now,
+                'deactivated_at' => null,
+                'created_at' => $now,
+                'updated_at' => $now,
+            ],
+            [
+                'id' => (string) Str::uuid(),
+                'license_id' => $keyB['license_id'],
+                'server_identity' => 'ed25519:PRIVATE_DO_NOT_EXPOSE_ORG_B',
+                'machine_identity_hash' => str_repeat('b', 64),
+                'idempotency_key' => 'org-b-private-idempotency',
+                'activated_at' => $now,
+                'deactivated_at' => $now,
+                'created_at' => $now,
+                'updated_at' => $now,
+            ],
+        ]);
+
+        $this->actingAs($ownerA)
+            ->get('/developer/apps')
+            ->assertOk()
+            ->assertDontSee('PRIVATE_DO_NOT_EXPOSE_ORG_A')
+            ->assertDontSee('PRIVATE_DO_NOT_EXPOSE_ORG_B')
+            ->assertDontSee('org-a-private-idempotency')
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('developer-apps')
+                ->has('keys', 1)
+                ->where('keys.0.organization_id', $orgA)
+                ->where('keys.0.recorded_binding_count', 1)
+                ->where('keys.0.non_deactivated_binding_count', 1)
+                ->missing('keys.0.server_identity')
+                ->missing('keys.0.machine_identity_hash'));
+
+        $this->actingAs($ownerB)
+            ->get('/developer/apps')
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('developer-apps')
+                ->has('keys', 1)
+                ->where('keys.0.organization_id', $orgB)
+                ->where('keys.0.recorded_binding_count', 1)
+                ->where('keys.0.non_deactivated_binding_count', 0)
+                ->missing('keys.0.server_identity')
+                ->missing('keys.0.machine_identity_hash'));
+    }
+
     public function test_duplicate_application_code_returns_validation_error_without_duplicate_record(): void
     {
         [$owner, $org] = $this->owner('Developer Duplicate Code');
