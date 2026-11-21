@@ -123,6 +123,32 @@ final class OperatorDeliveryControlTest extends TestCase
         $this->assertSame([], glob($this->path.'.*.tmp') ?: []);
     }
 
+    public function test_dangling_destination_symlink_never_gets_replaced(): void
+    {
+        if (PHP_OS_FAMILY === 'Windows' || ! function_exists('symlink')) {
+            $this->markTestSkipped('POSIX symlink regression test.');
+        }
+
+        $owner = $this->platformOwner();
+        $target = $this->path.'.missing';
+        if (! @symlink($target, $this->path)) {
+            $this->markTestSkipped('Symlink creation is unavailable.');
+        }
+
+        $queue = app(\App\Services\Operations\DeliveryControlRequestQueue::class);
+
+        try {
+            $queue->enqueue($owner, 'dispatch_worker');
+            $this->fail('Create-only publication must refuse an existing dangling symlink.');
+        } catch (\RuntimeException $exception) {
+            $this->assertStringContainsString('already pending', $exception->getMessage());
+        }
+
+        $this->assertTrue(is_link($this->path));
+        $this->assertDatabaseCount('operator_action_audits', 0);
+        $this->assertSame([], glob($this->path.'.*.tmp') ?: []);
+    }
+
     public function test_unknown_or_high_risk_actions_fail_closed(): void
     {
         $owner = $this->platformOwner();
