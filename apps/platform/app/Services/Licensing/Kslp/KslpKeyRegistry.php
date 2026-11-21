@@ -46,7 +46,12 @@ final class KslpKeyRegistry
                 throw new DomainException('KSLP_INVALID_KEY_SCOPE');
             }
         }
-        $expiresAt = $notAfter?->format('Y-m-d H:i:s');
+        // Persist an unambiguous UTC instant. A caller can supply a scoped
+        // key expiry with any timezone; storing its local wall clock would
+        // silently extend or shorten the trust window in a UTC database.
+        $expiresAt = $notAfter === null
+            ? null
+            : gmdate('Y-m-d H:i:s', $notAfter->getTimestamp());
         if ($notAfter !== null && $notAfter->getTimestamp() <= now()->getTimestamp()) {
             throw new DomainException('KSLP_INVALID_KEY_WINDOW');
         }
