@@ -328,7 +328,6 @@
     }
 }
 
-
 /*
  * Locked Command Center parity: one surface system for all real Owner modules.
  * This is deliberately scoped below the authenticated OwnerModuleShell.
@@ -373,7 +372,11 @@
     min-height: 124px;
     border: 1px solid var(--owner-line);
     border-radius: var(--owner-radius);
-    background: linear-gradient(130deg, var(--owner-surface-1), var(--owner-surface-0));
+    background: linear-gradient(
+        130deg,
+        var(--owner-surface-1),
+        var(--owner-surface-0)
+    );
     padding: clamp(18px, 1.75vw, 28px);
     box-shadow: none;
 }
@@ -391,16 +394,26 @@
     color: #aeb9c6;
 }
 
-.owner-module-shell .owner-admin-page
+.owner-module-shell
+    .owner-admin-page
     :is(.kmj-admin-metric, .kmj-admin-module-card, .bg-card) {
     border-color: var(--owner-line);
     border-radius: 14px;
-    background: linear-gradient(135deg, var(--owner-surface-1), var(--owner-surface-0));
+    background: linear-gradient(
+        135deg,
+        var(--owner-surface-1),
+        var(--owner-surface-0)
+    );
     box-shadow: none;
 }
 
-.owner-module-shell .owner-admin-page
-    :is(input:not([type='checkbox']):not([type='radio']):not([type='hidden']), select, textarea) {
+.owner-module-shell
+    .owner-admin-page
+    :is(
+        input:not([type='checkbox']):not([type='radio']):not([type='hidden']),
+        select,
+        textarea
+    ) {
     max-width: 100%;
     min-height: 42px;
     border-radius: 10px;
@@ -409,15 +422,19 @@
     color: #eef2f7;
 }
 
-.owner-module-shell .owner-admin-page
-    :is(input:not([type='checkbox']):not([type='radio']):not([type='hidden']), select, textarea):focus-visible {
+.owner-module-shell
+    .owner-admin-page
+    :is(
+        input:not([type='checkbox']):not([type='radio']):not([type='hidden']),
+        select,
+        textarea
+    ):focus-visible {
     outline: 2px solid #f43b5c;
     outline-offset: 2px;
     border-color: #f43b5c;
 }
 
-.owner-module-shell .owner-admin-page
-    :is(button, a)[class*='bg-red-600'] {
+.owner-module-shell .owner-admin-page :is(button, a)[class*='bg-red-600'] {
     border-radius: 10px;
     background-color: var(--owner-danger-red);
     color: #fff;
@@ -464,7 +481,6 @@
     }
 }
 
-
 /*
  * Owner-only versions of shared service and account settings screens.
  * Their same components remain unchanged for ordinary customer accounts.
@@ -481,7 +497,11 @@
 .owner-module-shell .owner-admin-surface > section:first-of-type {
     border: 1px solid var(--owner-line);
     border-radius: var(--owner-radius);
-    background: linear-gradient(130deg, var(--owner-surface-1), var(--owner-surface-0));
+    background: linear-gradient(
+        130deg,
+        var(--owner-surface-1),
+        var(--owner-surface-0)
+    );
     box-shadow: none;
 }
 
@@ -492,10 +512,16 @@
     line-height: 1.15;
 }
 
-.owner-module-shell .owner-admin-surface :is(.bg-card, .kmj-ai-managed-provider) {
+.owner-module-shell
+    .owner-admin-surface
+    :is(.bg-card, .kmj-ai-managed-provider) {
     border-color: var(--owner-line);
     border-radius: 14px;
-    background: linear-gradient(135deg, var(--owner-surface-1), var(--owner-surface-0));
+    background: linear-gradient(
+        135deg,
+        var(--owner-surface-1),
+        var(--owner-surface-0)
+    );
 }
 
 .owner-module-shell .owner-admin-settings {
@@ -505,7 +531,11 @@
     padding: clamp(14px, 1.5vw, 24px);
     border: 1px solid var(--owner-line);
     border-radius: var(--owner-radius);
-    background: linear-gradient(130deg, var(--owner-surface-1), var(--owner-surface-0));
+    background: linear-gradient(
+        130deg,
+        var(--owner-surface-1),
+        var(--owner-surface-0)
+    );
 }
 
 .owner-module-shell .owner-admin-settings :is(input, textarea, select) {
