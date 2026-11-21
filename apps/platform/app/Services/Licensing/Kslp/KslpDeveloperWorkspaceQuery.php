@@ -21,7 +21,7 @@ final class KslpDeveloperWorkspaceQuery
         private readonly OrganizationCapabilityContext $capabilities,
     ) {}
 
-    /** @return array{organizations: array, applications: array, keys: array, canIssueKeys: bool} */
+    /** @return array{organizations: list<array<string, mixed>>, applications: array<int, object>, keys: array<int, object>, canIssueKeys: bool} */
     public function forUser(User $actor): array
     {
         $organizations = collect($this->directory->forUser($actor->id))
