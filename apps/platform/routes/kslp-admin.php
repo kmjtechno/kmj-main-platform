@@ -1,15 +1,19 @@
 <?php
 
 use App\Models\User;
+use App\Services\Licensing\Kslp\KslpDeveloperWorkspaceQuery;
 use App\Services\Licensing\Kslp\KslpLicenseControlPlane;
+use App\Services\Licensing\UnverifiedAccountCleanup;
 use App\Services\PlatformOwnerAccess;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
 
-Route::get('operator/kslp', function (Request $request, PlatformOwnerAccess $access, KslpLicenseControlPlane $control) {
+Route::get('operator/kslp', function (Request $request, PlatformOwnerAccess $access, KslpLicenseControlPlane $control, KslpDeveloperWorkspaceQuery $developerWorkspace, UnverifiedAccountCleanup $cleanup) {
     $user = $request->user();
     abort_unless($user instanceof User, 401);
     $access->require($user);
@@ -90,6 +94,67 @@ Route::get('operator/kslp', function (Request $request, PlatformOwnerAccess $acc
             'entitlement.ends_at',
         ]);
 
+    // One commercial KSLP authority, with separate bounded role views.
+    // A KSLP license count is NOT a developer issuer subscription count.
+    // Owner may inspect issuer organization readiness but this read-only view
+    // does not grant a tier, create an app, enable a flag or issue a key.
+    $issuerOrganizations = DB::table('organizations as organization')
+        ->leftJoin('kslp_issuer_subscriptions as issuer', 'issuer.organization_id', '=', 'organization.id')
+        ->orderBy('organization.name')
+        ->limit(60)
+        ->get([
+            'organization.id',
+            'organization.name',
+            'issuer.tier',
+            'issuer.status as issuer_status',
+            'issuer.product_limit',
+            'issuer.monthly_issue_limit',
+            'issuer.current_period_end',
+        ]);
+    $issuerOrganizationIds = $issuerOrganizations->pluck('id')->all();
+    $issuerAppCounts = $issuerOrganizationIds === []
+        ? collect()
+        : DB::table('kslp_licensed_products')
+            ->whereIn('organization_id', $issuerOrganizationIds)
+            ->selectRaw('organization_id, count(*) as aggregate')
+            ->groupBy('organization_id')
+            ->pluck('aggregate', 'organization_id');
+    $issuerWorkspaces = $issuerOrganizations->map(function ($organization) use ($issuerAppCounts): array {
+        $status = (string) ($organization->issuer_status ?? 'not_subscribed');
+        if ($status === 'active' && $organization->current_period_end
+            && Carbon::parse($organization->current_period_end)->isPast()) {
+            $status = 'expired';
+        }
+
+        return [
+            'id' => (string) $organization->id,
+            'name' => (string) $organization->name,
+            'issuer_status' => $status,
+            'tier' => $organization->tier === null ? null : (string) $organization->tier,
+            'registered_apps' => (int) $issuerAppCounts->get((string) $organization->id, 0),
+            'product_limit' => (int) ($organization->product_limit ?? 0),
+            'monthly_issue_limit' => (int) ($organization->monthly_issue_limit ?? 0),
+            'current_period_end' => $organization->current_period_end,
+        ];
+    })->all();
+
+    // Non-mutating preview only; a schema/introspection anomaly blocks cleanup,
+    // but cannot break the owner license directory.
+    $unverified = ['unverified' => User::query()->whereNull('email_verified_at')->count(),
+        'eligible' => 0, 'protected' => 0, 'sha256' => '', 'status' => 'ROLLOUT_BLOCKED'];
+    // Full schema/FK scans are deliberately NOT run on every owner page
+    // while the protected cleanup flag is OFF. Only a bounded count is shown.
+    if ((bool) config('services.kmj_unverified_account_cleanup.enabled', false)) {
+        try {
+            $proof = $cleanup->preview();
+            $unverified = [...$proof, 'status' => 'PREVIEW_ONLY'];
+            unset($unverified['candidateIds']);
+        } catch (Throwable) {
+            $unverified['status'] = 'PREVIEW_BLOCKED';
+            // Unknown table/FK state can never authorize deletion.
+        }
+    }
+
     return Inertia::render('operator-kslp', [
         'metrics' => [
             'licenses' => DB::table('kslp_licenses')->count(),
@@ -97,9 +162,28 @@ Route::get('operator/kslp', function (Request $request, PlatformOwnerAccess $acc
             'trials' => DB::table('kslp_licenses')->where('plan', 'trial')->count(),
             'activations' => DB::table('kslp_activations')->whereNull('deactivated_at')->count(),
             'revoked' => DB::table('kslp_licenses')->whereNotNull('revoked_at')->count(),
-            'issuerSubscriptions' => DB::table('kslp_issuer_subscriptions')->where('status', 'active')->count(),
+            // Effective active issuers: expired subscriptions are not eligible
+            // even if the historical status column is still "active".
+            'issuerSubscriptions' => DB::table('kslp_issuer_subscriptions')
+                ->where('status', 'active')
+                ->where(fn ($query) => $query->whereNull('current_period_end')
+                    ->orWhere('current_period_end', '>', now()))
+                ->count(),
         ],
         'licenses' => $licenses,
+        'issuerWorkspaces' => $issuerWorkspaces,
+        'developerIssuanceEnabled' => Schema::hasTable('kslp_license_keys') && (bool) config('services.kmj_developer_licensing.enabled', false),
+        // Reuse exactly the tenant-restricted developer workspace query. Global
+        // KSLP data stays owner-only; a commercial lease never becomes an issuer.
+        'unverifiedEmailCleanup' => [
+            ...$unverified,
+            'enabled' => (bool) config('services.kmj_unverified_account_cleanup.enabled', false),
+        ],
+        'developerWorkspace' => [
+            ...$developerWorkspace->forUser($user),
+            'canAccessOwnerHub' => true,
+            'newKey' => $request->session()->get('developer_license_key'),
+        ],
         'productEntitlements' => $entitlements,
         'filters' => ['customer_q' => $search, 'plan' => $plan],
         'matchingCount' => $matchingCount,
@@ -117,6 +201,44 @@ Route::get('operator/kslp', function (Request $request, PlatformOwnerAccess $acc
         'events' => DB::table('kslp_license_events')->latest('created_at')->limit(50)->get(),
     ]);
 })->name('operator.kslp')->middleware('password.confirm');
+
+// One-click owner-initiated deletion of ONLY exact-preview, old, standalone
+// email-unverified accounts. Disabled until protected backup/release approval.
+// No blanket DELETE where email_verified_at IS NULL is ever allowed.
+Route::post('operator/kslp/unverified-accounts/purge', function (
+    Request $request,
+    PlatformOwnerAccess $access,
+    UnverifiedAccountCleanup $cleanup,
+) {
+    $actor = $request->user();
+    abort_unless($actor instanceof User, 401);
+    $access->require($actor);
+    abort_unless((bool) config('services.kmj_unverified_account_cleanup.enabled', false), 503);
+
+    $values = $request->validate([
+        'confirmation' => ['required', 'in:REMOVE_UNVERIFIED_EMAIL_USERS'],
+        'expected' => ['required', 'integer', 'min:0', 'max:100'],
+        'sha256' => ['required', 'string', 'regex:/\\A[a-f0-9]{64}\\z/D'],
+    ]);
+    try {
+        $removed = $cleanup->purge((int) $values['expected'], $values['sha256']);
+    } catch (RuntimeException) {
+        return back()->withErrors([
+            'cleanup' => 'Cohort changed or protected account linkage detected. Refresh the preview; no partial deletion.',
+        ]);
+    }
+
+    Log::notice('KMJ_OWNER_UNVERIFIED_EMAIL_CLEANUP', [
+        'actor_id' => (int) $actor->id,
+        'deleted_count' => $removed,
+        'preview_sha256' => $values['sha256'],
+        'email_addresses_logged' => false,
+    ]);
+
+    return redirect('/operator/kslp#unverified-accounts')
+        ->with('success', "Removed {$removed} eligible old unverified accounts.");
+})->middleware(['password.confirm', 'throttle:1,1'])
+    ->name('operator.kslp.unverified-cleanup');
 
 Route::post('operator/kslp/licenses', function (Request $request, PlatformOwnerAccess $access, KslpLicenseControlPlane $control) {
     $user = $request->user();

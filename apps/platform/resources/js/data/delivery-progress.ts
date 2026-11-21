@@ -10,6 +10,14 @@ export type DeliveryMilestone = {
 
 export const deliveryMilestones: DeliveryMilestone[] = [
     {
+        id: 'single-licensing-hub-authsp-role-workflow-unverified-cleanup-20261121',
+        title: 'One Licensing Hub — role-scoped AuthSP developer workflow and guarded email cleanup',
+        state: 'active',
+        detail: 'Source-only owner dashboard consolidation: global license issuance, developer applications, issued trial keys, language SDK configuration and issuer subscriptions are brought into one Owner Licensing Hub. Owner links route to /operator/kslp; ordinary developers retain tenant-limited access. Old unverified-email account deletion is intentionally disabled pending protected backup, real dependency and isolation checks, owner authorization, and release approval. AuthSP reseller, batch lifecycle and production SDK parity are NOT yet complete.',
+        evidence:
+            'PR #932 source and feature/static tests; exact-head CI pending. Existing standalone Google-dependent workflows are not reintroduced; no DB records, signatures, live licenses or verified customers were changed. No production deployment or cleanup has occurred.',
+    },
+    {
         id: 'payments-admin-ui-consistency-20261121',
         title: 'Payment Gateway Control aligned with the admin dashboard design system',
         state: 'active',

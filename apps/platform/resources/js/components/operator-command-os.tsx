@@ -8,7 +8,6 @@ import {
     ChartNoAxesCombined,
     ChevronRight,
     Cloud,
-    Code2,
     CreditCard,
     Crown,
     Database,
@@ -92,15 +91,13 @@ const groups = [
             ['Products & Catalog', '/operator/products', Package],
             ['Customers & Orgs', '/operator/directory', Users],
             ['Orders & Payments', '/operator#commercial-orders', ShoppingCart],
-            ['Licensing & Entitlements', '/operator/kslp', KeyRound],
-            ['Subscriptions & Plans', '/operator/kslp', FileText],
+            ['KMJ Licensing Hub', '/operator/kslp', KeyRound],
             ['Revenue & Analytics', '#owner-revenue', ChartNoAxesCombined],
         ],
     },
     {
         title: 'PLATFORM',
         items: [
-            ['Developer Apps & Keys', '/developer/apps', Code2],
             [
                 'CodeBridge & Devices',
                 '/services/kmj-codebridge#codebridge-device-control',

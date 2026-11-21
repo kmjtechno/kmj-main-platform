@@ -10,6 +10,7 @@ use App\Services\Licensing\Kslp\KslpIssuerSubscriptionAuthority;
 use DomainException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
 
@@ -167,6 +168,60 @@ final class KslpDeveloperAppsTest extends TestCase
                 'customer_id' => 'attacker',
                 'plan' => 'trial',
             ])->assertForbidden();
+    }
+
+    public function test_developer_console_hides_owner_navigation_for_non_platform_owner(): void
+    {
+        [$developer] = $this->owner('Ordinary Developer');
+
+        $this->actingAs($developer)->get('/developer/apps')
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('developer-apps')
+                ->where('canAccessOwnerHub', false));
+    }
+
+    public function test_passkey_verified_platform_owner_sees_owner_hub_navigation(): void
+    {
+        $platformOwner = User::factory()->create([
+            'email_verified_at' => now(),
+            'is_platform_owner' => true,
+            'platform_owner_granted_at' => now(),
+        ]);
+        DB::table('passkeys')->insert([
+            'user_id' => $platformOwner->id,
+            'name' => 'Owner developer navigation',
+            'credential_id' => 'owner-dev-'.Str::uuid(),
+            'credential' => '{}',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $this->actingAs($platformOwner)->get('/developer/apps')
+            ->assertRedirect('/operator/kslp#developer-workspace');
+    }
+
+    public function test_expired_issuer_does_not_appear_active_in_developer_workspace(): void
+    {
+        [$developer, $org] = $this->owner('Expired Developer');
+        app(KslpIssuerSubscriptionAuthority::class)
+            ->subscribe($org, 'business', 2, 8, now()->subDay());
+
+        $this->actingAs($developer)->get('/developer/apps')
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('developer-apps')
+                ->where('organizations.0.issuer_status', 'expired')
+                ->where('canAccessOwnerHub', false));
+
+        $this->actingAs($developer)
+            ->withSession(['auth.password_confirmed_at' => time()])
+            ->post('/developer/apps', [
+                'organization_id' => $org,
+                'product_code' => 'EXPIRED.APP',
+                'name' => 'Expired App',
+            ])->assertSessionHasErrors('product_code');
+        $this->assertDatabaseCount('kslp_licensed_products', 0);
     }
 
     public function test_default_off_flag_blocks_mutations_without_disabling_read_only_view(): void

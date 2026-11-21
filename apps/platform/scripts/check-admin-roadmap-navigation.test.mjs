@@ -40,7 +40,6 @@ void test('task-first categories contain real, inspectable workspaces', () => {
         '/operator/kslp',
         '/operator/ops',
         '/operator/codebridge/owner-plan',
-        '/developer/apps',
         '/sandbox-licenses',
     ];
     for (const href of links) {

@@ -6,6 +6,9 @@ const read = (path) =>
     readFileSync(new URL('../' + path, import.meta.url), 'utf8');
 const ownerRoutes = read('routes/kslp-admin.php');
 const developerRoutes = read('routes/developer-licenses.php');
+const developerWorkspace = read(
+    'app/Services/Licensing/Kslp/KslpDeveloperWorkspaceQuery.php',
+);
 const ownerUi = read('resources/js/pages/operator-kslp.tsx');
 const dashboard = read('resources/js/pages/dashboard.tsx');
 const developerUi = read('resources/js/pages/developer-apps.tsx');
@@ -63,8 +66,12 @@ void test('customers see only actual organization entitlements, never catalog-in
 
 void test('developer license management retains tenant and paid-license gates', () => {
     assert.match(developerRoutes, /'license\.manage'/);
+    // Both owner and tenant views must share this exact restrictive KSLP
+    // query; its move to a service must not remove the security assertion.
+    assert.match(developerRoutes, /KslpDeveloperWorkspaceQuery/);
+    assert.match(ownerRoutes, /KslpDeveloperWorkspaceQuery/);
     assert.match(
-        developerRoutes,
+        developerWorkspace,
         /->whereIn\('k\.organization_id', \$tenantIds\)/,
     );
     assert.match(

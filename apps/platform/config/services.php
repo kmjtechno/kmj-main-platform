@@ -36,6 +36,11 @@ return [
     ],
 
     // Off until exact-head tests, secure activation and production signing gates pass.
+    'kmj_unverified_account_cleanup' => [
+        // Disabled until an independently reviewed backup and live readiness approval.
+        'enabled' => (bool) env('KMJ_UNVERIFIED_ACCOUNT_CLEANUP_ENABLED', false),
+    ],
+
     'kmj_developer_licensing' => [
         'enabled' => (bool) env('KMJ_DEVELOPER_LICENSING_ENABLED', false),
     ],

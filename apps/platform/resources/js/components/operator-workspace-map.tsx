@@ -13,7 +13,6 @@ import {
     ShieldCheck,
     ShoppingCart,
     Users,
-    Wrench,
 } from 'lucide-react';
 import { useMemo, useState } from 'react';
 
@@ -111,12 +110,6 @@ const workspaceGroups = [
                     'Owner-only CodeBridge license policy and plan controls',
                 href: '/operator/codebridge/owner-plan',
                 icon: Boxes,
-            },
-            {
-                label: 'Developer Apps & Keys',
-                description: 'Registered clients and scoped keys',
-                href: '/developer/apps',
-                icon: Wrench,
             },
             {
                 label: 'Sandbox Token Lab',

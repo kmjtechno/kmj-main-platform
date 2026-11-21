@@ -1,4 +1,8 @@
 import OperatorModuleNavigation from '@/components/operator-module-navigation';
+import {
+    DeveloperAppsWorkspace,
+    type DeveloperWorkspaceProps,
+} from './developer-apps';
 import { Head, router, useForm } from '@inertiajs/react';
 import { useState } from 'react';
 import {
@@ -34,6 +38,17 @@ type ProductEntitlement = {
     ends_at: string | null;
 };
 
+type IssuerWorkspace = {
+    id: string;
+    name: string;
+    issuer_status: string;
+    tier: string | null;
+    registered_apps: number;
+    product_limit: number;
+    monthly_issue_limit: number;
+    current_period_end: string | null;
+};
+
 type Event = {
     id: number;
     license_id: string;
@@ -58,6 +73,17 @@ type Props = {
     matchingCount: number;
     customerOptions: { id: string; name: string; email: string }[];
     productEntitlements: ProductEntitlement[];
+    issuerWorkspaces: IssuerWorkspace[];
+    developerIssuanceEnabled: boolean;
+    developerWorkspace: DeveloperWorkspaceProps;
+    unverifiedEmailCleanup: {
+        unverified: number;
+        eligible: number;
+        protected: number;
+        sha256: string;
+        status: string;
+        enabled: boolean;
+    };
 };
 
 export default function OperatorKslp({
@@ -68,8 +94,13 @@ export default function OperatorKslp({
     matchingCount,
     customerOptions,
     productEntitlements,
+    issuerWorkspaces,
+    developerIssuanceEnabled,
+    developerWorkspace,
+    unverifiedEmailCleanup,
 }: Props) {
     const [actionReason, setActionReason] = useState('');
+    const [purgingUnverified, setPurgingUnverified] = useState(false);
     const [customerQuery, setCustomerQuery] = useState(filters.customer_q);
     const [planQuery, setPlanQuery] = useState(filters.plan);
     const [stateQuery, setStateQuery] = useState('all');
@@ -135,6 +166,9 @@ export default function OperatorKslp({
                 >
                     {[
                         ['#license-overview', 'Overview'],
+                        ['#issuer-workspaces', 'Developer issuers'],
+                        ['#developer-workspace', 'Apps, Keys & SDK'],
+                        ['#unverified-accounts', 'Unverified accounts'],
                         ['#license-issue', 'Issue license'],
                         ['#license-search', 'Find customer'],
                         ['#license-register', 'Manage plans'],
@@ -185,6 +219,233 @@ export default function OperatorKslp({
                             <div className="mt-2 text-2xl font-black">{v}</div>
                         </div>
                     ))}
+                </section>
+                <section
+                    id="issuer-workspaces"
+                    aria-label="Developer issuer organizations"
+                    className="bg-card scroll-mt-6 rounded-2xl border p-5"
+                >
+                    <div className="flex flex-wrap items-start justify-between gap-4">
+                        <div>
+                            <h2 className="font-bold">
+                                Developer issuer organizations
+                            </h2>
+                            <p className="text-muted-foreground mt-1 max-w-3xl text-xs leading-5">
+                                AuthSP-style application and developer workflow
+                                visibility. These are issuer subscription and
+                                registered-app records, not commercial customer
+                                licenses. Active KSLP licenses above do not
+                                automatically entitle an organization to create
+                                apps or generate customer keys.
+                            </p>
+                        </div>
+                        <a
+                            href="/developer/apps"
+                            className="inline-flex min-h-10 items-center rounded-lg border px-3 text-xs font-bold hover:border-red-500/40"
+                        >
+                            Open Developer Apps &amp; Keys
+                        </a>
+                    </div>
+                    <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                        <div className="rounded-xl border p-3">
+                            <p className="text-muted-foreground text-xs">
+                                Developer self-service release gate
+                            </p>
+                            <p className="mt-1 text-sm font-bold">
+                                {developerIssuanceEnabled
+                                    ? 'Enabled for eligible subscribed issuers'
+                                    : 'Protected rollout — disabled'}
+                            </p>
+                        </div>
+                        <div className="rounded-xl border p-3">
+                            <p className="text-muted-foreground text-xs">
+                                Active issuer subscriptions
+                            </p>
+                            <p className="mt-1 text-sm font-bold">
+                                {metrics.issuerSubscriptions} · distinct from{' '}
+                                {metrics.active} active commercial licenses
+                            </p>
+                        </div>
+                    </div>
+                    <div className="mt-4 overflow-x-auto">
+                        <table className="w-full min-w-[740px] text-left text-xs">
+                            <thead className="text-muted-foreground">
+                                <tr>
+                                    {[
+                                        'Organization',
+                                        'Issuer status',
+                                        'Tier',
+                                        'Apps / limit',
+                                        'Monthly issue quota',
+                                        'Period end',
+                                    ].map((name) => (
+                                        <th
+                                            className="border-b px-3 py-2"
+                                            key={name}
+                                        >
+                                            {name}
+                                        </th>
+                                    ))}
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {issuerWorkspaces.map((issuer) => (
+                                    <tr
+                                        className="border-b last:border-0"
+                                        key={issuer.id}
+                                    >
+                                        <td className="px-3 py-3 font-semibold">
+                                            {issuer.name}
+                                        </td>
+                                        <td className="px-3 py-3">
+                                            {issuer.issuer_status}
+                                        </td>
+                                        <td className="px-3 py-3">
+                                            {issuer.tier ?? '—'}
+                                        </td>
+                                        <td className="px-3 py-3">
+                                            {issuer.registered_apps} /{' '}
+                                            {issuer.product_limit}
+                                        </td>
+                                        <td className="px-3 py-3">
+                                            {issuer.monthly_issue_limit}
+                                        </td>
+                                        <td className="px-3 py-3">
+                                            {issuer.current_period_end ?? '—'}
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                        {issuerWorkspaces.length === 0 && (
+                            <p className="text-muted-foreground p-4 text-xs">
+                                No issuer organizations available.
+                            </p>
+                        )}
+                    </div>
+                    <p className="text-muted-foreground mt-3 text-xs">
+                        Read-only, first 60 organizations. Subscription
+                        approval, reseller quotas, commercial settlement, and
+                        customer key issuance require their separate verified
+                        workflows. This table cannot grant licenses or unlock
+                        the release gate.
+                    </p>
+                </section>
+                <section
+                    id="developer-workspace"
+                    aria-label="Applications, keys and SDK setup"
+                    className="bg-card scroll-mt-6 rounded-2xl border border-red-500/20 p-4 sm:p-6"
+                >
+                    <h2 className="text-xl font-black">
+                        Applications, license keys & SDK
+                    </h2>
+                    <p className="text-muted-foreground mt-2 mb-4 text-sm leading-6">
+                        One KMJ Licensing Hub. Developer actions use the same
+                        tenant-scoped KSLP authorization as the restricted
+                        developer view. Global commercial licensing policy and
+                        paid entitlements remain owner-only.
+                    </p>
+                    <DeveloperAppsWorkspace {...developerWorkspace} embedded />
+                </section>
+                <section
+                    id="unverified-accounts"
+                    aria-label="Unverified email account cleanup"
+                    className="bg-card scroll-mt-6 rounded-2xl border border-amber-500/20 p-5 sm:p-6"
+                >
+                    <h2 className="text-lg font-black">
+                        Unverified email accounts
+                    </h2>
+                    <p className="text-muted-foreground mt-2 max-w-3xl text-sm leading-6">
+                        Only old, standalone accounts without a verified email,
+                        owner privileges, recent sessions, passkeys,
+                        organization memberships, licensing or other linked
+                        business records can be deleted. Verified and linked
+                        accounts are protected.
+                    </p>
+                    <div className="mt-4 grid gap-3 sm:grid-cols-3">
+                        <div className="rounded-xl border p-4">
+                            <div className="text-muted-foreground text-xs">
+                                Unverified
+                            </div>
+                            <div className="mt-1 text-2xl font-black">
+                                {unverifiedEmailCleanup.unverified}
+                            </div>
+                        </div>
+                        <div className="rounded-xl border p-4">
+                            <div className="text-muted-foreground text-xs">
+                                Eligible for removal
+                            </div>
+                            <div className="mt-1 text-2xl font-black">
+                                {unverifiedEmailCleanup.eligible}
+                            </div>
+                        </div>
+                        <div className="rounded-xl border p-4">
+                            <div className="text-muted-foreground text-xs">
+                                Protected or recent
+                            </div>
+                            <div className="mt-1 text-2xl font-black">
+                                {unverifiedEmailCleanup.protected}
+                            </div>
+                        </div>
+                    </div>
+                    <div className="mt-4 flex flex-wrap items-center gap-3">
+                        <button
+                            type="button"
+                            disabled={
+                                purgingUnverified ||
+                                !unverifiedEmailCleanup.enabled ||
+                                unverifiedEmailCleanup.status !==
+                                    'PREVIEW_ONLY' ||
+                                unverifiedEmailCleanup.eligible === 0
+                            }
+                            onClick={() => {
+                                if (
+                                    !window.confirm(
+                                        'Permanently remove exactly ' +
+                                            unverifiedEmailCleanup.eligible +
+                                            ' old, unverified, standalone accounts? Linked, recent and verified users remain protected. A recent backup and approved rollout are required.',
+                                    )
+                                ) {
+                                    return;
+                                }
+                                setPurgingUnverified(true);
+                                router.post(
+                                    '/operator/kslp/unverified-accounts/purge',
+                                    {
+                                        confirmation:
+                                            'REMOVE_UNVERIFIED_EMAIL_USERS',
+                                        expected:
+                                            unverifiedEmailCleanup.eligible,
+                                        sha256: unverifiedEmailCleanup.sha256,
+                                    },
+                                    {
+                                        preserveScroll: true,
+                                        onFinish: () =>
+                                            setPurgingUnverified(false),
+                                    },
+                                );
+                            }}
+                            className="rounded-xl border border-red-500/50 bg-red-600 px-4 py-2 text-xs font-bold text-white disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                            {purgingUnverified
+                                ? 'Verifying and removing…'
+                                : 'Remove eligible unverified users'}
+                        </button>
+                        <span className="text-muted-foreground text-xs">
+                            {unverifiedEmailCleanup.enabled
+                                ? 'Owner step-up and exact snapshot confirmation required'
+                                : 'Cleanup blocked pending protected release and backup approval'}
+                        </span>
+                    </div>
+                    {unverifiedEmailCleanup.status !== 'PREVIEW_ONLY' && (
+                        <p
+                            role="status"
+                            className="mt-3 text-xs text-amber-600"
+                        >
+                            Preview blocked by schema or cohort safety check. No
+                            deletion is authorized.
+                        </p>
+                    )}
                 </section>
                 <section
                     id="license-issue"
