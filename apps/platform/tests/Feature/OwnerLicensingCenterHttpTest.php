@@ -163,6 +163,10 @@ final class OwnerLicensingCenterHttpTest extends TestCase
             ->assertInertia(fn (Assert $page) => $page
                 ->component('operator-kslp')
                 ->where('developerIssuanceEnabled', false)
+                ->where('developerWorkspace.canIssueKeys', false)
+                ->has('developerWorkspace.organizations')
+                ->has('developerWorkspace.applications')
+                ->has('developerWorkspace.keys')
                 ->where('metrics.issuerSubscriptions', 1)
                 ->where('metrics.licenses', 0)
                 ->where('issuerWorkspaces', fn ($items): bool => collect($items)
