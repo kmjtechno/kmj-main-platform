@@ -5,7 +5,6 @@ import {
     Crown,
     CreditCard,
     Code2,
-    FlaskConical,
     KeyRound,
     LayoutGrid,
     PackageOpen,
@@ -42,14 +41,9 @@ const baseNavItems: NavItem[] = [
         icon: ShoppingCart,
     },
     {
-        title: 'Developer Apps & Keys',
+        title: 'Licensing Hub',
         href: '/developer/apps',
         icon: Code2,
-    },
-    {
-        title: 'Sandbox Token Lab',
-        href: '/sandbox-licenses',
-        icon: FlaskConical,
     },
     {
         title: 'Security',

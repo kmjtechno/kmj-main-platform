@@ -48,6 +48,8 @@ void test('Owner, developer and sandbox navigation all remain visible', () => {
     ]) {
         assert.ok(sidebar.includes(path));
     }
+    assert.ok(!sidebar.includes("href: '/sandbox-licenses'"));
+    assert.ok(sidebar.includes("title: 'Licensing Hub'"));
     assert.ok(sandbox.includes('Sandbox Token Lab'));
     assert.ok(sandbox.includes('href="/developer/apps"'));
     assert.ok(sandbox.includes('href="/operator/kslp"'));

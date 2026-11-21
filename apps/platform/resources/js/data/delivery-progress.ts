@@ -10,6 +10,14 @@ export type DeliveryMilestone = {
 
 export const deliveryMilestones: DeliveryMilestone[] = [
     {
+        id: 'single-licensing-hub-navigation-20261121',
+        title: 'One Licensing Hub entry in navigation',
+        state: 'active',
+        detail: 'Source-only navigation change: the separate Sandbox Token Lab entry is removed from the sidebar and owner workspace map and the developer entry is renamed Licensing Hub. The sandbox page stays reachable from inside the Hub and still labels sandbox tokens as non-commercial. No licensing logic, authorization or route changed.',
+        evidence:
+            'Static navigation and licensing integration tests assert a single entry; no live proof until deployed.',
+    },
+    {
         id: 'gateway-setup-guardrails-20261121',
         title: 'Razorpay and Cashfree webhook setup guide with Live-mode and wrong-key guardrails',
         state: 'active',
