@@ -18,6 +18,14 @@ export const deliveryMilestones: DeliveryMilestone[] = [
             'PR #932 source and feature/static tests; exact-head CI pending. Existing standalone Google-dependent workflows are not reintroduced; no DB records, signatures, live licenses or verified customers were changed. No production deployment or cleanup has occurred.',
     },
     {
+        id: 'payment-credential-autofill-guard-20261121',
+        title: 'Payment credential form no longer accepts browser login autofill',
+        state: 'active',
+        detail: "Source-only owner console fix: the sandbox credential fields use new-password, password-manager ignore hints and non-login field names so a browser cannot fill the owner's own email and password into the gateway Client ID and Secret fields. No payment, license or live-charging behaviour changed.",
+        evidence:
+            'Static owner payment UX test asserts the guard; no live browser proof until deployed.',
+    },
+    {
         id: 'payments-admin-ui-consistency-20261121',
         title: 'Payment Gateway Control aligned with the admin dashboard design system',
         state: 'active',

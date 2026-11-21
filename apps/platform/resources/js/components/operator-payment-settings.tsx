@@ -199,9 +199,19 @@ function GatewaySettingsCard({ setting }: { setting: OwnerGatewaySetting }) {
                                             ? 'text'
                                             : 'password'
                                     }
-                                    autoComplete="off"
+                                    // Browsers treat a text field followed by a password field as a
+                                    // login form and autofill the owner's own email and password.
+                                    // 'new-password' plus ignore hints and non-login field names stop that.
+                                    autoComplete={
+                                        key === 'client_id'
+                                            ? 'off'
+                                            : 'new-password'
+                                    }
+                                    data-1p-ignore
+                                    data-lpignore="true"
+                                    data-form-type="other"
                                     spellCheck={false}
-                                    name={key}
+                                    name={`gateway_${key}`}
                                     value={form.data[key]}
                                     onChange={(e) =>
                                         form.setData(key, e.target.value)

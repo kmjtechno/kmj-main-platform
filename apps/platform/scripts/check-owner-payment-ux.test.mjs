@@ -60,14 +60,14 @@ void test('payment security state and live charging guard stay real', () => {
     assert.match(page, /sandbox_credentials_present/);
 });
 
-void test('sandbox probe and credential lifecycle files remain pinned (hash updated only for the webhook copy change)', () => {
+void test('sandbox probe and credential lifecycle files remain pinned (settings hash re-pinned only for the browser-autofill guard)', () => {
     assert.equal(
         gitBlobHash(onboarding),
         '65337d7a01c8b3bff1878e3a1da10dde56e17fbb',
     );
     assert.equal(
         gitBlobHash(settings),
-        'fcdebcf49be9f51b72411fe90ec38c8c6bd0be6e',
+        '8be41ac29e5b2b17c9107333f4e36cf135cb03b9',
     );
 });
 
@@ -82,4 +82,14 @@ void test('payment secrets remain test-only with explicit owner revocation', () 
     assert.match(settings, /Store sandbox keys in encrypted server storage/);
     assert.match(settings, /window\.confirm/);
     assert.match(settings, /\/credentials/);
+});
+
+void test('credential fields never invite browser login autofill', () => {
+    const settings = read(
+        'resources/js/components/operator-payment-settings.tsx',
+    );
+    assert.match(settings, /new-password/);
+    assert.match(settings, /data-1p-ignore/);
+    assert.match(settings, /name=\{`gateway_\$\{key\}`\}/);
+    assert.doesNotMatch(settings, /name=\{key\}/);
 });
