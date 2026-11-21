@@ -28,6 +28,8 @@ use Illuminate\Database\Eloquent\Model;
  * @property string $health
  * @property CarbonInterface|null $health_checked_at
  * @property string|null $last_error_code
+ * @property int $priority
+ * @property int|null $daily_request_cap
  * @property array<string, mixed>|null $rate_limit
  * @property int|null $created_by
  */

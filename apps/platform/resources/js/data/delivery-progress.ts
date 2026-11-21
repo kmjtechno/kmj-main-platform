@@ -10,6 +10,14 @@ export type DeliveryMilestone = {
 
 export const deliveryMilestones: DeliveryMilestone[] = [
     {
+        id: 'modelfabric-daily-caps-priority-20261121',
+        title: 'ModelFabric: owner daily caps and provider priority',
+        state: 'active',
+        detail: 'Source-only: per-provider owner daily request cap (UTC day, counted from the metadata ledger) and a priority number. A provider at 80% of its cap is deprioritised and at 100% is skipped, so work shifts to another approved provider before the provider itself hits a limit; priority only nudges ties and never overrides task fit or the verified-zero rules. Owner-only, audited. Adds migration 2026_11_21_000400.',
+        evidence:
+            "Feature and static tests with faked HTTP; exact-head CI only, not deployed, no real provider called. The cap counts attempts this app routed, not the provider's own quota.",
+    },
+    {
         id: 'modelfabric-dashboard-parity-20261121',
         title: 'ModelFabric: owner Dashboard look and plain-language guidance',
         state: 'active',

@@ -44,14 +44,23 @@ final class ModelFabricController extends Controller
 
         $providers = AiProvider::query()->where('organization_id', $orgId)->orderBy('name')->get();
         $evidence = AiModelEvidence::query()->where('organization_id', $orgId)->orderBy('model_id')->get();
+        $usedToday = AiModelRequest::query()
+            ->where('organization_id', $orgId)
+            ->where('created_at', '>=', now()->utc()->startOfDay())
+            ->selectRaw('ai_provider_id, count(*) as c')
+            ->groupBy('ai_provider_id')
+            ->pluck('c', 'ai_provider_id');
 
         return Inertia::render('operator-modelfabric', [
             'status' => session('status'),
             'canManage' => $scope['can_manage'],
             'maxEvidenceDays' => self::MAX_EVIDENCE_DAYS,
-            'providers' => $providers->map(function (AiProvider $provider): array {
+            'providers' => $providers->map(function (AiProvider $provider) use ($usedToday): array {
                 $presented = $this->manager->present($provider);
                 $presented['discovered_models'] = array_slice($provider->models_cache ?? [], 0, 200);
+                $presented['priority'] = (int) $provider->priority;
+                $presented['daily_request_cap'] = $provider->daily_request_cap === null ? null : (int) $provider->daily_request_cap;
+                $presented['used_today'] = (int) ($usedToday[$provider->id] ?? 0);
 
                 return $presented;
             })->values(),
@@ -160,6 +169,27 @@ final class ModelFabricController extends Controller
         $this->audit($request, 'model_fabric.evidence_revoked', ['model' => $row->model_id]);
 
         return back()->with('status', 'Evidence revoked. The model is no longer routable.');
+    }
+
+    public function updateProvider(Request $request, string $provider): RedirectResponse
+    {
+        $scope = $this->owner($request, true);
+        $data = $request->validate([
+            'priority' => ['required', 'integer', 'min:1', 'max:999'],
+            'daily_request_cap' => ['nullable', 'integer', 'min:1', 'max:1000000'],
+        ]);
+        $row = AiProvider::query()->where('organization_id', $scope['organization_id'])->whereKey($provider)->firstOrFail();
+        $row->priority = (int) $data['priority'];
+        $row->daily_request_cap = $data['daily_request_cap'] ?? null;
+        $row->save();
+
+        $this->audit($request, 'model_fabric.provider_limits_saved', [
+            'provider' => $row->name,
+            'priority' => (int) $data['priority'],
+            'daily_request_cap' => $data['daily_request_cap'] ?? null,
+        ]);
+
+        return back()->with('status', 'Provider limits saved. They apply to the next request.');
     }
 
     public function storeToken(Request $request): RedirectResponse

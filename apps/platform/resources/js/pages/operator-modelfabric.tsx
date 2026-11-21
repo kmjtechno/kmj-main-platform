@@ -28,6 +28,9 @@ type Provider = {
     discovered_models: string[];
     discovered_model_count: number;
     error_code: string | null;
+    priority: number;
+    daily_request_cap: number | null;
+    used_today: number;
 };
 
 type Evidence = {
@@ -221,6 +224,95 @@ function Card({
             )}
             <div>{children}</div>
         </section>
+    );
+}
+
+function ProviderLimits({
+    provider,
+    canManage,
+}: {
+    provider: Provider;
+    canManage: boolean;
+}) {
+    const [priority, setPriority] = useState(String(provider.priority));
+    const [cap, setCap] = useState(
+        provider.daily_request_cap === null
+            ? ''
+            : String(provider.daily_request_cap),
+    );
+    const percent =
+        provider.daily_request_cap && provider.daily_request_cap > 0
+            ? Math.min(
+                  100,
+                  Math.round(
+                      (provider.used_today / provider.daily_request_cap) * 100,
+                  ),
+              )
+            : null;
+
+    return (
+        <div className="mt-3 border-t pt-3 text-xs">
+            <p className="text-muted-foreground">
+                Used today: <strong>{provider.used_today}</strong>
+                {provider.daily_request_cap
+                    ? ` of ${provider.daily_request_cap} (your daily cap)`
+                    : ' (no daily cap set)'}
+            </p>
+            {percent !== null ? (
+                <div className="bg-muted mt-1 h-1.5 overflow-hidden rounded-full">
+                    <div
+                        className={`h-full rounded-full ${percent >= 80 ? 'bg-amber-500' : 'bg-red-500'}`}
+                        style={{ width: `${percent}%` }}
+                    />
+                </div>
+            ) : null}
+            {canManage ? (
+                <form
+                    className="mt-2 flex flex-wrap items-end gap-2"
+                    onSubmit={(event) => {
+                        event.preventDefault();
+                        router.patch(
+                            `${BASE}/providers/${provider.id}`,
+                            {
+                                priority: Number(priority),
+                                daily_request_cap:
+                                    cap === '' ? null : Number(cap),
+                            },
+                            { preserveScroll: true },
+                        );
+                    }}
+                >
+                    <label className="text-[11px] font-medium">
+                        Priority (1 = first)
+                        <input
+                            className={`${fieldClass} w-24`}
+                            type="number"
+                            min={1}
+                            max={999}
+                            value={priority}
+                            onChange={(e) => setPriority(e.target.value)}
+                        />
+                    </label>
+                    <label className="text-[11px] font-medium">
+                        Daily cap (blank = none)
+                        <input
+                            className={`${fieldClass} w-28`}
+                            type="number"
+                            min={1}
+                            value={cap}
+                            onChange={(e) => setCap(e.target.value)}
+                        />
+                    </label>
+                    <button type="submit" className={ghostButton}>
+                        Save limits
+                    </button>
+                </form>
+            ) : null}
+            <p className="text-muted-foreground mt-2">
+                Work moves to another approved provider before the cap is hit
+                (at 80% it is deprioritised, at 100% it is skipped).
+            </p>
+        </div>
     );
 }
 
@@ -666,6 +758,10 @@ export default function OperatorModelFabric({
                                                 {provider.error_code}
                                             </p>
                                         ) : null}
+                                        <ProviderLimits
+                                            provider={provider}
+                                            canManage={canManage}
+                                        />
                                         {canManage &&
                                         provider.free_tier === 'allowlist' ? (
                                             <button
