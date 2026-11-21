@@ -50,7 +50,7 @@ type IssuedKey = {
     product_code: string;
 };
 
-type Props = {
+export type DeveloperWorkspaceProps = {
     organizations: Organization[];
     applications: Application[];
     keys: LicenseKey[];
@@ -175,14 +175,15 @@ function sdkConfiguration(language: string, productCode: string): string {
     }
 }
 
-export default function DeveloperApps({
+export function DeveloperAppsWorkspace({
     organizations,
     applications,
     keys,
     canIssueKeys,
     canAccessOwnerHub,
     newKey,
-}: Props) {
+    embedded = false,
+}: DeveloperWorkspaceProps & { embedded?: boolean }) {
     const [language, setLanguage] = useState<string>('TypeScript');
     const [selectedApp, setSelectedApp] = useState<string>('');
     const [copied, setCopied] = useState(false);
@@ -264,9 +265,9 @@ export default function DeveloperApps({
 
     return (
         <>
-            <Head title="KMJ Licensing Hub · Developer Apps" />
-            <div className="owner-shared-page flex min-w-0 flex-1 flex-col gap-6 p-4 sm:p-7">
-                <section className="overflow-hidden rounded-2xl border bg-gradient-to-br from-[#111b29] via-[#10151f] to-[#231523] p-6 text-white sm:p-8">
+            {!embedded && <Head title="KMJ Licensing Hub · Developer Apps" />}
+            <div className={embedded ? 'flex min-w-0 flex-col gap-6' : 'owner-shared-page flex min-w-0 flex-1 flex-col gap-6 p-4 sm:p-7'}>
+                <section className={embedded ? 'hidden' : 'overflow-hidden rounded-2xl border bg-gradient-to-br from-[#111b29] via-[#10151f] to-[#231523] p-6 text-white sm:p-8'}>
                     <div className="flex flex-col justify-between gap-6 lg:flex-row lg:items-center">
                         <div className="max-w-2xl">
                             <div className="mb-3 flex items-center gap-2 text-xs font-bold tracking-[0.14em] text-amber-300 uppercase">
@@ -1003,4 +1004,9 @@ export default function DeveloperApps({
             </div>
         </>
     );
+}
+
+// Non-owner developers retain a restricted view of the SAME KSLP authority.
+export default function DeveloperApps(props: DeveloperWorkspaceProps) {
+    return <DeveloperAppsWorkspace {...props} />;
 }
