@@ -14,6 +14,7 @@ final class EliteActivationIntentTest extends TestCase
     use RefreshDatabase;
 
     private string $requestPath;
+
     private string $receiptPath;
 
     protected function setUp(): void
