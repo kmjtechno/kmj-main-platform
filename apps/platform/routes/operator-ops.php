@@ -4,8 +4,8 @@ use App\Models\OperatorActionAudit;
 use App\Models\User;
 use App\Services\Events\OutboxHealthSnapshot;
 use App\Services\Operations\DeliveryControlRequestQueue;
-use App\Services\Operations\EliteReleaseReadinessSnapshot;
 use App\Services\Operations\EliteActivationIntentQueue;
+use App\Services\Operations\EliteReleaseReadinessSnapshot;
 use App\Services\Operations\OperationalReadinessSnapshot;
 use App\Services\Operations\OperatorActionRunner;
 use App\Services\Operations\ServerMetricsSnapshot;
@@ -229,7 +229,7 @@ Route::middleware(['auth', 'verified', 'password.confirm'])
                     $validated['expected_current_release'],
                     $validated['confirmation'],
                 );
-            } catch (\RuntimeException $exception) {
+            } catch (RuntimeException $exception) {
                 abort(409, 'Trusted release preflight or pending request must be reconciled.');
             }
 
