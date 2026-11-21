@@ -127,7 +127,7 @@ final class KslpKeyRegistry
 
         return DB::table('kslp_signing_keys')
             ->where('purpose', $purpose)
-            ->when($productId !== null, fn ($query) => $query->where('product_id', $productId))
+            ->where('product_id', $productId)
             ->whereIn('status', self::PUBLISHABLE_STATUSES)
             ->whereNull('revoked_at')
             ->where('not_before', '<=', now())
@@ -148,7 +148,7 @@ final class KslpKeyRegistry
         $key = DB::table('kslp_signing_keys')
             ->where('kid', $kid)
             ->where('purpose', $purpose)
-            ->when($productId !== null, fn ($query) => $query->where('product_id', $productId))
+            ->where('product_id', $productId)
             ->whereIn('status', self::PUBLISHABLE_STATUSES)
             ->whereNull('revoked_at')
             ->where('not_before', '<=', now())
