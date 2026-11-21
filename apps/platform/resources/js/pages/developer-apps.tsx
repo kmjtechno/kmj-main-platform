@@ -188,7 +188,14 @@ export function DeveloperAppsWorkspace({
     const [selectedApp, setSelectedApp] = useState<string>('');
     const [copied, setCopied] = useState(false);
     const [revokeKeyId, setRevokeKeyId] = useState<string | null>(null);
+    const [manageAppId, setManageAppId] = useState<string | null>(null);
     const revokeForm = useForm({ reason: '' });
+    const manageAppForm = useForm({
+        organization_id: '',
+        action: 'pause',
+        name: '',
+        reason: '',
+    });
     const createOrganization = useForm({ name: '' });
     const createApp = useForm({
         organization_id: organizations[0]?.id ?? '',
@@ -339,13 +346,13 @@ export function DeveloperAppsWorkspace({
                                 One KMJ Licensing Hub · Developer workspace
                             </h2>
                             <p className="text-muted-foreground mt-1 max-w-3xl text-sm leading-6">
-                                This is your organization-scoped app and trial-key
-                                workspace. The Super Admin Licensing Hub governs
-                                platform-wide CloudOS commercial licenses,
-                                policies, renewals and audit. These are different
-                                records under the same KMJ authority: an existing
-                                commercial license does not create a developer
-                                issuer subscription.
+                                This is your organization-scoped app and
+                                trial-key workspace. The Super Admin Licensing
+                                Hub governs platform-wide CloudOS commercial
+                                licenses, policies, renewals and audit. These
+                                are different records under the same KMJ
+                                authority: an existing commercial license does
+                                not create a developer issuer subscription.
                             </p>
                         </div>
                         {canAccessOwnerHub && (
@@ -360,19 +367,28 @@ export function DeveloperAppsWorkspace({
                     </div>
                     <div className="mt-4 grid gap-3 sm:grid-cols-3">
                         <div className="rounded-xl border p-3">
-                            <p className="text-xs font-semibold">Developer rollout</p>
+                            <p className="text-xs font-semibold">
+                                Developer rollout
+                            </p>
                             <p className="mt-1 text-sm font-bold">
-                                {canIssueKeys ? 'Available for authorized issuers' : 'Protected — globally disabled'}
+                                {canIssueKeys
+                                    ? 'Available for authorized issuers'
+                                    : 'Protected — globally disabled'}
                             </p>
                         </div>
                         <div className="rounded-xl border p-3">
-                            <p className="text-xs font-semibold">Selected issuer subscription</p>
+                            <p className="text-xs font-semibold">
+                                Selected issuer subscription
+                            </p>
                             <p className="mt-1 text-sm font-bold">
-                                {selectedIssuer?.issuer_status ?? 'No organization'}
+                                {selectedIssuer?.issuer_status ??
+                                    'No organization'}
                             </p>
                         </div>
                         <div className="rounded-xl border p-3">
-                            <p className="text-xs font-semibold">Commercial customer licenses</p>
+                            <p className="text-xs font-semibold">
+                                Commercial customer licenses
+                            </p>
                             <p className="text-muted-foreground mt-1 text-xs">
                                 Issued by governed KSLP entitlement authority,
                                 not by an unverified trial-key form
@@ -380,7 +396,10 @@ export function DeveloperAppsWorkspace({
                         </div>
                     </div>
                     {!canRegister && organizations.length > 0 && (
-                        <p role="status" className="text-muted-foreground mt-3 text-xs leading-5">
+                        <p
+                            role="status"
+                            className="text-muted-foreground mt-3 text-xs leading-5"
+                        >
                             {canIssueKeys
                                 ? 'This organization has no currently active issuer subscription. Owner approval and recorded commercial entitlement are required before app registration.'
                                 : 'Developer issuance is paused by a platform-wide release gate. An active owner-issued license does not bypass this gate or create an issuer subscription.'}
@@ -789,6 +808,196 @@ export function DeveloperAppsWorkspace({
                                         <p className="text-muted-foreground mt-1 font-mono text-xs">
                                             {app.product_code}
                                         </p>
+                                        {(app.status === 'active' ||
+                                            (canIssueKeys &&
+                                                app.status === 'paused')) && (
+                                            <button
+                                                type="button"
+                                                className="mt-3 min-h-10 rounded-lg border px-3 text-xs font-bold"
+                                                onClick={() => {
+                                                    if (
+                                                        manageAppId === app.id
+                                                    ) {
+                                                        setManageAppId(null);
+                                                        return;
+                                                    }
+                                                    setManageAppId(app.id);
+                                                    manageAppForm.clearErrors();
+                                                    manageAppForm.setData({
+                                                        organization_id:
+                                                            app.organization_id,
+                                                        action:
+                                                            app.status ===
+                                                            'active'
+                                                                ? 'pause'
+                                                                : 'resume',
+                                                        name: app.name,
+                                                        reason: '',
+                                                    });
+                                                }}
+                                            >
+                                                {manageAppId === app.id
+                                                    ? 'Close'
+                                                    : 'Manage application'}
+                                            </button>
+                                        )}
+                                        {manageAppId === app.id && (
+                                            <form
+                                                className="mt-3 space-y-3 border-t pt-3"
+                                                onSubmit={(event) => {
+                                                    event.preventDefault();
+                                                    manageAppForm.post(
+                                                        '/developer/apps/' +
+                                                            app.id +
+                                                            '/manage',
+                                                        {
+                                                            preserveScroll: true,
+                                                            onSuccess: () => {
+                                                                setManageAppId(
+                                                                    null,
+                                                                );
+                                                                manageAppForm.reset();
+                                                            },
+                                                        },
+                                                    );
+                                                }}
+                                            >
+                                                <label
+                                                    className="block text-xs font-semibold"
+                                                    htmlFor={
+                                                        'app-action-' + app.id
+                                                    }
+                                                >
+                                                    Action
+                                                </label>
+                                                <select
+                                                    id={'app-action-' + app.id}
+                                                    className="bg-background h-10 w-full rounded-lg border px-3 text-sm"
+                                                    value={
+                                                        manageAppForm.data
+                                                            .action
+                                                    }
+                                                    onChange={(event) =>
+                                                        manageAppForm.setData(
+                                                            'action',
+                                                            event.target.value,
+                                                        )
+                                                    }
+                                                >
+                                                    {canIssueKeys && (
+                                                        <option value="rename">
+                                                            Rename display name
+                                                        </option>
+                                                    )}
+                                                    {app.status ===
+                                                        'active' && (
+                                                        <option value="pause">
+                                                            Pause online
+                                                            issuance
+                                                        </option>
+                                                    )}
+                                                    {canIssueKeys &&
+                                                        app.status ===
+                                                            'paused' && (
+                                                            <option value="resume">
+                                                                Resume online
+                                                                issuance
+                                                            </option>
+                                                        )}
+                                                </select>
+                                                {manageAppForm.data.action ===
+                                                    'rename' && (
+                                                    <>
+                                                        <label
+                                                            className="block text-xs font-semibold"
+                                                            htmlFor={
+                                                                'app-name-' +
+                                                                app.id
+                                                            }
+                                                        >
+                                                            Display name
+                                                            (product code cannot
+                                                            change)
+                                                        </label>
+                                                        <input
+                                                            id={
+                                                                'app-name-' +
+                                                                app.id
+                                                            }
+                                                            className="bg-background h-10 w-full rounded-lg border px-3 text-sm"
+                                                            maxLength={160}
+                                                            minLength={2}
+                                                            required
+                                                            value={
+                                                                manageAppForm
+                                                                    .data.name
+                                                            }
+                                                            onChange={(event) =>
+                                                                manageAppForm.setData(
+                                                                    'name',
+                                                                    event.target
+                                                                        .value,
+                                                                )
+                                                            }
+                                                        />
+                                                    </>
+                                                )}
+                                                <label
+                                                    className="block text-xs font-semibold"
+                                                    htmlFor={
+                                                        'app-reason-' + app.id
+                                                    }
+                                                >
+                                                    Audit reason
+                                                </label>
+                                                <textarea
+                                                    id={'app-reason-' + app.id}
+                                                    className="bg-background w-full rounded-lg border px-3 py-2 text-sm"
+                                                    rows={2}
+                                                    minLength={8}
+                                                    maxLength={240}
+                                                    required
+                                                    value={
+                                                        manageAppForm.data
+                                                            .reason
+                                                    }
+                                                    onChange={(event) =>
+                                                        manageAppForm.setData(
+                                                            'reason',
+                                                            event.target.value,
+                                                        )
+                                                    }
+                                                />
+                                                {Object.values(
+                                                    manageAppForm.errors,
+                                                ).map((error, index) => (
+                                                    <p
+                                                        className="text-xs text-red-500"
+                                                        key={index}
+                                                    >
+                                                        {error}
+                                                    </p>
+                                                ))}
+                                                <p className="text-muted-foreground text-xs">
+                                                    Pause blocks new keys and
+                                                    online bootstrap redemption.
+                                                    Existing offline-signed
+                                                    leases expire on their own
+                                                    schedule.
+                                                </p>
+                                                <button
+                                                    type="submit"
+                                                    disabled={
+                                                        manageAppForm.processing
+                                                    }
+                                                    className="min-h-10 rounded-lg bg-red-600 px-3 text-xs font-bold text-white disabled:opacity-50"
+                                                >
+                                                    {manageAppForm.processing
+                                                        ? 'Applying…'
+                                                        : 'Confirm audited action'}
+                                                </button>
+                                            </form>
+                                        )}
                                     </article>
                                 ))
                             )}
