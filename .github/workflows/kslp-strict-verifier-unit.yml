@@ -1,0 +1,56 @@
+name: KSLP-v1 Strict Signed Verifier Unit
+
+on:
+  pull_request:
+    paths:
+      - 'apps/platform/app/Services/Licensing/Kslp/KslpCodec.php'
+      - 'apps/platform/app/Services/Licensing/Kslp/KslpVerifier.php'
+      - 'apps/platform/app/Services/Licensing/Kslp/KslpOfflineLeaseGuard.php'
+      - 'apps/platform/tests/Unit/Kslp/**'
+      - 'contracts/kslp-v1/**'
+      - '.github/workflows/kslp-strict-verifier-unit.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: kslp-strict-verifier-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  php-strict-verifier:
+    name: PHP 8.4 signed Golden and negative unit contracts
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - name: Checkout PR exact immutable head without credentials
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - name: PHP 8.4 Sodium test runtime
+        uses: shivammathur/setup-php@87d00bde2555f25eb54fedf940384e99cbdc55ef
+        with:
+          php-version: '8.4'
+          extensions: sodium, pdo_sqlite, sqlite3
+          coverage: none
+      - name: Install locked PHP test dependencies
+        working-directory: apps/platform
+        run: |
+          set -euo pipefail
+          composer install --no-interaction --prefer-dist --no-progress --optimize-autoloader
+      - name: Run exactly the KSLP unit verifier contracts
+        env:
+          SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        working-directory: apps/platform
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$SOURCE_SHA"
+          test -x vendor/bin/phpunit
+          php -l app/Services/Licensing/Kslp/KslpCodec.php
+          php -l app/Services/Licensing/Kslp/KslpVerifier.php
+          php -l tests/Unit/Kslp/KslpStrictVerifierTest.php
+          vendor/bin/phpunit tests/Unit/Kslp
+          echo 'KSLP_V1_STRICT_SIGNED_UNIT=PASS'
+          echo 'FULL_PRODUCTION_SECURITY_AUDIT=SEPARATELY_REQUIRED'
