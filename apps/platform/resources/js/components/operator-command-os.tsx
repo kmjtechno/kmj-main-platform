@@ -103,7 +103,7 @@ const groups = [
                 '/services/kmj-codebridge#codebridge-device-control',
                 Boxes,
             ],
-            ['ModelFabric & AI', '/operator/ops', Gauge],
+            ['ModelFabric & AI', '/operator/modelfabric', Gauge],
             ['CloudOS & Infrastructure', '/operator/ops', Cloud],
             ['OmniDesk Remote Access', '/operator/products', Globe2],
             ['CineCore & Calibration', '/operator/products', Gauge],
