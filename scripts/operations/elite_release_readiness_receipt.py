@@ -14,6 +14,7 @@ import os
 from pathlib import Path
 import socket
 import stat
+import sys
 import tempfile
 import time
 
@@ -25,6 +26,8 @@ BLOCKED = "BLOCKED_GATE_UNAVAILABLE"
 
 
 def verified_gate():
+    # Never write a .pyc into the signed, root-owned installed gate directory.
+    sys.dont_write_bytecode = True
     # The only imported preflight is the operator-installed fixed root script.
     parent = GATE.parent.lstat()
     root = GATE.lstat()
