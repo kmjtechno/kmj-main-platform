@@ -1,0 +1,25 @@
+name: KMJ P520 Cipher SHA256 Readback Source QA
+on:
+  pull_request:
+    paths:
+      - 'scripts/windows/P520-OFFSITE-CIPHER-READBACK-20261116.mjs'
+      - 'scripts/windows/test-P520-OFFSITE-CIPHER-READBACK-20261116.mjs'
+      - '.github/workflows/kmj-p520-cipher-readback-qa.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  readback:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Bounded synthetic encrypted artifact readback tests
+        run: |
+          set -Eeuo pipefail
+          node --test scripts/windows/test-P520-OFFSITE-CIPHER-READBACK-20261116.mjs
+          echo P520_REAL_CIPHER_READBACK=NOT_EXECUTED
+          echo P520_DECRYPT_OR_DATABASE_RESTORE=NOT_EXECUTED
+          echo PRODUCTION_APPROVAL=NOT_GRANTED

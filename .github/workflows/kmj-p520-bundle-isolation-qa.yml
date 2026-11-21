@@ -1,0 +1,26 @@
+name: KMJ P520 Key-Isolated AGE Bundle Integrity QA
+on:
+  pull_request:
+    paths:
+      - 'scripts/windows/P520-OFFSITE-BUNDLE-ISOLATION-20261116.mjs'
+      - 'scripts/windows/test-P520-OFFSITE-BUNDLE-ISOLATION-20261116.mjs'
+      - '.github/workflows/kmj-p520-bundle-isolation-qa.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  isolate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Unit-test strict non-Google two-container sandbox command contracts
+        run: |
+          set -Eeuo pipefail
+          node --test scripts/windows/test-P520-OFFSITE-BUNDLE-ISOLATION-20261116.mjs
+          echo REAL_AGE_KEY_READ=NO
+          echo REAL_DECRYPTION=NOT_EXECUTED
+          echo REAL_PG_RESTORE=NOT_EXECUTED
+          echo PROD_APPROVAL=NOT_GRANTED

@@ -1,0 +1,26 @@
+name: KMJ P520 Immutable Container Admission Source QA
+on:
+  pull_request:
+    paths:
+      - 'scripts/windows/P520-OFFSITE-CONTAINER-ADMISSION-20261116.mjs'
+      - 'scripts/windows/test-P520-OFFSITE-CONTAINER-ADMISSION-20261116.mjs'
+      - '.github/workflows/kmj-p520-container-admission-qa.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  admission:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Offline immutable image, fail-closed host/engine admission tests
+        run: |
+          set -Eeuo pipefail
+          node --test scripts/windows/test-P520-OFFSITE-CONTAINER-ADMISSION-20261116.mjs
+          echo P520_DOCKER_CONTAINER_STARTED=NO
+          echo P520_PRODUCTION_RESTORE=NOT_EXECUTED
+          echo GOOGLE_VPS_REQUIRED=NO
+          echo PRODUCTION_APPROVAL=NOT_GRANTED

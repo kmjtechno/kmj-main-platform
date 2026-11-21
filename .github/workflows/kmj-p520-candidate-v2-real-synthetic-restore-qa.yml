@@ -1,0 +1,52 @@
+name: KMJ P520 Candidate V2 Isolation and Real Synthetic PG18 QA
+on:
+  pull_request:
+    paths:
+      - 'scripts/windows/P520-OFFSITE-*-CANDIDATE-V2-20261119.mjs'
+      - 'scripts/windows/test-P520-CANDIDATE-V2-RESTORE-COMPONENTS-20261119.mjs'
+      - 'scripts/ci/verify-p520-real-pg18-restore-candidate-v2-ci.sh'
+      - 'scripts/ci/Dockerfile.p520-pg18-restore-ci'
+      - '.github/workflows/kmj-p520-candidate-v2-real-synthetic-restore-qa.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  candidate-v2-module-qa:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-2025, ubuntu-24.04]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 7
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - name: Exact SHA candidate-only cipher, manifest, signer and immutable-image tests
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          test "$(git rev-parse HEAD)" = "${{ github.event.pull_request.head.sha || github.sha }}"
+          node --test scripts/windows/test-P520-CANDIDATE-V2-RESTORE-COMPONENTS-20261119.mjs
+          echo 'OWNER_P520_REAL_RESTORE=NOT_EXECUTED'
+          echo 'PRIVATE_KEY_ACCESS=NONE'
+          echo 'PRODUCTION_APPROVAL=NOT_GRANTED'
+
+  candidate-v2-real-synthetic-pg18:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - name: Offline nonroot PG18 and uploads restore from exact V2 source
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          test "$(git rev-parse HEAD)" = "${{ github.event.pull_request.head.sha || github.sha }}"
+          bash -n scripts/ci/verify-p520-real-pg18-restore-candidate-v2-ci.sh
+          grep -Fq -- '--network=none' scripts/ci/verify-p520-real-pg18-restore-candidate-v2-ci.sh
+          grep -Fq 'OWNER_P520_BACKUP_AND_RESTORE=NOT_EXECUTED' scripts/ci/verify-p520-real-pg18-restore-candidate-v2-ci.sh
+          bash scripts/ci/verify-p520-real-pg18-restore-candidate-v2-ci.sh "$(git rev-parse HEAD)"

@@ -1,0 +1,33 @@
+name: KMJ P520 Existing Key Owner-Only Repair Safety QA
+on:
+  pull_request:
+    paths:
+      - 'scripts/windows/P520-OWNER-ONLY-KEY-FILE-OWNER-REPAIR-20261118.ps1'
+      - 'scripts/windows/test-P520-OWNER-ONLY-KEY-FILE-REPAIR-20261118.mjs'
+      - '.github/workflows/kmj-p520-owner-only-file-acl-repair-qa.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  owner-only-repair-qa:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-2025, ubuntu-24.04]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 8
+    steps:
+      - name: Exact source candidate
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - name: Native Windows PowerShell parser and fail-closed operation gates
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          test "$(git rev-parse HEAD)" = "${{ github.event.pull_request.head.sha || github.sha }}"
+          node --test scripts/windows/test-P520-OWNER-ONLY-KEY-FILE-REPAIR-20261118.mjs
+          echo 'REAL_P520_KEY_ACL_REPAIR=NOT_EXECUTED'
+          echo 'PRIVATE_KEY_BYTES_ACCESSED=NO'
+          echo 'PRODUCTION_RELEASE_APPROVAL=NOT_GRANTED'

@@ -1,0 +1,30 @@
+name: KMJ P520 Private ACL SID Guard QA
+on:
+  pull_request:
+    paths:
+      - 'scripts/windows/P520-OFFSITE-ACL-VERIFY-20261116.mjs'
+      - 'scripts/windows/test-P520-OFFSITE-ACL-VERIFY-20261116.mjs'
+      - 'scripts/windows/P520-OFFSITE-KEY-BOOTSTRAP-20261116.mjs'
+      - 'scripts/windows/P520-OFFSITE-CIPHER-READBACK-20261116.mjs'
+      - 'scripts/windows/P520-OFFSITE-INBOX-FINALIZE-20261116.mjs'
+      - '.github/workflows/kmj-p520-acl-sid-guard-qa.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  acl:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: SID ACL allowlist and negative fixtures; no real keys
+        run: |
+          set -Eeuo pipefail
+          node --test scripts/windows/test-P520-OFFSITE-ACL-VERIFY-20261116.mjs
+          grep -Fq 'verifyWindowsPrivateAcl(folder)' scripts/windows/P520-OFFSITE-KEY-BOOTSTRAP-20261116.mjs
+          grep -Fq 'verifyWindowsPrivateAcl(path)' scripts/windows/P520-OFFSITE-CIPHER-READBACK-20261116.mjs
+          grep -Fq 'verifyWindowsPrivateAcl(path)' scripts/windows/P520-OFFSITE-INBOX-FINALIZE-20261116.mjs
+          echo ACTUAL_P520_PRIVATE_ACL_CHECK=NOT_EXECUTED
+          echo PRODUCTION_APPROVAL=NOT_GRANTED
