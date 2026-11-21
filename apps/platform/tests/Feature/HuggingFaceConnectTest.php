@@ -51,9 +51,9 @@ final class HuggingFaceConnectTest extends TestCase
     {
         $json = $this->getJson('/.well-known/oauth-cimd')->assertOk()->json();
 
-        $this->assertSame('https://localhost/.well-known/oauth-cimd', $json['client_id']);
+        $this->assertSame($this->clientId(), $json['client_id']);
         $this->assertSame('none', $json['token_endpoint_auth_method']);
-        $this->assertSame(['https://localhost'.self::CALLBACK], $json['redirect_uris']);
+        $this->assertSame([$this->redirectUri()], $json['redirect_uris']);
         $this->assertArrayNotHasKey('client_secret', $json);
     }
 
@@ -71,7 +71,7 @@ final class HuggingFaceConnectTest extends TestCase
         $this->assertSame('inference-api', $query['scope']);
         $this->assertSame('S256', $query['code_challenge_method']);
         $this->assertSame('code', $query['response_type']);
-        $this->assertSame('https://localhost/.well-known/oauth-cimd', $query['client_id']);
+        $this->assertSame($this->clientId(), $query['client_id']);
         $this->assertSame(rtrim(strtr(base64_encode(hash('sha256', $verifier, true)), '+/', '-_'), '='), $query['code_challenge']);
         $this->assertStringNotContainsString($verifier, $location);
     }
@@ -95,7 +95,7 @@ final class HuggingFaceConnectTest extends TestCase
         Http::assertSent(fn ($request): bool => $request->url() === 'https://huggingface.co/oauth/token'
             && $request['grant_type'] === 'authorization_code'
             && $request['code_verifier'] === $verifier
-            && $request['client_id'] === 'https://localhost/.well-known/oauth-cimd');
+            && $request['client_id'] === $this->clientId());
         $provider = AiProvider::query()->firstOrFail();
         $this->assertSame('huggingface', $provider->preset);
         $this->assertSame(self::TOKEN, $provider->api_key);
@@ -144,6 +144,16 @@ final class HuggingFaceConnectTest extends TestCase
 
         Http::assertNothingSent();
         $this->assertDatabaseCount('ai_providers', 0);
+    }
+
+    private function clientId(): string
+    {
+        return (string) preg_replace('#\Ahttp://#', 'https://', route('ai-providers.huggingface.metadata'));
+    }
+
+    private function redirectUri(): string
+    {
+        return (string) preg_replace('#\Ahttp://#', 'https://', route('ai-providers.huggingface.callback'));
     }
 
     private function callbackUrl(string $code = 'abcdefgh12345'): string
