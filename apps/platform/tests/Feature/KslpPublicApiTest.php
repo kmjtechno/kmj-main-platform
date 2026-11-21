@@ -162,4 +162,54 @@ final class KslpPublicApiTest extends TestCase
             self::assertSame('KSLP_KEY_WINDOW_CONFLICT', $error->getMessage());
         }
     }
+
+    public function test_scoped_key_expiry_uses_utc_instead_of_caller_wall_clock(): void
+    {
+        [, $key] = $this->key('timezone-issuer');
+        $expiry = (new \DateTimeImmutable('@'.(now()->getTimestamp() + 172800)))
+            ->setTimezone(new \DateTimeZone('Asia/Kolkata'));
+
+        app(KslpKeyRegistry::class)->publish(
+            'timezone-kid',
+            'license',
+            $key,
+            'active',
+            OmniDeskLicenseContract::PRODUCT_ID,
+            $expiry,
+        );
+
+        self::assertSame(
+            gmdate('Y-m-d H:i:s', $expiry->getTimestamp()),
+            (string) DB::table('kslp_signing_keys')->where('kid', 'timezone-kid')->value('not_after'),
+            'An offset timezone must not extend the product signing key window.',
+        );
+    }
+
+    public function test_product_scope_cannot_be_dropped_while_a_scoped_key_exists(): void
+    {
+        [, $key] = $this->key('rollback-issuer');
+        app(KslpKeyRegistry::class)->publish(
+            'rollback-kid',
+            'license',
+            $key,
+            'active',
+            OmniDeskLicenseContract::PRODUCT_ID,
+            now()->addDay(),
+        );
+
+        $migration = require database_path('migrations/2026_11_21_124500_add_product_scope_to_kslp_signing_keys.php');
+        try {
+            $migration->down();
+            self::fail('Removing audience with a live product key must never succeed.');
+        } catch (\RuntimeException $error) {
+            self::assertSame('KSLP_PRODUCT_SCOPE_ROLLBACK_BLOCKED', $error->getMessage());
+        }
+
+        self::assertTrue(\Illuminate\Support\Facades\Schema::hasColumn('kslp_signing_keys', 'product_id'));
+        self::assertSame(
+            OmniDeskLicenseContract::PRODUCT_ID,
+            (string) DB::table('kslp_signing_keys')->where('kid', 'rollback-kid')->value('product_id'),
+        );
+    }
+
 }
