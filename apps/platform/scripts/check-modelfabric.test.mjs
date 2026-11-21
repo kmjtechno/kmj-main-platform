@@ -115,6 +115,6 @@ void test('bulk evidence needs one explicit attestation, is capped and renewal n
     assert.match(controller, /DB::transaction/);
     assert.match(routes, /evidence\/bulk/);
     assert.match(routes, /evidence\/\{evidence\}\/renew/);
-    assert.match(page, /Approve all \{bulkModels\.length\}/);
+    assert.match(page, /Approve \{bulkModels\.length\} selected/);
     assert.match(page, /Renew 30 days/);
 });
