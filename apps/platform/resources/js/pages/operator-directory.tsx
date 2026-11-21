@@ -108,11 +108,11 @@ export default function OperatorDirectory({
     return (
         <>
             <Head title="KMJ TECHNO — Customer Accounts & Organizations" />
-            <main className="kmj-admin-shell min-h-screen space-y-6 p-4 sm:p-8">
-                <div className="mx-auto max-w-7xl">
+            <main className="owner-admin-page kmj-admin-shell flex min-w-0 flex-1 flex-col gap-6 p-4 sm:p-6 lg:p-8">
+                <div className="w-full">
                     <OperatorModuleNavigation active="customers" />
                 </div>
-                <header className="kmj-admin-hero mx-auto max-w-7xl rounded-[1.65rem] p-6 sm:p-8">
+                <header className="owner-admin-hero kmj-admin-hero w-full rounded-[1.65rem] p-6 sm:p-8">
                     <div className="flex flex-wrap items-center gap-3">
                         <Users
                             className="size-8 text-red-400"
@@ -137,7 +137,7 @@ export default function OperatorDirectory({
 
                 <form
                     onSubmit={search}
-                    className="bg-card mx-auto grid max-w-7xl gap-3 rounded-2xl border border-white/10 p-5 md:grid-cols-[1fr_1fr_auto] md:items-end"
+                    className="bg-card grid w-full gap-3 rounded-2xl border border-white/10 p-5 md:grid-cols-[1fr_1fr_auto] md:items-end"
                 >
                     <label className="text-muted-foreground space-y-2 text-xs font-semibold">
                         <span>
@@ -171,7 +171,7 @@ export default function OperatorDirectory({
                     </button>
                 </form>
 
-                <div className="mx-auto grid max-w-7xl gap-6 xl:grid-cols-2">
+                <div className="grid w-full gap-6 xl:grid-cols-2">
                     <section
                         aria-label="Platform users"
                         className="bg-card min-w-0 rounded-2xl border border-white/10 p-5"
