@@ -16,6 +16,8 @@ export const deliveryMilestones: DeliveryMilestone[] = [
         detail: 'Source-only owner dashboard consolidation: global license issuance, developer applications, issued trial keys, language SDK configuration and issuer subscriptions are brought into one Owner Licensing Hub. Owner links route to /operator/kslp; ordinary developers retain tenant-limited access. Old unverified-email account deletion is intentionally disabled pending protected backup, real dependency and isolation checks, owner authorization, and release approval. AuthSP reseller, batch lifecycle and production SDK parity are NOT yet complete.',
         evidence:
             'PR #932 source and feature/static tests; exact-head CI pending. Existing standalone Google-dependent workflows are not reintroduced; no DB records, signatures, live licenses or verified customers were changed. No production deployment or cleanup has occurred.',
+    },
+    {
         id: 'payment-credential-autofill-guard-20261121',
         title: 'Payment credential form no longer accepts browser login autofill',
         state: 'active',
