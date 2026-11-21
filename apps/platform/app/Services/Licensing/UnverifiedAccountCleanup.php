@@ -162,7 +162,13 @@ final class UnverifiedAccountCleanup
 
         foreach ($relations as $table => $columns) {
             foreach ($columns as $column) {
-                if (DB::table($table)->where($column, (string) $id)->exists()) {
+                // A customer_id may be UUID while users.id is bigint. Always
+                // compare text to text; never cast a user ID into a UUID or
+                // silently skip that potentially related record.
+                if (preg_match('/\\A[a-z][a-z0-9_]*\\z/D', $column) !== 1) {
+                    throw new RuntimeException('UNVERIFIED_CLEANUP_UNSAFE_REFERENCE_COLUMN');
+                }
+                if (DB::table($table)->whereRaw('CAST("'.$column.'" AS TEXT) = ?', [(string) $id])->exists()) {
                     return true;
                 }
             }
