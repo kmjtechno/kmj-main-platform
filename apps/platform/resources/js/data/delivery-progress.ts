@@ -10,6 +10,14 @@ export type DeliveryMilestone = {
 
 export const deliveryMilestones: DeliveryMilestone[] = [
     {
+        id: 'kslp-app-lifecycle-audited-20261121',
+        title: 'Licensing Hub: guarded app rename and emergency pause/resume',
+        state: 'active',
+        detail: 'Source-only, carved from reviewed draft #894: server-authorized app rename/pause/resume on the existing KSLP authority. Product codes stay immutable; tenant capability, recent password step-up, audit reason, issuer and application locks and fail-closed status checks govern changes. A paused application rejects online bootstrap keys and new trial issuance. Already signed offline leases are not revoked instantly by this action.',
+        evidence:
+            'Negative feature tests cover cross-tenant attempts, stale step-up, paused keys and guarded resume; exact-head CI only, nothing deployed, not full AuthSP parity.',
+    },
+    {
         id: 'kslp-v1-strict-signed-verifier-20261121',
         title: 'Strict signed KSLP v1 license verifier in PHP and Rust',
         state: 'active',
