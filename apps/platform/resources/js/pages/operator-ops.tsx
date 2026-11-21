@@ -294,7 +294,13 @@ export default function OperatorOps({
     const refresh = () => {
         setRefreshing(true);
         router.reload({
-            only: ['snapshot', 'readiness', 'eliteRelease', 'outbox', 'recentActions'],
+            only: [
+                'snapshot',
+                'readiness',
+                'eliteRelease',
+                'outbox',
+                'recentActions',
+            ],
             onFinish: () => setRefreshing(false),
         });
     };
@@ -306,7 +312,13 @@ export default function OperatorOps({
             if (document.visibilityState !== 'visible') return;
 
             router.reload({
-                only: ['snapshot', 'readiness', 'eliteRelease', 'outbox', 'recentActions'],
+                only: [
+                    'snapshot',
+                    'readiness',
+                    'eliteRelease',
+                    'outbox',
+                    'recentActions',
+                ],
             });
         };
         const resumeWhenVisible = () => {
@@ -390,24 +402,41 @@ export default function OperatorOps({
                         <div>
                             <div className="flex items-center gap-2">
                                 <ShieldCheck className="h-4 w-4 text-red-500" />
-                                <h2 className="font-bold">Elite-only release control</h2>
+                                <h2 className="font-bold">
+                                    Elite-only release control
+                                </h2>
                             </div>
                             <p className="text-muted-foreground mt-2 max-w-2xl text-xs leading-5">
-                                One server: KMJ-elite. Staging, restore and production
-                                each require independently verified evidence. This
-                                read-only receipt is not a deploy authorization.
+                                One server: KMJ-elite. Staging, restore and
+                                production each require independently verified
+                                evidence. This read-only receipt is not a deploy
+                                authorization.
                             </p>
                         </div>
                         <StatusPill status={eliteRelease.status} />
                     </div>
                     <div className="mt-5 grid gap-3 sm:grid-cols-3">
                         {[
-                            { label: '1 · Stage', value: 'Requires exact staged-origin SHA' },
-                            { label: '2 · Verify', value: 'Owner QA, local restore, rollback and protected SHA' },
-                            { label: '3 · Deploy', value: 'Fixed privileged broker not connected to this page' },
+                            {
+                                label: '1 · Stage',
+                                value: 'Requires exact staged-origin SHA',
+                            },
+                            {
+                                label: '2 · Verify',
+                                value: 'Owner QA, local restore, rollback and protected SHA',
+                            },
+                            {
+                                label: '3 · Deploy',
+                                value: 'Fixed privileged broker not connected to this page',
+                            },
                         ].map((step) => (
-                            <div key={step.label} className="bg-muted/20 rounded-xl border p-4">
-                                <div className="text-xs font-black">{step.label}</div>
+                            <div
+                                key={step.label}
+                                className="bg-muted/20 rounded-xl border p-4"
+                            >
+                                <div className="text-xs font-black">
+                                    {step.label}
+                                </div>
                                 <p className="text-muted-foreground mt-2 text-xs leading-5">
                                     {step.value}
                                 </p>
@@ -419,7 +448,7 @@ export default function OperatorOps({
                             <div className="text-muted-foreground font-semibold">
                                 Trusted root preflight
                             </div>
-                            <div className="mt-1 break-all font-mono">
+                            <div className="mt-1 font-mono break-all">
                                 {eliteRelease.reason}
                             </div>
                         </div>
@@ -427,11 +456,13 @@ export default function OperatorOps({
                             <div className="text-muted-foreground font-semibold">
                                 Current release / approved SHA
                             </div>
-                            <div className="mt-1 break-all font-mono">
-                                {eliteRelease.current_release ?? 'Not independently observed'}
+                            <div className="mt-1 font-mono break-all">
+                                {eliteRelease.current_release ??
+                                    'Not independently observed'}
                             </div>
-                            <div className="text-muted-foreground mt-1 break-all font-mono">
-                                {eliteRelease.approved_sha ?? 'No trusted approval receipt'}
+                            <div className="text-muted-foreground mt-1 font-mono break-all">
+                                {eliteRelease.approved_sha ??
+                                    'No trusted approval receipt'}
                             </div>
                         </div>
                     </div>
@@ -440,7 +471,8 @@ export default function OperatorOps({
                             ? `Root snapshot: ${new Date(eliteRelease.captured_at_unix * 1000).toLocaleString()} · `
                             : 'No fresh root receipt · '}
                         Deployment not triggered. Independent disaster recovery
-                        not verified. Google VPS is not a Main Platform dependency.
+                        not verified. Google VPS is not a Main Platform
+                        dependency.
                     </p>
                     <button
                         type="button"
@@ -448,7 +480,9 @@ export default function OperatorOps({
                         disabled={refreshing}
                         className="hover:bg-muted mt-4 inline-flex items-center gap-2 rounded-xl border px-4 py-3 text-xs font-bold disabled:opacity-50"
                     >
-                        <RefreshCw className={`size-4 ${refreshing ? 'animate-spin' : ''}`} />
+                        <RefreshCw
+                            className={`size-4 ${refreshing ? 'animate-spin' : ''}`}
+                        />
                         Check release readiness
                     </button>
                 </section>
