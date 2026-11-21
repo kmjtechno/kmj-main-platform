@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\CodeBridgeOAuthLinkController;
+use App\Http\Controllers\HuggingFaceConnectController;
 use App\Models\LicenseAuditEvent;
 use App\Models\User;
 use App\Services\AuthorityBootstrapper;
@@ -340,7 +341,7 @@ Route::get('acceptable-use', fn () => Inertia::render('legal/acceptable-use'))->
 Route::get('cookie-policy', fn () => Inertia::render('legal/cookie-policy'))->name('legal.cookies');
 
 // Public client metadata for Hugging Face's documented CIMD OAuth flow (no secret, no registration by hand).
-Route::get('.well-known/oauth-cimd', [\App\Http\Controllers\HuggingFaceConnectController::class, 'metadata'])
+Route::get('.well-known/oauth-cimd', [HuggingFaceConnectController::class, 'metadata'])
     ->middleware('throttle:60,1')->name('ai-providers.huggingface.metadata');
 
 Route::middleware(['auth', 'verified'])->group(function () {
