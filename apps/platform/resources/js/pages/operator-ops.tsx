@@ -290,6 +290,7 @@ export default function OperatorOps({
 }: Props) {
     const [refreshing, setRefreshing] = useState(false);
     const [restarting, setRestarting] = useState(false);
+    const [activationRequesting, setActivationRequesting] = useState(false);
 
     const refresh = () => {
         setRefreshing(true);
@@ -349,6 +350,49 @@ export default function OperatorOps({
             {
                 preserveScroll: true,
                 onFinish: () => setRestarting(false),
+            },
+        );
+    };
+
+    const canRequestActivation =
+        eliteRelease.status === 'preflight_ready_only' &&
+        eliteRelease.reason === 'READY_APPROVED_RELEASE' &&
+        typeof eliteRelease.approved_sha === 'string' &&
+        /^[a-f0-9]{40}$/.test(eliteRelease.approved_sha) &&
+        typeof eliteRelease.current_release === 'string' &&
+        /^platform-[a-f0-9]{12}$/.test(eliteRelease.current_release) &&
+        eliteRelease.expected_current_release === eliteRelease.current_release &&
+        eliteRelease.promoted_sha === eliteRelease.approved_sha &&
+        eliteRelease.deploy_triggered === false;
+
+    const requestActivation = () => {
+        if (
+            !canRequestActivation ||
+            !eliteRelease.approved_sha ||
+            !eliteRelease.current_release
+        ) {
+            return;
+        }
+
+        if (
+            !window.confirm(
+                `Request the existing protected production-release unit for exact SHA ${eliteRelease.approved_sha} from ${eliteRelease.current_release}? This records an owner intent, not a successful deployment. All independent protected gates must still pass.`,
+            )
+        ) {
+            return;
+        }
+
+        setActivationRequesting(true);
+        router.post(
+            '/operator/ops/actions/release-activation-intent',
+            {
+                approved_sha: eliteRelease.approved_sha,
+                expected_current_release: eliteRelease.current_release,
+                confirmation: 'REQUEST_APPROVED_PRODUCTION_RELEASE',
+            },
+            {
+                preserveScroll: true,
+                onFinish: () => setActivationRequesting(false),
             },
         );
     };
@@ -485,6 +529,24 @@ export default function OperatorOps({
                         />
                         Check release readiness
                     </button>
+                    <button
+                        type="button"
+                        onClick={requestActivation}
+                        disabled={!canRequestActivation || activationRequesting}
+                        className="mt-4 ml-2 inline-flex items-center justify-center gap-2 rounded-xl bg-red-600 px-4 py-3 text-xs font-bold text-white transition disabled:cursor-not-allowed disabled:opacity-40"
+                    >
+                        <ShieldCheck className="size-4" aria-hidden="true" />
+                        {activationRequesting
+                            ? 'Submitting owner request...'
+                            : 'Request approved activation'}
+                    </button>
+                    <p className="text-muted-foreground mt-2 text-[11px]">
+                        Enabled only for a fresh exact-SHA trusted preflight.
+                        Requesting never supplies backup or rollback approvals,
+                        never overwrites a pending request, and never proves a
+                        production switch. The fixed root broker must be
+                        independently installed and verify every protected gate.
+                    </p>
                 </section>
 
                 <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
