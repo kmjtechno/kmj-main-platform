@@ -1,0 +1,26 @@
+name: KMJ Elite release preflight receipt contract
+
+on:
+  pull_request:
+    paths:
+      - 'scripts/operations/elite_release_readiness_receipt.py'
+      - 'scripts/test_elite_release_readiness_receipt.py'
+      - '.github/workflows/elite-release-readiness-receipt.yml'
+      - 'apps/platform/app/Services/Operations/EliteReleaseReadinessSnapshot.php'
+      - 'apps/platform/tests/Unit/EliteReleaseReadinessSnapshotTest.php'
+      - 'docs/operations/ELITE_ONECLICK_RELEASE_PROOF.md'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  fixed-readonly-preflight:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Compile root-only publisher and its tests
+        run: python3 -m py_compile scripts/operations/elite_release_readiness_receipt.py scripts/test_elite_release_readiness_receipt.py
+      - name: Check false-PASS and no-deploy boundaries
+        run: python3 scripts/test_elite_release_readiness_receipt.py -v
