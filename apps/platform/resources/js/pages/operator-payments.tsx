@@ -47,6 +47,13 @@ export default function OperatorPayments({
     const [selectedProvider, setSelectedProvider] =
         useState<OwnerGatewaySetting['provider']>('razorpay');
 
+    const visibleGateways = paymentReadiness.providers.filter(
+        (gateway) => gateway.id === 'razorpay' || gateway.id === 'cashfree',
+    );
+    const selectedGateway = visibleGateways.find(
+        (gateway) => gateway.id === selectedProvider,
+    );
+
     return (
         <>
             <Head title="KMJ TECHNO — Payment Gateway Control" />
@@ -84,6 +91,50 @@ export default function OperatorPayments({
                     </div>
                 </header>
 
+                <section
+                    className="kmj-pay-metrics"
+                    aria-label="Payment readiness summary"
+                >
+                    {[
+                        {
+                            label: 'Live charging',
+                            value: paymentReadiness.live_charging_enabled
+                                ? 'Enabled'
+                                : 'Locked',
+                            note: 'Stays locked until end-to-end tests pass',
+                        },
+                        ...visibleGateways.map((gateway) => ({
+                            label: `${gateway.label} test keys`,
+                            value: gateway.sandbox_credentials_present
+                                ? 'Saved'
+                                : 'Missing',
+                            note: 'Stored encrypted; connection not proven by this alone',
+                        })),
+                        ...visibleGateways.map((gateway) => ({
+                            label: `${gateway.label} webhook`,
+                            value: gateway.webhook_verification_configured
+                                ? 'Delivery proven'
+                                : 'Not proven',
+                            note: `${gateway.webhook_events_received} signed event(s) received`,
+                        })),
+                    ].map((metric) => (
+                        <div
+                            key={metric.label}
+                            className="kmj-admin-metric p-5"
+                        >
+                            <p className="text-muted-foreground text-sm">
+                                {metric.label}
+                            </p>
+                            <p className="mt-2 text-2xl font-bold tracking-tight">
+                                {metric.value}
+                            </p>
+                            <p className="text-muted-foreground mt-1 text-xs leading-5">
+                                {metric.note}
+                            </p>
+                        </div>
+                    ))}
+                </section>
+
                 <PaymentGatewayOnboarding
                     gatewaySettings={gatewaySettings}
                     provider={selectedProvider}
@@ -93,6 +144,11 @@ export default function OperatorPayments({
                     gatewaySettings={gatewaySettings}
                     selectedProvider={selectedProvider}
                 />
+                {selectedGateway ? (
+                    <section aria-label="Webhook setup">
+                        <WebhookSetupGuide gateway={selectedGateway} />
+                    </section>
+                ) : null}
                 <section className="mx-auto grid w-full max-w-6xl gap-4 md:grid-cols-2">
                     {paymentReadiness.providers
                         .filter(
@@ -174,7 +230,6 @@ export default function OperatorPayments({
                                         </dd>
                                     </div>
                                 </dl>
-                                <WebhookSetupGuide gateway={gateway} />
                             </article>
                         ))}
                 </section>

@@ -10,6 +10,14 @@ export type DeliveryMilestone = {
 
 export const deliveryMilestones: DeliveryMilestone[] = [
     {
+        id: 'payments-admin-ui-consistency-20261121',
+        title: 'Payment Gateway Control aligned with the admin dashboard design system',
+        state: 'active',
+        detail: 'Source-only UI update: the payments page now uses the shared admin tokens (no private colours), a readiness metric row like the other owner pages, and places the webhook setup directly under the credentials of the selected provider. No payment, license or live-charging behaviour changed.',
+        evidence:
+            'Static owner UI tests updated to forbid private hex colours on this page; no live visual proof until deployed.',
+    },
+    {
         id: 'webhook-secret-generator-guided-setup-20261121',
         title: 'Razorpay webhook secret generator and guided setup',
         state: 'active',
