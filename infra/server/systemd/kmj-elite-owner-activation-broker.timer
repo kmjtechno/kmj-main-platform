@@ -1,0 +1,12 @@
+[Unit]
+Description=KMJ TECHNO guarded owner release intent check (Elite-only, no external VPS)
+
+[Timer]
+OnBootSec=60s
+OnUnitInactiveSec=30s
+AccuracySec=5s
+Persistent=false
+Unit=kmj-elite-owner-activation-broker.service
+
+[Install]
+WantedBy=timers.target
