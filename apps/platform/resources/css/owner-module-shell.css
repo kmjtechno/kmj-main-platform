@@ -327,3 +327,238 @@
         row-gap: 8px;
     }
 }
+
+/*
+ * Locked Command Center parity: one surface system for all real Owner modules.
+ * This is deliberately scoped below the authenticated OwnerModuleShell.
+ * Customer dashboard, public pages, marketing, permission and data APIs are
+ * never restyled or modified by these rules.
+ */
+.owner-module-shell[data-owner-design='command-center-v1'] {
+    --owner-surface-0: #070c11;
+    --owner-surface-1: #0b1016;
+    --owner-surface-2: #111820;
+    --owner-line: #34404c;
+    --owner-danger-red: #df092f;
+    --owner-radius: 16px;
+}
+
+.owner-module-shell .owner-module-content .owner-admin-page {
+    width: 100%;
+    max-width: none;
+    min-width: 0;
+    min-height: 0;
+    margin: 0;
+    padding: clamp(12px, 1.3vw, 20px);
+    gap: 18px;
+    color: var(--foreground);
+    background: transparent;
+    overflow-x: clip;
+}
+
+.owner-module-shell .owner-admin-page > :is(header, section, form, nav, div) {
+    max-width: 100%;
+    min-width: 0;
+    margin-inline: 0;
+}
+
+.owner-module-shell .owner-admin-page :is(.max-w-6xl, .max-w-7xl) {
+    max-width: none;
+}
+
+.owner-module-shell .owner-admin-page .owner-admin-hero {
+    width: 100%;
+    min-width: 0;
+    min-height: 124px;
+    border: 1px solid var(--owner-line);
+    border-radius: var(--owner-radius);
+    background: linear-gradient(
+        130deg,
+        var(--owner-surface-1),
+        var(--owner-surface-0)
+    );
+    padding: clamp(18px, 1.75vw, 28px);
+    box-shadow: none;
+}
+
+.owner-module-shell .owner-admin-page .owner-admin-hero h1 {
+    font-size: clamp(25px, 2vw, 33px);
+    font-weight: 800;
+    line-height: 1.15;
+    letter-spacing: -0.025em;
+}
+
+.owner-module-shell .owner-admin-page .owner-admin-hero p {
+    max-width: 72ch;
+    line-height: 1.6;
+    color: #aeb9c6;
+}
+
+.owner-module-shell
+    .owner-admin-page
+    :is(.kmj-admin-metric, .kmj-admin-module-card, .bg-card) {
+    border-color: var(--owner-line);
+    border-radius: 14px;
+    background: linear-gradient(
+        135deg,
+        var(--owner-surface-1),
+        var(--owner-surface-0)
+    );
+    box-shadow: none;
+}
+
+.owner-module-shell
+    .owner-admin-page
+    :is(
+        input:not([type='checkbox']):not([type='radio']):not([type='hidden']),
+        select,
+        textarea
+    ) {
+    max-width: 100%;
+    min-height: 42px;
+    border-radius: 10px;
+    border-color: var(--owner-line);
+    background-color: var(--owner-surface-0);
+    color: #eef2f7;
+}
+
+.owner-module-shell
+    .owner-admin-page
+    :is(
+        input:not([type='checkbox']):not([type='radio']):not([type='hidden']),
+        select,
+        textarea
+    ):focus-visible {
+    outline: 2px solid #f43b5c;
+    outline-offset: 2px;
+    border-color: #f43b5c;
+}
+
+.owner-module-shell .owner-admin-page :is(button, a)[class*='bg-red-600'] {
+    border-radius: 10px;
+    background-color: var(--owner-danger-red);
+    color: #fff;
+    font-weight: 700;
+}
+
+.owner-module-shell .owner-admin-page :is(button, a):focus-visible {
+    outline: 2px solid #ff5673;
+    outline-offset: 3px;
+}
+
+.owner-module-shell .owner-admin-page :is(table, [role='table']) {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+}
+
+.owner-module-shell .owner-admin-page [class*='overflow-x-auto'] {
+    max-width: 100%;
+}
+
+@media (max-width: 700px) {
+    .owner-module-shell .owner-module-content .owner-admin-page {
+        padding: 10px;
+        gap: 12px;
+    }
+
+    .owner-module-shell .owner-admin-page .owner-admin-hero {
+        padding: 18px;
+    }
+
+    .owner-module-shell .owner-admin-page .owner-admin-hero h1 {
+        font-size: 24px;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .owner-module-shell .owner-admin-page *,
+    .owner-module-shell .owner-admin-page *::before,
+    .owner-module-shell .owner-admin-page *::after {
+        scroll-behavior: auto !important;
+        transition-duration: 0.01ms !important;
+        animation-duration: 0.01ms !important;
+    }
+}
+
+/*
+ * Owner-only versions of shared service and account settings screens.
+ * Their same components remain unchanged for ordinary customer accounts.
+ */
+.owner-module-shell .owner-module-content .owner-admin-surface {
+    width: 100%;
+    max-width: none;
+    min-width: 0;
+    padding: clamp(12px, 1.3vw, 20px);
+    gap: 18px;
+    background: transparent;
+}
+
+.owner-module-shell .owner-admin-surface > section:first-of-type {
+    border: 1px solid var(--owner-line);
+    border-radius: var(--owner-radius);
+    background: linear-gradient(
+        130deg,
+        var(--owner-surface-1),
+        var(--owner-surface-0)
+    );
+    box-shadow: none;
+}
+
+.owner-module-shell .owner-admin-surface > section:first-of-type h1 {
+    font-size: clamp(25px, 2vw, 33px);
+    font-weight: 800;
+    letter-spacing: -0.025em;
+    line-height: 1.15;
+}
+
+.owner-module-shell
+    .owner-admin-surface
+    :is(.bg-card, .kmj-ai-managed-provider) {
+    border-color: var(--owner-line);
+    border-radius: 14px;
+    background: linear-gradient(
+        135deg,
+        var(--owner-surface-1),
+        var(--owner-surface-0)
+    );
+}
+
+.owner-module-shell .owner-admin-settings {
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    padding: clamp(14px, 1.5vw, 24px);
+    border: 1px solid var(--owner-line);
+    border-radius: var(--owner-radius);
+    background: linear-gradient(
+        130deg,
+        var(--owner-surface-1),
+        var(--owner-surface-0)
+    );
+}
+
+.owner-module-shell
+    .owner-admin-settings
+    :is(
+        input:not([type='checkbox']):not([type='radio']):not([type='hidden']),
+        textarea,
+        select
+    ) {
+    min-height: 42px;
+    max-width: 100%;
+    border-color: var(--owner-line);
+    border-radius: 10px;
+}
+
+.owner-module-shell .owner-admin-settings :is(button, a):focus-visible {
+    outline: 2px solid #ff5673;
+    outline-offset: 3px;
+}
+
+@media (max-width: 700px) {
+    .owner-module-shell .owner-module-content .owner-admin-surface,
+    .owner-module-shell .owner-admin-settings {
+        padding: 12px;
+    }
+}

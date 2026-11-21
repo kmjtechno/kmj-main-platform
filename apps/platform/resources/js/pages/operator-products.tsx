@@ -65,9 +65,9 @@ export default function OperatorProducts({
     return (
         <>
             <Head title="Product Management · Super Admin" />
-            <main className="owner-product-workspace kmj-admin-shell flex min-w-0 flex-1 flex-col gap-6 p-4 sm:p-6 lg:p-8">
+            <main className="owner-product-workspace owner-admin-page kmj-admin-shell flex min-w-0 flex-1 flex-col gap-6 p-4 sm:p-6 lg:p-8">
                 <OperatorModuleNavigation active="products" />
-                <header className="kmj-admin-hero rounded-[1.65rem] p-6 sm:p-8">
+                <header className="owner-admin-hero kmj-admin-hero rounded-[1.65rem] p-6 sm:p-8">
                     <Link
                         href="/operator"
                         className="text-muted-foreground hover:text-foreground inline-flex items-center gap-2 text-xs"

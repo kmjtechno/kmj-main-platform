@@ -38,7 +38,7 @@ export default function Profile(
 
             <h1 className="sr-only">Profile settings</h1>
 
-            <div className="space-y-6">
+            <div className="owner-admin-settings space-y-6">
                 <Heading
                     variant="small"
                     title="Profile"

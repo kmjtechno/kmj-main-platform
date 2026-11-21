@@ -63,10 +63,10 @@ export default function OperatorCodeBridgeOwner({
     return (
         <>
             <Head title="KMJ CodeBridge Control Center" />
-            <main className="kmj-admin-shell flex min-w-0 flex-1 flex-col gap-6 p-4 sm:p-6 lg:p-8">
+            <main className="owner-admin-page kmj-admin-shell flex min-w-0 flex-1 flex-col gap-6 p-4 sm:p-6 lg:p-8">
                 <OperatorModuleNavigation active="codebridge" />
-                <section className="kmj-admin-hero rounded-xl p-4">
-                    <h1 className="text-2xl font-bold">
+                <section className="owner-admin-hero kmj-admin-hero rounded-[1.65rem] p-6 sm:p-8">
+                    <h1 className="text-3xl font-black tracking-tight sm:text-4xl">
                         CodeBridge Control Center
                     </h1>
                     <p className="text-muted-foreground mt-2 text-sm">
@@ -95,7 +95,7 @@ export default function OperatorCodeBridgeOwner({
                     </div>
                 </section>
                 {organizations.length === 0 && (
-                    <section className="bg-card rounded-xl border p-4">
+                    <section className="bg-card rounded-2xl border p-5 sm:p-6">
                         <h2 className="font-bold">
                             No managed organization yet
                         </h2>
@@ -111,7 +111,7 @@ export default function OperatorCodeBridgeOwner({
                 {organizations.map((organization) => (
                     <section
                         key={organization.id}
-                        className="bg-card min-w-0 space-y-3 rounded-xl border p-4"
+                        className="bg-card min-w-0 space-y-3 rounded-2xl border p-5 sm:p-6"
                         aria-label={`${organization.name} device summary`}
                     >
                         <h2 className="text-lg font-bold">

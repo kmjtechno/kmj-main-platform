@@ -79,7 +79,7 @@ void test('owner enterprise styles are scoped and inputs remain accessible', () 
         page,
         /import '\.\.\/\.\.\/\.\.\/css\/ai-provider-connect\.css'/,
     );
-    assert.match(page, /className="kmj-ai-providers flex/);
+    assert.match(page, /className="kmj-ai-providers owner-admin-surface flex/);
     assert.match(css, /\.owner-module-shell \.kmj-ai-providers/);
     assert.match(css, /focus-visible/);
     assert.match(css, /prefers-reduced-motion/);

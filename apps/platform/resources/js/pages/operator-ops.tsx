@@ -332,9 +332,9 @@ export default function OperatorOps({
     return (
         <>
             <Head title="Ops Command Center" />
-            <div className="kmj-admin-shell flex h-full min-w-0 flex-1 flex-col gap-6 overflow-x-auto p-4 sm:p-6 lg:p-8">
+            <div className="owner-admin-page kmj-admin-shell flex h-full min-w-0 flex-1 flex-col gap-6 overflow-x-auto p-4 sm:p-6 lg:p-8">
                 <OperatorModuleNavigation active="operations" />
-                <section className="kmj-admin-hero rounded-[1.65rem] p-6 sm:p-8 lg:p-10">
+                <section className="owner-admin-hero kmj-admin-hero rounded-[1.65rem] p-6 sm:p-8 lg:p-10">
                     <div className="flex flex-col justify-between gap-5 lg:flex-row lg:items-end">
                         <div className="max-w-3xl">
                             <div className="inline-flex items-center gap-2 rounded-full border border-emerald-500/20 bg-emerald-500/5 px-3 py-1 text-xs font-bold text-emerald-600 dark:text-emerald-400">
