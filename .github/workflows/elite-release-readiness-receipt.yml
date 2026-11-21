@@ -9,6 +9,7 @@ on:
       - 'apps/platform/app/Services/Operations/EliteReleaseReadinessSnapshot.php'
       - 'apps/platform/tests/Unit/EliteReleaseReadinessSnapshotTest.php'
       - 'docs/operations/ELITE_ONECLICK_RELEASE_PROOF.md'
+      - 'apps/platform/resources/js/pages/operator-ops.tsx'
   workflow_dispatch:
 
 permissions:
@@ -24,3 +25,21 @@ jobs:
         run: python3 -m py_compile scripts/operations/elite_release_readiness_receipt.py scripts/test_elite_release_readiness_receipt.py
       - name: Check false-PASS and no-deploy boundaries
         run: python3 scripts/test_elite_release_readiness_receipt.py -v
+
+  frontend-formatter-preview:
+    runs-on: ubuntu-latest
+    timeout-minutes: 7
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: apps/platform/package-lock.json
+      - name: Show exact Vite Plus formatter patch without committing
+        working-directory: apps/platform
+        run: |
+          set -Eeuo pipefail
+          npm ci --ignore-scripts --no-audit --no-fund
+          ./node_modules/.bin/vp fmt resources/js/pages/operator-ops.tsx
+          git --no-pager diff -- resources/js/pages/operator-ops.tsx
