@@ -93,3 +93,36 @@ void test('Global PHP route imports cannot produce DomainException Wayfinder war
         assert.ok(source.includes('catch (DomainException'));
     }
 });
+
+void test('one KMJ Licensing Hub embeds developer workflow and never opens a second owner console', () => {
+    const owner = read('resources/js/pages/operator-kslp.tsx');
+    const developer = read('resources/js/pages/developer-apps.tsx');
+    const ownerRoutes = read('routes/kslp-admin.php');
+    const commands = read('resources/js/components/operator-command-os.tsx');
+    const workspaces = read('resources/js/components/operator-workspace-map.tsx');
+
+    assert.match(owner, /<DeveloperAppsWorkspace \\{\\.\\.\\.developerWorkspace\\} embedded \\/>/);
+    assert.match(developer, /export function DeveloperAppsWorkspace/);
+    assert.match(developerRoutes, /return redirect\\('\/operator\/kslp#developer-workspace'\\)/);
+    assert.match(ownerRoutes, /'developerWorkspace' => \\[/);
+    assert.match(commands, /\\['KMJ Licensing Hub', '\/operator\/kslp'/);
+    assert.doesNotMatch(commands, /\\['Developer Apps & Keys', '\/developer\/apps'/);
+    assert.doesNotMatch(workspaces, /href: '\/developer\/apps'/);
+});
+
+void test('account cleanup is an owner-only exact-snapshot action, disabled by default', () => {
+    const ownerRoutes = read('routes/kslp-admin.php');
+    const cleanup = read('app/Services/Licensing/UnverifiedAccountCleanup.php');
+    const ownerUi = read('resources/js/pages/operator-kslp.tsx');
+    const config = read('config/services.php');
+
+    assert.match(config, /KMJ_UNVERIFIED_ACCOUNT_CLEANUP_ENABLED', false/);
+    assert.match(ownerRoutes, /\$access->require\(\$actor\)/);
+    assert.match(ownerRoutes, /REMOVE_UNVERIFIED_EMAIL_USERS/);
+    assert.match(cleanup, /whereNull\('email_verified_at'\)/);
+    assert.match(cleanup, /MIN_AGE_DAYS = 7/);
+    assert.match(cleanup, /getForeignKeys\(\$table\)/);
+    assert.match(cleanup, /UNVERIFIED_CLEANUP_STALE_PREVIEW/);
+    assert.match(ownerUi, /unverifiedEmailCleanup\.enabled/);
+    assert.doesNotMatch(cleanup, /whereNull\('email_verified_at'\)->delete\(/);
+});
