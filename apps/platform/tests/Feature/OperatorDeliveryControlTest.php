@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\User;
+use App\Services\Operations\DeliveryControlRequestQueue;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
@@ -101,6 +102,52 @@ final class OperatorDeliveryControlTest extends TestCase
 
         $request = json_decode(File::get($this->path), true, 32, JSON_THROW_ON_ERROR);
         $this->assertSame(['run_id' => 999], $request['parameters']);
+    }
+
+    public function test_a_second_delivery_request_cannot_replace_the_first_pending_request(): void
+    {
+        $owner = $this->platformOwner();
+        $queue = app(DeliveryControlRequestQueue::class);
+        $queue->enqueue($owner, 'dispatch_worker');
+
+        $original = File::get($this->path);
+
+        try {
+            $queue->enqueue($owner, 'rerun_failed_ci', null, 999);
+            $this->fail('A pending request must never be overwritten.');
+        } catch (\RuntimeException $exception) {
+            $this->assertStringContainsString('already pending', $exception->getMessage());
+        }
+
+        $this->assertSame($original, File::get($this->path));
+        $this->assertDatabaseCount('operator_action_audits', 1);
+        $this->assertSame([], glob($this->path.'.*.tmp') ?: []);
+    }
+
+    public function test_dangling_destination_symlink_never_gets_replaced(): void
+    {
+        if (PHP_OS_FAMILY === 'Windows' || ! function_exists('symlink')) {
+            $this->markTestSkipped('POSIX symlink regression test.');
+        }
+
+        $owner = $this->platformOwner();
+        $target = $this->path.'.missing';
+        if (! @symlink($target, $this->path)) {
+            $this->markTestSkipped('Symlink creation is unavailable.');
+        }
+
+        $queue = app(DeliveryControlRequestQueue::class);
+
+        try {
+            $queue->enqueue($owner, 'dispatch_worker');
+            $this->fail('Create-only publication must refuse an existing dangling symlink.');
+        } catch (\RuntimeException $exception) {
+            $this->assertStringContainsString('already pending', $exception->getMessage());
+        }
+
+        $this->assertTrue(is_link($this->path));
+        $this->assertDatabaseCount('operator_action_audits', 0);
+        $this->assertSame([], glob($this->path.'.*.tmp') ?: []);
     }
 
     public function test_unknown_or_high_risk_actions_fail_closed(): void

@@ -39,7 +39,7 @@ final class DeliveryControlRequestQueue
         }
 
         File::ensureDirectoryExists(dirname($path), 0750, true);
-        if (File::exists($path)) {
+        if (File::exists($path) || is_link($path)) {
             throw new RuntimeException('A delivery control request is already pending.');
         }
 
@@ -56,8 +56,11 @@ final class DeliveryControlRequestQueue
         try {
             File::put($temporary, json_encode($payload, JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES), true);
             chmod($temporary, 0640);
-            if (! @rename($temporary, $path)) {
-                throw new RuntimeException('Delivery control request could not be published atomically.');
+            // Create-only hard link is atomic on the same filesystem. rename() would
+            // silently overwrite a different owner's pending request between the
+            // earlier exists() check and publication (including double-clicks).
+            if (! @link($temporary, $path)) {
+                throw new RuntimeException('A delivery control request is already pending or cannot be safely published.');
             }
         } finally {
             File::delete($temporary);
