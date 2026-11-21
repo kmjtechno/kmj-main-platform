@@ -58,7 +58,19 @@ type Analytics = {
     cooling_until: string | null;
 };
 
+type Token = {
+    id: string;
+    name: string;
+    prefix: string;
+    private_source: boolean;
+    expires_at: string;
+    last_used_at: string | null;
+    active: boolean;
+};
+
 type Props = {
+    newToken?: string | null;
+    tokens: Token[];
     status?: string | null;
     canManage: boolean;
     maxEvidenceDays: number;
@@ -115,6 +127,8 @@ function PlanCard({
 }
 
 export default function OperatorModelFabric({
+    newToken,
+    tokens,
     status,
     canManage,
     maxEvidenceDays,
@@ -127,6 +141,9 @@ export default function OperatorModelFabric({
     const allowlistProviders = providers.filter(
         (provider) => provider.free_tier === 'allowlist',
     );
+    const [tokenName, setTokenName] = useState('');
+    const [tokenDays, setTokenDays] = useState('30');
+    const [tokenPrivate, setTokenPrivate] = useState(true);
     const [providerId, setProviderId] = useState(
         allowlistProviders[0]?.id ?? '',
     );
@@ -279,6 +296,135 @@ export default function OperatorModelFabric({
                                 {row.cooling_until
                                     ? ` · cooling down until ${new Date(row.cooling_until).toLocaleTimeString()}`
                                     : ''}
+                            </li>
+                        ))}
+                    </ul>
+                </section>
+
+                <section
+                    aria-label="API tokens"
+                    className="kmj-admin-metric p-5"
+                >
+                    <h2 className="text-lg font-bold">
+                        ModelFabric API tokens (OpenAI-compatible)
+                    </h2>
+                    <p className="text-muted-foreground mt-1 text-xs">
+                        Base URL <code>/api/modelfabric/v1</code>, endpoints{' '}
+                        <code>/chat/completions</code> (no streaming yet) and{' '}
+                        <code>/models</code>. The caller never chooses a
+                        provider or model: ModelFabric routes only through
+                        verified-zero evidence and answers
+                        NO_FREE_ROUTE_AVAILABLE otherwise. Private-source tokens
+                        only reach models whose no-training handling is
+                        documented. Tokens are stored as a hash and shown once.
+                    </p>
+                    {newToken ? (
+                        <p
+                            className="mt-3 rounded border border-emerald-400/40 p-3 font-mono text-xs break-all"
+                            data-testid="modelfabric-new-token"
+                        >
+                            {newToken}
+                        </p>
+                    ) : null}
+                    {canManage ? (
+                        <form
+                            className="mt-4 grid gap-3 md:grid-cols-4"
+                            onSubmit={(event) => {
+                                event.preventDefault();
+                                router.post(
+                                    `${BASE}/tokens`,
+                                    {
+                                        name: tokenName,
+                                        valid_days: Number(tokenDays),
+                                        private_source: tokenPrivate,
+                                    },
+                                    { preserveScroll: true },
+                                );
+                                setTokenName('');
+                            }}
+                        >
+                            <label className="text-sm">
+                                Name
+                                <input
+                                    className="mt-1 w-full rounded border border-white/15 bg-black/40 p-2"
+                                    value={tokenName}
+                                    onChange={(e) =>
+                                        setTokenName(e.target.value)
+                                    }
+                                    minLength={3}
+                                    maxLength={80}
+                                    required
+                                />
+                            </label>
+                            <label className="text-sm">
+                                Valid days (1-90)
+                                <input
+                                    className="mt-1 w-full rounded border border-white/15 bg-black/40 p-2"
+                                    type="number"
+                                    min={1}
+                                    max={90}
+                                    value={tokenDays}
+                                    onChange={(e) =>
+                                        setTokenDays(e.target.value)
+                                    }
+                                />
+                            </label>
+                            <label className="flex items-end gap-2 text-sm">
+                                <input
+                                    type="checkbox"
+                                    checked={tokenPrivate}
+                                    onChange={(e) =>
+                                        setTokenPrivate(e.target.checked)
+                                    }
+                                />
+                                Private source (stricter routing)
+                            </label>
+                            <button
+                                type="submit"
+                                className="rounded bg-red-600 px-3 py-2 text-sm font-semibold"
+                            >
+                                Create token
+                            </button>
+                        </form>
+                    ) : null}
+                    <ul className="mt-3 divide-y divide-white/10 text-sm">
+                        {tokens.length === 0 ? (
+                            <li className="py-2">No token created yet.</li>
+                        ) : null}
+                        {tokens.map((token) => (
+                            <li
+                                key={token.id}
+                                className="flex items-center justify-between gap-2 py-2"
+                            >
+                                <span>
+                                    <strong>{token.name}</strong> ·{' '}
+                                    {token.prefix}… ·{' '}
+                                    {token.private_source
+                                        ? 'private source'
+                                        : 'general'}{' '}
+                                    · {token.active ? 'active' : 'inactive'} ·
+                                    expires{' '}
+                                    {new Date(
+                                        token.expires_at,
+                                    ).toLocaleDateString()}
+                                    {token.last_used_at
+                                        ? ` · last used ${new Date(token.last_used_at).toLocaleString()}`
+                                        : ''}
+                                </span>
+                                {canManage && token.active ? (
+                                    <button
+                                        type="button"
+                                        aria-label={`Revoke ${token.name}`}
+                                        onClick={() =>
+                                            router.delete(
+                                                `${BASE}/tokens/${token.id}`,
+                                                { preserveScroll: true },
+                                            )
+                                        }
+                                    >
+                                        <Trash2 className="h-4 w-4" />
+                                    </button>
+                                ) : null}
                             </li>
                         ))}
                     </ul>

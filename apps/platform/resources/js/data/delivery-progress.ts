@@ -18,6 +18,14 @@ export const deliveryMilestones: DeliveryMilestone[] = [
             'PR #949 regression tests cover preservation of pending requests and dangling-symlink rejection. Exact-head CI must pass before merge; no deployment or production mutation performed.',
     },
     {
+        id: 'modelfabric-openai-endpoint-20261121',
+        title: 'ModelFabric: OpenAI-compatible endpoint and API tokens for the coding worker',
+        state: 'active',
+        detail: 'Source-only: /api/modelfabric/v1/chat/completions and /models behind owner-created bearer tokens (SHA-256 hash only, shown once, expiry, revoke, per-token and per-IP throttle). The caller cannot choose a provider or model; routing uses only verified-zero evidence, private-source tokens reach only models with documented no-training handling, streaming is refused and the answer is NO_FREE_ROUTE_AVAILABLE when nothing qualifies. Only metadata is logged. This does not activate the coding worker.',
+        evidence:
+            'Feature and static tests with faked HTTP; exact-head CI only, not deployed, no real provider called and no worker connected yet.',
+    },
+    {
         id: 'modelfabric-smart-routing-20261121',
         title: 'ModelFabric: task-aware model choice and pre-emptive limit shifting',
         state: 'active',
