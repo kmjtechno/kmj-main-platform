@@ -7,7 +7,6 @@ import {
     ChartNoAxesCombined,
     ChevronRight,
     Cloud,
-    Code2,
     CreditCard,
     Database,
     FileText,
@@ -63,14 +62,9 @@ const groups: { title: string; items: Workspace[] }[] = [
                 icon: CreditCard,
             },
             {
-                label: 'Licensing & Entitlements',
+                label: 'KMJ Licensing Hub',
                 href: '/operator/kslp',
                 icon: KeyRound,
-            },
-            {
-                label: 'Subscriptions & Plans',
-                href: '/operator/kslp',
-                icon: FileText,
             },
             {
                 label: 'Revenue & Analytics',
@@ -82,11 +76,6 @@ const groups: { title: string; items: Workspace[] }[] = [
     {
         title: 'PLATFORM',
         items: [
-            {
-                label: 'Developer Apps & Keys',
-                href: '/developer/apps',
-                icon: Code2,
-            },
             {
                 label: 'CodeBridge & Devices',
                 href: '/services/kmj-codebridge#codebridge-device-control',
@@ -194,7 +183,7 @@ export default function OwnerModuleShell({
     }, [navOpen]);
 
     return (
-        <div className="owner-lock owner-module-shell">
+        <div className="owner-lock owner-module-shell" data-owner-design="command-center-v1">
             <a className="owner-skip" href="#owner-main">
                 Skip to owner module
             </a>
