@@ -217,8 +217,8 @@ Route::middleware(['auth', 'verified', 'password.confirm'])
             $access->require($user);
 
             $validated = $request->validate([
-                'approved_sha' => ['required', 'string', 'regex:/\\A[a-f0-9]{40}\\z/D'],
-                'expected_current_release' => ['required', 'string', 'regex:/\\Aplatform-[a-f0-9]{12}\\z/D'],
+                'approved_sha' => ['required', 'string', 'regex:/\A[a-f0-9]{40}\z/D'],
+                'expected_current_release' => ['required', 'string', 'regex:/\Aplatform-[a-f0-9]{12}\z/D'],
                 'confirmation' => ['required', 'in:REQUEST_APPROVED_PRODUCTION_RELEASE'],
             ]);
 
@@ -229,7 +229,7 @@ Route::middleware(['auth', 'verified', 'password.confirm'])
                     $validated['expected_current_release'],
                     $validated['confirmation'],
                 );
-            } catch (\\RuntimeException $exception) {
+            } catch (\RuntimeException $exception) {
                 abort(409, 'Trusted release preflight or pending request must be reconciled.');
             }
 
