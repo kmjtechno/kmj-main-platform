@@ -173,7 +173,7 @@ final class UnverifiedAccountCleanup
                     // Decimal users.id cannot be represented by a native UUID.
                     continue;
                 }
-                if (! in_array($type, ['bigint', 'integer', 'smallint', 'string', 'varchar', 'char', 'text', 'decimal', 'numeric'], true)) {
+                if (! in_array($type, ['bigint', 'integer', 'smallint', 'int2', 'int4', 'int8', 'string', 'varchar', 'character varying', 'character', 'bpchar', 'char', 'text', 'citext', 'decimal', 'numeric'], true)) {
                     // Unknown foreign-reference type requires a fresh reviewed
                     // schema contract, never optimistic eligibility.
                     throw new RuntimeException('UNVERIFIED_CLEANUP_REFERENCE_TYPE_UNKNOWN');
