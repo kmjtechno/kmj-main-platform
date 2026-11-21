@@ -1,4 +1,5 @@
 import OperatorModuleNavigation from '@/components/operator-module-navigation';
+import { DeveloperAppsWorkspace, type DeveloperWorkspaceProps } from './developer-apps';
 import { Head, router, useForm } from '@inertiajs/react';
 import { useState } from 'react';
 import {
@@ -71,6 +72,7 @@ type Props = {
     productEntitlements: ProductEntitlement[];
     issuerWorkspaces: IssuerWorkspace[];
     developerIssuanceEnabled: boolean;
+    developerWorkspace: DeveloperWorkspaceProps;
 };
 
 export default function OperatorKslp({
@@ -83,6 +85,7 @@ export default function OperatorKslp({
     productEntitlements,
     issuerWorkspaces,
     developerIssuanceEnabled,
+    developerWorkspace,
 }: Props) {
     const [actionReason, setActionReason] = useState('');
     const [customerQuery, setCustomerQuery] = useState(filters.customer_q);
@@ -151,6 +154,7 @@ export default function OperatorKslp({
                     {[
                         ['#license-overview', 'Overview'],
                         ['#issuer-workspaces', 'Developer issuers'],
+                        ['#developer-workspace', 'Apps, Keys & SDK'],
                         ['#license-issue', 'Issue license'],
                         ['#license-search', 'Find customer'],
                         ['#license-register', 'Manage plans'],
@@ -298,6 +302,15 @@ export default function OperatorKslp({
                         key issuance require their separate verified workflows.
                         This table cannot grant licenses or unlock the release gate.
                     </p>
+                </section>
+                <section id="developer-workspace" aria-label="Applications, keys and SDK setup" className="scroll-mt-6 rounded-2xl border border-red-500/20 bg-card p-4 sm:p-6">
+                    <h2 className="text-xl font-black">Applications, license keys & SDK</h2>
+                    <p className="text-muted-foreground mt-2 mb-4 text-sm leading-6">
+                        One KMJ Licensing Hub. Developer actions use the same tenant-scoped
+                        KSLP authorization as the restricted developer view. Global commercial
+                        licensing policy and paid entitlements remain owner-only.
+                    </p>
+                    <DeveloperAppsWorkspace {...developerWorkspace} embedded />
                 </section>
                 <section
                     id="license-issue"
