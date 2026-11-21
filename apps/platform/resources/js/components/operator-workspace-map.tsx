@@ -113,12 +113,6 @@ const workspaceGroups = [
                 icon: Boxes,
             },
             {
-                label: 'Developer Apps & Keys',
-                description: 'Registered clients and scoped keys',
-                href: '/developer/apps',
-                icon: Wrench,
-            },
-            {
                 label: 'Sandbox Token Lab',
                 description: 'Inspect the sandbox license lifecycle',
                 href: '/sandbox-licenses',
