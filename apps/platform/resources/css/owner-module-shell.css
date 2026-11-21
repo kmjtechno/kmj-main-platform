@@ -538,7 +538,7 @@
     );
 }
 
-.owner-module-shell .owner-admin-settings :is(input, textarea, select) {
+.owner-module-shell .owner-admin-settings :is(input:not([type='checkbox']):not([type='radio']):not([type='hidden']), textarea, select) {
     min-height: 42px;
     max-width: 100%;
     border-color: var(--owner-line);
