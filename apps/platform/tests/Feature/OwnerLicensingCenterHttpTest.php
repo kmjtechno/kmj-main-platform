@@ -175,8 +175,7 @@ final class OwnerLicensingCenterHttpTest extends TestCase
                         && $org['registered_apps'] === 1
                         && $org['product_limit'] === 3
                         && $org['monthly_issue_limit'] === 20)
-                    && collect($items)->contains(fn ($org): bool =>
-                        $org['name'] === 'Unsubscribed Organization'
+                    && collect($items)->contains(fn ($org): bool => $org['name'] === 'Unsubscribed Organization'
                         && $org['issuer_status'] === 'not_subscribed'
                         && $org['registered_apps'] === 0)));
 
