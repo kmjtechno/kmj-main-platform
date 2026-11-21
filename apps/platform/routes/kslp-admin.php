@@ -2,6 +2,7 @@
 
 use App\Models\User;
 use App\Services\Licensing\Kslp\KslpLicenseControlPlane;
+use App\Services\Licensing\Kslp\KslpDeveloperWorkspaceQuery;
 use App\Services\PlatformOwnerAccess;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -10,7 +11,7 @@ use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
 
-Route::get('operator/kslp', function (Request $request, PlatformOwnerAccess $access, KslpLicenseControlPlane $control) {
+Route::get('operator/kslp', function (Request $request, PlatformOwnerAccess $access, KslpLicenseControlPlane $control, KslpDeveloperWorkspaceQuery $developerWorkspace) {
     $user = $request->user();
     abort_unless($user instanceof User, 401);
     $access->require($user);
@@ -153,6 +154,13 @@ Route::get('operator/kslp', function (Request $request, PlatformOwnerAccess $acc
         'licenses' => $licenses,
         'issuerWorkspaces' => $issuerWorkspaces,
         'developerIssuanceEnabled' => Schema::hasTable('kslp_license_keys') && (bool) config('services.kmj_developer_licensing.enabled', false),
+        // Reuse exactly the tenant-restricted developer workspace query. Global
+        // KSLP data stays owner-only; a commercial lease never becomes an issuer.
+        'developerWorkspace' => [
+            ...$developerWorkspace->forUser($user),
+            'canAccessOwnerHub' => true,
+            'newKey' => $request->session()->get('developer_license_key'),
+        ],
         'productEntitlements' => $entitlements,
         'filters' => ['customer_q' => $search, 'plan' => $plan],
         'matchingCount' => $matchingCount,
