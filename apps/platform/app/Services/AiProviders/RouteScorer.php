@@ -48,6 +48,6 @@ final class RouteScorer
 
         usort($scored, static fn (array $a, array $b): int => [$b['score'], $a['index']] <=> [$a['score'], $b['index']]);
 
-        return array_values(array_map(static fn (array $row): array => $row['route'], $scored));
+        return array_map(static fn (array $row): array => $row['route'], $scored);
     }
 }
