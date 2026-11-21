@@ -17,6 +17,7 @@ use App\Services\AiProviders\ResolvesAiProviderScope;
 use App\Services\PlatformOwnerAccess;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
@@ -29,6 +30,8 @@ use Inertia\Response;
 final class ModelFabricController extends Controller
 {
     private const MAX_EVIDENCE_DAYS = 30;
+
+    private const MAX_BULK_MODELS = 50;
 
     public function __construct(
         private readonly PlatformOwnerAccess $access,
@@ -154,6 +157,101 @@ final class ModelFabricController extends Controller
         ]);
 
         return back()->with('status', 'Price evidence saved. The model is routable until it expires or is revoked.');
+    }
+
+    /**
+     * One attestation for several models of one provider (the same published free-tier page covers
+     * them). Each model must be in the provider's last discovery; every row is written and audited.
+     */
+    public function bulkEvidence(Request $request): RedirectResponse
+    {
+        $scope = $this->owner($request, true);
+        $data = $request->validate([
+            'provider_id' => ['required', 'uuid'],
+            'model_ids' => ['required', 'array', 'min:1', 'max:'.self::MAX_BULK_MODELS],
+            'model_ids.*' => ['required', 'string', 'max:128'],
+            'price_evidence_url' => ['required', 'string', 'max:255', 'url:https'],
+            'price_evidence_note' => ['required', 'string', 'min:10', 'max:280'],
+            'valid_days' => ['required', 'integer', 'min:1', 'max:'.self::MAX_EVIDENCE_DAYS],
+            'data_handling' => ['required', Rule::in(['no-training-documented', 'unknown'])],
+            'capabilities' => ['sometimes', 'array', 'max:4'],
+            'capabilities.*' => [Rule::in(['chat', 'tools', 'code', 'vision'])],
+            'attest_pricing' => ['accepted'],
+        ]);
+
+        $provider = AiProvider::query()
+            ->where('organization_id', $scope['organization_id'])
+            ->whereKey($data['provider_id'])
+            ->first();
+        if ($provider === null) {
+            return back()->withErrors(['provider_id' => 'Provider not found.']);
+        }
+        $tier = $this->manager->presets()[$provider->preset]['free_tier'] ?? 'none';
+        if ($tier !== 'allowlist') {
+            return back()->withErrors(['model_ids' => 'Evidence applies only to allowlist providers; this provider is '.$tier.'.']);
+        }
+        $models = array_values(array_unique($data['model_ids']));
+        $unknown = array_values(array_diff($models, $provider->models_cache ?? []));
+        if ($unknown !== []) {
+            return back()->withErrors(['model_ids' => 'Not in the last discovery: '.implode(', ', array_slice($unknown, 0, 3)).'. Run Test connection first.']);
+        }
+
+        $now = now();
+        $userId = (int) $this->user($request)->id;
+        DB::transaction(function () use ($models, $provider, $scope, $data, $now, $userId): void {
+            foreach ($models as $modelId) {
+                AiModelEvidence::query()->updateOrCreate(
+                    ['ai_provider_id' => $provider->id, 'model_id' => $modelId],
+                    [
+                        'organization_id' => $scope['organization_id'],
+                        'price_evidence_url' => $data['price_evidence_url'],
+                        'price_evidence_note' => $data['price_evidence_note'],
+                        'verified_at' => $now,
+                        'expires_at' => $now->copy()->addDays((int) $data['valid_days']),
+                        'data_handling' => $data['data_handling'],
+                        'capabilities' => array_values(array_unique($data['capabilities'] ?? ['chat'])),
+                        'verified_by' => $userId,
+                        'revoked_at' => null,
+                    ],
+                );
+            }
+        });
+
+        $this->audit($request, 'model_fabric.evidence_bulk_saved', [
+            'provider' => $provider->name,
+            'models' => count($models),
+            'valid_days' => (int) $data['valid_days'],
+            'data_handling' => $data['data_handling'],
+        ]);
+
+        return back()->with('status', count($models).' models approved with one attestation. They stay routable until the evidence expires or is revoked.');
+    }
+
+    /** Re-attest still-valid-looking evidence for another period; revoked evidence is never revived here. */
+    public function renewEvidence(Request $request, string $evidence): RedirectResponse
+    {
+        $scope = $this->owner($request, true);
+        $request->validate(['attest_pricing' => ['accepted']]);
+        $row = AiModelEvidence::query()
+            ->where('organization_id', $scope['organization_id'])
+            ->whereKey($evidence)
+            ->first();
+        if ($row === null) {
+            return back()->withErrors(['evidence' => 'Evidence not found.']);
+        }
+        if ($row->revoked_at !== null) {
+            return back()->withErrors(['evidence' => 'Revoked evidence cannot be renewed. Add it again with a fresh source.']);
+        }
+
+        $now = now();
+        $row->verified_at = $now;
+        $row->expires_at = $now->copy()->addDays(self::MAX_EVIDENCE_DAYS);
+        $row->verified_by = (int) $this->user($request)->id;
+        $row->save();
+
+        $this->audit($request, 'model_fabric.evidence_renewed', ['model' => $row->model_id]);
+
+        return back()->with('status', 'Evidence renewed for '.self::MAX_EVIDENCE_DAYS.' days.');
     }
 
     public function revokeEvidence(Request $request, string $evidence): RedirectResponse
