@@ -253,8 +253,11 @@ export default function OperatorModelFabric({
                     <p className="text-muted-foreground mt-1 text-xs">
                         Metadata only: no prompt or response is stored. Failover
                         tries at most 3 verified-zero routes, then cools a
-                        rate-limited or failing provider down. Discovery
-                        refreshes automatically every 6 hours.
+                        rate-limited or failing provider down. Easy work goes to
+                        lighter models, hard coding to stronger ones, and a
+                        provider near its reported limit is deprioritised before
+                        it runs out. Discovery refreshes automatically every 6
+                        hours.
                     </p>
                     <ul
                         className="mt-3 divide-y divide-white/10 text-sm"

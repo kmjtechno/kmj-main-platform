@@ -110,7 +110,7 @@ final class OpenAiCompatibleAdapter
      *
      * @param  list<string>  $approvedHosts
      * @param  list<array{role: string, content: string}>  $messages
-     * @return array{ok: bool, content: ?string, error_code: ?string}
+     * @return array{ok: bool, content: ?string, error_code: ?string, rate?: array{requests_remaining: ?int, tokens_remaining: ?int, retry_after: ?int}}
      */
     public function complete(string $baseUrl, string $apiKey, array $approvedHosts, string $model, array $messages): array
     {
@@ -137,25 +137,33 @@ final class OpenAiCompatibleAdapter
             return ['ok' => false, 'content' => null, 'error_code' => 'connection_failed'];
         }
 
+        $limit = $this->rateLimit($response->headers());
+        $rate = [
+            'requests_remaining' => $limit['requests_remaining'] ?? null,
+            'tokens_remaining' => $limit['tokens_remaining'] ?? null,
+            'retry_after' => $this->retryAfter($response->header('Retry-After')),
+        ];
+        $fail = static fn (string $code): array => ['ok' => false, 'content' => null, 'error_code' => $code, 'rate' => $rate];
+
         $status = $response->status();
         if ($status === 401 || $status === 403) {
-            return ['ok' => false, 'content' => null, 'error_code' => 'auth_failed'];
+            return $fail('auth_failed');
         }
         if ($status === 429) {
-            return ['ok' => false, 'content' => null, 'error_code' => 'rate_limited'];
+            return $fail('rate_limited');
         }
         if ($status >= 300) {
-            return ['ok' => false, 'content' => null, 'error_code' => $status >= 500 ? 'provider_unavailable' : 'unexpected_status'];
+            return $fail($status >= 500 ? 'provider_unavailable' : 'unexpected_status');
         }
         if (strlen($response->body()) > self::MAX_BODY) {
-            return ['ok' => false, 'content' => null, 'error_code' => 'response_too_large'];
+            return $fail('response_too_large');
         }
         $content = $response->json('choices.0.message.content');
         if (! is_string($content) || trim($content) === '') {
-            return ['ok' => false, 'content' => null, 'error_code' => 'empty_response'];
+            return $fail('empty_response');
         }
 
-        return ['ok' => true, 'content' => mb_substr($content, 0, 8000), 'error_code' => null];
+        return ['ok' => true, 'content' => mb_substr($content, 0, 8000), 'error_code' => null, 'rate' => $rate];
     }
 
     /**

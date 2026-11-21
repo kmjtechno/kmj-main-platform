@@ -71,6 +71,23 @@ final class ModelFabricGatewayTest extends TestCase
         $this->assertSame(1, AiModelRequest::query()->where('error_code', 'rate_limited')->count());
     }
 
+    public function test_provider_is_deprioritised_before_its_limit_runs_out(): void
+    {
+        $this->provider('groq', 'A Groq', 'https://api.groq.com/openai/v1', 'llama-3.3-70b');
+        $this->provider('gemini', 'B Gemini', 'https://generativelanguage.googleapis.com/v1beta/openai', 'gemini-2.5-flash');
+        Http::fake([
+            'api.groq.com/*' => Http::response(['choices' => [['message' => ['content' => 'a']]]], 200, ['x-ratelimit-remaining-requests' => '1']),
+            'generativelanguage.googleapis.com/*' => Http::response(['choices' => [['message' => ['content' => 'b']]]], 200),
+        ]);
+
+        $first = app(ModelFabricGateway::class)->complete($this->org, [['role' => 'user', 'content' => 'hello']]);
+        $second = app(ModelFabricGateway::class)->complete($this->org, [['role' => 'user', 'content' => 'hello']]);
+
+        $this->assertSame('A Groq', $first['provider']);
+        $this->assertSame('simple', $first['profile']);
+        $this->assertSame('B Gemini', $second['provider']);
+    }
+
     public function test_unevidenced_model_is_never_sent_even_when_a_provider_is_healthy(): void
     {
         Http::fake();
