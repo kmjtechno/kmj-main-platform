@@ -179,6 +179,54 @@ def claim_once(obj: dict, now: int) -> Path:
     return path
 
 
+def previously_claimed(obj: dict) -> bool:
+    """An identical root-owned claimed marker means no replay, not LIVE PASS."""
+    check_root_state_dir()
+    path = STATE_DIR / (obj["intent_id"] + ".claimed")
+    try:
+        fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_CLOEXEC)
+    except FileNotFoundError:
+        return False
+    try:
+        info = os.fstat(fd)
+        if (not stat.S_ISREG(info.st_mode) or info.st_uid != 0
+                or info.st_nlink != 1 or stat.S_IMODE(info.st_mode) & 0o077
+                or not 64 <= info.st_size <= 512):
+            raise ValueError("BLOCKED_CLAIM_IDENTITY")
+        data = os.read(fd, 513)
+        if len(data) != info.st_size:
+            raise ValueError("BLOCKED_CLAIM_PARTIAL")
+        claimed = strict_claim(data)
+        if (claimed.get("intent_id") != obj["intent_id"]
+                or claimed.get("approved_sha") != obj["approved_sha"]
+                or claimed.get("expected_current_release") != obj["expected_current_release"]
+                or claimed.get("status") != "START_REQUESTED_NOT_PROVEN"):
+            raise ValueError("BLOCKED_CLAIM_MISMATCH")
+        return True
+    finally:
+        os.close(fd)
+
+
+def strict_claim(data: bytes) -> dict:
+    def unique(pairs):
+        result = {}
+        for key, value in pairs:
+            if key in result:
+                raise ValueError("BLOCKED_CLAIM_DUPLICATE")
+            result[key] = value
+        return result
+    try:
+        parsed = json.loads(data.decode("utf-8"), object_pairs_hook=unique)
+    except (UnicodeError, json.JSONDecodeError) as exc:
+        raise ValueError("BLOCKED_CLAIM_JSON") from exc
+    if (not isinstance(parsed, dict) or set(parsed) != {
+        "intent_id", "approved_sha", "expected_current_release",
+        "claimed_at_unix", "status"
+    } or type(parsed["claimed_at_unix"]) is not int):
+        raise ValueError("BLOCKED_CLAIM_SCHEMA")
+    return parsed
+
+
 def fixed_unit_status() -> bool:
     # The unit name is constant and not taken from browser-controlled JSON.
     try:
@@ -217,10 +265,9 @@ def run(execute: bool, *, now: int | None = None) -> int:
         except FileNotFoundError:
             print("KMJ_ACTIVATION_BROKER=NO_PENDING_INTENT")
             return 0
-        claim = STATE_DIR / (obj["intent_id"] + ".claimed")
-        check_root_state_dir()
-        if claim.exists() or claim.is_symlink():
-            raise ValueError("BLOCKED_REPLAY_OR_PREVIOUS_ATTEMPT")
+        if previously_claimed(obj):
+            print("KMJ_ACTIVATION_BROKER=ALREADY_REQUESTED_NOT_LIVE_PROOF")
+            return 0
         protected_activation_match(obj, trusted_gate())
         if not fixed_unit_status():
             raise ValueError("BLOCKED_FIXED_UNIT_NOT_READY")
