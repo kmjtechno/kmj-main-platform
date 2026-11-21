@@ -146,8 +146,9 @@ Route::get('operator/kslp', function (Request $request, PlatformOwnerAccess $acc
         $proof = $cleanup->preview();
         $unverified = [...$proof, 'status' => 'PREVIEW_ONLY'];
         unset($unverified['candidateIds']);
-    } catch (RuntimeException) {
-        // Never fall back to naive email_verified_at IS NULL DELETE.
+    } catch (\Throwable) {
+        // Schema/query uncertainty must never break the owner's license
+        // directory or fall back to unscoped account deletion.
     }
 
     return Inertia::render('operator-kslp', [
