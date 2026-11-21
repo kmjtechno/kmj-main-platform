@@ -48,7 +48,7 @@ final class UnverifiedAccountCleanup
 
         $eligible = [];
         foreach ($users as $user) {
-            if (! $this->hasLinkedRecords((int) $user->id, $tables, $cutoff->timestamp)) {
+            if (! $this->hasLinkedRecords((int) $user->id, $tables, (int) $cutoff->timestamp)) {
                 $eligible[] = (int) $user->id;
             }
         }
@@ -168,7 +168,17 @@ final class UnverifiedAccountCleanup
                 if (preg_match('/\\A[a-z][a-z0-9_]*\\z/D', $column) !== 1) {
                     throw new RuntimeException('UNVERIFIED_CLEANUP_UNSAFE_REFERENCE_COLUMN');
                 }
-                if (DB::table($table)->whereRaw('CAST("'.$column.'" AS TEXT) = ?', [(string) $id])->exists()) {
+                $type = Schema::getColumnType($table, $column);
+                if ($type === 'uuid') {
+                    // Decimal users.id cannot be represented by a native UUID.
+                    continue;
+                }
+                if (! in_array($type, ['bigint', 'integer', 'smallint', 'string', 'varchar', 'char', 'text', 'decimal', 'numeric'], true)) {
+                    // Unknown foreign-reference type requires a fresh reviewed
+                    // schema contract, never optimistic eligibility.
+                    throw new RuntimeException('UNVERIFIED_CLEANUP_REFERENCE_TYPE_UNKNOWN');
+                }
+                if (DB::table($table)->where($column, (string) $id)->exists()) {
                     return true;
                 }
             }
