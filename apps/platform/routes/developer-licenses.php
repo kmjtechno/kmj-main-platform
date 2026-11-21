@@ -4,18 +4,17 @@ declare(strict_types=1);
 
 use App\Models\User;
 use App\Services\AuthorityBootstrapper;
-use App\Services\PlatformOwnerAccess;
 use App\Services\Licensing\Kslp\KslpDeveloperKeys;
 use App\Services\Licensing\Kslp\KslpDeveloperWorkspaceQuery;
 use App\Services\Licensing\Kslp\KslpIssuerSubscriptionAuthority;
 use App\Services\Licensing\Kslp\KslpLicenseControlPlane;
+use App\Services\PlatformOwnerAccess;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Schema;
 use Inertia\Inertia;
 use KMJ\MainPlatform\Organizations\Services\OrganizationCapabilityContext;
-use KMJ\MainPlatform\Organizations\Services\OrganizationDirectory;
 
 // Separate from sandbox licensing. No customer licence or private key is
 // created merely by viewing the developer portal.
