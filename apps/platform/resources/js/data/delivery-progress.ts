@@ -29,7 +29,7 @@ export const deliveryMilestones: DeliveryMilestone[] = [
         id: 'modelfabric-huggingface-oauth-20261121',
         title: 'ModelFabric: one-click Hugging Face sign-in',
         state: 'active',
-        detail: 'Source-only: Connect Hugging Face uses the documented OAuth code + PKCE flow with a public client described by a metadata document served from this site, so no app has to be registered by hand. Only the inference-api scope is requested, the owner must attest the account is a Free account with no payment method (a PRO or pay-as-you-go account could be billed), the token is exchanged server-side and stored encrypted, and reconnecting replaces the key. Models still need per-model price evidence before any request is sent.',
+        detail: 'Source-only: Connect Hugging Face uses the documented OAuth code + PKCE flow with a public client described by a metadata document served from this site (oauth/clients/huggingface.json), so no app has to be registered by hand. Only the inference-api scope is requested, the owner must attest the account is a Free account with no payment method (a PRO or pay-as-you-go account could be billed), the token is exchanged server-side and stored encrypted, and reconnecting replaces the key. Models still need per-model price evidence before any request is sent.',
         evidence:
             'Feature and static tests with faked HTTP; exact-head CI only. Not proven against the real Hugging Face service: token lifetime and refresh are not documented, so the first real sign-in, and any reconnect after expiry, are unverified until the owner clicks Connect.',
     },
