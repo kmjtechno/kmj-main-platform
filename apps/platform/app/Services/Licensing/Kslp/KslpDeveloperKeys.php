@@ -59,6 +59,82 @@ final class KslpDeveloperKeys
     }
 
     /**
+     * Issue a bounded, all-or-nothing batch of TRIAL bootstrap keys only.
+     *
+     * One transaction wraps all delegated authority, quota, duplicate-trial
+     * checks and insertions. If customer #N is invalid, none of the N keys,
+     * licenses or audit events are committed. The returned plaintext secrets
+     * are flashed once by the authenticated controller and never stored here.
+     *
+     * @param  list<mixed>  $customerIds
+     * @return list<array{customer_id: string, key: string, license_id: string, product_code: string}>
+     */
+    public function issueTrialBatch(
+        string $organizationId,
+        string $productCode,
+        array $customerIds,
+        string $actor,
+        string $reason,
+    ): array {
+        if (count($customerIds) < 2 || count($customerIds) > 10) {
+            throw new DomainException('KSLP_TRIAL_BATCH_SIZE_INVALID');
+        }
+
+        $seen = [];
+        $validatedCustomers = [];
+        foreach ($customerIds as $customerId) {
+            if (! is_string($customerId)
+                || preg_match('/\A[A-Za-z0-9._:@-]{3,128}\z/D', $customerId) !== 1
+                || isset($seen[$customerId])) {
+                throw new DomainException('KSLP_TRIAL_BATCH_CUSTOMER_INVALID');
+            }
+            $seen[$customerId] = true;
+            $validatedCustomers[] = $customerId;
+        }
+
+        if (mb_strlen(trim($reason)) < 8 || mb_strlen(trim($reason)) > 240) {
+            throw new DomainException('KSLP_TRIAL_BATCH_REASON_REQUIRED');
+        }
+
+        return DB::transaction(function () use (
+            $organizationId, $productCode, $validatedCustomers, $actor, $reason,
+        ): array {
+            $results = [];
+            foreach ($validatedCustomers as $customerId) {
+                $issued = $this->issue(
+                    $organizationId, $productCode, $customerId, 'trial', $actor,
+                );
+                $results[] = [
+                    'customer_id' => $customerId,
+                    'key' => $issued['key'],
+                    'license_id' => $issued['license_id'],
+                    'product_code' => $issued['product_code'],
+                ];
+            }
+
+            // Individual delegated issue events already record license IDs,
+            // actor and product. This aggregate audit contains NO keys, raw
+            // customer identifiers, device identities or private-key data.
+            $now = now();
+            DB::table('license_audit_events')->insert([
+                'actor_id' => ctype_digit($actor) ? (int) $actor : null,
+                'organization_id' => $organizationId,
+                'action' => 'kslp_trial_batch_issued',
+                'status' => 'success',
+                'metadata' => json_encode([
+                    'product_code' => $productCode,
+                    'count' => count($results),
+                    'reason' => trim($reason),
+                ], JSON_THROW_ON_ERROR),
+                'created_at' => $now,
+                'updated_at' => $now,
+            ]);
+
+            return $results;
+        }, 3);
+    }
+
+    /**
      * Authenticate a random 256-bit bootstrap key, never a client self-issued
      * entitlement. The key is accepted only while issuer/product/license
      * authority is still active. Callers must also prove device key possession.

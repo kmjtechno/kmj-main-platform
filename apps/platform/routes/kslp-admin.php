@@ -183,6 +183,7 @@ Route::get('operator/kslp', function (Request $request, PlatformOwnerAccess $acc
             ...$developerWorkspace->forUser($user),
             'canAccessOwnerHub' => true,
             'newKey' => $request->session()->get('developer_license_key'),
+            'newKeys' => $request->session()->get('developer_license_batch'),
         ],
         'productEntitlements' => $entitlements,
         'filters' => ['customer_q' => $search, 'plan' => $plan],

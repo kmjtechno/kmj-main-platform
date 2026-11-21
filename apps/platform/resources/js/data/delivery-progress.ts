@@ -10,6 +10,14 @@ export type DeliveryMilestone = {
 
 export const deliveryMilestones: DeliveryMilestone[] = [
     {
+        id: 'kslp-atomic-trial-batch-20261121',
+        title: 'Licensing Hub: atomic multi-customer trial key batch',
+        state: 'active',
+        detail: 'Source-only, carved from reviewed draft #897 without its dependency changes: a developer can issue 2 to 10 trial keys in one all-or-nothing transaction with capability, password step-up, reason, quota and rollout checks. Trial only, never a commercial plan; keys are shown once from a session flash and never stored in clear. The one-time flash now also survives the redirect from the developer page to the owner Hub.',
+        evidence:
+            'Feature tests cover quota rollback, cross-tenant denial and duplicate customers; exact-head CI only, nothing deployed, not full AuthSP parity.',
+    },
+    {
         id: 'kslp-tenant-device-summary-20261121',
         title: 'Licensing Hub: tenant-scoped device binding totals per key',
         state: 'active',
