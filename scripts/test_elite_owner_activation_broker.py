@@ -149,6 +149,7 @@ class ActivationBrokerTests(unittest.TestCase):
             p = Path(temp) / "intent.json"
             p.write_text(json.dumps(intent()))
             p.chmod(0o640)
+            p.parent.chmod(0o777)
             with patch.object(mod, "INTENT", p):
                 # A tmp directory is not the owner-controlled fixed inbox.
                 with self.assertRaisesRegex(ValueError, "INTENT_PARENT"):
