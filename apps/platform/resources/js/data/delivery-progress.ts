@@ -10,6 +10,14 @@ export type DeliveryMilestone = {
 
 export const deliveryMilestones: DeliveryMilestone[] = [
     {
+        id: 'modelfabric-dashboard-parity-20261121',
+        title: 'ModelFabric: owner Dashboard look and plain-language guidance',
+        state: 'active',
+        detail: 'Source-only UI rework after owner feedback that the page must match the main Super Admin Dashboard: the same earth hero, compact KPI tiles and red-icon panels, plus a next-step guide, Overview / Free models / API tokens / Activity tabs and plain-language wording (the technical status code stays visible in small print). No routing, evidence or token logic changed.',
+        evidence:
+            'vp fmt, vp check, tsc and static tests; exact-head CI only. Not yet reviewed in a real browser: layout against the dashboard is unconfirmed until the owner sees it after deploy.',
+    },
+    {
         id: 'modelfabric-guided-ux-20261121',
         title: 'ModelFabric: guided setup page',
         state: 'active',
