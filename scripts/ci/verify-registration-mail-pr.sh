@@ -56,6 +56,15 @@ if python3 -m py_compile "$tmp/tree/scripts/operations/kmj-mail-cloudflare-dkim.
 else
   echo 'FAIL: Cloudflare DNS publisher Python syntax'; failed=$((failed+1))
 fi
+echo '== Privacy-safe Postfix queue snapshot QA =='
+if python3 -m py_compile \
+    "$tmp/tree/scripts/operations/kmj_postfix_queue_snapshot_20261121.py" \
+    "$tmp/tree/scripts/operations/test_kmj_postfix_queue_snapshot_20261121.py" \
+    && python3 "$tmp/tree/scripts/operations/test_kmj_postfix_queue_snapshot_20261121.py"; then
+  echo 'PASS: queue snapshot parser, zero-is-not-delivered, age/525 and PII privacy regressions'
+else
+  echo 'FAIL: queue snapshot offline QA'; failed=$((failed+1))
+fi
 echo '== Offline Cloudflare DKIM DNS publishing regression tests =='
 if python3 "$tmp/tree/scripts/operations/test-kmj-mail-cloudflare-dkim.py"; then
   echo 'PASS: DKIM publish idempotency and no-write guards'
