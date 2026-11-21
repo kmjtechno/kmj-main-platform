@@ -60,12 +60,13 @@ final class WebhookSecretGenerationTest extends TestCase
     {
         $this->postJson(self::URL)->assertUnauthorized();
 
+        // Before any withSession() call: that confirmation would carry over to later requests.
+        $owner = $this->platformOwner();
+        $this->actingAs($owner)->postJson(self::URL)->assertStatus(423);
+
         $normal = User::factory()->create(['email_verified_at' => now()]);
         $this->actingAs($normal)->withSession(['auth.password_confirmed_at' => time()])
             ->postJson(self::URL)->assertForbidden();
-
-        $owner = $this->platformOwner();
-        $this->actingAs($owner)->postJson(self::URL)->assertStatus(423);
 
         $this->assertSame(0, DB::table('payment_gateway_settings')->count());
     }
