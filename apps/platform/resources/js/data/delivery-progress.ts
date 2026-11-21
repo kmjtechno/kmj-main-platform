@@ -10,6 +10,14 @@ export type DeliveryMilestone = {
 
 export const deliveryMilestones: DeliveryMilestone[] = [
     {
+        id: 'modelfabric-guided-ux-20261121',
+        title: 'ModelFabric: guided setup page',
+        state: 'active',
+        detail: 'Source-only UI rework after owner feedback: a 4-step progress bar (connect, verify, routes, token), provider cards with usable and discovered counts, a model picker fed by the last discovery, a suggested (unverified) pricing page per provider, a required confirmation before saving evidence, grouped route lists with plain-language reasons, and a copy button plus curl example for new tokens. No routing or policy logic changed.',
+        evidence:
+            'vp fmt, vp check, tsc and static tests; exact-head CI only, not deployed, not yet reviewed in a real browser by the owner.',
+    },
+    {
         id: 'ops-oneclick-queue-noclobber-20261121',
         title: 'One-click deploy prerequisite: non-overwriting operator request queue',
         state: 'active',
