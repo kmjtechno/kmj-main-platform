@@ -57,11 +57,11 @@ export default function OperatorPayments({
     return (
         <>
             <Head title="KMJ TECHNO — Payment Gateway Control" />
-            <main className="kmj-admin-shell kmj-owner-payments flex min-h-screen min-w-0 flex-col gap-6 p-4 sm:p-8">
-                <div className="mx-auto w-full max-w-6xl">
+            <main className="owner-admin-page kmj-admin-shell kmj-owner-payments flex min-w-0 flex-1 flex-col gap-6 p-4 sm:p-6 lg:p-8">
+                <div className="w-full">
                     <OperatorModuleNavigation active="payments" />
                 </div>
-                <header className="mx-auto flex w-full max-w-6xl flex-col gap-4">
+                <header className="flex w-full flex-col gap-4">
                     <Link
                         href="/operator"
                         className="text-muted-foreground hover:text-foreground inline-flex w-fit items-center gap-2 text-sm"
@@ -69,7 +69,7 @@ export default function OperatorPayments({
                         <ArrowLeft className="h-4 w-4" />
                         Back to Super Admin
                     </Link>
-                    <div className="kmj-admin-hero rounded-[1.65rem] p-6 sm:p-8">
+                    <div className="owner-admin-hero kmj-admin-hero rounded-[1.65rem] p-6 sm:p-8">
                         <div className="flex flex-wrap items-center gap-3">
                             <CreditCard className="h-8 w-8 text-red-500" />
                             <h1 className="text-2xl font-black tracking-tight sm:text-3xl">
@@ -149,7 +149,7 @@ export default function OperatorPayments({
                         <WebhookSetupGuide gateway={selectedGateway} />
                     </section>
                 ) : null}
-                <section className="mx-auto grid w-full max-w-6xl gap-4 md:grid-cols-2">
+                <section className="grid w-full gap-4 md:grid-cols-2">
                     {paymentReadiness.providers
                         .filter(
                             (gateway) =>
@@ -255,7 +255,7 @@ export default function OperatorPayments({
                             ))}
                     </div>
                 </details>
-                <section className="bg-card mx-auto w-full max-w-6xl rounded-2xl border border-white/10 p-6">
+                <section className="bg-card w-full rounded-2xl border border-white/10 p-6">
                     <h2 className="text-lg font-bold">
                         Required before accepting money
                     </h2>
