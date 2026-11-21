@@ -10,6 +10,14 @@ export type DeliveryMilestone = {
 
 export const deliveryMilestones: DeliveryMilestone[] = [
     {
+        id: 'modelfabric-bulk-evidence-renew-20261121',
+        title: 'ModelFabric: approve many models at once and renew evidence in one click',
+        state: 'active',
+        detail: 'Source-only: for an allowlist provider the owner can approve every listed model (up to 50) with one pricing-page attestation instead of one form per model, and renew expiring evidence for another 30 days with one confirmed click. Models must come from the provider last discovery, both actions need an explicit attestation, are applied in one transaction and audited. Revoked evidence is never revived, and providers without a verified free tier still cannot be unlocked. Evidence still expires after at most 30 days.',
+        evidence:
+            'Feature and static tests; exact-head CI only. Not a claim that any model is actually free: the owner attests that from the provider pricing page.',
+    },
+    {
         id: 'elite-oneclick-release-preflight-receipt-20261121',
         title: 'Owner one-click Stage/Verify/Deploy prerequisite: trusted Elite preflight receipt',
         state: 'active',

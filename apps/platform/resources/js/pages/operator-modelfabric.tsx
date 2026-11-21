@@ -455,6 +455,14 @@ export default function OperatorModelFabric({
         note.trim().length >= 10 &&
         confirmed;
 
+    const bulkModels = (selected?.discovered_models ?? []).slice(0, 50);
+    const canBulk =
+        canManage &&
+        bulkModels.length > 1 &&
+        url.startsWith('https://') &&
+        note.trim().length >= 10 &&
+        confirmed;
+
     const next = (() => {
         if (providers.length === 0) {
             return {
@@ -512,6 +520,45 @@ export default function OperatorModelFabric({
                     setConfirmed(false);
                 },
             },
+        );
+    };
+
+    const saveAll = () => {
+        router.post(
+            `${BASE}/evidence/bulk`,
+            {
+                provider_id: providerId,
+                model_ids: bulkModels,
+                price_evidence_url: url,
+                price_evidence_note: note,
+                valid_days: days,
+                data_handling: handling,
+                capabilities: caps,
+                attest_pricing: confirmed,
+            },
+            {
+                preserveScroll: true,
+                onSuccess: () => {
+                    setNote('');
+                    setModel('');
+                    setConfirmed(false);
+                },
+            },
+        );
+    };
+
+    const renew = (id: string) => {
+        if (
+            !window.confirm(
+                'Re-check the evidence page first. Renew for 30 days?',
+            )
+        ) {
+            return;
+        }
+        router.post(
+            `${BASE}/evidence/${id}/renew`,
+            { attest_pricing: true },
+            { preserveScroll: true },
         );
     };
 
@@ -983,8 +1030,8 @@ export default function OperatorModelFabric({
                                             setConfirmed(e.target.checked)
                                         }
                                     />
-                                    I opened this page myself and it shows this
-                                    exact model is free today.
+                                    I opened this page myself and it shows the
+                                    model(s) I approve are free today.
                                 </label>
                                 <div className="flex flex-wrap items-center gap-3 md:col-span-2">
                                     <button
@@ -994,6 +1041,17 @@ export default function OperatorModelFabric({
                                     >
                                         Save approval
                                     </button>
+                                    {bulkModels.length > 1 ? (
+                                        <button
+                                            type="button"
+                                            className={primaryButton}
+                                            disabled={!canBulk}
+                                            onClick={saveAll}
+                                        >
+                                            Approve all {bulkModels.length}{' '}
+                                            listed models
+                                        </button>
+                                    ) : null}
                                     {!canSave ? (
                                         <span className="text-muted-foreground text-xs">
                                             Pick a listed model, add an https
@@ -1070,6 +1128,15 @@ export default function OperatorModelFabric({
                                             evidence
                                         </a>
                                     </span>
+                                    {canManage && !row.revoked ? (
+                                        <button
+                                            type="button"
+                                            className="inline-flex items-center gap-1 text-xs font-bold"
+                                            onClick={() => renew(row.id)}
+                                        >
+                                            Renew 30 days
+                                        </button>
+                                    ) : null}
                                     {canManage && row.current ? (
                                         <button
                                             type="button"

@@ -104,3 +104,17 @@ void test('Hugging Face one-click OAuth is secretless PKCE, inference-api only a
     assert.match(web, /\.well-known\/oauth-cimd/);
     assert.match(hub, /Free account with no\s+payment method/);
 });
+
+void test('bulk evidence needs one explicit attestation, is capped and renewal never revives revoked evidence', () => {
+    const controller = read('app/Http/Controllers/ModelFabricController.php');
+    const routes = read('routes/model-fabric.php');
+    const page = read('resources/js/pages/operator-modelfabric.tsx');
+    assert.match(controller, /MAX_BULK_MODELS = 50/);
+    assert.match(controller, /'attest_pricing' => \['accepted'\]/);
+    assert.match(controller, /Revoked evidence cannot be renewed/);
+    assert.match(controller, /DB::transaction/);
+    assert.match(routes, /evidence\/bulk/);
+    assert.match(routes, /evidence\/\{evidence\}\/renew/);
+    assert.match(page, /Approve all \{bulkModels\.length\}/);
+    assert.match(page, /Renew 30 days/);
+});
