@@ -143,7 +143,16 @@ export function AppSidebar() {
             </SidebarHeader>
 
             <SidebarContent>
-                <NavMain items={operator?.enabled ? baseNavItems.filter((item) => item.href !== '/developer/apps') : baseNavItems} label="My workspace" />
+                <NavMain
+                    items={
+                        operator?.enabled
+                            ? baseNavItems.filter(
+                                  (item) => item.href !== '/developer/apps',
+                              )
+                            : baseNavItems
+                    }
+                    label="My workspace"
+                />
                 {operator?.enabled && (
                     <>
                         <NavMain
