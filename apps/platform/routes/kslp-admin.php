@@ -1,16 +1,17 @@
 <?php
 
 use App\Models\User;
-use App\Services\Licensing\Kslp\KslpLicenseControlPlane;
 use App\Services\Licensing\Kslp\KslpDeveloperWorkspaceQuery;
+use App\Services\Licensing\Kslp\KslpLicenseControlPlane;
 use App\Services\Licensing\UnverifiedAccountCleanup;
 use App\Services\PlatformOwnerAccess;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
+use Throwable;
 use Inertia\Inertia;
 
 Route::get('operator/kslp', function (Request $request, PlatformOwnerAccess $access, KslpLicenseControlPlane $control, KslpDeveloperWorkspaceQuery $developerWorkspace, UnverifiedAccountCleanup $cleanup) {
@@ -149,7 +150,7 @@ Route::get('operator/kslp', function (Request $request, PlatformOwnerAccess $acc
             $proof = $cleanup->preview();
             $unverified = [...$proof, 'status' => 'PREVIEW_ONLY'];
             unset($unverified['candidateIds']);
-        } catch (\Throwable) {
+        } catch (Throwable) {
             $unverified['status'] = 'PREVIEW_BLOCKED';
             // Unknown table/FK state can never authorize deletion.
         }
