@@ -7,6 +7,7 @@ use App\Services\Licensing\OmniDeskLicenseContract;
 use DomainException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Tests\TestCase;
 
 final class KslpPublicApiTest extends TestCase
@@ -205,11 +206,10 @@ final class KslpPublicApiTest extends TestCase
             self::assertSame('KSLP_PRODUCT_SCOPE_ROLLBACK_BLOCKED', $error->getMessage());
         }
 
-        self::assertTrue(\Illuminate\Support\Facades\Schema::hasColumn('kslp_signing_keys', 'product_id'));
+        self::assertTrue(Schema::hasColumn('kslp_signing_keys', 'product_id'));
         self::assertSame(
             OmniDeskLicenseContract::PRODUCT_ID,
             (string) DB::table('kslp_signing_keys')->where('kid', 'rollback-kid')->value('product_id'),
         );
     }
-
 }
