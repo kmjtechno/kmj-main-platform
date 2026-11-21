@@ -20,6 +20,7 @@ return Application::configure(basePath: dirname(__DIR__))
             __DIR__.'/../routes/product-manager.php',
             __DIR__.'/../routes/operator-ops.php',
             __DIR__.'/../routes/operator-directory.php',
+            __DIR__.'/../routes/model-fabric.php',
             __DIR__.'/../routes/kslp-public.php',
             __DIR__.'/../routes/codebridge-oauth.php',
             __DIR__.'/../routes/payments-webhooks.php',

@@ -10,6 +10,14 @@ export type DeliveryMilestone = {
 
 export const deliveryMilestones: DeliveryMilestone[] = [
     {
+        id: 'modelfabric-verified-zero-router-20261121',
+        title: 'ModelFabric & AI: owner page with verified-zero price evidence and route plan',
+        state: 'active',
+        detail: 'Source-only, roadmap section 15 and ADR-004: the sidebar ModelFabric & AI entry now opens a real owner page. The owner records current, expiring (30 days maximum) price evidence for an exact discovered model on an allowlist provider, and a planner shows which routes qualify or returns NO_FREE_ROUTE_AVAILABLE with per-provider reasons. A separate private-source plan needs documented no-training evidence. Evidence can never unlock a provider with no free tier, and there is no paid or unknown-cost fallback.',
+        evidence:
+            'Feature tests cover expiry, revocation, non-free providers, undiscovered models and owner-only access; exact-head CI only, nothing deployed, no provider was called and no inference verified.',
+    },
+    {
         id: 'kslp-atomic-trial-batch-20261121',
         title: 'Licensing Hub: atomic multi-customer trial key batch',
         state: 'active',

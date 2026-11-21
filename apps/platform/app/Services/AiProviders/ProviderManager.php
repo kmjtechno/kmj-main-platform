@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Services\AiProviders;
 
+use App\Models\AiModelEvidence;
 use App\Models\AiProvider;
 use Illuminate\Support\Facades\Config;
 use InvalidArgumentException;
@@ -139,10 +140,7 @@ final class ProviderManager
         }
 
         $tier = $this->presets()[$provider->preset]['free_tier'] ?? 'none';
-        $allowlist = array_values(array_filter(
-            (array) Config::get('ai_providers.free_models.'.$provider->preset, []),
-            'is_string',
-        ));
+        $allowlist = $this->allowlist($provider, $tier);
 
         return array_values(array_filter(
             $provider->models_cache ?? [],
@@ -173,11 +171,34 @@ final class ProviderManager
             throw new InvalidArgumentException('model_not_discovered');
         }
         $tier = $this->presets()[$provider->preset]['free_tier'] ?? 'none';
-        $allowlist = array_values(array_filter(
+        FreePolicy::assertInferenceAllowed($tier, $model, $this->allowlist($provider, $tier));
+    }
+
+    /**
+     * Server-env verified-free ids plus owner price evidence that is still current. Evidence only
+     * counts on the allowlist tier: it can never unlock a provider with no free tier, and it
+     * expires on its own, so a stale claim stops admitting inference without any cleanup job.
+     *
+     * @return list<string>
+     */
+    private function allowlist(AiProvider $provider, string $tier): array
+    {
+        $ids = array_values(array_filter(
             (array) Config::get('ai_providers.free_models.'.$provider->preset, []),
             'is_string',
         ));
-        FreePolicy::assertInferenceAllowed($tier, $model, $allowlist);
+        if ($tier !== 'allowlist') {
+            return $ids;
+        }
+
+        $evidence = AiModelEvidence::query()
+            ->where('ai_provider_id', $provider->id)
+            ->whereNull('revoked_at')
+            ->where('expires_at', '>', now())
+            ->pluck('model_id')
+            ->all();
+
+        return array_values(array_unique([...$ids, ...array_filter($evidence, 'is_string')]));
     }
 
     /**

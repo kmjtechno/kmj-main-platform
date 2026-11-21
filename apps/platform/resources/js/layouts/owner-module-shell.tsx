@@ -81,7 +81,11 @@ const groups: { title: string; items: Workspace[] }[] = [
                 href: '/services/kmj-codebridge#codebridge-device-control',
                 icon: Boxes,
             },
-            { label: 'ModelFabric & AI', href: '/operator/ops', icon: Gauge },
+            {
+                label: 'ModelFabric & AI',
+                href: '/operator/modelfabric',
+                icon: Gauge,
+            },
             {
                 label: 'CloudOS & Infrastructure',
                 href: '/operator/ops',
