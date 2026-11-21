@@ -1,0 +1,24 @@
+name: KMJ Elite owner-disabled offsite health policy
+
+on:
+  pull_request:
+    paths:
+      - 'scripts/operations/elite_health_owner_disabled_offsite.py'
+      - 'scripts/test_elite_health_owner_disabled_offsite.py'
+      - '.github/workflows/elite-health-owner-timer-policy.yml'
+      - 'docs/operations/ELITE_HEALTH_OWNER_DISABLED_OFFSITE.md'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  owner-offsite-health-regressions:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Compile guarded policy script
+        run: python3 -m py_compile scripts/operations/elite_health_owner_disabled_offsite.py scripts/test_elite_health_owner_disabled_offsite.py
+      - name: Exercise real policy, malformed state and no-bypass tests
+        run: python3 scripts/test_elite_health_owner_disabled_offsite.py -v
