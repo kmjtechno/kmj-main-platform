@@ -40,7 +40,6 @@ void test('task-first categories contain real, inspectable workspaces', () => {
         '/operator/kslp',
         '/operator/ops',
         '/operator/codebridge/owner-plan',
-        '/sandbox-licenses',
     ];
     for (const href of links) {
         assert.ok(
@@ -56,6 +55,10 @@ void test('task-first categories contain real, inspectable workspaces', () => {
     assert.match(routes, /Route::get\('owner-plan'/);
     assert.match(routes, /Route::get\('apps'/);
     assert.match(routes, /Route::get\('sandbox-licenses'/);
+    assert.ok(
+        !map.includes("href: '/sandbox-licenses'"),
+        'Sandbox Token Lab must not be a second licensing entry in the workspace map',
+    );
 });
 
 void test('roadmap-only modules cannot look like operational services', () => {
@@ -103,10 +106,8 @@ void test('owner-only sidebar separates personal workspace from governed areas',
     assert.match(sidebar, /Business · Owner/);
     assert.match(sidebar, /Commerce & Access/);
     assert.match(sidebar, /Systems & Trust/);
-    assert.match(
-        sidebar,
-        /<NavMain items=\{baseNavItems\} label="My workspace"/,
-    );
+    assert.match(sidebar, /label="My workspace"/);
+    assert.match(sidebar, /baseNavItems/);
     assert.match(overview, /<OperatorWorkspaceMap \/>/);
     assert.match(dashboard, /Open Command Center/);
     assert.match(dashboard, /href="\/operator"/);

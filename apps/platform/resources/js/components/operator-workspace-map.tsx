@@ -111,12 +111,6 @@ const workspaceGroups = [
                 href: '/operator/codebridge/owner-plan',
                 icon: Boxes,
             },
-            {
-                label: 'Sandbox Token Lab',
-                description: 'Inspect the sandbox license lifecycle',
-                href: '/sandbox-licenses',
-                icon: KeyRound,
-            },
         ],
     },
 ] as const;
