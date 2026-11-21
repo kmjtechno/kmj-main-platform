@@ -5,6 +5,7 @@ use App\Models\User;
 use App\Services\Events\OutboxHealthSnapshot;
 use App\Services\Operations\DeliveryControlRequestQueue;
 use App\Services\Operations\EliteReleaseReadinessSnapshot;
+use App\Services\Operations\EliteActivationIntentQueue;
 use App\Services\Operations\OperationalReadinessSnapshot;
 use App\Services\Operations\OperatorActionRunner;
 use App\Services\Operations\ServerMetricsSnapshot;
@@ -205,4 +206,34 @@ Route::middleware(['auth', 'verified', 'password.confirm'])
 
             return redirect()->route('operator.ops.index');
         })->name('ops.delivery-control');
+
+        Route::post('ops/actions/release-activation-intent', function (
+            Request $request,
+            PlatformOwnerAccess $access,
+            EliteActivationIntentQueue $queue,
+        ) {
+            $user = $request->user();
+            abort_unless($user instanceof User, 401);
+            $access->require($user);
+
+            $validated = $request->validate([
+                'approved_sha' => ['required', 'string', 'regex:/\\A[a-f0-9]{40}\\z/D'],
+                'expected_current_release' => ['required', 'string', 'regex:/\\Aplatform-[a-f0-9]{12}\\z/D'],
+                'confirmation' => ['required', 'in:REQUEST_APPROVED_PRODUCTION_RELEASE'],
+            ]);
+
+            try {
+                $queue->enqueue(
+                    $user,
+                    $validated['approved_sha'],
+                    $validated['expected_current_release'],
+                    $validated['confirmation'],
+                );
+            } catch (\\RuntimeException $exception) {
+                abort(409, 'Trusted release preflight or pending request must be reconciled.');
+            }
+
+            // Accepted into a local intent inbox is NOT an activation claim.
+            return redirect()->route('operator.ops.index');
+        })->name('ops.release-activation-intent');
     });
