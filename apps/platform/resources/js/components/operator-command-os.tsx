@@ -8,7 +8,6 @@ import {
     ChartNoAxesCombined,
     ChevronRight,
     Cloud,
-    Code2,
     CreditCard,
     Crown,
     Database,
