@@ -42,11 +42,12 @@ final class ModelFabricRouter
             $admitted = 0;
             foreach ($models as $model) {
                 $proof = $evidence[$model] ?? null;
-                $handling = $proof?->data_handling ?? 'unknown';
+                $handling = $proof instanceof AiModelEvidence ? $proof->data_handling : 'unknown';
+                $capabilities = $proof instanceof AiModelEvidence ? ($proof->capabilities ?? []) : [];
                 if ($privateSource && ($proof === null || $handling !== 'no-training-documented')) {
                     continue;
                 }
-                if ($capability !== 'chat' && ! in_array($capability, $proof?->capabilities ?? [], true)) {
+                if ($capability !== 'chat' && ! in_array($capability, $capabilities, true)) {
                     continue;
                 }
                 $admitted++;
@@ -55,7 +56,7 @@ final class ModelFabricRouter
                     'provider' => $provider->name,
                     'model' => $model,
                     'source' => $proof === null ? 'server-allowlist-or-free-suffix' : 'owner-price-evidence',
-                    'evidence_expires_at' => $proof?->expires_at->toIso8601String(),
+                    'evidence_expires_at' => $proof instanceof AiModelEvidence ? $proof->expires_at->toIso8601String() : null,
                     'data_handling' => $handling,
                 ];
             }
