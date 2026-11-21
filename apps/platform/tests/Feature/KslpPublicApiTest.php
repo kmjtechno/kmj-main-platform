@@ -162,5 +162,4 @@ final class KslpPublicApiTest extends TestCase
             self::assertSame('KSLP_KEY_WINDOW_CONFLICT', $error->getMessage());
         }
     }
-
 }
