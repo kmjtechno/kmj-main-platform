@@ -177,8 +177,20 @@ export default function WebhookSetupGuide({
                     </li>
                     <li>
                         <span className="text-foreground font-medium">
-                            In Razorpay Dashboard (Test Mode) → Account &amp;
-                            Settings → Webhooks → Add New Webhook, fill:
+                            First switch the Test Mode toggle ON (bottom-left of
+                            the Razorpay Dashboard). A webhook created in Live
+                            mode never receives test payments.
+                        </span>{' '}
+                        <a
+                            className="underline"
+                            href="https://dashboard.razorpay.com/app/website-app-settings/webhooks"
+                            target="_blank"
+                            rel="noreferrer"
+                        >
+                            Open Razorpay Webhooks
+                        </a>
+                        <span className="mt-2 block">
+                            Then Add New Webhook and fill:
                         </span>
                         <dl className="mt-2 grid gap-2">
                             <div>
@@ -220,26 +232,84 @@ export default function WebhookSetupGuide({
                     <li>
                         <span className="text-foreground font-medium">
                             Click Create Webhook, then make one Test Mode
-                            payment (or trigger a test event if the dashboard
-                            offers it).
+                            payment: Payment Links, create a small link, open it
+                            on a computer, choose Netbanking, pick a test bank
+                            and press Success (UPI/QR does not work in Test
+                            Mode).
                         </span>{' '}
                         This card turns to &quot;Delivery proven&quot; by itself
                         once the first signed event arrives.
                     </li>
                 </ol>
             ) : (
-                <div className="text-muted-foreground mt-2 leading-5">
-                    <div className="flex items-center gap-2">
-                        <code className="bg-muted min-w-0 flex-1 overflow-x-auto rounded px-2 py-1">
-                            {gateway.webhook_receiver_url}
-                        </code>
-                        <CopyButton text={gateway.webhook_receiver_url} />
-                    </div>
-                    <p className="mt-2">
-                        Cashfree signs webhooks with the client secret, so no
-                        separate secret is needed.
-                    </p>
-                </div>
+                <ol className="text-muted-foreground mt-3 list-decimal space-y-3 pl-4 leading-5">
+                    <li>
+                        <span className="text-foreground font-medium">
+                            Use the Test environment in Cashfree.
+                        </span>{' '}
+                        Developers → API Keys: copy the Test App ID and Secret
+                        Key into the KMJ key form above by typing or pasting
+                        them yourself (the browser must not autofill your
+                        login). Test keys saved from Production make every
+                        webhook fail the signature check.
+                    </li>
+                    <li>
+                        <span className="text-foreground font-medium">
+                            Developers → Webhooks → Add Webhook Endpoint:
+                        </span>{' '}
+                        <a
+                            className="underline"
+                            href="https://merchant.cashfree.com/merchants/pg/developers/webhooks?env=test"
+                            target="_blank"
+                            rel="noreferrer"
+                        >
+                            Open Cashfree Webhooks (Test)
+                        </a>
+                        <dl className="mt-2 grid gap-2">
+                            <div>
+                                <dt className="text-foreground">
+                                    Endpoint URL
+                                </dt>
+                                <dd className="mt-1 flex items-center gap-2">
+                                    <code className="bg-muted min-w-0 flex-1 overflow-x-auto rounded px-2 py-1">
+                                        {gateway.webhook_receiver_url}
+                                    </code>
+                                    <CopyButton
+                                        text={gateway.webhook_receiver_url}
+                                    />
+                                </dd>
+                            </div>
+                            <div>
+                                <dt className="text-foreground">Version</dt>
+                                <dd>2023-08-01</dd>
+                            </div>
+                            <div>
+                                <dt className="text-foreground">Events</dt>
+                                <dd>
+                                    Only success payment and failed payment.
+                                </dd>
+                            </div>
+                            <div>
+                                <dt className="text-foreground">Secret</dt>
+                                <dd>
+                                    None. Cashfree signs with your Secret Key,
+                                    so there is no separate webhook secret.
+                                </dd>
+                            </div>
+                        </dl>
+                        Cashfree&apos;s own Test button sends an unsigned ping,
+                        so a warning there is expected.
+                    </li>
+                    <li>
+                        <span className="text-foreground font-medium">
+                            Make one ₹1 test payment (Payment Links → Create →
+                            pay with a test option).
+                        </span>{' '}
+                        If Developers → Webhooks → Logs shows 401, the Secret
+                        Key saved in KMJ is not the Test key: save the right
+                        one, then use Batch Resend on that log entry.
+                    </li>
+                </ol>
             )}
 
             <p className="text-foreground mt-3 leading-5" role="status">

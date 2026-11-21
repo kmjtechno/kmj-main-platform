@@ -10,6 +10,14 @@ export type DeliveryMilestone = {
 
 export const deliveryMilestones: DeliveryMilestone[] = [
     {
+        id: 'gateway-setup-guardrails-20261121',
+        title: 'Razorpay and Cashfree webhook setup guide with Live-mode and wrong-key guardrails',
+        state: 'active',
+        detail: 'Source-only owner console guide update: Razorpay steps warn to switch Test Mode on first and use Netbanking Success, and Cashfree gets a numbered Test-environment guide (Test keys, endpoint URL, version 2023-08-01, two payment events, no separate secret, 401 and Batch Resend recovery). One-click OAuth connect needs partner status with each provider and is not available to this account.',
+        evidence:
+            'Static owner payment UX test asserts the guardrails; no live proof until deployed.',
+    },
+    {
         id: 'single-licensing-hub-authsp-role-workflow-unverified-cleanup-20261121',
         title: 'One Licensing Hub — role-scoped AuthSP developer workflow and guarded email cleanup',
         state: 'active',

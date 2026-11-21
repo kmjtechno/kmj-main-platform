@@ -93,3 +93,12 @@ void test('credential fields never invite browser login autofill', () => {
     assert.match(settings, /name=\{`gateway_\$\{key\}`\}/);
     assert.doesNotMatch(settings, /name=\{key\}/);
 });
+
+void test('webhook guide prevents the known Live-mode, empty-secret and wrong-key mistakes', () => {
+    const guide = read('resources/js/components/webhook-setup-guide.tsx');
+    assert.match(guide, /Test Mode toggle ON/);
+    assert.match(guide, /never receives test payments/);
+    assert.match(guide, /2023-08-01/);
+    assert.match(guide, /Batch Resend/);
+    assert.match(guide, /Cashfree signs with your Secret/);
+});
