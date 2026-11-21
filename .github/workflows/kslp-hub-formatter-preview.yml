@@ -1,0 +1,29 @@
+name: KSLP Hub formatter preview (source-only)
+on:
+  pull_request:
+    paths:
+      - 'apps/platform/resources/js/**'
+      - 'apps/platform/scripts/**'
+      - '.github/workflows/kslp-hub-formatter-preview.yml'
+  workflow_dispatch:
+jobs:
+  formatter-preview:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: apps/platform/package-lock.json
+      - name: Render formatter diff without writing to git or production
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          cd apps/platform
+          npm ci --no-audit --no-fund --ignore-scripts
+          ./node_modules/.bin/vp fmt resources/js/components/app-sidebar.tsx resources/js/pages/developer-apps.tsx resources/js/pages/operator-kslp.tsx scripts/check-licensing-hub-scopes.test.mjs scripts/check-licensing-integration.test.mjs
+          git diff --no-ext-diff -- resources/js/components/app-sidebar.tsx resources/js/pages/developer-apps.tsx resources/js/pages/operator-kslp.tsx scripts/check-licensing-hub-scopes.test.mjs scripts/check-licensing-integration.test.mjs
+          echo 'PRODUCTION_MUTATION=NONE'
