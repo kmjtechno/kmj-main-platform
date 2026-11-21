@@ -266,8 +266,20 @@ export function DeveloperAppsWorkspace({
     return (
         <>
             {!embedded && <Head title="KMJ Licensing Hub · Developer Apps" />}
-            <div className={embedded ? 'flex min-w-0 flex-col gap-6' : 'owner-shared-page flex min-w-0 flex-1 flex-col gap-6 p-4 sm:p-7'}>
-                <section className={embedded ? 'hidden' : 'overflow-hidden rounded-2xl border bg-gradient-to-br from-[#111b29] via-[#10151f] to-[#231523] p-6 text-white sm:p-8'}>
+            <div
+                className={
+                    embedded
+                        ? 'flex min-w-0 flex-col gap-6'
+                        : 'owner-shared-page flex min-w-0 flex-1 flex-col gap-6 p-4 sm:p-7'
+                }
+            >
+                <section
+                    className={
+                        embedded
+                            ? 'hidden'
+                            : 'overflow-hidden rounded-2xl border bg-gradient-to-br from-[#111b29] via-[#10151f] to-[#231523] p-6 text-white sm:p-8'
+                    }
+                >
                     <div className="flex flex-col justify-between gap-6 lg:flex-row lg:items-center">
                         <div className="max-w-2xl">
                             <div className="mb-3 flex items-center gap-2 text-xs font-bold tracking-[0.14em] text-amber-300 uppercase">
@@ -339,13 +351,13 @@ export function DeveloperAppsWorkspace({
                                 One KMJ Licensing Hub · Developer workspace
                             </h2>
                             <p className="text-muted-foreground mt-1 max-w-3xl text-sm leading-6">
-                                This is your organization-scoped app and trial-key
-                                workspace. The Super Admin Licensing Hub governs
-                                platform-wide CloudOS commercial licenses,
-                                policies, renewals and audit. These are different
-                                records under the same KMJ authority: an existing
-                                commercial license does not create a developer
-                                issuer subscription.
+                                This is your organization-scoped app and
+                                trial-key workspace. The Super Admin Licensing
+                                Hub governs platform-wide CloudOS commercial
+                                licenses, policies, renewals and audit. These
+                                are different records under the same KMJ
+                                authority: an existing commercial license does
+                                not create a developer issuer subscription.
                             </p>
                         </div>
                         {canAccessOwnerHub && (
@@ -360,19 +372,28 @@ export function DeveloperAppsWorkspace({
                     </div>
                     <div className="mt-4 grid gap-3 sm:grid-cols-3">
                         <div className="rounded-xl border p-3">
-                            <p className="text-xs font-semibold">Developer rollout</p>
+                            <p className="text-xs font-semibold">
+                                Developer rollout
+                            </p>
                             <p className="mt-1 text-sm font-bold">
-                                {canIssueKeys ? 'Available for authorized issuers' : 'Protected — globally disabled'}
+                                {canIssueKeys
+                                    ? 'Available for authorized issuers'
+                                    : 'Protected — globally disabled'}
                             </p>
                         </div>
                         <div className="rounded-xl border p-3">
-                            <p className="text-xs font-semibold">Selected issuer subscription</p>
+                            <p className="text-xs font-semibold">
+                                Selected issuer subscription
+                            </p>
                             <p className="mt-1 text-sm font-bold">
-                                {selectedIssuer?.issuer_status ?? 'No organization'}
+                                {selectedIssuer?.issuer_status ??
+                                    'No organization'}
                             </p>
                         </div>
                         <div className="rounded-xl border p-3">
-                            <p className="text-xs font-semibold">Commercial customer licenses</p>
+                            <p className="text-xs font-semibold">
+                                Commercial customer licenses
+                            </p>
                             <p className="text-muted-foreground mt-1 text-xs">
                                 Issued by governed KSLP entitlement authority,
                                 not by an unverified trial-key form
@@ -380,7 +401,10 @@ export function DeveloperAppsWorkspace({
                         </div>
                     </div>
                     {!canRegister && organizations.length > 0 && (
-                        <p role="status" className="text-muted-foreground mt-3 text-xs leading-5">
+                        <p
+                            role="status"
+                            className="text-muted-foreground mt-3 text-xs leading-5"
+                        >
                             {canIssueKeys
                                 ? 'This organization has no currently active issuer subscription. Owner approval and recorded commercial entitlement are required before app registration.'
                                 : 'Developer issuance is paused by a platform-wide release gate. An active owner-issued license does not bypass this gate or create an issuer subscription.'}
