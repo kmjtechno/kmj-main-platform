@@ -434,6 +434,7 @@ export default function OperatorModelFabric({
     const [handling, setHandling] = useState('unknown');
     const [caps, setCaps] = useState<string[]>(['chat']);
     const [confirmed, setConfirmed] = useState(false);
+    const [picked, setPicked] = useState<string[]>([]);
     const selected = providers.find((provider) => provider.id === providerId);
     const hint = selected ? PRICING_HINTS[selected.preset] : undefined;
     const modelKnown = !!selected?.discovered_models.includes(model);
@@ -455,10 +456,13 @@ export default function OperatorModelFabric({
         note.trim().length >= 10 &&
         confirmed;
 
-    const bulkModels = (selected?.discovered_models ?? []).slice(0, 50);
+    const listedModels = (selected?.discovered_models ?? []).slice(0, 200);
+    const bulkModels = picked
+        .filter((id) => listedModels.includes(id))
+        .slice(0, 50);
     const canBulk =
         canManage &&
-        bulkModels.length > 1 &&
+        bulkModels.length > 0 &&
         url.startsWith('https://') &&
         note.trim().length >= 10 &&
         confirmed;
@@ -542,6 +546,7 @@ export default function OperatorModelFabric({
                     setNote('');
                     setModel('');
                     setConfirmed(false);
+                    setPicked([]);
                 },
             },
         );
@@ -1021,6 +1026,46 @@ export default function OperatorModelFabric({
                                         model serve the coding worker.
                                     </p>
                                 </fieldset>
+                                {listedModels.length > 1 ? (
+                                    <fieldset className="text-sm md:col-span-2">
+                                        <legend className="font-medium">
+                                            Approve several at once (tick only
+                                            models the page shows as free)
+                                        </legend>
+                                        <div className="mt-1 grid max-h-48 gap-1 overflow-y-auto sm:grid-cols-2">
+                                            {listedModels.map((id) => (
+                                                <label
+                                                    key={id}
+                                                    className="flex items-center gap-2 text-xs"
+                                                >
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={picked.includes(
+                                                            id,
+                                                        )}
+                                                        onChange={(e) =>
+                                                            setPicked(
+                                                                e.target.checked
+                                                                    ? [
+                                                                          ...picked,
+                                                                          id,
+                                                                      ]
+                                                                    : picked.filter(
+                                                                          (
+                                                                              item,
+                                                                          ) =>
+                                                                              item !==
+                                                                              id,
+                                                                      ),
+                                                            )
+                                                        }
+                                                    />
+                                                    {id}
+                                                </label>
+                                            ))}
+                                        </div>
+                                    </fieldset>
+                                ) : null}
                                 <label className="flex items-start gap-2 text-sm md:col-span-2">
                                     <input
                                         type="checkbox"
@@ -1041,15 +1086,15 @@ export default function OperatorModelFabric({
                                     >
                                         Save approval
                                     </button>
-                                    {bulkModels.length > 1 ? (
+                                    {listedModels.length > 1 ? (
                                         <button
                                             type="button"
                                             className={primaryButton}
                                             disabled={!canBulk}
                                             onClick={saveAll}
                                         >
-                                            Approve all {bulkModels.length}{' '}
-                                            listed models
+                                            Approve {bulkModels.length} selected
+                                            model(s)
                                         </button>
                                     ) : null}
                                     {!canSave ? (
