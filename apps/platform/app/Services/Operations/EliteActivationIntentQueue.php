@@ -46,7 +46,7 @@ final class EliteActivationIntentQueue
         }
 
         $id = (string) Str::uuid();
-        $now = now()->timestamp;
+        $now = (int) now()->timestamp;
         $payload = [
             'schema' => 'kmj.elite.production-activation-intent.v1',
             'intent_id' => $id,
