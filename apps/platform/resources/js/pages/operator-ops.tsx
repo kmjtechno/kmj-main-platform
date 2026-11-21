@@ -361,7 +361,8 @@ export default function OperatorOps({
         /^[a-f0-9]{40}$/.test(eliteRelease.approved_sha) &&
         typeof eliteRelease.current_release === 'string' &&
         /^platform-[a-f0-9]{12}$/.test(eliteRelease.current_release) &&
-        eliteRelease.expected_current_release === eliteRelease.current_release &&
+        eliteRelease.expected_current_release ===
+            eliteRelease.current_release &&
         eliteRelease.promoted_sha === eliteRelease.approved_sha &&
         eliteRelease.deploy_triggered === false;
 
