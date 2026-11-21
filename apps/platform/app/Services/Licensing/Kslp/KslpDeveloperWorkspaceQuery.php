@@ -55,10 +55,22 @@ final class KslpDeveloperWorkspaceQuery
             ->get(['id', 'organization_id', 'product_code', 'name', 'status', 'created_at'])
             ->all();
 
+        // Read-only, aggregate-only device evidence. Never expose device
+        // public keys, hardware hashes or idempotency tokens through Inertia.
+        // A non-deactivated binding is NOT a live connection, entitlement or
+        // proof that an expired/revoked license is usable.
+        $bindingCounts = DB::table('kslp_activations')
+            ->select('license_id')
+            ->selectRaw('COUNT(*) AS recorded_binding_count')
+            ->selectRaw('SUM(CASE WHEN deactivated_at IS NULL THEN 1 ELSE 0 END) AS non_deactivated_binding_count')
+            ->selectRaw('MAX(activated_at) AS last_activation_at')
+            ->groupBy('license_id');
+
         $storageReady = Schema::hasTable('kslp_license_keys');
         $keys = ($storageReady && $tenantIds !== [])
             ? DB::table('kslp_license_keys as k')
                 ->join('kslp_licenses as l', 'l.id', '=', 'k.license_id')
+                ->leftJoinSub($bindingCounts, 'bindings', fn ($join) => $join->on('bindings.license_id', '=', 'l.id'))
                 ->whereIn('k.organization_id', $tenantIds)
                 ->orderBy('k.created_at', 'desc')
                 ->limit(100)
@@ -66,6 +78,9 @@ final class KslpDeveloperWorkspaceQuery
                     'k.id', 'k.organization_id', 'k.licensed_product_id',
                     'k.license_id', 'k.display_prefix', 'k.first_activated_at',
                     'k.revoked_at', 'l.plan', 'l.customer_id', 'l.expires_at',
+                    'bindings.last_activation_at',
+                    DB::raw('COALESCE(bindings.recorded_binding_count, 0) AS recorded_binding_count'),
+                    DB::raw('COALESCE(bindings.non_deactivated_binding_count, 0) AS non_deactivated_binding_count'),
                 ])->all() : [];
 
         return [

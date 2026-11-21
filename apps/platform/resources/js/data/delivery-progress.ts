@@ -10,6 +10,14 @@ export type DeliveryMilestone = {
 
 export const deliveryMilestones: DeliveryMilestone[] = [
     {
+        id: 'kslp-tenant-device-summary-20261121',
+        title: 'Licensing Hub: tenant-scoped device binding totals per key',
+        state: 'active',
+        detail: 'Source-only, carved from reviewed draft #896: developer key list shows recorded and non-deactivated binding counts and the latest recorded activation, aggregated per license inside the tenant. No device identifiers, hardware hashes or tokens are exposed, and bindings are labelled as not proof of online presence or entitlement.',
+        evidence:
+            'Feature test asserts tenant isolation and absence of identifiers; exact-head CI only, nothing deployed.',
+    },
+    {
         id: 'kslp-app-lifecycle-audited-20261121',
         title: 'Licensing Hub: guarded app rename and emergency pause/resume',
         state: 'active',
