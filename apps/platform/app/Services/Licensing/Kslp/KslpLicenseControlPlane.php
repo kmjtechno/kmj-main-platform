@@ -313,7 +313,7 @@ final class KslpLicenseControlPlane
 
         $active = DB::table('kslp_licensed_products')
             ->where('organization_id', $issuerOrganizationId)
-            ->where('product_code', (string) $license->product)
+            ->where('product_code', (string) ($license->product ?? ''))
             ->where('status', 'active')
             ->exists();
 
