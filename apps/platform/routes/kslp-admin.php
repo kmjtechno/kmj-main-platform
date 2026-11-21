@@ -3,6 +3,7 @@
 use App\Models\User;
 use App\Services\Licensing\Kslp\KslpLicenseControlPlane;
 use App\Services\Licensing\Kslp\KslpDeveloperWorkspaceQuery;
+use App\Services\Licensing\UnverifiedAccountCleanup;
 use App\Services\PlatformOwnerAccess;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -11,7 +12,7 @@ use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
 
-Route::get('operator/kslp', function (Request $request, PlatformOwnerAccess $access, KslpLicenseControlPlane $control, KslpDeveloperWorkspaceQuery $developerWorkspace) {
+Route::get('operator/kslp', function (Request $request, PlatformOwnerAccess $access, KslpLicenseControlPlane $control, KslpDeveloperWorkspaceQuery $developerWorkspace, UnverifiedAccountCleanup $cleanup) {
     $user = $request->user();
     abort_unless($user instanceof User, 401);
     $access->require($user);
@@ -136,6 +137,18 @@ Route::get('operator/kslp', function (Request $request, PlatformOwnerAccess $acc
         ];
     })->all();
 
+    // Non-mutating preview only; a schema/introspection anomaly blocks cleanup,
+    // but cannot break the owner license directory.
+    $unverified = ['unverified' => User::query()->whereNull('email_verified_at')->count(),
+        'eligible' => 0, 'protected' => 0, 'sha256' => '', 'status' => 'BLOCKED'];
+    try {
+        $proof = $cleanup->preview();
+        $unverified = [...$proof, 'status' => 'PREVIEW_ONLY'];
+        unset($unverified['candidateIds']);
+    } catch (RuntimeException) {
+        // Never fall back to naive email_verified_at IS NULL DELETE.
+    }
+
     return Inertia::render('operator-kslp', [
         'metrics' => [
             'licenses' => DB::table('kslp_licenses')->count(),
@@ -156,6 +169,10 @@ Route::get('operator/kslp', function (Request $request, PlatformOwnerAccess $acc
         'developerIssuanceEnabled' => Schema::hasTable('kslp_license_keys') && (bool) config('services.kmj_developer_licensing.enabled', false),
         // Reuse exactly the tenant-restricted developer workspace query. Global
         // KSLP data stays owner-only; a commercial lease never becomes an issuer.
+        'unverifiedEmailCleanup' => [
+            ...$unverified,
+            'enabled' => (bool) config('services.kmj_unverified_account_cleanup.enabled', false),
+        ],
         'developerWorkspace' => [
             ...$developerWorkspace->forUser($user),
             'canAccessOwnerHub' => true,
