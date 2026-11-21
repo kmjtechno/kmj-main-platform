@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Support\Carbon;
 
 /**
  * Bearer token for the ModelFabric OpenAI-compatible endpoint. Only the SHA-256 hash is stored.
@@ -17,9 +17,9 @@ use Illuminate\Support\Carbon;
  * @property string $token_hash
  * @property string $token_prefix
  * @property bool $private_source
- * @property Carbon $expires_at
- * @property Carbon|null $last_used_at
- * @property Carbon|null $revoked_at
+ * @property CarbonInterface $expires_at
+ * @property CarbonInterface|null $last_used_at
+ * @property CarbonInterface|null $revoked_at
  */
 final class AiModelToken extends Model
 {
