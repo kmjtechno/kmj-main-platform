@@ -198,10 +198,7 @@ final class KslpDeveloperAppsTest extends TestCase
         ]);
 
         $this->actingAs($platformOwner)->get('/developer/apps')
-            ->assertOk()
-            ->assertInertia(fn (Assert $page) => $page
-                ->component('developer-apps')
-                ->where('canAccessOwnerHub', true));
+            ->assertRedirect('/operator/kslp#developer-workspace');
     }
 
     public function test_expired_issuer_does_not_appear_active_in_developer_workspace(): void
