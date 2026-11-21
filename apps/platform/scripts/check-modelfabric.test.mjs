@@ -34,3 +34,16 @@ void test('routes are owner, password-confirmed and throttled; controller denies
     assert.match(controller, /Evidence applies only to allowlist providers/);
     assert.match(controller, /MAX_EVIDENCE_DAYS = 30/);
 });
+
+void test('gateway only walks planned routes and the refresh stays read-only', () => {
+    const gateway = read('app/Services/AiProviders/ModelFabricGateway.php');
+    const refresh = read('app/Console/Commands/ModelFabricRefreshCommand.php');
+    const consoleRoutes = read('routes/console.php');
+    assert.match(gateway, /\$this->router->plan\(/);
+    assert.match(gateway, /MAX_ATTEMPTS = 3/);
+    assert.doesNotMatch(gateway, /Http::|->post\(/);
+    assert.match(refresh, /\$manager->test\(\$provider\)/);
+    assert.doesNotMatch(refresh, /complete\(/);
+    assert.match(consoleRoutes, /modelfabric:refresh'\)->everySixHours\(\)/);
+    assert.match(page, /Routing activity/);
+});

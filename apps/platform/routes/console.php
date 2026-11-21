@@ -141,3 +141,5 @@ Artisan::command('codebridge:agent-origin-doctor', function () {
         ? Command::SUCCESS
         : Command::FAILURE;
 })->purpose('Read-only, secret-free Home Office agent pairing configuration preflight');
+
+Schedule::command('modelfabric:refresh')->everySixHours()->withoutOverlapping();
