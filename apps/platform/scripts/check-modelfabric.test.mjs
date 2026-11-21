@@ -47,3 +47,12 @@ void test('gateway only walks planned routes and the refresh stays read-only', (
     assert.match(consoleRoutes, /modelfabric:refresh'\)->everySixHours\(\)/);
     assert.match(page, /Routing activity/);
 });
+
+void test('smart routing only reorders eligible routes and never adds one', () => {
+    const scorer = read('app/Services/AiProviders/RouteScorer.php');
+    const gateway = read('app/Services/AiProviders/ModelFabricGateway.php');
+    assert.match(scorer, /Orders ALREADY ELIGIBLE routes/);
+    assert.doesNotMatch(scorer, /AiProvider\b|Http::|Cache::/);
+    assert.match(gateway, /\$this->scorer->order\(\$plan\['routes'\]/);
+    assert.match(gateway, /nearLimit/);
+});

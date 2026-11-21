@@ -10,6 +10,14 @@ export type DeliveryMilestone = {
 
 export const deliveryMilestones: DeliveryMilestone[] = [
     {
+        id: 'modelfabric-smart-routing-20261121',
+        title: 'ModelFabric: task-aware model choice and pre-emptive limit shifting',
+        state: 'active',
+        detail: 'Source-only: a rule-based profile (simple, coding, complex) and model-family tiers order the routes the verified-zero planner already admitted, so easy work uses lighter models and hard coding uses stronger ones. Provider-reported remaining quota deprioritises a provider before it runs out, and provider retry-after sets the cooldown. NVIDIA NIM preset added (allowlist only, needs evidence). Research notes and the roadmap are in docs/modelfabric. Tier hints are heuristics and are not benchmarked yet.',
+        evidence:
+            'Unit and feature tests with faked HTTP; exact-head CI only, nothing deployed, no real provider called, no coding benchmark run.',
+    },
+    {
         id: 'modelfabric-failover-gateway-20261121',
         title: 'ModelFabric: verified-zero failover, cooldowns, auto-refresh and routing analytics',
         state: 'active',
