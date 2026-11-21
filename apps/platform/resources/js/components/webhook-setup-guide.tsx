@@ -118,7 +118,7 @@ export default function WebhookSetupGuide({
 
     return (
         <div
-            className="border-border mt-4 rounded-xl border p-3 text-xs"
+            className="bg-card kmj-admin-module-card rounded-2xl border p-5 text-sm"
             data-testid={`webhook-${gateway.id}`}
         >
             <p className="text-foreground flex items-center gap-2 font-semibold">

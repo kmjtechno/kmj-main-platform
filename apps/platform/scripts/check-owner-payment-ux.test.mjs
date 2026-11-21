@@ -42,7 +42,12 @@ void test('readable, keyboard accessible and responsive locked enterprise UI', (
     assert.match(css, /:focus-visible/);
     assert.match(css, /@media \(max-width: 850px\)/);
     assert.match(css, /prefers-reduced-motion/);
-    assert.match(css, /#0e151e/);
+    assert.match(css, /--kmj-pay-card: var\(--card\)/);
+    assert.doesNotMatch(
+        css,
+        /#[0-9a-fA-F]{6}\b/,
+        'use shared admin tokens, not private colors',
+    );
 });
 
 void test('payment security state and live charging guard stay real', () => {

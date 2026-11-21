@@ -4,16 +4,16 @@
  * All merchant readiness indicators remain authoritative and unchanged.
  */
 .owner-module-shell .kmj-owner-payments {
-    --kmj-pay-card: #0e151e;
-    --kmj-pay-line: #354557;
-    --kmj-pay-muted: #bec9d7;
+    --kmj-pay-card: var(--card);
+    --kmj-pay-line: var(--kmj-workspace-border);
+    --kmj-pay-muted: var(--muted-foreground);
     width: 100%;
     max-width: none;
     min-width: 0;
     margin: 0;
     gap: clamp(18px, 1.5vw, 26px);
     padding: clamp(14px, 1.7vw, 28px);
-    color: #f0f4f9;
+    color: var(--foreground);
     font-size: 14px;
     line-height: 1.55;
 }
@@ -47,20 +47,6 @@
 .owner-module-shell .kmj-owner-payments .text-muted-foreground,
 .owner-module-shell .kmj-owner-payments .text-slate-400 {
     color: var(--kmj-pay-muted);
-}
-
-.owner-module-shell .kmj-owner-payments .kmj-admin-hero {
-    border: 1px solid #703045;
-    border-radius: 20px;
-    padding: clamp(22px, 2vw, 34px);
-    background:
-        radial-gradient(
-            ellipse at 95% 0%,
-            rgba(180, 16, 56, 0.18),
-            transparent 50%
-        ),
-        linear-gradient(130deg, #111824 0%, #090f17 75%);
-    box-shadow: 0 12px 35px rgba(0, 0, 0, 0.17);
 }
 
 .owner-module-shell .kmj-owner-payments .kmj-admin-hero h1 {
@@ -99,8 +85,12 @@
     [aria-label='Guided payment gateway onboarding'] {
     padding: clamp(18px, 1.9vw, 30px);
     background:
-        linear-gradient(150deg, rgba(158, 21, 54, 0.075), transparent 50%),
-        #0c141d;
+        linear-gradient(
+            150deg,
+            var(--kmj-workspace-highlight),
+            transparent 55%
+        ),
+        var(--card);
 }
 
 .owner-module-shell
@@ -139,9 +129,9 @@
 .owner-module-shell .kmj-owner-payments :is(input, select, textarea) {
     min-height: 44px;
     border-radius: 10px;
-    border-color: #516073;
-    background-color: #111b27;
-    color: #f3f7fb;
+    border-color: var(--border);
+    background-color: var(--background);
+    color: var(--foreground);
     font-size: 14px;
 }
 
@@ -152,7 +142,7 @@
 .owner-module-shell
     .kmj-owner-payments
     :is(button, a, input, select, textarea):focus-visible {
-    outline: 2px solid #ff4a68;
+    outline: 2px solid var(--ring);
     outline-offset: 3px;
 }
 
@@ -162,7 +152,7 @@
     li,
 .owner-module-shell .kmj-owner-payments > section article {
     min-width: 0;
-    border-color: #324355;
+    border-color: var(--kmj-workspace-border);
     background-color: var(--kmj-pay-card);
 }
 
@@ -210,4 +200,10 @@
     .owner-module-shell .kmj-owner-payments *::after {
         transition: none !important;
     }
+}
+
+.owner-module-shell .kmj-owner-payments .kmj-pay-metrics {
+    display: grid;
+    gap: 14px;
+    grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
 }
