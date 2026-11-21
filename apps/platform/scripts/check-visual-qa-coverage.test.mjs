@@ -77,6 +77,9 @@ void test('owner Operations preview is synthetic-only and renders the real owner
     assert.match(fixture, /registration_available: false/);
     assert.match(fixture, /: null,/);
     assert.match(fixture, /environment: 'synthetic-preview'/);
+    assert.match(fixture, /reason: 'SYNTHETIC_NO_ROOT_RECEIPT'/);
+    assert.match(fixture, /deploy_triggered: false/);
+    assert.match(fixture, /staging_origin_verified: false/);
     assert.match(fixture, /status: 'unknown'/);
     assert.doesNotMatch(fixture, /fetch\(|router\.post\(|APP_KEY|\.env/);
 });

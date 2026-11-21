@@ -10,6 +10,14 @@ export type DeliveryMilestone = {
 
 export const deliveryMilestones: DeliveryMilestone[] = [
     {
+        id: 'elite-oneclick-release-preflight-receipt-20261121',
+        title: 'Owner one-click Stage/Verify/Deploy prerequisite: trusted Elite preflight receipt',
+        state: 'active',
+        detail: 'Source-only P0 issue #945 progress: a fixed KMJ-elite root publisher reports real guarded release-preflight decisions into a root-owned fresh receipt; Laravel refuses forged, stale or contradictory evidence. Owner Ops shows Stage/Verify/Deploy as separate gated steps and can refresh proof in one click. This is read-only, not actual staging, not a trusted deployment broker, and does not create owner approvals or mutate LIVE.',
+        evidence:
+            'PR #957 adds Python and Laravel negative tests, fixed receipt reader, owner gated UI and exact-head CI. The root publisher still requires separate reviewed installation; independent stage origin, Elite PG+uploads restore, rollback and Supervisor execution remain REQUIRED before real one-click deployment.',
+    },
+    {
         id: 'modelfabric-daily-caps-priority-20261121',
         title: 'ModelFabric: owner daily caps and provider priority',
         state: 'active',

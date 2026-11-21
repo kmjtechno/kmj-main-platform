@@ -4,6 +4,7 @@ use App\Models\OperatorActionAudit;
 use App\Models\User;
 use App\Services\Events\OutboxHealthSnapshot;
 use App\Services\Operations\DeliveryControlRequestQueue;
+use App\Services\Operations\EliteReleaseReadinessSnapshot;
 use App\Services\Operations\OperationalReadinessSnapshot;
 use App\Services\Operations\OperatorActionRunner;
 use App\Services\Operations\ServerMetricsSnapshot;
@@ -21,6 +22,7 @@ Route::middleware(['auth', 'verified', 'password.confirm'])
             PlatformOwnerAccess $access,
             ServerMetricsSnapshot $metrics,
             OperationalReadinessSnapshot $readiness,
+            EliteReleaseReadinessSnapshot $eliteRelease,
             OutboxHealthSnapshot $outboxHealth,
         ) {
             $user = $request->user();
@@ -148,9 +150,19 @@ Route::middleware(['auth', 'verified', 'password.confirm'])
                 ];
             }
 
+            // Root-side evidence is optional. No owner Ops request ever
+            // mints release approval or invokes privileged deployment.
+            try {
+                $eliteReleaseSnapshot = $eliteRelease->capture();
+            } catch (Throwable $exception) {
+                report($exception);
+                $eliteReleaseSnapshot = ['status' => 'unavailable', 'reason' => 'RECEIPT_PROBE_FAILED'];
+            }
+
             return Inertia::render('operator-ops', [
                 'snapshot' => $snapshot,
                 'readiness' => $readinessSnapshot,
+                'eliteRelease' => $eliteReleaseSnapshot,
                 'outbox' => $outboxSnapshot,
                 'recentActions' => $recentActions,
             ]);

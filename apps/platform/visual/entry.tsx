@@ -108,6 +108,18 @@ function OwnerOpsPreview() {
     return (
         <OwnerModuleShell>
             <OperatorOps
+                eliteRelease={{
+                    status: 'unavailable',
+                    reason: 'SYNTHETIC_NO_ROOT_RECEIPT',
+                    captured_at_unix: null,
+                    current_release: null,
+                    approved_sha: null,
+                    expected_current_release: null,
+                    promoted_sha: null,
+                    staging_origin_verified: false,
+                    independent_dr_verified: false,
+                    deploy_triggered: false,
+                }}
                 snapshot={{
                     captured_at: '2026-01-01T00:00:00Z',
                     environment: 'synthetic-preview',
