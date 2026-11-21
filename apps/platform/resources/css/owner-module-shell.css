@@ -463,3 +463,66 @@
         animation-duration: 0.01ms !important;
     }
 }
+
+
+/*
+ * Owner-only versions of shared service and account settings screens.
+ * Their same components remain unchanged for ordinary customer accounts.
+ */
+.owner-module-shell .owner-module-content .owner-admin-surface {
+    width: 100%;
+    max-width: none;
+    min-width: 0;
+    padding: clamp(12px, 1.3vw, 20px);
+    gap: 18px;
+    background: transparent;
+}
+
+.owner-module-shell .owner-admin-surface > section:first-of-type {
+    border: 1px solid var(--owner-line);
+    border-radius: var(--owner-radius);
+    background: linear-gradient(130deg, var(--owner-surface-1), var(--owner-surface-0));
+    box-shadow: none;
+}
+
+.owner-module-shell .owner-admin-surface > section:first-of-type h1 {
+    font-size: clamp(25px, 2vw, 33px);
+    font-weight: 800;
+    letter-spacing: -0.025em;
+    line-height: 1.15;
+}
+
+.owner-module-shell .owner-admin-surface :is(.bg-card, .kmj-ai-managed-provider) {
+    border-color: var(--owner-line);
+    border-radius: 14px;
+    background: linear-gradient(135deg, var(--owner-surface-1), var(--owner-surface-0));
+}
+
+.owner-module-shell .owner-admin-settings {
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    padding: clamp(14px, 1.5vw, 24px);
+    border: 1px solid var(--owner-line);
+    border-radius: var(--owner-radius);
+    background: linear-gradient(130deg, var(--owner-surface-1), var(--owner-surface-0));
+}
+
+.owner-module-shell .owner-admin-settings :is(input, textarea, select) {
+    min-height: 42px;
+    max-width: 100%;
+    border-color: var(--owner-line);
+    border-radius: 10px;
+}
+
+.owner-module-shell .owner-admin-settings :is(button, a):focus-visible {
+    outline: 2px solid #ff5673;
+    outline-offset: 3px;
+}
+
+@media (max-width: 700px) {
+    .owner-module-shell .owner-module-content .owner-admin-surface,
+    .owner-module-shell .owner-admin-settings {
+        padding: 12px;
+    }
+}
