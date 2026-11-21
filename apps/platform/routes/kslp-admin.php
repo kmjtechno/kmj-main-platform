@@ -141,14 +141,18 @@ Route::get('operator/kslp', function (Request $request, PlatformOwnerAccess $acc
     // Non-mutating preview only; a schema/introspection anomaly blocks cleanup,
     // but cannot break the owner license directory.
     $unverified = ['unverified' => User::query()->whereNull('email_verified_at')->count(),
-        'eligible' => 0, 'protected' => 0, 'sha256' => '', 'status' => 'BLOCKED'];
-    try {
-        $proof = $cleanup->preview();
-        $unverified = [...$proof, 'status' => 'PREVIEW_ONLY'];
-        unset($unverified['candidateIds']);
-    } catch (\Throwable) {
-        // Schema/query uncertainty must never break the owner's license
-        // directory or fall back to unscoped account deletion.
+        'eligible' => 0, 'protected' => 0, 'sha256' => '', 'status' => 'ROLLOUT_BLOCKED'];
+    // Full schema/FK scans are deliberately NOT run on every owner page
+    // while the protected cleanup flag is OFF. Only a bounded count is shown.
+    if ((bool) config('services.kmj_unverified_account_cleanup.enabled', false)) {
+        try {
+            $proof = $cleanup->preview();
+            $unverified = [...$proof, 'status' => 'PREVIEW_ONLY'];
+            unset($unverified['candidateIds']);
+        } catch (\Throwable) {
+            $unverified['status'] = 'PREVIEW_BLOCKED';
+            // Unknown table/FK state can never authorize deletion.
+        }
     }
 
     return Inertia::render('operator-kslp', [
