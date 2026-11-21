@@ -62,7 +62,10 @@ void test('CodeBridge page imports premium CSS within real authenticated owner c
         bridge,
         /import '\.\.\/\.\.\/\.\.\/css\/codebridge-premium\.css';/,
     );
-    assert.match(bridge, /className="kmj-codebridge-premium flex/);
+    assert.match(
+        bridge,
+        /className="kmj-codebridge-premium owner-admin-surface flex/,
+    );
     assert.match(premium, /owner-earth\.webp/);
     assert.match(
         premium,
