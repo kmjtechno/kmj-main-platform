@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 use App\Models\User;
 use App\Services\AuthorityBootstrapper;
+use App\Services\PlatformOwnerAccess;
 use App\Services\Licensing\Kslp\KslpDeveloperKeys;
+use App\Services\Licensing\Kslp\KslpDeveloperWorkspaceQuery;
 use App\Services\Licensing\Kslp\KslpIssuerSubscriptionAuthority;
 use App\Services\Licensing\Kslp\KslpLicenseControlPlane;
 use Illuminate\Http\Request;
@@ -20,56 +22,21 @@ use KMJ\MainPlatform\Organizations\Services\OrganizationDirectory;
 Route::middleware(['auth', 'verified'])->prefix('developer')->name('developer.')->group(function (): void {
     Route::get('apps', function (
         Request $request,
-        OrganizationDirectory $directory,
-        OrganizationCapabilityContext $capabilities,
+        KslpDeveloperWorkspaceQuery $workspace,
+        PlatformOwnerAccess $ownerAccess,
     ) {
         $actor = $request->user();
         abort_unless($actor instanceof User, 401);
 
-        $organizations = collect($directory->forUser($actor->id))
-            ->filter(fn (array $org): bool => $capabilities->allows($actor->id, $org['id'], 'license.manage'))
-            ->map(function (array $org): array {
-                $subscription = DB::table('kslp_issuer_subscriptions')
-                    ->where('organization_id', $org['id'])->first();
-                if ($subscription === null) {
-                    $org['issuer_status'] = 'not_subscribed';
-                    $org['product_limit'] = 0;
-                    $org['current_period_end'] = null;
-                } else {
-                    $org['issuer_status'] = (string) $subscription->status;
-                    $org['product_limit'] = (int) $subscription->product_limit;
-                    $org['current_period_end'] = $subscription->current_period_end;
-                }
-
-                return $org;
-            })->values()->all();
-
-        $tenantIds = array_column($organizations, 'id');
-        $products = $tenantIds === [] ? [] : DB::table('kslp_licensed_products')
-            ->whereIn('organization_id', $tenantIds)
-            ->orderBy('created_at', 'desc')
-            ->limit(100)
-            ->get(['id', 'organization_id', 'product_code', 'name', 'status', 'created_at'])
-            ->all();
-
-        $storageReady = Schema::hasTable('kslp_license_keys');
-        $keys = ($storageReady && $tenantIds !== [])
-            ? DB::table('kslp_license_keys as k')
-                ->join('kslp_licenses as l', 'l.id', '=', 'k.license_id')
-                ->whereIn('k.organization_id', $tenantIds)
-                ->orderBy('k.created_at', 'desc')
-                ->limit(100)
-                ->get([
-                    'k.id', 'k.organization_id', 'k.licensed_product_id',
-                    'k.license_id', 'k.display_prefix', 'k.first_activated_at',
-                    'k.revoked_at', 'l.plan', 'l.customer_id', 'l.expires_at',
-                ])->all() : [];
+        // An owner sees all licensing workspaces in ONE canonical Hub. Tenant
+        // developers retain their own restricted URL and exact authorization.
+        if ($ownerAccess->allows($actor)) {
+            return redirect('/operator/kslp#developer-workspace');
+        }
 
         return Inertia::render('developer-apps', [
-            'organizations' => $organizations,
-            'applications' => $products,
-            'keys' => $keys,
-            'canIssueKeys' => $storageReady && (bool) config('services.kmj_developer_licensing.enabled', false),
+            ...$workspace->forUser($actor),
+            'canAccessOwnerHub' => false,
             'newKey' => $request->session()->get('developer_license_key'),
         ]);
     })->name('apps.index');
@@ -83,7 +50,11 @@ Route::middleware(['auth', 'verified'])->prefix('developer')->name('developer.')
         $data = $request->validate(['name' => ['required', 'string', 'min:2', 'max:160']]);
         $bootstrapper->createOrganizationWithSandboxAccess($data['name'], $actor->id);
 
-        return redirect()->route('developer.apps.index');
+        return redirect()->to(
+            app(PlatformOwnerAccess::class)->allows($actor)
+                ? '/operator/kslp#developer-workspace'
+                : route('developer.apps.index')
+        );
     })->middleware('throttle:3,1')->name('organizations.store');
 
     Route::post('apps', function (
@@ -107,7 +78,11 @@ Route::middleware(['auth', 'verified'])->prefix('developer')->name('developer.')
             return back()->withErrors(['product_code' => $exception->getMessage()]);
         }
 
-        return redirect()->route('developer.apps.index')->with('success', 'Application registered.');
+        return redirect()->to(
+            app(PlatformOwnerAccess::class)->allows($actor)
+                ? '/operator/kslp#developer-workspace'
+                : route('developer.apps.index')
+        )->with('success', 'Application registered.');
     })->middleware(['password.confirm', 'throttle:10,1'])->name('apps.store');
 
     Route::post('keys/{key}/revoke', function (
@@ -137,7 +112,11 @@ Route::middleware(['auth', 'verified'])->prefix('developer')->name('developer.')
             ]);
         }, 3);
 
-        return redirect()->route('developer.apps.index');
+        return redirect()->to(
+            app(PlatformOwnerAccess::class)->allows($actor)
+                ? '/operator/kslp#developer-workspace'
+                : route('developer.apps.index')
+        );
     })->middleware(['password.confirm', 'throttle:5,1'])->name('keys.revoke');
 
     Route::post('keys', function (
@@ -169,7 +148,11 @@ Route::middleware(['auth', 'verified'])->prefix('developer')->name('developer.')
 
         // Flash exactly once to the authorized issuer; never persist a
         // recoverable plaintext key or include it in the audit log.
-        return redirect()->route('developer.apps.index')
+        return redirect()->to(
+            app(PlatformOwnerAccess::class)->allows($actor)
+                ? '/operator/kslp#developer-workspace'
+                : route('developer.apps.index')
+        )
             ->with('developer_license_key', $issued);
     })->middleware(['password.confirm', 'throttle:10,1'])->name('keys.store');
 });
