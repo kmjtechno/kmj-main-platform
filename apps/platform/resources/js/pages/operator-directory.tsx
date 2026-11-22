@@ -274,15 +274,19 @@ export default function OperatorDirectory({
                                 ({users.total})
                             </span>
                         </h2>
-                        <div className="mt-4 flex flex-wrap items-center gap-3 rounded-xl border border-white/10 bg-background/40 p-3">
+                        <div className="bg-background/40 mt-4 flex flex-wrap items-center gap-3 rounded-xl border border-white/10 p-3">
                             <label className="inline-flex cursor-pointer items-center gap-2 text-xs font-semibold">
                                 <input
                                     type="checkbox"
                                     checked={everyVisibleSelected}
-                                    disabled={bulkBusy || visibleIds.length === 0}
+                                    disabled={
+                                        bulkBusy || visibleIds.length === 0
+                                    }
                                     aria-label="Select all customers on this page"
                                     onChange={(event) =>
-                                        togglePageSelection(event.target.checked)
+                                        togglePageSelection(
+                                            event.target.checked,
+                                        )
                                     }
                                     className="size-4 accent-red-500"
                                 />
@@ -305,8 +309,8 @@ export default function OperatorDirectory({
                             </button>
                             <p className="text-muted-foreground w-full text-xs">
                                 Only checked customers on this page. One
-                                confirmation; protected accounts block the entire
-                                selection.
+                                confirmation; protected accounts block the
+                                entire selection.
                             </p>
                             {bulkError && (
                                 <p
