@@ -131,11 +131,12 @@ class WriterIdentityTests(unittest.TestCase):
             with self.assertRaisesRegex(mod.Blocked, "EXISTING_REQUEST_REQUIRES"):
                 mod.fixed_parent_chain(1001)
 
+        # Parent is still owned by UID 1001. A broker configured for a
+        # different owner MUST refuse it without reading request contents.
         with patch.object(mod, "directory_identity"), patch.object(
-            mod.Path, "lstat", side_effect=lambda p: safe_file
-            if p == mod.INBOX else safe_dir
+            mod.Path, "lstat", lstat
         ), patch.object(mod, "no_extended_acl"):
-            with self.assertRaises(mod.Blocked):
+            with self.assertRaisesRegex(mod.Blocked, "INBOX_NOT_OWNER_UID"):
                 mod.fixed_parent_chain(1002)
 
     def test_absent_intent_is_not_a_request_or_permission_to_create_one(self):
