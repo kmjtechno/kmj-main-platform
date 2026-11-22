@@ -10,6 +10,14 @@ export type DeliveryMilestone = {
 
 export const deliveryMilestones: DeliveryMilestone[] = [
     {
+        id: 'kslp-customer-signed-device-transfer-default-off-20261122',
+        title: 'KSLP customer device transfer: verified possession proof and cooldown',
+        state: 'active',
+        detail: 'Source-only default-OFF KSLP-v1 CloudOS self-service transfer backend uses verified account and organization capability, recent password confirmation, CSRF, Ed25519 new-device challenge, 24h cooldown, atomic seat replacement, audit and monotonic sequence. The customer Hub remains read-only without the separately approved native client SDK.',
+        evidence:
+            'New KslpCustomerDeviceTransfer service, gated web routes, negative proof/tenant/replay/cooldown tests and source-only security runbook. No activated feature flag, signed client SDK, production install or claim of offline revocation.',
+    },
+    {
         id: 'single-kslp-customer-licenses-devices-20261122',
         title: 'Single Licensing Hub: verified customer products, licenses and masked device history',
         state: 'active',
