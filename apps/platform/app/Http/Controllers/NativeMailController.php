@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers;
 
 use App\Models\User;
+use App\Services\Mail\NativeExternalMailService;
 use App\Services\Mail\NativeMailService;
 use App\Services\Mail\RegistrationMailReadiness;
 use App\Services\Mail\WorkforceMailActions;
@@ -19,6 +20,7 @@ final class NativeMailController
 {
     public function __construct(
         private readonly NativeMailService $mail,
+        private readonly NativeExternalMailService $external,
         private readonly PlatformOwnerAccess $owner,
     ) {}
 
@@ -45,7 +47,8 @@ final class NativeMailController
             'directory' => $this->mail->directory(),
             'staff' => $portal === 'operator' ? $this->mail->activeStaff() : [],
             'myUserId' => (int) $user->getKey(),
-            'externalMailEnabled' => false,
+            'externalMailEnabled' => $this->external->transportEnabled(),
+            'externalOutbound' => $this->external->capability($user),
             'transportCanAttempt' => app(RegistrationMailReadiness::class)->canAttemptDelivery(),
             'testEnabled' => config('services.kmj_workforce_mail.preview_enabled', false) === true,
         ]);
@@ -70,19 +73,54 @@ final class NativeMailController
             ->with('status', 'Delivered to the recipient’s KMJ private inbox. No external email was sent.');
     }
 
+    public function sendExternal(Request $request, string $portal): RedirectResponse
+    {
+        $user = $this->user($request, $portal);
+        $input = $request->validate([
+            'recipient_email' => ['required', 'email', 'max:254'],
+            'subject' => ['required', 'string', 'min:1', 'max:180'],
+            'body' => ['required', 'string', 'min:1', 'max:12000'],
+            'client_key' => ['required', 'uuid'],
+            'reply_to_id' => ['sometimes', 'nullable', 'integer', 'min:1'],
+        ]);
+        $this->external->queue(
+            $user,
+            (string) $input['recipient_email'],
+            (string) $input['subject'],
+            (string) $input['body'],
+            (string) $input['client_key'],
+            isset($input['reply_to_id']) ? (int) $input['reply_to_id'] : null,
+        );
+
+        return redirect()->to('/'.$portal.'/mail?folder=sent')
+            ->with('status', 'Queued for KMJ Postfix submission. Mail-server acceptance and recipient inbox delivery are separate statuses.');
+    }
+
     public function draft(Request $request, string $portal): RedirectResponse
     {
         $user = $this->user($request, $portal);
         $input = $request->validate([
             'draft_id' => ['sometimes', 'nullable', 'integer', 'min:1'],
             'recipient_id' => ['sometimes', 'nullable', 'integer', 'min:1'],
+            'recipient_type' => ['sometimes', 'in:internal,external'],
+            'recipient_email' => ['sometimes', 'nullable', 'email', 'max:254'],
             'subject' => ['present', 'nullable', 'string', 'max:180'],
             'body' => ['present', 'nullable', 'string', 'max:12000'],
         ]);
-        $this->mail->saveDraft($user,
-            isset($input['draft_id']) ? (int) $input['draft_id'] : null,
-            isset($input['recipient_id']) ? (int) $input['recipient_id'] : null,
-            trim((string) $input['subject']), (string) $input['body']);
+        if (($input['recipient_type'] ?? 'internal') === 'external') {
+            $this->external->saveDraft(
+                $user,
+                isset($input['draft_id']) ? (int) $input['draft_id'] : null,
+                isset($input['recipient_email']) ? (string) $input['recipient_email'] : null,
+                trim((string) $input['subject']),
+                (string) $input['body'],
+            );
+        } else {
+            $this->mail->saveDraft($user,
+                isset($input['draft_id']) ? (int) $input['draft_id'] : null,
+                isset($input['recipient_id']) ? (int) $input['recipient_id'] : null,
+                trim((string) $input['subject']), (string) $input['body']);
+        }
 
         return redirect()->to('/'.$portal.'/mail?folder=drafts')
             ->with('status', 'Draft saved in your private KMJ mailbox.');
@@ -90,7 +128,15 @@ final class NativeMailController
 
     public function sendDraft(Request $request, string $portal, int $message): RedirectResponse
     {
-        $this->mail->sendDraft($this->user($request, $portal), $message);
+        $user = $this->user($request, $portal);
+        if ($this->external->isExternalDraft($user, $message)) {
+            $this->external->sendDraft($user, $message);
+
+            return redirect()->to('/'.$portal.'/mail?folder=sent')
+                ->with('status', 'External draft queued for KMJ mail-server submission. Recipient delivery is not confirmed.');
+        }
+
+        $this->mail->sendDraft($user, $message);
 
         return redirect()->to('/'.$portal.'/mail?folder=sent')
             ->with('status', 'Draft delivered to the recipient’s KMJ private inbox.');
@@ -120,6 +166,19 @@ final class NativeMailController
 
         return redirect()->to('/operator/mail')
             ->with('status', 'Verified account granted KMJ internal staff-mail access.');
+    }
+
+    public function setStaffSenderAlias(Request $request, int $userId): RedirectResponse
+    {
+        $owner = $this->user($request, 'operator');
+        $values = $request->validate([
+            'sender_alias' => ['sometimes', 'nullable', 'email', 'max:254'],
+        ]);
+        $alias = isset($values['sender_alias']) ? (string) $values['sender_alias'] : null;
+        $this->external->grantStaffAlias($owner, $userId, $alias);
+
+        return redirect()->to('/operator/mail')
+            ->with('status', $alias === null ? 'Staff sender alias cleared.' : 'Staff sender alias assigned for guarded KMJ domain sending.');
     }
 
     public function revokeStaff(Request $request, int $userId): RedirectResponse
