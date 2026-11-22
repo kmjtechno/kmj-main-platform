@@ -50,6 +50,14 @@ export const deliveryMilestones: DeliveryMilestone[] = [
             'Unit test pins the header; exact-head CI only. Not deployed and not yet proven against the live GitHub catalog.',
     },
     {
+        id: 'unverified-cleanup-json-org-reference-20261122',
+        title: 'Unverified cleanup: fail closed on unknown JSON organization references',
+        state: 'active',
+        detail: 'Source-only safety hardening: JSON and JSONB fields whose names imply an organization or tenant reference can contain nested UUID strings. The cleanup eligibility preview now rejects such unreviewed reference shapes instead of treating them as incapable of holding an organization ID. A failed safety preview never grants deletion permission; existing owner-only cleanup flag and exact cohort confirmation remain unchanged.',
+        evidence:
+            'PostgreSQL JSONB negative regression test and hosted exact-head CI required. No cleanup approval, account deletion, release or live schema reconciliation is implied by this source change.',
+    },
+    {
         id: 'unverified-cleanup-empty-signup-org-20261122',
         title: 'Unverified-account cleanup: removable when the only link is an empty signup organization',
         state: 'active',
