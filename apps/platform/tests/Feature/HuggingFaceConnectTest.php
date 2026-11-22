@@ -141,10 +141,8 @@ final class HuggingFaceConnectTest extends TestCase
         $response = $this->actingAs($this->owner)->get($this->callbackUrl());
 
         $response->assertRedirect(route('operator.modelfabric.index'));
-        $message = (string) session('errors')->first('provider');
-        $this->assertStringContainsString('http 400, invalid_grant', $message);
-        $this->assertStringNotContainsString('secret detail', $message);
-        $this->assertStringNotContainsString(self::TOKEN, $message);
+        // The exact message proves neither the provider's description text nor a token is echoed.
+        $response->assertSessionHasErrors(['provider' => 'Hugging Face sign-in failed: oauth_exchange_failed (http 400, invalid_grant)']);
     }
 
     public function test_a_pending_sign_in_cannot_be_redeemed_by_another_organization(): void
