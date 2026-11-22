@@ -296,6 +296,7 @@ final class ModelFabricGateway
         return $lowRequests || (is_int($tokens) && $tokens <= 2000);
     }
 
+    /** @param array{requests_remaining: ?int, tokens_remaining: ?int, retry_after: ?int}|null $rate */
     private function penalize(AiProvider $provider, string $model, string $code, ?array $rate = null): void
     {
         $retryAfter = $rate['retry_after'] ?? null;
