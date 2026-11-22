@@ -105,17 +105,35 @@ function PageControls({
 }: PageControlsProps) {
     if (pageCount <= 1) return null;
 
+    const start = page * LIST_PAGE_SIZE + 1;
+    const end = Math.min((page + 1) * LIST_PAGE_SIZE, total);
+
     return (
-        <nav aria-label={label + ' pages'} className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t pt-3">
+        <nav
+            aria-label={label + ' pages'}
+            className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t pt-3"
+        >
             <span role="status" className="text-muted-foreground text-xs">
-                Showing {page * LIST_PAGE_SIZE + 1}–{Math.min((page + 1) * LIST_PAGE_SIZE, total)} of {total} loaded
+                Showing {start}–{end} of {total} loaded
             </span>
             <div className="flex items-center gap-2">
-                <button type="button" className="rounded-lg border px-3 py-2 text-xs font-semibold hover:bg-accent disabled:cursor-not-allowed disabled:opacity-40" disabled={page === 0} onClick={() => onPageChange(page - 1)}>
+                <button
+                    type="button"
+                    className="hover:bg-accent rounded-lg border px-3 py-2 text-xs font-semibold disabled:cursor-not-allowed disabled:opacity-40"
+                    disabled={page === 0}
+                    onClick={() => onPageChange(page - 1)}
+                >
                     Previous
                 </button>
-                <span className="text-muted-foreground text-xs tabular-nums">Page {page + 1} / {pageCount}</span>
-                <button type="button" className="rounded-lg border px-3 py-2 text-xs font-semibold hover:bg-accent disabled:cursor-not-allowed disabled:opacity-40" disabled={page >= pageCount - 1} onClick={() => onPageChange(page + 1)}>
+                <span className="text-muted-foreground text-xs tabular-nums">
+                    Page {page + 1} / {pageCount}
+                </span>
+                <button
+                    type="button"
+                    className="hover:bg-accent rounded-lg border px-3 py-2 text-xs font-semibold disabled:cursor-not-allowed disabled:opacity-40"
+                    disabled={page >= pageCount - 1}
+                    onClick={() => onPageChange(page + 1)}
+                >
                     Next
                 </button>
             </div>
@@ -147,22 +165,35 @@ export default function OperatorKslp({
     const [auditPage, setAuditPage] = useState(0);
     const issuerNeedle = issuerSearch.trim().toLocaleLowerCase();
     const filteredIssuers = issuerWorkspaces.filter((issuer) =>
-        [issuer.name, issuer.issuer_status, issuer.tier ?? '']
-            .some((value) => value.toLocaleLowerCase().includes(issuerNeedle)),
+        [issuer.name, issuer.issuer_status, issuer.tier ?? ''].some((value) =>
+            value.toLocaleLowerCase().includes(issuerNeedle),
+        ),
     );
-    const issuerPageCount = Math.max(1, Math.ceil(filteredIssuers.length / LIST_PAGE_SIZE));
+    const issuerPageCount = Math.max(
+        1,
+        Math.ceil(filteredIssuers.length / LIST_PAGE_SIZE),
+    );
     const currentIssuerPage = Math.min(issuerPage, issuerPageCount - 1);
     const issuerRows = filteredIssuers.slice(
         currentIssuerPage * LIST_PAGE_SIZE,
         (currentIssuerPage + 1) * LIST_PAGE_SIZE,
     );
-    const entitlementPageCount = Math.max(1, Math.ceil(productEntitlements.length / LIST_PAGE_SIZE));
-    const currentEntitlementPage = Math.min(entitlementPage, entitlementPageCount - 1);
+    const entitlementPageCount = Math.max(
+        1,
+        Math.ceil(productEntitlements.length / LIST_PAGE_SIZE),
+    );
+    const currentEntitlementPage = Math.min(
+        entitlementPage,
+        entitlementPageCount - 1,
+    );
     const entitlementRows = productEntitlements.slice(
         currentEntitlementPage * LIST_PAGE_SIZE,
         (currentEntitlementPage + 1) * LIST_PAGE_SIZE,
     );
-    const auditPageCount = Math.max(1, Math.ceil(events.length / LIST_PAGE_SIZE));
+    const auditPageCount = Math.max(
+        1,
+        Math.ceil(events.length / LIST_PAGE_SIZE),
+    );
     const currentAuditPage = Math.min(auditPage, auditPageCount - 1);
     const auditRows = events.slice(
         currentAuditPage * LIST_PAGE_SIZE,
@@ -331,7 +362,10 @@ export default function OperatorKslp({
                             </p>
                         </div>
                     </div>
-                    <label className="mt-4 block max-w-lg text-xs font-semibold" htmlFor="issuer-workspace-search">
+                    <label
+                        className="mt-4 block max-w-lg text-xs font-semibold"
+                        htmlFor="issuer-workspace-search"
+                    >
                         Search loaded issuer organizations
                     </label>
                     <input
@@ -396,8 +430,13 @@ export default function OperatorKslp({
                             </tbody>
                         </table>
                         {filteredIssuers.length === 0 && (
-                            <p className="text-muted-foreground p-4 text-xs" role="status">
-                                {issuerSearch.trim() ? 'No matching issuer organizations in the loaded records.' : 'No issuer organizations available.'}
+                            <p
+                                className="text-muted-foreground p-4 text-xs"
+                                role="status"
+                            >
+                                {issuerSearch.trim()
+                                    ? 'No matching issuer organizations in the loaded records.'
+                                    : 'No issuer organizations available.'}
                             </p>
                         )}
                     </div>
@@ -430,9 +469,16 @@ export default function OperatorKslp({
                         developer view. Global commercial licensing policy and
                         paid entitlements remain owner-only.
                     </p>
-                    <details className="rounded-xl border p-3" open={developerWorkspace.newKey !== null || (developerWorkspace.newKeys?.length ?? 0) > 0}>
+                    <details
+                        className="rounded-xl border p-3"
+                        open={
+                            developerWorkspace.newKey !== null ||
+                            (developerWorkspace.newKeys?.length ?? 0) > 0
+                        }
+                    >
                         <summary className="cursor-pointer rounded-lg px-2 py-3 text-sm font-bold focus-visible:outline-2 focus-visible:outline-red-500">
-                            Open application registration, license keys and SDK tools
+                            Open application registration, license keys and SDK
+                            tools
                         </summary>
                         <div className="mt-3">
                             <DeveloperAppsWorkspace {...developerWorkspace} embedded />
@@ -1076,8 +1122,12 @@ export default function OperatorKslp({
                             </div>
                         ))}
                         {events.length === 0 && (
-                            <p className="text-muted-foreground rounded-lg border border-dashed p-4 text-xs" role="status">
-                                No license lifecycle events have been recorded in this view.
+                            <p
+                                className="text-muted-foreground rounded-lg border border-dashed p-4 text-xs"
+                                role="status"
+                            >
+                                No license lifecycle events have been recorded in
+                                this view.
                             </p>
                         )}
                     </div>
