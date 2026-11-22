@@ -6,6 +6,8 @@ on:
       - "scripts/operations/release_admission_receipts.py"
       - "scripts/operations/main_platform_autopublish_gate.py"
       - "scripts/test_release_admission_receipts.py"
+      - "scripts/operations/release_receipt_store.py"
+      - "scripts/test_release_receipt_store.py"
       - ".github/workflows/release-admission-receipts.yml"
   workflow_dispatch:
 
@@ -24,5 +26,6 @@ jobs:
         run: |
           set -Eeuo pipefail
           python3 -B scripts/test_release_admission_receipts.py -v
+          python3 -B scripts/test_release_receipt_store.py -v
           echo "RELEASE_ADMISSION_RECEIPTS_QA=PASS"
           echo "INSTALLED=NO ADMISSION_WRITTEN=NO PRODUCTION_RELEASE=UNCHANGED"
