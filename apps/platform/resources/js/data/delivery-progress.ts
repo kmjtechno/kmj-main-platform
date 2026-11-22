@@ -11,11 +11,11 @@ export type DeliveryMilestone = {
 export const deliveryMilestones: DeliveryMilestone[] = [
     {
         id: 'kmj-native-external-postfix-compose-20261122',
-        title: 'KMJ Mail: guarded external address sending via own Elite Postfix',
+        title: 'KMJ Mail: independent guarded external sending through Elite Postfix',
         state: 'active',
-        detail: 'Source-only: owner and explicitly authorized staff can type a single Gmail, Outlook or any valid email address in KMJ Compose, save drafts and view real queued/failed/mail-server-accepted submission state in Sent. The sender identity is bound to KMJ domain (owner existing sender; staff unique owner-granted alias), with rate limits, idempotency and security audit. External delivery flag remains default OFF; transport uses an exact allowlist for Elite Postfix /usr/sbin/sendmail -t -i (observed production) or -bs -i, with no arbitrary binary/flags. Gmail OAuth/sync is not used.',
+        detail: 'Source-only draft PR #1035 replaces the sandbox-incompatible sendmail/postdrop submission path with timeout-bounded Postfix SMTP over fixed 127.0.0.1:25. Native outbound requires both owner-enabled external mail and a separate explicit loopback_smtp transport setting; default transport is disabled even when the previous activation flag survives deployment. Existing owner and authorized staff sender policy, daily quotas and idempotency remain. The earlier production sendmail job is still blocked by NoNewPrivileges and must not be blindly retried.',
         evidence:
-            'PR #1022 exact-head CI, database rollback, guarded signed Elite release, Mail Center authenticated QA and independent external pilot inbox/header proof are prerequisites for production enablement. Local Postfix acceptance is not proof of recipient Inbox delivery; inbound Internet mail, MX changes, attachments and anti-spam remain pending.',
+            'P0 incident #1029: postdrop effective GID 1000 rather than group 125, 295 Permission denied errors, worker stuck in pipe_read, old message ID1 submitting and ID2 queued. Draft PR #1035 is not merged, deployed or activated. CI exact-head, loopback SMTP listener/relay-safety inspection, queue reconciliation, owner-signed Elite release and actual recipient inbox/authentication proof are required. MTA acceptance is not delivery; inbound mail and full JMAP remain pending.',
     },
     {
         id: 'kmj-owner-team-mail-center-20261122',
