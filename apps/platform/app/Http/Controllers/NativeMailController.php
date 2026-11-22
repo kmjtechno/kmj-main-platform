@@ -76,8 +76,8 @@ final class NativeMailController
         $input = $request->validate([
             'draft_id' => ['sometimes', 'nullable', 'integer', 'min:1'],
             'recipient_id' => ['sometimes', 'nullable', 'integer', 'min:1'],
-            'subject' => ['present', 'string', 'max:180'],
-            'body' => ['present', 'string', 'max:12000'],
+            'subject' => ['present', 'nullable', 'string', 'max:180'],
+            'body' => ['present', 'nullable', 'string', 'max:12000'],
         ]);
         $this->mail->saveDraft($user,
             isset($input['draft_id']) ? (int) $input['draft_id'] : null,
