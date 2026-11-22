@@ -8,12 +8,16 @@ type Stage = {
     workflow_url: string;
 };
 
-export default function CodeBridgeStageControl({ stage }: { stage: Stage }) {
+export default function CodeBridgeStageControl({ stage }: { stage?: Stage | null }) {
+    // Synthetic previews and partial server responses may omit this optional
+    // protected capability. Fail closed instead of crashing the Ops console.
+    const configured = stage?.configured === true;
+    const workflowUrl = stage?.workflow_url ?? 'https://github.com/kmjtechno/kmj-codebridge/actions/workflows/oneclick-stage.yml';
     const [requesting, setRequesting] = useState(false);
     const [notice, setNotice] = useState('');
 
     const requestStage = () => {
-        if (requesting || !stage.configured) return;
+        if (requesting || !configured) return;
         setRequesting(true);
         setNotice('Requesting one exact-main isolated staging run...');
         router.post(
@@ -51,7 +55,7 @@ export default function CodeBridgeStageControl({ stage }: { stage: Stage }) {
                     </p>
                 </div>
                 <span className="rounded-full border px-3 py-1 text-xs font-bold">
-                    {stage.configured
+                    {configured
                         ? 'Stage connector available'
                         : 'Stage connector not configured'}
                 </span>
@@ -82,14 +86,14 @@ export default function CodeBridgeStageControl({ stage }: { stage: Stage }) {
                 <button
                     type="button"
                     onClick={requestStage}
-                    disabled={!stage.configured || requesting}
+                    disabled={!configured || requesting}
                     className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-red-600 px-5 py-3 text-xs font-black text-white disabled:cursor-not-allowed disabled:opacity-40"
                 >
                     <Play className="size-4" aria-hidden="true" />
                     {requesting ? 'Requesting stage...' : 'Stage CodeBridge'}
                 </button>
                 <a
-                    href={stage.workflow_url}
+                    href={workflowUrl}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="text-muted-foreground text-xs underline"
@@ -103,7 +107,7 @@ export default function CodeBridgeStageControl({ stage }: { stage: Stage }) {
             </div>
             <p className="text-muted-foreground mt-3 text-xs" role="status">
                 {notice ||
-                    (stage.configured
+                    (configured
                         ? 'Ready to request staging. A click is not a completed stage.'
                         : 'A restricted server-side GitHub Actions connector must be installed by the owner first.')}
             </p>
