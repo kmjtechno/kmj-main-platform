@@ -271,7 +271,7 @@ void test('Playground checks an existing ModelFabric token without creating keys
     assert.match(playground, /!routeReady/);
     assert.match(playground, /verifiedRoutes > 0/);
     assert.match(playground, /No requests run automatically/);
-    assert.match(playground, /owner-initiated/);
+    assert.match(playground, /owner-initiated/i);
     assert.doesNotMatch(playground, /fetch\(.*(?:https?:\/\/|provider_url)/);
     assert.match(read('routes/model-fabric-api.php'), /AuthenticateModelFabricToken::class/);
     assert.match(read('app/Http/Controllers/ModelFabricApiController.php'), /\$this->gateway->complete\(/);
