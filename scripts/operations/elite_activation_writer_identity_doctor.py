@@ -164,6 +164,8 @@ def listener_inode() -> str:
     require(len(data) <= 1048576, "BLOCKED_TCP_SNAPSHOT_OVERSIZE")
     matches = []
     for line in data.splitlines()[1:]:
+        if not line.strip():
+            continue  # Empty /proc rows are not listeners; malformed rows still block.
         fields = line.split()
         require(len(fields) >= 10, "BLOCKED_TCP_SCHEMA")
         if fields[1] == PRODUCTION_LISTENER and fields[3] == "0A":
