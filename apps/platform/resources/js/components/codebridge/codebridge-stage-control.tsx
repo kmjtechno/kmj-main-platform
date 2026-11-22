@@ -21,12 +21,14 @@ export default function CodeBridgeStageControl({ stage }: { stage: Stage }) {
             { confirmation: 'STAGE_CODEBRIDGE_MAIN' },
             {
                 preserveScroll: true,
-                onSuccess: () => setNotice(
-                    'Request accepted, not staged yet. Verify exact SHA, GitHub CI and the unsigned archive receipt.',
-                ),
-                onError: () => setNotice(
-                    'Stage request not verified. Review the owner action audit before retrying.',
-                ),
+                onSuccess: () =>
+                    setNotice(
+                        'Request accepted, not staged yet. Verify exact SHA, GitHub CI and the unsigned archive receipt.',
+                    ),
+                onError: () =>
+                    setNotice(
+                        'Stage request not verified. Review the owner action audit before retrying.',
+                    ),
                 onFinish: () => setRequesting(false),
             },
         );
@@ -44,11 +46,14 @@ export default function CodeBridgeStageControl({ stage }: { stage: Stage }) {
                         CodeBridge Release Center
                     </h2>
                     <p className="text-muted-foreground mt-1 text-xs">
-                        One-click source staging. Owner signing and Elite release remain protected.
+                        One-click source staging. Owner signing and Elite
+                        release remain protected.
                     </p>
                 </div>
                 <span className="rounded-full border px-3 py-1 text-xs font-bold">
-                    {stage.configured ? 'Stage connector available' : 'Stage connector not configured'}
+                    {stage.configured
+                        ? 'Stage connector available'
+                        : 'Stage connector not configured'}
                 </span>
             </div>
             <div className="mt-4 grid gap-3 sm:grid-cols-3">
@@ -59,7 +64,9 @@ export default function CodeBridgeStageControl({ stage }: { stage: Stage }) {
                     </span>
                 </div>
                 <div className="rounded-xl border p-4">
-                    <strong className="block text-sm">2. Owner signature</strong>
+                    <strong className="block text-sm">
+                        2. Owner signature
+                    </strong>
                     <span className="text-muted-foreground mt-2 block text-xs">
                         Independent owner-held Ed25519 approval required
                     </span>
@@ -89,17 +96,18 @@ export default function CodeBridgeStageControl({ stage }: { stage: Stage }) {
                 >
                     View official GitHub staging runs
                 </a>
-                <span className="inline-flex items-center gap-2 text-xs text-muted-foreground">
+                <span className="text-muted-foreground inline-flex items-center gap-2 text-xs">
                     <LockKeyhole className="size-4" />
                     No signing key or production command in browser
                 </span>
             </div>
             <p className="text-muted-foreground mt-3 text-xs" role="status">
-                {notice || (stage.configured
-                    ? 'Ready to request staging. A click is not a completed stage.'
-                    : 'A restricted server-side GitHub Actions connector must be installed by the owner first.')}
+                {notice ||
+                    (stage.configured
+                        ? 'Ready to request staging. A click is not a completed stage.'
+                        : 'A restricted server-side GitHub Actions connector must be installed by the owner first.')}
             </p>
-            <p className="mt-3 flex items-center gap-2 text-xs text-muted-foreground">
+            <p className="text-muted-foreground mt-3 flex items-center gap-2 text-xs">
                 <CheckCircle2 className="size-4" />
                 Existing CodeBridge signed release is unchanged by this action.
             </p>

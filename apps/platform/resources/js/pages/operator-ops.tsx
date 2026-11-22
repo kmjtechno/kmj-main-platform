@@ -144,7 +144,11 @@ type EliteRelease = {
 };
 
 type Props = {
-    codebridgeStage: { status: string; configured: boolean; workflow_url: string };
+    codebridgeStage: {
+        status: string;
+        configured: boolean;
+        workflow_url: string;
+    };
     snapshot: OpsSnapshot;
     eliteRelease: EliteRelease;
     readiness: OperationalReadiness;
