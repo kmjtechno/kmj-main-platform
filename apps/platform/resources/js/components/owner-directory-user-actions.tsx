@@ -22,7 +22,9 @@ export default function OwnerDirectoryUserActions({
 }) {
     const [name, setName] = useState(user.name);
     const [phone, setPhone] = useState(user.customer_profile?.phone ?? '');
-    const [country, setCountry] = useState(user.customer_profile?.country ?? '');
+    const [country, setCountry] = useState(
+        user.customer_profile?.country ?? '',
+    );
     const [company, setCompany] = useState(
         user.customer_profile?.company_name ?? '',
     );
@@ -48,8 +50,7 @@ export default function OwnerDirectoryUserActions({
             },
             {
                 preserveScroll: true,
-                onError: (errors) =>
-                    setError(Object.values(errors).join(' ')),
+                onError: (errors) => setError(Object.values(errors).join(' ')),
                 onFinish: () => setBusy(false),
             },
         );
@@ -64,8 +65,7 @@ export default function OwnerDirectoryUserActions({
             { confirmation: 'DELETE_USER_' + user.id },
             {
                 preserveScroll: true,
-                onError: (errors) =>
-                    setError(Object.values(errors).join(' ')),
+                onError: (errors) => setError(Object.values(errors).join(' ')),
                 onFinish: () => setBusy(false),
             },
         );
@@ -84,7 +84,8 @@ export default function OwnerDirectoryUserActions({
                     className="mt-3 grid gap-3 sm:grid-cols-2"
                 >
                     <p className="text-muted-foreground text-xs sm:col-span-2">
-                        Email, verification and privileges are not editable here.
+                        Email, verification and privileges are not editable
+                        here.
                     </p>
                     <label className="text-xs">
                         Name
@@ -94,7 +95,7 @@ export default function OwnerDirectoryUserActions({
                             maxLength={120}
                             value={name}
                             onChange={(event) => setName(event.target.value)}
-                            className="mt-1 w-full rounded-lg border bg-background p-2"
+                            className="bg-background mt-1 w-full rounded-lg border p-2"
                         />
                     </label>
                     {user.customer_profile && (
@@ -107,7 +108,7 @@ export default function OwnerDirectoryUserActions({
                                     onChange={(event) =>
                                         setPhone(event.target.value)
                                     }
-                                    className="mt-1 w-full rounded-lg border bg-background p-2"
+                                    className="bg-background mt-1 w-full rounded-lg border p-2"
                                 />
                             </label>
                             <label className="text-xs">
@@ -118,7 +119,7 @@ export default function OwnerDirectoryUserActions({
                                     onChange={(event) =>
                                         setCountry(event.target.value)
                                     }
-                                    className="mt-1 w-full rounded-lg border bg-background p-2"
+                                    className="bg-background mt-1 w-full rounded-lg border p-2"
                                 />
                             </label>
                             <label className="text-xs">
@@ -129,7 +130,7 @@ export default function OwnerDirectoryUserActions({
                                     onChange={(event) =>
                                         setCompany(event.target.value)
                                     }
-                                    className="mt-1 w-full rounded-lg border bg-background p-2"
+                                    className="bg-background mt-1 w-full rounded-lg border p-2"
                                 />
                             </label>
                         </>
@@ -157,7 +158,7 @@ export default function OwnerDirectoryUserActions({
                     value={deletePhrase}
                     onChange={(event) => setDeletePhrase(event.target.value)}
                     aria-label="Type account deletion confirmation"
-                    className="mt-3 w-full rounded-lg border bg-background p-2 text-xs"
+                    className="bg-background mt-3 w-full rounded-lg border p-2 text-xs"
                 />
                 <button
                     type="button"

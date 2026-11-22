@@ -95,13 +95,19 @@ export default function OperatorDirectory({
     filters,
 }: Props) {
     const [usersQuery, setUsersQuery] = useState(filters.users_q);
-    const [usersStatus, setUsersStatus] = useState(filters.users_status ?? 'all');
+    const [usersStatus, setUsersStatus] = useState(
+        filters.users_status ?? 'all',
+    );
     const [orgsQuery, setOrgsQuery] = useState(filters.orgs_q);
     const search = (event: FormEvent<HTMLFormElement>) => {
         event.preventDefault();
         router.get(
             '/operator/directory',
-            { users_q: usersQuery.trim(), users_status: usersStatus, orgs_q: orgsQuery.trim() },
+            {
+                users_q: usersQuery.trim(),
+                users_status: usersStatus,
+                orgs_q: orgsQuery.trim(),
+            },
             { preserveState: true, preserveScroll: true, replace: true },
         );
     };
@@ -127,9 +133,10 @@ export default function OperatorDirectory({
                         Review verified identities, signup contact details and
                         customer organizations from one owner-only workspace.
                         Contact fields appear only when customers supplied them.
-                        Contact details can be updated by the passkey-verified owner.
-                        Deletion is limited to standalone accounts; linked
-                        organizations, licenses and audit history are protected.
+                        Contact details can be updated by the passkey-verified
+                        owner. Deletion is limited to standalone accounts;
+                        linked organizations, licenses and audit history are
+                        protected.
                     </p>
                     <div className="mt-4 inline-flex items-center gap-2 rounded-full border border-blue-500/20 px-3 py-1.5 text-xs font-bold text-blue-200">
                         <ShieldCheck className="size-4" aria-hidden="true" />
@@ -172,7 +179,9 @@ export default function OperatorDirectory({
                         <select
                             className="bg-background/50 w-full rounded-xl border border-white/20 px-4 py-3 text-sm text-white"
                             value={usersStatus}
-                            onChange={(event) => setUsersStatus(event.target.value)}
+                            onChange={(event) =>
+                                setUsersStatus(event.target.value)
+                            }
                             aria-label="Filter email verification"
                         >
                             <option value="all">All users</option>
