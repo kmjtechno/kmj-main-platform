@@ -99,6 +99,65 @@ export default function OperatorDirectory({
         filters.users_status ?? 'all',
     );
     const [orgsQuery, setOrgsQuery] = useState(filters.orgs_q);
+    const [selectedIds, setSelectedIds] = useState<number[]>([]);
+    const [bulkBusy, setBulkBusy] = useState(false);
+    const [bulkError, setBulkError] = useState('');
+    // Deliberately select visible page records only, never all filtered users.
+    const visibleIds = users.data
+        .filter((user) => !user.is_platform_owner)
+        .map((user) => user.id);
+    const selectedVisibleIds = selectedIds.filter((id) =>
+        visibleIds.includes(id),
+    );
+    const everyVisibleSelected =
+        visibleIds.length > 0 &&
+        visibleIds.every((id) => selectedVisibleIds.includes(id));
+
+    const toggleSelected = (id: number) => {
+        setSelectedIds((current) => {
+            const visible = current.filter((item) => visibleIds.includes(item));
+            return visible.includes(id)
+                ? visible.filter((item) => item !== id)
+                : [...visible, id];
+        });
+    };
+
+    const deleteSelected = () => {
+        if (bulkBusy || selectedVisibleIds.length === 0) return;
+        const ids = [...selectedVisibleIds].sort((a, b) => a - b);
+        if (
+            !window.confirm(
+                'Permanently delete ' + ids.length +
+                ' selected customer(s) and their private signup data? ' +
+                'This cannot be undone. If any account is protected, ' +
+                'nothing in this selection will be deleted.',
+            )
+        ) return;
+
+        setBulkBusy(true);
+        setBulkError('');
+        const options = {
+            preserveScroll: true,
+            onSuccess: () => setSelectedIds([]),
+            onError: (errors: Record<string, string>) =>
+                setBulkError(Object.values(errors).join(' ')),
+            onFinish: () => setBulkBusy(false),
+        };
+        if (ids.length === 1) {
+            router.post(
+                '/operator/directory/users/' + ids[0] + '/delete',
+                { confirmation: 'DELETE_USER_' + ids[0] },
+                options,
+            );
+        } else {
+            router.post(
+                '/operator/directory/users/bulk-delete',
+                { user_ids: ids },
+                options,
+            );
+        }
+    };
+
     const search = (event: FormEvent<HTMLFormElement>) => {
         event.preventDefault();
         router.get(
@@ -134,9 +193,9 @@ export default function OperatorDirectory({
                         customer organizations from one owner-only workspace.
                         Contact fields appear only when customers supplied them.
                         Contact details can be updated by the passkey-verified
-                        owner. Deletion is limited to standalone accounts;
-                        linked organizations, licenses and audit history are
-                        protected.
+                        owner. Private signup accounts and their exclusive empty
+                        organizations may be deleted; shared organizations,
+                        licenses, payments and audit records are protected.
                     </p>
                     <div className="mt-4 inline-flex items-center gap-2 rounded-full border border-blue-500/20 px-3 py-1.5 text-xs font-bold text-blue-200">
                         <ShieldCheck className="size-4" aria-hidden="true" />
@@ -210,6 +269,45 @@ export default function OperatorDirectory({
                                 ({users.total})
                             </span>
                         </h2>
+                        <div className="mt-4 flex flex-wrap items-center gap-3 rounded-xl border border-white/10 bg-background/40 p-3">
+                            <label className="inline-flex cursor-pointer items-center gap-2 text-xs font-semibold">
+                                <input
+                                    type="checkbox"
+                                    checked={everyVisibleSelected}
+                                    disabled={bulkBusy || visibleIds.length === 0}
+                                    aria-label="Select all customers on this page"
+                                    onChange={(event) =>
+                                        setSelectedIds(
+                                            event.target.checked ? visibleIds : [],
+                                        )
+                                    }
+                                    className="size-4 accent-red-500"
+                                />
+                                Select page ({visibleIds.length})
+                            </label>
+                            <span className="text-muted-foreground text-xs">
+                                {selectedVisibleIds.length} selected
+                            </span>
+                            <button
+                                type="button"
+                                disabled={bulkBusy || selectedVisibleIds.length === 0}
+                                onClick={deleteSelected}
+                                className="ml-auto min-h-10 rounded-lg bg-red-600 px-4 py-2 text-xs font-bold text-white hover:bg-red-500 disabled:cursor-not-allowed disabled:opacity-50"
+                            >
+                                {bulkBusy
+                                    ? 'Deleting...'
+                                    : 'Delete selected (' + selectedVisibleIds.length + ')'}
+                            </button>
+                            <p className="text-muted-foreground w-full text-xs">
+                                Only checked customers on this page. One confirmation;
+                                protected accounts block the entire selection.
+                            </p>
+                            {bulkError && (
+                                <p role="alert" className="w-full text-xs text-red-300">
+                                    {bulkError}
+                                </p>
+                            )}
+                        </div>
                         {users.data.length === 0 ? (
                             <p className="text-muted-foreground mt-5 rounded-xl border border-dashed border-white/15 p-5 text-sm">
                                 No users match this search.
@@ -221,6 +319,19 @@ export default function OperatorDirectory({
                                         key={user.id}
                                         className="flex flex-wrap items-start justify-between gap-3 py-4"
                                     >
+                                        {!user.is_platform_owner && (
+                                            <label className="inline-flex min-h-8 items-center gap-2 text-xs">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={selectedVisibleIds.includes(user.id)}
+                                                    disabled={bulkBusy}
+                                                    onChange={() => toggleSelected(user.id)}
+                                                    aria-label={'Select customer ' + user.name}
+                                                    className="size-4 accent-red-500"
+                                                />
+                                                Select
+                                            </label>
+                                        )}
                                         <div className="min-w-0">
                                             <p className="font-semibold">
                                                 {user.name}
