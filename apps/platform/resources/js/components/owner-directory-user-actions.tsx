@@ -44,9 +44,9 @@ export default function OwnerDirectoryUserActions({
             '/operator/directory/users/' + user.id + '/contact',
             {
                 name,
-                phone,
-                country,
-                company_name: company,
+                ...(user.customer_profile
+                    ? { phone, country, company_name: company }
+                    : {}),
             },
             {
                 preserveScroll: true,
@@ -103,6 +103,7 @@ export default function OwnerDirectoryUserActions({
                             <label className="text-xs">
                                 Phone
                                 <input
+                                    required
                                     maxLength={32}
                                     value={phone}
                                     onChange={(event) =>
@@ -114,6 +115,7 @@ export default function OwnerDirectoryUserActions({
                             <label className="text-xs">
                                 Country
                                 <input
+                                    required
                                     maxLength={80}
                                     value={country}
                                     onChange={(event) =>
