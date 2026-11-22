@@ -185,7 +185,7 @@ final class NativeMailService
         return DB::transaction(function () use ($sender, $recipientId, $subject, $body, $clientKey, $replyToId): int {
             $senderId = (int) $sender->getKey();
             $existing = DB::table('kmj_mail_messages')
-                ->where('mailbox_user_id', $senderId)->where('client_key', $clientKey)->first(['id']);
+                ->where('mailbox_user_id', $senderId)->where('client_key', $clientKey)->first();
             if ($existing !== null) {
                 if ($existing->recipient_email !== null
                     || (int) $existing->recipient_user_id !== $recipientId
