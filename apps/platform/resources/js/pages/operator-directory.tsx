@@ -1,6 +1,7 @@
 import { Head, Link, router } from '@inertiajs/react';
 import { Building2, Search, ShieldCheck, Users } from 'lucide-react';
 import { useState, type FormEvent } from 'react';
+import OwnerDirectoryUserActions from '@/components/owner-directory-user-actions';
 import OperatorModuleNavigation from '@/components/operator-module-navigation';
 
 type PageLink = { url: string | null; label: string; active: boolean };
@@ -39,8 +40,8 @@ type DirectoryOrganization = {
 type Props = {
     users: Paginated<DirectoryUser>;
     organizations: Paginated<DirectoryOrganization>;
-    filters: { users_q: string; orgs_q: string };
-    read_only: true;
+    filters: { users_q: string; users_status: string; orgs_q: string };
+    read_only: boolean;
 };
 
 function Pager({ data }: { data: Paginated<unknown> }) {
@@ -94,13 +95,13 @@ export default function OperatorDirectory({
     filters,
 }: Props) {
     const [usersQuery, setUsersQuery] = useState(filters.users_q);
+    const [usersStatus, setUsersStatus] = useState(filters.users_status ?? 'all');
     const [orgsQuery, setOrgsQuery] = useState(filters.orgs_q);
-
     const search = (event: FormEvent<HTMLFormElement>) => {
         event.preventDefault();
         router.get(
             '/operator/directory',
-            { users_q: usersQuery.trim(), orgs_q: orgsQuery.trim() },
+            { users_q: usersQuery.trim(), users_status: usersStatus, orgs_q: orgsQuery.trim() },
             { preserveState: true, preserveScroll: true, replace: true },
         );
     };
@@ -126,18 +127,19 @@ export default function OperatorDirectory({
                         Review verified identities, signup contact details and
                         customer organizations from one owner-only workspace.
                         Contact fields appear only when customers supplied them.
-                        This module cannot grant permissions, licenses or
-                        account invitations.
+                        Contact details can be updated by the passkey-verified owner.
+                        Deletion is limited to standalone accounts; linked
+                        organizations, licenses and audit history are protected.
                     </p>
                     <div className="mt-4 inline-flex items-center gap-2 rounded-full border border-blue-500/20 px-3 py-1.5 text-xs font-bold text-blue-200">
                         <ShieldCheck className="size-4" aria-hidden="true" />
-                        Owner only · Read-only
+                        Owner only · Password-confirmed actions
                     </div>
                 </header>
 
                 <form
                     onSubmit={search}
-                    className="bg-card grid w-full gap-3 rounded-2xl border border-white/10 p-5 md:grid-cols-[1fr_1fr_auto] md:items-end"
+                    className="bg-card grid w-full gap-3 rounded-2xl border border-white/10 p-5 md:grid-cols-[1fr_1fr_12rem_auto] md:items-end"
                 >
                     <label className="text-muted-foreground space-y-2 text-xs font-semibold">
                         <span>
@@ -164,6 +166,19 @@ export default function OperatorDirectory({
                             maxLength={80}
                             placeholder="Organization name"
                         />
+                    </label>
+                    <label className="text-muted-foreground space-y-2 text-xs font-semibold">
+                        <span>Email verification</span>
+                        <select
+                            className="bg-background/50 w-full rounded-xl border border-white/20 px-4 py-3 text-sm text-white"
+                            value={usersStatus}
+                            onChange={(event) => setUsersStatus(event.target.value)}
+                            aria-label="Filter email verification"
+                        >
+                            <option value="all">All users</option>
+                            <option value="verified">Verified</option>
+                            <option value="unverified">Unverified</option>
+                        </select>
                     </label>
                     <button className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-red-600 px-5 py-3 text-sm font-bold hover:bg-red-500">
                         <Search className="size-4" aria-hidden="true" />
@@ -274,13 +289,18 @@ export default function OperatorDirectory({
                                                 </dl>
                                             )}
                                         </div>
-                                        <span className="text-muted-foreground rounded-full border border-white/15 px-2.5 py-1 text-[11px]">
-                                            {user.is_platform_owner
-                                                ? 'Platform owner'
-                                                : user.email_verified_at
-                                                  ? 'Verified user'
-                                                  : 'Email unverified'}
-                                        </span>
+                                        <div className="flex flex-wrap items-center gap-2">
+                                            <span className="text-muted-foreground rounded-full border border-white/15 px-2.5 py-1 text-[11px]">
+                                                {user.is_platform_owner
+                                                    ? 'Platform owner'
+                                                    : user.email_verified_at
+                                                      ? 'Verified user'
+                                                      : 'Email unverified'}
+                                            </span>
+                                        </div>
+                                        <OwnerDirectoryUserActions
+                                            user={user}
+                                        />
                                     </div>
                                 ))}
                             </div>
