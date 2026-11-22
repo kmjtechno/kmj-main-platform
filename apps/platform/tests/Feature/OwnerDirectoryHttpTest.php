@@ -319,16 +319,15 @@ final class OwnerDirectoryHttpTest extends TestCase
             'country' => 'India',
         ]);
 
-        foreach ([
-            ['phone' => '', 'country' => 'India'],
-            ['phone' => '+91 1111111111', 'country' => ''],
-        ] as $contact) {
+        foreach (['phone', 'country'] as $blankField) {
+            $contact = ['phone' => '+91 1111111111', 'country' => 'India'];
+            $contact[$blankField] = '';
             $this->actingAs($owner)
                 ->withSession(['auth.password_confirmed_at' => time()])
                 ->patch('/operator/directory/users/'.$target->id.'/contact', [
                     'name' => 'Changed Invalidly',
                     ...$contact,
-                ])->assertSessionHasErrors();
+                ])->assertSessionHasErrors($blankField);
         }
 
         $this->assertDatabaseHas('users', ['id' => $target->id, 'name' => 'Valid Contact']);
