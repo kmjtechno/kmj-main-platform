@@ -10,6 +10,14 @@ export type DeliveryMilestone = {
 
 export const deliveryMilestones: DeliveryMilestone[] = [
     {
+        id: 'kmj-premium-transactional-email-suite-20261122',
+        title: 'KMJ-branded customer email suite: welcome, orders, payments and service notices',
+        state: 'active',
+        detail: 'Source-only: premium responsive HTML plus plain text with official locked logo; existing signed verification/reset mail preserved. Ten event-specific variants including welcome after verified account and order request/confirmation/cancellation through persisted commerce outbox; payment receipts require independently enabled owner flag and confirmed facts. Queued after commit and default-off to avoid unintended customer messages.',
+        evidence:
+            'PR #1005 exact-head CI and auth regression required; owner-approved signed Elite release, actual verification/reset inbox delivery, SPF/DKIM/DMARC and protected activation still pending. Not live, no mail queue/DNS/customer mutation.',
+    },
+    {
         id: 'owner-customer-account-signup-graph-delete-20261122',
         title: 'Owner Customers: complete private signup data deletion',
         state: 'active',
