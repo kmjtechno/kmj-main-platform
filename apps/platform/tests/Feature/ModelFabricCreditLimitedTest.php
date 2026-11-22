@@ -10,7 +10,6 @@ use App\Models\User;
 use App\Services\AiProviders\EndpointGuard;
 use App\Services\AiProviders\ModelFabricGateway;
 use App\Services\AiProviders\ResolvesAiProviderScope;
-use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
@@ -73,12 +72,17 @@ final class ModelFabricCreditLimitedTest extends TestCase
         $this->assertNull($row->credit_hard_cap_attested_at);
     }
 
-    public function test_the_database_rejects_a_credit_limited_row_without_a_cap(): void
+    public function test_a_credit_limited_row_without_a_cap_is_never_called(): void
     {
         $provider = $this->provider('Credit', 'models/credit-a');
-
-        $this->expectException(QueryException::class);
         AiModelEvidence::query()->create([...$this->evidenceRow($provider, 'models/credit-a'), 'cost_class' => 'credit-limited']);
+        Http::fake();
+
+        $result = app(ModelFabricGateway::class)->complete($this->org, [['role' => 'user', 'content' => 'hi']]);
+
+        $this->assertFalse($result['ok']);
+        $this->assertSame('credit_cap_reached', $result['error_code']);
+        Http::assertNothingSent();
     }
 
     public function test_the_gateway_never_calls_a_credit_route_at_its_daily_cap(): void

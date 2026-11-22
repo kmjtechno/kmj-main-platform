@@ -61,9 +61,9 @@ export const deliveryMilestones: DeliveryMilestone[] = [
         id: 'modelfabric-credit-limited-tier-20261122',
         title: 'ModelFabric: credit-limited approvals with an enforced daily cap (ADR-004 rev 2)',
         state: 'active',
-        detail: 'Source-only: an owner approval can now be credit-limited. It needs the owner hard-cap attestation (the provider cannot bill beyond the credits) and a KMJ-side daily request cap that the database enforces together. The gateway skips such a route at its cap, fails closed without one and sinks it behind other routes at 80%. Renewal needs a fresh attestation; bulk approval and auto-approve rules stay free-only and reset the class.',
+        detail: 'Source-only: an owner approval can now be credit-limited. It needs the owner hard-cap attestation (the provider cannot bill beyond the credits) and a KMJ-side daily request cap that request validation enforces together (no raw DDL: migration policy). The gateway skips such a route at its cap, fails closed without one and sinks it behind other routes at 80%. Renewal needs a fresh attestation; bulk approval and auto-approve rules stay free-only and reset the class.',
         evidence:
-            'Feature tests (validation, DB constraint, cap, 80% sink, renewal, bulk reset), static checks and exact-head CI only. Not deployed, no credit-limited model is approved and no provider was called.',
+            'Feature tests (validation, fail-closed missing cap, cap, 80% sink, renewal, bulk reset), static checks and exact-head CI only. Not deployed, no credit-limited model is approved and no provider was called.',
     },
     {
         id: 'adr-004-rev2-credit-and-local-20261122',

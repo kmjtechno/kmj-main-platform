@@ -166,9 +166,10 @@ final class ModelFabricGateway
             ->where('created_at', '>=', now()->utc()->startOfDay())
             ->selectRaw('ai_provider_id, model_id, count(*) as c')
             ->groupBy('ai_provider_id', 'model_id')
+            ->toBase()
             ->get();
         foreach ($rows as $row) {
-            $used[$row->ai_provider_id.'|'.$row->model_id] = (int) $row->c;
+            $used[(string) $row->ai_provider_id.'|'.(string) $row->model_id] = (int) $row->c;
         }
 
         return $used;

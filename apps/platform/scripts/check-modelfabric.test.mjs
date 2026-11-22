@@ -176,15 +176,9 @@ void test('credit-limited approvals (ADR-004 rev 2) are capped, attested and enf
         'database/migrations/2026_11_22_000200_add_cost_class_to_ai_model_evidence.php',
     );
     const gateway = read('app/Services/AiProviders/ModelFabricGateway.php');
-    // The database itself refuses a credit-limited row without a cap and an attestation.
-    assert.match(
-        migration,
-        /CHECK \(cost_class IN \('free', 'credit-limited'\)/,
-    );
-    assert.match(
-        migration,
-        /credit_daily_cap > 0 AND credit_hard_cap_attested_at IS NOT NULL/,
-    );
+    // No raw DDL in the migration (migration review policy); validation and the gateway enforce the pairing.
+    assert.doesNotMatch(migration, /DB::statement/);
+    assert.match(migration, /credit_daily_cap/);
     // The gateway skips a credit route at its cap and fails closed without one.
     assert.match(gateway, /credit_cap_reached/);
     assert.match(gateway, /\$cap <= 0/);
