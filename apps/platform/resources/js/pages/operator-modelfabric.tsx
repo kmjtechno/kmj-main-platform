@@ -435,6 +435,7 @@ export default function OperatorModelFabric({
     const [caps, setCaps] = useState<string[]>(['chat']);
     const [confirmed, setConfirmed] = useState(false);
     const [picked, setPicked] = useState<string[]>([]);
+    const [hfFree, setHfFree] = useState(false);
     const selected = providers.find((provider) => provider.id === providerId);
     const hint = selected ? PRICING_HINTS[selected.preset] : undefined;
     const modelKnown = !!selected?.discovered_models.includes(model);
@@ -549,6 +550,16 @@ export default function OperatorModelFabric({
                     setPicked([]);
                 },
             },
+        );
+    };
+
+    const connectOAuth = (kind: 'openrouter' | 'huggingface') => {
+        router.post(
+            `/services/kmj-codebridge/ai-providers/connect/${kind}`,
+            kind === 'huggingface'
+                ? { free_account_confirmed: true, return_to: 'modelfabric' }
+                : { return_to: 'modelfabric' },
+            { preserveScroll: true },
         );
     };
 
@@ -829,11 +840,70 @@ export default function OperatorModelFabric({
                                     </div>
                                 ))}
                             </div>
+                            {canManage ? (
+                                <div className="mt-4 rounded-xl border p-4 text-sm">
+                                    <h3 className="font-black">
+                                        Connect a provider with one click
+                                    </h3>
+                                    <p className="text-muted-foreground mt-1 text-xs">
+                                        You come back to this page afterwards.
+                                        Connecting never approves a model: each
+                                        model still needs your price evidence.
+                                    </p>
+                                    <div className="mt-3 flex flex-wrap items-start gap-4">
+                                        <button
+                                            type="button"
+                                            className={primaryButton}
+                                            onClick={() =>
+                                                connectOAuth('openrouter')
+                                            }
+                                        >
+                                            Connect OpenRouter
+                                        </button>
+                                        <div className="max-w-md">
+                                            <label className="flex items-start gap-2 text-xs">
+                                                <input
+                                                    type="checkbox"
+                                                    className="mt-0.5"
+                                                    checked={hfFree}
+                                                    onChange={(e) =>
+                                                        setHfFree(
+                                                            e.target.checked,
+                                                        )
+                                                    }
+                                                />
+                                                My Hugging Face account is a
+                                                Free account with no payment
+                                                method.
+                                            </label>
+                                            <button
+                                                type="button"
+                                                className={`${primaryButton} mt-2`}
+                                                disabled={!hfFree}
+                                                onClick={() =>
+                                                    connectOAuth('huggingface')
+                                                }
+                                            >
+                                                Connect Hugging Face
+                                            </button>
+                                        </div>
+                                    </div>
+                                    {errors?.provider ? (
+                                        <p
+                                            role="alert"
+                                            className="mt-3 text-xs text-red-500"
+                                        >
+                                            {errors.provider}
+                                        </p>
+                                    ) : null}
+                                </div>
+                            ) : null}
                             <a
                                 className="mt-4 inline-block text-xs font-bold underline"
                                 href="/services/kmj-codebridge/ai-providers"
                             >
-                                Open provider connect page
+                                Add a provider with an API key (Gemini, Groq,
+                                Mistral…)
                             </a>
                         </Card>
                     </>

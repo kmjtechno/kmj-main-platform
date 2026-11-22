@@ -42,7 +42,7 @@ final class HuggingFaceConnectController extends Controller
     public function start(Request $request): SymfonyResponse
     {
         $scope = $this->managing($request);
-        $request->validate(['free_account_confirmed' => ['accepted']]);
+        $request->validate(['free_account_confirmed' => ['accepted'], 'return_to' => ['nullable', 'in:modelfabric']]);
         try {
             $flow = $this->hf->begin($this->clientId(), $this->redirectUri());
         } catch (InvalidArgumentException $exception) {
@@ -53,6 +53,7 @@ final class HuggingFaceConnectController extends Controller
             'state' => $flow['state'],
             'user' => (int) $this->user($request)->id,
             'organization' => $scope['organization_id'],
+            'return_to' => $request->input('return_to') === 'modelfabric' ? 'modelfabric' : null,
             'expires' => time() + 600,
         ]);
 
@@ -64,7 +65,7 @@ final class HuggingFaceConnectController extends Controller
         $scope = $this->managing($request);
         // Single use: a replayed or forged callback finds nothing to redeem.
         $pending = $request->session()->pull('ai_provider_hf_oauth');
-        $index = redirect()->route('ai-providers.index');
+        $index = redirect()->route(is_array($pending) && ($pending['return_to'] ?? null) === 'modelfabric' ? 'operator.modelfabric.index' : 'ai-providers.index');
         if (! is_array($pending) || ($pending['expires'] ?? 0) < time()
             || ($pending['user'] ?? null) !== (int) $this->user($request)->id
             || ($pending['organization'] ?? null) !== $scope['organization_id']) {

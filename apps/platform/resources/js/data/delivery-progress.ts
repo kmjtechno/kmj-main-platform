@@ -10,6 +10,14 @@ export type DeliveryMilestone = {
 
 export const deliveryMilestones: DeliveryMilestone[] = [
     {
+        id: 'modelfabric-connect-in-place-20261122',
+        title: 'ModelFabric: connect OpenRouter and Hugging Face from the ModelFabric page',
+        state: 'active',
+        detail: 'Source-only: the one-click OpenRouter and Hugging Face sign-ins can now be started from the ModelFabric Providers panel and return to that page instead of the CodeBridge provider page; the Hugging Face free-account attestation moves with it. A failed Hugging Face token exchange now reports only the HTTP status and the provider short OAuth error code, never the response body or a token, so the cause can be diagnosed.',
+        evidence:
+            'Feature and static tests with faked HTTP; exact-head CI only. The first real Hugging Face sign-in failed at token exchange (cause not yet known); this change only improves the diagnostics and has not been proven to fix it.',
+    },
+    {
         id: 'modelfabric-select-models-20261121',
         title: 'ModelFabric: approve only the models you tick',
         state: 'active',

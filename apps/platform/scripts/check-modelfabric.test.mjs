@@ -118,3 +118,16 @@ void test('bulk evidence needs one explicit attestation, is capped and renewal n
     assert.match(page, /Approve \{bulkModels\.length\} selected/);
     assert.match(page, /Renew 30 days/);
 });
+
+void test('ModelFabric connects OpenRouter and Hugging Face itself and returns to the ModelFabric page', () => {
+    const page = read('resources/js/pages/operator-modelfabric.tsx');
+    const hf = read('app/Http/Controllers/HuggingFaceConnectController.php');
+    const or = read('app/Http/Controllers/AiProviderController.php');
+    const service = read('app/Services/AiProviders/HuggingFaceConnect.php');
+    assert.match(page, /return_to: 'modelfabric'/);
+    assert.match(page, /connectOAuth\('huggingface'\)/);
+    assert.match(hf, /operator\.modelfabric\.index/);
+    assert.match(or, /operator\.modelfabric\.index/);
+    assert.match(service, /oauth_exchange_failed \(http/);
+    assert.doesNotMatch(service, /oauth_exchange_failed \(.*body/);
+});

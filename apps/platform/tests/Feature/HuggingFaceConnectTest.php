@@ -133,6 +133,18 @@ final class HuggingFaceConnectTest extends TestCase
         $this->assertDatabaseCount('ai_providers', 0);
     }
 
+    public function test_failed_exchange_shows_only_status_and_error_code_and_can_return_to_modelfabric(): void
+    {
+        Http::fake(['huggingface.co/*' => Http::response(['error' => 'invalid_grant', 'error_description' => 'secret detail '.self::TOKEN], 400)]);
+        $this->confirmed($this->owner)->post(self::START, ['free_account_confirmed' => true, 'return_to' => 'modelfabric']);
+
+        $response = $this->actingAs($this->owner)->get($this->callbackUrl());
+
+        $response->assertRedirect(route('operator.modelfabric.index'));
+        // The exact message proves neither the provider's description text nor a token is echoed.
+        $response->assertSessionHasErrors(['provider' => 'Hugging Face sign-in failed: oauth_exchange_failed (http 400, invalid_grant)']);
+    }
+
     public function test_a_pending_sign_in_cannot_be_redeemed_by_another_organization(): void
     {
         Http::fake();
