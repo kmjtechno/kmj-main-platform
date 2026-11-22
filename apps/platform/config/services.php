@@ -41,6 +41,12 @@ return [
         'enabled' => (bool) env('KMJ_UNVERIFIED_ACCOUNT_CLEANUP_ENABLED', false),
     ],
 
+    // Opt-in only after independent recipient inbox acceptance and signed release.
+    'kmj_transactional_mail' => [
+        'enabled' => (bool) env('KMJ_TRANSACTIONAL_NOTIFICATIONS_ENABLED', false),
+        'send_payment_receipts' => (bool) env('KMJ_TRANSACTIONAL_PAYMENT_RECEIPTS_ENABLED', false),
+    ],
+
     'kmj_developer_licensing' => [
         'enabled' => (bool) env('KMJ_DEVELOPER_LICENSING_ENABLED', false),
     ],
