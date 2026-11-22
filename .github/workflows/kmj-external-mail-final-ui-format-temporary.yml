@@ -1,0 +1,24 @@
+name: KMJ external mail final UI format patch (temporary)
+on:
+  push:
+    branches: [feat/kmj-native-external-mail-compose-20261122]
+permissions:
+  contents: read
+jobs:
+  format:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Exact VitePlus formatting on ephemeral runner
+        run: |
+          set -euo pipefail
+          cd apps/platform
+          npm ci --no-audit --no-fund
+          node_modules/.bin/vp fmt resources/js/pages/mail-center.tsx resources/js/data/delivery-progress.ts
+          git --no-pager diff --color=never -- resources/js/pages/mail-center.tsx resources/js/data/delivery-progress.ts
