@@ -34,6 +34,14 @@ export const deliveryMilestones: DeliveryMilestone[] = [
             'Local contract tests and exact-head CI only; not yet exercised on the Elite host. The helper hashes it pins must be updated whenever a pinned helper changes.',
     },
     {
+        id: 'modelfabric-github-catalog-accept-20261122',
+        title: 'ModelFabric: GitHub Models catalog request uses the documented Accept header',
+        state: 'active',
+        detail: 'Source-only fix: the GitHub Models catalog read now sends Accept application/vnd.github+json as the GitHub REST docs specify, because the connected provider reported invalid_catalog with the generic JSON header. This is a hypothesis until the live connection test passes after a release.',
+        evidence:
+            'Unit test pins the header; exact-head CI only. Not deployed and not yet proven against the live GitHub catalog.',
+    },
+    {
         id: 'modelfabric-guided-providers-20261122',
         title: 'ModelFabric: guided connect cards for GitHub Models, Cerebras and NVIDIA',
         state: 'active',

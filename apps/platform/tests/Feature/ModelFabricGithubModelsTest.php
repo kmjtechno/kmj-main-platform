@@ -58,7 +58,8 @@ final class ModelFabricGithubModelsTest extends TestCase
 
         Http::assertSent(fn ($request): bool => $request->url() === 'https://models.github.ai/catalog/models'
             && $request->method() === 'GET'
-            && $request->body() === '');
+            && $request->body() === ''
+            && $request->hasHeader('Accept', 'application/vnd.github+json'));
         $this->assertSame('ok', $tested->health);
         $this->assertSame(['meta/llama-3.3-70b-instruct', 'openai/gpt-4.1'], $tested->models_cache);
     }
