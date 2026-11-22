@@ -11,11 +11,11 @@ export type DeliveryMilestone = {
 export const deliveryMilestones: DeliveryMilestone[] = [
     {
         id: 'kmj-owner-team-mail-center-20261122',
-        title: 'KMJ Mail: premium owner and organization-team template workspace',
+        title: 'KMJ Native Mail: independent owner/staff inbox, threads and drafting',
         state: 'active',
-        detail: 'Source-only Gmail-inspired mail workspace with five owner and five verified-member email previews, approved KMJ dark/red branding and reusable HTML/plain text. Owner route requires verified passkey owner + recent password confirmation; team route requires current organization membership. Gmail inbox/sent/drafts truthfully display Not connected. Optional self-addressed preview notification is default OFF, after-commit, audited and rate-limited; no other-recipient sends or privilege elevation.',
+        detail: 'New first-party private KMJ Mail source uses PostgreSQL-backed Inbox/Sent/Drafts/Trash, threaded internal messages, unread state, search, send/reply, reversible trash, verified owner access and an owner-approved internal staff grant/revoke ledger separate from customer organization membership. No Gmail integration. External Internet mail remains gated until independent MX/inbound and outbound receipt validation.',
         evidence:
-            'Exact-head CI, security review, auth negative tests, protected Elite release and real authenticated owner/team browser QA pending. No Gmail OAuth, third-party mailbox access, staff provisioning, bulk email, new customer privilege or production mail/DNS changes.',
+            'Exact-head PHP/TypeScript/PostgreSQL CI, migration rollback, cross-user mailbox isolation and authenticated owner/staff browser QA pending. No Gmail OAuth, imported Gmail, external inbound, arbitrary SMTP relay, paid service or production cutover from this source branch.',
     },
     {
         id: 'owner-directory-simple-confirm-selected-delete-20261122',
