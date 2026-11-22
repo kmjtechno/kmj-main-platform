@@ -119,6 +119,7 @@ final class AiProviderController extends Controller
     public function connectOpenRouter(Request $request): SymfonyResponse
     {
         $scope = $this->managing($request);
+        $request->validate(['return_to' => ['nullable', 'in:modelfabric']]);
         try {
             // OpenRouter only redirects back to https; behind the proxy the request scheme may be http.
             $flow = $this->openRouter->begin((string) preg_replace('#\Ahttp://#', 'https://', route('ai-providers.openrouter.callback')));
@@ -130,6 +131,7 @@ final class AiProviderController extends Controller
             'state' => $flow['state'],
             'user' => (int) $this->user($request)->id,
             'organization' => $scope['organization_id'],
+            'return_to' => $request->input('return_to') === 'modelfabric' ? 'modelfabric' : null,
             'expires' => time() + 600,
         ]);
 
@@ -141,7 +143,7 @@ final class AiProviderController extends Controller
         $scope = $this->managing($request);
         // Single use: a replayed or forged callback finds nothing to redeem.
         $pending = $request->session()->pull('ai_provider_oauth');
-        $index = redirect()->route('ai-providers.index');
+        $index = redirect()->route(is_array($pending) && ($pending['return_to'] ?? null) === 'modelfabric' ? 'operator.modelfabric.index' : 'ai-providers.index');
         if (! is_array($pending) || ($pending['expires'] ?? 0) < time()
             || ($pending['user'] ?? null) !== (int) $this->user($request)->id
             || ($pending['organization'] ?? null) !== $scope['organization_id']) {

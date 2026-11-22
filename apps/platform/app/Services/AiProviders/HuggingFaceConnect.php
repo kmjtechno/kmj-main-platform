@@ -86,7 +86,11 @@ final class HuggingFaceConnect
 
         $token = $response->successful() ? $response->json('access_token') : null;
         if (! is_string($token) || preg_match('/\A[A-Za-z0-9_.-]{16,512}\z/', $token) !== 1) {
-            throw new InvalidArgumentException('oauth_exchange_failed');
+            // Only the HTTP status and the provider's short OAuth error code are surfaced, never the body or a token.
+            $error = $response->json('error');
+            $code = is_string($error) && preg_match('/\A[a-z_]{1,40}\z/', $error) === 1 ? $error : ($response->successful() ? 'bad_token_shape' : 'no_error_code');
+
+            throw new InvalidArgumentException('oauth_exchange_failed (http '.$response->status().', '.$code.')');
         }
 
         return $token;
