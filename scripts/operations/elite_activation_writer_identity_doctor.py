@@ -2,9 +2,9 @@
 """Read-only owner review gate for KMJ-elite activation-intent writer identity.
 
 Never installs broker, creates directories, reads request contents, changes
-permissions, starts units, approves a release or claims PHP-FPM pool routing.
-The preflight intentionally blocks if any worker under the fixed PHP-FPM master
-could write the queue with an unexpected identity.
+permissions, starts units, approves a release or changes pool configuration.
+It verifies the actual fixed production PHP-FPM listener and worker UIDs as a
+bounded read-only snapshot; unrelated pool workers are not reconfigured.
 """
 from __future__ import annotations
 
@@ -123,15 +123,127 @@ def pool_identity(master_pid: int, master: dict, children: list[dict], uid: int)
     require(len(children) > 0, "BLOCKED_NO_LIVE_FPM_WORKER")
     require(len({w["pid"] for w in children}) == len(children),
             "BLOCKED_DUPLICATE_WORKER_SNAPSHOT")
+    # Validate the shape of ALL children before classifying any UID mismatch.
+    # Only emit a bounded count of known pool categories, never raw process
+    # titles, UID numbers, paths, command lines or environment.
     for worker in children:
         require(worker["parent"] == master_pid
                 and worker["exe"] == MASTER_EXE
                 and worker["cmd"].startswith(WORKER_PREFIX)
                 and len(worker["cmd"]) <= 100, "BLOCKED_UNKNOWN_FPM_CHILD")
-        require(worker["uids"] == (uid, uid, uid, uid), "BLOCKED_FPM_WRITER_UID_MISMATCH")
+    if any(worker["uids"] != (uid, uid, uid, uid) for worker in children):
+        digest = {category: [0, 0] for category in ("KMJPROD", "WWW", "STAGING", "OTHER")}
+        for worker in children:
+            title = worker["cmd"][len(WORKER_PREFIX):]
+            category = (
+                "KMJPROD" if title == "kmjprod" else
+                "WWW" if title == "www" else
+                "STAGING" if title in ("kmjstage", "kmjstage-a979") else
+                "OTHER"
+            )
+            own = worker["uids"] == (uid, uid, uid, uid)
+            digest[category][0 if own else 1] += 1
+        for category in ("KMJPROD", "WWW", "STAGING", "OTHER"):
+            own_count, other_count = digest[category]
+            print(f"KMJ_FPM_POOL_{category}_OWNER_UID_COUNT={own_count}")
+            print(f"KMJ_FPM_POOL_{category}_OTHER_UID_COUNT={other_count}")
+        raise Blocked("BLOCKED_FPM_WRITER_UID_MISMATCH")
     # Deliberately conservative: all direct master children must use kmjprod.
     # It does not prove Nginx's selected FastCGI listener or worker quiescence.
     return len(children)
+
+
+PRODUCTION_POOL = "php-fpm: pool kmj-elite-stage"
+PRODUCTION_LISTENER = "0100007F:525C"  # 127.0.0.1:21084
+
+
+def listener_inode() -> str:
+    """Prove one exact IPv4 LISTEN socket; never print inode or proc content."""
+    with Path("/proc/net/tcp").open("r", encoding="ascii") as stream:
+        data = stream.read(1048577)
+    require(len(data) <= 1048576, "BLOCKED_TCP_SNAPSHOT_OVERSIZE")
+    matches = []
+    for line in data.splitlines()[1:]:
+        if not line.strip():
+            continue  # Empty /proc rows are not listeners; malformed rows still block.
+        fields = line.split()
+        require(len(fields) >= 10, "BLOCKED_TCP_SCHEMA")
+        if fields[1] == PRODUCTION_LISTENER and fields[3] == "0A":
+            inode = fields[9]
+            require(re.fullmatch(r"[0-9]{1,20}", inode) is not None
+                    and int(inode) > 0, "BLOCKED_TCP_INODE")
+            matches.append(inode)
+    require(len(matches) == 1, "BLOCKED_PRODUCTION_LISTENER_COUNT")
+    return matches[0]
+
+
+def host_network_namespace(pid: int) -> str:
+    """The process must be in the host init network namespace."""
+    require(1 <= pid <= 4194304, "BLOCKED_NETNS_PID")
+    return os.readlink(Path("/proc") / str(pid) / "ns/net")
+
+
+def holds_listener(pid: int, inode: str) -> bool:
+    """Read one process's fd symlinks only; fail closed on racing descriptors."""
+    require(1 <= pid <= 4194304, "BLOCKED_SOCKET_PID")
+    directory = Path("/proc") / str(pid) / "fd"
+    count = 0
+    for item in directory.iterdir():
+        count += 1
+        require(count <= 16384, "BLOCKED_FD_SCAN_OVERSIZE")
+        try:
+            if os.readlink(item) == "socket:[" + inode + "]":
+                return True
+        except FileNotFoundError:
+            raise Blocked("BLOCKED_SOCKET_FD_RACE") from None
+    return False
+
+
+def production_pool_binding(master_pid: int, master: dict,
+                            children: list[dict], uid: int) -> int:
+    """Only the exact production pool may hold its private listener.
+
+    Co-resident www/staging pools may run as their own users, but must never
+    hold the 21084 listener. This is bounded read-only snapshot evidence,
+    NOT a signed installation or durable permission to activate.
+    """
+    require(master["pid"] == master_pid and master["uids"] == (0, 0, 0, 0)
+            and master["exe"] == MASTER_EXE, "BLOCKED_FPM_MASTER_IDENTITY")
+    require(len(children) > 0 and len({w["pid"] for w in children}) == len(children),
+            "BLOCKED_FPM_WORKER_SNAPSHOT")
+    for w in children:
+        require(w["parent"] == master_pid
+                and w["exe"] == MASTER_EXE
+                and w["cmd"].startswith(WORKER_PREFIX)
+                and len(w["cmd"]) <= 100, "BLOCKED_UNKNOWN_FPM_CHILD")
+    prod = [w for w in children if w["cmd"] == PRODUCTION_POOL]
+    count = pool_identity(master_pid, master, prod, uid)
+    require(host_network_namespace(os.getpid()) == host_network_namespace(1),
+            "BLOCKED_NOT_HOST_NETNS")
+    host_ns = host_network_namespace(1)
+    require(host_network_namespace(master_pid) == host_ns,
+            "BLOCKED_MASTER_NETNS")
+    for w in children:
+        require(host_network_namespace(w["pid"]) == host_ns,
+                "BLOCKED_WORKER_NETNS")
+    inode = listener_inode()
+    require(holds_listener(master_pid, inode), "BLOCKED_MASTER_LISTENER_BINDING")
+    for w in children:
+        holds = holds_listener(w["pid"], inode)
+        if w["cmd"] == PRODUCTION_POOL:
+            require(holds, "BLOCKED_PRODUCTION_WORKER_LISTENER_BINDING")
+        else:
+            require(not holds, "BLOCKED_FOREIGN_POOL_LISTENER_BINDING")
+    # Bound both process identity and listening socket to a second snapshot.
+    require(listener_inode() == inode
+            and fixed_live_children(master_pid) == children,
+            "BLOCKED_PRODUCTION_BINDING_RACE")
+    require(holds_listener(master_pid, inode), "BLOCKED_MASTER_LISTENER_RACE")
+    for w in children:
+        holds = holds_listener(w["pid"], inode)
+        require(holds == (w["cmd"] == PRODUCTION_POOL),
+                "BLOCKED_WORKER_LISTENER_RACE")
+    return count
 
 
 def fixed_master_pid() -> int:
@@ -183,21 +295,32 @@ def fixed_live_children(master_pid: int) -> list[dict]:
 
 
 def inspect() -> int:
+    # Classify *only* the fixed read-only phase on unexpected OS/parse errors.
+    # Never return exception text, private paths, request bytes or process data.
+    phase = "HOST"
     try:
         require(os.geteuid() == 0 and socket.gethostname().split(".")[0] == HOST,
                 "BLOCKED_WRONG_HOST_OR_UID")
+        phase = "OWNER_UID"
         uid = pwd.getpwnam(OWNER).pw_uid
         require(uid > 0, "BLOCKED_OWNER_UID")
         # Check the filesystem before any success wording.
+        phase = "PRIVATE_INBOX"
         fixed_parent_chain(uid)
+        phase = "FPM_SYSTEMD_UNIT"
         master_pid = fixed_master_pid()
+        phase = "FPM_MASTER_PROCESS"
         master = process_identity(master_pid)
+        phase = "FPM_CHILD_PROCESSES"
         children = fixed_live_children(master_pid)
-        count = pool_identity(master_pid, master, children, uid)
+        phase = "FPM_CHILD_IDENTITY"
+        count = production_pool_binding(master_pid, master, children, uid)
         # Ensure the master did not change underneath the read-only scan.
+        phase = "FPM_MASTER_RECHECK"
         require(fixed_master_pid() == master_pid
                 and process_identity(master_pid) == master,
                 "BLOCKED_FPM_IDENTITY_RACE")
+        phase = "PRIVATE_INBOX_RECHECK"
         fixed_parent_chain(uid)
         print("KMJ_ACTIVATION_WRITER_IDENTITY=READY_FOR_OWNER_REVIEW_NOT_INSTALLED")
         print("KMJ_FPM_WORKERS_AT_SNAPSHOT=" + str(count))
@@ -208,8 +331,9 @@ def inspect() -> int:
     except Blocked as exc:
         print("KMJ_ACTIVATION_WRITER_IDENTITY=" + str(exc))
         return 2
-    except (OSError, UnicodeError, ValueError, subprocess.TimeoutExpired):
+    except (OSError, UnicodeError, ValueError, KeyError, subprocess.TimeoutExpired):
         print("KMJ_ACTIVATION_WRITER_IDENTITY=BLOCKED_READONLY_PROBE_UNVERIFIED")
+        print("KMJ_ACTIVATION_PROBE_PHASE=" + phase)
         return 2
 
 
