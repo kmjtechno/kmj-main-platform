@@ -1,0 +1,36 @@
+name: Elite activation writer identity preflight safety
+
+on:
+  pull_request:
+    paths:
+      - 'scripts/operations/elite_activation_writer_identity_doctor.py'
+      - 'scripts/test_elite_activation_writer_identity_doctor.py'
+      - 'docs/operations/ELITE_ACTIVATION_WRITER_IDENTITY_PREFLIGHT.md'
+      - '.github/workflows/elite-activation-writer-identity.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  writer-identity-fail-closed:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Compile fixed read-only Elite writer probe
+        run: python3 -m py_compile scripts/operations/elite_activation_writer_identity_doctor.py scripts/test_elite_activation_writer_identity_doctor.py
+      - name: Test FPM UID, ACL, symlink and pending intent rejections
+        run: python3 scripts/test_elite_activation_writer_identity_doctor.py -v
+      - name: CLI forbids unauthenticated inspection and all extra arguments
+        run: |
+          set -Eeuo pipefail
+          if python3 scripts/operations/elite_activation_writer_identity_doctor.py --execute; then
+            echo "FAIL: unreviewed execution switch accepted"
+            exit 1
+          fi
+          if python3 scripts/operations/elite_activation_writer_identity_doctor.py --inspect --apply; then
+            echo "FAIL: unreviewed mutation switch accepted"
+            exit 1
+          fi
+          echo "OWNER_READ_ONLY_INSPECT_GRAMMAR=PASS"
