@@ -117,6 +117,37 @@ Route::middleware(['auth', 'verified', 'password.confirm'])
             return redirect()->route('operator.directory.index');
         })->middleware('throttle:8,1')->name('directory.user-contact');
 
+        // Only explicitly checked customers, never a search/filter cohort.
+        // Password re-confirmation, CSRF and passkey-verified owner scope are
+        // inherited from this entire route group.
+        Route::post('directory/users/bulk-delete', function (
+            Request $request,
+            PlatformOwnerAccess $access,
+            OwnerDirectoryAccountActions $actions,
+        ) {
+            $actor = $request->user();
+            abort_unless($actor instanceof User, 401);
+            $access->require($actor);
+
+            $values = $request->validate([
+                'user_ids' => ['required', 'array', 'min:2', 'max:15'],
+                'user_ids.*' => ['required', 'integer', 'distinct', 'min:1'],
+            ]);
+
+            try {
+                $actions->deleteSelectedCustomers(
+                    array_map('intval', $values['user_ids']),
+                    (int) $actor->id,
+                );
+            } catch (RuntimeException) {
+                throw ValidationException::withMessages([
+                    'user_ids' => 'Nothing was deleted. One or more selected customers are protected, missing, or linked to shared organizations, licenses, payments or audit records.',
+                ]);
+            }
+
+            return redirect()->route('operator.directory.index');
+        })->middleware('throttle:2,1')->name('directory.users-bulk-delete');
+
         Route::post('directory/users/{user}/delete', function (
             Request $request,
             User $user,
