@@ -118,6 +118,9 @@ final class ModelFabricRuleApplier
                         'data_handling' => $rule->data_handling,
                         'capabilities' => $rule->capabilities ?? ['chat'],
                         'verified_by' => $rule->attested_by,
+                        'cost_class' => 'free',
+                        'credit_daily_cap' => null,
+                        'credit_hard_cap_attested_at' => null,
                         'revoked_at' => null,
                     ],
                 );

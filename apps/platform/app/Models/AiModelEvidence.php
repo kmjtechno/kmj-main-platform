@@ -25,6 +25,9 @@ use Illuminate\Database\Eloquent\Model;
  * @property int|null $context_limit
  * @property int|null $verified_by
  * @property CarbonInterface|null $revoked_at
+ * @property string $cost_class 'free' or 'credit-limited' (ADR-004 rev 2)
+ * @property int|null $credit_daily_cap
+ * @property CarbonInterface|null $credit_hard_cap_attested_at
  */
 final class AiModelEvidence extends Model
 {
@@ -43,6 +46,8 @@ final class AiModelEvidence extends Model
             'verified_at' => 'datetime',
             'expires_at' => 'datetime',
             'revoked_at' => 'datetime',
+            'credit_hard_cap_attested_at' => 'datetime',
+            'credit_daily_cap' => 'integer',
             'context_limit' => 'integer',
         ];
     }

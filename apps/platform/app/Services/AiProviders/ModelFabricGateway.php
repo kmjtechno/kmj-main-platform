@@ -53,6 +53,11 @@ final class ModelFabricGateway
             'priority' => (int) ($limits[$id]['priority'] ?? 100),
         ]);
 
+        // ADR-004 rev 2: a credit-limited route is skipped at its owner-set daily cap and sinks at 80%, so
+        // a mis-stated provider limit can never spend the owner's money. A missing or zero cap fails closed.
+        $creditUsed = $this->creditUsage($organizationId, $plan['routes']);
+        $plan['routes'] = $this->sinkNearCreditCap($plan['routes'], $creditUsed);
+
         $attempts = 0;
         $last = 'all_routes_cooling_down';
         foreach ($plan['routes'] as $route) {
@@ -62,6 +67,14 @@ final class ModelFabricGateway
             $providerId = (string) $route['provider_id'];
             if (self::coolingUntil($providerId) !== null) {
                 continue;
+            }
+            if (($route['cost_class'] ?? 'free') === 'credit-limited') {
+                $cap = (int) ($route['credit_daily_cap'] ?? 0);
+                if ($cap <= 0 || ($creditUsed[$providerId.'|'.(string) $route['model']] ?? 0) >= $cap) {
+                    $last = 'credit_cap_reached';
+
+                    continue;
+                }
             }
             // Owner's daily cap: skip before the provider's own limit can be hit.
             if (($limits[$providerId]['cap'] ?? null) !== null && $limits[$providerId]['used'] >= $limits[$providerId]['cap']) {
@@ -126,6 +139,64 @@ final class ModelFabricGateway
         }
 
         return $out;
+    }
+
+    /**
+     * Today's routed attempts (UTC day) per "provider|model" for credit-limited routes only.
+     *
+     * @param  list<array<string, mixed>>  $routes
+     * @return array<string, int>
+     */
+    private function creditUsage(string $organizationId, array $routes): array
+    {
+        $providerIds = [];
+        foreach ($routes as $route) {
+            if (($route['cost_class'] ?? 'free') === 'credit-limited') {
+                $providerIds[(string) $route['provider_id']] = true;
+            }
+        }
+        if ($providerIds === []) {
+            return [];
+        }
+
+        $used = [];
+        $rows = AiModelRequest::query()
+            ->where('organization_id', $organizationId)
+            ->whereIn('ai_provider_id', array_keys($providerIds))
+            ->where('created_at', '>=', now()->utc()->startOfDay())
+            ->selectRaw('ai_provider_id, model_id, count(*) as c')
+            ->groupBy('ai_provider_id', 'model_id')
+            ->toBase()
+            ->get();
+        foreach ($rows as $row) {
+            $used[(string) $row->ai_provider_id.'|'.(string) $row->model_id] = (int) $row->c;
+        }
+
+        return $used;
+    }
+
+    /**
+     * Stable partition: credit-limited routes at or above 80% of their cap go last.
+     *
+     * @param  list<array<string, mixed>>  $routes
+     * @param  array<string, int>  $creditUsed
+     * @return list<array<string, mixed>>
+     */
+    private function sinkNearCreditCap(array $routes, array $creditUsed): array
+    {
+        $normal = [];
+        $near = [];
+        foreach ($routes as $route) {
+            $cap = (int) ($route['credit_daily_cap'] ?? 0);
+            $used = $creditUsed[(string) $route['provider_id'].'|'.(string) $route['model']] ?? 0;
+            if (($route['cost_class'] ?? 'free') === 'credit-limited' && $cap > 0 && $used * 10 >= $cap * 8) {
+                $near[] = $route;
+            } else {
+                $normal[] = $route;
+            }
+        }
+
+        return [...$normal, ...$near];
     }
 
     /** @param  array{priority: int, cap: ?int, used: int}|null  $limit */

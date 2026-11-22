@@ -43,6 +43,8 @@ type Evidence = {
     expires_at: string;
     data_handling: string;
     capabilities: string[];
+    cost_class: string;
+    credit_daily_cap: number | null;
     current: boolean;
     revoked: boolean;
 };
@@ -449,6 +451,11 @@ export default function OperatorModelFabric({
     const [handling, setHandling] = useState('unknown');
     const [caps, setCaps] = useState<string[]>(['chat']);
     const [confirmed, setConfirmed] = useState(false);
+    const [costClass, setCostClass] = useState<'free' | 'credit-limited'>(
+        'free',
+    );
+    const [creditCap, setCreditCap] = useState('');
+    const [creditAttested, setCreditAttested] = useState(false);
     const [picked, setPicked] = useState<string[]>([]);
     const [hfFree, setHfFree] = useState(false);
     const selected = providers.find((provider) => provider.id === providerId);
@@ -489,7 +496,8 @@ export default function OperatorModelFabric({
         modelKnown &&
         url.startsWith('https://') &&
         note.trim().length >= 10 &&
-        confirmed;
+        confirmed &&
+        (costClass === 'free' || (Number(creditCap) >= 1 && creditAttested));
 
     const listedModels = (selected?.discovered_models ?? []).slice(0, 200);
     const bulkModels = picked
@@ -497,6 +505,7 @@ export default function OperatorModelFabric({
         .slice(0, 50);
     const canBulk =
         canManage &&
+        costClass === 'free' &&
         bulkModels.length > 0 &&
         url.startsWith('https://') &&
         note.trim().length >= 10 &&
@@ -550,6 +559,13 @@ export default function OperatorModelFabric({
                 valid_days: days,
                 data_handling: handling,
                 capabilities: caps,
+                cost_class: costClass,
+                ...(costClass === 'credit-limited'
+                    ? {
+                          credit_daily_cap: Number(creditCap),
+                          credit_hard_cap_attested: creditAttested,
+                      }
+                    : {}),
             },
             {
                 preserveScroll: true,
@@ -557,6 +573,7 @@ export default function OperatorModelFabric({
                     setNote('');
                     setModel('');
                     setConfirmed(false);
+                    setCreditAttested(false);
                 },
             },
         );
@@ -636,17 +653,21 @@ export default function OperatorModelFabric({
         );
     };
 
-    const renew = (id: string) => {
+    const renew = (id: string, credit = false) => {
         if (
             !window.confirm(
-                'Re-check the evidence page first. Renew for 30 days?',
+                credit
+                    ? 'Re-check the credit page first. Confirm this account still cannot bill beyond the free credits, then renew for 30 days?'
+                    : 'Re-check the evidence page first. Renew for 30 days?',
             )
         ) {
             return;
         }
         router.post(
             `${BASE}/evidence/${id}/renew`,
-            { attest_pricing: true },
+            credit
+                ? { attest_pricing: true, credit_hard_cap_attested: true }
+                : { attest_pricing: true },
             { preserveScroll: true },
         );
     };
@@ -695,8 +716,8 @@ export default function OperatorModelFabric({
                         </h2>
                         <p className="owner-hero-description">
                             A model is used only after you prove it is free
-                            today and its provider is healthy. No paid fallback,
-                            no local LLM.
+                            today (or it is credit-limited with a hard cap) and
+                            its provider is healthy. No paid fallback.
                         </p>
                         <div className="owner-hero-actions">
                             {'href' in next ? (
@@ -1130,6 +1151,60 @@ export default function OperatorModelFabric({
                                         </option>
                                     </select>
                                 </label>
+                                <label className="text-sm font-medium">
+                                    Cost type
+                                    <select
+                                        className={fieldClass}
+                                        value={costClass}
+                                        onChange={(e) =>
+                                            setCostClass(
+                                                e.target.value as
+                                                    | 'free'
+                                                    | 'credit-limited',
+                                            )
+                                        }
+                                    >
+                                        <option value="free">
+                                            Free tier (no cost)
+                                        </option>
+                                        <option value="credit-limited">
+                                            Credit-limited (free credits that
+                                            run out)
+                                        </option>
+                                    </select>
+                                </label>
+                                {costClass === 'credit-limited' ? (
+                                    <>
+                                        <label className="text-sm font-medium">
+                                            KMJ daily request cap (required)
+                                            <input
+                                                className={fieldClass}
+                                                type="number"
+                                                min={1}
+                                                value={creditCap}
+                                                onChange={(e) =>
+                                                    setCreditCap(e.target.value)
+                                                }
+                                            />
+                                        </label>
+                                        <label className="flex items-start gap-2 text-sm md:col-span-2">
+                                            <input
+                                                type="checkbox"
+                                                className="mt-1"
+                                                checked={creditAttested}
+                                                onChange={(e) =>
+                                                    setCreditAttested(
+                                                        e.target.checked,
+                                                    )
+                                                }
+                                            />
+                                            This provider account has no payment
+                                            method or a hard cap, so it cannot
+                                            bill me beyond the free credits, and
+                                            the page shows the credit amount.
+                                        </label>
+                                    </>
+                                ) : null}
                                 <fieldset className="text-sm md:col-span-2">
                                     <legend className="font-medium">
                                         What this model may be used for
@@ -1306,6 +1381,9 @@ export default function OperatorModelFabric({
                                             ).toLocaleDateString()}{' '}
                                             · {row.data_handling} ·{' '}
                                             {row.capabilities.join(', ')} ·{' '}
+                                            {row.cost_class === 'credit-limited'
+                                                ? `credit-limited, cap ${row.credit_daily_cap ?? 0}/day · `
+                                                : ''}
                                         </span>
                                         <a
                                             className="text-xs font-bold underline"
@@ -1320,7 +1398,13 @@ export default function OperatorModelFabric({
                                         <button
                                             type="button"
                                             className="inline-flex items-center gap-1 text-xs font-bold"
-                                            onClick={() => renew(row.id)}
+                                            onClick={() =>
+                                                renew(
+                                                    row.id,
+                                                    row.cost_class ===
+                                                        'credit-limited',
+                                                )
+                                            }
                                         >
                                             Renew 30 days
                                         </button>

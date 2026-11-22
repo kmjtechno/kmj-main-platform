@@ -170,3 +170,22 @@ void test('GitHub Models is an allowlist-only preset with its own read-only cata
     );
     assert.match(adapter, /https:\/\/models\.github\.ai\/catalog\/models/);
 });
+
+void test('credit-limited approvals (ADR-004 rev 2) are capped, attested and enforced', () => {
+    const migration = read(
+        'database/migrations/2026_11_22_000200_add_cost_class_to_ai_model_evidence.php',
+    );
+    const gateway = read('app/Services/AiProviders/ModelFabricGateway.php');
+    // No raw DDL in the migration (migration review policy); validation and the gateway enforce the pairing.
+    assert.doesNotMatch(migration, /DB::statement/);
+    assert.match(migration, /credit_daily_cap/);
+    // The gateway skips a credit route at its cap and fails closed without one.
+    assert.match(gateway, /credit_cap_reached/);
+    assert.match(gateway, /\$cap <= 0/);
+    // The owner form requires the cap and the hard-cap statement before saving.
+    assert.match(page, /credit_hard_cap_attested/);
+    assert.match(page, /cannot\s+bill\s+me\s+beyond\s+the\s+free\s+credits/);
+    // Bulk approval and rules stay free-only and reset the class.
+    assert.match(controller, /'cost_class' => 'free'/);
+    assert.doesNotMatch(page, /enable[_ -]?paid fallback/i);
+});
