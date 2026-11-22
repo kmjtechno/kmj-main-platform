@@ -22,9 +22,7 @@ export default function OwnerDirectoryUserActions({
 }) {
     const [name, setName] = useState(user.name);
     const [phone, setPhone] = useState(user.customer_profile?.phone ?? '');
-    const [country, setCountry] = useState(
-        user.customer_profile?.country ?? '',
-    );
+    const [country, setCountry] = useState(user.customer_profile?.country ?? '');
     const [company, setCompany] = useState(
         user.customer_profile?.company_name ?? '',
     );
@@ -50,7 +48,8 @@ export default function OwnerDirectoryUserActions({
             },
             {
                 preserveScroll: true,
-                onError: (errors) => setError(Object.values(errors).join(' ')),
+                onError: (errors) =>
+                    setError(Object.values(errors).join(' ')),
                 onFinish: () => setBusy(false),
             },
         );
@@ -104,7 +103,9 @@ export default function OwnerDirectoryUserActions({
                                 <input
                                     maxLength={32}
                                     value={phone}
-                                    onChange={(event) => setPhone(event.target.value)}
+                                    onChange={(event) =>
+                                        setPhone(event.target.value)
+                                    }
                                     className="mt-1 w-full rounded-lg border bg-background p-2"
                                 />
                             </label>
@@ -113,7 +114,9 @@ export default function OwnerDirectoryUserActions({
                                 <input
                                     maxLength={80}
                                     value={country}
-                                    onChange={(event) => setCountry(event.target.value)}
+                                    onChange={(event) =>
+                                        setCountry(event.target.value)
+                                    }
                                     className="mt-1 w-full rounded-lg border bg-background p-2"
                                 />
                             </label>
@@ -122,7 +125,9 @@ export default function OwnerDirectoryUserActions({
                                 <input
                                     maxLength={160}
                                     value={company}
-                                    onChange={(event) => setCompany(event.target.value)}
+                                    onChange={(event) =>
+                                        setCompany(event.target.value)
+                                    }
                                     className="mt-1 w-full rounded-lg border bg-background p-2"
                                 />
                             </label>

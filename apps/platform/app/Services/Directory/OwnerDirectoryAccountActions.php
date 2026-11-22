@@ -22,6 +22,7 @@ final class OwnerDirectoryAccountActions
         'requested_by', 'created_by', 'updated_by', 'customer_id', 'notifiable_id',
     ];
 
+    /** @param array<string, string|null> $values */
     public function updateContact(int $id, int $actorId, array $values): void
     {
         DB::transaction(function () use ($id, $actorId, $values): void {

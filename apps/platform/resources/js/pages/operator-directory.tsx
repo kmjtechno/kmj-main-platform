@@ -1,7 +1,7 @@
 import { Head, Link, router } from '@inertiajs/react';
 import { Building2, Search, ShieldCheck, Users } from 'lucide-react';
-import OwnerDirectoryUserActions from '@/components/owner-directory-user-actions';
 import { useState, type FormEvent } from 'react';
+import OwnerDirectoryUserActions from '@/components/owner-directory-user-actions';
 import OperatorModuleNavigation from '@/components/operator-module-navigation';
 
 type PageLink = { url: string | null; label: string; active: boolean };
@@ -284,7 +284,9 @@ export default function OperatorDirectory({
                                                       : 'Email unverified'}
                                             </span>
                                         </div>
-                                        <OwnerDirectoryUserActions user={user} />
+                                        <OwnerDirectoryUserActions
+                                            user={user}
+                                        />
                                     </div>
                                 ))}
                             </div>
