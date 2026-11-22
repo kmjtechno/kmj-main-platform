@@ -67,6 +67,9 @@ final class OwnerDirectoryAccountActions
             count(array_unique($ids)) !== count($ids)) {
             throw new RuntimeException('DIRECTORY_INVALID_SELECTION');
         }
+        if (in_array($actorId, $ids, true)) {
+            throw new RuntimeException('DIRECTORY_ACCOUNT_PROTECTED');
+        }
 
         sort($ids, SORT_NUMERIC);
 
@@ -76,12 +79,15 @@ final class OwnerDirectoryAccountActions
             $locked = User::query()->whereKey($ids)->orderBy('id')
                 ->lockForUpdate()->get(['id', 'is_platform_owner', 'platform_owner_granted_at']);
 
-            if ($locked->count() !== count($ids) ||
-                $locked->contains(static fn (User $user): bool =>
-                    (bool) $user->is_platform_owner ||
-                    $user->platform_owner_granted_at !== null ||
-                    (int) $user->id === $actorId)) {
+            if ($locked->count() !== count($ids)) {
                 throw new RuntimeException('DIRECTORY_ACCOUNT_PROTECTED');
+            }
+            foreach ($locked as $candidate) {
+                if ((bool) $candidate->is_platform_owner ||
+                    $candidate->platform_owner_granted_at !== null ||
+                    (int) $candidate->id === $actorId) {
+                    throw new RuntimeException('DIRECTORY_ACCOUNT_PROTECTED');
+                }
             }
 
             foreach ($ids as $id) {
