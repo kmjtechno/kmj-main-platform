@@ -80,6 +80,8 @@ final class ModelFabricController extends Controller
                 'expires_at' => $row->expires_at->toIso8601String(),
                 'data_handling' => $row->data_handling,
                 'capabilities' => $row->capabilities ?? [],
+                'cost_class' => $row->cost_class,
+                'credit_daily_cap' => $row->credit_daily_cap,
                 'current' => $row->isCurrent(),
                 'revoked' => $row->revoked_at !== null,
             ])->values(),
@@ -128,7 +130,12 @@ final class ModelFabricController extends Controller
             'capabilities' => ['sometimes', 'array', 'max:4'],
             'capabilities.*' => [Rule::in(['chat', 'tools', 'code', 'vision'])],
             'context_limit' => ['nullable', 'integer', 'min:1', 'max:10000000'],
+            // ADR-004 rev 2: credit-limited models need a KMJ-side daily cap and the owner's hard-cap attestation.
+            'cost_class' => ['sometimes', Rule::in(['free', 'credit-limited'])],
+            'credit_daily_cap' => ['exclude_unless:cost_class,credit-limited', 'required', 'integer', 'min:1', 'max:1000000'],
+            'credit_hard_cap_attested' => ['accepted_if:cost_class,credit-limited'],
         ]);
+        $creditLimited = ($data['cost_class'] ?? 'free') === 'credit-limited';
 
         $provider = AiProvider::query()
             ->where('organization_id', $scope['organization_id'])
@@ -161,6 +168,9 @@ final class ModelFabricController extends Controller
                 'capabilities' => array_values(array_unique($data['capabilities'] ?? ['chat'])),
                 'context_limit' => $data['context_limit'] ?? null,
                 'verified_by' => (int) $this->user($request)->id,
+                'cost_class' => $creditLimited ? 'credit-limited' : 'free',
+                'credit_daily_cap' => $creditLimited ? (int) $data['credit_daily_cap'] : null,
+                'credit_hard_cap_attested_at' => $creditLimited ? $now : null,
                 'revoked_at' => null,
             ],
         );
@@ -170,9 +180,13 @@ final class ModelFabricController extends Controller
             'model' => $data['model_id'],
             'valid_days' => (int) $data['valid_days'],
             'data_handling' => $data['data_handling'],
+            'cost_class' => $creditLimited ? 'credit-limited' : 'free',
+            'credit_daily_cap' => $creditLimited ? (int) $data['credit_daily_cap'] : null,
         ]);
 
-        return back()->with('status', 'Price evidence saved. The model is routable until it expires or is revoked.');
+        return back()->with('status', $creditLimited
+            ? 'Credit-limited approval saved. KMJ stops routing to it at its daily cap; it is routable until it expires or is revoked.'
+            : 'Price evidence saved. The model is routable until it expires or is revoked.');
     }
 
     /**
@@ -227,6 +241,9 @@ final class ModelFabricController extends Controller
                         'data_handling' => $data['data_handling'],
                         'capabilities' => array_values(array_unique($data['capabilities'] ?? ['chat'])),
                         'verified_by' => $userId,
+                        'cost_class' => 'free',
+                        'credit_daily_cap' => null,
+                        'credit_hard_cap_attested_at' => null,
                         'revoked_at' => null,
                     ],
                 );
@@ -247,7 +264,7 @@ final class ModelFabricController extends Controller
     public function renewEvidence(Request $request, string $evidence): RedirectResponse
     {
         $scope = $this->owner($request, true);
-        $request->validate(['attest_pricing' => ['accepted']]);
+        $request->validate(['attest_pricing' => ['accepted'], 'credit_hard_cap_attested' => ['sometimes', 'boolean']]);
         $row = AiModelEvidence::query()
             ->where('organization_id', $scope['organization_id'])
             ->whereKey($evidence)
@@ -258,8 +275,15 @@ final class ModelFabricController extends Controller
         if ($row->revoked_at !== null) {
             return back()->withErrors(['evidence' => 'Revoked evidence cannot be renewed. Add it again with a fresh source.']);
         }
+        // A credit-limited approval is renewed only with a fresh hard-cap attestation (ADR-004 rev 2).
+        if ($row->cost_class === 'credit-limited' && ! $request->boolean('credit_hard_cap_attested')) {
+            return back()->withErrors(['evidence' => 'Confirm again that the provider cannot bill beyond the credits before renewing.']);
+        }
 
         $now = now();
+        if ($row->cost_class === 'credit-limited') {
+            $row->credit_hard_cap_attested_at = $now;
+        }
         $row->verified_at = $now;
         $row->expires_at = $now->copy()->addDays(self::MAX_EVIDENCE_DAYS);
         $row->verified_by = (int) $this->user($request)->id;

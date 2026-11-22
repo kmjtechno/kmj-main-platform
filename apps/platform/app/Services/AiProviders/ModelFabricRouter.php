@@ -58,6 +58,9 @@ final class ModelFabricRouter
                     'source' => $proof === null ? 'server-allowlist-or-free-suffix' : 'owner-price-evidence',
                     'evidence_expires_at' => $proof instanceof AiModelEvidence ? $proof->expires_at->toIso8601String() : null,
                     'data_handling' => $handling,
+                    // ADR-004 rev 2: credit-limited routes carry the owner-set daily cap the gateway enforces.
+                    'cost_class' => $proof instanceof AiModelEvidence ? $proof->cost_class : 'free',
+                    'credit_daily_cap' => $proof instanceof AiModelEvidence ? $proof->credit_daily_cap : null,
                 ];
             }
             if ($admitted === 0) {
