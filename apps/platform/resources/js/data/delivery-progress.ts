@@ -10,6 +10,14 @@ export type DeliveryMilestone = {
 
 export const deliveryMilestones: DeliveryMilestone[] = [
     {
+        id: 'unverified-cleanup-concurrent-writer-fence-20261122',
+        title: 'Unverified cleanup: transactional writer fence before protected purge',
+        state: 'active',
+        detail: 'Source-only PostgreSQL safety hardening: before computing an exact cohort for a destructive purge, acquire transaction-scoped NOWAIT table locks over a validated bounded inventory of application tables. Concurrent inserts or updates of organization memberships, licenses and even non-FK string reference rows cause the purge to abort without deletion. Existing owner-only step-up, feature flag, age bound and SHA-bound preview remain unchanged; source tests use a second PostgreSQL connection.',
+        evidence:
+            'PostgreSQL two-connection negative feature regression and full exact-head CI required. Only in-database writers can be fenced; cross-service identity reconciliation, independent backup restore, approval and live activation remain separate release gates.',
+    },
+    {
         id: 'auth-brand-owner-profile-dropdown-20261122',
         title: 'Auth logo and owner account profile/logout menu',
         state: 'active',
