@@ -18,6 +18,14 @@ export const deliveryMilestones: DeliveryMilestone[] = [
             'Local contract tests and exact-head CI only; not yet exercised on the Elite host. The helper hashes it pins must be updated whenever a pinned helper changes.',
     },
     {
+        id: 'modelfabric-github-models-20261122',
+        title: 'ModelFabric: GitHub Models provider (allowlist only)',
+        state: 'active',
+        detail: 'Source-only: GitHub Models is added as a provider preset. Discovery reads its separate read-only catalog list and never sends a prompt. It has no free proof in the API, so a model is routable only after an owner attestation or auto-approve rule, like Groq and Gemini.',
+        evidence:
+            'Feature and static tests with faked HTTP; exact-head CI only, not deployed and no real GitHub token or request was used.',
+    },
+    {
         id: 'modelfabric-auto-approve-rules-20261122',
         title: 'ModelFabric: one owner rule auto-approves matching free chat models',
         state: 'active',

@@ -22,6 +22,7 @@ return [
         'sambanova' => ['label' => 'SambaNova', 'base_url' => 'https://api.sambanova.ai/v1', 'free_tier' => 'allowlist'],
         'huggingface' => ['label' => 'Hugging Face router', 'base_url' => 'https://router.huggingface.co/v1', 'free_tier' => 'allowlist'],
         'nvidia' => ['label' => 'NVIDIA NIM', 'base_url' => 'https://integrate.api.nvidia.com/v1', 'free_tier' => 'allowlist'],
+        'github' => ['label' => 'GitHub Models', 'base_url' => 'https://models.github.ai/inference', 'free_tier' => 'allowlist'],
         'together' => ['label' => 'Together AI', 'base_url' => 'https://api.together.xyz/v1', 'free_tier' => 'none'],
         'openai' => ['label' => 'OpenAI', 'base_url' => 'https://api.openai.com/v1', 'free_tier' => 'none'],
         'custom' => ['label' => 'Custom HTTPS endpoint', 'base_url' => null, 'free_tier' => 'none'],
@@ -36,5 +37,6 @@ return [
         'sambanova' => $csv('AI_PROVIDER_FREE_MODELS_SAMBANOVA'),
         'huggingface' => $csv('AI_PROVIDER_FREE_MODELS_HUGGINGFACE'),
         'nvidia' => $csv('AI_PROVIDER_FREE_MODELS_NVIDIA'),
+        'github' => $csv('AI_PROVIDER_FREE_MODELS_GITHUB'),
     ],
 ];

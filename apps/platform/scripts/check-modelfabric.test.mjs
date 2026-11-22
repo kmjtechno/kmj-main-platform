@@ -158,3 +158,15 @@ void test('Auto-approve rules stay narrow, expiring, chat-only and revocable', (
     assert.match(refresh, /ModelFabricRuleApplier/);
     assert.match(page, /Save auto-approve rule/);
 });
+
+void test('GitHub Models is an allowlist-only preset with its own read-only catalog URL', () => {
+    const config = read('config/ai_providers.php');
+    const adapter = read(
+        'app/Services/AiProviders/OpenAiCompatibleAdapter.php',
+    );
+    assert.match(
+        config,
+        /'github' => \['label' => 'GitHub Models', 'base_url' => 'https:\/\/models\.github\.ai\/inference', 'free_tier' => 'allowlist'\]/,
+    );
+    assert.match(adapter, /https:\/\/models\.github\.ai\/catalog\/models/);
+});
