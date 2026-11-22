@@ -183,21 +183,32 @@ def fixed_live_children(master_pid: int) -> list[dict]:
 
 
 def inspect() -> int:
+    # Classify *only* the fixed read-only phase on unexpected OS/parse errors.
+    # Never return exception text, private paths, request bytes or process data.
+    phase = "HOST"
     try:
         require(os.geteuid() == 0 and socket.gethostname().split(".")[0] == HOST,
                 "BLOCKED_WRONG_HOST_OR_UID")
+        phase = "OWNER_UID"
         uid = pwd.getpwnam(OWNER).pw_uid
         require(uid > 0, "BLOCKED_OWNER_UID")
         # Check the filesystem before any success wording.
+        phase = "PRIVATE_INBOX"
         fixed_parent_chain(uid)
+        phase = "FPM_SYSTEMD_UNIT"
         master_pid = fixed_master_pid()
+        phase = "FPM_MASTER_PROCESS"
         master = process_identity(master_pid)
+        phase = "FPM_CHILD_PROCESSES"
         children = fixed_live_children(master_pid)
+        phase = "FPM_CHILD_IDENTITY"
         count = pool_identity(master_pid, master, children, uid)
         # Ensure the master did not change underneath the read-only scan.
+        phase = "FPM_MASTER_RECHECK"
         require(fixed_master_pid() == master_pid
                 and process_identity(master_pid) == master,
                 "BLOCKED_FPM_IDENTITY_RACE")
+        phase = "PRIVATE_INBOX_RECHECK"
         fixed_parent_chain(uid)
         print("KMJ_ACTIVATION_WRITER_IDENTITY=READY_FOR_OWNER_REVIEW_NOT_INSTALLED")
         print("KMJ_FPM_WORKERS_AT_SNAPSHOT=" + str(count))
@@ -208,8 +219,9 @@ def inspect() -> int:
     except Blocked as exc:
         print("KMJ_ACTIVATION_WRITER_IDENTITY=" + str(exc))
         return 2
-    except (OSError, UnicodeError, ValueError, subprocess.TimeoutExpired):
+    except (OSError, UnicodeError, ValueError, KeyError, subprocess.TimeoutExpired):
         print("KMJ_ACTIVATION_WRITER_IDENTITY=BLOCKED_READONLY_PROBE_UNVERIFIED")
+        print("KMJ_ACTIVATION_PROBE_PHASE=" + phase)
         return 2
 
 
