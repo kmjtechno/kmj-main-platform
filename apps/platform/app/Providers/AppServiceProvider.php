@@ -14,6 +14,7 @@ use App\Services\Licensing\SandboxLicenseIssuer;
 use App\Services\Licensing\SandboxLicenseLifecycle;
 use App\Services\Licensing\SandboxLicenseValidationEngine;
 use App\Services\Mail\BrandedAuthNotifications;
+use App\Services\Mail\BrandedCustomerEvents;
 use Carbon\CarbonImmutable;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Contracts\Foundation\Application;
@@ -75,6 +76,7 @@ class AppServiceProvider extends ServiceProvider
         $this->configureDefaults();
         $this->configureCodeBridgeEnrollmentLimiter();
         BrandedAuthNotifications::register();
+        BrandedCustomerEvents::register();
     }
 
     /**
