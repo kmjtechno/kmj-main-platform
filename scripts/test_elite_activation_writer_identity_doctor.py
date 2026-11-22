@@ -150,6 +150,34 @@ class WriterIdentityTests(unittest.TestCase):
         with patch.object(mod, "directory_identity"), patch.object(mod.Path, "lstat", lstat):
             mod.fixed_parent_chain(1001)
 
+    def test_proc_scan_reads_executable_only_for_fixed_fpm_master_children(self):
+        import io
+        from unittest.mock import Mock
+
+        paths = [Path("/proc/50"), Path("/proc/60")]
+        status = {
+            "/proc/50/status": b"PPid:\t1\nUid:\t0 0 0 0\n",
+            "/proc/60/status": b"PPid:\t4321\nUid:\t1001 1001 1001 1001\n",
+        }
+
+        def only_status(self, mode="rb"):
+            if str(self) not in status:
+                raise AssertionError("Unexpected process file access")
+            return io.BytesIO(status[str(self)])
+
+        with patch.object(mod.Path, "iterdir", return_value=paths), patch.object(
+            mod.Path, "open", only_status
+        ), patch.object(mod, "process_identity", return_value=worker(pid=60)) as probe:
+            result = mod.fixed_live_children(4321)
+            self.assertEqual(result, [worker(pid=60)])
+            probe.assert_called_once_with(60)
+
+        with patch.object(mod.Path, "iterdir", return_value=paths), patch.object(
+            mod.Path, "open", only_status
+        ), patch.object(mod, "process_identity", return_value=worker(pid=60, parent=7)):
+            with self.assertRaisesRegex(mod.Blocked, "FPM_WORKER_PARENT_RACE"):
+                mod.fixed_live_children(4321)
+
     def test_fixed_systemctl_requires_active_exact_service_and_pid(self):
         proc = SimpleNamespace(returncode=0, stdout="MainPID=4321\nActiveState=active\n")
         with patch.object(mod.subprocess, "run", return_value=proc) as p:
