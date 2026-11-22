@@ -17,6 +17,7 @@ import {
     Mail,
     Menu,
     Package,
+    Rocket,
     Search,
     Settings,
     ShieldCheck,
@@ -148,6 +149,11 @@ const groups: { title: string; items: Workspace[] }[] = [
                 icon: Bell,
             },
             { label: 'Task Automation', href: '/operator/ops', icon: Zap },
+            {
+                label: 'Release Center',
+                href: '/operator/release-center',
+                icon: Rocket,
+            },
             {
                 label: 'Settings & Configuration',
                 href: '/settings/profile',

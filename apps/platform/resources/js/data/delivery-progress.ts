@@ -130,6 +130,13 @@ export const deliveryMilestones: DeliveryMilestone[] = [
             'Feature test (advisory fields, degrades to unavailable without a receipt, no entry for other projects), tsc and exact-head CI only. Not deployed and not yet viewed in a browser by the owner.',
     },
     {
+        id: 'release-center-nav-link-20261122',
+        title: 'Release Center: sidebar link under Operations',
+        state: 'active',
+        detail: 'Source-only: the owner navigation and the Command Center list now link to the read-only Release Center page, which previously could only be reached from the System Status page. No new capability, route or permission.',
+        evidence: 'tsc, vp fmt and exact-head CI only. Not deployed.',
+    },
+    {
         id: 'release-contract-attestations-20261122',
         title: 'Release Center: staging QA and restore attestation names in release contracts',
         state: 'active',
