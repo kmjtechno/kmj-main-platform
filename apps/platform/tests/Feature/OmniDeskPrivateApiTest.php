@@ -204,6 +204,28 @@ final class OmniDeskPrivateApiTest extends TestCase
         );
     }
 
+    public function test_deactivation_rechecks_license_tenant_after_preview_without_mutation(): void
+    {
+        $fixture = $this->fixture();
+        $other = Organization::query()->create(['name' => 'Reassigned license tenant']);
+        DB::table('kslp_licenses')
+            ->where('id', $fixture['license_id'])
+            ->update(['customer_id' => $other->getKey()]);
+        $this->bindPrincipal($fixture['organization_id'], true);
+
+        $this->postJson(
+            '/api/v1/licensing/omnidesk/activations/'.$fixture['activation_id'].'/deactivate',
+            ['reason' => 'refuse stale tenant ownership'],
+        )
+            ->assertStatus(404)
+            ->assertExactJson(['error' => 'ACTIVATION_REVOKED']);
+
+        $this->assertDatabaseHas('kslp_activations', [
+            'id' => $fixture['activation_id'],
+            'deactivated_at' => null,
+        ]);
+    }
+
     public function test_invalid_deactivation_reason_maps_to_deterministic_invalid_request(): void
     {
         $fixture = $this->fixture();
