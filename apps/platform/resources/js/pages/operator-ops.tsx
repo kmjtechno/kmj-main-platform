@@ -424,6 +424,12 @@ export default function OperatorOps({
                                 being guessed.
                             </p>
                         </div>
+                        <a
+                            href="/operator/release-center"
+                            className="hover:bg-muted inline-flex items-center justify-center gap-2 rounded-xl border px-4 py-3 text-xs font-bold transition"
+                        >
+                            Release Center
+                        </a>
                         <button
                             type="button"
                             onClick={refresh}

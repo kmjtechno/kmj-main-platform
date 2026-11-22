@@ -114,6 +114,14 @@ export const deliveryMilestones: DeliveryMilestone[] = [
             'Unit test pins the header; exact-head CI only. Not deployed and not yet proven against the live GitHub catalog.',
     },
     {
+        id: 'release-center-list-20261122',
+        title: 'Release Center phase 2: read-only /operator/release-center list',
+        state: 'active',
+        detail: 'Source-only: a platform-owner page (passkey gated, GET only) that lists the checked-in release contracts: stage gate, smoke and health probes, rollback, data risk, signing, the owner-passkey approval and the required CI checks. Contracts that fail the safety checks (relaxed approval, wrong filename, oversize, broken JSON) are listed by file name only. It cannot stage, approve or release anything and shows live status as not connected.',
+        evidence:
+            'Feature tests (owner and guest access, valid and invalid contracts, GET-only, committed contracts load), tsc and exact-head CI only. Not deployed and not yet viewed in a browser by the owner.',
+    },
+    {
         id: 'release-contracts-validator-20261122',
         title: 'Release Center phase 1: deny-by-default release contracts and validator',
         state: 'active',

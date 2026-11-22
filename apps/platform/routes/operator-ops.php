@@ -8,6 +8,7 @@ use App\Services\Operations\EliteActivationIntentQueue;
 use App\Services\Operations\EliteReleaseReadinessSnapshot;
 use App\Services\Operations\OperationalReadinessSnapshot;
 use App\Services\Operations\OperatorActionRunner;
+use App\Services\Operations\ReleaseContractCatalog;
 use App\Services\Operations\ServerMetricsSnapshot;
 use App\Services\PlatformOwnerAccess;
 use Illuminate\Http\Request;
@@ -168,6 +169,19 @@ Route::middleware(['auth', 'verified', 'password.confirm'])
                 'recentActions' => $recentActions,
             ]);
         })->name('ops.index');
+
+        // Read-only: lists the checked-in release contracts. It starts nothing and writes nothing.
+        Route::get('release-center', function (
+            Request $request,
+            PlatformOwnerAccess $access,
+            ReleaseContractCatalog $catalog,
+        ) {
+            $user = $request->user();
+            abort_unless($user instanceof User, 401);
+            $access->require($user);
+
+            return Inertia::render('operator-release-center', ['catalog' => $catalog->load()]);
+        })->name('release-center.index');
 
         Route::post('ops/actions/queue-restart', function (
             Request $request,
