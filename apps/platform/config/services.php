@@ -41,6 +41,12 @@ return [
         'enabled' => (bool) env('KMJ_UNVERIFIED_ACCOUNT_CLEANUP_ENABLED', false),
     ],
 
+    // Disabled by default: use only after new-device Ed25519 proof,
+    // cooldown/sequence tests and owner-signed rollout approval.
+    'kmj_customer_device_transfer' => [
+        'enabled' => (bool) env('KMJ_CUSTOMER_DEVICE_TRANSFER_ENABLED', false),
+    ],
+
     'kmj_developer_licensing' => [
         'enabled' => (bool) env('KMJ_DEVELOPER_LICENSING_ENABLED', false),
     ],
