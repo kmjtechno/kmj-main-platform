@@ -10,6 +10,14 @@ export type DeliveryMilestone = {
 
 export const deliveryMilestones: DeliveryMilestone[] = [
     {
+        id: 'owner-directory-contact-validation-20261122',
+        title: 'Owner customer contact editing: trim names and validate required profile fields',
+        state: 'active',
+        detail: 'Source-only customer directory fix: validate trimmed names before saving, require nonblank phone and country when an existing profile submits those fields, and let legacy users without a profile edit their name without sending hidden empty inputs. Does not change account deletion, verification or license permissions.',
+        evidence:
+            'Regression tests for whitespace/short names, nonnullable contact values and profileless customer edits. Exact-head CI, independent review and protected Elite deployment remain required; no production data mutation by this source change.',
+    },
+    {
         id: 'owner-directory-guarded-management-20261122b',
         title: 'Owner customer directory: edit, verification filters and guarded delete',
         state: 'active',
