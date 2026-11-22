@@ -71,6 +71,17 @@ previously absent release approvals.
    a separate guarded reviewed owner procedure; never delete a pending
    or consumed intent silently.
 
+## Owner install helper (source only, 2026-11-22)
+
+`scripts/operations/install-elite-activation-broker-20261122.py` automates steps 2-5 above for the owner.
+It fetches only the exact reviewed commit `2cd5f602fe06` (PR #965), writes the broker and the two unit
+templates with a no-overwrite hardlink install, refuses to run unless the autopublish gate and the intent
+inbox parent already exist, and verifies the units. `--inspect` is read-only. `--install` does **not** enable
+the timer; `--install --enable-timer` is the owner's explicit approval to enable only the broker timer. It never
+starts the production release unit, writes an approval or switches LIVE. Offline tests run in
+`.github/workflows/elite-activation-broker-installer-qa.yml`. The status above stays **NOT DONE** until the owner
+has run it and a real approved-release activation has been verified.
+
 ## Tests / truth boundaries
 
 - python3 scripts/test_elite_owner_activation_broker.py -v

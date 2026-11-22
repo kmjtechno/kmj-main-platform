@@ -106,6 +106,14 @@ export const deliveryMilestones: DeliveryMilestone[] = [
             'Unit test pins the header; exact-head CI only. Not deployed and not yet proven against the live GitHub catalog.',
     },
     {
+        id: 'elite-activation-broker-installer-20261122',
+        title: 'Elite activation broker: pinned owner installer (one click needs the broker installed)',
+        state: 'active',
+        detail: 'Source-only: a root installer for the already reviewed owner activation-intent broker (#965). It fetches only the exact reviewed commit, installs without overwrite, refuses to run without the autopublish gate and the intent inbox, and enables the broker timer only with an explicit --enable-timer flag. It never starts the production release unit, writes an approval or switches LIVE.',
+        evidence:
+            'Offline unit tests in a dedicated workflow and exact-head CI only. Not installed on Elite, so the Ops page one-click activation is not yet usable and no release was activated by it.',
+    },
+    {
         id: 'modelfabric-error-help-20261122',
         title: 'ModelFabric: plain-language help under each provider error',
         state: 'active',
