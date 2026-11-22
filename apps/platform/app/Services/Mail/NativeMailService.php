@@ -45,12 +45,12 @@ final class NativeMailService
             })
             ->orderBy('name')->limit(100)->get(['id', 'name', 'email_verified_at', 'is_platform_owner']);
 
-        return $users->filter(fn (User $user): bool => $this->allowed($user))
+        return array_values($users->filter(fn (User $user): bool => $this->allowed($user))
             ->map(fn (User $user): array => [
                 'id' => (int) $user->getKey(),
                 'name' => (string) $user->name,
                 'role' => $this->ownerAccess->allows($user) ? 'owner' : 'staff',
-            ])->values()->all();
+            ])->values()->all());
     }
 
     /** @return array{items:array<int,array<string,mixed>>,unread:int} */
@@ -119,7 +119,7 @@ final class NativeMailService
 
         return [
             'thread_id' => (string) $anchor->thread_id,
-            'items' => $rows->map(static fn (object $row): array => [
+            'items' => array_values($rows->map(static fn (object $row): array => [
                 'id' => (int) $row->id,
                 'from_id' => (int) $row->sender_user_id,
                 'to_id' => $row->recipient_user_id === null ? null : (int) $row->recipient_user_id,
@@ -127,7 +127,7 @@ final class NativeMailService
                 'subject' => (string) $row->subject,
                 'body' => (string) $row->body,
                 'at' => (string) ($row->sent_at ?? $row->created_at),
-            ])->values()->all(),
+            ])->values()->all()),
         ];
     }
 
@@ -320,7 +320,7 @@ final class NativeMailService
     /** @return list<array{user_id:int,name:string,email:string}> */
     public function activeStaff(): array
     {
-        return DB::table('kmj_mail_staff')->join('users', 'users.id', '=', 'kmj_mail_staff.user_id')
+        return array_values(DB::table('kmj_mail_staff')->join('users', 'users.id', '=', 'kmj_mail_staff.user_id')
             ->whereNull('kmj_mail_staff.revoked_at')->whereNotNull('users.email_verified_at')
             ->orderBy('users.name')->limit(100)
             ->get(['users.id', 'users.name', 'users.email'])
@@ -328,7 +328,7 @@ final class NativeMailService
                 'user_id' => (int) $row->id,
                 'name' => (string) $row->name,
                 'email' => (string) $row->email,
-            ])->all();
+            ])->all());
     }
 
     private function validRecipient(int $userId): User
