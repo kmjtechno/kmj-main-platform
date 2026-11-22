@@ -140,3 +140,32 @@ void test('account cleanup is an owner-only exact-snapshot action, disabled by d
     assert.match(ownerUi, /unverifiedEmailCleanup\.enabled/);
     assert.doesNotMatch(cleanup, /whereNull\('email_verified_at'\)->delete\(/);
 });
+
+void test('owner Licensing Hub renders bounded searchable registers and accessible actions', () => {
+    const owner = read('resources/js/pages/operator-kslp.tsx');
+
+    // Large owner-only dataset remains available by paging; never silently omit records.
+    assert.match(owner, /const LIST_PAGE_SIZE = 10/);
+    assert.match(owner, /issuerWorkspaces\.filter/);
+    assert.match(owner, /issuerRows\.map/);
+    assert.match(owner, /entitlementRows\.map/);
+    assert.match(owner, /auditRows\.map/);
+    assert.match(owner, /label="Developer issuer organizations"/);
+    assert.match(owner, /label="Product entitlements"/);
+    assert.match(owner, /label="License lifecycle audit trail"/);
+    assert.match(owner, /onPageChange=\{setIssuerPage\}/);
+    assert.match(owner, /onPageChange=\{setEntitlementPage\}/);
+    assert.match(owner, /onPageChange=\{setAuditPage\}/);
+    assert.match(owner, /setIssuerPage\(0\)/);
+    assert.match(owner, /disabled=\{page === 0\}/);
+    assert.match(owner, /disabled=\{page >= pageCount - 1\}/);
+
+    // The single integrated owner hub retains the real developer workspace and protected forms.
+    assert.match(owner, /<details className=.*open=\{developerWorkspace\.newKey/);
+    assert.match(owner, /<DeveloperAppsWorkspace \{\.\.\.developerWorkspace\} embedded \/>/);
+    assert.match(owner, /aria-label="Customer or organization ID"/);
+    assert.match(owner, /aria-label="License plan"/);
+    assert.match(owner, /aria-label="Reason for license issuance"/);
+    assert.match(owner, /unverifiedEmailCleanup\.enabled/);
+    assert.match(owner, /\/operator\/kslp\/licenses/);
+});
