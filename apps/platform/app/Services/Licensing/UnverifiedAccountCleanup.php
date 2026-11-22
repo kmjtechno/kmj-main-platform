@@ -174,8 +174,8 @@ final class UnverifiedAccountCleanup
             $table = $entry['name'] ?? null;
             $schema = $entry['schema'] ?? 'public';
             if (! is_string($schema) || ! is_string($table)
-                || preg_match('/\\A[a-z][a-z0-9_]*\\z/D', $schema) !== 1
-                || preg_match('/\\A[a-z][a-z0-9_]*\\z/D', $table) !== 1) {
+                || preg_match('/\A[a-z][a-z0-9_]*\z/D', $schema) !== 1
+                || preg_match('/\A[a-z][a-z0-9_]*\z/D', $table) !== 1) {
                 throw new RuntimeException('UNVERIFIED_CLEANUP_UNSAFE_TABLE_IDENTITY');
             }
 
@@ -187,7 +187,7 @@ final class UnverifiedAccountCleanup
             $connection->statement(
                 'LOCK TABLE '.implode(', ', $names).' IN SHARE ROW EXCLUSIVE MODE NOWAIT'
             );
-        } catch (\\Throwable $e) {
+        } catch (\Throwable $e) {
             throw new RuntimeException('UNVERIFIED_CLEANUP_WRITER_FENCE_UNAVAILABLE', 0, $e);
         }
     }
@@ -326,7 +326,7 @@ final class UnverifiedAccountCleanup
                 // A customer_id may be UUID while users.id is bigint. Always
                 // compare text to text; never cast a user ID into a UUID or
                 // silently skip that potentially related record.
-                if (preg_match('/\\A[a-z][a-z0-9_]*\\z/D', $column) !== 1) {
+                if (preg_match('/\A[a-z][a-z0-9_]*\z/D', $column) !== 1) {
                     throw new RuntimeException('UNVERIFIED_CLEANUP_UNSAFE_REFERENCE_COLUMN');
                 }
                 $type = Schema::getColumnType($table, $column);
