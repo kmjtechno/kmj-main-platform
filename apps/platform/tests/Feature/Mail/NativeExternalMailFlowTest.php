@@ -238,7 +238,7 @@ final class NativeExternalMailFlowTest extends TestCase
     {
         $html = view('emails.kmj-native-outgoing', [
             'heading' => 'Hello <script>alert(1)</script>',
-            'body' => "Hello <img src=x onerror=alert(1)>",
+            'body' => 'Hello <img src=x onerror=alert(1)>',
             'senderAddress' => 'info@kmjtechno.com',
         ])->render();
         self::assertStringContainsString('kmj-email-lockup-dark.png', $html);
