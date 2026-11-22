@@ -208,7 +208,6 @@ final class ModelFabricGateway
         return [...$normal, ...$near];
     }
 
-    /** @param  array{priority: int, cap: ?int, used: int}|null  $limit */
     private function stickyKey(string $organizationId, string $sessionKey): string
     {
         return 'modelfabric:sticky:'.hash('sha256', $organizationId.'|'.$sessionKey);
@@ -237,9 +236,10 @@ final class ModelFabricGateway
             }
         }
 
-        return array_values([...$first, ...$rest]);
+        return [...$first, ...$rest];
     }
 
+    /** @param  array{priority: int, cap: ?int, used: int}|null  $limit */
     private function nearDailyCap(?array $limit): bool
     {
         return $limit !== null && $limit['cap'] !== null && $limit['cap'] > 0 && $limit['used'] * 10 >= $limit['cap'] * 8;
