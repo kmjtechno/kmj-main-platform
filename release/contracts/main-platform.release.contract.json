@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "project": "main-platform",
+  "kind": "laravel-elite",
+  "repository": "kmjtechno/kmj-main-platform",
+  "default_branch": "main",
+  "required_checks": [
+    "verify",
+    "Verify candidate for staging",
+    "Check owner approval before staging promotion",
+    "Staging owner, passkey and commerce acceptance / Verify authenticated surfaces for approved staging commit",
+    "Locked landing and Super Admin responsive browser acceptance / synthetic-owner-browser",
+    "Disposable PostgreSQL full-feature migration and rollback / migration-rollback"
+  ],
+  "stage": { "gate": "quality-gate:full" },
+  "smoke": { "probe": "authenticated-surfaces" },
+  "health": { "probe": "public-https-live-sha" },
+  "rollback": { "strategy": "previous-release-pointer" },
+  "data_risk": "migrations",
+  "approval": "owner-passkey",
+  "signing": "none"
+}
