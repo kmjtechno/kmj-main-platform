@@ -1,0 +1,83 @@
+import json
+import os
+import pathlib
+import sys
+import tempfile
+import unittest
+
+OPS = pathlib.Path(__file__).resolve().parent / "operations"
+sys.path.insert(0, str(OPS))
+import elite_collect_rollback_rehearsal_receipt as col  # noqa: E402
+import release_admission_receipts as ra  # noqa: E402
+
+SHA = "a" * 40
+EXP = "platform-" + "b" * 12
+NOW = 1_800_000_000
+GOOD = "\n".join([
+    "REHEARSAL_DATABASE=DISPOSABLE_ATTESTED", "PREVIOUS_MIGRATE=PASS", "CANDIDATE_MIGRATE=PASS",
+    "NEW_MIGRATIONS=2", "SCHEMA_CHANGE_ADDITIVE_ONLY=PASS",
+    "CODE_ROLLBACK_ON_MIGRATED_SCHEMA=PASS",
+    "SCHEMA_ROLLBACK_RESTORES_BASELINE_EXACTLY=PASS", "SCHEMA_REAPPLY_MATCHES_FORWARD_EXACTLY=PASS",
+    "PRODUCTION_DATABASE_TOUCHED=NO", "ROLLBACK_VERIFIED_FLAG=NOT_SET_BY_THIS_SCRIPT",
+    "FAILURES=NONE", "APP_HTTP_DB_ROLLBACK_REHEARSAL=PASS"]) + "\n"
+
+
+class RehearsalTests(unittest.TestCase):
+    def test_good_output_issues_valid_receipt_only_for_rollback(self):
+        r = col.collect(SHA, EXP, NOW, lambda e: GOOD, {"DB_X": "1"})
+        self.assertIsNone(ra.receipt_problem(r, SHA, EXP, NOW))
+        self.assertEqual(r["kind"], "rollback-rehearsal")
+
+    def test_zero_new_migrations_needs_no_schema_rollback_markers(self):
+        out = GOOD.replace("NEW_MIGRATIONS=2", "NEW_MIGRATIONS=0")
+        out = "\n".join(l for l in out.splitlines() if "SCHEMA_R" not in l) + "\n"
+        self.assertTrue(col.rehearsal_passed(out))
+
+    def test_each_defect_is_refused(self):
+        defects = [
+            GOOD.replace("=PASS", "=FAIL", 1),
+            GOOD.replace("FAILURES=NONE", "FAILURES=PREVIOUS_HTTP"),
+            GOOD.replace("PRODUCTION_DATABASE_TOUCHED=NO", "PRODUCTION_DATABASE_TOUCHED=YES"),
+            GOOD.replace("DISPOSABLE_ATTESTED", "UNATTESTED"),
+            GOOD.replace("APP_HTTP_DB_ROLLBACK_REHEARSAL=PASS", "APP_HTTP_DB_ROLLBACK_REHEARSAL=BLOCKED:X"),
+            GOOD.replace("CODE_ROLLBACK_ON_MIGRATED_SCHEMA=PASS\n", ""),
+            GOOD.replace("SCHEMA_REAPPLY_MATCHES_FORWARD_EXACTLY=PASS", "SCHEMA_REAPPLY_MATCHES_FORWARD_EXACTLY=FAIL"),
+            GOOD + "FAILURES=NONE\n",
+            GOOD.replace("NEW_MIGRATIONS=2", "NEW_MIGRATIONS=x"),
+            "",
+        ]
+        for out in defects:
+            self.assertFalse(col.rehearsal_passed(out), out[:60])
+            with self.assertRaises(ValueError):
+                col.collect(SHA, EXP, NOW, lambda e, o=out: o, {"DB_X": "1"})
+
+    def test_config_is_strict(self):
+        with tempfile.TemporaryDirectory() as d:
+            os.chmod(d, 0o700)
+            p = pathlib.Path(d) / "c.json"
+
+            def write(obj, mode=0o600):
+                p.write_text(json.dumps(obj))
+                os.chmod(p, mode)
+            write({"env": {"DB_DATABASE": "kmj_rehearsal", "KMJ_REHEARSAL_X": "1"}})
+            self.assertEqual(len(col.load_env(p, os.getuid())), 2)
+            for bad in ({"env": {"PATH": "/x"}}, {"env": {"DB_A": "a\nb"}}, {"env": {}},
+                        {"env": {"DB_A": 1}}, {"env": {"DB_A": "a"}, "x": 1}):
+                write(bad)
+                with self.assertRaises(ValueError):
+                    col.load_env(p, os.getuid())
+            write({"env": {"DB_A": "a"}}, 0o644)
+            with self.assertRaises(ValueError):
+                col.load_env(p, os.getuid())
+
+    def test_cli_guards_and_source_safety(self):
+        self.assertEqual(col.main(["x", "--check", "bad", EXP]), 2)
+        if os.geteuid() != 0:
+            self.assertEqual(col.main(["x", "--write", SHA, EXP]), 2)
+        src = (OPS / "elite_collect_rollback_rehearsal_receipt.py").read_text()
+        for bad in ("shell=True", "os.system", "systemctl", "production-release.json", "rollbackVerified"):
+            self.assertNotIn(bad, src)
+
+
+if __name__ == "__main__":
+    unittest.main()
