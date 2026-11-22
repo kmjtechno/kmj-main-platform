@@ -82,6 +82,14 @@ export const deliveryMilestones: DeliveryMilestone[] = [
             'Unit test pins the header; exact-head CI only. Not deployed and not yet proven against the live GitHub catalog.',
     },
     {
+        id: 'modelfabric-openai-sse-streaming-20261122',
+        title: 'ModelFabric: OpenAI-compatible streaming (stream=true) for IDE and SDK clients',
+        state: 'active',
+        detail: 'Source-only: the OpenAI-compatible endpoint accepts stream=true instead of returning 400. Routing, evidence admission, cooldowns and caps still run to completion first, so a failure stays a normal JSON error (NO_FREE_ROUTE_AVAILABLE is still 503); the verified answer is then replayed as chat.completion.chunk events ending in [DONE]. Compatibility streaming, not token-by-token provider streaming.',
+        evidence:
+            'Feature test (SSE shape, reassembled text, one provider call, caller model ignored, 503 stays JSON), static check and exact-head CI only. Not deployed.',
+    },
+    {
         id: 'modelfabric-credit-limited-tier-20261122',
         title: 'ModelFabric: credit-limited approvals with an enforced daily cap (ADR-004 rev 2)',
         state: 'active',

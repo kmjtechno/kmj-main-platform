@@ -57,7 +57,7 @@ void test('smart routing only reorders eligible routes and never adds one', () =
     assert.match(gateway, /nearLimit/);
 });
 
-void test('API endpoint is bearer-hashed, throttled, non-streaming and ignores caller model choice', () => {
+void test('API endpoint is bearer-hashed, throttled, replays streams after routing and ignores caller model choice', () => {
     const mw = read('app/Http/Middleware/AuthenticateModelFabricToken.php');
     const api = read('app/Http/Controllers/ModelFabricApiController.php');
     const apiRoutes = read('routes/model-fabric-api.php');
@@ -68,7 +68,9 @@ void test('API endpoint is bearer-hashed, throttled, non-streaming and ignores c
     assert.match(mw, /RateLimiter::tooManyAttempts/);
     assert.match(model, /hash\('sha256'/);
     assert.doesNotMatch(model, /plain_token|'token'\s*=>/);
-    assert.match(api, /streaming_not_supported/);
+    assert.doesNotMatch(api, /streaming_not_supported/);
+    assert.match(api, /text\/event-stream/);
+    assert.match(api, /data: \[DONE\]/);
     assert.match(api, /ignored on purpose/);
     assert.match(api, /\$this->gateway->complete\(/);
     assert.doesNotMatch(api, /Http::|Log::/);

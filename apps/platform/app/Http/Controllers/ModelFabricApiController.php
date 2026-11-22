@@ -11,9 +11,10 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /**
- * OpenAI-compatible surface over the verified-zero gateway (non-streaming). It never names a provider
+ * OpenAI-compatible surface over the verified-zero gateway (streaming is replayed after routing completes). It never names a provider
  * or model from the caller: routing is decided by ModelFabric alone, and when nothing qualifies the
  * answer is NO_FREE_ROUTE_AVAILABLE. Prompts and answers are never logged.
  */
@@ -40,7 +41,7 @@ final class ModelFabricApiController extends Controller
         ]);
     }
 
-    public function chat(Request $request): JsonResponse
+    public function chat(Request $request): JsonResponse|StreamedResponse
     {
         $token = $this->token($request);
         $data = $request->validate([
@@ -50,9 +51,6 @@ final class ModelFabricApiController extends Controller
             'stream' => ['sometimes', 'boolean'],
             'model' => ['sometimes', 'nullable', 'string', 'max:128'],
         ]);
-        if (! empty($data['stream'])) {
-            return $this->error(400, 'streaming_not_supported', 'Streaming is not supported yet; send stream=false.');
-        }
         $messages = [];
         $chars = 0;
         foreach ($data['messages'] as $message) {
@@ -72,8 +70,13 @@ final class ModelFabricApiController extends Controller
             return $this->error($code === ModelFabricRouter::NO_ROUTE ? 503 : 502, $code, 'No verified-zero route could answer this request.');
         }
 
+        $id = 'chatcmpl-mf-'.Str::lower(Str::random(24));
+        if (! empty($data['stream'])) {
+            return $this->sse($id, (string) $result['model'], (string) $result['content']);
+        }
+
         return response()->json([
-            'id' => 'chatcmpl-mf-'.Str::lower(Str::random(24)),
+            'id' => $id,
             'object' => 'chat.completion',
             'created' => time(),
             'model' => (string) $result['model'],
@@ -83,6 +86,35 @@ final class ModelFabricApiController extends Controller
                 'finish_reason' => 'stop',
             ]],
             'modelfabric' => ['provider' => $result['provider'], 'attempts' => $result['attempts'], 'profile' => $result['profile']],
+        ]);
+    }
+
+    /**
+     * Compatibility streaming: routing, admission and caps run to completion first (an error is still a normal
+     * JSON error), then the verified answer is replayed as OpenAI-style chunks. No provider is called while streaming.
+     */
+    private function sse(string $id, string $model, string $content): StreamedResponse
+    {
+        $created = time();
+        $chunk = static fn (array $delta, ?string $finish): string => 'data: '.json_encode([
+            'id' => $id,
+            'object' => 'chat.completion.chunk',
+            'created' => $created,
+            'model' => $model,
+            'choices' => [['index' => 0, 'delta' => $delta, 'finish_reason' => $finish]],
+        ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)."\n\n";
+
+        return response()->stream(function () use ($chunk, $content): void {
+            echo $chunk(['role' => 'assistant', 'content' => ''], null);
+            foreach (mb_str_split($content, 48) ?: [] as $piece) {
+                echo $chunk(['content' => $piece], null);
+            }
+            echo $chunk([], 'stop');
+            echo "data: [DONE]\n\n";
+        }, 200, [
+            'Content-Type' => 'text/event-stream',
+            'Cache-Control' => 'no-cache',
+            'X-Accel-Buffering' => 'no',
         ]);
     }
 

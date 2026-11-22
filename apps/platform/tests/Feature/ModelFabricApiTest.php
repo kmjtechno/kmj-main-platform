@@ -92,13 +92,40 @@ final class ModelFabricApiTest extends TestCase
         Http::assertNothingSent();
     }
 
-    public function test_streaming_is_refused_and_invalid_roles_fail_validation(): void
+    public function test_streaming_replays_the_verified_answer_as_sse_and_errors_stay_json(): void
     {
-        $plain = $this->token();
+        $plain = $this->token(['private_source' => false]);
         $headers = ['Authorization' => 'Bearer '.$plain];
+        $this->evidenced('llama-free');
+        Http::fake(['api.groq.com/*' => Http::response(['choices' => [['message' => ['content' => str_repeat('pong ', 30)]]]], 200)]);
 
+        $response = $this->postJson('/api/modelfabric/v1/chat/completions', ['stream' => true, 'model' => 'gpt-5-paid-premium', 'messages' => [['role' => 'user', 'content' => 'ping']]], $headers);
+        $response->assertOk();
+        $this->assertStringStartsWith('text/event-stream', (string) $response->headers->get('Content-Type'));
+        $body = $response->streamedContent();
+        $this->assertStringContainsString('"object":"chat.completion.chunk"', $body);
+        $this->assertStringContainsString('"finish_reason":"stop"', $body);
+        $this->assertStringEndsWith("data: [DONE]\n\n", $body);
+        $text = '';
+        foreach (explode("\n\n", trim($body)) as $event) {
+            $json = json_decode(substr($event, 6), true);
+            $text .= is_array($json) ? (string) ($json['choices'][0]['delta']['content'] ?? '') : '';
+        }
+        $this->assertSame(str_repeat('pong ', 30), $text);
+        Http::assertSentCount(1);
+        Http::assertSent(fn ($request): bool => ! str_contains((string) json_encode($request->data()), 'gpt-5-paid-premium'));
+
+        Cache::flush();
+        DB::table('ai_model_evidence')->delete();
+        Http::fake();
         $this->postJson('/api/modelfabric/v1/chat/completions', ['stream' => true, 'messages' => [['role' => 'user', 'content' => 'x']]], $headers)
-            ->assertStatus(400)->assertJsonPath('error.code', 'streaming_not_supported');
+            ->assertStatus(503)->assertJsonPath('error.code', 'NO_FREE_ROUTE_AVAILABLE');
+    }
+
+    public function test_invalid_roles_fail_validation(): void
+    {
+        $headers = ['Authorization' => 'Bearer '.$this->token()];
+
         $this->postJson('/api/modelfabric/v1/chat/completions', ['messages' => [['role' => 'tool', 'content' => 'x']]], $headers)->assertStatus(422);
     }
 
