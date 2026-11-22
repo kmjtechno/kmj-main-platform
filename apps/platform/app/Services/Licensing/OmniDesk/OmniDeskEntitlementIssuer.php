@@ -91,9 +91,11 @@ final class OmniDeskEntitlementIssuer
             }
         }
 
+        // Keep the signer aligned with OmniDesk Rust's verified entitlement
+        // interval: iat <= nbf < lease_expires_at <= exp.
         if ($claims['sequence'] < 1
-            || $claims['nbf'] > $claims['iat']
-            || $claims['iat'] > $claims['lease_expires_at']
+            || $claims['iat'] > $claims['nbf']
+            || $claims['nbf'] >= $claims['lease_expires_at']
             || $claims['lease_expires_at'] > $claims['exp']) {
             throw new DomainException('OMNIDESK_ENTITLEMENT_PAYLOAD_INVALID');
         }
