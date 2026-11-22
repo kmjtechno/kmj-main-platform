@@ -236,7 +236,9 @@ void test('credit-limited approvals (ADR-004 rev 2) are capped, attested and enf
 
 void test('ModelFabric guided flow keeps outbound prompts explicit and owner controlled', () => {
     const page = read('resources/js/pages/operator-modelfabric.tsx');
-    const playground = read('resources/js/components/modelfabric-safe-playground.tsx');
+    const playground = read(
+        'resources/js/components/modelfabric-safe-playground.tsx',
+    );
     const api = read('app/Http/Controllers/ModelFabricApiController.php');
 
     assert.match(page, /modelfabric-setup-journey/);
@@ -255,17 +257,28 @@ void test('ModelFabric guided flow keeps outbound prompts explicit and owner con
     assert.match(playground, /credentials: 'same-origin'/);
     assert.match(playground, /cache: 'no-store'/);
     assert.match(playground, /Authorization: 'Bearer ' \+ apiKey\.trim\(\)/);
-    assert.match(playground, /API_ROOT \+ \(sendPrompt \? '\/chat\/completions' : '\/models'\)/);
+    assert.match(
+        playground,
+        /API_ROOT \+ \(sendPrompt \? '\/chat\/completions' : '\/models'\)/,
+    );
     assert.match(playground, /NO_FREE_ROUTE_AVAILABLE/);
     assert.match(playground, /new AbortController/);
     assert.match(playground, /inFlight\.current\?\.abort/);
-    assert.doesNotMatch(playground, /localStorage\.(?:getItem|setItem)|sessionStorage\.(?:getItem|setItem)/);
-    assert.doesNotMatch(playground, /https:\/\/api\.openai\.com|openrouter\.ai\/api/);
+    assert.doesNotMatch(
+        playground,
+        /localStorage\.(?:getItem|setItem)|sessionStorage\.(?:getItem|setItem)/,
+    );
+    assert.doesNotMatch(
+        playground,
+        /https:\/\/api\.openai\.com|openrouter\.ai\/api/,
+    );
     assert.match(api, /ignored on purpose/);
 });
 
 void test('Playground checks an existing ModelFabric token without creating keys or bypassing routing', () => {
-    const playground = read('resources/js/components/modelfabric-safe-playground.tsx');
+    const playground = read(
+        'resources/js/components/modelfabric-safe-playground.tsx',
+    );
     assert.match(playground, /'\/api\/modelfabric\/v1'/);
     assert.match(playground, /'modelfabric-auto'/);
     assert.match(playground, /!routeReady/);
@@ -273,6 +286,12 @@ void test('Playground checks an existing ModelFabric token without creating keys
     assert.match(playground, /No requests run automatically/);
     assert.match(playground, /owner-initiated/i);
     assert.doesNotMatch(playground, /fetch\(.*(?:https?:\/\/|provider_url)/);
-    assert.match(read('routes/model-fabric-api.php'), /AuthenticateModelFabricToken::class/);
-    assert.match(read('app/Http/Controllers/ModelFabricApiController.php'), /\$this->gateway->complete\(/);
+    assert.match(
+        read('routes/model-fabric-api.php'),
+        /AuthenticateModelFabricToken::class/,
+    );
+    assert.match(
+        read('app/Http/Controllers/ModelFabricApiController.php'),
+        /\$this->gateway->complete\(/,
+    );
 });
