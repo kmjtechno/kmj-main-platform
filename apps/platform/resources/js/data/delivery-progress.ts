@@ -98,6 +98,13 @@ export const deliveryMilestones: DeliveryMilestone[] = [
             'Unit test pins the header; exact-head CI only. Not deployed and not yet proven against the live GitHub catalog.',
     },
     {
+        id: 'modelfabric-token-private-warning-20261122',
+        title: 'ModelFabric: token form no longer defaults into a private-source token that cannot route',
+        state: 'active',
+        detail: 'Source-only, frontend only: Private source defaults to on only when at least one private-source route exists, and a visible warning appears when it is ticked while none does (such a token would answer NO_FREE_ROUTE_AVAILABLE for every request). Found from an owner screenshot of the live page; routing is unchanged.',
+        evidence: 'Static check and exact-head CI only. Not deployed.',
+    },
+    {
         id: 'modelfabric-todo-panel-20261122',
         title: 'ModelFabric: "To do today" panel on the Overview tab',
         state: 'active',
