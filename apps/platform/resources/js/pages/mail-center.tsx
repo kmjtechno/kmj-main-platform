@@ -70,10 +70,18 @@ type Props = {
     q: string;
     selectedThread: { items: ThreadItem[]; thread_id: string } | null;
     directory: Contact[];
-    staff: { user_id: number; name: string; email: string; sender_alias: string | null }[];
+    staff: {
+        user_id: number;
+        name: string;
+        email: string;
+        sender_alias: string | null;
+    }[];
     myUserId: number;
     externalMailEnabled: boolean;
-    externalOutbound: { state: 'not_activated' | 'ready_to_queue'; from: string | null };
+    externalOutbound: {
+        state: 'not_activated' | 'ready_to_queue';
+        from: string | null;
+    };
     transportCanAttempt: boolean;
     testEnabled: boolean;
 };
@@ -118,7 +126,9 @@ export default function MailCenter({
     const [search, setSearch] = useState(q);
     const [busy, setBusy] = useState(false);
     const [recipientId, setRecipientId] = useState('');
-    const [recipientType, setRecipientType] = useState<'external' | 'internal'>('external');
+    const [recipientType, setRecipientType] = useState<'external' | 'internal'>(
+        'external',
+    );
     const [recipientEmail, setRecipientEmail] = useState('');
     const [clientKey, setClientKey] = useState('');
     const [aliasDrafts, setAliasDrafts] = useState<Record<number, string>>({});
@@ -177,7 +187,9 @@ export default function MailCenter({
         if (!latest) return;
         const other =
             latest.from_id === myUserId ? latest.to_id : latest.from_id;
-        const external = latest.recipient_email ?? (latest.from_id !== myUserId ? latest.sender_email : null);
+        const external =
+            latest.recipient_email ??
+            (latest.from_id !== myUserId ? latest.sender_email : null);
         if (external) {
             setRecipientType('external');
             setRecipientEmail(external);
@@ -221,33 +233,46 @@ export default function MailCenter({
         const external = recipientType === 'external';
         if (
             action === 'send' &&
-            (!subject.trim() || !body.trim() ||
-                (external ? (!recipientEmail.trim() || externalOutbound.state !== 'ready_to_queue') : !recipientId))
-        ) return;
+            (!subject.trim() ||
+                !body.trim() ||
+                (external
+                    ? !recipientEmail.trim() ||
+                      externalOutbound.state !== 'ready_to_queue'
+                    : !recipientId))
+        )
+            return;
 
         const key = clientKey || crypto.randomUUID();
         setClientKey(key);
         setBusy(true);
         const destination = external
             ? { recipient_email: recipientEmail.trim() }
-            : recipientId ? { recipient_id: Number(recipientId) } : {};
-        const params = action === 'send'
-            ? {
-                  ...destination,
-                  subject,
-                  body,
-                  client_key: key,
-                  ...(replyId ? { reply_to_id: replyId } : {}),
-              }
-            : {
-                  ...destination,
-                  recipient_type: recipientType,
-                  ...(draftId ? { draft_id: draftId } : {}),
-                  subject,
-                  body,
-              };
+            : recipientId
+              ? { recipient_id: Number(recipientId) }
+              : {};
+        const params =
+            action === 'send'
+                ? {
+                      ...destination,
+                      subject,
+                      body,
+                      client_key: key,
+                      ...(replyId ? { reply_to_id: replyId } : {}),
+                  }
+                : {
+                      ...destination,
+                      recipient_type: recipientType,
+                      ...(draftId ? { draft_id: draftId } : {}),
+                      subject,
+                      body,
+                  };
         router.post(
-            base + (action === 'draft' ? '/drafts' : external ? '/send-external' : '/send'),
+            base +
+                (action === 'draft'
+                    ? '/drafts'
+                    : external
+                      ? '/send-external'
+                      : '/send'),
             params,
             {
                 preserveScroll: true,
@@ -286,23 +311,35 @@ export default function MailCenter({
         );
     };
 
-    const updateStaffSenderAlias = (staffId: number, currentAlias: string | null) => {
+    const updateStaffSenderAlias = (
+        staffId: number,
+        currentAlias: string | null,
+    ) => {
         if (!isOwner || busy) return;
         setBusy(true);
         router.post(
             '/operator/mail/staff/' + staffId + '/sender-alias',
-            { sender_alias: (aliasDrafts[staffId] ?? currentAlias ?? '').trim() || null },
+            {
+                sender_alias:
+                    (aliasDrafts[staffId] ?? currentAlias ?? '').trim() || null,
+            },
             { preserveScroll: true, onFinish: () => setBusy(false) },
         );
     };
     const deliveryLabel = (state: string | null) => {
         switch (state) {
-            case 'queued': return 'Queued for SMTP';
-            case 'submitting': return 'Submission status unknown';
-            case 'mta_accepted': return 'Accepted by mail server';
-            case 'failed': return 'Submission failed';
-            case 'blocked': return 'Blocked by security policy';
-            default: return null;
+            case 'queued':
+                return 'Queued for SMTP';
+            case 'submitting':
+                return 'Submission status unknown';
+            case 'mta_accepted':
+                return 'Accepted by mail server';
+            case 'failed':
+                return 'Submission failed';
+            case 'blocked':
+                return 'Blocked by security policy';
+            default:
+                return null;
         }
     };
 
@@ -335,7 +372,11 @@ export default function MailCenter({
                                 KMJ Mail
                             </h1>
                             <p className="text-muted-foreground mt-2 max-w-3xl text-sm leading-6">
-                                Your independent KMJ Mail workspace supports private team messages and guarded internet email to Gmail, Outlook, Yahoo and other addresses. No Gmail account linking, OAuth or third-party mailbox access.
+                                Your independent KMJ Mail workspace supports
+                                private team messages and guarded internet email
+                                to Gmail, Outlook, Yahoo and other addresses. No
+                                Gmail account linking, OAuth or third-party
+                                mailbox access.
                             </p>
                         </div>
                         <div className="rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-xs">
@@ -344,7 +385,8 @@ export default function MailCenter({
                                 {isOwner ? 'Super Admin' : 'Approved KMJ Staff'}
                             </span>
                             <span className="text-muted-foreground mt-1 block">
-                                Private internal delivery · Guarded external SMTP
+                                Private internal delivery · Guarded external
+                                SMTP
                             </span>
                         </div>
                     </div>
@@ -362,7 +404,11 @@ export default function MailCenter({
                                 KMJ team recipients
                             </span>
                             <strong className="mt-1 block text-2xl font-bold tabular-nums">
-                                {directory.filter((person) => person.id !== myUserId).length}
+                                {
+                                    directory.filter(
+                                        (person) => person.id !== myUserId,
+                                    ).length
+                                }
                             </strong>
                         </div>
                         <div className="bg-background/45 rounded-xl border p-4">
@@ -375,7 +421,9 @@ export default function MailCenter({
                                     : 'External sending not activated'}
                             </strong>
                             <span className="text-muted-foreground mt-1 block text-[11px]">
-                                External sending uses KMJ Postfix, no Gmail connection. Inbox reception requires a separate pilot.
+                                External sending uses KMJ Postfix, no Gmail
+                                connection. Inbox reception requires a separate
+                                pilot.
                             </span>
                         </div>
                     </div>
@@ -551,16 +599,26 @@ export default function MailCenter({
                                                         <span className="size-2 rounded-full bg-red-500" />
                                                     )}
                                                     {folder === 'inbox'
-                                                        ? (item.sender_email ?? contactName(item.sender_user_id))
-                                                        : (item.recipient_email ?? contactName(item.recipient_user_id))}
+                                                        ? (item.sender_email ??
+                                                          contactName(
+                                                              item.sender_user_id,
+                                                          ))
+                                                        : (item.recipient_email ??
+                                                          contactName(
+                                                              item.recipient_user_id,
+                                                          ))}
                                                 </span>
                                                 <span className="text-muted-foreground shrink-0 text-[10px]">
                                                     {item.at.slice(0, 16)}
                                                 </span>
                                             </div>
-                                            {deliveryLabel(item.delivery_state) && (
+                                            {deliveryLabel(
+                                                item.delivery_state,
+                                            ) && (
                                                 <span className="mt-1 inline-block rounded-md border border-red-500/20 px-2 py-0.5 text-[10px] font-semibold text-red-500">
-                                                    {deliveryLabel(item.delivery_state)}
+                                                    {deliveryLabel(
+                                                        item.delivery_state,
+                                                    )}
                                                 </span>
                                             )}
                                             <div className="mt-1 truncate text-sm font-bold">
@@ -689,18 +747,33 @@ export default function MailCenter({
                                             </span>
                                             <div className="mt-3 flex flex-wrap gap-2">
                                                 <label className="min-w-0 flex-1 text-xs font-semibold">
-                                                    Approved @kmjtechno.com sender alias
+                                                    Approved @kmjtechno.com
+                                                    sender alias
                                                     <input
                                                         type="email"
                                                         maxLength={254}
-                                                        aria-label={'Sender alias for ' + person.name}
-                                                        value={aliasDrafts[person.user_id] ?? person.sender_alias ?? ''}
+                                                        aria-label={
+                                                            'Sender alias for ' +
+                                                            person.name
+                                                        }
+                                                        value={
+                                                            aliasDrafts[
+                                                                person.user_id
+                                                            ] ??
+                                                            person.sender_alias ??
+                                                            ''
+                                                        }
                                                         placeholder="colleague@kmjtechno.com"
                                                         onChange={(event) =>
-                                                            setAliasDrafts((old) => ({
-                                                                ...old,
-                                                                [person.user_id]: event.target.value,
-                                                            }))
+                                                            setAliasDrafts(
+                                                                (old) => ({
+                                                                    ...old,
+                                                                    [person.user_id]:
+                                                                        event
+                                                                            .target
+                                                                            .value,
+                                                                }),
+                                                            )
                                                         }
                                                         className="bg-background mt-2 min-h-11 w-full rounded-xl border px-3 text-xs"
                                                     />
@@ -708,8 +781,13 @@ export default function MailCenter({
                                                 <button
                                                     type="button"
                                                     disabled={busy}
-                                                    onClick={() => updateStaffSenderAlias(person.user_id, person.sender_alias)}
-                                                    className="self-end min-h-11 rounded-xl border px-3 text-xs font-semibold"
+                                                    onClick={() =>
+                                                        updateStaffSenderAlias(
+                                                            person.user_id,
+                                                            person.sender_alias,
+                                                        )
+                                                    }
+                                                    className="min-h-11 self-end rounded-xl border px-3 text-xs font-semibold"
                                                 >
                                                     Save alias
                                                 </button>
@@ -764,27 +842,54 @@ export default function MailCenter({
                                           : 'Compose'}
                                 </h2>
                                 <p className="text-muted-foreground mt-2 text-xs leading-6">
-                                    Send to any valid email address through KMJ TECHNO's own Postfix mail server, or message approved internal teammates. A queued message is not proof of inbox delivery.
+                                    Send to any valid email address through KMJ
+                                    TECHNO's own Postfix mail server, or message
+                                    approved internal teammates. A queued
+                                    message is not proof of inbox delivery.
                                 </p>
                                 <div className="mt-6 space-y-4">
-                                    <div role="group" aria-label="Recipient type">
-                                        <p className="mb-2 text-xs font-semibold">Send to</p>
+                                    <div
+                                        role="group"
+                                        aria-label="Recipient type"
+                                    >
+                                        <p className="mb-2 text-xs font-semibold">
+                                            Send to
+                                        </p>
                                         <div className="flex flex-wrap gap-2">
                                             <button
                                                 type="button"
-                                                aria-pressed={recipientType === 'external'}
-                                                onClick={() => setRecipientType('external')}
-                                                className={'min-h-11 rounded-xl border px-4 text-sm font-semibold ' +
-                                                    (recipientType === 'external' ? 'border-red-500 bg-red-500/10 text-red-500' : 'text-muted-foreground hover:text-foreground')}
+                                                aria-pressed={
+                                                    recipientType === 'external'
+                                                }
+                                                onClick={() =>
+                                                    setRecipientType('external')
+                                                }
+                                                className={
+                                                    'min-h-11 rounded-xl border px-4 text-sm font-semibold ' +
+                                                    (recipientType ===
+                                                    'external'
+                                                        ? 'border-red-500 bg-red-500/10 text-red-500'
+                                                        : 'text-muted-foreground hover:text-foreground')
+                                                }
                                             >
-                                                Email address · Gmail / Outlook / Any
+                                                Email address · Gmail / Outlook
+                                                / Any
                                             </button>
                                             <button
                                                 type="button"
-                                                aria-pressed={recipientType === 'internal'}
-                                                onClick={() => setRecipientType('internal')}
-                                                className={'min-h-11 rounded-xl border px-4 text-sm font-semibold ' +
-                                                    (recipientType === 'internal' ? 'border-red-500 bg-red-500/10 text-red-500' : 'text-muted-foreground hover:text-foreground')}
+                                                aria-pressed={
+                                                    recipientType === 'internal'
+                                                }
+                                                onClick={() =>
+                                                    setRecipientType('internal')
+                                                }
+                                                className={
+                                                    'min-h-11 rounded-xl border px-4 text-sm font-semibold ' +
+                                                    (recipientType ===
+                                                    'internal'
+                                                        ? 'border-red-500 bg-red-500/10 text-red-500'
+                                                        : 'text-muted-foreground hover:text-foreground')
+                                                }
                                             >
                                                 KMJ colleague
                                             </button>
@@ -802,15 +907,22 @@ export default function MailCenter({
                                                     maxLength={254}
                                                     placeholder="someone@gmail.com"
                                                     value={recipientEmail}
-                                                    onChange={(event) => setRecipientEmail(event.target.value)}
+                                                    onChange={(event) =>
+                                                        setRecipientEmail(
+                                                            event.target.value,
+                                                        )
+                                                    }
                                                     className="bg-background mt-2 min-h-12 w-full rounded-xl border px-3 text-sm"
                                                 />
                                             </label>
                                             <div className="text-muted-foreground rounded-xl border border-dashed px-4 py-3 text-xs leading-5">
-                                                <strong className="block text-foreground">
-                                                    From: {externalOutbound.from ?? 'KMJ domain sender (not activated)'}
+                                                <strong className="text-foreground block">
+                                                    From:{' '}
+                                                    {externalOutbound.from ??
+                                                        'KMJ domain sender (not activated)'}
                                                 </strong>
-                                                {externalOutbound.state === 'ready_to_queue'
+                                                {externalOutbound.state ===
+                                                'ready_to_queue'
                                                     ? 'You can queue one external email. Postfix acceptance will appear in Sent; recipient Inbox delivery is not guaranteed.'
                                                     : 'External sending is not activated for this mailbox. You can save an external draft, but the Send action is disabled until KMJ mail transport and sender authorization are approved.'}
                                             </div>
@@ -821,13 +933,24 @@ export default function MailCenter({
                                             <select
                                                 aria-label="KMJ recipient"
                                                 value={recipientId}
-                                                onChange={(event) => setRecipientId(event.target.value)}
+                                                onChange={(event) =>
+                                                    setRecipientId(
+                                                        event.target.value,
+                                                    )
+                                                }
                                                 className="bg-background mt-2 min-h-12 w-full rounded-xl border px-3 text-sm"
                                             >
-                                                <option value="">Select an approved team member</option>
+                                                <option value="">
+                                                    Select an approved team
+                                                    member
+                                                </option>
                                                 {directory.map((person) => (
-                                                    <option key={person.id} value={person.id}>
-                                                        {person.name} · {person.role}
+                                                    <option
+                                                        key={person.id}
+                                                        value={person.id}
+                                                    >
+                                                        {person.name} ·{' '}
+                                                        {person.role}
                                                     </option>
                                                 ))}
                                             </select>
@@ -870,7 +993,9 @@ export default function MailCenter({
                                             disabled={
                                                 busy ||
                                                 (recipientType === 'external'
-                                                    ? !recipientEmail.trim() || externalOutbound.state !== 'ready_to_queue'
+                                                    ? !recipientEmail.trim() ||
+                                                      externalOutbound.state !==
+                                                          'ready_to_queue'
                                                     : !recipientId) ||
                                                 !subject.trim() ||
                                                 !body.trim()
@@ -878,7 +1003,9 @@ export default function MailCenter({
                                             className="flex min-h-11 items-center gap-2 rounded-xl bg-red-600 px-5 text-sm font-semibold text-white hover:bg-red-500 disabled:opacity-40"
                                         >
                                             <Send className="size-4" />{' '}
-                                            {recipientType === 'external' ? 'Queue external email' : 'Send internally'}
+                                            {recipientType === 'external'
+                                                ? 'Queue external email'
+                                                : 'Send internally'}
                                         </button>
                                         <button
                                             type="button"
@@ -1036,16 +1163,32 @@ export default function MailCenter({
                                             <div className="flex flex-wrap items-start justify-between gap-2 border-b pb-3">
                                                 <div className="text-xs">
                                                     <strong className="block">
-                                                        {item.from_id === myUserId ? 'You' : (item.sender_email ?? contactName(item.from_id))}
+                                                        {item.from_id ===
+                                                        myUserId
+                                                            ? 'You'
+                                                            : (item.sender_email ??
+                                                              contactName(
+                                                                  item.from_id,
+                                                              ))}
                                                     </strong>
                                                     <span className="text-muted-foreground">
                                                         To{' '}
-                                                        {item.recipient_email ?? contactName(item.to_id)}
+                                                        {item.recipient_email ??
+                                                            contactName(
+                                                                item.to_id,
+                                                            )}
                                                     </span>
-                                                    {deliveryLabel(item.delivery_state) && (
+                                                    {deliveryLabel(
+                                                        item.delivery_state,
+                                                    ) && (
                                                         <span className="mt-2 block text-[11px] font-semibold text-red-500">
-                                                            {deliveryLabel(item.delivery_state)}
-                                                            {item.delivery_state === 'mta_accepted' ? ' · Not inbox delivery proof' : ''}
+                                                            {deliveryLabel(
+                                                                item.delivery_state,
+                                                            )}
+                                                            {item.delivery_state ===
+                                                            'mta_accepted'
+                                                                ? ' · Not inbox delivery proof'
+                                                                : ''}
                                                         </span>
                                                     )}
                                                 </div>
