@@ -78,6 +78,10 @@ final class UnverifiedAccountCleanup
         }
 
         return DB::transaction(function () use ($expected, $sha256): int {
+            // Lock every current application table against concurrent writers
+            // before previewing any references (including non-FK string links).
+            $this->fenceConcurrentReferenceWriters();
+
             // Serialize eligibility against email verification and concurrent
             // account edits. Never delete a user outside this exact snapshot.
             User::query()->whereNull('email_verified_at')
@@ -130,6 +134,61 @@ final class UnverifiedAccountCleanup
 
             return $deleted;
         }, 1);
+    }
+
+    /**
+     * A candidate User row lock does not stop independent writers from adding
+     * new organization memberships, license references or non-FK text links.
+     * Lock the exact current table inventory against INSERT/UPDATE/DELETE for
+     * this transaction before computing the protected cohort. NOWAIT refuses
+     * a busy system rather than waiting or deleting with a stale snapshot.
+     *
+     * This fences writers using the same PostgreSQL database only. Cross-
+     * service identity reconciliation remains a separate mandatory gate.
+     */
+    private function fenceConcurrentReferenceWriters(): void
+    {
+        $connection = DB::connection();
+        $driver = $connection->getDriverName();
+        if ($driver !== 'pgsql') {
+            // Existing SQLite unit tests exercise the cohort contract; the
+            // isolated PostgreSQL CI checks the real writer lock separately.
+            if ($driver === 'sqlite' && app()->environment('testing')) {
+                return;
+            }
+
+            throw new RuntimeException('UNVERIFIED_CLEANUP_POSTGRESQL_REQUIRED');
+        }
+        if ($connection->transactionLevel() < 1) {
+            throw new RuntimeException('UNVERIFIED_CLEANUP_TRANSACTION_REQUIRED');
+        }
+
+        $tables = Schema::getTables();
+        if ($tables === [] || count($tables) > 500) {
+            throw new RuntimeException('UNVERIFIED_CLEANUP_TABLE_INVENTORY_UNSAFE');
+        }
+
+        $names = [];
+        foreach ($tables as $entry) {
+            $table = $entry['name'] ?? null;
+            $schema = $entry['schema'] ?? 'public';
+            if (! is_string($schema) || ! is_string($table)
+                || preg_match('/\A[a-z][a-z0-9_]*\z/D', $schema) !== 1
+                || preg_match('/\A[a-z][a-z0-9_]*\z/D', $table) !== 1) {
+                throw new RuntimeException('UNVERIFIED_CLEANUP_UNSAFE_TABLE_IDENTITY');
+            }
+
+            $names[] = '"'.$schema.'"."'.$table.'"';
+        }
+
+        sort($names, SORT_STRING);
+        try {
+            $connection->statement(
+                'LOCK TABLE '.implode(', ', $names).' IN SHARE ROW EXCLUSIVE MODE NOWAIT'
+            );
+        } catch (\Throwable $e) {
+            throw new RuntimeException('UNVERIFIED_CLEANUP_WRITER_FENCE_UNAVAILABLE', 0, $e);
+        }
     }
 
     /** @return array<string, list<string>> */
@@ -266,7 +325,7 @@ final class UnverifiedAccountCleanup
                 // A customer_id may be UUID while users.id is bigint. Always
                 // compare text to text; never cast a user ID into a UUID or
                 // silently skip that potentially related record.
-                if (preg_match('/\\A[a-z][a-z0-9_]*\\z/D', $column) !== 1) {
+                if (preg_match('/\A[a-z][a-z0-9_]*\z/D', $column) !== 1) {
                     throw new RuntimeException('UNVERIFIED_CLEANUP_UNSAFE_REFERENCE_COLUMN');
                 }
                 $type = Schema::getColumnType($table, $column);
