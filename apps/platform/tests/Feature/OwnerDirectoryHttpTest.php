@@ -236,11 +236,20 @@ final class OwnerDirectoryHttpTest extends TestCase
         $this->assertDatabaseHas('users', ['id' => $target->id]);
     }
 
-    public function test_owner_cannot_delete_account_with_an_organization_or_their_own_account(): void
+    public function test_owner_cannot_delete_shared_organization_or_their_own_account(): void
     {
         $owner = $this->owner();
         $target = User::factory()->create(['email_verified_at' => null]);
-        app(OrganizationCreator::class)->create('Paid or provisional org', $target->id);
+        $other = User::factory()->create(['email_verified_at' => now()]);
+        $organization = app(OrganizationCreator::class)->create('Shared organization', $target->id);
+        DB::table('organization_memberships')->insert([
+            'id' => (string) Str::uuid(),
+            'organization_id' => $organization->id,
+            'user_id' => $other->id,
+            'role' => 'member',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
 
         $this->actingAs($owner)
             ->withSession(['auth.password_confirmed_at' => time()])
@@ -251,8 +260,51 @@ final class OwnerDirectoryHttpTest extends TestCase
             ->post('/operator/directory/users/'.$owner->id.'/delete', [
                 'confirmation' => 'DELETE_USER_'.$owner->id,
             ])->assertSessionHasErrors('user');
+
         $this->assertDatabaseHas('users', ['id' => $target->id]);
+        $this->assertDatabaseHas('users', ['id' => $other->id]);
         $this->assertDatabaseHas('users', ['id' => $owner->id]);
+        $this->assertDatabaseHas('organizations', ['id' => $organization->id]);
+        $this->assertDatabaseHas('organization_memberships', [
+            'organization_id' => $organization->id, 'user_id' => $other->id,
+        ]);
+    }
+
+    public function test_owner_deletes_customer_and_all_private_signup_data_atomically(): void
+    {
+        $owner = $this->owner();
+        $target = User::factory()->create(['email_verified_at' => null]);
+        $organization = app(OrganizationCreator::class)->create('Only signup organization', $target->id);
+        CustomerProfile::query()->create([
+            'user_id' => $target->id,
+            'account_type' => 'individual',
+            'phone' => '+91 2222222222',
+            'country' => 'India',
+        ]);
+        DB::table('password_reset_tokens')->insert([
+            'email' => $target->email,
+            'token' => 'test-only-reset-token',
+            'created_at' => now(),
+        ]);
+
+        $this->actingAs($owner)
+            ->withSession(['auth.password_confirmed_at' => time()])
+            ->post('/operator/directory/users/'.$target->id.'/delete', [
+                'confirmation' => 'DELETE_USER_'.$target->id,
+            ])->assertRedirect('/operator/directory');
+
+        $this->assertDatabaseMissing('users', ['id' => $target->id]);
+        $this->assertDatabaseMissing('customer_profiles', ['user_id' => $target->id]);
+        $this->assertDatabaseMissing('organization_memberships', [
+            'organization_id' => $organization->id,
+        ]);
+        $this->assertDatabaseMissing('organizations', ['id' => $organization->id]);
+        $this->assertDatabaseMissing('password_reset_tokens', ['email' => $target->email]);
+        $this->assertDatabaseHas('users', ['id' => $owner->id]);
+        $this->assertDatabaseHas('operator_action_audits', [
+            'actor_user_id' => $owner->id,
+            'action' => 'directory_customer_signup_graph_deleted',
+        ]);
     }
 
     public function test_owner_may_delete_only_a_standalone_user_with_explicit_confirmation_and_audit(): void
@@ -267,7 +319,7 @@ final class OwnerDirectoryHttpTest extends TestCase
         $this->assertDatabaseMissing('users', ['id' => $standalone->id]);
         $this->assertDatabaseHas('operator_action_audits', [
             'actor_user_id' => $owner->id,
-            'action' => 'directory_standalone_user_deleted',
+            'action' => 'directory_customer_signup_graph_deleted',
         ]);
     }
 
@@ -336,6 +388,34 @@ final class OwnerDirectoryHttpTest extends TestCase
             'phone' => '+91 1111111111',
             'country' => 'India',
         ]);
+    }
+
+    public function test_customer_with_business_organization_reference_is_never_cascade_deleted(): void
+    {
+        $owner = $this->owner();
+        $target = User::factory()->create(['email_verified_at' => null]);
+        $organization = app(OrganizationCreator::class)->create('Active organization', $target->id);
+        \App\Models\AiProvider::query()->create([
+            'organization_id' => $organization->id,
+            'name' => 'Active provider',
+            'preset' => 'github',
+            'kind' => 'openai-compatible',
+            'base_url' => 'https://models.github.ai/inference',
+            'api_key' => 'test-only-key-123456789',
+            'key_last4' => '6789',
+            'enabled' => true,
+            'free_only' => true,
+        ]);
+
+        $this->actingAs($owner)
+            ->withSession(['auth.password_confirmed_at' => time()])
+            ->post('/operator/directory/users/'.$target->id.'/delete', [
+                'confirmation' => 'DELETE_USER_'.$target->id,
+            ])->assertSessionHasErrors('user');
+
+        $this->assertDatabaseHas('users', ['id' => $target->id]);
+        $this->assertDatabaseHas('organizations', ['id' => $organization->id]);
+        $this->assertDatabaseHas('ai_providers', ['organization_id' => $organization->id]);
     }
 
     private function owner(): User
