@@ -158,15 +158,27 @@ def fixed_live_children(master_pid: int) -> list[dict]:
     for entry in Path("/proc").iterdir():
         if not entry.name.isdecimal():
             continue
+        selected = False
         try:
+            # Cheap bounded status-only scan. Do not inspect command lines or
+            # executable links of unrelated processes.
+            with (entry / "status").open("rb") as f:
+                status = f.read(16385)
+            require(len(status) < 16385, "BLOCKED_PROC_OVERSIZE")
+            parent, _ = parse_status(status)
+            if parent != master_pid:
+                continue
+            selected = True
             identity = process_identity(int(entry.name))
-        except (FileNotFoundError, ProcessLookupError):
-            # A process disappeared during inventory; do not count it.
-            continue
-        except (PermissionError, OSError, UnicodeError) as exc:
-            raise Blocked("BLOCKED_PROC_SNAPSHOT_UNVERIFIED") from None
-        if identity["parent"] == master_pid:
+            require(identity["parent"] == master_pid,
+                    "BLOCKED_FPM_WORKER_PARENT_RACE")
             children.append(identity)
+        except (FileNotFoundError, ProcessLookupError):
+            if selected:
+                raise Blocked("BLOCKED_FPM_WORKER_DISAPPEARED") from None
+            continue
+        except (PermissionError, OSError, UnicodeError):
+            raise Blocked("BLOCKED_PROC_SNAPSHOT_UNVERIFIED") from None
     return children
 
 
