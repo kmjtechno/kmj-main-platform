@@ -687,6 +687,33 @@ export default function MailCenter({
                                                 ID {person.user_id} ·{' '}
                                                 {person.email}
                                             </span>
+                                            <div className="mt-3 flex flex-wrap gap-2">
+                                                <label className="min-w-0 flex-1 text-xs font-semibold">
+                                                    Approved @kmjtechno.com sender alias
+                                                    <input
+                                                        type="email"
+                                                        maxLength={254}
+                                                        aria-label={'Sender alias for ' + person.name}
+                                                        value={aliasDrafts[person.user_id] ?? person.sender_alias ?? ''}
+                                                        placeholder="colleague@kmjtechno.com"
+                                                        onChange={(event) =>
+                                                            setAliasDrafts((old) => ({
+                                                                ...old,
+                                                                [person.user_id]: event.target.value,
+                                                            }))
+                                                        }
+                                                        className="bg-background mt-2 min-h-11 w-full rounded-xl border px-3 text-xs"
+                                                    />
+                                                </label>
+                                                <button
+                                                    type="button"
+                                                    disabled={busy}
+                                                    onClick={() => updateStaffSenderAlias(person.user_id, person.sender_alias)}
+                                                    className="self-end min-h-11 rounded-xl border px-3 text-xs font-semibold"
+                                                >
+                                                    Save alias
+                                                </button>
+                                            </div>
                                         </div>
                                         <button
                                             type="button"
