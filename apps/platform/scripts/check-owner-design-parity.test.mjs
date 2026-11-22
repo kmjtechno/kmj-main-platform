@@ -39,6 +39,23 @@ void test('all protected owner modules inherit one locked Command Center shell',
     assert.match(command, /owner-panel/);
 });
 
+void test('KMJ Mail renders exactly one inherited shell for owner and staff', () => {
+    const appEntry = read('resources/js/app.tsx');
+    const mailPage = read('resources/js/pages/mail-center.tsx');
+
+    // Inertia mounts AppLayout for mail-center once, and its owner branch
+    // renders OwnerModuleShell. A second page-level AppLayout caused the
+    // duplicate branding/header/sidebar visible on the live mail screenshot.
+    assert.match(appEntry, /default:\s*return AppLayout;/);
+    assert.match(layout, /if \(isOwner\)/);
+    assert.match(layout, /<OwnerModuleShell>/);
+    assert.doesNotMatch(mailPage, /<AppLayout\b|<OwnerModuleShell\b/);
+    assert.doesNotMatch(mailPage, /import AppLayout from/);
+    assert.match(mailPage, /data-test="kmj-native-mail"/);
+    assert.match(mailPage, /owner-admin-page kmj-admin-shell/);
+    assert.match(mailPage, /<Head title="KMJ Mail/);
+});
+
 void test('one canonical Licensing Hub is shown in the owner sidebar', () => {
     const groups = shell.slice(0, shell.indexOf('export default function'));
     assert.equal((groups.match(/href: '\/operator\/kslp'/g) ?? []).length, 1);

@@ -1,4 +1,3 @@
-import AppLayout from '@/layouts/app-layout';
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import { useMemo, useState } from 'react';
 import {
@@ -254,13 +253,10 @@ export default function MailCenter({
     const selected = selectedThread?.items.at(-1);
     const back = isOwner ? '/operator' : '/dashboard';
 
+    // app.tsx already mounts AppLayout (owner: OwnerModuleShell; staff: sidebar).
+    // Nesting AppLayout here duplicates the entire top bar and sidebar.
     return (
-        <AppLayout
-            breadcrumbs={[
-                { title: isOwner ? 'Command Center' : 'Dashboard', href: back },
-                { title: 'KMJ Mail', href: base },
-            ]}
-        >
+        <>
             <Head title="KMJ Mail · Private enterprise communications" />
             <div
                 data-test="kmj-native-mail"
@@ -968,6 +964,6 @@ export default function MailCenter({
                     </section>
                 </div>
             </div>
-        </AppLayout>
+        </>
     );
 }
