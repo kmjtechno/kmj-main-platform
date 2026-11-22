@@ -130,6 +130,14 @@ export const deliveryMilestones: DeliveryMilestone[] = [
             'Feature test (advisory fields, degrades to unavailable without a receipt, no entry for other projects), tsc and exact-head CI only. Not deployed and not yet viewed in a browser by the owner.',
     },
     {
+        id: 'release-receipt-store-20261122',
+        title: 'Release receipt store: strict root-protected reader for evidence receipts',
+        state: 'active',
+        detail: 'Source-only, read-only reader that accepts an evidence receipt only from a single-link regular file owned by the trusted uid, mode 0600 or stricter, in a non-writable directory, with strict JSON, and feeds the pure admission logic. It never writes a file or creates an admission.',
+        evidence:
+            'Unit tests and exact-head CI only. No collector, broker or admission file exists yet; one-click activation stays blocked until they do.',
+    },
+    {
         id: 'release-admission-receipts-20261122',
         title: 'Release admission receipts: pure fail-closed receipt-to-admission logic',
         state: 'active',
