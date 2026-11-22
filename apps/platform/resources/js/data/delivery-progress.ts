@@ -138,6 +138,14 @@ export const deliveryMilestones: DeliveryMilestone[] = [
             'Feature test (advisory fields, degrades to unavailable without a receipt, no entry for other projects), tsc and exact-head CI only. Not deployed and not yet viewed in a browser by the owner.',
     },
     {
+        id: 'release-admission-broker-20261122',
+        title: 'Release admission broker: root writes the gate admission only from real receipts and an owner intent',
+        state: 'active',
+        detail: 'Source-only, install-opt-in root broker. After an owner-authenticated intent it re-verifies the protected approval, live predecessor and every collector receipt, mints the authenticated-QA receipt only from the owner attestation in that intent, and writes the per-release admission file with no clobber. It starts no unit and changes no approval or pointer.',
+        evidence:
+            'Unit tests (including the real gate decision accepting the result) and exact-head CI only. Not installed; the web app does not yet write this intent, so one-click activation is still not proven end to end.',
+    },
+    {
         id: 'release-collector-public-qa-migration-storage-20261122',
         title: 'Release collectors 5 and 6: public HTTP smoke and derived migration-storage receipt',
         state: 'active',
