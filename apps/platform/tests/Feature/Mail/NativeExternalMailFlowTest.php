@@ -46,32 +46,42 @@ final class NativeExternalMailFlowTest extends TestCase
         Mail::assertNothingOutgoing();
     }
 
-    public function test_exact_elite_postfix_sendmail_modes_pass_but_unsafe_invocations_fail_closed(): void
+    public function test_native_outbound_requires_explicit_pinned_local_smtp_pilot(): void
     {
         $this->activateOutbound();
         $service = app(NativeExternalMailService::class);
+        self::assertTrue($service->transportEnabled());
 
-        // The real KMJ-elite Postfix installation uses "-t -i"; the Symfony
-        // mailer also supports "-bs -i". Both require every other mail gate.
-        foreach (['/usr/sbin/sendmail -t -i', '/usr/sbin/sendmail -bs -i'] as $path) {
-            config()->set('mail.mailers.sendmail.path', $path);
-            self::assertTrue($service->transportEnabled(), $path);
-        }
+        // New releases must fail closed even if the previous outbound
+        // enabled flag survives in production .env.
+        config()->set('services.kmj_native_external_mail.transport', 'disabled');
+        self::assertFalse($service->transportEnabled());
 
-        // Do not weaken exact binary/argument or explicit owner activation.
+        config()->set('services.kmj_native_external_mail.transport', 'sendmail');
+        self::assertFalse($service->transportEnabled());
+
+        config()->set('services.kmj_native_external_mail.transport', 'loopback_smtp');
+        self::assertTrue($service->transportEnabled());
+
+        // Prevent SMTP destination/port/credential/timeouts being changed
+        // by configuration drift, compromised env or future refactors.
         foreach ([
-            '/bin/true',
-            '/usr/sbin/sendmail -t -i -f attacker@example.com',
-            '/usr/sbin/sendmail -t -i; true',
-            '/usr/sbin/sendmail -t',
-            '/usr/local/sbin/sendmail -t -i',
-            '',
-        ] as $path) {
-            config()->set('mail.mailers.sendmail.path', $path);
-            self::assertFalse($service->transportEnabled(), $path);
+            ['mail.mailers.kmj_native_loopback.transport', 'log'],
+            ['mail.mailers.kmj_native_loopback.host', 'smtp.gmail.com'],
+            ['mail.mailers.kmj_native_loopback.host', 'localhost'],
+            ['mail.mailers.kmj_native_loopback.port', 2525],
+            ['mail.mailers.kmj_native_loopback.scheme', 'smtps'],
+            ['mail.mailers.kmj_native_loopback.username', 'attacker'],
+            ['mail.mailers.kmj_native_loopback.password', 'secret'],
+            ['mail.mailers.kmj_native_loopback.timeout', 60],
+            ['mail.mailers.kmj_native_loopback.local_domain', 'example.com'],
+        ] as [$key, $badValue]) {
+            $original = config($key);
+            config()->set($key, $badValue);
+            self::assertFalse($service->transportEnabled(), $key);
+            config()->set($key, $original);
         }
 
-        config()->set('mail.mailers.sendmail.path', '/usr/sbin/sendmail -t -i');
         config()->set('services.kmj_native_external_mail.enabled', false);
         self::assertFalse($service->transportEnabled());
         Queue::assertNothingPushed();
@@ -296,7 +306,15 @@ final class NativeExternalMailFlowTest extends TestCase
         config()->set('services.kmj_native_external_mail.enabled', true);
         config()->set('mail.default', 'sendmail');
         config()->set('mail.from.address', 'info@kmjtechno.com');
-        config()->set('mail.mailers.sendmail.path', '/usr/sbin/sendmail -bs -i');
+        config()->set('services.kmj_native_external_mail.transport', 'loopback_smtp');
+        config()->set('mail.mailers.kmj_native_loopback.transport', 'smtp');
+        config()->set('mail.mailers.kmj_native_loopback.host', '127.0.0.1');
+        config()->set('mail.mailers.kmj_native_loopback.port', 25);
+        config()->set('mail.mailers.kmj_native_loopback.scheme', null);
+        config()->set('mail.mailers.kmj_native_loopback.username', null);
+        config()->set('mail.mailers.kmj_native_loopback.password', null);
+        config()->set('mail.mailers.kmj_native_loopback.timeout', 8);
+        config()->set('mail.mailers.kmj_native_loopback.local_domain', 'kmjtechno.com');
     }
 
     private function runQueuedJob(): void

@@ -49,18 +49,20 @@ final class NativeExternalMailService
 
     public function transportEnabled(): bool
     {
-        // Internet email is a separate explicit owner activation.
-        // A log/array/failover transport must not masquerade as a delivery.
+        // Native outbound is independent of transactional sendmail.
+        // Previous production flag alone MUST NOT activate a new transport.
+        // SMTP peer, port, timeout and unauthenticated transport are pinned,
+        // so an env override cannot redirect owner/staff mail elsewhere.
         return config('services.kmj_native_external_mail.enabled', false) === true
-            && config('mail.default') === 'sendmail'
-            && config('mail.mailers.sendmail.transport') === 'sendmail'
-            // Symfony Mailer supports both Postfix sendmail invocation modes.
-            // Keep an exact allowlist: no alternate binaries, shells, arbitrary
-            // argv, injected envelope senders or third-party transports.
-            && in_array(config('mail.mailers.sendmail.path'), [
-                '/usr/sbin/sendmail -t -i',
-                '/usr/sbin/sendmail -bs -i',
-            ], true)
+            && config('services.kmj_native_external_mail.transport') === 'loopback_smtp'
+            && config('mail.mailers.kmj_native_loopback.transport') === 'smtp'
+            && config('mail.mailers.kmj_native_loopback.host') === '127.0.0.1'
+            && config('mail.mailers.kmj_native_loopback.port') === 25
+            && config('mail.mailers.kmj_native_loopback.scheme') === null
+            && config('mail.mailers.kmj_native_loopback.username') === null
+            && config('mail.mailers.kmj_native_loopback.password') === null
+            && config('mail.mailers.kmj_native_loopback.timeout') === 8
+            && config('mail.mailers.kmj_native_loopback.local_domain') === 'kmjtechno.com'
             && $this->readiness->canAttemptDelivery();
     }
 

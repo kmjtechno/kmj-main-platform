@@ -110,6 +110,22 @@ return [
             'transport' => 'resend',
         ],
 
+        // KMJ Mail only: fixed IPv4 loopback Postfix submission, NO
+        // sendmail/postdrop child process or setgid privilege transition.
+        // No env-supplied peer, TCP port, credentials or URL is allowed.
+        // Enable only after the owner has verified local SMTP listener and
+        // Postfix relay restrictions. Does not affect transactional mail.
+        'kmj_native_loopback' => [
+            'transport' => 'smtp',
+            'scheme' => null,
+            'host' => '127.0.0.1',
+            'port' => 25,
+            'username' => null,
+            'password' => null,
+            'timeout' => 8,
+            'local_domain' => 'kmjtechno.com',
+        ],
+
         'sendmail' => [
             'transport' => 'sendmail',
             'path' => env('MAIL_SENDMAIL_PATH', '/usr/sbin/sendmail -bs -i'),

@@ -55,6 +55,10 @@ return [
     // one real recipient inbox acceptance have been reviewed. Default OFF.
     'kmj_native_external_mail' => [
         'enabled' => (bool) env('KMJ_NATIVE_EXTERNAL_MAIL_ENABLED', false),
+        // Separate, explicit opt-in: previously enabled sendmail submissions
+        // MUST NOT silently change transport during a production release.
+        // Only an owner-reviewed loopback Postfix SMTP pilot may activate.
+        'transport' => env('KMJ_NATIVE_EXTERNAL_MAIL_TRANSPORT', 'disabled'),
     ],
 
     'kmj_workforce_mail' => [
