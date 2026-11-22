@@ -163,6 +163,9 @@ export default function OperatorKslp({
     const [issuerPage, setIssuerPage] = useState(0);
     const [entitlementPage, setEntitlementPage] = useState(0);
     const [auditPage, setAuditPage] = useState(0);
+    const cleanupPreviewAvailable =
+        unverifiedEmailCleanup.enabled &&
+        unverifiedEmailCleanup.status === 'PREVIEW_ONLY';
     const issuerNeedle = issuerSearch.trim().toLocaleLowerCase();
     const filteredIssuers = issuerWorkspaces.filter((issuer) =>
         [issuer.name, issuer.issuer_status, issuer.tier ?? ''].some((value) =>
@@ -517,7 +520,9 @@ export default function OperatorKslp({
                                 Eligible for removal
                             </div>
                             <div className="mt-1 text-2xl font-black">
-                                {unverifiedEmailCleanup.eligible}
+                                {cleanupPreviewAvailable
+                                    ? unverifiedEmailCleanup.eligible
+                                    : '—'}
                             </div>
                         </div>
                         <div className="rounded-xl border p-4">
@@ -525,7 +530,9 @@ export default function OperatorKslp({
                                 Protected or recent
                             </div>
                             <div className="mt-1 text-2xl font-black">
-                                {unverifiedEmailCleanup.protected}
+                                {cleanupPreviewAvailable
+                                    ? unverifiedEmailCleanup.protected
+                                    : '—'}
                             </div>
                         </div>
                     </div>
@@ -578,13 +585,14 @@ export default function OperatorKslp({
                                 : 'Cleanup blocked pending protected release and backup approval'}
                         </span>
                     </div>
-                    {unverifiedEmailCleanup.status !== 'PREVIEW_ONLY' && (
+                    {!cleanupPreviewAvailable && (
                         <p
                             role="status"
                             className="mt-3 text-xs text-amber-600"
                         >
-                            Preview blocked by schema or cohort safety check. No
-                            deletion is authorized.
+                            {unverifiedEmailCleanup.enabled
+                                ? 'Safety preview unavailable: eligibility and protected-account counts were not assessed. No deletion is authorized.'
+                                : 'Protected cleanup rollout is disabled: eligibility and protected-account counts were not assessed. No deletion is authorized.'}
                         </p>
                     )}
                 </section>
