@@ -26,6 +26,14 @@ export const deliveryMilestones: DeliveryMilestone[] = [
             'Local contract tests and exact-head CI only; not yet exercised on the Elite host. The helper hashes it pins must be updated whenever a pinned helper changes.',
     },
     {
+        id: 'modelfabric-guided-providers-20261122',
+        title: 'ModelFabric: guided connect cards for GitHub Models, Cerebras and NVIDIA',
+        state: 'active',
+        detail: 'Source-only UI: the provider connect page gets guided key cards for GitHub Models, Cerebras and NVIDIA NIM next to Groq, Gemini and Mistral. They only open each provider key page; keys are stored by the existing encrypted flow, and no model is routable without owner evidence.',
+        evidence:
+            'Static and type checks plus exact-head CI only; not deployed, and no provider key was created or used.',
+    },
+    {
         id: 'modelfabric-hf-credit-copy-20261122',
         title: 'ModelFabric: correct the Hugging Face free-credit wording',
         state: 'active',

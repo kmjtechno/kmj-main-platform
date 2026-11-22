@@ -41,6 +41,24 @@ const guides: Guide[] = [
         helper: 'Use your Mistral workspace key. Paid or unverified models stay blocked.',
     },
     {
+        key: 'github',
+        title: 'GitHub Models',
+        url: 'https://github.com/settings/tokens?type=beta',
+        helper: 'Create a fine-grained token with the Models read permission. Every model still needs owner evidence before it runs.',
+    },
+    {
+        key: 'cerebras',
+        title: 'Cerebras',
+        url: 'https://cloud.cerebras.ai/',
+        helper: 'Create a Cerebras API key. Only owner-approved free models can run.',
+    },
+    {
+        key: 'nvidia',
+        title: 'NVIDIA NIM',
+        url: 'https://build.nvidia.com/',
+        helper: 'Create an NVIDIA API Catalog key. Only owner-approved free models can run.',
+    },
+    {
         key: 'huggingface',
         title: 'Hugging Face',
         url: 'https://huggingface.co/settings/tokens',
