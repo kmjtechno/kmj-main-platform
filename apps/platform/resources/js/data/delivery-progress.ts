@@ -18,6 +18,14 @@ export const deliveryMilestones: DeliveryMilestone[] = [
             'Local contract tests and exact-head CI only; not yet exercised on the Elite host. The helper hashes it pins must be updated whenever a pinned helper changes.',
     },
     {
+        id: 'modelfabric-hf-credit-copy-20261122',
+        title: 'ModelFabric: correct the Hugging Face free-credit wording',
+        state: 'active',
+        detail: 'Source-only copy fix: the Hugging Face docs checked on 2026-11-22 list no included monthly inference credits for Free accounts (PRO and Team accounts get credits; Free accounts must buy them), so the connect card no longer promises a free monthly credit. Hugging Face models stay unapproved unless a pricing page shows one as free.',
+        evidence:
+            'Wording change only; exact-head CI only, not deployed. The pricing page was read on 2026-11-22 and can change.',
+    },
+    {
         id: 'modelfabric-github-models-20261122',
         title: 'ModelFabric: GitHub Models provider (allowlist only)',
         state: 'active',

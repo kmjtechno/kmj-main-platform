@@ -138,9 +138,11 @@ export default function AiProviderConnectHub({
                         </h3>
                         <p className="text-muted-foreground mt-1 text-sm leading-6">
                             One click opens Hugging Face sign-in (no app to
-                            register, no key to copy). Free accounts get a small
-                            monthly credit; a PRO or pay-as-you-go account could
-                            be billed, so connect a Free account only.
+                            register, no key to copy). Hugging Face documents no
+                            included inference credits for Free accounts, so
+                            expect no free models here unless its pricing page
+                            shows one. A PRO or pay-as-you-go account could be
+                            billed, so connect a Free account only.
                         </p>
                         <label className="mt-2 flex items-start gap-2 text-xs font-medium">
                             <input
