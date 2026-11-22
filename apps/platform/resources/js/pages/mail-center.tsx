@@ -32,6 +32,9 @@ type MailItem = {
     snippet: string;
     sender_user_id: number;
     recipient_user_id: number | null;
+    recipient_email: string | null;
+    sender_email: string | null;
+    delivery_state: string | null;
     unread: boolean;
     at: string;
 };
@@ -39,6 +42,9 @@ type ThreadItem = {
     id: number;
     from_id: number;
     to_id: number | null;
+    recipient_email: string | null;
+    sender_email: string | null;
+    delivery_state: string | null;
     folder: string;
     subject: string;
     body: string;
@@ -64,9 +70,10 @@ type Props = {
     q: string;
     selectedThread: { items: ThreadItem[]; thread_id: string } | null;
     directory: Contact[];
-    staff: { user_id: number; name: string; email: string }[];
+    staff: { user_id: number; name: string; email: string; sender_alias: string | null }[];
     myUserId: number;
-    externalMailEnabled: false;
+    externalMailEnabled: boolean;
+    externalOutbound: { state: 'not_activated' | 'ready_to_queue'; from: string | null };
     transportCanAttempt: boolean;
     testEnabled: boolean;
 };
@@ -89,6 +96,7 @@ export default function MailCenter({
     staff,
     myUserId,
     externalMailEnabled,
+    externalOutbound,
 }: Props) {
     const page = usePage();
     const flash = page.props.flash;
@@ -111,6 +119,10 @@ export default function MailCenter({
     const [search, setSearch] = useState(q);
     const [busy, setBusy] = useState(false);
     const [recipientId, setRecipientId] = useState('');
+    const [recipientType, setRecipientType] = useState<'external' | 'internal'>('external');
+    const [recipientEmail, setRecipientEmail] = useState('');
+    const [clientKey, setClientKey] = useState('');
+    const [aliasDrafts, setAliasDrafts] = useState<Record<number, string>>({});
     const [subject, setSubject] = useState('');
     const [body, setBody] = useState('');
     const [replyId, setReplyId] = useState<number | null>(null);
@@ -151,6 +163,9 @@ export default function MailCenter({
 
     const startCompose = () => {
         setRecipientId('');
+        setRecipientEmail('');
+        setRecipientType('external');
+        setClientKey(crypto.randomUUID());
         setSubject('');
         setBody('');
         setDraftId(null);
@@ -163,8 +178,18 @@ export default function MailCenter({
         if (!latest) return;
         const other =
             latest.from_id === myUserId ? latest.to_id : latest.from_id;
-        if (other === null) return;
-        setRecipientId(String(other));
+        const external = latest.recipient_email ?? (latest.from_id !== myUserId ? latest.sender_email : null);
+        if (external) {
+            setRecipientType('external');
+            setRecipientEmail(external);
+            setRecipientId('');
+        } else {
+            if (other === null) return;
+            setRecipientType('internal');
+            setRecipientId(String(other));
+            setRecipientEmail('');
+        }
+        setClientKey(crypto.randomUUID());
         setSubject(
             latest.subject.toLowerCase().startsWith('re:')
                 ? latest.subject
@@ -181,7 +206,10 @@ export default function MailCenter({
             (item) => item.folder === 'drafts',
         );
         if (!selected) return;
+        setRecipientType(selected.recipient_email ? 'external' : 'internal');
+        setRecipientEmail(selected.recipient_email ?? '');
         setRecipientId(selected.to_id === null ? '' : String(selected.to_id));
+        setClientKey(crypto.randomUUID());
         setSubject(selected.subject);
         setBody(selected.body);
         setDraftId(selected.id);
