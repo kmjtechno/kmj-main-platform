@@ -130,6 +130,14 @@ export const deliveryMilestones: DeliveryMilestone[] = [
             'Feature test (advisory fields, degrades to unavailable without a receipt, no entry for other projects), tsc and exact-head CI only. Not deployed and not yet viewed in a browser by the owner.',
     },
     {
+        id: 'release-readiness-publisher-installer-20261122',
+        title: 'Release readiness publisher: pinned owner installer (source only)',
+        state: 'active',
+        detail: 'Source-only: a SHA-pinned, root-only, no-overwrite installer for the read-only readiness publisher and its timer, with an inspect mode and an explicit flag to enable only that timer. Until the owner runs it, the Ops page keeps showing no trusted root receipt and the activation request button stays disabled.',
+        evidence:
+            'Offline negative tests, a dedicated workflow and exact-head CI only. Not run on Elite; no receipt produced yet.',
+    },
+    {
         id: 'release-readiness-publisher-units-20261122',
         title: 'Release readiness publisher: systemd units (source only)',
         state: 'active',

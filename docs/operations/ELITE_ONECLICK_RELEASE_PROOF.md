@@ -37,6 +37,16 @@ for issue #945; it does **not** complete Stage → Verify → Deploy.
   readiness** refreshes only existing Inertia telemetry; it is not Deploy.
   No success toast, fake 'staged', or deployment promise.
 
+## Owner install helper (source only, nothing installed by merging)
+
+`scripts/operations/install-elite-release-readiness-publisher-20261122.py` is a one-time, root-only,
+SHA-pinned installer for the read-only publisher and its 30 second timer. It fetches only the exact
+immutable commit it names, never overwrites, never starts the release unit and never writes an approval.
+`--inspect` is read-only; `--install` writes the files without enabling the timer; `--install
+--enable-timer` additionally enables only the publisher timer (the owner's explicit approval). Until it is
+run, the Ops page correctly shows `NO_TRUSTED_ROOT_RECEIPT` and the activation request button stays
+disabled. A fresh receipt is not a deploy, a staging-origin proof or a DR proof.
+
 ## Required further integration (not claimed here)
 
 1. Sign/review the fixed root publisher, pin the exact bytes, then explicitly
