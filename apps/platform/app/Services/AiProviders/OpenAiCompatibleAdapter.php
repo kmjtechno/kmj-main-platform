@@ -82,7 +82,7 @@ final class OpenAiCompatibleAdapter
         $data = $github ? $response->json() : $response->json('data');
         if (! is_array($data) || ! array_is_list($data)) {
             // An HTTP 200 with an error payload is not a successful catalog.
-            return $this->result('unreachable', [], $rate, 'invalid_catalog');
+            return $this->result('unreachable', [], $rate, $github ? $this->githubShapeCode($response->header('Content-Type'), $data, strlen($response->body())) : 'invalid_catalog');
         }
 
         // Some catalogs list paid models before free variants. Scan the
@@ -198,6 +198,20 @@ final class OpenAiCompatibleAdapter
     private function retryAfter(?string $value): ?int
     {
         return is_string($value) && preg_match('/\A\d{1,6}\z/', $value) === 1 ? min(3600, max(1, (int) $value)) : null;
+    }
+
+    /**
+     * Shape-only diagnostic for a GitHub catalog that is not a JSON list: content type, JSON type and key
+     * names (never values or body text), cut to the 48-character error-code column.
+     */
+    private function githubShapeCode(string $contentType, mixed $data, int $length): string
+    {
+        $type = strtolower(explode(';', $contentType)[0]);
+        $shape = is_array($data)
+            ? 'obj:'.implode(',', array_slice(array_map('strval', array_keys($data)), 0, 3))
+            : 'txt:'.$length;
+
+        return substr('invalid_catalog:'.(string) preg_replace('/[^a-z0-9:,_+.\/|-]/', '', strtolower($type.'|'.$shape)), 0, 48);
     }
 
     /**
