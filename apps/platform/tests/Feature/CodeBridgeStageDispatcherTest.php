@@ -41,8 +41,7 @@ final class CodeBridgeStageDispatcherTest extends TestCase
             'action' => 'codebridge.stage',
             'outcome' => 'queued',
         ]);
-        Http::assertSent(fn ($request): bool =>
-            $request->url() === 'https://api.github.com/repos/kmjtechno/kmj-codebridge/actions/workflows/oneclick-stage.yml/dispatches'
+        Http::assertSent(fn ($request): bool => $request->url() === 'https://api.github.com/repos/kmjtechno/kmj-codebridge/actions/workflows/oneclick-stage.yml/dispatches'
             && $request->method() === 'POST'
             && $request['ref'] === 'main'
         );
