@@ -222,6 +222,43 @@ class WriterIdentityTests(unittest.TestCase):
             self.assertIn("PRODUCTION_MUTATION=NONE", printed)
             self.assertNotIn("DEPLOY=PASS", printed)
 
+    def test_os_error_classified_by_fixed_phase_without_leaking_exception(self):
+        with patch.object(mod.os, "geteuid", return_value=0), patch.object(
+            mod.socket, "gethostname", return_value="KMJ-elite"
+        ), patch.object(mod.pwd, "getpwnam", return_value=SimpleNamespace(pw_uid=1001)), patch.object(
+            mod, "fixed_parent_chain", side_effect=OSError("DO_NOT_PRINT_SECRET_PATH")
+        ), patch("builtins.print") as emitted:
+            self.assertEqual(mod.inspect(), 2)
+            messages = [str(c.args[0]) for c in emitted.call_args_list]
+            self.assertIn("KMJ_ACTIVATION_WRITER_IDENTITY=BLOCKED_READONLY_PROBE_UNVERIFIED", messages)
+            self.assertIn("KMJ_ACTIVATION_PROBE_PHASE=PRIVATE_INBOX", messages)
+            self.assertNotIn("DO_NOT_PRINT_SECRET_PATH", " ".join(messages))
+
+        with patch.object(mod.os, "geteuid", return_value=0), patch.object(
+            mod.socket, "gethostname", return_value="KMJ-elite"
+        ), patch.object(mod.pwd, "getpwnam", return_value=SimpleNamespace(pw_uid=1001)), patch.object(
+            mod, "fixed_parent_chain"
+        ), patch.object(mod, "fixed_master_pid", return_value=4321), patch.object(
+            mod, "process_identity", return_value=master()
+        ), patch.object(mod, "fixed_live_children", side_effect=OSError("PRIVATE_PROC_DATA")), patch(
+            "builtins.print"
+        ) as emitted:
+            self.assertEqual(mod.inspect(), 2)
+            messages = [str(c.args[0]) for c in emitted.call_args_list]
+            self.assertIn("KMJ_ACTIVATION_PROBE_PHASE=FPM_CHILD_PROCESSES", messages)
+            self.assertNotIn("PRIVATE_PROC_DATA", " ".join(messages))
+
+    def test_unknown_owner_uid_reports_categorical_phase_not_traceback(self):
+        with patch.object(mod.os, "geteuid", return_value=0), patch.object(
+            mod.socket, "gethostname", return_value="KMJ-elite"
+        ), patch.object(mod.pwd, "getpwnam", side_effect=KeyError("SENSITIVE_NSS_LOOKUP")), patch(
+            "builtins.print"
+        ) as emitted:
+            self.assertEqual(mod.inspect(), 2)
+            messages = [str(c.args[0]) for c in emitted.call_args_list]
+            self.assertIn("KMJ_ACTIVATION_PROBE_PHASE=OWNER_UID", messages)
+            self.assertNotIn("SENSITIVE_NSS_LOOKUP", " ".join(messages))
+
     def test_source_never_starts_or_mutates_privileged_services(self):
         source = SOURCE.read_text()
         self.assertIn("INBOX_DIR = Path(", source)
