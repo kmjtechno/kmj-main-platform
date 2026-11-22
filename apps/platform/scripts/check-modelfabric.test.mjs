@@ -139,3 +139,22 @@ void test('Hugging Face exchange accepts long opaque tokens and only reports a c
     assert.match(service, /bad_token_shape_len_/);
     assert.doesNotMatch(service, /\{16,512\}/);
 });
+
+void test('Auto-approve rules stay narrow, expiring, chat-only and revocable', () => {
+    const applier = read('app/Services/AiProviders/ModelFabricRuleApplier.php');
+    const controller = read('app/Http/Controllers/ModelFabricController.php');
+    const routes = read('routes/model-fabric.php');
+    const refresh = read('app/Console/Commands/ModelFabricRefreshCommand.php');
+    const page = read('resources/js/pages/operator-modelfabric.tsx');
+    assert.match(applier, /MAX_MATCHES = 50/);
+    assert.match(applier, /MIN_LITERAL_PREFIX = 10/);
+    assert.match(applier, /'tts'.*'image'.*'embedding'/);
+    assert.match(applier, /revoked_at !== null/);
+    assert.match(applier, /'allowlist'/);
+    assert.match(applier, /paid_inference_enabled' => false/);
+    assert.match(controller, /A revoked rule cannot be renewed/);
+    assert.match(controller, /'attest_pricing' => \['accepted'\]/);
+    assert.match(routes, /rules\/\{rule\}\/renew/);
+    assert.match(refresh, /ModelFabricRuleApplier/);
+    assert.match(page, /Save auto-approve rule/);
+});

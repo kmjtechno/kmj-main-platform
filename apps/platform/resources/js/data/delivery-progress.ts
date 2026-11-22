@@ -18,6 +18,14 @@ export const deliveryMilestones: DeliveryMilestone[] = [
             'Local contract tests and exact-head CI only; not yet exercised on the Elite host. The helper hashes it pins must be updated whenever a pinned helper changes.',
     },
     {
+        id: 'modelfabric-auto-approve-rules-20261122',
+        title: 'ModelFabric: one owner rule auto-approves matching free chat models',
+        state: 'active',
+        detail: 'Source-only: the owner attests once that models matching a narrow pattern (at least 10 literal characters, at most 50 matches) are free today on an allowlist provider, and the six-hourly refresh approves matching new models as ordinary expiring evidence until the rule expires (30 days at most, one-click renew). Image, audio, live and embedding models are never included, a revoked model is never revived, revoking a rule revokes exactly the models it approved, and every step is audited.',
+        evidence:
+            'Feature and static tests only; exact-head CI only, not deployed, and no real provider was called.',
+    },
+    {
         id: 'modelfabric-huggingface-token-shape-20261122',
         title: 'ModelFabric: accept the real Hugging Face access token format',
         state: 'active',
