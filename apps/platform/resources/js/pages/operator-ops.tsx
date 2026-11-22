@@ -291,6 +291,8 @@ export default function OperatorOps({
     const [refreshing, setRefreshing] = useState(false);
     const [restarting, setRestarting] = useState(false);
     const [activationRequesting, setActivationRequesting] = useState(false);
+    const [admissionRequesting, setAdmissionRequesting] = useState(false);
+    const [qaAttested, setQaAttested] = useState(false);
 
     const refresh = () => {
         setRefreshing(true);
@@ -394,6 +396,51 @@ export default function OperatorOps({
             {
                 preserveScroll: true,
                 onFinish: () => setActivationRequesting(false),
+            },
+        );
+    };
+
+    const canRequestAdmission =
+        eliteRelease.status === 'blocked' &&
+        eliteRelease.reason === 'BLOCKED_ACCEPTANCE_SCHEMA' &&
+        typeof eliteRelease.approved_sha === 'string' &&
+        /^[a-f0-9]{40}$/.test(eliteRelease.approved_sha) &&
+        typeof eliteRelease.current_release === 'string' &&
+        /^platform-[a-f0-9]{12}$/.test(eliteRelease.current_release) &&
+        eliteRelease.expected_current_release ===
+            eliteRelease.current_release &&
+        eliteRelease.deploy_triggered === false;
+
+    const requestAdmission = () => {
+        if (
+            !canRequestAdmission ||
+            !qaAttested ||
+            !eliteRelease.approved_sha ||
+            !eliteRelease.current_release
+        ) {
+            return;
+        }
+
+        if (
+            !window.confirm(
+                `Ask the root broker to verify all evidence receipts and write the release admission for exact SHA ${eliteRelease.approved_sha}? This records an owner intent and your authenticated-QA attestation. It does not deploy anything.`,
+            )
+        ) {
+            return;
+        }
+
+        setAdmissionRequesting(true);
+        router.post(
+            '/operator/ops/actions/release-admission-intent',
+            {
+                approved_sha: eliteRelease.approved_sha,
+                expected_current_release: eliteRelease.current_release,
+                confirmation: 'REQUEST_RELEASE_ADMISSION',
+                owner_authenticated_qa_attested: true,
+            },
+            {
+                preserveScroll: true,
+                onFinish: () => setAdmissionRequesting(false),
             },
         );
     };
@@ -547,6 +594,41 @@ export default function OperatorOps({
                             ? 'Submitting owner request...'
                             : 'Request approved activation'}
                     </button>
+                    <label className="mt-4 flex max-w-xl items-start gap-2 text-xs">
+                        <input
+                            type="checkbox"
+                            checked={qaAttested}
+                            onChange={(event) =>
+                                setQaAttested(event.target.checked)
+                            }
+                            className="mt-0.5"
+                        />
+                        <span>
+                            I personally signed in on staging and completed
+                            authenticated QA for this exact SHA.
+                        </span>
+                    </label>
+                    <button
+                        type="button"
+                        onClick={requestAdmission}
+                        disabled={
+                            !canRequestAdmission ||
+                            !qaAttested ||
+                            admissionRequesting
+                        }
+                        className="mt-2 inline-flex items-center justify-center gap-2 rounded-xl border px-4 py-3 text-xs font-bold transition disabled:cursor-not-allowed disabled:opacity-40"
+                    >
+                        <ShieldCheck className="size-4" aria-hidden="true" />
+                        {admissionRequesting
+                            ? 'Submitting admission request...'
+                            : 'Request release admission'}
+                    </button>
+                    <p className="text-muted-foreground mt-2 text-[11px]">
+                        Enabled only while the fixed root preflight is waiting
+                        for admission evidence. The root broker independently
+                        re-verifies every receipt; this never writes the
+                        admission itself and never deploys.
+                    </p>
                     <p className="text-muted-foreground mt-2 text-[11px]">
                         Enabled only for a fresh exact-SHA trusted preflight.
                         Requesting never supplies backup or rollback approvals,
