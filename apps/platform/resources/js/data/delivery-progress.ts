@@ -10,6 +10,14 @@ export type DeliveryMilestone = {
 
 export const deliveryMilestones: DeliveryMilestone[] = [
     {
+        id: 'owner-codebridge-oneclick-stage-dispatch-20261122',
+        title: 'Super Admin Release Center: fixed one-click CodeBridge source staging',
+        state: 'active',
+        detail: 'Source-only protected Operations UI dispatches exactly the verified main-only CodeBridge staging workflow from an owner account. GitHub Actions installation permission remains server-only and default OFF; owner passkey/password, exact SHA admission, duplicate prevention and operator audit are required. GitHub 204 means request accepted, not staged or signed. A separate owner Ed25519 signature and Elite canary/rollback remain mandatory.',
+        evidence:
+            'CodeBridge PR #1142 and Main Platform PR #1011 exact CI and CODEOWNER approval pending; no website live deployment, GitHub token installation, signing key movement or production cutover.',
+    },
+    {
         id: 'owner-directory-simple-confirm-selected-delete-20261122',
         title: 'Owner Customers: easy single and selected batch deletion',
         state: 'active',
